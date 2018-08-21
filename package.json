@@ -1,0 +1,25 @@
+{
+    "name": "pokemonshowdown-ai",
+    "version": "0.0.1",
+    "description": "desc",
+    "main": "dist/index.js",
+    "scripts":
+    {
+        "build": "tsc",
+        "main": "npm run build && node dist/index.js"
+    },
+    "repository":
+    {
+        "type": "git",
+        "url": "https://github.com/CrazyGuy108/pokemonshowdown-ai"
+    },
+    "keywords": [ "pokemon" ],
+    "author": "Taylor Hansen (CrazyGuy108)",
+    "license": "MIT",
+    "dependencies":
+    {
+        "websocket": "^1.0.26",
+        "@types/websocket": "0.0.39"
+    },
+    "devDependencies": {}
+}
