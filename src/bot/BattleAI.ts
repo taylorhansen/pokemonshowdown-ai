@@ -3,8 +3,12 @@ import { Prefix, Message } from "./Message";
 
 /** Differentiates between the AI and the opponent. */
 export type Owner = "us" | "them";
-/** Listens for a certain Message type. */
-export type MessageListener = (message: Message) => void;
+/**
+ * Listens for a certain message type.
+ * @param message Message parameter.
+ * @returns Response messages to be sent to the server.
+ */
+export type MessageListener = (message: Message) => string[];
 
 /**
  * Controls the AI's actions during a battle.
@@ -33,24 +37,29 @@ export class BattleAI
         {
             // fill in team info (how exactly?)
             Logger.debug("request!");
+            return [];
         });
         this.onMessage("switch", message =>
         {
             // TODO: automatically determine message type?
             // switch out active pokemon and what we know about them
             Logger.debug("switch!");
+            return [];
         });
     }
 
     /**
      * Consumes an array of Messages and possibly acts upon them.
      * @param messages Messages to be processed.
+     * @returns Response messages to be sent to the server.
      */
-    public consume(messages: Message[])
+    public consume(messages: Message[]): string[]
     {
-        messages.forEach(message =>
-            (this.listeners[message.prefix] || [])
-                .forEach(f => f(message)));
+        const concat = (arr1: string[], arr2: string[]) => arr1.concat(arr2);
+        return messages.map(
+                message => (this.listeners[message.prefix] || [])
+                    .map(listener => listener(message)).reduce(concat))
+            .reduce(concat);
     }
 
     /**

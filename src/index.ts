@@ -17,20 +17,20 @@ ws.on("connect", connection =>
     {
         Logger.debug(`closing ${code}, reason: ${reason}`);
     });
-    connection.on("message", message =>
+    connection.on("message", unparsedPacket =>
     {
-        if (message.type === "utf8" && message.utf8Data)
+        if (unparsedPacket.type === "utf8" && unparsedPacket.utf8Data)
         {
-            Logger.debug(`received: ${message.utf8Data}`);
-            const response = bot.consume(message.utf8Data);
+            Logger.debug(`received: ${unparsedPacket.utf8Data}`);
+            const responses = bot.consumePacket(unparsedPacket.utf8Data);
 
-            if (response)
+            if (responses.length)
             {
-                Logger.debug(`sent: ${response}`);
-                connection.sendUTF(response);
+                Logger.debug(`sent: ${responses}`);
+                connection.sendUTF(responses.join("\n"));
             }
 
-            if (message.utf8Data.startsWith("|updatechallenges"))
+            if (unparsedPacket.utf8Data.startsWith("|updatechallenges"))
             {
                 connection.sendUTF(`|/useteam Magikarp||Focus Sash||bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`);
                 connection.sendUTF("|/accept taylor108");

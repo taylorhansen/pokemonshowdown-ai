@@ -1,5 +1,5 @@
 import { BattleAI } from "./BattleAI";
-import { Packet } from "./Message";
+import { Message, Packet } from "./Message";
 import { MessageParser } from "./MessageParser";
 
 /** Handles all bot actions. */
@@ -17,14 +17,14 @@ export class Bot
     }
 
     /**
-     * Consumes a message and possibly acts upon it.
-     * @param message Message data from the server.
+     * Parses a packet of messages and possibly acts upon it.
+     * @param unparsedPacket Message data from the server.
      * @returns A possible list of response messages to be sent to the server.
      * Can be empty.
      */
-    public consume(message: string): string[]
+    public consumePacket(unparsedPacket: string): string[]
     {
-        const packet: Packet = new MessageParser(message).parse();
+        const packet: Packet = new MessageParser(unparsedPacket).parse();
         // early return: no messages to even process
         if (!packet.messages.length)
         {
@@ -63,41 +63,17 @@ export class Bot
         else
         {
             // came from lobby or global
-            // if updateuser, set username
+            return this.consume(packet.messages);
         }
         return [];
     }
 
     /**
-     * Gets the prefix of a message which is surrounded by `|` symbols. The last
-     * character can optionally have a newline at the end.
-     * @param message Message to search.
-     * @param index Index to start searching from. Should point to the initial
-     * pipe character.
-     * @returns The message prefix, or null if the pipe character was missing.
+     * Consumes messages from lobby or global
+     * @param messages Messages to be processed.
      */
-    private static getPrefix(message: string, index = 0): string | null
+    private consume(messages: Message[]): string[]
     {
-        if (message.charAt(index) !== "|")
-        {
-            // no pipe at beginning
-            return null;
-        }
-
-        // build up the prefix substring
-        let result = "";
-        while (++index < message.length)
-        {
-            const c = message.charAt(index);
-            if (c === "|" || c === "\n")
-            {
-                return result;
-            }
-            else
-            {
-                result += c;
-            }
-        }
-        return result;
+        return [];
     }
 }
