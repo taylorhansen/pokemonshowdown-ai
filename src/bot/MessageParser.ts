@@ -345,7 +345,7 @@ export class MessageParser
         if (space === -1) space = status.length;
 
         const hp = parseInt(status.substring(0, slash));
-        const hpMax = parseInt(status.substring(slash, space));
+        const hpMax = parseInt(status.substring(slash + 1, space));
         const condition = status.substring(space + 1);
         return { hp: hp, hpMax: hpMax, condition: condition };
     }
