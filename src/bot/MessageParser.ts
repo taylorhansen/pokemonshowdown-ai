@@ -161,11 +161,17 @@ export class MessageParser
                 case "request": // move/switch request
                     // format: |request|<json>
                     // json contains active and side pokemon info
-                    result =
+                    const unparsedTeam = this.getRestOfLine().trim();
+                    // at the start of a battle, a |request| message is sent but
+                    //  without any json, so we need to account for that
+                    if (unparsedTeam.length)
                     {
-                        prefix: "request",
-                        team: JSON.parse(this.getRestOfLine())
-                    };
+                        result =
+                        {
+                            prefix: "request",
+                            team: JSON.parse(unparsedTeam)
+                        };
+                    }
                     break;
                 case "inactive":
                 case "inactiveoff":
