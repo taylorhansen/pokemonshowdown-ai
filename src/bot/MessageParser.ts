@@ -35,6 +35,10 @@ export class MessageParser
                 result.room = this.message.substring(1, this.pos);
             }
         }
+        else
+        {
+            this.pos = 0;
+        }
 
         // parse all messages on each line
         while (this.pos >= 0 && this.pos < this.message.length)
@@ -47,13 +51,20 @@ export class MessageParser
             }
             // advance to the next line
             this.pos = this.message.indexOf("\n", this.pos);
+            if (this.pos !== -1)
+            {
+                ++this.pos;
+            }
         }
         return result;
     }
 
+    /**
+     * Parses a single message line.
+     * @returns A parsed Message, or null if it's either invalid or unimportant.
+     */
     private parseMessage(): Message | null
     {
-
         let result: Message | null = null;
         const prefix = this.getWord();
         if (prefix)
