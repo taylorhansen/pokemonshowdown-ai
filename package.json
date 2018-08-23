@@ -1,25 +1,32 @@
 {
-    "name": "pokemonshowdown-ai",
-    "version": "0.0.1",
-    "description": "desc",
-    "main": "dist/index.js",
-    "scripts":
-    {
-        "build": "tsc",
-        "main": "npm run build && node dist/index.js"
-    },
-    "repository":
-    {
-        "type": "git",
-        "url": "https://github.com/CrazyGuy108/pokemonshowdown-ai"
-    },
-    "keywords": [ "pokemon" ],
-    "author": "Taylor Hansen (CrazyGuy108)",
-    "license": "MIT",
-    "dependencies":
-    {
-        "websocket": "^1.0.26",
-        "@types/websocket": "0.0.39"
-    },
-    "devDependencies": {}
+  "name": "pokemonshowdown-ai",
+  "version": "0.0.1",
+  "description": "desc",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "main": "npm run build && node dist/index.js",
+    "test": "mocha -r ts-node/register test/**/*.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CrazyGuy108/pokemonshowdown-ai"
+  },
+  "keywords": [
+    "pokemon"
+  ],
+  "author": "Taylor Hansen (CrazyGuy108)",
+  "license": "MIT",
+  "dependencies": {
+    "websocket": "^1.0.26",
+    "@types/websocket": "0.0.39"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.1.4",
+    "@types/mocha": "^5.2.5",
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "ts-node": "^7.0.1",
+    "typescript": "^3.0.1"
+  }
 }
