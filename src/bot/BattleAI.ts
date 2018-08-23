@@ -58,8 +58,8 @@ export class BattleAI
         const concat = (arr1: string[], arr2: string[]) => arr1.concat(arr2);
         return messages.map(
                 message => (this.listeners[message.prefix] || [])
-                    .map(listener => listener(message)).reduce(concat))
-            .reduce(concat);
+                    .map(listener => listener(message)).reduce(concat, []))
+            .reduce(concat, []);
     }
 
     /**
