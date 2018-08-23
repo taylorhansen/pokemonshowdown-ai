@@ -280,12 +280,12 @@ export class MessageParser
      */
     private parsePokemonID(id: string): PokemonID | null
     {
-        const i = id.indexOf(":");
+        const i = id.indexOf(": ");
         if (i !== -1)
         {
             const owner = id.substring(0, i - 1);
             const position = id.substring(i - 1, i);
-            const nickname = id.substring(i);
+            const nickname = id.substring(i + 2);
             return { owner: owner, position: position, nickname: nickname };
         }
         else
