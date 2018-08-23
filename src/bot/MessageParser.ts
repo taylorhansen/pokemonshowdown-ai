@@ -326,7 +326,7 @@ export class MessageParser
             }
 
             // level is always 100 unless otherwise indicated
-            level = words[i].startsWith("L") ?
+            level = words[i] && words[i].startsWith("L") ?
                 parseInt(words[i].substring(1)) : 100;
 
             return { species: species, shiny: shiny, gender: gender,
