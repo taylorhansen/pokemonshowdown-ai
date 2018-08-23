@@ -389,8 +389,15 @@ export class MessageParser
      */
     private getRestOfLine(): string
     {
-        const start = this.pos;
-        this.pos = this.message.indexOf("\n", this.pos);
+        // this.pos always points to the next pipe so we want to omit that
+        const start = this.pos + 1;
+        this.pos = this.message.indexOf("\n", start);
+        if (this.pos === -1)
+        {
+            // must be the last line of the message, so there's no terminating
+            //  newline
+            this.pos = this.message.length;
+        }
         return this.message.substring(start, this.pos);
     }
 }
