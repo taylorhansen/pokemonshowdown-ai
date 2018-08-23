@@ -27,13 +27,7 @@ ws.on("connect", connection =>
             if (responses.length)
             {
                 Logger.debug(`sent: ${responses}`);
-                connection.sendUTF(responses.join("\n"));
-            }
-
-            if (unparsedPacket.utf8Data.startsWith("|updatechallenges"))
-            {
-                connection.sendUTF(`|/useteam Magikarp||Focus Sash||bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`);
-                connection.sendUTF("|/accept taylor108");
+                responses.forEach(response => connection.sendUTF(response));
             }
         }
     });

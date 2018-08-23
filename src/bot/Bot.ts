@@ -69,11 +69,52 @@ export class Bot
     }
 
     /**
-     * Consumes messages from lobby or global
+     * Consumes messages from lobby or global.
      * @param messages Messages to be processed.
+     * @returns Response messages to be sent to the server.
      */
     private consume(messages: Message[]): string[]
     {
-        return [];
+        return messages.map(message =>
+        {
+            switch (message.prefix)
+            {
+                case "updatechallenges":
+                    return this.updateChallenges(message.challengesFrom);
+                default:
+                    return [];
+            }
+        }).reduce((arr1, arr2) => arr1.concat(arr2), []);
+    }
+
+    /**
+     * Responds to challenges from others.
+     * @param challengesFrom Map of user challenging the AI and the format it's
+     * being challenged to.
+     * @returns Response messages to be sent to the server.
+     */
+    private updateChallenges(challengesFrom: {[user: string]: string}): string[]
+    {
+        // test team for now
+        const useteam = `|/useteam Magikarp||Focus Sash||\
+bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
+        const result: string[] = [useteam];
+        for (let user in challengesFrom)
+        {
+            if (challengesFrom.hasOwnProperty(user))
+            {
+                if (challengesFrom[user] === "gen4ou")
+                {
+                    result.push(`|/accept ${user}`);
+                }
+                else
+                {
+                    result.push(`|/reject ${user}`);
+                }
+            }
+        }
+        // if there is an item, it'd be the |/useteam command, which is
+        //  unnecessary if there are no incoming challenges
+        return result.length === 1 ? [] : result;
     }
 }
