@@ -22,9 +22,11 @@ export class BattleAI
 
     /**
      * Creates a BattleAI object.
-     * @param listener Used to subscribe to certain messages.
+     * @param listener Used to subscribe to server messages.
+     * @param addResponses Used to send response messages to the server.
      */
-    constructor(listener: AnyMessageListener)
+    constructor(listener: AnyMessageListener,
+        addResponses: (...respones: string[]) => void)
     {
         this.players = {};
         this.teams = {};
@@ -37,6 +39,7 @@ export class BattleAI
         {
             // switch out active pokemon and what we know about them
             Logger.debug("switch!");
+            addResponses("|/move 1");
         });
     }
 }

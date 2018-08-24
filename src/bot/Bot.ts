@@ -29,7 +29,14 @@ export class Bot
                 // initialize a new battle ai
                 if (!this.battles.hasOwnProperty(this.room))
                 {
-                    const ai = new BattleAI(this.parser.getListener(this.room));
+                    // need a copy of the current room so the lambda captures
+                    //  that and not just a reference to `this`
+                    const room = this.room;
+                    const ai = new BattleAI(
+                        this.parser.getListener(room),
+                        // function for sending responses
+                        (...responses: string[]) =>
+                            this.addResponses(room, ...responses));
                     this.battles[this.room] = ai;
                 }
             }
@@ -45,11 +52,13 @@ bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
                     // ai only supports gen4ou for now
                     if (challengesFrom[user] === "gen4ou")
                     {
-                        this.responses.push(useteam, `|/accept ${user}`);
+                        // private message room names are the user being
+                        //  messaged
+                        this.addResponses(null, useteam, `|/accept ${user}`);
                     }
                     else
                     {
-                        this.responses.push(`|/reject ${user}`);
+                        this.addResponses(null, `|/reject ${user}`);
                     }
                 }
             }
@@ -70,5 +79,20 @@ bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
         const tmp = this.responses;
         this.responses = [];
         return tmp;
+    }
+
+    /**
+     * Queues a list of responses to be sent to the server.
+     * @param room Room to send the response from. Can be null if it doesn't
+     * matter.
+     * @param responses Responses to be sent to the server.
+     */
+    public addResponses(room: string | null, ...responses: string[]): void
+    {
+        if (room)
+        {
+            responses = responses.map(response => room + response);
+        }
+        this.responses.push(...responses);
     }
 }
