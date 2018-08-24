@@ -1,5 +1,5 @@
 import { Logger } from "../logger/Logger";
-import { AnyMessageListener } from "./MessageParser";
+import { AnyMessageListener } from "./MessageListener";
 
 /** Differentiates between the AI and the opponent. */
 export type Owner = "us" | "them";
