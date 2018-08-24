@@ -1,19 +1,59 @@
 import { BattleAI } from "./BattleAI";
 import { Message, Packet } from "./Message";
-import { MessageParser } from "./MessageParser";
+import { MessageParser, RoomType, ChallengesFrom } from "./MessageParser";
 
 /** Handles all bot actions. */
 export class Bot
 {
+    private readonly parser: MessageParser = new MessageParser();
     /** Keeps track of all the battles we're in. */
-    private battles: {[room: string]: BattleAI}
-    private username: string;
+    private readonly battles: {[room: string]: BattleAI} = {};
+    /** Name of the user. */
+    private username: string = "";
+    /** Pending responses to be sent to the server. */
+    private responses: string[] = [];
 
-    /** Creates a Bot object. */
+    /** Current room we're receiving messages from. */
+    private get room(): string
+    {
+        return this.parser.room;
+    }
+
+    /** Creates a Bot. */
     constructor()
     {
-        this.battles = {};
-        this.username = "";
+        this.parser.on("init", (type: RoomType) =>
+        {
+            if (type === "battle")
+            {
+                // initialize a new battle ai
+                if (!this.battles.hasOwnProperty(this.room))
+                {
+                    const ai = new BattleAI();
+                    this.battles[this.room] = ai;
+                }
+            }
+        }).on("updatechallenges", (challengesFrom: ChallengesFrom) =>
+        {
+            // test team for now
+            const useteam = `|/useteam Magikarp||Focus Sash||\
+bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
+            for (let user in challengesFrom)
+            {
+                if (challengesFrom.hasOwnProperty(user))
+                {
+                    // ai only supports gen4ou for now
+                    if (challengesFrom[user] === "gen4ou")
+                    {
+                        this.responses.push(useteam, `|/accept ${user}`);
+                    }
+                    else
+                    {
+                        this.responses.push(`|/reject ${user}`);
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -24,97 +64,11 @@ export class Bot
      */
     public consumePacket(unparsedPacket: string): string[]
     {
-        const packet: Packet = new MessageParser(unparsedPacket).parse();
-        // early return: no messages to even process
-        if (!packet.messages.length)
-        {
-            return [];
-        }
+        this.parser.parse(unparsedPacket);
 
-        if (packet.room)
-        {
-            // came from a room other than lobby
-            const room = packet.room;
-            let ai: BattleAI | null;
-            if (this.battles.hasOwnProperty(room))
-            {
-                ai = this.battles[room];
-            }
-            else
-            {
-                // could be initializing a new battle
-                const msg = packet.messages[0];
-                if (msg.prefix === "init" && msg.type === "battle")
-                {
-                    ai = new BattleAI();
-                    this.battles[room] = ai;
-                }
-                else
-                {
-                    ai = null;
-                }
-            }
-
-            if (ai)
-            {
-                ai.consume(packet.messages);
-            }
-        }
-        else
-        {
-            // came from lobby or global
-            return this.consume(packet.messages);
-        }
-        return [];
-    }
-
-    /**
-     * Consumes messages from lobby or global.
-     * @param messages Messages to be processed.
-     * @returns Response messages to be sent to the server.
-     */
-    private consume(messages: Message[]): string[]
-    {
-        return messages.map(message =>
-        {
-            switch (message.prefix)
-            {
-                case "updatechallenges":
-                    return this.updateChallenges(message.challengesFrom);
-                default:
-                    return [];
-            }
-        }).reduce((arr1, arr2) => arr1.concat(arr2), []);
-    }
-
-    /**
-     * Responds to challenges from others.
-     * @param challengesFrom Map of user challenging the AI and the format it's
-     * being challenged to.
-     * @returns Response messages to be sent to the server.
-     */
-    private updateChallenges(challengesFrom: {[user: string]: string}): string[]
-    {
-        // test team for now
-        const useteam = `|/useteam Magikarp||Focus Sash||\
-bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
-        const result: string[] = [useteam];
-        for (let user in challengesFrom)
-        {
-            if (challengesFrom.hasOwnProperty(user))
-            {
-                if (challengesFrom[user] === "gen4ou")
-                {
-                    result.push(`|/accept ${user}`);
-                }
-                else
-                {
-                    result.push(`|/reject ${user}`);
-                }
-            }
-        }
-        // if there is an item, it'd be the |/useteam command, which is
-        //  unnecessary if there are no incoming challenges
-        return result.length === 1 ? [] : result;
+        // send any pending responses then reset the list
+        const tmp = this.responses;
+        this.responses = [];
+        return tmp;
     }
 }

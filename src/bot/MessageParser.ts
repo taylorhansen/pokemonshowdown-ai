@@ -1,29 +1,162 @@
-import { Message, Packet } from "./Message";
-import { PokemonID, PokemonDetails, PokemonStatus } from "./Pokemon";
+import { PokemonID, PokemonDetails, PokemonStatus, Pokemon } from "./Pokemon";
 
+/** Prefix for a message that tells of the message's type. */
+export type Prefix = "init" | "updateuser" | "challstr" | "updatechallenges" |
+    "request" | "turn" | "switch";
+
+/**
+ * Listens for a certain type of message.
+ * @template P Describes the message's type.
+ */
+class MessageListener<P extends Prefix>
+{
+    /**
+     * Calls all registered handlers with the arguments for this type of
+     * message.
+     */
+    public readonly handle = ((...args: any[]) =>
+        // apply the arguments of this main handler to all the sub-handlers
+        this.handlers.forEach(handler =>
+            (handler as (...args: any[]) => void)(...args))
+    ) as MessageHandler<P>;
+    /** Array of registered message handlers. */
+    private readonly handlers: MessageHandler<P>[] = [];
+
+    /**
+     * Adds another message handler.
+     * @param handler Function to be called.
+     */
+    public addHandler(handler: MessageHandler<P>): void
+    {
+        this.handlers.push(handler);
+    }
+}
+
+/**
+ * Function type for handling certain message types.
+ * @template P Describes the message's type.
+ */
+export type MessageHandler<P extends Prefix> =
+    P extends "init" ? InitHandler
+    : P extends "updateuser" ? UpdateUserHandler
+    : P extends "challstr" ? ChallStrHandler
+    : P extends "updatechallenges" ? UpdateChallengesHandler
+    : P extends "request" ? RequestHandler
+    : P extends "turn" ? TurnHandler
+    : P extends "switch" ? SwitchHandler
+    : () => void;
+
+/** Types of server rooms. */
+export type RoomType = "chat" | "battle";
+
+/**
+ * Maps users challenging the client to the battle format they're being
+ * challenged to.
+ */
+export type ChallengesFrom = {[user: string]: string}
+
+/**
+ * Handles an `init` message.
+ * @param type Type of room we're joining.
+ */
+export type InitHandler = (type: RoomType) => void;
+/**
+ * Handles an `updateuser` message.
+ * @param username New username.
+ * @param isGuest Whether this is a guest account.
+ */
+export type UpdateUserHandler = (username: string, isGuest: boolean) => void;
+/**
+ * Handles a `challstr` message.
+ * @param challstr String used to verify account login.
+ */
+export type ChallStrHandler = (challstr: string) => void;
+/**
+ * Handles an `updatechallenges` message.
+ * @param challengesFrom Challenges from others to the client.
+ */
+export type UpdateChallengesHandler = (challengesFrom: ChallengesFrom) => void;
+/**
+ * Handles a `request` message.
+ * @param team Some of the client's team info.
+ */
+export type RequestHandler = (team: object) => void;
+/**
+ * Handles a `turn` message.
+ * @param turn Current turn number.
+ */
+export type TurnHandler = (turn: number) => void;
+/**
+ * Handles a `switch` message.
+ * @param id ID of the pokemon being switched in.
+ * @param details Some details on species, level, etc.
+ * @param status HP and any status conditions.
+ */
+export type SwitchHandler = (id: PokemonID, details: PokemonDetails,
+    status: PokemonStatus) => void;
+
+/**
+ * Parses messages sent from the server. Instead of producing some kind of
+ * syntax tree, this parser executes event listeners or callbacks whenever it
+ * has successfully parsed a message.
+ */
 export class MessageParser
 {
-    private readonly message: string;
+    /** Registered message listeners. */
+    private readonly listeners: {[P in Prefix]: MessageListener<P>};
+    /** Message or Packet being parsed. */
+    private message: string;
     /** Position within the string. */
     private pos: number;
+    /** Current room we're parsing messages from. */
+    private _room: string;
 
-    constructor(message: string)
+    /** Current room we're parsing messages from. */
+    public get room(): string
     {
-        this.message = message;
+        return this._room;
+    }
+
+    /** Creates a MessageParser. */
+    constructor()
+    {
+        this.listeners =
+        {
+            "init": new MessageListener<"init">(),
+            "updateuser": new MessageListener<"updateuser">(),
+            "challstr": new MessageListener<"challstr">(),
+            "updatechallenges": new MessageListener<"updatechallenges">(),
+            "request": new MessageListener<"request">(),
+            "turn": new MessageListener<"turn">(),
+            "switch": new MessageListener<"switch">()
+        };
+    }
+
+    /**
+     * Adds a MessageHandler for a certain message Prefix.
+     * @template P Prefix type.
+     * @param prefix Message prefix indicating its type.
+     * @param handler Function to be called using data from the message.
+     * @returns `this` to allow chaining.
+     */
+    public on<P extends Prefix>(prefix: P, handler: MessageHandler<P>):
+        MessageParser
+    {
+        // need to assert the function type since addHandler is displayed as a
+        //  union of all possible MessageHandlers
+        (this.listeners[prefix].addHandler as
+            (handler: MessageHandler<P>) => void)(handler);
+        return this;
     }
 
     /**
      * Parses the message sent from the server. This is split into lines and
      * parsed separately as little sub-messages.
-     * @returns A Packet containing all the Messages that were parsed.
+     * @param message Unparsed message or packet of messages.
      */
-    public parse(): Packet
+    public parse(message: string)
     {
-        const result: Packet =
-        {
-            room: null,
-            messages: []
-        };
+        this.message = message;
 
         // start with parsing the room name if possible
         // format: >roomname
@@ -32,40 +165,39 @@ export class MessageParser
             this.pos = this.message.indexOf("\n", 1);
             if (this.pos !== -1)
             {
-                result.room = this.message.substring(1, this.pos);
+                this._room = this.message.substring(1, this.pos);
+            }
+            else
+            {
+                this._room = "";
             }
         }
         else
         {
             this.pos = 0;
+            this._room = "";
         }
 
         // parse all messages on each line
         while (this.pos >= 0 && this.pos < this.message.length)
         {
-            const message = this.parseMessage();
-            // filter out nulls
-            if (message)
-            {
-                result.messages.push(message);
-            }
+            this.parseMessage();
+
             // advance to the next line
             this.pos = this.message.indexOf("\n", this.pos);
             if (this.pos !== -1)
             {
+                // need to skip over that newline
                 ++this.pos;
             }
         }
-        return result;
     }
 
     /**
      * Parses a single message line.
-     * @returns A parsed Message, or null if it's either invalid or unimportant.
      */
-    private parseMessage(): Message | null
+    private parseMessage(): void
     {
-        let result: Message | null = null;
         const prefix = this.getWord();
         if (prefix)
         {
@@ -79,11 +211,7 @@ export class MessageParser
                     const word = this.getWord();
                     if (word === "chat" || word === "battle")
                     {
-                        result =
-                        {
-                            prefix: "init",
-                            type: word
-                        };
+                        this.listeners["init"].handle(word);
                     }
                     break;
                 case "title":
@@ -112,21 +240,13 @@ export class MessageParser
 
                 case "challstr": // login key
                     // format: |challstr|<id>|<really long challstr>
-                    result =
-                    {
-                        prefix: "challstr",
-                        challstr: this.getRestOfLine()
-                    };
+                    this.listeners["challstr"].handle(this.getRestOfLine());
                     break;
                 case "updateuser": // user info changed
                     // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
                     //  <avatar id>
-                    result =
-                    {
-                        prefix: "updateuser",
-                        username: this.getWord() || "",
-                        isGuest: !parseInt(this.getWord() || "0")
-                    };
+                    this.listeners["updateuser"].handle(this.getWord() || "",
+                        !parseInt(this.getWord() || "0"));
                     break;
                 case "formats":
                 case "updatesearch":
@@ -136,11 +256,8 @@ export class MessageParser
                     // format: |updatechallenges|<json>
                     // json contains challengesFrom and challengeTo
                     const challenges = JSON.parse(this.getRestOfLine());
-                    result =
-                    {
-                        prefix: "updatechallenges",
-                        challengesFrom: challenges["challengesFrom"]
-                    };
+                    this.listeners["updatechallenges"].handle(
+                        challenges["challengesFrom"]);
                     break;
                 case "queryresponse":
 
@@ -166,11 +283,8 @@ export class MessageParser
                     //  without any json, so we need to account for that
                     if (unparsedTeam.length)
                     {
-                        result =
-                        {
-                            prefix: "request",
-                            team: JSON.parse(unparsedTeam)
-                        };
+                        this.listeners["request"].handle(
+                            JSON.parse(unparsedTeam));
                     }
                     break;
                 case "inactive":
@@ -178,11 +292,8 @@ export class MessageParser
                     break;
                 case "turn": // update turn counter
                     // format: |turn|<turn number>
-                    result =
-                    {
-                        prefix: "turn",
-                        turn: parseInt(this.getRestOfLine())
-                    };
+                    this.listeners["turn"].handle(parseInt(
+                        this.getRestOfLine()));
                     break;
                 case "win":
                 case "tie":
@@ -221,13 +332,7 @@ export class MessageParser
                         break;
                     }
 
-                    result =
-                    {
-                        prefix: "switch",
-                        id: pokemonId,
-                        details: details,
-                        status: status
-                    };
+                    this.listeners["switch"].handle(pokemonId, details, status);
                     break;
                 case "detailschange":
                 case "-formechange":
@@ -268,7 +373,6 @@ export class MessageParser
                     break;
             }
         }
-        return result;
     }
 
     /**
@@ -355,7 +459,8 @@ export class MessageParser
      * character can optionally have a newline at the end. `pos` should be
      * pointed to the first `|` and will end up on the next `|` or newline, or
      * the end of the string if it encountered the end of the string.
-     * @returns The message prefix, or null if the pipe character was missing.
+     * @returns The next word in a message, or null if the pipe character was
+     * missing.
      */
     private getWord(): string | null
     {
