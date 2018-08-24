@@ -29,7 +29,7 @@ export class Bot
                 // initialize a new battle ai
                 if (!this.battles.hasOwnProperty(this.room))
                 {
-                    const ai = new BattleAI();
+                    const ai = new BattleAI(this.room, this.parser);
                     this.battles[this.room] = ai;
                 }
             }
