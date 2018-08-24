@@ -1,5 +1,4 @@
 import { BattleAI } from "./BattleAI";
-import { Message, Packet } from "./Message";
 import { MessageParser, RoomType, ChallengesFrom } from "./MessageParser";
 
 /** Handles all bot actions. */

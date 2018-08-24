@@ -6,18 +6,17 @@ const ws = new WebSocketClient();
 ws.on("connect", connection =>
 {
     Logger.debug("connected");
-
-    let bot = new Bot();
+    const bot = new Bot();
 
     connection.on("error", error =>
     {
         Logger.error(error.toString());
-    });
-    connection.on("close", (code, reason) =>
+    })
+    .on("close", (code, reason) =>
     {
         Logger.debug(`closing ${code}, reason: ${reason}`);
-    });
-    connection.on("message", unparsedPacket =>
+    })
+    .on("message", unparsedPacket =>
     {
         if (unparsedPacket.type === "utf8" && unparsedPacket.utf8Data)
         {
