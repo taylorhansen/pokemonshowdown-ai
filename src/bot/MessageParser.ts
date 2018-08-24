@@ -1,14 +1,68 @@
-import { PokemonID, PokemonDetails, PokemonStatus, Pokemon } from "./Pokemon";
+import { PokemonID, PokemonDetails, PokemonStatus } from "./Pokemon";
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "init" | "updateuser" | "challstr" | "updatechallenges" |
     "request" | "turn" | "switch";
 
 /**
+ * Listens for any type of message and delegates it to one of its specific
+ * listeners.
+ */
+export class AnyMessageListener
+{
+    /** Registered message listeners for each type of Prefix. */
+    private readonly listeners: {readonly [P in Prefix]: MessageListener<P>};
+
+    /** Creates an AnyMessageListener. */
+    constructor()
+    {
+        this.listeners =
+        {
+            "init": new MessageListener<"init">(),
+            "updateuser": new MessageListener<"updateuser">(),
+            "challstr": new MessageListener<"challstr">(),
+            "updatechallenges": new MessageListener<"updatechallenges">(),
+            "request": new MessageListener<"request">(),
+            "turn": new MessageListener<"turn">(),
+            "switch": new MessageListener<"switch">()
+        };
+    }
+
+    /**
+     * Adds a MessageHandler for a certain message Prefix.
+     * @template P Prefix type.
+     * @param prefix Message prefix indicating its type.
+     * @param handler Function to be called using data from the message.
+     * @returns `this` to allow chaining.
+     */
+    public on<P extends Prefix>(prefix: P, handler: MessageHandler<P>):
+        AnyMessageListener
+    {
+        // need to assert the function type since addHandler is displayed as a
+        //  union of all possible MessageHandlers
+        (this.listeners[prefix].addHandler as
+            (handler: MessageHandler<P>) => void)(handler);
+        return this;
+    }
+
+    /**
+     * Gets the main handler for the given message type.
+     * @template P Prefix type.
+     * @param prefix Message prefix indicating its type.
+     * @returns A function that calls all registered handlers for this message
+     * type.
+     */
+    public getHandler<P extends Prefix>(prefix: P): MessageHandler<P>
+    {
+        return this.listeners[prefix].handle as MessageHandler<P>;
+    }
+}
+
+/**
  * Listens for a certain type of message.
  * @template P Describes the message's type.
  */
-class MessageListener<P extends Prefix>
+export class MessageListener<P extends Prefix>
 {
     /**
      * Calls all registered handlers with the arguments for this type of
@@ -103,7 +157,10 @@ export type SwitchHandler = (id: PokemonID, details: PokemonDetails,
 export class MessageParser
 {
     /** Registered message listeners. */
-    private readonly listeners: {[P in Prefix]: MessageListener<P>};
+    private readonly messageListeners: {[room: string]: AnyMessageListener} =
+        {};
+    /** Listener for unfamiliar rooms. */
+    private readonly newRoomListener = new AnyMessageListener();
     /** Message or Packet being parsed. */
     private message: string;
     /** Position within the string. */
@@ -117,36 +174,37 @@ export class MessageParser
         return this._room;
     }
 
-    /** Creates a MessageParser. */
-    constructor()
-    {
-        this.listeners =
-        {
-            "init": new MessageListener<"init">(),
-            "updateuser": new MessageListener<"updateuser">(),
-            "challstr": new MessageListener<"challstr">(),
-            "updatechallenges": new MessageListener<"updatechallenges">(),
-            "request": new MessageListener<"request">(),
-            "turn": new MessageListener<"turn">(),
-            "switch": new MessageListener<"switch">()
-        };
-    }
-
     /**
-     * Adds a MessageHandler for a certain message Prefix.
+     * Adds a MessageHandler for a certain message Prefix from a certain room.
      * @template P Prefix type.
+     * @param room The room the message should originate from. Empty string
+     * means lobby or global, while `null` means an unfamiliar room.
      * @param prefix Message prefix indicating its type.
      * @param handler Function to be called using data from the message.
      * @returns `this` to allow chaining.
      */
-    public on<P extends Prefix>(prefix: P, handler: MessageHandler<P>):
-        MessageParser
+    public on<P extends Prefix>(room: string | null, prefix: P,
+        handler: MessageHandler<P>): MessageParser
     {
-        // need to assert the function type since addHandler is displayed as a
-        //  union of all possible MessageHandlers
-        (this.listeners[prefix].addHandler as
-            (handler: MessageHandler<P>) => void)(handler);
+        (room !== null ? this.getListener(room) : this.newRoomListener)
+            .on(prefix, handler);
         return this;
+    }
+
+    /**
+     * Gets a message listener for the given room. If the room is unfamiliar,
+     * then a new listener is created and returned.
+     * @param room The room this message originates from. Empty string means
+     * lobby or global.
+     * @returns A message listener for the given room.
+     */
+    public getListener(room: string): AnyMessageListener
+    {
+        if (!this.messageListeners.hasOwnProperty(room))
+        {
+            this.messageListeners[room] = new AnyMessageListener();
+        }
+        return this.messageListeners[room];
     }
 
     /**
@@ -194,6 +252,23 @@ export class MessageParser
     }
 
     /**
+     * Gets a MessageHandler for the current room and given message prefix. If
+     * the room name is unfamiliar, then the new room listener is used.
+     * @template P Prefix type.
+     * @param prefix Message prefix indicating its type.
+     * @returns The appropriate function to call for this message prefix.
+     */
+    private getHandler<P extends Prefix>(prefix: P):
+        MessageHandler<P>
+    {
+        if (this.messageListeners.hasOwnProperty(this._room))
+        {
+            return this.messageListeners[this._room].getHandler(prefix);
+        }
+        return this.newRoomListener.getHandler(prefix);
+    }
+
+    /**
      * Parses a single message line.
      */
     private parseMessage(): void
@@ -211,7 +286,7 @@ export class MessageParser
                     const word = this.getWord();
                     if (word === "chat" || word === "battle")
                     {
-                        this.listeners["init"].handle(word);
+                        this.getHandler("init")(word);
                     }
                     break;
                 case "title":
@@ -240,12 +315,12 @@ export class MessageParser
 
                 case "challstr": // login key
                     // format: |challstr|<id>|<really long challstr>
-                    this.listeners["challstr"].handle(this.getRestOfLine());
+                    this.getHandler("challstr")(this.getRestOfLine());
                     break;
                 case "updateuser": // user info changed
                     // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
                     //  <avatar id>
-                    this.listeners["updateuser"].handle(this.getWord() || "",
+                    this.getHandler("updateuser")(this.getWord() || "",
                         !parseInt(this.getWord() || "0"));
                     break;
                 case "formats":
@@ -256,7 +331,7 @@ export class MessageParser
                     // format: |updatechallenges|<json>
                     // json contains challengesFrom and challengeTo
                     const challenges = JSON.parse(this.getRestOfLine());
-                    this.listeners["updatechallenges"].handle(
+                    this.getHandler("updatechallenges")(
                         challenges["challengesFrom"]);
                     break;
                 case "queryresponse":
@@ -283,8 +358,7 @@ export class MessageParser
                     //  without any json, so we need to account for that
                     if (unparsedTeam.length)
                     {
-                        this.listeners["request"].handle(
-                            JSON.parse(unparsedTeam));
+                        this.getHandler("request")(JSON.parse(unparsedTeam));
                     }
                     break;
                 case "inactive":
@@ -292,8 +366,7 @@ export class MessageParser
                     break;
                 case "turn": // update turn counter
                     // format: |turn|<turn number>
-                    this.listeners["turn"].handle(parseInt(
-                        this.getRestOfLine()));
+                    this.getHandler("turn")(parseInt(this.getRestOfLine()));
                     break;
                 case "win":
                 case "tie":
@@ -332,7 +405,7 @@ export class MessageParser
                         break;
                     }
 
-                    this.listeners["switch"].handle(pokemonId, details, status);
+                    this.getHandler("switch")(pokemonId, details, status);
                     break;
                 case "detailschange":
                 case "-formechange":

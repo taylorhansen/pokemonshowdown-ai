@@ -21,18 +21,18 @@ export class Bot
     /** Creates a Bot. */
     constructor()
     {
-        this.parser.on("init", (type: RoomType) =>
+        this.parser.on(null, "init", (type: RoomType) =>
         {
             if (type === "battle")
             {
                 // initialize a new battle ai
                 if (!this.battles.hasOwnProperty(this.room))
                 {
-                    const ai = new BattleAI(this.room, this.parser);
+                    const ai = new BattleAI(this.parser.getListener(this.room));
                     this.battles[this.room] = ai;
                 }
             }
-        }).on("updatechallenges", (challengesFrom: ChallengesFrom) =>
+        }).on("", "updatechallenges", (challengesFrom: ChallengesFrom) =>
         {
             // test team for now
             const useteam = `|/useteam Magikarp||Focus Sash||\

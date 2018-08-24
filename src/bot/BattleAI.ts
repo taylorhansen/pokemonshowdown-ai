@@ -1,5 +1,5 @@
 import { Logger } from "../logger/Logger";
-import { MessageParser } from "./MessageParser";
+import { AnyMessageListener } from "./MessageParser";
 
 /** Differentiates between the AI and the opponent. */
 export type Owner = "us" | "them";
@@ -22,29 +22,21 @@ export class BattleAI
 
     /**
      * Creates a BattleAI object.
-     * @param room Room where the battle takes place.
-     * @param parser Used to subscribe to certain messages.
+     * @param listener Used to subscribe to certain messages.
      */
-    constructor(room: string, parser: MessageParser)
+    constructor(listener: AnyMessageListener)
     {
         this.players = {};
         this.teams = {};
-        parser.on("request", (team: object) =>
+        listener.on("request", (team: object) =>
         {
-            // FIXME: use a hash listener lookup based on room?
-            if (parser.room === room)
-            {
-                // fill in team info (how exactly?)
-                Logger.debug("request!");
-            }
+            // fill in team info (how exactly?)
+            Logger.debug("request!");
         })
         .on("switch", (team: object) =>
         {
-            if (parser.room === room)
-            {
-                // switch out active pokemon and what we know about them
-                Logger.debug("switch!");
-            }
+            // switch out active pokemon and what we know about them
+            Logger.debug("switch!");
         });
     }
 }
