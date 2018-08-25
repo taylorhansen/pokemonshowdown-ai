@@ -11,23 +11,17 @@ export type Prefix = "init" | "updateuser" | "challstr" | "updatechallenges" |
 export class AnyMessageListener
 {
     /** Registered message listeners for each type of Prefix. */
-    private readonly listeners: {readonly [P in Prefix]: MessageListener<P>};
-
-    /** Creates an AnyMessageListener. */
-    constructor()
+    private readonly listeners: {readonly [P in Prefix]: MessageListener<P>} =
     {
-        this.listeners =
-        {
-            "init": new MessageListener<"init">(),
-            "updateuser": new MessageListener<"updateuser">(),
-            "challstr": new MessageListener<"challstr">(),
-            "updatechallenges": new MessageListener<"updatechallenges">(),
-            "request": new MessageListener<"request">(),
-            "turn": new MessageListener<"turn">(),
-            "error": new MessageListener<"error">(),
-            "switch": new MessageListener<"switch">()
-        };
-    }
+        "init": new MessageListener<"init">(),
+        "updateuser": new MessageListener<"updateuser">(),
+        "challstr": new MessageListener<"challstr">(),
+        "updatechallenges": new MessageListener<"updatechallenges">(),
+        "request": new MessageListener<"request">(),
+        "turn": new MessageListener<"turn">(),
+        "error": new MessageListener<"error">(),
+        "switch": new MessageListener<"switch">()
+    };
 
     /**
      * Adds a MessageHandler for a certain message Prefix.
