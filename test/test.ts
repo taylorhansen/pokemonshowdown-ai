@@ -1,17 +1,14 @@
 import { expect } from "chai";
 import "mocha";
+import { MessageParser } from "../src/bot/MessageParser";
 
-describe("example suite", () =>
+describe("MessageParser test", () =>
 {
-    it("should pass", () =>
+    const parser = new MessageParser();
+    it("Should parse room name", () =>
     {
-        const x = "hi";
-        expect(x).to.equal("hi");
-    });
-
-    it("should fail", () =>
-    {
-        const x = "no";
-        expect(x).to.equal("hi");
+        const room = "myroomname"
+        parser.parse(`>${room}`);
+        expect(parser.room).to.equal(room);
     });
 });

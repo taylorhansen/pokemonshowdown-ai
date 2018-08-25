@@ -74,14 +74,11 @@ export class MessageParser
         if (this.message.startsWith(">"))
         {
             this.pos = this.message.indexOf("\n", 1);
-            if (this.pos !== -1)
+            if (this.pos === -1)
             {
-                this._room = this.message.substring(1, this.pos);
+                this.pos = this.message.length;
             }
-            else
-            {
-                this._room = "";
-            }
+            this._room = this.message.substring(1, this.pos);
         }
         else
         {
