@@ -54,8 +54,6 @@ bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
                     // ai only supports gen4ou for now
                     if (challengesFrom[user] === "gen4ou")
                     {
-                        // private message room names are the user being
-                        //  messaged
                         this.addResponses(null, useteam, `|/accept ${user}`);
                     }
                     else

@@ -1,5 +1,6 @@
 import { AnyMessageListener, Prefix, MessageHandler } from "./MessageListener";
-import { PokemonID, PokemonDetails, PokemonStatus } from "./Pokemon";
+import { PokemonID, PokemonDetails, PokemonStatus } from
+    "../BattleState/Pokemon";
 
 /**
  * Parses messages sent from the server. Instead of producing some kind of

@@ -23,22 +23,6 @@ export interface PokemonStatus
     condition: string;
 }
 
-/** Represents the possibly incomplete info about a Pokemon. */
-export interface Pokemon
-{
-    owner: string; // TODO
-    species: string;
-    gender: string | null;
-    active: boolean;
-    hp: number;
-    hpMax: number;
-    hpPercent: boolean;
-    stats: Stats;
-    moves: Move[];
-    baseAbility: string | string[];
-    item: string;
-}
-
 /** A combination of stats. */
 export interface Stats
 {
@@ -47,14 +31,4 @@ export interface Stats
     spa: number | number[];
     spd: number | number[];
     spe: number | number[];
-}
-
-/** Information about a move that a Pokemon can use. */
-export interface Move
-{
-    name: string;
-    pp: number;
-    maxpp: number;
-    target: string;
-    disabled: boolean;
 }

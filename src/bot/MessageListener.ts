@@ -1,4 +1,5 @@
-import { PokemonID, PokemonDetails, PokemonStatus } from "./Pokemon";
+import { PokemonID, PokemonDetails, PokemonStatus } from
+    "../BattleState/Pokemon";
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "init" | "updateuser" | "challstr" | "updatechallenges" |

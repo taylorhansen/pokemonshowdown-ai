@@ -1,3 +1,4 @@
+import { BattleState } from "../BattleState/BattleState";
 import { Logger } from "../logger/Logger";
 import { AnyMessageListener } from "./MessageListener";
 import * as readline from "readline";
@@ -13,6 +14,8 @@ const rl = readline.createInterface(process.stdin, process.stdout);
 */
 export class BattleAI
 {
+    /** Manages battle state and neural network input. */
+    private readonly state = new BattleState();
     /** Used to send response messages to the server. */
     private readonly addResponses: (...responses: string[]) => void;
 
@@ -29,7 +32,7 @@ export class BattleAI
         {
             // fill in team info (how exactly?)
         })
-        .on("switch", (team: object) =>
+        .on("switch", () =>
         {
             // switch out active pokemon and what we know about them
         })
@@ -45,7 +48,7 @@ export class BattleAI
         });
     }
 
-    /** Asks for and sends user input to the server once its received. */
+    /** Asks for and sends user input to the server once it's received. */
     private ask(): void
     {
         rl.question("ai> ", answer =>
