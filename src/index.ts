@@ -6,7 +6,7 @@ const ws = new WebSocketClient();
 ws.on("connect", connection =>
 {
     Logger.debug("connected");
-    const bot = new Bot();
+    const bot = new Bot((response: string) => connection.sendUTF(response));
 
     connection.on("error", error =>
     {
@@ -21,13 +21,7 @@ ws.on("connect", connection =>
         if (unparsedPacket.type === "utf8" && unparsedPacket.utf8Data)
         {
             Logger.debug(`received: ${unparsedPacket.utf8Data}`);
-            const responses = bot.consumePacket(unparsedPacket.utf8Data);
-
-            if (responses.length)
-            {
-                Logger.debug(`sent: ${responses}`);
-                responses.forEach(response => connection.sendUTF(response));
-            }
+            bot.consumePacket(unparsedPacket.utf8Data);
         }
     });
 });

@@ -1,4 +1,5 @@
 import { BattleAI } from "./BattleAI";
+import { Logger } from "../logger/Logger";
 import { RoomType, ChallengesFrom } from "./MessageListener";
 import { MessageParser } from "./MessageParser";
 
@@ -10,8 +11,8 @@ export class Bot
     private readonly battles: {[room: string]: BattleAI} = {};
     /** Name of the user. */
     private username: string = "";
-    /** Pending responses to be sent to the server. */
-    private responses: string[] = [];
+    /** Used to send response messages to the server. */
+    private readonly send: (response: string) => void;
 
     /** Current room we're receiving messages from. */
     private get room(): string
@@ -20,8 +21,9 @@ export class Bot
     }
 
     /** Creates a Bot. */
-    constructor()
+    constructor(send: (response: string) => void)
     {
+        this.send = send;
         this.parser.on(null, "init", (type: RoomType) =>
         {
             if (type === "battle")
@@ -68,31 +70,25 @@ bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
     /**
      * Parses a packet of messages and possibly acts upon it.
      * @param unparsedPacket Message data from the server.
-     * @returns A possible list of response messages to be sent to the server.
-     * Can be empty.
      */
-    public consumePacket(unparsedPacket: string): string[]
+    public consumePacket(unparsedPacket: string): void
     {
         this.parser.parse(unparsedPacket);
-
-        // send any pending responses then reset the list
-        const tmp = this.responses;
-        this.responses = [];
-        return tmp;
     }
 
     /**
-     * Queues a list of responses to be sent to the server.
+     * Sends a list of responses to the server.
      * @param room Room to send the response from. Can be null if it doesn't
      * matter.
      * @param responses Responses to be sent to the server.
      */
-    public addResponses(room: string | null, ...responses: string[]): void
+    private addResponses(room: string | null, ...responses: string[]): void
     {
         if (room)
         {
             responses = responses.map(response => room + response);
         }
-        this.responses.push(...responses);
+        responses.forEach(response => this.send(response));
+        Logger.debug(`sent: ["${responses.join("\", \"")}"]`);
     }
 }

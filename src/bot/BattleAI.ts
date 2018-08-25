@@ -1,8 +1,8 @@
 import { Logger } from "../logger/Logger";
 import { AnyMessageListener } from "./MessageListener";
+import * as readline from "readline";
 
-/** Differentiates between the AI and the opponent. */
-export type Owner = "us" | "them";
+const rl = readline.createInterface(process.stdin, process.stdout);
 
 /**
  * Controls the AI's actions during a battle.
@@ -13,12 +13,8 @@ export type Owner = "us" | "them";
 */
 export class BattleAI
 {
-    /**
-     * Holds the two player ids and tells which one symbolizes the AI or the
-     * opponent.
-     */
-    private readonly players: {[id: string]: Owner};
-    private readonly teams: {[owner: string]: null[]};
+    /** Used to send response messages to the server. */
+    private readonly addResponses: (...responses: string[]) => void;
 
     /**
      * Creates a BattleAI object.
@@ -28,18 +24,41 @@ export class BattleAI
     constructor(listener: AnyMessageListener,
         addResponses: (...respones: string[]) => void)
     {
-        this.players = {};
-        this.teams = {};
+        this.addResponses = addResponses;
         listener.on("request", (team: object) =>
         {
             // fill in team info (how exactly?)
-            Logger.debug("request!");
         })
         .on("switch", (team: object) =>
         {
             // switch out active pokemon and what we know about them
-            Logger.debug("switch!");
-            addResponses("|/move 1");
+        })
+        .on("turn", (turn: number) =>
+        {
+            Logger.debug(`new turn: ${turn}`)
+            this.ask();
+        })
+        .on("error", (reason: string) =>
+        {
+            Logger.error(reason);
+            this.ask();
+        });
+    }
+
+    /** Asks for and sends user input to the server once its received. */
+    private ask(): void
+    {
+        rl.question("ai> ", answer =>
+        {
+            if (answer)
+            {
+                Logger.debug("received ai input");
+                this.addResponses(answer);
+            }
+            else
+            {
+                Logger.error("no ai input");
+            }
         });
     }
 }

@@ -164,7 +164,6 @@ export class MessageParser
                 case "usercount":
                 case "nametaken":
                     break;
-
                 case "challstr": // login key
                     // format: |challstr|<id>|<really long challstr>
                     this.getHandler("challstr")(this.getRestOfLine());
@@ -223,6 +222,9 @@ export class MessageParser
                 case "win":
                 case "tie":
                     break;
+                case "error": // e.g. invalid move/switch choice
+                    // format: |error|[reason] description
+                    this.getHandler("error")(this.getRestOfLine());
 
                 // major actions
                 case "move": // a pokemon performed a move

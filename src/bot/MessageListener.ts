@@ -2,7 +2,7 @@ import { PokemonID, PokemonDetails, PokemonStatus } from "./Pokemon";
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "init" | "updateuser" | "challstr" | "updatechallenges" |
-    "request" | "turn" | "switch";
+    "request" | "turn" | "error" | "switch";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -24,6 +24,7 @@ export class AnyMessageListener
             "updatechallenges": new MessageListener<"updatechallenges">(),
             "request": new MessageListener<"request">(),
             "turn": new MessageListener<"turn">(),
+            "error": new MessageListener<"error">(),
             "switch": new MessageListener<"switch">()
         };
     }
@@ -62,7 +63,7 @@ export class AnyMessageListener
  * Listens for a certain type of message.
  * @template P Describes the message's type.
  */
-export class MessageListener<P extends Prefix>
+class MessageListener<P extends Prefix>
 {
     /**
      * Calls all registered handlers with the arguments for this type of
@@ -97,6 +98,7 @@ export type MessageHandler<P extends Prefix> =
     : P extends "updatechallenges" ? UpdateChallengesHandler
     : P extends "request" ? RequestHandler
     : P extends "turn" ? TurnHandler
+    : P extends "error" ? ErrorHandler
     : P extends "switch" ? SwitchHandler
     : () => void;
 
@@ -114,32 +116,44 @@ export type ChallengesFrom = {[user: string]: string}
  * @param type Type of room we're joining.
  */
 export type InitHandler = (type: RoomType) => void;
+
 /**
  * Handles an `updateuser` message.
  * @param username New username.
  * @param isGuest Whether this is a guest account.
  */
 export type UpdateUserHandler = (username: string, isGuest: boolean) => void;
+
 /**
  * Handles a `challstr` message.
  * @param challstr String used to verify account login.
  */
 export type ChallStrHandler = (challstr: string) => void;
+
 /**
  * Handles an `updatechallenges` message.
  * @param challengesFrom Challenges from others to the client.
  */
 export type UpdateChallengesHandler = (challengesFrom: ChallengesFrom) => void;
+
 /**
  * Handles a `request` message.
  * @param team Some of the client's team info.
  */
 export type RequestHandler = (team: object) => void;
+
 /**
  * Handles a `turn` message.
  * @param turn Current turn number.
  */
 export type TurnHandler = (turn: number) => void;
+
+/**
+ * Handles an `error` message.
+ * @param reason Why the requested action failed.
+ */
+export type ErrorHandler = (reason: string) => void;
+
 /**
  * Handles a `switch` message.
  * @param id ID of the pokemon being switched in.
