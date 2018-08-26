@@ -1,7 +1,7 @@
-import { BattleState } from "../state/BattleState";
+import { BattleState, Side } from "../state/BattleState";
 import { Logger } from "../logger/Logger";
 import { AnyMessageListener } from "../parser/MessageListener";
-import { PokemonID, PokemonDetails, PokemonStatus } from
+import { PokemonID, PokemonDetails, PokemonStatus, PlayerID } from
     "../parser/MessageData";
 import * as readline from "readline";
 
@@ -18,6 +18,11 @@ export class BattleAI
 {
     /** Manages battle state and neural network input. */
     private readonly state = new BattleState();
+    /**
+     * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
+     * them).
+     */
+    private readonly sides: {[ID in PlayerID]: Side};
     /** Used to send response messages to the server. */
     private readonly addResponses: (...responses: string[]) => void;
 
@@ -30,7 +35,13 @@ export class BattleAI
         addResponses: (...respones: string[]) => void)
     {
         this.addResponses = addResponses;
-        listener.on("request", (team: object) =>
+        listener
+        .on("error", (reason: string) =>
+        {
+            Logger.error(reason);
+            this.ask();
+        })
+        .on("request", (team: object) =>
         {
             // fill in team info (how exactly?)
         })
@@ -39,14 +50,14 @@ export class BattleAI
         {
             // switch out active pokemon and what we know about them
         })
+        .on("teamsize", (id: PlayerID, size: number) =>
+        {
+            // TODO: initialize this.sides
+            this.state.setTeamSize(this.sides[id], size);
+        })
         .on("turn", (turn: number) =>
         {
             Logger.debug(`new turn: ${turn}`)
-            this.ask();
-        })
-        .on("error", (reason: string) =>
-        {
-            Logger.error(reason);
             this.ask();
         });
     }

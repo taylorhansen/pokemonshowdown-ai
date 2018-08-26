@@ -1,9 +1,9 @@
-import { ChallengesFrom, RoomType, PokemonID, PokemonDetails, PokemonStatus }
-    from "./MessageData";
+import { ChallengesFrom, RoomType, PokemonID, PokemonDetails, PokemonStatus,
+    PlayerID } from "./MessageData";
 
 /** Prefix for a message that tells of the message's type. */
-export type Prefix = "init" | "updateuser" | "challstr" | "updatechallenges" |
-    "request" | "turn" | "error" | "switch";
+export type Prefix = "challstr" | "error" | "init" | "request" | "switch" |
+    "teamsize" | "turn" | "updatechallenges" | "updateuser";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -14,14 +14,15 @@ export class AnyMessageListener
     /** Registered message listeners for each type of Prefix. */
     private readonly listeners: {readonly [P in Prefix]: MessageListener<P>} =
     {
-        "init": new MessageListener<"init">(),
-        "updateuser": new MessageListener<"updateuser">(),
         "challstr": new MessageListener<"challstr">(),
-        "updatechallenges": new MessageListener<"updatechallenges">(),
-        "request": new MessageListener<"request">(),
-        "turn": new MessageListener<"turn">(),
         "error": new MessageListener<"error">(),
-        "switch": new MessageListener<"switch">()
+        "init": new MessageListener<"init">(),
+        "request": new MessageListener<"request">(),
+        "switch": new MessageListener<"switch">(),
+        "teamsize": new MessageListener<"teamsize">(),
+        "turn": new MessageListener<"turn">(),
+        "updatechallenges": new MessageListener<"updatechallenges">(),
+        "updateuser": new MessageListener<"updateuser">()
     };
 
     /**
@@ -87,28 +88,16 @@ class MessageListener<P extends Prefix>
  * @template P Describes the message's type.
  */
 export type MessageHandler<P extends Prefix> =
-    P extends "init" ? InitHandler
-    : P extends "updateuser" ? UpdateUserHandler
-    : P extends "challstr" ? ChallStrHandler
-    : P extends "updatechallenges" ? UpdateChallengesHandler
-    : P extends "request" ? RequestHandler
-    : P extends "turn" ? TurnHandler
+    P extends "challstr" ? ChallStrHandler
     : P extends "error" ? ErrorHandler
+    : P extends "init" ? InitHandler
+    : P extends "request" ? RequestHandler
     : P extends "switch" ? SwitchHandler
+    : P extends "teamsize" ? TeamSizeHandler
+    : P extends "turn" ? TurnHandler
+    : P extends "updatechallenges" ? UpdateChallengesHandler
+    : P extends "updateuser" ? UpdateUserHandler
     : () => void;
-
-/**
- * Handles an `init` message.
- * @param type Type of room we're joining.
- */
-export type InitHandler = (type: RoomType) => void;
-
-/**
- * Handles an `updateuser` message.
- * @param username New username.
- * @param isGuest Whether this is a guest account.
- */
-export type UpdateUserHandler = (username: string, isGuest: boolean) => void;
 
 /**
  * Handles a `challstr` message.
@@ -117,28 +106,22 @@ export type UpdateUserHandler = (username: string, isGuest: boolean) => void;
 export type ChallStrHandler = (challstr: string) => void;
 
 /**
- * Handles an `updatechallenges` message.
- * @param challengesFrom Challenges from others to the client.
+ * Handles an `error` message.
+ * @param reason Why the requested action failed.
  */
-export type UpdateChallengesHandler = (challengesFrom: ChallengesFrom) => void;
+export type ErrorHandler = (reason: string) => void;
+
+/**
+ * Handles an `init` message.
+ * @param type Type of room we're joining.
+ */
+export type InitHandler = (type: RoomType) => void;
 
 /**
  * Handles a `request` message.
  * @param team Some of the client's team info.
  */
 export type RequestHandler = (team: object) => void;
-
-/**
- * Handles a `turn` message.
- * @param turn Current turn number.
- */
-export type TurnHandler = (turn: number) => void;
-
-/**
- * Handles an `error` message.
- * @param reason Why the requested action failed.
- */
-export type ErrorHandler = (reason: string) => void;
 
 /**
  * Handles a `switch` message.
@@ -148,3 +131,29 @@ export type ErrorHandler = (reason: string) => void;
  */
 export type SwitchHandler = (id: PokemonID, details: PokemonDetails,
     status: PokemonStatus) => void;
+
+/**
+ * Handles a `teamsize` message.
+ * @param id Player ID.
+ * @param size Size of that player's team.
+ */
+export type TeamSizeHandler = (id: PlayerID, size: number) => void;
+
+/**
+ * Handles a `turn` message.
+ * @param turn Current turn number.
+ */
+export type TurnHandler = (turn: number) => void;
+
+/**
+ * Handles an `updatechallenges` message.
+ * @param challengesFrom Challenges from others to the client.
+ */
+export type UpdateChallengesHandler = (challengesFrom: ChallengesFrom) => void;
+
+/**
+ * Handles an `updateuser` message.
+ * @param username New username.
+ * @param isGuest Whether this is a guest account.
+ */
+export type UpdateUserHandler = (username: string, isGuest: boolean) => void;

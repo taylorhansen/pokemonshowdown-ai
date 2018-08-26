@@ -194,7 +194,22 @@ export class MessageParser
 
                 // battle initialization
                 /*case "player":
-                case "gametype":
+                    break;*/
+                case "teamsize": // initialize the size of a player's team
+                    // format: |teamsize|<player>|<size>
+                    // player should be p1 or p2
+                    const playerId = this.getWord();
+                    if (playerId && (playerId === "p1" || playerId === "p2"))
+                    {
+                        const unparsedSize = this.getWord();
+                        if (unparsedSize)
+                        {
+                            this.getHandler("teamsize")(playerId,
+                                parseInt(unparsedSize));
+                        }
+                    }
+                    break;
+                /*case "gametype":
                 case "gen":
                 case "tier":
                 case "rated":

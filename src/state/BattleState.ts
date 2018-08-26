@@ -11,6 +11,12 @@ export class Team
     private status: TeamStatus;
     /** The pokemon that compose this team. First one is always active. */
     private pokemon: Pokemon[];
+
+    /** Number of pokemon on this team. */
+    public set size(size: number)
+    {
+        this.pokemon.fill(new Pokemon(), 0, size);
+    }
 }
 
 /** Temporary status conditions for a certain team. */
@@ -99,8 +105,13 @@ export type Side = "us" | "them";
 export class BattleState
 {
     /** Global status conditions for the entire room. */
-    private status = new RoomStatus();
+    private readonly status = new RoomStatus();
     /** Team data. */
-    private teams: {readonly [S in Side]: Team} =
+    private readonly teams: {readonly [S in Side]: Team} =
         { "us": new Team(), "them": new Team() };
+
+    public setTeamSize(side: Side, size: number): void
+    {
+        this.teams[side].size = size;
+    }
 }

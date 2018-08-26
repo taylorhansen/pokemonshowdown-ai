@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { ChallengesFrom, PokemonID, PokemonDetails, PokemonStatus, RoomType }
-    from "../src/parser/MessageData";
+import { ChallengesFrom, PokemonID, PokemonDetails, PokemonStatus, RoomType,
+    PlayerID } from "../src/parser/MessageData";
 import { AnyMessageListener } from "../src/parser/MessageListener";
 
 describe("AnyMessageListener", function()
@@ -11,6 +11,34 @@ describe("AnyMessageListener", function()
     beforeEach("Initialize AnyMessageListener", function()
     {
         listener = new AnyMessageListener();
+    });
+
+    describe("challstr", function()
+    {
+        it("Should handle a normal challstr message", function(done)
+        {
+            const something = "something";
+            listener.on("challstr", (challstr: string) =>
+            {
+                expect(challstr).to.equal(something);
+                done();
+            })
+            .getHandler("challstr")(something);
+        });
+    });
+
+    describe("error", function()
+    {
+        it("Should handle a normal error message", function(done)
+        {
+            const message = "because i said so";
+            listener.on("error", (reason: string) =>
+            {
+                expect(reason).to.equal(message);
+                done();
+            })
+            .getHandler("error")(message);
+        });
     });
 
     describe("init", function()
@@ -30,50 +58,6 @@ describe("AnyMessageListener", function()
         };
     });
 
-    describe("updateuser", function()
-    {
-        it("Should handle a normal updateuser message", function(done)
-        {
-            const newuser = "newuser";
-            const guest = true;
-            listener.on("updateuser", (username: string, isGuest: boolean) =>
-            {
-                expect(username).to.equal(newuser);
-                expect(isGuest).to.equal(guest);
-                done();
-            })
-            .getHandler("updateuser")(newuser, guest);
-        });
-    });
-
-    describe("challstr", function()
-    {
-        it("Should handle a normal challstr message", function(done)
-        {
-            const something = "something";
-            listener.on("challstr", (challstr: string) =>
-            {
-                expect(challstr).to.equal(something);
-                done();
-            })
-            .getHandler("challstr")(something);
-        });
-    });
-
-    describe("updatechallenges", function()
-    {
-        it("Should handle a normal updatechallenges message", function(done)
-        {
-            const from: ChallengesFrom = { "newuser": "gen4ou" };
-            listener.on("updatechallenges", (challengesFrom: ChallengesFrom) =>
-            {
-                expect(challengesFrom).to.equal(from);
-                done();
-            })
-            .getHandler("updatechallenges")(from);
-        });
-    });
-
     describe("request", function()
     {
         it("Should handle a normal request message", function(done)
@@ -85,34 +69,6 @@ describe("AnyMessageListener", function()
                 done();
             })
             .getHandler("request")(teamInfo);
-        });
-    });
-
-    describe("turn", function()
-    {
-        it("Should handle a normal turn message", function(done)
-        {
-            const givenTurn = 1;
-            listener.on("turn", (turn: number) =>
-            {
-                expect(turn).to.equal(givenTurn);
-                done();
-            })
-            .getHandler("turn")(givenTurn);
-        });
-    });
-
-    describe("error", function()
-    {
-        it("Should handle a normal error message", function(done)
-        {
-            const message = "because i said so";
-            listener.on("error", (reason: string) =>
-            {
-                expect(reason).to.equal(message);
-                done();
-            })
-            .getHandler("error")(message);
         });
     });
 
@@ -135,6 +91,66 @@ describe("AnyMessageListener", function()
                 done();
             })
             .getHandler("switch")(givenId, givenDetails, givenStatus);
+        });
+    });
+
+    describe("teamsize", function()
+    {
+        it("Should handle a normal teamsize message", function(done)
+        {
+            const givenId = "p1";
+            const givenSize = 1;
+            listener.on("teamsize", (id: PlayerID, size: number) =>
+            {
+                expect(id).to.equal(givenId);
+                expect(size).to.equal(givenSize);
+                done();
+            })
+            .getHandler("teamsize")(givenId, givenSize);
+        });
+    });
+
+    describe("turn", function()
+    {
+        it("Should handle a normal turn message", function(done)
+        {
+            const givenTurn = 1;
+            listener.on("turn", (turn: number) =>
+            {
+                expect(turn).to.equal(givenTurn);
+                done();
+            })
+            .getHandler("turn")(givenTurn);
+        });
+    });
+
+    describe("updatechallenges", function()
+    {
+        it("Should handle a normal updatechallenges message", function(done)
+        {
+            const from: ChallengesFrom = { "newuser": "gen4ou" };
+            listener.on("updatechallenges", (challengesFrom: ChallengesFrom) =>
+            {
+                expect(challengesFrom).to.equal(from);
+                done();
+            })
+            .getHandler("updatechallenges")(from);
+        });
+    });
+
+    describe("updateuser", function()
+    {
+        it("Should handle a normal updateuser message", function(done)
+        {
+            const newuser = "newuser";
+            const guest = true;
+            listener.on("updateuser", (username: string, isGuest: boolean) =>
+            {
+                expect(username).to.equal(newuser);
+                expect(isGuest).to.equal(guest);
+                done();
+            })
+            .getHandler("updateuser")(newuser, guest);
         });
     });
 });

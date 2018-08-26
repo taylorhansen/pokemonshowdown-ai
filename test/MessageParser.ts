@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { ChallengesFrom, PokemonStatus, PokemonID, PokemonDetails, RoomType }
-    from "../src/parser/MessageData";
+import { ChallengesFrom, PokemonStatus, PokemonID, PokemonDetails, RoomType,
+    PlayerID } from "../src/parser/MessageData";
 import { MessageParser } from "../src/parser/MessageParser";
 import "mocha";
 
@@ -58,6 +58,35 @@ describe("MessageParser", function()
 
     describe("Message types", function()
     {
+        describe("challstr", function()
+        {
+            it("Should parse challstr", function(done)
+            {
+                // not an actual challstr
+                const givenChallstr = "4|12352361236737sdagwflk";
+                parser.on("", "challstr", (challstr: string) =>
+                {
+                    expect(challstr).to.equal(givenChallstr);
+                    done();
+                })
+                .parse(`|challstr|${givenChallstr}`);
+            });
+        });
+
+        describe("error", function()
+        {
+            it("Should parse error", function(done)
+            {
+                const givenReason = "because i said so";
+                parser.on("", "error", (reason: string) =>
+                {
+                    expect(reason).to.equal(givenReason);
+                    done();
+                })
+                .parse(`|error|${givenReason}`);
+            });
+        });
+
         describe("init", function()
         {
             const initTypes: RoomType[] = ["chat", "battle"];
@@ -75,67 +104,6 @@ describe("MessageParser", function()
             };
         });
 
-        describe("challstr", function()
-        {
-            it("Should parse challstr", function(done)
-            {
-                // not an actual challstr
-                const givenChallstr = "4|12352361236737sdagwflk";
-                parser.on("", "challstr", (challstr: string) =>
-                {
-                    expect(challstr).to.equal(givenChallstr);
-                    done();
-                })
-                .parse(`|challstr|${givenChallstr}`);
-            });
-        });
-
-        describe("updateuser", function()
-        {
-            it("Should parse updateuser", function(done)
-            {
-                const givenUsername = "somebody";
-                const guest = 0;
-                const avatarId = 21;
-                parser.on("", "updateuser",
-                    (username: string, isGuest: boolean) =>
-                {
-                    expect(username).to.equal(givenUsername);
-                    expect(isGuest).to.equal(!guest);
-                    done();
-                })
-                .parse(`|updateuser|${givenUsername}|${guest}|${avatarId}`);
-            });
-
-            for (const msg of ["updateuser", "updateuser|user"])
-            {
-                it(`Should not parse empty ${msg}`, function()
-                {
-                    parser.on("", "updateuser", () =>
-                    {
-                        throw new Error("Parsed empty updateuser");
-                    })
-                    .parse(`|${msg}`);
-                });
-            }
-        });
-
-        describe("updatechallenges", function()
-        {
-            it("Should parse updatechallenges", function(done)
-            {
-                const givenChallengesFrom: ChallengesFrom =
-                    { somebody: "gen4ou" };
-                parser.on("", "updatechallenges",
-                    (challengesFrom: ChallengesFrom) =>
-                {
-                    expect(challengesFrom).to.deep.equal(givenChallengesFrom);
-                    done();
-                })
-                .parse(`|updatechallenges|{"challengesFrom":\
-${JSON.stringify(givenChallengesFrom)}}`);
-            });
-        });
 
         describe("request", function()
         {
@@ -157,34 +125,6 @@ ${JSON.stringify(givenChallengesFrom)}}`);
                     done();
                 })
                 .parse(`|request|${JSON.stringify(givenTeam)}`);
-            });
-        });
-
-        describe("turn", function()
-        {
-            it("Should parse turn", function(done)
-            {
-                const givenTurn = 1;
-                parser.on("", "turn", (turn: number) =>
-                {
-                    expect(turn).to.equal(givenTurn);
-                    done();
-                })
-                .parse(`|turn|${givenTurn}`);
-            });
-        });
-
-        describe("error", function()
-        {
-            it("Should parse error", function(done)
-            {
-                const givenReason = "because i said so";
-                parser.on("", "error", (reason: string) =>
-                {
-                    expect(reason).to.equal(givenReason);
-                    done();
-                })
-                .parse(`|error|${givenReason}`);
             });
         });
 
@@ -271,6 +211,104 @@ ${JSON.stringify(givenChallengesFrom)}}`);
                         .parse(`|switch|${switchInfos[0].join("|")}`);
                     });
                 }
+            }
+        });
+
+        describe("teamsize", function()
+        {
+            const givenIds = ["p1", "p2"];
+            const givenSize = 1;
+            for (let i = 0; i < givenIds.length; ++i)
+            {
+                it(`Should parse teamsize ${givenIds[i]}`, function(done)
+                {
+                    parser.on("", "teamsize", (id: PlayerID, size: number) =>
+                    {
+                        expect(id).to.equal(givenIds[i]);
+                        expect(size).to.equal(givenSize);
+                        done();
+                    })
+                    .parse(`|teamsize|${givenIds[i]}|${givenSize}`);
+                });
+            }
+
+            it("Should not parse empty player", function()
+            {
+                parser.on("", "teamsize", (id: PlayerID, size: number) =>
+                {
+                    throw new Error("Parsed with empty player");
+                })
+                .parse(`|teamsize||${givenSize}`);
+            });
+
+            it("Should not parse empty size", function()
+            {
+                parser.on("", "teamsize", (id: PlayerID, size: number) =>
+                {
+                    throw new Error("Parsed with empty size");
+                })
+                .parse(`|teamsize|${givenIds[0]}|`);
+            });
+        });
+
+        describe("turn", function()
+        {
+            it("Should parse turn", function(done)
+            {
+                const givenTurn = 1;
+                parser.on("", "turn", (turn: number) =>
+                {
+                    expect(turn).to.equal(givenTurn);
+                    done();
+                })
+                .parse(`|turn|${givenTurn}`);
+            });
+        });
+
+        describe("updatechallenges", function()
+        {
+            it("Should parse updatechallenges", function(done)
+            {
+                const givenChallengesFrom: ChallengesFrom =
+                    { somebody: "gen4ou" };
+                parser.on("", "updatechallenges",
+                    (challengesFrom: ChallengesFrom) =>
+                {
+                    expect(challengesFrom).to.deep.equal(givenChallengesFrom);
+                    done();
+                })
+                .parse(`|updatechallenges|{"challengesFrom":\
+${JSON.stringify(givenChallengesFrom)}}`);
+            });
+        });
+
+        describe("updateuser", function()
+        {
+            it("Should parse updateuser", function(done)
+            {
+                const givenUsername = "somebody";
+                const guest = 0;
+                const avatarId = 21;
+                parser.on("", "updateuser",
+                    (username: string, isGuest: boolean) =>
+                {
+                    expect(username).to.equal(givenUsername);
+                    expect(isGuest).to.equal(!guest);
+                    done();
+                })
+                .parse(`|updateuser|${givenUsername}|${guest}|${avatarId}`);
+            });
+
+            for (const msg of ["updateuser", "updateuser|user"])
+            {
+                it(`Should not parse empty ${msg}`, function()
+                {
+                    parser.on("", "updateuser", () =>
+                    {
+                        throw new Error("Parsed empty updateuser");
+                    })
+                    .parse(`|${msg}`);
+                });
             }
         });
     });

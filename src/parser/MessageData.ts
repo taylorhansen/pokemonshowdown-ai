@@ -1,3 +1,6 @@
+/** Player ID in a battle. */
+export type PlayerID = "p1" | "p2";
+
 /** Types of server rooms. */
 export type RoomType = "chat" | "battle";
 
