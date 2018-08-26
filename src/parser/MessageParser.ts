@@ -191,8 +191,23 @@ export class MessageParser
                     break;*/
 
                 // battle initialization
-                /*case "player":
-                    break;*/
+                case "player": // initialize player data
+                    // TODO: put blocks in switch cases that have variables to
+                    //  prevent name conflicts such as in this case
+                {
+                    // format: |player|<id>|<username>|<avatarId>
+                    // id should be p1 or p2, username is a string, and avatarId
+                    //  is an integer
+                    const id = this.getWord();
+                    if (!id || (id !== "p1" && id !== "p2")) break;
+                    const username = this.getWord();
+                    if (!username) break;
+                    const unparsedAvatar = this.getWord();
+                    if (!unparsedAvatar) break;
+                    const avatarId = parseInt(unparsedAvatar);
+                    this.getHandler("player")(id, username, avatarId);
+                    break;
+                }
                 case "teamsize": // initialize the size of a player's team
                     // format: |teamsize|<player>|<size>
                     // player should be p1 or p2

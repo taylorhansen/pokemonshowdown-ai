@@ -110,6 +110,44 @@ describe("MessageParser", function()
             });
         });
 
+        describe("player", function()
+        {
+            const givenIds: PlayerID[] = ["p1", "p2"];
+            const givenUser = "somebody";
+            const givenAvatar = 100;
+            for (const givenId of givenIds)
+            {
+                it(`Should parse player ${givenId}`, function(done)
+                {
+                    parser.on("", "player", (id: PlayerID, username: string,
+                        avatarId: number) =>
+                    {
+                        expect(id).to.equal(givenId);
+                        expect(username).to.equal(givenUser);
+                        expect(avatarId).to.equal(givenAvatar);
+                        done();
+                    })
+                    .parse(`|player|${givenId}|${givenUser}|${givenAvatar}`);
+                });
+            }
+
+            // TODO: need more functions like this to reduce code duplication
+            function shouldntParse(phrase: string, ...args: any[])
+            {
+                it(`Should not parse ${phrase}`, function()
+                {
+                    parser.on("", "player", () =>
+                    {
+                        throw new Error(`Parsed ${phrase}`);
+                    })
+                    .parse(`|player|${args.join("|")}`);
+                });
+            }
+            shouldntParse("empty id", "", givenUser, givenAvatar);
+            shouldntParse("empty user", "p1", "", givenAvatar);
+            shouldntParse("empty avatar", "p1", givenUser, "");
+        });
+
 
         describe("request", function()
         {

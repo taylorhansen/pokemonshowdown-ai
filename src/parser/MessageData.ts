@@ -1,6 +1,20 @@
 /** Player ID in a battle. */
 export type PlayerID = "p1" | "p2";
 
+/**
+ * Gets the opposite PlayerID of the given one.
+ * @param id Given player id.
+ * @returns The other PlayerID.
+ */
+export function otherId(id: PlayerID): PlayerID
+{
+    if (id === "p1")
+    {
+        return "p2";
+    }
+    return "p1";
+}
+
 /** Types of server rooms. */
 export type RoomType = "chat" | "battle";
 

@@ -1,7 +1,7 @@
 import { BattleState, Side } from "../state/BattleState";
 import { Logger } from "../logger/Logger";
 import { AnyMessageListener } from "../parser/MessageListener";
-import { PokemonID, PokemonDetails, PokemonStatus, PlayerID } from
+import { PokemonID, PokemonDetails, PokemonStatus, PlayerID, otherId } from
     "../parser/MessageData";
 import * as readline from "readline";
 
@@ -22,16 +22,17 @@ export class BattleAI
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
      */
-    private readonly sides: {[ID in PlayerID]: Side};
+    private sides: {[ID in PlayerID]: Side};
     /** Used to send response messages to the server. */
     private readonly addResponses: (...responses: string[]) => void;
 
     /**
      * Creates a BattleAI object.
+     * @param username Client's username.
      * @param listener Used to subscribe to server messages.
      * @param addResponses Used to send response messages to the server.
      */
-    constructor(listener: AnyMessageListener,
+    constructor(username: string, listener: AnyMessageListener,
         addResponses: (...respones: string[]) => void)
     {
         this.addResponses = addResponses;
@@ -40,6 +41,16 @@ export class BattleAI
         {
             Logger.error(reason);
             this.ask();
+        })
+        .on("player", (id: PlayerID, givenUser: string) =>
+        {
+            if (givenUser !== username)
+            {
+                // them
+                this.sides = {} as any;
+                this.sides[id] = "them";
+                this.sides[otherId(id)] = "us";
+            }
         })
         .on("request", (team: object) =>
         {

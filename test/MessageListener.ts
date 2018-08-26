@@ -58,6 +58,25 @@ describe("AnyMessageListener", function()
         };
     });
 
+    describe("player", function()
+    {
+        it("Should handle a normal player message", function(done)
+        {
+            const givenId = "p1";
+            const givenUser = "somebody";
+            const givenAvatar = 100;
+            listener.on("player", (id: PlayerID, username: string,
+                avatarId: number) =>
+            {
+                expect(id).to.equal(givenId);
+                expect(username).to.equal(givenUser);
+                expect(avatarId).to.equal(givenAvatar);
+                done();
+            })
+            .getHandler("player")(givenId, givenUser, givenAvatar);
+        });
+    });
+
     describe("request", function()
     {
         it("Should handle a normal request message", function(done)

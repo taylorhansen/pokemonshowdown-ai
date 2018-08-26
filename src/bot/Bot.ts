@@ -34,7 +34,7 @@ export class Bot
                     // need a copy of the current room so the lambda captures
                     //  that and not just a reference to `this`
                     const room = this.room;
-                    const ai = new BattleAI(
+                    const ai = new BattleAI(this.username,
                         this.parser.getListener(room),
                         // function for sending responses
                         (...responses: string[]) =>
@@ -62,6 +62,10 @@ bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
                     }
                 }
             }
+        })
+        .on("", "updateuser", (username: string) =>
+        {
+            this.username = username;
         });
     }
 

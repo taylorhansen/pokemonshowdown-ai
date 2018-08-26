@@ -2,8 +2,8 @@ import { ChallengesFrom, RoomType, PokemonID, PokemonDetails, PokemonStatus,
     PlayerID } from "./MessageData";
 
 /** Prefix for a message that tells of the message's type. */
-export type Prefix = "challstr" | "error" | "init" | "request" | "switch" |
-    "teamsize" | "turn" | "updatechallenges" | "updateuser";
+export type Prefix = "challstr" | "error" | "init" | "player" | "request" |
+    "switch" | "teamsize" | "turn" | "updatechallenges" | "updateuser";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -17,6 +17,7 @@ export class AnyMessageListener
         "challstr": new MessageListener<"challstr">(),
         "error": new MessageListener<"error">(),
         "init": new MessageListener<"init">(),
+        "player": new MessageListener<"player">(),
         "request": new MessageListener<"request">(),
         "switch": new MessageListener<"switch">(),
         "teamsize": new MessageListener<"teamsize">(),
@@ -91,6 +92,7 @@ export type MessageHandler<P extends Prefix> =
     P extends "challstr" ? ChallStrHandler
     : P extends "error" ? ErrorHandler
     : P extends "init" ? InitHandler
+    : P extends "player" ? PlayerHandler
     : P extends "request" ? RequestHandler
     : P extends "switch" ? SwitchHandler
     : P extends "teamsize" ? TeamSizeHandler
@@ -116,6 +118,15 @@ export type ErrorHandler = (reason: string) => void;
  * @param type Type of room we're joining.
  */
 export type InitHandler = (type: RoomType) => void;
+
+/**
+ * Handles a `player` message.
+ * @param id Player id used in identifying pokemon owner.
+ * @param username Username of that player.
+ * @param avatarId Avatar id.
+ */
+export type PlayerHandler = (id: PlayerID, username: string, avatarId: number)
+    => void;
 
 /**
  * Handles a `request` message.
