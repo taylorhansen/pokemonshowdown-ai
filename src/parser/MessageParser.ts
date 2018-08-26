@@ -53,7 +53,6 @@ export class MessageParser
      */
     public getListener(room: string): AnyMessageListener
     {
-        /* istanbul ignore else */
         if (!this.messageListeners.hasOwnProperty(room))
         {
             this.messageListeners[room] = new AnyMessageListener();
@@ -135,7 +134,6 @@ export class MessageParser
                 case "init": // joined a room
                     // format: |init|<chat or battle>
                     const word = this.getWord();
-                    /* istanbul ignore else */
                     if (word === "chat" || word === "battle")
                     {
                         this.getHandler("init")(word);
@@ -463,7 +461,6 @@ export class MessageParser
         // this.pos always points to the next pipe so we want to omit that
         const start = this.pos + 1;
         this.pos = this.message.indexOf("\n", start);
-        /* istanbul ignore else */
         if (this.pos === -1)
         {
             // must be the last line of the message, so there's no terminating

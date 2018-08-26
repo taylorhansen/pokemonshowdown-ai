@@ -16,11 +16,8 @@ describe("MessageParser", function()
     it("Should handle multiple messages", function()
     {
         let count = 2;
-        parser.on("", "init", () =>
-        {
-            --count;
-        })
-        .parse("|init|chat\n|init|chat");
+        parser.on("", "challstr", () => --count).on("", "init", () => --count)
+            .parse("|challstr|1234\n|init|battle");
         expect(count).to.equal(0);
     });
 
@@ -92,7 +89,7 @@ describe("MessageParser", function()
             const initTypes: RoomType[] = ["chat", "battle"];
             for (const initType of initTypes)
             {
-                it(`Should handle ${initType} init message`, function(done)
+                it(`Should parse ${initType} init message`, function(done)
                 {
                     parser.on("", "init", (type: RoomType) =>
                     {
@@ -102,6 +99,15 @@ describe("MessageParser", function()
                     .parse(`|init|${initType}`);
                 });
             };
+
+            it("Should not parse empty init", function()
+            {
+                parser.on("", "init", () =>
+                {
+                    throw new Error("Parsed empty init");
+                })
+                .parse("|init|");
+            });
         });
 
 
