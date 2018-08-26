@@ -1,6 +1,8 @@
-import { BattleState } from "../BattleState/BattleState";
+import { BattleState } from "../state/BattleState";
 import { Logger } from "../logger/Logger";
-import { AnyMessageListener } from "./MessageListener";
+import { AnyMessageListener } from "../parser/MessageListener";
+import { PokemonID, PokemonDetails, PokemonStatus } from
+    "../parser/MessageData";
 import * as readline from "readline";
 
 const rl = readline.createInterface(process.stdin, process.stdout);
@@ -32,7 +34,8 @@ export class BattleAI
         {
             // fill in team info (how exactly?)
         })
-        .on("switch", () =>
+        .on("switch", (id: PokemonID, details: PokemonDetails,
+            status: PokemonStatus) =>
         {
             // switch out active pokemon and what we know about them
         })

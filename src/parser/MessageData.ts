@@ -1,3 +1,12 @@
+/** Types of server rooms. */
+export type RoomType = "chat" | "battle";
+
+/**
+ * Maps users challenging the client to the battle format they're being
+ * challenged to.
+ */
+export type ChallengesFrom = {[user: string]: string}
+
 /** Gives basic info about the owner and position of a pokemon. */
 export interface PokemonID
 {
@@ -21,14 +30,4 @@ export interface PokemonStatus
     hp: number;
     hpMax: number;
     condition: string;
-}
-
-/** A combination of stats. */
-export interface Stats
-{
-    atk: number | number[];
-    def: number | number[];
-    spa: number | number[];
-    spd: number | number[];
-    spe: number | number[];
 }

@@ -1,9 +1,8 @@
 import { expect } from "chai";
-import { RoomType, ChallengesFrom } from "../src/bot/MessageListener";
-import { MessageParser } from "../src/bot/MessageParser";
+import { ChallengesFrom, PokemonStatus, PokemonID, PokemonDetails, RoomType }
+    from "../src/parser/MessageData";
+import { MessageParser } from "../src/parser/MessageParser";
 import "mocha";
-import { PokemonStatus, PokemonID, PokemonDetails } from
-    "../src/BattleState/Pokemon";
 
 describe("MessageParser", function()
 {

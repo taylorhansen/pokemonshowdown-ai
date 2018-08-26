@@ -1,7 +1,7 @@
 import { BattleAI } from "./BattleAI";
 import { Logger } from "../logger/Logger";
-import { RoomType, ChallengesFrom } from "./MessageListener";
-import { MessageParser } from "./MessageParser";
+import { RoomType, ChallengesFrom } from "../parser/MessageData";
+import { MessageParser } from "../parser/MessageParser";
 
 /** Handles all bot actions. */
 export class Bot

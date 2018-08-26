@@ -1,5 +1,5 @@
-import { PokemonID, PokemonDetails, PokemonStatus } from
-    "../BattleState/Pokemon";
+import { ChallengesFrom, RoomType, PokemonID, PokemonDetails, PokemonStatus }
+    from "./MessageData";
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "init" | "updateuser" | "challstr" | "updatechallenges" |
@@ -96,15 +96,6 @@ export type MessageHandler<P extends Prefix> =
     : P extends "error" ? ErrorHandler
     : P extends "switch" ? SwitchHandler
     : () => void;
-
-/** Types of server rooms. */
-export type RoomType = "chat" | "battle";
-
-/**
- * Maps users challenging the client to the battle format they're being
- * challenged to.
- */
-export type ChallengesFrom = {[user: string]: string}
 
 /**
  * Handles an `init` message.
