@@ -305,7 +305,8 @@ export class MessageParser
      * format `<owner><pos>`, where owner determines who's side the pokemon is
      * on and pos is its position on that side (applicable in non-single
      * battles). Name is just the Pokemon's nickname.
-     * @param id 
+     * @param id Unparsed pokemon ID.
+     * @returns A parsed PokemonID object, or null if invalid.
      */
     private parsePokemonID(id: string): PokemonID | null
     {
@@ -323,6 +324,14 @@ export class MessageParser
         }
     }
 
+    /**
+     * Parses a Pokemon's details in the form
+     * `<species>, shiny, <gender>, L<level>`, where all but the species name is
+     * optional. If gender is omitted then it's genderless, and if level is
+     * omitted then it's assumed to be level 100.
+     * @param details Unparsed pokemon details.
+     * @returns A parsed PokemonDetails object, or null if invalid.
+     */
     private parsePokemonDetails(details: string): PokemonDetails | null
     {
         const words = details.split(", ");
@@ -364,6 +373,13 @@ export class MessageParser
         return null;
     }
 
+    /**
+     * Parses a pokemon's status in the form `<hp>/<hpMax> <status>`. HP is
+     * mandatory but can be displayed as a percentage, and status condition is
+     * optional.
+     * @param status Unparsed pokemon status.
+     * @returns A parsed PokemonStatus object, or null if empty.
+     */
     private parsePokemonStatus(status: string): PokemonStatus | null
     {
         const slash = status.indexOf("/");
