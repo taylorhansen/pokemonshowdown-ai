@@ -5,8 +5,21 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "main": "npm run build && node dist/index.js",
-    "test": "mocha -r ts-node/register test/**/*.ts"
+    "main": "ts-node src/index.ts",
+    "test": "nyc mocha"
+  },
+  "nyc": {
+    "extension": [
+      ".ts"
+    ],
+    "exclude": [
+      "**/*.js"
+    ],
+    "reporter": [
+      "html",
+      "text"
+    ],
+    "all": true
   },
   "repository": {
     "type": "git",
@@ -26,6 +39,8 @@
     "@types/mocha": "^5.2.5",
     "chai": "^4.1.2",
     "mocha": "^5.2.0",
+    "nyc": "^12.0.2",
+    "source-map-support": "^0.5.9",
     "ts-node": "^7.0.1",
     "typescript": "^3.0.1"
   }
