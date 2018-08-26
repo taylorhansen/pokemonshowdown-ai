@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 /** Logs debug messages to stderr. */
 export const Logger =
 {

@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { Bot } from "./bot/Bot";
 import { Logger } from "./logger/Logger";
 import { client as WebSocketClient } from "websocket";
