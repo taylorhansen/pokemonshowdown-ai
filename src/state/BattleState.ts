@@ -10,12 +10,15 @@ export class Team
     /** Team-related status conditions. */
     private status: TeamStatus;
     /** The pokemon that compose this team. First one is always active. */
-    private pokemon: Pokemon[];
+    private pokemon: Pokemon[] = [];
 
     /** Number of pokemon on this team. */
     public set size(size: number)
     {
-        this.pokemon.fill(new Pokemon(), 0, size);
+        for (let i = 0 ; i< size; ++i)
+        {
+            this.pokemon[i] = new Pokemon();
+        }
     }
 }
 
