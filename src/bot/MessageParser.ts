@@ -53,6 +53,7 @@ export class MessageParser
      */
     public getListener(room: string): AnyMessageListener
     {
+        /* istanbul ignore else */
         if (!this.messageListeners.hasOwnProperty(room))
         {
             this.messageListeners[room] = new AnyMessageListener();
@@ -134,17 +135,18 @@ export class MessageParser
                 case "init": // joined a room
                     // format: |init|<chat or battle>
                     const word = this.getWord();
+                    /* istanbul ignore else */
                     if (word === "chat" || word === "battle")
                     {
                         this.getHandler("init")(word);
                     }
                     break;
-                case "title":
+                /*case "title":
                 case "users":
-                    break;
+                    break;*/
 
                 // room messages
-                case "":
+                /*case "":
                 case "html":
                 case "uhtml":
                 case "uhtmlchange":
@@ -154,14 +156,14 @@ export class MessageParser
                 case ":":
                 case "c:":
                 case "battle": case "b": case "B":
-                    break;
+                    break;*/
 
                 // global messages
-                case "popup":
+                /*case "popup":
                 case "pm":
                 case "usercount":
                 case "nametaken":
-                    break;
+                    break;*/
                 case "challstr": // login key
                     // format: |challstr|<id>|<really long challstr>
                     this.getHandler("challstr")(this.getRestOfLine());
@@ -169,12 +171,16 @@ export class MessageParser
                 case "updateuser": // user info changed
                     // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
                     //  <avatar id>
-                    this.getHandler("updateuser")(this.getWord() || "",
-                        !parseInt(this.getWord() || "0"));
+                    const username = this.getWord();
+                    if (!username) break;
+                    const unparsedGuest = this.getWord();
+                    if (!unparsedGuest) break;
+                    const isGuest = !parseInt(unparsedGuest);
+                    this.getHandler("updateuser")(username, isGuest);
                     break;
-                case "formats":
+                /*case "formats":
                 case "updatesearch":
-                    break;
+                    break;*/
                 case "updatechallenges":
                     // change in incoming/outgoing challenges
                     // format: |updatechallenges|<json>
@@ -183,10 +189,11 @@ export class MessageParser
                     this.getHandler("updatechallenges")(
                         challenges["challengesFrom"]);
                     break;
-                case "queryresponse":
+                /*case "queryresponse":
+                    break;*/
 
                 // battle initialization
-                case "player":
+                /*case "player":
                 case "gametype":
                 case "gen":
                 case "tier":
@@ -196,7 +203,7 @@ export class MessageParser
                 case "poke":
                 case "teampreview":
                 case "start":
-                    break;
+                    break;*/
 
                 // battle progress
                 case "request": // move/switch request
@@ -210,23 +217,23 @@ export class MessageParser
                         this.getHandler("request")(JSON.parse(unparsedTeam));
                     }
                     break;
-                case "inactive":
+                /*case "inactive":
                 case "inactiveoff":
-                    break;
+                    break;*/
                 case "turn": // update turn counter
                     // format: |turn|<turn number>
                     this.getHandler("turn")(parseInt(this.getRestOfLine()));
                     break;
-                case "win":
+                /*case "win":
                 case "tie":
-                    break;
+                    break;*/
                 case "error": // e.g. invalid move/switch choice
                     // format: |error|[reason] description
                     this.getHandler("error")(this.getRestOfLine());
 
                 // major actions
-                case "move": // a pokemon performed a move
-                    break;
+                /*case "move": // a pokemon performed a move (TODO)
+                    break;*/
                 case "switch": // a pokemon was voluntarily switched
                 case "drag": // involuntarily switched, really doesn't matter
                     // format: |<switch or drag>|<pokemon>|<details>|<status>
@@ -234,16 +241,17 @@ export class MessageParser
                     // details contains species, gender, etc.
                     // status contains hp (value or %), status, etc.
 
-                    const pokemon = this.getWord();
+                    const unparsedId = this.getWord();
                     let pokemonId: PokemonID | null;
-                    if (!pokemon || !(pokemonId = this.parsePokemonID(pokemon)))
+                    if (unparsedId === null ||
+                        !(pokemonId = this.parsePokemonID(unparsedId)))
                     {
                         break;
                     }
 
                     const unparsedDetails = this.getWord();
                     let details: PokemonDetails | null;
-                    if (!unparsedDetails ||
+                    if (unparsedDetails === null ||
                         !(details = this.parsePokemonDetails(unparsedDetails)))
                     {
                         break;
@@ -251,7 +259,7 @@ export class MessageParser
 
                     const unparsedStatus = this.getWord();
                     let status: PokemonStatus | null;
-                    if (!unparsedStatus ||
+                    if (unparsedStatus === null ||
                         !(status = this.parsePokemonStatus(unparsedStatus)))
                     {
                         break;
@@ -259,16 +267,16 @@ export class MessageParser
 
                     this.getHandler("switch")(pokemonId, details, status);
                     break;
-                case "detailschange":
+                /*case "detailschange":
                 case "-formechange":
                 case "replace":
                 case "swap":
                 case "cant":
                 case "faint":
-                    break;
+                    break;*/
 
                 // minor actions
-                case "-fail":
+                /*case "-fail":
                 case "-damage":
                 case "-heal":
                 case "-status":
@@ -295,7 +303,7 @@ export class MessageParser
                 case "-hint":
                 case "-center":
                 case "-message":
-                    break;
+                    break;*/
             }
         }
     }
@@ -334,43 +342,45 @@ export class MessageParser
      */
     private parsePokemonDetails(details: string): PokemonDetails | null
     {
-        const words = details.split(", ");
-        if (words.length > 0)
+        // filter out empty strings
+        const words = details.split(", ").filter(word => word.length > 0);
+        if (words.length === 0)
         {
-            const species = words[0];
-            let shiny: boolean;
-            let gender: string | null;
-            let level: number;
-            let i = 1;
-
-            if (words[i] === "shiny")
-            {
-                shiny = true;
-                ++i;
-            }
-            else
-            {
-                shiny = false;
-            }
-
-            if (words[i] === "M" || details[i] === "F")
-            {
-                gender = words[i];
-                ++i;
-            }
-            else
-            {
-                gender = null;
-            }
-
-            // level is always 100 unless otherwise indicated
-            level = words[i] && words[i].startsWith("L") ?
-                parseInt(words[i].substring(1)) : 100;
-
-            return { species: species, shiny: shiny, gender: gender,
-                level: level };
+            return null;
         }
-        return null;
+
+        const species = words[0];
+        let shiny: boolean;
+        let gender: string | null;
+        let level: number;
+        let i = 1;
+
+        if (words[i] === "shiny")
+        {
+            shiny = true;
+            ++i;
+        }
+        else
+        {
+            shiny = false;
+        }
+
+        if (words[i] === "M" || words[i] === "F")
+        {
+            gender = words[i];
+            ++i;
+        }
+        else
+        {
+            gender = null;
+        }
+
+        // level is always 100 unless otherwise indicated
+        level = words[i] && words[i].startsWith("L") ?
+            parseInt(words[i].substring(1)) : 100;
+
+        return { species: species, shiny: shiny, gender: gender,
+            level: level };
     }
 
     /**
@@ -438,6 +448,7 @@ export class MessageParser
         // this.pos always points to the next pipe so we want to omit that
         const start = this.pos + 1;
         this.pos = this.message.indexOf("\n", start);
+        /* istanbul ignore else */
         if (this.pos === -1)
         {
             // must be the last line of the message, so there's no terminating

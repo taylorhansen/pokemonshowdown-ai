@@ -1,9 +1,9 @@
 import { expect } from "chai";
-import "mocha";
 import { RoomType, ChallengesFrom } from "../src/bot/MessageListener";
 import { MessageParser } from "../src/bot/MessageParser";
-import { doesNotReject } from "assert";
-import { PokemonStatus, PokemonID, PokemonDetails } from "../src/BattleState/Pokemon";
+import "mocha";
+import { PokemonStatus, PokemonID, PokemonDetails } from
+    "../src/BattleState/Pokemon";
 
 describe("MessageParser", function()
 {
@@ -107,6 +107,18 @@ describe("MessageParser", function()
                 })
                 .parse(`|updateuser|${givenUsername}|${guest}|${avatarId}`);
             });
+
+            for (const msg of ["updateuser", "updateuser|user"])
+            {
+                it(`Should not parse empty ${msg}`, function()
+                {
+                    parser.on("", "updateuser", () =>
+                    {
+                        throw new Error("Parsed empty updateuser");
+                    })
+                    .parse(`|${msg}`);
+                });
+            }
         });
 
         describe("updatechallenges", function()
@@ -179,43 +191,70 @@ ${JSON.stringify(givenChallengesFrom)}}`);
 
         describe("switch", function()
         {
+            // message can be switch or drag, depending on whether the switch
+            //  was intentional or unintentional
             const prefixes = ["switch", "drag"];
-            const givenInfo =
+            // expected value when the corresponding switchInfo is parsed
+            const givenInfos =
             [
-                { owner: "p1", position: "a", nickname: "Lucky" },
-                { species: "Magikarp", shiny: true, gender: "M", level: 50 },
-                { hp: 65, hpMax: 200, condition: "par" }
+                [
+                    {owner: "p1", position: "a", nickname: "Lucky"},
+                    {species: "Magikarp", shiny: true, gender: "M", level: 100},
+                    {hp: 65, hpMax: 200, condition: "par"},
+                ],
+                [
+                    {owner: "p2", position: "b", nickname: "Rage"},
+                    {species: "Gyarados", shiny: false, gender: "F", level: 50},
+                    {hp: 1, hpMax: 1, condition: ""}
+                ],
+                [
+                    {owner: "p1", position: "c", nickname: "Mew2"},
+                    {species: "Mewtwo", shiny: false, gender: null, level: 100},
+                    {hp: 100, hpMax: 100, condition: "slp"}
+                ]
             ];
+            // contains the indexes of each switch parameter
             const infoNames: {[infoName: string]: number} =
                 { id: 0, details: 1, status: 2 };
-            const switchInfo: string[] = [];
+            // unparsed givenInfos
+            let switchInfos: string[][];
 
             beforeEach(function()
             {
                 // these values can be sabotaged in some later test cases to
                 //  observe how the parser handles it
-                switchInfo[0] = "p1a: Lucky";
-                switchInfo[1] = "Magikarp, shiny, M, L50";
-                switchInfo[2] = "65/200 par";
+                switchInfos =
+                [
+                    ["p1a: Lucky", "Magikarp, shiny, M", "65/200 par"],
+                    ["p2b: Rage", "Gyarados, F, L50", "1/1"],
+                    ["p1c: Mew2", "Mewtwo", "100/100 slp"]
+                ];
             });
 
             for (const prefix of prefixes)
             {
-                it(`Should parse ${prefix} with valid info`, function(done)
+                // try parsing with each set of switch info
+                for (let i = 0; i < givenInfos.length; ++i)
                 {
-                    parser.on("", "switch", (id: PokemonID,
-                        details: PokemonDetails, status: PokemonStatus) =>
+                    it(`Should parse ${prefix} with valid info ${i + 1}`,
+                    function(done)
                     {
-                        const info = [id, details, status];
-                        for (let i = 0; i < 3; ++i)
+                        parser.on("", "switch", (id: PokemonID,
+                            details: PokemonDetails, status: PokemonStatus) =>
                         {
-                            expect(info[i]).to.deep.equal(givenInfo[i]);
-                        }
-                        done();
-                    })
-                    .parse(`|switch|${switchInfo.join("|")}`);
-                });
+                            // match each id/details/status object
+                            const info = [id, details, status];
+                            for (let j = 0; j < givenInfos[i].length; ++j)
+                            {
+                                expect(info[j]).to.deep.equal(givenInfos[i][j]);
+                            }
+                            done();
+                        })
+                        .parse(`|switch|${switchInfos[i].join("|")}`);
+                    });
+                }
 
+                // only need to test sabotage values for one set
                 for (const infoName in infoNames)
                 {
                     it(`Should not parse ${prefix} with invalid ${infoName}`,
@@ -224,13 +263,13 @@ ${JSON.stringify(givenChallengesFrom)}}`);
                         // if any one of PokemonID, PokemonDetails, or
                         //  PokemonStatus are omitted or invalid, the entire
                         //  message can't be parsed
-                        switchInfo[infoNames[infoName]] = "";
+                        switchInfos[0][infoNames[infoName]] = "";
 
                         parser.on("", "switch", () =>
                         {
-                            throw new Error(`Parsed with invalid id`);
+                            throw new Error(`Parsed with invalid ${infoName}`);
                         })
-                        .parse(`|switch|${switchInfo.join("|")}`);
+                        .parse(`|switch|${switchInfos[0].join("|")}`);
                     });
                 }
             }
