@@ -5,14 +5,18 @@ The code is pretty unstable right now so I wouldn't recommend trying to use it o
 
 ## Compiling/running
 ```sh
-# compiles everything
+# compile everything
 npm install
 npm run build
 # directly execute the program
 node dist/index.js
 
-# compiles and runs
+# compile and run client
 npm run main
+# lint for style errors
+npm run lint
+# run tests
+npm run test
 ```
 
 ## License
