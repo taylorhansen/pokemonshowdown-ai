@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "lint": "tslint -c tslint.json src/**/*.ts data/**/*.ts",
+    "lint": "tslint -c tslint.json data/**/*.ts src/**/*.ts test/**/*.ts",
     "main": "ts-node src/index.ts",
     "test": "nyc mocha"
   },
