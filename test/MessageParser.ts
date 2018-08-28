@@ -239,6 +239,7 @@ describe("MessageParser", function()
                 // only need to test sabotage values for one set
                 for (const infoName in infoNames)
                 {
+                    if (!infoNames.hasOwnProperty(infoName)) continue;
                     it(`Should not parse ${prefix} with invalid ${infoName}`,
                     function()
                     {

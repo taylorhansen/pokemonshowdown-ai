@@ -1,5 +1,5 @@
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RoomType } from "./MessageData";
+    RequestData, RoomType} from "./MessageData";
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "challstr" | "error" | "init" | "player" | "request" |
@@ -132,7 +132,7 @@ export type PlayerHandler = (id: PlayerID, username: string, avatarId: number)
  * Handles a `request` message.
  * @param team Some of the client's team info.
  */
-export type RequestHandler = (team: object) => void;
+export type RequestHandler = (data: RequestData) => void;
 
 /**
  * Handles a `switch` message.

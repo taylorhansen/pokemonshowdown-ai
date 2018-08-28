@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RoomType } from "../src/parser/MessageData";
+    RequestData, RoomType } from "../src/parser/MessageData";
 import { AnyMessageListener } from "../src/parser/MessageListener";
 
 describe("AnyMessageListener", function()
@@ -81,7 +81,7 @@ describe("AnyMessageListener", function()
     {
         it("Should handle a normal request message", function(done)
         {
-            const teamInfo = {};
+            const teamInfo = {} as RequestData;
             listener.on("request", (team: object) =>
             {
                 expect(team).to.equal(teamInfo);

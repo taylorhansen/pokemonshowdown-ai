@@ -1,7 +1,7 @@
 import * as readline from "readline";
 import * as logger from "../logger";
-import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus } from
-    "../parser/MessageData";
+import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
+    RequestData } from "../parser/MessageData";
 import { AnyMessageListener } from "../parser/MessageListener";
 import { BattleState, Side } from "../state/BattleState";
 
@@ -52,9 +52,9 @@ export class BattleAI
                 this.sides[otherId(id)] = "us";
             }
         })
-        .on("request", (team: object) =>
+        .on("request", (data: RequestData) =>
         {
-            // fill in team info (how exactly?)
+            // TODO: fill in team info (how exactly?)
         })
         .on("switch", (id: PokemonID, details: PokemonDetails,
             status: PokemonStatus) =>

@@ -253,6 +253,7 @@ export class MessageParser
                     //  without any json, so we need to account for that
                     if (unparsedTeam.length)
                     {
+                        // TODO: parse some inner fields?
                         this.getHandler("request")(JSON.parse(unparsedTeam));
                     }
                     break;
