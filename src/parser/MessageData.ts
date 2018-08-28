@@ -35,6 +35,16 @@ export interface PokemonID
     nickname: string;
 }
 
+/**
+ * Stringifies a PokemonID.
+ * @param id ID object.
+ * @returns The PokemonID in string form.
+ */
+export function stringifyID(id: PokemonID): string
+{
+    return `${id.owner}${id.position}: ${id.nickname}`;
+}
+
 /** Holds a couple details about a pokemon. */
 export interface PokemonDetails
 {
@@ -44,12 +54,37 @@ export interface PokemonDetails
     level: number;
 }
 
+/**
+ * Stringifies a PokemonDetails.
+ * @param details Details object.
+ * @returns The PokemonDetails in string form.
+ */
+export function stringifyDetails(details: PokemonDetails): string
+{
+    const arr = [details.species];
+    if (details.shiny) arr.push("shiny");
+    if (details.gender) arr.push(details.gender);
+    if (details.level !== 100) arr.push(`L${details.level}`);
+    return arr.join(", ");
+}
+
 /** Details pokemon hp (can be percent) and status conditions. */
 export interface PokemonStatus
 {
     hp: number;
     hpMax: number;
     condition: string;
+}
+
+/**
+ * Stringifies a PokemonStatus.
+ * @param details Status object.
+ * @returns The PokemonStatus in string form.
+ */
+export function stringifyStatus(status: PokemonStatus): string
+{
+    return `${status.hp}/${status.hpMax}\
+${status.condition ? ` ${status.condition}` : ""}`;
 }
 
 /** Types the JSON data in a |request| message. */
@@ -96,11 +131,11 @@ export interface RequestSide
 export interface RequestPokemon
 {
     /** Parseable PokemonID. */
-    ident: string;
+    ident: PokemonID;
     /** Parseable PokemonDetails. */
-    details: string;
+    details: PokemonDetails;
     /** Parseable PokemonStatus. */
-    condition: string;
+    condition: PokemonStatus;
     /** True if this pokemon is active. */
     active: boolean;
     /** Pokemon's stats. */
@@ -113,4 +148,24 @@ export interface RequestPokemon
     item: string;
     /** Pokeball id name. */
     pokeball: string;
+}
+
+/**
+ * Stringifies the object from a |request| message back to normal JSON.
+ * @param data Data to stringify.
+ */
+export function stringifyRequest(data: RequestData): string
+{
+    // i mean, copying it this way is kind of efficient
+    const obj: any = JSON.parse(JSON.stringify(data));
+
+    for (const mon of obj.side.pokemon)
+    {
+        // ident, details, and condition fields are the same
+        //  as the data from a |switch| message
+        mon.ident = stringifyID(mon.ident);
+        mon.details = stringifyDetails(mon.details);
+        mon.condition = stringifyStatus(mon.condition);
+    }
+    return JSON.stringify(obj);
 }

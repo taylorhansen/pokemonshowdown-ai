@@ -1,4 +1,4 @@
-import { PokemonDetails, PokemonID, PokemonStatus } from
+import { PokemonDetails, PokemonID, PokemonStatus, RequestData } from
     "../parser/MessageData";
 import { AnyMessageListener, MessageHandler, Prefix } from "./MessageListener";
 
@@ -253,8 +253,18 @@ export class MessageParser
                     //  without any json, so we need to account for that
                     if (unparsedTeam.length)
                     {
-                        // TODO: parse some inner fields?
-                        this.getHandler("request")(JSON.parse(unparsedTeam));
+                        const parsedTeam = JSON.parse(unparsedTeam);
+                        for (const mon of parsedTeam.side.pokemon)
+                        {
+                            // ident, details, and condition fields are the same
+                            //  as the data from a |switch| message
+                            mon.ident = MessageParser.parsePokemonID(mon.ident);
+                            mon.details = MessageParser.parsePokemonDetails(
+                                mon.details);
+                            mon.condition = MessageParser.parsePokemonStatus(
+                                mon.condition);
+                        }
+                        this.getHandler("request")(parsedTeam);
                     }
                     break;
                 }
@@ -290,7 +300,7 @@ export class MessageParser
                     const unparsedId = this.getWord();
                     let pokemonId: PokemonID | null;
                     if (unparsedId === null ||
-                        !(pokemonId = this.parsePokemonID(unparsedId)))
+                        !(pokemonId = MessageParser.parsePokemonID(unparsedId)))
                     {
                         break;
                     }
@@ -298,7 +308,8 @@ export class MessageParser
                     const unparsedDetails = this.getWord();
                     let details: PokemonDetails | null;
                     if (unparsedDetails === null ||
-                        !(details = this.parsePokemonDetails(unparsedDetails)))
+                        !(details =
+                            MessageParser.parsePokemonDetails(unparsedDetails)))
                     {
                         break;
                     }
@@ -306,7 +317,8 @@ export class MessageParser
                     const unparsedStatus = this.getWord();
                     let status: PokemonStatus | null;
                     if (unparsedStatus === null ||
-                        !(status = this.parsePokemonStatus(unparsedStatus)))
+                        !(status =
+                            MessageParser.parsePokemonStatus(unparsedStatus)))
                     {
                         break;
                     }
@@ -363,20 +375,15 @@ export class MessageParser
      * @param id Unparsed pokemon ID.
      * @returns A parsed PokemonID object, or null if invalid.
      */
-    private parsePokemonID(id: string): PokemonID | null
+    private static parsePokemonID(id: string): PokemonID | null
     {
         const i = id.indexOf(": ");
-        if (i !== -1)
-        {
-            const owner = id.substring(0, i - 1);
-            const position = id.substring(i - 1, i);
-            const nickname = id.substring(i + 2);
-            return { owner, position, nickname };
-        }
-        else
-        {
-            return null;
-        }
+        if (i === -1) return null;
+
+        const owner = id.substring(0, i - 1);
+        const position = id.substring(i - 1, i);
+        const nickname = id.substring(i + 2);
+        return { owner, position, nickname };
     }
 
     /**
@@ -387,7 +394,7 @@ export class MessageParser
      * @param details Unparsed pokemon details.
      * @returns A parsed PokemonDetails object, or null if invalid.
      */
-    private parsePokemonDetails(details: string): PokemonDetails | null
+    private static parsePokemonDetails(details: string): PokemonDetails | null
     {
         // filter out empty strings
         const words = details.split(", ").filter(word => word.length > 0);
@@ -436,7 +443,7 @@ export class MessageParser
      * @param status Unparsed pokemon status.
      * @returns A parsed PokemonStatus object, or null if empty.
      */
-    private parsePokemonStatus(status: string): PokemonStatus | null
+    private static parsePokemonStatus(status: string): PokemonStatus | null
     {
         const slash = status.indexOf("/");
         if (slash === -1) return null;

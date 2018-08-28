@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RoomType } from "../src/parser/MessageData";
+    RequestData, RoomType, stringifyRequest } from "../src/parser/MessageData";
 import { MessageParser } from "../src/parser/MessageParser";
 
 describe("MessageParser", function()
@@ -161,13 +161,75 @@ describe("MessageParser", function()
 
             it("Should parse request", function(done)
             {
-                const givenTeam: object = {}; // TODO
-                parser.on("", "request", (team: object) =>
+                const givenData: RequestData =
                 {
-                    expect(team).to.deep.equal(givenTeam);
+                    active:
+                    {
+                        moves:
+                        [
+                            {
+                                move: "Splash", id: "splash", pp: 24, maxpp: 24,
+                                target: "self", disabled: false
+                            }
+                        ]
+                    },
+                    side:
+                    {
+                        name: "somebody", id: "p1",
+                        pokemon:
+                        [
+                            {
+                                ident:
+                                {
+                                    owner: "p1", position: "a", nickname: "hi"
+                                },
+                                details:
+                                {
+                                    species: "Magikarp", shiny: true,
+                                    gender: "M", level: 50
+                                },
+                                condition:
+                                {
+                                    hp: 100, hpMax: 100, condition: "par"
+                                },
+                                active: true,
+                                stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                                moves: ["splash"],
+                                baseAbility: "swiftswim",
+                                item: "choiceband",
+                                pokeball: "masterball"
+                            },
+                            {
+                                ident:
+                                {
+                                    owner: "p1", position: "a", nickname: "hi"
+                                },
+                                details:
+                                {
+                                    species: "Mewtwo", shiny: false,
+                                    gender: null, level: 100
+                                },
+                                condition:
+                                {
+                                    hp: 9001, hpMax: 9001, condition: ""
+                                },
+                                active: true,
+                                stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                                moves: ["hyperbeam"],
+                                baseAbility: "pressure",
+                                item: "choicespecs",
+                                pokeball: "nestball"
+                            }
+                        ]
+                    },
+                    rqid: 10
+                };
+                parser.on("", "request", (data: RequestData) =>
+                {
+                    expect(data).to.deep.equal(givenData);
                     done();
                 })
-                .parse(`|request|${JSON.stringify(givenTeam)}`);
+                .parse(`|request|${stringifyRequest(givenData)}`);
             });
         });
 
