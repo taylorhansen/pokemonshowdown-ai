@@ -1,5 +1,5 @@
-import { ChallengesFrom, RoomType, PokemonID, PokemonDetails, PokemonStatus,
-    PlayerID } from "./MessageData";
+import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
+    RoomType } from "./MessageData";
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "challstr" | "error" | "init" | "player" | "request" |
@@ -14,16 +14,16 @@ export class AnyMessageListener
     /** Registered message listeners for each type of Prefix. */
     private readonly listeners: {readonly [P in Prefix]: MessageListener<P>} =
     {
-        "challstr": new MessageListener<"challstr">(),
-        "error": new MessageListener<"error">(),
-        "init": new MessageListener<"init">(),
-        "player": new MessageListener<"player">(),
-        "request": new MessageListener<"request">(),
-        "switch": new MessageListener<"switch">(),
-        "teamsize": new MessageListener<"teamsize">(),
-        "turn": new MessageListener<"turn">(),
-        "updatechallenges": new MessageListener<"updatechallenges">(),
-        "updateuser": new MessageListener<"updateuser">()
+        challstr: new MessageListener<"challstr">(),
+        error: new MessageListener<"error">(),
+        init: new MessageListener<"init">(),
+        player: new MessageListener<"player">(),
+        request: new MessageListener<"request">(),
+        switch: new MessageListener<"switch">(),
+        teamsize: new MessageListener<"teamsize">(),
+        turn: new MessageListener<"turn">(),
+        updatechallenges: new MessageListener<"updatechallenges">(),
+        updateuser: new MessageListener<"updateuser">()
     };
 
     /**

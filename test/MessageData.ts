@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { otherId } from "../src/parser/MessageData";
 import "mocha";
+import { otherId } from "../src/parser/MessageData";
 
 describe("MessageData", function()
 {

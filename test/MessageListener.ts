@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { ChallengesFrom, PokemonID, PokemonDetails, PokemonStatus, RoomType,
-    PlayerID } from "../src/parser/MessageData";
+import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
+    RoomType } from "../src/parser/MessageData";
 import { AnyMessageListener } from "../src/parser/MessageListener";
 
 describe("AnyMessageListener", function()
@@ -55,7 +55,7 @@ describe("AnyMessageListener", function()
                 })
                 .getHandler("init")(initType);
             });
-        };
+        }
     });
 
     describe("player", function()
@@ -147,7 +147,7 @@ describe("AnyMessageListener", function()
     {
         it("Should handle a normal updatechallenges message", function(done)
         {
-            const from: ChallengesFrom = { "newuser": "gen4ou" };
+            const from: ChallengesFrom = { newuser: "gen4ou" };
             listener.on("updatechallenges", (challengesFrom: ChallengesFrom) =>
             {
                 expect(challengesFrom).to.equal(from);

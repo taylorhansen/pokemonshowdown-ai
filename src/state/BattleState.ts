@@ -1,5 +1,3 @@
-import { PokemonDetails, PokemonStatus } from "../parser/MessageData";
-
 /** Temporary status conditions in the entire battle room. */
 export class RoomStatus
 {
@@ -150,7 +148,7 @@ export class BattleState
     private readonly status = new RoomStatus();
     /** Team data. */
     private readonly teams: {readonly [S in Side]: Team} =
-        { "us": new Team(), "them": new Team() };
+        { us: new Team(), them: new Team() };
 
     /**
      * Sets a team's size.

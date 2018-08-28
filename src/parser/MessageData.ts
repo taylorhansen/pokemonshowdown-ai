@@ -22,7 +22,10 @@ export type RoomType = "chat" | "battle";
  * Maps users challenging the client to the battle format they're being
  * challenged to.
  */
-export type ChallengesFrom = {[user: string]: string}
+export interface ChallengesFrom
+{
+    [user: string]: string;
+}
 
 /** Gives basic info about the owner and position of a pokemon. */
 export interface PokemonID

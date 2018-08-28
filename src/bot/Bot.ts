@@ -1,7 +1,7 @@
-import { BattleAI } from "./BattleAI";
-import { Logger } from "../logger/Logger";
-import { RoomType, ChallengesFrom } from "../parser/MessageData";
+import * as logger from "../logger";
+import { ChallengesFrom, RoomType } from "../parser/MessageData";
 import { MessageParser } from "../parser/MessageParser";
+import { BattleAI } from "./BattleAI";
 
 /** Handles all bot actions. */
 export class Bot
@@ -47,7 +47,7 @@ export class Bot
             // test team for now
             const useteam = `|/useteam Magikarp||Focus Sash||\
 bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
-            for (let user in challengesFrom)
+            for (const user in challengesFrom)
             {
                 if (challengesFrom.hasOwnProperty(user))
                 {
@@ -91,6 +91,6 @@ bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
             responses = responses.map(response => room + response);
         }
         responses.forEach(response => this.send(response));
-        Logger.debug(`sent: ["${responses.join("\", \"")}"]`);
+        logger.debug(`sent: ["${responses.join("\", \"")}"]`);
     }
 }

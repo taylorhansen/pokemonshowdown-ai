@@ -1,9 +1,9 @@
-import { BattleState, Side } from "../state/BattleState";
-import { Logger } from "../logger/Logger";
-import { AnyMessageListener } from "../parser/MessageListener";
-import { PokemonID, PokemonDetails, PokemonStatus, PlayerID, otherId } from
-    "../parser/MessageData";
 import * as readline from "readline";
+import * as logger from "../logger";
+import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus } from
+    "../parser/MessageData";
+import { AnyMessageListener } from "../parser/MessageListener";
+import { BattleState, Side } from "../state/BattleState";
 
 const rl = readline.createInterface(process.stdin, process.stdout);
 
@@ -13,7 +13,7 @@ const rl = readline.createInterface(process.stdin, process.stdout);
  * Info that the AI needs to make an informed decision:
  * * Known aspects of the opponent's team.
  * * All aspects of the AI's team.
-*/
+ */
 export class BattleAI
 {
     /** Manages battle state and neural network input. */
@@ -39,7 +39,7 @@ export class BattleAI
         listener
         .on("error", (reason: string) =>
         {
-            Logger.error(reason);
+            logger.error(reason);
             this.ask();
         })
         .on("player", (id: PlayerID, givenUser: string) =>
@@ -68,7 +68,7 @@ export class BattleAI
         })
         .on("turn", (turn: number) =>
         {
-            Logger.debug(`new turn: ${turn}`)
+            logger.debug(`new turn: ${turn}`);
             this.ask();
         });
     }
@@ -80,12 +80,12 @@ export class BattleAI
         {
             if (answer)
             {
-                Logger.debug("received ai input");
+                logger.debug("received ai input");
                 this.addResponses(answer);
             }
             else
             {
-                Logger.error("no ai input");
+                logger.error("no ai input");
             }
         });
     }

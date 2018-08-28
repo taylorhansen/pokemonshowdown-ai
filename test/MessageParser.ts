@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import { ChallengesFrom, PokemonStatus, PokemonID, PokemonDetails, RoomType,
-    PlayerID } from "../src/parser/MessageData";
-import { MessageParser } from "../src/parser/MessageParser";
 import "mocha";
+import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
+    RoomType } from "../src/parser/MessageData";
+import { MessageParser } from "../src/parser/MessageParser";
 
 describe("MessageParser", function()
 {
@@ -23,7 +23,7 @@ describe("MessageParser", function()
 
     describe("Room name", function()
     {
-        const room = "myroomname"
+        const room = "myroomname";
 
         it("Should handle empty string", function()
         {
@@ -98,7 +98,7 @@ describe("MessageParser", function()
                     })
                     .parse(`|init|${initType}`);
                 });
-            };
+            }
 
             it("Should not parse empty init", function()
             {
@@ -148,7 +148,6 @@ describe("MessageParser", function()
             shouldntParse("empty avatar", "p1", givenUser, "");
         });
 
-
         describe("request", function()
         {
             it("Should not parse empty request", function()
@@ -183,7 +182,7 @@ describe("MessageParser", function()
                 [
                     {owner: "p1", position: "a", nickname: "Lucky"},
                     {species: "Magikarp", shiny: true, gender: "M", level: 100},
-                    {hp: 65, hpMax: 200, condition: "par"},
+                    {hp: 65, hpMax: 200, condition: "par"}
                 ],
                 [
                     {owner: "p2", position: "b", nickname: "Rage"},
@@ -262,17 +261,17 @@ describe("MessageParser", function()
         {
             const givenIds = ["p1", "p2"];
             const givenSize = 1;
-            for (let i = 0; i < givenIds.length; ++i)
+            for (const givenId of givenIds)
             {
-                it(`Should parse teamsize ${givenIds[i]}`, function(done)
+                it(`Should parse teamsize ${givenId}`, function(done)
                 {
                     parser.on("", "teamsize", (id: PlayerID, size: number) =>
                     {
-                        expect(id).to.equal(givenIds[i]);
+                        expect(id).to.equal(givenId);
                         expect(size).to.equal(givenSize);
                         done();
                     })
-                    .parse(`|teamsize|${givenIds[i]}|${givenSize}`);
+                    .parse(`|teamsize|${givenId}|${givenSize}`);
                 });
             }
 

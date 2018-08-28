@@ -1,6 +1,6 @@
-import { PokemonID, PokemonDetails, PokemonStatus } from
+import { PokemonDetails, PokemonID, PokemonStatus } from
     "../parser/MessageData";
-import { AnyMessageListener, Prefix, MessageHandler } from "./MessageListener";
+import { AnyMessageListener, MessageHandler, Prefix } from "./MessageListener";
 
 /**
  * Parses messages sent from the server. Instead of producing some kind of
@@ -132,6 +132,7 @@ export class MessageParser
 
                 // room initialization
                 case "init": // joined a room
+                {
                     // format: |init|<chat or battle>
                     const word = this.getWord();
                     if (word === "chat" || word === "battle")
@@ -139,6 +140,7 @@ export class MessageParser
                         this.getHandler("init")(word);
                     }
                     break;
+                }
                 /*case "title":
                 case "users":
                     break;*/
@@ -163,30 +165,36 @@ export class MessageParser
                 case "nametaken":
                     break;*/
                 case "challstr": // login key
+                {
                     // format: |challstr|<id>|<really long challstr>
                     this.getHandler("challstr")(this.getRestOfLine());
                     break;
+                }
                 case "updateuser": // user info changed
+                {
                     // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
                     //  <avatar id>
                     const username = this.getWord();
                     if (!username) break;
                     const unparsedGuest = this.getWord();
                     if (!unparsedGuest) break;
-                    const isGuest = !parseInt(unparsedGuest);
+                    const isGuest = !parseInt(unparsedGuest, 10);
                     this.getHandler("updateuser")(username, isGuest);
                     break;
+                }
                 /*case "formats":
                 case "updatesearch":
                     break;*/
                 case "updatechallenges":
+                {
                     // change in incoming/outgoing challenges
                     // format: |updatechallenges|<json>
                     // json contains challengesFrom and challengeTo
                     const challenges = JSON.parse(this.getRestOfLine());
                     this.getHandler("updatechallenges")(
-                        challenges["challengesFrom"]);
+                        challenges.challengesFrom);
                     break;
+                }
                 /*case "queryresponse":
                     break;*/
 
@@ -204,11 +212,12 @@ export class MessageParser
                     if (!username) break;
                     const unparsedAvatar = this.getWord();
                     if (!unparsedAvatar) break;
-                    const avatarId = parseInt(unparsedAvatar);
+                    const avatarId = parseInt(unparsedAvatar, 10);
                     this.getHandler("player")(id, username, avatarId);
                     break;
                 }
                 case "teamsize": // initialize the size of a player's team
+                {
                     // format: |teamsize|<player>|<size>
                     // player should be p1 or p2
                     const playerId = this.getWord();
@@ -218,10 +227,11 @@ export class MessageParser
                         if (unparsedSize)
                         {
                             this.getHandler("teamsize")(playerId,
-                                parseInt(unparsedSize));
+                                parseInt(unparsedSize, 10));
                         }
                     }
                     break;
+                }
                 /*case "gametype":
                 case "gen":
                 case "tier":
@@ -235,6 +245,7 @@ export class MessageParser
 
                 // battle progress
                 case "request": // move/switch request
+                {
                     // format: |request|<json>
                     // json contains active and side pokemon info
                     const unparsedTeam = this.getRestOfLine().trim();
@@ -245,25 +256,31 @@ export class MessageParser
                         this.getHandler("request")(JSON.parse(unparsedTeam));
                     }
                     break;
+                }
                 /*case "inactive":
                 case "inactiveoff":
                     break;*/
                 case "turn": // update turn counter
+                {
                     // format: |turn|<turn number>
-                    this.getHandler("turn")(parseInt(this.getRestOfLine()));
+                    this.getHandler("turn")(parseInt(this.getRestOfLine(), 10));
                     break;
+                }
                 /*case "win":
                 case "tie":
                     break;*/
                 case "error": // e.g. invalid move/switch choice
+                {
                     // format: |error|[reason] description
                     this.getHandler("error")(this.getRestOfLine());
-
+                    break;
+                }
                 // major actions
                 /*case "move": // a pokemon performed a move (TODO)
                     break;*/
                 case "switch": // a pokemon was voluntarily switched
                 case "drag": // involuntarily switched, really doesn't matter
+                {
                     // format: |<switch or drag>|<pokemon>|<details>|<status>
                     // pokemon contains active position and nickname
                     // details contains species, gender, etc.
@@ -295,6 +312,7 @@ export class MessageParser
 
                     this.getHandler("switch")(pokemonId, details, status);
                     break;
+                }
                 /*case "detailschange":
                 case "-formechange":
                 case "replace":
@@ -352,7 +370,7 @@ export class MessageParser
             const owner = id.substring(0, i - 1);
             const position = id.substring(i - 1, i);
             const nickname = id.substring(i + 2);
-            return { owner: owner, position: position, nickname: nickname };
+            return { owner, position, nickname };
         }
         else
         {
@@ -405,10 +423,9 @@ export class MessageParser
 
         // level is always 100 unless otherwise indicated
         level = words[i] && words[i].startsWith("L") ?
-            parseInt(words[i].substring(1)) : 100;
+            parseInt(words[i].substring(1), 10) : 100;
 
-        return { species: species, shiny: shiny, gender: gender,
-            level: level };
+        return { species, shiny, gender, level };
     }
 
     /**
@@ -427,10 +444,10 @@ export class MessageParser
         //  empty string
         if (space === -1) space = status.length;
 
-        const hp = parseInt(status.substring(0, slash));
-        const hpMax = parseInt(status.substring(slash + 1, space));
+        const hp = parseInt(status.substring(0, slash), 10);
+        const hpMax = parseInt(status.substring(slash + 1, space), 10);
         const condition = status.substring(space + 1);
-        return { hp: hp, hpMax: hpMax, condition: condition };
+        return { hp, hpMax, condition };
     }
 
     /**

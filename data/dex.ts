@@ -23,7 +23,7 @@ export interface PokemonData
 }
 
 /** Contains data for every pokemon in the supported generation. */
-export const Dex: {[species: string]: PokemonData} =
+export const dex: {[species: string]: PokemonData} =
 {
     Bulbasaur:
     {
