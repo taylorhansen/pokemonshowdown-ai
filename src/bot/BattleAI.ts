@@ -59,7 +59,7 @@ export class BattleAI
         .on("switch", (id: PokemonID, details: PokemonDetails,
             status: PokemonStatus) =>
         {
-            // switch out active pokemon and what we know about them
+            // switch out active pokemon and what we know about them (how?)
         })
         .on("teamsize", (id: PlayerID, size: number) =>
         {

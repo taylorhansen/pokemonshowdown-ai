@@ -1,3 +1,5 @@
+import { PokemonDetails, PokemonStatus } from "../parser/MessageData";
+
 /** Temporary status conditions in the entire battle room. */
 export class RoomStatus
 {
@@ -10,12 +12,13 @@ export class Team
     /** Team-related status conditions. */
     private status: TeamStatus;
     /** The pokemon that compose this team. First one is always active. */
-    private pokemon: Pokemon[] = [];
+    private pokemon: Pokemon[];
 
     /** Number of pokemon on this team. */
     public set size(size: number)
     {
-        for (let i = 0 ; i< size; ++i)
+        this.pokemon = [];
+        for (let i = 0 ; i < size; ++i)
         {
             this.pokemon[i] = new Pokemon();
         }
@@ -50,6 +53,11 @@ export class Pokemon
     private status?: MajorStatusName; // TODO
     /** Minor status conditions, cleared on switch. */
     private readonly volatileStatus: VolatileStatus;
+
+    constructor(maxHp?: number)
+    {
+        this.hp = new HP(maxHp);
+    }
 }
 
 /** Information about a certain move. */
@@ -73,14 +81,45 @@ export class Move
 export class HP
 {
     /** Current HP. */
-    private current: number;
+    public get current(): number
+    {
+        return this._current;
+    }
+    public set current(hp: number)
+    {
+        this._current = Math.min(Math.max(0, hp), this.max);
+    }
+
     /** Maximum HP. */
-    private readonly max: number;
+    public readonly max: number;
     /**
      * Whether this is represented as a percentage. If true, `max` is `100` and
      * `current` is the percentage.
      */
-    private readonly percent: boolean;
+    public readonly isPercent: boolean;
+
+    /** Current HP backing field. */
+    private _current: number;
+
+    /**
+     * Creates a full HP object.
+     * @param max Maximum HP. If omitted, this is assumed to be a percentage.
+     */
+    constructor(max?: number)
+    {
+        if (max)
+        {
+            this.current = max;
+            this.max = max;
+            this.isPercent = false;
+        }
+        else
+        {
+            this.current = 100;
+            this.max = 100;
+            this.isPercent = true;
+        }
+    }
 }
 
 /** Major pokemon status conditions. */
@@ -113,6 +152,11 @@ export class BattleState
     private readonly teams: {readonly [S in Side]: Team} =
         { "us": new Team(), "them": new Team() };
 
+    /**
+     * Sets a team's size.
+     * @param side Side of the team.
+     * @param size How many pokemon are on that team.
+     */
     public setTeamSize(side: Side, size: number): void
     {
         this.teams[side].size = size;
