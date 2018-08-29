@@ -10,11 +10,11 @@ export type Type = "bug" | "dark" | "dragon" | "fire" | "flying" | "ghost" |
 export interface PokemonData
 {
     /** ID number in the Pokedex. */
-    id: number;
+    readonly id: number;
     /** Unique ID number that belongs to a single pokemon or form. */
-    uid: number;
-    baseStats: {[S in StatName]: number};
-    types: Type[];
+    readonly uid: number;
+    readonly baseStats: {readonly [S in StatName]: number};
+    readonly types: Readonly<Type[]>;
     /**
      * ID of the abilities this species can have. 1 or 2 means it's the
      * pokemon's first or second ability.
@@ -22,16 +22,41 @@ export interface PokemonData
     abilities: {[name: string]: 1 | 2};
 }
 
-/** Contains data for every pokemon in the supported generation. */
-export const dex: {[species: string]: PokemonData} =
+/** Type info for the dex variable. */
+export interface Dex
 {
-    Bulbasaur:
+    /** Contains info about each pokemon. */
+    readonly pokemon: {readonly [species: string]: PokemonData};
+    /** Maps a move id name to its id number. */
+    readonly moves: {readonly [name: string]: number};
+    /** Maps an item id name to its id number. */
+    readonly items: {readonly [name: string]: number};
+}
+
+/** Contains data for every pokemon in the supported generation. */
+export const dex: Dex =
+{
+    pokemon:
     {
-        id: 1,
-        uid: 1,
-        baseStats: {hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45},
-        types: ["grass", "poison"],
-        abilities: {Overgrow: 1}
+        Bulbasaur:
+        {
+            id: 1,
+            uid: 1,
+            baseStats: {hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45},
+            types: ["grass", "poison"],
+            abilities: {overgrow: 1}
+        }
+        // TODO: fill in others
+    },
+    moves:
+    {
+        splash: 1
+        // TODO: fill in others
+    },
+    items:
+    {
+        none: 0,
+        focussash: 1
+        // TODO: fill in others
     }
-    // TODO: fill in others
 };

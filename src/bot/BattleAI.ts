@@ -1,9 +1,10 @@
 import * as readline from "readline";
 import * as logger from "../logger";
 import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestData } from "../parser/MessageData";
+    RequestData, RequestMove, RequestPokemon } from "../parser/MessageData";
 import { AnyMessageListener } from "../parser/MessageListener";
-import { BattleState, Side } from "../state/BattleState";
+import { BattleState, Side } from "./state/BattleState";
+import { MajorStatusName, Pokemon } from "./state/Pokemon";
 
 const rl = readline.createInterface(process.stdin, process.stdout);
 
@@ -23,6 +24,8 @@ export class BattleAI
      * them).
      */
     private sides: {[ID in PlayerID]: Side};
+    /** Current request ID. */
+    private rqid: number | null;
     /** Used to send response messages to the server. */
     private readonly addResponses: (...responses: string[]) => void;
 
@@ -52,9 +55,42 @@ export class BattleAI
                 this.sides[otherId(id)] = "us";
             }
         })
-        .on("request", (data: RequestData) =>
+        .on("request", (request: RequestData) =>
         {
-            // TODO: fill in team info (how exactly?)
+            // update move data on our active pokemon
+            const active: Pokemon = this.state.getActive("us");
+            const moveData: RequestMove[] = request.active.moves;
+            for (let i = 0; i < moveData.length; ++i)
+            {
+                const move = moveData[i];
+                active.setMove(i, move.id, move.pp, move.maxpp);
+                active.disableMove(i, request.active.moves[i].disabled);
+            }
+
+            // update side data
+            const pokemon: Pokemon[] = this.state.getPokemon("us");
+            const pokemonData: RequestPokemon[] = request.side.pokemon;
+            for (let i = 0; i < pokemonData.length; ++i)
+            {
+                const mon = pokemon[i];
+                const data = pokemonData[i];
+
+                const details: PokemonDetails = data.details;
+                mon.species = details.species;
+                mon.level = details.level;
+                mon.gender = details.gender;
+
+                const status: PokemonStatus = data.condition;
+                mon.setHP(status.hp, status.hpMax);
+                mon.setMajorStatus(status.condition as MajorStatusName);
+
+                mon.item = data.item;
+                // must be set after species is set
+                mon.baseAbility = data.baseAbility;
+            }
+
+            // update rqid
+            this.rqid = request.rqid;
         })
         .on("switch", (id: PokemonID, details: PokemonDetails,
             status: PokemonStatus) =>
@@ -63,7 +99,6 @@ export class BattleAI
         })
         .on("teamsize", (id: PlayerID, size: number) =>
         {
-            // TODO: initialize this.sides
             this.state.setTeamSize(this.sides[id], size);
         })
         .on("turn", (turn: number) =>
