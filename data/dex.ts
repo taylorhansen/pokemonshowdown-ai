@@ -45,12 +45,23 @@ export const dex: Dex =
             baseStats: {hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45},
             types: ["grass", "poison"],
             abilities: {overgrow: 1}
+        },
+        Magikarp:
+        {
+            id: 2,
+            uid: 2,
+            baseStats: {hp: 20, atk: 10, def: 55, spa: 15, spd: 20, spe: 80},
+            types: ["water"],
+            abilities: {swiftswim: 1}
         }
         // TODO: fill in others
     },
     moves:
     {
-        splash: 1
+        splash: 1,
+        bounce: 2,
+        flail: 3,
+        tackle: 4
         // TODO: fill in others
     },
     items:
