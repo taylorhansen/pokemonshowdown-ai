@@ -90,13 +90,20 @@ ${status.condition ? ` ${status.condition}` : ""}`;
 /** Types the JSON data in a |request| message. */
 export interface RequestData
 {
-    /** Move status of active pokemon. */
-    active: {moves: RequestMove[]};
+    /** Active pokemon info. */
+    active: RequestActive[];
     /** Basic info about the entire team. */
     side: RequestSide;
     /** Request id for verification. */
     rqid: number;
 
+}
+
+/** Active pokemon info. */
+export interface RequestActive
+{
+    /** Move statuses. */
+    moves: RequestMove[];
 }
 
 /** Data about an active pokemon's move. */

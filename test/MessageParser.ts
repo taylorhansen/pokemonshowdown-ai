@@ -164,15 +164,17 @@ describe("MessageParser", function()
                 const givenData: RequestData =
                 {
                     active:
-                    {
-                        moves:
-                        [
-                            {
-                                move: "Splash", id: "splash", pp: 24, maxpp: 24,
-                                target: "self", disabled: false
-                            }
-                        ]
-                    },
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    move: "Splash", id: "splash", pp: 24,
+                                    maxpp: 24, target: "self", disabled: false
+                                }
+                            ]
+                        }
+                    ],
                     side:
                     {
                         name: "somebody", id: "p1",
