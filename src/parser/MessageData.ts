@@ -90,12 +90,16 @@ ${status.condition ? ` ${status.condition}` : ""}`;
 /** Types the JSON data in a |request| message. */
 export interface RequestData
 {
+    /** Corresponds to which active pokemon slots must be filled. */
+    forceSwitch?: boolean[];
     /** Active pokemon info. */
-    active: RequestActive[];
+    active?: RequestActive[];
     /** Basic info about the entire team. */
     side: RequestSide;
     /** Request id for verification. */
     rqid: number;
+    /** Whether the given request cannot be canceled. */
+    noCancel?: boolean;
 
 }
 

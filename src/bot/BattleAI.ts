@@ -59,20 +59,13 @@ export class BattleAI
         })
         .on("request", (request: RequestData) =>
         {
+            // update rqid to verify our next choice
+            this.rqid = request.rqid;
+
             // first time: team array not initialized yet
             if (!this.state.getPokemon("us").length)
             {
                 this.state.setTeamSize("us", request.side.pokemon.length);
-            }
-
-            // update move data on our active pokemon
-            const active: Pokemon = this.state.getActive("us");
-            const moveData: RequestMove[] = request.active[0].moves;
-            for (let i = 0; i < moveData.length; ++i)
-            {
-                const move = moveData[i];
-                active.setMove(i, move.id, move.pp, move.maxpp);
-                active.disableMove(i, request.active[0].moves[i].disabled);
             }
 
             // update side data
@@ -97,8 +90,18 @@ export class BattleAI
                 mon.baseAbility = data.baseAbility;
             }
 
-            // update rqid
-            this.rqid = request.rqid;
+            if (request.active)
+            {
+                // update move data on our active pokemon
+                const active: Pokemon = this.state.getActive("us");
+                const moveData: RequestMove[] = request.active[0].moves;
+                for (let i = 0; i < moveData.length; ++i)
+                {
+                    const move = moveData[i];
+                    active.setMove(i, move.id, move.pp, move.maxpp);
+                    active.disableMove(i, request.active[0].moves[i].disabled);
+                }
+            }
         })
         .on("switch", (id: PokemonID, details: PokemonDetails,
             status: PokemonStatus) =>
