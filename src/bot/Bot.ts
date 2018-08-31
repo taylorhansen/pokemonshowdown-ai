@@ -6,6 +6,9 @@ import { BattleAI } from "./BattleAI";
 /** Handles all bot actions. */
 export class Bot
 {
+    /** Allowed formats to play in. */
+    private static readonly format = "gen4randombattle";
+    /** Parses server messages. */
     private readonly parser: MessageParser = new MessageParser();
     /** Keeps track of all the battles we're in. */
     private readonly battles: {[room: string]: BattleAI} = {};
@@ -44,17 +47,14 @@ export class Bot
             }
         }).on("", "updatechallenges", (challengesFrom: ChallengesFrom) =>
         {
-            // test team for now
-            const useteam = `|/useteam Magikarp||Focus Sash||\
-bounce,flail,splash,tackle|Adamant|,252,,,4,252|||||`;
             for (const user in challengesFrom)
             {
                 if (challengesFrom.hasOwnProperty(user))
                 {
                     // ai only supports gen4ou for now
-                    if (challengesFrom[user] === "gen4ou")
+                    if (challengesFrom[user] === Bot.format)
                     {
-                        this.addResponses(null, useteam, `|/accept ${user}`);
+                        this.addResponses(null, `|/accept ${user}`);
                     }
                     else
                     {
