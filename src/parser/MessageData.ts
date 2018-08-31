@@ -83,6 +83,10 @@ export interface PokemonStatus
  */
 export function stringifyStatus(status: PokemonStatus): string
 {
+    if (status.hp === 0)
+    {
+        return "0 fnt";
+    }
     return `${status.hp}/${status.hpMax}\
 ${status.condition ? ` ${status.condition}` : ""}`;
 }

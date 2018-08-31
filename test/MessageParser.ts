@@ -196,10 +196,8 @@ describe("MessageParser", function()
                                 },
                                 active: true,
                                 stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                                moves: ["splash"],
-                                baseAbility: "swiftswim",
-                                item: "choiceband",
-                                pokeball: "masterball"
+                                moves: ["splash"], baseAbility: "swiftswim",
+                                item: "choiceband", pokeball: "masterball"
                             },
                             {
                                 ident:
@@ -217,10 +215,27 @@ describe("MessageParser", function()
                                 },
                                 active: true,
                                 stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                                moves: ["hyperbeam"],
-                                baseAbility: "pressure",
-                                item: "choicespecs",
-                                pokeball: "nestball"
+                                moves: ["hyperbeam"], baseAbility: "pressure",
+                                item: "choicespecs", pokeball: "nestball"
+                            },
+                            {
+                                ident:
+                                {
+                                    owner: "p1", position: "a", nickname: "hi"
+                                },
+                                details:
+                                {
+                                    species: "Mewtwo", shiny: true,
+                                    gender: null, level: 1
+                                },
+                                condition:
+                                {
+                                    hp: 0, hpMax: 0, condition: ""
+                                },
+                                active: true,
+                                stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                                moves: ["hyperbeam"], baseAbility: "pressure",
+                                item: "choicespecs", pokeball: "nestball"
                             }
                         ]
                     },

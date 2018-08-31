@@ -445,6 +445,12 @@ export class MessageParser
      */
     private static parsePokemonStatus(status: string): PokemonStatus | null
     {
+        if (status === "0 fnt")
+        {
+            // fainted pokemon
+            return {hp: 0, hpMax: 0, condition: ""};
+        }
+
         const slash = status.indexOf("/");
         if (slash === -1) return null;
         let space = status.indexOf(" ", slash);
