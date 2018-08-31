@@ -2,7 +2,7 @@
 .nyc_output/
 coverage/
 
-# holds all the compiled js
+# holds all the compiled js files
 dist/
 
 # npm packages
@@ -10,3 +10,6 @@ node_modules/
 
 # error log of last npm command
 npm-debug.log
+
+# random logs for reference
+logs/
