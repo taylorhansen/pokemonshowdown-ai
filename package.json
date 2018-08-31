@@ -33,8 +33,9 @@
   "author": "Taylor Hansen (CrazyGuy108)",
   "license": "MIT",
   "dependencies": {
-    "websocket": "^1.0.26",
-    "@types/websocket": "0.0.39"
+    "@tensorflow/tfjs": "^0.12.6",
+    "@types/websocket": "0.0.39",
+    "websocket": "^1.0.26"
   },
   "devDependencies": {
     "@types/chai": "^4.1.4",

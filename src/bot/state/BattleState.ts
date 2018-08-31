@@ -27,13 +27,38 @@ export class BattleState
         this.teams[side].size = size;
     }
 
+    /**
+     * Gets the active pokemon of the given side.
+     * @param side The given side.
+     * @returns The team's active pokemon.
+     */
     public getActive(side: Side): Pokemon
     {
         return this.teams[side].active;
     }
 
+    /**
+     * Gets all pokemon on the given side.
+     * @param side The given side.
+     * @returns The team's pokemon.
+     */
     public getPokemon(side: Side): Pokemon[]
     {
         return this.teams[side].pokemon;
+    }
+
+    /**
+     * Formats battle info into an array of numbers.
+     * @returns All battle data in array form.
+     */
+    public toArray(): number[]
+    {
+        const a =
+        [
+            ...this.status.toArray(),
+            ...this.teams.us.toArray(),
+            ...this.teams.them.toArray()
+        ];
+        return a;
     }
 }

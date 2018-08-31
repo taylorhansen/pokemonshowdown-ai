@@ -3,27 +3,33 @@ import { dex, PokemonData } from "../../../data/dex";
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon
 {
+    /** Species name. */
     public set species(species: string)
     {
         this.data = dex.pokemon[species];
         this._species = this.data.uid;
     }
 
+    /** Ability id name. */
     public set baseAbility(baseAbility: string)
     {
         this._baseAbility = this.data.abilities[baseAbility];
     }
 
+    /** Item id name. */
     public set item(item: string)
     {
         this._item = dex.items[item];
     }
 
+    /** Pokemon's level. */
     public set level(level: number)
     {
         this._level = Math.max(1, Math.min(level, 100));
     }
 
+    /** Whether this is the current active pokemon. */
+    public active: boolean = false;
     /** Pokemon's gender. */
     public gender: string | null;
 
@@ -41,25 +47,25 @@ export class Pokemon
     /** Pokemon's level from 1 to 100. */
     private _level: number;
     /** Known moveset. */
-    private moves: Move[];
+    private readonly moves: Move[] = [];
     /** Info about the pokemon's hit points. */
-    private hp: HP;
+    private hp: HP = new HP();
     /** Current major status condition. Not cleared on switch. */
     private status?: MajorStatusName; // TODO
     /** Minor status conditions. Cleared on switch. */
     private readonly volatileStatus = new VolatileStatus();
 
     /**
-     * Does some initialization steps on first switchin.
-     * @param species Unique form/species id number.
-     * @param level Pokemon's level.
-     * @param maxHp Max HP. If omitted, the HP is interpreted as a percentage.
+     * Creates a Pokemon.
+     * @param active Whether this is the current active pokemon.
      */
-    public firstSwitchin(species: number, level: number, maxHp?: number): void
+    constructor(active: boolean)
     {
-        this._species = species;
-        this.level = level;
-        this.hp = new HP(maxHp);
+        // initialize moveset
+        for (let i = 0; i < 4; ++i)
+        {
+            this.moves[i] = new Move();
+        }
     }
 
     /**
@@ -103,6 +109,34 @@ export class Pokemon
     {
         this.status = status;
     }
+
+    /**
+     * Formats pokemon info into an array of numbers.
+     * @returns All pokemon data in array form.
+     */
+    public toArray(): number[]
+    {
+        const a =
+        [
+            this.gender === "M" ? 1 : 0,
+            this.gender === "F" ? 1 : 0,
+            this._species, this._item, this._baseAbility, this._level,
+            ...([] as number[]).concat(
+                ...this.moves.map(move => move.toArray())),
+            ...this.hp.toArray(),
+            this.status === "brn" ? 1 : 0,
+            this.status === "par" ? 1 : 0,
+            this.status === "psn" ? 1 : 0,
+            this.status === "tox" ? 1 : 0,
+            this.status === "slp" ? 1 : 0,
+            this.status === "frz" ? 1 : 0
+        ];
+        if (this.active)
+        {
+            a.push(...this.volatileStatus.toArray());
+        }
+        return a;
+    }
 }
 
 /** Information about a certain move. */
@@ -133,6 +167,15 @@ export class Move
         this.pp = pp;
         this.ppMax = ppMax;
     }
+
+    /**
+     * Formats move info into an array of numbers.
+     * @returns All move data in array form.
+     */
+    public toArray(): number[]
+    {
+        return [this.id, this.ppLeft];
+    }
 }
 
 /** Hit points info. */
@@ -144,6 +187,7 @@ export class HP
         this._current = Math.min(Math.max(0, hp), this._max);
     }
 
+    /** Maximum HP. */
     public set max(max: number)
     {
         this._max = max;
@@ -180,6 +224,15 @@ export class HP
             this.max = 100;
             this.isPercent = true;
         }
+    }
+
+    /**
+     * Formats hp info into an array of numbers.
+     * @returns All hp data in array form.
+     */
+    public toArray(): number[]
+    {
+        return [this._current, this._max];
     }
 }
 
@@ -221,6 +274,21 @@ export class VolatileStatus
     public disableMove(move: number, disabled: boolean = true): void
     {
         this.disabledMoves[move] = disabled;
+    }
+
+    /**
+     * Formats volatile status info into an array of numbers.
+     * @returns All volatile status data in array form.
+     */
+    public toArray(): number[]
+    {
+        const a =
+        [
+            ...Object.keys(this.statBoosts).map(
+                (key: BoostableStatName) => this.statBoosts[key]),
+            ...this.disabledMoves.map(b => b ? 1 : 0)
+        ];
+        return a;
     }
 }
 

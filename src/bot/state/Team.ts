@@ -13,7 +13,7 @@ export class Team
     public readonly pokemon: Pokemon[] = [];
 
     /** Team-related status conditions. */
-    private status: TeamStatus;
+    private readonly status: TeamStatus = new TeamStatus();
 
     /**
      * Size of the team. This should be called before the battle officially
@@ -23,7 +23,7 @@ export class Team
     {
         for (let i = 0 ; i < size; ++i)
         {
-            this.pokemon[i] = new Pokemon();
+            this.pokemon[i] = new Pokemon(/*active=*/ i === 0);
         }
 
         // delete any other element slots if they exist
@@ -32,10 +32,34 @@ export class Team
             this.pokemon.splice(size);
         }
     }
+
+    /**
+     * Formats all the team info into an array of numbers.
+     * @returns All team data in array form.
+     */
+    public toArray(): number[]
+    {
+        const a =
+        [
+            ...this.status.toArray(),
+            ...([] as number[]).concat(
+                ...this.pokemon.map(mon => mon.toArray()))
+        ];
+        return a;
+    }
 }
 
 /** Temporary status conditions for a certain team. */
 export class TeamStatus
 {
     // TODO
+
+    /**
+     * Formats team status info into an array of numbers.
+     * @returns All team status data in array form.
+     */
+    public toArray(): number[]
+    {
+        return [];
+    }
 }

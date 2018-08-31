@@ -3,6 +3,7 @@ import * as logger from "../logger";
 import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
     RequestData, RequestMove, RequestPokemon } from "../parser/MessageData";
 import { AnyMessageListener } from "../parser/MessageListener";
+import { network } from "./nn/network";
 import { BattleState, Side } from "./state/BattleState";
 import { MajorStatusName, Pokemon } from "./state/Pokemon";
 
@@ -43,7 +44,8 @@ export class BattleAI
         .on("error", (reason: string) =>
         {
             logger.error(reason);
-            this.ask();
+            logger.debug("nn input failed, asking user for input");
+            this.askUser();
         })
         .on("player", (id: PlayerID, givenUser: string) =>
         {
@@ -57,14 +59,20 @@ export class BattleAI
         })
         .on("request", (request: RequestData) =>
         {
+            // first time: team array not initialized yet
+            if (!this.state.getPokemon("us").length)
+            {
+                this.state.setTeamSize("us", request.side.pokemon.length);
+            }
+
             // update move data on our active pokemon
             const active: Pokemon = this.state.getActive("us");
-            const moveData: RequestMove[] = request.active.moves;
+            const moveData: RequestMove[] = request.active[0].moves;
             for (let i = 0; i < moveData.length; ++i)
             {
                 const move = moveData[i];
                 active.setMove(i, move.id, move.pp, move.maxpp);
-                active.disableMove(i, request.active.moves[i].disabled);
+                active.disableMove(i, request.active[0].moves[i].disabled);
             }
 
             // update side data
@@ -99,17 +107,29 @@ export class BattleAI
         })
         .on("teamsize", (id: PlayerID, size: number) =>
         {
-            this.state.setTeamSize(this.sides[id], size);
+            // should only initialize if the team is empty
+            const side = this.sides[id];
+            if (!this.state.getPokemon(side).length)
+            {
+                this.state.setTeamSize(side, size);
+            }
         })
         .on("turn", (turn: number) =>
         {
             logger.debug(`new turn: ${turn}`);
-            this.ask();
+            this.askNN();
         });
     }
 
+    /** Asks the neural network for what to do next. */
+    private askNN(): void
+    {
+        const response = network.decide(this.state);
+        this.addResponses(`|/choose ${response}|${this.rqid}`);
+    }
+
     /** Asks for and sends user input to the server once it's received. */
-    private ask(): void
+    private askUser(): void
     {
         rl.question("ai> ", answer =>
         {
