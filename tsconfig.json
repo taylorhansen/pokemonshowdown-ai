@@ -11,5 +11,5 @@
         "baseUrl": ".",
         "paths": { "*": [ "node_modules/*" ] }
     },
-    "include": [ "src/**/*.ts", "data/**/*.ts" ]
+    "include": [ "src/**/*.ts", "data/*.ts" ]
 }

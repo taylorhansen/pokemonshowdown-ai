@@ -4,8 +4,9 @@
   "description": "desc",
   "main": "dist/index.js",
   "scripts": {
+    "build:dex": "./build-dex.sh",
     "build": "tsc",
-    "lint": "tslint -c tslint.json data/**/*.ts src/**/*.ts test/**/*.ts",
+    "lint": "tslint -c tslint.json data/*.ts src/**/*.ts test/**/*.ts",
     "main": "ts-node src/index.ts",
     "test": "nyc mocha"
   },

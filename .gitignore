@@ -13,3 +13,6 @@ npm-debug.log
 
 # random logs for reference
 logs/
+
+# clone of pokemon showdown repo for extracting pokedex data
+data/Pokemon-Showdown/
