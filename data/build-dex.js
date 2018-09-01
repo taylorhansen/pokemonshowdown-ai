@@ -87,8 +87,9 @@ for (const name in pokedex)
         }
     }
 
-    console.log(`    ${name}:\n    {`);
     console.log(`\
+    ${/[- ']+/.test(mon.species) ? quote(mon.species) : mon.species}:
+    {
         id: ${mon.num},
         uid: ${i},
         species: ${quote(mon.species)},`);

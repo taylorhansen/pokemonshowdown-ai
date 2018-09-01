@@ -4,7 +4,7 @@ import { PokemonData } from "../../../data/dex-types";
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon
 {
-    /** Species name. */
+    /** Species/form name. */
     public set species(species: string)
     {
         this.data = dex.pokemon[species];
