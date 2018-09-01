@@ -213,7 +213,7 @@ describe("MessageParser", function()
                                 {
                                     hp: 9001, hpMax: 9001, condition: ""
                                 },
-                                active: true,
+                                active: false,
                                 stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
                                 moves: ["hyperbeam"], baseAbility: "pressure",
                                 item: "choicespecs", pokeball: "nestball"
@@ -221,21 +221,22 @@ describe("MessageParser", function()
                             {
                                 ident:
                                 {
-                                    owner: "p1", position: "a", nickname: "hi"
+                                    owner: "p1", position: "a",
+                                    nickname: "Pentagon"
                                 },
                                 details:
                                 {
-                                    species: "Mewtwo", shiny: true,
-                                    gender: null, level: 1
+                                    species: "Porygon", shiny: false,
+                                    gender: null, level: 100
                                 },
                                 condition:
                                 {
                                     hp: 0, hpMax: 0, condition: ""
                                 },
-                                active: true,
+                                active: false,
                                 stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                                moves: ["hyperbeam"], baseAbility: "pressure",
-                                item: "choicespecs", pokeball: "nestball"
+                                moves: ["tackle"], baseAbility: "trace",
+                                item: "choicescarf", pokeball: "greatball"
                             }
                         ]
                     },

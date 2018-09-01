@@ -404,34 +404,20 @@ export class MessageParser
         }
 
         const species = words[0];
-        let shiny: boolean;
-        let gender: string | null;
-        let level: number;
-        let i = 1;
-
-        if (words[i] === "shiny")
+        let shiny = false;
+        let gender: string | null = null;
+        let level = 100;
+        for (let i = 1; i < words.length; ++i)
         {
-            shiny = true;
-            ++i;
+            const word = words[i];
+            /* istanbul ignore else */
+            if (word === "shiny") shiny = true;
+            else if (word === "M" || word === "F") gender = word;
+            else if (word.startsWith("L"))
+            {
+                level = parseInt(word.substring(1), 10);
+            }
         }
-        else
-        {
-            shiny = false;
-        }
-
-        if (words[i] === "M" || words[i] === "F")
-        {
-            gender = words[i];
-            ++i;
-        }
-        else
-        {
-            gender = null;
-        }
-
-        // level is always 100 unless otherwise indicated
-        level = words[i] && words[i].startsWith("L") ?
-            parseInt(words[i].substring(1), 10) : 100;
 
         return { species, shiny, gender, level };
     }
