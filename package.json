@@ -15,8 +15,10 @@
       ".ts"
     ],
     "exclude": [
-      "**/*.js",
-      "test/**/*"
+      "coverage/",
+      "data/",
+      "dist/",
+      "test/"
     ],
     "reporter": [
       "html",
