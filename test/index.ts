@@ -1,6 +1,7 @@
 import { disable } from "../src/logger";
 import "./AnyMessageListener";
-import "./Bot";
+import "./bot/battle/Battle";
+import "./bot/Bot";
 import "./messageData";
 import "./parser/MessageParser";
 

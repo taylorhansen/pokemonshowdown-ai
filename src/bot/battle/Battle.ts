@@ -11,8 +11,6 @@ import { BattleState, Side } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
 import { SwitchInOptions } from "./state/Team";
 
-const rl = readline.createInterface(process.stdin, process.stdout);
-
 /** Holds the reward values for different events. */
 const rewards =
 {
@@ -22,7 +20,7 @@ const rewards =
 /** Manages the battle state and the AI. */
 export class Battle
 {
-    /** Manages battle state and neural network input. */
+    /** Manages battle state for AI input. */
     private readonly state = new BattleState();
     /** Decides what the client should do. */
     private readonly ai: AI;
@@ -57,18 +55,19 @@ export class Battle
     {
         this.ai = new aiType(BattleState.getArraySize());
         this.addResponses = addResponses;
+
         listener
         .on("-curestatus", args =>
         {
-            this.state.getTeam(this.sides[args.id.owner]).active.cure();
+            this.state.getTeam(this.getSide(args.id.owner)).active.cure();
         })
         .on("-cureteam", args =>
         {
-            this.state.getTeam(this.sides[args.id.owner]).cure();
+            this.state.getTeam(this.getSide(args.id.owner)).cure();
         })
         .on("-damage", args =>
         {
-            const side = this.sides[args.id.owner];
+            const side = this.getSide(args.id.owner);
             const active = this.state.getTeam(side).active;
 
             // side "them" uses hp percentages so hpMax would be omitted
@@ -85,10 +84,10 @@ export class Battle
         })
         .on("-status", args =>
         {
-            this.state.getTeam(this.sides[args.id.owner]).active
+            this.state.getTeam(this.getSide(args.id.owner)).active
                 .afflict(args.condition);
         })
-        .on("error", args =>
+        .on("error", /* istanbul ignore next: uses stdin */ args =>
         {
             logger.error(args.reason);
             logger.debug("nn input failed, asking user for input");
@@ -98,13 +97,13 @@ export class Battle
         {
             // active pokemon has fainted
             // TODO: for doubles/triples, do this based on active position also
-            const side = this.sides[args.id.owner];
+            const side = this.getSide(args.id.owner);
             this.state.getTeam(side).active.faint();
             this.applyReward(side, rewards.faint);
         })
         .on("move", args =>
         {
-            const side = this.sides[args.id.owner];
+            const side = this.getSide(args.id.owner);
             const mon = this.state.getTeam(side).active;
             const moveId = args.move.toLowerCase().replace(/[ -]/g, "");
 
@@ -212,7 +211,7 @@ export class Battle
         })
         .on("switch", args =>
         {
-            const side = this.sides[args.id.owner];
+            const side = this.getSide(args.id.owner);
             const team = this.state.getTeam(side);
 
             // consume pending copyvolatile boolean flags
@@ -250,7 +249,7 @@ expected`);
         .on("teamsize", args =>
         {
             // should only initialize if the team is empty
-            const side = this.sides[args.id];
+            const side = this.getSide(args.id);
             const team = this.state.getTeam(side);
             if (team.size <= 0)
             {
@@ -276,6 +275,16 @@ expected`);
         });
     }
 
+    /**
+     * Asks which player id corresponds to which side.
+     * @param id Player id.
+     * @returns The corresponding Side.
+     */
+    protected getSide(id: PlayerID): Side
+    {
+        return this.sides[id];
+    }
+
     /** Asks the AI for what to do next. */
     private askAI(): void
     {
@@ -296,6 +305,7 @@ expected`);
     /** Asks for and sends user input to the server once it's received. */
     private askUser(): void
     {
+        const rl = readline.createInterface(process.stdin, process.stdout);
         rl.question("ai> ", answer =>
         {
             if (answer)
@@ -307,6 +317,7 @@ expected`);
             {
                 logger.error("no ai input");
             }
+            rl.close();
         });
     }
 

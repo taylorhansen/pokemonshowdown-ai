@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { Bot } from "../src/bot/Bot";
-import { MockParser } from "./parser/MockParser";
+import { Bot } from "../../src/bot/Bot";
+import { MockParser } from "../parser/MockParser";
 
 describe("Bot", function()
 {
