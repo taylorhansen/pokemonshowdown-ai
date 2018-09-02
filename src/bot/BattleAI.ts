@@ -116,10 +116,12 @@ export class BattleAI
             {
                 this.choices = [];
                 // possible choices for switching pokemon
-                for (let i = 0; i < pokemon.length; ++i)
+                // TODO: implement Pokemon.active field
+                // can remove comments once they are
+                for (let i = 1/*0*/; i < pokemon.length; ++i)
                 {
                     const mon = pokemon[i];
-                    if (mon.fainted || mon.active) continue;
+                    if (mon.fainted/* || mon.active*/) continue;
 
                     this.choices.push(`switch ${i + 1}` as Choice);
                 }
