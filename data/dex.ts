@@ -4928,10 +4928,20 @@ const pokemon: {readonly [species: string]: PokemonData} =
         baseStats: {hp: 75, atk: 95, def: 67, spa: 125, spd: 95, spe: 83},
         weightkg: 68
     },
+    Yanmega:
+    {
+        id: 469,
+        uid: 487,
+        species: "Yanmega",
+        abilities: {speedboost: 1, tintedlens: 2},
+        types: ["bug", "flying"],
+        baseStats: {hp: 86, atk: 76, def: 86, spa: 116, spd: 56, spe: 95},
+        weightkg: 51.5
+    },
     Leafeon:
     {
         id: 470,
-        uid: 487,
+        uid: 488,
         species: "Leafeon",
         abilities: {leafguard: 1},
         types: ["grass"],
@@ -4941,7 +4951,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Glaceon:
     {
         id: 471,
-        uid: 488,
+        uid: 489,
         species: "Glaceon",
         abilities: {snowcloak: 1},
         types: ["ice"],
@@ -4951,7 +4961,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gliscor:
     {
         id: 472,
-        uid: 489,
+        uid: 490,
         species: "Gliscor",
         abilities: {hypercutter: 1, sandveil: 2},
         types: ["ground", "flying"],
@@ -4961,7 +4971,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mamoswine:
     {
         id: 473,
-        uid: 490,
+        uid: 491,
         species: "Mamoswine",
         abilities: {oblivious: 1, snowcloak: 2},
         types: ["ice", "ground"],
@@ -4971,7 +4981,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Porygon-Z":
     {
         id: 474,
-        uid: 491,
+        uid: 492,
         species: "Porygon-Z",
         abilities: {adaptability: 1, download: 2},
         types: ["normal"],
@@ -4981,7 +4991,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gallade:
     {
         id: 475,
-        uid: 492,
+        uid: 493,
         species: "Gallade",
         abilities: {steadfast: 1},
         types: ["psychic", "fighting"],
@@ -4991,7 +5001,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Probopass:
     {
         id: 476,
-        uid: 493,
+        uid: 494,
         species: "Probopass",
         abilities: {sturdy: 1, magnetpull: 2},
         types: ["rock", "steel"],
@@ -5001,7 +5011,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Froslass:
     {
         id: 478,
-        uid: 494,
+        uid: 495,
         species: "Froslass",
         abilities: {snowcloak: 1},
         types: ["ice", "ghost"],
@@ -5011,7 +5021,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rotom:
     {
         id: 479,
-        uid: 495,
+        uid: 496,
         species: "Rotom",
         otherForms:
         [
@@ -5025,7 +5035,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Uxie:
     {
         id: 480,
-        uid: 496,
+        uid: 497,
         species: "Uxie",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -5035,7 +5045,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mesprit:
     {
         id: 481,
-        uid: 497,
+        uid: 498,
         species: "Mesprit",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -5045,7 +5055,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Azelf:
     {
         id: 482,
-        uid: 498,
+        uid: 499,
         species: "Azelf",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -5055,7 +5065,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dialga:
     {
         id: 483,
-        uid: 499,
+        uid: 500,
         species: "Dialga",
         abilities: {pressure: 1},
         types: ["steel", "dragon"],
@@ -5065,7 +5075,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Palkia:
     {
         id: 484,
-        uid: 500,
+        uid: 501,
         species: "Palkia",
         abilities: {pressure: 1},
         types: ["water", "dragon"],
@@ -5075,7 +5085,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Regigigas:
     {
         id: 486,
-        uid: 501,
+        uid: 502,
         species: "Regigigas",
         abilities: {slowstart: 1},
         types: ["normal"],
@@ -5085,7 +5095,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Giratina:
     {
         id: 487,
-        uid: 502,
+        uid: 503,
         species: "Giratina",
         baseForm: "Altered",
         otherForms: ["giratinaorigin"],
@@ -5097,7 +5107,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Giratina-Origin":
     {
         id: 487,
-        uid: 503,
+        uid: 504,
         species: "Giratina-Origin",
         baseSpecies: "Giratina",
         form: "Origin",
@@ -5110,7 +5120,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cresselia:
     {
         id: 488,
-        uid: 504,
+        uid: 505,
         species: "Cresselia",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -5120,7 +5130,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Phione:
     {
         id: 489,
-        uid: 505,
+        uid: 506,
         species: "Phione",
         abilities: {hydration: 1},
         types: ["water"],
@@ -5130,7 +5140,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Manaphy:
     {
         id: 490,
-        uid: 506,
+        uid: 507,
         species: "Manaphy",
         abilities: {hydration: 1},
         types: ["water"],
@@ -5140,7 +5150,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Darkrai:
     {
         id: 491,
-        uid: 507,
+        uid: 508,
         species: "Darkrai",
         abilities: {baddreams: 1},
         types: ["dark"],
@@ -5150,7 +5160,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shaymin:
     {
         id: 492,
-        uid: 508,
+        uid: 509,
         species: "Shaymin",
         baseForm: "Land",
         otherForms: ["shayminsky"],
@@ -5162,7 +5172,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Shaymin-Sky":
     {
         id: 492,
-        uid: 509,
+        uid: 510,
         species: "Shaymin-Sky",
         baseSpecies: "Shaymin",
         form: "Sky",
@@ -5175,7 +5185,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Bug":
     {
         id: 493,
-        uid: 510,
+        uid: 511,
         species: "Arceus-Bug",
         baseSpecies: "Arceus",
         form: "Bug",
@@ -5188,7 +5198,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Dark":
     {
         id: 493,
-        uid: 511,
+        uid: 512,
         species: "Arceus-Dark",
         baseSpecies: "Arceus",
         form: "Dark",
@@ -5201,7 +5211,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Dragon":
     {
         id: 493,
-        uid: 512,
+        uid: 513,
         species: "Arceus-Dragon",
         baseSpecies: "Arceus",
         form: "Dragon",
@@ -5214,7 +5224,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Electric":
     {
         id: 493,
-        uid: 513,
+        uid: 514,
         species: "Arceus-Electric",
         baseSpecies: "Arceus",
         form: "Electric",
@@ -5227,7 +5237,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Fighting":
     {
         id: 493,
-        uid: 514,
+        uid: 515,
         species: "Arceus-Fighting",
         baseSpecies: "Arceus",
         form: "Fighting",
@@ -5240,7 +5250,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Fire":
     {
         id: 493,
-        uid: 515,
+        uid: 516,
         species: "Arceus-Fire",
         baseSpecies: "Arceus",
         form: "Fire",
@@ -5253,7 +5263,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Flying":
     {
         id: 493,
-        uid: 516,
+        uid: 517,
         species: "Arceus-Flying",
         baseSpecies: "Arceus",
         form: "Flying",
@@ -5266,7 +5276,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Ghost":
     {
         id: 493,
-        uid: 517,
+        uid: 518,
         species: "Arceus-Ghost",
         baseSpecies: "Arceus",
         form: "Ghost",
@@ -5279,7 +5289,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Grass":
     {
         id: 493,
-        uid: 518,
+        uid: 519,
         species: "Arceus-Grass",
         baseSpecies: "Arceus",
         form: "Grass",
@@ -5292,7 +5302,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Ground":
     {
         id: 493,
-        uid: 519,
+        uid: 520,
         species: "Arceus-Ground",
         baseSpecies: "Arceus",
         form: "Ground",
@@ -5305,7 +5315,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Ice":
     {
         id: 493,
-        uid: 520,
+        uid: 521,
         species: "Arceus-Ice",
         baseSpecies: "Arceus",
         form: "Ice",
@@ -5318,7 +5328,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Poison":
     {
         id: 493,
-        uid: 521,
+        uid: 522,
         species: "Arceus-Poison",
         baseSpecies: "Arceus",
         form: "Poison",
@@ -5331,7 +5341,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Psychic":
     {
         id: 493,
-        uid: 522,
+        uid: 523,
         species: "Arceus-Psychic",
         baseSpecies: "Arceus",
         form: "Psychic",
@@ -5344,7 +5354,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Rock":
     {
         id: 493,
-        uid: 523,
+        uid: 524,
         species: "Arceus-Rock",
         baseSpecies: "Arceus",
         form: "Rock",
@@ -5357,7 +5367,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Steel":
     {
         id: 493,
-        uid: 524,
+        uid: 525,
         species: "Arceus-Steel",
         baseSpecies: "Arceus",
         form: "Steel",
@@ -5370,7 +5380,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Water":
     {
         id: 493,
-        uid: 525,
+        uid: 526,
         species: "Arceus-Water",
         baseSpecies: "Arceus",
         form: "Water",

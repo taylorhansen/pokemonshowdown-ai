@@ -15,6 +15,8 @@ const Dex = require("./Pokemon-Showdown/sim/dex");
 function isNonGen4(name)
 {
     // banlist: megas, primal, alola/totem, arceus fairy, pikachu forms
+    // except yanmega, which isn't actually a mega evolution
+    if (name === "yanmega") return false;
     return /(mega[xy]?|primal|alola|totem|arceusfairy|^pikachu.+)$/.test(name);
 }
 
