@@ -14,11 +14,12 @@ export const network =
     decide(state: BattleState, choices: Choice[]): string
     {
         const input: number[] = state.toArray();
+        const outNeurons = Object.keys(choiceIds).length;
 
         const model = tf.sequential();
         model.add(tf.layers.dense(
         {
-            units: 9, inputShape: [input.length], activation: "softmax"
+            units: outNeurons, inputShape: [input.length], activation: "softmax"
         }));
 
         // run a single input vector through the nn
@@ -27,15 +28,16 @@ export const network =
         const output = tensorOut.flatten().dataSync();
 
         // find the highest activation that is a subset of the choices array
-        let bestChoice = 0;
+        let bestChoice = choices[0];
         for (let i = 1; i < choices.length; ++i)
         {
-            const activation = output[choiceIds[choices[i]]];
-            if (activation > output[choiceIds[choices[bestChoice]]])
+            const choice = choices[i];
+            const activation = output[choiceIds[choice]];
+            if (activation > output[choiceIds[bestChoice]])
             {
-                bestChoice = i;
+                bestChoice = choice;
             }
         }
-        return choices[bestChoice];
+        return bestChoice;
     }
 };
