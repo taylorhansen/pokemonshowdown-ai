@@ -172,4 +172,12 @@ describe("AnyMessageListener", function()
             .getHandler("updateuser")(newuser, guest);
         });
     });
+
+    describe("upkeep", function()
+    {
+        it("Should handle a normal upkeep message", function(done)
+        {
+            listener.on("upkeep", done).getHandler("upkeep")();
+        });
+    });
 });

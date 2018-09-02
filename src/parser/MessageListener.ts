@@ -3,7 +3,8 @@ import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "challstr" | "error" | "init" | "player" | "request" |
-    "switch" | "teamsize" | "turn" | "updatechallenges" | "updateuser";
+    "switch" | "teamsize" | "turn" | "updatechallenges" | "updateuser" |
+    "upkeep";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -23,7 +24,8 @@ export class AnyMessageListener
         teamsize: new MessageListener<"teamsize">(),
         turn: new MessageListener<"turn">(),
         updatechallenges: new MessageListener<"updatechallenges">(),
-        updateuser: new MessageListener<"updateuser">()
+        updateuser: new MessageListener<"updateuser">(),
+        upkeep: new MessageListener<"upkeep">()
     };
 
     /**
@@ -99,6 +101,7 @@ export type MessageHandler<P extends Prefix> =
     : P extends "turn" ? TurnHandler
     : P extends "updatechallenges" ? UpdateChallengesHandler
     : P extends "updateuser" ? UpdateUserHandler
+    : P extends "upkeep" ? UpkeepHandler
     : () => void;
 
 /**
@@ -168,3 +171,6 @@ export type UpdateChallengesHandler = (challengesFrom: ChallengesFrom) => void;
  * @param isGuest Whether this is a guest account.
  */
 export type UpdateUserHandler = (username: string, isGuest: boolean) => void;
+
+/** Handles an `upkeep` message. */
+export type UpkeepHandler = () => void;

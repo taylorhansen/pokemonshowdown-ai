@@ -435,5 +435,13 @@ ${JSON.stringify(givenChallengesFrom)}}`);
                 });
             }
         });
+
+        describe("upkeep", function()
+        {
+            it("Should parse upkeep", function(done)
+            {
+                parser.on("", "upkeep", done).parse("|upkeep");
+            });
+        });
     });
 });

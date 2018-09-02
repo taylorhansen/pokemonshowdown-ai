@@ -333,6 +333,9 @@ export class MessageParser
                 case "cant":
                 case "faint":
                     break;*/
+                case "upkeep":
+                    this.getHandler("upkeep")();
+                    break;
 
                 // minor actions
                 /*case "-fail":

@@ -30,6 +30,8 @@ export class BattleAI
     private rqid: number | null;
     /** Available choices to make. */
     private choices: Choice[] = [];
+    /** Whether we're being forced to switch. */
+    private forceSwitch = false;
     /** Used to send response messages to the server. */
     private readonly addResponses: (...responses: string[]) => void;
 
@@ -137,6 +139,13 @@ export class BattleAI
 
                         this.choices.push(`move ${i + 1}` as Choice);
                     }
+                    this.forceSwitch = false;
+                }
+                else
+                {
+                    // if this is just a switch request, then we're being forced
+                    //  to switch
+                    this.forceSwitch = true;
                 }
             }
         })
@@ -158,6 +167,17 @@ export class BattleAI
         {
             logger.debug(`new turn: ${turn}`);
             this.askNN();
+        })
+        .on("upkeep", () =>
+        {
+            // usually, once we get the message that a new turn has started, we
+            //  would then ask the neural network for input
+            // but if we're being forced to switch (e.g. when a pokemon faints),
+            //  the turn message we've been waiting for hasn't been sent yet
+            if (this.forceSwitch)
+            {
+                this.askNN();
+            }
         });
     }
 
