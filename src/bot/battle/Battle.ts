@@ -21,7 +21,7 @@ export class Battle
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
      */
-    private sides: {[ID in PlayerID]: Side};
+    private sides: {readonly [ID in PlayerID]: Side};
     /** Current request ID. Updated after every `|request|` message. */
     private rqid: number | null;
     /** Available choices to make. */
@@ -56,9 +56,7 @@ export class Battle
             if (givenUser !== username)
             {
                 // them
-                this.sides = {} as any;
-                this.sides[id] = "them";
-                this.sides[otherId(id)] = "us";
+                this.sides = {[id]: "them", [otherId(id)]: "us"} as any;
             }
         })
         .on("request", (request: RequestData) =>
