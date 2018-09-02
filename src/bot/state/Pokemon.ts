@@ -68,6 +68,8 @@ export class Pokemon
      */
     constructor(active: boolean)
     {
+        this.active = active;
+
         // initialize moveset
         for (let i = 0; i < 4; ++i)
         {

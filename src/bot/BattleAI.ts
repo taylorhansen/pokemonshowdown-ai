@@ -120,12 +120,10 @@ export class BattleAI
             {
                 this.choices = [];
                 // possible choices for switching pokemon
-                // TODO: implement Pokemon.active field
-                // can remove comments once they are
-                for (let i = 1/*0*/; i < pokemon.length; ++i)
+                for (let i = 0; i < pokemon.length; ++i)
                 {
                     const mon = pokemon[i];
-                    if (mon.fainted/* || mon.active*/) continue;
+                    if (mon.fainted || mon.active) continue;
 
                     this.choices.push(`switch ${i + 1}` as Choice);
                 }
@@ -154,7 +152,7 @@ export class BattleAI
         .on("switch", (id: PokemonID, details: PokemonDetails,
             status: PokemonStatus) =>
         {
-            // switch out active pokemon and what we know about them (how?)
+            // TODO: update active status on pokemon
         })
         .on("teamsize", (id: PlayerID, size: number) =>
         {
