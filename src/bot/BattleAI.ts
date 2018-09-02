@@ -4,7 +4,7 @@ import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
     RequestData, RequestMove, RequestPokemon } from "../parser/MessageData";
 import { AnyMessageListener } from "../parser/MessageListener";
 import { Choice } from "./Choice";
-import { network } from "./nn/network";
+import { Network } from "./Network";
 import { BattleState, Side } from "./state/BattleState";
 import { MajorStatusName, Pokemon } from "./state/Pokemon";
 
@@ -21,6 +21,8 @@ export class BattleAI
 {
     /** Manages battle state and neural network input. */
     private readonly state = new BattleState();
+    /** Decides what the AI should do. */
+    private readonly network = new Network();
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -184,7 +186,7 @@ export class BattleAI
     /** Asks the neural network for what to do next. */
     private askNN(): void
     {
-        const response = network.decide(this.state, this.choices);
+        const response = this.network.decide(this.state, this.choices);
         this.choices = [];
         this.addResponses(`|/choose ${response}|${this.rqid}`);
     }
