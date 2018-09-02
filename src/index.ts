@@ -26,4 +26,4 @@ ws.on("connect", connection =>
         }
     });
 });
-ws.connect("ws://sim.smogon.com:8000/showdown/websocket");
+ws.connect("ws://localhost:8000/showdown/websocket");
