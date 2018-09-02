@@ -1,9 +1,8 @@
 import * as tf from "@tensorflow/tfjs";
 import { Choice, choiceIds } from "./Choice";
-import { BattleState } from "./state/BattleState";
 
 /** Neural network interface. */
-export class Network
+export class AI
 {
     /** Neural network model. */
     private readonly model = tf.sequential();
@@ -30,13 +29,11 @@ export class Network
      * @param choices The set of possible choices that can be made.
      * @returns A command to be sent, e.g. `move 1` or `switch 3`.
      */
-    public decide(state: BattleState, choices: Choice[]): string
+    public decide(state: number[], choices: Choice[]): string
     {
-        const input: number[] = state.toArray();
-
         // run a single input vector through the neural network
         const tensorOut = this.model.predict(
-            tf.tensor([input], [1, this.inputLength], "float32")) as tf.Tensor;
+            tf.tensor([state], [1, this.inputLength], "float32")) as tf.Tensor;
         const output = tensorOut.flatten().dataSync();
 
         // find the highest activation that is a subset of the choices array

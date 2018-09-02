@@ -1,28 +1,22 @@
 import * as readline from "readline";
-import * as logger from "../logger";
+import * as logger from "../../logger";
 import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestData, RequestMove, RequestPokemon } from "../parser/MessageData";
-import { AnyMessageListener } from "../parser/MessageListener";
-import { Choice } from "./Choice";
-import { Network } from "./Network";
+    RequestData, RequestMove, RequestPokemon } from "../../parser/MessageData";
+import { AnyMessageListener } from "../../parser/MessageListener";
+import { AI } from "./ai/AI";
+import { Choice } from "./ai/Choice";
 import { BattleState, Side } from "./state/BattleState";
 import { MajorStatusName, Pokemon } from "./state/Pokemon";
 
 const rl = readline.createInterface(process.stdin, process.stdout);
 
-/**
- * Controls the AI's actions during a battle.
- *
- * Info that the AI needs to make an informed decision:
- * * Known aspects of the opponent's team.
- * * All aspects of the AI's team.
- */
-export class BattleAI
+/** Manages the battle state and the AI. */
+export class Battle
 {
     /** Manages battle state and neural network input. */
     private readonly state = new BattleState();
-    /** Decides what the AI should do. */
-    private readonly network = new Network();
+    /** Decides what the client should do. */
+    private readonly ai = new AI();
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -166,7 +160,7 @@ export class BattleAI
         .on("turn", (turn: number) =>
         {
             logger.debug(`new turn: ${turn}`);
-            this.askNN();
+            this.askAI();
         })
         .on("upkeep", () =>
         {
@@ -176,15 +170,15 @@ export class BattleAI
             //  the turn message we've been waiting for hasn't been sent yet
             if (this.forceSwitch)
             {
-                this.askNN();
+                this.askAI();
             }
         });
     }
 
-    /** Asks the neural network for what to do next. */
-    private askNN(): void
+    /** Asks the AI for what to do next. */
+    private askAI(): void
     {
-        const response = this.network.decide(this.state, this.choices);
+        const response = this.ai.decide(this.state.toArray(), this.choices);
         this.choices = [];
         this.addResponses(`|/choose ${response}|${this.rqid}`);
     }

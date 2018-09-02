@@ -1,7 +1,7 @@
 import * as logger from "../logger";
 import { ChallengesFrom, RoomType } from "../parser/MessageData";
 import { MessageParser } from "../parser/MessageParser";
-import { BattleAI } from "./BattleAI";
+import { Battle } from "./battle/Battle";
 
 /** Handles all bot actions. */
 export class Bot
@@ -11,7 +11,7 @@ export class Bot
     /** Parses server messages. */
     private readonly parser: MessageParser = new MessageParser();
     /** Keeps track of all the battles we're in. */
-    private readonly battles: {[room: string]: BattleAI} = {};
+    private readonly battles: {[room: string]: Battle} = {};
     /** Name of the user. */
     private username: string = "";
     /** Used to send response messages to the server. */
@@ -37,7 +37,7 @@ export class Bot
                     // need a copy of the current room so the lambda captures
                     //  that and not just a reference to `this`
                     const room = this.room;
-                    const ai = new BattleAI(this.username,
+                    const ai = new Battle(this.username,
                         this.parser.getListener(room),
                         // function for sending responses
                         (...responses: string[]) =>
@@ -90,7 +90,7 @@ export class Bot
         {
             responses = responses.map(response => room + response);
         }
-        responses.forEach(response => this.send(response));
+        responses.forEach(this.send);
         logger.debug(`sent: ["${responses.join("\", \"")}"]`);
     }
 }
