@@ -1,6 +1,7 @@
 import * as logger from "../logger";
 import { ChallengesFrom, RoomType } from "../parser/MessageData";
 import { MessageParser } from "../parser/MessageParser";
+import { Network } from "./battle/ai/Network";
 import { Battle } from "./battle/Battle";
 
 /** Handles all bot actions. */
@@ -37,7 +38,7 @@ export class Bot
                     // need a copy of the current room so the lambda captures
                     //  that and not just a reference to `this`
                     const room = this.room;
-                    const ai = new Battle(this.username,
+                    const ai = new Battle(Network, this.username,
                         this.parser.getListener(room),
                         // function for sending responses
                         (...responses: string[]) =>

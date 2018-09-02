@@ -3,7 +3,7 @@ import * as logger from "../../logger";
 import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
     RequestData, RequestMove, RequestPokemon } from "../../parser/MessageData";
 import { AnyMessageListener } from "../../parser/MessageListener";
-import { AI } from "./ai/AI";
+import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
 import { BattleState, Side } from "./state/BattleState";
 import { MajorStatusName, Pokemon } from "./state/Pokemon";
@@ -16,7 +16,7 @@ export class Battle
     /** Manages battle state and neural network input. */
     private readonly state = new BattleState();
     /** Decides what the client should do. */
-    private readonly ai = new AI();
+    private readonly ai: AI;
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -32,14 +32,17 @@ export class Battle
     private readonly addResponses: (...responses: string[]) => void;
 
     /**
-     * Creates a BattleAI object.
+     * Creates a Battle object.
+     * @param aiType Type of AI to use.
      * @param username Client's username.
      * @param listener Used to subscribe to server messages.
      * @param addResponses Used to send response messages to the server.
      */
-    constructor(username: string, listener: AnyMessageListener,
+    constructor(aiType: AIConstructor, username: string,
+        listener: AnyMessageListener,
         addResponses: (...respones: string[]) => void)
     {
+        this.ai = new aiType();
         this.addResponses = addResponses;
         listener
         .on("error", (reason: string) =>
