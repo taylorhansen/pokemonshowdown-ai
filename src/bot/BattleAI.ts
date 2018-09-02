@@ -3,6 +3,7 @@ import * as logger from "../logger";
 import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
     RequestData, RequestMove, RequestPokemon } from "../parser/MessageData";
 import { AnyMessageListener } from "../parser/MessageListener";
+import { Choice } from "./Choice";
 import { network } from "./nn/network";
 import { BattleState, Side } from "./state/BattleState";
 import { MajorStatusName, Pokemon } from "./state/Pokemon";
@@ -25,8 +26,10 @@ export class BattleAI
      * them).
      */
     private sides: {[ID in PlayerID]: Side};
-    /** Current request ID. */
+    /** Current request ID. Updated after every `|request|` message. */
     private rqid: number | null;
+    /** Available choices to make. */
+    private choices: Choice[] = [];
     /** Used to send response messages to the server. */
     private readonly addResponses: (...responses: string[]) => void;
 
@@ -59,6 +62,8 @@ export class BattleAI
         })
         .on("request", (request: RequestData) =>
         {
+            // update the client's team
+
             // update rqid to verify our next choice
             this.rqid = request.rqid;
 
@@ -93,6 +98,8 @@ export class BattleAI
             if (request.active)
             {
                 // update move data on our active pokemon
+                // TODO: support doubles/triples where there are multiple active
+                //  pokemon
                 const active: Pokemon = this.state.getActive("us");
                 const moveData: RequestMove[] = request.active[0].moves;
                 for (let i = 0; i < moveData.length; ++i)
@@ -100,6 +107,34 @@ export class BattleAI
                     const move = moveData[i];
                     active.setMove(i, move.id, move.pp, move.maxpp);
                     active.disableMove(i, request.active[0].moves[i].disabled);
+                }
+
+                this.choices = [];
+            }
+
+            if (request.forceSwitch || request.active)
+            {
+                this.choices = [];
+                // possible choices for switching pokemon
+                for (let i = 0; i < pokemon.length; ++i)
+                {
+                    const mon = pokemon[i];
+                    if (mon.fainted || mon.active) continue;
+
+                    this.choices.push(`switch ${i + 1}` as Choice);
+                }
+
+                if (!request.forceSwitch && request.active)
+                {
+                    // can also possibly make a move
+                    const moves = request.active[0].moves;
+                    for (let i = 0; i < moves.length; ++i)
+                    {
+                        const move = moves[i];
+                        if (move.pp <= 0 || move.disabled) continue;
+
+                        this.choices.push(`move ${i + 1}` as Choice);
+                    }
                 }
             }
         })
@@ -127,7 +162,8 @@ export class BattleAI
     /** Asks the neural network for what to do next. */
     private askNN(): void
     {
-        const response = network.decide(this.state);
+        const response = network.decide(this.state, this.choices);
+        this.choices = [];
         this.addResponses(`|/choose ${response}|${this.rqid}`);
     }
 

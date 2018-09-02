@@ -4,6 +4,12 @@ import { PokemonData } from "../../../data/dex-types";
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon
 {
+    /** Whether this pokemon is fainted. */
+    public get fainted(): boolean
+    {
+        return this.hp.current === 0;
+    }
+
     /** Species/form name. */
     public set species(species: string)
     {
