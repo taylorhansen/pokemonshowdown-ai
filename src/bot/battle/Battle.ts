@@ -23,7 +23,7 @@ export class Battle
      */
     private sides: {readonly [ID in PlayerID]: Side};
     /** Current request ID. Updated after every `|request|` message. */
-    private rqid: number | null;
+    private rqid: number | null = null;
     /** Available choices to make. */
     private choices: Choice[] = [];
     /** Whether we're being forced to switch. */
@@ -61,45 +61,58 @@ export class Battle
         })
         .on("request", (request: RequestData) =>
         {
-            // update the client's team
+            // update the client's team data
+            // generally, handling all the other types of messages should
+            //  reproduce effectively the same team data as would be given to us
+            //  by this message type, so this should only be used for
+            //  initializing the starting data for the client's team on the
+            //  first turn
+            // TODO: fully satisfy above requirement
 
-            // update rqid to verify our next choice
-            this.rqid = request.rqid;
+            const team = this.state.getTeam("us");
 
             // first time: team array not initialized yet
-            if (!this.state.getPokemon("us").length)
+            if (team.size === 0)
             {
-                this.state.setTeamSize("us", request.side.pokemon.length);
+                team.size = request.side.pokemon.length;
             }
-
-            // update side data
-            const pokemon: Pokemon[] = this.state.getPokemon("us");
+            const pokemon: Pokemon[] = team.pokemon;
             const pokemonData: RequestPokemon[] = request.side.pokemon;
-            for (let i = 0; i < pokemonData.length; ++i)
+
+            // initialize side data
+            if (this.rqid === null)
             {
-                const mon = pokemon[i];
-                const data = pokemonData[i];
+                for (const data of pokemonData)
+                {
+                    const details: PokemonDetails = data.details;
+                    const status: PokemonStatus = data.condition;
 
-                const details: PokemonDetails = data.details;
-                mon.species = details.species;
-                mon.level = details.level;
-                mon.gender = details.gender;
-
-                const status: PokemonStatus = data.condition;
-                mon.setHP(status.hp, status.hpMax);
-                mon.setMajorStatus(status.condition as MajorStatusName);
-
-                mon.item = data.item;
-                // must be set after species is set
-                mon.baseAbility = data.baseAbility;
+                    const index = team.reveal(details.species, details.level,
+                            details.gender, status.hp, status.hpMax);
+                    const mon = pokemon[index];
+                    mon.item = data.item;
+                    mon.baseAbility = data.baseAbility;
+                    mon.setHP(status.hp, status.hpMax);
+                    mon.setMajorStatus(status.condition as MajorStatusName);
+                    // set active status
+                    if (data.active)
+                    {
+                        mon.switchIn();
+                    }
+                    else
+                    {
+                        mon.switchOut();
+                    }
+                }
             }
 
+            // TODO: move choice logic to upkeep/turn messages
             if (request.active)
             {
                 // update move data on our active pokemon
                 // TODO: support doubles/triples where there are multiple active
                 //  pokemon
-                const active: Pokemon = this.state.getActive("us");
+                const active: Pokemon = team.active;
                 const moveData: RequestMove[] = request.active[0].moves;
                 for (let i = 0; i < moveData.length; ++i)
                 {
@@ -107,10 +120,9 @@ export class Battle
                     active.setMove(i, move.id, move.pp, move.maxpp);
                     active.disableMove(i, request.active[0].moves[i].disabled);
                 }
-
-                this.choices = [];
             }
 
+            // TODO: move choice logic to upkeep/turn messages
             if (request.forceSwitch || request.active)
             {
                 this.choices = [];
@@ -142,25 +154,52 @@ export class Battle
                     //  to switch
                     this.forceSwitch = true;
                 }
+
+                logger.debug(`choices: [${this.choices.join(", ")}]`);
             }
+
+            // update rqid to verify our next choice
+            this.rqid = request.rqid;
         })
         .on("switch", (id: PokemonID, details: PokemonDetails,
             status: PokemonStatus) =>
         {
-            // TODO: update active status on pokemon
+            const side = this.sides[id.owner];
+            const team = this.state.getTeam(side);
+
+            // index of the pokemon to switch
+            let newActiveIndex = team.find(details.species);
+            if (newActiveIndex === -1)
+            {
+                // no known pokemon found, so this is a new switchin
+                // hp is a percentage if on the opponent's team
+                const hpMax = side === "us" ? status.hpMax : undefined;
+                newActiveIndex = team.newSwitchin(details.species,
+                    details.level, details.gender, status.hp, hpMax);
+                if (newActiveIndex === -1)
+                {
+                    logger.error(`team ${side} seems to have more pokemon than \
+expected`);
+                }
+                return;
+            }
+
+            team.switchIn(newActiveIndex);
         })
         .on("teamsize", (id: PlayerID, size: number) =>
         {
             // should only initialize if the team is empty
             const side = this.sides[id];
-            if (!this.state.getPokemon(side).length)
+            const team = this.state.getTeam(side);
+            if (team.size <= 0)
             {
-                this.state.setTeamSize(side, size);
+                team.size = size;
             }
         })
         .on("turn", (turn: number) =>
         {
             logger.debug(`new turn: ${turn}`);
+            logger.debug(`state:\n${this.state.toString()}`);
             this.askAI();
         })
         .on("upkeep", () =>

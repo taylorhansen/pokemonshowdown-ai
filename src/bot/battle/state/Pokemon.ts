@@ -10,42 +10,73 @@ export class Pokemon
         return this.hp.current === 0;
     }
 
+    /** Whether this is the current active pokemon. */
+    public get active(): boolean
+    {
+        return this._active;
+    }
+
     /** Species/form name. */
+    public get species(): string
+    {
+        return this.speciesName;
+    }
     public set species(species: string)
     {
+        this.speciesName = species;
         this.data = dex.pokemon[species];
         this._species = this.data.uid;
     }
 
     /** Ability id name. */
+    public get baseAbility(): string
+    {
+        return this.baseAbilityName;
+    }
     public set baseAbility(baseAbility: string)
     {
+        this.baseAbilityName = baseAbility;
         this._baseAbility = this.data.abilities[baseAbility];
     }
 
     /** Item id name. */
+    public get item(): string
+    {
+        return this.itemName;
+    }
     public set item(item: string)
     {
+        this.itemName = item;
         this._item = dex.items[item];
     }
 
     /** Pokemon's level. */
+    public get level(): number
+    {
+        return this._level;
+    }
     public set level(level: number)
     {
         this._level = Math.max(1, Math.min(level, 100));
     }
 
-    /** Whether this is the current active pokemon. */
-    public active: boolean = false;
     /** Pokemon's gender. */
     public gender: string | null;
 
+    /** Whether this is the current active pokemon. */
+    private _active: boolean = false;
     /** Dex data. */
     private data: PokemonData;
+    /** ID name of the species. */
+    private speciesName = "";
     /** Pokemon species/form unique identifier. */
     private _species: number;
+    /** ID name of the held item. */
+    private itemName = "";
     /** Item the pokemon is holding. */
     private _item: number;
+    /** ID name of the base ability. */
+    private baseAbilityName = "";
     /**
      * Base ability relative to its species. Can be 1 or 2 indicating which
      * ability that is.
@@ -55,6 +86,8 @@ export class Pokemon
     private _level: number;
     /** Known moveset. */
     private readonly moves: Move[] = [];
+    /** First index of the part of the moveset that is unknown. */
+    private unrevealedMove = 0; // TODO
     /** Info about the pokemon's hit points. */
     private hp: HP = new HP();
     /** Current major status condition. Not cleared on switch. */
@@ -64,11 +97,10 @@ export class Pokemon
 
     /**
      * Creates a Pokemon.
-     * @param active Whether this is the current active pokemon.
      */
-    constructor(active: boolean)
+    constructor()
     {
-        this.active = active;
+        this._active = false;
 
         // initialize moveset
         for (let i = 0; i < 4; ++i)
@@ -77,12 +109,16 @@ export class Pokemon
         }
     }
 
-    /**
-     * Clears all volatile status conditions. This happens when the pokemon is
-     * switched out usually.
-     */
-    public clearVolatile(): void
+    /** Tells the pokemon that it is currently being switched in. */
+    public switchIn(): void
     {
+        this._active = true;
+    }
+
+    /** Tells the pokemon that it is currently being switched out. */
+    public switchOut(): void
+    {
+        this._active = false;
         this.volatileStatus.clear();
     }
 
@@ -95,7 +131,19 @@ export class Pokemon
      */
     public setMove(index: number, id: string, pp: number, ppMax: number): void
     {
+        this.unrevealedMove = index + 1; // TODO: remake this method to reveal?
         this.moves[index].set(dex.moves[id], pp, ppMax);
+    }
+
+    /**
+     * Sets the pokemon's HP.
+     * @param current Current HP.
+     * @param max Maximum HP. Omit to assume a percentage.
+     */
+    public setHP(current: number, max?: number): void
+    {
+        this.hp = new HP(max);
+        this.hp.current = current;
     }
 
     /**
@@ -108,15 +156,33 @@ export class Pokemon
         this.volatileStatus.disableMove(index, disabled);
     }
 
-    public setHP(current: number, max: number): void
-    {
-        this.hp.max = max;
-        this.hp.current = current;
-    }
-
     public setMajorStatus(status: MajorStatusName): void
     {
         this.status = status;
+    }
+
+    /**
+     * Encodes all pokemon data into a string.
+     * @param indent Indentation level to use.
+     * @returns The Pokemon in string form.
+     */
+    public toString(indent = 0): string
+    {
+        const s = " ".repeat(indent);
+        return `\
+${s}${this.speciesName}
+${s}active: ${this.active}
+${s}level: ${this._level}
+${s}gender: ${this.gender ? this.gender : "genderless"}
+${s}item: ${this.itemName ? this.itemName : "<unknown>"}
+${s}ability: ${this.baseAbilityName ? this.baseAbilityName : "<unknown>"}
+${s}hp: ${this.hp.toString()}
+${s}status: ${this.status ? this.status : "none"}
+${this.moves.map(
+        (move, i) => `${s}move${i + 1}:${i < this.unrevealedMove ?
+                `\n${move.toString(indent + 4)}` : " <unrevealed>"}`)
+    .join("\n")}
+${s}volatile: ${this.volatileStatus.toString()}`;
     }
 
     /**
@@ -140,7 +206,7 @@ export class Pokemon
             this.status === "slp" ? 1 : 0,
             this.status === "frz" ? 1 : 0
         ];
-        if (this.active)
+        if (this._active)
         {
             a.push(...this.volatileStatus.toArray());
         }
@@ -175,6 +241,20 @@ export class Move
         this.id = id;
         this.pp = pp;
         this.ppMax = ppMax;
+    }
+
+    /**
+     * Encodes all move data into a string.
+     * @param indent Indentation level to use.
+     * @returns The Move in string form.
+     */
+    public toString(indent = 0): string
+    {
+        const s = " ".repeat(indent);
+        return `\
+${s}id: ${this.id}
+${s}pp: ${this.pp}
+${s}ppMax: ${this.ppMax}`;
     }
 
     /**
@@ -236,6 +316,15 @@ export class HP
     }
 
     /**
+     * Encodes all hp data into a string.
+     * @returns The HP in string form.
+     */
+    public toString(): string
+    {
+        return `${this._current}/${this._max}${this.isPercent ? "%" : ""}`;
+    }
+
+    /**
      * Formats hp info into an array of numbers.
      * @returns All hp data in array form.
      */
@@ -258,6 +347,17 @@ export class VolatileStatus
     private statBoosts: {[N in BoostableStatName]: BoostStage};
     private disabledMoves: boolean[];
     // TODO: everything else
+
+    /**
+     * Converts a number to a string where positive numbers are preceded by a
+     * `+` symbol.
+     * @param n Number to convert.
+     * @returns The number in string form with explicit sign.
+     */
+    private static plus(n: number): string
+    {
+        return (n > 0 ? "+" : "") + n;
+    }
 
     /** Creates a VolatileStatus object. */
     constructor()
@@ -283,6 +383,23 @@ export class VolatileStatus
     public disableMove(move: number, disabled: boolean = true): void
     {
         this.disabledMoves[move] = disabled;
+    }
+
+    /**
+     * Encodes all volatile status data into a string.
+     * @returns The VolatileStatus in string form.
+     */
+    public toString(): string
+    {
+        return `[${
+            Object.keys(this.statBoosts)
+            .filter((key: BoostableStatName) => this.statBoosts[key] !== 0)
+            .map((key: BoostableStatName) =>
+                `${key}: ${VolatileStatus.plus(this.statBoosts[key])}`)
+            .concat(this.disabledMoves
+                .filter(disabled => disabled)
+                .map((disabled, i) => `disabled move ${i + 1}`))
+            .join(", ")}]`;
     }
 
     /**

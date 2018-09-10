@@ -1,4 +1,5 @@
 import * as tf from "@tensorflow/tfjs";
+import * as logger from "../../../logger";
 import { AI } from "./AI";
 import { Choice, choiceIds } from "./Choice";
 
@@ -8,7 +9,7 @@ export class Network implements AI
     /** Neural network model. */
     private readonly model = tf.sequential();
     /** Number of input neurons. */
-    private readonly inputLength = 264; // TODO
+    private readonly inputLength = 278; // TODO
 
     /** Creates a Network. */
     constructor()
@@ -25,6 +26,23 @@ export class Network implements AI
     /** @override */
     public decide(state: number[], choices: Choice[]): Choice
     {
+        if (state.length > this.inputLength)
+        {
+            logger.error(`too many state values ${state.length}, expected \
+${this.inputLength}`);
+            state.splice(this.inputLength);
+        }
+        else if (state.length < this.inputLength)
+        {
+            logger.error(`not enough state values ${state.length}, expected \
+${this.inputLength}`);
+            do
+            {
+                state.push(0);
+            }
+            while (state.length < this.inputLength);
+        }
+
         // run a single input vector through the neural network
         const tensorOut = this.model.predict(
             tf.tensor([state], [1, this.inputLength], "float32")) as tf.Tensor;

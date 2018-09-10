@@ -1,4 +1,3 @@
-import { Pokemon } from "./Pokemon";
 import { RoomStatus } from "./Room";
 import { Team } from "./Team";
 
@@ -28,23 +27,29 @@ export class BattleState
     }
 
     /**
-     * Gets the active pokemon of the given side.
+     * Gets the given side's team.
      * @param side The given side.
-     * @returns The team's active pokemon.
+     * @returns The appropriate team.
      */
-    public getActive(side: Side): Pokemon
+    public getTeam(side: Side): Team
     {
-        return this.teams[side].active;
+        return this.teams[side];
     }
 
     /**
-     * Gets all pokemon on the given side.
-     * @param side The given side.
-     * @returns The team's pokemon.
+     * Encodes all state data into a string.
+     * @param indent Indentation level to use.
+     * @returns The BattleState in string form.
      */
-    public getPokemon(side: Side): Pokemon[]
+    public toString(indent = 0): string
     {
-        return this.teams[side].pokemon;
+        const s = " ".repeat(indent);
+        return `\
+${s}status: ${this.status.toString()}
+${s}us:
+${this.teams.us.toString(indent + 4)}
+${s}them:
+${this.teams.them.toString(indent + 4)}`;
     }
 
     /**

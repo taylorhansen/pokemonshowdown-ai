@@ -30,7 +30,7 @@ export interface ChallengesFrom
 /** Gives basic info about the owner and position of a pokemon. */
 export interface PokemonID
 {
-    owner: string;
+    owner: PlayerID;
     position: string;
     nickname: string;
 }

@@ -384,6 +384,7 @@ export class MessageParser
         if (i === -1) return null;
 
         const owner = id.substring(0, i - 1);
+        if (owner !== "p1" && owner !== "p2") return null;
         const position = id.substring(i - 1, i);
         const nickname = id.substring(i + 2);
         return { owner, position, nickname };
