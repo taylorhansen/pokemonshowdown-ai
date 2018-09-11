@@ -332,6 +332,7 @@ export class MessageParser
                 case "swap":
                 case "cant":*/
                 case "faint": // a pokemon has fainted
+                {
                     // format: |faint|<pokemon id>
 
                     const unparsedId = this.getWord();
@@ -343,6 +344,7 @@ export class MessageParser
                     }
                     this.getHandler("faint")(pokemonId);
                     break;
+                }
                 case "upkeep":
                     this.getHandler("upkeep")();
                     break;
