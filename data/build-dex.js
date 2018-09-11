@@ -43,7 +43,10 @@ function quote(str)
 const data = Dex.mod("gen4").data;
 
 // import statement at the top of the file
-console.log("import { Dex, PokemonData } from \"./dex-types\";\n");
+console.log("import { Dex, MoveData, PokemonData } from \"./dex-types\";\n");
+
+// implicitly uses typings from:
+//  https://github.com/Zarel/Pokemon-Showdown/blob/master/sim/dex-data.js
 
 // pokemon
 const pokedex = data.Pokedex;
@@ -119,7 +122,7 @@ console.log("};\n");
 // moves
 const moves = data.Movedex;
 console.log(`/** Contains data for every move in the supported generation. */
-const moves: {readonly [name: string]: number} =\n{`);
+const moves: {readonly [name: string]: MoveData} =\n{`);
 i = 1;
 for (const moveName in moves)
 {
@@ -136,7 +139,14 @@ for (const moveName in moves)
         id += move.type.toLowerCase();
     }
 
-    console.log(`    ${id}: ${i},`);
+    // factor pp boosts if the move supports it in game
+    let pp = move.pp;
+    if (!move.noPPBoosts)
+    {
+        pp = Math.floor(pp * 8 / 5);
+    }
+
+    console.log(`    ${id}: {uid: ${i}, pp: ${pp}},`);
     ++i;
 }
 console.log("};\n");

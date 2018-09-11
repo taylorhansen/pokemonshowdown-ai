@@ -135,6 +135,22 @@ export class Pokemon
     }
 
     /**
+     * Sets the pokemon's HP.
+     * @param current Current HP.
+     * @param max Maximum HP. Omit to assume a percentage.
+     */
+    public setHP(current: number, max?: number): void
+    {
+        this.hp = new HP(max);
+        this.hp.current = current;
+    }
+
+    public revealMove(id: string): void
+    {
+        this._moves[this.unrevealedMove++].id = id;
+    }
+
+    /**
      * Checks whether a move can be made.
      * @param index Index of the move.
      * @returns Whether the move can be made.
@@ -145,6 +161,7 @@ export class Pokemon
             this._moves[index].pp > 0 && !this.volatileStatus.isDisabled(index);
     }
 
+    // TODO: replace this method with stuff like revealMove() and useMove()
     /**
      * Sets the data about a move.
      * @param index Index of the move.
@@ -155,18 +172,7 @@ export class Pokemon
     public setMove(index: number, id: string, pp: number, ppMax: number): void
     {
         this.unrevealedMove = index + 1; // TODO: remake this method to reveal?
-        this._moves[index].set(dex.moves[id], pp, ppMax);
-    }
-
-    /**
-     * Sets the pokemon's HP.
-     * @param current Current HP.
-     * @param max Maximum HP. Omit to assume a percentage.
-     */
-    public setHP(current: number, max?: number): void
-    {
-        this.hp = new HP(max);
-        this.hp.current = current;
+        this._moves[index].set(dex.moves[id].uid, pp, ppMax);
     }
 
     /**
@@ -240,14 +246,30 @@ ${s}volatile: ${this.volatileStatus.toString()}`;
 /** Information about a certain move. */
 export class Move
 {
+    /** Move id name. */
+    public get id(): string
+    {
+        return this.idName;
+    }
+    public set id(name: string)
+    {
+        this.idName = name;
+        const data = dex.moves[name];
+        this._id = data.uid;
+        this._pp = data.pp;
+        this.ppMax = data.pp;
+    }
+
     /** Amount of power points left on this move. */
     public get pp(): number
     {
         return this._pp;
     }
 
+    /** Move id name. */
+    private idName = "";
     /** Move id. */
-    private id: number;
+    private _id: number;
     /** Current power points. */
     private _pp: number;
     /** Maximum amount of power points. */
@@ -261,7 +283,7 @@ export class Move
      */
     public set(id: number, pp: number, ppMax: number): void
     {
-        this.id = id;
+        this._id = id;
         this._pp = pp;
         this.ppMax = ppMax;
     }
@@ -286,7 +308,7 @@ ${s}ppMax: ${this.ppMax}`;
      */
     public toArray(): number[]
     {
-        return [this.id, this._pp];
+        return [this._id, this._pp];
     }
 }
 

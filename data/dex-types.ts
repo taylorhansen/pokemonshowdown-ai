@@ -38,13 +38,22 @@ export interface PokemonData
     readonly weightkg: number;
 }
 
+/** Format for each move entry in the Dex. */
+export interface MoveData
+{
+    /** Unique identifier number. */
+    readonly uid: number;
+    /** Base power points. */
+    readonly pp: number;
+}
+
 /** Type info for the dex variable. */
 export interface Dex
 {
     /** Contains info about each pokemon. */
     readonly pokemon: {readonly [species: string]: PokemonData};
     /** Maps a move id name to its id number. */
-    readonly moves: {readonly [name: string]: number};
+    readonly moves: {readonly [name: string]: MoveData};
     /** Maps an item id name to its id number. */
     readonly items: {readonly [name: string]: number};
 }
