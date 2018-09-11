@@ -31,15 +31,15 @@ describe("AnyMessageListener", function()
         });
     }
 
+    // data isn't actually valid, and is assumed to be validated by the parser
+    shouldHandle("-damage", {} as PokemonID, {} as PokemonStatus);
+    shouldHandle("-heal", {} as PokemonID, {} as PokemonStatus);
     shouldHandle("challstr", "some random challstr");
     shouldHandle("error", "some random reason");
     shouldHandle("faint", {owner: "p1", position: "a", nickname: "cat"});
     shouldHandle("init", "chat");
     shouldHandle("player", "p1", "some username", /*avatarId*/ 100);
-    // request data isn't actually valid, and is assumed to be validated by the
-    //  parser
     shouldHandle("request", {} as RequestData);
-    // same as above
     shouldHandle("switch", {} as PokemonID, {} as PokemonDetails,
         {} as PokemonStatus);
     shouldHandle("teamsize", "p2", 21);

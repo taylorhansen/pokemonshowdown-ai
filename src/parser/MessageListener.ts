@@ -2,9 +2,9 @@ import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
     RequestData, RoomType} from "./MessageData";
 
 /** Prefix for a message that tells of the message's type. */
-export type Prefix = "challstr" | "error" | "faint" | "init" | "player" |
-    "request" | "switch" | "teamsize" | "turn" | "updatechallenges" |
-    "updateuser" | "upkeep";
+export type Prefix = "-damage" | "-heal" | "challstr" | "error" | "faint" |
+    "init" | "player" | "request" | "switch" | "teamsize" | "turn" |
+    "updatechallenges" | "updateuser" | "upkeep";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -15,6 +15,8 @@ export class AnyMessageListener
     /** Registered message listeners for each type of Prefix. */
     private readonly listeners: {readonly [P in Prefix]: MessageListener<P>} =
     {
+        "-damage": new MessageListener<"-damage">(),
+        "-heal": new MessageListener<"-heal">(),
         challstr: new MessageListener<"challstr">(),
         error: new MessageListener<"error">(),
         faint: new MessageListener<"faint">(),
@@ -92,7 +94,9 @@ class MessageListener<P extends Prefix>
  * @template P Describes the message's type.
  */
 export type MessageHandler<P extends Prefix> =
-    P extends "challstr" ? ChallStrHandler
+    P extends "-damage" ? DamageHandler
+    : P extends "-heal" ? HealHandler
+    : P extends "challstr" ? ChallStrHandler
     : P extends "error" ? ErrorHandler
     : P extends "faint" ? FaintHandler
     : P extends "init" ? InitHandler
@@ -105,6 +109,20 @@ export type MessageHandler<P extends Prefix> =
     : P extends "updateuser" ? UpdateUserHandler
     : P extends "upkeep" ? UpkeepHandler
     : () => void;
+
+/**
+ * Handles a `-damage` message.
+ * @param id ID of the pokemon being damaged.
+ * @param status HP and any status conditions.
+ */
+export type DamageHandler = (id: PokemonID, status: PokemonStatus) => void;
+
+/**
+ * Handles a `-heal` message.
+ * @param id ID of the pokemon being healed.
+ * @param status HP and any status conditions.
+ */
+export type HealHandler = (id: PokemonID, status: PokemonStatus) => void;
 
 /**
  * Handles a `challstr` message.

@@ -43,6 +43,25 @@ export class Battle
         this.ai = new aiType();
         this.addResponses = addResponses;
         listener
+        .on("-damage", (id: PokemonID, status: PokemonStatus) =>
+        {
+            const side = this.sides[id.owner];
+            // side "them" is represented by a percentage so hpMax is omitted
+            const hpMax = side === "us" ? status.hpMax : undefined;
+            const active = this.state.getTeam(side).active;
+
+            active.setHP(status.hp, hpMax);
+            if (!active.fainted)
+            {
+                // status should be ignored if the pokemon is already fainted
+                active.setMajorStatus(status.condition as MajorStatusName);
+            }
+        })
+        .on("-heal", (id: PokemonID, status: PokemonStatus) =>
+        {
+            // delegate to -damage for now
+            listener.getHandler("-damage")(id, status);
+        })
         .on("error", (reason: string) =>
         {
             logger.error(reason);

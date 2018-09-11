@@ -1,8 +1,9 @@
 import { expect } from "chai";
 import "mocha";
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestData, RoomType, stringifyID, stringifyRequest } from
+    RequestData, RoomType, stringifyID, stringifyRequest, stringifyStatus } from
     "../src/parser/MessageData";
+import { Prefix } from "../src/parser/MessageListener";
 import { MessageParser } from "../src/parser/MessageParser";
 
 describe("MessageParser", function()
@@ -56,6 +57,29 @@ describe("MessageParser", function()
 
     describe("Message types", function()
     {
+        for (const prefix of ["-damage", "-heal"] as Prefix[])
+        {
+            describe(prefix, function()
+            {
+                it(`Should parse ${prefix}`, function(done)
+                {
+                    const givenId: PokemonID =
+                        {owner: "p1", position: "a", nickname: "nou"};
+                    const givenStatus: PokemonStatus =
+                        {hp: 100, hpMax: 100, condition: "psn"};
+                    parser.on("", prefix,
+                    (id: PokemonID, status: PokemonStatus) =>
+                    {
+                        expect(id).to.deep.equal(givenId);
+                        expect(status).to.deep.equal(givenStatus);
+                        done();
+                    })
+                    .parse(`|${prefix}|${stringifyID(givenId)}|\
+${stringifyStatus(givenStatus)}`);
+                });
+            });
+        }
+
         describe("challstr", function()
         {
             it("Should parse challstr", function(done)
