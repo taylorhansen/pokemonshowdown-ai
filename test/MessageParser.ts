@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import "mocha";
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestData, RoomType, stringifyRequest } from "../src/parser/MessageData";
+    RequestData, RoomType, stringifyID, stringifyRequest } from
+    "../src/parser/MessageData";
 import { MessageParser } from "../src/parser/MessageParser";
 
 describe("MessageParser", function()
@@ -81,6 +82,30 @@ describe("MessageParser", function()
                     done();
                 })
                 .parse(`|error|${givenReason}`);
+            });
+        });
+
+        describe("faint", function()
+        {
+            it("Should not parse empty faint", function()
+            {
+                parser.on("", "faint", () =>
+                {
+                    throw new Error("Parsed empty faint");
+                })
+                .parse("|faint|");
+            });
+
+            it("Should parse faint", function(done)
+            {
+                const givenId: PokemonID =
+                    {owner: "p1", position: "a", nickname: "hi"};
+                parser.on("", "faint", (id: PokemonID) =>
+                {
+                    expect(id).to.deep.equal(givenId);
+                    done();
+                })
+                .parse(`|faint|${stringifyID(givenId)}`);
             });
         });
 

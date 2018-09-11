@@ -13,6 +13,7 @@ describe("AnyMessageListener", function()
         listener = new AnyMessageListener();
     });
 
+    // TODO: generalize these to make them more DRY
     describe("challstr", function()
     {
         it("Should handle a normal challstr message", function(done)
@@ -38,6 +39,20 @@ describe("AnyMessageListener", function()
                 done();
             })
             .getHandler("error")(message);
+        });
+    });
+
+    describe("faint", function()
+    {
+        it("Should handle a normal faint message", function(done)
+        {
+            const id: PokemonID = {owner: "p1", position: "a", nickname: "no"};
+            listener.on("faint", (id: PokemonID) =>
+            {
+                expect(id).to.equal(id);
+                done();
+            })
+            .getHandler("faint")(id);
         });
     });
 
@@ -96,7 +111,7 @@ describe("AnyMessageListener", function()
         it("Should handle a normal switch message", function(done)
         {
             const givenId: PokemonID =
-                { owner: "me", position: "b", nickname: "crazy" };
+                { owner: "p1", position: "b", nickname: "crazy" };
             const givenDetails: PokemonDetails =
                 { species: "Magikarp", shiny: true, gender: "M", level: 100 };
             const givenStatus: PokemonStatus =

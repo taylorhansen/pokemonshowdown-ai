@@ -51,6 +51,12 @@ export class Battle
             logger.debug("nn input failed, asking user for input");
             this.askUser();
         })
+        .on("faint", (id: PokemonID) =>
+        {
+            // active pokemon has fainted
+            // TODO: for doubles/triples, do this based on active position also
+            this.state.getTeam(this.sides[id.owner]).active.faint();
+        })
         .on("player", (id: PlayerID, givenUser: string) =>
         {
             if (givenUser !== username)

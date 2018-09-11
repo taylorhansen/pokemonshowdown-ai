@@ -2,9 +2,9 @@ import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
     RequestData, RoomType} from "./MessageData";
 
 /** Prefix for a message that tells of the message's type. */
-export type Prefix = "challstr" | "error" | "init" | "player" | "request" |
-    "switch" | "teamsize" | "turn" | "updatechallenges" | "updateuser" |
-    "upkeep";
+export type Prefix = "challstr" | "error" | "faint" | "init" | "player" |
+    "request" | "switch" | "teamsize" | "turn" | "updatechallenges" |
+    "updateuser" | "upkeep";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -17,6 +17,7 @@ export class AnyMessageListener
     {
         challstr: new MessageListener<"challstr">(),
         error: new MessageListener<"error">(),
+        faint: new MessageListener<"faint">(),
         init: new MessageListener<"init">(),
         player: new MessageListener<"player">(),
         request: new MessageListener<"request">(),
@@ -93,6 +94,7 @@ class MessageListener<P extends Prefix>
 export type MessageHandler<P extends Prefix> =
     P extends "challstr" ? ChallStrHandler
     : P extends "error" ? ErrorHandler
+    : P extends "faint" ? FaintHandler
     : P extends "init" ? InitHandler
     : P extends "player" ? PlayerHandler
     : P extends "request" ? RequestHandler
@@ -115,6 +117,12 @@ export type ChallStrHandler = (challstr: string) => void;
  * @param reason Why the requested action failed.
  */
 export type ErrorHandler = (reason: string) => void;
+
+/**
+ * Handles a `faint` message.
+ * @param id ID of the pokemon that has fainted.
+ */
+export type FaintHandler = (id: PokemonID) => void;
 
 /**
  * Handles an `init` message.

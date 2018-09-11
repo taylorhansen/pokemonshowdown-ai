@@ -122,6 +122,12 @@ export class Pokemon
         this.volatileStatus.clear();
     }
 
+    /** Tells the pokemon that it has fainted. */
+    public faint(): void
+    {
+        this.setHP(0, 0);
+    }
+
     /**
      * Sets the data about a move.
      * @param index Index of the move.

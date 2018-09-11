@@ -292,7 +292,7 @@ export class MessageParser
                 case "switch": // a pokemon was voluntarily switched
                 case "drag": // involuntarily switched, really doesn't matter
                 {
-                    // format: |<switch or drag>|<pokemon>|<details>|<status>
+                    // format: |<switch or drag>|<pokemon id>|<details>|<status>
                     // pokemon contains active position and nickname
                     // details contains species, gender, etc.
                     // status contains hp (value or %), status, etc.
@@ -330,9 +330,19 @@ export class MessageParser
                 case "-formechange":
                 case "replace":
                 case "swap":
-                case "cant":
-                case "faint":
-                    break;*/
+                case "cant":*/
+                case "faint": // a pokemon has fainted
+                    // format: |faint|<pokemon id>
+
+                    const unparsedId = this.getWord();
+                    let pokemonId: PokemonID | null;
+                    if (unparsedId === null ||
+                        !(pokemonId = MessageParser.parsePokemonID(unparsedId)))
+                    {
+                        break;
+                    }
+                    this.getHandler("faint")(pokemonId);
+                    break;
                 case "upkeep":
                     this.getHandler("upkeep")();
                     break;
