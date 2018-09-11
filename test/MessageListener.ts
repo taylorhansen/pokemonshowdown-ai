@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import "mocha";
-import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestData, RoomType } from "../src/parser/MessageData";
-import { AnyMessageListener } from "../src/parser/MessageListener";
+import { PokemonDetails, PokemonID, PokemonStatus, RequestData } from
+    "../src/parser/MessageData";
+import { AnyMessageListener, Prefix } from "../src/parser/MessageListener";
 
 describe("AnyMessageListener", function()
 {
@@ -13,186 +13,38 @@ describe("AnyMessageListener", function()
         listener = new AnyMessageListener();
     });
 
-    // TODO: generalize these to make them more DRY
-    describe("challstr", function()
+    /**
+     * Creates a message listener test.
+     * @param prefix Prefix of the message type to test.
+     * @param givenArgs Arguments to the message handler.
+     */
+    function shouldHandle(prefix: Prefix, ...givenArgs: any[])
     {
-        it("Should handle a normal challstr message", function(done)
+        it(`Should handle a normal ${prefix} message`, function(done)
         {
-            const something = "something";
-            listener.on("challstr", (challstr: string) =>
+            listener.on(prefix, (...args: any[]) =>
             {
-                expect(challstr).to.equal(something);
+                expect(args).to.deep.equal(givenArgs);
                 done();
             })
-            .getHandler("challstr")(something);
+            .getHandler(prefix).apply(this, givenArgs);
         });
-    });
+    }
 
-    describe("error", function()
-    {
-        it("Should handle a normal error message", function(done)
-        {
-            const message = "because i said so";
-            listener.on("error", (reason: string) =>
-            {
-                expect(reason).to.equal(message);
-                done();
-            })
-            .getHandler("error")(message);
-        });
-    });
-
-    describe("faint", function()
-    {
-        it("Should handle a normal faint message", function(done)
-        {
-            const id: PokemonID = {owner: "p1", position: "a", nickname: "no"};
-            listener.on("faint", (id: PokemonID) =>
-            {
-                expect(id).to.equal(id);
-                done();
-            })
-            .getHandler("faint")(id);
-        });
-    });
-
-    describe("init", function()
-    {
-        const initTypes: RoomType[] = ["chat", "battle"];
-        for (const initType of initTypes)
-        {
-            it(`Should handle ${initType} init message`, function(done)
-            {
-                listener.on("init", (type: RoomType) =>
-                {
-                    expect(type).to.equal(initType);
-                    done();
-                })
-                .getHandler("init")(initType);
-            });
-        }
-    });
-
-    describe("player", function()
-    {
-        it("Should handle a normal player message", function(done)
-        {
-            const givenId = "p1";
-            const givenUser = "somebody";
-            const givenAvatar = 100;
-            listener.on("player", (id: PlayerID, username: string,
-                avatarId: number) =>
-            {
-                expect(id).to.equal(givenId);
-                expect(username).to.equal(givenUser);
-                expect(avatarId).to.equal(givenAvatar);
-                done();
-            })
-            .getHandler("player")(givenId, givenUser, givenAvatar);
-        });
-    });
-
-    describe("request", function()
-    {
-        it("Should handle a normal request message", function(done)
-        {
-            const teamInfo = {} as RequestData;
-            listener.on("request", (team: object) =>
-            {
-                expect(team).to.equal(teamInfo);
-                done();
-            })
-            .getHandler("request")(teamInfo);
-        });
-    });
-
-    describe("switch", function()
-    {
-        it("Should handle a normal switch message", function(done)
-        {
-            const givenId: PokemonID =
-                { owner: "p1", position: "b", nickname: "crazy" };
-            const givenDetails: PokemonDetails =
-                { species: "Magikarp", shiny: true, gender: "M", level: 100 };
-            const givenStatus: PokemonStatus =
-                { hp: 100, hpMax: 100, condition: "par" };
-            listener.on("switch", (id: PokemonID, details: PokemonDetails,
-                status: PokemonStatus) =>
-            {
-                expect(id).to.equal(givenId);
-                expect(details).to.equal(givenDetails);
-                expect(status).to.equal(givenStatus);
-                done();
-            })
-            .getHandler("switch")(givenId, givenDetails, givenStatus);
-        });
-    });
-
-    describe("teamsize", function()
-    {
-        it("Should handle a normal teamsize message", function(done)
-        {
-            const givenId = "p1";
-            const givenSize = 1;
-            listener.on("teamsize", (id: PlayerID, size: number) =>
-            {
-                expect(id).to.equal(givenId);
-                expect(size).to.equal(givenSize);
-                done();
-            })
-            .getHandler("teamsize")(givenId, givenSize);
-        });
-    });
-
-    describe("turn", function()
-    {
-        it("Should handle a normal turn message", function(done)
-        {
-            const givenTurn = 1;
-            listener.on("turn", (turn: number) =>
-            {
-                expect(turn).to.equal(givenTurn);
-                done();
-            })
-            .getHandler("turn")(givenTurn);
-        });
-    });
-
-    describe("updatechallenges", function()
-    {
-        it("Should handle a normal updatechallenges message", function(done)
-        {
-            const from: ChallengesFrom = { newuser: "gen4ou" };
-            listener.on("updatechallenges", (challengesFrom: ChallengesFrom) =>
-            {
-                expect(challengesFrom).to.equal(from);
-                done();
-            })
-            .getHandler("updatechallenges")(from);
-        });
-    });
-
-    describe("updateuser", function()
-    {
-        it("Should handle a normal updateuser message", function(done)
-        {
-            const newuser = "newuser";
-            const guest = true;
-            listener.on("updateuser", (username: string, isGuest: boolean) =>
-            {
-                expect(username).to.equal(newuser);
-                expect(isGuest).to.equal(guest);
-                done();
-            })
-            .getHandler("updateuser")(newuser, guest);
-        });
-    });
-
-    describe("upkeep", function()
-    {
-        it("Should handle a normal upkeep message", function(done)
-        {
-            listener.on("upkeep", done).getHandler("upkeep")();
-        });
-    });
+    shouldHandle("challstr", "some random challstr");
+    shouldHandle("error", "some random reason");
+    shouldHandle("faint", {owner: "p1", position: "a", nickname: "cat"});
+    shouldHandle("init", "chat");
+    shouldHandle("player", "p1", "some username", /*avatarId*/ 100);
+    // request data isn't actually valid, and is assumed to be validated by the
+    //  parser
+    shouldHandle("request", {} as RequestData);
+    // same as above
+    shouldHandle("switch", {} as PokemonID, {} as PokemonDetails,
+        {} as PokemonStatus);
+    shouldHandle("teamsize", "p2", 21);
+    shouldHandle("turn", 1);
+    shouldHandle("updatechallenges", /*challengesFrom*/ {newuser: "gen4ou"});
+    shouldHandle("updateuser", "newuser", /*isGuest*/ true);
+    shouldHandle("upkeep");
 });
