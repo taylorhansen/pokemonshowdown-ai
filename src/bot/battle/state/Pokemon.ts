@@ -307,7 +307,7 @@ export class HP
      */
     constructor(max?: number)
     {
-        if (max)
+        if (max !== undefined)
         {
             this.current = max;
             this.max = max;
