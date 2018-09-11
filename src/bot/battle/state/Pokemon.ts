@@ -60,6 +60,12 @@ export class Pokemon
         this._level = Math.max(1, Math.min(level, 100));
     }
 
+    /** Known moveset. */
+    public get moves(): Move[]
+    {
+        return this._moves.slice(0, this.unrevealedMove);
+    }
+
     /** Pokemon's gender. */
     public gender: string | null;
 
@@ -85,7 +91,7 @@ export class Pokemon
     /** Pokemon's level from 1 to 100. */
     private _level: number;
     /** Known moveset. */
-    private readonly moves: Move[] = [];
+    private readonly _moves: Move[] = [];
     /** First index of the part of the moveset that is unknown. */
     private unrevealedMove = 0; // TODO
     /** Info about the pokemon's hit points. */
@@ -105,7 +111,7 @@ export class Pokemon
         // initialize moveset
         for (let i = 0; i < 4; ++i)
         {
-            this.moves[i] = new Move();
+            this._moves[i] = new Move();
         }
     }
 
@@ -129,6 +135,17 @@ export class Pokemon
     }
 
     /**
+     * Checks whether a move can be made.
+     * @param index Index of the move.
+     * @returns Whether the move can be made.
+     */
+    public canMove(index: number): boolean
+    {
+        return index < this._moves.length && index < this.unrevealedMove &&
+            this._moves[index].pp > 0 && !this.volatileStatus.isDisabled(index);
+    }
+
+    /**
      * Sets the data about a move.
      * @param index Index of the move.
      * @param id Move ID name.
@@ -138,7 +155,7 @@ export class Pokemon
     public setMove(index: number, id: string, pp: number, ppMax: number): void
     {
         this.unrevealedMove = index + 1; // TODO: remake this method to reveal?
-        this.moves[index].set(dex.moves[id], pp, ppMax);
+        this._moves[index].set(dex.moves[id], pp, ppMax);
     }
 
     /**
@@ -184,7 +201,7 @@ ${s}item: ${this.itemName ? this.itemName : "<unknown>"}
 ${s}ability: ${this.baseAbilityName ? this.baseAbilityName : "<unknown>"}
 ${s}hp: ${this.hp.toString()}
 ${s}status: ${this.status ? this.status : "none"}
-${this.moves.map(
+${this._moves.map(
         (move, i) => `${s}move${i + 1}:${i < this.unrevealedMove ?
                 `\n${move.toString(indent + 4)}` : " <unrevealed>"}`)
     .join("\n")}
@@ -203,7 +220,7 @@ ${s}volatile: ${this.volatileStatus.toString()}`;
             this.gender === "F" ? 1 : 0,
             this._species, this._item, this._baseAbility, this._level,
             ...([] as number[]).concat(
-                ...this.moves.map(move => move.toArray())),
+                ...this._moves.map(move => move.toArray())),
             ...this.hp.toArray(),
             this.status === "brn" ? 1 : 0,
             this.status === "par" ? 1 : 0,
@@ -224,15 +241,15 @@ ${s}volatile: ${this.volatileStatus.toString()}`;
 export class Move
 {
     /** Amount of power points left on this move. */
-    public get ppLeft(): number
+    public get pp(): number
     {
-        return this.ppMax - this.pp;
+        return this._pp;
     }
 
     /** Move id. */
     private id: number;
     /** Current power points. */
-    private pp: number;
+    private _pp: number;
     /** Maximum amount of power points. */
     private ppMax: number;
 
@@ -245,7 +262,7 @@ export class Move
     public set(id: number, pp: number, ppMax: number): void
     {
         this.id = id;
-        this.pp = pp;
+        this._pp = pp;
         this.ppMax = ppMax;
     }
 
@@ -269,7 +286,7 @@ ${s}ppMax: ${this.ppMax}`;
      */
     public toArray(): number[]
     {
-        return [this.id, this.ppLeft];
+        return [this.id, this._pp];
     }
 }
 
@@ -277,6 +294,10 @@ ${s}ppMax: ${this.ppMax}`;
 export class HP
 {
     /** Current HP. */
+    public get current(): number
+    {
+        return this._current;
+    }
     public set current(hp: number)
     {
         this._current = Math.min(Math.max(0, hp), this._max);
@@ -379,6 +400,16 @@ export class VolatileStatus
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
         };
         this.disabledMoves = [];
+    }
+
+    /**
+     * Checks whether a move is disabled.
+     * @param move Index of the move.
+     * @returns Whether the move is disabled.
+     */
+    public isDisabled(move: number): boolean
+    {
+        return this.disabledMoves[move];
     }
 
     /**

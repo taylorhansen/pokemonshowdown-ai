@@ -24,8 +24,6 @@ export class Battle
     private sides: {readonly [ID in PlayerID]: Side};
     /** Current request ID. Updated after every `|request|` message. */
     private rqid: number | null = null;
-    /** Available choices to make. */
-    private choices: Choice[] = [];
     /** Whether we're being forced to switch. */
     private forceSwitch = false;
     /** Used to send response messages to the server. */
@@ -112,10 +110,12 @@ export class Battle
                 }
             }
 
-            // TODO: move choice logic to upkeep/turn messages
+            // TODO: don't rely on request to get move info since it's stale
+            //  data after first turn
             if (request.active)
             {
                 // update move data on our active pokemon
+                // TODO: also initialize move data for side pokemon
                 // TODO: support doubles/triples where there are multiple active
                 //  pokemon
                 const active: Pokemon = team.active;
@@ -128,41 +128,10 @@ export class Battle
                 }
             }
 
-            // TODO: move choice logic to upkeep/turn messages
-            if (request.forceSwitch || request.active)
-            {
-                this.choices = [];
-                // possible choices for switching pokemon
-                for (let i = 0; i < pokemon.length; ++i)
-                {
-                    const mon = pokemon[i];
-                    if (mon.fainted || mon.active) continue;
-
-                    this.choices.push(`switch ${i + 1}` as Choice);
-                }
-
-                if (!request.forceSwitch && request.active)
-                {
-                    // can also possibly make a move
-                    const moves = request.active[0].moves;
-                    for (let i = 0; i < moves.length; ++i)
-                    {
-                        const move = moves[i];
-                        if (move.pp <= 0 || move.disabled) continue;
-
-                        this.choices.push(`move ${i + 1}` as Choice);
-                    }
-                    this.forceSwitch = false;
-                }
-                else
-                {
-                    // if this is just a switch request, then we're being forced
-                    //  to switch
-                    this.forceSwitch = true;
-                }
-
-                logger.debug(`choices: [${this.choices.join(", ")}]`);
-            }
+            // presence of a forceSwitch array indicates that we're being forced
+            //  to switch right now
+            // TODO: doubles/triples support
+            this.forceSwitch = request.forceSwitch !== undefined;
 
             // update rqid to verify our next choice
             this.rqid = request.rqid;
@@ -189,7 +158,6 @@ expected`);
                 }
                 return;
             }
-
             team.switchIn(newActiveIndex);
         })
         .on("teamsize", (id: PlayerID, size: number) =>
@@ -224,8 +192,10 @@ expected`);
     /** Asks the AI for what to do next. */
     private askAI(): void
     {
-        const response = this.ai.decide(this.state.toArray(), this.choices);
-        this.choices = [];
+        const choices = this.getChoices();
+        logger.debug(`choices: [${choices.join(", ")}]`);
+
+        const response = this.ai.decide(this.state.toArray(), choices);
         this.addResponses(`|/choose ${response}|${this.rqid}`);
     }
 
@@ -244,5 +214,41 @@ expected`);
                 logger.error("no ai input");
             }
         });
+    }
+
+    /**
+     * Determines what choices can be made.
+     * @returns A list of choices that can be made by the AI.
+     */
+    private getChoices(): Choice[]
+    {
+        const choices: Choice[] = [];
+        const team = this.state.getTeam("us");
+
+        // possible choices for switching pokemon
+        for (let i = 0; i < team.pokemon.length; ++i)
+        {
+            const mon = team.pokemon[i];
+            if (!mon.active && !mon.fainted)
+            {
+                choices.push(`switch ${i + 1}` as Choice);
+            }
+        }
+
+        if (!this.forceSwitch)
+        {
+            // can also possibly make a move, since we're not being forced to
+            //  just switch
+            const active = team.active;
+            for (let i = 0; i < active.moves.length; ++i)
+            {
+                if (active.canMove(i))
+                {
+                    choices.push(`move ${i + 1}` as Choice);
+                }
+            }
+        }
+
+        return choices;
     }
 }
