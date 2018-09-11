@@ -145,6 +145,10 @@ export class Pokemon
         this.hp.current = current;
     }
 
+    /**
+     * Reveals a move to the client.
+     * @param id ID name of the move.
+     */
     public revealMove(id: string): void
     {
         this._moves[this.unrevealedMove++].id = id;
@@ -185,6 +189,10 @@ export class Pokemon
         this.volatileStatus.disableMove(index, disabled);
     }
 
+    /**
+     * Sets the pokemon's major status condition.
+     * @param status Name of condition.
+     */
     public setMajorStatus(status: MajorStatusName): void
     {
         this.status = status;
@@ -394,6 +402,7 @@ export class VolatileStatus
 {
     /** Stat boost stages. */
     private statBoosts: {[N in BoostableStatName]: BoostStage};
+    /** Whether the corresponding move in the pokemon's moveset is disabled. */
     private disabledMoves: boolean[];
     // TODO: everything else
 
