@@ -1,6 +1,5 @@
 import { isMajorStatus, MajorStatusName } from "../bot/battle/state/Pokemon";
-import { PokemonDetails, PokemonID, PokemonStatus, RequestData } from
-    "../parser/MessageData";
+import { PokemonDetails, PokemonID, PokemonStatus } from "./MessageData";
 import { AnyMessageListener, MessageHandler, Prefix } from "./MessageListener";
 
 /**
@@ -38,7 +37,7 @@ export class MessageParser
      * @returns `this` to allow chaining.
      */
     public on<P extends Prefix>(room: string | null, prefix: P,
-        handler: MessageHandler<P>): MessageParser
+        handler: MessageHandler<P>): this
     {
         (room !== null ? this.getListener(room) : this.newRoomListener)
             .on(prefix, handler);
@@ -109,8 +108,7 @@ export class MessageParser
      * @param prefix Message prefix indicating its type.
      * @returns The appropriate function to call for this message prefix.
      */
-    private getHandler<P extends Prefix>(prefix: P):
-        MessageHandler<P>
+    private getHandler<P extends Prefix>(prefix: P): MessageHandler<P>
     {
         if (this.messageListeners.hasOwnProperty(this._room))
         {
@@ -119,9 +117,7 @@ export class MessageParser
         return this.newRoomListener.getHandler(prefix);
     }
 
-    /**
-     * Parses a single message line.
-     */
+    /** Parses a single message line. */
     private parseMessage(): void
     {
         const prefix = this.getWord();
@@ -166,11 +162,9 @@ export class MessageParser
                 case "nametaken":
                     break;*/
                 case "challstr": // login key
-                {
                     // format: |challstr|<id>|<really long challstr>
                     this.getHandler("challstr")(this.getRestOfLine());
                     break;
-                }
                 case "updateuser": // user info changed
                 {
                     // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
@@ -201,8 +195,6 @@ export class MessageParser
 
                 // battle initialization
                 case "player": // initialize player data
-                    // TODO: put blocks in switch cases that have variables to
-                    //  prevent name conflicts such as in this case
                 {
                     // format: |player|<id>|<username>|<avatarId>
                     // id should be p1 or p2, username is a string, and avatarId
@@ -300,24 +292,15 @@ export class MessageParser
 
                     const pokemonId =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId)
-                    {
-                        break;
-                    }
+                    if (!pokemonId) break;
 
                     const details =
                         MessageParser.parsePokemonDetails(this.getWord());
-                    if (!details)
-                    {
-                        break;
-                    }
+                    if (!details) break;
 
                     const status =
                         MessageParser.parsePokemonStatus(this.getWord());
-                    if (!status)
-                    {
-                        break;
-                    }
+                    if (!status) break;
 
                     this.getHandler("switch")(pokemonId, details, status);
                     break;
@@ -333,10 +316,7 @@ export class MessageParser
 
                     const pokemonId =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId)
-                    {
-                        break;
-                    }
+                    if (!pokemonId) break;
 
                     this.getHandler("faint")(pokemonId);
                     break;
@@ -353,17 +333,11 @@ export class MessageParser
                 {
                     const pokemonId =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId)
-                    {
-                        break;
-                    }
+                    if (!pokemonId) break;
 
                     const status =
                         MessageParser.parsePokemonStatus(this.getWord());
-                    if (!status)
-                    {
-                        break;
-                    }
+                    if (!status) break;
 
                     this.getHandler(prefix)(pokemonId, status);
                     break;
@@ -372,17 +346,11 @@ export class MessageParser
                 {
                     const pokemonId =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId)
-                    {
-                        break;
-                    }
+                    if (!pokemonId) break;
 
                     const condition =
                         MessageParser.parseCondition(this.getWord());
-                    if (!condition)
-                    {
-                        break;
-                    }
+                    if (!condition) break;
 
                     this.getHandler(prefix)(pokemonId, condition);
                     break;
@@ -391,17 +359,11 @@ export class MessageParser
                 {
                     const pokemonId =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId)
-                    {
-                        break;
-                    }
+                    if (!pokemonId) break;
 
                     const condition =
                         MessageParser.parseCondition(this.getWord());
-                    if (!condition)
-                    {
-                        break;
-                    }
+                    if (!condition) break;
 
                     this.getHandler(prefix)(pokemonId, condition);
                     break;
@@ -410,10 +372,7 @@ export class MessageParser
                 {
                     const pokemonId =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId)
-                    {
-                        break;
-                    }
+                    if (!pokemonId) break;
 
                     this.getHandler(prefix)(pokemonId);
                     break;

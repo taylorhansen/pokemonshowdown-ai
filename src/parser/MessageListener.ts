@@ -43,8 +43,7 @@ export class AnyMessageListener
      * @param handler Function to be called using data from the message.
      * @returns `this` to allow chaining.
      */
-    public on<P extends Prefix>(prefix: P, handler: MessageHandler<P>):
-        AnyMessageListener
+    public on<P extends Prefix>(prefix: P, handler: MessageHandler<P>): this
     {
         // need to assert the function type since addHandler is displayed as a
         //  union of all possible MessageHandlers
