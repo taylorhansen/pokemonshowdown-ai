@@ -1,3 +1,4 @@
+import { isMajorStatus, MajorStatusName } from "../bot/battle/state/Pokemon";
 import { PokemonDetails, PokemonID, PokemonStatus, RequestData } from
     "../parser/MessageData";
 import { AnyMessageListener, MessageHandler, Prefix } from "./MessageListener";
@@ -365,11 +366,59 @@ export class MessageParser
                     }
 
                     this.getHandler(prefix)(pokemonId, status);
+                    break;
                 }
-                /*case "-status":
+                case "-status":
+                {
+                    const pokemonId =
+                        MessageParser.parsePokemonID(this.getWord());
+                    if (!pokemonId)
+                    {
+                        break;
+                    }
+
+                    const condition =
+                        MessageParser.parseCondition(this.getWord());
+                    if (!condition)
+                    {
+                        break;
+                    }
+
+                    this.getHandler(prefix)(pokemonId, condition);
+                    break;
+                }
                 case "-curestatus":
+                {
+                    const pokemonId =
+                        MessageParser.parsePokemonID(this.getWord());
+                    if (!pokemonId)
+                    {
+                        break;
+                    }
+
+                    const condition =
+                        MessageParser.parseCondition(this.getWord());
+                    if (!condition)
+                    {
+                        break;
+                    }
+
+                    this.getHandler(prefix)(pokemonId, condition);
+                    break;
+                }
                 case "-cureteam":
-                case "-boost":
+                {
+                    const pokemonId =
+                        MessageParser.parsePokemonID(this.getWord());
+                    if (!pokemonId)
+                    {
+                        break;
+                    }
+
+                    this.getHandler(prefix)(pokemonId);
+                    break;
+                }
+                /*case "-boost":
                 case "-unboost":
                 case "-weather":
                 case "-fieldstart":
@@ -483,8 +532,22 @@ export class MessageParser
 
         const hp = parseInt(status.substring(0, slash), 10);
         const hpMax = parseInt(status.substring(slash + 1, space), 10);
-        const condition = status.substring(space + 1);
+        const condition = MessageParser.parseCondition(
+                status.substring(space + 1));
+        if (condition === null) return null;
         return { hp, hpMax, condition };
+    }
+
+    /**
+     * Parses a status condition.
+     * @param condition Unparsed status condition string.
+     * @returns The string if it's a valid MajorStatusName, or null otherwise.
+     */
+    private static parseCondition(condition: string | null):
+        MajorStatusName | null
+    {
+        return (condition === null || !isMajorStatus(condition)) ?
+                null : condition;
     }
 
     /**

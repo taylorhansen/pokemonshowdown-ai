@@ -391,9 +391,6 @@ export class HP
     }
 }
 
-/** Major pokemon status conditions. */
-export type MajorStatusName = "brn" | "par" | "psn" | "tox" | "slp" | "frz";
-
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
  * removed upon switch.
@@ -492,3 +489,22 @@ export type BoostableStatName = "atk" | "def" | "spa" | "spd" | "spe" |
 /** Maximum and minimum stat boost stages. */
 export type BoostStage = -6 | -5 | -4 | -3 | -2 | -1 | 0 | 1 | 2 | 3 | 4 | 5 |
     6;
+
+/** Hold the set of all major status names. Empty string means no status. */
+export const majorStatusNames =
+{
+    brn: true, par: true, psn: true, tox: true, slp: true, frz: true, "": true
+};
+
+/** Major pokemon status conditions. */
+export type MajorStatusName = keyof typeof majorStatusNames;
+
+/**
+ * Checks if a string matches a major status name.
+ * @param condition String to be checked.
+ * @returns True if the name matches, false otherwise.
+ */
+export function isMajorStatus(condition: string): condition is MajorStatusName
+{
+    return majorStatusNames.hasOwnProperty(condition);
+}

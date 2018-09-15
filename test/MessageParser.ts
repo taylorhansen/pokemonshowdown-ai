@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import "mocha";
+import { MajorStatusName } from "../src/bot/battle/state/Pokemon";
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
     RequestData, RoomType, stringifyID, stringifyRequest, stringifyStatus } from
     "../src/parser/MessageData";
@@ -57,6 +58,42 @@ describe("MessageParser", function()
 
     describe("Message types", function()
     {
+        for (const prefix of ["-curestatus", "-status"] as Prefix[])
+        {
+            describe(prefix, function()
+            {
+                it(`Should parse ${prefix}`, function(done)
+                {
+                    const givenId: PokemonID =
+                        {owner: "p1", position: "a", nickname: "nou"};
+                    const givenCondition: MajorStatusName = "psn";
+                    parser.on("", prefix,
+                    (id: PokemonID, condition: MajorStatusName) =>
+                    {
+                        expect([id, condition]).to.deep.equal([id, condition]);
+                        done();
+                    })
+                    .parse(`|${prefix}|${stringifyID(givenId)}|\
+${givenCondition}`);
+                });
+            });
+        }
+
+        describe("-cureteam", function()
+        {
+            it("Should parse -cureteam", function(done)
+            {
+                const givenId: PokemonID =
+                    {owner: "p1", position: "a", nickname: "nou"};
+                parser.on("", "-cureteam", (id: PokemonID) =>
+                {
+                    expect(id).to.deep.equal(id);
+                    done();
+                })
+                .parse(`|-cureteam|${stringifyID(givenId)}`);
+            });
+        });
+
         for (const prefix of ["-damage", "-heal"] as Prefix[])
         {
             describe(prefix, function()

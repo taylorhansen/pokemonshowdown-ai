@@ -32,8 +32,11 @@ describe("AnyMessageListener", function()
     }
 
     // data isn't actually valid, and is assumed to be validated by the parser
+    shouldHandle("-curestatus", {} as PokemonID, "psn");
+    shouldHandle("-cureteam", {} as PokemonID);
     shouldHandle("-damage", {} as PokemonID, {} as PokemonStatus);
     shouldHandle("-heal", {} as PokemonID, {} as PokemonStatus);
+    shouldHandle("-status", {} as PokemonID, "psn");
     shouldHandle("challstr", "some random challstr");
     shouldHandle("error", "some random reason");
     shouldHandle("faint", {owner: "p1", position: "a", nickname: "cat"});

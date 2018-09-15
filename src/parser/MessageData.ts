@@ -1,3 +1,5 @@
+import { MajorStatusName } from "../bot/battle/state/Pokemon";
+
 /** Player ID in a battle. */
 export type PlayerID = "p1" | "p2";
 
@@ -73,7 +75,7 @@ export interface PokemonStatus
 {
     hp: number;
     hpMax: number;
-    condition: string;
+    condition: MajorStatusName;
 }
 
 /**

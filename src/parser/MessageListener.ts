@@ -1,10 +1,12 @@
+import { MajorStatusName } from "../bot/battle/state/Pokemon";
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
     RequestData, RoomType} from "./MessageData";
 
 /** Prefix for a message that tells of the message's type. */
-export type Prefix = "-damage" | "-heal" | "challstr" | "error" | "faint" |
-    "init" | "player" | "request" | "switch" | "teamsize" | "turn" |
-    "updatechallenges" | "updateuser" | "upkeep";
+export type Prefix = "-curestatus" | "-cureteam" | "-damage" | "-heal" |
+    "-status" | "challstr" | "error" | "faint" | "init" | "player" | "request" |
+    "switch" | "teamsize" | "turn" | "updatechallenges" | "updateuser" |
+    "upkeep";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -15,8 +17,11 @@ export class AnyMessageListener
     /** Registered message listeners for each type of Prefix. */
     private readonly listeners: {readonly [P in Prefix]: MessageListener<P>} =
     {
+        "-curestatus": new MessageListener<"-curestatus">(),
+        "-cureteam": new MessageListener<"-cureteam">(),
         "-damage": new MessageListener<"-damage">(),
         "-heal": new MessageListener<"-heal">(),
+        "-status": new MessageListener<"-status">(),
         challstr: new MessageListener<"challstr">(),
         error: new MessageListener<"error">(),
         faint: new MessageListener<"faint">(),
@@ -94,8 +99,11 @@ class MessageListener<P extends Prefix>
  * @template P Describes the message's type.
  */
 export type MessageHandler<P extends Prefix> =
-    P extends "-damage" ? DamageHandler
+    P extends "-curestatus" ? CureStatusHandler
+    : P extends "-cureteam" ? CureTeamHandler
+    : P extends "-damage" ? DamageHandler
     : P extends "-heal" ? HealHandler
+    : P extends "-status" ? StatusHandler
     : P extends "challstr" ? ChallStrHandler
     : P extends "error" ? ErrorHandler
     : P extends "faint" ? FaintHandler
@@ -111,6 +119,21 @@ export type MessageHandler<P extends Prefix> =
     : () => void;
 
 /**
+ * Handles a `-curestatus` message.
+ * @param id ID of the pokemon being cured.
+ * @param condition Status condition the pokemon is being cured of.
+ */
+export type CureStatusHandler = (id: PokemonID, condition: MajorStatusName) =>
+    void;
+
+/**
+ * Handles a `-cureteam` message.
+ * @param id ID of the pokemon of which its team is being cured of status
+ * conditions.
+ */
+export type CureTeamHandler = (id: PokemonID) => void;
+
+/**
  * Handles a `-damage` message.
  * @param id ID of the pokemon being damaged.
  * @param status HP and any status conditions.
@@ -123,6 +146,13 @@ export type DamageHandler = (id: PokemonID, status: PokemonStatus) => void;
  * @param status HP and any status conditions.
  */
 export type HealHandler = (id: PokemonID, status: PokemonStatus) => void;
+
+/**
+ * Handles a `-status` message.
+ * @param id ID of the pokemon being afflicted with a status condition.
+ * @param condition Status condition being afflicted.
+ */
+export type StatusHandler = (id: PokemonID, condition: MajorStatusName) => void;
 
 /**
  * Handles a `challstr` message.

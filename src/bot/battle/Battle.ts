@@ -43,6 +43,17 @@ export class Battle
         this.ai = new aiType();
         this.addResponses = addResponses;
         listener
+        .on("-curestatus", (id: PokemonID, condition: MajorStatusName) =>
+        {
+            this.state.getTeam(this.sides[id.owner]).active.setMajorStatus("");
+        })
+        .on("-cureteam", (id: PokemonID) =>
+        {
+            for (const mon of this.state.getTeam(this.sides[id.owner]).pokemon)
+            {
+                mon.setMajorStatus("");
+            }
+        })
         .on("-damage", (id: PokemonID, status: PokemonStatus) =>
         {
             const side = this.sides[id.owner];
@@ -61,6 +72,11 @@ export class Battle
         {
             // delegate to -damage for now
             listener.getHandler("-damage")(id, status);
+        })
+        .on("-status", (id: PokemonID, condition: MajorStatusName) =>
+        {
+            this.state.getTeam(this.sides[id.owner]).active
+                .setMajorStatus(condition);
         })
         .on("error", (reason: string) =>
         {
