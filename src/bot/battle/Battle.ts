@@ -90,6 +90,14 @@ export class Battle
             // TODO: for doubles/triples, do this based on active position also
             this.state.getTeam(this.sides[id.owner]).active.faint();
         })
+        .on("move", (id: PokemonID, move: string, effect: string,
+            missed: boolean) =>
+        {
+            const mon = this.state.getTeam(this.sides[id.owner]).active;
+            const moveId = move.toLowerCase().replace(/[ -]/g, "");
+            // TODO: sometimes a move might use >1 pp
+            mon.useMove(moveId, effect);
+        })
         .on("player", (id: PlayerID, givenUser: string) =>
         {
             if (givenUser !== username)
@@ -103,10 +111,9 @@ export class Battle
             // update the client's team data
             // generally, handling all the other types of messages should
             //  reproduce effectively the same team data as would be given to us
-            //  by this message type, so this should only be used for
-            //  initializing the starting data for the client's team on the
+            //  by this message type if not more, so this should only be used
+            //  for initializing the starting data for the client's team on the
             //  first turn
-            // TODO: fully satisfy above requirement
 
             const team = this.state.getTeam("us");
 
@@ -118,9 +125,10 @@ export class Battle
             const pokemon: Pokemon[] = team.pokemon;
             const pokemonData: RequestPokemon[] = request.side.pokemon;
 
-            // initialize side data
             if (this.rqid === null)
             {
+                // initialize each of the client's pokemon since this is our
+                //  first time receiving a request and initializing the rqid
                 for (const data of pokemonData)
                 {
                     const details: PokemonDetails = data.details;
@@ -133,6 +141,7 @@ export class Battle
                     mon.baseAbility = data.baseAbility;
                     mon.setHP(status.hp, status.hpMax);
                     mon.setMajorStatus(status.condition as MajorStatusName);
+
                     // set active status
                     if (data.active)
                     {
@@ -142,15 +151,18 @@ export class Battle
                     {
                         mon.switchOut();
                     }
+
+                    for (const moveId of data.moves)
+                    {
+                        mon.revealMove(moveId);
+                    }
                 }
             }
 
-            // TODO: don't rely on request to get move info since it's stale
-            //  data after first turn
+            // TODO: don't rely on request to get move info
             if (request.active)
             {
                 // update move data on our active pokemon
-                // TODO: also initialize move data for side pokemon
                 // TODO: support doubles/triples where there are multiple active
                 //  pokemon
                 const active: Pokemon = team.active;
@@ -158,7 +170,6 @@ export class Battle
                 for (let i = 0; i < moveData.length; ++i)
                 {
                     const move = moveData[i];
-                    active.setMove(i, move.id, move.pp, move.maxpp);
                     active.disableMove(i, request.active[0].moves[i].disabled);
                 }
             }

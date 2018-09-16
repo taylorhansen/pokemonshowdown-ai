@@ -41,6 +41,8 @@ describe("AnyMessageListener", function()
     shouldHandle("error", "some random reason");
     shouldHandle("faint", {owner: "p1", position: "a", nickname: "cat"});
     shouldHandle("init", "chat");
+    shouldHandle("move", {} as PokemonID, "Some Move", /*effect*/ "",
+        /*missed*/ false);
     shouldHandle("player", "p1", "some username", /*avatarId*/ 100);
     shouldHandle("request", {} as RequestData);
     shouldHandle("switch", {} as PokemonID, {} as PokemonDetails,

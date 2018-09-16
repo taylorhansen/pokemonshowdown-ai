@@ -280,8 +280,45 @@ export class MessageParser
                     break;
                 }
                 // major actions
-                /*case "move": // a pokemon performed a move (TODO)
-                    break;*/
+                case "move": // a pokemon performed a move
+                {
+                    // format: |move|<pokemon id>|<move name>|<target id>
+                    // "|[miss]" is present if the move missed, but can also be
+                    //  determined from a "-miss" message
+                    // can also get a "|[from]<effectname>" suffix, e.g.
+                    //  "|[from]lockedmove"
+
+                    const pokemonId =
+                        MessageParser.parsePokemonID(this.getWord());
+                    if (!pokemonId) break;
+
+                    const move = this.getWord();
+                    if (!move) break;
+
+                    // TODO: include this in non-single battles
+                    const targetId =
+                        MessageParser.parsePokemonID(this.getWord());
+                    if (!targetId) break;
+
+                    // parse optional suffixes
+                    let word: string | null;
+                    let missed = false;
+                    let effect = "";
+                    while (word = this.getWord())
+                    {
+                        if (word.startsWith("[from]"))
+                        {
+                            effect = word.substring("[from]".length);
+                        }
+                        else if (word === "[miss]")
+                        {
+                            missed = true;
+                        }
+                    }
+
+                    this.getHandler("move")(pokemonId, move, effect, missed);
+                    break;
+                }
                 case "switch": // a pokemon was voluntarily switched
                 case "drag": // involuntarily switched, really doesn't matter
                 {

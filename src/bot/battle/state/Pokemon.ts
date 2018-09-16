@@ -93,7 +93,7 @@ export class Pokemon
     /** Known moveset. */
     private readonly _moves: Move[] = [];
     /** First index of the part of the moveset that is unknown. */
-    private unrevealedMove = 0; // TODO
+    private unrevealedMove = 0;
     /** Info about the pokemon's hit points. */
     private hp: HP = new HP();
     /** Current major status condition. Not cleared on switch. */
@@ -101,9 +101,7 @@ export class Pokemon
     /** Minor status conditions. Cleared on switch. */
     private readonly volatileStatus = new VolatileStatus();
 
-    /**
-     * Creates a Pokemon.
-     */
+    /** Creates a Pokemon. */
     constructor()
     {
         this._active = false;
@@ -148,10 +146,29 @@ export class Pokemon
     /**
      * Reveals a move to the client.
      * @param id ID name of the move.
+     * @returns The new move.
      */
-    public revealMove(id: string): void
+    public revealMove(id: string): Move
     {
-        this._moves[this.unrevealedMove++].id = id;
+        const move = new Move();
+        move.id = id;
+        this._moves[this.unrevealedMove++] = move;
+        return move;
+    }
+
+    /**
+     * Indicates that a move has been used.
+     * @param id ID name of the move.
+     * @param effect ID name of the effect that caused the move.
+     */
+    public useMove(id: string, effect: string): void
+    {
+        const move = this.getMove(id) || this.revealMove(id);
+        // could be locked into using a move, where no pp is consumed
+        if (effect !== "lockedmove")
+        {
+            move.use();
+        }
     }
 
     /**
@@ -165,7 +182,18 @@ export class Pokemon
             this._moves[index].pp > 0 && !this.volatileStatus.isDisabled(index);
     }
 
-    // TODO: replace this method with stuff like revealMove() and useMove()
+    /**
+     * Gets the pokemon's move by name.
+     * @param id ID name of the move.
+     * @returns The pokemon's move that matches the ID name, or null if not
+     * found.
+     */
+    public getMove(id: string): Move | null
+    {
+        const index = this.moves.findIndex(move => move.id === id);
+        return index !== -1 ? this.moves[index] : null;
+    }
+
     /**
      * Sets the data about a move.
      * @param index Index of the move.
@@ -282,6 +310,15 @@ export class Move
     private _pp: number;
     /** Maximum amount of power points. */
     private ppMax: number;
+
+    /**
+     * Indicates that the move has been used.
+     * @param pp Amount of power points to consume, or 1 by default.
+     */
+    public use(pp = 1): void
+    {
+        this._pp = Math.max(0, Math.min(this._pp - pp, this.ppMax));
+    }
 
     /**
      * Overwrites move data.

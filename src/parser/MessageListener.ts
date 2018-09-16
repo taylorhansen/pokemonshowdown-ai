@@ -4,9 +4,9 @@ import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "-curestatus" | "-cureteam" | "-damage" | "-heal" |
-    "-status" | "challstr" | "error" | "faint" | "init" | "player" | "request" |
-    "switch" | "teamsize" | "turn" | "updatechallenges" | "updateuser" |
-    "upkeep";
+    "-status" | "challstr" | "error" | "faint" | "init" | "move" | "player" |
+    "request" | "switch" | "teamsize" | "turn" | "updatechallenges" |
+    "updateuser" | "upkeep";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -26,6 +26,7 @@ export class AnyMessageListener
         error: new MessageListener<"error">(),
         faint: new MessageListener<"faint">(),
         init: new MessageListener<"init">(),
+        move: new MessageListener<"move">(),
         player: new MessageListener<"player">(),
         request: new MessageListener<"request">(),
         switch: new MessageListener<"switch">(),
@@ -107,6 +108,7 @@ export type MessageHandler<P extends Prefix> =
     : P extends "error" ? ErrorHandler
     : P extends "faint" ? FaintHandler
     : P extends "init" ? InitHandler
+    : P extends "move" ? MoveHandler
     : P extends "player" ? PlayerHandler
     : P extends "request" ? RequestHandler
     : P extends "switch" ? SwitchHandler
@@ -178,13 +180,24 @@ export type FaintHandler = (id: PokemonID) => void;
 export type InitHandler = (type: RoomType) => void;
 
 /**
+ * Handles a `move` message.
+ * @param id ID of the pokemon using a move.
+ * @param move Name of the move. Should be converted into an id name afterwards.
+ * @param effect ID name of an effect that caused the move to be used. Empty
+ * string means no effect.
+ * @param missed Whether the move missed.
+ */
+export type MoveHandler = (id: PokemonID, move: string, effect: string,
+    missed: boolean) => void;
+
+/**
  * Handles a `player` message.
  * @param id Player id used in identifying pokemon owner.
  * @param username Username of that player.
  * @param avatarId Avatar id.
  */
-export type PlayerHandler = (id: PlayerID, username: string, avatarId: number)
-    => void;
+export type PlayerHandler = (id: PlayerID, username: string,
+    avatarId: number) => void;
 
 /**
  * Handles a `request` message.

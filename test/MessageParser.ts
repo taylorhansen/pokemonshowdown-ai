@@ -7,6 +7,7 @@ import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
 import { Prefix } from "../src/parser/MessageListener";
 import { MessageParser } from "../src/parser/MessageParser";
 
+// TODO: generalize test case patterns
 describe("MessageParser", function()
 {
     let parser: MessageParser;
@@ -193,6 +194,32 @@ ${stringifyStatus(givenStatus)}`);
                     throw new Error("Parsed empty init");
                 })
                 .parse("|init|");
+            });
+        });
+
+        describe("move", function()
+        {
+            const givenId: PokemonID =
+                {owner: "p1", position: "a", nickname: "hi"};
+            const givenMove = "Splash";
+            const target: PokemonID =
+                {owner: "p2", position: "a", nickname: "nou"};
+            const givenEffect = "";
+            const givenMissed = true;
+            it("Should parse move", function(done)
+            {
+                parser.on("", "move", (id: PokemonID, move: string,
+                    effect: string, missed: boolean) =>
+                {
+                    expect(id).to.deep.equal(givenId);
+                    expect(move).to.equal(givenMove);
+                    expect(effect).to.equal(givenEffect);
+                    expect(missed).to.equal(givenMissed);
+                    done();
+                })
+                .parse(`|move|${stringifyID(givenId)}|${givenMove}|\
+${stringifyID(target)}${givenEffect ? `|${givenEffect}` : ""}\
+${givenMissed ? "|[miss]" : ""}`);
             });
         });
 
