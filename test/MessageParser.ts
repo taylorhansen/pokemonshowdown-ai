@@ -2,8 +2,8 @@ import { expect } from "chai";
 import "mocha";
 import { MajorStatusName } from "../src/bot/battle/state/Pokemon";
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestData, RoomType, stringifyID, stringifyRequest, stringifyStatus } from
-    "../src/parser/MessageData";
+    RequestData, RoomType, stringifyDetails, stringifyID, stringifyRequest,
+    stringifyStatus } from "../src/parser/MessageData";
 import { Prefix } from "../src/parser/MessageListener";
 import { MessageParser } from "../src/parser/MessageParser";
 
@@ -59,116 +59,103 @@ describe("MessageParser", function()
 
     describe("Message types", function()
     {
+        /**
+         * Creates a server message.
+         * @param prefix Message prefix.
+         * @param argStrs String arguments for the message.
+         * @returns A composed message.
+         */
+        function composeMessage(prefix: Prefix, argStrs: string[]): string
+        {
+            return `|${prefix}\
+${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
+        }
+
+        /**
+         * Adds a test case that should be correctly parsed.
+         * @param prefix Message prefix.
+         * @param argStrs String arguments.
+         * @param givenArgs Expected message handler arguments.
+         */
+        function shouldParse(prefix: Prefix, argStrs: string[],
+            givenArgs: any[]): void
+        {
+            it(`Should parse ${prefix}`, function(done)
+            {
+                parser.on("", prefix, (...args: any[]) =>
+                {
+                    expect(args).to.deep.equal(givenArgs);
+                    done();
+                })
+                .parse(composeMessage(prefix, argStrs));
+            });
+        }
+
+        /**
+         * Adds a test case that should not be correctly parsed.
+         * @param prefix Message prefix.
+         * @param argStrs String arguments.
+         */
+        function shouldntParse(prefix: Prefix, argStrs: string[]): void
+        {
+            it(`Should not parse ${prefix}`, function()
+            {
+                parser.on("", prefix, (...args: any[]) =>
+                {
+                    throw new Error(`Parsed an invalid ${prefix}`);
+                })
+                .parse(composeMessage(prefix, argStrs));
+            });
+        }
+
         for (const prefix of ["-curestatus", "-status"] as Prefix[])
         {
             describe(prefix, function()
             {
-                it(`Should parse ${prefix}`, function(done)
-                {
-                    const givenId: PokemonID =
-                        {owner: "p1", position: "a", nickname: "nou"};
-                    const givenCondition: MajorStatusName = "psn";
-                    parser.on("", prefix,
-                    (id: PokemonID, condition: MajorStatusName) =>
-                    {
-                        expect([id, condition]).to.deep.equal([id, condition]);
-                        done();
-                    })
-                    .parse(`|${prefix}|${stringifyID(givenId)}|\
-${givenCondition}`);
-                });
+                const id: PokemonID =
+                    {owner: "p1", position: "a", nickname: "nou"};
+                const condition: MajorStatusName = "psn";
+                shouldParse(prefix, [stringifyID(id), condition],
+                    [id, condition]);
             });
         }
 
         describe("-cureteam", function()
         {
-            it("Should parse -cureteam", function(done)
-            {
-                const givenId: PokemonID =
-                    {owner: "p1", position: "a", nickname: "nou"};
-                parser.on("", "-cureteam", (id: PokemonID) =>
-                {
-                    expect(id).to.deep.equal(id);
-                    done();
-                })
-                .parse(`|-cureteam|${stringifyID(givenId)}`);
-            });
+            const id: PokemonID = {owner: "p1", position: "a", nickname: "nou"};
+            shouldParse("-cureteam", [stringifyID(id)], [id]);
         });
 
         for (const prefix of ["-damage", "-heal"] as Prefix[])
         {
             describe(prefix, function()
             {
-                it(`Should parse ${prefix}`, function(done)
-                {
-                    const givenId: PokemonID =
-                        {owner: "p1", position: "a", nickname: "nou"};
-                    const givenStatus: PokemonStatus =
-                        {hp: 100, hpMax: 100, condition: "psn"};
-                    parser.on("", prefix,
-                    (id: PokemonID, status: PokemonStatus) =>
-                    {
-                        expect(id).to.deep.equal(givenId);
-                        expect(status).to.deep.equal(givenStatus);
-                        done();
-                    })
-                    .parse(`|${prefix}|${stringifyID(givenId)}|\
-${stringifyStatus(givenStatus)}`);
-                });
+                const id: PokemonID =
+                    {owner: "p1", position: "a", nickname: "nou"};
+                const status: PokemonStatus =
+                    {hp: 100, hpMax: 100, condition: "psn"};
+                shouldParse(prefix, [stringifyID(id), stringifyStatus(status)],
+                    [id, status]);
             });
         }
 
         describe("challstr", function()
         {
-            it("Should parse challstr", function(done)
-            {
-                // not an actual challstr
-                const givenChallstr = "4|12352361236737sdagwflk";
-                parser.on("", "challstr", (challstr: string) =>
-                {
-                    expect(challstr).to.equal(givenChallstr);
-                    done();
-                })
-                .parse(`|challstr|${givenChallstr}`);
-            });
+            const challstr = "4|12352361236737sdagwflk";
+            shouldParse("challstr", [challstr], [challstr]);
         });
 
         describe("error", function()
         {
-            it("Should parse error", function(done)
-            {
-                const givenReason = "because i said so";
-                parser.on("", "error", (reason: string) =>
-                {
-                    expect(reason).to.equal(givenReason);
-                    done();
-                })
-                .parse(`|error|${givenReason}`);
-            });
+            const reason = "because i said so";
+            shouldParse("error", [reason], [reason]);
         });
 
         describe("faint", function()
         {
-            it("Should not parse empty faint", function()
-            {
-                parser.on("", "faint", () =>
-                {
-                    throw new Error("Parsed empty faint");
-                })
-                .parse("|faint|");
-            });
-
-            it("Should parse faint", function(done)
-            {
-                const givenId: PokemonID =
-                    {owner: "p1", position: "a", nickname: "hi"};
-                parser.on("", "faint", (id: PokemonID) =>
-                {
-                    expect(id).to.deep.equal(givenId);
-                    done();
-                })
-                .parse(`|faint|${stringifyID(givenId)}`);
-            });
+            const id: PokemonID = {owner: "p1", position: "a", nickname: "hi"};
+            shouldParse("faint", [stringifyID(id)], [id]);
+            shouldntParse("faint", []);
         });
 
         describe("init", function()
@@ -176,201 +163,137 @@ ${stringifyStatus(givenStatus)}`);
             const initTypes: RoomType[] = ["chat", "battle"];
             for (const initType of initTypes)
             {
-                it(`Should parse ${initType} init message`, function(done)
-                {
-                    parser.on("", "init", (type: RoomType) =>
-                    {
-                        expect(type).to.equal(initType);
-                        done();
-                    })
-                    .parse(`|init|${initType}`);
-                });
+                shouldParse("init", [initType], [initType]);
             }
-
-            it("Should not parse empty init", function()
-            {
-                parser.on("", "init", () =>
-                {
-                    throw new Error("Parsed empty init");
-                })
-                .parse("|init|");
-            });
+            shouldntParse("init", []);
         });
 
         describe("move", function()
         {
-            const givenId: PokemonID =
-                {owner: "p1", position: "a", nickname: "hi"};
-            const givenMove = "Splash";
+            const id: PokemonID = {owner: "p1", position: "a", nickname: "hi"};
+            const move = "Splash";
             const target: PokemonID =
                 {owner: "p2", position: "a", nickname: "nou"};
-            const givenEffect = "";
-            const givenMissed = true;
-            it("Should parse move", function(done)
+            const effects = ["", "lockedmove"];
+            const missed = true;
+
+            for (const effect of effects)
             {
-                parser.on("", "move", (id: PokemonID, move: string,
-                    effect: string, missed: boolean) =>
-                {
-                    expect(id).to.deep.equal(givenId);
-                    expect(move).to.equal(givenMove);
-                    expect(effect).to.equal(givenEffect);
-                    expect(missed).to.equal(givenMissed);
-                    done();
-                })
-                .parse(`|move|${stringifyID(givenId)}|${givenMove}|\
-${stringifyID(target)}${givenEffect ? `|${givenEffect}` : ""}\
-${givenMissed ? "|[miss]" : ""}`);
-            });
+                const argStrs = [stringifyID(id), move, stringifyID(target)];
+                if (effect) argStrs.push(`[from]${effect}`);
+                if (missed) argStrs.push("[miss]");
+                shouldParse("move", argStrs, [id, move, effect, missed]);
+            }
         });
 
         describe("player", function()
         {
-            const givenIds: PlayerID[] = ["p1", "p2"];
-            const givenUser = "somebody";
-            const givenAvatar = 100;
-            for (const givenId of givenIds)
+            const ids: PlayerID[] = ["p1", "p2"];
+            const user = "somebody";
+            const avatar = 100;
+            for (const id of ids)
             {
-                it(`Should parse player ${givenId}`, function(done)
-                {
-                    parser.on("", "player", (id: PlayerID, username: string,
-                        avatarId: number) =>
-                    {
-                        expect(id).to.equal(givenId);
-                        expect(username).to.equal(givenUser);
-                        expect(avatarId).to.equal(givenAvatar);
-                        done();
-                    })
-                    .parse(`|player|${givenId}|${givenUser}|${givenAvatar}`);
-                });
+                shouldParse("player", [id, user, avatar.toString()],
+                    [id, user, avatar]);
             }
 
-            // TODO: need more functions like this to reduce code duplication
-            function shouldntParse(phrase: string, ...args: any[])
-            {
-                it(`Should not parse ${phrase}`, function()
-                {
-                    parser.on("", "player", () =>
-                    {
-                        throw new Error(`Parsed ${phrase}`);
-                    })
-                    .parse(`|player|${args.join("|")}`);
-                });
-            }
-            shouldntParse("empty id", "", givenUser, givenAvatar);
-            shouldntParse("empty user", "p1", "", givenAvatar);
-            shouldntParse("empty avatar", "p1", givenUser, "");
+            shouldntParse("player", ["", user, avatar.toString()]);
+            shouldntParse("player", ["p1", "", avatar.toString()]);
+            shouldntParse("player", ["p1", user, ""]);
         });
 
         describe("request", function()
         {
-            it("Should not parse empty request", function()
+            const request: RequestData =
             {
-                parser.on("", "request", () =>
-                {
-                    throw new Error("Parsed empty request");
-                })
-                .parse("|request|");
-            });
-
-            it("Should parse request", function(done)
-            {
-                const givenData: RequestData =
-                {
-                    active:
-                    [
-                        {
-                            moves:
-                            [
-                                {
-                                    move: "Splash", id: "splash", pp: 24,
-                                    maxpp: 24, target: "self", disabled: false
-                                }
-                            ]
-                        }
-                    ],
-                    side:
+                active:
+                [
                     {
-                        name: "somebody", id: "p1",
-                        pokemon:
+                        moves:
                         [
                             {
-                                ident:
-                                {
-                                    owner: "p1", position: "a", nickname: "hi"
-                                },
-                                details:
-                                {
-                                    species: "Magikarp", shiny: true,
-                                    gender: "M", level: 50
-                                },
-                                condition:
-                                {
-                                    hp: 100, hpMax: 100, condition: "par"
-                                },
-                                active: true,
-                                stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                                moves: ["splash"], baseAbility: "swiftswim",
-                                item: "choiceband", pokeball: "masterball"
-                            },
-                            {
-                                ident:
-                                {
-                                    owner: "p1", position: "a", nickname: "hi"
-                                },
-                                details:
-                                {
-                                    species: "Mewtwo", shiny: false,
-                                    gender: null, level: 100
-                                },
-                                condition:
-                                {
-                                    hp: 9001, hpMax: 9001, condition: ""
-                                },
-                                active: false,
-                                stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                                moves: ["hyperbeam"], baseAbility: "pressure",
-                                item: "choicespecs", pokeball: "nestball"
-                            },
-                            {
-                                ident:
-                                {
-                                    owner: "p1", position: "a",
-                                    nickname: "Pentagon"
-                                },
-                                details:
-                                {
-                                    species: "Porygon", shiny: false,
-                                    gender: null, level: 100
-                                },
-                                condition:
-                                {
-                                    hp: 0, hpMax: 0, condition: ""
-                                },
-                                active: false,
-                                stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                                moves: ["tackle"], baseAbility: "trace",
-                                item: "choicescarf", pokeball: "greatball"
+                                move: "Splash", id: "splash", pp: 24,
+                                maxpp: 24, target: "self", disabled: false
                             }
                         ]
-                    },
-                    rqid: 10
-                };
-                parser.on("", "request", (data: RequestData) =>
+                    }
+                ],
+                side:
                 {
-                    expect(data).to.deep.equal(givenData);
-                    done();
-                })
-                .parse(`|request|${stringifyRequest(givenData)}`);
-            });
+                    name: "somebody", id: "p1",
+                    pokemon:
+                    [
+                        {
+                            ident:
+                            {
+                                owner: "p1", position: "a", nickname: "hi"
+                            },
+                            details:
+                            {
+                                species: "Magikarp", shiny: true,
+                                gender: "M", level: 50
+                            },
+                            condition:
+                            {
+                                hp: 100, hpMax: 100, condition: "par"
+                            },
+                            active: true,
+                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            moves: ["splash"], baseAbility: "swiftswim",
+                            item: "choiceband", pokeball: "masterball"
+                        },
+                        {
+                            ident:
+                            {
+                                owner: "p1", position: "a", nickname: "hi"
+                            },
+                            details:
+                            {
+                                species: "Mewtwo", shiny: false,
+                                gender: null, level: 100
+                            },
+                            condition:
+                            {
+                                hp: 9001, hpMax: 9001, condition: ""
+                            },
+                            active: false,
+                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            moves: ["hyperbeam"], baseAbility: "pressure",
+                            item: "choicespecs", pokeball: "nestball"
+                        },
+                        {
+                            ident:
+                            {
+                                owner: "p1", position: "a",
+                                nickname: "Pentagon"
+                            },
+                            details:
+                            {
+                                species: "Porygon", shiny: false,
+                                gender: null, level: 100
+                            },
+                            condition:
+                            {
+                                hp: 0, hpMax: 0, condition: ""
+                            },
+                            active: false,
+                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            moves: ["tackle"], baseAbility: "trace",
+                            item: "choicescarf", pokeball: "greatball"
+                        }
+                    ]
+                },
+                rqid: 10
+            };
+            shouldParse("request", [stringifyRequest(request)], [request]);
+
+            shouldntParse("request", []);
         });
 
         describe("switch", function()
         {
-            // message can be switch or drag, depending on whether the switch
-            //  was intentional or unintentional
-            const prefixes = ["switch", "drag"];
             // expected value when the corresponding switchInfo is parsed
-            const givenInfos =
+            const switchData: [PokemonID, PokemonDetails, PokemonStatus][] =
             [
                 [
                     {owner: "p1", position: "a", nickname: "Lucky"},
@@ -391,170 +314,79 @@ ${givenMissed ? "|[miss]" : ""}`);
             // contains the indexes of each switch parameter
             const infoNames: {[infoName: string]: number} =
                 { id: 0, details: 1, status: 2 };
-            // unparsed givenInfos
-            let switchInfos: string[][];
+            // switch data in string form
+            const switchStrs: string[][] = switchData.map(a =>
+            [
+                stringifyID(a[0]),
+                stringifyDetails(a[1]),
+                stringifyStatus(a[2])
+            ]);
 
-            beforeEach(function()
+            let i: number;
+            // try parsing with each set of switch info
+            for (i = 0; i < switchData.length; ++i)
             {
-                // these values can be sabotaged in some later test cases to
-                //  observe how the parser handles it
-                switchInfos =
-                [
-                    ["p1a: Lucky", "Magikarp, shiny, M", "65/200 par"],
-                    ["p2b: Rage", "Gyarados, F, L50", "1/1"],
-                    ["p1c: Mew2", "Mewtwo", "100/100 slp"]
-                ];
-            });
+                shouldParse("switch", switchStrs[i].slice(0), switchData[i]);
+            }
 
-            for (const prefix of prefixes)
+            // only need to test sabotage values for one set each
+            i = 0;
+            for (const infoName in infoNames)
             {
-                // try parsing with each set of switch info
-                for (let i = 0; i < givenInfos.length; ++i)
-                {
-                    it(`Should parse ${prefix} with valid info ${i + 1}`,
-                    function(done)
-                    {
-                        parser.on("", "switch", (id: PokemonID,
-                            details: PokemonDetails, status: PokemonStatus) =>
-                        {
-                            // match each id/details/status object
-                            const info = [id, details, status];
-                            for (let j = 0; j < givenInfos[i].length; ++j)
-                            {
-                                expect(info[j]).to.deep.equal(givenInfos[i][j]);
-                            }
-                            done();
-                        })
-                        .parse(`|switch|${switchInfos[i].join("|")}`);
-                    });
-                }
+                if (!infoNames.hasOwnProperty(infoName)) continue;
 
-                // only need to test sabotage values for one set
-                for (const infoName in infoNames)
-                {
-                    if (!infoNames.hasOwnProperty(infoName)) continue;
-                    it(`Should not parse ${prefix} with invalid ${infoName}`,
-                    function()
-                    {
-                        // if any one of PokemonID, PokemonDetails, or
-                        //  PokemonStatus are omitted or invalid, the entire
-                        //  message can't be parsed
-                        switchInfos[0][infoNames[infoName]] = "";
-
-                        parser.on("", "switch", () =>
-                        {
-                            throw new Error(`Parsed with invalid ${infoName}`);
-                        })
-                        .parse(`|switch|${switchInfos[0].join("|")}`);
-                    });
-                }
+                // if any one of PokemonID, PokemonDetails, or
+                //  PokemonStatus are omitted or invalid, the entire
+                //  message shouldn't be parsed
+                switchStrs[i][infoNames[infoName]] = "";
+                shouldntParse("switch", switchStrs[i]);
+                ++i;
             }
         });
 
         describe("teamsize", function()
         {
-            const givenIds = ["p1", "p2"];
-            const givenSize = 1;
-            for (const givenId of givenIds)
+            const playerIds = ["p1", "p2"];
+            const size = 1;
+            for (const playerId of playerIds)
             {
-                it(`Should parse teamsize ${givenId}`, function(done)
-                {
-                    parser.on("", "teamsize", (id: PlayerID, size: number) =>
-                    {
-                        expect(id).to.equal(givenId);
-                        expect(size).to.equal(givenSize);
-                        done();
-                    })
-                    .parse(`|teamsize|${givenId}|${givenSize}`);
-                });
+                shouldParse("teamsize", [playerId, size.toString()],
+                    [playerId, size]);
             }
-
-            it("Should not parse empty player", function()
-            {
-                parser.on("", "teamsize", (id: PlayerID, size: number) =>
-                {
-                    throw new Error("Parsed with empty player");
-                })
-                .parse(`|teamsize||${givenSize}`);
-            });
-
-            it("Should not parse empty size", function()
-            {
-                parser.on("", "teamsize", (id: PlayerID, size: number) =>
-                {
-                    throw new Error("Parsed with empty size");
-                })
-                .parse(`|teamsize|${givenIds[0]}|`);
-            });
+            shouldntParse("teamsize", ["", size.toString()]);
+            shouldntParse("teamsize", [playerIds[0], ""]);
         });
 
         describe("turn", function()
         {
-            it("Should parse turn", function(done)
-            {
-                const givenTurn = 1;
-                parser.on("", "turn", (turn: number) =>
-                {
-                    expect(turn).to.equal(givenTurn);
-                    done();
-                })
-                .parse(`|turn|${givenTurn}`);
-            });
+            const turn = 1;
+            shouldParse("turn", [turn.toString()], [turn]);
         });
 
         describe("updatechallenges", function()
         {
-            it("Should parse updatechallenges", function(done)
-            {
-                const givenChallengesFrom: ChallengesFrom =
-                    { somebody: "gen4ou" };
-                parser.on("", "updatechallenges",
-                    (challengesFrom: ChallengesFrom) =>
-                {
-                    expect(challengesFrom).to.deep.equal(givenChallengesFrom);
-                    done();
-                })
-                .parse(`|updatechallenges|{"challengesFrom":\
-${JSON.stringify(givenChallengesFrom)}}`);
-            });
+            const challengesFrom: ChallengesFrom = { somebody: "gen4ou" };
+            shouldParse("updatechallenges",
+                [`{"challengesFrom":${JSON.stringify(challengesFrom)}}`],
+                [challengesFrom]);
         });
 
         describe("updateuser", function()
         {
-            it("Should parse updateuser", function(done)
-            {
-                const givenUsername = "somebody";
-                const guest = 0;
-                const avatarId = 21;
-                parser.on("", "updateuser",
-                    (username: string, isGuest: boolean) =>
-                {
-                    expect(username).to.equal(givenUsername);
-                    expect(isGuest).to.equal(!guest);
-                    done();
-                })
-                .parse(`|updateuser|${givenUsername}|${guest}|${avatarId}`);
-            });
-
-            for (const msg of ["updateuser", "updateuser|user"])
-            {
-                it(`Should not parse empty ${msg}`, function()
-                {
-                    parser.on("", "updateuser", () =>
-                    {
-                        throw new Error("Parsed empty updateuser");
-                    })
-                    .parse(`|${msg}`);
-                });
-            }
+            const username = "somebody";
+            const guest = 0;
+            // required by the message type but not by message handler
+            const avatar = 21;
+            shouldParse("updateuser",
+                [username, guest.toString(), avatar.toString()],
+                [username, !guest]);
+            shouldntParse("updateuser", []);
+            shouldntParse("updateuser", [username]);
         });
 
         describe("upkeep", function()
         {
-            it("Should parse upkeep", function(done)
-            {
-                parser.on("", "upkeep", done).parse("|upkeep");
-            });
+            shouldParse("upkeep", [], []);
         });
     });
 });
