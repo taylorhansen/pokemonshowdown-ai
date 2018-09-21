@@ -15,5 +15,9 @@ export interface AI
 /** Interface for the constructor of an AI object. */
 export interface AIConstructor
 {
-    new(): AI;
+    /**
+     * Constructor function.
+     * @param inputLength Expected length of state input.
+     */
+    new(inputLength: number): AI;
 }

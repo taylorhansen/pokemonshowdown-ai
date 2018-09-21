@@ -4,12 +4,12 @@ export class RoomStatus
     // TODO
 
     /**
-     * Encodes all room status data into a string.
-     * @returns The RoomStatus in string form.
+     * Gets the size of the return value of `toArray()`.
+     * @returns The size of the return value of `toArray()`.
      */
-    public toString(): string
+    public static getArraySize(): number
     {
-        return "[]";
+        return 0;
     }
 
     /**
@@ -19,5 +19,14 @@ export class RoomStatus
     public toArray(): number[]
     {
         return [];
+    }
+
+    /**
+     * Encodes all room status data into a string.
+     * @returns The RoomStatus in string form.
+     */
+    public toString(): string
+    {
+        return "[]";
     }
 }

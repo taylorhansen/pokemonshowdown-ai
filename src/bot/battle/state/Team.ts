@@ -3,6 +3,9 @@ import { Pokemon } from "./Pokemon";
 /** Team state. */
 export class Team
 {
+    /** Maximum team size. */
+    public static readonly MAX_SIZE = 6;
+
     /** Gets the active pokemon. */
     public get active(): Pokemon
     {
@@ -15,33 +18,66 @@ export class Team
      */
     public get size(): number
     {
-        return this.pokemon.length;
+        return this._size;
     }
     public set size(size: number)
     {
-        for (let i = 0 ; i < size; ++i)
+        this._size = Math.max(1, Math.min(size, Team.MAX_SIZE));
+
+        // clear pokemon array
+        for (let i = 0 ; i < Team.MAX_SIZE; ++i)
         {
             this.pokemon[i] = new Pokemon();
-        }
-
-        // delete any other element slots if they exist
-        if (this.pokemon.length > size)
-        {
-            this.pokemon.splice(size);
         }
         this.unrevealed = 0;
     }
 
     /** The pokemon that compose this team. First one is always active. */
-    public readonly pokemon: Pokemon[] = [];
+    public readonly pokemon = new Array<Pokemon>(Team.MAX_SIZE);
 
     /** Team-related status conditions. */
     private readonly status: TeamStatus = new TeamStatus();
     /**
      * Index of the next pokemon that hasn't been revealed to the user yet.
-     * Indexes to the `pokemon` field after or equal to this value are invalid.
+     * Indexes to the `pokemon` field after or equal to this value point to
+     * newly constructed Pokemon objects that haven't been fully initialized
+     * yet.
      */
     private unrevealed = 0;
+    /** Team size for this battle. */
+    private _size = 0;
+
+    /**
+     * Gets the size of the return value of `toArray()`.
+     * @returns The size of the return value of `toArray()`.
+     */
+    public static getArraySize(): number
+    {
+        // size field
+        return 1 +
+            // active pokemon
+            Pokemon.getArraySize(/*active*/ true) +
+            // side pokemon
+            (Team.MAX_SIZE - 1) * Pokemon.getArraySize(/*active*/ false) +
+            // status
+            TeamStatus.getArraySize();
+    }
+
+    /**
+     * Formats all the team info into an array of numbers.
+     * @returns All team data in array form.
+     */
+    public toArray(): number[]
+    {
+        const a =
+        [
+            this._size,
+            ...([] as number[]).concat(
+                ...this.pokemon.map(mon => mon.toArray())),
+            ...this.status.toArray()
+        ];
+        return a;
+    }
 
     /**
      * Finds the first pokemon with the species name.
@@ -131,26 +167,9 @@ export class Team
         return `\
 ${s}status: ${this.status.toString()}
 ${this.pokemon.map(
-        // FIXME: some kind of off by one error displaying 1 more unrevealed
-        //  pokemon data than needed
         (mon, i) => `${s}mon${i + 1}:${i < this.unrevealed ?
                 `\n${mon.toString(indent + 4)}` : " <unrevealed>"}`)
     .join("\n")}`;
-    }
-
-    /**
-     * Formats all the team info into an array of numbers.
-     * @returns All team data in array form.
-     */
-    public toArray(): number[]
-    {
-        const a =
-        [
-            ...this.status.toArray(),
-            ...([] as number[]).concat(
-                ...this.pokemon.map(mon => mon.toArray()))
-        ];
-        return a;
     }
 }
 
@@ -160,12 +179,12 @@ export class TeamStatus
     // TODO
 
     /**
-     * Encodes all team status data into a string
-     * @returns The TeamStatus in string form.
+     * Gets the size of the return value of `toArray()`.
+     * @returns The size of the return value of `toArray()`.
      */
-    public toString(): string
+    public static getArraySize(): number
     {
-        return "[]";
+        return 0;
     }
 
     /**
@@ -175,5 +194,14 @@ export class TeamStatus
     public toArray(): number[]
     {
         return [];
+    }
+
+    /**
+     * Encodes all team status data into a string
+     * @returns The TeamStatus in string form.
+     */
+    public toString(): string
+    {
+        return "[]";
     }
 }

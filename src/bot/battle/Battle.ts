@@ -40,7 +40,7 @@ export class Battle
         listener: AnyMessageListener,
         addResponses: (...respones: string[]) => void)
     {
-        this.ai = new aiType();
+        this.ai = new aiType(BattleState.getArraySize());
         this.addResponses = addResponses;
         listener
         .on("-curestatus", (id: PokemonID, condition: MajorStatusName) =>

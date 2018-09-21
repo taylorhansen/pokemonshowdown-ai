@@ -9,11 +9,13 @@ export class Network implements AI
     /** Neural network model. */
     private readonly model = tf.sequential();
     /** Number of input neurons. */
-    private readonly inputLength = 278; // TODO
+    private readonly inputLength: number;
 
     /** Creates a Network. */
-    constructor()
+    constructor(inputLength: number)
     {
+        this.inputLength = inputLength;
+
         // setup all the layers
         const outNeurons = Object.keys(choiceIds).length;
         this.model.add(tf.layers.dense(

@@ -117,6 +117,65 @@ export class Pokemon
         }
     }
 
+    /**
+     * Gets the size of the return value of `toArray()`.
+     * @param active Whether to include active pokemon data, e.g. volatile
+     * status.
+     * @returns The size of the return value of `toArray()`.
+     */
+    public static getArraySize(active: boolean): number
+    {
+        // gender
+        return 2 +
+            dex.numPokemon +
+            dex.numItems +
+            // base ability
+            2 +
+            // level
+            1 +
+            Move.getArraySize() * 4 +
+            HP.getArraySize() +
+            // major status names excluding empty status
+            Object.keys(majorStatusNames).length - 1 +
+            (active ? VolatileStatus.getArraySize() : 0);
+    }
+
+    /**
+     * Formats pokemon info into an array of numbers.
+     * @returns All pokemon data in array form.
+     */
+    public toArray(): number[]
+    {
+        // one-hot encode categorical data
+        const species = Array.from({length: dex.numPokemon},
+            (v, i) => i === this._species ? 1 : 0);
+        const item = Array.from({length: dex.numItems},
+            (v, i) => i === this._item ? 1 : 0);
+        const baseAbility = Array.from({length: 2},
+            (v, i) => i === this._baseAbility ? 1 : 0);
+
+        const a =
+        [
+            this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
+            ...species, ...item, ...baseAbility,
+            this._level || 0,
+            ...([] as number[]).concat(
+                ...this._moves.map(move => move.toArray())),
+            ...this.hp.toArray(),
+            this.majorStatus === "brn" ? 1 : 0,
+            this.majorStatus === "par" ? 1 : 0,
+            this.majorStatus === "psn" ? 1 : 0,
+            this.majorStatus === "tox" ? 1 : 0,
+            this.majorStatus === "slp" ? 1 : 0,
+            this.majorStatus === "frz" ? 1 : 0
+        ];
+        if (this._active)
+        {
+            a.push(...this.volatileStatus.toArray());
+        }
+        return a;
+    }
+
     /** Tells the pokemon that it is currently being switched in. */
     public switchIn(): void
     {
@@ -253,42 +312,6 @@ ${this._moves.map(
     .join("\n")}
 ${s}volatile: ${this.volatileStatus.toString()}`;
     }
-
-    /**
-     * Formats pokemon info into an array of numbers.
-     * @returns All pokemon data in array form.
-     */
-    public toArray(): number[]
-    {
-        // one-hot encode categorical data
-        const species = Array.from({length: dex.numPokemon},
-            (v, i) => i === this._species ? 1 : 0);
-        const item = Array.from({length: dex.numItems},
-            (v, i) => i === this._item ? 1 : 0);
-        const baseAbility = Array.from({length: 2},
-            (v, i) => i === this._baseAbility ? 1 : 0);
-
-        const a =
-        [
-            this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
-            ...species, ...item, ...baseAbility,
-            this._level || 0,
-            ...([] as number[]).concat(
-                ...this._moves.map(move => move.toArray())),
-            ...this.hp.toArray(),
-            this.majorStatus === "brn" ? 1 : 0,
-            this.majorStatus === "par" ? 1 : 0,
-            this.majorStatus === "psn" ? 1 : 0,
-            this.majorStatus === "tox" ? 1 : 0,
-            this.majorStatus === "slp" ? 1 : 0,
-            this.majorStatus === "frz" ? 1 : 0
-        ];
-        if (this._active)
-        {
-            a.push(...this.volatileStatus.toArray());
-        }
-        return a;
-    }
 }
 
 /** Information about a certain move. */
@@ -324,6 +347,32 @@ export class Move
     private ppMax: number;
 
     /**
+     * Gets the size of the return value of `toArray()`.
+     * status.
+     * @returns The size of the return value of `toArray()`.
+     */
+    public static getArraySize(): number
+    {
+        // move id
+        return dex.numMoves +
+            // pp
+            1;
+    }
+
+    /**
+     * Formats move info into an array of numbers.
+     * @returns All move data in array form.
+     */
+    public toArray(): number[]
+    {
+        // one-hot encode move id
+        const id = Array.from({length: dex.numMoves},
+            (v, i) => i === this._id ? 1 : 0);
+
+        return [...id, this._pp];
+    }
+
+    /**
      * Indicates that the move has been used.
      * @param pp Amount of power points to consume, or 1 by default.
      */
@@ -357,19 +406,6 @@ export class Move
 ${s}id: ${this.id}
 ${s}pp: ${this.pp}
 ${s}ppMax: ${this.ppMax}`;
-    }
-
-    /**
-     * Formats move info into an array of numbers.
-     * @returns All move data in array form.
-     */
-    public toArray(): number[]
-    {
-        // one-hot encode move id
-        const id = Array.from({length: dex.numMoves},
-            (v, i) => i === this._id ? 1 : 0);
-
-        return [...id, this._pp];
     }
 }
 
@@ -426,12 +462,14 @@ export class HP
     }
 
     /**
-     * Encodes all hp data into a string.
-     * @returns The HP in string form.
+     * Gets the size of the return value of `toArray()`.
+     * status.
+     * @returns The size of the return value of `toArray()`.
      */
-    public toString(): string
+    public static getArraySize(): number
     {
-        return `${this._current}/${this._max}${this.isPercent ? "%" : ""}`;
+        // current + max
+        return 1 + 1;
     }
 
     /**
@@ -441,6 +479,15 @@ export class HP
     public toArray(): number[]
     {
         return [this._current, this._max];
+    }
+
+    /**
+     * Encodes all hp data into a string.
+     * @returns The HP in string form.
+     */
+    public toString(): string
+    {
+        return `${this._current}/${this._max}${this.isPercent ? "%" : ""}`;
     }
 }
 
@@ -456,6 +503,12 @@ export class VolatileStatus
     private disabledMoves: boolean[];
     // TODO: everything else
 
+    /** Creates a VolatileStatus object. */
+    constructor()
+    {
+        this.clear();
+    }
+
     /**
      * Converts a number to a string where positive numbers are preceded by a
      * `+` symbol.
@@ -467,10 +520,32 @@ export class VolatileStatus
         return (n > 0 ? "+" : "") + n;
     }
 
-    /** Creates a VolatileStatus object. */
-    constructor()
+    /**
+     * Gets the size of the return value of `toArray()`.
+     * status.
+     * @returns The size of the return value of `toArray()`.
+     */
+    public static getArraySize(): number
     {
-        this.clear();
+        // boostable stats
+        return Object.keys(boostableStatNames).length +
+            // disabled moves
+            4;
+    }
+
+    /**
+     * Formats volatile status info into an array of numbers.
+     * @returns All volatile status data in array form.
+     */
+    public toArray(): number[]
+    {
+        const a =
+        [
+            ...Object.keys(this.statBoosts).map(
+                (key: BoostableStatName) => this.statBoosts[key]),
+            ...this.disabledMoves.map(b => b ? 1 : 0)
+        ];
+        return a;
     }
 
     /** Clears all volatile status conditions. */
@@ -519,26 +594,17 @@ export class VolatileStatus
                 .map((disabled, i) => `disabled move ${i + 1}`))
             .join(", ")}]`;
     }
-
-    /**
-     * Formats volatile status info into an array of numbers.
-     * @returns All volatile status data in array form.
-     */
-    public toArray(): number[]
-    {
-        const a =
-        [
-            ...Object.keys(this.statBoosts).map(
-                (key: BoostableStatName) => this.statBoosts[key]),
-            ...this.disabledMoves.map(b => b ? 1 : 0)
-        ];
-        return a;
-    }
 }
 
+/** Holds the set of all boostable stat names. */
+export const boostableStatNames =
+{
+    atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true,
+    evasion: true
+};
 /** Names of pokemon stats that can be boosted. */
-export type BoostableStatName = "atk" | "def" | "spa" | "spd" | "spe" |
-    "accuracy" | "evasion";
+export type BoostableStatName = keyof typeof boostableStatNames;
+
 /** Maximum and minimum stat boost stages. */
 export type BoostStage = -6 | -5 | -4 | -3 | -2 | -1 | 0 | 1 | 2 | 3 | 4 | 5 |
     6;
@@ -548,7 +614,6 @@ export const majorStatusNames =
 {
     brn: true, par: true, psn: true, tox: true, slp: true, frz: true, "": true
 };
-
 /** Major pokemon status conditions. */
 export type MajorStatusName = keyof typeof majorStatusNames;
 

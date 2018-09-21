@@ -17,6 +17,31 @@ export class BattleState
         { us: new Team(), them: new Team() };
 
     /**
+     * Gets the size of the return value of `toArray()`.
+     * @returns The size of the return value of `toArray()`.
+     */
+    public static getArraySize(): number
+    {
+        return RoomStatus.getArraySize() + Team.getArraySize() * 2;
+    }
+
+    /**
+     * Formats battle info into an array of numbers. As the battle state
+     * changes, the length of this array should not change.
+     * @returns All battle data in array form.
+     */
+    public toArray(): number[]
+    {
+        const a =
+        [
+            ...this.status.toArray(),
+            ...this.teams.us.toArray(),
+            ...this.teams.them.toArray()
+        ];
+        return a;
+    }
+
+    /**
      * Sets a team's size.
      * @param side Side of the team.
      * @param size How many pokemon are on that team.
@@ -50,21 +75,5 @@ ${s}us:
 ${this.teams.us.toString(indent + 4)}
 ${s}them:
 ${this.teams.them.toString(indent + 4)}`;
-    }
-
-    /**
-     * Formats battle info into an array of numbers. As the battle state
-     * changes, the length of this array should not change.
-     * @returns All battle data in array form.
-     */
-    public toArray(): number[]
-    {
-        const a =
-        [
-            ...this.status.toArray(),
-            ...this.teams.us.toArray(),
-            ...this.teams.them.toArray()
-        ];
-        return a;
     }
 }
