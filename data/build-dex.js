@@ -69,8 +69,8 @@ for (const name in pokedex)
     const stats = mon.baseStats;
 
     // showdown dex maps a number of 0 or 1 with the ability name
-    // we want the opposite of that with a number of 1 or 2, i.e. mapping the
-    //  ability name with a number indicating first or second ability
+    // we want the opposite of that, i.e. mapping the ability name with a number
+    //  indicating first or second ability
     const abilities = [];
     for (const abilityId in mon.abilities)
     {
@@ -81,7 +81,7 @@ for (const name in pokedex)
         //  and such, e.g. "serenegrace"
         let abilityName = mon.abilities[abilityId].toLowerCase()
             .replace(/[- ]+/, "");
-        abilities.push(`${abilityName}: ${parseInt(abilityId, 10) + 1}`);
+        abilities.push(`${abilityName}: ${parseInt(abilityId, 10)}`);
     }
 
     // optionally fill in other forms if there are any from gen4

@@ -26,10 +26,10 @@ export interface PokemonData
     /** Alternate forms of this pokemon. */
     readonly otherForms?: string[];
     /**
-     * ID of the abilities this species can have. 1 or 2 means it's the
+     * ID of the abilities this species can have. 0 or 1 means it's the
      * pokemon's first or second ability.
      */
-    readonly abilities: {readonly [name: string]: 1 | 2};
+    readonly abilities: {readonly [name: string]: 0 | 1};
     /** Types of the pokemon. */
     readonly types: Readonly<Type[]>;
     /** Base stats. */

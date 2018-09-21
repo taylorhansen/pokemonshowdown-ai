@@ -36,6 +36,10 @@ export class Pokemon
     public set baseAbility(baseAbility: string)
     {
         this.baseAbilityName = baseAbility;
+        if (!this.data)
+        {
+            throw new Error("Base ability set before species data");
+        }
         this._baseAbility = this.data.abilities[baseAbility];
     }
 
@@ -51,13 +55,13 @@ export class Pokemon
     }
 
     /** Pokemon's level. */
-    public get level(): number
+    public get level(): number | undefined
     {
         return this._level;
     }
-    public set level(level: number)
+    public set level(level: number | undefined)
     {
-        this._level = Math.max(1, Math.min(level, 100));
+        this._level = level && Math.max(1, Math.min(level, 100));
     }
 
     /** Known moveset. */
@@ -72,24 +76,24 @@ export class Pokemon
     /** Whether this is the current active pokemon. */
     private _active: boolean = false;
     /** Dex data. */
-    private data: PokemonData;
+    private data?: PokemonData;
     /** ID name of the species. */
     private speciesName = "";
     /** Pokemon species/form unique identifier. */
-    private _species: number;
+    private _species?: number;
     /** ID name of the held item. */
     private itemName = "";
     /** Item the pokemon is holding. */
-    private _item: number;
+    private _item?: number;
     /** ID name of the base ability. */
     private baseAbilityName = "";
     /**
      * Base ability relative to its species. Can be 1 or 2 indicating which
      * ability that is.
      */
-    private _baseAbility: number;
+    private _baseAbility?: number;
     /** Pokemon's level from 1 to 100. */
-    private _level: number;
+    private _level?: number;
     /** Known moveset. */
     private readonly _moves: Move[] = [];
     /** First index of the part of the moveset that is unknown. */
@@ -97,7 +101,7 @@ export class Pokemon
     /** Info about the pokemon's hit points. */
     private hp: HP = new HP();
     /** Current major status condition. Not cleared on switch. */
-    private status?: MajorStatusName; // TODO
+    private majorStatus: MajorStatusName = "";
     /** Minor status conditions. Cleared on switch. */
     private readonly volatileStatus = new VolatileStatus();
 
@@ -223,7 +227,7 @@ export class Pokemon
      */
     public setMajorStatus(status: MajorStatusName): void
     {
-        this.status = status;
+        this.majorStatus = status;
     }
 
     /**
@@ -242,7 +246,7 @@ ${s}gender: ${this.gender ? this.gender : "genderless"}
 ${s}item: ${this.itemName ? this.itemName : "<unknown>"}
 ${s}ability: ${this.baseAbilityName ? this.baseAbilityName : "<unknown>"}
 ${s}hp: ${this.hp.toString()}
-${s}status: ${this.status ? this.status : "none"}
+${s}majorStatus: ${this.majorStatus ? this.majorStatus : "none"}
 ${this._moves.map(
         (move, i) => `${s}move${i + 1}:${i < this.unrevealedMove ?
                 `\n${move.toString(indent + 4)}` : " <unrevealed>"}`)
@@ -256,20 +260,28 @@ ${s}volatile: ${this.volatileStatus.toString()}`;
      */
     public toArray(): number[]
     {
+        // one-hot encode categorical data
+        const species = Array.from({length: dex.numPokemon},
+            (v, i) => i === this._species ? 1 : 0);
+        const item = Array.from({length: dex.numItems},
+            (v, i) => i === this._item ? 1 : 0);
+        const baseAbility = Array.from({length: 2},
+            (v, i) => i === this._baseAbility ? 1 : 0);
+
         const a =
         [
-            this.gender === "M" ? 1 : 0,
-            this.gender === "F" ? 1 : 0,
-            this._species, this._item, this._baseAbility, this._level,
+            this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
+            ...species, ...item, ...baseAbility,
+            this._level || 0,
             ...([] as number[]).concat(
                 ...this._moves.map(move => move.toArray())),
             ...this.hp.toArray(),
-            this.status === "brn" ? 1 : 0,
-            this.status === "par" ? 1 : 0,
-            this.status === "psn" ? 1 : 0,
-            this.status === "tox" ? 1 : 0,
-            this.status === "slp" ? 1 : 0,
-            this.status === "frz" ? 1 : 0
+            this.majorStatus === "brn" ? 1 : 0,
+            this.majorStatus === "par" ? 1 : 0,
+            this.majorStatus === "psn" ? 1 : 0,
+            this.majorStatus === "tox" ? 1 : 0,
+            this.majorStatus === "slp" ? 1 : 0,
+            this.majorStatus === "frz" ? 1 : 0
         ];
         if (this._active)
         {
@@ -353,7 +365,11 @@ ${s}ppMax: ${this.ppMax}`;
      */
     public toArray(): number[]
     {
-        return [this._id, this._pp];
+        // one-hot encode move id
+        const id = Array.from({length: dex.numMoves},
+            (v, i) => i === this._id ? 1 : 0);
+
+        return [...id, this._pp];
     }
 }
 
@@ -464,7 +480,7 @@ export class VolatileStatus
         {
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
         };
-        this.disabledMoves = [];
+        this.disabledMoves = [false, false, false, false];
     }
 
     /**

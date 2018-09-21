@@ -53,7 +53,8 @@ ${this.teams.them.toString(indent + 4)}`;
     }
 
     /**
-     * Formats battle info into an array of numbers.
+     * Formats battle info into an array of numbers. As the battle state
+     * changes, the length of this array should not change.
      * @returns All battle data in array form.
      */
     public toArray(): number[]
