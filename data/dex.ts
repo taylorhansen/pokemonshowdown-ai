@@ -6,7 +6,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Rotom-Heat":
     {
         id: 479,
-        uid: 1,
+        uid: 0,
         species: "Rotom-Heat",
         baseSpecies: "Rotom",
         form: "Heat",
@@ -19,7 +19,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Rotom-Wash":
     {
         id: 479,
-        uid: 2,
+        uid: 1,
         species: "Rotom-Wash",
         baseSpecies: "Rotom",
         form: "Wash",
@@ -32,7 +32,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Rotom-Frost":
     {
         id: 479,
-        uid: 3,
+        uid: 2,
         species: "Rotom-Frost",
         baseSpecies: "Rotom",
         form: "Frost",
@@ -45,7 +45,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Rotom-Fan":
     {
         id: 479,
-        uid: 4,
+        uid: 3,
         species: "Rotom-Fan",
         baseSpecies: "Rotom",
         form: "Fan",
@@ -58,7 +58,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Rotom-Mow":
     {
         id: 479,
-        uid: 5,
+        uid: 4,
         species: "Rotom-Mow",
         baseSpecies: "Rotom",
         form: "Mow",
@@ -71,7 +71,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Butterfree:
     {
         id: 12,
-        uid: 6,
+        uid: 5,
         species: "Butterfree",
         abilities: {compoundeyes: 1},
         types: ["bug", "flying"],
@@ -81,7 +81,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Beedrill:
     {
         id: 15,
-        uid: 7,
+        uid: 6,
         species: "Beedrill",
         abilities: {swarm: 1},
         types: ["bug", "poison"],
@@ -91,7 +91,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pidgeot:
     {
         id: 18,
-        uid: 8,
+        uid: 7,
         species: "Pidgeot",
         abilities: {keeneye: 1, tangledfeet: 2},
         types: ["normal", "flying"],
@@ -101,7 +101,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pikachu:
     {
         id: 25,
-        uid: 9,
+        uid: 8,
         species: "Pikachu",
         abilities: {static: 1},
         types: ["electric"],
@@ -111,7 +111,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Raichu:
     {
         id: 26,
-        uid: 10,
+        uid: 9,
         species: "Raichu",
         abilities: {static: 1},
         types: ["electric"],
@@ -121,7 +121,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Nidoqueen:
     {
         id: 31,
-        uid: 11,
+        uid: 10,
         species: "Nidoqueen",
         abilities: {poisonpoint: 1, rivalry: 2},
         types: ["poison", "ground"],
@@ -131,7 +131,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Nidoking:
     {
         id: 34,
-        uid: 12,
+        uid: 11,
         species: "Nidoking",
         abilities: {poisonpoint: 1, rivalry: 2},
         types: ["poison", "ground"],
@@ -141,7 +141,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Clefairy:
     {
         id: 35,
-        uid: 13,
+        uid: 12,
         species: "Clefairy",
         abilities: {cutecharm: 1, magicguard: 2},
         types: ["normal"],
@@ -151,7 +151,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Clefable:
     {
         id: 36,
-        uid: 14,
+        uid: 13,
         species: "Clefable",
         abilities: {cutecharm: 1, magicguard: 2},
         types: ["normal"],
@@ -161,7 +161,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Jigglypuff:
     {
         id: 39,
-        uid: 15,
+        uid: 14,
         species: "Jigglypuff",
         abilities: {cutecharm: 1},
         types: ["normal"],
@@ -171,7 +171,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wigglytuff:
     {
         id: 40,
-        uid: 16,
+        uid: 15,
         species: "Wigglytuff",
         abilities: {cutecharm: 1},
         types: ["normal"],
@@ -181,7 +181,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Vileplume:
     {
         id: 45,
-        uid: 17,
+        uid: 16,
         species: "Vileplume",
         abilities: {chlorophyll: 1},
         types: ["grass", "poison"],
@@ -191,7 +191,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Poliwrath:
     {
         id: 62,
-        uid: 18,
+        uid: 17,
         species: "Poliwrath",
         abilities: {waterabsorb: 1, damp: 2},
         types: ["water", "fighting"],
@@ -201,7 +201,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Alakazam:
     {
         id: 65,
-        uid: 19,
+        uid: 18,
         species: "Alakazam",
         abilities: {synchronize: 1, innerfocus: 2},
         types: ["psychic"],
@@ -211,7 +211,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Victreebel:
     {
         id: 71,
-        uid: 20,
+        uid: 19,
         species: "Victreebel",
         abilities: {chlorophyll: 1},
         types: ["grass", "poison"],
@@ -221,7 +221,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Golem:
     {
         id: 76,
-        uid: 21,
+        uid: 20,
         species: "Golem",
         abilities: {rockhead: 1, sturdy: 2},
         types: ["rock", "ground"],
@@ -231,7 +231,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Mr. Mime":
     {
         id: 122,
-        uid: 22,
+        uid: 21,
         species: "Mr. Mime",
         abilities: {soundproof: 1, filter: 2},
         types: ["psychic"],
@@ -241,7 +241,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Articuno:
     {
         id: 144,
-        uid: 23,
+        uid: 22,
         species: "Articuno",
         abilities: {pressure: 1},
         types: ["ice", "flying"],
@@ -251,7 +251,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Zapdos:
     {
         id: 145,
-        uid: 24,
+        uid: 23,
         species: "Zapdos",
         abilities: {pressure: 1},
         types: ["electric", "flying"],
@@ -261,7 +261,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Moltres:
     {
         id: 146,
-        uid: 25,
+        uid: 24,
         species: "Moltres",
         abilities: {pressure: 1},
         types: ["fire", "flying"],
@@ -271,7 +271,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Chikorita:
     {
         id: 152,
-        uid: 26,
+        uid: 25,
         species: "Chikorita",
         abilities: {overgrow: 1},
         types: ["grass"],
@@ -281,7 +281,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bayleef:
     {
         id: 153,
-        uid: 27,
+        uid: 26,
         species: "Bayleef",
         abilities: {overgrow: 1},
         types: ["grass"],
@@ -291,7 +291,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Meganium:
     {
         id: 154,
-        uid: 28,
+        uid: 27,
         species: "Meganium",
         abilities: {overgrow: 1},
         types: ["grass"],
@@ -301,7 +301,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cyndaquil:
     {
         id: 155,
-        uid: 29,
+        uid: 28,
         species: "Cyndaquil",
         abilities: {blaze: 1},
         types: ["fire"],
@@ -311,7 +311,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Quilava:
     {
         id: 156,
-        uid: 30,
+        uid: 29,
         species: "Quilava",
         abilities: {blaze: 1},
         types: ["fire"],
@@ -321,7 +321,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Typhlosion:
     {
         id: 157,
-        uid: 31,
+        uid: 30,
         species: "Typhlosion",
         abilities: {blaze: 1},
         types: ["fire"],
@@ -331,7 +331,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Totodile:
     {
         id: 158,
-        uid: 32,
+        uid: 31,
         species: "Totodile",
         abilities: {torrent: 1},
         types: ["water"],
@@ -341,7 +341,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Croconaw:
     {
         id: 159,
-        uid: 33,
+        uid: 32,
         species: "Croconaw",
         abilities: {torrent: 1},
         types: ["water"],
@@ -351,7 +351,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Feraligatr:
     {
         id: 160,
-        uid: 34,
+        uid: 33,
         species: "Feraligatr",
         abilities: {torrent: 1},
         types: ["water"],
@@ -361,7 +361,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Igglybuff:
     {
         id: 174,
-        uid: 35,
+        uid: 34,
         species: "Igglybuff",
         abilities: {cutecharm: 1},
         types: ["normal"],
@@ -371,7 +371,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Togepi:
     {
         id: 175,
-        uid: 36,
+        uid: 35,
         species: "Togepi",
         abilities: {hustle: 1, serenegrace: 2},
         types: ["normal"],
@@ -381,7 +381,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Togetic:
     {
         id: 176,
-        uid: 37,
+        uid: 36,
         species: "Togetic",
         abilities: {hustle: 1, serenegrace: 2},
         types: ["normal", "flying"],
@@ -391,7 +391,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cleffa:
     {
         id: 173,
-        uid: 38,
+        uid: 37,
         species: "Cleffa",
         abilities: {cutecharm: 1, magicguard: 2},
         types: ["normal"],
@@ -401,7 +401,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ampharos:
     {
         id: 181,
-        uid: 39,
+        uid: 38,
         species: "Ampharos",
         abilities: {static: 1},
         types: ["electric"],
@@ -411,7 +411,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bellossom:
     {
         id: 182,
-        uid: 40,
+        uid: 39,
         species: "Bellossom",
         abilities: {chlorophyll: 1},
         types: ["grass"],
@@ -421,7 +421,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Marill:
     {
         id: 183,
-        uid: 41,
+        uid: 40,
         species: "Marill",
         abilities: {thickfat: 1, hugepower: 2},
         types: ["water"],
@@ -431,7 +431,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Azumarill:
     {
         id: 184,
-        uid: 42,
+        uid: 41,
         species: "Azumarill",
         abilities: {thickfat: 1, hugepower: 2},
         types: ["water"],
@@ -441,7 +441,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Jumpluff:
     {
         id: 189,
-        uid: 43,
+        uid: 42,
         species: "Jumpluff",
         abilities: {chlorophyll: 1, leafguard: 2},
         types: ["grass", "flying"],
@@ -451,7 +451,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Snubbull:
     {
         id: 209,
-        uid: 44,
+        uid: 43,
         species: "Snubbull",
         abilities: {intimidate: 1, runaway: 2},
         types: ["normal"],
@@ -461,7 +461,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Granbull:
     {
         id: 210,
-        uid: 45,
+        uid: 44,
         species: "Granbull",
         abilities: {intimidate: 1, quickfeet: 2},
         types: ["normal"],
@@ -471,7 +471,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Raikou:
     {
         id: 243,
-        uid: 46,
+        uid: 45,
         species: "Raikou",
         abilities: {pressure: 1},
         types: ["electric"],
@@ -481,7 +481,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Entei:
     {
         id: 244,
-        uid: 47,
+        uid: 46,
         species: "Entei",
         abilities: {pressure: 1},
         types: ["fire"],
@@ -491,7 +491,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Suicune:
     {
         id: 245,
-        uid: 48,
+        uid: 47,
         species: "Suicune",
         abilities: {pressure: 1},
         types: ["water"],
@@ -501,7 +501,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Beautifly:
     {
         id: 267,
-        uid: 49,
+        uid: 48,
         species: "Beautifly",
         abilities: {swarm: 1},
         types: ["bug", "flying"],
@@ -511,7 +511,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ralts:
     {
         id: 280,
-        uid: 50,
+        uid: 49,
         species: "Ralts",
         abilities: {synchronize: 1, trace: 2},
         types: ["psychic"],
@@ -521,7 +521,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kirlia:
     {
         id: 281,
-        uid: 51,
+        uid: 50,
         species: "Kirlia",
         abilities: {synchronize: 1, trace: 2},
         types: ["psychic"],
@@ -531,7 +531,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gardevoir:
     {
         id: 282,
-        uid: 52,
+        uid: 51,
         species: "Gardevoir",
         abilities: {synchronize: 1, trace: 2},
         types: ["psychic"],
@@ -541,7 +541,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Exploud:
     {
         id: 295,
-        uid: 53,
+        uid: 52,
         species: "Exploud",
         abilities: {soundproof: 1},
         types: ["normal"],
@@ -551,7 +551,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Azurill:
     {
         id: 298,
-        uid: 54,
+        uid: 53,
         species: "Azurill",
         abilities: {thickfat: 1, hugepower: 2},
         types: ["normal"],
@@ -561,7 +561,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mawile:
     {
         id: 303,
-        uid: 55,
+        uid: 54,
         species: "Mawile",
         abilities: {hypercutter: 1, intimidate: 2},
         types: ["steel"],
@@ -571,7 +571,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Plusle:
     {
         id: 311,
-        uid: 56,
+        uid: 55,
         species: "Plusle",
         abilities: {plus: 1},
         types: ["electric"],
@@ -581,7 +581,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Minun:
     {
         id: 312,
-        uid: 57,
+        uid: 56,
         species: "Minun",
         abilities: {minus: 1},
         types: ["electric"],
@@ -591,7 +591,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kecleon:
     {
         id: 352,
-        uid: 58,
+        uid: 57,
         species: "Kecleon",
         abilities: {colorchange: 1},
         types: ["normal"],
@@ -601,7 +601,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Milotic:
     {
         id: 350,
-        uid: 59,
+        uid: 58,
         species: "Milotic",
         abilities: {marvelscale: 1},
         types: ["water"],
@@ -611,7 +611,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Duskull:
     {
         id: 355,
-        uid: 60,
+        uid: 59,
         species: "Duskull",
         abilities: {levitate: 1},
         types: ["ghost"],
@@ -621,7 +621,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dusclops:
     {
         id: 356,
-        uid: 61,
+        uid: 60,
         species: "Dusclops",
         abilities: {pressure: 1},
         types: ["ghost"],
@@ -631,7 +631,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Regirock:
     {
         id: 377,
-        uid: 62,
+        uid: 61,
         species: "Regirock",
         abilities: {clearbody: 1},
         types: ["rock"],
@@ -641,7 +641,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Regice:
     {
         id: 378,
-        uid: 63,
+        uid: 62,
         species: "Regice",
         abilities: {clearbody: 1},
         types: ["ice"],
@@ -651,7 +651,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Registeel:
     {
         id: 379,
-        uid: 64,
+        uid: 63,
         species: "Registeel",
         abilities: {clearbody: 1},
         types: ["steel"],
@@ -661,7 +661,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Starly:
     {
         id: 396,
-        uid: 65,
+        uid: 64,
         species: "Starly",
         abilities: {keeneye: 1},
         types: ["normal", "flying"],
@@ -671,7 +671,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Staraptor:
     {
         id: 398,
-        uid: 66,
+        uid: 65,
         species: "Staraptor",
         abilities: {intimidate: 1},
         types: ["normal", "flying"],
@@ -681,7 +681,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Roserade:
     {
         id: 407,
-        uid: 67,
+        uid: 66,
         species: "Roserade",
         abilities: {naturalcure: 1, poisonpoint: 2},
         types: ["grass", "poison"],
@@ -691,7 +691,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Mime Jr.":
     {
         id: 439,
-        uid: 68,
+        uid: 67,
         species: "Mime Jr.",
         abilities: {soundproof: 1, filter: 2},
         types: ["psychic"],
@@ -701,7 +701,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Togekiss:
     {
         id: 468,
-        uid: 69,
+        uid: 68,
         species: "Togekiss",
         abilities: {hustle: 1, serenegrace: 2},
         types: ["normal", "flying"],
@@ -711,7 +711,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dusknoir:
     {
         id: 477,
-        uid: 70,
+        uid: 69,
         species: "Dusknoir",
         abilities: {pressure: 1},
         types: ["ghost"],
@@ -721,7 +721,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Heatran:
     {
         id: 485,
-        uid: 71,
+        uid: 70,
         species: "Heatran",
         abilities: {flashfire: 1},
         types: ["fire", "steel"],
@@ -731,7 +731,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Arbok:
     {
         id: 24,
-        uid: 72,
+        uid: 71,
         species: "Arbok",
         abilities: {intimidate: 1, shedskin: 2},
         types: ["poison"],
@@ -741,7 +741,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dugtrio:
     {
         id: 51,
-        uid: 73,
+        uid: 72,
         species: "Dugtrio",
         abilities: {sandveil: 1, arenatrap: 2},
         types: ["ground"],
@@ -751,7 +751,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Farfetch'd":
     {
         id: 83,
-        uid: 74,
+        uid: 73,
         species: "Farfetch'd",
         abilities: {keeneye: 1, innerfocus: 2},
         types: ["normal", "flying"],
@@ -761,7 +761,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dodrio:
     {
         id: 85,
-        uid: 75,
+        uid: 74,
         species: "Dodrio",
         abilities: {runaway: 1, earlybird: 2},
         types: ["normal", "flying"],
@@ -771,7 +771,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gengar:
     {
         id: 94,
-        uid: 76,
+        uid: 75,
         species: "Gengar",
         abilities: {levitate: 1},
         types: ["ghost", "poison"],
@@ -781,7 +781,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Electrode:
     {
         id: 101,
-        uid: 77,
+        uid: 76,
         species: "Electrode",
         abilities: {soundproof: 1, static: 2},
         types: ["electric"],
@@ -791,7 +791,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Exeggutor:
     {
         id: 103,
-        uid: 78,
+        uid: 77,
         species: "Exeggutor",
         abilities: {chlorophyll: 1},
         types: ["grass", "psychic"],
@@ -801,7 +801,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Noctowl:
     {
         id: 164,
-        uid: 79,
+        uid: 78,
         species: "Noctowl",
         abilities: {insomnia: 1, keeneye: 2},
         types: ["normal", "flying"],
@@ -811,7 +811,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ariados:
     {
         id: 168,
-        uid: 80,
+        uid: 79,
         species: "Ariados",
         abilities: {swarm: 1, insomnia: 2},
         types: ["bug", "poison"],
@@ -821,7 +821,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Qwilfish:
     {
         id: 211,
-        uid: 81,
+        uid: 80,
         species: "Qwilfish",
         abilities: {poisonpoint: 1, swiftswim: 2},
         types: ["water", "poison"],
@@ -831,7 +831,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Magcargo:
     {
         id: 219,
-        uid: 82,
+        uid: 81,
         species: "Magcargo",
         abilities: {magmaarmor: 1, flamebody: 2},
         types: ["fire", "rock"],
@@ -841,7 +841,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Corsola:
     {
         id: 222,
-        uid: 83,
+        uid: 82,
         species: "Corsola",
         abilities: {hustle: 1, naturalcure: 2},
         types: ["water", "rock"],
@@ -851,7 +851,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mantine:
     {
         id: 226,
-        uid: 84,
+        uid: 83,
         species: "Mantine",
         abilities: {swiftswim: 1, waterabsorb: 2},
         types: ["water", "flying"],
@@ -861,7 +861,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Swellow:
     {
         id: 277,
-        uid: 85,
+        uid: 84,
         species: "Swellow",
         abilities: {guts: 1},
         types: ["normal", "flying"],
@@ -871,7 +871,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wingull:
     {
         id: 278,
-        uid: 86,
+        uid: 85,
         species: "Wingull",
         abilities: {keeneye: 1},
         types: ["water", "flying"],
@@ -881,7 +881,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pelipper:
     {
         id: 279,
-        uid: 87,
+        uid: 86,
         species: "Pelipper",
         abilities: {keeneye: 1},
         types: ["water", "flying"],
@@ -891,7 +891,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Masquerain:
     {
         id: 284,
-        uid: 88,
+        uid: 87,
         species: "Masquerain",
         abilities: {intimidate: 1},
         types: ["bug", "flying"],
@@ -901,7 +901,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Delcatty:
     {
         id: 301,
-        uid: 89,
+        uid: 88,
         species: "Delcatty",
         abilities: {cutecharm: 1, normalize: 2},
         types: ["normal"],
@@ -911,7 +911,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Volbeat:
     {
         id: 313,
-        uid: 90,
+        uid: 89,
         species: "Volbeat",
         abilities: {illuminate: 1, swarm: 2},
         types: ["bug"],
@@ -921,7 +921,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Illumise:
     {
         id: 314,
-        uid: 91,
+        uid: 90,
         species: "Illumise",
         abilities: {oblivious: 1, tintedlens: 2},
         types: ["bug"],
@@ -931,7 +931,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Torkoal:
     {
         id: 324,
-        uid: 92,
+        uid: 91,
         species: "Torkoal",
         abilities: {whitesmoke: 1},
         types: ["fire"],
@@ -941,7 +941,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lunatone:
     {
         id: 337,
-        uid: 93,
+        uid: 92,
         species: "Lunatone",
         abilities: {levitate: 1},
         types: ["rock", "psychic"],
@@ -951,7 +951,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Solrock:
     {
         id: 338,
-        uid: 94,
+        uid: 93,
         species: "Solrock",
         abilities: {levitate: 1},
         types: ["rock", "psychic"],
@@ -961,7 +961,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Castform:
     {
         id: 351,
-        uid: 95,
+        uid: 94,
         species: "Castform",
         otherForms: ["castformsunny", "castformrainy", "castformsnowy"],
         abilities: {forecast: 1},
@@ -972,7 +972,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Castform-Sunny":
     {
         id: 351,
-        uid: 96,
+        uid: 95,
         species: "Castform-Sunny",
         baseSpecies: "Castform",
         form: "Sunny",
@@ -985,7 +985,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Castform-Rainy":
     {
         id: 351,
-        uid: 97,
+        uid: 96,
         species: "Castform-Rainy",
         baseSpecies: "Castform",
         form: "Rainy",
@@ -998,7 +998,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Chimecho:
     {
         id: 358,
-        uid: 98,
+        uid: 97,
         species: "Chimecho",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -1008,7 +1008,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Burmy:
     {
         id: 412,
-        uid: 99,
+        uid: 98,
         species: "Burmy",
         baseForm: "Plant",
         abilities: {shedskin: 1},
@@ -1019,7 +1019,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wormadam:
     {
         id: 413,
-        uid: 100,
+        uid: 99,
         species: "Wormadam",
         baseForm: "Plant",
         otherForms: ["wormadamsandy", "wormadamtrash"],
@@ -1031,7 +1031,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Wormadam-Sandy":
     {
         id: 413,
-        uid: 101,
+        uid: 100,
         species: "Wormadam-Sandy",
         baseSpecies: "Wormadam",
         form: "Sandy",
@@ -1044,7 +1044,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Wormadam-Trash":
     {
         id: 413,
-        uid: 102,
+        uid: 101,
         species: "Wormadam-Trash",
         baseSpecies: "Wormadam",
         form: "Trash",
@@ -1057,7 +1057,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cherrim:
     {
         id: 421,
-        uid: 103,
+        uid: 102,
         species: "Cherrim",
         baseForm: "Overcast",
         otherForms: ["cherrimsunshine"],
@@ -1069,7 +1069,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Arceus:
     {
         id: 493,
-        uid: 104,
+        uid: 103,
         species: "Arceus",
         baseForm: "Normal",
         otherForms:
@@ -1087,7 +1087,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bulbasaur:
     {
         id: 1,
-        uid: 105,
+        uid: 104,
         species: "Bulbasaur",
         abilities: {overgrow: 1},
         types: ["grass", "poison"],
@@ -1097,7 +1097,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ivysaur:
     {
         id: 2,
-        uid: 106,
+        uid: 105,
         species: "Ivysaur",
         abilities: {overgrow: 1},
         types: ["grass", "poison"],
@@ -1107,7 +1107,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Venusaur:
     {
         id: 3,
-        uid: 107,
+        uid: 106,
         species: "Venusaur",
         abilities: {overgrow: 1},
         types: ["grass", "poison"],
@@ -1117,7 +1117,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Charmander:
     {
         id: 4,
-        uid: 108,
+        uid: 107,
         species: "Charmander",
         abilities: {blaze: 1},
         types: ["fire"],
@@ -1127,7 +1127,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Charmeleon:
     {
         id: 5,
-        uid: 109,
+        uid: 108,
         species: "Charmeleon",
         abilities: {blaze: 1},
         types: ["fire"],
@@ -1137,7 +1137,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Charizard:
     {
         id: 6,
-        uid: 110,
+        uid: 109,
         species: "Charizard",
         abilities: {blaze: 1},
         types: ["fire", "flying"],
@@ -1147,7 +1147,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Squirtle:
     {
         id: 7,
-        uid: 111,
+        uid: 110,
         species: "Squirtle",
         abilities: {torrent: 1},
         types: ["water"],
@@ -1157,7 +1157,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wartortle:
     {
         id: 8,
-        uid: 112,
+        uid: 111,
         species: "Wartortle",
         abilities: {torrent: 1},
         types: ["water"],
@@ -1167,7 +1167,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Blastoise:
     {
         id: 9,
-        uid: 113,
+        uid: 112,
         species: "Blastoise",
         abilities: {torrent: 1},
         types: ["water"],
@@ -1177,7 +1177,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Caterpie:
     {
         id: 10,
-        uid: 114,
+        uid: 113,
         species: "Caterpie",
         abilities: {shielddust: 1},
         types: ["bug"],
@@ -1187,7 +1187,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Metapod:
     {
         id: 11,
-        uid: 115,
+        uid: 114,
         species: "Metapod",
         abilities: {shedskin: 1},
         types: ["bug"],
@@ -1197,7 +1197,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Weedle:
     {
         id: 13,
-        uid: 116,
+        uid: 115,
         species: "Weedle",
         abilities: {shielddust: 1},
         types: ["bug", "poison"],
@@ -1207,7 +1207,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kakuna:
     {
         id: 14,
-        uid: 117,
+        uid: 116,
         species: "Kakuna",
         abilities: {shedskin: 1},
         types: ["bug", "poison"],
@@ -1217,7 +1217,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pidgey:
     {
         id: 16,
-        uid: 118,
+        uid: 117,
         species: "Pidgey",
         abilities: {keeneye: 1, tangledfeet: 2},
         types: ["normal", "flying"],
@@ -1227,7 +1227,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pidgeotto:
     {
         id: 17,
-        uid: 119,
+        uid: 118,
         species: "Pidgeotto",
         abilities: {keeneye: 1, tangledfeet: 2},
         types: ["normal", "flying"],
@@ -1237,7 +1237,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rattata:
     {
         id: 19,
-        uid: 120,
+        uid: 119,
         species: "Rattata",
         abilities: {runaway: 1, guts: 2},
         types: ["normal"],
@@ -1247,7 +1247,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Raticate:
     {
         id: 20,
-        uid: 121,
+        uid: 120,
         species: "Raticate",
         abilities: {runaway: 1, guts: 2},
         types: ["normal"],
@@ -1257,7 +1257,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Spearow:
     {
         id: 21,
-        uid: 122,
+        uid: 121,
         species: "Spearow",
         abilities: {keeneye: 1},
         types: ["normal", "flying"],
@@ -1267,7 +1267,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Fearow:
     {
         id: 22,
-        uid: 123,
+        uid: 122,
         species: "Fearow",
         abilities: {keeneye: 1},
         types: ["normal", "flying"],
@@ -1277,7 +1277,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ekans:
     {
         id: 23,
-        uid: 124,
+        uid: 123,
         species: "Ekans",
         abilities: {intimidate: 1, shedskin: 2},
         types: ["poison"],
@@ -1287,7 +1287,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sandshrew:
     {
         id: 27,
-        uid: 125,
+        uid: 124,
         species: "Sandshrew",
         abilities: {sandveil: 1},
         types: ["ground"],
@@ -1297,7 +1297,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sandslash:
     {
         id: 28,
-        uid: 126,
+        uid: 125,
         species: "Sandslash",
         abilities: {sandveil: 1},
         types: ["ground"],
@@ -1307,7 +1307,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Nidoran-F":
     {
         id: 29,
-        uid: 127,
+        uid: 126,
         species: "Nidoran-F",
         abilities: {poisonpoint: 1, rivalry: 2},
         types: ["poison"],
@@ -1317,7 +1317,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Nidorina:
     {
         id: 30,
-        uid: 128,
+        uid: 127,
         species: "Nidorina",
         abilities: {poisonpoint: 1, rivalry: 2},
         types: ["poison"],
@@ -1327,7 +1327,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Nidoran-M":
     {
         id: 32,
-        uid: 129,
+        uid: 128,
         species: "Nidoran-M",
         abilities: {poisonpoint: 1, rivalry: 2},
         types: ["poison"],
@@ -1337,7 +1337,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Nidorino:
     {
         id: 33,
-        uid: 130,
+        uid: 129,
         species: "Nidorino",
         abilities: {poisonpoint: 1, rivalry: 2},
         types: ["poison"],
@@ -1347,7 +1347,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Vulpix:
     {
         id: 37,
-        uid: 131,
+        uid: 130,
         species: "Vulpix",
         abilities: {flashfire: 1},
         types: ["fire"],
@@ -1357,7 +1357,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ninetales:
     {
         id: 38,
-        uid: 132,
+        uid: 131,
         species: "Ninetales",
         abilities: {flashfire: 1},
         types: ["fire"],
@@ -1367,7 +1367,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Zubat:
     {
         id: 41,
-        uid: 133,
+        uid: 132,
         species: "Zubat",
         abilities: {innerfocus: 1},
         types: ["poison", "flying"],
@@ -1377,7 +1377,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Golbat:
     {
         id: 42,
-        uid: 134,
+        uid: 133,
         species: "Golbat",
         abilities: {innerfocus: 1},
         types: ["poison", "flying"],
@@ -1387,7 +1387,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Oddish:
     {
         id: 43,
-        uid: 135,
+        uid: 134,
         species: "Oddish",
         abilities: {chlorophyll: 1},
         types: ["grass", "poison"],
@@ -1397,7 +1397,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gloom:
     {
         id: 44,
-        uid: 136,
+        uid: 135,
         species: "Gloom",
         abilities: {chlorophyll: 1},
         types: ["grass", "poison"],
@@ -1407,7 +1407,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Paras:
     {
         id: 46,
-        uid: 137,
+        uid: 136,
         species: "Paras",
         abilities: {effectspore: 1, dryskin: 2},
         types: ["bug", "grass"],
@@ -1417,7 +1417,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Parasect:
     {
         id: 47,
-        uid: 138,
+        uid: 137,
         species: "Parasect",
         abilities: {effectspore: 1, dryskin: 2},
         types: ["bug", "grass"],
@@ -1427,7 +1427,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Venonat:
     {
         id: 48,
-        uid: 139,
+        uid: 138,
         species: "Venonat",
         abilities: {compoundeyes: 1, tintedlens: 2},
         types: ["bug", "poison"],
@@ -1437,7 +1437,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Venomoth:
     {
         id: 49,
-        uid: 140,
+        uid: 139,
         species: "Venomoth",
         abilities: {shielddust: 1, tintedlens: 2},
         types: ["bug", "poison"],
@@ -1447,7 +1447,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Diglett:
     {
         id: 50,
-        uid: 141,
+        uid: 140,
         species: "Diglett",
         abilities: {sandveil: 1, arenatrap: 2},
         types: ["ground"],
@@ -1457,7 +1457,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Meowth:
     {
         id: 52,
-        uid: 142,
+        uid: 141,
         species: "Meowth",
         abilities: {pickup: 1, technician: 2},
         types: ["normal"],
@@ -1467,7 +1467,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Persian:
     {
         id: 53,
-        uid: 143,
+        uid: 142,
         species: "Persian",
         abilities: {limber: 1, technician: 2},
         types: ["normal"],
@@ -1477,7 +1477,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Psyduck:
     {
         id: 54,
-        uid: 144,
+        uid: 143,
         species: "Psyduck",
         abilities: {damp: 1, cloudnine: 2},
         types: ["water"],
@@ -1487,7 +1487,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Golduck:
     {
         id: 55,
-        uid: 145,
+        uid: 144,
         species: "Golduck",
         abilities: {damp: 1, cloudnine: 2},
         types: ["water"],
@@ -1497,7 +1497,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mankey:
     {
         id: 56,
-        uid: 146,
+        uid: 145,
         species: "Mankey",
         abilities: {vitalspirit: 1, angerpoint: 2},
         types: ["fighting"],
@@ -1507,7 +1507,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Primeape:
     {
         id: 57,
-        uid: 147,
+        uid: 146,
         species: "Primeape",
         abilities: {vitalspirit: 1, angerpoint: 2},
         types: ["fighting"],
@@ -1517,7 +1517,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Growlithe:
     {
         id: 58,
-        uid: 148,
+        uid: 147,
         species: "Growlithe",
         abilities: {intimidate: 1, flashfire: 2},
         types: ["fire"],
@@ -1527,7 +1527,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Arcanine:
     {
         id: 59,
-        uid: 149,
+        uid: 148,
         species: "Arcanine",
         abilities: {intimidate: 1, flashfire: 2},
         types: ["fire"],
@@ -1537,7 +1537,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Poliwag:
     {
         id: 60,
-        uid: 150,
+        uid: 149,
         species: "Poliwag",
         abilities: {waterabsorb: 1, damp: 2},
         types: ["water"],
@@ -1547,7 +1547,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Poliwhirl:
     {
         id: 61,
-        uid: 151,
+        uid: 150,
         species: "Poliwhirl",
         abilities: {waterabsorb: 1, damp: 2},
         types: ["water"],
@@ -1557,7 +1557,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Abra:
     {
         id: 63,
-        uid: 152,
+        uid: 151,
         species: "Abra",
         abilities: {synchronize: 1, innerfocus: 2},
         types: ["psychic"],
@@ -1567,7 +1567,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kadabra:
     {
         id: 64,
-        uid: 153,
+        uid: 152,
         species: "Kadabra",
         abilities: {synchronize: 1, innerfocus: 2},
         types: ["psychic"],
@@ -1577,7 +1577,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Machop:
     {
         id: 66,
-        uid: 154,
+        uid: 153,
         species: "Machop",
         abilities: {guts: 1, noguard: 2},
         types: ["fighting"],
@@ -1587,7 +1587,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Machoke:
     {
         id: 67,
-        uid: 155,
+        uid: 154,
         species: "Machoke",
         abilities: {guts: 1, noguard: 2},
         types: ["fighting"],
@@ -1597,7 +1597,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Machamp:
     {
         id: 68,
-        uid: 156,
+        uid: 155,
         species: "Machamp",
         abilities: {guts: 1, noguard: 2},
         types: ["fighting"],
@@ -1607,7 +1607,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bellsprout:
     {
         id: 69,
-        uid: 157,
+        uid: 156,
         species: "Bellsprout",
         abilities: {chlorophyll: 1},
         types: ["grass", "poison"],
@@ -1617,7 +1617,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Weepinbell:
     {
         id: 70,
-        uid: 158,
+        uid: 157,
         species: "Weepinbell",
         abilities: {chlorophyll: 1},
         types: ["grass", "poison"],
@@ -1627,7 +1627,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Tentacool:
     {
         id: 72,
-        uid: 159,
+        uid: 158,
         species: "Tentacool",
         abilities: {clearbody: 1, liquidooze: 2},
         types: ["water", "poison"],
@@ -1637,7 +1637,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Tentacruel:
     {
         id: 73,
-        uid: 160,
+        uid: 159,
         species: "Tentacruel",
         abilities: {clearbody: 1, liquidooze: 2},
         types: ["water", "poison"],
@@ -1647,7 +1647,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Geodude:
     {
         id: 74,
-        uid: 161,
+        uid: 160,
         species: "Geodude",
         abilities: {rockhead: 1, sturdy: 2},
         types: ["rock", "ground"],
@@ -1657,7 +1657,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Graveler:
     {
         id: 75,
-        uid: 162,
+        uid: 161,
         species: "Graveler",
         abilities: {rockhead: 1, sturdy: 2},
         types: ["rock", "ground"],
@@ -1667,7 +1667,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ponyta:
     {
         id: 77,
-        uid: 163,
+        uid: 162,
         species: "Ponyta",
         abilities: {runaway: 1, flashfire: 2},
         types: ["fire"],
@@ -1677,7 +1677,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rapidash:
     {
         id: 78,
-        uid: 164,
+        uid: 163,
         species: "Rapidash",
         abilities: {runaway: 1, flashfire: 2},
         types: ["fire"],
@@ -1687,7 +1687,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Slowpoke:
     {
         id: 79,
-        uid: 165,
+        uid: 164,
         species: "Slowpoke",
         abilities: {oblivious: 1, owntempo: 2},
         types: ["water", "psychic"],
@@ -1697,7 +1697,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Slowbro:
     {
         id: 80,
-        uid: 166,
+        uid: 165,
         species: "Slowbro",
         abilities: {oblivious: 1, owntempo: 2},
         types: ["water", "psychic"],
@@ -1707,7 +1707,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Magnemite:
     {
         id: 81,
-        uid: 167,
+        uid: 166,
         species: "Magnemite",
         abilities: {magnetpull: 1, sturdy: 2},
         types: ["electric", "steel"],
@@ -1717,7 +1717,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Magneton:
     {
         id: 82,
-        uid: 168,
+        uid: 167,
         species: "Magneton",
         abilities: {magnetpull: 1, sturdy: 2},
         types: ["electric", "steel"],
@@ -1727,7 +1727,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Doduo:
     {
         id: 84,
-        uid: 169,
+        uid: 168,
         species: "Doduo",
         abilities: {runaway: 1, earlybird: 2},
         types: ["normal", "flying"],
@@ -1737,7 +1737,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Seel:
     {
         id: 86,
-        uid: 170,
+        uid: 169,
         species: "Seel",
         abilities: {thickfat: 1, hydration: 2},
         types: ["water"],
@@ -1747,7 +1747,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dewgong:
     {
         id: 87,
-        uid: 171,
+        uid: 170,
         species: "Dewgong",
         abilities: {thickfat: 1, hydration: 2},
         types: ["water", "ice"],
@@ -1757,7 +1757,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Grimer:
     {
         id: 88,
-        uid: 172,
+        uid: 171,
         species: "Grimer",
         abilities: {stench: 1, stickyhold: 2},
         types: ["poison"],
@@ -1767,7 +1767,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Muk:
     {
         id: 89,
-        uid: 173,
+        uid: 172,
         species: "Muk",
         abilities: {stench: 1, stickyhold: 2},
         types: ["poison"],
@@ -1777,7 +1777,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shellder:
     {
         id: 90,
-        uid: 174,
+        uid: 173,
         species: "Shellder",
         abilities: {shellarmor: 1, skilllink: 2},
         types: ["water"],
@@ -1787,7 +1787,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cloyster:
     {
         id: 91,
-        uid: 175,
+        uid: 174,
         species: "Cloyster",
         abilities: {shellarmor: 1, skilllink: 2},
         types: ["water", "ice"],
@@ -1797,7 +1797,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gastly:
     {
         id: 92,
-        uid: 176,
+        uid: 175,
         species: "Gastly",
         abilities: {levitate: 1},
         types: ["ghost", "poison"],
@@ -1807,7 +1807,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Haunter:
     {
         id: 93,
-        uid: 177,
+        uid: 176,
         species: "Haunter",
         abilities: {levitate: 1},
         types: ["ghost", "poison"],
@@ -1817,7 +1817,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Onix:
     {
         id: 95,
-        uid: 178,
+        uid: 177,
         species: "Onix",
         abilities: {rockhead: 1, sturdy: 2},
         types: ["rock", "ground"],
@@ -1827,7 +1827,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Drowzee:
     {
         id: 96,
-        uid: 179,
+        uid: 178,
         species: "Drowzee",
         abilities: {insomnia: 1, forewarn: 2},
         types: ["psychic"],
@@ -1837,7 +1837,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hypno:
     {
         id: 97,
-        uid: 180,
+        uid: 179,
         species: "Hypno",
         abilities: {insomnia: 1, forewarn: 2},
         types: ["psychic"],
@@ -1847,7 +1847,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Krabby:
     {
         id: 98,
-        uid: 181,
+        uid: 180,
         species: "Krabby",
         abilities: {hypercutter: 1, shellarmor: 2},
         types: ["water"],
@@ -1857,7 +1857,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kingler:
     {
         id: 99,
-        uid: 182,
+        uid: 181,
         species: "Kingler",
         abilities: {hypercutter: 1, shellarmor: 2},
         types: ["water"],
@@ -1867,7 +1867,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Voltorb:
     {
         id: 100,
-        uid: 183,
+        uid: 182,
         species: "Voltorb",
         abilities: {soundproof: 1, static: 2},
         types: ["electric"],
@@ -1877,7 +1877,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Exeggcute:
     {
         id: 102,
-        uid: 184,
+        uid: 183,
         species: "Exeggcute",
         abilities: {chlorophyll: 1},
         types: ["grass", "psychic"],
@@ -1887,7 +1887,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cubone:
     {
         id: 104,
-        uid: 185,
+        uid: 184,
         species: "Cubone",
         abilities: {rockhead: 1, lightningrod: 2},
         types: ["ground"],
@@ -1897,7 +1897,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Marowak:
     {
         id: 105,
-        uid: 186,
+        uid: 185,
         species: "Marowak",
         abilities: {rockhead: 1, lightningrod: 2},
         types: ["ground"],
@@ -1907,7 +1907,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hitmonlee:
     {
         id: 106,
-        uid: 187,
+        uid: 186,
         species: "Hitmonlee",
         abilities: {limber: 1, reckless: 2},
         types: ["fighting"],
@@ -1917,7 +1917,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hitmonchan:
     {
         id: 107,
-        uid: 188,
+        uid: 187,
         species: "Hitmonchan",
         abilities: {keeneye: 1, ironfist: 2},
         types: ["fighting"],
@@ -1927,7 +1927,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lickitung:
     {
         id: 108,
-        uid: 189,
+        uid: 188,
         species: "Lickitung",
         abilities: {owntempo: 1, oblivious: 2},
         types: ["normal"],
@@ -1937,7 +1937,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Koffing:
     {
         id: 109,
-        uid: 190,
+        uid: 189,
         species: "Koffing",
         abilities: {levitate: 1},
         types: ["poison"],
@@ -1947,7 +1947,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Weezing:
     {
         id: 110,
-        uid: 191,
+        uid: 190,
         species: "Weezing",
         abilities: {levitate: 1},
         types: ["poison"],
@@ -1957,7 +1957,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rhyhorn:
     {
         id: 111,
-        uid: 192,
+        uid: 191,
         species: "Rhyhorn",
         abilities: {lightningrod: 1, rockhead: 2},
         types: ["ground", "rock"],
@@ -1967,7 +1967,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rhydon:
     {
         id: 112,
-        uid: 193,
+        uid: 192,
         species: "Rhydon",
         abilities: {lightningrod: 1, rockhead: 2},
         types: ["ground", "rock"],
@@ -1977,7 +1977,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Chansey:
     {
         id: 113,
-        uid: 194,
+        uid: 193,
         species: "Chansey",
         abilities: {naturalcure: 1, serenegrace: 2},
         types: ["normal"],
@@ -1987,7 +1987,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Tangela:
     {
         id: 114,
-        uid: 195,
+        uid: 194,
         species: "Tangela",
         abilities: {chlorophyll: 1, leafguard: 2},
         types: ["grass"],
@@ -1997,7 +1997,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kangaskhan:
     {
         id: 115,
-        uid: 196,
+        uid: 195,
         species: "Kangaskhan",
         abilities: {earlybird: 1, scrappy: 2},
         types: ["normal"],
@@ -2007,7 +2007,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Horsea:
     {
         id: 116,
-        uid: 197,
+        uid: 196,
         species: "Horsea",
         abilities: {swiftswim: 1, sniper: 2},
         types: ["water"],
@@ -2017,7 +2017,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Seadra:
     {
         id: 117,
-        uid: 198,
+        uid: 197,
         species: "Seadra",
         abilities: {poisonpoint: 1, sniper: 2},
         types: ["water"],
@@ -2027,7 +2027,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Goldeen:
     {
         id: 118,
-        uid: 199,
+        uid: 198,
         species: "Goldeen",
         abilities: {swiftswim: 1, waterveil: 2},
         types: ["water"],
@@ -2037,7 +2037,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Seaking:
     {
         id: 119,
-        uid: 200,
+        uid: 199,
         species: "Seaking",
         abilities: {swiftswim: 1, waterveil: 2},
         types: ["water"],
@@ -2047,7 +2047,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Staryu:
     {
         id: 120,
-        uid: 201,
+        uid: 200,
         species: "Staryu",
         abilities: {illuminate: 1, naturalcure: 2},
         types: ["water"],
@@ -2057,7 +2057,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Starmie:
     {
         id: 121,
-        uid: 202,
+        uid: 201,
         species: "Starmie",
         abilities: {illuminate: 1, naturalcure: 2},
         types: ["water", "psychic"],
@@ -2067,7 +2067,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Scyther:
     {
         id: 123,
-        uid: 203,
+        uid: 202,
         species: "Scyther",
         abilities: {swarm: 1, technician: 2},
         types: ["bug", "flying"],
@@ -2077,7 +2077,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Jynx:
     {
         id: 124,
-        uid: 204,
+        uid: 203,
         species: "Jynx",
         abilities: {oblivious: 1, forewarn: 2},
         types: ["ice", "psychic"],
@@ -2087,7 +2087,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Electabuzz:
     {
         id: 125,
-        uid: 205,
+        uid: 204,
         species: "Electabuzz",
         abilities: {static: 1},
         types: ["electric"],
@@ -2097,7 +2097,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Magmar:
     {
         id: 126,
-        uid: 206,
+        uid: 205,
         species: "Magmar",
         abilities: {flamebody: 1},
         types: ["fire"],
@@ -2107,7 +2107,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pinsir:
     {
         id: 127,
-        uid: 207,
+        uid: 206,
         species: "Pinsir",
         abilities: {hypercutter: 1, moldbreaker: 2},
         types: ["bug"],
@@ -2117,7 +2117,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Tauros:
     {
         id: 128,
-        uid: 208,
+        uid: 207,
         species: "Tauros",
         abilities: {intimidate: 1, angerpoint: 2},
         types: ["normal"],
@@ -2127,7 +2127,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Magikarp:
     {
         id: 129,
-        uid: 209,
+        uid: 208,
         species: "Magikarp",
         abilities: {swiftswim: 1},
         types: ["water"],
@@ -2137,7 +2137,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gyarados:
     {
         id: 130,
-        uid: 210,
+        uid: 209,
         species: "Gyarados",
         abilities: {intimidate: 1},
         types: ["water", "flying"],
@@ -2147,7 +2147,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lapras:
     {
         id: 131,
-        uid: 211,
+        uid: 210,
         species: "Lapras",
         abilities: {waterabsorb: 1, shellarmor: 2},
         types: ["water", "ice"],
@@ -2157,7 +2157,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ditto:
     {
         id: 132,
-        uid: 212,
+        uid: 211,
         species: "Ditto",
         abilities: {limber: 1},
         types: ["normal"],
@@ -2167,7 +2167,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Eevee:
     {
         id: 133,
-        uid: 213,
+        uid: 212,
         species: "Eevee",
         abilities: {runaway: 1, adaptability: 2},
         types: ["normal"],
@@ -2177,7 +2177,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Vaporeon:
     {
         id: 134,
-        uid: 214,
+        uid: 213,
         species: "Vaporeon",
         abilities: {waterabsorb: 1},
         types: ["water"],
@@ -2187,7 +2187,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Jolteon:
     {
         id: 135,
-        uid: 215,
+        uid: 214,
         species: "Jolteon",
         abilities: {voltabsorb: 1},
         types: ["electric"],
@@ -2197,7 +2197,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Flareon:
     {
         id: 136,
-        uid: 216,
+        uid: 215,
         species: "Flareon",
         abilities: {flashfire: 1},
         types: ["fire"],
@@ -2207,7 +2207,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Porygon:
     {
         id: 137,
-        uid: 217,
+        uid: 216,
         species: "Porygon",
         abilities: {trace: 1, download: 2},
         types: ["normal"],
@@ -2217,7 +2217,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Omanyte:
     {
         id: 138,
-        uid: 218,
+        uid: 217,
         species: "Omanyte",
         abilities: {swiftswim: 1, shellarmor: 2},
         types: ["rock", "water"],
@@ -2227,7 +2227,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Omastar:
     {
         id: 139,
-        uid: 219,
+        uid: 218,
         species: "Omastar",
         abilities: {swiftswim: 1, shellarmor: 2},
         types: ["rock", "water"],
@@ -2237,7 +2237,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kabuto:
     {
         id: 140,
-        uid: 220,
+        uid: 219,
         species: "Kabuto",
         abilities: {swiftswim: 1, battlearmor: 2},
         types: ["rock", "water"],
@@ -2247,7 +2247,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kabutops:
     {
         id: 141,
-        uid: 221,
+        uid: 220,
         species: "Kabutops",
         abilities: {swiftswim: 1, battlearmor: 2},
         types: ["rock", "water"],
@@ -2257,7 +2257,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Aerodactyl:
     {
         id: 142,
-        uid: 222,
+        uid: 221,
         species: "Aerodactyl",
         abilities: {rockhead: 1, pressure: 2},
         types: ["rock", "flying"],
@@ -2267,7 +2267,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Snorlax:
     {
         id: 143,
-        uid: 223,
+        uid: 222,
         species: "Snorlax",
         abilities: {immunity: 1, thickfat: 2},
         types: ["normal"],
@@ -2277,7 +2277,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dratini:
     {
         id: 147,
-        uid: 224,
+        uid: 223,
         species: "Dratini",
         abilities: {shedskin: 1},
         types: ["dragon"],
@@ -2287,7 +2287,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dragonair:
     {
         id: 148,
-        uid: 225,
+        uid: 224,
         species: "Dragonair",
         abilities: {shedskin: 1},
         types: ["dragon"],
@@ -2297,7 +2297,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dragonite:
     {
         id: 149,
-        uid: 226,
+        uid: 225,
         species: "Dragonite",
         abilities: {innerfocus: 1},
         types: ["dragon", "flying"],
@@ -2307,7 +2307,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mewtwo:
     {
         id: 150,
-        uid: 227,
+        uid: 226,
         species: "Mewtwo",
         abilities: {pressure: 1},
         types: ["psychic"],
@@ -2317,7 +2317,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mew:
     {
         id: 151,
-        uid: 228,
+        uid: 227,
         species: "Mew",
         abilities: {synchronize: 1},
         types: ["psychic"],
@@ -2327,7 +2327,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sentret:
     {
         id: 161,
-        uid: 229,
+        uid: 228,
         species: "Sentret",
         abilities: {runaway: 1, keeneye: 2},
         types: ["normal"],
@@ -2337,7 +2337,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Furret:
     {
         id: 162,
-        uid: 230,
+        uid: 229,
         species: "Furret",
         abilities: {runaway: 1, keeneye: 2},
         types: ["normal"],
@@ -2347,7 +2347,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hoothoot:
     {
         id: 163,
-        uid: 231,
+        uid: 230,
         species: "Hoothoot",
         abilities: {insomnia: 1, keeneye: 2},
         types: ["normal", "flying"],
@@ -2357,7 +2357,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ledyba:
     {
         id: 165,
-        uid: 232,
+        uid: 231,
         species: "Ledyba",
         abilities: {swarm: 1, earlybird: 2},
         types: ["bug", "flying"],
@@ -2367,7 +2367,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ledian:
     {
         id: 166,
-        uid: 233,
+        uid: 232,
         species: "Ledian",
         abilities: {swarm: 1, earlybird: 2},
         types: ["bug", "flying"],
@@ -2377,7 +2377,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Spinarak:
     {
         id: 167,
-        uid: 234,
+        uid: 233,
         species: "Spinarak",
         abilities: {swarm: 1, insomnia: 2},
         types: ["bug", "poison"],
@@ -2387,7 +2387,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Crobat:
     {
         id: 169,
-        uid: 235,
+        uid: 234,
         species: "Crobat",
         abilities: {innerfocus: 1},
         types: ["poison", "flying"],
@@ -2397,7 +2397,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Chinchou:
     {
         id: 170,
-        uid: 236,
+        uid: 235,
         species: "Chinchou",
         abilities: {voltabsorb: 1, illuminate: 2},
         types: ["water", "electric"],
@@ -2407,7 +2407,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lanturn:
     {
         id: 171,
-        uid: 237,
+        uid: 236,
         species: "Lanturn",
         abilities: {voltabsorb: 1, illuminate: 2},
         types: ["water", "electric"],
@@ -2417,7 +2417,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pichu:
     {
         id: 172,
-        uid: 238,
+        uid: 237,
         species: "Pichu",
         otherForms: ["pichuspikyeared"],
         abilities: {static: 1},
@@ -2428,7 +2428,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Pichu-Spiky-eared":
     {
         id: 172,
-        uid: 239,
+        uid: 238,
         species: "Pichu-Spiky-eared",
         baseSpecies: "Pichu",
         form: "Spiky-eared",
@@ -2441,7 +2441,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Natu:
     {
         id: 177,
-        uid: 240,
+        uid: 239,
         species: "Natu",
         abilities: {synchronize: 1, earlybird: 2},
         types: ["psychic", "flying"],
@@ -2451,7 +2451,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Xatu:
     {
         id: 178,
-        uid: 241,
+        uid: 240,
         species: "Xatu",
         abilities: {synchronize: 1, earlybird: 2},
         types: ["psychic", "flying"],
@@ -2461,7 +2461,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mareep:
     {
         id: 179,
-        uid: 242,
+        uid: 241,
         species: "Mareep",
         abilities: {static: 1},
         types: ["electric"],
@@ -2471,7 +2471,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Flaaffy:
     {
         id: 180,
-        uid: 243,
+        uid: 242,
         species: "Flaaffy",
         abilities: {static: 1},
         types: ["electric"],
@@ -2481,7 +2481,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sudowoodo:
     {
         id: 185,
-        uid: 244,
+        uid: 243,
         species: "Sudowoodo",
         abilities: {sturdy: 1, rockhead: 2},
         types: ["rock"],
@@ -2491,7 +2491,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Politoed:
     {
         id: 186,
-        uid: 245,
+        uid: 244,
         species: "Politoed",
         abilities: {waterabsorb: 1, damp: 2},
         types: ["water"],
@@ -2501,7 +2501,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hoppip:
     {
         id: 187,
-        uid: 246,
+        uid: 245,
         species: "Hoppip",
         abilities: {chlorophyll: 1, leafguard: 2},
         types: ["grass", "flying"],
@@ -2511,7 +2511,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Skiploom:
     {
         id: 188,
-        uid: 247,
+        uid: 246,
         species: "Skiploom",
         abilities: {chlorophyll: 1, leafguard: 2},
         types: ["grass", "flying"],
@@ -2521,7 +2521,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Aipom:
     {
         id: 190,
-        uid: 248,
+        uid: 247,
         species: "Aipom",
         abilities: {runaway: 1, pickup: 2},
         types: ["normal"],
@@ -2531,7 +2531,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sunkern:
     {
         id: 191,
-        uid: 249,
+        uid: 248,
         species: "Sunkern",
         abilities: {chlorophyll: 1, solarpower: 2},
         types: ["grass"],
@@ -2541,7 +2541,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sunflora:
     {
         id: 192,
-        uid: 250,
+        uid: 249,
         species: "Sunflora",
         abilities: {chlorophyll: 1, solarpower: 2},
         types: ["grass"],
@@ -2551,7 +2551,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Yanma:
     {
         id: 193,
-        uid: 251,
+        uid: 250,
         species: "Yanma",
         abilities: {speedboost: 1, compoundeyes: 2},
         types: ["bug", "flying"],
@@ -2561,7 +2561,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wooper:
     {
         id: 194,
-        uid: 252,
+        uid: 251,
         species: "Wooper",
         abilities: {damp: 1, waterabsorb: 2},
         types: ["water", "ground"],
@@ -2571,7 +2571,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Quagsire:
     {
         id: 195,
-        uid: 253,
+        uid: 252,
         species: "Quagsire",
         abilities: {damp: 1, waterabsorb: 2},
         types: ["water", "ground"],
@@ -2581,7 +2581,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Espeon:
     {
         id: 196,
-        uid: 254,
+        uid: 253,
         species: "Espeon",
         abilities: {synchronize: 1},
         types: ["psychic"],
@@ -2591,7 +2591,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Umbreon:
     {
         id: 197,
-        uid: 255,
+        uid: 254,
         species: "Umbreon",
         abilities: {synchronize: 1},
         types: ["dark"],
@@ -2601,7 +2601,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Murkrow:
     {
         id: 198,
-        uid: 256,
+        uid: 255,
         species: "Murkrow",
         abilities: {insomnia: 1, superluck: 2},
         types: ["dark", "flying"],
@@ -2611,7 +2611,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Slowking:
     {
         id: 199,
-        uid: 257,
+        uid: 256,
         species: "Slowking",
         abilities: {oblivious: 1, owntempo: 2},
         types: ["water", "psychic"],
@@ -2621,7 +2621,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Misdreavus:
     {
         id: 200,
-        uid: 258,
+        uid: 257,
         species: "Misdreavus",
         abilities: {levitate: 1},
         types: ["ghost"],
@@ -2631,7 +2631,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Unown:
     {
         id: 201,
-        uid: 259,
+        uid: 258,
         species: "Unown",
         baseForm: "A",
         abilities: {levitate: 1},
@@ -2642,7 +2642,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wobbuffet:
     {
         id: 202,
-        uid: 260,
+        uid: 259,
         species: "Wobbuffet",
         abilities: {shadowtag: 1},
         types: ["psychic"],
@@ -2652,7 +2652,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Girafarig:
     {
         id: 203,
-        uid: 261,
+        uid: 260,
         species: "Girafarig",
         abilities: {innerfocus: 1, earlybird: 2},
         types: ["normal", "psychic"],
@@ -2662,7 +2662,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pineco:
     {
         id: 204,
-        uid: 262,
+        uid: 261,
         species: "Pineco",
         abilities: {sturdy: 1},
         types: ["bug"],
@@ -2672,7 +2672,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Forretress:
     {
         id: 205,
-        uid: 263,
+        uid: 262,
         species: "Forretress",
         abilities: {sturdy: 1},
         types: ["bug", "steel"],
@@ -2682,7 +2682,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dunsparce:
     {
         id: 206,
-        uid: 264,
+        uid: 263,
         species: "Dunsparce",
         abilities: {serenegrace: 1, runaway: 2},
         types: ["normal"],
@@ -2692,7 +2692,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gligar:
     {
         id: 207,
-        uid: 265,
+        uid: 264,
         species: "Gligar",
         abilities: {hypercutter: 1, sandveil: 2},
         types: ["ground", "flying"],
@@ -2702,7 +2702,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Steelix:
     {
         id: 208,
-        uid: 266,
+        uid: 265,
         species: "Steelix",
         abilities: {rockhead: 1, sturdy: 2},
         types: ["steel", "ground"],
@@ -2712,7 +2712,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Scizor:
     {
         id: 212,
-        uid: 267,
+        uid: 266,
         species: "Scizor",
         abilities: {swarm: 1, technician: 2},
         types: ["bug", "steel"],
@@ -2722,7 +2722,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shuckle:
     {
         id: 213,
-        uid: 268,
+        uid: 267,
         species: "Shuckle",
         abilities: {sturdy: 1, gluttony: 2},
         types: ["bug", "rock"],
@@ -2732,7 +2732,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Heracross:
     {
         id: 214,
-        uid: 269,
+        uid: 268,
         species: "Heracross",
         abilities: {swarm: 1, guts: 2},
         types: ["bug", "fighting"],
@@ -2742,7 +2742,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sneasel:
     {
         id: 215,
-        uid: 270,
+        uid: 269,
         species: "Sneasel",
         abilities: {innerfocus: 1, keeneye: 2},
         types: ["dark", "ice"],
@@ -2752,7 +2752,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Teddiursa:
     {
         id: 216,
-        uid: 271,
+        uid: 270,
         species: "Teddiursa",
         abilities: {pickup: 1, quickfeet: 2},
         types: ["normal"],
@@ -2762,7 +2762,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ursaring:
     {
         id: 217,
-        uid: 272,
+        uid: 271,
         species: "Ursaring",
         abilities: {guts: 1, quickfeet: 2},
         types: ["normal"],
@@ -2772,7 +2772,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Slugma:
     {
         id: 218,
-        uid: 273,
+        uid: 272,
         species: "Slugma",
         abilities: {magmaarmor: 1, flamebody: 2},
         types: ["fire"],
@@ -2782,7 +2782,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Swinub:
     {
         id: 220,
-        uid: 274,
+        uid: 273,
         species: "Swinub",
         abilities: {oblivious: 1, snowcloak: 2},
         types: ["ice", "ground"],
@@ -2792,7 +2792,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Piloswine:
     {
         id: 221,
-        uid: 275,
+        uid: 274,
         species: "Piloswine",
         abilities: {oblivious: 1, snowcloak: 2},
         types: ["ice", "ground"],
@@ -2802,7 +2802,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Remoraid:
     {
         id: 223,
-        uid: 276,
+        uid: 275,
         species: "Remoraid",
         abilities: {hustle: 1, sniper: 2},
         types: ["water"],
@@ -2812,7 +2812,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Octillery:
     {
         id: 224,
-        uid: 277,
+        uid: 276,
         species: "Octillery",
         abilities: {suctioncups: 1, sniper: 2},
         types: ["water"],
@@ -2822,7 +2822,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Delibird:
     {
         id: 225,
-        uid: 278,
+        uid: 277,
         species: "Delibird",
         abilities: {vitalspirit: 1, hustle: 2},
         types: ["ice", "flying"],
@@ -2832,7 +2832,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Skarmory:
     {
         id: 227,
-        uid: 279,
+        uid: 278,
         species: "Skarmory",
         abilities: {keeneye: 1, sturdy: 2},
         types: ["steel", "flying"],
@@ -2842,7 +2842,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Houndour:
     {
         id: 228,
-        uid: 280,
+        uid: 279,
         species: "Houndour",
         abilities: {earlybird: 1, flashfire: 2},
         types: ["dark", "fire"],
@@ -2852,7 +2852,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Houndoom:
     {
         id: 229,
-        uid: 281,
+        uid: 280,
         species: "Houndoom",
         abilities: {earlybird: 1, flashfire: 2},
         types: ["dark", "fire"],
@@ -2862,7 +2862,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kingdra:
     {
         id: 230,
-        uid: 282,
+        uid: 281,
         species: "Kingdra",
         abilities: {swiftswim: 1, sniper: 2},
         types: ["water", "dragon"],
@@ -2872,7 +2872,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Phanpy:
     {
         id: 231,
-        uid: 283,
+        uid: 282,
         species: "Phanpy",
         abilities: {pickup: 1},
         types: ["ground"],
@@ -2882,7 +2882,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Donphan:
     {
         id: 232,
-        uid: 284,
+        uid: 283,
         species: "Donphan",
         abilities: {sturdy: 1},
         types: ["ground"],
@@ -2892,7 +2892,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Porygon2:
     {
         id: 233,
-        uid: 285,
+        uid: 284,
         species: "Porygon2",
         abilities: {trace: 1, download: 2},
         types: ["normal"],
@@ -2902,7 +2902,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Stantler:
     {
         id: 234,
-        uid: 286,
+        uid: 285,
         species: "Stantler",
         abilities: {intimidate: 1, frisk: 2},
         types: ["normal"],
@@ -2912,7 +2912,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Smeargle:
     {
         id: 235,
-        uid: 287,
+        uid: 286,
         species: "Smeargle",
         abilities: {owntempo: 1, technician: 2},
         types: ["normal"],
@@ -2922,7 +2922,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Tyrogue:
     {
         id: 236,
-        uid: 288,
+        uid: 287,
         species: "Tyrogue",
         abilities: {guts: 1, steadfast: 2},
         types: ["fighting"],
@@ -2932,7 +2932,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hitmontop:
     {
         id: 237,
-        uid: 289,
+        uid: 288,
         species: "Hitmontop",
         abilities: {intimidate: 1, technician: 2},
         types: ["fighting"],
@@ -2942,7 +2942,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Smoochum:
     {
         id: 238,
-        uid: 290,
+        uid: 289,
         species: "Smoochum",
         abilities: {oblivious: 1, forewarn: 2},
         types: ["ice", "psychic"],
@@ -2952,7 +2952,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Elekid:
     {
         id: 239,
-        uid: 291,
+        uid: 290,
         species: "Elekid",
         abilities: {static: 1},
         types: ["electric"],
@@ -2962,7 +2962,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Magby:
     {
         id: 240,
-        uid: 292,
+        uid: 291,
         species: "Magby",
         abilities: {flamebody: 1},
         types: ["fire"],
@@ -2972,7 +2972,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Miltank:
     {
         id: 241,
-        uid: 293,
+        uid: 292,
         species: "Miltank",
         abilities: {thickfat: 1, scrappy: 2},
         types: ["normal"],
@@ -2982,7 +2982,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Blissey:
     {
         id: 242,
-        uid: 294,
+        uid: 293,
         species: "Blissey",
         abilities: {naturalcure: 1, serenegrace: 2},
         types: ["normal"],
@@ -2992,7 +2992,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Larvitar:
     {
         id: 246,
-        uid: 295,
+        uid: 294,
         species: "Larvitar",
         abilities: {guts: 1},
         types: ["rock", "ground"],
@@ -3002,7 +3002,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pupitar:
     {
         id: 247,
-        uid: 296,
+        uid: 295,
         species: "Pupitar",
         abilities: {shedskin: 1},
         types: ["rock", "ground"],
@@ -3012,7 +3012,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Tyranitar:
     {
         id: 248,
-        uid: 297,
+        uid: 296,
         species: "Tyranitar",
         abilities: {sandstream: 1},
         types: ["rock", "dark"],
@@ -3022,7 +3022,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lugia:
     {
         id: 249,
-        uid: 298,
+        uid: 297,
         species: "Lugia",
         abilities: {pressure: 1},
         types: ["psychic", "flying"],
@@ -3032,7 +3032,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Ho-Oh":
     {
         id: 250,
-        uid: 299,
+        uid: 298,
         species: "Ho-Oh",
         abilities: {pressure: 1},
         types: ["fire", "flying"],
@@ -3042,7 +3042,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Celebi:
     {
         id: 251,
-        uid: 300,
+        uid: 299,
         species: "Celebi",
         abilities: {naturalcure: 1},
         types: ["psychic", "grass"],
@@ -3052,7 +3052,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Treecko:
     {
         id: 252,
-        uid: 301,
+        uid: 300,
         species: "Treecko",
         abilities: {overgrow: 1},
         types: ["grass"],
@@ -3062,7 +3062,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Grovyle:
     {
         id: 253,
-        uid: 302,
+        uid: 301,
         species: "Grovyle",
         abilities: {overgrow: 1},
         types: ["grass"],
@@ -3072,7 +3072,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sceptile:
     {
         id: 254,
-        uid: 303,
+        uid: 302,
         species: "Sceptile",
         abilities: {overgrow: 1},
         types: ["grass"],
@@ -3082,7 +3082,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Torchic:
     {
         id: 255,
-        uid: 304,
+        uid: 303,
         species: "Torchic",
         abilities: {blaze: 1},
         types: ["fire"],
@@ -3092,7 +3092,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Combusken:
     {
         id: 256,
-        uid: 305,
+        uid: 304,
         species: "Combusken",
         abilities: {blaze: 1},
         types: ["fire", "fighting"],
@@ -3102,7 +3102,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Blaziken:
     {
         id: 257,
-        uid: 306,
+        uid: 305,
         species: "Blaziken",
         abilities: {blaze: 1},
         types: ["fire", "fighting"],
@@ -3112,7 +3112,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mudkip:
     {
         id: 258,
-        uid: 307,
+        uid: 306,
         species: "Mudkip",
         abilities: {torrent: 1},
         types: ["water"],
@@ -3122,7 +3122,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Marshtomp:
     {
         id: 259,
-        uid: 308,
+        uid: 307,
         species: "Marshtomp",
         abilities: {torrent: 1},
         types: ["water", "ground"],
@@ -3132,7 +3132,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Swampert:
     {
         id: 260,
-        uid: 309,
+        uid: 308,
         species: "Swampert",
         abilities: {torrent: 1},
         types: ["water", "ground"],
@@ -3142,7 +3142,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Poochyena:
     {
         id: 261,
-        uid: 310,
+        uid: 309,
         species: "Poochyena",
         abilities: {runaway: 1, quickfeet: 2},
         types: ["dark"],
@@ -3152,7 +3152,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mightyena:
     {
         id: 262,
-        uid: 311,
+        uid: 310,
         species: "Mightyena",
         abilities: {intimidate: 1, quickfeet: 2},
         types: ["dark"],
@@ -3162,7 +3162,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Zigzagoon:
     {
         id: 263,
-        uid: 312,
+        uid: 311,
         species: "Zigzagoon",
         abilities: {pickup: 1, gluttony: 2},
         types: ["normal"],
@@ -3172,7 +3172,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Linoone:
     {
         id: 264,
-        uid: 313,
+        uid: 312,
         species: "Linoone",
         abilities: {pickup: 1, gluttony: 2},
         types: ["normal"],
@@ -3182,7 +3182,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wurmple:
     {
         id: 265,
-        uid: 314,
+        uid: 313,
         species: "Wurmple",
         abilities: {shielddust: 1},
         types: ["bug"],
@@ -3192,7 +3192,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Silcoon:
     {
         id: 266,
-        uid: 315,
+        uid: 314,
         species: "Silcoon",
         abilities: {shedskin: 1},
         types: ["bug"],
@@ -3202,7 +3202,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cascoon:
     {
         id: 268,
-        uid: 316,
+        uid: 315,
         species: "Cascoon",
         abilities: {shedskin: 1},
         types: ["bug"],
@@ -3212,7 +3212,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dustox:
     {
         id: 269,
-        uid: 317,
+        uid: 316,
         species: "Dustox",
         abilities: {shielddust: 1},
         types: ["bug", "poison"],
@@ -3222,7 +3222,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lotad:
     {
         id: 270,
-        uid: 318,
+        uid: 317,
         species: "Lotad",
         abilities: {swiftswim: 1, raindish: 2},
         types: ["water", "grass"],
@@ -3232,7 +3232,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lombre:
     {
         id: 271,
-        uid: 319,
+        uid: 318,
         species: "Lombre",
         abilities: {swiftswim: 1, raindish: 2},
         types: ["water", "grass"],
@@ -3242,7 +3242,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ludicolo:
     {
         id: 272,
-        uid: 320,
+        uid: 319,
         species: "Ludicolo",
         abilities: {swiftswim: 1, raindish: 2},
         types: ["water", "grass"],
@@ -3252,7 +3252,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Seedot:
     {
         id: 273,
-        uid: 321,
+        uid: 320,
         species: "Seedot",
         abilities: {chlorophyll: 1, earlybird: 2},
         types: ["grass"],
@@ -3262,7 +3262,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Nuzleaf:
     {
         id: 274,
-        uid: 322,
+        uid: 321,
         species: "Nuzleaf",
         abilities: {chlorophyll: 1, earlybird: 2},
         types: ["grass", "dark"],
@@ -3272,7 +3272,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shiftry:
     {
         id: 275,
-        uid: 323,
+        uid: 322,
         species: "Shiftry",
         abilities: {chlorophyll: 1, earlybird: 2},
         types: ["grass", "dark"],
@@ -3282,7 +3282,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Taillow:
     {
         id: 276,
-        uid: 324,
+        uid: 323,
         species: "Taillow",
         abilities: {guts: 1},
         types: ["normal", "flying"],
@@ -3292,7 +3292,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Surskit:
     {
         id: 283,
-        uid: 325,
+        uid: 324,
         species: "Surskit",
         abilities: {swiftswim: 1},
         types: ["bug", "water"],
@@ -3302,7 +3302,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shroomish:
     {
         id: 285,
-        uid: 326,
+        uid: 325,
         species: "Shroomish",
         abilities: {effectspore: 1, poisonheal: 2},
         types: ["grass"],
@@ -3312,7 +3312,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Breloom:
     {
         id: 286,
-        uid: 327,
+        uid: 326,
         species: "Breloom",
         abilities: {effectspore: 1, poisonheal: 2},
         types: ["grass", "fighting"],
@@ -3322,7 +3322,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Slakoth:
     {
         id: 287,
-        uid: 328,
+        uid: 327,
         species: "Slakoth",
         abilities: {truant: 1},
         types: ["normal"],
@@ -3332,7 +3332,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Vigoroth:
     {
         id: 288,
-        uid: 329,
+        uid: 328,
         species: "Vigoroth",
         abilities: {vitalspirit: 1},
         types: ["normal"],
@@ -3342,7 +3342,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Slaking:
     {
         id: 289,
-        uid: 330,
+        uid: 329,
         species: "Slaking",
         abilities: {truant: 1},
         types: ["normal"],
@@ -3352,7 +3352,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Nincada:
     {
         id: 290,
-        uid: 331,
+        uid: 330,
         species: "Nincada",
         abilities: {compoundeyes: 1},
         types: ["bug", "ground"],
@@ -3362,7 +3362,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ninjask:
     {
         id: 291,
-        uid: 332,
+        uid: 331,
         species: "Ninjask",
         abilities: {speedboost: 1},
         types: ["bug", "flying"],
@@ -3372,7 +3372,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shedinja:
     {
         id: 292,
-        uid: 333,
+        uid: 332,
         species: "Shedinja",
         abilities: {wonderguard: 1},
         types: ["bug", "ghost"],
@@ -3382,7 +3382,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Whismur:
     {
         id: 293,
-        uid: 334,
+        uid: 333,
         species: "Whismur",
         abilities: {soundproof: 1},
         types: ["normal"],
@@ -3392,7 +3392,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Loudred:
     {
         id: 294,
-        uid: 335,
+        uid: 334,
         species: "Loudred",
         abilities: {soundproof: 1},
         types: ["normal"],
@@ -3402,7 +3402,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Makuhita:
     {
         id: 296,
-        uid: 336,
+        uid: 335,
         species: "Makuhita",
         abilities: {thickfat: 1, guts: 2},
         types: ["fighting"],
@@ -3412,7 +3412,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hariyama:
     {
         id: 297,
-        uid: 337,
+        uid: 336,
         species: "Hariyama",
         abilities: {thickfat: 1, guts: 2},
         types: ["fighting"],
@@ -3422,7 +3422,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Nosepass:
     {
         id: 299,
-        uid: 338,
+        uid: 337,
         species: "Nosepass",
         abilities: {sturdy: 1, magnetpull: 2},
         types: ["rock"],
@@ -3432,7 +3432,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Skitty:
     {
         id: 300,
-        uid: 339,
+        uid: 338,
         species: "Skitty",
         abilities: {cutecharm: 1, normalize: 2},
         types: ["normal"],
@@ -3442,7 +3442,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sableye:
     {
         id: 302,
-        uid: 340,
+        uid: 339,
         species: "Sableye",
         abilities: {keeneye: 1, stall: 2},
         types: ["dark", "ghost"],
@@ -3452,7 +3452,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Aron:
     {
         id: 304,
-        uid: 341,
+        uid: 340,
         species: "Aron",
         abilities: {sturdy: 1, rockhead: 2},
         types: ["steel", "rock"],
@@ -3462,7 +3462,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lairon:
     {
         id: 305,
-        uid: 342,
+        uid: 341,
         species: "Lairon",
         abilities: {sturdy: 1, rockhead: 2},
         types: ["steel", "rock"],
@@ -3472,7 +3472,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Aggron:
     {
         id: 306,
-        uid: 343,
+        uid: 342,
         species: "Aggron",
         abilities: {sturdy: 1, rockhead: 2},
         types: ["steel", "rock"],
@@ -3482,7 +3482,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Meditite:
     {
         id: 307,
-        uid: 344,
+        uid: 343,
         species: "Meditite",
         abilities: {purepower: 1},
         types: ["fighting", "psychic"],
@@ -3492,7 +3492,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Medicham:
     {
         id: 308,
-        uid: 345,
+        uid: 344,
         species: "Medicham",
         abilities: {purepower: 1},
         types: ["fighting", "psychic"],
@@ -3502,7 +3502,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Electrike:
     {
         id: 309,
-        uid: 346,
+        uid: 345,
         species: "Electrike",
         abilities: {static: 1, lightningrod: 2},
         types: ["electric"],
@@ -3512,7 +3512,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Manectric:
     {
         id: 310,
-        uid: 347,
+        uid: 346,
         species: "Manectric",
         abilities: {static: 1, lightningrod: 2},
         types: ["electric"],
@@ -3522,7 +3522,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Roselia:
     {
         id: 315,
-        uid: 348,
+        uid: 347,
         species: "Roselia",
         abilities: {naturalcure: 1, poisonpoint: 2},
         types: ["grass", "poison"],
@@ -3532,7 +3532,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gulpin:
     {
         id: 316,
-        uid: 349,
+        uid: 348,
         species: "Gulpin",
         abilities: {liquidooze: 1, stickyhold: 2},
         types: ["poison"],
@@ -3542,7 +3542,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Swalot:
     {
         id: 317,
-        uid: 350,
+        uid: 349,
         species: "Swalot",
         abilities: {liquidooze: 1, stickyhold: 2},
         types: ["poison"],
@@ -3552,7 +3552,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Carvanha:
     {
         id: 318,
-        uid: 351,
+        uid: 350,
         species: "Carvanha",
         abilities: {roughskin: 1},
         types: ["water", "dark"],
@@ -3562,7 +3562,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sharpedo:
     {
         id: 319,
-        uid: 352,
+        uid: 351,
         species: "Sharpedo",
         abilities: {roughskin: 1},
         types: ["water", "dark"],
@@ -3572,7 +3572,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wailmer:
     {
         id: 320,
-        uid: 353,
+        uid: 352,
         species: "Wailmer",
         abilities: {waterveil: 1, oblivious: 2},
         types: ["water"],
@@ -3582,7 +3582,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wailord:
     {
         id: 321,
-        uid: 354,
+        uid: 353,
         species: "Wailord",
         abilities: {waterveil: 1, oblivious: 2},
         types: ["water"],
@@ -3592,7 +3592,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Numel:
     {
         id: 322,
-        uid: 355,
+        uid: 354,
         species: "Numel",
         abilities: {oblivious: 1, simple: 2},
         types: ["fire", "ground"],
@@ -3602,7 +3602,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Camerupt:
     {
         id: 323,
-        uid: 356,
+        uid: 355,
         species: "Camerupt",
         abilities: {magmaarmor: 1, solidrock: 2},
         types: ["fire", "ground"],
@@ -3612,7 +3612,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Spoink:
     {
         id: 325,
-        uid: 357,
+        uid: 356,
         species: "Spoink",
         abilities: {thickfat: 1, owntempo: 2},
         types: ["psychic"],
@@ -3622,7 +3622,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Grumpig:
     {
         id: 326,
-        uid: 358,
+        uid: 357,
         species: "Grumpig",
         abilities: {thickfat: 1, owntempo: 2},
         types: ["psychic"],
@@ -3632,7 +3632,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Spinda:
     {
         id: 327,
-        uid: 359,
+        uid: 358,
         species: "Spinda",
         abilities: {owntempo: 1, tangledfeet: 2},
         types: ["normal"],
@@ -3642,7 +3642,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Trapinch:
     {
         id: 328,
-        uid: 360,
+        uid: 359,
         species: "Trapinch",
         abilities: {hypercutter: 1, arenatrap: 2},
         types: ["ground"],
@@ -3652,7 +3652,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Vibrava:
     {
         id: 329,
-        uid: 361,
+        uid: 360,
         species: "Vibrava",
         abilities: {levitate: 1},
         types: ["ground", "dragon"],
@@ -3662,7 +3662,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Flygon:
     {
         id: 330,
-        uid: 362,
+        uid: 361,
         species: "Flygon",
         abilities: {levitate: 1},
         types: ["ground", "dragon"],
@@ -3672,7 +3672,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cacnea:
     {
         id: 331,
-        uid: 363,
+        uid: 362,
         species: "Cacnea",
         abilities: {sandveil: 1},
         types: ["grass"],
@@ -3682,7 +3682,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cacturne:
     {
         id: 332,
-        uid: 364,
+        uid: 363,
         species: "Cacturne",
         abilities: {sandveil: 1},
         types: ["grass", "dark"],
@@ -3692,7 +3692,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Swablu:
     {
         id: 333,
-        uid: 365,
+        uid: 364,
         species: "Swablu",
         abilities: {naturalcure: 1},
         types: ["normal", "flying"],
@@ -3702,7 +3702,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Altaria:
     {
         id: 334,
-        uid: 366,
+        uid: 365,
         species: "Altaria",
         abilities: {naturalcure: 1},
         types: ["dragon", "flying"],
@@ -3712,7 +3712,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Zangoose:
     {
         id: 335,
-        uid: 367,
+        uid: 366,
         species: "Zangoose",
         abilities: {immunity: 1},
         types: ["normal"],
@@ -3722,7 +3722,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Seviper:
     {
         id: 336,
-        uid: 368,
+        uid: 367,
         species: "Seviper",
         abilities: {shedskin: 1},
         types: ["poison"],
@@ -3732,7 +3732,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Barboach:
     {
         id: 339,
-        uid: 369,
+        uid: 368,
         species: "Barboach",
         abilities: {oblivious: 1, anticipation: 2},
         types: ["water", "ground"],
@@ -3742,7 +3742,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Whiscash:
     {
         id: 340,
-        uid: 370,
+        uid: 369,
         species: "Whiscash",
         abilities: {oblivious: 1, anticipation: 2},
         types: ["water", "ground"],
@@ -3752,7 +3752,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Corphish:
     {
         id: 341,
-        uid: 371,
+        uid: 370,
         species: "Corphish",
         abilities: {hypercutter: 1, shellarmor: 2},
         types: ["water"],
@@ -3762,7 +3762,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Crawdaunt:
     {
         id: 342,
-        uid: 372,
+        uid: 371,
         species: "Crawdaunt",
         abilities: {hypercutter: 1, shellarmor: 2},
         types: ["water", "dark"],
@@ -3772,7 +3772,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Baltoy:
     {
         id: 343,
-        uid: 373,
+        uid: 372,
         species: "Baltoy",
         abilities: {levitate: 1},
         types: ["ground", "psychic"],
@@ -3782,7 +3782,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Claydol:
     {
         id: 344,
-        uid: 374,
+        uid: 373,
         species: "Claydol",
         abilities: {levitate: 1},
         types: ["ground", "psychic"],
@@ -3792,7 +3792,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lileep:
     {
         id: 345,
-        uid: 375,
+        uid: 374,
         species: "Lileep",
         abilities: {suctioncups: 1},
         types: ["rock", "grass"],
@@ -3802,7 +3802,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cradily:
     {
         id: 346,
-        uid: 376,
+        uid: 375,
         species: "Cradily",
         abilities: {suctioncups: 1},
         types: ["rock", "grass"],
@@ -3812,7 +3812,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Anorith:
     {
         id: 347,
-        uid: 377,
+        uid: 376,
         species: "Anorith",
         abilities: {battlearmor: 1},
         types: ["rock", "bug"],
@@ -3822,7 +3822,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Armaldo:
     {
         id: 348,
-        uid: 378,
+        uid: 377,
         species: "Armaldo",
         abilities: {battlearmor: 1},
         types: ["rock", "bug"],
@@ -3832,7 +3832,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Feebas:
     {
         id: 349,
-        uid: 379,
+        uid: 378,
         species: "Feebas",
         abilities: {swiftswim: 1, oblivious: 2},
         types: ["water"],
@@ -3842,7 +3842,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Castform-Snowy":
     {
         id: 351,
-        uid: 380,
+        uid: 379,
         species: "Castform-Snowy",
         baseSpecies: "Castform",
         form: "Snowy",
@@ -3855,7 +3855,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shuppet:
     {
         id: 353,
-        uid: 381,
+        uid: 380,
         species: "Shuppet",
         abilities: {insomnia: 1, frisk: 2},
         types: ["ghost"],
@@ -3865,7 +3865,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Banette:
     {
         id: 354,
-        uid: 382,
+        uid: 381,
         species: "Banette",
         abilities: {insomnia: 1, frisk: 2},
         types: ["ghost"],
@@ -3875,7 +3875,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Tropius:
     {
         id: 357,
-        uid: 383,
+        uid: 382,
         species: "Tropius",
         abilities: {chlorophyll: 1, solarpower: 2},
         types: ["grass", "flying"],
@@ -3885,7 +3885,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Absol:
     {
         id: 359,
-        uid: 384,
+        uid: 383,
         species: "Absol",
         abilities: {pressure: 1, superluck: 2},
         types: ["dark"],
@@ -3895,7 +3895,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Wynaut:
     {
         id: 360,
-        uid: 385,
+        uid: 384,
         species: "Wynaut",
         abilities: {shadowtag: 1},
         types: ["psychic"],
@@ -3905,7 +3905,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Snorunt:
     {
         id: 361,
-        uid: 386,
+        uid: 385,
         species: "Snorunt",
         abilities: {innerfocus: 1, icebody: 2},
         types: ["ice"],
@@ -3915,7 +3915,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Glalie:
     {
         id: 362,
-        uid: 387,
+        uid: 386,
         species: "Glalie",
         abilities: {innerfocus: 1, icebody: 2},
         types: ["ice"],
@@ -3925,7 +3925,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Spheal:
     {
         id: 363,
-        uid: 388,
+        uid: 387,
         species: "Spheal",
         abilities: {thickfat: 1, icebody: 2},
         types: ["ice", "water"],
@@ -3935,7 +3935,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Sealeo:
     {
         id: 364,
-        uid: 389,
+        uid: 388,
         species: "Sealeo",
         abilities: {thickfat: 1, icebody: 2},
         types: ["ice", "water"],
@@ -3945,7 +3945,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Walrein:
     {
         id: 365,
-        uid: 390,
+        uid: 389,
         species: "Walrein",
         abilities: {thickfat: 1, icebody: 2},
         types: ["ice", "water"],
@@ -3955,7 +3955,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Clamperl:
     {
         id: 366,
-        uid: 391,
+        uid: 390,
         species: "Clamperl",
         abilities: {shellarmor: 1},
         types: ["water"],
@@ -3965,7 +3965,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Huntail:
     {
         id: 367,
-        uid: 392,
+        uid: 391,
         species: "Huntail",
         abilities: {swiftswim: 1},
         types: ["water"],
@@ -3975,7 +3975,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gorebyss:
     {
         id: 368,
-        uid: 393,
+        uid: 392,
         species: "Gorebyss",
         abilities: {swiftswim: 1},
         types: ["water"],
@@ -3985,7 +3985,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Relicanth:
     {
         id: 369,
-        uid: 394,
+        uid: 393,
         species: "Relicanth",
         abilities: {swiftswim: 1, rockhead: 2},
         types: ["water", "rock"],
@@ -3995,7 +3995,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Luvdisc:
     {
         id: 370,
-        uid: 395,
+        uid: 394,
         species: "Luvdisc",
         abilities: {swiftswim: 1},
         types: ["water"],
@@ -4005,7 +4005,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bagon:
     {
         id: 371,
-        uid: 396,
+        uid: 395,
         species: "Bagon",
         abilities: {rockhead: 1},
         types: ["dragon"],
@@ -4015,7 +4015,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shelgon:
     {
         id: 372,
-        uid: 397,
+        uid: 396,
         species: "Shelgon",
         abilities: {rockhead: 1},
         types: ["dragon"],
@@ -4025,7 +4025,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Salamence:
     {
         id: 373,
-        uid: 398,
+        uid: 397,
         species: "Salamence",
         abilities: {intimidate: 1},
         types: ["dragon", "flying"],
@@ -4035,7 +4035,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Beldum:
     {
         id: 374,
-        uid: 399,
+        uid: 398,
         species: "Beldum",
         abilities: {clearbody: 1},
         types: ["steel", "psychic"],
@@ -4045,7 +4045,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Metang:
     {
         id: 375,
-        uid: 400,
+        uid: 399,
         species: "Metang",
         abilities: {clearbody: 1},
         types: ["steel", "psychic"],
@@ -4055,7 +4055,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Metagross:
     {
         id: 376,
-        uid: 401,
+        uid: 400,
         species: "Metagross",
         abilities: {clearbody: 1},
         types: ["steel", "psychic"],
@@ -4065,7 +4065,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Latias:
     {
         id: 380,
-        uid: 402,
+        uid: 401,
         species: "Latias",
         abilities: {levitate: 1},
         types: ["dragon", "psychic"],
@@ -4075,7 +4075,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Latios:
     {
         id: 381,
-        uid: 403,
+        uid: 402,
         species: "Latios",
         abilities: {levitate: 1},
         types: ["dragon", "psychic"],
@@ -4085,7 +4085,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kyogre:
     {
         id: 382,
-        uid: 404,
+        uid: 403,
         species: "Kyogre",
         abilities: {drizzle: 1},
         types: ["water"],
@@ -4095,7 +4095,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Groudon:
     {
         id: 383,
-        uid: 405,
+        uid: 404,
         species: "Groudon",
         abilities: {drought: 1},
         types: ["ground"],
@@ -4105,7 +4105,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rayquaza:
     {
         id: 384,
-        uid: 406,
+        uid: 405,
         species: "Rayquaza",
         abilities: {airlock: 1},
         types: ["dragon", "flying"],
@@ -4115,7 +4115,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Jirachi:
     {
         id: 385,
-        uid: 407,
+        uid: 406,
         species: "Jirachi",
         abilities: {serenegrace: 1},
         types: ["steel", "psychic"],
@@ -4125,7 +4125,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Deoxys:
     {
         id: 386,
-        uid: 408,
+        uid: 407,
         species: "Deoxys",
         baseForm: "Normal",
         otherForms: ["deoxysattack", "deoxysdefense", "deoxysspeed"],
@@ -4137,7 +4137,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Deoxys-Attack":
     {
         id: 386,
-        uid: 409,
+        uid: 408,
         species: "Deoxys-Attack",
         baseSpecies: "Deoxys",
         form: "Attack",
@@ -4150,7 +4150,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Deoxys-Defense":
     {
         id: 386,
-        uid: 410,
+        uid: 409,
         species: "Deoxys-Defense",
         baseSpecies: "Deoxys",
         form: "Defense",
@@ -4163,7 +4163,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Deoxys-Speed":
     {
         id: 386,
-        uid: 411,
+        uid: 410,
         species: "Deoxys-Speed",
         baseSpecies: "Deoxys",
         form: "Speed",
@@ -4176,7 +4176,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Turtwig:
     {
         id: 387,
-        uid: 412,
+        uid: 411,
         species: "Turtwig",
         abilities: {overgrow: 1},
         types: ["grass"],
@@ -4186,7 +4186,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Grotle:
     {
         id: 388,
-        uid: 413,
+        uid: 412,
         species: "Grotle",
         abilities: {overgrow: 1},
         types: ["grass"],
@@ -4196,7 +4196,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Torterra:
     {
         id: 389,
-        uid: 414,
+        uid: 413,
         species: "Torterra",
         abilities: {overgrow: 1},
         types: ["grass", "ground"],
@@ -4206,7 +4206,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Chimchar:
     {
         id: 390,
-        uid: 415,
+        uid: 414,
         species: "Chimchar",
         abilities: {blaze: 1},
         types: ["fire"],
@@ -4216,7 +4216,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Monferno:
     {
         id: 391,
-        uid: 416,
+        uid: 415,
         species: "Monferno",
         abilities: {blaze: 1},
         types: ["fire", "fighting"],
@@ -4226,7 +4226,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Infernape:
     {
         id: 392,
-        uid: 417,
+        uid: 416,
         species: "Infernape",
         abilities: {blaze: 1},
         types: ["fire", "fighting"],
@@ -4236,7 +4236,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Piplup:
     {
         id: 393,
-        uid: 418,
+        uid: 417,
         species: "Piplup",
         abilities: {torrent: 1},
         types: ["water"],
@@ -4246,7 +4246,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Prinplup:
     {
         id: 394,
-        uid: 419,
+        uid: 418,
         species: "Prinplup",
         abilities: {torrent: 1},
         types: ["water"],
@@ -4256,7 +4256,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Empoleon:
     {
         id: 395,
-        uid: 420,
+        uid: 419,
         species: "Empoleon",
         abilities: {torrent: 1},
         types: ["water", "steel"],
@@ -4266,7 +4266,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Staravia:
     {
         id: 397,
-        uid: 421,
+        uid: 420,
         species: "Staravia",
         abilities: {intimidate: 1},
         types: ["normal", "flying"],
@@ -4276,7 +4276,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bidoof:
     {
         id: 399,
-        uid: 422,
+        uid: 421,
         species: "Bidoof",
         abilities: {simple: 1, unaware: 2},
         types: ["normal"],
@@ -4286,7 +4286,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bibarel:
     {
         id: 400,
-        uid: 423,
+        uid: 422,
         species: "Bibarel",
         abilities: {simple: 1, unaware: 2},
         types: ["normal", "water"],
@@ -4296,7 +4296,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kricketot:
     {
         id: 401,
-        uid: 424,
+        uid: 423,
         species: "Kricketot",
         abilities: {shedskin: 1},
         types: ["bug"],
@@ -4306,7 +4306,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Kricketune:
     {
         id: 402,
-        uid: 425,
+        uid: 424,
         species: "Kricketune",
         abilities: {swarm: 1},
         types: ["bug"],
@@ -4316,7 +4316,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shinx:
     {
         id: 403,
-        uid: 426,
+        uid: 425,
         species: "Shinx",
         abilities: {rivalry: 1, intimidate: 2},
         types: ["electric"],
@@ -4326,7 +4326,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Luxio:
     {
         id: 404,
-        uid: 427,
+        uid: 426,
         species: "Luxio",
         abilities: {rivalry: 1, intimidate: 2},
         types: ["electric"],
@@ -4336,7 +4336,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Luxray:
     {
         id: 405,
-        uid: 428,
+        uid: 427,
         species: "Luxray",
         abilities: {rivalry: 1, intimidate: 2},
         types: ["electric"],
@@ -4346,7 +4346,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Budew:
     {
         id: 406,
-        uid: 429,
+        uid: 428,
         species: "Budew",
         abilities: {naturalcure: 1, poisonpoint: 2},
         types: ["grass", "poison"],
@@ -4356,7 +4356,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cranidos:
     {
         id: 408,
-        uid: 430,
+        uid: 429,
         species: "Cranidos",
         abilities: {moldbreaker: 1},
         types: ["rock"],
@@ -4366,7 +4366,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rampardos:
     {
         id: 409,
-        uid: 431,
+        uid: 430,
         species: "Rampardos",
         abilities: {moldbreaker: 1},
         types: ["rock"],
@@ -4376,7 +4376,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shieldon:
     {
         id: 410,
-        uid: 432,
+        uid: 431,
         species: "Shieldon",
         abilities: {sturdy: 1},
         types: ["rock", "steel"],
@@ -4386,7 +4386,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bastiodon:
     {
         id: 411,
-        uid: 433,
+        uid: 432,
         species: "Bastiodon",
         abilities: {sturdy: 1},
         types: ["rock", "steel"],
@@ -4396,7 +4396,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mothim:
     {
         id: 414,
-        uid: 434,
+        uid: 433,
         species: "Mothim",
         abilities: {swarm: 1},
         types: ["bug", "flying"],
@@ -4406,7 +4406,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Combee:
     {
         id: 415,
-        uid: 435,
+        uid: 434,
         species: "Combee",
         abilities: {honeygather: 1},
         types: ["bug", "flying"],
@@ -4416,7 +4416,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Vespiquen:
     {
         id: 416,
-        uid: 436,
+        uid: 435,
         species: "Vespiquen",
         abilities: {pressure: 1},
         types: ["bug", "flying"],
@@ -4426,7 +4426,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Pachirisu:
     {
         id: 417,
-        uid: 437,
+        uid: 436,
         species: "Pachirisu",
         abilities: {runaway: 1, pickup: 2},
         types: ["electric"],
@@ -4436,7 +4436,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Buizel:
     {
         id: 418,
-        uid: 438,
+        uid: 437,
         species: "Buizel",
         abilities: {swiftswim: 1},
         types: ["water"],
@@ -4446,7 +4446,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Floatzel:
     {
         id: 419,
-        uid: 439,
+        uid: 438,
         species: "Floatzel",
         abilities: {swiftswim: 1},
         types: ["water"],
@@ -4456,7 +4456,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cherubi:
     {
         id: 420,
-        uid: 440,
+        uid: 439,
         species: "Cherubi",
         abilities: {chlorophyll: 1},
         types: ["grass"],
@@ -4466,7 +4466,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Cherrim-Sunshine":
     {
         id: 421,
-        uid: 441,
+        uid: 440,
         species: "Cherrim-Sunshine",
         baseSpecies: "Cherrim",
         form: "Sunshine",
@@ -4479,7 +4479,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shellos:
     {
         id: 422,
-        uid: 442,
+        uid: 441,
         species: "Shellos",
         baseForm: "West",
         abilities: {stickyhold: 1, stormdrain: 2},
@@ -4490,7 +4490,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gastrodon:
     {
         id: 423,
-        uid: 443,
+        uid: 442,
         species: "Gastrodon",
         baseForm: "West",
         abilities: {stickyhold: 1, stormdrain: 2},
@@ -4501,7 +4501,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Ambipom:
     {
         id: 424,
-        uid: 444,
+        uid: 443,
         species: "Ambipom",
         abilities: {technician: 1, pickup: 2},
         types: ["normal"],
@@ -4511,7 +4511,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Drifloon:
     {
         id: 425,
-        uid: 445,
+        uid: 444,
         species: "Drifloon",
         abilities: {aftermath: 1, unburden: 2},
         types: ["ghost", "flying"],
@@ -4521,7 +4521,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Drifblim:
     {
         id: 426,
-        uid: 446,
+        uid: 445,
         species: "Drifblim",
         abilities: {aftermath: 1, unburden: 2},
         types: ["ghost", "flying"],
@@ -4531,7 +4531,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Buneary:
     {
         id: 427,
-        uid: 447,
+        uid: 446,
         species: "Buneary",
         abilities: {runaway: 1, klutz: 2},
         types: ["normal"],
@@ -4541,7 +4541,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lopunny:
     {
         id: 428,
-        uid: 448,
+        uid: 447,
         species: "Lopunny",
         abilities: {cutecharm: 1, klutz: 2},
         types: ["normal"],
@@ -4551,7 +4551,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mismagius:
     {
         id: 429,
-        uid: 449,
+        uid: 448,
         species: "Mismagius",
         abilities: {levitate: 1},
         types: ["ghost"],
@@ -4561,7 +4561,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Honchkrow:
     {
         id: 430,
-        uid: 450,
+        uid: 449,
         species: "Honchkrow",
         abilities: {insomnia: 1, superluck: 2},
         types: ["dark", "flying"],
@@ -4571,7 +4571,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Glameow:
     {
         id: 431,
-        uid: 451,
+        uid: 450,
         species: "Glameow",
         abilities: {limber: 1, owntempo: 2},
         types: ["normal"],
@@ -4581,7 +4581,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Purugly:
     {
         id: 432,
-        uid: 452,
+        uid: 451,
         species: "Purugly",
         abilities: {thickfat: 1, owntempo: 2},
         types: ["normal"],
@@ -4591,7 +4591,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Chingling:
     {
         id: 433,
-        uid: 453,
+        uid: 452,
         species: "Chingling",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -4601,7 +4601,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Stunky:
     {
         id: 434,
-        uid: 454,
+        uid: 453,
         species: "Stunky",
         abilities: {stench: 1, aftermath: 2},
         types: ["poison", "dark"],
@@ -4611,7 +4611,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Skuntank:
     {
         id: 435,
-        uid: 455,
+        uid: 454,
         species: "Skuntank",
         abilities: {stench: 1, aftermath: 2},
         types: ["poison", "dark"],
@@ -4621,7 +4621,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bronzor:
     {
         id: 436,
-        uid: 456,
+        uid: 455,
         species: "Bronzor",
         abilities: {levitate: 1, heatproof: 2},
         types: ["steel", "psychic"],
@@ -4631,7 +4631,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bronzong:
     {
         id: 437,
-        uid: 457,
+        uid: 456,
         species: "Bronzong",
         abilities: {levitate: 1, heatproof: 2},
         types: ["steel", "psychic"],
@@ -4641,7 +4641,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Bonsly:
     {
         id: 438,
-        uid: 458,
+        uid: 457,
         species: "Bonsly",
         abilities: {sturdy: 1, rockhead: 2},
         types: ["rock"],
@@ -4651,7 +4651,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Happiny:
     {
         id: 440,
-        uid: 459,
+        uid: 458,
         species: "Happiny",
         abilities: {naturalcure: 1, serenegrace: 2},
         types: ["normal"],
@@ -4661,7 +4661,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Chatot:
     {
         id: 441,
-        uid: 460,
+        uid: 459,
         species: "Chatot",
         abilities: {keeneye: 1, tangledfeet: 2},
         types: ["normal", "flying"],
@@ -4671,7 +4671,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Spiritomb:
     {
         id: 442,
-        uid: 461,
+        uid: 460,
         species: "Spiritomb",
         abilities: {pressure: 1},
         types: ["ghost", "dark"],
@@ -4681,7 +4681,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gible:
     {
         id: 443,
-        uid: 462,
+        uid: 461,
         species: "Gible",
         abilities: {sandveil: 1},
         types: ["dragon", "ground"],
@@ -4691,7 +4691,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gabite:
     {
         id: 444,
-        uid: 463,
+        uid: 462,
         species: "Gabite",
         abilities: {sandveil: 1},
         types: ["dragon", "ground"],
@@ -4701,7 +4701,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Garchomp:
     {
         id: 445,
-        uid: 464,
+        uid: 463,
         species: "Garchomp",
         abilities: {sandveil: 1},
         types: ["dragon", "ground"],
@@ -4711,7 +4711,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Munchlax:
     {
         id: 446,
-        uid: 465,
+        uid: 464,
         species: "Munchlax",
         abilities: {pickup: 1, thickfat: 2},
         types: ["normal"],
@@ -4721,7 +4721,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Riolu:
     {
         id: 447,
-        uid: 466,
+        uid: 465,
         species: "Riolu",
         abilities: {steadfast: 1, innerfocus: 2},
         types: ["fighting"],
@@ -4731,7 +4731,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lucario:
     {
         id: 448,
-        uid: 467,
+        uid: 466,
         species: "Lucario",
         abilities: {steadfast: 1, innerfocus: 2},
         types: ["fighting", "steel"],
@@ -4741,7 +4741,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hippopotas:
     {
         id: 449,
-        uid: 468,
+        uid: 467,
         species: "Hippopotas",
         abilities: {sandstream: 1},
         types: ["ground"],
@@ -4751,7 +4751,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Hippowdon:
     {
         id: 450,
-        uid: 469,
+        uid: 468,
         species: "Hippowdon",
         abilities: {sandstream: 1},
         types: ["ground"],
@@ -4761,7 +4761,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Skorupi:
     {
         id: 451,
-        uid: 470,
+        uid: 469,
         species: "Skorupi",
         abilities: {battlearmor: 1, sniper: 2},
         types: ["poison", "bug"],
@@ -4771,7 +4771,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Drapion:
     {
         id: 452,
-        uid: 471,
+        uid: 470,
         species: "Drapion",
         abilities: {battlearmor: 1, sniper: 2},
         types: ["poison", "dark"],
@@ -4781,7 +4781,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Croagunk:
     {
         id: 453,
-        uid: 472,
+        uid: 471,
         species: "Croagunk",
         abilities: {anticipation: 1, dryskin: 2},
         types: ["poison", "fighting"],
@@ -4791,7 +4791,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Toxicroak:
     {
         id: 454,
-        uid: 473,
+        uid: 472,
         species: "Toxicroak",
         abilities: {anticipation: 1, dryskin: 2},
         types: ["poison", "fighting"],
@@ -4801,7 +4801,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Carnivine:
     {
         id: 455,
-        uid: 474,
+        uid: 473,
         species: "Carnivine",
         abilities: {levitate: 1},
         types: ["grass"],
@@ -4811,7 +4811,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Finneon:
     {
         id: 456,
-        uid: 475,
+        uid: 474,
         species: "Finneon",
         abilities: {swiftswim: 1, stormdrain: 2},
         types: ["water"],
@@ -4821,7 +4821,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lumineon:
     {
         id: 457,
-        uid: 476,
+        uid: 475,
         species: "Lumineon",
         abilities: {swiftswim: 1, stormdrain: 2},
         types: ["water"],
@@ -4831,7 +4831,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mantyke:
     {
         id: 458,
-        uid: 477,
+        uid: 476,
         species: "Mantyke",
         abilities: {swiftswim: 1, waterabsorb: 2},
         types: ["water", "flying"],
@@ -4841,7 +4841,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Snover:
     {
         id: 459,
-        uid: 478,
+        uid: 477,
         species: "Snover",
         abilities: {snowwarning: 1},
         types: ["grass", "ice"],
@@ -4851,7 +4851,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Abomasnow:
     {
         id: 460,
-        uid: 479,
+        uid: 478,
         species: "Abomasnow",
         abilities: {snowwarning: 1},
         types: ["grass", "ice"],
@@ -4861,7 +4861,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Weavile:
     {
         id: 461,
-        uid: 480,
+        uid: 479,
         species: "Weavile",
         abilities: {pressure: 1},
         types: ["dark", "ice"],
@@ -4871,7 +4871,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Magnezone:
     {
         id: 462,
-        uid: 481,
+        uid: 480,
         species: "Magnezone",
         abilities: {magnetpull: 1, sturdy: 2},
         types: ["electric", "steel"],
@@ -4881,7 +4881,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Lickilicky:
     {
         id: 463,
-        uid: 482,
+        uid: 481,
         species: "Lickilicky",
         abilities: {owntempo: 1, oblivious: 2},
         types: ["normal"],
@@ -4891,7 +4891,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rhyperior:
     {
         id: 464,
-        uid: 483,
+        uid: 482,
         species: "Rhyperior",
         abilities: {lightningrod: 1, solidrock: 2},
         types: ["ground", "rock"],
@@ -4901,7 +4901,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Tangrowth:
     {
         id: 465,
-        uid: 484,
+        uid: 483,
         species: "Tangrowth",
         abilities: {chlorophyll: 1, leafguard: 2},
         types: ["grass"],
@@ -4911,7 +4911,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Electivire:
     {
         id: 466,
-        uid: 485,
+        uid: 484,
         species: "Electivire",
         abilities: {motordrive: 1},
         types: ["electric"],
@@ -4921,7 +4921,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Magmortar:
     {
         id: 467,
-        uid: 486,
+        uid: 485,
         species: "Magmortar",
         abilities: {flamebody: 1},
         types: ["fire"],
@@ -4931,7 +4931,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Yanmega:
     {
         id: 469,
-        uid: 487,
+        uid: 486,
         species: "Yanmega",
         abilities: {speedboost: 1, tintedlens: 2},
         types: ["bug", "flying"],
@@ -4941,7 +4941,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Leafeon:
     {
         id: 470,
-        uid: 488,
+        uid: 487,
         species: "Leafeon",
         abilities: {leafguard: 1},
         types: ["grass"],
@@ -4951,7 +4951,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Glaceon:
     {
         id: 471,
-        uid: 489,
+        uid: 488,
         species: "Glaceon",
         abilities: {snowcloak: 1},
         types: ["ice"],
@@ -4961,7 +4961,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gliscor:
     {
         id: 472,
-        uid: 490,
+        uid: 489,
         species: "Gliscor",
         abilities: {hypercutter: 1, sandveil: 2},
         types: ["ground", "flying"],
@@ -4971,7 +4971,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mamoswine:
     {
         id: 473,
-        uid: 491,
+        uid: 490,
         species: "Mamoswine",
         abilities: {oblivious: 1, snowcloak: 2},
         types: ["ice", "ground"],
@@ -4981,7 +4981,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Porygon-Z":
     {
         id: 474,
-        uid: 492,
+        uid: 491,
         species: "Porygon-Z",
         abilities: {adaptability: 1, download: 2},
         types: ["normal"],
@@ -4991,7 +4991,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Gallade:
     {
         id: 475,
-        uid: 493,
+        uid: 492,
         species: "Gallade",
         abilities: {steadfast: 1},
         types: ["psychic", "fighting"],
@@ -5001,7 +5001,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Probopass:
     {
         id: 476,
-        uid: 494,
+        uid: 493,
         species: "Probopass",
         abilities: {sturdy: 1, magnetpull: 2},
         types: ["rock", "steel"],
@@ -5011,7 +5011,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Froslass:
     {
         id: 478,
-        uid: 495,
+        uid: 494,
         species: "Froslass",
         abilities: {snowcloak: 1},
         types: ["ice", "ghost"],
@@ -5021,7 +5021,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Rotom:
     {
         id: 479,
-        uid: 496,
+        uid: 495,
         species: "Rotom",
         otherForms:
         [
@@ -5035,7 +5035,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Uxie:
     {
         id: 480,
-        uid: 497,
+        uid: 496,
         species: "Uxie",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -5045,7 +5045,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Mesprit:
     {
         id: 481,
-        uid: 498,
+        uid: 497,
         species: "Mesprit",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -5055,7 +5055,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Azelf:
     {
         id: 482,
-        uid: 499,
+        uid: 498,
         species: "Azelf",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -5065,7 +5065,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Dialga:
     {
         id: 483,
-        uid: 500,
+        uid: 499,
         species: "Dialga",
         abilities: {pressure: 1},
         types: ["steel", "dragon"],
@@ -5075,7 +5075,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Palkia:
     {
         id: 484,
-        uid: 501,
+        uid: 500,
         species: "Palkia",
         abilities: {pressure: 1},
         types: ["water", "dragon"],
@@ -5085,7 +5085,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Regigigas:
     {
         id: 486,
-        uid: 502,
+        uid: 501,
         species: "Regigigas",
         abilities: {slowstart: 1},
         types: ["normal"],
@@ -5095,7 +5095,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Giratina:
     {
         id: 487,
-        uid: 503,
+        uid: 502,
         species: "Giratina",
         baseForm: "Altered",
         otherForms: ["giratinaorigin"],
@@ -5107,7 +5107,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Giratina-Origin":
     {
         id: 487,
-        uid: 504,
+        uid: 503,
         species: "Giratina-Origin",
         baseSpecies: "Giratina",
         form: "Origin",
@@ -5120,7 +5120,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Cresselia:
     {
         id: 488,
-        uid: 505,
+        uid: 504,
         species: "Cresselia",
         abilities: {levitate: 1},
         types: ["psychic"],
@@ -5130,7 +5130,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Phione:
     {
         id: 489,
-        uid: 506,
+        uid: 505,
         species: "Phione",
         abilities: {hydration: 1},
         types: ["water"],
@@ -5140,7 +5140,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Manaphy:
     {
         id: 490,
-        uid: 507,
+        uid: 506,
         species: "Manaphy",
         abilities: {hydration: 1},
         types: ["water"],
@@ -5150,7 +5150,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Darkrai:
     {
         id: 491,
-        uid: 508,
+        uid: 507,
         species: "Darkrai",
         abilities: {baddreams: 1},
         types: ["dark"],
@@ -5160,7 +5160,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     Shaymin:
     {
         id: 492,
-        uid: 509,
+        uid: 508,
         species: "Shaymin",
         baseForm: "Land",
         otherForms: ["shayminsky"],
@@ -5172,7 +5172,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Shaymin-Sky":
     {
         id: 492,
-        uid: 510,
+        uid: 509,
         species: "Shaymin-Sky",
         baseSpecies: "Shaymin",
         form: "Sky",
@@ -5185,7 +5185,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Bug":
     {
         id: 493,
-        uid: 511,
+        uid: 510,
         species: "Arceus-Bug",
         baseSpecies: "Arceus",
         form: "Bug",
@@ -5198,7 +5198,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Dark":
     {
         id: 493,
-        uid: 512,
+        uid: 511,
         species: "Arceus-Dark",
         baseSpecies: "Arceus",
         form: "Dark",
@@ -5211,7 +5211,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Dragon":
     {
         id: 493,
-        uid: 513,
+        uid: 512,
         species: "Arceus-Dragon",
         baseSpecies: "Arceus",
         form: "Dragon",
@@ -5224,7 +5224,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Electric":
     {
         id: 493,
-        uid: 514,
+        uid: 513,
         species: "Arceus-Electric",
         baseSpecies: "Arceus",
         form: "Electric",
@@ -5237,7 +5237,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Fighting":
     {
         id: 493,
-        uid: 515,
+        uid: 514,
         species: "Arceus-Fighting",
         baseSpecies: "Arceus",
         form: "Fighting",
@@ -5250,7 +5250,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Fire":
     {
         id: 493,
-        uid: 516,
+        uid: 515,
         species: "Arceus-Fire",
         baseSpecies: "Arceus",
         form: "Fire",
@@ -5263,7 +5263,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Flying":
     {
         id: 493,
-        uid: 517,
+        uid: 516,
         species: "Arceus-Flying",
         baseSpecies: "Arceus",
         form: "Flying",
@@ -5276,7 +5276,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Ghost":
     {
         id: 493,
-        uid: 518,
+        uid: 517,
         species: "Arceus-Ghost",
         baseSpecies: "Arceus",
         form: "Ghost",
@@ -5289,7 +5289,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Grass":
     {
         id: 493,
-        uid: 519,
+        uid: 518,
         species: "Arceus-Grass",
         baseSpecies: "Arceus",
         form: "Grass",
@@ -5302,7 +5302,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Ground":
     {
         id: 493,
-        uid: 520,
+        uid: 519,
         species: "Arceus-Ground",
         baseSpecies: "Arceus",
         form: "Ground",
@@ -5315,7 +5315,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Ice":
     {
         id: 493,
-        uid: 521,
+        uid: 520,
         species: "Arceus-Ice",
         baseSpecies: "Arceus",
         form: "Ice",
@@ -5328,7 +5328,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Poison":
     {
         id: 493,
-        uid: 522,
+        uid: 521,
         species: "Arceus-Poison",
         baseSpecies: "Arceus",
         form: "Poison",
@@ -5341,7 +5341,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Psychic":
     {
         id: 493,
-        uid: 523,
+        uid: 522,
         species: "Arceus-Psychic",
         baseSpecies: "Arceus",
         form: "Psychic",
@@ -5354,7 +5354,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Rock":
     {
         id: 493,
-        uid: 524,
+        uid: 523,
         species: "Arceus-Rock",
         baseSpecies: "Arceus",
         form: "Rock",
@@ -5367,7 +5367,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Steel":
     {
         id: 493,
-        uid: 525,
+        uid: 524,
         species: "Arceus-Steel",
         baseSpecies: "Arceus",
         form: "Steel",
@@ -5380,7 +5380,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     "Arceus-Water":
     {
         id: 493,
-        uid: 526,
+        uid: 525,
         species: "Arceus-Water",
         baseSpecies: "Arceus",
         form: "Water",
@@ -5395,708 +5395,711 @@ const pokemon: {readonly [species: string]: PokemonData} =
 /** Contains data for every move in the supported generation. */
 const moves: {readonly [name: string]: MoveData} =
 {
-    absorb: {uid: 1, pp: 40},
-    acupressure: {uid: 2, pp: 48},
-    armthrust: {uid: 3, pp: 32},
-    aromatherapy: {uid: 4, pp: 8},
-    aquaring: {uid: 5, pp: 32},
-    assist: {uid: 6, pp: 32},
-    assurance: {uid: 7, pp: 16},
-    avalanche: {uid: 8, pp: 16},
-    barrage: {uid: 9, pp: 32},
-    beatup: {uid: 10, pp: 16},
-    bide: {uid: 11, pp: 16},
-    bind: {uid: 12, pp: 32},
-    block: {uid: 13, pp: 8},
-    bonerush: {uid: 14, pp: 16},
-    bonemerang: {uid: 15, pp: 16},
-    bounce: {uid: 16, pp: 8},
-    bravebird: {uid: 17, pp: 24},
-    brickbreak: {uid: 18, pp: 24},
-    bugbite: {uid: 19, pp: 32},
-    bulletseed: {uid: 20, pp: 48},
-    camouflage: {uid: 21, pp: 32},
-    chatter: {uid: 22, pp: 32},
-    clamp: {uid: 23, pp: 16},
-    cometpunch: {uid: 24, pp: 24},
-    conversion: {uid: 25, pp: 48},
-    conversion2: {uid: 26, pp: 48},
-    copycat: {uid: 27, pp: 32},
-    cottonspore: {uid: 28, pp: 64},
-    counter: {uid: 29, pp: 32},
-    covet: {uid: 30, pp: 64},
-    crabhammer: {uid: 31, pp: 16},
-    crushgrip: {uid: 32, pp: 8},
-    curse: {uid: 33, pp: 16},
-    defog: {uid: 34, pp: 24},
-    detect: {uid: 35, pp: 8},
-    dig: {uid: 36, pp: 16},
-    disable: {uid: 37, pp: 32},
-    dive: {uid: 38, pp: 16},
-    doomdesire: {uid: 39, pp: 8},
-    doubleedge: {uid: 40, pp: 24},
-    doublehit: {uid: 41, pp: 16},
-    doublekick: {uid: 42, pp: 48},
-    doubleslap: {uid: 43, pp: 16},
-    drainpunch: {uid: 44, pp: 8},
-    dreameater: {uid: 45, pp: 24},
-    earthquake: {uid: 46, pp: 16},
-    embargo: {uid: 47, pp: 24},
-    encore: {uid: 48, pp: 8},
-    endeavor: {uid: 49, pp: 8},
-    endure: {uid: 50, pp: 16},
-    explosion: {uid: 51, pp: 8},
-    extremespeed: {uid: 52, pp: 8},
-    fakeout: {uid: 53, pp: 16},
-    feint: {uid: 54, pp: 16},
-    firefang: {uid: 55, pp: 24},
-    firespin: {uid: 56, pp: 24},
-    flail: {uid: 57, pp: 24},
-    flareblitz: {uid: 58, pp: 24},
-    fling: {uid: 59, pp: 16},
-    fly: {uid: 60, pp: 24},
-    focuspunch: {uid: 61, pp: 32},
-    followme: {uid: 62, pp: 32},
-    foresight: {uid: 63, pp: 64},
-    furyattack: {uid: 64, pp: 32},
-    furycutter: {uid: 65, pp: 32},
-    furyswipes: {uid: 66, pp: 24},
-    futuresight: {uid: 67, pp: 24},
-    gigadrain: {uid: 68, pp: 16},
-    glare: {uid: 69, pp: 48},
-    gravity: {uid: 70, pp: 8},
-    growth: {uid: 71, pp: 64},
-    gust: {uid: 72, pp: 56},
-    hail: {uid: 73, pp: 16},
-    headsmash: {uid: 74, pp: 8},
-    healbell: {uid: 75, pp: 8},
-    healblock: {uid: 76, pp: 24},
-    healingwish: {uid: 77, pp: 16},
-    healorder: {uid: 78, pp: 16},
-    highjumpkick: {uid: 79, pp: 32},
-    iciclespear: {uid: 80, pp: 48},
-    imprison: {uid: 81, pp: 16},
-    ingrain: {uid: 82, pp: 32},
-    jumpkick: {uid: 83, pp: 40},
-    knockoff: {uid: 84, pp: 32},
-    lastresort: {uid: 85, pp: 8},
-    leechlife: {uid: 86, pp: 24},
-    lightscreen: {uid: 87, pp: 48},
-    lockon: {uid: 88, pp: 8},
-    luckychant: {uid: 89, pp: 48},
-    lunardance: {uid: 90, pp: 16},
-    magiccoat: {uid: 91, pp: 24},
-    magmastorm: {uid: 92, pp: 8},
-    magnetrise: {uid: 93, pp: 16},
-    magnitude: {uid: 94, pp: 48},
-    meanlook: {uid: 95, pp: 8},
-    mefirst: {uid: 96, pp: 32},
-    megadrain: {uid: 97, pp: 24},
-    memento: {uid: 98, pp: 16},
-    metalburst: {uid: 99, pp: 16},
-    metronome: {uid: 100, pp: 16},
-    milkdrink: {uid: 101, pp: 16},
-    mimic: {uid: 102, pp: 16},
-    mindreader: {uid: 103, pp: 8},
-    minimize: {uid: 104, pp: 32},
-    miracleeye: {uid: 105, pp: 64},
-    mirrorcoat: {uid: 106, pp: 32},
-    mirrormove: {uid: 107, pp: 32},
-    moonlight: {uid: 108, pp: 8},
-    morningsun: {uid: 109, pp: 8},
-    mudsport: {uid: 110, pp: 24},
-    naturalgift: {uid: 111, pp: 24},
-    naturepower: {uid: 112, pp: 32},
-    odorsleuth: {uid: 113, pp: 64},
-    outrage: {uid: 114, pp: 24},
-    payback: {uid: 115, pp: 16},
-    petaldance: {uid: 116, pp: 32},
-    pinmissile: {uid: 117, pp: 32},
-    pluck: {uid: 118, pp: 32},
-    poisongas: {uid: 119, pp: 64},
-    powertrick: {uid: 120, pp: 16},
-    protect: {uid: 121, pp: 16},
-    psychup: {uid: 122, pp: 16},
-    psywave: {uid: 123, pp: 24},
-    pursuit: {uid: 124, pp: 32},
-    rapidspin: {uid: 125, pp: 64},
-    razorwind: {uid: 126, pp: 16},
-    recover: {uid: 127, pp: 16},
-    recycle: {uid: 128, pp: 16},
-    reflect: {uid: 129, pp: 32},
-    revenge: {uid: 130, pp: 16},
-    reversal: {uid: 131, pp: 24},
-    roar: {uid: 132, pp: 32},
-    rockblast: {uid: 133, pp: 16},
-    roleplay: {uid: 134, pp: 16},
-    roost: {uid: 135, pp: 16},
-    sandtomb: {uid: 136, pp: 24},
-    sandstorm: {uid: 137, pp: 16},
-    scaryface: {uid: 138, pp: 16},
-    secretpower: {uid: 139, pp: 32},
-    selfdestruct: {uid: 140, pp: 8},
-    sketch: {uid: 141, pp: 1},
-    skillswap: {uid: 142, pp: 16},
-    skyuppercut: {uid: 143, pp: 24},
-    slackoff: {uid: 144, pp: 16},
-    sleeptalk: {uid: 145, pp: 16},
-    smellingsalts: {uid: 146, pp: 16},
-    snatch: {uid: 147, pp: 16},
-    softboiled: {uid: 148, pp: 16},
-    solarbeam: {uid: 149, pp: 16},
-    spiderweb: {uid: 150, pp: 16},
-    spikecannon: {uid: 151, pp: 24},
-    spikes: {uid: 152, pp: 32},
-    spite: {uid: 153, pp: 16},
-    spitup: {uid: 154, pp: 16},
-    stealthrock: {uid: 155, pp: 32},
-    stomp: {uid: 156, pp: 32},
-    struggle: {uid: 157, pp: 1},
-    submission: {uid: 158, pp: 40},
-    suckerpunch: {uid: 159, pp: 8},
-    surf: {uid: 160, pp: 24},
-    swallow: {uid: 161, pp: 16},
-    switcheroo: {uid: 162, pp: 16},
-    synthesis: {uid: 163, pp: 8},
-    tackle: {uid: 164, pp: 56},
-    tailglow: {uid: 165, pp: 32},
-    tailwind: {uid: 166, pp: 48},
-    takedown: {uid: 167, pp: 32},
-    taunt: {uid: 168, pp: 32},
-    thief: {uid: 169, pp: 16},
-    thrash: {uid: 170, pp: 32},
-    thunder: {uid: 171, pp: 16},
-    torment: {uid: 172, pp: 24},
-    toxic: {uid: 173, pp: 16},
-    toxicspikes: {uid: 174, pp: 32},
-    transform: {uid: 175, pp: 16},
-    trick: {uid: 176, pp: 16},
-    trickroom: {uid: 177, pp: 8},
-    triplekick: {uid: 178, pp: 16},
-    twineedle: {uid: 179, pp: 32},
-    twister: {uid: 180, pp: 32},
-    uproar: {uid: 181, pp: 16},
-    uturn: {uid: 182, pp: 32},
-    volttackle: {uid: 183, pp: 24},
-    wakeupslap: {uid: 184, pp: 16},
-    watersport: {uid: 185, pp: 24},
-    whirlpool: {uid: 186, pp: 24},
-    whirlwind: {uid: 187, pp: 32},
-    wish: {uid: 188, pp: 16},
-    woodhammer: {uid: 189, pp: 24},
-    worryseed: {uid: 190, pp: 16},
-    wrap: {uid: 191, pp: 32},
-    wringout: {uid: 192, pp: 8},
-    acidarmor: {uid: 193, pp: 64},
-    aircutter: {uid: 194, pp: 40},
-    airslash: {uid: 195, pp: 32},
-    attract: {uid: 196, pp: 24},
-    aurasphere: {uid: 197, pp: 32},
-    barrier: {uid: 198, pp: 48},
-    blizzard: {uid: 199, pp: 8},
-    bodyslam: {uid: 200, pp: 24},
-    bubble: {uid: 201, pp: 48},
-    bugbuzz: {uid: 202, pp: 16},
-    charm: {uid: 203, pp: 32},
-    dracometeor: {uid: 204, pp: 8},
-    dragonpulse: {uid: 205, pp: 16},
-    dragonrush: {uid: 206, pp: 16},
-    energyball: {uid: 207, pp: 16},
-    extrasensory: {uid: 208, pp: 48},
-    facade: {uid: 209, pp: 32},
-    fireblast: {uid: 210, pp: 8},
-    flamethrower: {uid: 211, pp: 24},
-    grasswhistle: {uid: 212, pp: 24},
-    growl: {uid: 213, pp: 64},
-    gunkshot: {uid: 214, pp: 8},
-    gyroball: {uid: 215, pp: 8},
-    heatwave: {uid: 216, pp: 16},
-    hiddenpower: {uid: 217, pp: 24},
-    hiddenpowerbug: {uid: 218, pp: 24},
-    hiddenpowerdark: {uid: 219, pp: 24},
-    hiddenpowerdragon: {uid: 220, pp: 24},
-    hiddenpowerelectric: {uid: 221, pp: 24},
-    hiddenpowerfighting: {uid: 222, pp: 24},
-    hiddenpowerfire: {uid: 223, pp: 24},
-    hiddenpowerflying: {uid: 224, pp: 24},
-    hiddenpowerghost: {uid: 225, pp: 24},
-    hiddenpowergrass: {uid: 226, pp: 24},
-    hiddenpowerground: {uid: 227, pp: 24},
-    hiddenpowerice: {uid: 228, pp: 24},
-    hiddenpowerpoison: {uid: 229, pp: 24},
-    hiddenpowerpsychic: {uid: 230, pp: 24},
-    hiddenpowerrock: {uid: 231, pp: 24},
-    hiddenpowersteel: {uid: 232, pp: 24},
-    hiddenpowerwater: {uid: 233, pp: 24},
-    hydropump: {uid: 234, pp: 8},
-    hypervoice: {uid: 235, pp: 16},
-    icebeam: {uid: 236, pp: 16},
-    leafstorm: {uid: 237, pp: 8},
-    lick: {uid: 238, pp: 48},
-    metalsound: {uid: 239, pp: 64},
-    meteormash: {uid: 240, pp: 16},
-    muddywater: {uid: 241, pp: 16},
-    overheat: {uid: 242, pp: 8},
-    perishsong: {uid: 243, pp: 8},
-    poisonfang: {uid: 244, pp: 24},
-    poisonpowder: {uid: 245, pp: 56},
-    powergem: {uid: 246, pp: 32},
-    psychoshift: {uid: 247, pp: 16},
-    rocktomb: {uid: 248, pp: 16},
-    screech: {uid: 249, pp: 64},
-    shadowforce: {uid: 250, pp: 8},
-    sing: {uid: 251, pp: 24},
-    skullbash: {uid: 252, pp: 24},
-    sleeppowder: {uid: 253, pp: 24},
-    smog: {uid: 254, pp: 32},
-    snore: {uid: 255, pp: 24},
-    spore: {uid: 256, pp: 24},
-    stringshot: {uid: 257, pp: 64},
-    stunspore: {uid: 258, pp: 48},
-    substitute: {uid: 259, pp: 16},
-    supersonic: {uid: 260, pp: 32},
-    sweetkiss: {uid: 261, pp: 16},
-    sweetscent: {uid: 262, pp: 32},
-    swordsdance: {uid: 263, pp: 48},
-    thunderbolt: {uid: 264, pp: 24},
-    vinewhip: {uid: 265, pp: 24},
-    weatherball: {uid: 266, pp: 16},
-    willowisp: {uid: 267, pp: 24},
-    darkvoid: {uid: 268, pp: 16},
-    destinybond: {uid: 269, pp: 8},
-    gastroacid: {uid: 270, pp: 16},
-    iceball: {uid: 271, pp: 32},
-    rollout: {uid: 272, pp: 32},
-    sheercold: {uid: 273, pp: 8},
-    swagger: {uid: 274, pp: 24},
-    thunderwave: {uid: 275, pp: 32},
-    acid: {uid: 276, pp: 48},
-    aerialace: {uid: 277, pp: 32},
-    aeroblast: {uid: 278, pp: 8},
-    agility: {uid: 279, pp: 48},
-    amnesia: {uid: 280, pp: 32},
-    ancientpower: {uid: 281, pp: 8},
-    aquajet: {uid: 282, pp: 32},
-    aquatail: {uid: 283, pp: 16},
-    astonish: {uid: 284, pp: 24},
-    attackorder: {uid: 285, pp: 24},
-    aurorabeam: {uid: 286, pp: 32},
-    batonpass: {uid: 287, pp: 64},
-    bellydrum: {uid: 288, pp: 16},
-    bite: {uid: 289, pp: 40},
-    blastburn: {uid: 290, pp: 8},
-    blazekick: {uid: 291, pp: 16},
-    boneclub: {uid: 292, pp: 32},
-    brine: {uid: 293, pp: 16},
-    bubblebeam: {uid: 294, pp: 32},
-    bulkup: {uid: 295, pp: 32},
-    bulletpunch: {uid: 296, pp: 48},
-    calmmind: {uid: 297, pp: 32},
-    captivate: {uid: 298, pp: 32},
-    charge: {uid: 299, pp: 32},
-    chargebeam: {uid: 300, pp: 16},
-    closecombat: {uid: 301, pp: 8},
-    confuseray: {uid: 302, pp: 16},
-    confusion: {uid: 303, pp: 40},
-    constrict: {uid: 304, pp: 56},
-    cosmicpower: {uid: 305, pp: 32},
-    crosschop: {uid: 306, pp: 8},
-    crosspoison: {uid: 307, pp: 32},
-    crunch: {uid: 308, pp: 24},
-    crushclaw: {uid: 309, pp: 16},
-    cut: {uid: 310, pp: 48},
-    darkpulse: {uid: 311, pp: 24},
-    defendorder: {uid: 312, pp: 16},
-    defensecurl: {uid: 313, pp: 64},
-    discharge: {uid: 314, pp: 24},
-    dizzypunch: {uid: 315, pp: 16},
-    doubleteam: {uid: 316, pp: 24},
-    dragonbreath: {uid: 317, pp: 32},
-    dragonclaw: {uid: 318, pp: 24},
-    dragondance: {uid: 319, pp: 32},
-    dragonrage: {uid: 320, pp: 16},
-    drillpeck: {uid: 321, pp: 32},
-    dynamicpunch: {uid: 322, pp: 8},
-    earthpower: {uid: 323, pp: 16},
-    eggbomb: {uid: 324, pp: 16},
-    ember: {uid: 325, pp: 40},
-    eruption: {uid: 326, pp: 8},
-    feintattack: {uid: 327, pp: 32},
-    faketears: {uid: 328, pp: 32},
-    falseswipe: {uid: 329, pp: 64},
-    featherdance: {uid: 330, pp: 24},
-    firepunch: {uid: 331, pp: 24},
-    fissure: {uid: 332, pp: 8},
-    flamewheel: {uid: 333, pp: 40},
-    flash: {uid: 334, pp: 32},
-    flashcannon: {uid: 335, pp: 16},
-    flatter: {uid: 336, pp: 24},
-    focusblast: {uid: 337, pp: 8},
-    focusenergy: {uid: 338, pp: 48},
-    forcepalm: {uid: 339, pp: 16},
-    frenzyplant: {uid: 340, pp: 8},
-    frustration: {uid: 341, pp: 32},
-    gigaimpact: {uid: 342, pp: 8},
-    grassknot: {uid: 343, pp: 32},
-    grudge: {uid: 344, pp: 8},
-    guardswap: {uid: 345, pp: 16},
-    guillotine: {uid: 346, pp: 8},
-    hammerarm: {uid: 347, pp: 16},
-    harden: {uid: 348, pp: 48},
-    haze: {uid: 349, pp: 48},
-    headbutt: {uid: 350, pp: 24},
-    heartswap: {uid: 351, pp: 16},
-    helpinghand: {uid: 352, pp: 32},
-    hornattack: {uid: 353, pp: 40},
-    horndrill: {uid: 354, pp: 8},
-    howl: {uid: 355, pp: 64},
-    hydrocannon: {uid: 356, pp: 8},
-    hyperbeam: {uid: 357, pp: 8},
-    hyperfang: {uid: 358, pp: 24},
-    hypnosis: {uid: 359, pp: 32},
-    icefang: {uid: 360, pp: 24},
-    icepunch: {uid: 361, pp: 24},
-    iceshard: {uid: 362, pp: 48},
-    icywind: {uid: 363, pp: 24},
-    irondefense: {uid: 364, pp: 24},
-    ironhead: {uid: 365, pp: 24},
-    irontail: {uid: 366, pp: 24},
-    judgment: {uid: 367, pp: 16},
-    karatechop: {uid: 368, pp: 40},
-    kinesis: {uid: 369, pp: 24},
-    lavaplume: {uid: 370, pp: 24},
-    leafblade: {uid: 371, pp: 24},
-    leechseed: {uid: 372, pp: 16},
-    leer: {uid: 373, pp: 48},
-    lovelykiss: {uid: 374, pp: 16},
-    lowkick: {uid: 375, pp: 32},
-    lusterpurge: {uid: 376, pp: 8},
-    machpunch: {uid: 377, pp: 48},
-    magicalleaf: {uid: 378, pp: 32},
-    magnetbomb: {uid: 379, pp: 32},
-    meditate: {uid: 380, pp: 64},
-    megakick: {uid: 381, pp: 8},
-    megapunch: {uid: 382, pp: 32},
-    megahorn: {uid: 383, pp: 16},
-    metalclaw: {uid: 384, pp: 56},
-    mirrorshot: {uid: 385, pp: 16},
-    mist: {uid: 386, pp: 48},
-    mistball: {uid: 387, pp: 8},
-    mudslap: {uid: 388, pp: 16},
-    mudbomb: {uid: 389, pp: 16},
-    mudshot: {uid: 390, pp: 24},
-    nastyplot: {uid: 391, pp: 32},
-    needlearm: {uid: 392, pp: 24},
-    nightshade: {uid: 393, pp: 24},
-    nightslash: {uid: 394, pp: 24},
-    nightmare: {uid: 395, pp: 24},
-    octazooka: {uid: 396, pp: 16},
-    ominouswind: {uid: 397, pp: 8},
-    painsplit: {uid: 398, pp: 32},
-    payday: {uid: 399, pp: 32},
-    peck: {uid: 400, pp: 56},
-    poisonjab: {uid: 401, pp: 32},
-    poisonsting: {uid: 402, pp: 56},
-    poisontail: {uid: 403, pp: 40},
-    pound: {uid: 404, pp: 56},
-    powdersnow: {uid: 405, pp: 40},
-    powerswap: {uid: 406, pp: 16},
-    powerwhip: {uid: 407, pp: 16},
-    present: {uid: 408, pp: 24},
-    psybeam: {uid: 409, pp: 32},
-    psychic: {uid: 410, pp: 16},
-    psychoboost: {uid: 411, pp: 8},
-    psychocut: {uid: 412, pp: 32},
-    punishment: {uid: 413, pp: 8},
-    quickattack: {uid: 414, pp: 48},
-    rage: {uid: 415, pp: 32},
-    raindance: {uid: 416, pp: 8},
-    razorleaf: {uid: 417, pp: 40},
-    refresh: {uid: 418, pp: 32},
-    rest: {uid: 419, pp: 16},
-    return: {uid: 420, pp: 32},
-    roaroftime: {uid: 421, pp: 8},
-    rockclimb: {uid: 422, pp: 32},
-    rockpolish: {uid: 423, pp: 32},
-    rockslide: {uid: 424, pp: 16},
-    rocksmash: {uid: 425, pp: 24},
-    rockthrow: {uid: 426, pp: 24},
-    rockwrecker: {uid: 427, pp: 8},
-    rollingkick: {uid: 428, pp: 24},
-    sacredfire: {uid: 429, pp: 8},
-    safeguard: {uid: 430, pp: 40},
-    sandattack: {uid: 431, pp: 24},
-    scratch: {uid: 432, pp: 56},
-    seedbomb: {uid: 433, pp: 24},
-    seedflare: {uid: 434, pp: 8},
-    seismictoss: {uid: 435, pp: 32},
-    shadowball: {uid: 436, pp: 24},
-    shadowclaw: {uid: 437, pp: 24},
-    shadowpunch: {uid: 438, pp: 32},
-    shadowsneak: {uid: 439, pp: 48},
-    sharpen: {uid: 440, pp: 48},
-    shockwave: {uid: 441, pp: 32},
-    signalbeam: {uid: 442, pp: 24},
-    silverwind: {uid: 443, pp: 8},
-    skyattack: {uid: 444, pp: 8},
-    slam: {uid: 445, pp: 32},
-    slash: {uid: 446, pp: 32},
-    sludge: {uid: 447, pp: 32},
-    sludgebomb: {uid: 448, pp: 16},
-    smokescreen: {uid: 449, pp: 32},
-    sonicboom: {uid: 450, pp: 32},
-    spacialrend: {uid: 451, pp: 8},
-    spark: {uid: 452, pp: 32},
-    splash: {uid: 453, pp: 64},
-    steelwing: {uid: 454, pp: 40},
-    stockpile: {uid: 455, pp: 32},
-    stoneedge: {uid: 456, pp: 8},
-    strength: {uid: 457, pp: 24},
-    sunnyday: {uid: 458, pp: 8},
-    superfang: {uid: 459, pp: 16},
-    superpower: {uid: 460, pp: 8},
-    swift: {uid: 461, pp: 32},
-    tailwhip: {uid: 462, pp: 48},
-    teeterdance: {uid: 463, pp: 32},
-    teleport: {uid: 464, pp: 32},
-    thunderfang: {uid: 465, pp: 24},
-    thunderpunch: {uid: 466, pp: 24},
-    thundershock: {uid: 467, pp: 48},
-    tickle: {uid: 468, pp: 32},
-    triattack: {uid: 469, pp: 16},
-    trumpcard: {uid: 470, pp: 5},
-    vacuumwave: {uid: 471, pp: 48},
-    vicegrip: {uid: 472, pp: 48},
-    vitalthrow: {uid: 473, pp: 16},
-    watergun: {uid: 474, pp: 40},
-    waterpulse: {uid: 475, pp: 32},
-    waterspout: {uid: 476, pp: 8},
-    waterfall: {uid: 477, pp: 24},
-    wingattack: {uid: 478, pp: 56},
-    withdraw: {uid: 479, pp: 64},
-    xscissor: {uid: 480, pp: 24},
-    yawn: {uid: 481, pp: 16},
-    zapcannon: {uid: 482, pp: 8},
-    zenheadbutt: {uid: 483, pp: 24}
+    absorb: {uid: 0, pp: 40},
+    acupressure: {uid: 1, pp: 48},
+    armthrust: {uid: 2, pp: 32},
+    aromatherapy: {uid: 3, pp: 8},
+    aquaring: {uid: 4, pp: 32},
+    assist: {uid: 5, pp: 32},
+    assurance: {uid: 6, pp: 16},
+    avalanche: {uid: 7, pp: 16},
+    barrage: {uid: 8, pp: 32},
+    beatup: {uid: 9, pp: 16},
+    bide: {uid: 10, pp: 16},
+    bind: {uid: 11, pp: 32},
+    block: {uid: 12, pp: 8},
+    bonerush: {uid: 13, pp: 16},
+    bonemerang: {uid: 14, pp: 16},
+    bounce: {uid: 15, pp: 8},
+    bravebird: {uid: 16, pp: 24},
+    brickbreak: {uid: 17, pp: 24},
+    bugbite: {uid: 18, pp: 32},
+    bulletseed: {uid: 19, pp: 48},
+    camouflage: {uid: 20, pp: 32},
+    chatter: {uid: 21, pp: 32},
+    clamp: {uid: 22, pp: 16},
+    cometpunch: {uid: 23, pp: 24},
+    conversion: {uid: 24, pp: 48},
+    conversion2: {uid: 25, pp: 48},
+    copycat: {uid: 26, pp: 32},
+    cottonspore: {uid: 27, pp: 64},
+    counter: {uid: 28, pp: 32},
+    covet: {uid: 29, pp: 64},
+    crabhammer: {uid: 30, pp: 16},
+    crushgrip: {uid: 31, pp: 8},
+    curse: {uid: 32, pp: 16},
+    defog: {uid: 33, pp: 24},
+    detect: {uid: 34, pp: 8},
+    dig: {uid: 35, pp: 16},
+    disable: {uid: 36, pp: 32},
+    dive: {uid: 37, pp: 16},
+    doomdesire: {uid: 38, pp: 8},
+    doubleedge: {uid: 39, pp: 24},
+    doublehit: {uid: 40, pp: 16},
+    doublekick: {uid: 41, pp: 48},
+    doubleslap: {uid: 42, pp: 16},
+    drainpunch: {uid: 43, pp: 8},
+    dreameater: {uid: 44, pp: 24},
+    earthquake: {uid: 45, pp: 16},
+    embargo: {uid: 46, pp: 24},
+    encore: {uid: 47, pp: 8},
+    endeavor: {uid: 48, pp: 8},
+    endure: {uid: 49, pp: 16},
+    explosion: {uid: 50, pp: 8},
+    extremespeed: {uid: 51, pp: 8},
+    fakeout: {uid: 52, pp: 16},
+    feint: {uid: 53, pp: 16},
+    firefang: {uid: 54, pp: 24},
+    firespin: {uid: 55, pp: 24},
+    flail: {uid: 56, pp: 24},
+    flareblitz: {uid: 57, pp: 24},
+    fling: {uid: 58, pp: 16},
+    fly: {uid: 59, pp: 24},
+    focuspunch: {uid: 60, pp: 32},
+    followme: {uid: 61, pp: 32},
+    foresight: {uid: 62, pp: 64},
+    furyattack: {uid: 63, pp: 32},
+    furycutter: {uid: 64, pp: 32},
+    furyswipes: {uid: 65, pp: 24},
+    futuresight: {uid: 66, pp: 24},
+    gigadrain: {uid: 67, pp: 16},
+    glare: {uid: 68, pp: 48},
+    gravity: {uid: 69, pp: 8},
+    growth: {uid: 70, pp: 64},
+    gust: {uid: 71, pp: 56},
+    hail: {uid: 72, pp: 16},
+    headsmash: {uid: 73, pp: 8},
+    healbell: {uid: 74, pp: 8},
+    healblock: {uid: 75, pp: 24},
+    healingwish: {uid: 76, pp: 16},
+    healorder: {uid: 77, pp: 16},
+    highjumpkick: {uid: 78, pp: 32},
+    iciclespear: {uid: 79, pp: 48},
+    imprison: {uid: 80, pp: 16},
+    ingrain: {uid: 81, pp: 32},
+    jumpkick: {uid: 82, pp: 40},
+    knockoff: {uid: 83, pp: 32},
+    lastresort: {uid: 84, pp: 8},
+    leechlife: {uid: 85, pp: 24},
+    lightscreen: {uid: 86, pp: 48},
+    lockon: {uid: 87, pp: 8},
+    luckychant: {uid: 88, pp: 48},
+    lunardance: {uid: 89, pp: 16},
+    magiccoat: {uid: 90, pp: 24},
+    magmastorm: {uid: 91, pp: 8},
+    magnetrise: {uid: 92, pp: 16},
+    magnitude: {uid: 93, pp: 48},
+    meanlook: {uid: 94, pp: 8},
+    mefirst: {uid: 95, pp: 32},
+    megadrain: {uid: 96, pp: 24},
+    memento: {uid: 97, pp: 16},
+    metalburst: {uid: 98, pp: 16},
+    metronome: {uid: 99, pp: 16},
+    milkdrink: {uid: 100, pp: 16},
+    mimic: {uid: 101, pp: 16},
+    mindreader: {uid: 102, pp: 8},
+    minimize: {uid: 103, pp: 32},
+    miracleeye: {uid: 104, pp: 64},
+    mirrorcoat: {uid: 105, pp: 32},
+    mirrormove: {uid: 106, pp: 32},
+    moonlight: {uid: 107, pp: 8},
+    morningsun: {uid: 108, pp: 8},
+    mudsport: {uid: 109, pp: 24},
+    naturalgift: {uid: 110, pp: 24},
+    naturepower: {uid: 111, pp: 32},
+    odorsleuth: {uid: 112, pp: 64},
+    outrage: {uid: 113, pp: 24},
+    payback: {uid: 114, pp: 16},
+    petaldance: {uid: 115, pp: 32},
+    pinmissile: {uid: 116, pp: 32},
+    pluck: {uid: 117, pp: 32},
+    poisongas: {uid: 118, pp: 64},
+    powertrick: {uid: 119, pp: 16},
+    protect: {uid: 120, pp: 16},
+    psychup: {uid: 121, pp: 16},
+    psywave: {uid: 122, pp: 24},
+    pursuit: {uid: 123, pp: 32},
+    rapidspin: {uid: 124, pp: 64},
+    razorwind: {uid: 125, pp: 16},
+    recover: {uid: 126, pp: 16},
+    recycle: {uid: 127, pp: 16},
+    reflect: {uid: 128, pp: 32},
+    revenge: {uid: 129, pp: 16},
+    reversal: {uid: 130, pp: 24},
+    roar: {uid: 131, pp: 32},
+    rockblast: {uid: 132, pp: 16},
+    roleplay: {uid: 133, pp: 16},
+    roost: {uid: 134, pp: 16},
+    sandtomb: {uid: 135, pp: 24},
+    sandstorm: {uid: 136, pp: 16},
+    scaryface: {uid: 137, pp: 16},
+    secretpower: {uid: 138, pp: 32},
+    selfdestruct: {uid: 139, pp: 8},
+    sketch: {uid: 140, pp: 1},
+    skillswap: {uid: 141, pp: 16},
+    skyuppercut: {uid: 142, pp: 24},
+    slackoff: {uid: 143, pp: 16},
+    sleeptalk: {uid: 144, pp: 16},
+    smellingsalts: {uid: 145, pp: 16},
+    snatch: {uid: 146, pp: 16},
+    softboiled: {uid: 147, pp: 16},
+    solarbeam: {uid: 148, pp: 16},
+    spiderweb: {uid: 149, pp: 16},
+    spikecannon: {uid: 150, pp: 24},
+    spikes: {uid: 151, pp: 32},
+    spite: {uid: 152, pp: 16},
+    spitup: {uid: 153, pp: 16},
+    stealthrock: {uid: 154, pp: 32},
+    stomp: {uid: 155, pp: 32},
+    struggle: {uid: 156, pp: 1},
+    submission: {uid: 157, pp: 40},
+    suckerpunch: {uid: 158, pp: 8},
+    surf: {uid: 159, pp: 24},
+    swallow: {uid: 160, pp: 16},
+    switcheroo: {uid: 161, pp: 16},
+    synthesis: {uid: 162, pp: 8},
+    tackle: {uid: 163, pp: 56},
+    tailglow: {uid: 164, pp: 32},
+    tailwind: {uid: 165, pp: 48},
+    takedown: {uid: 166, pp: 32},
+    taunt: {uid: 167, pp: 32},
+    thief: {uid: 168, pp: 16},
+    thrash: {uid: 169, pp: 32},
+    thunder: {uid: 170, pp: 16},
+    torment: {uid: 171, pp: 24},
+    toxic: {uid: 172, pp: 16},
+    toxicspikes: {uid: 173, pp: 32},
+    transform: {uid: 174, pp: 16},
+    trick: {uid: 175, pp: 16},
+    trickroom: {uid: 176, pp: 8},
+    triplekick: {uid: 177, pp: 16},
+    twineedle: {uid: 178, pp: 32},
+    twister: {uid: 179, pp: 32},
+    uproar: {uid: 180, pp: 16},
+    uturn: {uid: 181, pp: 32},
+    volttackle: {uid: 182, pp: 24},
+    wakeupslap: {uid: 183, pp: 16},
+    watersport: {uid: 184, pp: 24},
+    whirlpool: {uid: 185, pp: 24},
+    whirlwind: {uid: 186, pp: 32},
+    wish: {uid: 187, pp: 16},
+    woodhammer: {uid: 188, pp: 24},
+    worryseed: {uid: 189, pp: 16},
+    wrap: {uid: 190, pp: 32},
+    wringout: {uid: 191, pp: 8},
+    acidarmor: {uid: 192, pp: 64},
+    aircutter: {uid: 193, pp: 40},
+    airslash: {uid: 194, pp: 32},
+    attract: {uid: 195, pp: 24},
+    aurasphere: {uid: 196, pp: 32},
+    barrier: {uid: 197, pp: 48},
+    blizzard: {uid: 198, pp: 8},
+    bodyslam: {uid: 199, pp: 24},
+    bubble: {uid: 200, pp: 48},
+    bugbuzz: {uid: 201, pp: 16},
+    charm: {uid: 202, pp: 32},
+    dracometeor: {uid: 203, pp: 8},
+    dragonpulse: {uid: 204, pp: 16},
+    dragonrush: {uid: 205, pp: 16},
+    energyball: {uid: 206, pp: 16},
+    extrasensory: {uid: 207, pp: 48},
+    facade: {uid: 208, pp: 32},
+    fireblast: {uid: 209, pp: 8},
+    flamethrower: {uid: 210, pp: 24},
+    grasswhistle: {uid: 211, pp: 24},
+    growl: {uid: 212, pp: 64},
+    gunkshot: {uid: 213, pp: 8},
+    gyroball: {uid: 214, pp: 8},
+    heatwave: {uid: 215, pp: 16},
+    hiddenpower: {uid: 216, pp: 24},
+    hiddenpowerbug: {uid: 217, pp: 24},
+    hiddenpowerdark: {uid: 218, pp: 24},
+    hiddenpowerdragon: {uid: 219, pp: 24},
+    hiddenpowerelectric: {uid: 220, pp: 24},
+    hiddenpowerfighting: {uid: 221, pp: 24},
+    hiddenpowerfire: {uid: 222, pp: 24},
+    hiddenpowerflying: {uid: 223, pp: 24},
+    hiddenpowerghost: {uid: 224, pp: 24},
+    hiddenpowergrass: {uid: 225, pp: 24},
+    hiddenpowerground: {uid: 226, pp: 24},
+    hiddenpowerice: {uid: 227, pp: 24},
+    hiddenpowerpoison: {uid: 228, pp: 24},
+    hiddenpowerpsychic: {uid: 229, pp: 24},
+    hiddenpowerrock: {uid: 230, pp: 24},
+    hiddenpowersteel: {uid: 231, pp: 24},
+    hiddenpowerwater: {uid: 232, pp: 24},
+    hydropump: {uid: 233, pp: 8},
+    hypervoice: {uid: 234, pp: 16},
+    icebeam: {uid: 235, pp: 16},
+    leafstorm: {uid: 236, pp: 8},
+    lick: {uid: 237, pp: 48},
+    metalsound: {uid: 238, pp: 64},
+    meteormash: {uid: 239, pp: 16},
+    muddywater: {uid: 240, pp: 16},
+    overheat: {uid: 241, pp: 8},
+    perishsong: {uid: 242, pp: 8},
+    poisonfang: {uid: 243, pp: 24},
+    poisonpowder: {uid: 244, pp: 56},
+    powergem: {uid: 245, pp: 32},
+    psychoshift: {uid: 246, pp: 16},
+    rocktomb: {uid: 247, pp: 16},
+    screech: {uid: 248, pp: 64},
+    shadowforce: {uid: 249, pp: 8},
+    sing: {uid: 250, pp: 24},
+    skullbash: {uid: 251, pp: 24},
+    sleeppowder: {uid: 252, pp: 24},
+    smog: {uid: 253, pp: 32},
+    snore: {uid: 254, pp: 24},
+    spore: {uid: 255, pp: 24},
+    stringshot: {uid: 256, pp: 64},
+    stunspore: {uid: 257, pp: 48},
+    substitute: {uid: 258, pp: 16},
+    supersonic: {uid: 259, pp: 32},
+    sweetkiss: {uid: 260, pp: 16},
+    sweetscent: {uid: 261, pp: 32},
+    swordsdance: {uid: 262, pp: 48},
+    thunderbolt: {uid: 263, pp: 24},
+    vinewhip: {uid: 264, pp: 24},
+    weatherball: {uid: 265, pp: 16},
+    willowisp: {uid: 266, pp: 24},
+    darkvoid: {uid: 267, pp: 16},
+    destinybond: {uid: 268, pp: 8},
+    gastroacid: {uid: 269, pp: 16},
+    iceball: {uid: 270, pp: 32},
+    rollout: {uid: 271, pp: 32},
+    sheercold: {uid: 272, pp: 8},
+    swagger: {uid: 273, pp: 24},
+    thunderwave: {uid: 274, pp: 32},
+    acid: {uid: 275, pp: 48},
+    aerialace: {uid: 276, pp: 32},
+    aeroblast: {uid: 277, pp: 8},
+    agility: {uid: 278, pp: 48},
+    amnesia: {uid: 279, pp: 32},
+    ancientpower: {uid: 280, pp: 8},
+    aquajet: {uid: 281, pp: 32},
+    aquatail: {uid: 282, pp: 16},
+    astonish: {uid: 283, pp: 24},
+    attackorder: {uid: 284, pp: 24},
+    aurorabeam: {uid: 285, pp: 32},
+    batonpass: {uid: 286, pp: 64},
+    bellydrum: {uid: 287, pp: 16},
+    bite: {uid: 288, pp: 40},
+    blastburn: {uid: 289, pp: 8},
+    blazekick: {uid: 290, pp: 16},
+    boneclub: {uid: 291, pp: 32},
+    brine: {uid: 292, pp: 16},
+    bubblebeam: {uid: 293, pp: 32},
+    bulkup: {uid: 294, pp: 32},
+    bulletpunch: {uid: 295, pp: 48},
+    calmmind: {uid: 296, pp: 32},
+    captivate: {uid: 297, pp: 32},
+    charge: {uid: 298, pp: 32},
+    chargebeam: {uid: 299, pp: 16},
+    closecombat: {uid: 300, pp: 8},
+    confuseray: {uid: 301, pp: 16},
+    confusion: {uid: 302, pp: 40},
+    constrict: {uid: 303, pp: 56},
+    cosmicpower: {uid: 304, pp: 32},
+    crosschop: {uid: 305, pp: 8},
+    crosspoison: {uid: 306, pp: 32},
+    crunch: {uid: 307, pp: 24},
+    crushclaw: {uid: 308, pp: 16},
+    cut: {uid: 309, pp: 48},
+    darkpulse: {uid: 310, pp: 24},
+    defendorder: {uid: 311, pp: 16},
+    defensecurl: {uid: 312, pp: 64},
+    discharge: {uid: 313, pp: 24},
+    dizzypunch: {uid: 314, pp: 16},
+    doubleteam: {uid: 315, pp: 24},
+    dragonbreath: {uid: 316, pp: 32},
+    dragonclaw: {uid: 317, pp: 24},
+    dragondance: {uid: 318, pp: 32},
+    dragonrage: {uid: 319, pp: 16},
+    drillpeck: {uid: 320, pp: 32},
+    dynamicpunch: {uid: 321, pp: 8},
+    earthpower: {uid: 322, pp: 16},
+    eggbomb: {uid: 323, pp: 16},
+    ember: {uid: 324, pp: 40},
+    eruption: {uid: 325, pp: 8},
+    feintattack: {uid: 326, pp: 32},
+    faketears: {uid: 327, pp: 32},
+    falseswipe: {uid: 328, pp: 64},
+    featherdance: {uid: 329, pp: 24},
+    firepunch: {uid: 330, pp: 24},
+    fissure: {uid: 331, pp: 8},
+    flamewheel: {uid: 332, pp: 40},
+    flash: {uid: 333, pp: 32},
+    flashcannon: {uid: 334, pp: 16},
+    flatter: {uid: 335, pp: 24},
+    focusblast: {uid: 336, pp: 8},
+    focusenergy: {uid: 337, pp: 48},
+    forcepalm: {uid: 338, pp: 16},
+    frenzyplant: {uid: 339, pp: 8},
+    frustration: {uid: 340, pp: 32},
+    gigaimpact: {uid: 341, pp: 8},
+    grassknot: {uid: 342, pp: 32},
+    grudge: {uid: 343, pp: 8},
+    guardswap: {uid: 344, pp: 16},
+    guillotine: {uid: 345, pp: 8},
+    hammerarm: {uid: 346, pp: 16},
+    harden: {uid: 347, pp: 48},
+    haze: {uid: 348, pp: 48},
+    headbutt: {uid: 349, pp: 24},
+    heartswap: {uid: 350, pp: 16},
+    helpinghand: {uid: 351, pp: 32},
+    hornattack: {uid: 352, pp: 40},
+    horndrill: {uid: 353, pp: 8},
+    howl: {uid: 354, pp: 64},
+    hydrocannon: {uid: 355, pp: 8},
+    hyperbeam: {uid: 356, pp: 8},
+    hyperfang: {uid: 357, pp: 24},
+    hypnosis: {uid: 358, pp: 32},
+    icefang: {uid: 359, pp: 24},
+    icepunch: {uid: 360, pp: 24},
+    iceshard: {uid: 361, pp: 48},
+    icywind: {uid: 362, pp: 24},
+    irondefense: {uid: 363, pp: 24},
+    ironhead: {uid: 364, pp: 24},
+    irontail: {uid: 365, pp: 24},
+    judgment: {uid: 366, pp: 16},
+    karatechop: {uid: 367, pp: 40},
+    kinesis: {uid: 368, pp: 24},
+    lavaplume: {uid: 369, pp: 24},
+    leafblade: {uid: 370, pp: 24},
+    leechseed: {uid: 371, pp: 16},
+    leer: {uid: 372, pp: 48},
+    lovelykiss: {uid: 373, pp: 16},
+    lowkick: {uid: 374, pp: 32},
+    lusterpurge: {uid: 375, pp: 8},
+    machpunch: {uid: 376, pp: 48},
+    magicalleaf: {uid: 377, pp: 32},
+    magnetbomb: {uid: 378, pp: 32},
+    meditate: {uid: 379, pp: 64},
+    megakick: {uid: 380, pp: 8},
+    megapunch: {uid: 381, pp: 32},
+    megahorn: {uid: 382, pp: 16},
+    metalclaw: {uid: 383, pp: 56},
+    mirrorshot: {uid: 384, pp: 16},
+    mist: {uid: 385, pp: 48},
+    mistball: {uid: 386, pp: 8},
+    mudslap: {uid: 387, pp: 16},
+    mudbomb: {uid: 388, pp: 16},
+    mudshot: {uid: 389, pp: 24},
+    nastyplot: {uid: 390, pp: 32},
+    needlearm: {uid: 391, pp: 24},
+    nightshade: {uid: 392, pp: 24},
+    nightslash: {uid: 393, pp: 24},
+    nightmare: {uid: 394, pp: 24},
+    octazooka: {uid: 395, pp: 16},
+    ominouswind: {uid: 396, pp: 8},
+    painsplit: {uid: 397, pp: 32},
+    payday: {uid: 398, pp: 32},
+    peck: {uid: 399, pp: 56},
+    poisonjab: {uid: 400, pp: 32},
+    poisonsting: {uid: 401, pp: 56},
+    poisontail: {uid: 402, pp: 40},
+    pound: {uid: 403, pp: 56},
+    powdersnow: {uid: 404, pp: 40},
+    powerswap: {uid: 405, pp: 16},
+    powerwhip: {uid: 406, pp: 16},
+    present: {uid: 407, pp: 24},
+    psybeam: {uid: 408, pp: 32},
+    psychic: {uid: 409, pp: 16},
+    psychoboost: {uid: 410, pp: 8},
+    psychocut: {uid: 411, pp: 32},
+    punishment: {uid: 412, pp: 8},
+    quickattack: {uid: 413, pp: 48},
+    rage: {uid: 414, pp: 32},
+    raindance: {uid: 415, pp: 8},
+    razorleaf: {uid: 416, pp: 40},
+    refresh: {uid: 417, pp: 32},
+    rest: {uid: 418, pp: 16},
+    return: {uid: 419, pp: 32},
+    roaroftime: {uid: 420, pp: 8},
+    rockclimb: {uid: 421, pp: 32},
+    rockpolish: {uid: 422, pp: 32},
+    rockslide: {uid: 423, pp: 16},
+    rocksmash: {uid: 424, pp: 24},
+    rockthrow: {uid: 425, pp: 24},
+    rockwrecker: {uid: 426, pp: 8},
+    rollingkick: {uid: 427, pp: 24},
+    sacredfire: {uid: 428, pp: 8},
+    safeguard: {uid: 429, pp: 40},
+    sandattack: {uid: 430, pp: 24},
+    scratch: {uid: 431, pp: 56},
+    seedbomb: {uid: 432, pp: 24},
+    seedflare: {uid: 433, pp: 8},
+    seismictoss: {uid: 434, pp: 32},
+    shadowball: {uid: 435, pp: 24},
+    shadowclaw: {uid: 436, pp: 24},
+    shadowpunch: {uid: 437, pp: 32},
+    shadowsneak: {uid: 438, pp: 48},
+    sharpen: {uid: 439, pp: 48},
+    shockwave: {uid: 440, pp: 32},
+    signalbeam: {uid: 441, pp: 24},
+    silverwind: {uid: 442, pp: 8},
+    skyattack: {uid: 443, pp: 8},
+    slam: {uid: 444, pp: 32},
+    slash: {uid: 445, pp: 32},
+    sludge: {uid: 446, pp: 32},
+    sludgebomb: {uid: 447, pp: 16},
+    smokescreen: {uid: 448, pp: 32},
+    sonicboom: {uid: 449, pp: 32},
+    spacialrend: {uid: 450, pp: 8},
+    spark: {uid: 451, pp: 32},
+    splash: {uid: 452, pp: 64},
+    steelwing: {uid: 453, pp: 40},
+    stockpile: {uid: 454, pp: 32},
+    stoneedge: {uid: 455, pp: 8},
+    strength: {uid: 456, pp: 24},
+    sunnyday: {uid: 457, pp: 8},
+    superfang: {uid: 458, pp: 16},
+    superpower: {uid: 459, pp: 8},
+    swift: {uid: 460, pp: 32},
+    tailwhip: {uid: 461, pp: 48},
+    teeterdance: {uid: 462, pp: 32},
+    teleport: {uid: 463, pp: 32},
+    thunderfang: {uid: 464, pp: 24},
+    thunderpunch: {uid: 465, pp: 24},
+    thundershock: {uid: 466, pp: 48},
+    tickle: {uid: 467, pp: 32},
+    triattack: {uid: 468, pp: 16},
+    trumpcard: {uid: 469, pp: 5},
+    vacuumwave: {uid: 470, pp: 48},
+    vicegrip: {uid: 471, pp: 48},
+    vitalthrow: {uid: 472, pp: 16},
+    watergun: {uid: 473, pp: 40},
+    waterpulse: {uid: 474, pp: 32},
+    waterspout: {uid: 475, pp: 8},
+    waterfall: {uid: 476, pp: 24},
+    wingattack: {uid: 477, pp: 56},
+    withdraw: {uid: 478, pp: 64},
+    xscissor: {uid: 479, pp: 24},
+    yawn: {uid: 480, pp: 16},
+    zapcannon: {uid: 481, pp: 8},
+    zenheadbutt: {uid: 482, pp: 24}
 };
 
 /** Contains data for every item in the supported generation. */
 const items: {readonly [name: string]: number} =
 {
-    adamantorb: 1,
-    choiceband: 2,
-    choicescarf: 3,
-    choicespecs: 4,
-    chopleberry: 5,
-    custapberry: 6,
-    deepseascale: 7,
-    deepseatooth: 8,
-    focussash: 9,
-    griseousorb: 10,
-    ironball: 11,
-    jabocaberry: 12,
-    lifeorb: 13,
-    lightball: 14,
-    luckypunch: 15,
-    lustrousorb: 16,
-    mentalherb: 17,
-    metronome: 18,
-    rowapberry: 19,
-    stick: 20,
-    thickclub: 21,
-    aguavberry: 22,
-    apicotberry: 23,
-    aspearberry: 24,
-    babiriberry: 25,
-    belueberry: 26,
-    blukberry: 27,
-    chartiberry: 28,
-    cheriberry: 29,
-    chestoberry: 30,
-    chilanberry: 31,
-    cobaberry: 32,
-    colburberry: 33,
-    cornnberry: 34,
-    durinberry: 35,
-    enigmaberry: 36,
-    figyberry: 37,
-    ganlonberry: 38,
-    grepaberry: 39,
-    habanberry: 40,
-    hondewberry: 41,
-    iapapaberry: 42,
-    kasibberry: 43,
-    kebiaberry: 44,
-    kelpsyberry: 45,
-    lansatberry: 46,
-    leppaberry: 47,
-    liechiberry: 48,
-    lumberry: 49,
-    mail: 50,
-    magoberry: 51,
-    magostberry: 52,
-    micleberry: 53,
-    nanabberry: 54,
-    nomelberry: 55,
-    occaberry: 56,
-    oranberry: 57,
-    pamtreberry: 58,
-    passhoberry: 59,
-    payapaberry: 60,
-    pechaberry: 61,
-    persimberry: 62,
-    petayaberry: 63,
-    pinapberry: 64,
-    pomegberry: 65,
-    qualotberry: 66,
-    rabutaberry: 67,
-    rawstberry: 68,
-    razzberry: 69,
-    rindoberry: 70,
-    salacberry: 71,
-    shucaberry: 72,
-    sitrusberry: 73,
-    souldew: 74,
-    spelonberry: 75,
-    starfberry: 76,
-    tamatoberry: 77,
-    tangaberry: 78,
-    wacanberry: 79,
-    watmelberry: 80,
-    wepearberry: 81,
-    wikiberry: 82,
-    yacheberry: 83,
-    bigroot: 84,
-    lightclay: 85,
-    machobrace: 86,
-    armorfossil: 87,
-    berryjuice: 88,
-    blackbelt: 89,
-    blacksludge: 90,
-    blackglasses: 91,
-    brightpowder: 92,
-    charcoal: 93,
-    cherishball: 94,
-    clawfossil: 95,
-    damprock: 96,
-    dawnstone: 97,
-    destinyknot: 98,
-    diveball: 99,
-    domefossil: 100,
-    dracoplate: 101,
-    dragonfang: 102,
-    dragonscale: 103,
-    dreadplate: 104,
-    dubiousdisc: 105,
-    duskball: 106,
-    duskstone: 107,
-    earthplate: 108,
-    electirizer: 109,
-    energypowder: 110,
-    expertbelt: 111,
-    fastball: 112,
-    firestone: 113,
-    fistplate: 114,
-    flameorb: 115,
-    flameplate: 116,
-    focusband: 117,
-    friendball: 118,
-    fullincense: 119,
-    greatball: 120,
-    gripclaw: 121,
-    hardstone: 122,
-    healball: 123,
-    heatrock: 124,
-    heavyball: 125,
-    helixfossil: 126,
-    icicleplate: 127,
-    icyrock: 128,
-    insectplate: 129,
-    ironplate: 130,
-    kingsrock: 131,
-    laggingtail: 132,
-    laxincense: 133,
-    leafstone: 134,
-    leftovers: 135,
-    levelball: 136,
-    loveball: 137,
-    lureball: 138,
-    luxuryball: 139,
-    magmarizer: 140,
-    magnet: 141,
-    masterball: 142,
-    meadowplate: 143,
-    metalcoat: 144,
-    metalpowder: 145,
-    mindplate: 146,
-    miracleseed: 147,
-    moonball: 148,
-    moonstone: 149,
-    muscleband: 150,
-    mysticwater: 151,
-    nestball: 152,
-    netball: 153,
-    nevermeltice: 154,
-    oddincense: 155,
-    oldamber: 156,
-    ovalstone: 157,
-    parkball: 158,
-    poisonbarb: 159,
-    pokeball: 160,
-    poweranklet: 161,
-    powerband: 162,
-    powerbelt: 163,
-    powerbracer: 164,
-    powerherb: 165,
-    powerlens: 166,
-    powerweight: 167,
-    premierball: 168,
-    protector: 169,
-    quickball: 170,
-    quickclaw: 171,
-    quickpowder: 172,
-    rarebone: 173,
-    razorclaw: 174,
-    razorfang: 175,
-    reapercloth: 176,
-    repeatball: 177,
-    rockincense: 178,
-    rootfossil: 179,
-    roseincense: 180,
-    safariball: 181,
-    scopelens: 182,
-    seaincense: 183,
-    sharpbeak: 184,
-    shedshell: 185,
-    shellbell: 186,
-    shinystone: 187,
-    silkscarf: 188,
-    silverpowder: 189,
-    skullfossil: 190,
-    skyplate: 191,
-    smoothrock: 192,
-    softsand: 193,
-    spelltag: 194,
-    splashplate: 195,
-    spookyplate: 196,
-    sportball: 197,
-    stickybarb: 198,
-    stoneplate: 199,
-    sunstone: 200,
-    thunderstone: 201,
-    timerball: 202,
-    toxicorb: 203,
-    toxicplate: 204,
-    twistedspoon: 205,
-    ultraball: 206,
-    upgrade: 207,
-    waterstone: 208,
-    waveincense: 209,
-    whiteherb: 210,
-    widelens: 211,
-    wiseglasses: 212,
-    zapplate: 213,
-    zoomlens: 214
+    adamantorb: 0,
+    choiceband: 1,
+    choicescarf: 2,
+    choicespecs: 3,
+    chopleberry: 4,
+    custapberry: 5,
+    deepseascale: 6,
+    deepseatooth: 7,
+    focussash: 8,
+    griseousorb: 9,
+    ironball: 10,
+    jabocaberry: 11,
+    lifeorb: 12,
+    lightball: 13,
+    luckypunch: 14,
+    lustrousorb: 15,
+    mentalherb: 16,
+    metronome: 17,
+    rowapberry: 18,
+    stick: 19,
+    thickclub: 20,
+    aguavberry: 21,
+    apicotberry: 22,
+    aspearberry: 23,
+    babiriberry: 24,
+    belueberry: 25,
+    blukberry: 26,
+    chartiberry: 27,
+    cheriberry: 28,
+    chestoberry: 29,
+    chilanberry: 30,
+    cobaberry: 31,
+    colburberry: 32,
+    cornnberry: 33,
+    durinberry: 34,
+    enigmaberry: 35,
+    figyberry: 36,
+    ganlonberry: 37,
+    grepaberry: 38,
+    habanberry: 39,
+    hondewberry: 40,
+    iapapaberry: 41,
+    kasibberry: 42,
+    kebiaberry: 43,
+    kelpsyberry: 44,
+    lansatberry: 45,
+    leppaberry: 46,
+    liechiberry: 47,
+    lumberry: 48,
+    mail: 49,
+    magoberry: 50,
+    magostberry: 51,
+    micleberry: 52,
+    nanabberry: 53,
+    nomelberry: 54,
+    occaberry: 55,
+    oranberry: 56,
+    pamtreberry: 57,
+    passhoberry: 58,
+    payapaberry: 59,
+    pechaberry: 60,
+    persimberry: 61,
+    petayaberry: 62,
+    pinapberry: 63,
+    pomegberry: 64,
+    qualotberry: 65,
+    rabutaberry: 66,
+    rawstberry: 67,
+    razzberry: 68,
+    rindoberry: 69,
+    salacberry: 70,
+    shucaberry: 71,
+    sitrusberry: 72,
+    souldew: 73,
+    spelonberry: 74,
+    starfberry: 75,
+    tamatoberry: 76,
+    tangaberry: 77,
+    wacanberry: 78,
+    watmelberry: 79,
+    wepearberry: 80,
+    wikiberry: 81,
+    yacheberry: 82,
+    bigroot: 83,
+    lightclay: 84,
+    machobrace: 85,
+    armorfossil: 86,
+    berryjuice: 87,
+    blackbelt: 88,
+    blacksludge: 89,
+    blackglasses: 90,
+    brightpowder: 91,
+    charcoal: 92,
+    cherishball: 93,
+    clawfossil: 94,
+    damprock: 95,
+    dawnstone: 96,
+    destinyknot: 97,
+    diveball: 98,
+    domefossil: 99,
+    dracoplate: 100,
+    dragonfang: 101,
+    dragonscale: 102,
+    dreadplate: 103,
+    dubiousdisc: 104,
+    duskball: 105,
+    duskstone: 106,
+    earthplate: 107,
+    electirizer: 108,
+    energypowder: 109,
+    expertbelt: 110,
+    fastball: 111,
+    firestone: 112,
+    fistplate: 113,
+    flameorb: 114,
+    flameplate: 115,
+    focusband: 116,
+    friendball: 117,
+    fullincense: 118,
+    greatball: 119,
+    gripclaw: 120,
+    hardstone: 121,
+    healball: 122,
+    heatrock: 123,
+    heavyball: 124,
+    helixfossil: 125,
+    icicleplate: 126,
+    icyrock: 127,
+    insectplate: 128,
+    ironplate: 129,
+    kingsrock: 130,
+    laggingtail: 131,
+    laxincense: 132,
+    leafstone: 133,
+    leftovers: 134,
+    levelball: 135,
+    loveball: 136,
+    lureball: 137,
+    luxuryball: 138,
+    magmarizer: 139,
+    magnet: 140,
+    masterball: 141,
+    meadowplate: 142,
+    metalcoat: 143,
+    metalpowder: 144,
+    mindplate: 145,
+    miracleseed: 146,
+    moonball: 147,
+    moonstone: 148,
+    muscleband: 149,
+    mysticwater: 150,
+    nestball: 151,
+    netball: 152,
+    nevermeltice: 153,
+    oddincense: 154,
+    oldamber: 155,
+    ovalstone: 156,
+    parkball: 157,
+    poisonbarb: 158,
+    pokeball: 159,
+    poweranklet: 160,
+    powerband: 161,
+    powerbelt: 162,
+    powerbracer: 163,
+    powerherb: 164,
+    powerlens: 165,
+    powerweight: 166,
+    premierball: 167,
+    protector: 168,
+    quickball: 169,
+    quickclaw: 170,
+    quickpowder: 171,
+    rarebone: 172,
+    razorclaw: 173,
+    razorfang: 174,
+    reapercloth: 175,
+    repeatball: 176,
+    rockincense: 177,
+    rootfossil: 178,
+    roseincense: 179,
+    safariball: 180,
+    scopelens: 181,
+    seaincense: 182,
+    sharpbeak: 183,
+    shedshell: 184,
+    shellbell: 185,
+    shinystone: 186,
+    silkscarf: 187,
+    silverpowder: 188,
+    skullfossil: 189,
+    skyplate: 190,
+    smoothrock: 191,
+    softsand: 192,
+    spelltag: 193,
+    splashplate: 194,
+    spookyplate: 195,
+    sportball: 196,
+    stickybarb: 197,
+    stoneplate: 198,
+    sunstone: 199,
+    thunderstone: 200,
+    timerball: 201,
+    toxicorb: 202,
+    toxicplate: 203,
+    twistedspoon: 204,
+    ultraball: 205,
+    upgrade: 206,
+    waterstone: 207,
+    waveincense: 208,
+    whiteherb: 209,
+    widelens: 210,
+    wiseglasses: 211,
+    zapplate: 212,
+    zoomlens: 213
 };
 
-export const dex: Dex = {pokemon, moves, items};
+export const dex: Dex =
+{
+    pokemon, numPokemon: 526, moves, numMoves: 483, items, numItems: 214
+};

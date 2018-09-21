@@ -14,7 +14,7 @@ const Dex = require("./Pokemon-Showdown/sim/dex");
  */
 function isNonGen4(name)
 {
-    // banlist: megas, primal, alola/totem, arceus fairy, pikachu forms
+    // banlist: megas, primal, alola/totem, arceus fairy, pikachu alt forms
     // except yanmega, which isn't actually a mega evolution
     if (name === "yanmega") return false;
     return /(mega[xy]?|primal|alola|totem|arceusfairy|^pikachu.+)$/.test(name);
@@ -48,11 +48,14 @@ console.log("import { Dex, MoveData, PokemonData } from \"./dex-types\";\n");
 // implicitly uses typings from:
 //  https://github.com/Zarel/Pokemon-Showdown/blob/master/sim/dex-data.js
 
+// counter for the unique identifier of a pokemon, move, etc.
+/** @type {number} */
+let uid = 0;
+
 // pokemon
 const pokedex = data.Pokedex;
 console.log(`/** Contains data for every pokemon in the supported generation. */
 const pokemon: {readonly [species: string]: PokemonData} =\n{`);
-let i = 1;
 for (const name in pokedex)
 {
     if (!pokedex.hasOwnProperty(name)) continue;
@@ -96,7 +99,7 @@ for (const name in pokedex)
     ${/[- ']+/.test(mon.species) ? quote(mon.species) : mon.species}:
     {
         id: ${mon.num},
-        uid: ${i},
+        uid: ${uid},
         species: ${quote(mon.species)},`);
     if (mon.baseSpecies) console.log(`\
         baseSpecies: ${quote(mon.baseSpecies)},`);
@@ -115,15 +118,16 @@ for (const name in pokedex)
 spa: ${stats.spa}, spd: ${stats.spd}, spe: ${stats.spe}},
         weightkg: ${mon.weightkg}
     },`);
-    ++i;
+    ++uid;
 }
 console.log("};\n");
+const numPokemon = uid;
 
 // moves
 const moves = data.Movedex;
 console.log(`/** Contains data for every move in the supported generation. */
 const moves: {readonly [name: string]: MoveData} =\n{`);
-i = 1;
+uid = 0;
 for (const moveName in moves)
 {
     if (!moves.hasOwnProperty(moveName)) continue;
@@ -146,16 +150,17 @@ for (const moveName in moves)
         pp = Math.floor(pp * 8 / 5);
     }
 
-    console.log(`    ${id}: {uid: ${i}, pp: ${pp}},`);
-    ++i;
+    console.log(`    ${id}: {uid: ${uid}, pp: ${pp}},`);
+    ++uid;
 }
 console.log("};\n");
+const numMoves = uid;
 
 // items
 const items = data.Items;
 console.log(`/** Contains data for every item in the supported generation. */
 const items: {readonly [name: string]: number} =\n{`);
-i = 1;
+uid = 0;
 for (const itemName in items)
 {
     if (!items.hasOwnProperty(itemName)) continue;
@@ -163,9 +168,14 @@ for (const itemName in items)
     // only gen4 and under items allowed
     if (item.gen > 4 || item.isNonstandard) continue;
 
-    console.log(`    ${item.id}: ${i},`);
-    ++i;
+    console.log(`    ${item.id}: ${uid},`);
+    ++uid;
 }
 console.log("};\n");
+const numItems = uid;
 
-console.log("export const dex: Dex = {pokemon, moves, items};");
+console.log(`export const dex: Dex =
+{
+    pokemon, numPokemon: ${numPokemon}, moves, numMoves: ${numMoves}, \
+items, numItems: ${numItems}
+};`);

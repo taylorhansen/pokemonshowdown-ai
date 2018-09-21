@@ -52,8 +52,14 @@ export interface Dex
 {
     /** Contains info about each pokemon. */
     readonly pokemon: {readonly [species: string]: PokemonData};
+    /** Total number of pokemon species. */
+    readonly numPokemon: number;
     /** Maps a move id name to its id number. */
     readonly moves: {readonly [name: string]: MoveData};
+    /** Total number of moves. */
+    readonly numMoves: number;
     /** Maps an item id name to its id number. */
     readonly items: {readonly [name: string]: number};
+    /** Total number of items. */
+    readonly numItems: number;
 }
