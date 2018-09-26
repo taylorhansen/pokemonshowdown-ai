@@ -25,11 +25,10 @@ export class Network implements AI
 
         // setup all the layers
         const outNeurons = Object.keys(choiceIds).length;
-        this.model.add(tf.layers.inputLayer({inputShape: [this.inputLength]}));
         this.model.add(tf.layers.dense(
-        {
-            units: outNeurons, activation: "linear"
-        }));
+            {units: 10, activation: "tanh", inputDim: this.inputLength}));
+        this.model.add(tf.layers.dense(
+            {units: outNeurons, activation: "linear"}));
         this.model.compile(
         {
             loss: "meanSquaredError", optimizer: "adam", metrics: ["mae"]
@@ -79,7 +78,7 @@ ${this.inputLength}`);
         // TODO: make this async
         const data = Array.from(prediction.dataSync());
         logger.debug(`prediction: \
-[${data.map((r, i) => `${intToChoice[i]}: ${r}`)}]`);
+{${data.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
         this.lastChoice = choices.reduce((prev, curr) =>
             data[choiceIds[prev]] < data[choiceIds[curr]] ? curr : prev);
         return this.lastChoice;
