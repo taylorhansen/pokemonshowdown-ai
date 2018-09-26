@@ -55,13 +55,13 @@ export class Pokemon
     }
 
     /** Pokemon's level. */
-    public get level(): number | undefined
+    public get level(): number
     {
         return this._level;
     }
-    public set level(level: number | undefined)
+    public set level(level: number)
     {
-        this._level = level && Math.max(1, Math.min(level, 100));
+        this._level = Math.max(1, Math.min(level, 100));
     }
 
     /** Known moveset. */
@@ -80,11 +80,11 @@ export class Pokemon
     /** ID name of the species. */
     private speciesName = "";
     /** Pokemon species/form unique identifier. */
-    private _species?: number;
+    private _species = 0;
     /** ID name of the held item. */
     private itemName = "";
     /** Item the pokemon is holding. */
-    private _item?: number;
+    private _item = 0;
     /** ID name of the base ability. */
     private baseAbilityName = "";
     /**
@@ -93,7 +93,7 @@ export class Pokemon
      */
     private _baseAbility?: number;
     /** Pokemon's level from 1 to 100. */
-    private _level?: number;
+    private _level = 0;
     /** Known moveset. */
     private readonly _moves: Move[] = [];
     /** First index of the part of the moveset that is unknown. */
@@ -158,7 +158,7 @@ export class Pokemon
         [
             this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
             ...species, ...item, ...baseAbility,
-            this._level || 0,
+            this._level,
             ...([] as number[]).concat(
                 ...this._moves.map(move => move.toArray())),
             ...this.hp.toArray(),
@@ -340,11 +340,11 @@ export class Move
     /** Move id name. */
     private idName = "";
     /** Move id. */
-    private _id: number;
+    private _id = 0;
     /** Current power points. */
-    private _pp: number;
+    private _pp = 0;
     /** Maximum amount of power points. */
-    private ppMax: number;
+    private ppMax = 0;
 
     /**
      * Gets the size of the return value of `toArray()`.
@@ -449,14 +449,14 @@ export class HP
     {
         if (max !== undefined)
         {
-            this.current = max;
-            this.max = max;
+            this._current = max;
+            this._max = max;
             this.isPercent = false;
         }
         else
         {
-            this.current = 100;
-            this.max = 100;
+            this._current = 100;
+            this._max = 100;
             this.isPercent = true;
         }
     }
