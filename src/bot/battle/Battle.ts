@@ -10,6 +10,12 @@ import { MajorStatusName, Pokemon } from "./state/Pokemon";
 
 const rl = readline.createInterface(process.stdin, process.stdout);
 
+/** Holds the reward values for different events. */
+const rewards =
+{
+    faint: -10
+};
+
 /** Manages the battle state and the AI. */
 export class Battle
 {
@@ -26,6 +32,8 @@ export class Battle
     private rqid: number | null = null;
     /** Whether we're being forced to switch. */
     private forceSwitch = false;
+    /** Accumulated reward during the current turn. */
+    private reward = 0;
     /** Used to send response messages to the server. */
     private readonly addResponses: (...responses: string[]) => void;
 
@@ -88,7 +96,9 @@ export class Battle
         {
             // active pokemon has fainted
             // TODO: for doubles/triples, do this based on active position also
-            this.state.getTeam(this.sides[id.owner]).active.faint();
+            const side = this.sides[id.owner];
+            this.state.getTeam(side).active.faint();
+            this.applyReward(side, rewards.faint);
         })
         .on("move", (id: PokemonID, move: string, effect: string,
             missed: boolean) =>
@@ -240,8 +250,11 @@ expected`);
     {
         const choices = this.getChoices();
         logger.debug(`choices: [${choices.join(", ")}]`);
+        logger.debug(`accumulated award: ${this.reward}`);
 
-        const response = this.ai.decide(this.state.toArray(), choices);
+        const response = this.ai.decide(this.state.toArray(), choices,
+                this.reward);
+        this.reward = 0;
         this.addResponses(`|/choose ${response}|${this.rqid}`);
     }
 
@@ -296,5 +309,24 @@ expected`);
         }
 
         return choices;
+    }
+
+    /**
+     * Rewards one side of the battle.
+     * @param side The team that was rewarded for something.
+     * @param reward Value of the reward.
+     */
+    private applyReward(side: Side, reward: number): void
+    {
+        switch (side)
+        {
+            case "us":
+                this.reward += reward;
+                break;
+            case "them":
+                // punish the other side (us)
+                this.reward -= reward;
+                break;
+        }
     }
 }
