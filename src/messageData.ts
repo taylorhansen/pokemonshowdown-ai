@@ -1,4 +1,9 @@
-import { MajorStatusName } from "../bot/battle/state/Pokemon";
+/**
+ * @file Interfaces and helper functions for dealing with the arguments of a
+ * MessageHandler.
+ */
+import { RequestArgs } from "./AnyMessageListener";
+import { MajorStatusName } from "./bot/battle/state/Pokemon";
 
 /** Player ID in a battle. */
 export type PlayerID = "p1" | "p2";
@@ -15,6 +20,16 @@ export function otherId(id: PlayerID): PlayerID
         return "p2";
     }
     return "p1";
+}
+
+/**
+ * Checks whether a string is a PlayerID.
+ * @param id Value to check.
+ * @returns True if the value is part of the PlayerID type union.
+ */
+export function isPlayerId(id: any): id is PlayerID
+{
+    return id === "p1" || id === "p2";
 }
 
 /** Types of server rooms. */
@@ -93,22 +108,6 @@ export function stringifyStatus(status: PokemonStatus): string
 ${status.condition ? ` ${status.condition}` : ""}`;
 }
 
-/** Types the JSON data in a |request| message. */
-export interface RequestData
-{
-    /** Corresponds to which active pokemon slots must be filled. */
-    forceSwitch?: boolean[];
-    /** Active pokemon info. */
-    active?: RequestActive[];
-    /** Basic info about the entire team. */
-    side: RequestSide;
-    /** Request id for verification. */
-    rqid: number;
-    /** Whether the given request cannot be canceled. */
-    noCancel?: boolean;
-
-}
-
 /** Active pokemon info. */
 export interface RequestActive
 {
@@ -171,7 +170,7 @@ export interface RequestPokemon
  * Stringifies the object from a |request| message back to normal JSON.
  * @param data Data to stringify.
  */
-export function stringifyRequest(data: RequestData): string
+export function stringifyRequest(data: RequestArgs): string
 {
     // i mean, copying it this way is kind of efficient
     const obj: any = JSON.parse(JSON.stringify(data));

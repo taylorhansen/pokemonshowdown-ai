@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { otherId, stringifyDetails, stringifyID, stringifyRequest,
-    stringifyStatus } from "../src/parser/MessageData";
+    stringifyStatus } from "../src/messageData";
 
 /**
  * Describes a test case given to a function.

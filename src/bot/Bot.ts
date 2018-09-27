@@ -1,5 +1,5 @@
 import * as logger from "../logger";
-import { ChallengesFrom, RoomType } from "../parser/MessageData";
+import { ChallengesFrom, RoomType } from "../messageData";
 import { MessageParser } from "../parser/MessageParser";
 import { Network } from "./battle/ai/Network";
 import { Battle } from "./battle/Battle";
@@ -28,9 +28,9 @@ export class Bot
     constructor(send: (response: string) => void)
     {
         this.send = send;
-        this.parser.on(null, "init", (type: RoomType) =>
+        this.parser.on(null, "init", args =>
         {
-            if (type === "battle")
+            if (args.type === "battle")
             {
                 // initialize a new battle ai
                 if (!this.battles.hasOwnProperty(this.room))
@@ -46,14 +46,14 @@ export class Bot
                     this.battles[this.room] = ai;
                 }
             }
-        }).on("", "updatechallenges", (challengesFrom: ChallengesFrom) =>
+        }).on("", "updatechallenges", args =>
         {
-            for (const user in challengesFrom)
+            for (const user in args.challengesFrom)
             {
-                if (challengesFrom.hasOwnProperty(user))
+                if (args.challengesFrom.hasOwnProperty(user))
                 {
                     // ai only supports gen4ou for now
-                    if (challengesFrom[user] === Bot.format)
+                    if (args.challengesFrom[user] === Bot.format)
                     {
                         this.addResponses(null, `|/accept ${user}`);
                     }
@@ -64,9 +64,9 @@ export class Bot
                 }
             }
         })
-        .on("", "updateuser", (username: string) =>
+        .on("", "updateuser", args =>
         {
-            this.username = username;
+            this.username = args.username;
         });
     }
 

@@ -17,6 +17,7 @@
         "no-console": false,
         "no-default-export": true,
         "no-empty": false,
+        "no-empty-interface": false,
         "object-literal-key-quotes": [true, "as-needed"],
         "object-literal-sort-keys": false,
         "one-line": [true, "check-whitespace"],

@@ -1,10 +1,11 @@
 import { expect } from "chai";
 import "mocha";
+import { MessageArgs, Prefix, RequestArgs, SwitchArgs } from
+    "../src/AnyMessageListener";
 import { MajorStatusName } from "../src/bot/battle/state/Pokemon";
 import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestData, RoomType, stringifyDetails, stringifyID, stringifyRequest,
-    stringifyStatus } from "../src/parser/MessageData";
-import { Prefix } from "../src/parser/MessageListener";
+    RoomType, stringifyDetails, stringifyID, stringifyRequest,
+    stringifyStatus } from "../src/messageData";
 import { MessageParser } from "../src/parser/MessageParser";
 
 // TODO: generalize test case patterns
@@ -77,12 +78,12 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
          * @param argStrs String arguments.
          * @param givenArgs Expected message handler arguments.
          */
-        function shouldParse(prefix: Prefix, argStrs: string[],
-            givenArgs: any[]): void
+        function shouldParse<P extends Prefix>(prefix: P, argStrs: string[],
+            givenArgs: MessageArgs<P>): void
         {
             it(`Should parse ${prefix}`, function(done)
             {
-                parser.on("", prefix, (...args: any[]) =>
+                parser.on("", prefix, args =>
                 {
                     expect(args).to.deep.equal(givenArgs);
                     done();
@@ -108,7 +109,8 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             });
         }
 
-        for (const prefix of ["-curestatus", "-status"] as Prefix[])
+        for (const prefix of ["-curestatus", "-status"] as
+                ("-curestatus" | "-status")[])
         {
             describe(prefix, function()
             {
@@ -116,17 +118,17 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
                     {owner: "p1", position: "a", nickname: "nou"};
                 const condition: MajorStatusName = "psn";
                 shouldParse(prefix, [stringifyID(id), condition],
-                    [id, condition]);
+                    {id, condition});
             });
         }
 
         describe("-cureteam", function()
         {
             const id: PokemonID = {owner: "p1", position: "a", nickname: "nou"};
-            shouldParse("-cureteam", [stringifyID(id)], [id]);
+            shouldParse("-cureteam", [stringifyID(id)], {id});
         });
 
-        for (const prefix of ["-damage", "-heal"] as Prefix[])
+        for (const prefix of ["-damage", "-heal"] as ("-damage" | "-heal")[])
         {
             describe(prefix, function()
             {
@@ -135,35 +137,35 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
                 const status: PokemonStatus =
                     {hp: 100, hpMax: 100, condition: "psn"};
                 shouldParse(prefix, [stringifyID(id), stringifyStatus(status)],
-                    [id, status]);
+                    {id, status});
             });
         }
 
         describe("challstr", function()
         {
             const challstr = "4|12352361236737sdagwflk";
-            shouldParse("challstr", [challstr], [challstr]);
+            shouldParse("challstr", [challstr], {challstr});
         });
 
         describe("error", function()
         {
             const reason = "because i said so";
-            shouldParse("error", [reason], [reason]);
+            shouldParse("error", [reason], {reason});
         });
 
         describe("faint", function()
         {
             const id: PokemonID = {owner: "p1", position: "a", nickname: "hi"};
-            shouldParse("faint", [stringifyID(id)], [id]);
+            shouldParse("faint", [stringifyID(id)], {id});
             shouldntParse("faint", []);
         });
 
         describe("init", function()
         {
             const initTypes: RoomType[] = ["chat", "battle"];
-            for (const initType of initTypes)
+            for (const type of initTypes)
             {
-                shouldParse("init", [initType], [initType]);
+                shouldParse("init", [type], {type});
             }
             shouldntParse("init", []);
         });
@@ -182,29 +184,30 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
                 const argStrs = [stringifyID(id), move, stringifyID(target)];
                 if (effect) argStrs.push(`[from]${effect}`);
                 if (missed) argStrs.push("[miss]");
-                shouldParse("move", argStrs, [id, move, effect, missed]);
+                shouldParse("move", argStrs,
+                    {id, move, target, effect, missed});
             }
         });
 
         describe("player", function()
         {
             const ids: PlayerID[] = ["p1", "p2"];
-            const user = "somebody";
-            const avatar = 100;
+            const username = "somebody";
+            const avatarId = 100;
             for (const id of ids)
             {
-                shouldParse("player", [id, user, avatar.toString()],
-                    [id, user, avatar]);
+                shouldParse("player", [id, username, avatarId.toString()],
+                    {id, username, avatarId});
             }
 
-            shouldntParse("player", ["", user, avatar.toString()]);
-            shouldntParse("player", ["p1", "", avatar.toString()]);
-            shouldntParse("player", ["p1", user, ""]);
+            shouldntParse("player", ["", username, avatarId.toString()]);
+            shouldntParse("player", ["p1", "", avatarId.toString()]);
+            shouldntParse("player", ["p1", username, ""]);
         });
 
         describe("request", function()
         {
-            const request: RequestData =
+            const args: RequestArgs =
             {
                 active:
                 [
@@ -285,7 +288,7 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
                 },
                 rqid: 10
             };
-            shouldParse("request", [stringifyRequest(request)], [request]);
+            shouldParse("request", [stringifyRequest(args)], args);
 
             shouldntParse("request", []);
         });
@@ -293,33 +296,46 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
         describe("switch", function()
         {
             // expected value when the corresponding switchInfo is parsed
-            const switchData: [PokemonID, PokemonDetails, PokemonStatus][] =
+            const switchData: SwitchArgs[] =
             [
-                [
-                    {owner: "p1", position: "a", nickname: "Lucky"},
-                    {species: "Magikarp", shiny: true, gender: "M", level: 100},
-                    {hp: 65, hpMax: 200, condition: "par"}
-                ],
-                [
-                    {owner: "p2", position: "b", nickname: "Rage"},
-                    {species: "Gyarados", shiny: false, gender: "F", level: 50},
-                    {hp: 1, hpMax: 1, condition: ""}
-                ],
-                [
-                    {owner: "p1", position: "c", nickname: "Mew2"},
-                    {species: "Mewtwo", shiny: false, gender: null, level: 100},
-                    {hp: 100, hpMax: 100, condition: "slp"}
-                ]
+                {
+                    id: {owner: "p1", position: "a", nickname: "Lucky"},
+                    details:
+                    {
+                        species: "Magikarp", shiny: true, gender: "M",
+                        level: 100
+                    },
+                    status: {hp: 65, hpMax: 200, condition: "par"}
+                },
+                {
+                    id: {owner: "p2", position: "b", nickname: "Rage"},
+                    details:
+                    {
+                        species: "Gyarados", shiny: false, gender: "F",
+                        level: 50
+                    },
+                    status: {hp: 1, hpMax: 1, condition: ""}
+                },
+                {
+                    id: {owner: "p1", position: "c", nickname: "Mew2"},
+                    details:
+                    {
+                        species: "Mewtwo", shiny: false, gender: null,
+                        level: 100
+                    },
+                    status: {hp: 100, hpMax: 100, condition: "slp"}
+                }
             ];
             // contains the indexes of each switch parameter
-            const infoNames: {[infoName: string]: number} =
-                { id: 0, details: 1, status: 2 };
-            // switch data in string form
-            const switchStrs: string[][] = switchData.map(a =>
+            const infoNames: {[T in keyof SwitchArgs]: number} =
+                {id: 0, details: 1, status: 2};
+
+            // switch args in string form
+            const switchStrs = switchData.map(args =>
             [
-                stringifyID(a[0]),
-                stringifyDetails(a[1]),
-                stringifyStatus(a[2])
+                stringifyID(args.id),
+                stringifyDetails(args.details),
+                stringifyStatus(args.status)
             ]);
 
             let i: number;
@@ -338,7 +354,7 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
                 // if any one of PokemonID, PokemonDetails, or
                 //  PokemonStatus are omitted or invalid, the entire
                 //  message shouldn't be parsed
-                switchStrs[i][infoNames[infoName]] = "";
+                switchStrs[i][infoNames[infoName as keyof SwitchArgs]] = "";
                 shouldntParse("switch", switchStrs[i]);
                 ++i;
             }
@@ -346,12 +362,11 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
 
         describe("teamsize", function()
         {
-            const playerIds = ["p1", "p2"];
+            const playerIds: PlayerID[] = ["p1", "p2"];
             const size = 1;
-            for (const playerId of playerIds)
+            for (const id of playerIds)
             {
-                shouldParse("teamsize", [playerId, size.toString()],
-                    [playerId, size]);
+                shouldParse("teamsize", [id, size.toString()], {id, size});
             }
             shouldntParse("teamsize", ["", size.toString()]);
             shouldntParse("teamsize", [playerIds[0], ""]);
@@ -360,7 +375,7 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
         describe("turn", function()
         {
             const turn = 1;
-            shouldParse("turn", [turn.toString()], [turn]);
+            shouldParse("turn", [turn.toString()], {turn});
         });
 
         describe("updatechallenges", function()
@@ -368,7 +383,7 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             const challengesFrom: ChallengesFrom = { somebody: "gen4ou" };
             shouldParse("updatechallenges",
                 [`{"challengesFrom":${JSON.stringify(challengesFrom)}}`],
-                [challengesFrom]);
+                {challengesFrom});
         });
 
         describe("updateuser", function()
@@ -379,14 +394,14 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             const avatar = 21;
             shouldParse("updateuser",
                 [username, guest.toString(), avatar.toString()],
-                [username, !guest]);
+                {username, isGuest: !guest});
             shouldntParse("updateuser", []);
             shouldntParse("updateuser", [username]);
         });
 
         describe("upkeep", function()
         {
-            shouldParse("upkeep", [], []);
+            shouldParse("upkeep", [], {});
         });
     });
 });

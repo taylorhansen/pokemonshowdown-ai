@@ -1,6 +1,8 @@
+import { AnyMessageListener, MessageHandler, Prefix } from
+    "../AnyMessageListener";
 import { isMajorStatus, MajorStatusName } from "../bot/battle/state/Pokemon";
-import { PokemonDetails, PokemonID, PokemonStatus } from "./MessageData";
-import { AnyMessageListener, MessageHandler, Prefix } from "./MessageListener";
+import { isPlayerId, PokemonDetails, PokemonID, PokemonStatus } from
+    "../messageData";
 
 /**
  * Parses messages sent from the server. Instead of producing some kind of
@@ -131,10 +133,10 @@ export class MessageParser
                 case "init": // joined a room
                 {
                     // format: |init|<chat or battle>
-                    const word = this.getWord();
-                    if (word === "chat" || word === "battle")
+                    const type = this.getWord();
+                    if (type === "chat" || type === "battle")
                     {
-                        this.getHandler("init")(word);
+                        this.getHandler("init")({type});
                     }
                     break;
                 }
@@ -162,9 +164,12 @@ export class MessageParser
                 case "nametaken":
                     break;*/
                 case "challstr": // login key
+                {
                     // format: |challstr|<id>|<really long challstr>
-                    this.getHandler("challstr")(this.getRestOfLine());
+                    const challstr = this.getRestOfLine();
+                    this.getHandler("challstr")({challstr});
                     break;
+                }
                 case "updateuser": // user info changed
                 {
                     // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
@@ -174,7 +179,7 @@ export class MessageParser
                     const unparsedGuest = this.getWord();
                     if (!unparsedGuest) break;
                     const isGuest = !parseInt(unparsedGuest, 10);
-                    this.getHandler("updateuser")(username, isGuest);
+                    this.getHandler("updateuser")({username, isGuest});
                     break;
                 }
                 /*case "formats":
@@ -186,8 +191,7 @@ export class MessageParser
                     // format: |updatechallenges|<json>
                     // json contains challengesFrom and challengeTo
                     const challenges = JSON.parse(this.getRestOfLine());
-                    this.getHandler("updatechallenges")(
-                        challenges.challengesFrom);
+                    this.getHandler("updatechallenges")(challenges);
                     break;
                 }
                 /*case "queryresponse":
@@ -206,21 +210,21 @@ export class MessageParser
                     const unparsedAvatar = this.getWord();
                     if (!unparsedAvatar) break;
                     const avatarId = parseInt(unparsedAvatar, 10);
-                    this.getHandler("player")(id, username, avatarId);
+                    this.getHandler("player")({id, username, avatarId});
                     break;
                 }
                 case "teamsize": // initialize the size of a player's team
                 {
                     // format: |teamsize|<player>|<size>
                     // player should be p1 or p2
-                    const playerId = this.getWord();
-                    if (playerId && (playerId === "p1" || playerId === "p2"))
+                    const id = this.getWord();
+                    if (isPlayerId(id))
                     {
                         const unparsedSize = this.getWord();
                         if (unparsedSize)
                         {
-                            this.getHandler("teamsize")(playerId,
-                                parseInt(unparsedSize, 10));
+                            const size = parseInt(unparsedSize, 10);
+                            this.getHandler("teamsize")({id, size});
                         }
                     }
                     break;
@@ -267,7 +271,8 @@ export class MessageParser
                 case "turn": // update turn counter
                 {
                     // format: |turn|<turn number>
-                    this.getHandler("turn")(parseInt(this.getRestOfLine(), 10));
+                    const turn = parseInt(this.getRestOfLine(), 10);
+                    this.getHandler("turn")({turn});
                     break;
                 }
                 /*case "win":
@@ -276,7 +281,8 @@ export class MessageParser
                 case "error": // e.g. invalid move/switch choice
                 {
                     // format: |error|[reason] description
-                    this.getHandler("error")(this.getRestOfLine());
+                    const reason = this.getRestOfLine();
+                    this.getHandler("error")({reason});
                     break;
                 }
                 // major actions
@@ -288,17 +294,16 @@ export class MessageParser
                     // can also get a "|[from]<effectname>" suffix, e.g.
                     //  "|[from]lockedmove"
 
-                    const pokemonId =
+                    const id =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId) break;
+                    if (!id) break;
 
                     const move = this.getWord();
                     if (!move) break;
 
-                    // TODO: include this in non-single battles
-                    const targetId =
+                    const target =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!targetId) break;
+                    if (!target) break;
 
                     // parse optional suffixes
                     let word: string | null;
@@ -316,7 +321,7 @@ export class MessageParser
                         }
                     }
 
-                    this.getHandler("move")(pokemonId, move, effect, missed);
+                    this.getHandler("move")({id, move, target, effect, missed});
                     break;
                 }
                 case "switch": // a pokemon was voluntarily switched
@@ -327,9 +332,9 @@ export class MessageParser
                     // details contains species, gender, etc.
                     // status contains hp (value or %), status, etc.
 
-                    const pokemonId =
+                    const id =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId) break;
+                    if (!id) break;
 
                     const details =
                         MessageParser.parsePokemonDetails(this.getWord());
@@ -339,7 +344,7 @@ export class MessageParser
                         MessageParser.parsePokemonStatus(this.getWord());
                     if (!status) break;
 
-                    this.getHandler("switch")(pokemonId, details, status);
+                    this.getHandler("switch")({id, details, status});
                     break;
                 }
                 /*case "detailschange":
@@ -351,15 +356,15 @@ export class MessageParser
                 {
                     // format: |faint|<pokemon id>
 
-                    const pokemonId =
+                    const id =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId) break;
+                    if (!id) break;
 
-                    this.getHandler("faint")(pokemonId);
+                    this.getHandler("faint")({id});
                     break;
                 }
                 case "upkeep":
-                    this.getHandler("upkeep")();
+                    this.getHandler("upkeep")({});
                     break;
 
                 // minor actions
@@ -368,50 +373,50 @@ export class MessageParser
                 case "-damage":
                 case "-heal":
                 {
-                    const pokemonId =
+                    const id =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId) break;
+                    if (!id) break;
 
                     const status =
                         MessageParser.parsePokemonStatus(this.getWord());
                     if (!status) break;
 
-                    this.getHandler(prefix)(pokemonId, status);
+                    this.getHandler(prefix)({id, status});
                     break;
                 }
                 case "-status":
                 {
-                    const pokemonId =
+                    const id =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId) break;
+                    if (!id) break;
 
                     const condition =
                         MessageParser.parseCondition(this.getWord());
                     if (!condition) break;
 
-                    this.getHandler(prefix)(pokemonId, condition);
+                    this.getHandler(prefix)({id, condition});
                     break;
                 }
                 case "-curestatus":
                 {
-                    const pokemonId =
+                    const id =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId) break;
+                    if (!id) break;
 
                     const condition =
                         MessageParser.parseCondition(this.getWord());
                     if (!condition) break;
 
-                    this.getHandler(prefix)(pokemonId, condition);
+                    this.getHandler(prefix)({id, condition});
                     break;
                 }
                 case "-cureteam":
                 {
-                    const pokemonId =
+                    const id =
                         MessageParser.parsePokemonID(this.getWord());
-                    if (!pokemonId) break;
+                    if (!id) break;
 
-                    this.getHandler(prefix)(pokemonId);
+                    this.getHandler(prefix)({id});
                     break;
                 }
                 /*case "-boost":

@@ -1,8 +1,8 @@
 import * as readline from "readline";
+import { AnyMessageListener } from "../../AnyMessageListener";
 import * as logger from "../../logger";
 import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestData, RequestMove, RequestPokemon } from "../../parser/MessageData";
-import { AnyMessageListener } from "../../parser/MessageListener";
+    RequestMove, RequestPokemon } from "../../messageData";
 import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
 import { BattleState, Side } from "./state/BattleState";
@@ -51,72 +51,74 @@ export class Battle
         this.ai = new aiType(BattleState.getArraySize());
         this.addResponses = addResponses;
         listener
-        .on("-curestatus", (id: PokemonID, condition: MajorStatusName) =>
+        .on("-curestatus", args =>
         {
-            this.state.getTeam(this.sides[id.owner]).active.setMajorStatus("");
+            this.state.getTeam(this.sides[args.id.owner]).active
+                .setMajorStatus("");
         })
-        .on("-cureteam", (id: PokemonID) =>
+        .on("-cureteam", args =>
         {
-            for (const mon of this.state.getTeam(this.sides[id.owner]).pokemon)
+            const team = this.state.getTeam(this.sides[args.id.owner]);
+            for (const mon of team.pokemon)
             {
                 mon.setMajorStatus("");
             }
         })
-        .on("-damage", (id: PokemonID, status: PokemonStatus) =>
+        .on("-damage", args =>
         {
-            const side = this.sides[id.owner];
+            const side = this.sides[args.id.owner];
             // side "them" is represented by a percentage so hpMax is omitted
-            const hpMax = side === "us" ? status.hpMax : undefined;
+            const hpMax = side === "us" ? args.status.hpMax : undefined;
             const active = this.state.getTeam(side).active;
 
-            active.setHP(status.hp, hpMax);
+            active.setHP(args.status.hp, hpMax);
             if (!active.fainted)
             {
                 // status should be ignored if the pokemon is already fainted
-                active.setMajorStatus(status.condition as MajorStatusName);
+                active.setMajorStatus(args.status.condition);
             }
         })
-        .on("-heal", (id: PokemonID, status: PokemonStatus) =>
+        .on("-heal", args =>
         {
             // delegate to -damage for now
-            listener.getHandler("-damage")(id, status);
+            listener.getHandler("-damage")(args);
         })
-        .on("-status", (id: PokemonID, condition: MajorStatusName) =>
+        .on("-status", args =>
         {
-            this.state.getTeam(this.sides[id.owner]).active
-                .setMajorStatus(condition);
+            this.state.getTeam(this.sides[args.id.owner]).active
+                .setMajorStatus(args.condition);
         })
-        .on("error", (reason: string) =>
+        .on("error", args =>
         {
-            logger.error(reason);
+            logger.error(args.reason);
             logger.debug("nn input failed, asking user for input");
             this.askUser();
         })
-        .on("faint", (id: PokemonID) =>
+        .on("faint", args =>
         {
             // active pokemon has fainted
             // TODO: for doubles/triples, do this based on active position also
-            const side = this.sides[id.owner];
+            const side = this.sides[args.id.owner];
             this.state.getTeam(side).active.faint();
             this.applyReward(side, rewards.faint);
         })
-        .on("move", (id: PokemonID, move: string, effect: string,
-            missed: boolean) =>
+        .on("move", args =>
         {
-            const mon = this.state.getTeam(this.sides[id.owner]).active;
-            const moveId = move.toLowerCase().replace(/[ -]/g, "");
+            const mon = this.state.getTeam(this.sides[args.id.owner]).active;
+            const moveId = args.move.toLowerCase().replace(/[ -]/g, "");
             // TODO: sometimes a move might use >1 pp
-            mon.useMove(moveId, effect);
+            mon.useMove(moveId, args.effect);
         })
-        .on("player", (id: PlayerID, givenUser: string) =>
+        .on("player", args =>
         {
-            if (givenUser !== username)
+            if (args.username !== username)
             {
                 // them
-                this.sides = {[id]: "them", [otherId(id)]: "us"} as any;
+                this.sides = {[args.id]: "them", [otherId(args.id)]: "us"} as
+                    any;
             }
         })
-        .on("request", (request: RequestData) =>
+        .on("request", args =>
         {
             // update the client's team data
             // generally, handling all the other types of messages should
@@ -130,15 +132,15 @@ export class Battle
             // first time: team array not initialized yet
             if (team.size === 0)
             {
-                team.size = request.side.pokemon.length;
+                team.size = args.side.pokemon.length;
             }
             const pokemon: Pokemon[] = team.pokemon;
-            const pokemonData: RequestPokemon[] = request.side.pokemon;
+            const pokemonData: RequestPokemon[] = args.side.pokemon;
 
             if (this.rqid === null)
             {
                 // initialize each of the client's pokemon since this is our
-                //  first time receiving a request and initializing the rqid
+                //  first time receiving a args and initializing the rqid
                 for (const data of pokemonData)
                 {
                     const details: PokemonDetails = data.details;
@@ -169,44 +171,44 @@ export class Battle
                 }
             }
 
-            // TODO: don't rely on request to get move info
-            if (request.active)
+            // TODO: don't rely on args to get move info
+            if (args.active)
             {
                 // update move data on our active pokemon
                 // TODO: support doubles/triples where there are multiple active
                 //  pokemon
                 const active: Pokemon = team.active;
-                const moveData: RequestMove[] = request.active[0].moves;
+                const moveData: RequestMove[] = args.active[0].moves;
                 for (let i = 0; i < moveData.length; ++i)
                 {
                     const move = moveData[i];
-                    active.disableMove(i, request.active[0].moves[i].disabled);
+                    active.disableMove(i, args.active[0].moves[i].disabled);
                 }
             }
 
             // presence of a forceSwitch array indicates that we're being forced
             //  to switch right now
             // TODO: doubles/triples support
-            this.forceSwitch = request.forceSwitch !== undefined;
+            this.forceSwitch = args.forceSwitch !== undefined;
 
             // update rqid to verify our next choice
-            this.rqid = request.rqid;
+            this.rqid = args.rqid;
         })
-        .on("switch", (id: PokemonID, details: PokemonDetails,
-            status: PokemonStatus) =>
+        .on("switch", args =>
         {
-            const side = this.sides[id.owner];
+            const side = this.sides[args.id.owner];
             const team = this.state.getTeam(side);
 
             // index of the pokemon to switch
-            let newActiveIndex = team.find(details.species);
+            let newActiveIndex = team.find(args.details.species);
             if (newActiveIndex === -1)
             {
                 // no known pokemon found, so this is a new switchin
                 // hp is a percentage if on the opponent's team
-                const hpMax = side === "us" ? status.hpMax : undefined;
-                newActiveIndex = team.newSwitchin(details.species,
-                    details.level, details.gender, status.hp, hpMax);
+                const hpMax = side === "us" ? args.status.hpMax : undefined;
+                newActiveIndex = team.newSwitchin(args.details.species,
+                        args.details.level, args.details.gender, args.status.hp,
+                        hpMax);
                 if (newActiveIndex === -1)
                 {
                     logger.error(`team ${side} seems to have more pokemon than \
@@ -216,23 +218,23 @@ expected`);
             }
             team.switchIn(newActiveIndex);
         })
-        .on("teamsize", (id: PlayerID, size: number) =>
+        .on("teamsize", args =>
         {
             // should only initialize if the team is empty
-            const side = this.sides[id];
+            const side = this.sides[args.id];
             const team = this.state.getTeam(side);
             if (team.size <= 0)
             {
-                team.size = size;
+                team.size = args.size;
             }
         })
-        .on("turn", (turn: number) =>
+        .on("turn", args =>
         {
-            logger.debug(`new turn: ${turn}`);
+            logger.debug(`new turn: ${args.turn}`);
             logger.debug(`state:\n${this.state.toString()}`);
             this.askAI();
         })
-        .on("upkeep", () =>
+        .on("upkeep", args =>
         {
             // usually, once we get the message that a new turn has started, we
             //  would then ask the neural network for input
