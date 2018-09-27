@@ -254,10 +254,13 @@ expected`);
         logger.debug(`choices: [${choices.join(", ")}]`);
         logger.debug(`accumulated award: ${this.reward}`);
 
-        const response = this.ai.decide(this.state.toArray(), choices,
-                this.reward);
+        this.ai.decide(this.state.toArray(), choices, this.reward)
+        .then(choice =>
+        {
+            this.addResponses(`|/choose ${choice}|${this.rqid}`);
+        });
+
         this.reward = 0;
-        this.addResponses(`|/choose ${response}|${this.rqid}`);
     }
 
     /** Asks for and sends user input to the server once it's received. */

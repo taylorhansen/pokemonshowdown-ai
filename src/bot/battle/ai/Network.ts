@@ -36,52 +36,58 @@ export class Network implements AI
     }
 
     /** @override */
-    public decide(state: number[], choices: Choice[], reward?: number): Choice
+    public decide(state: number[], choices: Choice[], reward?: number):
+        Promise<Choice>
     {
-        if (state.length > this.inputLength)
+        return new Promise<Choice>(async (resolve, reject) =>
         {
-            logger.error(`too many state values ${state.length}, expected \
-${this.inputLength}`);
-            state.splice(this.inputLength);
-        }
-        else if (state.length < this.inputLength)
-        {
-            logger.error(`not enough state values ${state.length}, expected \
-${this.inputLength}`);
-            do
+            if (state.length > this.inputLength)
             {
-                state.push(0);
+                logger.error(`too many state values ${state.length}, expected \
+${this.inputLength}`);
+                state.splice(this.inputLength);
             }
-            while (state.length < this.inputLength);
-        }
+            else if (state.length < this.inputLength)
+            {
+                logger.error(`not enough state values ${state.length}, \
+expected ${this.inputLength}`);
+                do
+                {
+                    state.push(0);
+                }
+                while (state.length < this.inputLength);
+            }
 
-        const nextState = Network.toColumn(state);
-        const prediction = this.model.predict(nextState) as tf.Tensor2D;
+            const nextState = Network.toColumn(state);
+            const prediction = this.model.predict(nextState) as tf.Tensor2D;
+            const predictionData = Array.from(await prediction.data());
 
-        if (reward && this.lastState && this.lastPrediction && this.lastChoice)
-        {
-            // apply the Q learning update rule
+            if (reward && this.lastState && this.lastPrediction &&
+                this.lastChoice)
+            {
+                logger.debug("applying reward");
+                // apply the Q learning update rule
+                const discount = 0.8;
+                const nextMaxReward = discount * Math.max(...predictionData);
 
-            const discount = 0.8;
-            const nextMaxReward = discount * Math.max(...prediction.dataSync());
+                const target = predictionData;
+                target[choiceIds[this.lastChoice]] = reward + nextMaxReward;
 
-            const target = this.lastPrediction.dataSync();
-            target[choiceIds[this.lastChoice]] = reward + nextMaxReward;
+                this.model.fit(this.lastState, Network.toColumn(target));
+            }
 
-            this.model.fit(this.lastState, Network.toColumn(target));
-        }
+            this.lastState = nextState;
+            this.lastPrediction = prediction;
 
-        this.lastState = nextState;
-        this.lastPrediction = prediction;
+            logger.debug(`prediction: \
+{${predictionData.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
 
-        // find the best choice that is a subset of our choices parameter
-        // TODO: make this async
-        const data = Array.from(prediction.dataSync());
-        logger.debug(`prediction: \
-{${data.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
-        this.lastChoice = choices.reduce((prev, curr) =>
-            data[choiceIds[prev]] < data[choiceIds[curr]] ? curr : prev);
-        return this.lastChoice;
+            // find the best choice that is a subset of our choices parameter
+            this.lastChoice = choices.reduce((prev, curr) =>
+                predictionData[choiceIds[prev]] <
+                    predictionData[choiceIds[curr]] ? curr : prev);
+            resolve(this.lastChoice);
+        });
     }
 
     /**
