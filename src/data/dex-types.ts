@@ -46,8 +46,14 @@ export interface MoveData
     /** Base power points. */
     readonly pp: number;
     /** Whether this move causes the user to switch. */
-    readonly selfSwitch: boolean;
+    readonly selfSwitch: SelfSwitch;
 }
+
+/**
+ * Whether this move causes the user to switch, but `copyvolatile` additionally
+ * transfers volatile status conditions.
+ */
+export type SelfSwitch = boolean | "copyvolatile";
 
 /** Type info for the dex variable. */
 export interface Dex

@@ -1,5 +1,12 @@
 import { Pokemon } from "./Pokemon";
 
+/** Options for switchin methods. */
+export interface SwitchInOptions
+{
+    /** Whether volatile status should be copied onto the replacing pokemon. */
+    copyVolatile?: boolean;
+}
+
 /** Team state. */
 export class Team
 {
@@ -97,18 +104,19 @@ export class Team
      * @param gender Pokemon's gender.
      * @param hp Current HP.
      * @param hpMax Maximum HP. Omit to assume percentage.
+     * @param options Circumstances of switchin.
      * @returns The index of the new pokemon, or -1 if already full.
      */
     public newSwitchin(species: string, level: number,
-        gender: string | null, hp: number, hpMax?: number): number
+        gender: string | null, hp: number, hpMax?: number,
+        options: SwitchInOptions = {}): number
     {
         // early return: team already full
         if (this.unrevealed >= this.size) return -1;
 
         // switch active status
-        this.active.switchOut();
         const revealed = this.reveal(species, level, gender, hp, hpMax);
-        this.switchIn(revealed);
+        this.switchIn(revealed, options);
 
         return revealed;
     }
@@ -117,15 +125,17 @@ export class Team
      * Indicates that a pokemon has been switched in and will replace the
      * current active pokemon.
      * @param index Index of the pokemon being switched in.
+     * @param options Circumstances of switchin.
      */
-    public switchIn(index: number): void
+    public switchIn(index: number, options: SwitchInOptions = {}): void
     {
         // early return: trying to access an invalid pokemon
         if (index < 0 || index >= this.unrevealed) return;
 
         // switch active status
-        this.active.switchOut();
-        this.pokemon[index].switchIn();
+        const volatile = this.active.switchOut();
+        this.pokemon[index].switchIn(
+                options.copyVolatile ? volatile : undefined);
 
         const tmp = this.pokemon[0];
         this.pokemon[0] = this.pokemon[index];

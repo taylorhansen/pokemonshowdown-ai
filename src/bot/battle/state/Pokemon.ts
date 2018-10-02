@@ -103,7 +103,7 @@ export class Pokemon
     /** Current major status condition. Not cleared on switch. */
     private majorStatus: MajorStatusName = "";
     /** Minor status conditions. Cleared on switch. */
-    private readonly volatileStatus = new VolatileStatus();
+    private volatileStatus = new VolatileStatus();
 
     /** Creates a Pokemon. */
     constructor()
@@ -176,17 +176,33 @@ export class Pokemon
         return a;
     }
 
-    /** Tells the pokemon that it is currently being switched in. */
-    public switchIn(): void
+    /**
+     * Tells the pokemon that it is currently being switched in.
+     * @param volatile Volatile status to set for this pokemon.
+     */
+    public switchIn(volatile?: VolatileStatus): void
     {
         this._active = true;
+        if (volatile)
+        {
+            this.volatileStatus = volatile;
+        }
+        else
+        {
+            this.volatileStatus.clear();
+        }
     }
 
-    /** Tells the pokemon that it is currently being switched out. */
-    public switchOut(): void
+    /**
+     * Tells the pokemon that it is currently being switched out.
+     * @returns Volatile status before switching out.
+     */
+    public switchOut(): VolatileStatus
     {
         this._active = false;
+        const v = this.volatileStatus.shallowClone();
         this.volatileStatus.clear();
+        return v;
     }
 
     /** Tells the pokemon that it has fainted. */
@@ -548,7 +564,22 @@ export class VolatileStatus
         return a;
     }
 
-    /** Clears all volatile status conditions. */
+    /**
+     * Creates a shallow clone of this VolatileStatus.
+     * @returns A shallow clone of this object.
+     */
+    public shallowClone(): VolatileStatus
+    {
+        const v = new VolatileStatus();
+        v.statBoosts = this.statBoosts;
+        v.disabledMoves = this.disabledMoves;
+        return v;
+    }
+
+    /**
+     * Clears all volatile status conditions. This does not affect shallow
+     * clones.
+     */
     public clear(): void
     {
         this.statBoosts =

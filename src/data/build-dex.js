@@ -154,7 +154,8 @@ for (const moveName in moves)
         pp = Math.floor(pp * 8 / 5);
     }
 
-    const selfSwitch = !!move.selfSwitch;
+    const selfSwitch = typeof move.selfSwitch === "string" ?
+        quote(move.selfSwitch) : !!move.selfSwitch;
 
     console.log(`    ${id}: {uid: ${uid}, pp: ${pp}, \
 selfSwitch: ${selfSwitch}},`);

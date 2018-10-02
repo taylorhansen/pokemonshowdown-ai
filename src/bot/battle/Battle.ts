@@ -1,6 +1,7 @@
 import * as readline from "readline";
 import { AnyMessageListener } from "../../AnyMessageListener";
 import { dex } from "../../data/dex";
+import { SelfSwitch } from "../../data/dex-types";
 import * as logger from "../../logger";
 import { otherId, PlayerID, PokemonDetails, PokemonStatus, RequestMove,
     RequestPokemon } from "../../messageData";
@@ -8,6 +9,7 @@ import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
 import { BattleState, Side } from "./state/BattleState";
 import { MajorStatusName, Pokemon } from "./state/Pokemon";
+import { SwitchInOptions } from "./state/Team";
 
 const rl = readline.createInterface(process.stdin, process.stdout);
 
@@ -33,6 +35,10 @@ export class Battle
     private rqid: number | null = null;
     /** Whether we're being forced to switch. */
     private forceSwitch = false;
+    /** Whether we're using a move that requires a switch choice. */
+    private selfSwitch: SelfSwitch = false;
+    /** Whether the opponent is using a move that copies volatile status. */
+    private themCopyVolatile = false;
     /** Accumulated reward during the current turn. */
     private reward = 0;
     /** Used to send response messages to the server. */
@@ -112,11 +118,18 @@ export class Battle
             // TODO: sometimes a move might use >1 pp
             mon.useMove(moveId, args.effect);
 
-            // on the next upkeep message, the game will expect a choice for
-            //  a new switchin, since this move forces a switch
-            if (side === "us" && dex.moves[moveId].selfSwitch)
+            const selfSwitch = dex.moves[moveId].selfSwitch;
+            if (side === "us")
             {
-                this.forceSwitch = true;
+                // on the next upkeep message, the game will expect a choice for
+                //  a new switchin, since this move forces a switch
+                this.selfSwitch = selfSwitch;
+            }
+            else if (side === "them" && selfSwitch === "copyvolatile")
+            {
+                // remember to copy volatile status data for the opponent's
+                //  switchin
+                this.themCopyVolatile = true;
             }
         })
         .on("player", args =>
@@ -209,6 +222,19 @@ export class Battle
             const side = this.sides[args.id.owner];
             const team = this.state.getTeam(side);
 
+            // consume pending copyvolatile boolean flags
+            const options: SwitchInOptions = {};
+            if (side === "us")
+            {
+                options.copyVolatile = this.selfSwitch === "copyvolatile";
+                this.selfSwitch = false;
+            }
+            else
+            {
+                options.copyVolatile = this.themCopyVolatile;
+                this.themCopyVolatile = false;
+            }
+
             // index of the pokemon to switch
             let newActiveIndex = team.find(args.details.species);
             if (newActiveIndex === -1)
@@ -218,7 +244,7 @@ export class Battle
                 const hpMax = side === "us" ? args.status.hpMax : undefined;
                 newActiveIndex = team.newSwitchin(args.details.species,
                         args.details.level, args.details.gender, args.status.hp,
-                        hpMax);
+                        hpMax, options);
                 if (newActiveIndex === -1)
                 {
                     logger.error(`team ${side} seems to have more pokemon than \
@@ -226,7 +252,7 @@ expected`);
                 }
                 return;
             }
-            team.switchIn(newActiveIndex);
+            team.switchIn(newActiveIndex, options);
         })
         .on("teamsize", args =>
         {
@@ -309,7 +335,7 @@ expected`);
             }
         }
 
-        if (!this.forceSwitch)
+        if (!this.forceSwitch && !this.selfSwitch)
         {
             // can also possibly make a move, since we're not being forced to
             //  just switch

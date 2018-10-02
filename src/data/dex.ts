@@ -5684,7 +5684,7 @@ const moves: {readonly [name: string]: MoveData} =
     astonish: {uid: 283, pp: 24, selfSwitch: false},
     attackorder: {uid: 284, pp: 24, selfSwitch: false},
     aurorabeam: {uid: 285, pp: 32, selfSwitch: false},
-    batonpass: {uid: 286, pp: 64, selfSwitch: true},
+    batonpass: {uid: 286, pp: 64, selfSwitch: "copyvolatile"},
     bellydrum: {uid: 287, pp: 16, selfSwitch: false},
     bite: {uid: 288, pp: 40, selfSwitch: false},
     blastburn: {uid: 289, pp: 8, selfSwitch: false},
