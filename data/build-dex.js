@@ -43,7 +43,12 @@ function quote(str)
 const data = Dex.mod("gen4").data;
 
 // import statement at the top of the file
-console.log("import { Dex, MoveData, PokemonData } from \"./dex-types\";\n");
+console.log(`\
+/**
+ * @file Generated file containing all the dex data taken from Pokemon Showdown.
+ */
+import { Dex, MoveData, PokemonData } from \"./dex-types\";
+`);
 
 // implicitly uses typings from:
 //  https://github.com/Zarel/Pokemon-Showdown/blob/master/sim/dex-data.js
