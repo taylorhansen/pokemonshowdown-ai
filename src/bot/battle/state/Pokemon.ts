@@ -1,5 +1,5 @@
-import { dex } from "../../../../data/dex";
-import { PokemonData } from "../../../../data/dex-types";
+import { dex } from "../../../data/dex";
+import { PokemonData } from "../../../data/dex-types";
 
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon

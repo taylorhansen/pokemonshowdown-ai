@@ -2,7 +2,6 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
-
 const Dex = require("./Pokemon-Showdown/sim/dex");
 
 // TODO: support other gens?

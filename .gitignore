@@ -15,4 +15,4 @@ npm-debug.log
 logs/
 
 # clone of pokemon showdown repo for extracting pokedex data
-data/Pokemon-Showdown/
+src/data/Pokemon-Showdown/
