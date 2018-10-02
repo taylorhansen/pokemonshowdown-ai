@@ -2,15 +2,16 @@
 # clones the Pokemon-Showdown github repository in order to extract the desired
 #  pokedex/movedex/item info from it
 
-cd data
-if [ -d Pokemon-Showdown ]
+ps_dir=./src/data/Pokemon-Showdown
+
+if [ -d $ps_dir ]
 then
-    cd Pokemon-Showdown
+    cd $ps_dir
     git checkout master
     git pull origin master
     cd ..
 else
-    git clone https://github.com/Zarel/Pokemon-Showdown
+    git clone https://github.com/Zarel/Pokemon-Showdown $ps_dir
 fi
 
 echo Building dex...

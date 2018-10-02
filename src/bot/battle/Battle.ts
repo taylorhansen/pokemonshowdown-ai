@@ -1,8 +1,9 @@
 import * as readline from "readline";
 import { AnyMessageListener } from "../../AnyMessageListener";
+import { dex } from "../../data/dex";
 import * as logger from "../../logger";
-import { otherId, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestMove, RequestPokemon } from "../../messageData";
+import { otherId, PlayerID, PokemonDetails, PokemonStatus, RequestMove,
+    RequestPokemon } from "../../messageData";
 import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
 import { BattleState, Side } from "./state/BattleState";
@@ -104,10 +105,19 @@ export class Battle
         })
         .on("move", args =>
         {
-            const mon = this.state.getTeam(this.sides[args.id.owner]).active;
+            const side = this.sides[args.id.owner];
+            const mon = this.state.getTeam(side).active;
             const moveId = args.move.toLowerCase().replace(/[ -]/g, "");
+
             // TODO: sometimes a move might use >1 pp
             mon.useMove(moveId, args.effect);
+
+            // on the next upkeep message, the game will expect a choice for
+            //  a new switchin, since this move forces a switch
+            if (side === "us" && dex.moves[moveId].selfSwitch)
+            {
+                this.forceSwitch = true;
+            }
         })
         .on("player", args =>
         {

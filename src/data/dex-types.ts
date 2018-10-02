@@ -45,6 +45,8 @@ export interface MoveData
     readonly uid: number;
     /** Base power points. */
     readonly pp: number;
+    /** Whether this move causes the user to switch. */
+    readonly selfSwitch: boolean;
 }
 
 /** Type info for the dex variable. */

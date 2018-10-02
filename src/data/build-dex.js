@@ -154,7 +154,10 @@ for (const moveName in moves)
         pp = Math.floor(pp * 8 / 5);
     }
 
-    console.log(`    ${id}: {uid: ${uid}, pp: ${pp}},`);
+    const selfSwitch = !!move.selfSwitch;
+
+    console.log(`    ${id}: {uid: ${uid}, pp: ${pp}, \
+selfSwitch: ${selfSwitch}},`);
     ++uid;
 }
 console.log("};\n");
