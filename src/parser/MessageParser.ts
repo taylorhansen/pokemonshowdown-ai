@@ -1,7 +1,7 @@
-import { AnyMessageListener, MessageHandler, Prefix } from
+import { AnyMessageListener, MessageArgs, MessageHandler, Prefix } from
     "../AnyMessageListener";
 import { isMajorStatus, MajorStatusName } from "../bot/battle/state/Pokemon";
-import { isPlayerId, PokemonDetails, PokemonID, PokemonStatus } from
+import { isPlayerId, PlayerID, PokemonDetails, PokemonID, PokemonStatus } from
     "../messageData";
 
 /**
@@ -67,7 +67,7 @@ export class MessageParser
      * parsed separately as little sub-messages.
      * @param message Unparsed message or packet of messages.
      */
-    public parse(message: string)
+    public parse(message: string): void
     {
         this.message = message;
 
@@ -104,19 +104,25 @@ export class MessageParser
     }
 
     /**
-     * Gets a MessageHandler for the current room and given message prefix. If
-     * the room name is unfamiliar, then the new room listener is used.
-     * @template P Prefix type.
-     * @param prefix Message prefix indicating its type.
-     * @returns The appropriate function to call for this message prefix.
+     * Calls a registered MessageHandler for the current room using the given
+     * message prefix.
+     * @param prefix Given prefix.
+     * @param args Message handler arguments.
      */
-    private getHandler<P extends Prefix>(prefix: P): MessageHandler<P>
+    private handle<P extends Prefix>(prefix: P,
+        args: {[A in keyof MessageArgs<P>]: MessageArgs<P>[A] | null}): void
     {
-        if (this.messageListeners.hasOwnProperty(this._room))
+        // early return: message handlers do not accept null arguments
+        if ((Object.keys(args) as (keyof MessageArgs<P>)[])
+            .some(key => args[key] === null))
         {
-            return this.messageListeners[this._room].getHandler(prefix);
+            return;
         }
-        return this.newRoomListener.getHandler(prefix);
+
+        // unregistered rooms are delegated to a special listener
+        const handler = this.messageListeners.hasOwnProperty(this._room) ?
+            this.messageListeners[this._room] : this.newRoomListener;
+        handler.getHandler(prefix)(args as MessageArgs<P>);
     }
 
     /** Parses a single message line. */
@@ -136,7 +142,7 @@ export class MessageParser
                     const type = this.getWord();
                     if (type === "chat" || type === "battle")
                     {
-                        this.getHandler("init")({type});
+                        this.handle("init", {type});
                     }
                     break;
                 }
@@ -167,7 +173,7 @@ export class MessageParser
                 {
                     // format: |challstr|<id>|<really long challstr>
                     const challstr = this.getRestOfLine();
-                    this.getHandler("challstr")({challstr});
+                    this.handle("challstr", {challstr});
                     break;
                 }
                 case "updateuser": // user info changed
@@ -175,11 +181,12 @@ export class MessageParser
                     // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
                     //  <avatar id>
                     const username = this.getWord();
-                    if (!username) break;
+
                     const unparsedGuest = this.getWord();
-                    if (!unparsedGuest) break;
-                    const isGuest = !parseInt(unparsedGuest, 10);
-                    this.getHandler("updateuser")({username, isGuest});
+                    const isGuest = unparsedGuest ?
+                        !MessageParser.parseInt(unparsedGuest) : null;
+
+                    this.handle("updateuser", {username, isGuest});
                     break;
                 }
                 /*case "formats":
@@ -190,8 +197,9 @@ export class MessageParser
                     // change in incoming/outgoing challenges
                     // format: |updatechallenges|<json>
                     // json contains challengesFrom and challengeTo
-                    const challenges = JSON.parse(this.getRestOfLine());
-                    this.getHandler("updatechallenges")(challenges);
+                    const challenges =
+                        MessageParser.parseJSON(this.getRestOfLine());
+                    this.handle("updatechallenges", challenges);
                     break;
                 }
                 /*case "queryresponse":
@@ -203,30 +211,20 @@ export class MessageParser
                     // format: |player|<id>|<username>|<avatarId>
                     // id should be p1 or p2, username is a string, and avatarId
                     //  is an integer
-                    const id = this.getWord();
-                    if (!id || (id !== "p1" && id !== "p2")) break;
-                    const username = this.getWord();
-                    if (!username) break;
-                    const unparsedAvatar = this.getWord();
-                    if (!unparsedAvatar) break;
-                    const avatarId = parseInt(unparsedAvatar, 10);
-                    this.getHandler("player")({id, username, avatarId});
+                    const id = MessageParser.parsePlayerId(this.getWord());
+                    // empty usernames are invalid, hence this extra falsy check
+                    const username = this.getWord() || null;
+                    const avatarId = MessageParser.parseInt(this.getWord());
+                    this.handle("player", {id, username, avatarId});
                     break;
                 }
                 case "teamsize": // initialize the size of a player's team
                 {
                     // format: |teamsize|<player>|<size>
                     // player should be p1 or p2
-                    const id = this.getWord();
-                    if (isPlayerId(id))
-                    {
-                        const unparsedSize = this.getWord();
-                        if (unparsedSize)
-                        {
-                            const size = parseInt(unparsedSize, 10);
-                            this.getHandler("teamsize")({id, size});
-                        }
-                    }
+                    const id = MessageParser.parsePlayerId(this.getWord());
+                    const size = MessageParser.parseInt(this.getWord());
+                    this.handle("teamsize", {id, size});
                     break;
                 }
                 /*case "gametype":
@@ -245,13 +243,10 @@ export class MessageParser
                 {
                     // format: |request|<json>
                     // json contains active and side pokemon info
-                    const unparsedTeam = this.getRestOfLine().trim();
-                    // at the start of a battle, a |request| message is sent but
-                    //  without any json, so we need to account for that
-                    if (unparsedTeam.length)
+                    const team = MessageParser.parseJSON(this.getRestOfLine());
+                    if (team !== null)
                     {
-                        const parsedTeam = JSON.parse(unparsedTeam);
-                        for (const mon of parsedTeam.side.pokemon)
+                        for (const mon of team.side.pokemon)
                         {
                             // ident, details, and condition fields are the same
                             //  as the data from a |switch| message
@@ -261,7 +256,7 @@ export class MessageParser
                             mon.condition = MessageParser.parsePokemonStatus(
                                 mon.condition);
                         }
-                        this.getHandler("request")(parsedTeam);
+                        this.handle("request", team);
                     }
                     break;
                 }
@@ -271,8 +266,8 @@ export class MessageParser
                 case "turn": // update turn counter
                 {
                     // format: |turn|<turn number>
-                    const turn = parseInt(this.getRestOfLine(), 10);
-                    this.getHandler("turn")({turn});
+                    const turn = MessageParser.parseInt(this.getRestOfLine());
+                    this.handle("turn", {turn});
                     break;
                 }
                 /*case "win":
@@ -282,7 +277,7 @@ export class MessageParser
                 {
                     // format: |error|[reason] description
                     const reason = this.getRestOfLine();
-                    this.getHandler("error")({reason});
+                    this.handle("error", {reason});
                     break;
                 }
                 // major actions
@@ -294,16 +289,9 @@ export class MessageParser
                     // can also get a "|[from]<effectname>" suffix, e.g.
                     //  "|[from]lockedmove"
 
-                    const id =
-                        MessageParser.parsePokemonID(this.getWord());
-                    if (!id) break;
-
+                    const id = MessageParser.parsePokemonID(this.getWord());
                     const move = this.getWord();
-                    if (!move) break;
-
-                    const target =
-                        MessageParser.parsePokemonID(this.getWord());
-                    if (!target) break;
+                    const target = MessageParser.parsePokemonID(this.getWord());
 
                     // parse optional suffixes
                     let word: string | null;
@@ -321,7 +309,7 @@ export class MessageParser
                         }
                     }
 
-                    this.getHandler("move")({id, move, target, effect, missed});
+                    this.handle("move", {id, move, target, effect, missed});
                     break;
                 }
                 case "switch": // a pokemon was voluntarily switched
@@ -332,19 +320,12 @@ export class MessageParser
                     // details contains species, gender, etc.
                     // status contains hp (value or %), status, etc.
 
-                    const id =
-                        MessageParser.parsePokemonID(this.getWord());
-                    if (!id) break;
-
+                    const id = MessageParser.parsePokemonID(this.getWord());
                     const details =
                         MessageParser.parsePokemonDetails(this.getWord());
-                    if (!details) break;
-
                     const status =
                         MessageParser.parsePokemonStatus(this.getWord());
-                    if (!status) break;
-
-                    this.getHandler("switch")({id, details, status});
+                    this.handle("switch", {id, details, status});
                     break;
                 }
                 /*case "detailschange":
@@ -356,15 +337,12 @@ export class MessageParser
                 {
                     // format: |faint|<pokemon id>
 
-                    const id =
-                        MessageParser.parsePokemonID(this.getWord());
-                    if (!id) break;
-
-                    this.getHandler("faint")({id});
+                    const id = MessageParser.parsePokemonID(this.getWord());
+                    this.handle("faint", {id});
                     break;
                 }
                 case "upkeep":
-                    this.getHandler("upkeep")({});
+                    this.handle("upkeep", {});
                     break;
 
                 // minor actions
@@ -373,50 +351,32 @@ export class MessageParser
                 case "-damage":
                 case "-heal":
                 {
-                    const id =
-                        MessageParser.parsePokemonID(this.getWord());
-                    if (!id) break;
-
+                    const id = MessageParser.parsePokemonID(this.getWord());
                     const status =
                         MessageParser.parsePokemonStatus(this.getWord());
-                    if (!status) break;
-
-                    this.getHandler(prefix)({id, status});
+                    this.handle(prefix, {id, status});
                     break;
                 }
                 case "-status":
                 {
-                    const id =
-                        MessageParser.parsePokemonID(this.getWord());
-                    if (!id) break;
-
+                    const id = MessageParser.parsePokemonID(this.getWord());
                     const condition =
                         MessageParser.parseCondition(this.getWord());
-                    if (!condition) break;
-
-                    this.getHandler(prefix)({id, condition});
+                    this.handle(prefix, {id, condition});
                     break;
                 }
                 case "-curestatus":
                 {
-                    const id =
-                        MessageParser.parsePokemonID(this.getWord());
-                    if (!id) break;
-
+                    const id = MessageParser.parsePokemonID(this.getWord());
                     const condition =
                         MessageParser.parseCondition(this.getWord());
-                    if (!condition) break;
-
-                    this.getHandler(prefix)({id, condition});
+                    this.handle(prefix, {id, condition});
                     break;
                 }
                 case "-cureteam":
                 {
-                    const id =
-                        MessageParser.parsePokemonID(this.getWord());
-                    if (!id) break;
-
-                    this.getHandler(prefix)({id});
+                    const id = MessageParser.parsePokemonID(this.getWord());
+                    this.handle(prefix, {id});
                     break;
                 }
                 /*case "-boost":
@@ -443,6 +403,42 @@ export class MessageParser
                     break;*/
             }
         }
+    }
+
+    /**
+     * Parses a PlayerID.
+     * @param id String to parse.
+     * @returns A valid PlayerID, or null if invalid.
+     */
+    private static parsePlayerId(id: string | null): PlayerID | null
+    {
+        return isPlayerId(id) ? id : null;
+    }
+
+    /**
+     * Parses an integer.
+     * @param n String to parse.
+     * @returns An integer, or null if invalid.
+     */
+    private static parseInt(n: string | null): number | null
+    {
+        if (n !== null)
+        {
+            const parsed = parseInt(n, 10);
+            return isNaN(parsed) ? null : parsed;
+        }
+        return null;
+    }
+
+    /**
+     * Parses a JSON object.
+     * @param obj String to parse.
+     * @returns An object, or null if invalid.
+     */
+    private static parseJSON(obj: string | null): any
+    {
+        // any falsy type (empty string, null, etc) is invalid
+        return obj ? JSON.parse(obj) : null;
     }
 
     /**
