@@ -8,7 +8,8 @@
     "build": "tsc",
     "lint": "tslint -c tslint.json data/*.ts src/**/*.ts test/**/*.ts",
     "main": "ts-node src/index.ts",
-    "test": "nyc mocha"
+    "test": "nyc mocha",
+    "test:mocha": "mocha"
   },
   "nyc": {
     "extension": [
