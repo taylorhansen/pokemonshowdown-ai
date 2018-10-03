@@ -1,5 +1,6 @@
 import * as tf from "@tensorflow/tfjs";
 import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
+import "@tensorflow/tfjs-node";
 import * as logger from "../../../logger";
 import { AI } from "./AI";
 import { Choice, choiceIds, intToChoice } from "./Choice";
@@ -7,8 +8,11 @@ import { Choice, choiceIds, intToChoice } from "./Choice";
 /** Neural network interface. */
 export class Network implements AI
 {
+    /** Path to weights manifest folder. */
+    private static readonly weightsPath =
+        `${__dirname}/../../../../weights-latest`;
     /** Neural network model. */
-    private readonly model = tf.sequential();
+    private model: tf.Model;
     /** Number of input neurons. */
     private readonly inputLength: number;
     /** Last state input tensor. */
@@ -23,15 +27,11 @@ export class Network implements AI
     {
         this.inputLength = inputLength;
 
-        // setup all the layers
-        const outNeurons = Object.keys(choiceIds).length;
-        this.model.add(tf.layers.dense(
-            {units: 10, activation: "tanh", inputDim: this.inputLength}));
-        this.model.add(tf.layers.dense(
-            {units: outNeurons, activation: "linear"}));
-        this.model.compile(
+        this.load().catch(reason =>
         {
-            loss: "meanSquaredError", optimizer: "adam", metrics: ["mae"]
+            logger.error(`error opening model-latest: ${reason}`);
+            logger.debug("Constructing new model");
+            this.constructModel();
         });
     }
 
@@ -90,6 +90,27 @@ expected ${this.inputLength}`);
         });
     }
 
+    /** @override */
+    public async save(): Promise<void>
+    {
+        await this.model.save(`file://${Network.weightsPath}`);
+    }
+
+    /** Loads the most recently saved model. */
+    public async load(): Promise<void>
+    {
+        this.model =
+            await tf.loadModel(`file://${Network.weightsPath}/model.json`);
+        this.compileModel();
+
+        // loaded models must have the correct input/output shape
+        const input = this.model.input;
+        if (Array.isArray(input) || !this.isValidInputShape(input.shape))
+        {
+            throw new Error("Invalid input shape");
+        }
+    }
+
     /**
      * Turns a tensor-like object into a column vector.
      * @param arr Array to convert.
@@ -98,5 +119,40 @@ expected ${this.inputLength}`);
     private static toColumn(arr: TensorLike2D): tf.Tensor2D
     {
         return tf.tensor2d(arr, [1, arr.length], "float32");
+    }
+
+    /** Constructs the neural network model. */
+    private constructModel(): void
+    {
+        // setup all the layers
+        const outNeurons = Object.keys(choiceIds).length;
+
+        const dense1 = tf.layers.dense({units: 10, activation: "tanh"});
+        const dense2 = tf.layers.dense(
+            {units: outNeurons, activation: "linear"});
+
+        const input = tf.input({shape: [this.inputLength]});
+        const output = dense2.apply(dense1.apply(input)) as tf.SymbolicTensor;
+
+        this.model = tf.model({inputs: input, outputs: output});
+        this.compileModel();
+    }
+
+    /** Compiles the current model. */
+    private compileModel(): void
+    {
+        this.model.compile(
+            {loss: "meanSquaredError", optimizer: "adam", metrics: ["mae"]});
+    }
+
+    /**
+     * Ensures that a network input shape is valid.
+     * @param shape Given input shape.
+     * @return True if the input shape is valid.
+     */
+    private isValidInputShape(shape: number[]): boolean
+    {
+        return shape.length === 2 && shape[0] === null &&
+            shape[1] === this.inputLength;
     }
 }

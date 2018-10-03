@@ -291,9 +291,10 @@ expected`);
         logger.debug(`accumulated award: ${this.reward}`);
 
         this.ai.decide(this.state.toArray(), choices, this.reward)
-        .then(choice =>
+        .then(async choice =>
         {
             this.addResponses(`|/choose ${choice}|${this.rqid}`);
+            await this.ai.save();
         });
 
         this.reward = 0;

@@ -13,6 +13,9 @@ export interface AI
      */
     decide(state: number[], choices: Choice[], reward?: number):
         Promise<Choice>;
+
+    /** Saves AI state to storage. */
+    save(): Promise<void>;
 }
 
 /** Interface for the constructor of an AI object. */

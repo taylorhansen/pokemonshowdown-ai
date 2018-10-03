@@ -16,3 +16,6 @@ logs/
 
 # clone of pokemon showdown repo for extracting pokedex data
 src/data/Pokemon-Showdown/
+
+# neural network weights files
+weights-latest/
