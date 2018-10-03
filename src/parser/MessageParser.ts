@@ -199,6 +199,7 @@ export class MessageParser
                     // json contains challengesFrom and challengeTo
                     const challenges =
                         MessageParser.parseJSON(this.getRestOfLine());
+                    challenges.challengeTo = challenges.challengeTo || {};
                     this.handle("updatechallenges", challenges);
                     break;
                 }
