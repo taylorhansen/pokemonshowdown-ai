@@ -1,11 +1,10 @@
 import { expect } from "chai";
 import "mocha";
-import { MessageArgs, Prefix, RequestArgs, SwitchArgs } from
-    "../src/AnyMessageListener";
+import { MessageArgs, Prefix, RequestArgs, SwitchArgs, UpdateChallengesArgs }
+    from "../src/AnyMessageListener";
 import { MajorStatusName } from "../src/bot/battle/state/Pokemon";
-import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RoomType, stringifyDetails, stringifyID, stringifyRequest,
-    stringifyStatus } from "../src/messageData";
+import { PlayerID, PokemonID, PokemonStatus, RoomType, stringifyDetails,
+    stringifyID, stringifyRequest, stringifyStatus } from "../src/messageData";
 import { MessageParser } from "../src/parser/MessageParser";
 
 // TODO: generalize test case patterns
@@ -380,10 +379,9 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
 
         describe("updatechallenges", function()
         {
-            const challengesFrom: ChallengesFrom = { somebody: "gen4ou" };
-            shouldParse("updatechallenges",
-                [`{"challengesFrom":${JSON.stringify(challengesFrom)}}`],
-                {challengesFrom});
+            const args: UpdateChallengesArgs =
+                {challengesFrom: {somebody: "gen4ou"}, challengeTo: {}};
+            shouldParse("updatechallenges", [JSON.stringify(args)], args);
         });
 
         describe("updateuser", function()

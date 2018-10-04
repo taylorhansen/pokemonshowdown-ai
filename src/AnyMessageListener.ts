@@ -274,6 +274,8 @@ export interface UpdateChallengesArgs
 {
     /** Challenges from others to the client. */
     challengesFrom: ChallengesFrom;
+    /** Current outgoing challenge from the client (TODO). */
+    challengeTo: {};
 }
 
 /** Args for an `updateuser` message. */
