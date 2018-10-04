@@ -60,30 +60,23 @@ export class Battle
         listener
         .on("-curestatus", args =>
         {
-            this.state.getTeam(this.sides[args.id.owner]).active
-                .setMajorStatus("");
+            this.state.getTeam(this.sides[args.id.owner]).active.cure();
         })
         .on("-cureteam", args =>
         {
-            const team = this.state.getTeam(this.sides[args.id.owner]);
-            for (const mon of team.pokemon)
-            {
-                mon.setMajorStatus("");
-            }
+            this.state.getTeam(this.sides[args.id.owner]).cure();
         })
         .on("-damage", args =>
         {
             const side = this.sides[args.id.owner];
-            // side "them" is represented by a percentage so hpMax is omitted
-            const hpMax = side === "us" ? args.status.hpMax : undefined;
             const active = this.state.getTeam(side).active;
 
+            // side "them" uses hp percentages so hpMax would be omitted
+            const hpMax = side === "us" ? args.status.hpMax : undefined;
             active.setHP(args.status.hp, hpMax);
-            if (!active.fainted)
-            {
-                // status should be ignored if the pokemon is already fainted
-                active.setMajorStatus(args.status.condition);
-            }
+            // this should already be covered by the `-status` handler but just
+            //  in case
+            active.afflict(args.status.condition);
         })
         .on("-heal", args =>
         {
@@ -93,7 +86,7 @@ export class Battle
         .on("-status", args =>
         {
             this.state.getTeam(this.sides[args.id.owner]).active
-                .setMajorStatus(args.condition);
+                .afflict(args.condition);
         })
         .on("error", args =>
         {
@@ -175,7 +168,7 @@ export class Battle
                     mon.item = data.item;
                     mon.baseAbility = data.baseAbility;
                     mon.setHP(status.hp, status.hpMax);
-                    mon.setMajorStatus(status.condition as MajorStatusName);
+                    mon.afflict(status.condition);
 
                     // set active status
                     if (data.active)

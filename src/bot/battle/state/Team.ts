@@ -166,6 +166,15 @@ export class Team
         return this.unrevealed++;
     }
 
+    /** Cures all pokemon of any major status conditions. */
+    public cure(): void
+    {
+        for (const mon of this.pokemon)
+        {
+            mon.cure();
+        }
+    }
+
     /**
      * Encodes all team data into a string.
      * @param indent Indentation level to use.

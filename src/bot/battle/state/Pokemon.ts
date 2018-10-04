@@ -297,12 +297,18 @@ export class Pokemon
     }
 
     /**
-     * Sets the pokemon's major status condition.
+     * Afflicts the pokemon with a major status condition.
      * @param status Name of condition.
      */
-    public setMajorStatus(status: MajorStatusName): void
+    public afflict(status: MajorStatusName): void
     {
         this.majorStatus = status;
+    }
+
+    /** Cures the pokemon of a major status condition. */
+    public cure(): void
+    {
+        this.afflict("");
     }
 
     /**
