@@ -1,5 +1,4 @@
 import * as logger from "../logger";
-import { ChallengesFrom, RoomType } from "../messageData";
 import { MessageParser } from "../parser/MessageParser";
 import { Network } from "./battle/ai/Network";
 import { Battle } from "./battle/Battle";
@@ -52,7 +51,6 @@ export class Bot
             {
                 if (args.challengesFrom.hasOwnProperty(user))
                 {
-                    // ai only supports gen4ou for now
                     if (args.challengesFrom[user] === Bot.format)
                     {
                         this.addResponses(null, `|/accept ${user}`);
