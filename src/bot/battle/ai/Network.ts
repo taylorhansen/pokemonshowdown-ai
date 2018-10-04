@@ -36,58 +36,55 @@ export class Network implements AI
     }
 
     /** @override */
-    public decide(state: number[], choices: Choice[], reward?: number):
+    public async decide(state: number[], choices: Choice[], reward?: number):
         Promise<Choice>
     {
-        return new Promise<Choice>(async (resolve, reject) =>
+        if (state.length > this.inputLength)
         {
-            if (state.length > this.inputLength)
-            {
-                logger.error(`too many state values ${state.length}, expected \
+            logger.error(`too many state values ${state.length}, expected \
 ${this.inputLength}`);
-                state.splice(this.inputLength);
-            }
-            else if (state.length < this.inputLength)
-            {
-                logger.error(`not enough state values ${state.length}, \
+            state.splice(this.inputLength);
+        }
+        else if (state.length < this.inputLength)
+        {
+            logger.error(`not enough state values ${state.length}, \
 expected ${this.inputLength}`);
-                do
-                {
-                    state.push(0);
-                }
-                while (state.length < this.inputLength);
-            }
-
-            const nextState = Network.toColumn(state);
-            const prediction = this.model.predict(nextState) as tf.Tensor2D;
-            const predictionData = Array.from(await prediction.data());
-
-            if (reward && this.lastState && this.lastPrediction &&
-                this.lastChoice)
+            do
             {
-                logger.debug("applying reward");
-                // apply the Q learning update rule
-                const discount = 0.8;
-                const nextMaxReward = discount * Math.max(...predictionData);
-
-                const target = predictionData;
-                target[choiceIds[this.lastChoice]] = reward + nextMaxReward;
-
-                this.model.fit(this.lastState, Network.toColumn(target));
+                state.push(0);
             }
+            while (state.length < this.inputLength);
+        }
 
-            this.lastState = nextState;
-            this.lastPrediction = prediction;
+        const nextState = Network.toColumn(state);
+        const prediction = this.model.predict(nextState) as tf.Tensor2D;
+        const predictionData = Array.from(await prediction.data());
 
-            logger.debug(`prediction: \
+        if (reward && this.lastState && this.lastPrediction &&
+            this.lastChoice)
+        {
+            logger.debug("applying reward");
+            // apply the Q learning update rule
+            const discount = 0.8;
+            const nextMaxReward = discount * Math.max(...predictionData);
+
+            const target = predictionData;
+            target[choiceIds[this.lastChoice]] = reward + nextMaxReward;
+
+            this.model.fit(this.lastState, Network.toColumn(target));
+        }
+
+        this.lastState = nextState;
+        this.lastPrediction = prediction;
+
+        logger.debug(`prediction: \
 {${predictionData.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
 
-            // find the best choice that is a subset of our choices parameter
-            this.lastChoice = choices.reduce((prev, curr) =>
-                predictionData[choiceIds[prev]] <
-                    predictionData[choiceIds[curr]] ? curr : prev);
-            resolve(this.lastChoice);
-        });
+        // find the best choice that is a subset of our choices parameter
+        this.lastChoice = choices.reduce((prev, curr) =>
+            predictionData[choiceIds[prev]] < predictionData[choiceIds[curr]] ?
+                curr : prev);
+        return this.lastChoice;
     }
 
     /** @override */
