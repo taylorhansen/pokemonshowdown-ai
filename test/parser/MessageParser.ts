@@ -138,6 +138,12 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
                     {hp: 100, hpMax: 100, condition: "psn"};
                 shouldParse(prefix, [stringifyID(id), stringifyStatus(status)],
                     {id, status});
+
+                // invalid major statuses should not be parsed
+                const invalidStatus: any = {...status};
+                invalidStatus.condition = "invalid";
+                shouldntParse(prefix,
+                    [stringifyID(id), stringifyStatus(invalidStatus)]);
             });
         }
 
@@ -158,6 +164,11 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             const id: PokemonID = {owner: "p1", position: "a", nickname: "hi"};
             shouldParse("faint", [stringifyID(id)], {id});
             shouldntParse("faint", []);
+
+            // invalid ids should not be parsed
+            const newId: any = {...id};
+            newId.owner = "p";
+            shouldntParse("faint", [stringifyID(newId)]);
         });
 
         describe("init", function()
@@ -176,17 +187,18 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             const move = "Splash";
             const target: PokemonID =
                 {owner: "p2", position: "a", nickname: "nou"};
-            const effects = ["", "lockedmove"];
-            const missed = true;
+            const originalArgs = [stringifyID(id), move, stringifyID(target)];
 
-            for (const effect of effects)
-            {
-                const argStrs = [stringifyID(id), move, stringifyID(target)];
-                if (effect) argStrs.push(`[from]${effect}`);
-                if (missed) argStrs.push("[miss]");
-                shouldParse("move", argStrs,
-                    {id, move, target, effect, missed});
-            }
+            // invalid suffixes are not parsed
+            let argStrs = [...originalArgs, "miss"];
+            shouldParse("move", argStrs,
+                {id, move, target, effect: "", missed: false});
+
+            const effect = "lockedmove";
+            argStrs = [...originalArgs, `[from]${effect}`, "[miss]"];
+            shouldParse("move", argStrs,
+                {id, move, target, effect, missed: true});
+
         });
 
         describe("player", function()
@@ -203,6 +215,7 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             shouldntParse("player", ["", username, avatarId.toString()]);
             shouldntParse("player", ["p1", "", avatarId.toString()]);
             shouldntParse("player", ["p1", username, ""]);
+            shouldntParse("player", ["p1", username]);
         });
 
         describe("request", function()
@@ -264,7 +277,9 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
                 shouldParse("switch", switchStrs[i].slice(0), switchData[i]);
             }
 
-            // only need to test sabotage values for one set each
+            shouldntParse("switch", []);
+
+            // only need to test sabotage values for one switchStr set each
             i = 0;
             for (const infoName in infoNames)
             {
@@ -302,6 +317,12 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             const args: UpdateChallengesArgs =
                 {challengesFrom: {somebody: "gen4ou"}, challengeTo: {}};
             shouldParse("updatechallenges", [JSON.stringify(args)], args);
+
+            // in the actual server protocol, challengeTo can be null, which
+            //  should be corrected to {} by the parser
+            const serverArgs: any = {...args};
+            serverArgs.challengeTo = null;
+            shouldParse("updatechallenges", [JSON.stringify(serverArgs)], args);
         });
 
         describe("updateuser", function()
