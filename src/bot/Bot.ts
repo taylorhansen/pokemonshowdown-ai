@@ -7,7 +7,8 @@ import { Battle } from "./battle/Battle";
 export class Bot
 {
     /** Allowed formats to play in. */
-    private static readonly format = "gen4randombattle";
+    public static readonly format = "gen4randombattle";
+
     /** Parses server messages. */
     private readonly parser: Parser;
     /** Keeps track of all the battles we're in. */
@@ -32,7 +33,8 @@ export class Bot
     {
         this.parser = parser;
         this.send = send;
-        this.parser.on(null, "init", args =>
+        this.parser
+        .on(null, "init", args =>
         {
             if (args.type === "battle")
             {
@@ -50,7 +52,8 @@ export class Bot
                     this.battles[this.room] = ai;
                 }
             }
-        }).on("", "updatechallenges", args =>
+        })
+        .on("", "updatechallenges", args =>
         {
             for (const user in args.challengesFrom)
             {

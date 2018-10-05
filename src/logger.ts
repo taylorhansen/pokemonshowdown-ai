@@ -1,11 +1,27 @@
 /* istanbul ignore file */
+
+/** Whether the logger is enabled. */
+let enabled = true;
+
+/** Enables the logger. This is the default behavior. */
+export function enable(): void
+{
+    enabled = true;
+}
+
+/** Disables the logger. */
+export function disable(): void
+{
+    enabled = false;
+}
+
 /**
  * Logs a normal debug message to stderr.
  * @param message Message to log.
  */
 export function debug(message: string): void
 {
-    console.error(`debug: ${message}`);
+    if (enabled) console.error(`debug: ${message}`);
 }
 
 /**
@@ -14,5 +30,5 @@ export function debug(message: string): void
  */
 export function error(message: string): void
 {
-    console.error(`error: ${message}`);
+    if (enabled) console.error(`error: ${message}`);
 }

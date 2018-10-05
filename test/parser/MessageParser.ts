@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import "mocha";
 import { MessageArgs, Prefix, RequestArgs, SwitchArgs, UpdateChallengesArgs }
-    from "../src/AnyMessageListener";
+    from "../../src/AnyMessageListener";
 import { MajorStatus, PlayerID, PokemonID, PokemonStatus, RoomType,
     stringifyDetails, stringifyID, stringifyRequest, stringifyStatus } from
-    "../src/messageData";
-import { MessageParser } from "../src/parser/MessageParser";
+    "../../src/messageData";
+import { MessageParser } from "../../src/parser/MessageParser";
 
 // TODO: generalize test case patterns
 describe("MessageParser", function()
