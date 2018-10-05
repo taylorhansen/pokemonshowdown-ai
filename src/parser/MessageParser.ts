@@ -1,8 +1,7 @@
 import { AnyMessageListener, MessageArgs, MessageHandler, Prefix } from
     "../AnyMessageListener";
-import { isMajorStatus, MajorStatusName } from "../bot/battle/state/Pokemon";
-import { isPlayerId, PlayerID, PokemonDetails, PokemonID, PokemonStatus } from
-    "../messageData";
+import { isMajorStatus, isPlayerId, MajorStatus, PlayerID, PokemonDetails,
+    PokemonID, PokemonStatus } from "../messageData";
 
 /**
  * Parses messages sent from the server. Instead of producing some kind of
@@ -362,7 +361,7 @@ export class MessageParser
                 {
                     const id = MessageParser.parsePokemonID(this.getWord());
                     const condition =
-                        MessageParser.parseCondition(this.getWord());
+                        MessageParser.parseMajorStatus(this.getWord());
                     this.handle(prefix, {id, condition});
                     break;
                 }
@@ -370,7 +369,7 @@ export class MessageParser
                 {
                     const id = MessageParser.parsePokemonID(this.getWord());
                     const condition =
-                        MessageParser.parseCondition(this.getWord());
+                        MessageParser.parseMajorStatus(this.getWord());
                     this.handle(prefix, {id, condition});
                     break;
                 }
@@ -530,22 +529,20 @@ export class MessageParser
 
         const hp = parseInt(status.substring(0, slash), 10);
         const hpMax = parseInt(status.substring(slash + 1, space), 10);
-        const condition = MessageParser.parseCondition(
+        const condition = MessageParser.parseMajorStatus(
                 status.substring(space + 1));
         if (condition === null) return null;
         return { hp, hpMax, condition };
     }
 
     /**
-     * Parses a status condition.
-     * @param condition Unparsed status condition string.
-     * @returns The string if it's a valid MajorStatusName, or null otherwise.
+     * Parses a major status.
+     * @param status Unparsed status string.
+     * @returns The string if it's a valid MajorStatus, or null otherwise.
      */
-    private static parseCondition(condition: string | null):
-        MajorStatusName | null
+    private static parseMajorStatus(status: string | null): MajorStatus | null
     {
-        return (condition === null || !isMajorStatus(condition)) ?
-                null : condition;
+        return status !== null && isMajorStatus(status) ? status : null;
     }
 
     /**

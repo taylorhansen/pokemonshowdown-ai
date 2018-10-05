@@ -1,6 +1,5 @@
-import { MajorStatusName } from "./bot/battle/state/Pokemon";
-import { ChallengesFrom, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    RequestActive, RequestSide, RoomType } from "./messageData";
+import { ChallengesFrom, MajorStatus, PlayerID, PokemonDetails, PokemonID,
+    PokemonStatus, RequestActive, RequestSide, RoomType } from "./messageData";
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "-curestatus" | "-cureteam" | "-damage" | "-heal" |
@@ -129,7 +128,7 @@ export interface CureStatusArgs
     /** ID of the pokemon being cured. */
     id: PokemonID;
     /** Status condition the pokemon is being cured of. */
-    condition: MajorStatusName;
+    condition: MajorStatus;
 }
 
 /** Args for a `-cureteam` message. */
@@ -165,7 +164,7 @@ export interface StatusArgs
     /** ID of the pokemon being afflicted with a status condition. */
     id: PokemonID;
     /** Status condition being afflicted. */
-    condition: MajorStatusName;
+    condition: MajorStatus;
 }
 
 /** Args for a `challstr` message. */

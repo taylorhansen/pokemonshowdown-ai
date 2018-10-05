@@ -1,5 +1,6 @@
 import { dex } from "../../../data/dex";
 import { PokemonData } from "../../../data/dex-types";
+import { MajorStatus, majorStatuses } from "../../../messageData";
 
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon
@@ -101,7 +102,7 @@ export class Pokemon
     /** Info about the pokemon's hit points. */
     private hp: HP = new HP();
     /** Current major status condition. Not cleared on switch. */
-    private majorStatus: MajorStatusName = "";
+    private majorStatus: MajorStatus = "";
     /** Minor status conditions. Cleared on switch. */
     private volatileStatus = new VolatileStatus();
 
@@ -135,8 +136,8 @@ export class Pokemon
             1 +
             Move.getArraySize() * 4 +
             HP.getArraySize() +
-            // major status names excluding empty status
-            Object.keys(majorStatusNames).length - 1 +
+            // major statuses excluding empty status
+            Object.keys(majorStatuses).length - 1 +
             (active ? VolatileStatus.getArraySize() : 0);
     }
 
@@ -153,6 +154,10 @@ export class Pokemon
             (v, i) => i === this._item ? 1 : 0);
         const baseAbility = Array.from({length: 2},
             (v, i) => i === this._baseAbility ? 1 : 0);
+        // only include actual statuses, not the empty string
+        const majorStatus = Array.from(
+            {length: Object.keys(majorStatuses).length - 1},
+            (v, i) => i + 1 === majorStatuses[this.majorStatus] ? 1 : 0);
 
         const a =
         [
@@ -162,12 +167,7 @@ export class Pokemon
             ...([] as number[]).concat(
                 ...this._moves.map(move => move.toArray())),
             ...this.hp.toArray(),
-            this.majorStatus === "brn" ? 1 : 0,
-            this.majorStatus === "par" ? 1 : 0,
-            this.majorStatus === "psn" ? 1 : 0,
-            this.majorStatus === "tox" ? 1 : 0,
-            this.majorStatus === "slp" ? 1 : 0,
-            this.majorStatus === "frz" ? 1 : 0
+            ...majorStatus
         ];
         if (this._active)
         {
@@ -300,7 +300,7 @@ export class Pokemon
      * Afflicts the pokemon with a major status condition.
      * @param status Name of condition.
      */
-    public afflict(status: MajorStatusName): void
+    public afflict(status: MajorStatus): void
     {
         this.majorStatus = status;
     }
@@ -645,21 +645,3 @@ export type BoostableStatName = keyof typeof boostableStatNames;
 /** Maximum and minimum stat boost stages. */
 export type BoostStage = -6 | -5 | -4 | -3 | -2 | -1 | 0 | 1 | 2 | 3 | 4 | 5 |
     6;
-
-/** Hold the set of all major status names. Empty string means no status. */
-export const majorStatusNames =
-{
-    brn: true, par: true, psn: true, tox: true, slp: true, frz: true, "": true
-};
-/** Major pokemon status conditions. */
-export type MajorStatusName = keyof typeof majorStatusNames;
-
-/**
- * Checks if a string matches a major status name.
- * @param condition String to be checked.
- * @returns True if the name matches, false otherwise.
- */
-export function isMajorStatus(condition: string): condition is MajorStatusName
-{
-    return majorStatusNames.hasOwnProperty(condition);
-}

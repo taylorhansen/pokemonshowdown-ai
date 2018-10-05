@@ -2,9 +2,9 @@ import { expect } from "chai";
 import "mocha";
 import { MessageArgs, Prefix, RequestArgs, SwitchArgs, UpdateChallengesArgs }
     from "../src/AnyMessageListener";
-import { MajorStatusName } from "../src/bot/battle/state/Pokemon";
-import { PlayerID, PokemonID, PokemonStatus, RoomType, stringifyDetails,
-    stringifyID, stringifyRequest, stringifyStatus } from "../src/messageData";
+import { MajorStatus, PlayerID, PokemonID, PokemonStatus, RoomType,
+    stringifyDetails, stringifyID, stringifyRequest, stringifyStatus } from
+    "../src/messageData";
 import { MessageParser } from "../src/parser/MessageParser";
 
 // TODO: generalize test case patterns
@@ -115,7 +115,7 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             {
                 const id: PokemonID =
                     {owner: "p1", position: "a", nickname: "nou"};
-                const condition: MajorStatusName = "psn";
+                const condition: MajorStatus = "psn";
                 shouldParse(prefix, [stringifyID(id), condition],
                     {id, condition});
             });

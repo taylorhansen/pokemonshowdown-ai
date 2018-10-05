@@ -3,7 +3,6 @@
  * MessageHandler.
  */
 import { RequestArgs } from "./AnyMessageListener";
-import { MajorStatusName } from "./bot/battle/state/Pokemon";
 
 /** Player ID in a battle. */
 export type PlayerID = "p1" | "p2";
@@ -90,7 +89,7 @@ export interface PokemonStatus
 {
     hp: number;
     hpMax: number;
-    condition: MajorStatusName;
+    condition: MajorStatus;
 }
 
 /**
@@ -106,6 +105,25 @@ export function stringifyStatus(status: PokemonStatus): string
     }
     return `${status.hp}/${status.hpMax}\
 ${status.condition ? ` ${status.condition}` : ""}`;
+}
+
+/** Hold the set of all major status names. Empty string means no status. */
+export const majorStatuses =
+{
+    "": 0, brn: 1, par: 2, psn: 3, tox: 4, slp: 5, frz: 6
+};
+
+/** Major pokemon status conditions. */
+export type MajorStatus = keyof typeof majorStatuses;
+
+/**
+ * Checks if a value matches a major status.
+ * @param status Value to be checked.
+ * @returns True if the name matches, false otherwise.
+ */
+export function isMajorStatus(status: any): status is MajorStatus
+{
+    return majorStatuses.hasOwnProperty(status);
 }
 
 /** Active pokemon info. */

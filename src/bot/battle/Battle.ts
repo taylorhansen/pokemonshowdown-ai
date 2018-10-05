@@ -8,7 +8,7 @@ import { otherId, PlayerID, PokemonDetails, PokemonStatus, RequestMove,
 import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
 import { BattleState, Side } from "./state/BattleState";
-import { MajorStatusName, Pokemon } from "./state/Pokemon";
+import { Pokemon } from "./state/Pokemon";
 import { SwitchInOptions } from "./state/Team";
 
 const rl = readline.createInterface(process.stdin, process.stdout);
