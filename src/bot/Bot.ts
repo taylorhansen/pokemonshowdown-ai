@@ -1,5 +1,5 @@
 import * as logger from "../logger";
-import { MessageParser } from "../parser/MessageParser";
+import { Parser } from "../parser/Parser";
 import { Network } from "./battle/ai/Network";
 import { Battle } from "./battle/Battle";
 
@@ -9,7 +9,7 @@ export class Bot
     /** Allowed formats to play in. */
     private static readonly format = "gen4randombattle";
     /** Parses server messages. */
-    private readonly parser: MessageParser = new MessageParser();
+    private readonly parser: Parser;
     /** Keeps track of all the battles we're in. */
     private readonly battles: {[room: string]: Battle} = {};
     /** Name of the user. */
@@ -23,9 +23,14 @@ export class Bot
         return this.parser.room;
     }
 
-    /** Creates a Bot. */
-    constructor(send: (response: string) => void)
+    /**
+     * Creates a Bot.
+     * @param parser Parses messages from the server.
+     * @param send Sends responses to the server.
+     */
+    constructor(parser: Parser, send: (response: string) => void)
     {
+        this.parser = parser;
         this.send = send;
         this.parser.on(null, "init", args =>
         {

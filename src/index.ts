@@ -2,12 +2,17 @@
 import { client as WebSocketClient } from "websocket";
 import { Bot } from "./bot/Bot";
 import * as logger from "./logger";
+import { MessageParser } from "./parser/MessageParser";
 
 const ws = new WebSocketClient();
 ws.on("connect", connection =>
 {
     logger.debug("connected");
-    const bot = new Bot((response: string) => connection.sendUTF(response));
+
+    const parser = new MessageParser();
+    function send(response: string): void { connection.sendUTF(response); }
+
+    const bot = new Bot(parser, send);
 
     connection.on("error", error =>
     {

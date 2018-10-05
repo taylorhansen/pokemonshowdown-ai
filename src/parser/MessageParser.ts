@@ -1,20 +1,20 @@
-import { AnyMessageListener, MessageArgs, MessageHandler, Prefix } from
-    "../AnyMessageListener";
 import { isMajorStatus, isPlayerId, MajorStatus, PlayerID, PokemonDetails,
     PokemonID, PokemonStatus } from "../messageData";
+import { Parser } from "./Parser";
 
 /**
  * Parses messages sent from the server. Instead of producing some kind of
  * syntax tree, this parser executes event listeners or callbacks whenever it
  * has successfully parsed a message.
  */
-export class MessageParser
+export class MessageParser extends Parser
 {
-    /** Registered message listeners. */
-    private readonly messageListeners: {[room: string]: AnyMessageListener} =
-        {};
-    /** Listener for unfamiliar rooms. */
-    private readonly newRoomListener = new AnyMessageListener();
+    /** @override */
+    public get room(): string
+    {
+        return this._room;
+    }
+
     /** Message or Packet being parsed. */
     private message: string;
     /** Position within the string. */
@@ -22,50 +22,7 @@ export class MessageParser
     /** Current room we're parsing messages from. */
     private _room: string;
 
-    /** Current room we're parsing messages from. */
-    public get room(): string
-    {
-        return this._room;
-    }
-
-    /**
-     * Adds a MessageHandler for a certain message Prefix from a certain room.
-     * @template P Prefix type.
-     * @param room The room the message should originate from. Empty string
-     * means lobby or global, while `null` means an unfamiliar room.
-     * @param prefix Message prefix indicating its type.
-     * @param handler Function to be called using data from the message.
-     * @returns `this` to allow chaining.
-     */
-    public on<P extends Prefix>(room: string | null, prefix: P,
-        handler: MessageHandler<P>): this
-    {
-        (room !== null ? this.getListener(room) : this.newRoomListener)
-            .on(prefix, handler);
-        return this;
-    }
-
-    /**
-     * Gets a message listener for the given room. If the room is unfamiliar,
-     * then a new listener is created and returned.
-     * @param room The room this message originates from. Empty string means
-     * lobby or global.
-     * @returns A message listener for the given room.
-     */
-    public getListener(room: string): AnyMessageListener
-    {
-        if (!this.messageListeners.hasOwnProperty(room))
-        {
-            this.messageListeners[room] = new AnyMessageListener();
-        }
-        return this.messageListeners[room];
-    }
-
-    /**
-     * Parses the message sent from the server. This is split into lines and
-     * parsed separately as little sub-messages.
-     * @param message Unparsed message or packet of messages.
-     */
+    /** @override */
     public parse(message: string): void
     {
         this.message = message;
@@ -100,28 +57,6 @@ export class MessageParser
                 ++this.pos;
             }
         }
-    }
-
-    /**
-     * Calls a registered MessageHandler for the current room using the given
-     * message prefix.
-     * @param prefix Given prefix.
-     * @param args Message handler arguments.
-     */
-    private handle<P extends Prefix>(prefix: P,
-        args: {[A in keyof MessageArgs<P>]: MessageArgs<P>[A] | null}): void
-    {
-        // early return: message handlers do not accept null arguments
-        if ((Object.keys(args) as (keyof MessageArgs<P>)[])
-            .some(key => args[key] === null))
-        {
-            return;
-        }
-
-        // unregistered rooms are delegated to a special listener
-        const handler = this.messageListeners.hasOwnProperty(this._room) ?
-            this.messageListeners[this._room] : this.newRoomListener;
-        handler.getHandler(prefix)(args as MessageArgs<P>);
     }
 
     /** Parses a single message line. */
