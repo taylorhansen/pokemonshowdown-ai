@@ -8,13 +8,12 @@ import { Choice, choiceIds, intToChoice } from "./Choice";
 /** Neural network interface. */
 export class Network implements AI
 {
-    /** Path to weights manifest folder. */
-    private static readonly weightsPath =
-        `${__dirname}/../../../../weights-latest`;
     /** Neural network model. */
     private model: tf.Model;
     /** Number of input neurons. */
     private readonly inputLength: number;
+    /** Base file name/path for model folder. */
+    private readonly path: string;
     /** Last state input tensor. */
     private lastState?: tf.Tensor2D;
     /** Last prediction output tensor. */
@@ -23,9 +22,10 @@ export class Network implements AI
     private lastChoice?: Choice;
 
     /** Creates a Network. */
-    constructor(inputLength: number)
+    constructor(inputLength: number, path: string)
     {
         this.inputLength = inputLength;
+        this.path = path;
 
         this.load().catch(reason =>
         {
@@ -90,14 +90,13 @@ expected ${this.inputLength}`);
     /** @override */
     public async save(): Promise<void>
     {
-        await this.model.save(`file://${Network.weightsPath}`);
+        await this.model.save(`file://${this.path}`);
     }
 
     /** Loads the most recently saved model. */
     public async load(): Promise<void>
     {
-        this.model =
-            await tf.loadModel(`file://${Network.weightsPath}/model.json`);
+        this.model = await tf.loadModel(`file://${this.path}/model.json`);
         this.compileModel();
 
         // loaded models must have the correct input/output shape

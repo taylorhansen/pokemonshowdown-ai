@@ -18,4 +18,4 @@ logs/
 src/data/Pokemon-Showdown/
 
 # neural network weights files
-weights-latest/
+models/

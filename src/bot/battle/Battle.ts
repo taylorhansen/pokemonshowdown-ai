@@ -46,14 +46,17 @@ export class Battle
      * Creates a Battle object.
      * @param aiType Type of AI to use.
      * @param username Client's username.
+     * @param saveAlways True if the AI model should always be saved at the end,
+     * or false if that should happen once it wins.
      * @param listener Used to subscribe to server messages.
      * @param addResponses Used to send response messages to the server.
      */
-    constructor(aiType: AIConstructor, username: string,
+    constructor(aiType: AIConstructor, username: string, saveAlways: boolean,
         listener: AnyMessageListener,
         addResponses: (...respones: string[]) => void)
     {
-        this.ai = new aiType(BattleState.getArraySize());
+        const path = `${__dirname}/../../../models/latest`;
+        this.ai = new aiType(BattleState.getArraySize(), path);
         this.addResponses = addResponses;
 
         listener
@@ -256,13 +259,21 @@ expected`);
                 team.size = args.size;
             }
         })
+        .on("tie", () =>
+        {
+            if (saveAlways)
+            {
+                logger.debug(`saving ${username}`);
+                this.ai.save();
+            }
+        })
         .on("turn", args =>
         {
             logger.debug(`new turn: ${args.turn}`);
             logger.debug(`state:\n${this.state.toString()}`);
             this.askAI();
         })
-        .on("upkeep", args =>
+        .on("upkeep", () =>
         {
             // usually, once we get the message that a new turn has started, we
             //  would then ask the neural network for input
@@ -271,6 +282,14 @@ expected`);
             if (this.forceSwitch)
             {
                 this.askAI();
+            }
+        })
+        .on("win", args =>
+        {
+            if (saveAlways || args.username === username)
+            {
+                logger.debug(`saving ${username}`);
+                this.ai.save();
             }
         });
     }
@@ -286,20 +305,16 @@ expected`);
     }
 
     /** Asks the AI for what to do next. */
-    private askAI(): void
+    private async askAI(): Promise<void>
     {
         const choices = this.getChoices();
         logger.debug(`choices: [${choices.join(", ")}]`);
         logger.debug(`accumulated award: ${this.reward}`);
-
-        this.ai.decide(this.state.toArray(), choices, this.reward)
-        .then(async choice =>
-        {
-            this.addResponses(`|/choose ${choice}|${this.rqid}`);
-            await this.ai.save();
-        });
-
+        const r = this.reward;
         this.reward = 0;
+
+        const choice = await this.ai.decide(this.state.toArray(), choices, r);
+        this.addResponses(`|/choose ${choice}|${this.rqid}`);
     }
 
     /** Asks for and sends user input to the server once it's received. */

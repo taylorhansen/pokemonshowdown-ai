@@ -24,6 +24,7 @@ export interface AIConstructor
     /**
      * Constructor function.
      * @param inputLength Expected length of state input.
+     * @param path Where to store learned behavior.
      */
-    new(inputLength: number): AI;
+    new(inputLength: number, path: string): AI;
 }

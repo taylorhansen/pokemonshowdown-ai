@@ -45,12 +45,11 @@ export class Bot
                     //  lambda captures that and not a reference to `this`
                     const room = this.room;
                     const listener = this.parser.getListener(room);
-                    const addResponses =
-                        (...responses: string[]) =>
+                    const addResponses = (...responses: string[]) =>
                             this.addResponses(room, ...responses);
 
-                    const battle = new Battle(Network, this.username, listener,
-                        addResponses);
+                    const battle = new Battle(Network, this.username,
+                            /*saveAlways*/ true, listener, addResponses);
                     this.battles[this.room] = battle;
 
                     // once the battle's over we can respectfully leave
