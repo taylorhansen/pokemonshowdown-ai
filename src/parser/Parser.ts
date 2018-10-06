@@ -55,6 +55,15 @@ export abstract class Parser
     }
 
     /**
+     * Removes a room message listener.
+     * @param room Room to stop tracking.
+     */
+    public removeListener(room: string): void
+    {
+        delete this.messageListeners[room];
+    }
+
+    /**
      * Calls a registered MessageHandler for the current room using the given
      * message prefix.
      * @param prefix Given prefix.

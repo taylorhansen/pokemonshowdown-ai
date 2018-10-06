@@ -4,5 +4,6 @@ import "./bot/battle/Battle";
 import "./bot/Bot";
 import "./messageData";
 import "./parser/MessageParser";
+import "./parser/Parser";
 
 disable();

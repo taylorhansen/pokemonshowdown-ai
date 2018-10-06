@@ -41,15 +41,27 @@ export class Bot
                 // initialize a new battle ai
                 if (!this.battles.hasOwnProperty(this.room))
                 {
-                    // need a copy of the current room so the lambda captures
-                    //  that and not just a reference to `this`
+                    // need a copy of the current room so the addResponses
+                    //  lambda captures that and not a reference to `this`
                     const room = this.room;
-                    const ai = new Battle(Network, this.username,
-                        this.parser.getListener(room),
-                        // function for sending responses
+                    const listener = this.parser.getListener(room);
+                    const addResponses =
                         (...responses: string[]) =>
-                            this.addResponses(room, ...responses));
-                    this.battles[this.room] = ai;
+                            this.addResponses(room, ...responses);
+
+                    const battle = new Battle(Network, this.username, listener,
+                        addResponses);
+                    this.battles[this.room] = battle;
+
+                    // once the battle's over we can respectfully leave
+                    listener
+                    .on("tie", () => addResponses("|gg", "|/leave"))
+                    .on("win", listener.getHandler("tie"))
+                    .on("deinit", () =>
+                    {
+                        this.parser.removeListener(room);
+                        delete this.battles[this.room];
+                    });
                 }
             }
         })

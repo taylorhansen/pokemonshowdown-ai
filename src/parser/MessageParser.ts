@@ -83,6 +83,11 @@ export class MessageParser extends Parser
                 /*case "title":
                 case "users":
                     break;*/
+                case "deinit": // left a room
+                {
+                    // format: |deinit
+                    this.handle("deinit", {});
+                }
 
                 // room messages
                 /*case "":
@@ -205,9 +210,18 @@ export class MessageParser extends Parser
                     this.handle("turn", {turn});
                     break;
                 }
-                /*case "win":
+                case "win": // game over
+                {
+                    // format: |win|<user>
+                    const username = this.getRestOfLine();
+                    this.handle("win", {username});
+                    break;
+                }
                 case "tie":
-                    break;*/
+                {
+                    // format: |tie
+                    this.handle("tie", {});
+                }
                 case "error": // e.g. invalid move/switch choice
                 {
                     // format: |error|[reason] description

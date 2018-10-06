@@ -3,9 +3,9 @@ import { ChallengesFrom, MajorStatus, PlayerID, PokemonDetails, PokemonID,
 
 /** Prefix for a message that tells of the message's type. */
 export type Prefix = "-curestatus" | "-cureteam" | "-damage" | "-heal" |
-    "-status" | "challstr" | "error" | "faint" | "init" | "move" | "player" |
-    "request" | "switch" | "teamsize" | "turn" | "updatechallenges" |
-    "updateuser" | "upkeep";
+    "-status" | "challstr" | "deinit" | "error" | "faint" | "init" | "move" |
+    "player" | "request" | "switch" | "teamsize" | "tie" | "turn" |
+    "updatechallenges" | "updateuser" | "upkeep" | "win";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -22,6 +22,7 @@ export class AnyMessageListener
         "-heal": new MessageListener<"-heal">(),
         "-status": new MessageListener<"-status">(),
         challstr: new MessageListener<"challstr">(),
+        deinit: new MessageListener<"deinit">(),
         error: new MessageListener<"error">(),
         faint: new MessageListener<"faint">(),
         init: new MessageListener<"init">(),
@@ -30,10 +31,12 @@ export class AnyMessageListener
         request: new MessageListener<"request">(),
         switch: new MessageListener<"switch">(),
         teamsize: new MessageListener<"teamsize">(),
+        tie: new MessageListener<"tie">(),
         turn: new MessageListener<"turn">(),
         updatechallenges: new MessageListener<"updatechallenges">(),
         updateuser: new MessageListener<"updateuser">(),
-        upkeep: new MessageListener<"upkeep">()
+        upkeep: new MessageListener<"upkeep">(),
+        win: new MessageListener<"win">()
     };
 
     /**
@@ -108,6 +111,7 @@ export type MessageArgs<P extends Prefix> =
     : P extends "-heal" ? HealArgs
     : P extends "-status" ? StatusArgs
     : P extends "challstr" ? ChallStrArgs
+    : P extends "deinit" ? DeInitArgs
     : P extends "error" ? ErrorArgs
     : P extends "faint" ? FaintArgs
     : P extends "init" ? InitArgs
@@ -116,10 +120,12 @@ export type MessageArgs<P extends Prefix> =
     : P extends "request" ? RequestArgs
     : P extends "switch" ? SwitchArgs
     : P extends "teamsize" ? TeamSizeArgs
+    : P extends "tie" ? TieArgs
     : P extends "turn" ? TurnArgs
     : P extends "updatechallenges" ? UpdateChallengesArgs
     : P extends "updateuser" ? UpdateUserArgs
     : P extends "upkeep" ? UpkeepArgs
+    : P extends "win" ? WinArgs
     : () => void;
 
 /** Args for a `-curestatus` message. */
@@ -172,6 +178,11 @@ export interface ChallStrArgs
 {
     /** String used to verify account login. */
     challstr: string;
+}
+
+/** Args for a `deinit` message. */
+export interface DeInitArgs
+{
 }
 
 /** Args for an `error` message. */
@@ -259,6 +270,11 @@ export interface TeamSizeArgs
     size: number;
 }
 
+/** Args for a `tie` message. */
+export interface TieArgs
+{
+}
+
 /** Args for a `turn` message. */
 export interface TurnArgs
 {
@@ -289,4 +305,11 @@ export interface UpdateUserArgs
 /** Args for an `upkeep` message. */
 export interface UpkeepArgs
 {
+}
+
+/** Args for a `win` message. */
+export interface WinArgs
+{
+    /** Name of the user who won. */
+    username: string;
 }

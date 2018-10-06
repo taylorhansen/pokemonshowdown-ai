@@ -153,6 +153,11 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             shouldParse("challstr", [challstr], {challstr});
         });
 
+        describe("deinit", function()
+        {
+            shouldParse("deinit", [], {});
+        });
+
         describe("error", function()
         {
             const reason = "because i said so";
@@ -306,6 +311,11 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
             shouldntParse("teamsize", [playerIds[0], ""]);
         });
 
+        describe("tie", function()
+        {
+            shouldParse("tie", [], {});
+        });
+
         describe("turn", function()
         {
             const turn = 1;
@@ -341,6 +351,12 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
         describe("upkeep", function()
         {
             shouldParse("upkeep", [], {});
+        });
+
+        describe("win", function()
+        {
+            const username = "somebody";
+            shouldParse("win", [username], {username});
         });
     });
 });
