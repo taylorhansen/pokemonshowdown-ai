@@ -2,7 +2,7 @@
 # clones the Pokemon-Showdown github repository in order to extract the desired
 #  pokedex/movedex/item info from it
 
-ps_dir=./js/Pokemon-Showdown
+ps_dir=./scripts/Pokemon-Showdown
 if [ -d $ps_dir ]
 then
     cd $ps_dir
@@ -16,7 +16,7 @@ fi
 echo Building dex...
 dex_file=./src/data/dex.ts
 
-node ./scripts/build-dex.js > $dex_file
+ts-node ./scripts/build-dex.ts > $dex_file
 # try to fix any style errors
 # this will also point out errors that must be fixed manually
 tslint --fix $dex_file

@@ -2,16 +2,17 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
-const Dex = require("./Pokemon-Showdown/sim/dex");
+// @ts-ignore
+import Dex = require("./Pokemon-Showdown/sim/dex");
 
 // TODO: support other gens?
 
 /**
  * Checks whether a pokemon id name is not from gen4.
- * @param {string} name Pokemon name.
- * @returns {boolean} True if the id is not from gen4 or below.
+ * @param name Pokemon name.
+ * @returns True if the id is not from gen4 or below.
  */
-function isNonGen4(name)
+function isNonGen4(name: string): boolean
 {
     // banlist: megas, primal, alola/totem, arceus fairy, pikachu alt forms
     // except yanmega, which isn't actually a mega evolution
@@ -21,20 +22,20 @@ function isNonGen4(name)
 
 /**
  * Checks whether a pokemon id name is from gen4.
- * @param {string} name Pokemon name.
- * @returns {boolean} True if the id is from gen4 or below.
+ * @param name Pokemon name.
+ * @returns True if the id is from gen4 or below.
  */
-function isGen4(name)
+function isGen4(name: string): boolean
 {
     return !isNonGen4(name);
 }
 
 /**
  * Wraps a string in quotes.
- * @param {string} str String to quote.
- * @returns {string} The given string in quotes.
+ * @param str String to quote.
+ * @returns The given string in quotes.
  */
-function quote(str)
+function quote(str: string): string
 {
     return `"${str}"`;
 }
@@ -53,7 +54,6 @@ import { Dex, MoveData, PokemonData } from \"./dex-types\";
 //  https://github.com/Zarel/Pokemon-Showdown/blob/master/sim/dex-data.js
 
 // counter for the unique identifier of a pokemon, move, etc.
-/** @type {number} */
 let uid = 0;
 
 // pokemon
@@ -75,7 +75,7 @@ for (const name in pokedex)
     // showdown dex maps a number of 0 or 1 with the ability name
     // we want the opposite of that, i.e. mapping the ability name with a number
     //  indicating first or second ability
-    const abilities = [];
+    const abilities: string[] = [];
     for (const abilityId in mon.abilities)
     {
         if (!mon.abilities.hasOwnProperty(abilityId)) continue;
@@ -83,10 +83,12 @@ for (const name in pokedex)
         // mon.abilities[abilityId] gives us the display name, e.g.
         //  "Serene Grace", but the actual name is all lowercase without spaces
         //  and such, e.g. "serenegrace"
-        let abilityName = mon.abilities[abilityId].toLowerCase()
+        const abilityName = mon.abilities[abilityId].toLowerCase()
             .replace(/[- ]+/, "");
         abilities.push(`${abilityName}: ${parseInt(abilityId, 10)}`);
     }
+
+    const types: string[] = mon.types;
 
     // optionally fill in other forms if there are any from gen4
     let otherForms;
@@ -105,6 +107,7 @@ for (const name in pokedex)
         id: ${mon.num},
         uid: ${uid},
         species: ${quote(mon.species)},`);
+    // tslint:disable:curly
     if (mon.baseSpecies) console.log(`\
         baseSpecies: ${quote(mon.baseSpecies)},`);
     if (mon.baseForme) console.log(`\
@@ -115,9 +118,10 @@ for (const name in pokedex)
         formLetter: ${quote(mon.formeLetter)},`);
     if (otherForms) console.log(`\
         otherForms: [${otherForms.map(quote).join(", ")}],`);
+    // tslint:enable:curly
     console.log(`\
         abilities: {${abilities.join(", ")}},
-        types: [${mon.types.map(t => quote(t.toLowerCase())).join(", ")}],
+        types: [${types.map(t => quote(t.toLowerCase())).join(", ")}],
         baseStats: {hp: ${stats.hp}, atk: ${stats.atk}, def: ${stats.def}, \
 spa: ${stats.spa}, spd: ${stats.spd}, spe: ${stats.spe}},
         weightkg: ${mon.weightkg}
