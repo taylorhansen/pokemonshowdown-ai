@@ -16,7 +16,7 @@ fi
 echo Building dex...
 dex_file=./src/data/dex.ts
 
-node ./js/build-dex.js > $dex_file
+node ./scripts/build-dex.js > $dex_file
 # try to fix any style errors
 # this will also point out errors that must be fixed manually
 tslint --fix $dex_file

@@ -15,7 +15,7 @@ npm-debug.log
 logs/
 
 # clone of pokemon showdown repo
-js/Pokemon-Showdown/
+scripts/Pokemon-Showdown/
 
 # neural network weights files
 models/
