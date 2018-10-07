@@ -9,7 +9,8 @@
     "lint": "tslint -c tslint.json data/*.ts src/**/*.ts test/**/*.ts",
     "main": "ts-node src/index.ts",
     "test": "nyc npm run test:mocha",
-    "test:mocha": "mocha"
+    "test:mocha": "mocha",
+    "train": "ts-node scripts/train.ts"
   },
   "nyc": {
     "extension": [
