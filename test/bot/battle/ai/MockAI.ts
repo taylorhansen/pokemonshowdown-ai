@@ -9,7 +9,7 @@ export class MockAI implements AI
     }
 
     /** @override */
-    public async decide(state: number[], choices: Choice[], reward?: number):
+    public async decide(state: number[], choices: Choice[], reward: number):
         Promise<Choice>
     {
         return choices[0];

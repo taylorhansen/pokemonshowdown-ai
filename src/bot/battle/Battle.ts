@@ -22,7 +22,7 @@ const rewards =
  * @param choice Choice to send.
  * @param rqid Request ID.
  */
-export type ChoiceSender = (choice: Choice, rqid: number) => void;
+export type ChoiceSender = (choice: Choice, rqid?: number) => void;
 
 /** Manages the battle state and the AI. */
 export class Battle
@@ -37,7 +37,7 @@ export class Battle
      */
     private sides: {readonly [ID in PlayerID]: Side};
     /** Current request ID. Updated after every `|request|` message. */
-    private rqid: number;
+    private rqid?: number;
     /** Whether we're being forced to switch. */
     private forceSwitch = false;
     /** Whether we're using a move that requires a switch choice. */
@@ -48,6 +48,8 @@ export class Battle
     private reward = 0;
     /** Used to send the AI's choice to the server. */
     private readonly sender: ChoiceSender;
+    /** Whether the battle has started. */
+    private started = false;
 
     /**
      * Creates a Battle object.
@@ -161,10 +163,9 @@ export class Battle
             const pokemon: Pokemon[] = team.pokemon;
             const pokemonData: RequestPokemon[] = args.side.pokemon;
 
-            if (this.rqid === undefined)
+            // first time setup, initialize each of the client's pokemon
+            if (!this.started)
             {
-                // initialize each of the client's pokemon since this is our
-                //  first time receiving a args and initializing the rqid
                 for (const data of pokemonData)
                 {
                     const details: PokemonDetails = data.details;
@@ -275,6 +276,10 @@ expected`);
         })
         .on("turn", args =>
         {
+            // received at the end of every turn so we know the game is at least
+            //  fully initialized now
+            this.started = true;
+
             logger.debug(`new turn: ${args.turn}`);
             logger.debug(`state:\n${this.state.toString()}`);
             this.askAI();

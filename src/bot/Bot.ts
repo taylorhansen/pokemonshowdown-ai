@@ -46,7 +46,7 @@ export class Bot
                     //  lambda captures that and not a reference to `this`
                     const room = this.room;
                     const listener = this.parser.getListener(room);
-                    const sender = (choice: Choice, rqid: number) =>
+                    const sender = (choice: Choice, rqid?: number) =>
                         this.addResponses(room, `|/choose ${choice}|${rqid}`);
 
                     const battle = new Battle(Network, this.username,

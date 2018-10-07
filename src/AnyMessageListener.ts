@@ -245,7 +245,7 @@ export interface RequestArgs
     /** Basic info about the entire team. */
     side: RequestSide;
     /** Request id for verification. */
-    rqid: number;
+    rqid?: number;
     /** Whether the given request cannot be canceled. */
     noCancel?: boolean;
 }

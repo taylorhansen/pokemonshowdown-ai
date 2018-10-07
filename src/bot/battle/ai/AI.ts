@@ -11,7 +11,7 @@ export interface AI
      * @returns A Promise to compute the command to be sent, e.g. `move 1` or
      * `switch 3`.
      */
-    decide(state: number[], choices: Choice[], reward?: number):
+    decide(state: number[], choices: Choice[], reward: number):
         Promise<Choice>;
 
     /** Saves AI state to storage. */

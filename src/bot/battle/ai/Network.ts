@@ -38,7 +38,7 @@ export class Network implements AI
     }
 
     /** @override */
-    public async decide(state: number[], choices: Choice[], reward?: number):
+    public async decide(state: number[], choices: Choice[], reward: number):
         Promise<Choice>
     {
         await this.ready;
@@ -64,8 +64,7 @@ expected ${this.inputLength}`);
         const prediction = this.model.predict(nextState) as tf.Tensor2D;
         const predictionData = Array.from(await prediction.data());
 
-        if (reward && this.lastState && this.lastPrediction &&
-            this.lastChoice)
+        if (this.lastState && this.lastPrediction && this.lastChoice)
         {
             logger.debug("applying reward");
             // apply the Q learning update rule
