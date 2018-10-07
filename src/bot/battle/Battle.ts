@@ -17,6 +17,13 @@ const rewards =
     faint: -10
 };
 
+/**
+ * Sends a Choice to the server.
+ * @param choice Choice to send.
+ * @param rqid Request ID.
+ */
+export type ChoiceSender = (choice: Choice, rqid: number) => void;
+
 /** Manages the battle state and the AI. */
 export class Battle
 {
@@ -30,7 +37,7 @@ export class Battle
      */
     private sides: {readonly [ID in PlayerID]: Side};
     /** Current request ID. Updated after every `|request|` message. */
-    private rqid: number | null = null;
+    private rqid: number;
     /** Whether we're being forced to switch. */
     private forceSwitch = false;
     /** Whether we're using a move that requires a switch choice. */
@@ -39,8 +46,8 @@ export class Battle
     private themCopyVolatile = false;
     /** Accumulated reward during the current turn. */
     private reward = 0;
-    /** Used to send response messages to the server. */
-    private readonly addResponses: (...responses: string[]) => void;
+    /** Used to send the AI's choice to the server. */
+    private readonly sender: ChoiceSender;
 
     /**
      * Creates a Battle object.
@@ -49,15 +56,14 @@ export class Battle
      * @param saveAlways True if the AI model should always be saved at the end,
      * or false if that should happen once it wins.
      * @param listener Used to subscribe to server messages.
-     * @param addResponses Used to send response messages to the server.
+     * @param sender Used to send the AI's choice to the server.
      */
     constructor(aiType: AIConstructor, username: string, saveAlways: boolean,
-        listener: AnyMessageListener,
-        addResponses: (...respones: string[]) => void)
+        listener: AnyMessageListener, sender: ChoiceSender)
     {
         const path = `${__dirname}/../../../models/latest`;
         this.ai = new aiType(BattleState.getArraySize(), path);
-        this.addResponses = addResponses;
+        this.sender = sender;
 
         listener
         .on("-curestatus", args =>
@@ -155,7 +161,7 @@ export class Battle
             const pokemon: Pokemon[] = team.pokemon;
             const pokemonData: RequestPokemon[] = args.side.pokemon;
 
-            if (this.rqid === null)
+            if (this.rqid === undefined)
             {
                 // initialize each of the client's pokemon since this is our
                 //  first time receiving a args and initializing the rqid
@@ -314,7 +320,7 @@ expected`);
         this.reward = 0;
 
         const choice = await this.ai.decide(this.state.toArray(), choices, r);
-        this.addResponses(`|/choose ${choice}|${this.rqid}`);
+        this.sender(choice, this.rqid);
     }
 
     /** Asks for and sends user input to the server once it's received. */
@@ -326,7 +332,7 @@ expected`);
             if (answer)
             {
                 logger.debug("received ai input");
-                this.addResponses(answer);
+                this.sender(answer as Choice, this.rqid);
             }
             else
             {

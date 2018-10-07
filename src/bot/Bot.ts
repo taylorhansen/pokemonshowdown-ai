@@ -1,5 +1,6 @@
 import * as logger from "../logger";
 import { Parser } from "../parser/Parser";
+import { Choice } from "./battle/ai/Choice";
 import { Network } from "./battle/ai/Network";
 import { Battle } from "./battle/Battle";
 
@@ -45,16 +46,16 @@ export class Bot
                     //  lambda captures that and not a reference to `this`
                     const room = this.room;
                     const listener = this.parser.getListener(room);
-                    const addResponses = (...responses: string[]) =>
-                            this.addResponses(room, ...responses);
+                    const sender = (choice: Choice, rqid: number) =>
+                        this.addResponses(room, `|/choose ${choice}|${rqid}`);
 
                     const battle = new Battle(Network, this.username,
-                            /*saveAlways*/ true, listener, addResponses);
+                            /*saveAlways*/ true, listener, sender);
                     this.battles[this.room] = battle;
 
                     // once the battle's over we can respectfully leave
                     listener
-                    .on("tie", () => addResponses("|gg", "|/leave"))
+                    .on("tie", () => this.addResponses(room, "|gg", "|/leave"))
                     .on("win", listener.getHandler("tie"))
                     .on("deinit", () =>
                     {

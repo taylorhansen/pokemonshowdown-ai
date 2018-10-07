@@ -29,7 +29,7 @@ export class Network implements AI
 
         this.load().catch(reason =>
         {
-            logger.error(`error opening model-latest: ${reason}`);
+            logger.error(`error opening model: ${reason}`);
             logger.debug("Constructing new model");
             this.constructModel();
         });
