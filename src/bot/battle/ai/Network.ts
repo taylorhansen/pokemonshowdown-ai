@@ -20,6 +20,8 @@ export class Network implements AI
     private lastPrediction?: tf.Tensor2D;
     /** Last choice taken by the AI. */
     private lastChoice?: Choice;
+    /** Resolves once the Network is ready to be used. */
+    private ready: Promise<void>;
 
     /** Creates a Network. */
     constructor(inputLength: number, path: string)
@@ -27,7 +29,7 @@ export class Network implements AI
         this.inputLength = inputLength;
         this.path = path;
 
-        this.load().catch(reason =>
+        this.ready = this.load().catch(reason =>
         {
             logger.error(`error opening model: ${reason}`);
             logger.debug("Constructing new model");
@@ -39,6 +41,8 @@ export class Network implements AI
     public async decide(state: number[], choices: Choice[], reward?: number):
         Promise<Choice>
     {
+        await this.ready;
+
         if (state.length > this.inputLength)
         {
             logger.error(`too many state values ${state.length}, expected \
@@ -90,6 +94,7 @@ expected ${this.inputLength}`);
     /** @override */
     public async save(): Promise<void>
     {
+        await this.ready;
         await this.model.save(`file://${this.path}`);
     }
 
