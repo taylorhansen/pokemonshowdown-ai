@@ -74,7 +74,7 @@ expected ${this.inputLength}`);
             const target = predictionData;
             target[choiceIds[this.lastChoice]] = reward + nextMaxReward;
 
-            this.model.fit(this.lastState, Network.toColumn(target));
+            await this.model.fit(this.lastState, Network.toColumn(target));
         }
 
         this.lastState = nextState;
