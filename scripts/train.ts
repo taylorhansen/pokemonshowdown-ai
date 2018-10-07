@@ -17,7 +17,7 @@ const stream = new Sim.BattleStream();
     let output: string;
     while (output = await stream.read())
     {
-        console.log(`received: ${output}`);
+        logger.debug(`received: ${output}`);
         parse(output);
         // await keypress();
     }
@@ -38,7 +38,7 @@ async function keypress(): Promise<void>
  */
 function writeStream(response: string): void
 {
-    console.log(`sent: ${response}`);
+    logger.debug(`sent: ${response}`);
     stream.write(response);
 }
 
@@ -96,10 +96,8 @@ function parse(data: string): void
     switch (command)
     {
         case "update":
-        {
             parseUpdate(lines);
             break;
-        }
         case "sideupdate":
         {
             // send messages exclusively to this player
