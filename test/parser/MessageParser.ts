@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { MessageArgs, Prefix, SwitchArgs, UpdateChallengesArgs } from
-    "../../src/AnyMessageListener";
+import { MessageArgs, PlayerArgs, Prefix, SwitchArgs, UpdateChallengesArgs }
+    from "../../src/AnyMessageListener";
 import { MajorStatus, PlayerID, PokemonID, PokemonStatus, RoomType,
     stringifyDetails, stringifyID, stringifyRequest, stringifyStatus } from
     "../../src/messageData";
@@ -217,10 +217,14 @@ ${argStrs.length > 0 ? `|${argStrs.join("|")}` : ""}`;
                     {id, username, avatarId});
             }
 
+            // omitted id/username are invalid
             shouldntParse("player", ["", username, avatarId.toString()]);
             shouldntParse("player", ["p1", "", avatarId.toString()]);
-            shouldntParse("player", ["p1", username, ""]);
-            shouldntParse("player", ["p1", username]);
+
+            // omitted avatarId should default to 0
+            const args: PlayerArgs = {id: "p1", username, avatarId: 0};
+            shouldParse("player", ["p1", username, ""], args);
+            shouldParse("player", ["p1", username], args);
         });
 
         describe("request", function()

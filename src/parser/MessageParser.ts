@@ -154,7 +154,9 @@ export class MessageParser extends Parser
                     const id = MessageParser.parsePlayerId(this.getWord());
                     // empty usernames are invalid, hence this extra falsy check
                     const username = this.getWord() || null;
-                    const avatarId = MessageParser.parseInt(this.getWord());
+                    // but empty avatarIds are valid
+                    const avatarId = MessageParser.parseInt(this.getWord()) ||
+                        0;
                     this.handle("player", {id, username, avatarId});
                     break;
                 }

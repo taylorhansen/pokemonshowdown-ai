@@ -16,7 +16,7 @@ export class MockBattle extends Battle
     constructor(username: string, listener: AnyMessageListener,
         addResponses: (...responses: string[]) => void)
     {
-        super(MockAI, username, listener, addResponses);
+        super(MockAI, username, /*saveAlways*/ true, listener, addResponses);
     }
 
     /**
