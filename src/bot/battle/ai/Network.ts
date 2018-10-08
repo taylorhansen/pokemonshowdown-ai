@@ -21,7 +21,7 @@ export class Network implements AI
     /** Last choice taken by the AI. */
     private lastChoice?: Choice;
     /** Resolves once the Network is ready to be used. */
-    private ready: Promise<void>;
+    private ready: Promise<any>;
 
     /** Creates a Network. */
     constructor(inputLength: number, path: string)
@@ -83,7 +83,8 @@ expected ${this.inputLength}`);
             const target = predictionData;
             target[choiceIds[this.lastChoice]] = reward + nextMaxReward;
 
-            await this.model.fit(this.lastState, Network.toColumn(target));
+            this.ready =
+                this.model.fit(this.lastState, Network.toColumn(target));
         }
 
         this.lastChoice = bestChoice.choice;
