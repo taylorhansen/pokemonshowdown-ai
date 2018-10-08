@@ -151,6 +151,8 @@ for (const moveName in moves)
         id += move.type.toLowerCase();
     }
 
+    const target = quote(move.target);
+
     // factor pp boosts if the move supports it in game
     let pp = move.pp;
     if (!move.noPPBoosts)
@@ -161,8 +163,11 @@ for (const moveName in moves)
     const selfSwitch = typeof move.selfSwitch === "string" ?
         quote(move.selfSwitch) : !!move.selfSwitch;
 
-    console.log(`    ${id}: {uid: ${uid}, pp: ${pp}, \
-selfSwitch: ${selfSwitch}},`);
+    console.log(`\
+    ${id}:
+    {
+        uid: ${uid}, pp: ${pp}, target: ${target}, selfSwitch: ${selfSwitch}
+    },`);
     ++uid;
 }
 console.log("};\n");

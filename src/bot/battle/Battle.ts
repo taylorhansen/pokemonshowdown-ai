@@ -121,12 +121,17 @@ export class Battle
             // TODO: sometimes a move might use >1 pp
             mon.useMove(moveId, args.effect);
 
-            const selfSwitch = dex.moves[moveId].selfSwitch;
+            const move = dex.moves[moveId];
+            const selfSwitch = move.selfSwitch;
             if (side === "us")
             {
-                // on the next upkeep message, the game will expect a choice for
-                //  a new switchin, since this move forces a switch
                 this.selfSwitch = selfSwitch;
+                if (selfSwitch && move.target === "self")
+                {
+                    // self-switch moves that don't do anything else will
+                    //  immediately expect a switch replacement
+                    this.askAI();
+                }
             }
             else if (side === "them" && selfSwitch === "copyvolatile")
             {

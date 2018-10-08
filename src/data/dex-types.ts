@@ -43,11 +43,18 @@ export interface MoveData
 {
     /** Unique identifier number. */
     readonly uid: number;
+    /** Target of the move. */
+    readonly target: MoveTarget;
     /** Base power points. */
     readonly pp: number;
     /** Whether this move causes the user to switch. */
     readonly selfSwitch: SelfSwitch;
 }
+
+/** Types of targets for a move. */
+export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
+    "all" | "allAdjacent" | "allAdjacentFoes" | "allySide" | "allyTeam" |
+    "any" | "foeSide" | "normal" | "randomNormal" | "scripted" | "self";
 
 /**
  * Whether this move causes the user to switch, but `copyvolatile` additionally
