@@ -64,12 +64,21 @@ expected ${this.inputLength}`);
         const prediction = this.model.predict(nextState) as tf.Tensor2D;
         const predictionData = Array.from(await prediction.data());
 
+        logger.debug(`prediction: \
+{${predictionData.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
+
+        // find the best choice that is a subset of our possible choices
+        // include reward so we can use it for Q learning
+        const bestChoice = choices
+            .map(c => ({choice: c, reward: predictionData[choiceIds[c]]}))
+            .reduce((prev, curr) => prev.reward < curr.reward ? curr : prev);
+
         if (this.lastState && this.lastPrediction && this.lastChoice)
         {
             logger.debug("applying reward");
             // apply the Q learning update rule
             const discount = 0.8;
-            const nextMaxReward = discount * Math.max(...predictionData);
+            const nextMaxReward = discount * bestChoice.reward;
 
             const target = predictionData;
             target[choiceIds[this.lastChoice]] = reward + nextMaxReward;
@@ -77,16 +86,9 @@ expected ${this.inputLength}`);
             await this.model.fit(this.lastState, Network.toColumn(target));
         }
 
+        this.lastChoice = bestChoice.choice;
         this.lastState = nextState;
         this.lastPrediction = prediction;
-
-        logger.debug(`prediction: \
-{${predictionData.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
-
-        // find the best choice that is a subset of our choices parameter
-        this.lastChoice = choices.reduce((prev, curr) =>
-            predictionData[choiceIds[prev]] < predictionData[choiceIds[curr]] ?
-                curr : prev);
         return this.lastChoice;
     }
 
