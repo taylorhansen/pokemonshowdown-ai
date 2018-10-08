@@ -160,20 +160,19 @@ export class Battle
             {
                 team.size = args.side.pokemon.length;
             }
-            const pokemon: Pokemon[] = team.pokemon;
-            const pokemonData: RequestPokemon[] = args.side.pokemon;
 
             // first time setup, initialize each of the client's pokemon
             if (!this.started)
             {
-                for (const data of pokemonData)
+                this.started = true;
+                for (const data of args.side.pokemon)
                 {
                     const details: PokemonDetails = data.details;
                     const status: PokemonStatus = data.condition;
 
                     const index = team.reveal(details.species, details.level,
                             details.gender, status.hp, status.hpMax);
-                    const mon = pokemon[index];
+                    const mon = team.pokemon[index];
                     mon.item = data.item;
                     mon.baseAbility = data.baseAbility;
                     mon.setHP(status.hp, status.hpMax);
@@ -206,8 +205,7 @@ export class Battle
                 const moveData: RequestMove[] = args.active[0].moves;
                 for (let i = 0; i < moveData.length; ++i)
                 {
-                    const move = moveData[i];
-                    active.disableMove(i, args.active[0].moves[i].disabled);
+                    active.disableMove(i, moveData[i].disabled);
                 }
             }
 
@@ -276,10 +274,6 @@ expected`);
         })
         .on("turn", args =>
         {
-            // received at the end of every turn so we know the game is at least
-            //  fully initialized now
-            this.started = true;
-
             logger.debug(`new turn: ${args.turn}`);
             logger.debug(`state:\n${this.state.toString()}`);
             this.askAI();
