@@ -71,234 +71,65 @@ export class MessageParser extends Parser
 
                 // room initialization
                 case "init": // joined a room
-                {
-                    // format: |init|<chat or battle>
-                    const type = this.getWord();
-                    if (type === "chat" || type === "battle")
-                    {
-                        this.handle("init", {type});
-                    }
+                    this.parseInit();
                     break;
-                }
-                /*case "title":
-                case "users":
-                    break;*/
                 case "deinit": // left a room
-                {
-                    // format: |deinit
-                    this.handle("deinit", {});
-                }
-
-                // room messages
-                /*case "":
-                case "html":
-                case "uhtml":
-                case "uhtmlchange":
-                case "join": case "j": case "J":
-                case "leave": case "l": case "L":
-                case "chat": case "c": case "C":
-                case ":":
-                case "c:":
-                case "battle": case "b": case "B":
-                    break;*/
+                    this.parseDeInit();
+                    break;
 
                 // global messages
-                /*case "popup":
-                case "pm":
-                case "usercount":
-                case "nametaken":
-                    break;*/
                 case "challstr": // login key
-                {
-                    // format: |challstr|<id>|<really long challstr>
-                    const challstr = this.getRestOfLine();
-                    this.handle("challstr", {challstr});
+                    this.parseChallstr();
                     break;
-                }
                 case "updateuser": // user info changed
-                {
-                    // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
-                    //  <avatar id>
-                    const username = this.getWord();
-
-                    const unparsedGuest = this.getWord();
-                    const isGuest = unparsedGuest ?
-                        !MessageParser.parseInt(unparsedGuest) : null;
-
-                    this.handle("updateuser", {username, isGuest});
+                    this.parseUpdateUser();
                     break;
-                }
-                /*case "formats":
-                case "updatesearch":
-                    break;*/
                 case "updatechallenges":
-                {
                     // change in incoming/outgoing challenges
-                    // format: |updatechallenges|<json>
-                    // json contains challengesFrom and challengeTo
-                    const challenges =
-                        MessageParser.parseJSON(this.getRestOfLine());
-                    challenges.challengeTo = challenges.challengeTo || {};
-                    this.handle("updatechallenges", challenges);
+                    this.parseUpdateChallenges();
                     break;
-                }
-                /*case "queryresponse":
-                    break;*/
 
                 // battle initialization
                 case "player": // initialize player data
-                {
-                    // format: |player|<id>|<username>|<avatarId>
-                    // id should be p1 or p2, username is a string, and avatarId
-                    //  is an integer
-                    const id = MessageParser.parsePlayerId(this.getWord());
-                    // empty usernames are invalid, hence this extra falsy check
-                    const username = this.getWord() || null;
-                    // but empty avatarIds are valid
-                    const avatarId = MessageParser.parseInt(this.getWord()) ||
-                        0;
-                    this.handle("player", {id, username, avatarId});
+                    this.parsePlayer();
                     break;
-                }
                 case "teamsize": // initialize the size of a player's team
-                {
-                    // format: |teamsize|<player>|<size>
-                    // player should be p1 or p2
-                    const id = MessageParser.parsePlayerId(this.getWord());
-                    const size = MessageParser.parseInt(this.getWord());
-                    this.handle("teamsize", {id, size});
+                    this.parseTeamSize();
                     break;
-                }
-                /*case "gametype":
-                case "gen":
-                case "tier":
-                case "rated":
-                case "rule":
-                case "clearpoke":
-                case "poke":
-                case "teampreview":
-                case "start":
-                    break;*/
 
                 // battle progress
                 case "request": // move/switch request
-                {
-                    // format: |request|<json>
-                    // json contains active and side pokemon info
-                    const team = MessageParser.parseJSON(this.getRestOfLine());
-                    if (team !== null)
-                    {
-                        for (const mon of team.side.pokemon)
-                        {
-                            // ident, details, and condition fields are the same
-                            //  as the data from a |switch| message
-                            mon.ident = MessageParser.parsePokemonID(mon.ident);
-                            mon.details = MessageParser.parsePokemonDetails(
-                                mon.details);
-                            mon.condition = MessageParser.parsePokemonStatus(
-                                mon.condition);
-                        }
-                        this.handle("request", team);
-                    }
+                    this.parseRequest();
                     break;
-                }
-                /*case "inactive":
-                case "inactiveoff":
-                    break;*/
                 case "turn": // update turn counter
-                {
-                    // format: |turn|<turn number>
-                    const turn = MessageParser.parseInt(this.getRestOfLine());
-                    this.handle("turn", {turn});
+                    this.parseTurn();
                     break;
-                }
                 case "win": // game over
-                {
-                    // format: |win|<user>
-                    const username = this.getRestOfLine();
-                    this.handle("win", {username});
+                    this.parseWin();
                     break;
-                }
-                case "tie":
-                {
-                    // format: |tie
-                    this.handle("tie", {});
-                }
+                case "tie": // game ended in a tie
+                    this.parseTie();
+                    break;
                 case "error": // e.g. invalid move/switch choice
-                {
-                    // format: |error|[reason] description
-                    const reason = this.getRestOfLine();
-                    this.handle("error", {reason});
+                    this.parseError();
                     break;
-                }
+
                 // major actions
                 case "move": // a pokemon performed a move
-                {
-                    // format: |move|<pokemon id>|<move name>|<target id>
-                    // "|[miss]" is present if the move missed, but can also be
-                    //  determined from a "-miss" message
-                    // can also get a "|[from]<effectname>" suffix, e.g.
-                    //  "|[from]lockedmove"
-
-                    const id = MessageParser.parsePokemonID(this.getWord());
-                    const move = this.getWord();
-                    const target = MessageParser.parsePokemonID(this.getWord());
-
-                    // parse optional suffixes
-                    let word: string | null;
-                    let missed = false;
-                    let effect = "";
-                    while (word = this.getWord())
-                    {
-                        if (word.startsWith("[from]"))
-                        {
-                            effect = word.substring("[from]".length);
-                        }
-                        else if (word === "[miss]")
-                        {
-                            missed = true;
-                        }
-                    }
-
-                    this.handle("move", {id, move, target, effect, missed});
+                    this.parseMove();
                     break;
-                }
                 case "switch": // a pokemon was voluntarily switched
                 case "drag": // involuntarily switched, really doesn't matter
-                {
-                    // format: |<switch or drag>|<pokemon id>|<details>|<status>
-                    // pokemon contains active position and nickname
-                    // details contains species, gender, etc.
-                    // status contains hp (value or %), status, etc.
-
-                    const id = MessageParser.parsePokemonID(this.getWord());
-                    const details =
-                        MessageParser.parsePokemonDetails(this.getWord());
-                    const status =
-                        MessageParser.parsePokemonStatus(this.getWord());
-                    this.handle("switch", {id, details, status});
+                    this.parseSwitch();
                     break;
-                }
-                /*case "detailschange":
-                case "-formechange":
-                case "replace":
-                case "swap":
-                case "cant":*/
                 case "faint": // a pokemon has fainted
-                {
-                    // format: |faint|<pokemon id>
-
-                    const id = MessageParser.parsePokemonID(this.getWord());
-                    this.handle("faint", {id});
+                    this.parseFaint();
                     break;
-                }
                 case "upkeep":
-                    this.handle("upkeep", {});
+                    this.parseUpkeep();
                     break;
 
                 // minor actions
-                /*case "-fail":
-                    break;*/
                 case "-damage":
                 case "-heal":
                 {
@@ -330,30 +161,243 @@ export class MessageParser extends Parser
                     this.handle(prefix, {id});
                     break;
                 }
-                /*case "-boost":
-                case "-unboost":
-                case "-weather":
-                case "-fieldstart":
-                case "-fieldend":
-                case "-sidestart":
-                case "-sideend":
-                case "-crit":
-                case "-supereffective":
-                case "-resisted":
-                case "-immune":
-                case "-item":
-                case "-enditem":
-                case "-ability":
-                case "-endability":
-                case "-transform":
-                case "-mega":
-                case "-activate":
-                case "-hint":
-                case "-center":
-                case "-message":
-                    break;*/
             }
         }
+    }
+
+    /**
+     * Gets the next phrase which is surrounded by `|` symbols. The last
+     * character can optionally have a newline at the end. `pos` should be
+     * pointed to the first `|` and will end up on the next `|` or newline, or
+     * the end of the string if it encountered the end of the string.
+     * @returns The next word in a message, or null if the pipe character was
+     * missing.
+     */
+    private getWord(): string | null
+    {
+        if (this.message.charAt(this.pos) !== "|")
+        {
+            // no pipe at beginning
+            return null;
+        }
+
+        // build up the prefix substring
+        let result = "";
+        while (++this.pos < this.message.length)
+        {
+            const c = this.message.charAt(this.pos);
+            if (c === "|" || c === "\n")
+            {
+                return result;
+            }
+            else
+            {
+                result += c;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Advances `pos` to the end of the line and returns a substring from the
+     * original to the new position.
+     * @returns The rest of the line from `pos` forward.
+     */
+    private getRestOfLine(): string
+    {
+        // this.pos always points to the next pipe so we want to omit that
+        const start = this.pos + 1;
+        this.pos = this.message.indexOf("\n", start);
+        if (this.pos === -1)
+        {
+            // must be the last line of the message, so there's no terminating
+            //  newline
+            this.pos = this.message.length;
+        }
+        return this.message.substring(start, this.pos);
+    }
+
+    /** Parses a `challstr` message. */
+    private parseChallstr(): void
+    {
+        // format: |challstr|<challstr>
+        const challstr = this.getRestOfLine();
+        this.handle("challstr", {challstr});
+    }
+
+    /** Parses a `deinit` message. */
+    private parseDeInit(): void
+    {
+        // format: |deinit
+        this.handle("deinit", {});
+    }
+
+    /** Parses an `error` message. */
+    private parseError(): void
+    {
+        // format: |error|[reason] description
+        const reason = this.getRestOfLine();
+        this.handle("error", {reason});
+    }
+
+    /** Parses a `faint` message. */
+    private parseFaint(): void
+    {
+        // format: |faint|<pokemon id>
+        const id = MessageParser.parsePokemonID(this.getWord());
+        this.handle("faint", {id});
+    }
+
+    /** Parses an `init` message. */
+    private parseInit(): void
+    {
+        const type = this.getWord();
+        if (type === "chat" || type === "battle")
+        {
+            this.handle("init", {type});
+        }
+    }
+
+    /** Parses a `move` message. */
+    private parseMove(): void
+    {
+        // format: |move|<pokemon id>|<move name>|<target id>
+        // "|[miss]" is present if the move missed, but can also be
+        //  determined from a "-miss" message
+        // can also get a "|[from]<effectname>" suffix, e.g.
+        //  "|[from]lockedmove"
+
+        const id = MessageParser.parsePokemonID(this.getWord());
+        const move = this.getWord();
+        const target = MessageParser.parsePokemonID(this.getWord());
+
+        // parse optional suffixes
+        let word: string | null;
+        let missed = false;
+        let effect = "";
+        while (word = this.getWord())
+        {
+            if (word.startsWith("[from]"))
+            {
+                effect = word.substring("[from]".length);
+            }
+            else if (word === "[miss]")
+            {
+                missed = true;
+            }
+        }
+
+        this.handle("move", {id, move, target, effect, missed});
+    }
+
+    /** Parses a `player` message. */
+    private parsePlayer(): void
+    {
+        // format: |player|<id>|<username>|<avatarId>
+        // id should be p1 or p2, username is a string, and avatarId
+        //  is an integer
+        const id = MessageParser.parsePlayerId(this.getWord());
+        // empty usernames are invalid, hence this extra falsy check
+        const username = this.getWord() || null;
+        // but empty avatarIds are valid
+        const avatarId = MessageParser.parseInt(this.getWord()) || 0;
+        this.handle("player", {id, username, avatarId});
+    }
+
+    /** Parses a `request` message. */
+    private parseRequest(): void
+    {
+        // format: |request|<json>
+        // json contains active and side pokemon info
+        const team = MessageParser.parseJSON(this.getRestOfLine());
+        if (team !== null)
+        {
+            // some information is encoded in a string that needs to be further
+            //  parsed
+            for (const mon of team.side.pokemon)
+            {
+                // ident, details, and condition fields are the same format
+                //  as the data from a |switch| message
+                mon.ident = MessageParser.parsePokemonID(mon.ident);
+                mon.details = MessageParser.parsePokemonDetails(mon.details);
+                mon.condition = MessageParser.parsePokemonStatus(mon.condition);
+            }
+            this.handle("request", team);
+        }
+    }
+
+    /** Parses a `switch` message. */
+    private parseSwitch(): void
+    {
+        // format: |<switch or drag>|<pokemon id>|<details>|<status>
+        // pokemon contains active position and nickname
+        // details contains species, gender, etc.
+        // status contains hp (value or %), status, etc.
+        const id = MessageParser.parsePokemonID(this.getWord());
+        const details = MessageParser.parsePokemonDetails(this.getWord());
+        const status = MessageParser.parsePokemonStatus(this.getWord());
+        this.handle("switch", {id, details, status});
+    }
+
+    /** Parses a `teamsize` message. */
+    private parseTeamSize(): void
+    {
+        // format: |teamsize|<player>|<size>
+        // player should be p1 or p2
+        const id = MessageParser.parsePlayerId(this.getWord());
+        const size = MessageParser.parseInt(this.getWord());
+        this.handle("teamsize", {id, size});
+    }
+
+    /** Parses a `tie` message. */
+    private parseTie(): void
+    {
+        // format: |tie
+        this.handle("tie", {});
+    }
+
+    /** Parses a `turn` message. */
+    private parseTurn(): void
+    {
+        // format: |turn|<turn number>
+        const turn = MessageParser.parseInt(this.getRestOfLine());
+        this.handle("turn", {turn});
+    }
+
+    /** Parses an `updatechallenges` message. */
+    private parseUpdateChallenges(): void
+    {
+        // format: |updatechallenges|<json>
+        // json contains challengesFrom and challengeTo
+        const challenges = MessageParser.parseJSON(this.getRestOfLine());
+        challenges.challengeTo = challenges.challengeTo || {};
+        this.handle("updatechallenges", challenges);
+    }
+
+    /** Parses an `updateuser` message. */
+    private parseUpdateUser(): void
+    {
+        // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
+        //  <avatar id>
+        const username = this.getWord();
+        const word = this.getWord();
+        const isGuest = word ? !MessageParser.parseInt(word) : null;
+        this.handle("updateuser", {username, isGuest});
+    }
+
+    /** Parses an `upkeep` message. */
+    private parseUpkeep(): void
+    {
+        // format: |upkeep
+        this.handle("upkeep", {});
+    }
+
+    /** Parses a `win` message. */
+    private parseWin(): void
+    {
+        // format: |win|<user>
+        const username = this.getRestOfLine();
+        this.handle("win", {username});
     }
 
     /**
@@ -494,57 +538,5 @@ export class MessageParser extends Parser
     private static parseMajorStatus(status: string | null): MajorStatus | null
     {
         return status !== null && isMajorStatus(status) ? status : null;
-    }
-
-    /**
-     * Gets the next phrase which is surrounded by `|` symbols. The last
-     * character can optionally have a newline at the end. `pos` should be
-     * pointed to the first `|` and will end up on the next `|` or newline, or
-     * the end of the string if it encountered the end of the string.
-     * @returns The next word in a message, or null if the pipe character was
-     * missing.
-     */
-    private getWord(): string | null
-    {
-        if (this.message.charAt(this.pos) !== "|")
-        {
-            // no pipe at beginning
-            return null;
-        }
-
-        // build up the prefix substring
-        let result = "";
-        while (++this.pos < this.message.length)
-        {
-            const c = this.message.charAt(this.pos);
-            if (c === "|" || c === "\n")
-            {
-                return result;
-            }
-            else
-            {
-                result += c;
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Advances `pos` to the end of the line and returns a substring from the
-     * original to the new position.
-     * @returns The rest of the line from `pos` forward.
-     */
-    private getRestOfLine(): string
-    {
-        // this.pos always points to the next pipe so we want to omit that
-        const start = this.pos + 1;
-        this.pos = this.message.indexOf("\n", start);
-        if (this.pos === -1)
-        {
-            // must be the last line of the message, so there's no terminating
-            //  newline
-            this.pos = this.message.length;
-        }
-        return this.message.substring(start, this.pos);
     }
 }
