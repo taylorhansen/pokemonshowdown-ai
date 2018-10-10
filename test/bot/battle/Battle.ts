@@ -2,6 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { AnyMessageListener, RequestArgs } from
     "../../../src/AnyMessageListener";
+import { Choice } from "../../../src/bot/battle/ai/Choice";
 import { requestTestArgs } from "../../RequestTestArgs";
 import { MockBattle } from "./MockBattle";
 
@@ -12,11 +13,11 @@ describe("Battle", function()
 
     /**
      * Adds to the responses array.
-     * @param args Responses to add.
+     * @param choice Response to add.
      */
-    function addResponses(...args: string[]): void
+    function sender(choice: Choice): void
     {
-        responses.push(...args);
+        responses.push(choice);
     }
 
     let responses: string[];
@@ -27,7 +28,7 @@ describe("Battle", function()
     {
         responses = [];
         listener = new AnyMessageListener();
-        battle = new MockBattle(user1, listener, addResponses);
+        battle = new MockBattle(user1, listener, sender);
     });
 
     describe("player", function()

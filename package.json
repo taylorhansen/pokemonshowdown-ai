@@ -18,6 +18,7 @@
     ],
     "exclude": [
       "coverage/",
+      "scripts/",
       "src/data/",
       "dist/",
       "test/"
