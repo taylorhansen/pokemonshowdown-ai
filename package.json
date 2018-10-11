@@ -6,11 +6,12 @@
   "scripts": {
     "build:dex": "./build-dex.sh",
     "build": "tsc",
+    "init:ps": "./init-ph.sh",
     "lint": "tslint -c tslint.json data/*.ts src/**/*.ts test/**/*.ts",
     "main": "ts-node src/index.ts",
     "test": "nyc npm run test:mocha",
     "test:mocha": "mocha",
-    "train": "ts-node scripts/train.ts"
+    "train": "./train.sh"
   },
   "nyc": {
     "extension": [
