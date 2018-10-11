@@ -1,11 +1,26 @@
 import { ChallengesFrom, MajorStatus, PlayerID, PokemonDetails, PokemonID,
     PokemonStatus, RequestActive, RequestSide, RoomType } from "./messageData";
 
+/** Set of MinorPrefixes. */
+export const minorPrefixes =
+{
+    "-curestatus": 1, "-cureteam": 2, "-damage": 3, "-heal": 4, "-status": 5
+};
+/** Minor message type. */
+export type MinorPrefix = keyof typeof minorPrefixes;
+
+/** Set of MajorPrefixes. */
+export const majorPrefixes =
+{
+    challstr: 1, deinit: 2, error: 3, faint: 4, init: 5, move: 6, player: 7,
+    request: 8, switch: 9, teamsize: 10, tie: 11, turn: 12,
+    updatechallenges: 13, updateuser: 14, upkeep: 15, win: 16
+};
+/** Major message type. */
+export type MajorPrefix = keyof typeof majorPrefixes;
+
 /** Prefix for a message that tells of the message's type. */
-export type Prefix = "-curestatus" | "-cureteam" | "-damage" | "-heal" |
-    "-status" | "challstr" | "deinit" | "error" | "faint" | "init" | "move" |
-    "player" | "request" | "switch" | "teamsize" | "tie" | "turn" |
-    "updatechallenges" | "updateuser" | "upkeep" | "win";
+export type Prefix = MinorPrefix | MajorPrefix;
 
 /**
  * Listens for any type of message and delegates it to one of its specific

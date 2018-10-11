@@ -2,7 +2,7 @@
  * @file Interfaces and helper functions for dealing with the arguments of a
  * MessageHandler.
  */
-import { RequestArgs } from "./AnyMessageListener";
+import { MessageArgs, MinorPrefix, RequestArgs } from "./AnyMessageListener";
 
 /** Player ID in a battle. */
 export type PlayerID = "p1" | "p2";

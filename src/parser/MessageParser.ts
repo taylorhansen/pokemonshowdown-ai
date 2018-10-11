@@ -262,10 +262,9 @@ export class MessageParser extends Parser
     private parseMove(): void
     {
         // format: |move|<pokemon id>|<move name>|<target id>
-        // "|[miss]" is present if the move missed, but can also be
-        //  determined from a "-miss" message
-        // can also get a "|[from]<effectname>" suffix, e.g.
-        //  "|[from]lockedmove"
+        // "|[miss]" is present if the move missed, but can also be determined
+        //  from a "-miss" message
+        // can also get a "|[from]<effectname>" suffix, e.g. "|[from]lockedmove"
 
         const id = MessageParser.parsePokemonID(this.getWord());
         const move = this.getWord();
@@ -294,8 +293,8 @@ export class MessageParser extends Parser
     private parsePlayer(): void
     {
         // format: |player|<id>|<username>|<avatarId>
-        // id should be p1 or p2, username is a string, and avatarId
-        //  is an integer
+        // id should be p1 or p2, username is a string, and avatarId is an
+        //  integer
         const id = MessageParser.parsePlayerId(this.getWord());
         // empty usernames are invalid, hence this extra falsy check
         const username = this.getWord() || null;
@@ -316,8 +315,8 @@ export class MessageParser extends Parser
             //  parsed
             for (const mon of team.side.pokemon)
             {
-                // ident, details, and condition fields are the same format
-                //  as the data from a |switch| message
+                // ident, details, and condition fields are the same format as
+                //  the data from a |switch| message
                 mon.ident = MessageParser.parsePokemonID(mon.ident);
                 mon.details = MessageParser.parsePokemonDetails(mon.details);
                 mon.condition = MessageParser.parsePokemonStatus(mon.condition);
@@ -377,8 +376,7 @@ export class MessageParser extends Parser
     /** Parses an `updateuser` message. */
     private parseUpdateUser(): void
     {
-        // format: |updateuser|<username>|<0 if guest, 1 otherwise>|
-        //  <avatar id>
+        // format: |updateuser|<username>|<0 if guest, 1 otherwise>|<avatarId>
         const username = this.getWord();
         const word = this.getWord();
         const isGuest = word ? !MessageParser.parseInt(word) : null;
