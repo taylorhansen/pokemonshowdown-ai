@@ -3,8 +3,9 @@ import { AnyMessageListener } from "../../AnyMessageListener";
 import { dex } from "../../data/dex";
 import { SelfSwitch } from "../../data/dex-types";
 import * as logger from "../../logger";
-import { otherId, PlayerID, PokemonDetails, PokemonStatus, RequestMove,
-    RequestPokemon } from "../../messageData";
+import { BattleEvent, BattleEventAddon, BattleUpkeep, MoveEvent, otherId,
+    PlayerID, PokemonDetails, PokemonStatus, RequestMove, SwitchInEvent } from
+    "../../messageData";
 import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
 import { BattleState, Side } from "./state/BattleState";
@@ -50,6 +51,8 @@ export class Battle
     private readonly sender: ChoiceSender;
     /** Whether the battle has started. */
     private started = false;
+    /** Client's username. */
+    private username: string;
 
     /**
      * Creates a Battle object.
@@ -65,89 +68,52 @@ export class Battle
     {
         const path = `${__dirname}/../../../models/latest`;
         this.ai = new aiType(BattleState.getArraySize(), path);
+        this.username = username;
         this.sender = sender;
 
         listener
-        .on("-curestatus", args =>
+        .on("battleinit", args =>
         {
-            this.state.getTeam(this.getSide(args.id.owner)).active.cure();
-        })
-        .on("-cureteam", args =>
-        {
-            this.state.getTeam(this.getSide(args.id.owner)).cure();
-        })
-        .on("-damage", args =>
-        {
-            const side = this.getSide(args.id.owner);
-            const active = this.state.getTeam(side).active;
+            console.dir(args, {colors: true, depth: null});
 
-            // side "them" uses hp percentages so hpMax would be omitted
-            const hpMax = side === "us" ? args.status.hpMax : undefined;
-            active.setHP(args.status.hp, hpMax);
-            // this should already be covered by the `-status` handler but just
-            //  in case
-            active.afflict(args.status.condition);
+            // map player id to which side they represent
+            const id = args.id;
+            if (args.username === this.username)
+            {
+                this.sides = {[id]: "us", [otherId(id)]: "them"} as any;
+                // we already know our team's size from the initial request
+                //  message but not the other team
+                this.state.getTeam("them").size = args.teamSizes[otherId(id)];
+            }
+            else
+            {
+                this.sides = {[id]: "them", [otherId(id)]: "us"} as any;
+                this.state.getTeam("them").size = args.teamSizes[id];
+            }
+            args.switchIns.forEach(event => this.handleSwitchIn(event));
+
+            logger.debug(`state:\n${this.state.toString()}`);
+            this.askAI();
         })
-        .on("-heal", args =>
+        .on("battleprogress", args =>
         {
-            // delegate to -damage for now
-            listener.getHandler("-damage")(args);
-        })
-        .on("-status", args =>
-        {
-            this.state.getTeam(this.getSide(args.id.owner)).active
-                .afflict(args.condition);
+            console.dir(args, {colors: true, depth: null});
+
+            args.events.forEach(event => this.handleEvent(event));
+            if (args.upkeep)
+            {
+                args.upkeep.addons.forEach(addon => this.handleAddon(addon));
+            }
+            if (args.turn) logger.debug(`new turn: ${args.turn}`);
+
+            logger.debug(`state:\n${this.state.toString()}`);
+            this.askAI();
         })
         .on("error", /* istanbul ignore next: uses stdin */ args =>
         {
             logger.error(args.reason);
             logger.debug("nn input failed, asking user for input");
             this.askUser();
-        })
-        .on("faint", args =>
-        {
-            // active pokemon has fainted
-            // TODO: for doubles/triples, do this based on active position also
-            const side = this.getSide(args.id.owner);
-            this.state.getTeam(side).active.faint();
-            this.applyReward(side, rewards.faint);
-        })
-        .on("move", args =>
-        {
-            const side = this.getSide(args.id.owner);
-            const mon = this.state.getTeam(side).active;
-            const moveId = args.move.toLowerCase().replace(/[ -]/g, "");
-
-            // TODO: sometimes a move might use >1 pp
-            mon.useMove(moveId, args.effect);
-
-            const move = dex.moves[moveId];
-            const selfSwitch = move.selfSwitch;
-            if (side === "us")
-            {
-                this.selfSwitch = selfSwitch;
-                if (selfSwitch && move.target === "self")
-                {
-                    // self-switch moves that don't do anything else will
-                    //  immediately expect a switch replacement
-                    this.askAI();
-                }
-            }
-            else if (side === "them" && selfSwitch === "copyvolatile")
-            {
-                // remember to copy volatile status data for the opponent's
-                //  switchin
-                this.themCopyVolatile = true;
-            }
-        })
-        .on("player", args =>
-        {
-            if (args.username !== username)
-            {
-                // them
-                this.sides = {[args.id]: "them", [otherId(args.id)]: "us"} as
-                    any;
-            }
         })
         .on("request", args =>
         {
@@ -222,83 +188,20 @@ export class Battle
             // update rqid to verify our next choice
             this.rqid = args.rqid;
         })
-        .on("switch", args =>
-        {
-            const side = this.getSide(args.id.owner);
-            const team = this.state.getTeam(side);
-
-            // consume pending copyvolatile boolean flags
-            const options: SwitchInOptions = {};
-            if (side === "us")
-            {
-                options.copyVolatile = this.selfSwitch === "copyvolatile";
-                this.selfSwitch = false;
-            }
-            else
-            {
-                options.copyVolatile = this.themCopyVolatile;
-                this.themCopyVolatile = false;
-            }
-
-            // index of the pokemon to switch
-            let newActiveIndex = team.find(args.details.species);
-            if (newActiveIndex === -1)
-            {
-                // no known pokemon found, so this is a new switchin
-                // hp is a percentage if on the opponent's team
-                const hpMax = side === "us" ? args.status.hpMax : undefined;
-                newActiveIndex = team.newSwitchin(args.details.species,
-                        args.details.level, args.details.gender, args.status.hp,
-                        hpMax, options);
-                if (newActiveIndex === -1)
-                {
-                    logger.error(`team ${side} seems to have more pokemon than \
-expected`);
-                }
-                return;
-            }
-            team.switchIn(newActiveIndex, options);
-        })
-        .on("teamsize", args =>
-        {
-            // should only initialize if the team is empty
-            const side = this.getSide(args.id);
-            const team = this.state.getTeam(side);
-            if (team.size <= 0)
-            {
-                team.size = args.size;
-            }
-        })
         .on("tie", () =>
         {
             if (saveAlways)
             {
-                logger.debug(`saving ${username}`);
+                logger.debug(`saving ${this.username}`);
                 this.ai.save();
-            }
-        })
-        .on("turn", args =>
-        {
-            logger.debug(`new turn: ${args.turn}`);
-            logger.debug(`state:\n${this.state.toString()}`);
-            this.askAI();
-        })
-        .on("upkeep", () =>
-        {
-            // usually, once we get the message that a new turn has started, we
-            //  would then ask the neural network for input
-            // but if we're being forced to switch (e.g. when a pokemon faints),
-            //  the turn message we've been waiting for hasn't been sent yet
-            if (this.forceSwitch)
-            {
-                this.askAI();
             }
         })
         .on("win", args =>
         {
-            if (saveAlways || args.username === username)
+            if (saveAlways || args.username === this.username)
             {
-                logger.debug(`saving ${username}`);
+                // we won
+                logger.debug(`saving ${this.username}`);
                 this.ai.save();
             }
         });
@@ -314,7 +217,147 @@ expected`);
         return this.sides[id];
     }
 
-    /** Asks the AI for what to do next. */
+    /**
+     * Handles a BattleEvent.
+     * @param event Event to process.
+     */
+    private handleEvent(event: BattleEvent): void
+    {
+        switch (event.type)
+        {
+            case "move":
+                this.handleMove(event);
+                break;
+            case "switch":
+                this.handleSwitchIn(event);
+                break;
+        }
+    }
+
+    /**
+     * Handles a MoveEvent.
+     * @param event Event to process.
+     */
+    private handleMove(event: MoveEvent): void
+    {
+        const side = this.getSide(event.id.owner);
+        const mon = this.state.getTeam(side).active;
+        const moveId = event.moveName.toLowerCase().replace(/[ -]/g, "");
+
+        // FIXME: sometimes a move might use >1 pp due to an ability
+        // FIXME: a move could be stored as hiddenpower70 but displayed as
+        //  hiddenpowerfire
+        mon.useMove(moveId, event.from);
+
+        event.addons.forEach(addon => this.handleAddon(addon));
+
+        const move = dex.moves[moveId];
+        const selfSwitch = move.selfSwitch;
+        if (side === "us")
+        {
+            this.selfSwitch = selfSwitch;
+            if (selfSwitch && move.target === "self")
+            {
+                // self-switch moves that don't do anything else will
+                //  immediately expect a switch replacement
+                this.askAI();
+            }
+        }
+        else if (side === "them" && selfSwitch === "copyvolatile")
+        {
+            // remember to copy volatile status data for the opponent's
+            //  switchin
+            this.themCopyVolatile = true;
+        }
+    }
+
+    /**
+     * Handles a SwitchInEvent.
+     * @param event Event to process.
+     */
+    private handleSwitchIn(event: SwitchInEvent): void
+    {
+        const side = this.getSide(event.id.owner);
+        const team = this.state.getTeam(side);
+
+        // consume pending copyvolatile boolean flags
+        const options: SwitchInOptions = {};
+        if (side === "us")
+        {
+            options.copyVolatile = this.selfSwitch === "copyvolatile";
+            this.selfSwitch = false;
+        }
+        else
+        {
+            options.copyVolatile = this.themCopyVolatile;
+            this.themCopyVolatile = false;
+        }
+
+        // index of the pokemon to switch
+        let newActiveIndex = team.find(event.details.species);
+        if (newActiveIndex === -1)
+        {
+            // no known pokemon found, so this is a new switchin
+            // hp is a percentage if on the opponent's team
+            const hpMax = side === "us" ? event.status.hpMax : undefined;
+            newActiveIndex = team.newSwitchin(event.details.species,
+                    event.details.level, event.details.gender, event.status.hp,
+                    hpMax, options);
+            if (newActiveIndex === -1)
+            {
+                logger.error(`team ${side} seems to have more pokemon than \
+expected`);
+            }
+            return;
+        }
+        team.switchIn(newActiveIndex, options);
+
+        event.addons.forEach(addon => this.handleAddon(addon));
+    }
+
+    /**
+     * Handles a BattleEventAddon.
+     * @param addon Addon to process.
+     */
+    private handleAddon(addon: BattleEventAddon): void
+    {
+        switch (addon.type)
+        {
+            case "curestatus":
+                this.state.getTeam(this.getSide(addon.id.owner)).active.cure();
+                break;
+            case "cureteam":
+                this.state.getTeam(this.getSide(addon.id.owner)).cure();
+                break;
+            case "damage":
+            case "heal":
+            {
+                const side = this.getSide(addon.id.owner);
+                const active = this.state.getTeam(side).active;
+
+                // side "them" uses hp percentages so hpMax would be omitted
+                const hpMax = side === "us" ? addon.status.hpMax : undefined;
+                active.setHP(addon.status.hp, hpMax);
+                // this should already be covered by the `status` addon but just
+                //  in case
+                active.afflict(addon.status.condition);
+                break;
+            }
+            case "faint":
+            {
+                const side = this.getSide(addon.id.owner);
+                this.state.getTeam(side).active.faint();
+                this.applyReward(side, rewards.faint);
+                break;
+            }
+            case "status":
+                this.state.getTeam(this.getSide(addon.id.owner)).active
+                    .afflict(addon.majorStatus);
+                break;
+        }
+    }
+
+    /** Asks the AI for what to do next and sends the response. */
     private async askAI(): Promise<void>
     {
         const choices = this.getChoices();

@@ -1,26 +1,6 @@
-import { ChallengesFrom, MajorStatus, PlayerID, PokemonDetails, PokemonID,
-    PokemonStatus, RequestActive, RequestSide, RoomType } from "./messageData";
-
-/** Set of MinorPrefixes. */
-export const minorPrefixes =
-{
-    "-curestatus": 1, "-cureteam": 2, "-damage": 3, "-heal": 4, "-status": 5
-};
-/** Minor message type. */
-export type MinorPrefix = keyof typeof minorPrefixes;
-
-/** Set of MajorPrefixes. */
-export const majorPrefixes =
-{
-    challstr: 1, deinit: 2, error: 3, faint: 4, init: 5, move: 6, player: 7,
-    request: 8, switch: 9, teamsize: 10, tie: 11, turn: 12,
-    updatechallenges: 13, updateuser: 14, upkeep: 15, win: 16
-};
-/** Major message type. */
-export type MajorPrefix = keyof typeof majorPrefixes;
-
-/** Prefix for a message that tells of the message's type. */
-export type Prefix = MinorPrefix | MajorPrefix;
+import { BattleEvent, BattleUpkeep, MajorStatus, MessageType, PlayerID,
+    PokemonDetails, PokemonID, PokemonStatus, RequestActive, RequestSide,
+    RoomType, SwitchInEvent } from "./messageData";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -29,28 +9,19 @@ export type Prefix = MinorPrefix | MajorPrefix;
 export class AnyMessageListener
 {
     /** Registered message listeners for each type of Prefix. */
-    private readonly listeners: {readonly [P in Prefix]: MessageListener<P>} =
+    private readonly listeners:
+        {readonly [T in MessageType]: MessageListener<T>} =
     {
-        "-curestatus": new MessageListener<"-curestatus">(),
-        "-cureteam": new MessageListener<"-cureteam">(),
-        "-damage": new MessageListener<"-damage">(),
-        "-heal": new MessageListener<"-heal">(),
-        "-status": new MessageListener<"-status">(),
+        battleinit: new MessageListener<"battleinit">(),
+        battleprogress: new MessageListener<"battleprogress">(),
         challstr: new MessageListener<"challstr">(),
         deinit: new MessageListener<"deinit">(),
         error: new MessageListener<"error">(),
-        faint: new MessageListener<"faint">(),
         init: new MessageListener<"init">(),
-        move: new MessageListener<"move">(),
-        player: new MessageListener<"player">(),
         request: new MessageListener<"request">(),
-        switch: new MessageListener<"switch">(),
-        teamsize: new MessageListener<"teamsize">(),
         tie: new MessageListener<"tie">(),
-        turn: new MessageListener<"turn">(),
         updatechallenges: new MessageListener<"updatechallenges">(),
         updateuser: new MessageListener<"updateuser">(),
-        upkeep: new MessageListener<"upkeep">(),
         win: new MessageListener<"win">()
     };
 
@@ -61,12 +32,12 @@ export class AnyMessageListener
      * @param handler Function to be called using data from the message.
      * @returns `this` to allow chaining.
      */
-    public on<P extends Prefix>(prefix: P, handler: MessageHandler<P>): this
+    public on<T extends MessageType>(type: T, handler: MessageHandler<T>): this
     {
         // need to assert the function type since addHandler is displayed as a
         //  union of all possible MessageHandlers
-        (this.listeners[prefix].addHandler as
-            (handler: MessageHandler<P>) => void)(handler);
+        (this.listeners[type].addHandler as
+            (handler: MessageHandler<T>) => void)(handler);
         return this;
     }
 
@@ -77,28 +48,25 @@ export class AnyMessageListener
      * @returns A function that calls all registered handlers for this message
      * type.
      */
-    public getHandler<P extends Prefix>(prefix: P): MessageHandler<P>
+    public getHandler<T extends MessageType>(type: T): MessageHandler<T>
     {
-        return (args: MessageArgs<P>) =>
-            (this.listeners[prefix] as MessageListener<P>).handle(args);
+        return (args: MessageArgs<T>) =>
+            (this.listeners[type] as MessageListener<T>).handle(args);
     }
 }
 
-/**
- * Listens for a certain type of message.
- * @template P Describes the message's type.
- */
-class MessageListener<P extends Prefix>
+/** Listens for a certain type of message. */
+class MessageListener<T extends MessageType>
 {
     /** Array of registered message handlers. */
-    private readonly handlers: MessageHandler<P>[] = [];
+    private readonly handlers: MessageHandler<T>[] = [];
 
     /**
      * Calls all registered handlers with the arguments for this type of
      * message.
      * @param args Message arguments.
      */
-    public handle(args: MessageArgs<P>): void
+    public handle(args: MessageArgs<T>): void
     {
         this.handlers.forEach(handler => handler(args));
     }
@@ -107,41 +75,62 @@ class MessageListener<P extends Prefix>
      * Adds another message handler.
      * @param handler Function to be called.
      */
-    public addHandler(handler: MessageHandler<P>): void
+    public addHandler(handler: MessageHandler<T>): void
     {
         this.handlers.push(handler);
     }
 }
 
-/**
- * Function type for handling certain message types.
- * @template P Describes the message's type.
- */
-export type MessageHandler<P extends Prefix> = (args: MessageArgs<P>) => void;
+/** Function type for handling certain message types. */
+export type MessageHandler<T extends MessageType> =
+    (args: MessageArgs<T>) => void;
 
-export type MessageArgs<P extends Prefix> =
-    P extends "-curestatus" ? CureStatusArgs
-    : P extends "-cureteam" ? CureTeamArgs
-    : P extends "-damage" ? DamageArgs
-    : P extends "-heal" ? HealArgs
-    : P extends "-status" ? StatusArgs
-    : P extends "challstr" ? ChallStrArgs
-    : P extends "deinit" ? DeInitArgs
-    : P extends "error" ? ErrorArgs
-    : P extends "faint" ? FaintArgs
-    : P extends "init" ? InitArgs
-    : P extends "move" ? MoveArgs
-    : P extends "player" ? PlayerArgs
-    : P extends "request" ? RequestArgs
-    : P extends "switch" ? SwitchArgs
-    : P extends "teamsize" ? TeamSizeArgs
-    : P extends "tie" ? TieArgs
-    : P extends "turn" ? TurnArgs
-    : P extends "updatechallenges" ? UpdateChallengesArgs
-    : P extends "updateuser" ? UpdateUserArgs
-    : P extends "upkeep" ? UpkeepArgs
-    : P extends "win" ? WinArgs
-    : () => void;
+export type MessageArgs<T extends MessageType> =
+    T extends "battleinit" ? BattleInitArgs
+    : T extends "battleprogress" ? BattleProgressArgs
+    : T extends "challstr" ? ChallStrArgs
+    : T extends "deinit" ? DeInitArgs
+    : T extends "error" ? ErrorArgs
+    : T extends "init" ? InitArgs
+    : T extends "request" ? RequestArgs
+    : T extends "tie" ? TieArgs
+    : T extends "updatechallenges" ? UpdateChallengesArgs
+    : T extends "updateuser" ? UpdateUserArgs
+    : T extends "win" ? WinArgs
+    : {};
+
+/** Args for a `battleinit` message type. */
+export interface BattleInitArgs
+{
+    /** PlayerID of the client. */
+    id: PlayerID;
+    /** Username of the client. */
+    username: string;
+    /** Fixed size of each team. */
+    teamSizes: {[P in PlayerID]: number};
+    /** Game type, e.g. `singles`. */
+    gameType: string;
+    /** Cartridge generation. */
+    gen: number;
+    /** Initial switchins. */
+    switchIns: SwitchInEvent[];
+}
+
+/** Args for a `battleprogress` message type. */
+export interface BattleProgressArgs
+{
+    /** Sequence of events in the battle in the order they were parsed. */
+    events: BattleEvent[];
+    /**
+     * End-of-turn events. If undefined, then we're waiting for further input
+     * from someone in order to complete a major event, e.g. using a move that
+     * requires a switch choice. Refer to the last `|request|` json for more
+     * info.
+     */
+    upkeep?: BattleUpkeep;
+    /** New turn number. If present, a new turn has started. */
+    turn?: number;
+}
 
 /** Args for a `-curestatus` message. */
 export interface CureStatusArgs
@@ -155,9 +144,7 @@ export interface CureStatusArgs
 /** Args for a `-cureteam` message. */
 export interface CureTeamArgs
 {
-    /**
-     * ID of the pokemon of which its team is being cured of status conditions.
-     */
+    /** ID of the pokemon whose team is being cured of status conditions. */
     id: PokemonID;
 }
 
@@ -302,8 +289,11 @@ export interface TurnArgs
  */
 export interface UpdateChallengesArgs
 {
-    /** Challenges from others to the client. */
-    challengesFrom: ChallengesFrom;
+    /**
+     * Maps users challenging the client to the battle format they're being
+     * challenged to.
+     */
+    challengesFrom: {[user: string]: string};
     /** Current outgoing challenge from the client (TODO). */
     challengeTo: {};
 }

@@ -50,7 +50,7 @@ export class Bot
                         this.addResponses(room, `|/choose ${choice}|${rqid}`);
 
                     const battle = new Battle(Network, this.username,
-                            /*saveAlways*/ true, listener, sender);
+                        /*saveAlways*/ true, listener, sender);
                     this.battles[this.room] = battle;
 
                     // once the battle's over we can respectfully leave

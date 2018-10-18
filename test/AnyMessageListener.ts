@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { AnyMessageListener, MessageArgs, Prefix } from
-    "../src/AnyMessageListener";
+import { AnyMessageListener, MessageArgs } from "../src/AnyMessageListener";
+import { MessageType } from "../src/messageData";
 
 describe("AnyMessageListener", function()
 {
@@ -14,40 +14,35 @@ describe("AnyMessageListener", function()
 
     /**
      * Creates a message listener test.
-     * @param prefix Prefix of the message type to test.
+     * @param type Message type to test.
      * @param givenArgs Arguments to the message handler.
      */
-    function shouldHandle<P extends Prefix>(prefix: P): void
+    function shouldHandle<T extends MessageType>(type: T): void
     {
-        it(`Should handle a normal ${prefix} message`, function(done)
+        it(`Should handle a normal ${type} message`, function(done)
         {
-            const givenArgs = {} as MessageArgs<P>;
-            listener.on(prefix, args =>
+            // args aren't actually valid, but are assumed to be validated by
+            //  the parser
+            const givenArgs = {} as MessageArgs<T>;
+            listener
+            .on(type, args =>
             {
                 expect(args).to.equal(givenArgs);
                 done();
             })
-            .getHandler(prefix)(givenArgs);
+            .getHandler(type)(givenArgs);
         });
     }
 
-    // data isn't actually valid, and is assumed to be validated by the parser
-    shouldHandle("-curestatus");
-    shouldHandle("-cureteam");
-    shouldHandle("-damage");
-    shouldHandle("-heal");
-    shouldHandle("-status");
+    shouldHandle("battleinit");
+    shouldHandle("battleprogress");
     shouldHandle("challstr");
+    shouldHandle("deinit");
     shouldHandle("error");
-    shouldHandle("faint");
     shouldHandle("init");
-    shouldHandle("move");
-    shouldHandle("player");
     shouldHandle("request");
-    shouldHandle("switch");
-    shouldHandle("teamsize");
-    shouldHandle("turn");
+    shouldHandle("tie");
     shouldHandle("updatechallenges");
     shouldHandle("updateuser");
-    shouldHandle("upkeep");
+    shouldHandle("win");
 });

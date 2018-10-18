@@ -2,7 +2,67 @@
  * @file Interfaces and helper functions for dealing with the arguments of a
  * MessageHandler.
  */
-import { MessageArgs, MinorPrefix, RequestArgs } from "./AnyMessageListener";
+
+// MessageType
+
+/** Main message type produced by the MessageParser. */
+export type MessageType = "battleinit" | "battleprogress" | StandalonePrefix;
+
+// StandalonePrefix
+
+/** Set of StandalonePrefixes. */
+export const standalonePrefixes =
+{
+    challstr: 1, deinit: 2, error: 3, init: 4, request: 5, tie: 6,
+    updatechallenges: 7, updateuser: 8, win: 9
+};
+/** Message prefixes that can be parsed as a standalone message line. */
+export type StandalonePrefix = keyof typeof standalonePrefixes;
+
+// AddonPrefix
+
+/** Set of AddonPrefixes. */
+export const addonPrefixes =
+{
+    "-curestatus": 1, "-cureteam": 2, "-damage": 3, faint: 4, "-heal": 4,
+    "-status": 5
+};
+/** Message types that are parsed as addons to a major event. */
+export type AddonPrefix = keyof typeof addonPrefixes;
+
+/**
+ * Checks if a value is an AddonPrefix. Usable as a type guard.
+ * @param value Value to check.
+ * @returns Whether the value is an AddonPrefix.
+ */
+export function isAddonPrefix(value: any): value is AddonPrefix
+{
+    return addonPrefixes.hasOwnProperty(value);
+}
+
+// MajorPrefix
+
+/** Set of MajorPrefixes. */
+export const majorPrefixes =
+{
+    challstr: 1, deinit: 2, error: 3, init: 4, move: 5, player: 6,
+    request: 7, switch: 8, teamsize: 9, tie: 10, turn: 11,
+    updatechallenges: 12, updateuser: 13, upkeep: 14, win: 15
+};
+/** Major message type. */
+export type MajorPrefix = keyof typeof majorPrefixes;
+
+/**
+ * Checks if a value is a Majorprefix. Usable as a type guard.
+ * @param value Value to check.
+ * @returns Whether the value is a MajorPrefix.
+ */
+export function isMajorPrefix(value: any): value is MajorPrefix
+{
+    return majorPrefixes.hasOwnProperty(value);
+}
+
+// PlayerID type
 
 /** Player ID in a battle. */
 export type PlayerID = "p1" | "p2";
@@ -31,34 +91,126 @@ export function isPlayerId(id: any): id is PlayerID
     return id === "p1" || id === "p2";
 }
 
+// battle event types
+
+/** Types of events that can happen during battle. */
+export type BattleEvent = MoveEvent | SwitchInEvent;
+
+/** Base class for BattleEvents. */
+interface BattleEventBase
+{
+    /** Type of event this is. */
+    type: string;
+    /** Provides additional info about the event. */
+    addons: BattleEventAddon[];
+}
+
+/** BattleEvent where a move was used. */
+export interface MoveEvent extends BattleEventBase
+{
+    type: "move";
+    /** ID of the pokemon who used the move. */
+    id: PokemonID;
+    /** Display name of the move being used. */
+    moveName: string;
+    /** ID of the target pokemon. */
+    targetId: PokemonID;
+    /** Special condition as to why the move was chosen, e.g. `lockedmove`. */
+    from?: string;
+}
+
+/** BattleEvent where a pokemon was switched in. */
+export interface SwitchInEvent extends BattleEventBase
+{
+    type: "switch";
+    /** ID of the pokemon being switched in. */
+    id: PokemonID;
+    /** Some details on species; level; etc. */
+    details: PokemonDetails;
+    /** HP and any status conditions. */
+    status: PokemonStatus;
+}
+
+/** Contains minor events that happen at the end of a turn. */
+export interface BattleUpkeep
+{
+    /** Provides additional info about the event. */
+    addons: BattleEventAddon[];
+}
+
+// battle event addon types
+
+/** Addon to an event that provides additional info. */
+export type BattleEventAddon = CureStatusAddon | CureTeamAddon | DamageAddon |
+    FaintAddon | StatusAddon;
+
+/** Base class for BattleEventAddons. */
+interface AddonBase
+{
+    /** The type of addon this is. */
+    type: string;
+}
+
+/** Event addon where a pokemon's major status is cured. */
+export interface CureStatusAddon extends AddonBase
+{
+    type: "curestatus";
+    /** ID of the pokemon being cured. */
+    id: PokemonID;
+    /** Status condition the pokemon is being cured of. */
+    majorStatus: MajorStatus;
+}
+
+/** Event addon where all of a team's pokemon are cured of major statuses. */
+export interface CureTeamAddon extends AddonBase
+{
+    type: "cureteam";
+    /** ID of the pokemon whose team is being cured of a major status. */
+    id: PokemonID;
+}
+
+/** Event addon where a pokemon is damaged or healed. */
+export interface DamageAddon extends AddonBase
+{
+    type: "damage" | "heal";
+    /** ID of the pokemon being damaged. */
+    id: PokemonID;
+    /** New hp/status. */
+    status: PokemonStatus;
+}
+
+/** Event addon where a pokemon has fainted. */
+export interface FaintAddon extends AddonBase
+{
+    type: "faint";
+    /** ID of the pokemon that has fainted. */
+    id: PokemonID;
+}
+
+/** Event addon where a pokemon is afflicted with a status. */
+export interface StatusAddon extends AddonBase
+{
+    type: "status";
+    /** ID of the pokemon being afflicted with a status condition. */
+    id: PokemonID;
+    /** Status condition being afflicted. */
+    majorStatus: MajorStatus;
+}
+
+// other stuff
+
 /** Types of server rooms. */
 export type RoomType = "chat" | "battle";
-
-/**
- * Maps users challenging the client to the battle format they're being
- * challenged to.
- */
-export interface ChallengesFrom
-{
-    [user: string]: string;
-}
 
 /** Gives basic info about the owner and position of a pokemon. */
 export interface PokemonID
 {
+    /** Whose side the pokemon is on. */
     owner: PlayerID;
+    /** Active position (a, b, or c). */
     position: string;
+    /** Display nickname. */
     nickname: string;
-}
-
-/**
- * Stringifies a PokemonID.
- * @param id ID object.
- * @returns The PokemonID in string form.
- */
-export function stringifyID(id: PokemonID): string
-{
-    return `${id.owner}${id.position}: ${id.nickname}`;
 }
 
 /** Holds a couple details about a pokemon. */
@@ -70,20 +222,6 @@ export interface PokemonDetails
     level: number;
 }
 
-/**
- * Stringifies a PokemonDetails.
- * @param details Details object.
- * @returns The PokemonDetails in string form.
- */
-export function stringifyDetails(details: PokemonDetails): string
-{
-    const arr = [details.species];
-    if (details.shiny) arr.push("shiny");
-    if (details.gender) arr.push(details.gender);
-    if (details.level !== 100) arr.push(`L${details.level}`);
-    return arr.join(", ");
-}
-
 /** Details pokemon hp (can be percent) and status conditions. */
 export interface PokemonStatus
 {
@@ -92,20 +230,7 @@ export interface PokemonStatus
     condition: MajorStatus;
 }
 
-/**
- * Stringifies a PokemonStatus.
- * @param details Status object.
- * @returns The PokemonStatus in string form.
- */
-export function stringifyStatus(status: PokemonStatus): string
-{
-    if (status.hp === 0)
-    {
-        return "0 fnt";
-    }
-    return `${status.hp}/${status.hpMax}\
-${status.condition ? ` ${status.condition}` : ""}`;
-}
+// major status
 
 /** Hold the set of all major status names. Empty string means no status. */
 export const majorStatuses =
@@ -125,6 +250,8 @@ export function isMajorStatus(status: any): status is MajorStatus
 {
     return majorStatuses.hasOwnProperty(status);
 }
+
+// full |request| json typings
 
 /** Active pokemon info. */
 export interface RequestActive
@@ -182,24 +309,4 @@ export interface RequestPokemon
     item: string;
     /** Pokeball id name. */
     pokeball: string;
-}
-
-/**
- * Stringifies the object from a |request| message back to normal JSON.
- * @param data Data to stringify.
- */
-export function stringifyRequest(data: RequestArgs): string
-{
-    // i mean, copying it this way is kind of efficient
-    const obj: any = JSON.parse(JSON.stringify(data));
-
-    for (const mon of obj.side.pokemon)
-    {
-        // ident, details, and condition fields are the same
-        //  as the data from a |switch| message
-        mon.ident = stringifyID(mon.ident);
-        mon.details = stringifyDetails(mon.details);
-        mon.condition = stringifyStatus(mon.condition);
-    }
-    return JSON.stringify(obj);
 }

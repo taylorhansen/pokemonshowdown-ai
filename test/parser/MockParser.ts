@@ -1,4 +1,5 @@
-import { MessageArgs, Prefix } from "../../src/AnyMessageListener";
+import { MessageArgs } from "../../src/AnyMessageListener";
+import { MessageType } from "../../src/messageData";
 import { Parser } from "../../src/parser/Parser";
 
 /** Mocks the Parser class. */
@@ -14,9 +15,9 @@ export class MockParser extends Parser
     }
 
     /** @override */
-    public handle<P extends Prefix>(prefix: P,
-        args: {[A in keyof MessageArgs<P>]: MessageArgs<P>[A] | null}): void
+    public handle<T extends MessageType>(type: T,
+        args: {[A in keyof MessageArgs<T>]: MessageArgs<T>[A] | null}): void
     {
-        super.handle(prefix, args);
+        super.handle(type, args);
     }
 }

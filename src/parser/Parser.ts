@@ -1,5 +1,7 @@
-import { AnyMessageListener, MessageArgs, MessageHandler, Prefix } from
+import { AnyMessageListener, MessageArgs, MessageHandler } from
     "../AnyMessageListener";
+import { MessageType } from "../messageData";
+import { ShallowNullable } from "../types";
 
 /** Base class for parsers. */
 export abstract class Parser
@@ -23,18 +25,17 @@ export abstract class Parser
      * Adds a MessageHandler for a certain message Prefix from a certain room.
      * While parsing, if this prefix and room are found, the provided handler
      * will be called.
-     * @template P Prefix type.
      * @param room The room the message should originate from. Empty string
      * means lobby or global, while `null` means an unfamiliar room.
-     * @param prefix Message prefix indicating its type.
+     * @param type Type of message to listen for.
      * @param handler Function to be called using data from the message.
      * @returns `this` to allow chaining.
      */
-    public on<P extends Prefix>(room: string | null, prefix: P,
-        handler: MessageHandler<P>): this
+    public on<T extends MessageType>(room: string | null, type: T,
+        handler: MessageHandler<T>): this
     {
         (room !== null ? this.getListener(room) : this.newRoomListener)
-            .on(prefix, handler);
+            .on(type, handler);
         return this;
     }
 
@@ -66,14 +67,15 @@ export abstract class Parser
     /**
      * Calls a registered MessageHandler for the current room using the given
      * message prefix.
-     * @param prefix Given prefix.
-     * @param args Message handler arguments.
+     * @param type Message type to invoke.
+     * @param args Message handler arguments. These are allowed to be null, but
+     * will cause the parser to reject the message as a whole if any are found.
      */
-    protected handle<P extends Prefix>(prefix: P,
-        args: {[A in keyof MessageArgs<P>]: MessageArgs<P>[A] | null}): void
+    protected handle<T extends MessageType>(type: T,
+        args: ShallowNullable<MessageArgs<T>>): void
     {
         // early return: message handlers do not accept null arguments
-        if ((Object.keys(args) as (keyof MessageArgs<P>)[])
+        if ((Object.keys(args) as (keyof MessageArgs<T>)[])
             .some(key => args[key] === null))
         {
             return;
@@ -82,6 +84,6 @@ export abstract class Parser
         // unregistered rooms are delegated to a special listener
         const handler = this.messageListeners.hasOwnProperty(this.room) ?
             this.messageListeners[this.room] : this.newRoomListener;
-        handler.getHandler(prefix)(args as MessageArgs<P>);
+        handler.getHandler(type)(args as MessageArgs<T>);
     }
 }

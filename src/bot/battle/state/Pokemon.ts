@@ -238,13 +238,13 @@ export class Pokemon
     /**
      * Indicates that a move has been used.
      * @param id ID name of the move.
-     * @param effect ID name of the effect that caused the move.
+     * @param from ID name of the effect that caused the move.
      */
-    public useMove(id: string, effect: string): void
+    public useMove(id: string, from?: string): void
     {
         const move = this.getMove(id) || this.revealMove(id);
         // could be locked into using a move, where no pp is consumed
-        if (effect !== "lockedmove")
+        if (from !== "lockedmove")
         {
             move.use();
         }
