@@ -1,16 +1,13 @@
 import { expect } from "chai";
 import "mocha";
-import { AnyMessageListener, RequestArgs } from
-    "../../../src/AnyMessageListener";
+import { AnyMessageListener } from "../../../src/AnyMessageListener";
 import { Choice } from "../../../src/bot/battle/ai/Choice";
+import { BattleState } from "../../../src/bot/battle/state/BattleState";
 import * as testArgs from "../../helpers/battleTestArgs";
 import { MockBattle } from "./MockBattle";
 
 describe("Battle", function()
 {
-    const user1 = "user1";
-    const user2 = "user2";
-
     /**
      * Adds to the responses array.
      * @param choice Response to add.
@@ -22,27 +19,30 @@ describe("Battle", function()
 
     let responses: string[];
     let listener: AnyMessageListener;
+    let state: BattleState;
     let battle: MockBattle;
 
     beforeEach("Initialize Battle", function()
     {
         responses = [];
         listener = new AnyMessageListener();
-        battle = new MockBattle(user1, listener, sender);
+        state = new BattleState();
+        battle = new MockBattle(testArgs.username[0], listener, sender, state);
     });
 
-    /*describe("player", function()
+    it("Should initialize battle", function()
     {
-        it("Should initialize player", function()
+        listener.getHandler("battleinit")(
         {
-            listener.getHandler("player")(
-                {id: "p1", username: user1, avatarId: 1});
-            listener.getHandler("player")(
-                {id: "p2", username: user2, avatarId: 1});
-            expect(battle.getSide("p1")).to.equal("us");
-            expect(battle.getSide("p2")).to.equal("them");
+            id: "p1", username: testArgs.username[0], teamSizes: {p1: 3, p2: 3},
+            gameType: "singles", gen: 4, switchIns: []
         });
-    });*/
+        expect(battle.getSide("p1")).to.equal("us");
+        expect(battle.getSide("p2")).to.equal("them");
+        // setting our teamsize requires more info from a request message
+        expect(state.getTeam("us").size).to.equal(0);
+        expect(state.getTeam("them").size).to.equal(3);
+    });
 
     describe("request", function()
     {

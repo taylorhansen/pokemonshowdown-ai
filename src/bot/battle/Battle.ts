@@ -3,8 +3,8 @@ import { AnyMessageListener } from "../../AnyMessageListener";
 import { dex } from "../../data/dex";
 import { SelfSwitch } from "../../data/dex-types";
 import * as logger from "../../logger";
-import { BattleEvent, BattleEventAddon, BattleUpkeep, MoveEvent, otherId,
-    PlayerID, PokemonDetails, PokemonStatus, RequestMove, SwitchInEvent } from
+import { BattleEvent, BattleEventAddon, MoveEvent, otherId, PlayerID,
+    PokemonDetails, PokemonStatus, RequestMove, SwitchInEvent } from
     "../../messageData";
 import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
@@ -29,7 +29,7 @@ export type ChoiceSender = (choice: Choice, rqid?: number) => void;
 export class Battle
 {
     /** Manages battle state for AI input. */
-    private readonly state = new BattleState();
+    private readonly state: BattleState;
     /** Decides what the client should do. */
     private readonly ai: AI;
     /**
@@ -62,14 +62,16 @@ export class Battle
      * or false if that should happen once it wins.
      * @param listener Used to subscribe to server messages.
      * @param sender Used to send the AI's choice to the server.
+     * @param state Optional initial battle state.
      */
     constructor(aiType: AIConstructor, username: string, saveAlways: boolean,
-        listener: AnyMessageListener, sender: ChoiceSender)
+        listener: AnyMessageListener, sender: ChoiceSender, state?: BattleState)
     {
         const path = `${__dirname}/../../../models/latest`;
         this.ai = new aiType(BattleState.getArraySize(), path);
         this.username = username;
         this.sender = sender;
+        this.state = state || new BattleState();
 
         listener
         .on("battleinit", args =>

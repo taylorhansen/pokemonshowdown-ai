@@ -1,6 +1,6 @@
 import { AnyMessageListener } from "../../../src/AnyMessageListener";
 import { Battle, ChoiceSender } from "../../../src/bot/battle/Battle";
-import { Side } from "../../../src/bot/battle/state/BattleState";
+import { BattleState, Side } from "../../../src/bot/battle/state/BattleState";
 import { PlayerID } from "../../../src/messageData";
 import { MockAI } from "./ai/MockAI";
 
@@ -12,11 +12,12 @@ export class MockBattle extends Battle
      * @param username Username of the client.
      * @param listener Used to listen for messages.
      * @param addResponses Sends responses to the server.
+     * @param state Initial battle state.
      */
     constructor(username: string, listener: AnyMessageListener,
-        sender: ChoiceSender)
+        sender: ChoiceSender, state: BattleState)
     {
-        super(MockAI, username, /*saveAlways*/ true, listener, sender);
+        super(MockAI, username, /*saveAlways*/ true, listener, sender, state);
     }
 
     /**

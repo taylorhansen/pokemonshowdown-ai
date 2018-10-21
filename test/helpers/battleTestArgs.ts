@@ -4,6 +4,8 @@ import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
 import { BattleEventAddon, MoveEvent, PokemonDetails, PokemonID, PokemonStatus,
     SwitchInEvent } from "../../src/messageData";
 
+export const username: string[] = ["user1", "user2"];
+
 /** Test PokemonIDs. */
 export const pokemonId: PokemonID[] =
 [
@@ -69,7 +71,7 @@ export const switchInEvent: SwitchInEvent[] =
 export const battleInit: BattleInitArgs[] =
 [
     {
-        id: "p1", username: "someuser", gameType: "singles", gen: 4,
+        id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
         switchIns: [switchInEvent[0], switchInEvent[1]]
     }
@@ -80,7 +82,7 @@ export const battleInitInvalid: string[][][] =
 [
     // empty teamsize command
     [
-        ["player", "p2", "someuser"],
+        ["player", "p2", username[1]],
         ["teamsize"],
         ["teamsize", "p2", "6"],
         ["gametype", "singles"],
@@ -88,7 +90,7 @@ export const battleInitInvalid: string[][][] =
     ],
     // no teamsize number
     [
-        ["player", "p2", "someuser"],
+        ["player", "p2", username[1]],
         ["teamsize", "p1"],
         ["teamsize", "p2", "6"],
         ["gametype", "singles"],
@@ -124,7 +126,7 @@ export const request: RequestArgs[] =
         ],
         side:
         {
-            name: "somebody", id: "p1",
+            name: username[0], id: "p1",
             pokemon:
             [
                 {
