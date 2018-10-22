@@ -4,9 +4,10 @@
   "description": "desc",
   "main": "dist/index.js",
   "scripts": {
-    "build:dex": "./build-dex.sh",
     "build": "tsc",
-    "init:ps": "./init-ph.sh",
+    "build:dex": "./build-dex.sh",
+    "init": "npm run init:ps",
+    "init:ps": "./init-ps.sh",
     "lint": "tslint -c tslint.json data/*.ts src/**/*.ts test/**/*.ts",
     "main": "ts-node src/index.ts",
     "test": "nyc npm run test:mocha",
