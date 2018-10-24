@@ -143,9 +143,8 @@ export class Battle
                     const details: PokemonDetails = data.details;
                     const status: PokemonStatus = data.condition;
 
-                    const index = team.reveal(details.species, details.level,
+                    const mon = team.reveal(details.species, details.level,
                             details.gender, status.hp, status.hpMax);
-                    const mon = team.pokemon[index];
                     mon.item = data.item;
                     mon.baseAbility = data.baseAbility;
                     mon.setHP(status.hp, status.hpMax);
@@ -296,24 +295,11 @@ export class Battle
             this.themCopyVolatile = false;
         }
 
-        // index of the pokemon to switch
-        let newActiveIndex = team.find(event.details.species);
-        if (newActiveIndex === -1)
-        {
-            // no known pokemon found, so this is a new switchin
-            // hp is a percentage if on the opponent's team
-            const hpMax = side === "us" ? event.status.hpMax : undefined;
-            newActiveIndex = team.newSwitchin(event.details.species,
-                    event.details.level, event.details.gender, event.status.hp,
-                    hpMax, options);
-            if (newActiveIndex === -1)
-            {
-                logger.error(`team ${side} seems to have more pokemon than \
-expected`);
-            }
-            return;
-        }
-        team.switchIn(newActiveIndex, options);
+        // hp is a percentage if on the opponent's team
+        const hpMax = side === "us" ? event.status.hpMax : undefined;
+
+        team.switchIn(event.details.species, event.details.level,
+                event.details.gender, event.status.hp, hpMax, options);
 
         event.addons.forEach(addon => this.handleAddon(addon));
     }

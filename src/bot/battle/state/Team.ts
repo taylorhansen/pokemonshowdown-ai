@@ -87,16 +87,6 @@ export class Team
     }
 
     /**
-     * Finds the first pokemon with the species name.
-     * @param species Species name.
-     * @returns The index of the pokemon that was found, or -1 otherwise.
-     */
-    public find(species: string): number
-    {
-        return this.pokemon.findIndex(mon => mon.species === species);
-    }
-
-    /**
      * Indicates that a new pokemon has been switched in and will replace the
      * current active pokemon.
      * @param species Species name.
@@ -105,32 +95,21 @@ export class Team
      * @param hp Current HP.
      * @param hpMax Maximum HP. Omit to assume percentage.
      * @param options Circumstances of switchin.
-     * @returns The index of the new pokemon, or -1 if already full.
+     * @returns The new active pokemon, or null if invalid.
      */
-    public newSwitchin(species: string, level: number,
+    public switchIn(species: string, level: number,
         gender: string | null, hp: number, hpMax?: number,
-        options: SwitchInOptions = {}): number
+        options: SwitchInOptions = {}): Pokemon | null
     {
-        // early return: team already full
-        if (this.unrevealed >= this.size) return -1;
+        let index = this.pokemon.findIndex(mon => mon.species === species);
+        if (index < 0)
+        {
+            // revealing a new pokemon
+            index = this.revealIndex(species, level, gender, hp, hpMax);
+        }
 
-        // switch active status
-        const revealed = this.reveal(species, level, gender, hp, hpMax);
-        this.switchIn(revealed, options);
-
-        return revealed;
-    }
-
-    /**
-     * Indicates that a pokemon has been switched in and will replace the
-     * current active pokemon.
-     * @param index Index of the pokemon being switched in.
-     * @param options Circumstances of switchin.
-     */
-    public switchIn(index: number, options: SwitchInOptions = {}): void
-    {
         // early return: trying to access an invalid pokemon
-        if (index < 0 || index >= this.unrevealed) return;
+        if (index < 0 || index >= this.unrevealed) return null;
 
         // switch active status
         const volatile = this.active.switchOut();
@@ -140,6 +119,7 @@ export class Team
         const tmp = this.pokemon[0];
         this.pokemon[0] = this.pokemon[index];
         this.pokemon[index] = tmp;
+        return this.active;
     }
 
     /**
@@ -149,9 +129,25 @@ export class Team
      * @param gender Pokemon's gender.
      * @param hp Current HP.
      * @param hpMax Maximum HP. Omit to assume percentage.
-     * @returns The index of the new pokemon, or -1 if already full.
+     * @returns The new pokemon.
      */
     public reveal(species: string, level: number,
+        gender: string | null, hp: number, hpMax?: number): Pokemon
+    {
+        return this.pokemon[
+                this.revealIndex(species, level, gender, hp, hpMax)];
+    }
+
+    /**
+     * Indicates that a new pokemon has been revealed.
+     * @param species Species name.
+     * @param level Pokemon's level.
+     * @param gender Pokemon's gender.
+     * @param hp Current HP.
+     * @param hpMax Maximum HP. Omit to assume percentage.
+     * @returns The index of the new pokemon.
+     */
+    private revealIndex(species: string, level: number,
         gender: string | null, hp: number, hpMax?: number): number
     {
         this.pokemon[this.unrevealed] = new Pokemon();
@@ -169,10 +165,7 @@ export class Team
     /** Cures all pokemon of any major status conditions. */
     public cure(): void
     {
-        for (const mon of this.pokemon)
-        {
-            mon.cure();
-        }
+        this.pokemon.forEach(mon => mon.cure());
     }
 
     /**
