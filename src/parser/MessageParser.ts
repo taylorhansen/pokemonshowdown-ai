@@ -512,6 +512,7 @@ export class MessageParser extends Parser
         const upkeep: BattleUpkeep = {addons: this.parseBattleEventAddons()};
         // ignore the upkeep message
         if (this.line[0] === "upkeep") this.nextLine();
+        upkeep.addons.push(...this.parseBattleEventAddons());
         return upkeep;
     }
 
