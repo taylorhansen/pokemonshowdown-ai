@@ -38,7 +38,10 @@ export const addon: BattleEventAddon[] =
     {type: "cureteam", id: pokemonId[2]},
     {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
     {type: "faint", id: pokemonId[2]},
-    {type: "heal", id: pokemonId[1], status: pokemonStatus[1]},
+    {
+        type: "heal", id: pokemonId[1], status: pokemonStatus[1],
+        cause: {type: "item", item: "Leftovers"}
+    },
     {type: "status", id: pokemonId[0], majorStatus: "slp"}
 ];
 
@@ -51,7 +54,7 @@ export const moveEvent: MoveEvent[] =
     },
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
-        targetId: pokemonId[0], addons: [], from: "something"
+        targetId: pokemonId[0], addons: [], cause: {type: "lockedmove"}
     }
 ];
 

@@ -3,7 +3,7 @@ import { AnyMessageListener } from "../../AnyMessageListener";
 import { dex } from "../../data/dex";
 import { SelfSwitch } from "../../data/dex-types";
 import * as logger from "../../logger";
-import { BattleEvent, BattleEventAddon, MoveEvent, otherId, PlayerID,
+import { BattleEvent, BattleEventAddon, Cause, MoveEvent, otherId, PlayerID,
     PokemonDetails, PokemonStatus, RequestMove, SwitchInEvent } from
     "../../messageData";
 import { AI, AIConstructor } from "./ai/AI";
@@ -233,6 +233,10 @@ export class Battle
                 this.handleSwitchIn(event);
                 break;
         }
+        if (event.cause)
+        {
+            this.handleCause(this.sides[event.id.owner], event.cause);
+        }
     }
 
     /**
@@ -247,9 +251,17 @@ export class Battle
 
         // FIXME: a move could be stored as hiddenpower70 but displayed as
         //  hiddenpowerfire
-        const pp = (this.state.teams[otherSide(side)].active.baseAbility ===
-                "pressure") ? 2 : 1;
-        mon.useMove(moveId, pp, event.from);
+        let pp: number;
+
+        // locked moves don't consume pp
+        if (event.cause && event.cause.type === "lockedmove") pp = 0;
+        // pressure ability doubles pp usage
+        else if (this.state.teams[otherSide(side)].active.baseAbility ===
+            "pressure") pp = 2;
+        // but normally use 1 pp
+        else pp = 1;
+
+        mon.useMove(moveId, pp);
 
         event.addons.forEach(addon => this.handleAddon(addon));
 
@@ -346,6 +358,26 @@ export class Battle
             case "status":
                 this.state.teams[this.getSide(addon.id.owner)].active
                     .afflict(addon.majorStatus);
+                break;
+        }
+        if (addon.cause)
+        {
+            this.handleCause(this.sides[addon.id.owner], addon.cause);
+        }
+    }
+
+    /**
+     * Handles an event or addon Cause.
+     * @param side Side that it takes place.
+     * @param cause Cause object.
+     */
+    private handleCause(side: Side, cause: Cause): void
+    {
+        switch (cause.type)
+        {
+            case "item":
+                // reveal item
+                this.state.teams[side].active.item = cause.item;
                 break;
         }
     }

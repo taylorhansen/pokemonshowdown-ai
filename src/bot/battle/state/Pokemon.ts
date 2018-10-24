@@ -51,7 +51,7 @@ export class Pokemon
     }
     public set item(item: string)
     {
-        this.itemName = item;
+        this.itemName = item.toLowerCase().replace(/[ -]+/g, "");
         this._item = dex.items[item];
     }
 

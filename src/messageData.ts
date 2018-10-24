@@ -103,6 +103,8 @@ interface BattleEventBase
     type: string;
     /** Provides additional info about the event. */
     addons: BattleEventAddon[];
+    /** Cause of event. */
+    cause?: Cause;
 }
 
 /** BattleEvent where a move was used. */
@@ -115,8 +117,6 @@ export interface MoveEvent extends BattleEventBase
     moveName: string;
     /** ID of the target pokemon. */
     targetId: PokemonID;
-    /** Special condition as to why the move was chosen, e.g. `lockedmove`. */
-    from?: string;
 }
 
 /** BattleEvent where a pokemon was switched in. */
@@ -149,6 +149,8 @@ interface AddonBase
 {
     /** The type of addon this is. */
     type: string;
+    /** Cause of addon. */
+    cause?: Cause;
 }
 
 /** Event addon where a pokemon's ability is revealed and activated. */
@@ -205,6 +207,31 @@ export interface StatusAddon extends AddonBase
     id: PokemonID;
     /** Status condition being afflicted. */
     majorStatus: MajorStatus;
+}
+
+// battle event cause types
+
+export type Cause = ItemCause | LockedMoveCause;
+
+/** Base class for Causes. */
+interface CauseBase
+{
+    /** The type of Cause this is. */
+    type: string;
+}
+
+/** Caused by a held item. */
+export interface ItemCause extends CauseBase
+{
+    type: "item";
+    /** Item name. */
+    item: string;
+}
+
+/** Locked into a certain move. */
+export interface LockedMoveCause extends CauseBase
+{
+    type: "lockedmove";
 }
 
 // other stuff

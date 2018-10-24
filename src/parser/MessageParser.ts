@@ -1,9 +1,9 @@
 import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
 import { AbilityAddon, BattleEvent, BattleEventAddon, BattleUpkeep,
-    CureStatusAddon, CureTeamAddon, DamageAddon, FaintAddon, isAddonPrefix,
-    isMajorPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent, PlayerID,
-    PokemonDetails, PokemonID, PokemonStatus, StatusAddon, SwitchInEvent} from
-    "../messageData";
+    Cause, CureStatusAddon, CureTeamAddon, DamageAddon, FaintAddon,
+    isAddonPrefix, isMajorPrefix, isMajorStatus, isPlayerId, MajorStatus,
+    MoveEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus, StatusAddon,
+    SwitchInEvent } from "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -468,10 +468,13 @@ export class MessageParser extends Parser
         for (let i = 4; i < line.length; ++i)
         {
             const word = line[i];
-            // istanbul ignore else: not necessary to reproduce test case
+            // there's no space after "[from]", that's just how the server sends
+            //  it
             if (word.startsWith("[from]"))
             {
-                event.from = word.substring("[from]".length);
+                const cause =
+                    MessageParser.parseCause(word.substr("[from]".length));
+                if (cause) event.cause = cause;
             }
         }
 
@@ -629,6 +632,9 @@ export class MessageParser extends Parser
      * @example
      * |<-damage or -heal>|<PokemonID>|<new PokemonStatus>
      *
+     * // optional message suffixes:
+     * |[from] item: <item name>
+     *
      * @returns A DamageAddon, or null if invalid.
      */
     private parseDamageAddon(): DamageAddon | null
@@ -643,6 +649,15 @@ export class MessageParser extends Parser
         {
             return null;
         }
+
+        if (line.length > 3 && line[3].startsWith("[from] "))
+        {
+            // FOR NOW: ignore errored (null) Causes
+            const cause =
+                MessageParser.parseCause(line[3].substr("[from] ".length));
+            if (cause) return {type, id, status, cause};
+        }
+
         return {type, id, status};
     }
 
@@ -682,6 +697,21 @@ export class MessageParser extends Parser
         this.nextLine();
         if (!id || !majorStatus) return null;
         return {type: "status", id, majorStatus};
+    }
+
+    /**
+     * Parses an event Cause.
+     * @param str String to parse.
+     * @returns A Cause, or null if invalid.
+     */
+    private static parseCause(str: string): Cause | null
+    {
+        if (str.startsWith("item: "))
+        {
+            return {type: "item", item: str.substr("item: ".length)};
+        }
+        else if (str === "lockedmove") return {type: "lockedmove"};
+        return null;
     }
 
     /**

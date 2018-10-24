@@ -1,7 +1,8 @@
 import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
     "../../src/AnyMessageListener";
-import { BattleEvent, BattleEventAddon, BattleUpkeep, MoveEvent, PokemonDetails,
-    PokemonID, PokemonStatus, SwitchInEvent } from "../../src/messageData";
+import { BattleEvent, BattleEventAddon, BattleUpkeep, Cause, MoveEvent,
+    PokemonDetails, PokemonID, PokemonStatus, SwitchInEvent } from
+    "../../src/messageData";
 
 /**
  * Creates an unparsed server message.
@@ -108,7 +109,9 @@ export function composeMoveEvent(event: MoveEvent): string[][]
         [
             "move", stringifyID(event.id), event.moveName,
             stringifyID(event.targetId),
-            ...(event.from ? [`[from]${event.from}`] : [])
+            // don't add a space between [from] and the cause, that's just how
+            //  the server sends it
+            ...(event.cause ? [`[from]${stringifyCause(event.cause)}`] : [])
         ],
         ...event.addons.map(composeAddon)
     ];
@@ -178,8 +181,9 @@ export function composeAddon(addon: BattleEventAddon): string[]
             result = ["faint", stringifyID(addon.id)];
             break;
         default:
-            result = [];
+            return [];
     }
+    if (addon.cause) result.push(`[from] ${stringifyCause(addon.cause)}`);
     return result;
 }
 
@@ -220,4 +224,19 @@ export function stringifyStatus(status: PokemonStatus): string
     }
     return `${status.hp}/${status.hpMax}\
 ${status.condition ? ` ${status.condition}` : ""}`;
+}
+
+/**
+ * Stringifies a Cause.
+ * @param cause Cause object.
+ * @returns The Cause in string form.
+ */
+export function stringifyCause(cause: Cause): string
+{
+    switch (cause.type)
+    {
+        case "item": return `item: ${cause.item}`;
+        case "lockedmove": return "lockedmove";
+        default: return "";
+    }
 }
