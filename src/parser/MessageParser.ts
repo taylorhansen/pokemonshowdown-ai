@@ -126,6 +126,7 @@ export class MessageParser extends Parser
             // major actions
             case "move": // a pokemon performed a move
             case "switch": // a pokemon was voluntarily switched
+            case "drag": // involuntarily switched, same thing
                 this.parseBattleProgress();
                 break;
 
@@ -428,7 +429,10 @@ export class MessageParser extends Parser
             case "move": return this.parseMoveEvent();
             case "switch": case "drag": return this.parseSwitchInEvent();
             // istanbul ignore next: should never happen
-            default: return null;
+            default:
+                // ignore
+                this.nextLine();
+                return null;
         }
     }
 
