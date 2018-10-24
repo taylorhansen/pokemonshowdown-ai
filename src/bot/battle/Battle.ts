@@ -85,12 +85,12 @@ export class Battle
                 this.sides = {[id]: "us", [otherId(id)]: "them"} as any;
                 // we already know our team's size from the initial request
                 //  message but not the other team
-                this.state.getTeam("them").size = args.teamSizes[otherId(id)];
+                this.state.teams.them.size = args.teamSizes[otherId(id)];
             }
             else
             {
                 this.sides = {[id]: "them", [otherId(id)]: "us"} as any;
-                this.state.getTeam("them").size = args.teamSizes[id];
+                this.state.teams.them.size = args.teamSizes[id];
             }
             args.switchIns.forEach(event => this.handleSwitchIn(event));
 
@@ -126,7 +126,7 @@ export class Battle
             //  for initializing the starting data for the client's team on the
             //  first turn
 
-            const team = this.state.getTeam("us");
+            const team = this.state.teams.us;
 
             // first time: team array not initialized yet
             if (team.size === 0)
@@ -243,12 +243,12 @@ export class Battle
     private handleMove(event: MoveEvent): void
     {
         const side = this.getSide(event.id.owner);
-        const mon = this.state.getTeam(side).active;
+        const mon = this.state.teams[side].active;
         const moveId = event.moveName.toLowerCase().replace(/[ -]/g, "");
 
         // FIXME: a move could be stored as hiddenpower70 but displayed as
         //  hiddenpowerfire
-        const pp = (this.state.getTeam(otherSide(side)).active.baseAbility ===
+        const pp = (this.state.teams[otherSide(side)].active.baseAbility ===
                 "pressure") ? 2 : 1;
         mon.useMove(moveId, pp, event.from);
 
@@ -281,7 +281,7 @@ export class Battle
     private handleSwitchIn(event: SwitchInEvent): void
     {
         const side = this.getSide(event.id.owner);
-        const team = this.state.getTeam(side);
+        const team = this.state.teams[side];
 
         // consume pending copyvolatile boolean flags
         const options: SwitchInOptions = {};
@@ -327,20 +327,20 @@ expected`);
         switch (addon.type)
         {
             case "ability":
-                this.state.getTeam(this.getSide(addon.id.owner)).active
+                this.state.teams[this.getSide(addon.id.owner)].active
                     .baseAbility = addon.ability;
                 break;
             case "curestatus":
-                this.state.getTeam(this.getSide(addon.id.owner)).active.cure();
+                this.state.teams[this.getSide(addon.id.owner)].active.cure();
                 break;
             case "cureteam":
-                this.state.getTeam(this.getSide(addon.id.owner)).cure();
+                this.state.teams[this.getSide(addon.id.owner)].cure();
                 break;
             case "damage":
             case "heal":
             {
                 const side = this.getSide(addon.id.owner);
-                const active = this.state.getTeam(side).active;
+                const active = this.state.teams[side].active;
 
                 // side "them" uses hp percentages so hpMax would be omitted
                 const hpMax = side === "us" ? addon.status.hpMax : undefined;
@@ -353,12 +353,12 @@ expected`);
             case "faint":
             {
                 const side = this.getSide(addon.id.owner);
-                this.state.getTeam(side).active.faint();
+                this.state.teams[side].active.faint();
                 this.applyReward(side, rewards.faint);
                 break;
             }
             case "status":
-                this.state.getTeam(this.getSide(addon.id.owner)).active
+                this.state.teams[this.getSide(addon.id.owner)].active
                     .afflict(addon.majorStatus);
                 break;
         }
@@ -403,7 +403,7 @@ expected`);
     private getChoices(): Choice[]
     {
         const choices: Choice[] = [];
-        const team = this.state.getTeam("us");
+        const team = this.state.teams.us;
 
         // possible choices for switching pokemon
         for (let i = 0; i < team.pokemon.length; ++i)

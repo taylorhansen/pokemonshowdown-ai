@@ -3,6 +3,8 @@ import { Team } from "./Team";
 
 /** Identifies a team's side in the client's perspective. */
 export type Side = "us" | "them";
+
+/** Returns the other side. */
 export function otherSide(side: Side): Side
 {
     return side === "us" ? "them" : "us";
@@ -14,11 +16,12 @@ export function otherSide(side: Side): Side
  */
 export class BattleState
 {
+    /** Team data. */
+    public readonly teams: {readonly [S in Side]: Team} =
+        { us: new Team(), them: new Team() };
+
     /** Global status conditions for the entire room. */
     private readonly status = new RoomStatus();
-    /** Team data. */
-    private readonly teams: {readonly [S in Side]: Team} =
-        { us: new Team(), them: new Team() };
 
     /**
      * Gets the size of the return value of `toArray()`.
@@ -26,6 +29,7 @@ export class BattleState
      */
     public static getArraySize(): number
     {
+        // status + 2 teams
         return RoomStatus.getArraySize() + Team.getArraySize() * 2;
     }
 
@@ -43,26 +47,6 @@ export class BattleState
             ...this.teams.them.toArray()
         ];
         return a;
-    }
-
-    /**
-     * Sets a team's size.
-     * @param side Side of the team.
-     * @param size How many pokemon are on that team.
-     */
-    public setTeamSize(side: Side, size: number): void
-    {
-        this.teams[side].size = size;
-    }
-
-    /**
-     * Gets the given side's team.
-     * @param side The given side.
-     * @returns The appropriate team.
-     */
-    public getTeam(side: Side): Team
-    {
-        return this.teams[side];
     }
 
     /**

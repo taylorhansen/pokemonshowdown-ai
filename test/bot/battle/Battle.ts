@@ -40,8 +40,8 @@ describe("Battle", function()
         expect(battle.getSide("p1")).to.equal("us");
         expect(battle.getSide("p2")).to.equal("them");
         // setting our teamsize requires more info from a request message
-        expect(state.getTeam("us").size).to.equal(0);
-        expect(state.getTeam("them").size).to.equal(3);
+        expect(state.teams.us.size).to.equal(0);
+        expect(state.teams.them.size).to.equal(3);
     });
 
     describe("request", function()
