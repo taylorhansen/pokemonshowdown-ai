@@ -1,8 +1,9 @@
 import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
-import { BattleEvent, BattleEventAddon, BattleUpkeep, CureStatusAddon,
-    CureTeamAddon, DamageAddon, FaintAddon, isAddonPrefix, isMajorPrefix,
-    isMajorStatus, isPlayerId, MajorStatus, MoveEvent, PlayerID, PokemonDetails,
-    PokemonID, PokemonStatus, StatusAddon, SwitchInEvent} from "../messageData";
+import { AbilityAddon, BattleEvent, BattleEventAddon, BattleUpkeep,
+    CureStatusAddon, CureTeamAddon, DamageAddon, FaintAddon, isAddonPrefix,
+    isMajorPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent, PlayerID,
+    PokemonDetails, PokemonID, PokemonStatus, StatusAddon, SwitchInEvent} from
+    "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -545,6 +546,7 @@ export class MessageParser extends Parser
     {
         switch (this.line[0])
         {
+            case "-ability": return this.parseAbilityAddon();
             case "-curestatus": return this.parseCureStatusAddon();
             case "-cureteam": return this.parseCureTeamAddon();
             case "-damage": case "-heal": return this.parseDamageAddon();
@@ -555,6 +557,26 @@ export class MessageParser extends Parser
                 this.nextLine();
                 return null;
         }
+    }
+
+    /**
+     * Parses an AbilityAddon.
+     *
+     * Format
+     * @example
+     * |-ability|<PokemonID>|<ability name>
+     *
+     * @returns An AbilityAddon, or null if invalid.
+     */
+    private parseAbilityAddon(): AbilityAddon | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const ability = line[2];
+
+        this.nextLine();
+        if (!id || !ability) return null;
+        return {type: "ability", id, ability};
     }
 
     /**

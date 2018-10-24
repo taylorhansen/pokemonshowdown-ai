@@ -33,6 +33,7 @@ export const pokemonStatus: PokemonStatus[] =
 /** Test BattleEventAddons. */
 export const addon: BattleEventAddon[] =
 [
+    {type: "ability", id: pokemonId[0], ability: "Pressure"},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "cureteam", id: pokemonId[2]},
     {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
@@ -103,7 +104,7 @@ export const battleProgress: BattleProgressArgs[] =
 [
     {
         events: [moveEvent[0], moveEvent[1]],
-        upkeep: {addons: [addon[2], addon[3], addon[4], addon[5]]},
+        upkeep: {addons: [addon[2], addon[3], addon[4], addon[5], addon[6]]},
         turn: 2
     }
 ];

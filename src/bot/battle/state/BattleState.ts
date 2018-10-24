@@ -3,6 +3,10 @@ import { Team } from "./Team";
 
 /** Identifies a team's side in the client's perspective. */
 export type Side = "us" | "them";
+export function otherSide(side: Side): Side
+{
+    return side === "us" ? "them" : "us";
+}
 
 /**
  * Holds all the data about a battle. This is used as input to the nerual

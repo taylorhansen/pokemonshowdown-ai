@@ -8,7 +8,7 @@ import { BattleEvent, BattleEventAddon, MoveEvent, otherId, PlayerID,
     "../../messageData";
 import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
-import { BattleState, Side } from "./state/BattleState";
+import { BattleState, otherSide, Side } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
 import { SwitchInOptions } from "./state/Team";
 
@@ -246,10 +246,11 @@ export class Battle
         const mon = this.state.getTeam(side).active;
         const moveId = event.moveName.toLowerCase().replace(/[ -]/g, "");
 
-        // FIXME: sometimes a move might use >1 pp due to an ability
         // FIXME: a move could be stored as hiddenpower70 but displayed as
         //  hiddenpowerfire
-        mon.useMove(moveId, event.from);
+        const pp = (this.state.getTeam(otherSide(side)).active.baseAbility ===
+                "pressure") ? 2 : 1;
+        mon.useMove(moveId, pp, event.from);
 
         event.addons.forEach(addon => this.handleAddon(addon));
 
@@ -325,6 +326,10 @@ expected`);
     {
         switch (addon.type)
         {
+            case "ability":
+                this.state.getTeam(this.getSide(addon.id.owner)).active
+                    .baseAbility = addon.ability;
+                break;
             case "curestatus":
                 this.state.getTeam(this.getSide(addon.id.owner)).active.cure();
                 break;

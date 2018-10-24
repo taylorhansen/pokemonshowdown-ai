@@ -153,6 +153,9 @@ export function composeAddon(addon: BattleEventAddon): string[]
     let result: string[];
     switch (addon.type)
     {
+        case "ability":
+            result = ["-ability", stringifyID(addon.id), addon.ability];
+            break;
         case "curestatus":
         case "status":
             result =

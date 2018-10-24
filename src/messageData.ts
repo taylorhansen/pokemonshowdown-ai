@@ -24,8 +24,8 @@ export type StandalonePrefix = keyof typeof standalonePrefixes;
 /** Set of AddonPrefixes. */
 export const addonPrefixes =
 {
-    "-curestatus": 1, "-cureteam": 2, "-damage": 3, faint: 4, "-heal": 4,
-    "-status": 5
+    "-ability": 1, "-curestatus": 2, "-cureteam": 3, "-damage": 4, faint: 5,
+    "-heal": 6, "-status": 7
 };
 /** Message types that are parsed as addons to a major event. */
 export type AddonPrefix = keyof typeof addonPrefixes;
@@ -141,14 +141,24 @@ export interface BattleUpkeep
 // battle event addon types
 
 /** Addon to an event that provides additional info. */
-export type BattleEventAddon = CureStatusAddon | CureTeamAddon | DamageAddon |
-    FaintAddon | StatusAddon;
+export type BattleEventAddon = AbilityAddon | CureStatusAddon | CureTeamAddon |
+    DamageAddon | FaintAddon | StatusAddon;
 
 /** Base class for BattleEventAddons. */
 interface AddonBase
 {
     /** The type of addon this is. */
     type: string;
+}
+
+/** Event addon where a pokemon's ability is revealed and activated. */
+export interface AbilityAddon extends AddonBase
+{
+    type: "ability";
+    /** ID of the pokemon. */
+    id: PokemonID;
+    /** Ability being activated. */
+    ability: string;
 }
 
 /** Event addon where a pokemon's major status is cured. */

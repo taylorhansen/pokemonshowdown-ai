@@ -36,7 +36,7 @@ export class Pokemon
     }
     public set baseAbility(baseAbility: string)
     {
-        this.baseAbilityName = baseAbility;
+        this.baseAbilityName = baseAbility.toLowerCase().replace(/[ -]+/g, "");
         if (!this.data)
         {
             throw new Error("Base ability set before species data");
@@ -238,15 +238,16 @@ export class Pokemon
     /**
      * Indicates that a move has been used.
      * @param id ID name of the move.
+     * @param pp Amount of PP to use.
      * @param from ID name of the effect that caused the move.
      */
-    public useMove(id: string, from?: string): void
+    public useMove(id: string, pp: number, from?: string): void
     {
         const move = this.getMove(id) || this.revealMove(id);
         // could be locked into using a move, where no pp is consumed
         if (from !== "lockedmove")
         {
-            move.use();
+            move.use(pp);
         }
     }
 
