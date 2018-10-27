@@ -12,7 +12,7 @@ export class VolatileStatus
 
     // not passed when copying
     /** Whether the pokemon is able to switch. */
-    private lockedMove: boolean;
+    public lockedMove: boolean;
     /** Whether the pokemon is confused. */
     private confused: boolean;
 
@@ -72,15 +72,6 @@ export class VolatileStatus
     }
 
     /**
-     * Sets the lockedmove flag.
-     * @param flag Value of the flag.
-     */
-    public lockMove(flag: boolean): void
-    {
-        this.lockedMove = flag;
-    }
-
-    /**
      * Sets the confusion flag.
      * @param flag Value of the flag.
      */
@@ -98,7 +89,7 @@ export class VolatileStatus
     {
         // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
-            /*disabled moves*/4 + /*confused*/1;
+            /*disabled moves*/4 + /*lockedmove*/1 + /*confused*/1;
     }
 
     /**

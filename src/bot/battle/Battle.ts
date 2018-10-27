@@ -458,12 +458,19 @@ export class Battle
         {
             // can also possibly make a move, since we're not being forced to
             //  just switch
-            const active = team.active;
-            for (let i = 0; i < active.moves.length; ++i)
+            const mon = team.active;
+            if (mon.isLocked())
             {
-                if (active.canMove(i))
+                choices.push("move 1");
+            }
+            else
+            {
+                for (let i = 0; i < mon.moves.length; ++i)
                 {
-                    choices.push(`move ${i + 1}` as Choice);
+                    if (mon.canMove(i))
+                    {
+                        choices.push(`move ${i + 1}` as Choice);
+                    }
                 }
             }
         }

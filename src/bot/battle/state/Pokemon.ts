@@ -325,12 +325,21 @@ export class Pokemon
     }
 
     /**
+     * Checks whether the pokemon is using a locked move.
+     * @returns Locked move flag.
+     */
+    public isLocked(): boolean
+    {
+        return this.volatileStatus.lockedMove;
+    }
+
+    /**
      * Sets the lockedmove flag.
      * @param flag Value of the flag.
      */
     public lockMove(flag: boolean): void
     {
-        this.volatileStatus.lockMove(flag);
+        this.volatileStatus.lockedMove = flag;
     }
 
     /**
