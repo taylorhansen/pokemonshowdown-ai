@@ -32,6 +32,7 @@ describe("Battle", function()
 
     it("Should initialize battle", function()
     {
+        // TODO: unhandled promise rejection: teams not yet fully initialized
         listener.getHandler("battleinit")(
         {
             id: "p1", username: testArgs.username[0], teamSizes: {p1: 3, p2: 3},

@@ -40,9 +40,11 @@ export const cause: Cause[] =
 export const battleEvent: BattleEvent[] =
 [
     {type: "ability", id: pokemonId[0], ability: "Pressure"},
+    {type: "activate", id: pokemonId[1], volatile: "ingrain"},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "cureteam", id: pokemonId[2]},
     {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
+    {type: "end", id: pokemonId[2], volatile: "confusion"},
     {type: "faint", id: pokemonId[2]},
     {
         type: "heal", id: pokemonId[1], status: pokemonStatus[1],
@@ -75,7 +77,7 @@ export const battleInit: BattleInitArgs[] =
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: [battleEvent[0], battleEvent[1]]
+        events: [battleEvent[0], battleEvent[1], battleEvent[2]]
     }
 ];
 
@@ -83,18 +85,21 @@ export const battleInit: BattleInitArgs[] =
 export const battleProgress: BattleProgressArgs[] =
 [
     {
-        events: [battleEvent[2], battleEvent[3]],
-        upkeep: {pre: [battleEvent[4]], post: []},
+        events: [battleEvent[3], battleEvent[4]],
+        upkeep: {pre: [battleEvent[5], battleEvent[6]], post: []},
         turn: 2
     },
     {
-        events: [battleEvent[4], battleEvent[5]],
-        upkeep: {pre: [battleEvent[6]], post: [battleEvent[7], battleEvent[8]]},
+        events: [battleEvent[7], battleEvent[8]],
+        upkeep:
+        {
+            pre: [battleEvent[9]], post: [battleEvent[10], battleEvent[11]]
+        },
         turn: 100
     },
     {
-        events: [battleEvent[9], battleEvent[10], battleEvent[11]],
-        upkeep: {pre: [], post: [battleEvent[12], battleEvent[13]]},
+        events: [battleEvent[12], battleEvent[13], battleEvent[14]],
+        upkeep: {pre: [], post: [battleEvent[15]]},
         turn: 9
     }
 ];

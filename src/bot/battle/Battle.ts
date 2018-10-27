@@ -224,6 +224,14 @@ export class Battle
                 this.state.teams[this.getSide(event.id.owner)].active
                     .baseAbility = event.ability;
                 break;
+            case "activate":
+            case "end":
+                if (event.volatile === "confusion")
+                {
+                    this.state.teams[this.getSide(event.id.owner)].active
+                        .confuse(event.type === "activate");
+                }
+                break;
             case "curestatus":
                 this.state.teams[this.getSide(event.id.owner)].active.cure();
                 break;

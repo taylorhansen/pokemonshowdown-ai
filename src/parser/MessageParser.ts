@@ -1,9 +1,9 @@
 import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
-import { AbilityEvent, BattleEvent, BattleUpkeep,
-    Cause, CureStatusEvent, CureTeamEvent, DamageEvent, FaintEvent,
-    isEventPrefix, isMajorStatus, isPlayerId, MajorStatus,
-    MoveEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus, StartEvent,
-    StatusEvent, SwitchEvent, TieEvent, WinEvent } from "../messageData";
+import { AbilityEvent, ActivateEvent, BattleEvent, BattleUpkeep, Cause,
+    CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
+    isEventPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent, PlayerID,
+    PokemonDetails, PokemonID, PokemonStatus, StartEvent, StatusEvent,
+    SwitchEvent, TieEvent, WinEvent } from "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -390,9 +390,11 @@ export class MessageParser extends Parser
         switch (this.line[0])
         {
             case "-ability": return this.parseAbilityEvent();
+            case "-activate": return this.parseActivateEvent();
             case "-curestatus": return this.parseCureStatusEvent();
             case "-cureteam": return this.parseCureTeamEvent();
             case "-damage": case "-heal": return this.parseDamageEvent();
+            case "-end": return this.parseEndEvent();
             case "faint": return this.parseFaintEvent();
             case "move": return this.parseMoveEvent();
             case "-start": return this.parseStartEvent();
@@ -410,7 +412,7 @@ export class MessageParser extends Parser
     /**
      * Parses an AbilityEvent.
      *
-     * Format
+     * Format:
      * @example
      * |-ability|<PokemonID>|<ability name>
      *
@@ -425,6 +427,27 @@ export class MessageParser extends Parser
         this.nextLine();
         if (!id || !ability) return null;
         return {type: "ability", id, ability};
+    }
+
+    /**
+     * Parses an ActivateEvent.
+     *
+     * Format:
+     * @example
+     * |-activate|<PokemonID>|<volatile status>
+     *
+     * @returns An ActivateEvent, or null if invalid.
+     */
+    private parseActivateEvent(): ActivateEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const volatile = line[2];
+
+        this.nextLine();
+        if (!id || !volatile) return null;
+
+        return {type: "activate", id, volatile};
     }
 
     /**
@@ -498,6 +521,27 @@ export class MessageParser extends Parser
         }
 
         return {type, id, status};
+    }
+
+    /**
+     * Parses an EndEvent.
+     *
+     * Format:
+     * @example
+     * |-end|<PokemonID>|<volatile status>
+     *
+     * @returns An EndEvent, or null if invalid.
+     */
+    private parseEndEvent(): EndEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const volatile = line[2];
+
+        this.nextLine();
+        if (!id || !volatile) return null;
+
+        return {type: "end", id, volatile};
     }
 
     /**

@@ -11,9 +11,9 @@ export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
 /** Set of EventPrefixes. */
 export const eventPrefixes =
 {
-    "-ability": 1, "-curestatus": 2, "-cureteam": 3, "-damage": 4, drag: 5,
-    faint: 6, "-heal": 7, move: 8, "-start": 9, "-status": 10, switch: 11,
-    tie: 12, win: 13
+    "-ability": 1, "-activate": 2, "-curestatus": 3, "-cureteam": 4,
+    "-damage": 5, drag: 6, "-end": 7, faint: 8, "-heal": 9, move: 10,
+    "-start": 11, "-status": 12, switch: 13, tie: 14, win: 15
 };
 /** Message types that are parsed as battle events. */
 export type EventPrefix = keyof typeof eventPrefixes;
@@ -73,9 +73,9 @@ export function isPlayerId(id: any): id is PlayerID
 // battle event types
 
 /** Types of events that can happen during battle. */
-export type BattleEvent = AbilityEvent | CureStatusEvent | CureTeamEvent |
-    DamageEvent | FaintEvent | MoveEvent | StartEvent | StatusEvent |
-    SwitchEvent | TieEvent | WinEvent;
+export type BattleEvent = AbilityEvent | ActivateEvent | CureStatusEvent |
+    CureTeamEvent | DamageEvent | EndEvent | FaintEvent | MoveEvent |
+    StartEvent | StatusEvent | SwitchEvent | TieEvent | WinEvent;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
@@ -94,6 +94,16 @@ export interface AbilityEvent extends BattleEventBase
     id: PokemonID;
     /** Ability being activated. */
     ability: string;
+}
+
+/** Event addon where a volatile status is mentioned. */
+export interface ActivateEvent extends BattleEventBase
+{
+    type: "activate";
+    /** ID of the pokemon whose status is being activated. */
+    id: PokemonID;
+    /** Volatile status name. */
+    volatile: string;
 }
 
 /** Event where a pokemon's major status is cured. */
@@ -122,6 +132,16 @@ export interface DamageEvent extends BattleEventBase
     id: PokemonID;
     /** New hp/status. */
     status: PokemonStatus;
+}
+
+/** Event addon where a volatile status has ended. */
+export interface EndEvent extends BattleEventBase
+{
+    type: "end";
+    /** ID of the pokemon ending a volatile status. */
+    id: PokemonID;
+    /** Volatile status name to be removed. */
+    volatile: string;
 }
 
 /** Event where a pokemon has fainted. */

@@ -316,7 +316,7 @@ export class Pokemon
     }
 
     /**
-     * Sets the confusion flag.
+     * Sets the confusion flag. Should be called once per turn if it's on.
      * @param flag Value of the flag.
      */
     public confuse(flag: boolean): void

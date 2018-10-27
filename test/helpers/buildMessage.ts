@@ -90,6 +90,10 @@ export function composeBattleEvent(event: BattleEvent): string[]
         case "ability":
             result = ["-ability", stringifyID(event.id), event.ability];
             break;
+        case "activate":
+        case "end":
+            result = ["-" + event.type, stringifyID(event.id), event.volatile];
+            break;
         case "curestatus":
         case "status":
             result =

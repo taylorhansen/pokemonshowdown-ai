@@ -13,8 +13,11 @@ export class VolatileStatus
     // not passed when copying
     /** Whether the pokemon is able to switch. */
     public lockedMove: boolean;
-    /** Whether the pokemon is confused. */
-    private confused: boolean;
+    /**
+     * Number of turns this pokemon has been confused, including the turn it
+     * started.
+     */
+    private confuseTurns: number;
 
     /** Creates a VolatileStatus object. */
     constructor()
@@ -48,7 +51,7 @@ export class VolatileStatus
         };
         this.disabledMoves = [false, false, false, false];
         this.lockedMove = false;
-        this.confused = false;
+        this.confuseTurns = 0;
     }
 
     /**
@@ -72,12 +75,21 @@ export class VolatileStatus
     }
 
     /**
-     * Sets the confusion flag.
+     * Sets the lockedmove flag.
+     * @param flag Value of the flag.
+     */
+    public lockMove(flag: boolean): void
+    {
+        this.lockedMove = flag;
+    }
+
+    /**
+     * Sets the confusion flag. Should be called once per turn if it's on.
      * @param flag Value of the flag.
      */
     public confuse(flag: boolean): void
     {
-        this.confused = flag;
+        this.confuseTurns = flag ? Math.min(1, this.confuseTurns + 1) : 0;
     }
 
     /**
@@ -89,7 +101,7 @@ export class VolatileStatus
     {
         // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
-            /*disabled moves*/4 + /*lockedmove*/1 + /*confused*/1;
+            /*disabled moves*/4 + /*lockedmove*/1 + /*confuse turns*/1;
     }
 
     /**
@@ -104,7 +116,7 @@ export class VolatileStatus
                 (key: BoostableStatName) => this.statBoosts[key]),
             ...this.disabledMoves.map(b => b ? 1 : 0),
             this.lockedMove ? 1 : 0,
-            this.confused ? 1 : 0
+            this.confuseTurns
         ];
         return a;
     }
@@ -124,7 +136,8 @@ export class VolatileStatus
                 .filter(disabled => disabled)
                 .map((disabled, i) => `disabled move ${i + 1}`))
             .concat(this.lockedMove ? ["lockedmove"] : [])
-            .concat(this.confused ? ["confused"] : [])
+            .concat(this.confuseTurns ?
+                    [`confused for ${this.confuseTurns - 1} turns`] : [])
             .join(", ")}]`;
     }
 
