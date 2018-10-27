@@ -252,7 +252,6 @@ export class Battle
         // FIXME: a move could be stored as hiddenpower70 but displayed as
         //  hiddenpowerfire
         let pp: number;
-
         // locked moves don't consume pp
         if (event.cause && event.cause.type === "lockedmove") pp = 0;
         // pressure ability doubles pp usage
@@ -260,13 +259,19 @@ export class Battle
             "pressure") pp = 2;
         // but normally use 1 pp
         else pp = 1;
-
         mon.useMove(moveId, pp);
 
         event.addons.forEach(addon => this.handleAddon(addon));
 
         const move = dex.moves[moveId];
-        const selfSwitch = move.selfSwitch;
+
+        // TODO: what if it's interrupted?
+        if (move.volatileEffect === "lockedmove")
+        {
+            mon.lockMove(true);
+        }
+
+        const selfSwitch = move.selfSwitch || false;
         if (side === "us")
         {
             this.selfSwitch = selfSwitch;
@@ -355,6 +360,18 @@ export class Battle
                 this.applyReward(side, rewards.faint);
                 break;
             }
+            case "start":
+            {
+                const mon = this.state.teams[this.getSide(addon.id.owner)]
+                    .active;
+                switch (addon.volatile)
+                {
+                    case "confusion":
+                        mon.confuse(true);
+                        break;
+                }
+                break;
+            }
             case "status":
                 this.state.teams[this.getSide(addon.id.owner)].active
                     .afflict(addon.majorStatus);
@@ -375,6 +392,10 @@ export class Battle
     {
         switch (cause.type)
         {
+            case "fatigue":
+                // no longer locked into a move
+                this.state.teams[side].active.lockMove(false);
+                break;
             case "item":
                 // reveal item
                 this.state.teams[side].active.item = cause.item;

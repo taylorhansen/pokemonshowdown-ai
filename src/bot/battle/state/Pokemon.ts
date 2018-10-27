@@ -316,6 +316,24 @@ export class Pokemon
     }
 
     /**
+     * Sets the confusion flag.
+     * @param flag Value of the flag.
+     */
+    public confuse(flag: boolean): void
+    {
+        this.volatileStatus.confuse(flag);
+    }
+
+    /**
+     * Sets the lockedmove flag.
+     * @param flag Value of the flag.
+     */
+    public lockMove(flag: boolean): void
+    {
+        this.volatileStatus.lockMove(flag);
+    }
+
+    /**
      * Encodes all pokemon data into a string.
      * @param indent Indentation level to use.
      * @returns The Pokemon in string form.

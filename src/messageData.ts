@@ -142,7 +142,7 @@ export interface BattleUpkeep
 
 /** Addon to an event that provides additional info. */
 export type BattleEventAddon = AbilityAddon | CureStatusAddon | CureTeamAddon |
-    DamageAddon | FaintAddon | StatusAddon;
+    DamageAddon | FaintAddon | StartAddon | StatusAddon;
 
 /** Base class for BattleEventAddons. */
 interface AddonBase
@@ -199,6 +199,16 @@ export interface FaintAddon extends AddonBase
     id: PokemonID;
 }
 
+/** Event addon where a volatile status condition has started. */
+export interface StartAddon extends AddonBase
+{
+    type: "start";
+    /** ID of the pokemon starting a volatile status. */
+    id: PokemonID;
+    /** Type of volatile status condition. */
+    volatile: string;
+}
+
 /** Event addon where a pokemon is afflicted with a status. */
 export interface StatusAddon extends AddonBase
 {
@@ -211,13 +221,19 @@ export interface StatusAddon extends AddonBase
 
 // battle event cause types
 
-export type Cause = ItemCause | LockedMoveCause;
+export type Cause = FatigueCause | ItemCause | LockedMoveCause;
 
 /** Base class for Causes. */
 interface CauseBase
 {
     /** The type of Cause this is. */
     type: string;
+}
+
+/** Caused by fatigue, or the completion of a multi-turn locked move. */
+export interface FatigueCause extends CauseBase
+{
+    type: "fatigue";
 }
 
 /** Caused by a held item. */
@@ -295,9 +311,14 @@ export interface RequestActive
 {
     /** Move statuses. */
     moves: RequestMove[];
+    /** Whether the pokemon is trapped and can't switch. */
+    trapped?: boolean;
 }
 
-/** Data about an active pokemon's move. */
+/**
+ * Data about an active pokemon's move. When trapped into using a multi-turn
+ * move, only the `move` and `id` fields will be defined.
+ */
 export interface RequestMove
 {
     /** Name of the move. */
@@ -305,13 +326,13 @@ export interface RequestMove
     /** Move id name. */
     id: string;
     /** Current amount of power points. */
-    pp: number;
+    pp?: number;
     /** Maximum amount of power points. */
-    maxpp: number;
+    maxpp?: number;
     /** Target of the move. */
-    target: string;
+    target?: string;
     /** Whether the move is currently disabled. */
-    disabled: boolean;
+    disabled?: boolean;
 }
 
 /** Basic team info. */

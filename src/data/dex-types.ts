@@ -48,7 +48,9 @@ export interface MoveData
     /** Base power points. */
     readonly pp: number;
     /** Whether this move causes the user to switch. */
-    readonly selfSwitch: SelfSwitch;
+    readonly selfSwitch?: SelfSwitch;
+    /** Self-inflicted volatile status effect. */
+    readonly volatileEffect?: VolatileEffect;
 }
 
 /** Types of targets for a move. */
@@ -61,6 +63,10 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
  * transfers volatile status conditions.
  */
 export type SelfSwitch = boolean | "copyvolatile";
+
+/** Volatile status effects for moves. */
+export type VolatileEffect = "lockedmove" | "mustrecharge" | "rage" | "roost" |
+    "uproar";
 
 /** Type info for the dex variable. */
 export interface Dex

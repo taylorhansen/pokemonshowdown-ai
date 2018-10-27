@@ -163,10 +163,18 @@ for (const moveName in moves)
     const selfSwitch = typeof move.selfSwitch === "string" ?
         quote(move.selfSwitch) : !!move.selfSwitch;
 
+    let volatileEffect: string | undefined;
+    if (move.self && move.self.volatileStatus)
+    {
+        volatileEffect = quote(move.self.volatileStatus);
+    }
+
     console.log(`\
     ${id}:
     {
-        uid: ${uid}, pp: ${pp}, target: ${target}, selfSwitch: ${selfSwitch}
+        uid: ${uid}, pp: ${pp}, target: ${target}\
+${selfSwitch ? `, selfSwitch: ${selfSwitch}` : ""}\
+${volatileEffect ? `, volatileEffect: ${volatileEffect}` : ""}
     },`);
     ++uid;
 }

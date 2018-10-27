@@ -2,8 +2,8 @@ import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
 import { AbilityAddon, BattleEvent, BattleEventAddon, BattleUpkeep,
     Cause, CureStatusAddon, CureTeamAddon, DamageAddon, FaintAddon,
     isAddonPrefix, isMajorPrefix, isMajorStatus, isPlayerId, MajorStatus,
-    MoveEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus, StatusAddon,
-    SwitchInEvent } from "../messageData";
+    MoveEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus, StartAddon,
+    StatusAddon, SwitchInEvent } from "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -467,15 +467,8 @@ export class MessageParser extends Parser
         // parse optional suffixes
         for (let i = 4; i < line.length; ++i)
         {
-            const word = line[i];
-            // there's no space after "[from]", that's just how the server sends
-            //  it
-            if (word.startsWith("[from]"))
-            {
-                const cause =
-                    MessageParser.parseCause(word.substr("[from]".length));
-                if (cause) event.cause = cause;
-            }
+            const cause = MessageParser.parseCause(line[i]);
+            if (cause) event.cause = cause;
         }
 
         event.addons = this.parseBattleEventAddons();
@@ -559,6 +552,7 @@ export class MessageParser extends Parser
             case "-cureteam": return this.parseCureTeamAddon();
             case "-damage": case "-heal": return this.parseDamageAddon();
             case "faint": return this.parseFaintAddon();
+            case "-start": return this.parseStartAddon();
             case "-status": return this.parseStatusAddon();
             default:
                 // ignore
@@ -650,11 +644,10 @@ export class MessageParser extends Parser
             return null;
         }
 
-        if (line.length > 3 && line[3].startsWith("[from] "))
+        if (line.length > 3)
         {
             // FOR NOW: ignore errored (null) Causes
-            const cause =
-                MessageParser.parseCause(line[3].substr("[from] ".length));
+            const cause = MessageParser.parseCause(line[3]);
             if (cause) return {type, id, status, cause};
         }
 
@@ -677,6 +670,33 @@ export class MessageParser extends Parser
         this.nextLine();
         if (!id) return null;
         return {type: "faint", id};
+    }
+
+    /**
+     * Parses a StartAddon.
+     *
+     * Format:
+     * @example
+     * |-start|<PokemonID>|<volatile>
+     *
+     * // optional message suffixes:
+     * [fatigue]
+     */
+    private parseStartAddon(): StartAddon | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const volatile = line[2];
+
+        this.nextLine();
+        if (!id || !volatile) return null;
+
+        if (line.length > 3)
+        {
+            const cause = MessageParser.parseCause(line[3]);
+            if (cause) return {type: "start", id, volatile, cause};
+        }
+        return {type: "start", id, volatile};
     }
 
     /**
@@ -706,11 +726,12 @@ export class MessageParser extends Parser
      */
     private static parseCause(str: string): Cause | null
     {
-        if (str.startsWith("item: "))
+        if (str === "[fatigue]") return {type: "fatigue"};
+        else if (str.startsWith("[from] item: "))
         {
-            return {type: "item", item: str.substr("item: ".length)};
+            return {type: "item", item: str.substr("[from] item: ".length)};
         }
-        else if (str === "lockedmove") return {type: "lockedmove"};
+        else if (str === "[from]lockedmove") return {type: "lockedmove"};
         return null;
     }
 
