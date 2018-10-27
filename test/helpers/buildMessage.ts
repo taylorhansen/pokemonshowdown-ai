@@ -111,7 +111,7 @@ export function composeMoveEvent(event: MoveEvent): string[][]
             stringifyID(event.targetId),
             // don't add a space between [from] and the cause, that's just how
             //  the server sends it
-            ...(event.cause ? [`[from]${stringifyCause(event.cause)}`] : [])
+            ...(event.cause ? [stringifyCause(event.cause)] : [])
         ],
         ...event.addons.map(composeAddon)
     ];
@@ -180,10 +180,13 @@ export function composeAddon(addon: BattleEventAddon): string[]
         case "faint":
             result = ["faint", stringifyID(addon.id)];
             break;
+        case "start":
+            result = ["-start", stringifyID(addon.id), addon.volatile];
+            break;
         default:
             return [];
     }
-    if (addon.cause) result.push(`[from] ${stringifyCause(addon.cause)}`);
+    if (addon.cause) result.push(stringifyCause(addon.cause));
     return result;
 }
 
@@ -235,8 +238,9 @@ export function stringifyCause(cause: Cause): string
 {
     switch (cause.type)
     {
-        case "item": return `item: ${cause.item}`;
-        case "lockedmove": return "lockedmove";
+        case "fatigue": return "[fatigue]";
+        case "item": return `[from] item: ${cause.item}`;
+        case "lockedmove": return "[from]lockedmove";
         default: return "";
     }
 }

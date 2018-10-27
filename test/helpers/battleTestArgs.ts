@@ -42,6 +42,7 @@ export const addon: BattleEventAddon[] =
         type: "heal", id: pokemonId[1], status: pokemonStatus[1],
         cause: {type: "item", item: "Leftovers"}
     },
+    {type: "start", id: pokemonId[0], volatile: "confusion"},
     {type: "status", id: pokemonId[0], majorStatus: "slp"}
 ];
 
@@ -50,7 +51,7 @@ export const moveEvent: MoveEvent[] =
 [
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
-        targetId: pokemonId[1], addons: [addon[0]]
+        targetId: pokemonId[1], addons: [addon[0], addon[1]]
     },
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
@@ -67,7 +68,7 @@ export const switchInEvent: SwitchInEvent[] =
     },
     {
         type: "switch", id: pokemonId[1], details: pokemonDetails[1],
-        status: pokemonStatus[1], addons: [addon[1]]
+        status: pokemonStatus[1], addons: [addon[2], addon[3]]
     }
 ];
 
@@ -107,7 +108,7 @@ export const battleProgress: BattleProgressArgs[] =
 [
     {
         events: [moveEvent[0], moveEvent[1]],
-        upkeep: {addons: [addon[2], addon[3], addon[4], addon[5], addon[6]]},
+        upkeep: {addons: [addon[4], addon[5], addon[6], addon[7]]},
         turn: 2
     }
 ];

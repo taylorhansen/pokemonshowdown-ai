@@ -25,7 +25,7 @@ export type StandalonePrefix = keyof typeof standalonePrefixes;
 export const addonPrefixes =
 {
     "-ability": 1, "-curestatus": 2, "-cureteam": 3, "-damage": 4, faint: 5,
-    "-heal": 6, "-status": 7
+    "-heal": 6, "-start": 7, "-status": 8
 };
 /** Message types that are parsed as addons to a major event. */
 export type AddonPrefix = keyof typeof addonPrefixes;
