@@ -35,7 +35,7 @@ describe("Battle", function()
         listener.getHandler("battleinit")(
         {
             id: "p1", username: testArgs.username[0], teamSizes: {p1: 3, p2: 3},
-            gameType: "singles", gen: 4, switchIns: []
+            gameType: "singles", gen: 4, events: []
         });
         expect(battle.getSide("p1")).to.equal("us");
         expect(battle.getSide("p2")).to.equal("them");

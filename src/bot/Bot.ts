@@ -55,8 +55,15 @@ export class Bot
 
                     // once the battle's over we can respectfully leave
                     listener
-                    .on("tie", () => this.addResponses(room, "|gg", "|/leave"))
-                    .on("win", listener.getHandler("tie"))
+                    .on("battleprogress", a => a.events
+                        // look through all events
+                        .concat(a.upkeep ?
+                            a.upkeep.pre.concat(a.upkeep.post) : [])
+                        .forEach(event =>
+                            // once the game ends, be a little sportsmanlike
+                            ["tie", "win"].includes(event.type) ?
+                                this.addResponses(room, "|gg", "|/leave")
+                                : undefined))
                     .on("deinit", () =>
                     {
                         this.parser.removeListener(room);

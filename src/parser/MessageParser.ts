@@ -1,9 +1,9 @@
 import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
-import { AbilityAddon, BattleEvent, BattleEventAddon, BattleUpkeep,
-    Cause, CureStatusAddon, CureTeamAddon, DamageAddon, FaintAddon,
-    isAddonPrefix, isMajorPrefix, isMajorStatus, isPlayerId, MajorStatus,
-    MoveEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus, StartAddon,
-    StatusAddon, SwitchInEvent } from "../messageData";
+import { AbilityEvent, BattleEvent, BattleUpkeep,
+    Cause, CureStatusEvent, CureTeamEvent, DamageEvent, FaintEvent,
+    isEventPrefix, isMajorStatus, isPlayerId, MajorStatus,
+    MoveEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus, StartEvent,
+    StatusEvent, SwitchEvent, TieEvent, WinEvent } from "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -113,26 +113,18 @@ export class MessageParser extends Parser
             case "request": // move/switch request
                 this.parseRequest();
                 break;
-            case "win": // game over
-                this.parseWin();
-                break;
-            case "tie": // game ended in a tie
-                this.parseTie();
-                break;
             case "error": // e.g. invalid move/switch choice
                 this.parseError();
                 break;
 
-            // major actions
-            case "move": // a pokemon performed a move
-            case "switch": // a pokemon was voluntarily switched
-            case "drag": // involuntarily switched, same thing
-                this.parseBattleProgress();
-                break;
-
             default:
+                if (["drag", "move", "switch"].includes(this.line[0]) ||
+                    isEventPrefix(this.line[0]))
+                {
+                    this.parseBattleProgress();
+                }
                 // ignore
-                this.nextLine();
+                else this.nextLine();
         }
     }
 
@@ -240,19 +232,6 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a `tie` message.
-     *
-     * Format:
-     * @example
-     * |tie
-     */
-    private parseTie(): void
-    {
-        this.nextLine();
-        this.handle("tie", {});
-    }
-
-    /**
      * Parses an `updatechallenges` message.
      *
      * Format:
@@ -288,21 +267,6 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a `win` message.
-     *
-     * Format:
-     * @example
-     * |win|<username>
-     */
-    private parseWin(): void
-    {
-        const username = this.getRestOfLine();
-
-        this.nextLine();
-        this.handle("win", {username});
-    }
-
-    /**
      * Parses the initial battle initialization multiline message.
      *
      * Format:
@@ -314,7 +278,7 @@ export class MessageParser extends Parser
      * |gen|<gen #>
      * <...>
      * |start
-     * <initial SwitchInEvents>
+     * <initial BattleEvents>
      * |turn|1
      */
     private parseBattleInit(): void
@@ -322,8 +286,9 @@ export class MessageParser extends Parser
         const args: ShallowNullable<BattleInitArgs> =
         {
             id: null, username: null, teamSizes: null, gameType: null,
-            gen: null, switchIns: null
+            gen: null, events: null
         };
+        args.events = [];
 
         while (this.lineN < this.lines.length)
         {
@@ -356,79 +321,85 @@ export class MessageParser extends Parser
                     args.gen = MessageParser.parseInt(line[1]);
                     this.nextLine();
                     break;
-                case "switch":
-                {
-                    if (!args.switchIns) args.switchIns = [];
-                    const event = this.parseSwitchInEvent();
-                    if (event) args.switchIns.push(event);
-                    break;
-                }
                 default:
+                    if (isEventPrefix(line[0]))
+                    {
+                        // start of initial events
+                        args.events.push(...this.parseBattleEvents());
+                    }
                     // ignore
-                    this.nextLine();
+                    else this.nextLine();
             }
         }
         this.handle("battleinit", args);
     }
 
     /**
-     * Parses a battle progress multiline message. Composed of multiple move and
-     * switch events, optionally terminated by end-of-turn upkeep data.
+     * Parses a battle progress multiline message. Composed of multiple main
+     * BattleEvents, optionally terminated by end-of-turn BattleUpkeep events.
      *
      * Format:
      * @example
+     * <main BattleEvents>
      * |
-     * <move or switch events>
-     * |
-     * <upkeep events>
-     * |upkeep
+     * <BattleUpkeep>
      * |turn|<new turn #>
      */
     private parseBattleProgress(): void
     {
-        const args: ShallowNullable<BattleProgressArgs> = {} as any;
-        args.events = [];
-        let event: BattleEvent | null;
-        // parse all messages on each line
-        while (this.lineN < this.lines.length)
+        const args: ShallowNullable<BattleProgressArgs> =
+            {events: this.parseBattleEvents()};
+
+        if (this.line && this.line[0] === "")
         {
-            const line = this.line;
-            switch (line[0])
-            {
-                case "move":
-                case "switch":
-                case "drag":
-                    event = this.parseBattleEvent();
-                    if (event) args.events.push(event);
-                    break;
-                case "turn":
-                    args.turn = MessageParser.parseInt(line[1]);
-                    this.nextLine();
-                    break;
-                default:
-                    if (line[0] === "upkeep" || isAddonPrefix(line[0]))
-                    {
-                        args.upkeep = this.parseBattleUpkeep();
-                    }
-                    else this.nextLine();
-                    break;
-            }
+            // empty line between main events and upkeep events
+            this.nextLine();
+            args.upkeep = this.parseBattleUpkeep();
+        }
+        if (this.line && this.line[0] === "turn")
+        {
+            args.turn = MessageParser.parseInt(this.line[1]);
+            this.nextLine();
         }
         this.handle("battleprogress", args);
     }
 
     /**
-     * Parses a BattleEvent. This can be a move or a switch, with additional
-     * "addon" messages at the end.
+     * Parses BattleEvent messages until either the end of the message, a blank
+     * line, or a `turn` or `upkeep` message is found.
+     * @returns An array of parsed BattleEvents.
+     */
+    private parseBattleEvents(): BattleEvent[]
+    {
+        const events: BattleEvent[] = [];
+        while (this.lineN < this.lines.length && this.line[0] &&
+            this.line[0] !== "turn" && this.line[0] !== "upkeep")
+        {
+            const event = this.parseBattleEvent();
+            if (event) events.push(event);
+        }
+        return events;
+    }
+
+    /**
+     * Parses a BattleEvent.
      * @returns A BattleEvent, or null if invalid.
      */
     private parseBattleEvent(): BattleEvent | null
     {
         switch (this.line[0])
         {
+            case "-ability": return this.parseAbilityEvent();
+            case "-curestatus": return this.parseCureStatusEvent();
+            case "-cureteam": return this.parseCureTeamEvent();
+            case "-damage": case "-heal": return this.parseDamageEvent();
+            case "faint": return this.parseFaintEvent();
             case "move": return this.parseMoveEvent();
-            case "switch": case "drag": return this.parseSwitchInEvent();
-            // istanbul ignore next: should never happen
+            case "-start": return this.parseStartEvent();
+            case "-status": return this.parseStatusEvent();
+            case "switch": case "drag": return this.parseSwitchEvent();
+            case "tie": return this.parseTieEvent();
+            case "win": return this.parseWinEvent();
             default:
                 // ignore
                 this.nextLine();
@@ -437,140 +408,15 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a MoveEvent.
-     *
-     *
-     * Format:
-     * @example
-     * |move|<user PokemonID>|<move name>|<target PokemonID>
-     * <addon messages>
-     *
-     * // Optional message suffixes:
-     * |[miss]
-     * |[from]<effect name>
-     *
-     * @returns A MoveEvent, or null if invalid.
-     */
-    private parseMoveEvent(): MoveEvent | null
-    {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const moveName = line[2];
-        const targetId = MessageParser.parsePokemonID(line[3]);
-
-        this.nextLine();
-        if (!id || !moveName || !targetId) return null;
-
-        const event: MoveEvent =
-            {type: "move", id, moveName, targetId, addons: []};
-
-        // parse optional suffixes
-        for (let i = 4; i < line.length; ++i)
-        {
-            const cause = MessageParser.parseCause(line[i]);
-            if (cause) event.cause = cause;
-        }
-
-        event.addons = this.parseBattleEventAddons();
-        return event;
-    }
-
-    /**
-     * Parses a SwitchInEvent.
-     *
-     * Format:
-     * @example
-     * |<switch or drag>|<replacing PokemonID>|<PokemonDetails>|<PokemonStatus>
-     * <addon messages>
-     *
-     * @returns A SwitchInEvent, or null if invalid.
-     */
-    private parseSwitchInEvent(): SwitchInEvent | null
-    {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const details = MessageParser.parsePokemonDetails(line[2]);
-        const status = MessageParser.parsePokemonStatus(line[3]);
-
-        this.nextLine();
-        if (!id || !details || !status) return null;
-
-        const addons = this.parseBattleEventAddons();
-        return {type: "switch", id, details, status, addons};
-    }
-
-    /**
-     * Parses a BattleUpkeep.
-     *
-     * Format:
-     * @example
-     * <addon messages>
-     * |upkeep
-     */
-    private parseBattleUpkeep(): BattleUpkeep
-    {
-        const upkeep: BattleUpkeep = {addons: this.parseBattleEventAddons()};
-        // ignore the upkeep message
-        if (this.line[0] === "upkeep") this.nextLine();
-        upkeep.addons.push(...this.parseBattleEventAddons());
-        return upkeep;
-    }
-
-    /**
-     * Parses BattleEventAddons if the current line contains a non-empty
-     * message.
-     * @returns A list of BattleEventAddons.
-     */
-    private parseBattleEventAddons(): BattleEventAddon[]
-    {
-        const addons: BattleEventAddon[] = [];
-        while (this.lineN < this.lines.length)
-        {
-            // message types that can come after addons will terminate the
-            //  parsing of them
-            // a blank line can also act as a delimitter
-            const prefix = this.line[0];
-            if (!prefix || isMajorPrefix(prefix)) break;
-
-            const addon = this.parseBattleEventAddon();
-            if (addon) addons.push(addon);
-        }
-        return addons;
-    }
-
-    /**
-     * Parses a BattleEventAddon. These happen after major events or at the end
-     * of every turn.
-     * @returns A BattlEventAddon, or null if invalid.
-     */
-    private parseBattleEventAddon(): BattleEventAddon | null
-    {
-        switch (this.line[0])
-        {
-            case "-ability": return this.parseAbilityAddon();
-            case "-curestatus": return this.parseCureStatusAddon();
-            case "-cureteam": return this.parseCureTeamAddon();
-            case "-damage": case "-heal": return this.parseDamageAddon();
-            case "faint": return this.parseFaintAddon();
-            case "-start": return this.parseStartAddon();
-            case "-status": return this.parseStatusAddon();
-            default:
-                // ignore
-                this.nextLine();
-                return null;
-        }
-    }
-
-    /**
-     * Parses an AbilityAddon.
+     * Parses an AbilityEvent.
      *
      * Format
      * @example
      * |-ability|<PokemonID>|<ability name>
      *
-     * @returns An AbilityAddon, or null if invalid.
+     * @returns An AbilityEvent, or null if invalid.
      */
-    private parseAbilityAddon(): AbilityAddon | null
+    private parseAbilityEvent(): AbilityEvent | null
     {
         const line = this.line;
         const id = MessageParser.parsePokemonID(line[1]);
@@ -582,15 +428,15 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a CureStatusAddon.
+     * Parses a CureStatusEvent.
      *
      * Format:
      * @example
      * |-curestatus|<PokemonID>|<cured MajorStatus>
      *
-     * @returns A CureStatusAddon, or null if invalid.
+     * @returns A CureStatusEvent, or null if invalid.
      */
-    private parseCureStatusAddon(): CureStatusAddon | null
+    private parseCureStatusEvent(): CureStatusEvent | null
     {
         const line = this.line;
         const id = MessageParser.parsePokemonID(line[1]);
@@ -602,15 +448,15 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a CureTeamAddon.
+     * Parses a CureTeamEvent.
      *
      * Format:
      * @example
      * |-cureteam|<PokemonID>
      *
-     * @returns A CureTeamAddon, or null if invalid.
+     * @returns A CureTeamEvent, or null if invalid.
      */
-    private parseCureTeamAddon(): CureTeamAddon | null
+    private parseCureTeamEvent(): CureTeamEvent | null
     {
         const id = MessageParser.parsePokemonID(this.line[1]);
 
@@ -620,7 +466,7 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a DamageAddon.
+     * Parses a DamageEvent.
      *
      * Format:
      * @example
@@ -629,9 +475,9 @@ export class MessageParser extends Parser
      * // optional message suffixes:
      * |[from] item: <item name>
      *
-     * @returns A DamageAddon, or null if invalid.
+     * @returns A DamageEvent, or null if invalid.
      */
-    private parseDamageAddon(): DamageAddon | null
+    private parseDamageEvent(): DamageEvent | null
     {
         const line = this.line;
         const type = line[0].substr(1); // get rid of the dash
@@ -655,15 +501,15 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a FaintAddon.
+     * Parses a FaintEvent.
      *
      * Format:
      * @example
      * |faint|<PokemonID>
      *
-     * @returns A FaintAddon, or null if invalid.
+     * @returns A FaintEvent, or null if invalid.
      */
-    private parseFaintAddon(): FaintAddon | null
+    private parseFaintEvent(): FaintEvent | null
     {
         const id = MessageParser.parsePokemonID(this.line[1]);
 
@@ -673,7 +519,41 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a StartAddon.
+     * Parses a MoveEvent.
+     *
+     * Format:
+     * @example
+     * |move|<user PokemonID>|<move name>|<target PokemonID>
+     *
+     * // Optional message suffixes:
+     * |[miss]
+     * |[from]<effect name>
+     *
+     * @returns A MoveEvent, or null if invalid.
+     */
+    private parseMoveEvent(): MoveEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const moveName = line[2];
+        const targetId = MessageParser.parsePokemonID(line[3]);
+
+        this.nextLine();
+        if (!id || !moveName || !targetId) return null;
+
+        const event: MoveEvent = {type: "move", id, moveName, targetId};
+
+        // parse optional suffixes
+        for (let i = 4; i < line.length; ++i)
+        {
+            const cause = MessageParser.parseCause(line[i]);
+            if (cause) event.cause = cause;
+        }
+        return event;
+    }
+
+    /**
+     * Parses a StartEvent.
      *
      * Format:
      * @example
@@ -682,7 +562,7 @@ export class MessageParser extends Parser
      * // optional message suffixes:
      * [fatigue]
      */
-    private parseStartAddon(): StartAddon | null
+    private parseStartEvent(): StartEvent | null
     {
         const line = this.line;
         const id = MessageParser.parsePokemonID(line[1]);
@@ -700,15 +580,15 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a StatusAddon.
+     * Parses a StatusEvent.
      *
      * Format:
      * @example
      * |-status|<PokemonID>|<new MajorStatus>
      *
-     * @returns A StatusAddon, or null if invalid.
+     * @returns A StatusEvent, or null if invalid.
      */
-    private parseStatusAddon(): StatusAddon | null
+    private parseStatusEvent(): StatusEvent | null
     {
         const line = this.line;
         const id = MessageParser.parsePokemonID(line[1]);
@@ -717,6 +597,75 @@ export class MessageParser extends Parser
         this.nextLine();
         if (!id || !majorStatus) return null;
         return {type: "status", id, majorStatus};
+    }
+
+    /**
+     * Parses a SwitchEvent.
+     *
+     * Format:
+     * @example
+     * |<switch or drag>|<replacing PokemonID>|<PokemonDetails>|<PokemonStatus>
+     *
+     * @returns A SwitchInEvent, or null if invalid.
+     */
+    private parseSwitchEvent(): SwitchEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const details = MessageParser.parsePokemonDetails(line[2]);
+        const status = MessageParser.parsePokemonStatus(line[3]);
+
+        this.nextLine();
+        if (!id || !details || !status) return null;
+        return {type: "switch", id, details, status};
+    }
+
+    /**
+     * Parses a TieEvent.
+     *
+     * Format:
+     * @example
+     * |tie
+     *
+     * @returns A TieEvent.
+     */
+    private parseTieEvent(): TieEvent
+    {
+        this.nextLine();
+        return {type: "tie"};
+    }
+
+    /**
+     * Parses a WinEvent.
+     *
+     * Format:
+     * @example
+     * |win|<username>
+     *
+     * @returns A WinEvent.
+     */
+    private parseWinEvent(): WinEvent
+    {
+        const winner = this.getRestOfLine();
+        this.nextLine();
+        return {type: "win", winner};
+    }
+
+    /**
+     * Parses a BattleUpkeep.
+     *
+     * Format:
+     * @example
+     * <pre upkeep messages>
+     * |upkeep
+     * <post upkeep messages>
+     */
+    private parseBattleUpkeep(): BattleUpkeep
+    {
+        const upkeep: BattleUpkeep = {pre: this.parseBattleEvents(), post: []};
+        if (this.line && this.line[0] === "upkeep") this.nextLine();
+        upkeep.post = this.parseBattleEvents();
+        return upkeep;
     }
 
     /**

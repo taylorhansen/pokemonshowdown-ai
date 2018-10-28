@@ -116,11 +116,6 @@ ${buildMessage(words)}`);
                 shouldParse("battleinit", composeBattleInit(args), args);
             }
 
-            for (const invalid of testArgs.battleInitInvalid)
-            {
-                shouldntParse("battleinit", invalid);
-            }
-
             it("Should ignore unexpected message types", function(done)
             {
                 const givenArgs = testArgs.battleInit[0];
@@ -132,7 +127,7 @@ ${buildMessage(words)}`);
                 });
             });
 
-            it("Should not include invalid switchins", function()
+            it("Should not include invalid events", function(done)
             {
                 const words =
                 [
@@ -142,7 +137,8 @@ ${buildMessage(words)}`);
                 ];
                 parse("battleinit", words, args =>
                 {
-                    expect(args.switchIns.length).to.equal(0);
+                    expect(args.events.length).to.equal(0);
+                    done();
                 });
             });
         });
@@ -166,12 +162,13 @@ ${buildMessage(words)}`);
                 });
             });
 
-            it("Should not include invalid events", function()
+            it("Should not include invalid events", function(done)
             {
                 const words = [["move"]];
-                parse("battleinit", words, args =>
+                parse("battleprogress", words, args =>
                 {
-                    expect(args.switchIns.length).to.equal(0);
+                    expect(args.events.length).to.equal(0);
+                    done();
                 });
             });
         });
@@ -213,11 +210,6 @@ ${buildMessage(words)}`);
             shouldntParse("request", [["request"]]);
         });
 
-        describe("tie", function()
-        {
-            shouldParse("tie", [["tie"]], {});
-        });
-
         describe("updatechallenges", function()
         {
             const args: UpdateChallengesArgs =
@@ -246,12 +238,6 @@ ${buildMessage(words)}`);
                 {username, isGuest: !guest});
             shouldntParse("updateuser", [["updateuser"]]);
             shouldntParse("updateuser", [["updateuser", username]]);
-        });
-
-        describe("win", function()
-        {
-            const username = "somebody";
-            shouldParse("win", [["win", username]], {username});
         });
     });
 });

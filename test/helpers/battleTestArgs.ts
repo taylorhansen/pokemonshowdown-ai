@@ -1,8 +1,8 @@
 /** @file Contains test arguments for battle messages. */
 import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
     "../../src/AnyMessageListener";
-import { BattleEventAddon, MoveEvent, PokemonDetails, PokemonID, PokemonStatus,
-    SwitchInEvent } from "../../src/messageData";
+import { BattleEvent, Cause, PokemonDetails, PokemonID, PokemonStatus } from
+    "../../src/messageData";
 
 export const username: string[] = ["user1", "user2"];
 
@@ -30,8 +30,14 @@ export const pokemonStatus: PokemonStatus[] =
     {hp: 0, hpMax: 0, condition: ""}
 ];
 
-/** Test BattleEventAddons. */
-export const addon: BattleEventAddon[] =
+/** Test Causes. */
+export const cause: Cause[] =
+[
+    {type: "fatigue"}, {type: "item", item: "Leftovers"}, {type: "lockedmove"}
+];
+
+/** Test BattleEvents. */
+export const battleEvent: BattleEvent[] =
 [
     {type: "ability", id: pokemonId[0], ability: "Pressure"},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
@@ -40,36 +46,27 @@ export const addon: BattleEventAddon[] =
     {type: "faint", id: pokemonId[2]},
     {
         type: "heal", id: pokemonId[1], status: pokemonStatus[1],
-        cause: {type: "item", item: "Leftovers"}
+        cause: cause[1]
     },
-    {type: "start", id: pokemonId[0], volatile: "confusion"},
-    {type: "status", id: pokemonId[0], majorStatus: "slp"}
-];
-
-/** Test MoveEvents. */
-export const moveEvent: MoveEvent[] =
-[
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
-        targetId: pokemonId[1], addons: [addon[0], addon[1]]
+        targetId: pokemonId[1]
     },
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
-        targetId: pokemonId[0], addons: [], cause: {type: "lockedmove"}
-    }
-];
-
-/** Test SwitchInEvents. */
-export const switchInEvent: SwitchInEvent[] =
-[
+        targetId: pokemonId[0], cause: cause[2]
+    },
+    {type: "start", id: pokemonId[0], volatile: "confusion", cause: cause[0]},
+    {type: "status", id: pokemonId[0], majorStatus: "slp"},
     {
         type: "switch", id: pokemonId[0], details: pokemonDetails[0],
-        status: pokemonStatus[0], addons: []
+        status: pokemonStatus[0]
     },
     {
         type: "switch", id: pokemonId[1], details: pokemonDetails[1],
-        status: pokemonStatus[1], addons: [addon[2], addon[3]]
-    }
+        status: pokemonStatus[1]
+    },
+    {type: "tie"}, {type: "win", winner: username[1]}
 ];
 
 /** Test BattleInitArgs. */
@@ -78,38 +75,27 @@ export const battleInit: BattleInitArgs[] =
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        switchIns: [switchInEvent[0], switchInEvent[1]]
+        events: [battleEvent[0], battleEvent[1]]
     }
-];
-
-/** Invalid `battleinit` messages. */
-export const battleInitInvalid: string[][][] =
-[
-    // empty teamsize command
-    [
-        ["player", "p2", username[1]],
-        ["teamsize"],
-        ["teamsize", "p2", "6"],
-        ["gametype", "singles"],
-        ["gen", "4"]
-    ],
-    // no teamsize number
-    [
-        ["player", "p2", username[1]],
-        ["teamsize", "p1"],
-        ["teamsize", "p2", "6"],
-        ["gametype", "singles"],
-        ["gen", "4"]
-    ]
 ];
 
 /** Test BattleProgressArgs. */
 export const battleProgress: BattleProgressArgs[] =
 [
     {
-        events: [moveEvent[0], moveEvent[1]],
-        upkeep: {addons: [addon[4], addon[5], addon[6], addon[7]]},
+        events: [battleEvent[2], battleEvent[3]],
+        upkeep: {pre: [battleEvent[4]], post: []},
         turn: 2
+    },
+    {
+        events: [battleEvent[4], battleEvent[5]],
+        upkeep: {pre: [battleEvent[6]], post: [battleEvent[7], battleEvent[8]]},
+        turn: 100
+    },
+    {
+        events: [battleEvent[9], battleEvent[10], battleEvent[11]],
+        upkeep: {pre: [], post: [battleEvent[12], battleEvent[13]]},
+        turn: 9
     }
 ];
 

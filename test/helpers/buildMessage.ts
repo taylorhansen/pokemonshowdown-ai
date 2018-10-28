@@ -1,8 +1,7 @@
 import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
     "../../src/AnyMessageListener";
-import { BattleEvent, BattleEventAddon, BattleUpkeep, Cause, MoveEvent,
-    PokemonDetails, PokemonID, PokemonStatus, SwitchInEvent } from
-    "../../src/messageData";
+import { BattleEvent, BattleUpkeep, Cause, PokemonDetails, PokemonID,
+    PokemonStatus } from "../../src/messageData";
 
 /**
  * Creates an unparsed server message.
@@ -11,8 +10,7 @@ import { BattleEvent, BattleEventAddon, BattleUpkeep, Cause, MoveEvent,
  */
 export function buildMessage(words: string[][]): string
 {
-    return words
-        .map(line => line.length > 0 ? `|${line.join("|")}` : "")
+    return words.map(line => line.length > 0 ? `|${line.join("|")}` : "")
         .join("\n");
 }
 
@@ -52,9 +50,9 @@ export function composeBattleInit(args: BattleInitArgs): string[][]
         ["teamsize", "p2", args.teamSizes.p2.toString()],
         ["gametype", args.gameType],
         ["gen", args.gen.toString()],
-        ...args.switchIns
-            .map(composeSwitchInEvent)
-            .reduce((a, b) => a.concat(b), [])
+        ...args.events
+            .map(composeBattleEvent),
+        ["turn", "1"]
     ];
     return result;
 }
@@ -66,10 +64,7 @@ export function composeBattleInit(args: BattleInitArgs): string[][]
  */
 export function composeBattleProgress(args: BattleProgressArgs): string[][]
 {
-    const result: string[][] =
-        args.events
-            .map(composeBattleEvent)
-            .reduce((a, b) => a.concat(b), []);
+    const result: string[][] = args.events.map(composeBattleEvent);
 
     // upkeep and new turn number are separated by a blank line
     if (args.upkeep || args.turn)
@@ -87,52 +82,62 @@ export function composeBattleProgress(args: BattleProgressArgs): string[][]
  * @param event Event to stringify.
  * @returns An unparsed BattleEvent.
  */
-export function composeBattleEvent(event: BattleEvent): string[][]
+export function composeBattleEvent(event: BattleEvent): string[]
 {
+    let result: string[];
     switch (event.type)
     {
-        case "move": return composeMoveEvent(event);
-        case "switch": return composeSwitchInEvent(event);
-        default: return [];
+        case "ability":
+            result = ["-ability", stringifyID(event.id), event.ability];
+            break;
+        case "curestatus":
+        case "status":
+            result =
+            [
+                "-" + event.type, stringifyID(event.id), event.majorStatus
+            ];
+            break;
+        case "cureteam":
+            result = ["-cureteam", stringifyID(event.id)];
+            break;
+        case "damage":
+        case "heal":
+            result =
+            [
+                "-" + event.type, stringifyID(event.id),
+                stringifyStatus(event.status)
+            ];
+            break;
+        case "faint":
+            result = ["faint", stringifyID(event.id)];
+            break;
+        case "move":
+            result =
+            [
+                "move", stringifyID(event.id), event.moveName,
+                stringifyID(event.targetId)
+            ];
+            break;
+        case "start":
+            result = ["-start", stringifyID(event.id), event.volatile];
+            break;
+        case "switch":
+            result =
+            [
+                "switch", stringifyID(event.id),
+                stringifyDetails(event.details), stringifyStatus(event.status)
+            ];
+            break;
+        case "tie":
+            result = ["tie"];
+            break;
+        case "win":
+            result = ["win", event.winner];
+            break;
+        default:
+            result = [];
     }
-}
-
-/**
- * Composes all the word segments of a MoveEvent.
- * @param event Event to stringify.
- * @returns An unparsed MoveEvent.
- */
-export function composeMoveEvent(event: MoveEvent): string[][]
-{
-    const result: string[][] =
-    [
-        [
-            "move", stringifyID(event.id), event.moveName,
-            stringifyID(event.targetId),
-            // don't add a space between [from] and the cause, that's just how
-            //  the server sends it
-            ...(event.cause ? [stringifyCause(event.cause)] : [])
-        ],
-        ...event.addons.map(composeAddon)
-    ];
-    return result;
-}
-
-/**
- * Composes all the word segments of a SwitchInEvent.
- * @param event Event to stringify.
- * @returns An unparsed SwitchInEvent.
- */
-export function composeSwitchInEvent(event: SwitchInEvent): string[][]
-{
-    const result: string[][] =
-    [
-        [
-            "switch", stringifyID(event.id), stringifyDetails(event.details),
-            stringifyStatus(event.status)
-        ],
-        ...event.addons.map(composeAddon)
-    ];
+    if (event.cause) result.push(stringifyCause(event.cause));
     return result;
 }
 
@@ -143,50 +148,11 @@ export function composeSwitchInEvent(event: SwitchInEvent): string[][]
  */
 export function composeBattleUpkeep(upkeep: BattleUpkeep): string[][]
 {
-    return [...upkeep.addons.map(composeAddon), ["upkeep"]];
-}
-
-/**
- * Composes all the word segments of a BattleEventAddon.
- * @param addon Addon to stringify.
- * @returns An unparsed BattleEventAddon.
- */
-export function composeAddon(addon: BattleEventAddon): string[]
-{
-    let result: string[];
-    switch (addon.type)
-    {
-        case "ability":
-            result = ["-ability", stringifyID(addon.id), addon.ability];
-            break;
-        case "curestatus":
-        case "status":
-            result =
-            [
-                "-" + addon.type, stringifyID(addon.id), addon.majorStatus
-            ];
-            break;
-        case "cureteam":
-            result = ["-cureteam", stringifyID(addon.id)];
-            break;
-        case "damage":
-        case "heal":
-            result =
-            [
-                "-" + addon.type, stringifyID(addon.id),
-                stringifyStatus(addon.status)
-            ];
-            break;
-        case "faint":
-            result = ["faint", stringifyID(addon.id)];
-            break;
-        case "start":
-            result = ["-start", stringifyID(addon.id), addon.volatile];
-            break;
-        default:
-            return [];
-    }
-    if (addon.cause) result.push(stringifyCause(addon.cause));
+    const result: string[][] =
+    [
+        ...upkeep.pre.map(composeBattleEvent), ["upkeep"],
+        ...upkeep.post.map(composeBattleEvent)
+    ];
     return result;
 }
 

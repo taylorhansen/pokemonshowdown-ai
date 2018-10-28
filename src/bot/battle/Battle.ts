@@ -3,8 +3,8 @@ import { AnyMessageListener } from "../../AnyMessageListener";
 import { dex } from "../../data/dex";
 import { SelfSwitch } from "../../data/dex-types";
 import * as logger from "../../logger";
-import { BattleEvent, BattleEventAddon, Cause, MoveEvent, otherId, PlayerID,
-    PokemonDetails, PokemonStatus, RequestMove, SwitchInEvent } from
+import { BattleEvent, Cause, MoveEvent, otherId, PlayerID,
+    PokemonDetails, PokemonStatus, RequestMove, SwitchEvent } from
     "../../messageData";
 import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
@@ -28,10 +28,19 @@ export type ChoiceSender = (choice: Choice, rqid?: number) => void;
 /** Manages the battle state and the AI. */
 export class Battle
 {
-    /** Manages battle state for AI input. */
-    private readonly state: BattleState;
     /** Decides what the client should do. */
     private readonly ai: AI;
+    /** Client's username. */
+    private readonly username: string;
+    /**
+     * True if the AI model should always be saved at the end, or false if that
+     * should happen if it wins.
+     */
+    private readonly saveAlways: boolean;
+    /** Used to send the AI's choice to the server. */
+    private readonly sender: ChoiceSender;
+    /** Manages battle state for AI input. */
+    private readonly state: BattleState;
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -47,12 +56,8 @@ export class Battle
     private themCopyVolatile = false;
     /** Accumulated reward during the current turn. */
     private reward = 0;
-    /** Used to send the AI's choice to the server. */
-    private readonly sender: ChoiceSender;
     /** Whether the battle has started. */
     private started = false;
-    /** Client's username. */
-    private username: string;
 
     /**
      * Creates a Battle object.
@@ -70,6 +75,7 @@ export class Battle
         const path = `${__dirname}/../../../models/latest`;
         this.ai = new aiType(BattleState.getArraySize(), path);
         this.username = username;
+        this.saveAlways = saveAlways;
         this.sender = sender;
         this.state = state || new BattleState();
 
@@ -92,7 +98,7 @@ export class Battle
                 this.sides = {[id]: "them", [otherId(id)]: "us"} as any;
                 this.state.teams.them.size = args.teamSizes[id];
             }
-            args.switchIns.forEach(event => this.handleSwitchIn(event));
+            args.events.forEach(event => this.handleEvent(event));
 
             logger.debug(`state:\n${this.state.toString()}`);
             this.askAI();
@@ -104,11 +110,13 @@ export class Battle
             args.events.forEach(event => this.handleEvent(event));
             if (args.upkeep)
             {
-                args.upkeep.addons.forEach(addon => this.handleAddon(addon));
+                args.upkeep.pre.forEach(event => this.handleEvent(event));
+                args.upkeep.post.forEach(event => this.handleEvent(event));
             }
             if (args.turn) logger.debug(`new turn: ${args.turn}`);
 
             logger.debug(`state:\n${this.state.toString()}`);
+            // TODO: don't askAI if waiting for opponent
             this.askAI();
         })
         .on("error", /* istanbul ignore next: uses stdin */ args =>
@@ -188,23 +196,6 @@ export class Battle
 
             // update rqid to verify our next choice
             this.rqid = args.rqid;
-        })
-        .on("tie", () =>
-        {
-            if (saveAlways)
-            {
-                logger.debug(`saving ${this.username}`);
-                this.ai.save();
-            }
-        })
-        .on("win", args =>
-        {
-            if (saveAlways || args.username === this.username)
-            {
-                // we won
-                logger.debug(`saving ${this.username}`);
-                this.ai.save();
-            }
         });
     }
 
@@ -226,16 +217,78 @@ export class Battle
     {
         switch (event.type)
         {
+            case "ability":
+                this.state.teams[this.getSide(event.id.owner)].active
+                    .baseAbility = event.ability;
+                break;
+            case "curestatus":
+                this.state.teams[this.getSide(event.id.owner)].active.cure();
+                break;
+            case "cureteam":
+                this.state.teams[this.getSide(event.id.owner)].cure();
+                break;
+            case "damage":
+            case "heal":
+            {
+                const side = this.getSide(event.id.owner);
+                const active = this.state.teams[side].active;
+
+                // side "them" uses hp percentages so hpMax would be omitted
+                const hpMax = side === "us" ? event.status.hpMax : undefined;
+                active.setHP(event.status.hp, hpMax);
+                // this should already be covered by the `status` event but just
+                //  in case
+                active.afflict(event.status.condition);
+                break;
+            }
+            case "faint":
+            {
+                const side = this.getSide(event.id.owner);
+                this.state.teams[side].active.faint();
+                this.applyReward(side, rewards.faint);
+                break;
+            }
             case "move":
                 this.handleMove(event);
                 break;
+            case "start":
+            {
+                const mon = this.state.teams[this.getSide(event.id.owner)]
+                    .active;
+                switch (event.volatile)
+                {
+                    case "confusion":
+                        mon.confuse(true);
+                        break;
+                }
+                break;
+            }
+            case "status":
+                this.state.teams[this.getSide(event.id.owner)].active
+                    .afflict(event.majorStatus);
+                break;
             case "switch":
-                this.handleSwitchIn(event);
+                this.handleSwitch(event);
+                break;
+            case "tie":
+                if (this.saveAlways)
+                {
+                    logger.debug(`saving ${this.username}`);
+                    this.ai.save();
+                }
+                break;
+            case "win":
+                if (this.saveAlways || event.winner === this.username)
+                {
+                    // we won
+                    logger.debug(`saving ${this.username}`);
+                    this.ai.save();
+                }
                 break;
         }
-        if (event.cause)
+        if (event.cause && event.type !== "tie" && event.type !== "win")
         {
-            this.handleCause(this.sides[event.id.owner], event.cause);
+            this.handleCause(this.sides[event.id.owner], event.cause!);
         }
     }
 
@@ -261,8 +314,6 @@ export class Battle
         else pp = 1;
         mon.useMove(moveId, pp);
 
-        event.addons.forEach(addon => this.handleAddon(addon));
-
         const move = dex.moves[moveId];
 
         // TODO: what if it's interrupted?
@@ -275,12 +326,6 @@ export class Battle
         if (side === "us")
         {
             this.selfSwitch = selfSwitch;
-            if (selfSwitch && move.target === "self")
-            {
-                // self-switch moves that don't do anything else will
-                //  immediately expect a switch replacement
-                this.askAI();
-            }
         }
         else if (side === "them" && selfSwitch === "copyvolatile")
         {
@@ -291,10 +336,10 @@ export class Battle
     }
 
     /**
-     * Handles a SwitchInEvent.
+     * Handles a SwitchEvent.
      * @param event Event to process.
      */
-    private handleSwitchIn(event: SwitchInEvent): void
+    private handleSwitch(event: SwitchEvent): void
     {
         const side = this.getSide(event.id.owner);
         const team = this.state.teams[side];
@@ -317,74 +362,10 @@ export class Battle
 
         team.switchIn(event.details.species, event.details.level,
                 event.details.gender, event.status.hp, hpMax, options);
-
-        event.addons.forEach(addon => this.handleAddon(addon));
     }
 
     /**
-     * Handles a BattleEventAddon.
-     * @param addon Addon to process.
-     */
-    private handleAddon(addon: BattleEventAddon): void
-    {
-        switch (addon.type)
-        {
-            case "ability":
-                this.state.teams[this.getSide(addon.id.owner)].active
-                    .baseAbility = addon.ability;
-                break;
-            case "curestatus":
-                this.state.teams[this.getSide(addon.id.owner)].active.cure();
-                break;
-            case "cureteam":
-                this.state.teams[this.getSide(addon.id.owner)].cure();
-                break;
-            case "damage":
-            case "heal":
-            {
-                const side = this.getSide(addon.id.owner);
-                const active = this.state.teams[side].active;
-
-                // side "them" uses hp percentages so hpMax would be omitted
-                const hpMax = side === "us" ? addon.status.hpMax : undefined;
-                active.setHP(addon.status.hp, hpMax);
-                // this should already be covered by the `status` addon but just
-                //  in case
-                active.afflict(addon.status.condition);
-                break;
-            }
-            case "faint":
-            {
-                const side = this.getSide(addon.id.owner);
-                this.state.teams[side].active.faint();
-                this.applyReward(side, rewards.faint);
-                break;
-            }
-            case "start":
-            {
-                const mon = this.state.teams[this.getSide(addon.id.owner)]
-                    .active;
-                switch (addon.volatile)
-                {
-                    case "confusion":
-                        mon.confuse(true);
-                        break;
-                }
-                break;
-            }
-            case "status":
-                this.state.teams[this.getSide(addon.id.owner)].active
-                    .afflict(addon.majorStatus);
-                break;
-        }
-        if (addon.cause)
-        {
-            this.handleCause(this.sides[addon.id.owner], addon.cause);
-        }
-    }
-
-    /**
-     * Handles an event or addon Cause.
+     * Handles an event Cause.
      * @param side Side that it takes place.
      * @param cause Cause object.
      */

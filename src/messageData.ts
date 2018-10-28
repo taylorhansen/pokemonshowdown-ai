@@ -6,52 +6,35 @@
 // MessageType
 
 /** Main message type produced by the MessageParser. */
-export type MessageType = "battleinit" | "battleprogress" | StandalonePrefix;
+export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
 
-// StandalonePrefix
-
-/** Set of StandalonePrefixes. */
-export const standalonePrefixes =
+/** Set of EventPrefixes. */
+export const eventPrefixes =
 {
-    challstr: 1, deinit: 2, error: 3, init: 4, request: 5, tie: 6,
-    updatechallenges: 7, updateuser: 8, win: 9
+    "-ability": 1, "-curestatus": 2, "-cureteam": 3, "-damage": 4, drag: 5,
+    faint: 6, "-heal": 7, move: 8, "-start": 9, "-status": 10, switch: 11,
+    tie: 12, win: 13
 };
-/** Message prefixes that can be parsed as a standalone message line. */
-export type StandalonePrefix = keyof typeof standalonePrefixes;
-
-// AddonPrefix
-
-/** Set of AddonPrefixes. */
-export const addonPrefixes =
-{
-    "-ability": 1, "-curestatus": 2, "-cureteam": 3, "-damage": 4, faint: 5,
-    "-heal": 6, "-start": 7, "-status": 8
-};
-/** Message types that are parsed as addons to a major event. */
-export type AddonPrefix = keyof typeof addonPrefixes;
-
+/** Message types that are parsed as battle events. */
+export type EventPrefix = keyof typeof eventPrefixes;
 /**
- * Checks if a value is an AddonPrefix. Usable as a type guard.
+ * Checks if a value is an EventPrefix. Usable as a type guard.
  * @param value Value to check.
- * @returns Whether the value is an AddonPrefix.
+ * @returns Whether the value is an EventPrefix.
  */
-export function isAddonPrefix(value: any): value is AddonPrefix
+export function isEventPrefix(value: any): value is EventPrefix
 {
-    return addonPrefixes.hasOwnProperty(value);
+    return eventPrefixes.hasOwnProperty(value);
 }
-
-// MajorPrefix
 
 /** Set of MajorPrefixes. */
 export const majorPrefixes =
 {
-    challstr: 1, deinit: 2, error: 3, init: 4, move: 5, player: 6,
-    request: 7, switch: 8, teamsize: 9, tie: 10, turn: 11,
-    updatechallenges: 12, updateuser: 13, upkeep: 14, win: 15
+    challstr: 1, deinit: 2, error: 3, init: 4, request: 5, updatechallenges: 6,
+    updateuser: 7
 };
-/** Major message type. */
+/** Message types that are parsed as a single standalone line. */
 export type MajorPrefix = keyof typeof majorPrefixes;
-
 /**
  * Checks if a value is a Majorprefix. Usable as a type guard.
  * @param value Value to check.
@@ -62,11 +45,8 @@ export function isMajorPrefix(value: any): value is MajorPrefix
     return majorPrefixes.hasOwnProperty(value);
 }
 
-// PlayerID type
-
 /** Player ID in a battle. */
 export type PlayerID = "p1" | "p2";
-
 /**
  * Gets the opposite PlayerID of the given one.
  * @param id Given player id.
@@ -80,7 +60,6 @@ export function otherId(id: PlayerID): PlayerID
     }
     return "p1";
 }
-
 /**
  * Checks whether a string is a PlayerID.
  * @param id Value to check.
@@ -94,20 +73,66 @@ export function isPlayerId(id: any): id is PlayerID
 // battle event types
 
 /** Types of events that can happen during battle. */
-export type BattleEvent = MoveEvent | SwitchInEvent;
+export type BattleEvent = AbilityEvent | CureStatusEvent | CureTeamEvent |
+    DamageEvent | FaintEvent | MoveEvent | StartEvent | StatusEvent |
+    SwitchEvent | TieEvent | WinEvent;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
 {
     /** Type of event this is. */
     type: string;
-    /** Provides additional info about the event. */
-    addons: BattleEventAddon[];
     /** Cause of event. */
     cause?: Cause;
 }
 
-/** BattleEvent where a move was used. */
+/** Event addon where a pokemon's ability is revealed and activated. */
+export interface AbilityEvent extends BattleEventBase
+{
+    type: "ability";
+    /** ID of the pokemon. */
+    id: PokemonID;
+    /** Ability being activated. */
+    ability: string;
+}
+
+/** Event where a pokemon's major status is cured. */
+export interface CureStatusEvent extends BattleEventBase
+{
+    type: "curestatus";
+    /** ID of the pokemon being cured. */
+    id: PokemonID;
+    /** Status condition the pokemon is being cured of. */
+    majorStatus: MajorStatus;
+}
+
+/** Event where all of a team's pokemon are cured of major statuses. */
+export interface CureTeamEvent extends BattleEventBase
+{
+    type: "cureteam";
+    /** ID of the pokemon whose team is being cured of a major status. */
+    id: PokemonID;
+}
+
+/** Event where a pokemon is damaged or healed. */
+export interface DamageEvent extends BattleEventBase
+{
+    type: "damage" | "heal";
+    /** ID of the pokemon being damaged. */
+    id: PokemonID;
+    /** New hp/status. */
+    status: PokemonStatus;
+}
+
+/** Event where a pokemon has fainted. */
+export interface FaintEvent extends BattleEventBase
+{
+    type: "faint";
+    /** ID of the pokemon that has fainted. */
+    id: PokemonID;
+}
+
+/** Event where a move was used. */
 export interface MoveEvent extends BattleEventBase
 {
     type: "move";
@@ -119,8 +144,28 @@ export interface MoveEvent extends BattleEventBase
     targetId: PokemonID;
 }
 
-/** BattleEvent where a pokemon was switched in. */
-export interface SwitchInEvent extends BattleEventBase
+/** Event where a volatile status condition has started. */
+export interface StartEvent extends BattleEventBase
+{
+    type: "start";
+    /** ID of the pokemon starting a volatile status. */
+    id: PokemonID;
+    /** Type of volatile status condition. */
+    volatile: string;
+}
+
+/** Event where a pokemon is afflicted with a status. */
+export interface StatusEvent extends BattleEventBase
+{
+    type: "status";
+    /** ID of the pokemon being afflicted with a status condition. */
+    id: PokemonID;
+    /** Status condition being afflicted. */
+    majorStatus: MajorStatus;
+}
+
+/** Event where a pokemon was switched in. */
+export interface SwitchEvent extends BattleEventBase
 {
     type: "switch";
     /** ID of the pokemon being switched in. */
@@ -131,92 +176,27 @@ export interface SwitchInEvent extends BattleEventBase
     status: PokemonStatus;
 }
 
+/** Event indicating that the game has ended in a tie. */
+export interface TieEvent extends BattleEventBase
+{
+    type: "tie";
+}
+
+/** Event indicating that the game has ended with a winner. */
+export interface WinEvent extends BattleEventBase
+{
+    type: "win";
+    /** Username of the winner. */
+    winner: string;
+}
+
 /** Contains minor events that happen at the end of a turn. */
 export interface BattleUpkeep
 {
-    /** Provides additional info about the event. */
-    addons: BattleEventAddon[];
-}
-
-// battle event addon types
-
-/** Addon to an event that provides additional info. */
-export type BattleEventAddon = AbilityAddon | CureStatusAddon | CureTeamAddon |
-    DamageAddon | FaintAddon | StartAddon | StatusAddon;
-
-/** Base class for BattleEventAddons. */
-interface AddonBase
-{
-    /** The type of addon this is. */
-    type: string;
-    /** Cause of addon. */
-    cause?: Cause;
-}
-
-/** Event addon where a pokemon's ability is revealed and activated. */
-export interface AbilityAddon extends AddonBase
-{
-    type: "ability";
-    /** ID of the pokemon. */
-    id: PokemonID;
-    /** Ability being activated. */
-    ability: string;
-}
-
-/** Event addon where a pokemon's major status is cured. */
-export interface CureStatusAddon extends AddonBase
-{
-    type: "curestatus";
-    /** ID of the pokemon being cured. */
-    id: PokemonID;
-    /** Status condition the pokemon is being cured of. */
-    majorStatus: MajorStatus;
-}
-
-/** Event addon where all of a team's pokemon are cured of major statuses. */
-export interface CureTeamAddon extends AddonBase
-{
-    type: "cureteam";
-    /** ID of the pokemon whose team is being cured of a major status. */
-    id: PokemonID;
-}
-
-/** Event addon where a pokemon is damaged or healed. */
-export interface DamageAddon extends AddonBase
-{
-    type: "damage" | "heal";
-    /** ID of the pokemon being damaged. */
-    id: PokemonID;
-    /** New hp/status. */
-    status: PokemonStatus;
-}
-
-/** Event addon where a pokemon has fainted. */
-export interface FaintAddon extends AddonBase
-{
-    type: "faint";
-    /** ID of the pokemon that has fainted. */
-    id: PokemonID;
-}
-
-/** Event addon where a volatile status condition has started. */
-export interface StartAddon extends AddonBase
-{
-    type: "start";
-    /** ID of the pokemon starting a volatile status. */
-    id: PokemonID;
-    /** Type of volatile status condition. */
-    volatile: string;
-}
-
-/** Event addon where a pokemon is afflicted with a status. */
-export interface StatusAddon extends AddonBase
-{
-    type: "status";
-    /** ID of the pokemon being afflicted with a status condition. */
-    id: PokemonID;
-    /** Status condition being afflicted. */
-    majorStatus: MajorStatus;
+    /** Events before the upkeep message. */
+    pre: BattleEvent[];
+    /** Events after the upkeep message. */
+    post: BattleEvent[];
 }
 
 // battle event cause types

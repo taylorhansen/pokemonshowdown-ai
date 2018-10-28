@@ -1,6 +1,5 @@
-import { BattleEvent, BattleUpkeep, MajorStatus, MessageType, PlayerID,
-    PokemonDetails, PokemonID, PokemonStatus, RequestActive, RequestSide,
-    RoomType, SwitchInEvent } from "./messageData";
+import { BattleEvent, BattleUpkeep, MessageType, PlayerID, RequestActive,
+    RequestSide, RoomType } from "./messageData";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -19,10 +18,8 @@ export class AnyMessageListener
         error: new MessageListener<"error">(),
         init: new MessageListener<"init">(),
         request: new MessageListener<"request">(),
-        tie: new MessageListener<"tie">(),
         updatechallenges: new MessageListener<"updatechallenges">(),
-        updateuser: new MessageListener<"updateuser">(),
-        win: new MessageListener<"win">()
+        updateuser: new MessageListener<"updateuser">()
     };
 
     /**
@@ -85,6 +82,7 @@ class MessageListener<T extends MessageType>
 export type MessageHandler<T extends MessageType> =
     (args: MessageArgs<T>) => void;
 
+/** Argument object type for MessageHandlers. */
 export type MessageArgs<T extends MessageType> =
     T extends "battleinit" ? BattleInitArgs
     : T extends "battleprogress" ? BattleProgressArgs
@@ -93,10 +91,8 @@ export type MessageArgs<T extends MessageType> =
     : T extends "error" ? ErrorArgs
     : T extends "init" ? InitArgs
     : T extends "request" ? RequestArgs
-    : T extends "tie" ? TieArgs
     : T extends "updatechallenges" ? UpdateChallengesArgs
     : T extends "updateuser" ? UpdateUserArgs
-    : T extends "win" ? WinArgs
     : {};
 
 /** Args for a `battleinit` message type. */
@@ -112,8 +108,8 @@ export interface BattleInitArgs
     gameType: string;
     /** Cartridge generation. */
     gen: number;
-    /** Initial switchins. */
-    switchIns: SwitchInEvent[];
+    /** Initial events. */
+    events: BattleEvent[];
 }
 
 /** Args for a `battleprogress` message type. */
@@ -130,49 +126,6 @@ export interface BattleProgressArgs
     upkeep?: BattleUpkeep;
     /** New turn number. If present, a new turn has started. */
     turn?: number;
-}
-
-/** Args for a `-curestatus` message. */
-export interface CureStatusArgs
-{
-    /** ID of the pokemon being cured. */
-    id: PokemonID;
-    /** Status condition the pokemon is being cured of. */
-    condition: MajorStatus;
-}
-
-/** Args for a `-cureteam` message. */
-export interface CureTeamArgs
-{
-    /** ID of the pokemon whose team is being cured of status conditions. */
-    id: PokemonID;
-}
-
-/** Args for a `-damage` message. */
-export interface DamageArgs
-{
-    /** ID of the pokemon being damaged. */
-    id: PokemonID;
-    /** HP and any status conditions. */
-    status: PokemonStatus;
-}
-
-/** Args for a `-heal` message. */
-export interface HealArgs
-{
-    /** ID of the pokemon being healed. */
-    id: PokemonID;
-    /** HP and any status conditions. */
-    status: PokemonStatus;
-}
-
-/** Args for a `-status` message. */
-export interface StatusArgs
-{
-    /** ID of the pokemon being afflicted with a status condition. */
-    id: PokemonID;
-    /** Status condition being afflicted. */
-    condition: MajorStatus;
 }
 
 /** Args for a `challstr` message. */
@@ -194,47 +147,11 @@ export interface ErrorArgs
     reason: string;
 }
 
-/** Args for a `faint` message. */
-export interface FaintArgs
-{
-    /** ID of the pokemon that has fainted. */
-    id: PokemonID;
-}
-
 /** Args for an `init` message. */
 export interface InitArgs
 {
     /** Type of room we're joining. */
     type: RoomType;
-}
-
-/** Args for a `move` message. */
-export interface MoveArgs
-{
-    /** ID of the pokemon using a move. */
-    id: PokemonID;
-    /** Name of the move. Should be converted into an id name afterwards. */
-    move: string;
-    /** Target pokemon ID. */
-    target: PokemonID;
-    /**
-     * ID name of an effect that caused the move to be used. Empty string means
-     * no effect.
-     */
-    effect: string;
-    /** Whether the move missed. */
-    missed: boolean;
-}
-
-/** Args for a `player` message. */
-export interface PlayerArgs
-{
-    /** Player id used in identifying pokemon owner. */
-    id: PlayerID;
-    /** Username of that player. */
-    username: string;
-    /** Avatar id. */
-    avatarId: number;
 }
 
 /** Args for a `request` message. Types the JSON data in the message. */
@@ -250,38 +167,6 @@ export interface RequestArgs
     rqid?: number;
     /** Whether the given request cannot be canceled. */
     noCancel?: boolean;
-}
-
-/** Args for a `switch` message. */
-export interface SwitchArgs
-{
-    /** ID of the pokemon being switched in. */
-    id: PokemonID;
-    /** Some details on species; level; etc. */
-    details: PokemonDetails;
-    /** HP and any status conditions. */
-    status: PokemonStatus;
-}
-
-/** Args for a `teamsize` message. */
-export interface TeamSizeArgs
-{
-    /** Player ID. */
-    id: PlayerID;
-    /** Size of that player's team. */
-    size: number;
-}
-
-/** Args for a `tie` message. */
-export interface TieArgs
-{
-}
-
-/** Args for a `turn` message. */
-export interface TurnArgs
-{
-    /** Current turn number. */
-    turn: number;
 }
 
 /**
@@ -305,16 +190,4 @@ export interface UpdateUserArgs
     username: string;
     /** Whether this is a guest account. */
     isGuest: boolean;
-}
-
-/** Args for an `upkeep` message. */
-export interface UpkeepArgs
-{
-}
-
-/** Args for a `win` message. */
-export interface WinArgs
-{
-    /** Name of the user who won. */
-    username: string;
 }

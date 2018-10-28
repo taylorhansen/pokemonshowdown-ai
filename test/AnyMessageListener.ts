@@ -41,8 +41,6 @@ describe("AnyMessageListener", function()
     shouldHandle("error");
     shouldHandle("init");
     shouldHandle("request");
-    shouldHandle("tie");
     shouldHandle("updatechallenges");
     shouldHandle("updateuser");
-    shouldHandle("win");
 });
