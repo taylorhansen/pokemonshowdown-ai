@@ -56,8 +56,8 @@ export class Battle
     private themCopyVolatile = false;
     /** Accumulated reward during the current turn. */
     private reward = 0;
-    /** Whether the battle has started. */
-    private started = false;
+    /** Whether the battle is still going. */
+    private battling = false;
 
     /**
      * Creates a Battle object.
@@ -115,9 +115,12 @@ export class Battle
             }
             if (args.turn) logger.debug(`new turn: ${args.turn}`);
 
-            logger.debug(`state:\n${this.state.toString()}`);
-            // TODO: don't askAI if waiting for opponent
-            this.askAI();
+            if (this.battling)
+            {
+                logger.debug(`state:\n${this.state.toString()}`);
+                // TODO: don't askAI if waiting for opponent
+                this.askAI();
+            }
         })
         .on("error", /* istanbul ignore next: uses stdin */ args =>
         {
@@ -143,9 +146,9 @@ export class Battle
             }
 
             // first time setup, initialize each of the client's pokemon
-            if (!this.started)
+            if (!this.battling)
             {
-                this.started = true;
+                this.battling = true;
                 for (const data of args.side.pokemon)
                 {
                     const details: PokemonDetails = data.details;
@@ -271,6 +274,7 @@ export class Battle
                 this.handleSwitch(event);
                 break;
             case "tie":
+                this.battling = false;
                 if (this.saveAlways)
                 {
                     logger.debug(`saving ${this.username}`);
@@ -278,6 +282,7 @@ export class Battle
                 }
                 break;
             case "win":
+                this.battling = false;
                 if (this.saveAlways || event.winner === this.username)
                 {
                     // we won
@@ -285,6 +290,8 @@ export class Battle
                     this.ai.save();
                 }
                 break;
+            default:
+                logger.error(`Unhandled message type ${event!.type}`);
         }
         if (event.cause && event.type !== "tie" && event.type !== "win")
         {
