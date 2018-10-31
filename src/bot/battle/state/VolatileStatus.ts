@@ -89,7 +89,7 @@ export class VolatileStatus
      */
     public confuse(flag: boolean): void
     {
-        this.confuseTurns = flag ? Math.min(1, this.confuseTurns + 1) : 0;
+        this.confuseTurns = flag ? Math.max(1, this.confuseTurns + 1) : 0;
     }
 
     /**
