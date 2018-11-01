@@ -31,6 +31,8 @@ export class HP
     constructor(isPercent: boolean)
     {
         this.isPercent = isPercent;
+        this._current = 0;
+        this._max = 0;
     }
 
     /**
