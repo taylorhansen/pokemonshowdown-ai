@@ -158,7 +158,7 @@ export class Battle
                             details.gender, status.hp, status.hpMax);
                     mon.item = data.item;
                     mon.baseAbility = data.baseAbility;
-                    mon.setHP(status.hp, status.hpMax);
+                    mon.hp.set(status.hp, status.hpMax);
                     mon.afflict(status.condition);
 
                     // set active status
@@ -244,9 +244,7 @@ export class Battle
                 const side = this.getSide(event.id.owner);
                 const active = this.state.teams[side].active;
 
-                // side "them" uses hp percentages so hpMax would be omitted
-                const hpMax = side === "us" ? event.status.hpMax : undefined;
-                active.setHP(event.status.hp, hpMax);
+                active.hp.set(event.status.hp, event.status.hpMax);
                 // this should already be covered by the `status` event but just
                 //  in case
                 active.afflict(event.status.condition);
@@ -373,11 +371,8 @@ export class Battle
             this.themCopyVolatile = false;
         }
 
-        // hp is a percentage if on the opponent's team
-        const hpMax = side === "us" ? event.status.hpMax : undefined;
-
         team.switchIn(event.details.species, event.details.level,
-                event.details.gender, event.status.hp, hpMax, options);
+            event.details.gender, event.status.hp, event.status.hpMax, options);
     }
 
     /**

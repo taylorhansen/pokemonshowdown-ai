@@ -76,6 +76,8 @@ export class Pokemon
 
     /** Pokemon's gender. */
     public gender: string | null;
+    /** Info about the pokemon's hit points. */
+    public readonly hp: HP;
 
     /** Whether this is the current active pokemon. */
     private _active: boolean = false;
@@ -102,19 +104,20 @@ export class Pokemon
     private readonly _moves: Move[] = [];
     /** First index of the part of the moveset that is unknown. */
     private unrevealedMove = 0;
-    /** Info about the pokemon's hit points. */
-    private hp: HP = new HP();
     /** Current major status condition. Not cleared on switch. */
     private majorStatus: MajorStatus = "";
     /** Minor status conditions. Cleared on switch. */
     private volatileStatus = new VolatileStatus();
 
-    /** Creates a Pokemon. */
-    constructor()
+    /**
+     * Creates a Pokemon.
+     * @param hpPercent Whether to report HP as a percentage.
+     */
+    constructor(hpPercent: boolean)
     {
+        this.hp = new HP(hpPercent);
         this._active = false;
 
-        // initialize moveset
         for (let i = 0; i < 4; ++i)
         {
             this._moves[i] = new Move();
@@ -129,18 +132,9 @@ export class Pokemon
      */
     public static getArraySize(active: boolean): number
     {
-        // gender
-        return 2 +
-            dex.numPokemon +
-            dex.numItems +
-            // base ability
-            2 +
-            // level
-            1 +
-            Move.getArraySize() * 4 +
-            HP.getArraySize() +
-            // major statuses excluding empty status
-            Object.keys(majorStatuses).length - 1 +
+        return /*gender*/2 + dex.numPokemon + dex.numItems + /*baseAbility*/2 +
+            /*level*/1 + Move.getArraySize() * 4 + HP.getArraySize() +
+            /*majorStatus except empty*/Object.keys(majorStatuses).length - 1 +
             (active ? VolatileStatus.getArraySize() : 0);
     }
 
@@ -211,18 +205,7 @@ export class Pokemon
     /** Tells the pokemon that it has fainted. */
     public faint(): void
     {
-        this.setHP(0, 0);
-    }
-
-    /**
-     * Sets the pokemon's HP.
-     * @param current Current HP.
-     * @param max Maximum HP. Omit to assume a percentage.
-     */
-    public setHP(current: number, max?: number): void
-    {
-        this.hp = new HP(max);
-        this.hp.current = current;
+        this.hp.set(0, 0);
     }
 
     /**

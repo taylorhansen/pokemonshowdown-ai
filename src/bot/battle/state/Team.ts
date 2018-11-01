@@ -1,3 +1,4 @@
+import { Side } from "./BattleState";
 import { Pokemon } from "./Pokemon";
 
 /** Options for switchin methods. */
@@ -16,7 +17,7 @@ export class Team
     /** Gets the active pokemon. */
     public get active(): Pokemon
     {
-        return this.pokemon[0];
+        return this._pokemon[0];
     }
 
     /**
@@ -34,16 +35,26 @@ export class Team
         // clear pokemon array
         for (let i = 0 ; i < Team.MAX_SIZE; ++i)
         {
-            this.pokemon[i] = new Pokemon();
+            this._pokemon[i] = new Pokemon(/*hpPercent*/ this.side === "them");
         }
         this.unrevealed = 0;
     }
 
     /** The pokemon that compose this team. First one is always active. */
-    public readonly pokemon = new Array<Pokemon>(Team.MAX_SIZE);
+    public get pokemon(): ReadonlyArray<Pokemon>
+    {
+        return this._pokemon;
+    }
+
+    /** List of pokemon. */
+    private readonly _pokemon = new Array<Pokemon>(Team.MAX_SIZE);
+    /** Team size for this battle. */
+    private _size = 0;
 
     /** Team-related status conditions. */
     private readonly status: TeamStatus = new TeamStatus();
+    private readonly side: Side;
+
     /**
      * Index of the next pokemon that hasn't been revealed to the user yet.
      * Indexes to the `pokemon` field after or equal to this value point to
@@ -51,8 +62,94 @@ export class Team
      * yet.
      */
     private unrevealed = 0;
-    /** Team size for this battle. */
-    private _size = 0;
+
+    public constructor(side: Side)
+    {
+        this.side = side;
+    }
+
+    /**
+     * Indicates that a new pokemon has been switched in and will replace the
+     * current active pokemon.
+     * @param species Species name.
+     * @param level Pokemon's level.
+     * @param gender Pokemon's gender.
+     * @param hp Current HP.
+     * @param hpMax Maximum HP.
+     * @param options Circumstances of switchin.
+     * @returns The new active pokemon, or null if invalid.
+     */
+    public switchIn(species: string, level: number,
+        gender: string | null, hp: number, hpMax: number,
+        options: SwitchInOptions = {}): Pokemon | null
+    {
+        let index = this._pokemon.findIndex(mon => mon.species === species);
+        if (index < 0)
+        {
+            // revealing a new pokemon
+            index = this.revealIndex(species, level, gender, hp, hpMax);
+        }
+
+        // early return: trying to access an invalid pokemon
+        if (index < 0 || index >= this.unrevealed) return null;
+
+        // switch active status
+        const volatile = this.active.switchOut();
+        this._pokemon[index].switchIn(
+                options.copyVolatile ? volatile : undefined);
+
+        const tmp = this._pokemon[0];
+        this._pokemon[0] = this._pokemon[index];
+        this._pokemon[index] = tmp;
+        return this.active;
+    }
+
+    /**
+     * Indicates that a new pokemon has been revealed.
+     * @param species Species name.
+     * @param level Pokemon's level.
+     * @param gender Pokemon's gender.
+     * @param hp Current HP.
+     * @param hpMax Maximum HP.
+     * @returns The new pokemon.
+     */
+    public reveal(species: string, level: number,
+        gender: string | null, hp: number, hpMax: number): Pokemon
+    {
+        return this._pokemon[
+                this.revealIndex(species, level, gender, hp, hpMax)];
+    }
+
+    /**
+     * Indicates that a new pokemon has been revealed.
+     * @param species Species name.
+     * @param level Pokemon's level.
+     * @param gender Pokemon's gender.
+     * @param hp Current HP.
+     * @param hpMax Maximum HP.
+     * @returns The index of the new pokemon.
+     */
+    private revealIndex(species: string, level: number,
+        gender: string | null, hp: number, hpMax: number): number
+    {
+        this._pokemon[this.unrevealed] =
+            new Pokemon(/*hpPercent*/ this.side === "them");
+
+        // initialize new pokemon
+        const newMon = this._pokemon[this.unrevealed];
+        newMon.species = species;
+        newMon.level = level;
+        newMon.gender = gender;
+        newMon.hp.set(hp, hpMax);
+
+        return this.unrevealed++;
+    }
+
+    /** Cures all pokemon of any major status conditions. */
+    public cure(): void
+    {
+        this._pokemon.forEach(mon => mon.cure());
+    }
 
     /**
      * Gets the size of the return value of `toArray()`.
@@ -80,92 +177,10 @@ export class Team
         [
             this._size,
             ...([] as number[]).concat(
-                ...this.pokemon.map(mon => mon.toArray())),
+                ...this._pokemon.map(mon => mon.toArray())),
             ...this.status.toArray()
         ];
         return a;
-    }
-
-    /**
-     * Indicates that a new pokemon has been switched in and will replace the
-     * current active pokemon.
-     * @param species Species name.
-     * @param level Pokemon's level.
-     * @param gender Pokemon's gender.
-     * @param hp Current HP.
-     * @param hpMax Maximum HP. Omit to assume percentage.
-     * @param options Circumstances of switchin.
-     * @returns The new active pokemon, or null if invalid.
-     */
-    public switchIn(species: string, level: number,
-        gender: string | null, hp: number, hpMax?: number,
-        options: SwitchInOptions = {}): Pokemon | null
-    {
-        let index = this.pokemon.findIndex(mon => mon.species === species);
-        if (index < 0)
-        {
-            // revealing a new pokemon
-            index = this.revealIndex(species, level, gender, hp, hpMax);
-        }
-
-        // early return: trying to access an invalid pokemon
-        if (index < 0 || index >= this.unrevealed) return null;
-
-        // switch active status
-        const volatile = this.active.switchOut();
-        this.pokemon[index].switchIn(
-                options.copyVolatile ? volatile : undefined);
-
-        const tmp = this.pokemon[0];
-        this.pokemon[0] = this.pokemon[index];
-        this.pokemon[index] = tmp;
-        return this.active;
-    }
-
-    /**
-     * Indicates that a new pokemon has been revealed.
-     * @param species Species name.
-     * @param level Pokemon's level.
-     * @param gender Pokemon's gender.
-     * @param hp Current HP.
-     * @param hpMax Maximum HP. Omit to assume percentage.
-     * @returns The new pokemon.
-     */
-    public reveal(species: string, level: number,
-        gender: string | null, hp: number, hpMax?: number): Pokemon
-    {
-        return this.pokemon[
-                this.revealIndex(species, level, gender, hp, hpMax)];
-    }
-
-    /**
-     * Indicates that a new pokemon has been revealed.
-     * @param species Species name.
-     * @param level Pokemon's level.
-     * @param gender Pokemon's gender.
-     * @param hp Current HP.
-     * @param hpMax Maximum HP. Omit to assume percentage.
-     * @returns The index of the new pokemon.
-     */
-    private revealIndex(species: string, level: number,
-        gender: string | null, hp: number, hpMax?: number): number
-    {
-        this.pokemon[this.unrevealed] = new Pokemon();
-
-        // initialize new pokemon
-        const newMon = this.pokemon[this.unrevealed];
-        newMon.species = species;
-        newMon.level = level;
-        newMon.gender = gender;
-        newMon.setHP(hp, hpMax);
-
-        return this.unrevealed++;
-    }
-
-    /** Cures all pokemon of any major status conditions. */
-    public cure(): void
-    {
-        this.pokemon.forEach(mon => mon.cure());
     }
 
     /**
@@ -178,7 +193,7 @@ export class Team
         const s = " ".repeat(indent);
         return `\
 ${s}status: ${this.status.toString()}
-${this.pokemon.map(
+${this._pokemon.map(
         (mon, i) => `${s}mon${i + 1}:${i < this.unrevealed ?
                 `\n${mon.toString(indent + 4)}` : " <unrevealed>"}`)
     .join("\n")}`;

@@ -6,17 +6,11 @@ export class HP
     {
         return this._current;
     }
-    public set current(hp: number)
-    {
-        this._current = Math.min(Math.max(0, hp), this._max);
-    }
 
     /** Maximum HP. */
-    public set max(max: number)
+    public get max(): number
     {
-        this._max = max;
-        // re-check bounds
-        this.current = this._current;
+        return this._max;
     }
 
     /**
@@ -32,22 +26,22 @@ export class HP
 
     /**
      * Creates a full HP object.
-     * @param max Maximum HP. If omitted, this is assumed to be a percentage.
+     * @param isPercent Whether this HP is to be reported as a percentage.
      */
-    constructor(max?: number)
+    constructor(isPercent: boolean)
     {
-        if (max !== undefined)
-        {
-            this._current = max;
-            this._max = max;
-            this.isPercent = false;
-        }
-        else
-        {
-            this._current = 100;
-            this._max = 100;
-            this.isPercent = true;
-        }
+        this.isPercent = isPercent;
+    }
+
+    /**
+     * Sets the HP.
+     * @param current Current HP.
+     * @param max Maximum HP.
+     */
+    public set(current: number, max: number): void
+    {
+        this._max = max;
+        this._current = Math.min(Math.max(0, current), this._max);
     }
 
     /**
@@ -57,8 +51,7 @@ export class HP
      */
     public static getArraySize(): number
     {
-        // current + max
-        return 1 + 1;
+        return /*current*/1 + /*max*/1;
     }
 
     /**
