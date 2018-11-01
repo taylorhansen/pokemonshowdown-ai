@@ -11,12 +11,6 @@ import { BattleState, otherSide, Side } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
 import { SwitchInOptions } from "./state/Team";
 
-/** Holds the reward values for different events. */
-const rewards =
-{
-    faint: -10
-};
-
 /**
  * Sends a Choice to the server.
  * @param choice Choice to send.
@@ -26,17 +20,17 @@ export type ChoiceSender = (choice: Choice) => void;
 /** Manages the battle state and the AI. */
 export abstract class Battle
 {
-    /** Client's username. */
-    private readonly username: string;
     /**
      * True if the AI model should always be saved at the end, or false if that
      * should happen if it wins.
      */
     public saveAlways = true;
+    /** Tracks the currently known state of the battle. */
+    protected readonly state: BattleState;
+    /** Client's username. */
+    private readonly username: string;
     /** Used to send the AI's choice to the server. */
     private readonly sender: ChoiceSender;
-    /** Manages battle state for AI input. */
-    private readonly state: BattleState;
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -46,8 +40,6 @@ export abstract class Battle
     private selfSwitch: SelfSwitch = false;
     /** Whether the opponent is using a move that copies volatile status. */
     private themCopyVolatile = false;
-    /** Accumulated reward during the current turn. */
-    private reward = 0;
     /** Whether the battle is still going. */
     private battling = false;
 
@@ -182,14 +174,11 @@ export abstract class Battle
 
     /**
      * Decides what to do next.
-     * @param state Current state of the battle.
      * @param choices The set of possible choices that can be made.
-     * @param reward Reward accumulated from the last action.
      * @returns A Promise to compute the command to be sent, e.g. `move 1` or
      * `switch 3`.
      */
-    protected abstract decide(state: number[], choices: Choice[],
-        reward: number): Promise<Choice>;
+    protected abstract decide(choices: Choice[]): Promise<Choice>;
 
     /** Saves AI state to storage. */
     protected abstract save(): Promise<void>;
@@ -243,12 +232,8 @@ export abstract class Battle
                 break;
             }
             case "faint":
-            {
-                const side = this.getSide(event.id.owner);
-                this.state.teams[side].active.faint();
-                this.applyReward(side, rewards.faint);
+                this.state.teams[this.getSide(event.id.owner)].active.faint();
                 break;
-            }
             case "move":
                 this.handleMove(event);
                 break;
@@ -392,11 +377,8 @@ export abstract class Battle
     {
         const choices = this.getChoices();
         logger.debug(`choices: [${choices.join(", ")}]`);
-        logger.debug(`accumulated award: ${this.reward}`);
-        const r = this.reward;
-        this.reward = 0;
 
-        const choice = await this.decide(this.state.toArray(), choices, r);
+        const choice = await this.decide(choices);
         this.sender(choice);
     }
 
@@ -460,25 +442,6 @@ export abstract class Battle
         }
 
         return choices;
-    }
-
-    /**
-     * Rewards one side of the battle.
-     * @param side The team that was rewarded for something.
-     * @param reward Value of the reward.
-     */
-    private applyReward(side: Side, reward: number): void
-    {
-        switch (side)
-        {
-            case "us":
-                this.reward += reward;
-                break;
-            case "them":
-                // punish the other side (us)
-                this.reward -= reward;
-                break;
-        }
     }
 }
 

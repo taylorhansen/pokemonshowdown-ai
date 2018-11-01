@@ -5,11 +5,17 @@ import { AnyMessageListener } from "../AnyMessageListener";
 import * as logger from "../logger";
 import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
-import { BattleState } from "./state/BattleState";
+import { BattleState, Side } from "./state/BattleState";
 
 /** Neural network interface. */
 export class Network extends Battle
 {
+    /** Holds the reward values for different events. */
+    private static readonly rewards =
+    {
+        faint: -10
+    };
+
     /** Neural network model. */
     private model: tf.Model;
     /** Number of input neurons. */
@@ -24,6 +30,8 @@ export class Network extends Battle
     private lastChoice?: Choice;
     /** Resolves once the Network is ready to be used. */
     private ready: Promise<any>;
+    /** Accumulated reward during the current turn. */
+    private reward = 0;
 
     /**
      * Creates a Network.
@@ -32,10 +40,11 @@ export class Network extends Battle
      * @param sender Used to send the AI's choice to the server.
      * @param state Optional initial battle state.
      */
-    constructor(username: string,
-        listener: AnyMessageListener, sender: ChoiceSender, state?: BattleState)
+    constructor(username: string, listener: AnyMessageListener,
+        sender: ChoiceSender, state?: BattleState)
     {
         super(username, listener, sender, state);
+
         this.inputLength = BattleState.getArraySize();
         this.path = `${__dirname}/../../../models/latest`;
 
@@ -45,12 +54,36 @@ export class Network extends Battle
             logger.debug("Constructing new model");
             this.constructModel();
         });
+
+        // track reward value
+        listener.on("battleprogress", args =>
+            args.events.concat(args.upkeep ?
+                    args.upkeep.pre.concat(args.upkeep.post) : [])
+                .forEach(event =>
+        {
+            if (event.type === "faint")
+            {
+                this.applyReward(this.getSide(event.id.owner),
+                    Network.rewards.faint);
+            }
+        }));
+    }
+
+    /**
+     * Rewards one side of the battle.
+     * @param side The team that was rewarded for something.
+     * @param reward Value of the reward.
+     */
+    private applyReward(side: Side, reward: number): void
+    {
+        // reward one side = punish on the other
+        this.reward += reward * (side === "us" ? 1 : -1);
     }
 
     /** @override */
-    public async decide(state: number[], choices: Choice[], reward: number):
-        Promise<Choice>
+    public async decide(choices: Choice[]): Promise<Choice>
     {
+        const state = this.state.toArray();
         await this.ready;
 
         if (state.length > this.inputLength)
@@ -85,14 +118,15 @@ expected ${this.inputLength}`);
 
         if (this.lastState && this.lastPrediction && this.lastChoice)
         {
-            logger.debug("applying reward");
+            logger.debug(`applying reward: ${this.reward}`);
             // apply the Q learning update rule
             const discount = 0.8;
             const nextMaxReward = discount * bestChoice.reward;
 
             const target = predictionData;
-            target[choiceIds[this.lastChoice]] = reward + nextMaxReward;
+            target[choiceIds[this.lastChoice]] = this.reward + nextMaxReward;
 
+            this.reward = 0;
             this.ready =
                 this.model.fit(this.lastState, Network.toColumn(target));
         }
