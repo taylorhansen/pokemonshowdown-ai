@@ -1,8 +1,8 @@
-import * as logger from "../logger";
-import { Parser } from "../parser/Parser";
 import { Choice } from "./battle/ai/Choice";
 import { Network } from "./battle/ai/Network";
 import { Battle } from "./battle/Battle";
+import * as logger from "./logger";
+import { Parser } from "./parser/Parser";
 
 /** Handles all bot actions. */
 export class Bot

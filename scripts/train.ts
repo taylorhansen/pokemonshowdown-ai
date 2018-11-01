@@ -2,9 +2,9 @@
 import { Network } from "../src/bot/battle/ai/Network";
 import { Battle } from "../src/bot/battle/Battle";
 import { Bot } from "../src/bot/Bot";
-import * as logger from "../src/logger";
-import { PlayerID } from "../src/messageData";
-import { MessageParser } from "../src/parser/MessageParser";
+import * as logger from "../src/bot/logger";
+import { PlayerID } from "../src/bot/messageData";
+import { MessageParser } from "../src/bot/parser/MessageParser";
 // @ts-ignore
 import s = require("./Pokemon-Showdown/sim/battle-stream");
 

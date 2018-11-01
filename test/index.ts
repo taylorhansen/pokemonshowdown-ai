@@ -1,4 +1,4 @@
-import { disable } from "../src/logger";
+import { disable } from "../src/bot/logger";
 import "./AnyMessageListener";
 import "./bot/battle/Battle";
 import "./bot/Bot";

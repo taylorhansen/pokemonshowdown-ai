@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { AnyMessageListener, MessageArgs } from "../src/AnyMessageListener";
-import { MessageType } from "../src/messageData";
+import { AnyMessageListener, MessageArgs } from "../src/bot/AnyMessageListener";
+import { MessageType } from "../src/bot/messageData";
 
 describe("AnyMessageListener", function()
 {

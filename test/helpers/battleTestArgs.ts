@@ -1,8 +1,8 @@
 /** @file Contains test arguments for battle messages. */
 import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
-    "../../src/AnyMessageListener";
+    "../../src/bot/AnyMessageListener";
 import { BattleEvent, Cause, PokemonDetails, PokemonID, PokemonStatus } from
-    "../../src/messageData";
+    "../../src/bot/messageData";
 
 export const username: string[] = ["user1", "user2"];
 

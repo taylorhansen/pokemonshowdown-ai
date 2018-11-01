@@ -1,6 +1,6 @@
-import { dex } from "../../../data/dex";
-import { PokemonData } from "../../../data/dex-types";
-import { MajorStatus, majorStatuses } from "../../../messageData";
+import { MajorStatus, majorStatuses } from "../../messageData";
+import { dex } from "../dex/dex";
+import { PokemonData } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Move } from "./Move";
 import { VolatileStatus } from "./VolatileStatus";

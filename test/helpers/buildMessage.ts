@@ -1,7 +1,7 @@
 import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
-    "../../src/AnyMessageListener";
+    "../../src/bot/AnyMessageListener";
 import { BattleEvent, BattleUpkeep, Cause, PokemonDetails, PokemonID,
-    PokemonStatus } from "../../src/messageData";
+    PokemonStatus } from "../../src/bot/messageData";
 
 /**
  * Creates an unparsed server message.

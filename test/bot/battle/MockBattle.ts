@@ -1,7 +1,7 @@
-import { AnyMessageListener } from "../../../src/AnyMessageListener";
+import { AnyMessageListener } from "../../../src/bot/AnyMessageListener";
 import { Battle, ChoiceSender } from "../../../src/bot/battle/Battle";
 import { BattleState, Side } from "../../../src/bot/battle/state/BattleState";
-import { PlayerID } from "../../../src/messageData";
+import { PlayerID } from "../../../src/bot/messageData";
 import { MockAI } from "./ai/MockAI";
 
 /** Mocks the Battle class to get access to certain fields. */

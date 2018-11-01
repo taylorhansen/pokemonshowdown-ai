@@ -1,13 +1,13 @@
 import * as readline from "readline";
-import { AnyMessageListener } from "../../AnyMessageListener";
-import { dex } from "../../data/dex";
-import { SelfSwitch } from "../../data/dex-types";
-import * as logger from "../../logger";
+import { AnyMessageListener } from "../AnyMessageListener";
+import * as logger from "../logger";
 import { BattleEvent, Cause, MoveEvent, otherId, PlayerID,
     PokemonDetails, PokemonStatus, RequestMove, SwitchEvent } from
-    "../../messageData";
+    "../messageData";
 import { AI, AIConstructor } from "./ai/AI";
 import { Choice } from "./ai/Choice";
+import { dex } from "./dex/dex";
+import { SelfSwitch } from "./dex/dex-types";
 import { BattleState, otherSide, Side } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
 import { SwitchInOptions } from "./state/Team";

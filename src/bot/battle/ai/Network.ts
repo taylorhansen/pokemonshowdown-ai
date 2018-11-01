@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
 import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
 import "@tensorflow/tfjs-node";
-import * as logger from "../../../logger";
+import * as logger from "../../logger";
 import { AI } from "./AI";
 import { Choice, choiceIds, intToChoice } from "./Choice";
 

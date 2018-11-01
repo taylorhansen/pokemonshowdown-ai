@@ -1,8 +1,8 @@
 /* istanbul ignore file */
 import { client as WebSocketClient } from "websocket";
 import { Bot } from "./bot/Bot";
-import * as logger from "./logger";
-import { MessageParser } from "./parser/MessageParser";
+import * as logger from "./bot/logger";
+import { MessageParser } from "./bot/parser/MessageParser";
 
 const ws = new WebSocketClient();
 ws.on("connect", connection =>

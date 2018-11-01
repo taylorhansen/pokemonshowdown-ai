@@ -1,4 +1,4 @@
-import { dex } from "../../../data/dex";
+import { dex } from "../dex/dex";
 
 /** Information about a certain move. */
 export class Move

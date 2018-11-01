@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { otherId } from "../src/messageData";
+import { otherId } from "../src/bot/messageData";
 
 /**
  * Describes a test case given to a function.
