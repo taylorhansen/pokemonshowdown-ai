@@ -81,9 +81,20 @@ export class Network extends Battle
     }
 
     /** @override */
-    public async decide(choices: Choice[]): Promise<Choice>
+    public decide(choices: Choice[]): Promise<Choice>
     {
-        const state = this.state.toArray();
+        return this.decideImpl(this.state.toArray(), choices);
+    }
+
+    /**
+     * Async implementation of `decide()`.
+     * @param state Serialized state.
+     * @param choices Possible choices.
+     * @returns A Promise to compute the command ot be sent.
+     */
+    private async decideImpl(state: number[], choices: Choice[]):
+        Promise<Choice>
+    {
         await this.ready;
 
         if (state.length > this.inputLength)

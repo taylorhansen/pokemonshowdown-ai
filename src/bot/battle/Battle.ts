@@ -320,8 +320,7 @@ export abstract class Battle
         }
         else if (side === "them" && selfSwitch === "copyvolatile")
         {
-            // remember to copy volatile status data for the opponent's
-            //  switchin
+            // remember to copy volatile status data for the opponent's switchin
             this.themCopyVolatile = true;
         }
     }
