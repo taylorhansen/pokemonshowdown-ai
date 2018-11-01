@@ -1,5 +1,6 @@
 /* istanbul ignore file */
 import { client as WebSocketClient } from "websocket";
+import { Battle } from "./bot/battle/Battle";
 import { Bot } from "./bot/Bot";
 import * as logger from "./bot/logger";
 import { MessageParser } from "./bot/parser/MessageParser";
@@ -13,6 +14,7 @@ ws.on("connect", connection =>
     function send(response: string): void { connection.sendUTF(response); }
 
     const bot = new Bot(parser, send);
+    bot.addFormat("gen4randombattle", Battle);
 
     connection.on("error", error =>
     {

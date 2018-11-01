@@ -7,8 +7,9 @@ import { Parser } from "./parser/Parser";
 /** Handles all bot actions. */
 export class Bot
 {
-    /** Allowed formats to play in. */
-    public static readonly format = "gen4randombattle";
+    /** Supported formats and the object constructors to handle them. */
+    private readonly formats: {[format: string]: typeof Battle | undefined} =
+        {};
 
     /** Parses server messages. */
     private readonly parser: Parser;
@@ -37,48 +38,15 @@ export class Bot
         this.parser
         .on(null, "init", args =>
         {
-            if (args.type === "battle")
+            if (args.type === "battle" &&
+                !this.battles.hasOwnProperty(this.room))
             {
-                // initialize a new battle ai
-                if (!this.battles.hasOwnProperty(this.room))
-                {
-                    // need a copy of the current room so the addResponses
-                    //  lambda captures that and not a reference to `this`
-                    const room = this.room;
-                    let rqid: number; // request id used for validation
-                    function sender(choice: Choice): void
-                    {
-                        this.addResponses(room, `|/choose ${choice}|${rqid}`);
-                    }
-
-                    const listener = this.parser.getListener(room);
-
-                    const battle = new Battle(Network, this.username,
-                        /*saveAlways*/ true, listener, sender);
-                    this.battles[this.room] = battle;
-
-                    // once the battle's over we can respectfully leave
-                    listener
-                    .on("battleprogress", a => a.events
-                        // look through all events
-                        .concat(a.upkeep ?
-                            a.upkeep.pre.concat(a.upkeep.post) : [])
-                        .forEach(event =>
-                            // once the game ends, be a little sportsmanlike
-                            ["tie", "win"].includes(event.type) ?
-                                this.addResponses(room, "|gg", "|/leave")
-                                : undefined))
-                    .on("deinit", () =>
-                    {
-                        this.parser.removeListener(room);
-                        delete this.battles[this.room];
-                    })
-                    .on("request", a =>
-                    {
-                        // update rqid to verify our choice
-                        if (a.rqid) rqid = a.rqid;
-                    });
-                }
+                // joining a new battle
+                // room names follow the format battle-<format>-<id>
+                const format = this.room.split("-")[1];
+                const battleCtor = this.formats[format];
+                if (battleCtor) this.initBattle(this.room, battleCtor);
+                else logger.error(`Unsupported format ${format}`);
             }
         })
         .on("", "updatechallenges", args =>
@@ -87,7 +55,7 @@ export class Bot
             {
                 if (args.challengesFrom.hasOwnProperty(user))
                 {
-                    if (args.challengesFrom[user] === Bot.format)
+                    if (this.formats.hasOwnProperty(args.challengesFrom[user]))
                     {
                         this.addResponses(null, `|/accept ${user}`);
                     }
@@ -102,6 +70,54 @@ export class Bot
         {
             this.username = args.username;
         });
+    }
+
+    /**
+     * Starts a new battle.
+     * @param room Room that the battle is starting in.
+     * @param battleCtor AI to be used.
+     */
+    private initBattle(room: string, battleCtor: typeof Battle): void
+    {
+        let rqid: number; // request id used for validation
+        function sender(choice: Choice): void
+        {
+            this.addResponses(room, `|/choose ${choice}|${rqid}`);
+        }
+        const listener = this.parser.getListener(room);
+
+        const battle = new battleCtor(Network, this.username,
+            /*saveAlways*/ true, listener, sender);
+        this.battles[this.room] = battle;
+
+        // once the battle's over we can respectfully leave
+        listener.on("battleprogress", args => args.events
+            // look through all events
+            .concat(args.upkeep ? args.upkeep.pre.concat(args.upkeep.post) : [])
+            .forEach(event =>
+                // once the game ends, be a little sportsmanlike
+                ["tie", "win"].includes(event.type) ?
+                    this.addResponses(room, "|gg", "|/leave") : undefined))
+        .on("deinit", () =>
+        {
+            this.parser.removeListener(room);
+            delete this.battles[this.room];
+        })
+        .on("request", args =>
+        {
+            // update rqid to verify our choice
+            if (args.rqid) rqid = args.rqid;
+        });
+    }
+
+    /**
+     * Adds a supported battle format.
+     * @param format Format id name.
+     * @param battleCtor AI to be used for this format.
+     */
+    public addFormat(format: string, battleCtor: typeof Battle): void
+    {
+        this.formats[format] = battleCtor;
     }
 
     /**

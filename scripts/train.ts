@@ -9,7 +9,7 @@ import { MessageParser } from "../src/bot/parser/MessageParser";
 import s = require("./Pokemon-Showdown/sim/battle-stream");
 
 const streams = s.getPlayerStreams(new s.BattleStream());
-streams.omniscient.write(`>start {"formatid":"${Bot.format}"}`);
+streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
 for (const id of ["p1", "p2"] as PlayerID[])
 {
