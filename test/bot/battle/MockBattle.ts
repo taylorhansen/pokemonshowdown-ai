@@ -1,23 +1,21 @@
-import { AnyMessageListener } from "../../../src/bot/AnyMessageListener";
-import { Battle, ChoiceSender } from "../../../src/bot/battle/Battle";
-import { BattleState, Side } from "../../../src/bot/battle/state/BattleState";
+import { Battle } from "../../../src/bot/battle/Battle";
+import { Choice } from "../../../src/bot/battle/Choice";
+import { Side } from "../../../src/bot/battle/state/BattleState";
 import { PlayerID } from "../../../src/bot/messageData";
-import { MockAI } from "./ai/MockAI";
 
 /** Mocks the Battle class to get access to certain fields. */
 export class MockBattle extends Battle
 {
-    /**
-     * Creates a MockBattle.
-     * @param username Username of the client.
-     * @param listener Used to listen for messages.
-     * @param addResponses Sends responses to the server.
-     * @param state Initial battle state.
-     */
-    constructor(username: string, listener: AnyMessageListener,
-        sender: ChoiceSender, state: BattleState)
+    /** @override */
+    public async decide(state: number[], choices: Choice[], reward: number):
+        Promise<Choice>
     {
-        super(MockAI, username, /*saveAlways*/ true, listener, sender, state);
+        return choices[0];
+    }
+
+    /** @override */
+    public async save(): Promise<void>
+    {
     }
 
     /**

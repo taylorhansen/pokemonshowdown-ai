@@ -1,14 +1,14 @@
 import { expect } from "chai";
 import "mocha";
-import { Battle } from "../../src/bot/battle/Battle";
 import { Bot } from "../../src/bot/Bot";
 import { MockParser } from "../parser/MockParser";
+import { MockBattle } from "./battle/MockBattle";
 
 describe("Bot", function()
 {
     const username = "someuser";
     const format = "gen4randombattle";
-    let mockParser: MockParser;
+    let parser: MockParser;
     let bot: Bot;
     let responses: string[];
 
@@ -23,22 +23,22 @@ describe("Bot", function()
 
     beforeEach("Initialize Bot", function()
     {
-        mockParser = new MockParser();
-        bot = new Bot(mockParser, mockSend);
-        bot.addFormat(format, Battle);
+        parser = new MockParser();
+        bot = new Bot(parser, mockSend);
+        bot.addFormat(format, MockBattle);
         responses = [];
     });
 
     it(`Should accept ${format} challenges`, function()
     {
-        mockParser.handle("updatechallenges",
-           {challengesFrom: {[username]: format}, challengeTo: {}});
+        parser.handle("updatechallenges",
+            {challengesFrom: {[username]: format}, challengeTo: {}});
         expect(responses).to.deep.equal([`|/accept ${username}`]);
     });
 
     it(`Should not accept unsupported challenges`, function()
     {
-        mockParser.handle("updatechallenges",
+        parser.handle("updatechallenges",
            {challengesFrom: {[username]: format + "1"}, challengeTo: {}});
         expect(responses).to.deep.equal([`|/reject ${username}`]);
     });

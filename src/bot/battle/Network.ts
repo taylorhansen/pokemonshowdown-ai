@@ -1,12 +1,14 @@
 import * as tf from "@tensorflow/tfjs";
 import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
 import "@tensorflow/tfjs-node";
-import * as logger from "../../logger";
-import { AI } from "./AI";
+import { AnyMessageListener } from "../AnyMessageListener";
+import * as logger from "../logger";
+import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
+import { BattleState } from "./state/BattleState";
 
 /** Neural network interface. */
-export class Network implements AI
+export class Network extends Battle
 {
     /** Neural network model. */
     private model: tf.Model;
@@ -23,15 +25,23 @@ export class Network implements AI
     /** Resolves once the Network is ready to be used. */
     private ready: Promise<any>;
 
-    /** Creates a Network. */
-    constructor(inputLength: number, path: string)
+    /**
+     * Creates a Network.
+     * @param username Client's username.
+     * @param listener Used to subscribe to server messages.
+     * @param sender Used to send the AI's choice to the server.
+     * @param state Optional initial battle state.
+     */
+    constructor(username: string,
+        listener: AnyMessageListener, sender: ChoiceSender, state?: BattleState)
     {
-        this.inputLength = inputLength;
-        this.path = path;
+        super(username, listener, sender, state);
+        this.inputLength = BattleState.getArraySize();
+        this.path = `${__dirname}/../../../models/latest`;
 
         this.ready = this.load().catch(reason =>
         {
-            logger.error(`error opening model: ${reason}`);
+            logger.error(`Error opening model: ${reason}`);
             logger.debug("Constructing new model");
             this.constructModel();
         });
@@ -101,7 +111,7 @@ expected ${this.inputLength}`);
     }
 
     /** Loads the most recently saved model. */
-    public async load(): Promise<void>
+    private async load(): Promise<void>
     {
         this.model = await tf.loadModel(`file://${this.path}/model.json`);
         this.compileModel();

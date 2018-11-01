@@ -1,7 +1,5 @@
 /** @file Trains the Network AI against itself. */
-import { Network } from "../src/bot/battle/ai/Network";
-import { Battle } from "../src/bot/battle/Battle";
-import { Bot } from "../src/bot/Bot";
+import { Network } from "../src/bot/battle/Network";
 import * as logger from "../src/bot/logger";
 import { PlayerID } from "../src/bot/messageData";
 import { MessageParser } from "../src/bot/parser/MessageParser";
@@ -16,8 +14,9 @@ for (const id of ["p1", "p2"] as PlayerID[])
     // setup each player
     const parser = new MessageParser();
     const listener = parser.getListener("");
-    const battle = new Battle(Network, id, /*saveAlways*/ false, listener,
+    const ai = new Network(id, listener,
             /*sender*/ choice => streams[id].write(choice));
+    ai.saveAlways = false;
     streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
     // parser event loop

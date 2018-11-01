@@ -4,8 +4,7 @@ import * as logger from "../logger";
 import { BattleEvent, Cause, MoveEvent, otherId, PlayerID,
     PokemonDetails, PokemonStatus, RequestMove, SwitchEvent } from
     "../messageData";
-import { AI, AIConstructor } from "./ai/AI";
-import { Choice } from "./ai/Choice";
+import { Choice } from "./Choice";
 import { dex } from "./dex/dex";
 import { SelfSwitch } from "./dex/dex-types";
 import { BattleState, otherSide, Side } from "./state/BattleState";
@@ -25,17 +24,15 @@ const rewards =
 export type ChoiceSender = (choice: Choice) => void;
 
 /** Manages the battle state and the AI. */
-export class Battle
+export abstract class Battle
 {
-    /** Decides what the client should do. */
-    private readonly ai: AI;
     /** Client's username. */
     private readonly username: string;
     /**
      * True if the AI model should always be saved at the end, or false if that
      * should happen if it wins.
      */
-    private readonly saveAlways: boolean;
+    public saveAlways = true;
     /** Used to send the AI's choice to the server. */
     private readonly sender: ChoiceSender;
     /** Manages battle state for AI input. */
@@ -56,21 +53,15 @@ export class Battle
 
     /**
      * Creates a Battle object.
-     * @param aiType Type of AI to use.
      * @param username Client's username.
-     * @param saveAlways True if the AI model should always be saved at the end,
-     * or false if that should happen once it wins.
      * @param listener Used to subscribe to server messages.
      * @param sender Used to send the AI's choice to the server.
      * @param state Optional initial battle state.
      */
-    constructor(aiType: AIConstructor, username: string, saveAlways: boolean,
-        listener: AnyMessageListener, sender: ChoiceSender, state?: BattleState)
+    constructor(username: string, listener: AnyMessageListener,
+        sender: ChoiceSender, state?: BattleState)
     {
-        const path = `${__dirname}/../../../models/latest`;
-        this.ai = new aiType(BattleState.getArraySize(), path);
         this.username = username;
-        this.saveAlways = saveAlways;
         this.sender = sender;
         this.state = state || new BattleState();
 
@@ -190,6 +181,20 @@ export class Battle
     }
 
     /**
+     * Decides what to do next.
+     * @param state Current state of the battle.
+     * @param choices The set of possible choices that can be made.
+     * @param reward Reward accumulated from the last action.
+     * @returns A Promise to compute the command to be sent, e.g. `move 1` or
+     * `switch 3`.
+     */
+    protected abstract decide(state: number[], choices: Choice[],
+        reward: number): Promise<Choice>;
+
+    /** Saves AI state to storage. */
+    protected abstract save(): Promise<void>;
+
+    /**
      * Asks which player id corresponds to which side.
      * @param id Player id.
      * @returns The corresponding Side.
@@ -271,7 +276,7 @@ export class Battle
                 if (this.saveAlways)
                 {
                     logger.debug(`saving ${this.username}`);
-                    this.ai.save();
+                    this.save();
                 }
                 break;
             case "win":
@@ -280,7 +285,7 @@ export class Battle
                 {
                     // we won
                     logger.debug(`saving ${this.username}`);
-                    this.ai.save();
+                    this.save();
                 }
                 break;
             default:
@@ -382,7 +387,7 @@ export class Battle
         }
     }
 
-    /** Asks the AI for what to do next and sends the response. */
+    /** Asks the AI what to do next and sends the response. */
     private async askAI(): Promise<void>
     {
         const choices = this.getChoices();
@@ -391,7 +396,7 @@ export class Battle
         const r = this.reward;
         this.reward = 0;
 
-        const choice = await this.ai.decide(this.state.toArray(), choices, r);
+        const choice = await this.decide(this.state.toArray(), choices, r);
         this.sender(choice);
     }
 
@@ -475,4 +480,10 @@ export class Battle
                 break;
         }
     }
+}
+
+export interface BattleConstructor
+{
+    new(username: string, listener: AnyMessageListener,
+        sender: ChoiceSender, state?: BattleState): Battle;
 }

@@ -1,6 +1,5 @@
-import { Choice } from "./battle/ai/Choice";
-import { Network } from "./battle/ai/Network";
-import { Battle } from "./battle/Battle";
+import { Battle, BattleConstructor } from "./battle/Battle";
+import { Choice } from "./battle/Choice";
 import * as logger from "./logger";
 import { Parser } from "./parser/Parser";
 
@@ -8,8 +7,8 @@ import { Parser } from "./parser/Parser";
 export class Bot
 {
     /** Supported formats and the object constructors to handle them. */
-    private readonly formats: {[format: string]: typeof Battle | undefined} =
-        {};
+    private readonly formats:
+        {[format: string]: BattleConstructor | undefined} = {};
     /** Keeps track of all the battles we're in. */
     private readonly battles: {[room: string]: Battle} = {};
     /** Name of the user. */
@@ -66,7 +65,7 @@ export class Bot
      * @param parser Parser being used.
      * @param battleCtor AI to be used.
      */
-    private initBattle(parser: Parser, battleCtor: typeof Battle): void
+    private initBattle(parser: Parser, battleCtor: BattleConstructor): void
     {
         const room = parser.room;
         let rqid: number; // request id used for validation
@@ -74,8 +73,7 @@ export class Bot
             this.addResponses(room, `|/choose ${choice}|${rqid}`);
         const listener = parser.getListener(room);
 
-        const battle = new battleCtor(Network, this.username,
-            /*saveAlways*/ true, listener, sender);
+        const battle = new battleCtor(this.username, listener, sender);
         this.battles[room] = battle;
 
         // once the battle's over we can respectfully leave
@@ -103,7 +101,7 @@ export class Bot
      * @param format Format id name.
      * @param battleCtor AI to be used for this format.
      */
-    public addFormat(format: string, battleCtor: typeof Battle): void
+    public addFormat(format: string, battleCtor: BattleConstructor): void
     {
         this.formats[format] = battleCtor;
     }
