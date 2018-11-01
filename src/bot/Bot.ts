@@ -45,9 +45,13 @@ export class Bot
                     // need a copy of the current room so the addResponses
                     //  lambda captures that and not a reference to `this`
                     const room = this.room;
-                    const listener = this.parser.getListener(room);
-                    const sender = (choice: Choice, rqid?: number) =>
+                    let rqid: number; // request id used for validation
+                    function sender(choice: Choice): void
+                    {
                         this.addResponses(room, `|/choose ${choice}|${rqid}`);
+                    }
+
+                    const listener = this.parser.getListener(room);
 
                     const battle = new Battle(Network, this.username,
                         /*saveAlways*/ true, listener, sender);
@@ -68,6 +72,11 @@ export class Bot
                     {
                         this.parser.removeListener(room);
                         delete this.battles[this.room];
+                    })
+                    .on("request", a =>
+                    {
+                        // update rqid to verify our choice
+                        if (a.rqid) rqid = a.rqid;
                     });
                 }
             }
@@ -112,10 +121,7 @@ export class Bot
      */
     private addResponses(room: string | null, ...responses: string[]): void
     {
-        if (room)
-        {
-            responses = responses.map(response => room + response);
-        }
+        if (room) responses = responses.map(response => room + response);
         responses.forEach(this.send);
         logger.debug(`sent: ["${responses.join("\", \"")}"]`);
     }

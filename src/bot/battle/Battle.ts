@@ -21,9 +21,8 @@ const rewards =
 /**
  * Sends a Choice to the server.
  * @param choice Choice to send.
- * @param rqid Request ID.
  */
-export type ChoiceSender = (choice: Choice, rqid?: number) => void;
+export type ChoiceSender = (choice: Choice) => void;
 
 /** Manages the battle state and the AI. */
 export class Battle
@@ -46,8 +45,6 @@ export class Battle
      * them).
      */
     private sides: {readonly [ID in PlayerID]: Side};
-    /** Current request ID. Updated after every `|request|` message. */
-    private rqid?: number;
     /** Whether we're using a move that requires a switch choice. */
     private selfSwitch: SelfSwitch = false;
     /** Whether the opponent is using a move that copies volatile status. */
@@ -189,9 +186,6 @@ export class Battle
                     active.disableMove(i, moveData[i].disabled);
                 }
             }
-
-            // update rqid to verify our next choice
-            this.rqid = args.rqid;
         });
     }
 
@@ -398,7 +392,7 @@ export class Battle
         this.reward = 0;
 
         const choice = await this.ai.decide(this.state.toArray(), choices, r);
-        this.sender(choice, this.rqid);
+        this.sender(choice);
     }
 
     /** Asks for and sends user input to the server once it's received. */
@@ -410,7 +404,7 @@ export class Battle
             if (answer)
             {
                 logger.debug("received ai input");
-                this.sender(answer as Choice, this.rqid);
+                this.sender(answer as Choice);
             }
             else
             {
