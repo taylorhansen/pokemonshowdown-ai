@@ -48,8 +48,6 @@ export class Battle
     private sides: {readonly [ID in PlayerID]: Side};
     /** Current request ID. Updated after every `|request|` message. */
     private rqid?: number;
-    /** Whether we're being forced to switch. */
-    private forceSwitch = false;
     /** Whether we're using a move that requires a switch choice. */
     private selfSwitch: SelfSwitch = false;
     /** Whether the opponent is using a move that copies volatile status. */
@@ -191,11 +189,6 @@ export class Battle
                     active.disableMove(i, moveData[i].disabled);
                 }
             }
-
-            // presence of a forceSwitch array indicates that we're being forced
-            //  to switch right now
-            // TODO: doubles/triples support
-            this.forceSwitch = args.forceSwitch !== undefined;
 
             // update rqid to verify our next choice
             this.rqid = args.rqid;
@@ -446,20 +439,20 @@ export class Battle
             }
         }
 
-        if (!this.forceSwitch && !this.selfSwitch)
+        const active = team.active;
+        if (!active.fainted && !this.selfSwitch)
         {
             // can also possibly make a move, since we're not being forced to
             //  just switch
-            const mon = team.active;
-            if (mon.isLocked())
+            if (active.isLocked())
             {
                 choices.push("move 1");
             }
             else
             {
-                for (let i = 0; i < mon.moves.length; ++i)
+                for (let i = 0; i < active.moves.length; ++i)
                 {
-                    if (mon.canMove(i))
+                    if (active.canMove(i))
                     {
                         choices.push(`move ${i + 1}` as Choice);
                     }
