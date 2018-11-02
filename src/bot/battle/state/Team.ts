@@ -79,9 +79,9 @@ export class Team
      * @param options Circumstances of switchin.
      * @returns The new active pokemon, or null if invalid.
      */
-    public switchIn(species: string, level: number,
-        gender: string | null, hp: number, hpMax: number,
-        options: SwitchInOptions = {}): Pokemon | null
+    public switchIn(species: string, level: number, gender: string | null,
+        hp: number, hpMax: number, options: SwitchInOptions = {}):
+        Pokemon | null
     {
         let index = this._pokemon.findIndex(mon => mon.species === species);
         if (index < 0)
@@ -94,9 +94,12 @@ export class Team
         if (index < 0 || index >= this.unrevealed) return null;
 
         // switch active status
-        const volatile = this.active.switchOut();
-        this._pokemon[index].switchIn(
-                options.copyVolatile ? volatile : undefined);
+        this._pokemon[index].switchIn();
+        if (options.copyVolatile)
+        {
+            this.active.copyVolatile(this._pokemon[index]);
+        }
+        this.active.switchOut();
 
         const tmp = this._pokemon[0];
         this._pokemon[0] = this._pokemon[index];
@@ -148,7 +151,7 @@ export class Team
     /** Cures all pokemon of any major status conditions. */
     public cure(): void
     {
-        this._pokemon.forEach(mon => mon.cure());
+        for (const mon of this._pokemon) mon.majorStatus = "";
     }
 
     /**

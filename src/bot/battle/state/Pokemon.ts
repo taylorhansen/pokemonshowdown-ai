@@ -74,6 +74,12 @@ export class Pokemon
         return this._moves.slice(0, this.unrevealedMove);
     }
 
+    /** Minor status conditions. Cleared on switch. */
+    public get volatile(): VolatileStatus
+    {
+        return this._volatile;
+    }
+
     /** Pokemon's gender. */
     public gender: string | null;
     /** Info about the pokemon's hit points. */
@@ -105,9 +111,9 @@ export class Pokemon
     /** First index of the part of the moveset that is unknown. */
     private unrevealedMove = 0;
     /** Current major status condition. Not cleared on switch. */
-    private majorStatus: MajorStatus = "";
+    public majorStatus: MajorStatus = "";
     /** Minor status conditions. Cleared on switch. */
-    private volatileStatus = new VolatileStatus();
+    private _volatile = new VolatileStatus();
 
     /**
      * Creates a Pokemon.
@@ -122,6 +128,94 @@ export class Pokemon
         {
             this._moves[i] = new Move();
         }
+    }
+
+    /**
+     * Copies volatile status state to another pokemon.
+     * @param mon Pokemon that will receive the volatile status.
+     */
+    public copyVolatile(mon: Pokemon): void
+    {
+        mon._volatile = this._volatile.shallowClone();
+    }
+
+    /** Tells the pokemon that it is currently being switched in. */
+    public switchIn(): void
+    {
+        this._active = true;
+        this._volatile.clear();
+    }
+
+    /** Tells the pokemon that it is currently being switched out. */
+    public switchOut(): void
+    {
+        this._active = false;
+        this._volatile.clear();
+    }
+
+    /** Tells the pokemon that it has fainted. */
+    public faint(): void
+    {
+        this.hp.set(0, 0);
+    }
+
+    /**
+     * Reveals a move to the client.
+     * @param id ID name of the move.
+     * @returns The new move.
+     */
+    public revealMove(id: string): Move
+    {
+        const move = new Move();
+        move.id = id;
+        this._moves[this.unrevealedMove++] = move;
+        return move;
+    }
+
+    /**
+     * Indicates that a move has been used.
+     * @param id ID name of the move.
+     * @param pp Amount of PP to use.
+     */
+    public useMove(id: string, pp: number): void
+    {
+        (this.getMove(id) || this.revealMove(id)).use(pp);
+    }
+
+    /**
+     * Checks whether a move can be made.
+     * @param index Index of the move.
+     * @returns Whether the move can be made.
+     */
+    public canMove(index: number): boolean
+    {
+        return index < this._moves.length && index < this.unrevealedMove &&
+            this._moves[index].pp > 0 && !this._volatile.isDisabled(index);
+    }
+
+    /**
+     * Gets the pokemon's move by name.
+     * @param id ID name of the move.
+     * @returns The pokemon's move that matches the ID name, or null if not
+     * found.
+     */
+    public getMove(id: string): Move | null
+    {
+        const index = this.moves.findIndex(move => move.id === id);
+        return index !== -1 ? this.moves[index] : null;
+    }
+
+    /**
+     * Sets the data about a move.
+     * @param index Index of the move.
+     * @param id Move ID name.
+     * @param pp Current PP.
+     * @param ppMax Maximum PP.
+     */
+    public setMove(index: number, id: string, pp: number, ppMax: number): void
+    {
+        this.unrevealedMove = index + 1; // TODO: remake this method to reveal?
+        this._moves[index].set(dex.moves[id].uid, pp, ppMax);
     }
 
     /**
@@ -166,163 +260,8 @@ export class Pokemon
             ...this.hp.toArray(),
             ...majorStatus
         ];
-        if (this._active)
-        {
-            a.push(...this.volatileStatus.toArray());
-        }
+        if (this._active) a.push(...this._volatile.toArray());
         return a;
-    }
-
-    /**
-     * Tells the pokemon that it is currently being switched in.
-     * @param volatile Volatile status to set for this pokemon.
-     */
-    public switchIn(volatile?: VolatileStatus): void
-    {
-        this._active = true;
-        if (volatile)
-        {
-            this.volatileStatus = volatile;
-        }
-        else
-        {
-            this.volatileStatus.clear();
-        }
-    }
-
-    /**
-     * Tells the pokemon that it is currently being switched out.
-     * @returns Volatile status before switching out.
-     */
-    public switchOut(): VolatileStatus
-    {
-        this._active = false;
-        const v = this.volatileStatus.shallowClone();
-        this.volatileStatus.clear();
-        return v;
-    }
-
-    /** Tells the pokemon that it has fainted. */
-    public faint(): void
-    {
-        this.hp.set(0, 0);
-    }
-
-    /**
-     * Reveals a move to the client.
-     * @param id ID name of the move.
-     * @returns The new move.
-     */
-    public revealMove(id: string): Move
-    {
-        const move = new Move();
-        move.id = id;
-        this._moves[this.unrevealedMove++] = move;
-        return move;
-    }
-
-    /**
-     * Indicates that a move has been used.
-     * @param id ID name of the move.
-     * @param pp Amount of PP to use.
-     * @param from ID name of the effect that caused the move.
-     */
-    public useMove(id: string, pp: number, from?: string): void
-    {
-        const move = this.getMove(id) || this.revealMove(id);
-        // could be locked into using a move, where no pp is consumed
-        if (from !== "lockedmove")
-        {
-            move.use(pp);
-        }
-    }
-
-    /**
-     * Checks whether a move can be made.
-     * @param index Index of the move.
-     * @returns Whether the move can be made.
-     */
-    public canMove(index: number): boolean
-    {
-        return index < this._moves.length && index < this.unrevealedMove &&
-            this._moves[index].pp > 0 && !this.volatileStatus.isDisabled(index);
-    }
-
-    /**
-     * Gets the pokemon's move by name.
-     * @param id ID name of the move.
-     * @returns The pokemon's move that matches the ID name, or null if not
-     * found.
-     */
-    public getMove(id: string): Move | null
-    {
-        const index = this.moves.findIndex(move => move.id === id);
-        return index !== -1 ? this.moves[index] : null;
-    }
-
-    /**
-     * Sets the data about a move.
-     * @param index Index of the move.
-     * @param id Move ID name.
-     * @param pp Current PP.
-     * @param ppMax Maximum PP.
-     */
-    public setMove(index: number, id: string, pp: number, ppMax: number): void
-    {
-        this.unrevealedMove = index + 1; // TODO: remake this method to reveal?
-        this._moves[index].set(dex.moves[id].uid, pp, ppMax);
-    }
-
-    /**
-     * Disables a certain move.
-     * @param index Index of the move.
-     * @param disabled Disabled status. Omit to assume true.
-     */
-    public disableMove(index: number, disabled: boolean = true): void
-    {
-        this.volatileStatus.disableMove(index, disabled);
-    }
-
-    /**
-     * Afflicts the pokemon with a major status condition.
-     * @param status Name of condition.
-     */
-    public afflict(status: MajorStatus): void
-    {
-        this.majorStatus = status;
-    }
-
-    /** Cures the pokemon of a major status condition. */
-    public cure(): void
-    {
-        this.afflict("");
-    }
-
-    /**
-     * Sets the confusion flag. Should be called once per turn if it's on.
-     * @param flag Value of the flag.
-     */
-    public confuse(flag: boolean): void
-    {
-        this.volatileStatus.confuse(flag);
-    }
-
-    /**
-     * Checks whether the pokemon is using a locked move.
-     * @returns Locked move flag.
-     */
-    public isLocked(): boolean
-    {
-        return this.volatileStatus.lockedMove;
-    }
-
-    /**
-     * Sets the lockedmove flag.
-     * @param flag Value of the flag.
-     */
-    public lockMove(flag: boolean): void
-    {
-        this.volatileStatus.lockedMove = flag;
     }
 
     /**
@@ -346,6 +285,6 @@ ${this._moves.map(
         (move, i) => `${s}move${i + 1}:${i < this.unrevealedMove ?
                 `\n${move.toString(indent + 4)}` : " <unrevealed>"}`)
     .join("\n")}
-${s}volatile: ${this.volatileStatus.toString()}`;
+${s}volatile: ${this._volatile.toString()}`;
     }
 }

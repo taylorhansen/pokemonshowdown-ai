@@ -137,7 +137,7 @@ export abstract class Battle
                     mon.item = data.item;
                     mon.baseAbility = data.baseAbility;
                     mon.hp.set(status.hp, status.hpMax);
-                    mon.afflict(status.condition);
+                    mon.majorStatus = status.condition;
 
                     // set active status
                     if (data.active)
@@ -166,7 +166,9 @@ export abstract class Battle
                 const moveData: RequestMove[] = args.active[0].moves;
                 for (let i = 0; i < moveData.length; ++i)
                 {
-                    active.disableMove(i, moveData[i].disabled);
+                    // FIXME: the "disabled" volatile status and the "disabled"
+                    //  property in the request json are not the same thing
+                    active.volatile.disableMove(i, moveData[i].disabled);
                 }
             }
         });
@@ -207,14 +209,17 @@ export abstract class Battle
                 break;
             case "activate":
             case "end":
+            case "start":
                 if (event.volatile === "confusion")
                 {
+                    // start/upkeep or end confustion status
                     this.state.teams[this.getSide(event.id.owner)].active
-                        .confuse(event.type === "activate");
+                        .volatile.confuse(event.type !== "end");
                 }
                 break;
             case "curestatus":
-                this.state.teams[this.getSide(event.id.owner)].active.cure();
+                this.state.teams[this.getSide(event.id.owner)].active
+                    .majorStatus = "";
                 break;
             case "cureteam":
                 this.state.teams[this.getSide(event.id.owner)].cure();
@@ -228,7 +233,7 @@ export abstract class Battle
                 active.hp.set(event.status.hp, event.status.hpMax);
                 // this should already be covered by the `status` event but just
                 //  in case
-                active.afflict(event.status.condition);
+                active.majorStatus = event.status.condition;
                 break;
             }
             case "faint":
@@ -237,21 +242,9 @@ export abstract class Battle
             case "move":
                 this.handleMove(event);
                 break;
-            case "start":
-            {
-                const mon = this.state.teams[this.getSide(event.id.owner)]
-                    .active;
-                switch (event.volatile)
-                {
-                    case "confusion":
-                        mon.confuse(true);
-                        break;
-                }
-                break;
-            }
             case "status":
                 this.state.teams[this.getSide(event.id.owner)].active
-                    .afflict(event.majorStatus);
+                    .majorStatus = event.majorStatus;
                 break;
             case "switch":
                 this.handleSwitch(event);
@@ -310,7 +303,7 @@ export abstract class Battle
         // TODO: what if it's interrupted?
         if (move.volatileEffect === "lockedmove")
         {
-            mon.lockMove(true);
+            mon.volatile.lockedMove = true;
         }
 
         const selfSwitch = move.selfSwitch || false;
@@ -362,7 +355,7 @@ export abstract class Battle
         {
             case "fatigue":
                 // no longer locked into a move
-                this.state.teams[side].active.lockMove(false);
+                this.state.teams[side].active.volatile.lockedMove = false;
                 break;
             case "item":
                 // reveal item
@@ -410,24 +403,24 @@ export abstract class Battle
         const team = this.state.teams.us;
 
         // possible choices for switching pokemon
-        for (let i = 0; i < team.pokemon.length; ++i)
+        const active = team.active;
+        if (!active.volatile.lockedMove)
         {
-            const mon = team.pokemon[i];
-            if (!mon.active && !mon.fainted)
+            for (let i = 0; i < team.pokemon.length; ++i)
             {
-                choices.push(`switch ${i + 1}` as Choice);
+                const mon = team.pokemon[i];
+                if (!mon.active && !mon.fainted)
+                {
+                    choices.push(`switch ${i + 1}` as Choice);
+                }
             }
         }
 
-        const active = team.active;
         if (!active.fainted && !this.selfSwitch)
         {
             // can also possibly make a move, since we're not being forced to
             //  just switch
-            if (active.isLocked())
-            {
-                choices.push("move 1");
-            }
+            if (active.volatile.lockedMove) choices.push("move 1");
             else
             {
                 for (let i = 0; i < active.moves.length; ++i)

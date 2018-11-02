@@ -11,7 +11,7 @@ export class VolatileStatus
     private disabledMoves: boolean[];
 
     // not passed when copying
-    /** Whether the pokemon is able to switch. */
+    /** Whether the pokemon is locked into a move and is unable to switch. */
     public lockedMove: boolean;
     /**
      * Number of turns this pokemon has been confused, including the turn it
@@ -72,15 +72,6 @@ export class VolatileStatus
     public disableMove(move: number, disabled: boolean = true): void
     {
         this.disabledMoves[move] = disabled;
-    }
-
-    /**
-     * Sets the lockedmove flag.
-     * @param flag Value of the flag.
-     */
-    public lockMove(flag: boolean): void
-    {
-        this.lockedMove = flag;
     }
 
     /**
