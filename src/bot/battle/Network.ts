@@ -41,9 +41,9 @@ export class Network extends Battle
      * @param state Optional initial battle state.
      */
     constructor(username: string, listener: AnyMessageListener,
-        sender: ChoiceSender, state?: BattleState)
+        sender: ChoiceSender)
     {
-        super(username, listener, sender, state);
+        super(username, listener, sender);
 
         this.inputLength = BattleState.getArraySize();
         this.path = `${__dirname}/../../../models/latest`;
@@ -81,7 +81,7 @@ export class Network extends Battle
     }
 
     /** @override */
-    public decide(choices: Choice[]): Promise<Choice>
+    protected decide(choices: Choice[]): Promise<Choice>
     {
         return this.decideImpl(this.state.toArray(), choices);
     }
@@ -149,7 +149,7 @@ expected ${this.inputLength}`);
     }
 
     /** @override */
-    public async save(): Promise<void>
+    protected async save(): Promise<void>
     {
         await this.ready;
         await this.model.save(`file://${this.path}`);

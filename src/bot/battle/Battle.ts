@@ -26,7 +26,7 @@ export abstract class Battle
      */
     public saveAlways = true;
     /** Tracks the currently known state of the battle. */
-    protected readonly state: BattleState;
+    protected readonly state = new BattleState();
     /** Client's username. */
     private readonly username: string;
     /** Used to send the AI's choice to the server. */
@@ -48,14 +48,12 @@ export abstract class Battle
      * @param username Client's username.
      * @param listener Used to subscribe to server messages.
      * @param sender Used to send the AI's choice to the server.
-     * @param state Optional initial battle state.
      */
     constructor(username: string, listener: AnyMessageListener,
-        sender: ChoiceSender, state?: BattleState)
+        sender: ChoiceSender)
     {
         this.username = username;
         this.sender = sender;
-        this.state = state || new BattleState();
 
         listener
         .on("battleinit", args =>
@@ -439,6 +437,6 @@ export abstract class Battle
 
 export interface BattleConstructor
 {
-    new(username: string, listener: AnyMessageListener,
-        sender: ChoiceSender, state?: BattleState): Battle;
+    new(username: string, listener: AnyMessageListener, sender: ChoiceSender):
+        Battle;
 }

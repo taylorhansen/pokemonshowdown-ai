@@ -19,15 +19,13 @@ describe("Battle", function()
 
     let responses: string[];
     let listener: AnyMessageListener;
-    let state: BattleState;
     let battle: MockBattle;
 
     beforeEach("Initialize Battle", function()
     {
         responses = [];
         listener = new AnyMessageListener();
-        state = new BattleState();
-        battle = new MockBattle(testArgs.username[0], listener, sender, state);
+        battle = new MockBattle(testArgs.username[0], listener, sender);
     });
 
     it("Should initialize battle", function()
@@ -41,8 +39,8 @@ describe("Battle", function()
         expect(battle.getSide("p1")).to.equal("us");
         expect(battle.getSide("p2")).to.equal("them");
         // setting our teamsize requires more info from a request message
-        expect(state.teams.us.size).to.equal(0);
-        expect(state.teams.them.size).to.equal(3);
+        expect(battle.state.teams.us.size).to.equal(0);
+        expect(battle.state.teams.them.size).to.equal(3);
     });
 
     describe("request", function()
