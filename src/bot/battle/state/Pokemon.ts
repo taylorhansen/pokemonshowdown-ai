@@ -143,7 +143,6 @@ export class Pokemon
     public switchIn(): void
     {
         this._active = true;
-        this._volatile.clear();
     }
 
     /** Tells the pokemon that it is currently being switched out. */

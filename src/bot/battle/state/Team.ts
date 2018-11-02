@@ -98,12 +98,12 @@ export class Team
         if (index < 0 || index >= this.unrevealed) return null;
 
         // switch active status
-        this._pokemon[index].switchIn();
+        this.active.switchOut();
         if (options.copyVolatile)
         {
             this.active.copyVolatile(this._pokemon[index]);
         }
-        this.active.switchOut();
+        this._pokemon[index].switchIn();
 
         const tmp = this._pokemon[0];
         this._pokemon[0] = this._pokemon[index];
