@@ -7,8 +7,7 @@ import { PlayerID } from "../../../src/bot/messageData";
 export class MockBattle extends Battle
 {
     /** @override */
-    public async decide(state: number[], choices: Choice[], reward: number):
-        Promise<Choice>
+    public async decide(choices: Choice[]): Promise<Choice>
     {
         return choices[0];
     }
