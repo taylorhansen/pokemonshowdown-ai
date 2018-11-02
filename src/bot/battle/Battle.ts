@@ -319,14 +319,15 @@ export class Battle
 
         // FIXME: a move could be stored as hiddenpower70 but displayed as
         //  hiddenpowerfire
-        let pp: number;
-        // locked moves don't consume pp
-        if (event.cause && event.cause.type === "lockedmove") pp = 0;
-        // pressure ability doubles pp usage
-        else if (this.state.teams[otherSide(side)].active.baseAbility ===
-            "pressure") pp = 2;
-        // but normally use 1 pp
-        else pp = 1;
+        const pp =
+            // locked moves don't consume pp
+            (event.cause && event.cause.type === "lockedmove") ? 0
+            // pressure ability doubles pp usage if opponent is targeted
+            : (this.state.teams[otherSide(side)].active.baseAbility ===
+                    "pressure" &&
+                event.targetId.owner !== event.id.owner) ? 2
+            // but normally use 1 pp
+            : 1;
         mon.useMove(moveId, pp);
 
         const move = dex.moves[moveId];
