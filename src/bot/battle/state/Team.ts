@@ -33,7 +33,7 @@ export class Team
         this._size = Math.max(1, Math.min(size, Team.MAX_SIZE));
 
         // clear pokemon array
-        for (let i = 0 ; i < Team.MAX_SIZE; ++i)
+        for (let i = 0; i < Team.MAX_SIZE; ++i)
         {
             this._pokemon[i] = new Pokemon(/*hpPercent*/ this.side === "them");
         }
@@ -63,7 +63,11 @@ export class Team
      */
     private unrevealed = 0;
 
-    public constructor(side: Side)
+    /**
+     * Creates a Team object.
+     * @param side The Side this Team is on.
+     */
+    constructor(side: Side)
     {
         this.side = side;
     }

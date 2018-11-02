@@ -84,6 +84,8 @@ export class Pokemon
     public gender: string | null;
     /** Info about the pokemon's hit points. */
     public readonly hp: HP;
+    /** Current major status condition. Not cleared on switch. */
+    public majorStatus: MajorStatus = "";
 
     /** Whether this is the current active pokemon. */
     private _active: boolean = false;
@@ -110,8 +112,6 @@ export class Pokemon
     private readonly _moves: Move[] = [];
     /** First index of the part of the moveset that is unknown. */
     private unrevealedMove = 0;
-    /** Current major status condition. Not cleared on switch. */
-    public majorStatus: MajorStatus = "";
     /** Minor status conditions. Cleared on switch. */
     private _volatile = new VolatileStatus();
 
@@ -203,19 +203,6 @@ export class Pokemon
     {
         const index = this.moves.findIndex(move => move.id === id);
         return index !== -1 ? this.moves[index] : null;
-    }
-
-    /**
-     * Sets the data about a move.
-     * @param index Index of the move.
-     * @param id Move ID name.
-     * @param pp Current PP.
-     * @param ppMax Maximum PP.
-     */
-    public setMove(index: number, id: string, pp: number, ppMax: number): void
-    {
-        this.unrevealedMove = index + 1; // TODO: remake this method to reveal?
-        this._moves[index].set(dex.moves[id].uid, pp, ppMax);
     }
 
     /**

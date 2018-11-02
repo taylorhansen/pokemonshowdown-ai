@@ -33,6 +33,15 @@ export class Move
     private ppMax = 0;
 
     /**
+     * Indicates that the move has been used.
+     * @param pp Amount of power points to consume, or 1 by default.
+     */
+    public use(pp = 1): void
+    {
+        this._pp = Math.max(0, Math.min(this._pp - pp, this.ppMax));
+    }
+
+    /**
      * Gets the size of the return value of `toArray()`.
      * status.
      * @returns The size of the return value of `toArray()`.
@@ -56,28 +65,6 @@ export class Move
             (v, i) => i === this._id ? 1 : 0);
 
         return [...id, this._pp];
-    }
-
-    /**
-     * Indicates that the move has been used.
-     * @param pp Amount of power points to consume, or 1 by default.
-     */
-    public use(pp = 1): void
-    {
-        this._pp = Math.max(0, Math.min(this._pp - pp, this.ppMax));
-    }
-
-    /**
-     * Overwrites move data.
-     * @param id ID number.
-     * @param pp Current power points.
-     * @param ppMax Maximum amount of power points.
-     */
-    public set(id: number, pp: number, ppMax: number): void
-    {
-        this._id = id;
-        this._pp = pp;
-        this.ppMax = ppMax;
     }
 
     /**
