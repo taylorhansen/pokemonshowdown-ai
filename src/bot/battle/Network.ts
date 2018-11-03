@@ -5,7 +5,8 @@ import { AnyMessageListener } from "../AnyMessageListener";
 import * as logger from "../logger";
 import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
-import { BattleState, Side } from "./state/BattleState";
+import { BattleState } from "./state/BattleState";
+import { Side } from "./state/Side";
 
 /** Neural network interface. */
 export class Network extends Battle
