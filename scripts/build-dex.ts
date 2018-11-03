@@ -143,13 +143,9 @@ for (const moveName in moves)
     // only gen4 and under moves allowed
     if (move.num <= 0 || move.num >= 468 || move.isNonstandard) continue;
 
-    let id = move.id;
     // hidden power moves also need to encode their type
     // except hp normal which doesn't exist here
-    if (id === "hiddenpower" && move.type !== "Normal")
-    {
-        id += move.type.toLowerCase();
-    }
+    if (move.id === "hiddenpower" && move.type !== "Normal") continue;
 
     const target = quote(move.target);
 
@@ -170,7 +166,7 @@ for (const moveName in moves)
     }
 
     console.log(`\
-    ${id}:
+    ${move.id}:
     {
         uid: ${uid}, pp: ${pp}, target: ${target}\
 ${selfSwitch ? `, selfSwitch: ${selfSwitch}` : ""}\

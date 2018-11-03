@@ -6,7 +6,7 @@ import { BattleEvent, Cause, MoveEvent, otherId, PlayerID,
     "../messageData";
 import { Choice } from "./Choice";
 import { dex } from "./dex/dex";
-import { SelfSwitch } from "./dex/dex-types";
+import { SelfSwitch, Type } from "./dex/dex-types";
 import { BattleState } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
 import { otherSide, Side } from "./state/Side";
@@ -140,7 +140,19 @@ export abstract class Battle
                     if (data.active) mon.switchIn();
                     else mon.switchOut();
 
-                    for (const moveId of data.moves) mon.revealMove(moveId);
+                    for (const moveId of data.moves)
+                    {
+                        // set hidden power type
+                        if (moveId.startsWith("hiddenpower"))
+                        {
+                            // format: hiddenpower<type><base power if gen2-5>
+                            mon.hpType = moveId.substr("hiddenpower".length)
+                                .replace(/\d+/, "") as Type;
+                            mon.revealMove("hiddenpower");
+                            // TODO: track this for opponent's pokemon
+                        }
+                        else mon.revealMove(moveId);
+                    }
                 }
             }
 

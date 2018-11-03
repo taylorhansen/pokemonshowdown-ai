@@ -1,6 +1,6 @@
 import { MajorStatus, majorStatuses } from "../../messageData";
 import { dex } from "../dex/dex";
-import { PokemonData } from "../dex/dex-types";
+import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Move } from "./Move";
 import { VolatileStatus } from "./VolatileStatus";
@@ -8,17 +8,13 @@ import { VolatileStatus } from "./VolatileStatus";
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon
 {
-    /** Whether this pokemon is fainted. */
-    public get fainted(): boolean
-    {
-        return this.hp.current === 0;
-    }
-
     /** Whether this is the current active pokemon. */
     public get active(): boolean
     {
         return this._active;
     }
+    /** Whether this is the current active pokemon. */
+    private _active: boolean = false;
 
     /** Species/form display name. */
     public get species(): string
@@ -31,6 +27,10 @@ export class Pokemon
         this.data = dex.pokemon[species];
         this._species = this.data.uid;
     }
+    /** ID name of the species. */
+    private speciesName = "";
+    /** Pokemon species/form unique identifier. */
+    private _species = 0;
 
     /** Ability id name. Setter allows either id name or display name. */
     public get baseAbility(): string
@@ -53,6 +53,13 @@ export class Pokemon
         this.baseAbilityName = name;
         this._baseAbility = this.data.abilities[name];
     }
+    /** ID name of the base ability. */
+    private baseAbilityName = "";
+    /**
+     * Base ability relative to its species. Can be 1 or 2 indicating which
+     * ability that is.
+     */
+    private _baseAbility?: number;
 
     /** Item id name. Setter allows either id name or display name. */
     public get item(): string
@@ -72,6 +79,31 @@ export class Pokemon
         this.itemName = name;
         this._item = dex.items[item];
     }
+    /** ID name of the held item. */
+    private itemName = "";
+    /** Item the pokemon is holding. */
+    private _item = 0;
+
+    /** Possible hidden power types. */
+    public get possibleHPTypes(): {readonly [T in Type]: boolean}
+    {
+        return this._hpTypes;
+    }
+    /**
+     * Rules out all possible hidden power types except this one.
+     * @param type The pokemon's hidden power type.
+     */
+    public set hpType(type: Type)
+    {
+        for (const hpType in this._hpTypes)
+        {
+            // istanbul ignore if
+            if (!this._hpTypes.hasOwnProperty(hpType)) continue;
+            this._hpTypes[hpType as Type] = hpType === type;
+        }
+    }
+    /** Possible hidden power types. */
+    private readonly _hpTypes: {[T in Type]: boolean} = {...types};
 
     /** Pokemon's level. Clamped between the closed interval `[1, 100]`. */
     public get level(): number
@@ -82,53 +114,43 @@ export class Pokemon
     {
         this._level = Math.max(1, Math.min(level, 100));
     }
+    /** Pokemon's level from 1 to 100. */
+    private _level = 0;
 
     /** Known moveset. */
-    public get moves(): Move[]
+    public get moves(): ReadonlyArray<Move>
     {
         return this._moves.slice(0, this.unrevealedMove);
     }
+    /** Known moveset. */
+    private readonly _moves: Move[];
+
+    /** Pokemon's gender. */
+    public gender: string | null;
+
+    /** Whether this pokemon is fainted. */
+    public get fainted(): boolean
+    {
+        return this.hp.current === 0;
+    }
+    /** Info about the pokemon's hit points. */
+    public readonly hp: HP;
+
+    /** Current major status condition. Not cleared on switch. */
+    public majorStatus: MajorStatus = "";
 
     /** Minor status conditions. Cleared on switch. */
     public get volatile(): VolatileStatus
     {
         return this._volatile;
     }
-
-    /** Pokemon's gender. */
-    public gender: string | null;
-    /** Info about the pokemon's hit points. */
-    public readonly hp: HP;
-    /** Current major status condition. Not cleared on switch. */
-    public majorStatus: MajorStatus = "";
-
-    /** Whether this is the current active pokemon. */
-    private _active: boolean = false;
-    /** Dex data. */
-    private data?: PokemonData;
-    /** ID name of the species. */
-    private speciesName = "";
-    /** Pokemon species/form unique identifier. */
-    private _species = 0;
-    /** ID name of the held item. */
-    private itemName = "";
-    /** Item the pokemon is holding. */
-    private _item = 0;
-    /** ID name of the base ability. */
-    private baseAbilityName = "";
-    /**
-     * Base ability relative to its species. Can be 1 or 2 indicating which
-     * ability that is.
-     */
-    private _baseAbility?: number;
-    /** Pokemon's level from 1 to 100. */
-    private _level = 0;
-    /** Known moveset. */
-    private readonly _moves: Move[] = [];
-    /** First index of the part of the moveset that is unknown. */
-    private unrevealedMove = 0;
     /** Minor status conditions. Cleared on switch. */
     private _volatile = new VolatileStatus();
+
+    /** Dex data. */
+    private data?: PokemonData;
+    /** First index of the part of the moveset that is unknown. */
+    private unrevealedMove = 0;
 
     /**
      * Creates a Pokemon.
@@ -138,11 +160,7 @@ export class Pokemon
     {
         this.hp = new HP(hpPercent);
         this._active = false;
-
-        for (let i = 0; i < 4; ++i)
-        {
-            this._moves[i] = new Move();
-        }
+        this._moves = Array.from({length: 4}, () => new Move());
     }
 
     /**
@@ -174,6 +192,15 @@ export class Pokemon
     public faint(): void
     {
         this.hp.set(0, 0);
+    }
+
+    /**
+     * Rules out a possible hidden power type.
+     * @param type Type that can't be the pokemon's hidden power type.
+     */
+    public ruleOutHPType(type: Type): void
+    {
+        this._hpTypes[type] = false;
     }
 
     /**
@@ -232,6 +259,7 @@ export class Pokemon
     {
         return /*gender*/2 + dex.numPokemon + dex.numItems + /*baseAbility*/2 +
             /*level*/1 + Move.getArraySize() * 4 + HP.getArraySize() +
+            /*hidden power type*/Object.keys(types).length +
             /*majorStatus except empty*/Object.keys(majorStatuses).length - 1 +
             (active ? VolatileStatus.getArraySize() : 0);
     }
@@ -249,16 +277,17 @@ export class Pokemon
             (v, i) => i === this._item ? 1 : 0);
         const baseAbility = Array.from({length: 2},
             (v, i) => i === this._baseAbility ? 1 : 0);
-        // only include actual statuses, not the empty string
-        const majorStatus = Array.from(
-            {length: Object.keys(majorStatuses).length - 1},
-            (v, i) => i + 1 === majorStatuses[this.majorStatus] ? 1 : 0);
+        const hpTypes = (Object.keys(types) as Type[])
+            .map(type => this._hpTypes[type] ? 1 : 0);
+        const majorStatus = (Object.keys(majorStatuses) as MajorStatus[])
+            // only include actual statuses, not the empty string
+            .filter(status => status !== "")
+            .map(status => this.majorStatus === status ? 1 : 0);
 
         const a =
         [
             this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
-            ...species, ...item, ...baseAbility,
-            this._level,
+            ...species, ...item, ...baseAbility, ...hpTypes, this._level,
             ...([] as number[]).concat(
                 ...this._moves.map(move => move.toArray())),
             ...this.hp.toArray(),
@@ -286,6 +315,8 @@ ${s}item: ${this.itemName ? this.itemName : "<unknown>"}
 ${s}ability: ${this.baseAbilityName ? this.baseAbilityName : "<unknown>"}
 ${s}hp: ${this.hp.toString()}
 ${s}majorStatus: ${this.majorStatus ? this.majorStatus : "none"}
+${s}possibleHPTypes: [${(Object.keys(types) as Type[])
+    .filter(type => this._hpTypes[type]).join(", ")}]
 ${this._moves.map(
         (move, i) => `${s}move${i + 1}:${i < this.unrevealedMove ?
                 `\n${move.toString(indent + 4)}` : " <unrevealed>"}`)

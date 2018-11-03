@@ -6266,1069 +6266,1005 @@ const moves: {readonly [name: string]: MoveData} =
     {
         uid: 216, pp: 24, target: "normal"
     },
-    hiddenpowerbug:
-    {
-        uid: 217, pp: 24, target: "normal"
-    },
-    hiddenpowerdark:
-    {
-        uid: 218, pp: 24, target: "normal"
-    },
-    hiddenpowerdragon:
-    {
-        uid: 219, pp: 24, target: "normal"
-    },
-    hiddenpowerelectric:
-    {
-        uid: 220, pp: 24, target: "normal"
-    },
-    hiddenpowerfighting:
-    {
-        uid: 221, pp: 24, target: "normal"
-    },
-    hiddenpowerfire:
-    {
-        uid: 222, pp: 24, target: "normal"
-    },
-    hiddenpowerflying:
-    {
-        uid: 223, pp: 24, target: "normal"
-    },
-    hiddenpowerghost:
-    {
-        uid: 224, pp: 24, target: "normal"
-    },
-    hiddenpowergrass:
-    {
-        uid: 225, pp: 24, target: "normal"
-    },
-    hiddenpowerground:
-    {
-        uid: 226, pp: 24, target: "normal"
-    },
-    hiddenpowerice:
-    {
-        uid: 227, pp: 24, target: "normal"
-    },
-    hiddenpowerpoison:
-    {
-        uid: 228, pp: 24, target: "normal"
-    },
-    hiddenpowerpsychic:
-    {
-        uid: 229, pp: 24, target: "normal"
-    },
-    hiddenpowerrock:
-    {
-        uid: 230, pp: 24, target: "normal"
-    },
-    hiddenpowersteel:
-    {
-        uid: 231, pp: 24, target: "normal"
-    },
-    hiddenpowerwater:
-    {
-        uid: 232, pp: 24, target: "normal"
-    },
     hydropump:
     {
-        uid: 233, pp: 8, target: "normal"
+        uid: 217, pp: 8, target: "normal"
     },
     hypervoice:
     {
-        uid: 234, pp: 16, target: "allAdjacentFoes"
+        uid: 218, pp: 16, target: "allAdjacentFoes"
     },
     icebeam:
     {
-        uid: 235, pp: 16, target: "normal"
+        uid: 219, pp: 16, target: "normal"
     },
     leafstorm:
     {
-        uid: 236, pp: 8, target: "normal"
+        uid: 220, pp: 8, target: "normal"
     },
     lick:
     {
-        uid: 237, pp: 48, target: "normal"
+        uid: 221, pp: 48, target: "normal"
     },
     metalsound:
     {
-        uid: 238, pp: 64, target: "normal"
+        uid: 222, pp: 64, target: "normal"
     },
     meteormash:
     {
-        uid: 239, pp: 16, target: "normal"
+        uid: 223, pp: 16, target: "normal"
     },
     muddywater:
     {
-        uid: 240, pp: 16, target: "allAdjacentFoes"
+        uid: 224, pp: 16, target: "allAdjacentFoes"
     },
     overheat:
     {
-        uid: 241, pp: 8, target: "normal"
+        uid: 225, pp: 8, target: "normal"
     },
     perishsong:
     {
-        uid: 242, pp: 8, target: "all"
+        uid: 226, pp: 8, target: "all"
     },
     poisonfang:
     {
-        uid: 243, pp: 24, target: "normal"
+        uid: 227, pp: 24, target: "normal"
     },
     poisonpowder:
     {
-        uid: 244, pp: 56, target: "normal"
+        uid: 228, pp: 56, target: "normal"
     },
     powergem:
     {
-        uid: 245, pp: 32, target: "normal"
+        uid: 229, pp: 32, target: "normal"
     },
     psychoshift:
     {
-        uid: 246, pp: 16, target: "normal"
+        uid: 230, pp: 16, target: "normal"
     },
     rocktomb:
     {
-        uid: 247, pp: 16, target: "normal"
+        uid: 231, pp: 16, target: "normal"
     },
     screech:
     {
-        uid: 248, pp: 64, target: "normal"
+        uid: 232, pp: 64, target: "normal"
     },
     shadowforce:
     {
-        uid: 249, pp: 8, target: "normal"
+        uid: 233, pp: 8, target: "normal"
     },
     sing:
     {
-        uid: 250, pp: 24, target: "normal"
+        uid: 234, pp: 24, target: "normal"
     },
     skullbash:
     {
-        uid: 251, pp: 24, target: "normal"
+        uid: 235, pp: 24, target: "normal"
     },
     sleeppowder:
     {
-        uid: 252, pp: 24, target: "normal"
+        uid: 236, pp: 24, target: "normal"
     },
     smog:
     {
-        uid: 253, pp: 32, target: "normal"
+        uid: 237, pp: 32, target: "normal"
     },
     snore:
     {
-        uid: 254, pp: 24, target: "normal"
+        uid: 238, pp: 24, target: "normal"
     },
     spore:
     {
-        uid: 255, pp: 24, target: "normal"
+        uid: 239, pp: 24, target: "normal"
     },
     stringshot:
     {
-        uid: 256, pp: 64, target: "allAdjacentFoes"
+        uid: 240, pp: 64, target: "allAdjacentFoes"
     },
     stunspore:
     {
-        uid: 257, pp: 48, target: "normal"
+        uid: 241, pp: 48, target: "normal"
     },
     substitute:
     {
-        uid: 258, pp: 16, target: "self"
+        uid: 242, pp: 16, target: "self"
     },
     supersonic:
     {
-        uid: 259, pp: 32, target: "normal"
+        uid: 243, pp: 32, target: "normal"
     },
     sweetkiss:
     {
-        uid: 260, pp: 16, target: "normal"
+        uid: 244, pp: 16, target: "normal"
     },
     sweetscent:
     {
-        uid: 261, pp: 32, target: "allAdjacentFoes"
+        uid: 245, pp: 32, target: "allAdjacentFoes"
     },
     swordsdance:
     {
-        uid: 262, pp: 48, target: "self"
+        uid: 246, pp: 48, target: "self"
     },
     thunderbolt:
     {
-        uid: 263, pp: 24, target: "normal"
+        uid: 247, pp: 24, target: "normal"
     },
     vinewhip:
     {
-        uid: 264, pp: 24, target: "normal"
+        uid: 248, pp: 24, target: "normal"
     },
     weatherball:
     {
-        uid: 265, pp: 16, target: "normal"
+        uid: 249, pp: 16, target: "normal"
     },
     willowisp:
     {
-        uid: 266, pp: 24, target: "normal"
+        uid: 250, pp: 24, target: "normal"
     },
     darkvoid:
     {
-        uid: 267, pp: 16, target: "allAdjacentFoes"
+        uid: 251, pp: 16, target: "allAdjacentFoes"
     },
     destinybond:
     {
-        uid: 268, pp: 8, target: "self"
+        uid: 252, pp: 8, target: "self"
     },
     gastroacid:
     {
-        uid: 269, pp: 16, target: "normal"
+        uid: 253, pp: 16, target: "normal"
     },
     iceball:
     {
-        uid: 270, pp: 32, target: "normal"
+        uid: 254, pp: 32, target: "normal"
     },
     rollout:
     {
-        uid: 271, pp: 32, target: "normal"
+        uid: 255, pp: 32, target: "normal"
     },
     sheercold:
     {
-        uid: 272, pp: 8, target: "normal"
+        uid: 256, pp: 8, target: "normal"
     },
     swagger:
     {
-        uid: 273, pp: 24, target: "normal"
+        uid: 257, pp: 24, target: "normal"
     },
     thunderwave:
     {
-        uid: 274, pp: 32, target: "normal"
+        uid: 258, pp: 32, target: "normal"
     },
     acid:
     {
-        uid: 275, pp: 48, target: "allAdjacentFoes"
+        uid: 259, pp: 48, target: "allAdjacentFoes"
     },
     aerialace:
     {
-        uid: 276, pp: 32, target: "any"
+        uid: 260, pp: 32, target: "any"
     },
     aeroblast:
     {
-        uid: 277, pp: 8, target: "any"
+        uid: 261, pp: 8, target: "any"
     },
     agility:
     {
-        uid: 278, pp: 48, target: "self"
+        uid: 262, pp: 48, target: "self"
     },
     amnesia:
     {
-        uid: 279, pp: 32, target: "self"
+        uid: 263, pp: 32, target: "self"
     },
     ancientpower:
     {
-        uid: 280, pp: 8, target: "normal"
+        uid: 264, pp: 8, target: "normal"
     },
     aquajet:
     {
-        uid: 281, pp: 32, target: "normal"
+        uid: 265, pp: 32, target: "normal"
     },
     aquatail:
     {
-        uid: 282, pp: 16, target: "normal"
+        uid: 266, pp: 16, target: "normal"
     },
     astonish:
     {
-        uid: 283, pp: 24, target: "normal"
+        uid: 267, pp: 24, target: "normal"
     },
     attackorder:
     {
-        uid: 284, pp: 24, target: "normal"
+        uid: 268, pp: 24, target: "normal"
     },
     aurorabeam:
     {
-        uid: 285, pp: 32, target: "normal"
+        uid: 269, pp: 32, target: "normal"
     },
     batonpass:
     {
-        uid: 286, pp: 64, target: "self", selfSwitch: "copyvolatile"
+        uid: 270, pp: 64, target: "self", selfSwitch: "copyvolatile"
     },
     bellydrum:
     {
-        uid: 287, pp: 16, target: "self"
+        uid: 271, pp: 16, target: "self"
     },
     bite:
     {
-        uid: 288, pp: 40, target: "normal"
+        uid: 272, pp: 40, target: "normal"
     },
     blastburn:
     {
-        uid: 289, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 273, pp: 8, target: "normal", volatileEffect: "mustrecharge"
     },
     blazekick:
     {
-        uid: 290, pp: 16, target: "normal"
+        uid: 274, pp: 16, target: "normal"
     },
     boneclub:
     {
-        uid: 291, pp: 32, target: "normal"
+        uid: 275, pp: 32, target: "normal"
     },
     brine:
     {
-        uid: 292, pp: 16, target: "normal"
+        uid: 276, pp: 16, target: "normal"
     },
     bubblebeam:
     {
-        uid: 293, pp: 32, target: "normal"
+        uid: 277, pp: 32, target: "normal"
     },
     bulkup:
     {
-        uid: 294, pp: 32, target: "self"
+        uid: 278, pp: 32, target: "self"
     },
     bulletpunch:
     {
-        uid: 295, pp: 48, target: "normal"
+        uid: 279, pp: 48, target: "normal"
     },
     calmmind:
     {
-        uid: 296, pp: 32, target: "self"
+        uid: 280, pp: 32, target: "self"
     },
     captivate:
     {
-        uid: 297, pp: 32, target: "allAdjacentFoes"
+        uid: 281, pp: 32, target: "allAdjacentFoes"
     },
     charge:
     {
-        uid: 298, pp: 32, target: "self"
+        uid: 282, pp: 32, target: "self"
     },
     chargebeam:
     {
-        uid: 299, pp: 16, target: "normal"
+        uid: 283, pp: 16, target: "normal"
     },
     closecombat:
     {
-        uid: 300, pp: 8, target: "normal"
+        uid: 284, pp: 8, target: "normal"
     },
     confuseray:
     {
-        uid: 301, pp: 16, target: "normal"
+        uid: 285, pp: 16, target: "normal"
     },
     confusion:
     {
-        uid: 302, pp: 40, target: "normal"
+        uid: 286, pp: 40, target: "normal"
     },
     constrict:
     {
-        uid: 303, pp: 56, target: "normal"
+        uid: 287, pp: 56, target: "normal"
     },
     cosmicpower:
     {
-        uid: 304, pp: 32, target: "self"
+        uid: 288, pp: 32, target: "self"
     },
     crosschop:
     {
-        uid: 305, pp: 8, target: "normal"
+        uid: 289, pp: 8, target: "normal"
     },
     crosspoison:
     {
-        uid: 306, pp: 32, target: "normal"
+        uid: 290, pp: 32, target: "normal"
     },
     crunch:
     {
-        uid: 307, pp: 24, target: "normal"
+        uid: 291, pp: 24, target: "normal"
     },
     crushclaw:
     {
-        uid: 308, pp: 16, target: "normal"
+        uid: 292, pp: 16, target: "normal"
     },
     cut:
     {
-        uid: 309, pp: 48, target: "normal"
+        uid: 293, pp: 48, target: "normal"
     },
     darkpulse:
     {
-        uid: 310, pp: 24, target: "any"
+        uid: 294, pp: 24, target: "any"
     },
     defendorder:
     {
-        uid: 311, pp: 16, target: "self"
+        uid: 295, pp: 16, target: "self"
     },
     defensecurl:
     {
-        uid: 312, pp: 64, target: "self"
+        uid: 296, pp: 64, target: "self"
     },
     discharge:
     {
-        uid: 313, pp: 24, target: "allAdjacent"
+        uid: 297, pp: 24, target: "allAdjacent"
     },
     dizzypunch:
     {
-        uid: 314, pp: 16, target: "normal"
+        uid: 298, pp: 16, target: "normal"
     },
     doubleteam:
     {
-        uid: 315, pp: 24, target: "self"
+        uid: 299, pp: 24, target: "self"
     },
     dragonbreath:
     {
-        uid: 316, pp: 32, target: "normal"
+        uid: 300, pp: 32, target: "normal"
     },
     dragonclaw:
     {
-        uid: 317, pp: 24, target: "normal"
+        uid: 301, pp: 24, target: "normal"
     },
     dragondance:
     {
-        uid: 318, pp: 32, target: "self"
+        uid: 302, pp: 32, target: "self"
     },
     dragonrage:
     {
-        uid: 319, pp: 16, target: "normal"
+        uid: 303, pp: 16, target: "normal"
     },
     drillpeck:
     {
-        uid: 320, pp: 32, target: "any"
+        uid: 304, pp: 32, target: "any"
     },
     dynamicpunch:
     {
-        uid: 321, pp: 8, target: "normal"
+        uid: 305, pp: 8, target: "normal"
     },
     earthpower:
     {
-        uid: 322, pp: 16, target: "normal"
+        uid: 306, pp: 16, target: "normal"
     },
     eggbomb:
     {
-        uid: 323, pp: 16, target: "normal"
+        uid: 307, pp: 16, target: "normal"
     },
     ember:
     {
-        uid: 324, pp: 40, target: "normal"
+        uid: 308, pp: 40, target: "normal"
     },
     eruption:
     {
-        uid: 325, pp: 8, target: "allAdjacentFoes"
+        uid: 309, pp: 8, target: "allAdjacentFoes"
     },
     feintattack:
     {
-        uid: 326, pp: 32, target: "normal"
+        uid: 310, pp: 32, target: "normal"
     },
     faketears:
     {
-        uid: 327, pp: 32, target: "normal"
+        uid: 311, pp: 32, target: "normal"
     },
     falseswipe:
     {
-        uid: 328, pp: 64, target: "normal"
+        uid: 312, pp: 64, target: "normal"
     },
     featherdance:
     {
-        uid: 329, pp: 24, target: "normal"
+        uid: 313, pp: 24, target: "normal"
     },
     firepunch:
     {
-        uid: 330, pp: 24, target: "normal"
+        uid: 314, pp: 24, target: "normal"
     },
     fissure:
     {
-        uid: 331, pp: 8, target: "normal"
+        uid: 315, pp: 8, target: "normal"
     },
     flamewheel:
     {
-        uid: 332, pp: 40, target: "normal"
+        uid: 316, pp: 40, target: "normal"
     },
     flash:
     {
-        uid: 333, pp: 32, target: "normal"
+        uid: 317, pp: 32, target: "normal"
     },
     flashcannon:
     {
-        uid: 334, pp: 16, target: "normal"
+        uid: 318, pp: 16, target: "normal"
     },
     flatter:
     {
-        uid: 335, pp: 24, target: "normal"
+        uid: 319, pp: 24, target: "normal"
     },
     focusblast:
     {
-        uid: 336, pp: 8, target: "normal"
+        uid: 320, pp: 8, target: "normal"
     },
     focusenergy:
     {
-        uid: 337, pp: 48, target: "self"
+        uid: 321, pp: 48, target: "self"
     },
     forcepalm:
     {
-        uid: 338, pp: 16, target: "normal"
+        uid: 322, pp: 16, target: "normal"
     },
     frenzyplant:
     {
-        uid: 339, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 323, pp: 8, target: "normal", volatileEffect: "mustrecharge"
     },
     frustration:
     {
-        uid: 340, pp: 32, target: "normal"
+        uid: 324, pp: 32, target: "normal"
     },
     gigaimpact:
     {
-        uid: 341, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 325, pp: 8, target: "normal", volatileEffect: "mustrecharge"
     },
     grassknot:
     {
-        uid: 342, pp: 32, target: "normal"
+        uid: 326, pp: 32, target: "normal"
     },
     grudge:
     {
-        uid: 343, pp: 8, target: "self"
+        uid: 327, pp: 8, target: "self"
     },
     guardswap:
     {
-        uid: 344, pp: 16, target: "normal"
+        uid: 328, pp: 16, target: "normal"
     },
     guillotine:
     {
-        uid: 345, pp: 8, target: "normal"
+        uid: 329, pp: 8, target: "normal"
     },
     hammerarm:
     {
-        uid: 346, pp: 16, target: "normal"
+        uid: 330, pp: 16, target: "normal"
     },
     harden:
     {
-        uid: 347, pp: 48, target: "self"
+        uid: 331, pp: 48, target: "self"
     },
     haze:
     {
-        uid: 348, pp: 48, target: "all"
+        uid: 332, pp: 48, target: "all"
     },
     headbutt:
     {
-        uid: 349, pp: 24, target: "normal"
+        uid: 333, pp: 24, target: "normal"
     },
     heartswap:
     {
-        uid: 350, pp: 16, target: "normal"
+        uid: 334, pp: 16, target: "normal"
     },
     helpinghand:
     {
-        uid: 351, pp: 32, target: "adjacentAlly"
+        uid: 335, pp: 32, target: "adjacentAlly"
     },
     hornattack:
     {
-        uid: 352, pp: 40, target: "normal"
+        uid: 336, pp: 40, target: "normal"
     },
     horndrill:
     {
-        uid: 353, pp: 8, target: "normal"
+        uid: 337, pp: 8, target: "normal"
     },
     howl:
     {
-        uid: 354, pp: 64, target: "self"
+        uid: 338, pp: 64, target: "self"
     },
     hydrocannon:
     {
-        uid: 355, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 339, pp: 8, target: "normal", volatileEffect: "mustrecharge"
     },
     hyperbeam:
     {
-        uid: 356, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 340, pp: 8, target: "normal", volatileEffect: "mustrecharge"
     },
     hyperfang:
     {
-        uid: 357, pp: 24, target: "normal"
+        uid: 341, pp: 24, target: "normal"
     },
     hypnosis:
     {
-        uid: 358, pp: 32, target: "normal"
+        uid: 342, pp: 32, target: "normal"
     },
     icefang:
     {
-        uid: 359, pp: 24, target: "normal"
+        uid: 343, pp: 24, target: "normal"
     },
     icepunch:
     {
-        uid: 360, pp: 24, target: "normal"
+        uid: 344, pp: 24, target: "normal"
     },
     iceshard:
     {
-        uid: 361, pp: 48, target: "normal"
+        uid: 345, pp: 48, target: "normal"
     },
     icywind:
     {
-        uid: 362, pp: 24, target: "allAdjacentFoes"
+        uid: 346, pp: 24, target: "allAdjacentFoes"
     },
     irondefense:
     {
-        uid: 363, pp: 24, target: "self"
+        uid: 347, pp: 24, target: "self"
     },
     ironhead:
     {
-        uid: 364, pp: 24, target: "normal"
+        uid: 348, pp: 24, target: "normal"
     },
     irontail:
     {
-        uid: 365, pp: 24, target: "normal"
+        uid: 349, pp: 24, target: "normal"
     },
     judgment:
     {
-        uid: 366, pp: 16, target: "normal"
+        uid: 350, pp: 16, target: "normal"
     },
     karatechop:
     {
-        uid: 367, pp: 40, target: "normal"
+        uid: 351, pp: 40, target: "normal"
     },
     kinesis:
     {
-        uid: 368, pp: 24, target: "normal"
+        uid: 352, pp: 24, target: "normal"
     },
     lavaplume:
     {
-        uid: 369, pp: 24, target: "allAdjacent"
+        uid: 353, pp: 24, target: "allAdjacent"
     },
     leafblade:
     {
-        uid: 370, pp: 24, target: "normal"
+        uid: 354, pp: 24, target: "normal"
     },
     leechseed:
     {
-        uid: 371, pp: 16, target: "normal"
+        uid: 355, pp: 16, target: "normal"
     },
     leer:
     {
-        uid: 372, pp: 48, target: "allAdjacentFoes"
+        uid: 356, pp: 48, target: "allAdjacentFoes"
     },
     lovelykiss:
     {
-        uid: 373, pp: 16, target: "normal"
+        uid: 357, pp: 16, target: "normal"
     },
     lowkick:
     {
-        uid: 374, pp: 32, target: "normal"
+        uid: 358, pp: 32, target: "normal"
     },
     lusterpurge:
     {
-        uid: 375, pp: 8, target: "normal"
+        uid: 359, pp: 8, target: "normal"
     },
     machpunch:
     {
-        uid: 376, pp: 48, target: "normal"
+        uid: 360, pp: 48, target: "normal"
     },
     magicalleaf:
     {
-        uid: 377, pp: 32, target: "normal"
+        uid: 361, pp: 32, target: "normal"
     },
     magnetbomb:
     {
-        uid: 378, pp: 32, target: "normal"
+        uid: 362, pp: 32, target: "normal"
     },
     meditate:
     {
-        uid: 379, pp: 64, target: "self"
+        uid: 363, pp: 64, target: "self"
     },
     megakick:
     {
-        uid: 380, pp: 8, target: "normal"
+        uid: 364, pp: 8, target: "normal"
     },
     megapunch:
     {
-        uid: 381, pp: 32, target: "normal"
+        uid: 365, pp: 32, target: "normal"
     },
     megahorn:
     {
-        uid: 382, pp: 16, target: "normal"
+        uid: 366, pp: 16, target: "normal"
     },
     metalclaw:
     {
-        uid: 383, pp: 56, target: "normal"
+        uid: 367, pp: 56, target: "normal"
     },
     mirrorshot:
     {
-        uid: 384, pp: 16, target: "normal"
+        uid: 368, pp: 16, target: "normal"
     },
     mist:
     {
-        uid: 385, pp: 48, target: "allySide"
+        uid: 369, pp: 48, target: "allySide"
     },
     mistball:
     {
-        uid: 386, pp: 8, target: "normal"
+        uid: 370, pp: 8, target: "normal"
     },
     mudslap:
     {
-        uid: 387, pp: 16, target: "normal"
+        uid: 371, pp: 16, target: "normal"
     },
     mudbomb:
     {
-        uid: 388, pp: 16, target: "normal"
+        uid: 372, pp: 16, target: "normal"
     },
     mudshot:
     {
-        uid: 389, pp: 24, target: "normal"
+        uid: 373, pp: 24, target: "normal"
     },
     nastyplot:
     {
-        uid: 390, pp: 32, target: "self"
+        uid: 374, pp: 32, target: "self"
     },
     needlearm:
     {
-        uid: 391, pp: 24, target: "normal"
+        uid: 375, pp: 24, target: "normal"
     },
     nightshade:
     {
-        uid: 392, pp: 24, target: "normal"
+        uid: 376, pp: 24, target: "normal"
     },
     nightslash:
     {
-        uid: 393, pp: 24, target: "normal"
+        uid: 377, pp: 24, target: "normal"
     },
     nightmare:
     {
-        uid: 394, pp: 24, target: "normal"
+        uid: 378, pp: 24, target: "normal"
     },
     octazooka:
     {
-        uid: 395, pp: 16, target: "normal"
+        uid: 379, pp: 16, target: "normal"
     },
     ominouswind:
     {
-        uid: 396, pp: 8, target: "normal"
+        uid: 380, pp: 8, target: "normal"
     },
     painsplit:
     {
-        uid: 397, pp: 32, target: "normal"
+        uid: 381, pp: 32, target: "normal"
     },
     payday:
     {
-        uid: 398, pp: 32, target: "normal"
+        uid: 382, pp: 32, target: "normal"
     },
     peck:
     {
-        uid: 399, pp: 56, target: "any"
+        uid: 383, pp: 56, target: "any"
     },
     poisonjab:
     {
-        uid: 400, pp: 32, target: "normal"
+        uid: 384, pp: 32, target: "normal"
     },
     poisonsting:
     {
-        uid: 401, pp: 56, target: "normal"
+        uid: 385, pp: 56, target: "normal"
     },
     poisontail:
     {
-        uid: 402, pp: 40, target: "normal"
+        uid: 386, pp: 40, target: "normal"
     },
     pound:
     {
-        uid: 403, pp: 56, target: "normal"
+        uid: 387, pp: 56, target: "normal"
     },
     powdersnow:
     {
-        uid: 404, pp: 40, target: "allAdjacentFoes"
+        uid: 388, pp: 40, target: "allAdjacentFoes"
     },
     powerswap:
     {
-        uid: 405, pp: 16, target: "normal"
+        uid: 389, pp: 16, target: "normal"
     },
     powerwhip:
     {
-        uid: 406, pp: 16, target: "normal"
+        uid: 390, pp: 16, target: "normal"
     },
     present:
     {
-        uid: 407, pp: 24, target: "normal"
+        uid: 391, pp: 24, target: "normal"
     },
     psybeam:
     {
-        uid: 408, pp: 32, target: "normal"
+        uid: 392, pp: 32, target: "normal"
     },
     psychic:
     {
-        uid: 409, pp: 16, target: "normal"
+        uid: 393, pp: 16, target: "normal"
     },
     psychoboost:
     {
-        uid: 410, pp: 8, target: "normal"
+        uid: 394, pp: 8, target: "normal"
     },
     psychocut:
     {
-        uid: 411, pp: 32, target: "normal"
+        uid: 395, pp: 32, target: "normal"
     },
     punishment:
     {
-        uid: 412, pp: 8, target: "normal"
+        uid: 396, pp: 8, target: "normal"
     },
     quickattack:
     {
-        uid: 413, pp: 48, target: "normal"
+        uid: 397, pp: 48, target: "normal"
     },
     rage:
     {
-        uid: 414, pp: 32, target: "normal", volatileEffect: "rage"
+        uid: 398, pp: 32, target: "normal", volatileEffect: "rage"
     },
     raindance:
     {
-        uid: 415, pp: 8, target: "all"
+        uid: 399, pp: 8, target: "all"
     },
     razorleaf:
     {
-        uid: 416, pp: 40, target: "allAdjacentFoes"
+        uid: 400, pp: 40, target: "allAdjacentFoes"
     },
     refresh:
     {
-        uid: 417, pp: 32, target: "self"
+        uid: 401, pp: 32, target: "self"
     },
     rest:
     {
-        uid: 418, pp: 16, target: "self"
+        uid: 402, pp: 16, target: "self"
     },
     return:
     {
-        uid: 419, pp: 32, target: "normal"
+        uid: 403, pp: 32, target: "normal"
     },
     roaroftime:
     {
-        uid: 420, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 404, pp: 8, target: "normal", volatileEffect: "mustrecharge"
     },
     rockclimb:
     {
-        uid: 421, pp: 32, target: "normal"
+        uid: 405, pp: 32, target: "normal"
     },
     rockpolish:
     {
-        uid: 422, pp: 32, target: "self"
+        uid: 406, pp: 32, target: "self"
     },
     rockslide:
     {
-        uid: 423, pp: 16, target: "allAdjacentFoes"
+        uid: 407, pp: 16, target: "allAdjacentFoes"
     },
     rocksmash:
     {
-        uid: 424, pp: 24, target: "normal"
+        uid: 408, pp: 24, target: "normal"
     },
     rockthrow:
     {
-        uid: 425, pp: 24, target: "normal"
+        uid: 409, pp: 24, target: "normal"
     },
     rockwrecker:
     {
-        uid: 426, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 410, pp: 8, target: "normal", volatileEffect: "mustrecharge"
     },
     rollingkick:
     {
-        uid: 427, pp: 24, target: "normal"
+        uid: 411, pp: 24, target: "normal"
     },
     sacredfire:
     {
-        uid: 428, pp: 8, target: "normal"
+        uid: 412, pp: 8, target: "normal"
     },
     safeguard:
     {
-        uid: 429, pp: 40, target: "allySide"
+        uid: 413, pp: 40, target: "allySide"
     },
     sandattack:
     {
-        uid: 430, pp: 24, target: "normal"
+        uid: 414, pp: 24, target: "normal"
     },
     scratch:
     {
-        uid: 431, pp: 56, target: "normal"
+        uid: 415, pp: 56, target: "normal"
     },
     seedbomb:
     {
-        uid: 432, pp: 24, target: "normal"
+        uid: 416, pp: 24, target: "normal"
     },
     seedflare:
     {
-        uid: 433, pp: 8, target: "normal"
+        uid: 417, pp: 8, target: "normal"
     },
     seismictoss:
     {
-        uid: 434, pp: 32, target: "normal"
+        uid: 418, pp: 32, target: "normal"
     },
     shadowball:
     {
-        uid: 435, pp: 24, target: "normal"
+        uid: 419, pp: 24, target: "normal"
     },
     shadowclaw:
     {
-        uid: 436, pp: 24, target: "normal"
+        uid: 420, pp: 24, target: "normal"
     },
     shadowpunch:
     {
-        uid: 437, pp: 32, target: "normal"
+        uid: 421, pp: 32, target: "normal"
     },
     shadowsneak:
     {
-        uid: 438, pp: 48, target: "normal"
+        uid: 422, pp: 48, target: "normal"
     },
     sharpen:
     {
-        uid: 439, pp: 48, target: "self"
+        uid: 423, pp: 48, target: "self"
     },
     shockwave:
     {
-        uid: 440, pp: 32, target: "normal"
+        uid: 424, pp: 32, target: "normal"
     },
     signalbeam:
     {
-        uid: 441, pp: 24, target: "normal"
+        uid: 425, pp: 24, target: "normal"
     },
     silverwind:
     {
-        uid: 442, pp: 8, target: "normal"
+        uid: 426, pp: 8, target: "normal"
     },
     skyattack:
     {
-        uid: 443, pp: 8, target: "any"
+        uid: 427, pp: 8, target: "any"
     },
     slam:
     {
-        uid: 444, pp: 32, target: "normal"
+        uid: 428, pp: 32, target: "normal"
     },
     slash:
     {
-        uid: 445, pp: 32, target: "normal"
+        uid: 429, pp: 32, target: "normal"
     },
     sludge:
     {
-        uid: 446, pp: 32, target: "normal"
+        uid: 430, pp: 32, target: "normal"
     },
     sludgebomb:
     {
-        uid: 447, pp: 16, target: "normal"
+        uid: 431, pp: 16, target: "normal"
     },
     smokescreen:
     {
-        uid: 448, pp: 32, target: "normal"
+        uid: 432, pp: 32, target: "normal"
     },
     sonicboom:
     {
-        uid: 449, pp: 32, target: "normal"
+        uid: 433, pp: 32, target: "normal"
     },
     spacialrend:
     {
-        uid: 450, pp: 8, target: "normal"
+        uid: 434, pp: 8, target: "normal"
     },
     spark:
     {
-        uid: 451, pp: 32, target: "normal"
+        uid: 435, pp: 32, target: "normal"
     },
     splash:
     {
-        uid: 452, pp: 64, target: "self"
+        uid: 436, pp: 64, target: "self"
     },
     steelwing:
     {
-        uid: 453, pp: 40, target: "normal"
+        uid: 437, pp: 40, target: "normal"
     },
     stockpile:
     {
-        uid: 454, pp: 32, target: "self"
+        uid: 438, pp: 32, target: "self"
     },
     stoneedge:
     {
-        uid: 455, pp: 8, target: "normal"
+        uid: 439, pp: 8, target: "normal"
     },
     strength:
     {
-        uid: 456, pp: 24, target: "normal"
+        uid: 440, pp: 24, target: "normal"
     },
     sunnyday:
     {
-        uid: 457, pp: 8, target: "all"
+        uid: 441, pp: 8, target: "all"
     },
     superfang:
     {
-        uid: 458, pp: 16, target: "normal"
+        uid: 442, pp: 16, target: "normal"
     },
     superpower:
     {
-        uid: 459, pp: 8, target: "normal"
+        uid: 443, pp: 8, target: "normal"
     },
     swift:
     {
-        uid: 460, pp: 32, target: "allAdjacentFoes"
+        uid: 444, pp: 32, target: "allAdjacentFoes"
     },
     tailwhip:
     {
-        uid: 461, pp: 48, target: "allAdjacentFoes"
+        uid: 445, pp: 48, target: "allAdjacentFoes"
     },
     teeterdance:
     {
-        uid: 462, pp: 32, target: "allAdjacent"
+        uid: 446, pp: 32, target: "allAdjacent"
     },
     teleport:
     {
-        uid: 463, pp: 32, target: "self"
+        uid: 447, pp: 32, target: "self"
     },
     thunderfang:
     {
-        uid: 464, pp: 24, target: "normal"
+        uid: 448, pp: 24, target: "normal"
     },
     thunderpunch:
     {
-        uid: 465, pp: 24, target: "normal"
+        uid: 449, pp: 24, target: "normal"
     },
     thundershock:
     {
-        uid: 466, pp: 48, target: "normal"
+        uid: 450, pp: 48, target: "normal"
     },
     tickle:
     {
-        uid: 467, pp: 32, target: "normal"
+        uid: 451, pp: 32, target: "normal"
     },
     triattack:
     {
-        uid: 468, pp: 16, target: "normal"
+        uid: 452, pp: 16, target: "normal"
     },
     trumpcard:
     {
-        uid: 469, pp: 5, target: "normal"
+        uid: 453, pp: 5, target: "normal"
     },
     vacuumwave:
     {
-        uid: 470, pp: 48, target: "normal"
+        uid: 454, pp: 48, target: "normal"
     },
     vicegrip:
     {
-        uid: 471, pp: 48, target: "normal"
+        uid: 455, pp: 48, target: "normal"
     },
     vitalthrow:
     {
-        uid: 472, pp: 16, target: "normal"
+        uid: 456, pp: 16, target: "normal"
     },
     watergun:
     {
-        uid: 473, pp: 40, target: "normal"
+        uid: 457, pp: 40, target: "normal"
     },
     waterpulse:
     {
-        uid: 474, pp: 32, target: "any"
+        uid: 458, pp: 32, target: "any"
     },
     waterspout:
     {
-        uid: 475, pp: 8, target: "allAdjacentFoes"
+        uid: 459, pp: 8, target: "allAdjacentFoes"
     },
     waterfall:
     {
-        uid: 476, pp: 24, target: "normal"
+        uid: 460, pp: 24, target: "normal"
     },
     wingattack:
     {
-        uid: 477, pp: 56, target: "any"
+        uid: 461, pp: 56, target: "any"
     },
     withdraw:
     {
-        uid: 478, pp: 64, target: "self"
+        uid: 462, pp: 64, target: "self"
     },
     xscissor:
     {
-        uid: 479, pp: 24, target: "normal"
+        uid: 463, pp: 24, target: "normal"
     },
     yawn:
     {
-        uid: 480, pp: 16, target: "normal"
+        uid: 464, pp: 16, target: "normal"
     },
     zapcannon:
     {
-        uid: 481, pp: 8, target: "normal"
+        uid: 465, pp: 8, target: "normal"
     },
     zenheadbutt:
     {
-        uid: 482, pp: 24, target: "normal"
+        uid: 466, pp: 24, target: "normal"
     }
 };
 
@@ -7553,5 +7489,5 @@ const items: {readonly [name: string]: number} =
 
 export const dex: Dex =
 {
-    pokemon, numPokemon: 526, moves, numMoves: 483, items, numItems: 214
+    pokemon, numPokemon: 526, moves, numMoves: 467, items, numItems: 214
 };

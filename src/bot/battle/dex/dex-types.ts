@@ -1,10 +1,17 @@
 /** Names of certain stats. */
 export type StatName = "hp" | "atk" | "def" | "spa" | "spd" | "spe";
 
+const typesInternal =
+{
+    bug: true, dark: true, dragon: true, fire: true, flying: true, ghost: true,
+    electric: true, fighting: true, grass: true, ground: true, ice: true,
+    normal: true, poison: true, psychic: true, rock: true, steel: true,
+    water: true
+};
+/** Set of Type names. */
+export const types: Readonly<typeof typesInternal> = typesInternal;
 /** The different types a pokemon can have. */
-export type Type = "bug" | "dark" | "dragon" | "fire" | "flying" | "ghost" |
-    "electric" | "fighting" | "grass" | "ground" | "ice" | "normal" | "poison" |
-    "psychic" | "rock" | "steel" | "water";
+export type Type = keyof typeof typesInternal;
 
 /** Format of each pokemon entry in the Dex. */
 export interface PokemonData
@@ -31,7 +38,7 @@ export interface PokemonData
      */
     readonly abilities: {readonly [name: string]: 0 | 1};
     /** Types of the pokemon. */
-    readonly types: Readonly<Type[]>;
+    readonly types: ReadonlyArray<Type>;
     /** Base stats. */
     readonly baseStats: {readonly [S in StatName]: number};
     /** Pokemon's weight in kg. Affected by certain moves. */

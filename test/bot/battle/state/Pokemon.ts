@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import "mocha";
+import { Type, types } from "../../../../src/bot/battle/dex/dex-types";
 import { Pokemon } from "./../../../../src/bot/battle/state/Pokemon";
 
 describe("Pokemon", function()
@@ -114,6 +115,31 @@ describe("Pokemon", function()
         {
             expect(() => mon.item = "something that isn't an item").to.throw();
             expect(mon.item).to.equal("");
+        });
+    });
+
+    describe("hpType", function()
+    {
+        it("Should rule out all types if one is set", function()
+        {
+            mon.hpType = "fire";
+            // tslint:disable-next-line:no-unused-expression
+            expect(mon.possibleHPTypes.fire).to.be.true;
+            // tslint:disable-next-line:no-unused-expression
+            expect((Object.keys(types) as Type[])
+                    .filter(type => type !== "fire")
+                    .every(type => !mon.possibleHPTypes[type])).to.be.true;
+        });
+
+        it("Should rule out one type", function()
+        {
+            mon.ruleOutHPType("fire");
+            // tslint:disable-next-line:no-unused-expression
+            expect(mon.possibleHPTypes.fire).to.be.false;
+            // tslint:disable-next-line:no-unused-expression
+            expect((Object.keys(types) as Type[])
+                    .filter(type => type !== "fire")
+                    .every(type => mon.possibleHPTypes[type])).to.be.true;
         });
     });
 
@@ -266,6 +292,7 @@ describe("Pokemon", function()
             // set some stuff for coverage
             mon.species = "Magikarp";
             mon.baseAbility = "swiftswim";
+            mon.hpType = "fire";
             mon.majorStatus = "psn";
             mon.gender = "F";
 
