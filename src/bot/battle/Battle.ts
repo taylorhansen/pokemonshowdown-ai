@@ -95,8 +95,13 @@ export abstract class Battle
             if (this.battling)
             {
                 logger.debug(`state:\n${this.state.toString()}`);
-                // TODO: don't askAI if waiting for opponent
-                this.askAI();
+                // new turn, fainted, or selfswitch
+                if (args.turn || (args.upkeep &&
+                        (this.state.teams.us.active.fainted ||
+                            this.selfSwitch)))
+                {
+                    this.askAI();
+                }
             }
         })
         .on("error", /* istanbul ignore next: uses stdin */ args =>

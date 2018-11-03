@@ -1,5 +1,5 @@
-import { Side } from "./BattleState";
 import { Pokemon } from "./Pokemon";
+import { Side } from "./Side";
 
 /** Options for switchin methods. */
 export interface SwitchInOptions
