@@ -116,13 +116,12 @@ export abstract class Battle
 
             const team = this.state.teams.us;
 
-            // first time: team array not initialized yet
-            team.size = args.side.pokemon.length;
-
             // first time setup, initialize each of the client's pokemon
             if (!this.battling)
             {
                 this.battling = true;
+
+                team.size = args.side.pokemon.length;
                 for (const data of args.side.pokemon)
                 {
                     const details: PokemonDetails = data.details;
