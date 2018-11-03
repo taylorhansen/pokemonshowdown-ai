@@ -5,19 +5,36 @@
 export class VolatileStatus
 {
     // passed when copying
+
     /** Stat boost stages. */
-    private statBoosts: {[N in BoostableStatName]: BoostStage};
+    public get boosts(): {readonly [N in BoostableStatName]: number}
+    {
+        return this._boosts;
+    }
+    private _boosts: {[N in BoostableStatName]: number};
+
     /** Whether the corresponding move in the pokemon's moveset is disabled. */
     private disabledMoves: boolean[];
 
     // not passed when copying
+
     /** Whether the pokemon is locked into a move and is unable to switch. */
     public lockedMove: boolean;
+
+    /** Whether the pokemon is confused. */
+    public get isConfused(): boolean
+    {
+        return this.confuseTurns !== 0;
+    }
     /**
      * Number of turns this pokemon has been confused, including the turn it
      * started.
      */
-    private confuseTurns: number;
+    public get confuseTurns(): number
+    {
+        return this._confuseTurns;
+    }
+    private _confuseTurns: number;
 
     /** Creates a VolatileStatus object. */
     constructor()
@@ -32,10 +49,10 @@ export class VolatileStatus
     public shallowClone(): VolatileStatus
     {
         const v = new VolatileStatus();
-        v.statBoosts = this.statBoosts;
+        v._boosts = this._boosts;
         v.disabledMoves = this.disabledMoves;
         // not this.lockedmove, currently not reproducible ingame
-        // not this.confused, always reset when switching
+        // not this._confuseTurns, always reset when switching
         return v;
     }
 
@@ -45,13 +62,23 @@ export class VolatileStatus
      */
     public clear(): void
     {
-        this.statBoosts =
+        this._boosts =
         {
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
         };
         this.disabledMoves = [false, false, false, false];
         this.lockedMove = false;
-        this.confuseTurns = 0;
+        this._confuseTurns = 0;
+    }
+
+    /**
+     * Boosts a stat.
+     * @param stat Stat to be boosted.
+     * @param amount Whole number of stages to boost the stat by.
+     */
+    public boost(stat: BoostableStatName, amount: number): void
+    {
+        this._boosts[stat] += amount;
     }
 
     /**
@@ -69,7 +96,7 @@ export class VolatileStatus
      * @param index Index of the move.
      * @param disabled Disabled status. Omit to assume true.
      */
-    public disableMove(move: number, disabled: boolean = true): void
+    public disableMove(move: number, disabled: boolean): void
     {
         this.disabledMoves[move] = disabled;
     }
@@ -80,7 +107,7 @@ export class VolatileStatus
      */
     public confuse(flag: boolean): void
     {
-        this.confuseTurns = flag ? Math.max(1, this.confuseTurns + 1) : 0;
+        this._confuseTurns = flag ? this._confuseTurns + 1 : 0;
     }
 
     /**
@@ -92,7 +119,7 @@ export class VolatileStatus
     {
         // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
-            /*disabled moves*/4 + /*lockedmove*/1 + /*confuse turns*/1;
+            /*disabled moves*/4 + /*locked move*/1 + /*confuse turns*/1;
     }
 
     /**
@@ -103,15 +130,16 @@ export class VolatileStatus
     {
         const a =
         [
-            ...Object.keys(this.statBoosts).map(
-                (key: BoostableStatName) => this.statBoosts[key]),
+            ...Object.keys(this._boosts).map(
+                (key: BoostableStatName) => this._boosts[key]),
             ...this.disabledMoves.map(b => b ? 1 : 0),
             this.lockedMove ? 1 : 0,
-            this.confuseTurns
+            this._confuseTurns
         ];
         return a;
     }
 
+    // istanbul ignore next: only used in logging
     /**
      * Encodes all volatile status data into a string.
      * @returns The VolatileStatus in string form.
@@ -119,19 +147,20 @@ export class VolatileStatus
     public toString(): string
     {
         return `[${
-            Object.keys(this.statBoosts)
-            .filter((key: BoostableStatName) => this.statBoosts[key] !== 0)
+            Object.keys(this._boosts)
+            .filter((key: BoostableStatName) => this._boosts[key] !== 0)
             .map((key: BoostableStatName) =>
-                `${key}: ${VolatileStatus.plus(this.statBoosts[key])}`)
+                `${key}: ${VolatileStatus.plus(this._boosts[key])}`)
             .concat(this.disabledMoves
                 .filter(disabled => disabled)
                 .map((disabled, i) => `disabled move ${i + 1}`))
             .concat(this.lockedMove ? ["lockedmove"] : [])
-            .concat(this.confuseTurns ?
-                    [`confused for ${this.confuseTurns - 1} turns`] : [])
+            .concat(this._confuseTurns ?
+                    [`confused for ${this._confuseTurns - 1} turns`] : [])
             .join(", ")}]`;
     }
 
+    // istanbul ignore next: only used in logging
     /**
      * Converts a number to a string where positive numbers are preceded by a
      * `+` symbol.
@@ -152,7 +181,3 @@ export const boostableStatNames =
 };
 /** Names of pokemon stats that can be boosted. */
 export type BoostableStatName = keyof typeof boostableStatNames;
-
-/** Maximum and minimum stat boost stages. */
-export type BoostStage = -6 | -5 | -4 | -3 | -2 | -1 | 0 | 1 | 2 | 3 | 4 | 5 |
-    6;

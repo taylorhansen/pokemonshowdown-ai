@@ -1,12 +1,12 @@
 import { expect } from "chai";
 import "mocha";
 import { MessageArgs, MessageHandler, UpdateChallengesArgs } from
-    "../../src/bot/AnyMessageListener";
-import { MessageType, RoomType } from "../../src/bot/messageData";
-import { MessageParser } from "../../src/bot/parser/MessageParser";
-import * as testArgs from "../helpers/battleTestArgs";
+    "../../../src/bot/AnyMessageListener";
+import { MessageType, RoomType } from "../../../src/bot/messageData";
+import { MessageParser } from "../../../src/bot/parser/MessageParser";
+import * as testArgs from "../../helpers/battleTestArgs";
 import { buildMessage, composeBattleInit, composeBattleProgress,
-    stringifyRequest } from "../helpers/buildMessage";
+    stringifyRequest } from "../../helpers/buildMessage";
 
 describe("MessageParser", function()
 {

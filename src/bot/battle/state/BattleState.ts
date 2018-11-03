@@ -1,14 +1,6 @@
-import { RoomStatus } from "./Room";
+import { RoomStatus } from "./RoomStatus";
+import { Side } from "./Side";
 import { Team } from "./Team";
-
-/** Identifies a team's side in the client's perspective. */
-export type Side = "us" | "them";
-
-/** Returns the other side. */
-export function otherSide(side: Side): Side
-{
-    return side === "us" ? "them" : "us";
-}
 
 /**
  * Holds all the data about a battle. This is used as input to the nerual
@@ -49,6 +41,7 @@ export class BattleState
         return a;
     }
 
+    // istanbul ignore next: only used for logging
     /**
      * Encodes all state data into a string.
      * @param indent Indentation level to use.

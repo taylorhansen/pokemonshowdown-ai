@@ -2,7 +2,6 @@ import { expect } from "chai";
 import "mocha";
 import { AnyMessageListener } from "../../../src/bot/AnyMessageListener";
 import { Choice } from "../../../src/bot/battle/Choice";
-import { BattleState } from "../../../src/bot/battle/state/BattleState";
 import * as testArgs from "../../helpers/battleTestArgs";
 import { MockBattle } from "./MockBattle";
 

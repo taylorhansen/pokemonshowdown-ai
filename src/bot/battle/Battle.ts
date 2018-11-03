@@ -7,8 +7,9 @@ import { BattleEvent, Cause, MoveEvent, otherId, PlayerID,
 import { Choice } from "./Choice";
 import { dex } from "./dex/dex";
 import { SelfSwitch } from "./dex/dex-types";
-import { BattleState, otherSide, Side } from "./state/BattleState";
+import { BattleState } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
+import { otherSide, Side } from "./state/Side";
 import { SwitchInOptions } from "./state/Team";
 
 /**
@@ -116,10 +117,7 @@ export abstract class Battle
             const team = this.state.teams.us;
 
             // first time: team array not initialized yet
-            if (team.size === 0)
-            {
-                team.size = args.side.pokemon.length;
-            }
+            team.size = args.side.pokemon.length;
 
             // first time setup, initialize each of the client's pokemon
             if (!this.battling)
@@ -130,27 +128,20 @@ export abstract class Battle
                     const details: PokemonDetails = data.details;
                     const status: PokemonStatus = data.condition;
 
+                    // initial revealed pokemon can't be null, since we already
+                    //  set the teamsize
                     const mon = team.reveal(details.species, details.level,
-                            details.gender, status.hp, status.hpMax);
+                            details.gender, status.hp, status.hpMax)!;
                     mon.item = data.item;
                     mon.baseAbility = data.baseAbility;
                     mon.hp.set(status.hp, status.hpMax);
                     mon.majorStatus = status.condition;
 
                     // set active status
-                    if (data.active)
-                    {
-                        mon.switchIn();
-                    }
-                    else
-                    {
-                        mon.switchOut();
-                    }
+                    if (data.active) mon.switchIn();
+                    else mon.switchOut();
 
-                    for (const moveId of data.moves)
-                    {
-                        mon.revealMove(moveId);
-                    }
+                    for (const moveId of data.moves) mon.revealMove(moveId);
                 }
             }
 
@@ -166,7 +157,8 @@ export abstract class Battle
                 {
                     // FIXME: the "disabled" volatile status and the "disabled"
                     //  property in the request json are not the same thing
-                    active.volatile.disableMove(i, moveData[i].disabled);
+                    active.volatile.disableMove(i,
+                            moveData[i].disabled || false);
                 }
             }
         });

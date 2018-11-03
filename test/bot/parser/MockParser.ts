@@ -1,6 +1,6 @@
-import { MessageArgs } from "../../src/bot/AnyMessageListener";
-import { MessageType } from "../../src/bot/messageData";
-import { Parser } from "../../src/bot/parser/Parser";
+import { MessageArgs } from "../../../src/bot/AnyMessageListener";
+import { MessageType } from "../../../src/bot/messageData";
+import { Parser } from "../../../src/bot/parser/Parser";
 
 /** Mocks the Parser class. */
 export class MockParser extends Parser

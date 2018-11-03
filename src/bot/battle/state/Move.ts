@@ -8,10 +8,15 @@ export class Move
     {
         return this.idName;
     }
-    public set id(name: string)
+    public set id(id: string)
     {
-        this.idName = name;
-        const data = dex.moves[name];
+        if (!dex.moves.hasOwnProperty(id))
+        {
+            throw new Error(`Invalid move name ${id}`);
+        }
+
+        this.idName = id;
+        const data = dex.moves[id];
         this._id = data.uid;
         this._pp = data.pp;
         this.ppMax = data.pp;
@@ -67,6 +72,7 @@ export class Move
         return [...id, this._pp];
     }
 
+    // istanbul ignore next: only used for logging
     /**
      * Encodes all move data into a string.
      * @param indent Indentation level to use.

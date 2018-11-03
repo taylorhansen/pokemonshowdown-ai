@@ -20,7 +20,7 @@ export class Pokemon
         return this._active;
     }
 
-    /** Species/form name. */
+    /** Species/form display name. */
     public get species(): string
     {
         return this.speciesName;
@@ -32,33 +32,48 @@ export class Pokemon
         this._species = this.data.uid;
     }
 
-    /** Ability id name. */
+    /** Ability id name. Setter allows either id name or display name. */
     public get baseAbility(): string
     {
         return this.baseAbilityName;
     }
     public set baseAbility(baseAbility: string)
     {
-        this.baseAbilityName = baseAbility.toLowerCase().replace(/[ -]+/g, "");
-        if (!this.data)
+        if (!this.data) throw new Error("Base ability set before species data");
+
+        // make sure ability name is converted to an id name
+        const name = baseAbility.toLowerCase().replace(/[ -]+/g, "");
+
+        if (!this.data.abilities.hasOwnProperty(name))
         {
-            throw new Error("Base ability set before species data");
+            throw new Error(
+                `Species ${this.species} can't have ability ${name}`);
         }
-        this._baseAbility = this.data.abilities[baseAbility];
+
+        this.baseAbilityName = name;
+        this._baseAbility = this.data.abilities[name];
     }
 
-    /** Item id name. */
+    /** Item id name. Setter allows either id name or display name. */
     public get item(): string
     {
         return this.itemName;
     }
     public set item(item: string)
     {
-        this.itemName = item.toLowerCase().replace(/[ -]+/g, "");
+        // make sure item name is converted to an id name
+        const name = item.toLowerCase().replace(/[ -]+/g, "");
+
+        if (!dex.items.hasOwnProperty(name))
+        {
+            throw new Error(`Invalid item name ${name}`);
+        }
+
+        this.itemName = name;
         this._item = dex.items[item];
     }
 
-    /** Pokemon's level. */
+    /** Pokemon's level. Clamped between the closed interval `[1, 100]`. */
     public get level(): number
     {
         return this._level;
@@ -145,7 +160,10 @@ export class Pokemon
         this._active = true;
     }
 
-    /** Tells the pokemon that it is currently being switched out. */
+    /**
+     * Tells the pokemon that it is currently being switched out. Clears
+     * volatile status.
+     */
     public switchOut(): void
     {
         this._active = false;
@@ -188,7 +206,7 @@ export class Pokemon
      */
     public canMove(index: number): boolean
     {
-        return index < this._moves.length && index < this.unrevealedMove &&
+        return index >= 0 && index < this._moves.length &&
             this._moves[index].pp > 0 && !this._volatile.isDisabled(index);
     }
 
@@ -250,6 +268,7 @@ export class Pokemon
         return a;
     }
 
+    // istanbul ignore next: only used for logging
     /**
      * Encodes all pokemon data into a string.
      * @param indent Indentation level to use.

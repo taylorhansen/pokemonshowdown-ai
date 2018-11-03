@@ -98,11 +98,11 @@ export class Team
         if (index < 0 || index >= this.unrevealed) return null;
 
         // switch active status
-        this.active.switchOut();
         if (options.copyVolatile)
         {
             this.active.copyVolatile(this._pokemon[index]);
         }
+        this.active.switchOut();
         this._pokemon[index].switchIn();
 
         const tmp = this._pokemon[0];
@@ -118,13 +118,15 @@ export class Team
      * @param gender Pokemon's gender.
      * @param hp Current HP.
      * @param hpMax Maximum HP.
-     * @returns The new pokemon.
+     * @returns The new pokemon, or null if the operation would overflow the
+     * current team size.
      */
-    public reveal(species: string, level: number,
-        gender: string | null, hp: number, hpMax: number): Pokemon
+    public reveal(species: string, level: number, gender: string | null,
+        hp: number, hpMax: number): Pokemon | null
     {
-        return this._pokemon[
-                this.revealIndex(species, level, gender, hp, hpMax)];
+        const index = this.revealIndex(species, level, gender, hp, hpMax);
+        if (index < 0) return null;
+        return this._pokemon[index];
     }
 
     /**
@@ -134,11 +136,15 @@ export class Team
      * @param gender Pokemon's gender.
      * @param hp Current HP.
      * @param hpMax Maximum HP.
-     * @returns The index of the new pokemon.
+     * @returns The index of the new pokemon, or -1 if the operation would
+     * overflow the current team size.
      */
-    private revealIndex(species: string, level: number,
-        gender: string | null, hp: number, hpMax: number): number
+    private revealIndex(species: string, level: number, gender: string | null,
+        hp: number, hpMax: number): number
     {
+        // early return: team already full
+        if (this.unrevealed === this._size) return -1;
+
         this._pokemon[this.unrevealed] =
             new Pokemon(/*hpPercent*/ this.side === "them");
 
@@ -190,6 +196,7 @@ export class Team
         return a;
     }
 
+    // istanbul ignore next: only used for logging
     /**
      * Encodes all team data into a string.
      * @param indent Indentation level to use.
@@ -230,6 +237,7 @@ export class TeamStatus
         return [];
     }
 
+    // istanbul ignore next: only used for logging
     /**
      * Encodes all team status data into a string
      * @returns The TeamStatus in string form.
