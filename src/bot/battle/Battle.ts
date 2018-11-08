@@ -60,7 +60,8 @@ export abstract class Battle
         listener
         .on("battleinit", args =>
         {
-            logger.debug(`args: ${inspect(args, {colors: true, depth: null})}`);
+            logger.debug(`battleinit:
+${inspect(args, {colors: true, depth: null})}`);
 
             // map player id to which side they represent
             const id = args.id;
@@ -83,7 +84,8 @@ export abstract class Battle
         })
         .on("battleprogress", args =>
         {
-            logger.debug(`args: ${inspect(args, {colors: true, depth: null})}`);
+            logger.debug(`battleprogress:
+${inspect(args, {colors: true, depth: null})}`);
 
             args.events.forEach(event => this.handleEvent(event));
             if (args.upkeep)
@@ -113,6 +115,8 @@ export abstract class Battle
         })
         .on("request", args =>
         {
+            logger.debug(`request:
+${inspect(args, {colors: true, depth: null})}`);
             // update the client's team data
             // generally, handling all the other types of messages should
             //  reproduce effectively the same team data as would be given to us
