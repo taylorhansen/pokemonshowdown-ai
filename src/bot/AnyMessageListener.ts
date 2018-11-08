@@ -98,9 +98,9 @@ export type MessageArgs<T extends MessageType> =
 /** Args for a `battleinit` message type. */
 export interface BattleInitArgs
 {
-    /** PlayerID of the client. */
+    /** PlayerID of a player. */
     id: PlayerID;
-    /** Username of the client. */
+    /** Username of a player. */
     username: string;
     /** Fixed size of each team. */
     teamSizes: {[P in PlayerID]: number};
