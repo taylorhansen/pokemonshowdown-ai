@@ -338,10 +338,6 @@ export interface RequestMove
 /** Basic team info. */
 export interface RequestSide
 {
-    /** Username of the client. */
-    name: string;
-    /** Player ID. Can be p1 or p2. */
-    id: PlayerID;
     /** List of all pokemon on the team. */
     pokemon: RequestPokemon[];
 }
