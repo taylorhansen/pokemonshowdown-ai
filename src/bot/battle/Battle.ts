@@ -1,4 +1,5 @@
 import * as readline from "readline";
+import { inspect } from "util";
 import { AnyMessageListener } from "../AnyMessageListener";
 import * as logger from "../logger";
 import { BattleEvent, Cause, MoveEvent, otherId, PlayerID,
@@ -59,7 +60,7 @@ export abstract class Battle
         listener
         .on("battleinit", args =>
         {
-            console.dir(args, {colors: true, depth: null});
+            logger.debug(`args: ${inspect(args, {colors: true, depth: null})}`);
 
             // map player id to which side they represent
             const id = args.id;
@@ -82,7 +83,7 @@ export abstract class Battle
         })
         .on("battleprogress", args =>
         {
-            console.dir(args, {colors: true, depth: null});
+            logger.debug(`args: ${inspect(args, {colors: true, depth: null})}`);
 
             args.events.forEach(event => this.handleEvent(event));
             if (args.upkeep)
