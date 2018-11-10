@@ -332,7 +332,7 @@ export interface RequestMove
     /** Target of the move. */
     target?: string;
     /** Whether the move is currently disabled. */
-    disabled?: boolean;
+    disabled: boolean;
 }
 
 /** Basic team info. */

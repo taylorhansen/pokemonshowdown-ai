@@ -58,7 +58,7 @@ export abstract class Battle
         this.sender = sender;
 
         listener
-        .on("battleinit", args =>
+        .on("battleinit", async args =>
         {
             logger.debug(`battleinit:
 ${inspect(args, {colors: true, depth: null})}`);
@@ -80,9 +80,9 @@ ${inspect(args, {colors: true, depth: null})}`);
             args.events.forEach(event => this.handleEvent(event));
 
             logger.debug(`state:\n${this.state.toString()}`);
-            this.askAI();
+            await this.askAI();
         })
-        .on("battleprogress", args =>
+        .on("battleprogress", async args =>
         {
             logger.debug(`battleprogress:
 ${inspect(args, {colors: true, depth: null})}`);
@@ -98,12 +98,10 @@ ${inspect(args, {colors: true, depth: null})}`);
             if (this.battling)
             {
                 logger.debug(`state:\n${this.state.toString()}`);
-                // new turn, fainted, or selfswitch
-                if (args.turn || (args.upkeep &&
-                        (this.state.teams.us.active.fainted ||
-                            this.selfSwitch)))
+                if (args.turn || this.selfSwitch ||
+                    (args.upkeep && this.state.teams.us.active.fainted))
                 {
-                    this.askAI();
+                    await this.askAI();
                 }
             }
         })
@@ -143,25 +141,24 @@ ${inspect(args, {colors: true, depth: null})}`);
                             details.gender, status.hp, status.hpMax)!;
                     mon.item = data.item;
                     mon.baseAbility = data.baseAbility;
-                    mon.hp.set(status.hp, status.hpMax);
                     mon.majorStatus = status.condition;
 
                     // set active status
                     if (data.active) mon.switchIn();
                     else mon.switchOut();
 
-                    for (const moveId of data.moves)
+                    for (let moveId of data.moves)
                     {
-                        // set hidden power type
                         if (moveId.startsWith("hiddenpower"))
                         {
+                            // set hidden power type
                             // format: hiddenpower<type><base power if gen2-5>
                             mon.hpType = moveId.substr("hiddenpower".length)
                                 .replace(/\d+/, "") as Type;
-                            mon.revealMove("hiddenpower");
+                            moveId = "hiddenpower";
                             // TODO: track this for opponent's pokemon
                         }
-                        else mon.revealMove(moveId);
+                        mon.revealMove(moveId);
                     }
                 }
             }
@@ -178,8 +175,7 @@ ${inspect(args, {colors: true, depth: null})}`);
                 {
                     // FIXME: the "disabled" volatile status and the "disabled"
                     //  property in the request json are not the same thing
-                    active.volatile.disableMove(i,
-                            moveData[i].disabled || false);
+                    active.volatile.disableMove(i, moveData[i].disabled);
                 }
             }
         });
@@ -277,6 +273,7 @@ ${inspect(args, {colors: true, depth: null})}`);
                     this.save();
                 }
                 break;
+            // istanbul ignore next: should never happen
             default:
                 logger.error(`Unhandled message type ${event!.type}`);
         }
@@ -322,10 +319,10 @@ ${inspect(args, {colors: true, depth: null})}`);
         {
             this.selfSwitch = selfSwitch;
         }
-        else if (side === "them" && selfSwitch === "copyvolatile")
+        else // them
         {
             // remember to copy volatile status data for the opponent's switchin
-            this.themCopyVolatile = true;
+            this.themCopyVolatile = selfSwitch === "copyvolatile";
         }
     }
 
@@ -385,6 +382,7 @@ ${inspect(args, {colors: true, depth: null})}`);
         this.sender(choice);
     }
 
+    // istanbul ignore next: uses stdin
     /** Asks for and sends user input to the server once it's received. */
     private askUser(): void
     {

@@ -6,7 +6,7 @@ import { BattleEvent, Cause, PokemonDetails, PokemonID, PokemonStatus } from
 
 export const username: string[] = ["user1", "user2"];
 
-/** Test PokemonIDs. */
+/** Test PokemonIDs. Even indexes belong to p1 while odd ones belong to p2. */
 export const pokemonId: PokemonID[] =
 [
     {owner: "p1", position: "a", nickname: "hi"},
@@ -14,7 +14,7 @@ export const pokemonId: PokemonID[] =
     {owner: "p1", position: "a", nickname: "Pentagon"}
 ];
 
-/** Test PokemonDetails. */
+/** Test PokemonDetails. Matches corresponding pokemonId. */
 export const pokemonDetails: PokemonDetails[] =
 [
     {species: "Magikarp", shiny: true, gender: "M", level: 50},
@@ -22,7 +22,7 @@ export const pokemonDetails: PokemonDetails[] =
     {species: "Porygon", shiny: false, gender: null, level: 100}
 ];
 
-/** Test PokemonStatuses. */
+/** Test PokemonStatuses. Matches corresponding pokemonId. */
 export const pokemonStatus: PokemonStatus[] =
 [
     {hp: 100, hpMax: 100, condition: "par"},
@@ -71,7 +71,9 @@ export const battleEvent: BattleEvent[] =
     {type: "tie"}, {type: "win", winner: username[1]}
 ];
 
-/** Test BattleInitArgs. */
+/**
+ * Test BattleInitArgs. Even indexes belong to p1 while odd ones belong to p2.
+ */
 export const battleInit: BattleInitArgs[] =
 [
     {
@@ -104,9 +106,35 @@ export const battleProgress: BattleProgressArgs[] =
     }
 ];
 
-/** Test RequestArgs. */
+/** Test RequestArgs. Even indexes belong to p1 while odd ones belong to p2. */
 export const request: RequestArgs[] =
 [
+    {
+        side:
+        {
+            pokemon:
+            [
+                {
+                    ident: pokemonId[0],
+                    details: pokemonDetails[0],
+                    condition: pokemonStatus[0],
+                    active: true,
+                    stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                    moves: ["splash"], baseAbility: "swiftswim",
+                    item: "choiceband", pokeball: "masterball"
+                },
+                {
+                    ident: pokemonId[2],
+                    details: pokemonDetails[2],
+                    condition: pokemonStatus[2],
+                    active: false,
+                    stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                    moves: ["tackle"], baseAbility: "trace",
+                    item: "choicescarf", pokeball: "greatball"
+                }
+            ]
+        }
+    },
     {
         active:
         [
@@ -122,38 +150,19 @@ export const request: RequestArgs[] =
         ],
         side:
         {
-            name: username[0], id: "p1",
             pokemon:
             [
-                {
-                    ident: pokemonId[0],
-                    details: pokemonDetails[0],
-                    condition: pokemonStatus[0],
-                    active: true,
-                    stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                    moves: ["splash"], baseAbility: "swiftswim",
-                    item: "choiceband", pokeball: "masterball"
-                },
                 {
                     ident: pokemonId[1],
                     details: pokemonDetails[1],
                     condition: pokemonStatus[1],
-                    active: false,
+                    active: true,
                     stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                    moves: ["hyperbeam"], baseAbility: "pressure",
-                    item: "choicespecs", pokeball: "nestball"
-                },
-                {
-                    ident: pokemonId[2],
-                    details: pokemonDetails[2],
-                    condition: pokemonStatus[2],
-                    active: false,
-                    stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                    moves: ["tackle"], baseAbility: "trace",
-                    item: "choicescarf", pokeball: "greatball"
+                    moves: ["hiddenpowerfire70", "splash"],
+                    baseAbility: "pressure", item: "lifeorb",
+                    pokeball: "pokeball"
                 }
             ]
-        },
-        rqid: 10
+        }
     }
 ];

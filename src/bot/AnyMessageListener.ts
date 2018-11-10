@@ -33,8 +33,7 @@ export class AnyMessageListener
     {
         // need to assert the function type since addHandler is displayed as a
         //  union of all possible MessageHandlers
-        (this.listeners[type].addHandler as
-            (handler: MessageHandler<T>) => void)(handler);
+        (this.listeners[type] as MessageListener<T>).addHandler(handler);
         return this;
     }
 
@@ -45,7 +44,7 @@ export class AnyMessageListener
      * @returns A function that calls all registered handlers for this message
      * type.
      */
-    public getHandler<T extends MessageType>(type: T): MessageHandler<T>
+    public getHandler<T extends MessageType>(type: T): AsyncMessageHandler<T>
     {
         return (args: MessageArgs<T>) =>
             (this.listeners[type] as MessageListener<T>).handle(args);
@@ -63,9 +62,9 @@ class MessageListener<T extends MessageType>
      * message.
      * @param args Message arguments.
      */
-    public handle(args: MessageArgs<T>): void
+    public async handle(args: MessageArgs<T>): Promise<void>
     {
-        this.handlers.forEach(handler => handler(args));
+        await Promise.all(this.handlers.map(handler => handler(args)));
     }
 
     /**
@@ -79,7 +78,15 @@ class MessageListener<T extends MessageType>
 }
 
 /** Function type for handling certain message types. */
-export type MessageHandler<T extends MessageType> =
+export type MessageHandler<T extends MessageType> = AsyncMessageHandler<T> |
+    SyncMessageHandler<T>;
+
+/** Asynchronous function type for handling certain message types. */
+export type AsyncMessageHandler<T extends MessageType> =
+    (args: MessageArgs<T>) => Promise<void>;
+
+/** Synchronous function type for handling certain message types. */
+export type SyncMessageHandler<T extends MessageType> =
     (args: MessageArgs<T>) => void;
 
 /** Argument object type for MessageHandlers. */

@@ -12,16 +12,22 @@ export class MockBattle extends Battle
      * @override
      */
     public state: BattleState;
+    /** Last given choices. */
+    public lastChoices: Choice[] = [];
+    /** Whether the AI state was saved. */
+    public saved = false;
 
     /** @override */
     public async decide(choices: Choice[]): Promise<Choice>
     {
+        this.lastChoices = choices;
         return choices[0];
     }
 
     /** @override */
     public async save(): Promise<void>
     {
+        this.saved = true;
     }
 
     /**

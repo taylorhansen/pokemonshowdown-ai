@@ -89,10 +89,7 @@ export class Pokemon
     {
         return this._hpTypes;
     }
-    /**
-     * Rules out all possible hidden power types except this one.
-     * @param type The pokemon's hidden power type.
-     */
+    /** Rules out all possible hidden power types except this one. */
     public set hpType(type: Type)
     {
         for (const hpType in this._hpTypes)
