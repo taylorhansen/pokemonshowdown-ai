@@ -21,12 +21,12 @@
     "exclude": [
       "coverage/",
       "scripts/",
-      "src/data/",
       "dist/",
       "test/"
     ],
     "reporter": [
       "html",
+      "lcov",
       "text"
     ],
     "all": true
