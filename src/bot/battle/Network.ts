@@ -95,6 +95,7 @@ export class Network extends Battle
     /** @override */
     protected async decide(choices: Choice[]): Promise<Choice>
     {
+        if (choices.length === 0) throw new Error("No available choices!");
         await this.ready;
 
         const state = this.state.toArray();

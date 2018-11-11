@@ -29,7 +29,8 @@ ws.on("connect", connection =>
         if (unparsedPacket.type === "utf8" && unparsedPacket.utf8Data)
         {
             logger.debug(`received: ${unparsedPacket.utf8Data}`);
-            parser.parse(unparsedPacket.utf8Data);
+            parser.parse(unparsedPacket.utf8Data)
+                .catch(reason => logger.error(reason));
         }
     });
 });

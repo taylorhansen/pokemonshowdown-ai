@@ -34,7 +34,7 @@ export class MessageParser extends Parser
     private lineN: number;
 
     /** @override */
-    public parse(message: string): void
+    public async parse(message: string): Promise<void>
     {
         // start with parsing the room name if possible
         // format: >roomname
@@ -68,17 +68,15 @@ export class MessageParser extends Parser
                 .split("|"));
         this.lineN = 0;
 
-        while (this.lineN < this.lines.length)
-        {
-            this.parseMessage();
-        }
+        while (this.lineN < this.lines.length) await this.parseMessage();
     }
 
     /**
      * Parses a single message line. After being fully parsed, the `line` field
      * should point to the next unparsed line.
+     * @returns A promise that resolves once the listener is executed.
      */
-    private parseMessage(): void
+    private async parseMessage(): Promise<void>
     {
         switch (this.line[0])
         {
@@ -86,42 +84,33 @@ export class MessageParser extends Parser
 
             // room initialization
             case "init": // joined a room
-                this.parseInit();
-                break;
+                return this.parseInit();
             case "deinit": // left a room
-                this.parseDeInit();
-                break;
+                return this.parseDeInit();
 
             // global messages
             case "challstr": // login key
-                this.parseChallstr();
-                break;
+                return this.parseChallstr();
             case "updateuser": // user info changed
-                this.parseUpdateUser();
-                break;
-            case "updatechallenges":
-                // change in incoming/outgoing challenges
-                this.parseUpdateChallenges();
-                break;
+                return this.parseUpdateUser();
+            case "updatechallenges": // change in incoming/outgoing challenges
+                return this.parseUpdateChallenges();
 
             // battle initialization
             case "player": // initialize battle/player data
-                this.parseBattleInit();
-                break;
+                return this.parseBattleInit();
 
             // battle progress
             case "request": // move/switch request
-                this.parseRequest();
-                break;
+                return this.parseRequest();
             case "error": // e.g. invalid move/switch choice
-                this.parseError();
-                break;
+                return this.parseError();
 
             default:
                 if (["drag", "move", "switch"].includes(this.line[0]) ||
                     isEventPrefix(this.line[0]))
                 {
-                    this.parseBattleProgress();
+                    return this.parseBattleProgress();
                 }
                 // ignore
                 else this.nextLine();
@@ -152,12 +141,11 @@ export class MessageParser extends Parser
      * @example
      * |challstr|<challstr>
      */
-    private parseChallstr(): void
+    private parseChallstr(): Promise<void>
     {
         const challstr = this.getRestOfLine();
-
         this.nextLine();
-        this.handle("challstr", {challstr});
+        return this.handle("challstr", {challstr});
     }
 
     /**
@@ -167,10 +155,10 @@ export class MessageParser extends Parser
      * @example
      * |deinit
      */
-    private parseDeInit(): void
+    private parseDeInit(): Promise<void>
     {
         this.nextLine();
-        this.handle("deinit", {});
+        return this.handle("deinit", {});
     }
 
     /**
@@ -180,11 +168,11 @@ export class MessageParser extends Parser
      * @example
      * |error|[reason] <description>
      */
-    private parseError(): void
+    private parseError(): Promise<void>
     {
         const reason = this.getRestOfLine();
         this.nextLine();
-        this.handle("error", {reason});
+        return this.handle("error", {reason});
     }
 
     /**
@@ -194,14 +182,16 @@ export class MessageParser extends Parser
      * @example
      * |init|<chat or battle>
      */
-    private parseInit(): void
+    private parseInit(): Promise<void>
     {
         const type = this.line[1];
         this.nextLine();
         if (type === "chat" || type === "battle")
         {
-            this.handle("init", {type});
+            return this.handle("init", {type});
         }
+        // ignore invalid messages
+        return Promise.resolve();
     }
 
     /**
@@ -212,11 +202,12 @@ export class MessageParser extends Parser
      * @example
      * |request|<unparsed RequestArgs json>
      */
-    private parseRequest(): void
+    private parseRequest(): Promise<void>
     {
         const args = MessageParser.parseJSON(this.getRestOfLine());
         this.nextLine();
-        if (!args) return;
+        // ignore invalid messages
+        if (!args) return Promise.resolve();
 
         // some info is encoded in a string that needs to be further parsed
         for (const mon of args.side.pokemon)
@@ -228,7 +219,7 @@ export class MessageParser extends Parser
             mon.condition = MessageParser.parsePokemonStatus(mon.condition);
         }
 
-        this.handle("request", args);
+        return this.handle("request", args);
     }
 
     /**
@@ -238,15 +229,16 @@ export class MessageParser extends Parser
      * @example
      * |updatechallenges|<UpdateChallengesArgs json>
      */
-    private parseUpdateChallenges(): void
+    private parseUpdateChallenges(): Promise<void>
     {
         const args = MessageParser.parseJSON(this.getRestOfLine());
         this.nextLine();
-        if (!args) return;
+        // ignore invalid messages
+        if (!args) return Promise.resolve();
 
         // challengeTo may be null, which Parser.handle usually rejects
         args.challengeTo = args.challengeTo || {};
-        this.handle("updatechallenges", args);
+        return this.handle("updatechallenges", args);
     }
 
     /**
@@ -256,14 +248,14 @@ export class MessageParser extends Parser
      * @example
      * |updateuser|<our username>|<0 if guest, 1 otherwise>|<avatarId>
      */
-    private parseUpdateUser(): void
+    private parseUpdateUser(): Promise<void>
     {
         const line = this.line;
         const username = line[1];
         const isGuest = line[2] ? !MessageParser.parseInt(line[2]) : null;
 
         this.nextLine();
-        this.handle("updateuser", {username, isGuest});
+        return this.handle("updateuser", {username, isGuest});
     }
 
     /**
@@ -281,7 +273,7 @@ export class MessageParser extends Parser
      * <initial BattleEvents>
      * |turn|1
      */
-    private parseBattleInit(): void
+    private parseBattleInit(): Promise<void>
     {
         const args: ShallowNullable<BattleInitArgs> =
         {
@@ -331,7 +323,7 @@ export class MessageParser extends Parser
                     else this.nextLine();
             }
         }
-        this.handle("battleinit", args);
+        return this.handle("battleinit", args);
     }
 
     /**
@@ -345,7 +337,7 @@ export class MessageParser extends Parser
      * <BattleUpkeep>
      * |turn|<new turn #>
      */
-    private parseBattleProgress(): void
+    private parseBattleProgress(): Promise<void>
     {
         const args: ShallowNullable<BattleProgressArgs> =
             {events: this.parseBattleEvents()};
@@ -361,7 +353,7 @@ export class MessageParser extends Parser
             args.turn = MessageParser.parseInt(this.line[1]);
             this.nextLine();
         }
-        this.handle("battleprogress", args);
+        return this.handle("battleprogress", args);
     }
 
     /**

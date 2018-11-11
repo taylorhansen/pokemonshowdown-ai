@@ -18,8 +18,9 @@ export abstract class Parser
     /**
      * Parses the message sent from the server.
      * @param message Unparsed message or packet of messages.
+     * @returns A promise that resolves once all the listeners are executed.
      */
-    public abstract parse(message: string): void;
+    public abstract parse(message: string): Promise<void>;
 
     /**
      * Adds a MessageHandler for a certain message Prefix from a certain room.
@@ -70,20 +71,21 @@ export abstract class Parser
      * @param type Message type to invoke.
      * @param args Message handler arguments. These are allowed to be null, but
      * will cause the parser to reject the message as a whole if any are found.
+     * @returns A promise that resolves once all the listeners are executed.
      */
     protected handle<T extends MessageType>(type: T,
-        args: ShallowNullable<MessageArgs<T>>): void
+        args: ShallowNullable<MessageArgs<T>>): Promise<void>
     {
         // early return: message handlers do not accept null arguments
         if ((Object.keys(args) as (keyof MessageArgs<T>)[])
             .some(key => args[key] === null))
         {
-            return;
+            return Promise.resolve();
         }
 
         // unregistered rooms are delegated to a special listener
         const handler = this.messageListeners.hasOwnProperty(this.room) ?
             this.messageListeners[this.room] : this.newRoomListener;
-        handler.getHandler(type)(args as MessageArgs<T>);
+        return handler.getHandler(type)(args as MessageArgs<T>);
     }
 }

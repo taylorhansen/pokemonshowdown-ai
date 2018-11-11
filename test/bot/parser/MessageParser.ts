@@ -17,10 +17,11 @@ describe("MessageParser", function()
         parser = new MessageParser();
     });
 
-    it("Should handle multiple messages", function()
+    it("Should handle multiple messages", async function()
     {
         let count = 2;
-        parser.on("", "challstr", () => --count).on("", "init", () => --count)
+        await parser.on("", "challstr", () => --count)
+            .on("", "init", () => --count)
             .parse("|challstr|1234\n|init|battle");
         expect(count).to.equal(0);
     });
@@ -49,11 +50,8 @@ describe("MessageParser", function()
 
         it("Should handle unfamiliar rooms", function(done)
         {
-            parser.on(null, "init", () =>
-            {
-                done();
-            })
-            .parse(">some-random-room\n|init|chat");
+            parser.on(null, "init", () => done())
+                .parse(">some-random-room\n|init|chat");
         });
     });
 
@@ -65,11 +63,12 @@ describe("MessageParser", function()
          * @param type Message type.
          * @param words Words to compose the message.
          * @param handler Message handler that can be invoked.
+         * @returns A promise that resolves once the listener is executed.
          */
         function parse<T extends MessageType>(type: T, words: string[][],
-            handler: MessageHandler<T>): void
+            handler: MessageHandler<T>): Promise<void>
         {
-            parser.on("", type, handler).parse(buildMessage(words));
+            return parser.on("", type, handler).parse(buildMessage(words));
         }
 
         /**
@@ -100,10 +99,9 @@ describe("MessageParser", function()
         {
             it(`Should not parse ${type}`, function()
             {
-                parse(type, words, () =>
+                return parse(type, words, () =>
                 {
-                    throw new Error(
-                        `Parsed an invalid ${type}! Message:
+                    throw new Error(`Parsed an invalid ${type}! Message:
 ${buildMessage(words)}`);
                 });
             });
