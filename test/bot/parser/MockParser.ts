@@ -9,15 +9,16 @@ export class MockParser extends Parser
     public room = "";
 
     /** @override */
-    public parse(message: string): void
+    public async parse(message: string): Promise<void>
     {
         throw new Error("MockParser.parse is not implemented");
     }
 
     /** @override */
     public handle<T extends MessageType>(type: T,
-        args: {[A in keyof MessageArgs<T>]: MessageArgs<T>[A] | null}): void
+        args: {[A in keyof MessageArgs<T>]: MessageArgs<T>[A] | null}):
+        Promise<void>
     {
-        super.handle(type, args);
+        return super.handle(type, args);
     }
 }
