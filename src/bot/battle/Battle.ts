@@ -291,8 +291,9 @@ ${inspect(args, {colors: true, depth: null})}`);
      * Sets the HP of a pokemon.
      * @param id Pokemon's ID.
      * @param status New HP/status.
+     * @virtual
      */
-    private setHP(id: PokemonID, status: PokemonStatus): void
+    protected setHP(id: PokemonID, status: PokemonStatus): void
     {
         const mon = this.state.teams[this.getSide(id.owner)].active;
         mon.hp.set(status.hp, status.hpMax);

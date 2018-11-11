@@ -3,7 +3,7 @@ import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
 import "@tensorflow/tfjs-node";
 import { AnyMessageListener } from "../AnyMessageListener";
 import * as logger from "../logger";
-import { BattleEvent } from "../messageData";
+import { BattleEvent, PokemonID, PokemonStatus } from "../messageData";
 import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
 import { BattleState } from "./state/BattleState";
@@ -15,7 +15,8 @@ export class Network extends Battle
     /** Holds the reward values for different events. */
     private static readonly rewards =
     {
-        faint: -10
+        faint: -10,
+        damage: (percentDelta: number) => 10 * percentDelta
     };
 
     /** Neural network model. */
@@ -67,6 +68,17 @@ export class Network extends Battle
             this.applyReward(this.getSide(event.id.owner),
                 Network.rewards.faint);
         }
+    }
+
+    /** @override */
+    protected setHP(id: PokemonID, status: PokemonStatus): void
+    {
+        // use %delta hp to calc reward
+        const side = this.getSide(id.owner);
+        const mon = this.state.teams[side].active;
+        const percentDelta = (status.hp - mon.hp.current) / mon.hp.max;
+        super.setHP(id, status);
+        this.applyReward(side, Network.rewards.damage(percentDelta));
     }
 
     /**
