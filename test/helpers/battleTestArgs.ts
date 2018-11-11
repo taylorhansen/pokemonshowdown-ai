@@ -58,6 +58,14 @@ export const battleEvent: BattleEvent[] =
         type: "move", id: pokemonId[1], moveName: "Splash",
         targetId: pokemonId[0], cause: cause[2]
     },
+    {
+        type: "sethp",
+        newHPs:
+        [
+            {id: pokemonId[0], status: pokemonStatus[0]},
+            {id: pokemonId[1], status: pokemonStatus[1]}
+        ]
+    },
     {type: "start", id: pokemonId[0], volatile: "confusion", cause: cause[0]},
     {type: "status", id: pokemonId[0], majorStatus: "slp"},
     {
@@ -101,7 +109,7 @@ export const battleProgress: BattleProgressArgs[] =
     },
     {
         events: [battleEvent[12], battleEvent[13], battleEvent[14]],
-        upkeep: {pre: [], post: [battleEvent[15]]},
+        upkeep: {pre: [], post: [battleEvent[15], battleEvent[16]]},
         turn: 9
     }
 ];

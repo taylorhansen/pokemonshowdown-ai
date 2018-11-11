@@ -3,7 +3,7 @@ import { inspect } from "util";
 import { AnyMessageListener } from "../AnyMessageListener";
 import * as logger from "../logger";
 import { BattleEvent, Cause, MoveEvent, otherId, PlayerID,
-    PokemonDetails, PokemonStatus, RequestMove, SwitchEvent } from
+    PokemonDetails, PokemonID, PokemonStatus, RequestMove, SwitchEvent } from
     "../messageData";
 import { Choice } from "./Choice";
 import { dex } from "./dex/dex";
@@ -233,21 +233,19 @@ ${inspect(args, {colors: true, depth: null})}`);
                 break;
             case "damage":
             case "heal":
-            {
-                const side = this.getSide(event.id.owner);
-                const active = this.state.teams[side].active;
-
-                active.hp.set(event.status.hp, event.status.hpMax);
-                // this should already be covered by the `status` event but just
-                //  in case
-                active.majorStatus = event.status.condition;
+                this.setHP(event.id, event.status);
                 break;
-            }
             case "faint":
                 this.state.teams[this.getSide(event.id.owner)].active.faint();
                 break;
             case "move":
                 this.handleMove(event);
+                break;
+            case "sethp":
+                for (const pair of event.newHPs)
+                {
+                    this.setHP(pair.id, pair.status);
+                }
                 break;
             case "status":
                 this.state.teams[this.getSide(event.id.owner)].active
@@ -277,10 +275,28 @@ ${inspect(args, {colors: true, depth: null})}`);
             default:
                 logger.error(`Unhandled message type ${event!.type}`);
         }
-        if (event.cause && event.type !== "tie" && event.type !== "win")
+
+        // these message types don't have an id field, so there's not enough
+        //  information to process any Causes
+        // and anyways, they shouldn't have any meaningful ones on them
+        if (event.cause && event.type !== "sethp" && event.type !== "tie" &&
+            event.type !== "win")
         {
-            this.handleCause(this.sides[event.id.owner], event.cause!);
+            this.handleCause(this.getSide(event.id.owner), event.cause!);
         }
+    }
+
+    /**
+     * Sets the HP of a pokemon.
+     * @param id Pokemon's ID.
+     * @param status New HP/status.
+     */
+    private setHP(id: PokemonID, status: PokemonStatus): void
+    {
+        const mon = this.state.teams[this.getSide(id.owner)].active;
+        mon.hp.set(status.hp, status.hpMax);
+        // this should already be covered by the `status` event but just in case
+        mon.majorStatus = status.condition;
     }
 
     /**
@@ -293,8 +309,6 @@ ${inspect(args, {colors: true, depth: null})}`);
         const mon = this.state.teams[side].active;
         const moveId = event.moveName.toLowerCase().replace(/[ -]/g, "");
 
-        // FIXME: a move could be stored as hiddenpower70 but displayed as
-        //  hiddenpowerfire
         const pp =
             // locked moves don't consume pp
             (event.cause && event.cause.type === "lockedmove") ? 0

@@ -122,6 +122,15 @@ export function composeBattleEvent(event: BattleEvent): string[]
                 stringifyID(event.targetId)
             ];
             break;
+        case "sethp":
+            result =
+            [
+                "-sethp",
+                ...event.newHPs.map(pair =>
+                        [stringifyID(pair.id), stringifyStatus(pair.status)])
+                    .reduce((a1, a2) => a1.concat(a2), [])
+            ];
+            break;
         case "start":
             result = ["-start", stringifyID(event.id), event.volatile];
             break;

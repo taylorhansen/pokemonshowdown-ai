@@ -75,7 +75,7 @@ export function isPlayerId(id: any): id is PlayerID
 /** Types of events that can happen during battle. */
 export type BattleEvent = AbilityEvent | ActivateEvent | CureStatusEvent |
     CureTeamEvent | DamageEvent | EndEvent | FaintEvent | MoveEvent |
-    StartEvent | StatusEvent | SwitchEvent | TieEvent | WinEvent;
+    SetHPEvent | StartEvent | StatusEvent | SwitchEvent | TieEvent | WinEvent;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
@@ -162,6 +162,14 @@ export interface MoveEvent extends BattleEventBase
     moveName: string;
     /** ID of the target pokemon. */
     targetId: PokemonID;
+}
+
+/** Event where the HP of multiple pokemon is being modified at once. */
+export interface SetHPEvent extends BattleEventBase
+{
+    type: "sethp";
+    /** PokemonIDs with their corresponding new statuses. */
+    newHPs: {id: PokemonID, status: PokemonStatus}[];
 }
 
 /** Event where a volatile status condition has started. */

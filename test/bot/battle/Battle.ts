@@ -4,8 +4,8 @@ import { AnyMessageListener, BattleInitArgs, RequestArgs } from
     "../../../src/bot/AnyMessageListener";
 import { Choice } from "../../../src/bot/battle/Choice";
 import { Type } from "../../../src/bot/battle/dex/dex-types";
-import { FatigueCause, MoveEvent, PokemonDetails, PokemonID, PokemonStatus,
-    TieEvent, WinEvent } from "../../../src/bot/messageData";
+import { BattleEvent, MoveEvent, PokemonDetails, PokemonID, PokemonStatus,
+    SetHPEvent } from "../../../src/bot/messageData";
 import * as testArgs from "../../helpers/battleTestArgs";
 import { MockBattle } from "./MockBattle";
 
@@ -612,6 +612,29 @@ describe("Battle", function()
             });
         });
 
+        describe("sethp", function()
+        {
+            it("Should set hp", async function()
+            {
+                const hp1 = battle.state.teams.us.active.hp;
+                const hp2 = battle.state.teams.them.active.hp;
+                const event: SetHPEvent =
+                {
+                    type: "sethp",
+                    newHPs:
+                    [
+                        {id: us1, status: {hp: 1, hpMax: 10, condition: ""}},
+                        {id: them1, status: {hp: 2, hpMax: 20, condition: ""}}
+                    ]
+                };
+                await listener.getHandler("battleprogress")({events: [event]});
+                expect(hp1.current).to.equal(1);
+                expect(hp1.max).to.equal(10);
+                expect(hp2.current).to.equal(2);
+                expect(hp2.max).to.equal(20);
+            });
+        });
+
         describe("status", function()
         {
             it("Should afflict with status", async function()
@@ -698,18 +721,14 @@ describe("Battle", function()
 
         describe("cause", function()
         {
-            for (const type of ["win", "tie"] as ("win" | "tie")[])
+            function shouldntHandle(event: BattleEvent): void
             {
-                it(`Shouldn't handle ${type} causes`, async function()
-                {
-                    // sample event cause
-                    const cause: FatigueCause = {type: "fatigue"};
-                    const event = {type, cause} as WinEvent | TieEvent;
-                    if (event.type === "win")
-                    {
-                        event.winner = testArgs.username[0];
-                    }
+                // sample event cause
+                event.cause = {type: "fatigue"};
 
+                it(`Shouldn't handle Causes from ${event.type} messages`,
+                async function()
+                {
                     battle.state.teams.us.active.volatile.lockedMove = true;
                     await listener.getHandler("battleprogress")(
                         {events: [event]});
@@ -718,6 +737,9 @@ describe("Battle", function()
                         .to.be.true;
                 });
             }
+            shouldntHandle({type: "sethp", newHPs: []});
+            shouldntHandle({type: "tie"});
+            shouldntHandle({type: "win", winner: testArgs.username[0]});
 
             describe("fatigue", function()
             {

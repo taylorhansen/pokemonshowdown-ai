@@ -2,8 +2,8 @@ import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
 import { AbilityEvent, ActivateEvent, BattleEvent, BattleUpkeep, Cause,
     CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
     isEventPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent, PlayerID,
-    PokemonDetails, PokemonID, PokemonStatus, StartEvent, StatusEvent,
-    SwitchEvent, TieEvent, WinEvent } from "../messageData";
+    PokemonDetails, PokemonID, PokemonStatus, SetHPEvent, StartEvent,
+    StatusEvent, SwitchEvent, TieEvent, WinEvent } from "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -397,6 +397,7 @@ export class MessageParser extends Parser
             case "-end": return this.parseEndEvent();
             case "faint": return this.parseFaintEvent();
             case "move": return this.parseMoveEvent();
+            case "-sethp": return this.parseSetHPEvent();
             case "-start": return this.parseStartEvent();
             case "-status": return this.parseStatusEvent();
             case "switch": case "drag": return this.parseSwitchEvent();
@@ -597,6 +598,30 @@ export class MessageParser extends Parser
     }
 
     /**
+     * Parses a SetHPEvent.
+     *
+     * Format:
+     * @example
+     * |-sethp|<PokemonID 1>|<PokemonStatus 1>|<PokemonID 2>|<PokemonStatus 2>
+     *
+     * @returns A SetHPEvent, or null if invalid.
+     */
+    private parseSetHPEvent(): SetHPEvent | null
+    {
+        const line = this.line;
+        this.nextLine();
+        const event: SetHPEvent = {type: "sethp", newHPs: []};
+        for (let i = 1; i < line.length; i += 2)
+        {
+            const id = MessageParser.parsePokemonID(line[i]);
+            const status = MessageParser.parsePokemonStatus(line[i + 1]);
+            if (!id || !status) break;
+            event.newHPs.push({id, status});
+        }
+        return event;
+    }
+
+    /**
      * Parses a StartEvent.
      *
      * Format:
@@ -605,6 +630,8 @@ export class MessageParser extends Parser
      *
      * // optional message suffixes:
      * [fatigue]
+     *
+     * @returns A StartEvent, or null if invalid.
      */
     private parseStartEvent(): StartEvent | null
     {
