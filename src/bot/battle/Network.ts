@@ -3,6 +3,7 @@ import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
 import "@tensorflow/tfjs-node";
 import { AnyMessageListener } from "../AnyMessageListener";
 import * as logger from "../logger";
+import { BattleEvent } from "../messageData";
 import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
 import { BattleState } from "./state/BattleState";
@@ -55,19 +56,17 @@ export class Network extends Battle
             logger.debug("Constructing new model");
             this.constructModel();
         });
+    }
 
-        // track reward value
-        listener.on("battleprogress", args =>
-            args.events.concat(args.upkeep ?
-                    args.upkeep.pre.concat(args.upkeep.post) : [])
-                .forEach(event =>
+    /** @override */
+    protected handleEvent(event: BattleEvent): void
+    {
+        super.handleEvent(event);
+        if (event.type === "faint")
         {
-            if (event.type === "faint")
-            {
-                this.applyReward(this.getSide(event.id.owner),
-                    Network.rewards.faint);
-            }
-        }));
+            this.applyReward(this.getSide(event.id.owner),
+                Network.rewards.faint);
+        }
     }
 
     /**
@@ -82,22 +81,11 @@ export class Network extends Battle
     }
 
     /** @override */
-    protected decide(choices: Choice[]): Promise<Choice>
-    {
-        return this.decideImpl(this.state.toArray(), choices);
-    }
-
-    /**
-     * Async implementation of `decide()`.
-     * @param state Serialized state.
-     * @param choices Possible choices.
-     * @returns A Promise to compute the command ot be sent.
-     */
-    private async decideImpl(state: number[], choices: Choice[]):
-        Promise<Choice>
+    protected async decide(choices: Choice[]): Promise<Choice>
     {
         await this.ready;
 
+        const state = this.state.toArray();
         if (state.length > this.inputLength)
         {
             logger.error(`too many state values ${state.length}, expected \

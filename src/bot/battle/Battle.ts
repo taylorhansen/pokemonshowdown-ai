@@ -205,8 +205,9 @@ ${inspect(args, {colors: true, depth: null})}`);
     /**
      * Handles a BattleEvent.
      * @param event Event to process.
+     * @virtual
      */
-    private handleEvent(event: BattleEvent): void
+    protected handleEvent(event: BattleEvent): void
     {
         switch (event.type)
         {
