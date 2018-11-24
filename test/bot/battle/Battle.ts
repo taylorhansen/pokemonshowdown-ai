@@ -388,6 +388,25 @@ describe("Battle", function()
             });
         });
 
+        describe("boost", function()
+        {
+            it("Should boost stat", async function()
+            {
+                const boosts = battle.state.teams.us.active.volatile.boosts;
+                expect(boosts.def).to.equal(0);
+                await listener.getHandler("battleprogress")(
+                {
+                    events: [{type: "boost", id: us1, stat: "def", amount: 1}]
+                });
+                expect(boosts.def).to.equal(1);
+                await listener.getHandler("battleprogress")(
+                {
+                    events: [{type: "boost", id: us1, stat: "def", amount: -3}]
+                });
+                expect(boosts.def).to.equal(-2);
+            });
+        });
+
         describe("curestatus", function()
         {
             it("Should cure status", async function()

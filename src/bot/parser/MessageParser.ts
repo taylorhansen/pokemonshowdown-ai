@@ -1,6 +1,7 @@
 import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
-import { AbilityEvent, ActivateEvent, BattleEvent, BattleUpkeep, Cause,
-    CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
+import { BoostableStatName } from "../battle/state/VolatileStatus";
+import { AbilityEvent, ActivateEvent, BattleEvent, BattleUpkeep, BoostEvent,
+    Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
     isEventPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus, SetHPEvent, StartEvent,
     StatusEvent, SwitchEvent, TieEvent, WinEvent } from "../messageData";
@@ -383,6 +384,7 @@ export class MessageParser extends Parser
         {
             case "-ability": return this.parseAbilityEvent();
             case "-activate": return this.parseActivateEvent();
+            case "-boost": case "-unboost": return this.parseBoostEvent();
             case "-curestatus": return this.parseCureStatusEvent();
             case "-cureteam": return this.parseCureTeamEvent();
             case "-damage": case "-heal": return this.parseDamageEvent();
@@ -441,6 +443,29 @@ export class MessageParser extends Parser
         if (!id || !volatile) return null;
 
         return {type: "activate", id, volatile};
+    }
+
+    /**
+     * Parses a BoostEvent.
+     *
+     * Format:
+     * @example
+     * |<-boost or -unboost>|<PokemonID>|<stat name>|<amount>
+     *
+     * @returns A BoostEvent, or null if invalid.
+     */
+    private parseBoostEvent(): BoostEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const stat = line[2] as BoostableStatName;
+        let amount = MessageParser.parseInt(line[3]);
+
+        this.nextLine();
+        if (!id || !stat || !amount) return null;
+
+        if (line[0] === "-unboost") amount = -amount;
+        return {type: "boost", id, stat, amount};
     }
 
     /**

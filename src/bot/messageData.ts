@@ -1,3 +1,5 @@
+import { BoostableStatName } from "./battle/state/VolatileStatus";
+
 /**
  * @file Interfaces and helper functions for dealing with the arguments of a
  * MessageHandler.
@@ -11,9 +13,10 @@ export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
 /** Set of EventPrefixes. */
 export const eventPrefixes =
 {
-    "-ability": 1, "-activate": 2, "-curestatus": 3, "-cureteam": 4,
-    "-damage": 5, drag: 6, "-end": 7, faint: 8, "-heal": 9, move: 10,
-    "-start": 11, "-status": 12, switch: 13, tie: 14, win: 15
+    "-ability": true, "-activate": true, "-boost": true, "-curestatus": true,
+    "-cureteam": true, "-damage": true, drag: true, "-end": true, faint: true,
+    "-heal": true, move: true, "-start": true, "-status": true, switch: true,
+    tie: true, "-unboost": true, win: true
 };
 /** Message types that are parsed as battle events. */
 export type EventPrefix = keyof typeof eventPrefixes;
@@ -73,9 +76,10 @@ export function isPlayerId(id: any): id is PlayerID
 // battle event types
 
 /** Types of events that can happen during battle. */
-export type BattleEvent = AbilityEvent | ActivateEvent | CureStatusEvent |
-    CureTeamEvent | DamageEvent | EndEvent | FaintEvent | MoveEvent |
-    SetHPEvent | StartEvent | StatusEvent | SwitchEvent | TieEvent | WinEvent;
+export type BattleEvent = AbilityEvent | ActivateEvent | BoostEvent |
+    CureStatusEvent | CureTeamEvent | DamageEvent | EndEvent | FaintEvent |
+    MoveEvent | SetHPEvent | StartEvent | StatusEvent | SwitchEvent | TieEvent |
+    WinEvent;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
@@ -104,6 +108,18 @@ export interface ActivateEvent extends BattleEventBase
     id: PokemonID;
     /** Volatile status name. */
     volatile: string;
+}
+
+/** Event where a stat is being boosted or unboosted. */
+export interface BoostEvent extends BattleEventBase
+{
+    type: "boost";
+    /** ID of the pokemom being boosted. */
+    id: PokemonID;
+    /** Name of stat being boosted. */
+    stat: BoostableStatName;
+    /** Amount to boost by. */
+    amount: number;
 }
 
 /** Event where a pokemon's major status is cured. */

@@ -94,6 +94,13 @@ export function composeBattleEvent(event: BattleEvent): string[]
         case "end":
             result = ["-" + event.type, stringifyID(event.id), event.volatile];
             break;
+        case "boost":
+            result =
+            [
+                `-${event.amount < 0 ? "un" : ""}boost`, stringifyID(event.id),
+                event.stat, Math.abs(event.amount).toString()
+            ];
+            break;
         case "curestatus":
         case "status":
             result =

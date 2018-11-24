@@ -225,6 +225,10 @@ ${inspect(args, {colors: true, depth: null})}`);
                         .volatile.confuse(event.type !== "end");
                 }
                 break;
+            case "boost":
+                this.state.teams[this.getSide(event.id.owner)].active.volatile
+                    .boost(event.stat, event.amount);
+                break;
             case "curestatus":
                 this.state.teams[this.getSide(event.id.owner)].active
                     .majorStatus = "";
