@@ -279,6 +279,7 @@ describe("Battle", function()
 
         describe("selfSwitch", function()
         {
+            // uturn used by us
             const event: MoveEvent =
                 {type: "move", id: us1, moveName: "U-Turn", targetId: them1};
 
@@ -299,6 +300,21 @@ describe("Battle", function()
                 expect(responses).to.have.lengthOf(1);
             });
 
+            it("Should not selfSwitch if prevented from switching",
+            async function()
+            {
+                battle.state.teams.us.pokemon[1].faint();
+
+                // adding an upkeep+turn means that the move was completed, so a
+                //  selfSwitch choice should not be needed
+                await listener.getHandler("battleprogress")(
+                    {events: [event], upkeep: {pre: [], post: []}, turn: 2});
+
+                expect(battle.lastChoices).to.have.members(["move 1"]);
+                expect(responses).to.have.lengthOf(1);
+            });
+
+            // uturn used by them
             const event2: MoveEvent =
                 {type: "move", id: them1, moveName: "U-Turn", targetId: us1};
 
@@ -309,12 +325,28 @@ describe("Battle", function()
                 expect(responses).to.be.empty;
             });
 
-            it("Should wait for opponent selfSwitch if our pokemon faints",
+            it("Should wait for opponent selfSwitch if client's pokemon faints",
             async function()
             {
                 await listener.getHandler("battleprogress")(
                     {events: [event2, {type: "faint", id: event2.targetId}]});
                 expect(responses).to.have.lengthOf(0);
+            });
+
+            it("Should switchin if both faint after selfswitch move",
+            async function()
+            {
+                await listener.getHandler("battleprogress")(
+                {
+                    events:
+                    [
+                        event2, {type: "faint", id: us1},
+                        {type: "faint", id: them1}
+                    ],
+                    upkeep: {pre: [], post: []}
+                });
+                expect(battle.lastChoices).to.have.members(["switch 2"]);
+                expect(responses).to.have.lengthOf(1);
             });
         });
 

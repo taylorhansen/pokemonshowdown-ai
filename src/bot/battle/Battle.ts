@@ -40,7 +40,10 @@ export abstract class Battle
     private sides: {readonly [ID in PlayerID]: Side};
     /** Whether we're using a move that requires a switch choice. */
     private selfSwitch: SelfSwitch = false;
-    /** Whether the opponent is using a move that copies volatile status. */
+    /**
+     * Whether the opponent is using a move that copies volatile status while
+     * selfSwitching.
+     */
     private themCopyVolatile = false;
     /** Whether the battle is still going. */
     private battling = false;
@@ -92,6 +95,13 @@ ${inspect(args, {colors: true, depth: null})}`);
             {
                 args.upkeep.pre.forEach(event => this.handleEvent(event));
                 args.upkeep.post.forEach(event => this.handleEvent(event));
+
+                // selfSwitch is the result of a move, which only occurs in the
+                //  middle of all the turn's main events (args.events)
+                // if the simulator ignored the fact that a selfSwitch move was
+                //  used, then it would emit an upkeep
+                this.selfSwitch = false;
+                this.themCopyVolatile = false;
             }
             if (args.turn) logger.debug(`new turn: ${args.turn}`);
 
