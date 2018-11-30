@@ -350,6 +350,82 @@ describe("Battle", function()
             });
         });
 
+        describe("copyVolatile", function()
+        {
+            // batonpass used by us
+            const event1: MoveEvent =
+            {
+                type: "move", id: us1, moveName: "Baton Pass", targetId: them1
+            };
+
+            it("Should copy volatile", async function()
+            {
+                const us1Mon = battle.state.teams.us.pokemon[0];
+                const us2Mon = battle.state.teams.us.pokemon[1];
+
+                us1Mon.volatile.boost("atk", 2);
+                await listener.getHandler("battleprogress")(
+                {
+                    events:
+                    [
+                        event1,
+                        {
+                            type: "switch", id: us2,
+                            details:
+                            {
+                                species: us2Mon.species, gender: us2Mon.gender,
+                                level: us2Mon.level, shiny: false
+                            },
+                            status:
+                            {
+                                hp: us2Mon.hp.current, hpMax: us2Mon.hp.max,
+                                condition: us2Mon.majorStatus
+                            }
+                        }
+                    ],
+                    upkeep: {pre: [], post: []}, turn: 2
+                });
+                expect(us2Mon.volatile.boosts.atk).to.equal(2);
+            });
+
+            // batonpass used by them
+            const event2: MoveEvent =
+            {
+                type: "move", id: them1, moveName: "Baton Pass", targetId: us1
+            };
+
+            it("Should copy opponent volatile", async function()
+            {
+                const them1Mon = battle.state.teams.them.pokemon[0];
+
+                them1Mon.volatile.boost("atk", 2);
+                await listener.getHandler("battleprogress")(
+                {
+                    events:
+                    [
+                        event2,
+                        {
+                            type: "switch",
+                            id:
+                            {
+                                owner: "p2", position: "a", nickname: "Gyarados"
+                            },
+                            details:
+                            {
+                                species: "Gyarados", gender: "F", level: 100,
+                                shiny: false
+                            },
+                            status: {hp: 100, hpMax: 100, condition: ""}
+                        }
+                    ],
+                    upkeep: {pre: [], post: []}, turn: 2
+                });
+                const them2Mon = battle.state.teams.them.pokemon[0];
+                expect(them1Mon).to.not.equal(them2Mon);
+                expect(them2Mon.volatile.boosts.atk).to.equal(2);
+            });
+        });
+
         describe("abiliy", function()
         {
             it("Should set ability", async function()
