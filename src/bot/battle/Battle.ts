@@ -40,11 +40,8 @@ export abstract class Battle
     private sides: {readonly [ID in PlayerID]: Side};
     /** Whether we're using a move that requires a switch choice. */
     private selfSwitch: SelfSwitch = false;
-    /**
-     * Whether the opponent is using a move that copies volatile status while
-     * selfSwitching.
-     */
-    private themCopyVolatile = false;
+    /** Whether the opponent is using a move that requires a switch choice. */
+    private themSelfSwitch: SelfSwitch = false;
     /** Whether the battle is still going. */
     private battling = false;
 
@@ -101,15 +98,15 @@ ${inspect(args, {colors: true, depth: null})}`);
                 // if the simulator ignored the fact that a selfSwitch move was
                 //  used, then it would emit an upkeep
                 this.selfSwitch = false;
-                this.themCopyVolatile = false;
+                this.themSelfSwitch = false;
             }
             if (args.turn) logger.debug(`new turn: ${args.turn}`);
 
             if (this.battling)
             {
                 logger.debug(`state:\n${this.state.toString()}`);
-                if (args.turn || this.selfSwitch ||
-                    (args.upkeep && this.state.teams.us.active.fainted))
+                if (args.turn || this.selfSwitch || (!this.themSelfSwitch &&
+                        this.state.teams.us.active.fainted))
                 {
                     await this.askAI();
                 }
@@ -345,15 +342,8 @@ ${inspect(args, {colors: true, depth: null})}`);
         }
 
         const selfSwitch = move.selfSwitch || false;
-        if (side === "us")
-        {
-            this.selfSwitch = selfSwitch;
-        }
-        else // them
-        {
-            // remember to copy volatile status data for the opponent's switchin
-            this.themCopyVolatile = selfSwitch === "copyvolatile";
-        }
+        if (side === "us") this.selfSwitch = selfSwitch;
+        else this.themSelfSwitch = selfSwitch;
     }
 
     /**
@@ -374,8 +364,8 @@ ${inspect(args, {colors: true, depth: null})}`);
         }
         else
         {
-            options.copyVolatile = this.themCopyVolatile;
-            this.themCopyVolatile = false;
+            options.copyVolatile = this.themSelfSwitch === "copyvolatile";
+            this.themSelfSwitch = false;
         }
 
         team.switchIn(event.details.species, event.details.level,

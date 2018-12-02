@@ -277,6 +277,40 @@ describe("Battle", function()
             });
         });
 
+        describe("switch", function()
+        {
+            it("Should choose new switch replacement if replacement faints",
+            async function()
+            {
+                const a = battle.state.teams.us.active;
+                a.switchOut();
+                await listener.getHandler("battleprogress")(
+                {
+                    events:
+                    [
+                        // switchin as a replacement (upkeep already sent)
+                        {
+                            type: "switch", id: us1,
+                            details:
+                            {
+                                species: a.species, gender: a.gender,
+                                level: a.level, shiny: false
+                            },
+                            status:
+                            {
+                                hp: a.hp.current, hpMax: a.hp.max,
+                                condition: a.majorStatus
+                            }
+                        },
+                        // replacement ends up fainting
+                        {type: "faint", id: us1}
+                    ]
+                });
+                expect(battle.lastChoices).to.have.members(["switch 2"]);
+                expect(responses).to.have.lengthOf(1);
+            });
+        });
+
         describe("selfSwitch", function()
         {
             // uturn used by us
