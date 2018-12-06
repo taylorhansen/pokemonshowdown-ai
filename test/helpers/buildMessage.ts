@@ -123,9 +123,11 @@ export function composeBattleEvent(event: BattleEvent): string[]
             result = ["faint", stringifyID(event.id)];
             break;
         case "move":
+        case "prepare":
             result =
             [
-                "move", stringifyID(event.id), event.moveName,
+                event.type === "prepare" ? "-prepare" : event.type,
+                stringifyID(event.id), event.moveName,
                 stringifyID(event.targetId)
             ];
             break;

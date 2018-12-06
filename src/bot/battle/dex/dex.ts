@@ -7268,6 +7268,26 @@ const moves: {readonly [name: string]: MoveData} =
     }
 };
 
+const twoTurnMovesInternal =
+{
+    Bounce: 0,
+    Dig: 1,
+    Dive: 2,
+    Fly: 3,
+    "Razor Wind": 4,
+    "Solar Beam": 5,
+    "Shadow Force": 6,
+    "Skull Bash": 7,
+    "Sky Attack": 8
+};
+
+/** Set of all two-turn moves. Maps move name to its id within this object. */
+export const twoTurnMoves: Readonly<typeof twoTurnMovesInternal> =
+    twoTurnMovesInternal;
+
+/** Number of two-turn moves that exist. */
+export const numTwoTurnMoves = Object.keys(twoTurnMoves).length;
+
 /** Contains data for every item in the supported generation. */
 const items: {readonly [name: string]: number} =
 {

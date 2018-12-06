@@ -87,7 +87,18 @@ ${inspect(args, {colors: true, depth: null})}`);
             logger.debug(`battleprogress:
 ${inspect(args, {colors: true, depth: null})}`);
 
+            // last turn, a two-turn move status might've been set by an event,
+            //  so remove that first so it doesn't interfere
+            if (args.turn)
+            {
+                for (const side of ["us", "them"] as Side[])
+                {
+                    this.state.teams[side].active.volatile.twoTurn = "";
+                }
+            }
+
             args.events.forEach(event => this.handleEvent(event));
+
             if (args.upkeep)
             {
                 args.upkeep.pre.forEach(event => this.handleEvent(event));
@@ -100,6 +111,7 @@ ${inspect(args, {colors: true, depth: null})}`);
                 this.selfSwitch = false;
                 this.themSelfSwitch = false;
             }
+
             if (args.turn) logger.debug(`new turn: ${args.turn}`);
 
             if (this.battling)
@@ -252,6 +264,11 @@ ${inspect(args, {colors: true, depth: null})}`);
                 break;
             case "move":
                 this.handleMove(event);
+                break;
+            case "prepare":
+                // moveName should be one of the two-turn moves being prepared
+                this.state.teams[this.getSide(event.id.owner)].active
+                    .volatile.twoTurn = event.moveName as any;
                 break;
             case "sethp":
                 for (const pair of event.newHPs)
@@ -433,7 +450,8 @@ ${inspect(args, {colors: true, depth: null})}`);
 
         // possible choices for switching pokemon
         const active = team.active;
-        if (!active.volatile.lockedMove)
+        // locked two-turn moves trap the user and keeps them from switching
+        if (!active.volatile.lockedMove && !active.volatile.twoTurn)
         {
             for (let i = 0; i < team.pokemon.length; ++i)
             {
@@ -449,7 +467,11 @@ ${inspect(args, {colors: true, depth: null})}`);
         {
             // can also possibly make a move, since we're not being forced to
             //  just switch
-            if (active.volatile.lockedMove) choices.push("move 1");
+            if (active.volatile.lockedMove || active.volatile.twoTurn)
+            {
+                // locked two-turn moves trap the user into using only one move
+                choices.push("move 1");
+            }
             else
             {
                 for (let i = 0; i < active.moves.length; ++i)

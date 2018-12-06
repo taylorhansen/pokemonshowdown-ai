@@ -61,6 +61,10 @@ export const battleEvent: BattleEvent[] =
         targetId: pokemonId[0], cause: cause[2]
     },
     {
+        type: "prepare", id: pokemonId[1], moveName: "Solar Beam",
+        targetId: pokemonId[0]
+    },
+    {
         type: "sethp",
         newHPs:
         [
@@ -116,7 +120,10 @@ export const battleProgress: BattleProgressArgs[] =
     },
     {
         events: [battleEvent[14], battleEvent[15], battleEvent[16]],
-        upkeep: {pre: [], post: [battleEvent[17], battleEvent[18]]},
+        upkeep:
+        {
+            pre: [], post: [battleEvent[17], battleEvent[18], battleEvent[19]]
+        },
         turn: 9
     }
 ];

@@ -78,8 +78,8 @@ export function isPlayerId(id: any): id is PlayerID
 /** Types of events that can happen during battle. */
 export type BattleEvent = AbilityEvent | ActivateEvent | BoostEvent |
     CureStatusEvent | CureTeamEvent | DamageEvent | EndEvent | FaintEvent |
-    MoveEvent | SetHPEvent | StartEvent | StatusEvent | SwitchEvent | TieEvent |
-    WinEvent;
+    MoveEvent | PrepareEvent | SetHPEvent | StartEvent | StatusEvent |
+    SwitchEvent | TieEvent | WinEvent;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
@@ -175,6 +175,18 @@ export interface MoveEvent extends BattleEventBase
     /** ID of the pokemon who used the move. */
     id: PokemonID;
     /** Display name of the move being used. */
+    moveName: string;
+    /** ID of the target pokemon. */
+    targetId: PokemonID;
+}
+
+/** Event where a move is being prepared, and will fire next turn. */
+export interface PrepareEvent extends BattleEventBase
+{
+    type: "prepare";
+    /** ID of the pokemon preparing the move. */
+    id: PokemonID;
+    /** Display name of the move being prepared. */
     moveName: string;
     /** ID of the target pokemon. */
     targetId: PokemonID;

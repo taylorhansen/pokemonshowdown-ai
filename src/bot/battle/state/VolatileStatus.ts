@@ -1,3 +1,6 @@
+import { numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
+import { oneHot } from "./utility";
+
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
  * removed upon switch.
@@ -36,6 +39,9 @@ export class VolatileStatus
     }
     private _confuseTurns: number;
 
+    /** Two-turn move currently being prepared. */
+    public twoTurn: keyof typeof twoTurnMoves | "";
+
     /** Creates a VolatileStatus object. */
     constructor()
     {
@@ -51,8 +57,6 @@ export class VolatileStatus
         const v = new VolatileStatus();
         v._boosts = this._boosts;
         v.disabledMoves = this.disabledMoves;
-        // not this.lockedmove, currently not reproducible ingame
-        // not this._confuseTurns, always reset when switching
         return v;
     }
 
@@ -69,6 +73,7 @@ export class VolatileStatus
         this.disabledMoves = [false, false, false, false];
         this.lockedMove = false;
         this._confuseTurns = 0;
+        this.twoTurn = "";
     }
 
     /**
@@ -119,22 +124,26 @@ export class VolatileStatus
     {
         // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
-            /*disabled moves*/4 + /*locked move*/1 + /*confuse turns*/1;
+            /*disabled moves*/4 + /*locked move*/1 + /*confuse turns*/1 +
+            /*two-turn status*/numTwoTurnMoves;
     }
 
+    // istanbul ignore next: unstable, hard to test
     /**
      * Formats volatile status info into an array of numbers.
      * @returns All volatile status data in array form.
      */
     public toArray(): number[]
     {
+        // one-hot encode categorical data
+        const twoTurn = oneHot(this.twoTurn ? twoTurnMoves[this.twoTurn] : -1,
+                numTwoTurnMoves);
         const a =
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
             ...this.disabledMoves.map(b => b ? 1 : 0),
-            this.lockedMove ? 1 : 0,
-            this._confuseTurns
+            this.lockedMove ? 1 : 0, this._confuseTurns, ...twoTurn
         ];
         return a;
     }
@@ -157,6 +166,7 @@ export class VolatileStatus
             .concat(this.lockedMove ? ["lockedmove"] : [])
             .concat(this._confuseTurns ?
                     [`confused for ${this._confuseTurns - 1} turns`] : [])
+            .concat(this.twoTurn ? [`preparing ${this.twoTurn}`] : [])
             .join(", ")}]`;
     }
 

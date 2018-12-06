@@ -773,6 +773,57 @@ describe("Battle", function()
             });
         });
 
+        describe("prepare", function()
+        {
+            it("Should prepare two-turn move", async function()
+            {
+                // make it so we have 2 moves to choose from
+                battle.state.teams.us.active.revealMove("splash");
+                await listener.getHandler("battleprogress")(
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Solar Beam",
+                            targetId: them1
+                            // note: server also sends |[still] term at eol,
+                            //  which supresses animation and is technically
+                            //  supposed to hide targetId (applies to doubles)
+                        },
+                        {
+                            type: "prepare", id: us1, moveName: "Solar Beam",
+                            targetId: them1
+                        }
+                    ],
+                    upkeep: {pre: [], post: []}, turn: 2
+                });
+                // the use of a two-turn move should restrict the client's
+                //  choices to only the move being prepared, which temporarily
+                //  takes the spot of the first move
+                expect(battle.lastChoices).to.have.members(["move 1"]);
+                expect(responses).to.have.lengthOf(1);
+
+                // release the charged move
+                await listener.getHandler("battleprogress")(
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Solar Beam",
+                            targetId: them1, cause: {type: "lockedmove"}
+                        }
+                    ],
+                    upkeep: {pre: [], post: []}, turn: 3
+                });
+                // should now be able to choose other choices
+                expect(battle.lastChoices).to.have.members(
+                    ["move 1", "move 2", "switch 2"]);
+                expect(responses).to.have.lengthOf(2);
+            });
+
+            // TODO: interrupted two-turn moves
+        });
+
         describe("sethp", function()
         {
             it("Should set hp", async function()

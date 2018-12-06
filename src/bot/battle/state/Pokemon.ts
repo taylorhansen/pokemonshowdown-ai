@@ -3,6 +3,7 @@ import { dex } from "../dex/dex";
 import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Move } from "./Move";
+import { oneHot } from "./utility";
 import { VolatileStatus } from "./VolatileStatus";
 
 /** Holds all the possibly incomplete info about a pokemon. */
@@ -267,13 +268,11 @@ export class Pokemon
      */
     public toArray(): number[]
     {
+
         // one-hot encode categorical data
-        const species = Array.from({length: dex.numPokemon},
-            (v, i) => i === this._species ? 1 : 0);
-        const item = Array.from({length: dex.numItems},
-            (v, i) => i === this._item ? 1 : 0);
-        const baseAbility = Array.from({length: 2},
-            (v, i) => i === this._baseAbility ? 1 : 0);
+        const species = oneHot(this._species, dex.numPokemon);
+        const item = oneHot(this._item, dex.numItems);
+        const baseAbility = oneHot(this._baseAbility!, 2);
         const hpTypes = (Object.keys(types) as Type[])
             .map(type => this._hpTypes[type] ? 1 : 0);
         const majorStatus = (Object.keys(majorStatuses) as MajorStatus[])

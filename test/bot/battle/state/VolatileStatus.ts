@@ -129,8 +129,6 @@ describe("VolatileStatus", function()
         it("Should have the same size as VolatileStatus.getArraySize()",
         function()
         {
-            volatile.disableMove(0, true);
-            volatile.lockedMove = true;
             expect(volatile.toArray()).to.have.lengthOf(
                 VolatileStatus.getArraySize());
         });

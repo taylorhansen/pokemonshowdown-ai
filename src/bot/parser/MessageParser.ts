@@ -3,8 +3,9 @@ import { BoostableStatName } from "../battle/state/VolatileStatus";
 import { AbilityEvent, ActivateEvent, BattleEvent, BattleUpkeep, BoostEvent,
     Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
     isEventPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent, PlayerID,
-    PokemonDetails, PokemonID, PokemonStatus, SetHPEvent, StartEvent,
-    StatusEvent, SwitchEvent, TieEvent, WinEvent } from "../messageData";
+    PokemonDetails, PokemonID, PokemonStatus, PrepareEvent, SetHPEvent,
+    StartEvent, StatusEvent, SwitchEvent, TieEvent, WinEvent } from
+    "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -391,6 +392,7 @@ export class MessageParser extends Parser
             case "-end": return this.parseEndEvent();
             case "faint": return this.parseFaintEvent();
             case "move": return this.parseMoveEvent();
+            case "-prepare": return this.parsePrepareEvent();
             case "-sethp": return this.parseSetHPEvent();
             case "-start": return this.parseStartEvent();
             case "-status": return this.parseStatusEvent();
@@ -612,6 +614,28 @@ export class MessageParser extends Parser
             if (cause) event.cause = cause;
         }
         return event;
+    }
+
+    /**
+     * Parses a PrepareEvent.
+     *
+     * Format:
+     * @example
+     * |-prepare|<user PokemonID>|<move name>|<target PokemonID>
+     *
+     * @returns A PrepareEvent, or null if invalid.
+     */
+    private parsePrepareEvent(): PrepareEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const moveName = line[2];
+        const targetId = MessageParser.parsePokemonID(line[3]);
+
+        this.nextLine();
+        if (!id || !moveName || !targetId) return null;
+
+        return {type: "prepare", id, moveName, targetId};
     }
 
     /**

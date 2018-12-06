@@ -42,6 +42,17 @@ function quote(str: string): string
     return `"${str}"`;
 }
 
+/**
+ * Wraps a string in quotes if it is a valid identifier. An invalid identifier
+ * has dashes, spaces, or quotes in it.
+ * @param str String to quote.
+ * @returns The string given back if valid, else the string wrapped in quotes.
+ */
+function maybeQuote(str: string): string
+{
+    return /[- ']/.test(str) ? quote(str) : str;
+}
+
 const data = Dex.mod("gen4").data;
 
 // import statement at the top of the file
@@ -104,7 +115,7 @@ for (const name in pokedex)
     }
 
     console.log(`\
-    ${/[- ']+/.test(mon.species) ? quote(mon.species) : mon.species}:
+    ${maybeQuote(mon.species)}:
     {
         id: ${mon.num},
         uid: ${uid},
@@ -135,8 +146,12 @@ const numPokemon = uid;
 
 // moves
 const moves = data.Movedex;
+const twoTurnMoves: {[name: string]: number} = {};
+let twoTurnUid = 0;
+
 console.log(`/** Contains data for every move in the supported generation. */
 const moves: {readonly [name: string]: MoveData} =\n{`);
+
 uid = 0;
 for (const moveName in moves)
 {
@@ -145,8 +160,8 @@ for (const moveName in moves)
     // only gen4 and under moves allowed
     if (move.num <= 0 || move.num >= 468 || move.isNonstandard) continue;
 
-    // hidden power moves also need to encode their type
-    // except hp normal which doesn't exist here
+    // hidden power moves can have any type, but only one move really exists,
+    //  not sure why PS dex includes every possible type
     if (move.id === "hiddenpower" && move.type !== "Normal") continue;
 
     const target = quote(move.target);
@@ -167,6 +182,9 @@ for (const moveName in moves)
         volatileEffect = quote(move.self.volatileStatus);
     }
 
+    // two turn moves are also recorded in a different object
+    if (move.flags.charge === 1) twoTurnMoves[move.name] = twoTurnUid++;
+
     console.log(`\
     ${move.id}:
     {
@@ -178,6 +196,23 @@ ${volatileEffect ? `, volatileEffect: ${volatileEffect}` : ""}
 }
 console.log("};\n");
 const numMoves = uid;
+
+// build set of all two turn moves
+console.log("const twoTurnMovesInternal =\n{");
+for (const moveName in twoTurnMoves)
+{
+    if (!twoTurnMoves.hasOwnProperty(moveName)) continue;
+
+    console.log(`    ${maybeQuote(moveName)}: ${twoTurnMoves[moveName]},`);
+}
+console.log(`};
+
+/** Set of all two-turn moves. Maps move name to its id within this object. */
+export const twoTurnMoves: Readonly<typeof twoTurnMovesInternal> =
+    twoTurnMovesInternal;
+
+/** Number of two-turn moves that exist. */
+export const numTwoTurnMoves = Object.keys(twoTurnMoves).length;\n`);
 
 // items
 const items = data.Items;
