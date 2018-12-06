@@ -14,10 +14,12 @@ import Dex = require("./Pokemon-Showdown/sim/dex");
  */
 function isNonGen4(name: string): boolean
 {
-    // banlist: megas, primal, alola/totem, arceus fairy, pikachu alt forms
+    // banlist: megas, primal, alola/totem, arceus fairy, pikachu alt forms,
+    //  letsgo pikachu/eevee starters
     // except yanmega, which isn't actually a mega evolution
     if (name === "yanmega") return false;
-    return /(mega[xy]?|primal|alola|totem|arceusfairy|^pikachu.+)$/.test(name);
+    return /(mega[xy]?|primal|alola|totem|arceusfairy|^(pikachu|eevee).+)$/
+        .test(name);
 }
 
 /**
