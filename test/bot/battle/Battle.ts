@@ -551,15 +551,24 @@ describe("Battle", function()
 
         describe("cant", function()
         {
-            it("Should ignore invalid reasons", async function()
+            it("Should reveal failed move", async function()
             {
+                const mon = battle.state.teams.them.active;
+                // tslint:disable-next-line:no-unused-expression
+                expect(mon.getMove("thunderwave")).to.be.null;
+
                 await listener.getHandler("battleprogress")(
                 {
-                    events: [{type: "cant", id: us1, reason: ""}],
-                    upkeep: {pre: [], post: []}, turn: 5
+                    events:
+                    [
+                        {
+                            type: "cant", id: them1, reason: "taunt",
+                            moveName: "Thunder Wave"
+                        }
+                    ]
                 });
-                expect(battle.lastChoices).to.have.members(["switch 2"]);
-                expect(responses).to.have.lengthOf(1);
+                // tslint:disable-next-line:no-unused-expression
+                expect(mon.getMove("thunderwave")).to.not.be.null;
             });
         });
 

@@ -44,6 +44,8 @@ export const battleEvent: BattleEvent[] =
     {type: "boost", id: pokemonId[2], stat: "atk", amount: 2},
     {type: "boost", id: pokemonId[2], stat: "evasion", amount: -1},
     {type: "cant", id: pokemonId[1], reason: "recharge"},
+    // message not being parsed correctly?
+    {type: "cant", id: pokemonId[1], reason: "taunt", moveName: "Thunder Wave"},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "cureteam", id: pokemonId[2]},
     {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
@@ -113,23 +115,23 @@ export const battleInit: BattleInitArgs[] =
 export const battleProgress: BattleProgressArgs[] =
 [
     {
-        events: [battleEvent[7], battleEvent[8]],
-        upkeep: {pre: [battleEvent[9], battleEvent[10]], post: []},
+        events: [battleEvent[7], battleEvent[8], battleEvent[9]],
+        upkeep: {pre: [battleEvent[10], battleEvent[11]], post: []},
         turn: 2
     },
     {
-        events: [battleEvent[11], battleEvent[12]],
+        events: [battleEvent[12], battleEvent[13]],
         upkeep:
         {
-            pre: [battleEvent[13]], post: [battleEvent[14], battleEvent[15]]
+            pre: [battleEvent[14]], post: [battleEvent[15], battleEvent[16]]
         },
         turn: 100
     },
     {
-        events: [battleEvent[16], battleEvent[17], battleEvent[18]],
+        events: [battleEvent[17], battleEvent[18], battleEvent[19]],
         upkeep:
         {
-            pre: [], post: [battleEvent[19], battleEvent[20], battleEvent[21]]
+            pre: [], post: [battleEvent[20], battleEvent[21], battleEvent[22]]
         },
         turn: 9
     }

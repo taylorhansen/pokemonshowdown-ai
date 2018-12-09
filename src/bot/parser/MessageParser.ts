@@ -478,7 +478,7 @@ export class MessageParser extends Parser
      *
      * Format:
      * @example
-     * |<cant>|<PokemonID>|<reason>|<move (optional)>
+     * |cant|<PokemonID>|<reason>|<move (optional)>
      *
      * @returns A CantEvent, or null if invalid.
      */
@@ -487,11 +487,13 @@ export class MessageParser extends Parser
         const line = this.line;
         const id = MessageParser.parsePokemonID(line[1]);
         const reason = line[2];
+        const moveName = line[3];
 
         this.nextLine();
         if (!id || !reason) return null;
 
-        return {type: "cant", id, reason};
+        if (!moveName) return {type: "cant", id, reason};
+        return {type: "cant", id, reason, moveName};
     }
 
     /**

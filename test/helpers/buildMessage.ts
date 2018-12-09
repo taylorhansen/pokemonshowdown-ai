@@ -103,6 +103,7 @@ export function composeBattleEvent(event: BattleEvent): string[]
             break;
         case "cant":
             result = ["cant", stringifyID(event.id), event.reason];
+            if (event.moveName) result.push(event.moveName);
             break;
         case "curestatus":
         case "status":

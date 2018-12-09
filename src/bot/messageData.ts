@@ -131,6 +131,8 @@ export interface CantEvent extends BattleEventBase
     id: PokemonID;
     /** Why the action couldn't be completed. */
     reason: string;
+    /** The move that the pokemon wasn't able to use. */
+    moveName?: string;
 }
 
 /** Event where a pokemon's major status is cured. */

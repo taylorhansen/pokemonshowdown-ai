@@ -255,6 +255,14 @@ ${inspect(args, {colors: true, depth: null})}`);
                     this.state.teams[this.getSide(event.id.owner)].active
                         .volatile.mustRecharge = false;
                 }
+                if (event.moveName)
+                {
+                    const moveId = Battle.parseIDName(event.moveName);
+                    // prevented from using a move, which might not have been
+                    //  revealed before
+                    this.state.teams[this.getSide(event.id.owner)].active
+                        .revealMove(moveId);
+                }
                 break;
             case "curestatus":
                 this.state.teams[this.getSide(event.id.owner)].active
@@ -328,6 +336,16 @@ ${inspect(args, {colors: true, depth: null})}`);
     }
 
     /**
+     * Converts a display name to an id name.
+     * @param name Name to convert.
+     * @returns The resulting ID name.
+     */
+    protected static parseIDName(name: string): string
+    {
+        return name.toLowerCase().replace(/[ -]/g, "");
+    }
+
+    /**
      * Sets the HP of a pokemon.
      * @param id Pokemon's ID.
      * @param status New HP/status.
@@ -349,7 +367,7 @@ ${inspect(args, {colors: true, depth: null})}`);
     {
         const side = this.getSide(event.id.owner);
         const mon = this.state.teams[side].active;
-        const moveId = event.moveName.toLowerCase().replace(/[ -]/g, "");
+        const moveId = Battle.parseIDName(event.moveName);
 
         const pp =
             // locked moves don't consume pp

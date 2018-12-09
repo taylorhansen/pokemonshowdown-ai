@@ -80,12 +80,11 @@ describe("MessageParser", function()
         function shouldParse<T extends MessageType>(type: T,
             words: string[][], givenArgs: MessageArgs<T>): void
         {
-            it(`Should parse ${type}`, function(done)
+            it(`Should parse ${type}`, async function()
             {
-                parse(type, words, args =>
+                await parse(type, words, args =>
                 {
                     expect(givenArgs).to.deep.equal(args);
-                    done();
                 });
             });
         }
