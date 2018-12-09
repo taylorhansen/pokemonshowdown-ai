@@ -549,6 +549,20 @@ describe("Battle", function()
             });
         });
 
+        describe("cant", function()
+        {
+            it("Should ignore invalid reasons", async function()
+            {
+                await listener.getHandler("battleprogress")(
+                {
+                    events: [{type: "cant", id: us1, reason: ""}],
+                    upkeep: {pre: [], post: []}, turn: 5
+                });
+                expect(battle.lastChoices).to.have.members(["switch 2"]);
+                expect(responses).to.have.lengthOf(1);
+            });
+        });
+
         describe("curestatus", function()
         {
             it("Should cure status", async function()
@@ -770,6 +784,36 @@ describe("Battle", function()
                     expect(move).to.not.be.null;
                     expect(move.pp).to.equal(55);
                 });
+            });
+        });
+
+        describe("mustrecharge", function()
+        {
+            it("Should recharge after recharge move", async function()
+            {
+                await listener.getHandler("battleprogress")(
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Hyper Beam",
+                            targetId: them1
+                        },
+                        {type: "mustrecharge", id: us1}
+                    ],
+                    upkeep: {pre: [], post: []}, turn: 4
+                });
+                expect(battle.lastChoices).to.have.members(["move 1"]);
+                expect(responses).to.have.lengthOf(1);
+
+                await listener.getHandler("battleprogress")(
+                {
+                    events: [{type: "cant", id: us1, reason: "recharge"}],
+                    upkeep: {pre: [], post: []}, turn: 5
+                });
+                expect(battle.lastChoices).to.have.members(
+                    ["move 1", "switch 2"]);
+                expect(responses).to.have.lengthOf(2);
             });
         });
 

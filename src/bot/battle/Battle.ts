@@ -248,6 +248,14 @@ ${inspect(args, {colors: true, depth: null})}`);
                 this.state.teams[this.getSide(event.id.owner)].active.volatile
                     .boost(event.stat, event.amount);
                 break;
+            case "cant":
+                if (event.reason === "recharge")
+                {
+                    // successfully completed its recharge turn
+                    this.state.teams[this.getSide(event.id.owner)].active
+                        .volatile.mustRecharge = false;
+                }
+                break;
             case "curestatus":
                 this.state.teams[this.getSide(event.id.owner)].active
                     .majorStatus = "";
@@ -264,6 +272,10 @@ ${inspect(args, {colors: true, depth: null})}`);
                 break;
             case "move":
                 this.handleMove(event);
+                break;
+            case "mustrecharge":
+                this.state.teams[this.getSide(event.id.owner)].active.volatile
+                    .mustRecharge = true;
                 break;
             case "prepare":
                 // moveName should be one of the two-turn moves being prepared
@@ -451,7 +463,8 @@ ${inspect(args, {colors: true, depth: null})}`);
         // possible choices for switching pokemon
         const active = team.active;
         // locked two-turn moves trap the user and keeps them from switching
-        if (!active.volatile.lockedMove && !active.volatile.twoTurn)
+        if (!active.volatile.lockedMove && !active.volatile.twoTurn &&
+            !active.volatile.mustRecharge)
         {
             for (let i = 0; i < team.pokemon.length; ++i)
             {
@@ -467,9 +480,11 @@ ${inspect(args, {colors: true, depth: null})}`);
         {
             // can also possibly make a move, since we're not being forced to
             //  just switch
-            if (active.volatile.lockedMove || active.volatile.twoTurn)
+            if (active.volatile.lockedMove || active.volatile.twoTurn ||
+                active.volatile.mustRecharge)
             {
-                // locked two-turn moves trap the user into using only one move
+                // multi-turn attacks indicated by these statuses must be
+                //  completed before anything else can be done
                 choices.push("move 1");
             }
             else

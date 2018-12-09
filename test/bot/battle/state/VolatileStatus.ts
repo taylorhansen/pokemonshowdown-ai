@@ -20,12 +20,19 @@ describe("VolatileStatus", function()
             volatile.confuse(true);
             volatile.disableMove(0, true);
             volatile.lockedMove = true;
+            volatile.twoTurn = "Bounce";
+            volatile.mustRecharge = true;
+
             volatile.clear();
+            // tslint:disable:no-unused-expression
             expect(volatile.boosts.atk).to.equal(0);
-            expect(volatile.isConfused).to.equal(false);
+            expect(volatile.isConfused).to.be.false;
             expect(volatile.confuseTurns).to.equal(0);
-            expect(volatile.isDisabled(0)).to.equal(false);
-            expect(volatile.lockedMove).to.equal(false);
+            expect(volatile.isDisabled(0)).to.be.false;
+            expect(volatile.lockedMove).to.be.false;
+            expect(volatile.twoTurn).to.equal("");
+            expect(volatile.mustRecharge).to.be.false;
+            // tslint:enable:no-unused-expression
         });
     });
 
@@ -37,17 +44,22 @@ describe("VolatileStatus", function()
             volatile.confuse(true);
             volatile.disableMove(0, true);
             volatile.lockedMove = true;
+            volatile.twoTurn = "Bounce";
+            volatile.mustRecharge = true;
 
             const newVolatile = volatile.shallowClone();
             volatile.clear();
-
+            // tslint:disable:no-unused-expression
             expect(newVolatile).to.not.equal(volatile);
             expect(newVolatile.boosts).to.not.equal(volatile.boosts);
             expect(newVolatile.boosts.atk).to.equal(1);
-            expect(newVolatile.isDisabled(0)).to.equal(true);
-            expect(newVolatile.isConfused).to.equal(false);
+            expect(newVolatile.isDisabled(0)).to.be.true;
+            expect(newVolatile.isConfused).to.be.false;
             expect(newVolatile.confuseTurns).to.equal(0);
-            expect(newVolatile.lockedMove).to.equal(false);
+            expect(newVolatile.lockedMove).to.be.false;
+            expect(volatile.twoTurn).to.equal("");
+            expect(volatile.mustRecharge).to.be.false;
+            // tslint:enable:no-unused-expression
         });
     });
 

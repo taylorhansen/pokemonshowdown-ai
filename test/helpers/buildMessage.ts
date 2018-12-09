@@ -101,6 +101,9 @@ export function composeBattleEvent(event: BattleEvent): string[]
                 event.stat, Math.abs(event.amount).toString()
             ];
             break;
+        case "cant":
+            result = ["cant", stringifyID(event.id), event.reason];
+            break;
         case "curestatus":
         case "status":
             result =
@@ -130,6 +133,9 @@ export function composeBattleEvent(event: BattleEvent): string[]
                 stringifyID(event.id), event.moveName,
                 stringifyID(event.targetId)
             ];
+            break;
+        case "mustrecharge":
+            result = ["-mustrecharge", stringifyID(event.id)];
             break;
         case "sethp":
             result =

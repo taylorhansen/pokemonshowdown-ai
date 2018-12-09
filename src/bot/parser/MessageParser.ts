@@ -1,11 +1,11 @@
 import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
 import { BoostableStatName } from "../battle/state/VolatileStatus";
 import { AbilityEvent, ActivateEvent, BattleEvent, BattleUpkeep, BoostEvent,
-    Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
-    isEventPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent, PlayerID,
-    PokemonDetails, PokemonID, PokemonStatus, PrepareEvent, SetHPEvent,
-    StartEvent, StatusEvent, SwitchEvent, TieEvent, WinEvent } from
-    "../messageData";
+    CantEvent, Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent,
+    FaintEvent, isEventPrefix, isMajorStatus, isPlayerId, MajorStatus,
+    MoveEvent, MustRechargeEvent, PlayerID, PokemonDetails, PokemonID,
+    PokemonStatus, PrepareEvent, SetHPEvent, StartEvent, StatusEvent,
+    SwitchEvent, TieEvent, WinEvent } from "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -355,6 +355,7 @@ export class MessageParser extends Parser
             args.turn = MessageParser.parseInt(this.line[1]);
             this.nextLine();
         }
+        // TODO: some messages happen after turn event
         return this.handle("battleprogress", args);
     }
 
@@ -386,12 +387,14 @@ export class MessageParser extends Parser
             case "-ability": return this.parseAbilityEvent();
             case "-activate": return this.parseActivateEvent();
             case "-boost": case "-unboost": return this.parseBoostEvent();
+            case "cant": return this.parseCantEvent();
             case "-curestatus": return this.parseCureStatusEvent();
             case "-cureteam": return this.parseCureTeamEvent();
             case "-damage": case "-heal": return this.parseDamageEvent();
             case "-end": return this.parseEndEvent();
             case "faint": return this.parseFaintEvent();
             case "move": return this.parseMoveEvent();
+            case "-mustrecharge": return this.parseMustRechargeEvent();
             case "-prepare": return this.parsePrepareEvent();
             case "-sethp": return this.parseSetHPEvent();
             case "-start": return this.parseStartEvent();
@@ -468,6 +471,27 @@ export class MessageParser extends Parser
 
         if (line[0] === "-unboost") amount = -amount;
         return {type: "boost", id, stat, amount};
+    }
+
+    /**
+     * Parses a CantEvent.
+     *
+     * Format:
+     * @example
+     * |<cant>|<PokemonID>|<reason>|<move (optional)>
+     *
+     * @returns A CantEvent, or null if invalid.
+     */
+    private parseCantEvent(): CantEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const reason = line[2];
+
+        this.nextLine();
+        if (!id || !reason) return null;
+
+        return {type: "cant", id, reason};
     }
 
     /**
@@ -614,6 +638,25 @@ export class MessageParser extends Parser
             if (cause) event.cause = cause;
         }
         return event;
+    }
+
+    /**
+     * Parses a MustRechargeEvent.
+     *
+     * Format:
+     * @example
+     * |-mustrecharge|<PokemonID>
+     *
+     * @returns A MustRechargeEvent, or null if invalid.
+     */
+    private parseMustRechargeEvent(): MustRechargeEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+
+        this.nextLine();
+        if (!id) return null;
+        return {type: "mustrecharge", id};
     }
 
     /**

@@ -13,10 +13,11 @@ export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
 /** Set of EventPrefixes. */
 export const eventPrefixes =
 {
-    "-ability": true, "-activate": true, "-boost": true, "-curestatus": true,
-    "-cureteam": true, "-damage": true, drag: true, "-end": true, faint: true,
-    "-heal": true, move: true, "-start": true, "-status": true, switch: true,
-    tie: true, "-unboost": true, win: true
+    "-ability": true, "-activate": true, "-boost": true, cant: true,
+    "-curestatus": true, "-cureteam": true, "-damage": true, drag: true,
+    "-end": true, faint: true, "-heal": true, move: true, "-mustrecharge": true,
+    "-prepare": true, "-seth": true, "-start": true, "-status": true,
+    switch: true, tie: true, "-unboost": true, win: true
 };
 /** Message types that are parsed as battle events. */
 export type EventPrefix = keyof typeof eventPrefixes;
@@ -77,9 +78,9 @@ export function isPlayerId(id: any): id is PlayerID
 
 /** Types of events that can happen during battle. */
 export type BattleEvent = AbilityEvent | ActivateEvent | BoostEvent |
-    CureStatusEvent | CureTeamEvent | DamageEvent | EndEvent | FaintEvent |
-    MoveEvent | PrepareEvent | SetHPEvent | StartEvent | StatusEvent |
-    SwitchEvent | TieEvent | WinEvent;
+    CantEvent | CureStatusEvent | CureTeamEvent | DamageEvent | EndEvent |
+    FaintEvent | MoveEvent | MustRechargeEvent | PrepareEvent | SetHPEvent |
+    StartEvent | StatusEvent | SwitchEvent | TieEvent | WinEvent;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
@@ -90,7 +91,7 @@ interface BattleEventBase
     cause?: Cause;
 }
 
-/** Event addon where a pokemon's ability is revealed and activated. */
+/** Event where a pokemon's ability is revealed and activated. */
 export interface AbilityEvent extends BattleEventBase
 {
     type: "ability";
@@ -100,7 +101,7 @@ export interface AbilityEvent extends BattleEventBase
     ability: string;
 }
 
-/** Event addon where a volatile status is mentioned. */
+/** Event where a volatile status is mentioned. */
 export interface ActivateEvent extends BattleEventBase
 {
     type: "activate";
@@ -120,6 +121,16 @@ export interface BoostEvent extends BattleEventBase
     stat: BoostableStatName;
     /** Amount to boost by. */
     amount: number;
+}
+
+/** Event where an action is prevented from being completed. */
+export interface CantEvent extends BattleEventBase
+{
+    type: "cant";
+    /** ID of the pokemom. */
+    id: PokemonID;
+    /** Why the action couldn't be completed. */
+    reason: string;
 }
 
 /** Event where a pokemon's major status is cured. */
@@ -178,6 +189,14 @@ export interface MoveEvent extends BattleEventBase
     moveName: string;
     /** ID of the target pokemon. */
     targetId: PokemonID;
+}
+
+/** Event where a pokemon must recharge on the next turn. */
+export interface MustRechargeEvent extends BattleEventBase
+{
+    type: "mustrecharge";
+    /** ID of the pokemon that needs to recharge. */
+    id: PokemonID;
 }
 
 /** Event where a move is being prepared, and will fire next turn. */

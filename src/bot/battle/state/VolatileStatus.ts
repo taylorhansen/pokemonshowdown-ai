@@ -42,6 +42,9 @@ export class VolatileStatus
     /** Two-turn move currently being prepared. */
     public twoTurn: keyof typeof twoTurnMoves | "";
 
+    /** Whether this pokemon must recharge on the next turn. */
+    public mustRecharge: boolean;
+
     /** Creates a VolatileStatus object. */
     constructor()
     {
@@ -74,6 +77,7 @@ export class VolatileStatus
         this.lockedMove = false;
         this._confuseTurns = 0;
         this.twoTurn = "";
+        this.mustRecharge = false;
     }
 
     /**

@@ -43,6 +43,7 @@ export const battleEvent: BattleEvent[] =
     {type: "activate", id: pokemonId[1], volatile: "ingrain"},
     {type: "boost", id: pokemonId[2], stat: "atk", amount: 2},
     {type: "boost", id: pokemonId[2], stat: "evasion", amount: -1},
+    {type: "cant", id: pokemonId[1], reason: "recharge"},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "cureteam", id: pokemonId[2]},
     {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
@@ -60,6 +61,7 @@ export const battleEvent: BattleEvent[] =
         type: "move", id: pokemonId[1], moveName: "Splash",
         targetId: pokemonId[0], cause: cause[2]
     },
+    {type: "mustrecharge", id: pokemonId[2]},
     {
         type: "prepare", id: pokemonId[1], moveName: "Solar Beam",
         targetId: pokemonId[0]
@@ -99,6 +101,11 @@ export const battleInit: BattleInitArgs[] =
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
         events: [battleEvent[3], battleEvent[4]]
+    },
+    {
+        id: "p2", username: username[1], gameType: "singles", gen: 4,
+        teamSizes: {p1: 6, p2: 6},
+        events: [battleEvent[5], battleEvent[6]]
     }
 ];
 
@@ -106,23 +113,23 @@ export const battleInit: BattleInitArgs[] =
 export const battleProgress: BattleProgressArgs[] =
 [
     {
-        events: [battleEvent[5], battleEvent[6]],
-        upkeep: {pre: [battleEvent[7], battleEvent[8]], post: []},
+        events: [battleEvent[7], battleEvent[8]],
+        upkeep: {pre: [battleEvent[9], battleEvent[10]], post: []},
         turn: 2
     },
     {
-        events: [battleEvent[9], battleEvent[10]],
+        events: [battleEvent[11], battleEvent[12]],
         upkeep:
         {
-            pre: [battleEvent[11]], post: [battleEvent[12], battleEvent[13]]
+            pre: [battleEvent[13]], post: [battleEvent[14], battleEvent[15]]
         },
         turn: 100
     },
     {
-        events: [battleEvent[14], battleEvent[15], battleEvent[16]],
+        events: [battleEvent[16], battleEvent[17], battleEvent[18]],
         upkeep:
         {
-            pre: [], post: [battleEvent[17], battleEvent[18], battleEvent[19]]
+            pre: [], post: [battleEvent[19], battleEvent[20], battleEvent[21]]
         },
         turn: 9
     }
