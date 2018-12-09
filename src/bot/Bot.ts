@@ -78,8 +78,6 @@ export class Bot
 
         // once the battle's over we can respectfully leave
         listener.on("battleprogress", args => args.events
-            // look through all events
-            .concat(args.upkeep ? args.upkeep.pre.concat(args.upkeep.post) : [])
             .forEach(event =>
                 // once the game ends, be a little sportsmanlike
                 ["tie", "win"].includes(event.type) ?

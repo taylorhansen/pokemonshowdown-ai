@@ -1,8 +1,8 @@
 /** @file Contains test arguments for battle messages. */
 import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
     "../../src/bot/AnyMessageListener";
-import { BattleEvent, Cause, PokemonDetails, PokemonID, PokemonStatus } from
-    "../../src/bot/messageData";
+import { BattleEvent, Cause, PokemonDetails, PokemonID, PokemonStatus,
+    TurnEvent } from "../../src/bot/messageData";
 
 export const username: string[] = ["user1", "user2"];
 
@@ -36,7 +36,7 @@ export const cause: Cause[] =
     {type: "fatigue"}, {type: "item", item: "Leftovers"}, {type: "lockedmove"}
 ];
 
-/** Test BattleEvents. */
+/** Test BattleEvents except turn/upkeep. */
 export const battleEvent: BattleEvent[] =
 [
     {type: "ability", id: pokemonId[0], ability: "Pressure"},
@@ -89,6 +89,8 @@ export const battleEvent: BattleEvent[] =
     {type: "tie"}, {type: "win", winner: username[1]}
 ];
 
+const startTurn: TurnEvent = {type: "turn", num: 1};
+
 /**
  * Test BattleInitArgs. Even indexes belong to p1 while odd ones belong to p2.
  */
@@ -97,17 +99,17 @@ export const battleInit: BattleInitArgs[] =
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: [battleEvent[0], battleEvent[1], battleEvent[2]]
+        events: battleEvent.slice(0, 3).concat(startTurn)
     },
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: [battleEvent[3], battleEvent[4]]
+        events: battleEvent.slice(3, 5).concat(startTurn)
     },
     {
         id: "p2", username: username[1], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: [battleEvent[5], battleEvent[6]]
+        events: battleEvent.slice(5, 7).concat(startTurn)
     }
 ];
 
@@ -115,25 +117,18 @@ export const battleInit: BattleInitArgs[] =
 export const battleProgress: BattleProgressArgs[] =
 [
     {
-        events: [battleEvent[7], battleEvent[8], battleEvent[9]],
-        upkeep: {pre: [battleEvent[10], battleEvent[11]], post: []},
-        turn: 2
+        events: battleEvent.slice(7, 12)
+            .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
-        events: [battleEvent[12], battleEvent[13]],
-        upkeep:
-        {
-            pre: [battleEvent[14]], post: [battleEvent[15], battleEvent[16]]
-        },
-        turn: 100
+        events: battleEvent.slice(12, 15)
+            .concat({type: "upkeep"}, ...battleEvent.slice(15, 17),
+                {type: "turn", num: 100})
     },
     {
-        events: [battleEvent[17], battleEvent[18], battleEvent[19]],
-        upkeep:
-        {
-            pre: [], post: [battleEvent[20], battleEvent[21], battleEvent[22]]
-        },
-        turn: 9
+        events: battleEvent.slice(17, 20)
+            .concat({type: "upkeep"}, ...battleEvent.slice(20, 23),
+                {type: "turn", num: 9})
     }
 ];
 

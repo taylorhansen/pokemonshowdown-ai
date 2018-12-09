@@ -80,9 +80,9 @@ describe("MessageParser", function()
         function shouldParse<T extends MessageType>(type: T,
             words: string[][], givenArgs: MessageArgs<T>): void
         {
-            it(`Should parse ${type}`, async function()
+            it(`Should parse ${type}`, function()
             {
-                await parse(type, words, args =>
+                return parse(type, words, args =>
                 {
                     expect(givenArgs).to.deep.equal(args);
                 });
@@ -113,18 +113,17 @@ ${buildMessage(words)}`);
                 shouldParse("battleinit", composeBattleInit(args), args);
             }
 
-            it("Should ignore unexpected message types", function(done)
+            it("Should ignore unexpected message types", function()
             {
                 const givenArgs = testArgs.battleInit[0];
                 const words = [...composeBattleInit(givenArgs), ["lol"]];
-                parse("battleinit", words, args =>
+                return parse("battleinit", words, args =>
                 {
                     expect(args).to.deep.equal(givenArgs);
-                    done();
                 });
             });
 
-            it("Should not include invalid events", function(done)
+            it("Should not include invalid events", function()
             {
                 const words =
                 [
@@ -132,10 +131,9 @@ ${buildMessage(words)}`);
                     ["teamsize", "p2", "6"], ["gametype", "singles"],
                     ["gen", "4"], ["switch"]
                 ];
-                parse("battleinit", words, args =>
+                return parse("battleinit", words, args =>
                 {
                     expect(args.events.length).to.equal(0);
-                    done();
                 });
             });
         });
@@ -148,24 +146,22 @@ ${buildMessage(words)}`);
                     args);
             }
 
-            it("Should ignore unexpected message types", function(done)
+            it("Should ignore unexpected message types", async function()
             {
                 const givenArgs = testArgs.battleProgress[0];
                 const words = [...composeBattleProgress(givenArgs), ["lol"]];
-                parse("battleprogress", words, args =>
+                await parse("battleprogress", words, args =>
                 {
                     expect(givenArgs).to.deep.equal(args);
-                    done();
                 });
             });
 
-            it("Should not include invalid events", function(done)
+            it("Should not include invalid events", async function()
             {
                 const words = [["move"]];
-                parse("battleprogress", words, args =>
+                await parse("battleprogress", words, args =>
                 {
                     expect(args.events.length).to.equal(0);
-                    done();
                 });
             });
         });

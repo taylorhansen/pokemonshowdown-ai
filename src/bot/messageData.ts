@@ -17,7 +17,8 @@ export const eventPrefixes =
     "-curestatus": true, "-cureteam": true, "-damage": true, drag: true,
     "-end": true, faint: true, "-heal": true, move: true, "-mustrecharge": true,
     "-prepare": true, "-seth": true, "-start": true, "-status": true,
-    switch: true, tie: true, "-unboost": true, win: true
+    switch: true, tie: true, turn: true, "-unboost": true, upkeep: true,
+    win: true
 };
 /** Message types that are parsed as battle events. */
 export type EventPrefix = keyof typeof eventPrefixes;
@@ -80,7 +81,8 @@ export function isPlayerId(id: any): id is PlayerID
 export type BattleEvent = AbilityEvent | ActivateEvent | BoostEvent |
     CantEvent | CureStatusEvent | CureTeamEvent | DamageEvent | EndEvent |
     FaintEvent | MoveEvent | MustRechargeEvent | PrepareEvent | SetHPEvent |
-    StartEvent | StatusEvent | SwitchEvent | TieEvent | WinEvent;
+    StartEvent | StatusEvent | SwitchEvent | TieEvent | TurnEvent |
+    UpkeepEvent | WinEvent;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
@@ -259,21 +261,26 @@ export interface TieEvent extends BattleEventBase
     type: "tie";
 }
 
+/** Event indicating that a new turn has started. */
+export interface TurnEvent extends BattleEventBase
+{
+    type: "turn";
+    /** New turn number. */
+    num: number;
+}
+
+/** Event indicating that the main BattleEvents are over. */
+export interface UpkeepEvent extends BattleEventBase
+{
+    type: "upkeep";
+}
+
 /** Event indicating that the game has ended with a winner. */
 export interface WinEvent extends BattleEventBase
 {
     type: "win";
     /** Username of the winner. */
     winner: string;
-}
-
-/** Contains minor events that happen at the end of a turn. */
-export interface BattleUpkeep
-{
-    /** Events before the upkeep message. */
-    pre: BattleEvent[];
-    /** Events after the upkeep message. */
-    post: BattleEvent[];
 }
 
 // battle event cause types

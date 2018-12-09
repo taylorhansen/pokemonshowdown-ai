@@ -209,7 +209,7 @@ describe("Battle", function()
             expect(responses).to.be.empty;
         });
 
-        it("Should not choose moves it can't make", async function()
+        it("Should not choose disabled moves", async function()
         {
             const mon = battle.state.teams.us.active;
             mon.revealMove("splash");
@@ -217,7 +217,7 @@ describe("Battle", function()
             mon.revealMove("tackle");
 
             await listener.getHandler("battleprogress")(
-                {events: [], upkeep: {pre: [], post: []}, turn: 1});
+                {events: [{type: "upkeep"}, {type: "turn", num: 1}]});
 
             expect(battle.lastChoices).to.have.members(["move 2", "switch 2"]);
             expect(responses).to.have.lengthOf(1);
@@ -225,47 +225,26 @@ describe("Battle", function()
 
         describe("event processing", function()
         {
-            // sample BattleEvent
-            const event: MoveEvent =
-                {type: "move", id: us1, moveName: "Splash", targetId: us1};
-
-            beforeEach("Initial assertions", function()
+            it("Should process events", async function()
             {
+
                 // move hasn't been revealed yet
                 // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.active.getMove("splash"))
                     .to.be.null;
-            });
 
-            it("Should process events", async function()
-            {
                 await listener.getHandler("battleprogress")(
                 {
-                    events: [event],
-                    upkeep: {pre: [], post: []}, turn: 1
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Splash",
+                            targetId: us1
+                        },
+                        {type: "upkeep"}, {type: "turn", num: 1}
+                    ]
                 });
-            });
 
-            it("Should process upkeep.pre", async function()
-            {
-                await listener.getHandler("battleprogress")(
-                {
-                    events: [],
-                    upkeep: {pre: [event], post: []}, turn: 1
-                });
-            });
-
-            it("Should process upkeep.post", async function()
-            {
-                await listener.getHandler("battleprogress")(
-                {
-                    events: [],
-                    upkeep: {pre: [], post: [event]}, turn: 1
-                });
-            });
-
-            afterEach("Final assertions", function()
-            {
                 const move = battle.state.teams.us.active.getMove("splash");
                 // tslint:disable-next-line:no-unused-expression
                 expect(move).to.not.be.null;
@@ -342,7 +321,9 @@ describe("Battle", function()
                 // adding an upkeep+turn means that the move was completed, so a
                 //  selfSwitch choice should not be needed
                 await listener.getHandler("battleprogress")(
-                    {events: [event], upkeep: {pre: [], post: []}, turn: 2});
+                {
+                    events: [event, {type: "upkeep"}, {type: "turn", num: 2}]
+                });
 
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(1);
@@ -375,9 +356,8 @@ describe("Battle", function()
                     events:
                     [
                         event2, {type: "faint", id: us1},
-                        {type: "faint", id: them1}
-                    ],
-                    upkeep: {pre: [], post: []}
+                        {type: "faint", id: them1}, {type: "upkeep"}
+                    ]
                 });
                 expect(battle.lastChoices).to.have.members(["switch 2"]);
                 expect(responses).to.have.lengthOf(1);
@@ -415,9 +395,9 @@ describe("Battle", function()
                                 hp: us2Mon.hp.current, hpMax: us2Mon.hp.max,
                                 condition: us2Mon.majorStatus
                             }
-                        }
-                    ],
-                    upkeep: {pre: [], post: []}, turn: 2
+                        },
+                        {type: "upkeep"}, {type: "turn", num: 2}
+                    ]
                 });
                 expect(us2Mon.volatile.boosts.atk).to.equal(2);
             });
@@ -450,9 +430,9 @@ describe("Battle", function()
                                 shiny: false
                             },
                             status: {hp: 100, hpMax: 100, condition: ""}
-                        }
-                    ],
-                    upkeep: {pre: [], post: []}, turn: 2
+                        },
+                        {type: "upkeep"}, {type: "turn", num: 2}
+                    ]
                 });
                 const them2Mon = battle.state.teams.them.pokemon[0];
                 expect(them1Mon).to.not.equal(them2Mon);
@@ -634,10 +614,7 @@ describe("Battle", function()
                 expect(battle.state.teams.us.active.fainted).to.be.false;
 
                 await listener.getHandler("battleprogress")(
-                {
-                    events: [{type: "faint", id: us1}],
-                    upkeep: {pre: [], post: []}
-                });
+                    {events: [{type: "faint", id: us1}, {type: "upkeep"}]});
 
                 // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.active.fainted).to.be.true;
@@ -652,10 +629,7 @@ describe("Battle", function()
                 expect(battle.state.teams.them.active.fainted).to.be.false;
 
                 await listener.getHandler("battleprogress")(
-                {
-                    events: [{type: "faint", id: them1}],
-                    upkeep: {pre: [], post: []}
-                });
+                    {events: [{type: "faint", id: them1}, {type: "upkeep"}]});
 
                 // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
@@ -702,9 +676,9 @@ describe("Battle", function()
                             {
                                 type: "move", id: us1, moveName: "Outrage",
                                 targetId: them1
-                            }
-                        ],
-                        upkeep: {pre: [], post: []}, turn: 1
+                            },
+                            {type: "upkeep"}, {type: "turn", num: 60}
+                        ]
                     });
                     // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
@@ -808,17 +782,20 @@ describe("Battle", function()
                             type: "move", id: us1, moveName: "Hyper Beam",
                             targetId: them1
                         },
+                        {type: "upkeep"}, {type: "turn", num: 4},
                         {type: "mustrecharge", id: us1}
-                    ],
-                    upkeep: {pre: [], post: []}, turn: 4
+                    ]
                 });
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(1);
 
                 await listener.getHandler("battleprogress")(
                 {
-                    events: [{type: "cant", id: us1, reason: "recharge"}],
-                    upkeep: {pre: [], post: []}, turn: 5
+                    events:
+                    [
+                        {type: "cant", id: us1, reason: "recharge"},
+                        {type: "upkeep"}, {type: "turn", num: 5}
+                    ]
                 });
                 expect(battle.lastChoices).to.have.members(
                     ["move 1", "switch 2"]);
@@ -846,9 +823,9 @@ describe("Battle", function()
                         {
                             type: "prepare", id: us1, moveName: "Solar Beam",
                             targetId: them1
-                        }
-                    ],
-                    upkeep: {pre: [], post: []}, turn: 2
+                        },
+                        {type: "upkeep"}, {type: "turn", num: 10}
+                    ]
                 });
                 // the use of a two-turn move should restrict the client's
                 //  choices to only the move being prepared, which temporarily
@@ -864,9 +841,9 @@ describe("Battle", function()
                         {
                             type: "move", id: us1, moveName: "Solar Beam",
                             targetId: them1, cause: {type: "lockedmove"}
-                        }
-                    ],
-                    upkeep: {pre: [], post: []}, turn: 3
+                        },
+                        {type: "upkeep"}, {type: "turn", num: 11}
+                    ]
                 });
                 // should now be able to choose other choices
                 expect(battle.lastChoices).to.have.members(

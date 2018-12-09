@@ -58,7 +58,7 @@ export abstract class Battle
         this.sender = sender;
 
         listener
-        .on("battleinit", async args =>
+        .on("battleinit", args =>
         {
             logger.debug(`battleinit:
 ${inspect(args, {colors: true, depth: null})}`);
@@ -80,47 +80,43 @@ ${inspect(args, {colors: true, depth: null})}`);
             args.events.forEach(event => this.handleEvent(event));
 
             logger.debug(`state:\n${this.state.toString()}`);
-            await this.askAI();
+            return this.askAI();
         })
-        .on("battleprogress", async args =>
+        .on("battleprogress", args =>
         {
             logger.debug(`battleprogress:
 ${inspect(args, {colors: true, depth: null})}`);
 
-            // last turn, a two-turn move status might've been set by an event,
-            //  so remove that first so it doesn't interfere
-            if (args.turn)
+            // pre-event processing
+            for (const event of args.events)
             {
-                for (const side of ["us", "them"] as Side[])
+                if (event.type === "turn")
                 {
-                    this.state.teams[side].active.volatile.twoTurn = "";
+                    // last turn, a two-turn move status might've been set by an
+                    //  event, so remove that first so it doesn't interfere in
+                    //  case an event now is supposed to set or interrupt it
+                    for (const side of ["us", "them"] as Side[])
+                    {
+                        this.state.teams[side].active.volatile.twoTurn = "";
+                    }
                 }
             }
 
-            args.events.forEach(event => this.handleEvent(event));
-
-            if (args.upkeep)
+            // event processing
+            let newTurn = false;
+            for (const event of args.events)
             {
-                args.upkeep.pre.forEach(event => this.handleEvent(event));
-                args.upkeep.post.forEach(event => this.handleEvent(event));
-
-                // selfSwitch is the result of a move, which only occurs in the
-                //  middle of all the turn's main events (args.events)
-                // if the simulator ignored the fact that a selfSwitch move was
-                //  used, then it would emit an upkeep
-                this.selfSwitch = false;
-                this.themSelfSwitch = false;
+                this.handleEvent(event);
+                if (event.type === "turn") newTurn = true;
             }
-
-            if (args.turn) logger.debug(`new turn: ${args.turn}`);
 
             if (this.battling)
             {
                 logger.debug(`state:\n${this.state.toString()}`);
-                if (args.turn || this.selfSwitch || (!this.themSelfSwitch &&
+                if (newTurn || this.selfSwitch || (!this.themSelfSwitch &&
                         this.state.teams.us.active.fainted))
                 {
-                    await this.askAI();
+                    return this.askAI();
                 }
             }
         })
@@ -311,6 +307,17 @@ ${inspect(args, {colors: true, depth: null})}`);
                     this.save();
                 }
                 break;
+            case "turn":
+                logger.debug(`new turn: ${event.num}`);
+                break;
+            case "upkeep":
+                // selfSwitch is the result of a move, which only occurs in the
+                //  middle of all the turn's main events (args.events)
+                // if the simulator ignored the fact that a selfSwitch move was
+                //  used, then it would emit an upkeep
+                this.selfSwitch = false;
+                this.themSelfSwitch = false;
+                break;
             case "win":
                 this.battling = false;
                 if (this.saveAlways || event.winner === this.username)
@@ -329,6 +336,7 @@ ${inspect(args, {colors: true, depth: null})}`);
         //  information to process any Causes
         // and anyways, they shouldn't have any meaningful ones on them
         if (event.cause && event.type !== "sethp" && event.type !== "tie" &&
+            event.type !== "turn" && event.type !== "upkeep" &&
             event.type !== "win")
         {
             this.handleCause(this.getSide(event.id.owner), event.cause!);

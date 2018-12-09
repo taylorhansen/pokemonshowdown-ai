@@ -1,7 +1,7 @@
 import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
     "../../src/bot/AnyMessageListener";
-import { BattleEvent, BattleUpkeep, Cause, PokemonDetails, PokemonID,
-    PokemonStatus } from "../../src/bot/messageData";
+import { BattleEvent, Cause, PokemonDetails, PokemonID, PokemonStatus } from
+    "../../src/bot/messageData";
 
 /**
  * Creates an unparsed server message.
@@ -51,8 +51,7 @@ export function composeBattleInit(args: BattleInitArgs): string[][]
         ["gametype", args.gameType],
         ["gen", args.gen.toString()],
         ...args.events
-            .map(composeBattleEvent),
-        ["turn", "1"]
+            .map(composeBattleEvent)
     ];
     return result;
 }
@@ -64,17 +63,7 @@ export function composeBattleInit(args: BattleInitArgs): string[][]
  */
 export function composeBattleProgress(args: BattleProgressArgs): string[][]
 {
-    const result: string[][] = args.events.map(composeBattleEvent);
-
-    // upkeep and new turn number are separated by a blank line
-    if (args.upkeep || args.turn)
-    {
-        result.push([""]);
-        if (args.upkeep) result.push(...composeBattleUpkeep(args.upkeep));
-        if (args.turn) result.push(["turn", args.turn.toString()]);
-    }
-
-    return result;
+    return args.events.map(composeBattleEvent);
 }
 
 /**
@@ -160,6 +149,12 @@ export function composeBattleEvent(event: BattleEvent): string[]
         case "tie":
             result = ["tie"];
             break;
+        case "turn":
+            result = ["turn", event.num.toString()];
+            break;
+        case "upkeep":
+            result = ["upkeep"];
+            break;
         case "win":
             result = ["win", event.winner];
             break;
@@ -167,21 +162,6 @@ export function composeBattleEvent(event: BattleEvent): string[]
             result = [];
     }
     if (event.cause) result.push(stringifyCause(event.cause));
-    return result;
-}
-
-/**
- * Composes all the word segments of a BattleUpkeep.
- * @param upkeep Object to stringify.
- * @returns An unparsed BattleUpkeep.
- */
-export function composeBattleUpkeep(upkeep: BattleUpkeep): string[][]
-{
-    const result: string[][] =
-    [
-        ...upkeep.pre.map(composeBattleEvent), ["upkeep"],
-        ...upkeep.post.map(composeBattleEvent)
-    ];
     return result;
 }
 

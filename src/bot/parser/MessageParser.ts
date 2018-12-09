@@ -1,11 +1,11 @@
-import { BattleInitArgs, BattleProgressArgs } from "../AnyMessageListener";
+import { BattleInitArgs } from "../AnyMessageListener";
 import { BoostableStatName } from "../battle/state/VolatileStatus";
-import { AbilityEvent, ActivateEvent, BattleEvent, BattleUpkeep, BoostEvent,
-    CantEvent, Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent,
-    FaintEvent, isEventPrefix, isMajorStatus, isPlayerId, MajorStatus,
-    MoveEvent, MustRechargeEvent, PlayerID, PokemonDetails, PokemonID,
-    PokemonStatus, PrepareEvent, SetHPEvent, StartEvent, StatusEvent,
-    SwitchEvent, TieEvent, WinEvent } from "../messageData";
+import { AbilityEvent, ActivateEvent, BattleEvent, BoostEvent, CantEvent, Cause,
+    CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
+    isEventPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent,
+    MustRechargeEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
+    PrepareEvent, SetHPEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent,
+    TurnEvent, UpkeepEvent, WinEvent } from "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -315,6 +315,7 @@ export class MessageParser extends Parser
                     args.gen = MessageParser.parseInt(line[1]);
                     this.nextLine();
                     break;
+                    // TODO: team preview
                 default:
                     if (isEventPrefix(line[0]))
                     {
@@ -329,46 +330,23 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a battle progress multiline message. Composed of multiple main
-     * BattleEvents, optionally terminated by end-of-turn BattleUpkeep events.
-     *
-     * Format:
-     * @example
-     * <main BattleEvents>
-     * |
-     * <BattleUpkeep>
-     * |turn|<new turn #>
+     * Parses a battle progress multiline message. Composed of multiple
+     * BattleEvents.
      */
     private parseBattleProgress(): Promise<void>
     {
-        const args: ShallowNullable<BattleProgressArgs> =
-            {events: this.parseBattleEvents()};
-
-        if (this.line && this.line[0] === "")
-        {
-            // empty line between main events and upkeep events
-            this.nextLine();
-            args.upkeep = this.parseBattleUpkeep();
-        }
-        if (this.line && this.line[0] === "turn")
-        {
-            args.turn = MessageParser.parseInt(this.line[1]);
-            this.nextLine();
-        }
-        // TODO: some messages happen after turn event
-        return this.handle("battleprogress", args);
+        return this.handle("battleprogress",
+            {events: this.parseBattleEvents()});
     }
 
     /**
-     * Parses BattleEvent messages until either the end of the message, a blank
-     * line, or a `turn` or `upkeep` message is found.
+     * Parses BattleEvent messages until the end of the message string.
      * @returns An array of parsed BattleEvents.
      */
     private parseBattleEvents(): BattleEvent[]
     {
         const events: BattleEvent[] = [];
-        while (this.lineN < this.lines.length && this.line[0] &&
-            this.line[0] !== "turn" && this.line[0] !== "upkeep")
+        while (this.lineN < this.lines.length)
         {
             const event = this.parseBattleEvent();
             if (event) events.push(event);
@@ -401,6 +379,8 @@ export class MessageParser extends Parser
             case "-status": return this.parseStatusEvent();
             case "switch": case "drag": return this.parseSwitchEvent();
             case "tie": return this.parseTieEvent();
+            case "turn": return this.parseTurnEvent();
+            case "upkeep": return this.parseUpkeepEvent();
             case "win": return this.parseWinEvent();
             default:
                 // ignore
@@ -778,6 +758,40 @@ export class MessageParser extends Parser
     }
 
     /**
+     * Parses an UpkeepEvent.
+     *
+     * Format:
+     * @example
+     * |upkeep
+     *
+     * @returns An UpkeepEvent.
+     */
+    private parseUpkeepEvent(): UpkeepEvent
+    {
+        this.nextLine();
+        return {type: "upkeep"};
+    }
+
+    /**
+     * Parses a TurnEvent.
+     *
+     * Format:
+     * @example
+     * |turn|<new turn number>
+     *
+     * @returns A TurnEvent, or null if invalid.
+     */
+    private parseTurnEvent(): TurnEvent | null
+    {
+        const num = MessageParser.parseInt(this.line[1]);
+
+        this.nextLine();
+        if (!num) return null;
+
+        return {type: "turn", num};
+    }
+
+    /**
      * Parses a TieEvent.
      *
      * Format:
@@ -806,23 +820,6 @@ export class MessageParser extends Parser
         const winner = this.getRestOfLine();
         this.nextLine();
         return {type: "win", winner};
-    }
-
-    /**
-     * Parses a BattleUpkeep.
-     *
-     * Format:
-     * @example
-     * <pre upkeep messages>
-     * |upkeep
-     * <post upkeep messages>
-     */
-    private parseBattleUpkeep(): BattleUpkeep
-    {
-        const upkeep: BattleUpkeep = {pre: this.parseBattleEvents(), post: []};
-        if (this.line && this.line[0] === "upkeep") this.nextLine();
-        upkeep.post = this.parseBattleEvents();
-        return upkeep;
     }
 
     /**

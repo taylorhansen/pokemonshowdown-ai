@@ -1,5 +1,5 @@
-import { BattleEvent, BattleUpkeep, MessageType, PlayerID, RequestActive,
-    RequestSide, RoomType } from "./messageData";
+import { BattleEvent, MessageType, PlayerID, RequestActive, RequestSide,
+    RoomType } from "./messageData";
 
 /**
  * Listens for any type of message and delegates it to one of its specific
@@ -124,15 +124,6 @@ export interface BattleProgressArgs
 {
     /** Sequence of events in the battle in the order they were parsed. */
     events: BattleEvent[];
-    /**
-     * End-of-turn events. If undefined, then we're waiting for further input
-     * from someone in order to complete a major event, e.g. using a move that
-     * requires a switch choice. Refer to the last `|request|` json for more
-     * info.
-     */
-    upkeep?: BattleUpkeep;
-    /** New turn number. If present, a new turn has started. */
-    turn?: number;
 }
 
 /** Args for a `challstr` message. */
