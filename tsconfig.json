@@ -11,6 +11,5 @@
         "baseUrl": "./src/",
         "paths": {"*": ["node_modules/*"]}
     },
-    "include": ["src/**/*.ts"],
-    "exclude": ["src/data/build-dex.ts", "src/data/Pokemon-Showdown/"]
+    "include": ["src/**/*.ts"]
 }
