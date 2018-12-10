@@ -146,7 +146,8 @@ export class VolatileStatus
         // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
             /*disabled moves*/4 + /*locked move*/1 + /*confuse turns*/1 +
-            /*two-turn status*/numTwoTurnMoves + /*stall turns*/1;
+            /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
+            /*stall turns*/1;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -164,7 +165,8 @@ export class VolatileStatus
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
             ...this.disabledMoves.map(b => b ? 1 : 0), this.lockedMove ? 1 : 0,
-            this._confuseTurns, ...twoTurn, this._stallTurns
+            this._confuseTurns, ...twoTurn, this.mustRecharge ? 1 : 0,
+            this._stallTurns
         ];
         return a;
     }
@@ -188,6 +190,7 @@ export class VolatileStatus
                 this._confuseTurns ?
                     [`confused for ${this._confuseTurns - 1} turn(s)`] : [],
                 this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
+                this.mustRecharge ? ["must recharge"] : [],
                 this._stallTurns ?
                     [`stalling for ${this._stallTurns - 1} turn(s)`] : [])
             .join(", ")}]`;
