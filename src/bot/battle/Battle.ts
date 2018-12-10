@@ -28,9 +28,6 @@ export abstract class BattleBase
      * `switch 3`.
      */
     protected abstract decide(choices: Choice[]): Promise<Choice>;
-
-    /** Saves AI state to storage. */
-    protected abstract save(): Promise<void>;
 }
 
 /**

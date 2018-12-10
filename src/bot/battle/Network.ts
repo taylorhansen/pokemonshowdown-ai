@@ -1,6 +1,7 @@
 import * as tf from "@tensorflow/tfjs";
 import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
 import "@tensorflow/tfjs-node";
+import { modelPath } from "../../config";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PokemonID, PokemonStatus } from "../helpers";
 import * as logger from "../logger";
@@ -9,6 +10,27 @@ import { Choice, choiceIds, intToChoice } from "./Choice";
 import { EventProcessor } from "./EventProcessor";
 import { BattleState } from "./state/BattleState";
 import { Side } from "./state/Side";
+
+/** Preprocessed network decision evaluation data. */
+export interface Decision
+{
+    /** State in which the action was taken. */
+    state: number[];
+    /** Action that was taken. */
+    choice: Choice;
+    /** Q-value resulting from the action. */
+    reward: number;
+}
+
+/**
+ * Turns a tensor-like object into a column vector.
+ * @param arr Array to convert.
+ * @returns A 2D Tensor representing the column vector.
+ */
+export function toColumn(arr: TensorLike2D): tf.Tensor2D
+{
+    return tf.tensor2d(arr, [1, arr.length], "float32");
+}
 
 /** Accumulates a reward value for the Network by listening to events. */
 class RewardTracker extends EventProcessor
@@ -77,20 +99,28 @@ class RewardTracker extends EventProcessor
 /** Neural network interface. */
 export class Network extends Battle<RewardTracker>
 {
+    /** Number of input neurons. */
+    protected static readonly inputLength = BattleState.getArraySize();
+
+    /**
+     * Decision object generated from the last `decide()` call. Will be
+     * undefined until that method is called from the Battle superclass.
+     */
+    public get decision(): Readonly<Decision> | undefined
+    {
+        return this._decision;
+    }
+    /** `decision` backing field. */
+    private _decision?: Decision;
+
+    /** Resolves once the Network model is ready to be used. */
+    protected ready: Promise<any>;
     /** Neural network model. */
     private model: tf.Model;
-    /** Number of input neurons. */
-    private readonly inputLength: number;
-    /** Base file name/path for model folder. */
-    private readonly path: string;
-    /** Last state input tensor. */
-    private lastState?: tf.Tensor2D;
-    /** Last prediction output tensor. */
-    private lastPrediction?: tf.Tensor2D;
+    /** Last state input array. */
+    private lastState?: number[];
     /** Last choice taken by the AI. */
     private lastChoice?: Choice;
-    /** Resolves once the Network is ready to be used. */
-    private ready: Promise<any>;
 
     /**
      * Creates a Network.
@@ -102,16 +132,108 @@ export class Network extends Battle<RewardTracker>
         sender: ChoiceSender)
     {
         super(username, listener, sender, RewardTracker);
+    }
 
-        this.inputLength = BattleState.getArraySize();
-        this.path = `${__dirname}/../../../models/latest`;
-
-        this.ready = this.load().catch(reason =>
+    /**
+     * Loads a model from disk, or constructs the default one if it can't be
+     * found or the model's input or output shape don't match what's required.
+     * @param path Path to the model's folder created by `Model.save()`.
+     */
+    public static async loadModel(path: string): Promise<tf.Model>
+    {
+        let model: tf.Model;
+        try
         {
-            logger.error(`Error opening model: ${reason}`);
-            logger.debug("Constructing new model");
-            this.constructModel();
-        });
+            model = await tf.loadModel(`file://${path}/model.json`);
+            Network.verifyModel(model);
+        }
+        catch (e)
+        {
+            logger.error(`error opening model: ${e}`);
+            logger.debug("constructing default model");
+            model = Network.createModel();
+        }
+        return model;
+    }
+
+    /** Constructs a default model. */
+    public static createModel(): tf.Model
+    {
+        // setup all the layers
+        const outNeurons = Object.keys(choiceIds).length;
+
+        const dense1 = tf.layers.dense({units: 10, activation: "tanh"});
+        const dense2 = tf.layers.dense(
+            {units: outNeurons, activation: "linear"});
+
+        const input = tf.input({shape: [Network.inputLength]});
+        const output = dense2.apply(dense1.apply(input)) as tf.SymbolicTensor;
+
+        return tf.model({inputs: input, outputs: output});
+    }
+
+    /**
+     * Verifies a neural network model. Throws an error if invalid.
+     * @param model Model to verify.
+     */
+    private static verifyModel(model: tf.Model): void
+    {
+        // loaded models must have the correct input/output shape
+        const input = model.input;
+        if (Array.isArray(input) || !Network.isValidInputShape(input.shape))
+        {
+            throw new Error("Invalid input shape");
+        }
+    }
+
+    /**
+     * Ensures that a network input shape is valid.
+     * @param shape Given input shape.
+     * @return True if the input shape is valid.
+     */
+    private static isValidInputShape(shape: number[]): boolean
+    {
+        return shape.length === 2 && shape[0] === null &&
+            shape[1] === Network.inputLength;
+    }
+
+    /**
+     * Sets the neural network model. If the model's input and output shapes
+     * do not match what is required, then an Error will be thrown.
+     * @param model Model to be used.
+     */
+    public setModel(model: tf.Model): void
+    {
+        Network.verifyModel(model);
+        this.model = model;
+    }
+
+    /**
+     * Saves AI state to storage.
+     * @param path Base file name/path for model folder.
+     */
+    public async save(path: string): Promise<void>
+    {
+        await this.ready;
+        await this.model.save(`file://${path}`);
+    }
+
+    /**
+     * Loads a model from disk.
+     * @param path Path to the folder created by `Model.save()`.
+     */
+    public async load(path: string): Promise<void>
+    {
+        try
+        {
+            this.setModel(await tf.loadModel(`file://${path}/model.json`));
+        }
+        catch (e)
+        {
+            logger.error(`error opening model: ${e}`);
+            logger.debug("constructing default model");
+            this.setModel(Network.createModel());
+        }
     }
 
     /** @override */
@@ -121,24 +243,20 @@ export class Network extends Battle<RewardTracker>
         await this.ready;
 
         const state = this.processor.getStateArray();
-        if (state.length > this.inputLength)
+        if (state.length > Network.inputLength)
         {
             logger.error(`too many state values ${state.length}, expected \
-${this.inputLength}`);
-            state.splice(this.inputLength);
+${Network.inputLength}`);
+            state.splice(Network.inputLength);
         }
-        else if (state.length < this.inputLength)
+        else if (state.length < Network.inputLength)
         {
             logger.error(`not enough state values ${state.length}, \
-expected ${this.inputLength}`);
-            do
-            {
-                state.push(0);
-            }
-            while (state.length < this.inputLength);
+expected ${Network.inputLength}`);
+            do state.push(0); while (state.length < Network.inputLength);
         }
 
-        const nextState = Network.toColumn(state);
+        const nextState = toColumn(state);
         const prediction = this.model.predict(nextState) as tf.Tensor2D;
         const predictionData = Array.from(await prediction.data());
 
@@ -151,91 +269,50 @@ expected ${this.inputLength}`);
             .map(c => ({choice: c, reward: predictionData[choiceIds[c]]}))
             .reduce((prev, curr) => prev.reward < curr.reward ? curr : prev);
 
-        if (this.lastState && this.lastPrediction && this.lastChoice)
+        if (this.lastState && this.lastChoice)
         {
             logger.debug(`applying reward: ${this.processor.reward}`);
             // apply the Q learning update rule
+            // this makes the connection between present and future rewards by
+            //  combining the network's perceived reward from its current state
+            //  with the reward it gained from its last state
+            // distant rewards should matter less so they don't outweight the
+            //  immediate gain by too much
             const discount = 0.8;
             const nextMaxReward = discount * bestChoice.reward;
 
-            const target = predictionData;
-            target[choiceIds[this.lastChoice]] = this.processor.reward +
-                nextMaxReward;
+            // this Decision object can be picked up by the caller for mass
+            //  learning later
+            this._decision =
+            {
+                state: this.lastState, choice: this.lastChoice,
+                reward: this.processor.reward + nextMaxReward
+            };
 
-            this.processor.resetReward();
-            this.ready =
-                this.model.fit(this.lastState, Network.toColumn(target));
+            logger.debug(`accumulated reward: ${this.processor.reward}`);
+            logger.debug(`combined Q-value: ${this._decision.reward}`);
         }
+        this.processor.resetReward();
 
         this.lastChoice = bestChoice.choice;
-        this.lastState = nextState;
-        this.lastPrediction = prediction;
+        this.lastState = state;
         return this.lastChoice;
     }
+}
 
-    /** @override */
-    protected async save(): Promise<void>
-    {
-        await this.ready;
-        await this.model.save(`file://${this.path}`);
-    }
-
-    /** Loads the most recently saved model. */
-    private async load(): Promise<void>
-    {
-        this.model = await tf.loadModel(`file://${this.path}/model.json`);
-        this.compileModel();
-
-        // loaded models must have the correct input/output shape
-        const input = this.model.input;
-        if (Array.isArray(input) || !this.isValidInputShape(input.shape))
-        {
-            throw new Error("Invalid input shape");
-        }
-    }
-
+/** Network that loads the default `modelPath` from config. */
+export class DefaultNetwork extends Network
+{
     /**
-     * Turns a tensor-like object into a column vector.
-     * @param arr Array to convert.
-     * @returns A 2D Tensor representing the column vector.
+     * Creates a DefaultNetwork.
+     * @param username Client's username.
+     * @param listener Used to subscribe to server messages.
+     * @param sender Used to send the AI's choice to the server.
      */
-    private static toColumn(arr: TensorLike2D): tf.Tensor2D
+    constructor(username: string, listener: MessageListener,
+        sender: ChoiceSender)
     {
-        return tf.tensor2d(arr, [1, arr.length], "float32");
-    }
-
-    /** Constructs the neural network model. */
-    private constructModel(): void
-    {
-        // setup all the layers
-        const outNeurons = Object.keys(choiceIds).length;
-
-        const dense1 = tf.layers.dense({units: 10, activation: "tanh"});
-        const dense2 = tf.layers.dense(
-            {units: outNeurons, activation: "linear"});
-
-        const input = tf.input({shape: [this.inputLength]});
-        const output = dense2.apply(dense1.apply(input)) as tf.SymbolicTensor;
-
-        this.model = tf.model({inputs: input, outputs: output});
-        this.compileModel();
-    }
-
-    /** Compiles the current model. */
-    private compileModel(): void
-    {
-        this.model.compile(
-            {loss: "meanSquaredError", optimizer: "adam", metrics: ["mae"]});
-    }
-
-    /**
-     * Ensures that a given network input shape is valid.
-     * @param shape Given input shape.
-     * @return True if the input shape is valid.
-     */
-    private isValidInputShape(shape: number[]): boolean
-    {
-        return shape.length === 2 && shape[0] === null &&
-            shape[1] === this.inputLength;
+        super(username, listener, sender);
+        this.ready = this.load(modelPath);
     }
 }
