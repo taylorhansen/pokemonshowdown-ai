@@ -16,14 +16,6 @@ export class VolatileStatus
     }
     private _boosts: {[N in BoostableStatName]: number};
 
-    /** Whether the corresponding move in the pokemon's moveset is disabled. */
-    private disabledMoves: boolean[];
-
-    // not passed when copying
-
-    /** Whether the pokemon is locked into a move and is unable to switch. */
-    public lockedMove: boolean;
-
     /** Whether the pokemon is confused. */
     public get isConfused(): boolean
     {
@@ -38,6 +30,14 @@ export class VolatileStatus
         return this._confuseTurns;
     }
     private _confuseTurns: number;
+
+    /** Whether the corresponding move in the pokemon's moveset is disabled. */
+    private disabledMoves: boolean[];
+
+    // not passed when copying
+
+    /** Whether the pokemon is locked into a move and is unable to switch. */
+    public lockedMove: boolean;
 
     /** Two-turn move currently being prepared. */
     public twoTurn: keyof typeof twoTurnMoves | "";
@@ -66,6 +66,7 @@ export class VolatileStatus
     {
         const v = new VolatileStatus();
         v._boosts = this._boosts;
+        v._confuseTurns = this._confuseTurns;
         v.disabledMoves = this.disabledMoves;
         return v;
     }
@@ -80,9 +81,9 @@ export class VolatileStatus
         {
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
         };
+        this._confuseTurns = 0;
         this.disabledMoves = [false, false, false, false];
         this.lockedMove = false;
-        this._confuseTurns = 0;
         this.twoTurn = "";
         this.mustRecharge = false;
         this._stallTurns = 0;
@@ -145,7 +146,7 @@ export class VolatileStatus
     {
         // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
-            /*disabled moves*/4 + /*locked move*/1 + /*confuse turns*/1 +
+            /*confuse turns*/1 + /*disabled moves*/4 + /*locked move*/1 +
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
             /*stall turns*/1;
     }
@@ -164,8 +165,8 @@ export class VolatileStatus
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
-            ...this.disabledMoves.map(b => b ? 1 : 0), this.lockedMove ? 1 : 0,
-            this._confuseTurns, ...twoTurn, this.mustRecharge ? 1 : 0,
+            this._confuseTurns, ...this.disabledMoves.map(b => b ? 1 : 0),
+            this.lockedMove ? 1 : 0, ...twoTurn, this.mustRecharge ? 1 : 0,
             this._stallTurns
         ];
         return a;
