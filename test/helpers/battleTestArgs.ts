@@ -76,6 +76,7 @@ export const battleEvent: BattleEvent[] =
             {id: pokemonId[1], status: pokemonStatus[1]}
         ]
     },
+    {type: "singleturn", id: pokemonId[2], status: "Protect"},
     {type: "start", id: pokemonId[0], volatile: "confusion", cause: cause[0]},
     {type: "status", id: pokemonId[0], majorStatus: "slp"},
     {
@@ -127,7 +128,7 @@ export const battleProgress: BattleProgressArgs[] =
     },
     {
         events: battleEvent.slice(17, 20)
-            .concat({type: "upkeep"}, ...battleEvent.slice(20, 23),
+            .concat({type: "upkeep"}, ...battleEvent.slice(20, 24),
                 {type: "turn", num: 9})
     }
 ];

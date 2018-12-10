@@ -16,9 +16,9 @@ export const eventPrefixes =
     "-ability": true, "-activate": true, "-boost": true, cant: true,
     "-curestatus": true, "-cureteam": true, "-damage": true, drag: true,
     "-end": true, faint: true, "-heal": true, move: true, "-mustrecharge": true,
-    "-prepare": true, "-seth": true, "-start": true, "-status": true,
-    switch: true, tie: true, turn: true, "-unboost": true, upkeep: true,
-    win: true
+    "-prepare": true, "-sethp": true, "-singleturn": true, "-start": true,
+    "-status": true, switch: true, tie: true, turn: true, "-unboost": true,
+    upkeep: true, win: true
 };
 /** Message types that are parsed as battle events. */
 export type EventPrefix = keyof typeof eventPrefixes;
@@ -81,8 +81,8 @@ export function isPlayerId(id: any): id is PlayerID
 export type BattleEvent = AbilityEvent | ActivateEvent | BoostEvent |
     CantEvent | CureStatusEvent | CureTeamEvent | DamageEvent | EndEvent |
     FaintEvent | MoveEvent | MustRechargeEvent | PrepareEvent | SetHPEvent |
-    StartEvent | StatusEvent | SwitchEvent | TieEvent | TurnEvent |
-    UpkeepEvent | WinEvent;
+    SingleTurnEvent | StartEvent | StatusEvent | SwitchEvent | TieEvent |
+    TurnEvent | UpkeepEvent | WinEvent;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
@@ -221,6 +221,16 @@ export interface SetHPEvent extends BattleEventBase
     type: "sethp";
     /** PokemonIDs with their corresponding new statuses. */
     newHPs: {id: PokemonID, status: PokemonStatus}[];
+}
+
+/** Event where a status is temporarily added for a single turn. */
+export interface SingleTurnEvent extends BattleEventBase
+{
+    type: "singleturn";
+    /** ID of the pokemon getting the status. */
+    id: PokemonID;
+    /** Name of the temporary status. */
+    status: string;
 }
 
 /** Event where a volatile status condition has started. */

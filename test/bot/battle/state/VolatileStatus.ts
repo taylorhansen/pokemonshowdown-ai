@@ -22,6 +22,7 @@ describe("VolatileStatus", function()
             volatile.lockedMove = true;
             volatile.twoTurn = "Bounce";
             volatile.mustRecharge = true;
+            volatile.stall(true);
 
             volatile.clear();
             // tslint:disable:no-unused-expression
@@ -32,6 +33,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove).to.be.false;
             expect(volatile.twoTurn).to.equal("");
             expect(volatile.mustRecharge).to.be.false;
+            expect(volatile.stallTurns).to.equal(0);
             // tslint:enable:no-unused-expression
         });
     });
@@ -46,19 +48,23 @@ describe("VolatileStatus", function()
             volatile.lockedMove = true;
             volatile.twoTurn = "Bounce";
             volatile.mustRecharge = true;
+            volatile.stall(true);
 
             const newVolatile = volatile.shallowClone();
             volatile.clear();
             // tslint:disable:no-unused-expression
             expect(newVolatile).to.not.equal(volatile);
+            // passed
             expect(newVolatile.boosts).to.not.equal(volatile.boosts);
             expect(newVolatile.boosts.atk).to.equal(1);
             expect(newVolatile.isDisabled(0)).to.be.true;
+            // not passed
             expect(newVolatile.isConfused).to.be.false;
             expect(newVolatile.confuseTurns).to.equal(0);
             expect(newVolatile.lockedMove).to.be.false;
             expect(volatile.twoTurn).to.equal("");
             expect(volatile.mustRecharge).to.be.false;
+            expect(volatile.stallTurns).to.equal(0);
             // tslint:enable:no-unused-expression
         });
     });
@@ -105,34 +111,33 @@ describe("VolatileStatus", function()
 
     describe("confuse", function()
     {
-        it("Should not be disabled initially", function()
+        it("Should increment/reset confuseTurns", function()
         {
             expect(volatile.isConfused).to.equal(false);
             expect(volatile.confuseTurns).to.equal(0);
-        });
-
-        it("Should be confused if set", function()
-        {
             volatile.confuse(true);
             expect(volatile.isConfused).to.equal(true);
             expect(volatile.confuseTurns).to.equal(1);
-        });
-
-        it("Should increment confuseTurns", function()
-        {
-            volatile.confuse(true);
             volatile.confuse(true);
             expect(volatile.isConfused).to.equal(true);
             expect(volatile.confuseTurns).to.equal(2);
-        });
-
-        it("Should reset confuseTurns", function()
-        {
-            volatile.confuse(true);
-            volatile.confuse(true);
             volatile.confuse(false);
             expect(volatile.isConfused).to.equal(false);
             expect(volatile.confuseTurns).to.equal(0);
+        });
+    });
+
+    describe("stall", function()
+    {
+        it("Should increment/reset stallTurns", function()
+        {
+            expect(volatile.stallTurns).to.equal(0);
+            volatile.stall(true);
+            expect(volatile.stallTurns).to.equal(1);
+            volatile.stall(true);
+            expect(volatile.stallTurns).to.equal(2);
+            volatile.stall(false);
+            expect(volatile.stallTurns).to.equal(0);
         });
     });
 

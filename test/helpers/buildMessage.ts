@@ -136,6 +136,9 @@ export function composeBattleEvent(event: BattleEvent): string[]
                     .reduce((a1, a2) => a1.concat(a2), [])
             ];
             break;
+        case "singleturn":
+            result = ["-singleturn", stringifyID(event.id), event.status];
+            break;
         case "start":
             result = ["-start", stringifyID(event.id), event.volatile];
             break;

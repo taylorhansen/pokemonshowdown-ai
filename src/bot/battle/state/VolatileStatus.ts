@@ -45,6 +45,13 @@ export class VolatileStatus
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge: boolean;
 
+    /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
+    public get stallTurns(): number
+    {
+        return this._stallTurns;
+    }
+    private _stallTurns: number;
+
     /** Creates a VolatileStatus object. */
     constructor()
     {
@@ -78,6 +85,7 @@ export class VolatileStatus
         this._confuseTurns = 0;
         this.twoTurn = "";
         this.mustRecharge = false;
+        this._stallTurns = 0;
     }
 
     /**
@@ -120,6 +128,15 @@ export class VolatileStatus
     }
 
     /**
+     * Sets the stall flag. Should be called once per turn if it's on.
+     * @param flag Value of the flag.
+     */
+    public stall(flag: boolean): void
+    {
+        this._stallTurns = flag ? this._stallTurns + 1 : 0;
+    }
+
+    /**
      * Gets the size of the return value of `toArray()`.
      * status.
      * @returns The size of the return value of `toArray()`.
@@ -129,7 +146,7 @@ export class VolatileStatus
         // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
             /*disabled moves*/4 + /*locked move*/1 + /*confuse turns*/1 +
-            /*two-turn status*/numTwoTurnMoves;
+            /*two-turn status*/numTwoTurnMoves + /*stall turns*/1;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -146,8 +163,8 @@ export class VolatileStatus
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
-            ...this.disabledMoves.map(b => b ? 1 : 0),
-            this.lockedMove ? 1 : 0, this._confuseTurns, ...twoTurn
+            ...this.disabledMoves.map(b => b ? 1 : 0), this.lockedMove ? 1 : 0,
+            this._confuseTurns, ...twoTurn, this._stallTurns
         ];
         return a;
     }
@@ -164,13 +181,15 @@ export class VolatileStatus
             .filter((key: BoostableStatName) => this._boosts[key] !== 0)
             .map((key: BoostableStatName) =>
                 `${key}: ${VolatileStatus.plus(this._boosts[key])}`)
-            .concat(this.disabledMoves
-                .filter(disabled => disabled)
-                .map((disabled, i) => `disabled move ${i + 1}`))
-            .concat(this.lockedMove ? ["lockedmove"] : [])
-            .concat(this._confuseTurns ?
-                    [`confused for ${this._confuseTurns - 1} turns`] : [])
-            .concat(this.twoTurn ? [`preparing ${this.twoTurn}`] : [])
+            .concat(
+                this.disabledMoves.filter(disabled => disabled)
+                    .map((disabled, i) => `disabled move ${i + 1}`),
+                this.lockedMove ? ["lockedmove"] : [],
+                this._confuseTurns ?
+                    [`confused for ${this._confuseTurns - 1} turn(s)`] : [],
+                this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
+                this._stallTurns ?
+                    [`stalling for ${this._stallTurns - 1} turn(s)`] : [])
             .join(", ")}]`;
     }
 

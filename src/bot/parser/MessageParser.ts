@@ -4,8 +4,9 @@ import { AbilityEvent, ActivateEvent, BattleEvent, BoostEvent, CantEvent, Cause,
     CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
     isEventPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent,
     MustRechargeEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    PrepareEvent, SetHPEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent,
-    TurnEvent, UpkeepEvent, WinEvent } from "../messageData";
+    PrepareEvent, SetHPEvent, SingleTurnEvent, StartEvent, StatusEvent,
+    SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WinEvent } from
+    "../messageData";
 import { ShallowNullable } from "../types";
 import { Parser } from "./Parser";
 
@@ -375,6 +376,7 @@ export class MessageParser extends Parser
             case "-mustrecharge": return this.parseMustRechargeEvent();
             case "-prepare": return this.parsePrepareEvent();
             case "-sethp": return this.parseSetHPEvent();
+            case "-singleturn": return this.parseSingleTurnEvent();
             case "-start": return this.parseStartEvent();
             case "-status": return this.parseStatusEvent();
             case "switch": case "drag": return this.parseSwitchEvent();
@@ -685,6 +687,26 @@ export class MessageParser extends Parser
             event.newHPs.push({id, status});
         }
         return event;
+    }
+
+    /**
+     * Parses a SingleTurnEvent.
+     *
+     * Format:
+     * @example
+     * |-singleturn|<PokemonID>|<status>
+     *
+     * @returns A SingleTurn, or null if invalid.
+     */
+    private parseSingleTurnEvent(): SingleTurnEvent | null
+    {
+        const line = this.line;
+        const id = MessageParser.parsePokemonID(line[1]);
+        const status = line[2];
+
+        this.nextLine();
+        if (!id || !status) return null;
+        return {type: "singleturn", id, status};
     }
 
     /**

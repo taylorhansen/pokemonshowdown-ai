@@ -88,10 +88,13 @@ ${inspect(args, {colors: true, depth: null})}`);
 ${inspect(args, {colors: true, depth: null})}`);
 
             // pre-event processing
+            let newTurn = false;
             for (const event of args.events)
             {
                 if (event.type === "turn")
                 {
+                    newTurn = true;
+
                     // last turn, a two-turn move status might've been set by an
                     //  event, so remove that first so it doesn't interfere in
                     //  case an event now is supposed to set or interrupt it
@@ -103,11 +106,26 @@ ${inspect(args, {colors: true, depth: null})}`);
             }
 
             // event processing
-            let newTurn = false;
+            const stalling = {p1: false, p2: false};
             for (const event of args.events)
             {
                 this.handleEvent(event);
-                if (event.type === "turn") newTurn = true;
+                if (event.type === "singleturn" &&
+                    Battle.isStallSingleTurn(event.status))
+                {
+                    stalling[event.id.owner] = true;
+                }
+            }
+
+            // reset stall counter if the pokemon didn't use a stalling move
+            //  this turn
+            for (const id of Object.keys(stalling))
+            {
+                if (!stalling[id as PlayerID])
+                {
+                    this.state.teams[this.getSide(id as PlayerID)].active
+                        .volatile.stall(false);
+                }
             }
 
             if (this.battling)
@@ -231,11 +249,20 @@ ${inspect(args, {colors: true, depth: null})}`);
                     .baseAbility = event.ability;
                 break;
             case "activate":
+                if (event.volatile === "Mat Block" ||
+                    Battle.isStallSingleTurn(event.volatile))
+                {
+                    // user successfully stalled an attack from the other side
+                    // locked moves get canceled if they don't succeed
+                    this.state.teams[this.getSide(otherId(event.id.owner))]
+                        .active.volatile.lockedMove = false;
+                }
+                // fallthrough
             case "end":
             case "start":
                 if (event.volatile === "confusion")
                 {
-                    // start/upkeep or end confustion status
+                    // start/upkeep or end confusion status
                     this.state.teams[this.getSide(event.id.owner)].active
                         .volatile.confuse(event.type !== "end");
                 }
@@ -292,6 +319,15 @@ ${inspect(args, {colors: true, depth: null})}`);
                     this.setHP(pair.id, pair.status);
                 }
                 break;
+            case "singleturn":
+                // istanbul ignore else: hard to check else case
+                if (Battle.isStallSingleTurn(event.status))
+                {
+                    // user successfully used a stalling move
+                    this.state.teams[this.getSide(event.id.owner)].active
+                        .volatile.stall(true);
+                }
+                break;
             case "status":
                 this.state.teams[this.getSide(event.id.owner)].active
                     .majorStatus = event.majorStatus;
@@ -341,6 +377,17 @@ ${inspect(args, {colors: true, depth: null})}`);
         {
             this.handleCause(this.getSide(event.id.owner), event.cause!);
         }
+    }
+
+    /**
+     * Checks if a status string from a SingleTurnEvent represents a stalling
+     * move.
+     * @param status Single turn status.
+     * @returns True if it is a stalling status, false otherwise.
+     */
+    private static isStallSingleTurn(status: string): boolean
+    {
+        return ["Protect", "move: Protect", "move: Endure"].includes(status);
     }
 
     /**

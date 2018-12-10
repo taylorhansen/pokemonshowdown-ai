@@ -877,6 +877,95 @@ describe("Battle", function()
             });
         });
 
+        describe("singleturn", function()
+        {
+            describe("stall", function()
+            {
+                it("Should increment/reset stallTurns", async function()
+                {
+                    const volatile = battle.state.teams.us.active.volatile;
+                    expect(volatile.stallTurns).to.equal(0);
+
+                    await listener.getHandler("battleprogress")(
+                    {
+                        events:
+                        [
+                            {type: "singleturn", id: us1, status: "Protect"}
+                        ]
+                    });
+                    expect(volatile.stallTurns).to.equal(1);
+
+                    // uses protect again
+                    await listener.getHandler("battleprogress")(
+                    {
+                        events:
+                        [
+                            {type: "singleturn", id: us1, status: "Protect"}
+                        ]
+                    });
+                    expect(volatile.stallTurns).to.equal(2);
+
+                    // tries to use protect again but fails
+                    await listener.getHandler("battleprogress")({events: []});
+                    expect(volatile.stallTurns).to.equal(0);
+                });
+
+                it("Should stop locked moves on the first move",
+                async function()
+                {
+                    await listener.getHandler("battleprogress")(
+                    {
+                        events:
+                        [
+                            // it's implied that protect is used, but the
+                            //  presence of the activate message should dictate
+                            //  whether it works
+                            {
+                                type: "move", id: us1, moveName: "Outrage",
+                                targetId: them1
+                            },
+                            {type: "activate", id: them1, volatile: "Protect"}
+                        ]
+                    });
+                    // tslint:disable-next-line:no-unused-expression
+                    expect(battle.state.teams.us.active.volatile.lockedMove)
+                        .to.be.false;
+                });
+
+                it("Should interrupt locked moves", async function()
+                {
+                    await listener.getHandler("battleprogress")(
+                    {
+                        events:
+                        [
+                            {
+                                type: "move", id: us1, moveName: "Outrage",
+                                targetId: them1
+                            }
+                        ]
+                    });
+                    // tslint:disable-next-line:no-unused-expression
+                    expect(battle.state.teams.us.active.volatile.lockedMove)
+                        .to.be.true;
+
+                    await listener.getHandler("battleprogress")(
+                    {
+                        events:
+                        [
+                            {
+                                type: "move", id: us1, moveName: "Outrage",
+                                targetId: them1
+                            },
+                            {type: "activate", id: them1, volatile: "Protect"}
+                        ]
+                    });
+                    // tslint:disable-next-line:no-unused-expression
+                    expect(battle.state.teams.us.active.volatile.lockedMove)
+                        .to.be.false;
+                });
+            });
+        });
+
         describe("status", function()
         {
             it("Should afflict with status", async function()
