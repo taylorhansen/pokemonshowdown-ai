@@ -89,10 +89,10 @@ describe("Team", function()
         {
             team.size = 2;
             const mon1 = team.switchIn("Magikarp", 100, "M", 100, 100)!;
-            mon1.volatile.disableMove(0, true);
+            mon1.volatile.boost("spa", 2);
             const mon2 = team.switchIn("Porygon", 100, "M", 100, 100,
                     {copyVolatile: true})!;
-            expect(mon2.volatile.isDisabled(0)).to.equal(true);
+            expect(mon2.volatile.boosts.spa).to.equal(2);
         });
     });
 

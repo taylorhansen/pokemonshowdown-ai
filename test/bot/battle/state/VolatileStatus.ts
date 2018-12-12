@@ -59,8 +59,8 @@ describe("VolatileStatus", function()
             expect(newVolatile.boosts.atk).to.equal(1);
             expect(newVolatile.isConfused).to.be.true;
             expect(newVolatile.confuseTurns).to.equal(1);
-            expect(newVolatile.isDisabled(0)).to.be.true;
             // not passed
+            expect(newVolatile.isDisabled(0)).to.be.false;
             expect(newVolatile.lockedMove).to.be.false;
             expect(volatile.twoTurn).to.equal("");
             expect(volatile.mustRecharge).to.be.false;

@@ -31,10 +31,10 @@ export class VolatileStatus
     }
     private _confuseTurns: number;
 
+    // not passed when copying
+
     /** Whether the corresponding move in the pokemon's moveset is disabled. */
     private disabledMoves: boolean[];
-
-    // not passed when copying
 
     /** Whether the pokemon is locked into a move and is unable to switch. */
     public lockedMove: boolean;
@@ -67,7 +67,6 @@ export class VolatileStatus
         const v = new VolatileStatus();
         v._boosts = this._boosts;
         v._confuseTurns = this._confuseTurns;
-        v.disabledMoves = this.disabledMoves;
         return v;
     }
 
