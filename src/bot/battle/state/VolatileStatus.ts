@@ -1,5 +1,5 @@
 import { numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
-import { oneHot } from "./utility";
+import { oneHot, tempStatusTurns } from "./utility";
 
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
@@ -59,8 +59,8 @@ export class VolatileStatus
     }
 
     /**
-     * Increments temporary status turns. Should be called once per turn after
-     * the events are processed.
+     * Increments temporary status turns. Should be called once per turn by the
+     * parent Pokemon object.
      */
     public updateStatusTurns(): void
     {
@@ -189,11 +189,9 @@ export class VolatileStatus
         const twoTurn = oneHot(this.twoTurn ? twoTurnMoves[this.twoTurn] : -1,
                 numTwoTurnMoves);
 
-        // temporary statuses: store as a "likelihood" that the status will
-        //  still be there on the next turn
-        // more turns means it's more likely to be cured
-        const confused = this._confuseTurns === 0 ? 0 : 1 / this._confuseTurns;
-        const disabled = this.disableTurns.map(d => d === 0 ? 0 : 1 / d);
+        // encode temporary status turns
+        const confused = tempStatusTurns(this._confuseTurns);
+        const disabled = this.disableTurns.map(tempStatusTurns);
 
         const a =
         [
