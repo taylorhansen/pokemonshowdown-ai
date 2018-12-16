@@ -437,6 +437,9 @@ ${inspect(args, {colors: true, depth: null})}`);
         const mon = this.getActive(event.id.owner);
         const moveId = Battle.parseIDName(event.moveName);
 
+        // struggle is only used when there are no moves left
+        if (moveId === "struggle") return;
+
         const pp =
             // locked moves don't consume pp
             (event.cause && event.cause.type === "lockedmove") ? 0

@@ -660,6 +660,21 @@ describe("Battle", function()
                 expect(move.pp).to.equal(63);
             });
 
+            it("Should not reveal Struggle as a move slot", async function()
+            {
+                const event1 = {...event};
+                event1.moveName = "Struggle";
+
+                const mon = battle.state.teams.us.active;
+                // tslint:disable-next-line:no-unused-expression
+                expect(mon.getMove(event1.moveName)).to.be.null;
+
+                await listener.getHandler("battleprogress")({events: [event1]});
+
+                // tslint:disable-next-line:no-unused-expression
+                expect(mon.getMove(event1.moveName)).to.be.null;
+            });
+
             describe("lockedmove", function()
             {
                 it("Should activate lockedmove status and restrict choices",
