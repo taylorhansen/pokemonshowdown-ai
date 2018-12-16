@@ -248,6 +248,17 @@ export class Pokemon
     }
 
     /**
+     * Applies the disabled volatile status to a move.
+     * @param id ID name of the move.
+     */
+    public disableMove(id: string): void
+    {
+        if (!this.getMove(id)) this.revealMove(id);
+        const index = this.moves.findIndex(move => move.id === id);
+        this.volatile.disableMove(index);
+    }
+
+    /**
      * Gets the size of the return value of `toArray()`.
      * @param active Whether to include active pokemon data, e.g. volatile
      * status.

@@ -77,7 +77,14 @@ export const battleEvent: BattleEvent[] =
         ]
     },
     {type: "singleturn", id: pokemonId[2], status: "Protect"},
-    {type: "start", id: pokemonId[0], volatile: "confusion", cause: cause[0]},
+    {
+        type: "start", id: pokemonId[0], volatile: "confusion", otherArgs: [],
+        cause: cause[0]
+    },
+    {
+        type: "start", id: pokemonId[1], volatile: "Disable",
+        otherArgs: ["Splash"]
+    },
     {type: "status", id: pokemonId[0], majorStatus: "slp"},
     {
         type: "switch", id: pokemonId[0], details: pokemonDetails[0],
@@ -127,8 +134,8 @@ export const battleProgress: BattleProgressArgs[] =
                 {type: "turn", num: 100})
     },
     {
-        events: battleEvent.slice(17, 20)
-            .concat({type: "upkeep"}, ...battleEvent.slice(20, 24),
+        events: battleEvent.slice(17, 21)
+            .concat({type: "upkeep"}, ...battleEvent.slice(21, 25),
                 {type: "turn", num: 9})
     }
 ];
@@ -169,7 +176,7 @@ export const request: RequestArgs[] =
                 moves:
                 [
                     {
-                        move: "Splash", id: "splash", pp: 24, maxpp: 24,
+                        move: "Splash", id: "splash", pp: 64, maxpp: 64,
                         target: "self", disabled: false
                     }
                 ]

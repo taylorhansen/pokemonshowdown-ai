@@ -243,7 +243,7 @@ describe("Pokemon", function()
 
             it("Can't move if disabled", function()
             {
-                mon.volatile.disableMove(0, true);
+                mon.volatile.disableMove(0);
                 expect(mon.canMove(0)).to.be.false;
             });
 

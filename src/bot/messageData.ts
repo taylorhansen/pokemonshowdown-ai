@@ -241,6 +241,8 @@ export interface StartEvent extends BattleEventBase
     id: PokemonID;
     /** Type of volatile status condition. */
     volatile: string;
+    /** Additional info if provided. */
+    otherArgs: string[];
 }
 
 /** Event where a pokemon is afflicted with a status. */

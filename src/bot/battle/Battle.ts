@@ -1,6 +1,6 @@
 import * as readline from "readline";
 import { inspect } from "util";
-import { AnyMessageListener } from "../AnyMessageListener";
+import { AnyMessageListener, RequestArgs } from "../AnyMessageListener";
 import * as logger from "../logger";
 import { BattleEvent, Cause, MoveEvent, otherId, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus, RequestMove, SwitchEvent } from
@@ -42,6 +42,8 @@ export abstract class Battle
     private selfSwitch: SelfSwitch = false;
     /** Whether the opponent is using a move that requires a switch choice. */
     private themSelfSwitch: SelfSwitch = false;
+    /** Args object from the last |request| message. */
+    private lastRequest: RequestArgs;
     /** Whether the battle is still going. */
     private battling = false;
 
@@ -82,59 +84,53 @@ ${inspect(args, {colors: true, depth: null})}`);
             logger.debug(`state:\n${this.state.toString()}`);
             return this.askAI();
         })
-        .on("battleprogress", args =>
+        .on("battleprogress", async args =>
         {
             logger.debug(`battleprogress:
 ${inspect(args, {colors: true, depth: null})}`);
 
-            // pre-event processing
+            // event processing
+            const stalling = {p1: false, p2: false};
             let newTurn = false;
             for (const event of args.events)
             {
-                if (event.type === "turn")
+                this.handleEvent(event);
+                if (event.type === "singleturn")
                 {
-                    newTurn = true;
-
-                    // last turn, a two-turn move status might've been set by an
-                    //  event, so remove that first so it doesn't interfere in
-                    //  case an event now is supposed to set or interrupt it
-                    for (const side of ["us", "them"] as Side[])
+                    if (Battle.isStallSingleTurn(event.status))
                     {
-                        this.state.teams[side].active.volatile.twoTurn = "";
+                        stalling[event.id.owner] = true;
                     }
                 }
-            }
-
-            // event processing
-            const stalling = {p1: false, p2: false};
-            for (const event of args.events)
-            {
-                this.handleEvent(event);
-                if (event.type === "singleturn" &&
-                    Battle.isStallSingleTurn(event.status))
-                {
-                    stalling[event.id.owner] = true;
-                }
+                else if (event.type === "turn") newTurn = true;
             }
 
             // reset stall counter if the pokemon didn't use a stalling move
             //  this turn
-            for (const id of Object.keys(stalling))
+            for (const id of Object.keys(stalling) as PlayerID[])
             {
-                if (!stalling[id as PlayerID])
-                {
-                    this.state.teams[this.getSide(id as PlayerID)].active
-                        .volatile.stall(false);
-                }
+                if (!stalling[id]) this.getActive(id).volatile.stall(false);
             }
 
             if (this.battling)
             {
                 logger.debug(`state:\n${this.state.toString()}`);
+
                 if (newTurn || this.selfSwitch || (!this.themSelfSwitch &&
-                        this.state.teams.us.active.fainted))
+                    this.state.teams.us.active.fainted))
                 {
-                    return this.askAI();
+                    await this.askAI();
+                }
+
+                if (newTurn)
+                {
+                    // some statuses need to have their values updated every
+                    //  turn in case the next turn doesn't override them
+                    for (const side of ["us", "them"] as Side[])
+                    {
+                        this.state.teams[side].active.volatile
+                            .updateStatusTurns();
+                    }
                 }
             }
         })
@@ -195,22 +191,7 @@ ${inspect(args, {colors: true, depth: null})}`);
                     }
                 }
             }
-
-            // TODO: don't rely on args to get move info
-            if (args.active)
-            {
-                // update move data on our active pokemon
-                // TODO: support doubles/triples where there are multiple active
-                //  pokemon
-                const active: Pokemon = team.active;
-                const moveData: RequestMove[] = args.active[0].moves;
-                for (let i = 0; i < moveData.length; ++i)
-                {
-                    // FIXME: the "disabled" volatile status and the "disabled"
-                    //  property in the request json are not the same thing
-                    active.volatile.disableMove(i, moveData[i].disabled);
-                }
-            }
+            this.lastRequest = args;
         });
     }
 
@@ -238,15 +219,6 @@ ${inspect(args, {colors: true, depth: null})}`);
                 this.getActive(event.id.owner).baseAbility = event.ability;
                 break;
             case "activate":
-                if (event.volatile === "Mat Block" ||
-                    Battle.isStallSingleTurn(event.volatile))
-                {
-                    // user successfully stalled an attack from the other side
-                    // locked moves get canceled if they don't succeed
-                    this.getActive(otherId(event.id.owner)).volatile
-                        .lockedMove = false;
-                }
-                // fallthrough
             case "end":
             case "start":
                 if (event.volatile === "confusion")
@@ -254,6 +226,28 @@ ${inspect(args, {colors: true, depth: null})}`);
                     // start/upkeep or end confusion status
                     this.getActive(event.id.owner).volatile
                         .confuse(event.type !== "end");
+                }
+                else if ((event.volatile === "Mat Block" ||
+                        Battle.isStallSingleTurn(event.volatile)) &&
+                    event.type === "activate")
+                {
+                    // user successfully stalled an attack from the other side
+                    // locked moves get canceled if they don't succeed
+                    this.getActive(otherId(event.id.owner)).volatile
+                        .lockedMove = false;
+                }
+                else if (event.volatile === "Disable" && event.type === "start")
+                {
+                    // disable a move
+                    const active = this.getActive(event.id.owner);
+                    const moveId = Battle.parseIDName(event.otherArgs[0]);
+                    active.disableMove(moveId);
+                }
+                else if (event.volatile === "move: Disable" &&
+                    event.type === "end")
+                {
+                    // clear disabled status
+                    this.getActive(event.id.owner).volatile.enableMoves();
                 }
                 break;
             case "boost":
@@ -547,12 +541,16 @@ ${inspect(args, {colors: true, depth: null})}`);
     {
         const choices: Choice[] = [];
         const team = this.state.teams.us;
+        const active = team.active;
+
+        const trapped: boolean =
+            (!!this.lastRequest.active && this.lastRequest.active[0].trapped) ||
+            active.volatile.lockedMove ||
+            !!active.volatile.twoTurn ||
+            active.volatile.mustRecharge;
 
         // possible choices for switching pokemon
-        const active = team.active;
-        // locked two-turn moves trap the user and keeps them from switching
-        if (!active.volatile.lockedMove && !active.volatile.twoTurn &&
-            !active.volatile.mustRecharge)
+        if (!trapped)
         {
             for (let i = 0; i < team.pokemon.length; ++i)
             {
@@ -577,9 +575,14 @@ ${inspect(args, {colors: true, depth: null})}`);
             }
             else
             {
+                // get disabled moves from last |request| message
+                const requestDisabled = this.lastRequest.active ?
+                    this.lastRequest.active[0].moves.map(m => m.disabled)
+                    : [false, false, false, false];
+
                 for (let i = 0; i < active.moves.length; ++i)
                 {
-                    if (active.canMove(i))
+                    if (active.canMove(i) && !requestDisabled[i])
                     {
                         choices.push(`move ${i + 1}` as Choice);
                     }

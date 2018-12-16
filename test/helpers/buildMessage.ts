@@ -140,7 +140,11 @@ export function composeBattleEvent(event: BattleEvent): string[]
             result = ["-singleturn", stringifyID(event.id), event.status];
             break;
         case "start":
-            result = ["-start", stringifyID(event.id), event.volatile];
+            result =
+            [
+                "-start", stringifyID(event.id), event.volatile,
+                ...event.otherArgs
+            ];
             break;
         case "switch":
             result =

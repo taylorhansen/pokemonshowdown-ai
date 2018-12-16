@@ -714,7 +714,7 @@ export class MessageParser extends Parser
      *
      * Format:
      * @example
-     * |-start|<PokemonID>|<volatile>
+     * |-start|<PokemonID>|<volatile>|<other args>
      *
      * // optional message suffixes:
      * [fatigue]
@@ -730,12 +730,16 @@ export class MessageParser extends Parser
         this.nextLine();
         if (!id || !volatile) return null;
 
-        if (line.length > 3)
+        const otherArgs: string[] = [];
+        let cause: Cause | null = null;
+        for (let i = 3; i < line.length; ++i)
         {
-            const cause = MessageParser.parseCause(line[3]);
-            if (cause) return {type: "start", id, volatile, cause};
+            const s = line[i];
+            cause = MessageParser.parseCause(s);
+            if (!cause) otherArgs.push(s);
         }
-        return {type: "start", id, volatile};
+        if (cause) return {type: "start", id, volatile, otherArgs, cause};
+        return {type: "start", id, volatile, otherArgs};
     }
 
     /**

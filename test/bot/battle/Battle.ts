@@ -117,14 +117,17 @@ describe("Battle", function()
     {
         function testBattleInit(args: BattleInitArgs): void
         {
+            // testArgs: even/0 indexes are p1, odd are p2
+            const i = args.id === "p1" ? 0 : 1;
+            const req: RequestArgs =
+            {
+                side: {pokemon: [testArgs.request[i].side.pokemon[0]]}
+            };
+
             it("Should initialize battle", async function()
             {
-                // testArgs: even/0 indexes are p1, odd are p2
-                const i = args.id === "p1" ? 0 : 1;
-                const req: RequestArgs =
-                {
-                    side: {pokemon: [testArgs.request[i].side.pokemon[0]]}
-                };
+                // corresponding end |request| message is always sent before
+                //  the events that lead up to this state
                 await listener.getHandler("request")(req);
                 checkRequestSide(req);
                 await listener.getHandler("battleinit")(args);
@@ -162,6 +165,66 @@ describe("Battle", function()
         a.id = "p2";
         a.username = testArgs.username[1];
         testBattleInit(a);
+
+        it("Should disable moves", async function()
+        {
+            await listener.getHandler("request")(
+            {
+                active:
+                [
+                    {
+                        moves:
+                        [
+                            {
+                                move: "Splash", id: "splash", pp: 64, maxpp: 64,
+                                target: "self", disabled: true
+                            },
+                            {
+                                move: "Tackle", id: "tackle", pp: 56, maxpp: 56,
+                                target: "any", disabled: false
+                            }
+                        ]
+                    }
+                ],
+                side:
+                {
+                    pokemon:
+                    [
+                        {
+                            ident: testArgs.pokemonId[0],
+                            details: testArgs.pokemonDetails[0],
+                            condition: testArgs.pokemonStatus[0],
+                            active: true,
+                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            moves: ["splash", "tackle"],
+                            baseAbility: "swiftswim", item: "expertbelt",
+                            pokeball: "pokeball"
+                        }
+                    ]
+                }
+            });
+            await listener.getHandler("battleinit")(
+            {
+                id: "p1", username: testArgs.username[0],
+                teamSizes: {p1: 1, p2: 1}, gameType: "singles", gen: 4,
+                events:
+                [
+                    {
+                        type: "switch", id: testArgs.pokemonId[0],
+                        details: testArgs.pokemonDetails[0],
+                        status: testArgs.pokemonStatus[0]
+                    },
+                    {
+                        type: "switch", id: testArgs.pokemonId[1],
+                        details: testArgs.pokemonDetails[1],
+                        status: testArgs.pokemonStatus[1]
+                    }
+                ]
+            });
+
+            expect(battle.lastChoices).to.include.members(["move 2"]);
+            expect(responses).to.have.lengthOf(1);
+        });
     });
 
     describe("battleprogress", function()
@@ -213,7 +276,7 @@ describe("Battle", function()
         {
             const mon = battle.state.teams.us.active;
             mon.revealMove("splash");
-            mon.volatile.disableMove(0, true);
+            mon.volatile.disableMove(0);
             mon.revealMove("tackle");
 
             await listener.getHandler("battleprogress")(
@@ -478,7 +541,13 @@ describe("Battle", function()
                 expect(volatile.isConfused).to.be.false;
                 await listener.getHandler("battleprogress")(
                 {
-                    events: [{type: "start", id: us1, volatile: "confusion"}]
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "confusion",
+                            otherArgs: []
+                        }
+                    ]
                 });
                 expect(volatile.isConfused).to.be.true;
                 expect(volatile.confuseTurns).to.equal(1);
@@ -497,6 +566,76 @@ describe("Battle", function()
                 // tslint:enable:no-unused-expression
             });
 
+            for (const reveal of [true, false])
+            {
+                it(`Should disable ${reveal ? "" : "un"}revealed move`,
+                async function()
+                {
+                    // tslint:disable:no-unused-expression
+                    const mon = battle.state.teams.us.active;
+                    if (reveal) mon.revealMove("splash");
+                    mon.revealMove("tackle");
+
+                    expect(mon.volatile.isDisabled(0)).to.be.false;
+                    expect(mon.volatile.isDisabled(1)).to.be.false;
+
+                    await listener.getHandler("battleprogress")(
+                    {
+                        events:
+                        [
+                            {
+                                type: "start", id: us1, volatile: "Disable",
+                                otherArgs: ["Splash"]
+                            },
+                            {type: "upkeep"}, {type: "turn", num: 2}
+                        ]
+                    });
+
+                    if (reveal)
+                    {
+                        expect(mon.volatile.isDisabled(0)).to.be.true;
+                        expect(mon.volatile.isDisabled(1)).to.be.false;
+                        expect(battle.lastChoices).to.have.members(
+                            [`move 2`, "switch 2"]);
+                    }
+                    else
+                    {
+                        expect(mon.volatile.isDisabled(0)).to.be.false;
+                        expect(mon.volatile.isDisabled(1)).to.be.true;
+                        expect(battle.lastChoices).to.have.members(
+                            [`move 1`, "switch 2"]);
+                    }
+                    expect(responses).to.have.lengthOf(1);
+                    // tslint:enable:no-unused-expression
+                });
+            }
+
+            it("Should enable disabled move", async function()
+            {
+                const mon = battle.state.teams.us.active;
+                // tslint:disable-next-line:no-unused-expression
+                expect(mon.volatile.isDisabled(0)).to.be.false;
+
+                await listener.getHandler("battleprogress")(
+                {
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "Disable",
+                            otherArgs: ["Splash"]
+                        },
+                        {type: "end", id: us1, volatile: "move: Disable"},
+                        {type: "upkeep"}, {type: "turn", num: 2}
+                    ]
+                });
+
+                // tslint:disable-next-line:no-unused-expression
+                expect(mon.volatile.isDisabled(0)).to.be.false;
+                expect(battle.lastChoices).to.have.members(
+                    ["move 1", "switch 2"]);
+                expect(responses).to.have.lengthOf(1);
+            });
+
             it("Should ignore invalid volatiles", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
@@ -504,7 +643,12 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(volatile.isConfused).to.be.false;
                 await listener.getHandler("battleprogress")(
-                    {events: [{type: "start", id: us1, volatile: ""}]});
+                {
+                    events:
+                    [
+                        {type: "start", id: us1, volatile: "", otherArgs: []}
+                    ]
+                });
                 // tslint:disable-next-line:no-unused-expression
                 expect(volatile.isConfused).to.be.false;
             });
@@ -1098,7 +1242,7 @@ describe("Battle", function()
                         [
                             {
                                 type: "start", id: us1, volatile: "confusion",
-                                cause: {type: "fatigue"}
+                                otherArgs: [], cause: {type: "fatigue"}
                             }
                         ]
                     });

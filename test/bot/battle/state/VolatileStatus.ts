@@ -18,7 +18,7 @@ describe("VolatileStatus", function()
         {
             volatile.boost("atk", 1);
             volatile.confuse(true);
-            volatile.disableMove(0, true);
+            volatile.disableMove(0);
             volatile.lockedMove = true;
             volatile.twoTurn = "Bounce";
             volatile.mustRecharge = true;
@@ -44,7 +44,7 @@ describe("VolatileStatus", function()
         {
             volatile.boost("atk", 1);
             volatile.confuse(true);
-            volatile.disableMove(0, true);
+            volatile.disableMove(0);
             volatile.lockedMove = true;
             volatile.twoTurn = "Bounce";
             volatile.mustRecharge = true;
@@ -102,9 +102,9 @@ describe("VolatileStatus", function()
 
         it("Should disable/enable move", function()
         {
-            volatile.disableMove(0, true);
+            volatile.disableMove(0);
             expect(volatile.isDisabled(0)).to.equal(true);
-            volatile.disableMove(0, false);
+            volatile.enableMoves();
             expect(volatile.isDisabled(0)).to.equal(false);
         });
     });
