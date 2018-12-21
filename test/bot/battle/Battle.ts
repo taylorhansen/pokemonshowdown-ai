@@ -286,6 +286,14 @@ describe("Battle", function()
             expect(responses).to.have.lengthOf(1);
         });
 
+        it("Should struggle if no available moves", async function()
+        {
+            await listener.getHandler("battleprogress")(
+                {events: [{type: "upkeep"}, {type: "turn", num: 2}]});
+            expect(battle.lastChoices).to.have.members(["move 1", "switch 2"]);
+            expect(responses).to.have.lengthOf(1);
+        });
+
         describe("event processing", function()
         {
             it("Should process events", async function()

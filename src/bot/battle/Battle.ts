@@ -575,6 +575,8 @@ ${inspect(args, {colors: true, depth: null})}`);
             }
             else
             {
+                let cantMove = true;
+
                 // get disabled moves from last |request| message
                 const requestDisabled = this.lastRequest.active ?
                     this.lastRequest.active[0].moves.map(m => m.disabled)
@@ -585,8 +587,13 @@ ${inspect(args, {colors: true, depth: null})}`);
                     if (active.canMove(i) && !requestDisabled[i])
                     {
                         choices.push(`move ${i + 1}` as Choice);
+                        cantMove = false;
                     }
                 }
+
+                // if no other move choice, move slot 1 is replaced with
+                //  struggle
+                if (cantMove) choices.push("move 1");
             }
         }
 
