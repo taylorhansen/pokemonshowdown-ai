@@ -155,6 +155,11 @@ export interface InitArgs
 /** Args for a `request` message. Types the JSON data in the message. */
 export interface RequestArgs
 {
+    /**
+     * Whether the opponent is the only one making a decision, meaning the
+     * client has to wait.
+     */
+    wait?: boolean;
     /** Corresponds to which active pokemon slots must be filled. */
     forceSwitch?: boolean[];
     /** Active pokemon info. */

@@ -1,3 +1,4 @@
+import { SelfSwitch } from "../dex/dex-types";
 import { Pokemon } from "./Pokemon";
 import { Side } from "./Side";
 
@@ -52,7 +53,7 @@ export class Team
     private _size = 0;
 
     /** Team-related status conditions. */
-    private readonly status: TeamStatus = new TeamStatus();
+    public readonly status: TeamStatus = new TeamStatus();
     private readonly side: Side;
 
     /**
@@ -217,7 +218,7 @@ ${this._pokemon.map(
 /** Temporary status conditions for a certain team. */
 export class TeamStatus
 {
-    // TODO
+    public selfSwitch: SelfSwitch = false;
 
     /**
      * Gets the size of the return value of `toArray()`.
@@ -225,7 +226,7 @@ export class TeamStatus
      */
     public static getArraySize(): number
     {
-        return 0;
+        return /*selfSwitch*/ 2;
     }
 
     /**
@@ -234,7 +235,11 @@ export class TeamStatus
      */
     public toArray(): number[]
     {
-        return [];
+        const result =
+        [
+            this.selfSwitch ? 1 : 0, this.selfSwitch === "copyvolatile" ? 1 : 0
+        ];
+        return result;
     }
 
     // istanbul ignore next: only used for logging
@@ -244,6 +249,6 @@ export class TeamStatus
      */
     public toString(): string
     {
-        return "[]";
+        return `[${this.selfSwitch ? `selfSwitch: ${this.selfSwitch}` : ""}]`;
     }
 }

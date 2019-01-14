@@ -6,11 +6,11 @@ import * as logger from "../logger";
 import { BattleEvent, PokemonID, PokemonStatus } from "../messageData";
 import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
+import { EventProcessor } from "./EventProcessor";
 import { BattleState } from "./state/BattleState";
 import { Side } from "./state/Side";
 
-/** Neural network interface. */
-export class Network extends Battle
+class RewardTracker extends EventProcessor
 {
     /** Holds the reward values for different events. */
     private static readonly rewards =
@@ -18,6 +18,15 @@ export class Network extends Battle
         faint: -10,
         damage: (percentDelta: number) => 10 * percentDelta
     };
+
+    /** Accumulated reward during the current turn. */
+    private reward = 0;
+    // TODO
+}
+
+/** Neural network interface. */
+export class Network extends Battle
+{
 
     /** Neural network model. */
     private model: tf.Model;
@@ -33,8 +42,6 @@ export class Network extends Battle
     private lastChoice?: Choice;
     /** Resolves once the Network is ready to be used. */
     private ready: Promise<any>;
-    /** Accumulated reward during the current turn. */
-    private reward = 0;
 
     /**
      * Creates a Network.
@@ -46,7 +53,7 @@ export class Network extends Battle
     constructor(username: string, listener: AnyMessageListener,
         sender: ChoiceSender)
     {
-        super(username, listener, sender);
+        super(username, listener, sender, RewardTracker);
 
         this.inputLength = BattleState.getArraySize();
         this.path = `${__dirname}/../../../models/latest`;
