@@ -53,8 +53,153 @@ export class EventProcessor
     constructor(username: string)
     {
         this.username = username;
+
+        this.listener
+        .on("ability", event =>
+        {
+            this.getActive(event.id.owner).baseAbility = event.ability;
+        })
+        .on("start", event =>
+        {
+            if (event.volatile === "confusion")
+            {
+                // start/upkeep or end confusion status
+                this.getActive(event.id.owner).volatile.confuse(true);
+            }
+            else if (event.volatile === "Disable")
+            {
+                // disable a move
+                const active = this.getActive(event.id.owner);
+                const moveId = EventProcessor.parseIDName(event.otherArgs[0]);
+                active.disableMove(moveId);
+            }
+        })
+        .on("activate", event =>
+        {
+            if (event.volatile === "confusion")
+            {
+                this.getActive(event.id.owner).volatile.confuse(true);
+            }
+            else if (event.volatile === "Mat Block" ||
+                EventProcessor.isStallSingleTurn(event.volatile))
+            {
+                // user successfully stalled an attack
+                // locked moves get canceled if they don't succeed
+                this.getActive(otherId(event.id.owner)).volatile
+                    .lockedMove = false;
+            }
+        })
+        .on("end", event =>
+        {
+            if (event.volatile === "confusion")
+            {
+                this.getActive(event.id.owner).volatile.confuse(false);
+            }
+            else if (event.volatile === "move: Disable")
+            {
+                // clear disabled status
+                this.getActive(event.id.owner).volatile.enableMoves();
+            }
+        })
+        .on("boost", event =>
+        {
+            this.getActive(event.id.owner).volatile
+                .boost(event.stat, event.amount);
+        })
+        .on("cant", event =>
+        {
+            if (event.reason === "recharge")
+            {
+                // successfully completed its recharge turn
+                this.getActive(event.id.owner).volatile.mustRecharge =
+                    false;
+            }
+            if (event.moveName)
+            {
+                const moveId =
+                    EventProcessor.parseIDName(event.moveName);
+                // prevented from using a move, which might not have
+                //  been revealed before
+                this.getActive(event.id.owner).revealMove(moveId);
+            }
+        })
+        .on("curestatus", event =>
+        {
+            this.getActive(event.id.owner).majorStatus = "";
+        })
+        .on("cureteam", event =>
+        {
+            this.getTeam(event.id.owner).cure();
+        })
+        .on("damage", event =>
+        {
+            this.setHP(event.id, event.status);
+        })
+        .on("faint", event =>
+        {
+            this.getActive(event.id.owner).faint();
+        })
+        .on("move", (event, events, i) =>
+        {
+            this.handleMove(event, events, i);
+        })
+        .on("mustrecharge", event =>
+        {
+            this.getActive(event.id.owner).volatile.mustRecharge = true;
+        })
+        .on("prepare", event =>
+        {
+            // moveName should be one of the two-turn moves being
+            //  prepared
+            this.getActive(event.id.owner).volatile.twoTurn =
+                event.moveName as any;
+        })
+        .on("sethp", event =>
+        {
+            for (const pair of event.newHPs) this.setHP(pair.id, pair.status);
+        })
+        .on("singleturn", event =>
+        {
+            // istanbul ignore else: hard to check else case
+            if (EventProcessor.isStallSingleTurn(event.status))
+            {
+                // user successfully used a stalling move
+                this.getActive(event.id.owner).volatile.stall(true);
+            }
+        })
+        .on("status", event =>
+        {
+            this.getActive(event.id.owner).majorStatus =
+                event.majorStatus;
+        })
+        .on("switch", event =>
+        {
+            this.handleSwitch(event);
+        })
+        .on("tie", () =>
+        {
+            this._battling = false;
+        })
+        .on("win", () =>
+        {
+            this._battling = false;
+        })
+        .on("turn", () =>
+        {
+            this._newTurn = true;
+        })
+        .on("upkeep", () =>
+        {
+            // selfSwitch is the result of a move, which only occurs in
+            //  the middle of all the turn's main events (args.events)
+            // if the simulator ignored the fact that a selfSwitch move
+            //  was used, then it would emit an upkeep
+            this.state.teams.us.status.selfSwitch = false;
+            this.state.teams.them.status.selfSwitch = false;
+        });
     }
 
+    /** Gets the state data in array form. */
     public getStateArray(): number[]
     {
         return this.state.toArray();
@@ -148,135 +293,11 @@ export class EventProcessor
     {
         for (let i = 0; i < events.length; ++i)
         {
+            const event = events[i];
+
             // requires "as any" to get past the guarantee that the Message's
             //  type should match its properties
-            this.listener.dispatch(events[i].type as any, events[i], events, i);
-
-            const event = events[i];
-            switch (event.type)
-            {
-                case "ability":
-                    this.getActive(event.id.owner).baseAbility = event.ability;
-                    break;
-                case "activate":
-                case "end":
-                case "start":
-                    if (event.volatile === "confusion")
-                    {
-                        // start/upkeep or end confusion status
-                        this.getActive(event.id.owner).volatile
-                            .confuse(event.type !== "end");
-                    }
-                    else if ((event.volatile === "Mat Block" ||
-                            EventProcessor.isStallSingleTurn(event.volatile)) &&
-                        event.type === "activate")
-                    {
-                        // user successfully stalled an attack
-                        // locked moves get canceled if they don't succeed
-                        this.getActive(otherId(event.id.owner)).volatile
-                            .lockedMove = false;
-                    }
-                    else if (event.volatile === "Disable" &&
-                        event.type === "start")
-                    {
-                        // disable a move
-                        const active = this.getActive(event.id.owner);
-                        const moveId =
-                            EventProcessor.parseIDName(event.otherArgs[0]);
-                        active.disableMove(moveId);
-                    }
-                    else if (event.volatile === "move: Disable" &&
-                        event.type === "end")
-                    {
-                        // clear disabled status
-                        this.getActive(event.id.owner).volatile.enableMoves();
-                    }
-                    break;
-                case "boost":
-                    this.getActive(event.id.owner).volatile
-                        .boost(event.stat, event.amount);
-                    break;
-                case "cant":
-                    if (event.reason === "recharge")
-                    {
-                        // successfully completed its recharge turn
-                        this.getActive(event.id.owner).volatile.mustRecharge =
-                            false;
-                    }
-                    if (event.moveName)
-                    {
-                        const moveId =
-                            EventProcessor.parseIDName(event.moveName);
-                        // prevented from using a move, which might not have
-                        //  been revealed before
-                        this.getActive(event.id.owner).revealMove(moveId);
-                    }
-                    break;
-                case "curestatus":
-                    this.getActive(event.id.owner).majorStatus = "";
-                    break;
-                case "cureteam":
-                    this.getTeam(event.id.owner).cure();
-                    break;
-                case "damage":
-                case "heal":
-                    this.setHP(event.id, event.status);
-                    break;
-                case "faint":
-                    this.getActive(event.id.owner).faint();
-                    break;
-                case "move":
-                    this.handleMove(event, events, i);
-                    break;
-                case "mustrecharge":
-                    this.getActive(event.id.owner).volatile.mustRecharge = true;
-                    break;
-                case "prepare":
-                    // moveName should be one of the two-turn moves being
-                    //  prepared
-                    this.getActive(event.id.owner).volatile.twoTurn =
-                        event.moveName as any;
-                    break;
-                case "sethp":
-                    for (const pair of event.newHPs)
-                    {
-                        this.setHP(pair.id, pair.status);
-                    }
-                    break;
-                case "singleturn":
-                    // istanbul ignore else: hard to check else case
-                    if (EventProcessor.isStallSingleTurn(event.status))
-                    {
-                        // user successfully used a stalling move
-                        this.getActive(event.id.owner).volatile.stall(true);
-                    }
-                    break;
-                case "status":
-                    this.getActive(event.id.owner).majorStatus =
-                        event.majorStatus;
-                    break;
-                case "switch":
-                    this.handleSwitch(event);
-                    break;
-                case "tie":
-                case "win":
-                    this._battling = false;
-                    break;
-                case "turn":
-                    this._newTurn = true;
-                    break;
-                case "upkeep":
-                    // selfSwitch is the result of a move, which only occurs in
-                    //  the middle of all the turn's main events (args.events)
-                    // if the simulator ignored the fact that a selfSwitch move
-                    //  was used, then it would emit an upkeep
-                    this.state.teams.us.status.selfSwitch = false;
-                    this.state.teams.them.status.selfSwitch = false;
-                    break;
-                // istanbul ignore next: should never happen
-                default:
-                    logger.error(`Unhandled message type ${event!.type}`);
-            }
+            this.listener.dispatch(event.type as any, event, events, i);
 
             // handle message suffixes
             // these message types don't have an id field, so there's not enough
@@ -289,6 +310,20 @@ export class EventProcessor
                 this.handleCause(this.getSide(event.id.owner), event.cause!);
             }
         }
+    }
+
+    /**
+     * Sets the HP of a pokemon.
+     * @param id Pokemon's ID.
+     * @param status New HP/status.
+     * @virtual
+     */
+    protected setHP(id: PokemonID, status: PokemonStatus): void
+    {
+        const mon = this.getActive(id.owner);
+        mon.hp.set(status.hp, status.hpMax);
+        // this should already be covered by the `status` event but just in case
+        mon.majorStatus = status.condition;
     }
 
     /**
@@ -309,20 +344,6 @@ export class EventProcessor
                 this.state.teams[side].active.item = cause.item;
                 break;
         }
-    }
-
-    /**
-     * Sets the HP of a pokemon.
-     * @param id Pokemon's ID.
-     * @param status New HP/status.
-     * @virtual
-     */
-    protected setHP(id: PokemonID, status: PokemonStatus): void
-    {
-        const mon = this.getActive(id.owner);
-        mon.hp.set(status.hp, status.hpMax);
-        // this should already be covered by the `status` event but just in case
-        mon.majorStatus = status.condition;
     }
 
     /**
