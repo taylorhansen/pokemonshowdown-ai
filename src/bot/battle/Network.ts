@@ -20,12 +20,12 @@ class RewardTracker extends EventProcessor
         damage: (percentDelta: number) => 10 * percentDelta
     };
 
-    public get value(): number
-    {
-        return this.reward;
-    }
     /** Accumulated reward during the current turn. */
-    private reward = 0;
+    public get reward(): number
+    {
+        return this._reward;
+    }
+    private _reward = 0;
 
     /**
      * Creates a RewardTracker object.
@@ -40,6 +40,12 @@ class RewardTracker extends EventProcessor
             this.applyReward(this.getSide(event.id.owner),
                 RewardTracker.rewards.faint);
         });
+    }
+
+    /** Resets accumulated reward. */
+    public resetReward(): void
+    {
+        this._reward = 0;
     }
 
     /** @override */
@@ -61,12 +67,12 @@ class RewardTracker extends EventProcessor
     private applyReward(side: Side, reward: number): void
     {
         // reward one side = punish on the other
-        this.reward += reward * (side === "us" ? 1 : -1);
+        this._reward += reward * (side === "us" ? 1 : -1);
     }
 }
 
 /** Neural network interface. */
-export class Network extends Battle
+export class Network extends Battle<RewardTracker>
 {
 
     /** Neural network model. */
@@ -89,7 +95,6 @@ export class Network extends Battle
      * @param username Client's username.
      * @param listener Used to subscribe to server messages.
      * @param sender Used to send the AI's choice to the server.
-     * @param state Optional initial battle state.
      */
     constructor(username: string, listener: MessageListener,
         sender: ChoiceSender)
@@ -113,7 +118,7 @@ export class Network extends Battle
         if (choices.length === 0) throw new Error("No available choices!");
         await this.ready;
 
-        const state = this.state.toArray();
+        const state = this.processor.getStateArray();
         if (state.length > this.inputLength)
         {
             logger.error(`too many state values ${state.length}, expected \
@@ -146,15 +151,16 @@ expected ${this.inputLength}`);
 
         if (this.lastState && this.lastPrediction && this.lastChoice)
         {
-            logger.debug(`applying reward: ${this.reward}`);
+            logger.debug(`applying reward: ${this.processor.reward}`);
             // apply the Q learning update rule
             const discount = 0.8;
             const nextMaxReward = discount * bestChoice.reward;
 
             const target = predictionData;
-            target[choiceIds[this.lastChoice]] = this.reward + nextMaxReward;
+            target[choiceIds[this.lastChoice]] = this.processor.reward +
+                nextMaxReward;
 
-            this.reward = 0;
+            this.processor.resetReward();
             this.ready =
                 this.model.fit(this.lastState, Network.toColumn(target));
         }
@@ -221,7 +227,7 @@ expected ${this.inputLength}`);
     }
 
     /**
-     * Ensures that a network input shape is valid.
+     * Ensures that a given network input shape is valid.
      * @param shape Given input shape.
      * @return True if the input shape is valid.
      */

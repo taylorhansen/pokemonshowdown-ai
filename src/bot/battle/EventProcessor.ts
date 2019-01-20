@@ -12,6 +12,11 @@ import { Pokemon } from "./state/Pokemon";
 import { Side } from "./state/Side";
 import { SwitchInOptions, Team } from "./state/Team";
 
+export interface EventProcessorConstructor<T extends EventProcessor>
+{
+    new(username: string): T;
+}
+
 /** Modifies the BattleState by listening to game events. */
 export class EventProcessor
 {
@@ -48,6 +53,11 @@ export class EventProcessor
     constructor(username: string)
     {
         this.username = username;
+    }
+
+    public getStateArray(): number[]
+    {
+        return this.state.toArray();
     }
 
     /** Prints the state to the logger. */

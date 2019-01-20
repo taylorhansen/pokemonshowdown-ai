@@ -3,7 +3,7 @@ import { RequestMessage } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import * as logger from "../logger";
 import { Choice } from "./Choice";
-import { EventProcessor } from "./EventProcessor";
+import { EventProcessor, EventProcessorConstructor } from "./EventProcessor";
 
 /**
  * Sends a Choice to the server.
@@ -11,77 +11,16 @@ import { EventProcessor } from "./EventProcessor";
  */
 export type ChoiceSender = (choice: Choice) => void;
 
-/** Manages the battle state and the AI. */
-export abstract class Battle
+/** Constructs an abstract Battle type. */
+export interface BattleConstructor
 {
-    /**
-     * True if the AI model should always be saved at the end, or false if that
-     * should happen if it wins.
-     */
-    public saveAlways = true;
-    /** Used to send the AI's choice to the server. */
-    private readonly sender: ChoiceSender;
-    /** Last |request| message that was processed. */
-    private lastRequest: RequestMessage;
-    /** Manages the BattleState by processing events. */
-    private eventProcessor: EventProcessor;
+    new(username: string, listener: MessageListener, sender: ChoiceSender):
+        BattleBase;
+}
 
-    /**
-     * Creates a Battle object.
-     * @param username Client's username.
-     * @param listener Used to subscribe to server messages.
-     * @param sender Used to send the AI's choice to the server.
-     * @param processor Type of EventProcessor to use.
-     */
-    constructor(username: string, listener: MessageListener,
-        sender: ChoiceSender, processor: typeof EventProcessor = EventProcessor)
-    {
-        this.eventProcessor = new processor(username);
-        this.sender = sender;
-
-        listener
-        .on("battleinit", args =>
-        {
-            logger.debug(`battleinit:
-${inspect(args, {colors: true, depth: null})}`);
-
-            this.eventProcessor.initBattle(args);
-            this.eventProcessor.printState();
-
-            return this.askAI();
-        })
-        .on("battleprogress", async args =>
-        {
-            logger.debug(`battleprogress:
-${inspect(args, {colors: true, depth: null})}`);
-
-            this.eventProcessor.handleEvents(args.events);
-            this.eventProcessor.printState();
-
-            if (this.eventProcessor.battling)
-            {
-                this.eventProcessor.printState();
-
-                if (!this.lastRequest.wait) await this.askAI();
-
-                if (this.eventProcessor.newTurn)
-                {
-                    // some statuses need to have their values updated every
-                    //  turn in case the next turn doesn't override them
-                    this.eventProcessor.updateStatusTurns();
-                }
-            }
-        })
-        .on("request", args =>
-        {
-            logger.debug(`request:
-${inspect(args, {colors: true, depth: null})}`);
-
-            this.eventProcessor.handleRequest(args);
-            this.lastRequest = args;
-        });
-    }
-
+/** Contains abstract methods from the Battle class. */
+export abstract class BattleBase
+{
     /**
      * Decides what to do next.
      * @param choices The set of possible choices that can be made.
@@ -92,6 +31,79 @@ ${inspect(args, {colors: true, depth: null})}`);
 
     /** Saves AI state to storage. */
     protected abstract save(): Promise<void>;
+}
+
+/**
+ * Manages the entire course of a battle in the client's point of view.
+ * @template Processor Type of EventProcessor to use.
+ */
+export abstract class Battle<Processor extends EventProcessor>
+    extends BattleBase
+{
+    /** Manages the BattleState by processing events. */
+    protected processor: Processor;
+    /** Used to send the AI's choice to the server. */
+    private readonly sender: ChoiceSender;
+    /** Last |request| message that was processed. */
+    private lastRequest: RequestMessage;
+
+    /**
+     * Creates a Battle object.
+     * @param username Client's username.
+     * @param listener Used to subscribe to server messages.
+     * @param sender Used to send the AI's choice to the server.
+     * @param processor Type of EventProcessor to use.
+     */
+    constructor(username: string, listener: MessageListener,
+        sender: ChoiceSender, processor: EventProcessorConstructor<Processor>)
+    {
+        super();
+
+        this.processor = new processor(username);
+        this.sender = sender;
+
+        listener
+        .on("battleinit", args =>
+        {
+            logger.debug(`battleinit:
+${inspect(args, {colors: true, depth: null})}`);
+
+            this.processor.initBattle(args);
+            this.processor.printState();
+
+            return this.askAI();
+        })
+        .on("battleprogress", async args =>
+        {
+            logger.debug(`battleprogress:
+${inspect(args, {colors: true, depth: null})}`);
+
+            this.processor.handleEvents(args.events);
+            this.processor.printState();
+
+            if (this.processor.battling)
+            {
+                this.processor.printState();
+
+                if (!this.lastRequest.wait) await this.askAI();
+
+                if (this.processor.newTurn)
+                {
+                    // some statuses need to have their values updated every
+                    //  turn in case the next turn doesn't override them
+                    this.processor.updateStatusTurns();
+                }
+            }
+        })
+        .on("request", args =>
+        {
+            logger.debug(`request:
+${inspect(args, {colors: true, depth: null})}`);
+
+            this.processor.handleRequest(args);
+            this.lastRequest = args;
+        });
+    }
 
     /** Asks the AI what to do next and sends the response. */
     private async askAI(): Promise<void>
@@ -143,10 +155,4 @@ ${inspect(args, {colors: true, depth: null})}`);
 
         return choices;
     }
-}
-
-export interface BattleConstructor
-{
-    new(username: string, listener: MessageListener, sender: ChoiceSender):
-        Battle;
 }

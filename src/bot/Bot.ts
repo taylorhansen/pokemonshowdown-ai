@@ -1,4 +1,4 @@
-import { Battle, BattleConstructor } from "./battle/Battle";
+import { BattleBase, BattleConstructor } from "./battle/Battle";
 import { Choice } from "./battle/Choice";
 import * as logger from "./logger";
 import { Parser } from "./parser/Parser";
@@ -10,7 +10,7 @@ export class Bot
     private readonly formats:
         {[format: string]: BattleConstructor | undefined} = {};
     /** Keeps track of all the battles we're in. */
-    private readonly battles: {[room: string]: Battle} = {};
+    private readonly battles: {[room: string]: BattleBase} = {};
     /** Name of the user. */
     private username = "";
     /** Used to send response messages to the server. */
