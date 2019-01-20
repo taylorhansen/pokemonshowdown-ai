@@ -1,4 +1,4 @@
-import { MajorStatus, majorStatuses } from "../../dispatcher/messages";
+import { MajorStatus, majorStatuses } from "../../helpers";
 import { dex } from "../dex/dex";
 import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";

@@ -1,5 +1,6 @@
 import { inspect } from "util";
-import { AnyMessageListener, RequestArgs } from "../dispatcher/MessageListener";
+import { RequestMessage } from "../dispatcher/Message";
+import { MessageListener } from "../dispatcher/MessageListener";
 import * as logger from "../logger";
 import { Choice } from "./Choice";
 import { EventProcessor } from "./EventProcessor";
@@ -20,8 +21,8 @@ export abstract class Battle
     public saveAlways = true;
     /** Used to send the AI's choice to the server. */
     private readonly sender: ChoiceSender;
-    /** Args object from the last |request| message. */
-    private lastRequest: RequestArgs;
+    /** Last |request| message that was processed. */
+    private lastRequest: RequestMessage;
     /** Manages the BattleState by processing events. */
     private eventProcessor: EventProcessor;
 
@@ -32,7 +33,7 @@ export abstract class Battle
      * @param sender Used to send the AI's choice to the server.
      * @param processor Type of EventProcessor to use.
      */
-    constructor(username: string, listener: AnyMessageListener,
+    constructor(username: string, listener: MessageListener,
         sender: ChoiceSender, processor: typeof EventProcessor = EventProcessor)
     {
         this.eventProcessor = new processor(username);
@@ -146,6 +147,6 @@ ${inspect(args, {colors: true, depth: null})}`);
 
 export interface BattleConstructor
 {
-    new(username: string, listener: AnyMessageListener, sender: ChoiceSender):
+    new(username: string, listener: MessageListener, sender: ChoiceSender):
         Battle;
 }

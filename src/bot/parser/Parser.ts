@@ -1,6 +1,5 @@
-import { AnyMessageListener, MessageArgs, MessageHandler } from
-    "../dispatcher/MessageListener";
-import { MessageType } from "../dispatcher/messages";
+import { Message, MessageType } from "../dispatcher/Message";
+import { MessageHandler, MessageListener } from "../dispatcher/MessageListener";
 import { ShallowNullable } from "../helpers";
 
 /** Base class for parsers. */
@@ -10,10 +9,10 @@ export abstract class Parser
     public abstract get room(): string;
 
     /** Registered message listeners. */
-    private readonly messageListeners: {[room: string]: AnyMessageListener} =
+    private readonly messageListeners: {[room: string]: MessageListener} =
         {};
     /** Listener for unfamiliar rooms. */
-    private readonly newRoomListener = new AnyMessageListener();
+    private readonly newRoomListener = new MessageListener();
 
     /**
      * Parses the message sent from the server.
@@ -41,23 +40,23 @@ export abstract class Parser
     }
 
     /**
-     * Gets a message listener for the given room. If the room is unfamiliar,
+     * Gets a MessageListener for the given room. If the room is unfamiliar,
      * then a new listener is created and returned.
      * @param room The room this message originates from. Empty string means
      * lobby or global.
      * @returns A message listener for the given room.
      */
-    public getListener(room: string): AnyMessageListener
+    public getListener(room: string): MessageListener
     {
         if (!this.messageListeners.hasOwnProperty(room))
         {
-            this.messageListeners[room] = new AnyMessageListener();
+            this.messageListeners[room] = new MessageListener();
         }
         return this.messageListeners[room];
     }
 
     /**
-     * Removes a room message listener.
+     * Unregisters a room's MessageListener.
      * @param room Room to stop tracking.
      */
     public removeListener(room: string): void
@@ -66,26 +65,26 @@ export abstract class Parser
     }
 
     /**
-     * Calls a registered MessageHandler for the current room using the given
-     * message prefix.
-     * @param type Message type to invoke.
-     * @param args Message handler arguments. These are allowed to be null, but
-     * will cause the parser to reject the message as a whole if any are found.
-     * @returns A promise that resolves once all the listeners are executed.
+     * Dispatches registered callbacks for the current room and Message type.
+     * @param type Message type.
+     * @param message Message object. Each property is allowed to be null, in
+     * which case this method will have no effect.
+     * @returns A Promise to resolve all the listeners for this Message type.
      */
-    protected handle<T extends MessageType>(type: T,
-        args: ShallowNullable<MessageArgs<T>>): Promise<void>
+    protected dispatch<T extends MessageType>(type: T,
+        message: ShallowNullable<Message<T>>): Promise<void>
     {
         // early return: message handlers do not accept null arguments
-        if ((Object.keys(args) as (keyof MessageArgs<T>)[])
-            .some(key => args[key] === null))
+        if ((Object.keys(message) as (keyof Message<T>)[])
+            .some(key => message[key] === null))
         {
             return Promise.resolve();
         }
 
         // unregistered rooms are delegated to a special listener
-        const handler = this.messageListeners.hasOwnProperty(this.room) ?
+        const listener = this.messageListeners.hasOwnProperty(this.room) ?
             this.messageListeners[this.room] : this.newRoomListener;
-        return handler.getHandler(type)(args as MessageArgs<T>);
+
+        return listener.dispatch(type, message);
     }
 }

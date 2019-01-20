@@ -1,8 +1,10 @@
-import { BattleInitArgs, RequestArgs } from "../dispatcher/MessageListener";
+import { AnyBattleEvent, Cause, MoveEvent, SwitchEvent } from
+    "../dispatcher/BattleEvent";
+import { BattleEventListener } from "../dispatcher/BattleEventListener";
+import { BattleInitMessage, RequestMessage } from "../dispatcher/Message";
+import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
+    PokemonStatus } from "../helpers";
 import * as logger from "../logger";
-import { BattleEvent, Cause, isPlayerId, MoveEvent, otherId, PlayerID,
-    PokemonDetails, PokemonID, PokemonStatus, SwitchEvent } from
-    "../dispatcher/messages";
 import { dex } from "./dex/dex";
 import { Type } from "./dex/dex-types";
 import { BattleState } from "./state/BattleState";
@@ -29,6 +31,8 @@ export class EventProcessor
 
     /** Tracks the currently known state of the battle. */
     protected readonly state = new BattleState();
+    /** Manages callbacks related to BattleEvents. */
+    protected readonly listener = new BattleEventListener();
     /** Client's username. */
     protected readonly username: string;
     /**
@@ -63,7 +67,7 @@ export class EventProcessor
     }
 
     /** Processes a `request` message. */
-    public handleRequest(args: RequestArgs): void
+    public handleRequest(args: RequestMessage): void
     {
         // a request message is given at the start of the battle, before any
         //  battleinit stuff
@@ -105,7 +109,7 @@ export class EventProcessor
     }
 
     /** Initializes the battle conditions. */
-    public initBattle(args: BattleInitArgs): void
+    public initBattle(args: BattleInitMessage): void
     {
         this._battling = true;
 
@@ -130,11 +134,14 @@ export class EventProcessor
      * Processes BattleEvents sent from the server to update the internal
      * BattleState.
      */
-    public handleEvents(events: BattleEvent[]): void
+    public handleEvents(events: AnyBattleEvent[]): void
     {
-        let newTurn = false;
         for (let i = 0; i < events.length; ++i)
         {
+            // requires "as any" to get past the guarantee that the Message's
+            //  type should match its properties
+            this.listener.dispatch(events[i].type as any, events[i], events, i);
+
             const event = events[i];
             switch (event.type)
             {
@@ -246,7 +253,7 @@ export class EventProcessor
                     this._battling = false;
                     break;
                 case "turn":
-                    newTurn = true;
+                    this._newTurn = true;
                     break;
                 case "upkeep":
                     // selfSwitch is the result of a move, which only occurs in
@@ -272,7 +279,6 @@ export class EventProcessor
                 this.handleCause(this.getSide(event.id.owner), event.cause!);
             }
         }
-        this._newTurn = newTurn;
     }
 
     /**
@@ -326,7 +332,8 @@ export class EventProcessor
      * @param events Current list of events.
      * @param i Current position within the events list.
      */
-    private handleMove(event: MoveEvent, events: BattleEvent[], i: number): void
+    private handleMove(event: MoveEvent, events: AnyBattleEvent[], i: number):
+        void
     {
         const mon = this.getActive(event.id.owner);
         const moveId = EventProcessor.parseIDName(event.moveName);

@@ -1,9 +1,9 @@
 import * as tf from "@tensorflow/tfjs";
 import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
 import "@tensorflow/tfjs-node";
-import { AnyMessageListener } from "../dispatcher/MessageListener";
+import { MessageListener } from "../dispatcher/MessageListener";
+import { PokemonID, PokemonStatus } from "../helpers";
 import * as logger from "../logger";
-import { BattleEvent, PokemonID, PokemonStatus } from "../dispatcher/messages";
 import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
 import { EventProcessor } from "./EventProcessor";
@@ -20,9 +20,49 @@ class RewardTracker extends EventProcessor
         damage: (percentDelta: number) => 10 * percentDelta
     };
 
+    public get value(): number
+    {
+        return this.reward;
+    }
     /** Accumulated reward during the current turn. */
     private reward = 0;
-    // TODO
+
+    /**
+     * Creates a RewardTracker object.
+     * @param username Username of the client.
+     */
+    constructor(username: string)
+    {
+        super(username);
+
+        this.listener.on("faint", event =>
+        {
+            this.applyReward(this.getSide(event.id.owner),
+                RewardTracker.rewards.faint);
+        });
+    }
+
+    /** @override */
+    protected setHP(id: PokemonID, status: PokemonStatus): void
+    {
+        // use %delta hp to calc reward
+        const side = this.getSide(id.owner);
+        const mon = this.state.teams[side].active;
+        const percentDelta = (status.hp - mon.hp.current) / mon.hp.max;
+        super.setHP(id, status);
+        this.applyReward(side, RewardTracker.rewards.damage(percentDelta));
+    }
+
+    /**
+     * Rewards one side of the battle.
+     * @param side The team that was rewarded for something.
+     * @param reward Value of the reward.
+     */
+    private applyReward(side: Side, reward: number): void
+    {
+        // reward one side = punish on the other
+        this.reward += reward * (side === "us" ? 1 : -1);
+    }
 }
 
 /** Neural network interface. */
@@ -51,7 +91,7 @@ export class Network extends Battle
      * @param sender Used to send the AI's choice to the server.
      * @param state Optional initial battle state.
      */
-    constructor(username: string, listener: AnyMessageListener,
+    constructor(username: string, listener: MessageListener,
         sender: ChoiceSender)
     {
         super(username, listener, sender, RewardTracker);
@@ -65,39 +105,6 @@ export class Network extends Battle
             logger.debug("Constructing new model");
             this.constructModel();
         });
-    }
-
-    /** @override */
-    protected handleEvent(event: BattleEvent): void
-    {
-        super.handleEvent(event);
-        if (event.type === "faint")
-        {
-            this.applyReward(this.getSide(event.id.owner),
-                Network.rewards.faint);
-        }
-    }
-
-    /** @override */
-    protected setHP(id: PokemonID, status: PokemonStatus): void
-    {
-        // use %delta hp to calc reward
-        const side = this.getSide(id.owner);
-        const mon = this.state.teams[side].active;
-        const percentDelta = (status.hp - mon.hp.current) / mon.hp.max;
-        super.setHP(id, status);
-        this.applyReward(side, Network.rewards.damage(percentDelta));
-    }
-
-    /**
-     * Rewards one side of the battle.
-     * @param side The team that was rewarded for something.
-     * @param reward Value of the reward.
-     */
-    private applyReward(side: Side, reward: number): void
-    {
-        // reward one side = punish on the other
-        this.reward += reward * (side === "us" ? 1 : -1);
     }
 
     /** @override */

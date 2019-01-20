@@ -3,7 +3,7 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     isBattleEventPrefix, MoveEvent, MustRechargeEvent, PrepareEvent, SetHPEvent,
     SingleTurnEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent, TurnEvent,
     UpkeepEvent, WinEvent } from "../dispatcher/BattleEvent";
-import { BattleInitArgs } from "../dispatcher/MessageListener";
+import { BattleInitMessage } from "../dispatcher/Message";
 import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus, ShallowNullable } from
     "../helpers";
@@ -147,7 +147,7 @@ export class MessageParser extends Parser
     {
         const challstr = this.getRestOfLine();
         this.nextLine();
-        return this.handle("challstr", {challstr});
+        return this.dispatch("challstr", {challstr});
     }
 
     /**
@@ -160,7 +160,7 @@ export class MessageParser extends Parser
     private parseDeInit(): Promise<void>
     {
         this.nextLine();
-        return this.handle("deinit", {});
+        return this.dispatch("deinit", {});
     }
 
     /**
@@ -174,7 +174,7 @@ export class MessageParser extends Parser
     {
         const reason = this.getRestOfLine();
         this.nextLine();
-        return this.handle("error", {reason});
+        return this.dispatch("error", {reason});
     }
 
     /**
@@ -190,7 +190,7 @@ export class MessageParser extends Parser
         this.nextLine();
         if (type === "chat" || type === "battle")
         {
-            return this.handle("init", {type});
+            return this.dispatch("init", {type});
         }
         // ignore invalid messages
         return Promise.resolve();
@@ -221,7 +221,7 @@ export class MessageParser extends Parser
             mon.condition = MessageParser.parsePokemonStatus(mon.condition);
         }
 
-        return this.handle("request", args);
+        return this.dispatch("request", args);
     }
 
     /**
@@ -240,7 +240,7 @@ export class MessageParser extends Parser
 
         // challengeTo may be null, which Parser.handle usually rejects
         args.challengeTo = args.challengeTo || {};
-        return this.handle("updatechallenges", args);
+        return this.dispatch("updatechallenges", args);
     }
 
     /**
@@ -257,7 +257,7 @@ export class MessageParser extends Parser
         const isGuest = line[2] ? !MessageParser.parseInt(line[2]) : null;
 
         this.nextLine();
-        return this.handle("updateuser", {username, isGuest});
+        return this.dispatch("updateuser", {username, isGuest});
     }
 
     /**
@@ -277,7 +277,7 @@ export class MessageParser extends Parser
      */
     private parseBattleInit(): Promise<void>
     {
-        const args: ShallowNullable<BattleInitArgs> =
+        const args: ShallowNullable<BattleInitMessage> =
         {
             id: null, username: null, teamSizes: null, gameType: null,
             gen: null, events: null
@@ -301,7 +301,7 @@ export class MessageParser extends Parser
 
                     if (!args.teamSizes)
                     {
-                        args.teamSizes = {} as BattleInitArgs["teamSizes"];
+                        args.teamSizes = {} as BattleInitMessage["teamSizes"];
                     }
                     if (id && size) args.teamSizes[id] = size;
                     this.nextLine();
@@ -326,7 +326,7 @@ export class MessageParser extends Parser
                     else this.nextLine();
             }
         }
-        return this.handle("battleinit", args);
+        return this.dispatch("battleinit", args);
     }
 
     /**
@@ -335,7 +335,7 @@ export class MessageParser extends Parser
      */
     private parseBattleProgress(): Promise<void>
     {
-        return this.handle("battleprogress",
+        return this.dispatch("battleprogress",
             {events: this.parseBattleEvents()});
     }
 
