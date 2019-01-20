@@ -11,7 +11,8 @@ export class CallbackDispatcher<DispatchArgs extends {[type: string]: any[]}>
 {
     /** Contains the callback dispatchers for each event type. */
     private readonly dispatchers:
-        {[T in keyof DispatchArgs]?: SpecificDispatcher<DispatchArgs[T]>};
+        {[T in keyof DispatchArgs]?: SpecificDispatcher<DispatchArgs[T]>} =
+            {} as any;
 
     /**
      * Adds a callback for a certain event type.
