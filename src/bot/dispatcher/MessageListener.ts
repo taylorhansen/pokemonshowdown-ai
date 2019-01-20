@@ -1,5 +1,5 @@
 import { BattleEvent, MessageType, PlayerID, RequestActive, RequestSide,
-    RoomType } from "./messageData";
+    RoomType } from "./messages";
 
 /**
  * Listens for any type of message and delegates it to one of its specific

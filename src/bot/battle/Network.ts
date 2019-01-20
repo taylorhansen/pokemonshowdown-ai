@@ -1,15 +1,16 @@
 import * as tf from "@tensorflow/tfjs";
 import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
 import "@tensorflow/tfjs-node";
-import { AnyMessageListener } from "../AnyMessageListener";
+import { AnyMessageListener } from "../dispatcher/MessageListener";
 import * as logger from "../logger";
-import { BattleEvent, PokemonID, PokemonStatus } from "../messageData";
+import { BattleEvent, PokemonID, PokemonStatus } from "../dispatcher/messages";
 import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
 import { EventProcessor } from "./EventProcessor";
 import { BattleState } from "./state/BattleState";
 import { Side } from "./state/Side";
 
+/** Accumulates a reward value for the Network by listening to events. */
 class RewardTracker extends EventProcessor
 {
     /** Holds the reward values for different events. */

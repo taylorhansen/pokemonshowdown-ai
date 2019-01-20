@@ -1,13 +1,12 @@
-import { BattleInitArgs } from "../AnyMessageListener";
-import { BoostableStatName } from "../battle/state/VolatileStatus";
-import { AbilityEvent, ActivateEvent, BattleEvent, BoostEvent, CantEvent, Cause,
-    CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
-    isEventPrefix, isMajorStatus, isPlayerId, MajorStatus, MoveEvent,
-    MustRechargeEvent, PlayerID, PokemonDetails, PokemonID, PokemonStatus,
-    PrepareEvent, SetHPEvent, SingleTurnEvent, StartEvent, StatusEvent,
-    SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WinEvent } from
-    "../messageData";
-import { ShallowNullable } from "../types";
+import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
+    Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
+    isBattleEventPrefix, MoveEvent, MustRechargeEvent, PrepareEvent, SetHPEvent,
+    SingleTurnEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent, TurnEvent,
+    UpkeepEvent, WinEvent } from "../dispatcher/BattleEvent";
+import { BattleInitArgs } from "../dispatcher/MessageListener";
+import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
+    PokemonDetails, PokemonID, PokemonStatus, ShallowNullable } from
+    "../helpers";
 import { Parser } from "./Parser";
 
 /**
@@ -111,7 +110,7 @@ export class MessageParser extends Parser
 
             default:
                 if (["drag", "move", "switch"].includes(this.line[0]) ||
-                    isEventPrefix(this.line[0]))
+                    isBattleEventPrefix(this.line[0]))
                 {
                     return this.parseBattleProgress();
                 }
@@ -318,7 +317,7 @@ export class MessageParser extends Parser
                     break;
                     // TODO: team preview
                 default:
-                    if (isEventPrefix(line[0]))
+                    if (isBattleEventPrefix(line[0]))
                     {
                         // start of initial events
                         args.events.push(...this.parseBattleEvents());
@@ -344,9 +343,9 @@ export class MessageParser extends Parser
      * Parses BattleEvent messages until the end of the message string.
      * @returns An array of parsed BattleEvents.
      */
-    private parseBattleEvents(): BattleEvent[]
+    private parseBattleEvents(): AnyBattleEvent[]
     {
-        const events: BattleEvent[] = [];
+        const events: AnyBattleEvent[] = [];
         while (this.lineN < this.lines.length)
         {
             const event = this.parseBattleEvent();
@@ -359,7 +358,7 @@ export class MessageParser extends Parser
      * Parses a BattleEvent.
      * @returns A BattleEvent, or null if invalid.
      */
-    private parseBattleEvent(): BattleEvent | null
+    private parseBattleEvent(): AnyBattleEvent | null
     {
         switch (this.line[0])
         {

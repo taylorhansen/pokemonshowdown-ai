@@ -1,5 +1,5 @@
 import { inspect } from "util";
-import { AnyMessageListener, RequestArgs } from "../AnyMessageListener";
+import { AnyMessageListener, RequestArgs } from "../dispatcher/MessageListener";
 import * as logger from "../logger";
 import { Choice } from "./Choice";
 import { EventProcessor } from "./EventProcessor";

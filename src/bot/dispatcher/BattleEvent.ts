@@ -1,17 +1,9 @@
-import { BoostableStatName } from "./battle/state/VolatileStatus";
+/** @file Interfaces and helper functions for handling BattleEvents. */
+import { BoostableStatName, MajorStatus, PokemonDetails, PokemonID,
+    PokemonStatus } from "../helpers";
 
-/**
- * @file Interfaces and helper functions for dealing with the arguments of a
- * MessageHandler.
- */
-
-// MessageType
-
-/** Main message type produced by the MessageParser. */
-export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
-
-/** Set of EventPrefixes. */
-export const eventPrefixes =
+/** Set of BattleEventPrefixes. */
+export const battleEventPrefixes =
 {
     "-ability": true, "-activate": true, "-boost": true, cant: true,
     "-curestatus": true, "-cureteam": true, "-damage": true, drag: true,
@@ -20,69 +12,59 @@ export const eventPrefixes =
     "-status": true, switch: true, tie: true, turn: true, "-unboost": true,
     upkeep: true, win: true
 };
-/** Message types that are parsed as battle events. */
-export type EventPrefix = keyof typeof eventPrefixes;
-/**
- * Checks if a value is an EventPrefix. Usable as a type guard.
- * @param value Value to check.
- * @returns Whether the value is an EventPrefix.
- */
-export function isEventPrefix(value: any): value is EventPrefix
+
+/** Message line prefixes that are parsed as BattleEvents. */
+export type BattleEventPrefix = keyof typeof battleEventPrefixes;
+
+/** Checks if a string is a BattleEventPrefix. Usable as a type guard. */
+export function isBattleEventPrefix(value: any): value is BattleEventPrefix
 {
-    return eventPrefixes.hasOwnProperty(value);
+    return battleEventPrefixes.hasOwnProperty(value);
 }
 
-/** Set of MajorPrefixes. */
-export const majorPrefixes =
+/** Stands for any type of event that can happen during a battle. */
+export type AnyBattleEvent = BattleEvent<BattleEventType>;
+
+const battleEventTypesInternal =
 {
-    challstr: 1, deinit: 2, error: 3, init: 4, request: 5, updatechallenges: 6,
-    updateuser: 7
+    ability: true, activate: true, boost: true, cant: true, curestatus: true,
+    cureteam: true, damage: true, end: true, faint: true, move: true,
+    mustrecharge: true, prepare: true, sethp: true, singleturn: true,
+    start: true, status: true, switch: true, tie: true, turn: true,
+    upkeep: true, win: true
 };
-/** Message types that are parsed as a single standalone line. */
-export type MajorPrefix = keyof typeof majorPrefixes;
-/**
- * Checks if a value is a Majorprefix. Usable as a type guard.
- * @param value Value to check.
- * @returns Whether the value is a MajorPrefix.
- */
-export function isMajorPrefix(value: any): value is MajorPrefix
-{
-    return majorPrefixes.hasOwnProperty(value);
-}
 
-/** Player ID in a battle. */
-export type PlayerID = "p1" | "p2";
-/**
- * Gets the opposite PlayerID of the given one.
- * @param id Given player id.
- * @returns The other PlayerID.
- */
-export function otherId(id: PlayerID): PlayerID
-{
-    if (id === "p1")
-    {
-        return "p2";
-    }
-    return "p1";
-}
-/**
- * Checks whether a string is a PlayerID.
- * @param id Value to check.
- * @returns True if the value is part of the PlayerID type union.
- */
-export function isPlayerId(id: any): id is PlayerID
-{
-    return id === "p1" || id === "p2";
-}
+/** Names of BattleEvent types. */
+export const battleEventTypes: Readonly<typeof battleEventTypesInternal> =
+    battleEventTypesInternal;
 
-// battle event types
+/** Names of BattleEvent types. */
+export type BattleEventType = keyof typeof battleEventTypesInternal;
 
-/** Types of events that can happen during battle. */
-export type BattleEvent = AbilityEvent | ActivateEvent | BoostEvent |
-    CantEvent | CureStatusEvent | CureTeamEvent | DamageEvent | EndEvent |
-    FaintEvent | MoveEvent | MustRechargeEvent | PrepareEvent | SetHPEvent |
-    SingleTurnEvent | StartEvent | StatusEvent | SwitchEvent | TieEvent |
-    TurnEvent | UpkeepEvent | WinEvent;
+/** Maps BattleEventType to a BattleEvent interface type. */
+export type BattleEvent<T extends BattleEventType> =
+    T extends "ability" ? AbilityEvent
+    : T extends "activate" ? ActivateEvent
+    : T extends "boost" ? BoostEvent
+    : T extends "cant" ? CantEvent
+    : T extends "curestatus" ? CureStatusEvent
+    : T extends "cureteam" ? CureTeamEvent
+    : T extends "damage" ? DamageEvent
+    : T extends "end" ? EndEvent
+    : T extends "faint" ? FaintEvent
+    : T extends "move" ? MoveEvent
+    : T extends "mustrecharge" ? MustRechargeEvent
+    : T extends "prepare" ? PrepareEvent
+    : T extends "sethp" ? SetHPEvent
+    : T extends "singleturn" ? SingleTurnEvent
+    : T extends "start" ? StartEvent
+    : T extends "status" ? StatusEvent
+    : T extends "switch" ? SwitchEvent
+    : T extends "tie" ? TieEvent
+    : T extends "turn" ? TurnEvent
+    : T extends "upkeep" ? UpkeepEvent
+    : T extends "win" ? WinEvent
+    : never;
 
 /** Base class for BattleEvents. */
 interface BattleEventBase
@@ -261,7 +243,7 @@ export interface SwitchEvent extends BattleEventBase
     type: "switch";
     /** ID of the pokemon being switched in. */
     id: PokemonID;
-    /** Some details on species; level; etc. */
+    /** Some details on species, level, etc. */
     details: PokemonDetails;
     /** HP and any status conditions. */
     status: PokemonStatus;
@@ -324,119 +306,4 @@ export interface ItemCause extends CauseBase
 export interface LockedMoveCause extends CauseBase
 {
     type: "lockedmove";
-}
-
-// other stuff
-
-/** Types of server rooms. */
-export type RoomType = "chat" | "battle";
-
-/** Gives basic info about the owner and position of a pokemon. */
-export interface PokemonID
-{
-    /** Whose side the pokemon is on. */
-    owner: PlayerID;
-    /** Active position (a, b, or c). */
-    position: string;
-    /** Display nickname. */
-    nickname: string;
-}
-
-/** Holds a couple details about a pokemon. */
-export interface PokemonDetails
-{
-    species: string;
-    shiny: boolean;
-    gender: string | null;
-    level: number;
-}
-
-/** Details pokemon hp (can be percent) and status conditions. */
-export interface PokemonStatus
-{
-    hp: number;
-    hpMax: number;
-    condition: MajorStatus;
-}
-
-// major status
-
-/** Hold the set of all major status names. Empty string means no status. */
-export const majorStatuses =
-{
-    "": 0, brn: 1, par: 2, psn: 3, tox: 4, slp: 5, frz: 6
-};
-
-/** Major pokemon status conditions. */
-export type MajorStatus = keyof typeof majorStatuses;
-
-/**
- * Checks if a value matches a major status.
- * @param status Value to be checked.
- * @returns True if the name matches, false otherwise.
- */
-export function isMajorStatus(status: any): status is MajorStatus
-{
-    return majorStatuses.hasOwnProperty(status);
-}
-
-// full |request| json typings
-
-/** Active pokemon info. */
-export interface RequestActive
-{
-    /** Move statuses. */
-    moves: RequestMove[];
-    /** Whether the pokemon is trapped and can't switch. */
-    trapped?: boolean;
-}
-
-/**
- * Data about an active pokemon's move. When trapped into using a multi-turn
- * move, only the `move` and `id` fields will be defined.
- */
-export interface RequestMove
-{
-    /** Name of the move. */
-    move: string;
-    /** Move id name. */
-    id: string;
-    /** Current amount of power points. */
-    pp?: number;
-    /** Maximum amount of power points. */
-    maxpp?: number;
-    /** Target of the move. */
-    target?: string;
-    /** Whether the move is currently disabled. */
-    disabled: boolean;
-}
-
-/** Basic team info. */
-export interface RequestSide
-{
-    /** List of all pokemon on the team. */
-    pokemon: RequestPokemon[];
-}
-
-/** Basic pokemon info. */
-export interface RequestPokemon
-{
-    /** Parseable PokemonID. */
-    ident: PokemonID;
-    /** Parseable PokemonDetails. */
-    details: PokemonDetails;
-    /** Parseable PokemonStatus. */
-    condition: PokemonStatus;
-    /** True if this pokemon is active. */
-    active: boolean;
-    /** Pokemon's stats. */
-    stats: {atk: number, def: number, spa: number, spd: number, spe: number};
-    /** List of move id names. */
-    moves: string[];
-    /** Base ability id name. */
-    baseAbility: string;
-    /** Item id name. */
-    item: string;
-    /** Pokeball id name. */
-    pokeball: string;
 }

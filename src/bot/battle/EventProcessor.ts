@@ -1,8 +1,8 @@
-import { BattleInitArgs, RequestArgs } from "../AnyMessageListener";
+import { BattleInitArgs, RequestArgs } from "../dispatcher/MessageListener";
 import * as logger from "../logger";
 import { BattleEvent, Cause, isPlayerId, MoveEvent, otherId, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus, SwitchEvent } from
-    "../messageData";
+    "../dispatcher/messages";
 import { dex } from "./dex/dex";
 import { Type } from "./dex/dex-types";
 import { BattleState } from "./state/BattleState";

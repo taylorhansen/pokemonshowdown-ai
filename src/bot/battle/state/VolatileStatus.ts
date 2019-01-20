@@ -1,3 +1,4 @@
+import { BoostableStatName, boostableStatNames } from "../../helpers";
 import { numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
 import { oneHot, tempStatusTurns } from "./utility";
 
@@ -254,12 +255,3 @@ ${VolatileStatus.pluralTurns(this._stallTurns)}`] : [])
         return `turn${turns !== 1 ? "s" : ""}`;
     }
 }
-
-/** Holds the set of all boostable stat names. */
-export const boostableStatNames =
-{
-    atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true,
-    evasion: true
-};
-/** Names of pokemon stats that can be boosted. */
-export type BoostableStatName = keyof typeof boostableStatNames;

@@ -1,7 +1,7 @@
 import { AnyMessageListener, MessageArgs, MessageHandler } from
-    "../AnyMessageListener";
-import { MessageType } from "../messageData";
-import { ShallowNullable } from "../types";
+    "../dispatcher/MessageListener";
+import { MessageType } from "../dispatcher/messages";
+import { ShallowNullable } from "../helpers";
 
 /** Base class for parsers. */
 export abstract class Parser
