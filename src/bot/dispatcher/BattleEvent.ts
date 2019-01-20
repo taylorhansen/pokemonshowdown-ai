@@ -2,7 +2,10 @@
 import { BoostableStatName, MajorStatus, PokemonDetails, PokemonID,
     PokemonStatus } from "../helpers";
 
-/** Set of BattleEventPrefixes. */
+/**
+ * Set of BattleEventPrefixes. Heal and drag are included here, but are parsed
+ * as DamageEvents and SwitchEvents respectively.
+ */
 export const battleEventPrefixes =
 {
     "-ability": true, "-activate": true, "-boost": true, cant: true,
