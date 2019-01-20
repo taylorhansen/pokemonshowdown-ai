@@ -17,7 +17,8 @@ class RewardTracker extends EventProcessor
     private static readonly rewards =
     {
         faint: -10,
-        damage: (percentDelta: number) => 10 * percentDelta
+        damage: (percentDelta: number) => 10 * percentDelta,
+        turn: -0.1
     };
 
     /** Accumulated reward during the current turn. */
@@ -35,11 +36,13 @@ class RewardTracker extends EventProcessor
     {
         super(username);
 
-        this.listener.on("faint", event =>
+        this.listener
+        .on("faint", event =>
         {
             this.applyReward(this.getSide(event.id.owner),
                 RewardTracker.rewards.faint);
-        });
+        })
+        .on("turn", () => this.applyReward("us", RewardTracker.rewards.turn));
     }
 
     /** Resets accumulated reward. */
