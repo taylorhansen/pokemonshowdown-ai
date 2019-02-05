@@ -121,8 +121,6 @@ ${inspect(args, {colors: true, depth: null})}`);
      */
     private getChoices(): Choice[]
     {
-        if (this.lastRequest.wait) return [];
-
         const choices: Choice[] = [];
         if (!this.lastRequest.forceSwitch && this.lastRequest.active)
         {

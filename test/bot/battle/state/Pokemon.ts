@@ -141,6 +141,18 @@ describe("Pokemon", function()
                     .filter(type => type !== "fire")
                     .every(type => mon.possibleHPTypes[type])).to.be.true;
         });
+
+        it("Should reveal hidden power move and type", function()
+        {
+            mon.revealMove("hiddenpowerfire10");
+            // tslint:disable:no-unused-expression
+            expect(mon.possibleHPTypes.fire).to.be.true;
+            expect((Object.keys(types) as Type[])
+                    .filter(type => type !== "fire")
+                    .some(type => mon.possibleHPTypes[type])).to.be.false;
+            expect(mon.getMove("hiddenpower")).to.not.be.null;
+            // tslint:enable:no-unused-expression
+        });
     });
 
     describe("level", function()
@@ -175,11 +187,11 @@ describe("Pokemon", function()
         });
     });
 
+    // tslint:disable:no-unused-expression
     describe("moves", function()
     {
         it("Should be empty initially", function()
         {
-            // tslint:disable-next-line:no-unused-expression
             expect(mon.moves).to.be.empty;
         });
 
@@ -205,55 +217,37 @@ describe("Pokemon", function()
         {
             it("Should not get move if not revealed", function()
             {
-                // tslint:disable-next-line:no-unused-expression
                 expect(mon.getMove("splash")).to.be.null;
             });
 
             it("Should get move if revealed", function()
             {
                 mon.revealMove("splash");
-                // tslint:disable-next-line:no-unused-expression
                 expect(mon.getMove("splash")).to.not.be.null;
             });
         });
 
-        // tslint:disable:no-unused-expression
-        describe("canMove", function()
+        describe("disableMove", function()
         {
-            beforeEach("Initialize moveset", function()
+            it("Should disable move", function()
             {
                 mon.revealMove("splash");
+                expect(mon.volatile.isDisabled(0)).to.be.false;
+                mon.disableMove("splash");
+                expect(mon.volatile.isDisabled(0)).to.be.true;
             });
 
-            it("Can't move if negative index", function()
+            // likely not actually possible but just in case
+            it("Should reveal disabled move", function()
             {
-                expect(mon.canMove(-1)).to.be.false;
-            });
-
-            it("Can't move if index out of range", function()
-            {
-                expect(mon.canMove(5)).to.be.false;
-            });
-
-            it("Can't move if pp used up", function()
-            {
-                mon.useMove("splash", 64);
-                expect(mon.canMove(0)).to.be.false;
-            });
-
-            it("Can't move if disabled", function()
-            {
-                mon.volatile.disableMove(0);
-                expect(mon.canMove(0)).to.be.false;
-            });
-
-            it("Can move otherwise", function()
-            {
-                expect(mon.canMove(0)).to.be.true;
+                expect(mon.getMove("splash")).to.be.null;
+                mon.disableMove("splash");
+                expect(mon.getMove("splash")).to.not.be.null;
+                expect(mon.volatile.isDisabled(0)).to.be.true;
             });
         });
-        // tslint:enable:no-unused-expression
     });
+    // tslint:enable:no-unused-expression
 
     describe("faint", function()
     {

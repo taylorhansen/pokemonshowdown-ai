@@ -209,6 +209,14 @@ export class Pokemon
     public revealMove(id: string): Move
     {
         const move = new Move();
+        if (id.startsWith("hiddenpower") && id.length > "hiddenpower".length)
+        {
+            // set hidden power type
+            // format: hiddenpower<type><base power if gen2-5>
+            this.hpType = id.substr("hiddenpower".length).replace(/\d+/, "") as
+                Type;
+            id = "hiddenpower";
+        }
         move.id = id;
         this._moves[this.unrevealedMove++] = move;
         return move;
@@ -222,17 +230,6 @@ export class Pokemon
     public useMove(id: string, pp: number): void
     {
         (this.getMove(id) || this.revealMove(id)).use(pp);
-    }
-
-    /**
-     * Checks whether a move can be made.
-     * @param index Index of the move.
-     * @returns Whether the move can be made.
-     */
-    public canMove(index: number): boolean
-    {
-        return index >= 0 && index < this._moves.length &&
-            this._moves[index].pp > 0 && !this._volatile.isDisabled(index);
     }
 
     /**

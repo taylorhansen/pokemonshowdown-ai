@@ -95,10 +95,14 @@ export class EventProcessor
             {
                 this.getActive(event.id.owner).volatile.confuse(false);
             }
-            else if (event.volatile === "move: Disable")
+            else
             {
-                // clear disabled status
-                this.getActive(event.id.owner).volatile.enableMoves();
+                // istanbul ignore else: hard to reproduce and check
+                if (event.volatile === "move: Disable")
+                {
+                    // clear disabled status
+                    this.getActive(event.id.owner).volatile.enableMoves();
+                }
             }
         })
         .on("boost", event =>
@@ -139,9 +143,9 @@ export class EventProcessor
         {
             this.getActive(event.id.owner).faint();
         })
-        .on("move", (event, events, i) =>
+        .on("move", event =>
         {
-            this.handleMove(event, events, i);
+            this.handleMove(event);
         })
         .on("mustrecharge", event =>
         {
@@ -199,12 +203,14 @@ export class EventProcessor
         });
     }
 
+    // istanbul ignore next: unstable, hard to verify
     /** Gets the state data in array form. */
     public getStateArray(): number[]
     {
         return this.state.toArray();
     }
 
+    // istanbul ignore next: unstable, hard to verify
     /** Prints the state to the logger. */
     public printState(): void
     {
@@ -248,18 +254,7 @@ export class EventProcessor
             if (data.active) mon.switchIn();
             else mon.switchOut();
 
-            for (let moveId of data.moves)
-            {
-                if (moveId.startsWith("hiddenpower"))
-                {
-                    // set hidden power type
-                    // format: hiddenpower<type><base power if gen2-5>
-                    mon.hpType = moveId.substr("hiddenpower".length)
-                        .replace(/\d+/, "") as Type;
-                    moveId = "hiddenpower";
-                }
-                mon.revealMove(moveId);
-            }
+            for (const moveId of data.moves) mon.revealMove(moveId);
         }
     }
 
@@ -360,11 +355,8 @@ export class EventProcessor
     /**
      * Handles a MoveEvent.
      * @param event Event to process.
-     * @param events Current list of events.
-     * @param i Current position within the events list.
      */
-    private handleMove(event: MoveEvent, events: AnyBattleEvent[], i: number):
-        void
+    private handleMove(event: MoveEvent): void
     {
         const mon = this.getActive(event.id.owner);
         const moveId = EventProcessor.parseIDName(event.moveName);
@@ -390,15 +382,6 @@ export class EventProcessor
             mon.volatile.lockedMove = true;
         }
 
-        const nextEvent = events[i];
-        // check whether the user successfully used a stalling move by seeing if
-        //  the |-singleturn| message was sent
-        // this is used to check the likelihood of the same move failing if used
-        //  again
-        mon.volatile.stall(nextEvent && nextEvent.type === "singleturn" &&
-                JSON.stringify(nextEvent.id) === JSON.stringify(event.id) &&
-                EventProcessor.isStallSingleTurn(nextEvent.status));
-
         // set selfswitch flag
         this.getTeam(event.id.owner).status.selfSwitch =
             move.selfSwitch || false;
@@ -421,6 +404,7 @@ export class EventProcessor
             event.details.gender, event.status.hp, event.status.hpMax, options);
     }
 
+    // istanbul ignore next: trivial
     /**
      * Converts a display name to an id name.
      * @param name Name to convert.
@@ -431,17 +415,32 @@ export class EventProcessor
         return name.toLowerCase().replace(/[ -]/g, "");
     }
 
+    // istanbul ignore next: trivial
+    /**
+     * Gets the active pokemon.
+     * @param team Corresponding team. Can be a PlayerID or Side name.
+     */
     protected getActive(team: PlayerID | Side): Pokemon
     {
         return this.getTeam(team).active;
     }
 
+    // istanbul ignore next: trivial
+    /**
+     * Gets a team.
+     * @param team Corresponding team id. Can be a PlayerID or Side name.
+     */
     protected getTeam(team: PlayerID | Side): Team
     {
         if (isPlayerId(team)) team = this.getSide(team);
         return this.state.teams[team];
     }
 
+    // istanbul ignore next: trivial
+    /**
+     * Gets a Side name.
+     * @param id Corresponding PlayerID.
+     */
     protected getSide(id: PlayerID): Side
     {
         return this.sides[id];

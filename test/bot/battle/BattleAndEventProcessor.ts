@@ -12,7 +12,7 @@ import { PokemonDetails, PokemonID, PokemonStatus } from
 import * as testArgs from "../../helpers/battleTestArgs";
 import { MockBattle } from "./MockBattle";
 
-describe("Battle", function()
+describe("Battle and EventProcessor", function()
 {
     /**
      * Adds to the responses array.
@@ -489,7 +489,7 @@ describe("Battle", function()
             });
         });
 
-        describe("abiliy", function()
+        describe("ability", function()
         {
             it("Should set ability", async function()
             {
@@ -555,16 +555,16 @@ describe("Battle", function()
                 // tslint:enable:no-unused-expression
             });
 
-            it(`Should disable move in BattleState`, async function()
+            it("Should disable/reenable move in BattleState", async function()
             {
                 // tslint:disable:no-unused-expression
                 const mon = battle.state.teams.us.active;
                 mon.revealMove("splash");
                 mon.revealMove("tackle");
-
                 expect(mon.volatile.isDisabled(0)).to.be.false;
                 expect(mon.volatile.isDisabled(1)).to.be.false;
 
+                // disable the move
                 await listener.dispatch("battleprogress",
                 {
                     events:
@@ -576,36 +576,21 @@ describe("Battle", function()
                         {type: "upkeep"}, {type: "turn", num: 2}
                     ]
                 });
-
                 expect(mon.volatile.isDisabled(0)).to.be.true;
                 expect(mon.volatile.isDisabled(1)).to.be.false;
-                // tslint:enable:no-unused-expression
-            });
 
-            it("Should enable disabled move", async function()
-            {
-                const mon = battle.state.teams.us.active;
-                // tslint:disable-next-line:no-unused-expression
-                expect(mon.volatile.isDisabled(0)).to.be.false;
-
+                // reenable the move
                 await listener.dispatch("battleprogress",
                 {
                     events:
                     [
-                        {
-                            type: "start", id: us1, volatile: "Disable",
-                            otherArgs: ["Splash"]
-                        },
                         {type: "end", id: us1, volatile: "move: Disable"},
-                        {type: "upkeep"}, {type: "turn", num: 2}
+                        {type: "upkeep"}, {type: "turn", num: 3}
                     ]
                 });
-
-                // tslint:disable-next-line:no-unused-expression
                 expect(mon.volatile.isDisabled(0)).to.be.false;
-                expect(battle.lastChoices).to.have.members(
-                    ["move 1", "switch 2"]);
-                expect(responses).to.have.lengthOf(1);
+                expect(mon.volatile.isDisabled(1)).to.be.false;
+                // tslint:enable:no-unused-expression
             });
 
             it("Should ignore invalid volatiles", async function()
