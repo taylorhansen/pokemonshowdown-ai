@@ -247,6 +247,7 @@ describe("Battle", function()
             //  state properly
             await listener.dispatch("request",
             {
+                active: [{moves: []}],
                 side:
                 {
                     pokemon:
@@ -313,13 +314,23 @@ describe("Battle", function()
 
         it("Should not choose disabled moves", async function()
         {
-            const mon = battle.state.teams.us.active;
-            mon.revealMove("splash");
-            mon.revealMove("tackle");
-            mon.volatile.disableMove(0);
-
-            await listener.dispatch("battleprogress",
-                {events: [{type: "upkeep"}, {type: "turn", num: 1}]});
+            // moves that can't be used at this time are given by the request
+            //  message
+            await listener.dispatch("request",
+            {
+                active:
+                [
+                    {
+                        moves:
+                        [
+                            {move: "Splash", id: "splash", disabled: true},
+                            {move: "Tackle", id: "tackle", disabled: false}
+                        ]
+                    }
+                ],
+                side: battle.lastRequest.side
+            });
+            await listener.dispatch("battleprogress", {events: []});
 
             expect(battle.lastChoices).to.have.members(["move 2", "switch 2"]);
             expect(responses).to.have.lengthOf(1);
@@ -366,111 +377,39 @@ describe("Battle", function()
             });
         });
 
-        describe("switch", function()
-        {
-            it("Should choose new switch replacement if replacement faints",
-            async function()
-            {
-                const a = battle.state.teams.us.active;
-                a.switchOut();
-                await listener.dispatch("battleprogress",
-                {
-                    events:
-                    [
-                        // switchin as a replacement (upkeep already sent)
-                        {
-                            type: "switch", id: us1,
-                            details:
-                            {
-                                species: a.species, gender: a.gender,
-                                level: a.level, shiny: false
-                            },
-                            status:
-                            {
-                                hp: a.hp.current, hpMax: a.hp.max,
-                                condition: a.majorStatus
-                            }
-                        },
-                        // replacement ends up fainting
-                        {type: "faint", id: us1}
-                    ]
-                });
-                expect(battle.lastChoices).to.have.members(["switch 2"]);
-                expect(responses).to.have.lengthOf(1);
-            });
-        });
-
         describe("selfSwitch", function()
         {
-            // uturn used by us
-            const event: MoveEvent =
-                {type: "move", id: us1, moveName: "U-Turn", targetId: them1};
-
             it("Should process selfSwitch move", async function()
-            {
-                await listener.dispatch("battleprogress", {events: [event]});
-                expect(battle.lastChoices).to.have.members(["switch 2"]);
-                expect(responses).to.have.lengthOf(1);
-            });
-
-            it("Should selfSwitch if opponent faints", async function()
-            {
-                await listener.dispatch("battleprogress",
-                {
-                    events: [event, {type: "faint", id: event.targetId}]
-                });
-                expect(battle.lastChoices).to.have.members(["switch 2"]);
-                expect(responses).to.have.lengthOf(1);
-            });
-
-            it("Should not selfSwitch if prevented from switching",
-            async function()
-            {
-                battle.state.teams.us.pokemon[1].faint();
-
-                // adding an upkeep+turn means that the move was completed, so a
-                //  selfSwitch choice should not be needed
-                await listener.dispatch("battleprogress",
-                {
-                    events: [event, {type: "upkeep"}, {type: "turn", num: 2}]
-                });
-
-                expect(battle.lastChoices).to.have.members(["move 1"]);
-                expect(responses).to.have.lengthOf(1);
-            });
-
-            // uturn used by them
-            const event2: MoveEvent =
-                {type: "move", id: them1, moveName: "U-Turn", targetId: us1};
-
-            it("Should wait for opponent selfSwitch choice", async function()
-            {
-                await listener.dispatch("battleprogress", {events: [event2]});
-                // tslint:disable-next-line:no-unused-expression
-                expect(responses).to.be.empty;
-            });
-
-            it("Should wait for opponent selfSwitch if client's pokemon faints",
-            async function()
-            {
-                await listener.dispatch("battleprogress",
-                    {events: [event2, {type: "faint", id: event2.targetId}]});
-                expect(responses).to.have.lengthOf(0);
-            });
-
-            it("Should switchin if both faint after selfswitch move",
-            async function()
             {
                 await listener.dispatch("battleprogress",
                 {
                     events:
                     [
-                        event2, {type: "faint", id: us1},
-                        {type: "faint", id: them1}, {type: "upkeep"}
+                        {
+                            type: "move", id: us1, moveName: "U-Turn",
+                            targetId: them1
+                        }
                     ]
                 });
-                expect(battle.lastChoices).to.have.members(["switch 2"]);
-                expect(responses).to.have.lengthOf(1);
+                // tslint:disable-next-line:no-unused-expression
+                expect(battle.state.teams.us.status.selfSwitch).to.be.true;
+            });
+
+            it("Should process selfSwitch copyvolatile move", async function()
+            {
+                await listener.dispatch("battleprogress",
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Baton Pass",
+                            targetId: them1
+                        }
+                    ]
+                });
+                // tslint:disable-next-line:no-unused-expression
+                expect(battle.state.teams.us.status.selfSwitch)
+                    .to.equal("copyvolatile");
             });
         });
 
@@ -554,12 +493,15 @@ describe("Battle", function()
         {
             it("Should set ability", async function()
             {
-                expect(battle.state.teams.us.active.baseAbility).to.equal("");
+                expect(battle.state.teams.them.active.baseAbility).to.equal("");
                 await listener.dispatch("battleprogress",
                 {
-                    events: [{type: "ability", id: us1, ability: "Swift Swim"}]
+                    events:
+                    [
+                        {type: "ability", id: them1, ability: "Swift Swim"}
+                    ]
                 });
-                expect(battle.state.teams.us.active.baseAbility)
+                expect(battle.state.teams.them.active.baseAbility)
                     .to.equal("swiftswim");
             });
 
@@ -613,49 +555,32 @@ describe("Battle", function()
                 // tslint:enable:no-unused-expression
             });
 
-            for (const reveal of [true, false])
+            it(`Should disable move in BattleState`, async function()
             {
-                it(`Should disable ${reveal ? "" : "un"}revealed move`,
-                async function()
+                // tslint:disable:no-unused-expression
+                const mon = battle.state.teams.us.active;
+                mon.revealMove("splash");
+                mon.revealMove("tackle");
+
+                expect(mon.volatile.isDisabled(0)).to.be.false;
+                expect(mon.volatile.isDisabled(1)).to.be.false;
+
+                await listener.dispatch("battleprogress",
                 {
-                    // tslint:disable:no-unused-expression
-                    const mon = battle.state.teams.us.active;
-                    if (reveal) mon.revealMove("splash");
-                    mon.revealMove("tackle");
-
-                    expect(mon.volatile.isDisabled(0)).to.be.false;
-                    expect(mon.volatile.isDisabled(1)).to.be.false;
-
-                    await listener.dispatch("battleprogress",
-                    {
-                        events:
-                        [
-                            {
-                                type: "start", id: us1, volatile: "Disable",
-                                otherArgs: ["Splash"]
-                            },
-                            {type: "upkeep"}, {type: "turn", num: 2}
-                        ]
-                    });
-
-                    if (reveal)
-                    {
-                        expect(mon.volatile.isDisabled(0)).to.be.true;
-                        expect(mon.volatile.isDisabled(1)).to.be.false;
-                        expect(battle.lastChoices).to.have.members(
-                            [`move 2`, "switch 2"]);
-                    }
-                    else
-                    {
-                        expect(mon.volatile.isDisabled(0)).to.be.false;
-                        expect(mon.volatile.isDisabled(1)).to.be.true;
-                        expect(battle.lastChoices).to.have.members(
-                            [`move 1`, "switch 2"]);
-                    }
-                    expect(responses).to.have.lengthOf(1);
-                    // tslint:enable:no-unused-expression
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "Disable",
+                            otherArgs: ["Splash"]
+                        },
+                        {type: "upkeep"}, {type: "turn", num: 2}
+                    ]
                 });
-            }
+
+                expect(mon.volatile.isDisabled(0)).to.be.true;
+                expect(mon.volatile.isDisabled(1)).to.be.false;
+                // tslint:enable:no-unused-expression
+            });
 
             it("Should enable disabled move", async function()
             {
@@ -772,29 +697,26 @@ describe("Battle", function()
             });
         });
 
-        for (const type of ["damage", "heal"] as ("damage" | "heal")[])
+        describe("damage", function()
         {
-            describe(type, function()
+            it("Should set hp", async function()
             {
-                it("Should set hp", async function()
+                await listener.dispatch("battleprogress",
                 {
-                    await listener.dispatch("battleprogress",
-                    {
-                        events:
-                        [
-                            {
-                                type, id: us1,
-                                status: {hp: 1, hpMax: 10, condition: "brn"}
-                            }
-                        ]
-                    });
-                    const mon = battle.state.teams.us.active;
-                    expect(mon.hp.current).to.equal(1);
-                    expect(mon.hp.max).to.equal(10);
-                    expect(mon.majorStatus).to.equal("brn");
+                    events:
+                    [
+                        {
+                            type: "damage", id: us1,
+                            status: {hp: 1, hpMax: 10, condition: "brn"}
+                        }
+                    ]
                 });
+                const mon = battle.state.teams.us.active;
+                expect(mon.hp.current).to.equal(1);
+                expect(mon.hp.max).to.equal(10);
+                expect(mon.majorStatus).to.equal("brn");
             });
-        }
+        });
 
         describe("faint", function()
         {
@@ -804,6 +726,23 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.active.fainted).to.be.false;
 
+                await listener.dispatch("request",
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    move: "Splash", id: "splash", pp: 64,
+                                    maxpp: 64, disabled: false, target: "self"
+                                }
+                            ]
+                        }
+                    ],
+                    side: battle.lastRequest.side,
+                    forceSwitch: [true], noCancel: true
+                });
                 await listener.dispatch("battleprogress",
                     {events: [{type: "faint", id: us1}, {type: "upkeep"}]});
 
@@ -819,6 +758,23 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.them.active.fainted).to.be.false;
 
+                await listener.dispatch("request",
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    move: "Splash", id: "splash", pp: 64,
+                                    maxpp: 64, disabled: false, target: "self"
+                                }
+                            ]
+                        }
+                    ],
+                    side: battle.lastRequest.side,
+                    wait: true
+                });
                 await listener.dispatch("battleprogress",
                     {events: [{type: "faint", id: them1}, {type: "upkeep"}]});
 
@@ -874,7 +830,23 @@ describe("Battle", function()
                     // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.false;
-                    // certain moves cause the lockedmove status
+                    await listener.dispatch("request",
+                    {
+                        active:
+                        [
+                            {
+                                moves:
+                                [
+                                    {
+                                        move: "Outrage", id: "outrage",
+                                        disabled: false
+                                    }
+                                ],
+                                trapped: true
+                            }
+                        ],
+                        side: battle.lastRequest.side
+                    });
                     await listener.dispatch("battleprogress",
                     {
                         events:
@@ -980,6 +952,23 @@ describe("Battle", function()
         {
             it("Should recharge after recharge move", async function()
             {
+                await listener.dispatch("request",
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    move: "Recharge", id: "recharge",
+                                    disabled: false
+                                }
+                            ],
+                            trapped: true
+                        }
+                    ],
+                    side: battle.lastRequest.side
+                });
                 await listener.dispatch("battleprogress",
                 {
                     events:
@@ -995,6 +984,23 @@ describe("Battle", function()
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(1);
 
+                await listener.dispatch("request",
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    move: "Hyper Beam", id: "hyperbeam", pp: 7,
+                                    maxpp: 8, disabled: false
+                                }
+                            ],
+                            trapped: false
+                        }
+                    ],
+                    side: battle.lastRequest.side
+                });
                 await listener.dispatch("battleprogress",
                 {
                     events:
@@ -1015,6 +1021,23 @@ describe("Battle", function()
             {
                 // make it so we have 2 moves to choose from
                 battle.state.teams.us.active.revealMove("splash");
+                await listener.dispatch("request",
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    move: "Solar Beam", id: "solarbeam",
+                                    disabled: false
+                                }
+                            ],
+                            trapped: true
+                        }
+                    ],
+                    side: battle.lastRequest.side
+                });
                 await listener.dispatch("battleprogress",
                 {
                     events:
@@ -1040,6 +1063,26 @@ describe("Battle", function()
                 expect(responses).to.have.lengthOf(1);
 
                 // release the charged move
+                await listener.dispatch("request",
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    move: "Solar Beam", id: "solarbeam", pp: 15,
+                                    maxpp: 16, disabled: false, target: "any"
+                                },
+                                {
+                                    move: "Splash", id: "splash", pp: 64,
+                                    maxpp: 64, disabled: false, target: "self"
+                                }
+                            ]
+                        }
+                    ],
+                    side: battle.lastRequest.side
+                });
                 await listener.dispatch("battleprogress",
                 {
                     events:
@@ -1096,7 +1139,8 @@ describe("Battle", function()
                     {
                         events:
                         [
-                            {type: "singleturn", id: us1, status: "Protect"}
+                            {type: "singleturn", id: us1, status: "Protect"},
+                            {type: "turn", num: 2}
                         ]
                     });
                     expect(volatile.stallTurns).to.equal(1);
@@ -1106,13 +1150,15 @@ describe("Battle", function()
                     {
                         events:
                         [
-                            {type: "singleturn", id: us1, status: "Protect"}
+                            {type: "singleturn", id: us1, status: "Protect"},
+                            {type: "turn", num: 3}
                         ]
                     });
                     expect(volatile.stallTurns).to.equal(2);
 
                     // tries to use protect again but fails
-                    await listener.dispatch("battleprogress", {events: []});
+                    await listener.dispatch("battleprogress",
+                        {events: [{type: "turn", num: 4}]});
                     expect(volatile.stallTurns).to.equal(0);
                 });
 

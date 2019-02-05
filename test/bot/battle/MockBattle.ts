@@ -1,6 +1,7 @@
 import { Battle, ChoiceSender } from "../../../src/bot/battle/Battle";
 import { Choice } from "../../../src/bot/battle/Choice";
 import { BattleState } from "../../../src/bot/battle/state/BattleState";
+import { RequestMessage } from "../../../src/bot/dispatcher/Message";
 import { MessageListener } from "../../../src/bot/dispatcher/MessageListener";
 import { MockEventProcessor } from "./MockEventProcessor";
 
@@ -11,6 +12,8 @@ export class MockBattle extends Battle<MockEventProcessor>
     public get state(): BattleState { return this.processor.state; }
     /** @override */
     public processor: MockEventProcessor;
+    /** @override */
+    public lastRequest: RequestMessage;
     /** Last given choices. */
     public lastChoices: Choice[] = [];
     /** Whether the AI state was saved. */

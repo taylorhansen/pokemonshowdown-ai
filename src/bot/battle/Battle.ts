@@ -41,11 +41,11 @@ export abstract class Battle<Processor extends EventProcessor>
     extends BattleBase
 {
     /** Manages the BattleState by processing events. */
-    protected processor: Processor;
+    protected readonly processor: Processor;
+    /** Last |request| message that was processed. */
+    protected lastRequest: RequestMessage;
     /** Used to send the AI's choice to the server. */
     private readonly sender: ChoiceSender;
-    /** Last |request| message that was processed. */
-    private lastRequest: RequestMessage;
 
     /**
      * Creates a Battle object.

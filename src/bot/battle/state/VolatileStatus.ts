@@ -52,6 +52,8 @@ export class VolatileStatus
         return this._stallTurns;
     }
     private _stallTurns: number;
+    /** Whether we have successfully stalled this turn. */
+    private stalled = false;
 
     /** Creates a VolatileStatus object. */
     constructor()
@@ -79,6 +81,11 @@ export class VolatileStatus
         // if twoTurn was set this turn, the two-turn move must be completed or
         //  interrupted on the next turn
         this.twoTurn = "";
+
+        // stalling moves must be used successfully every turn or the turn
+        //  counter will reset
+        if (!this.stalled) this._stallTurns = 0;
+        this.stalled = false;
     }
 
     /**
@@ -163,6 +170,7 @@ export class VolatileStatus
     public stall(flag: boolean): void
     {
         this._stallTurns = flag ? this._stallTurns + 1 : 0;
+        this.stalled = flag;
     }
 
     /**
