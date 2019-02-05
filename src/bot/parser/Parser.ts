@@ -67,20 +67,12 @@ export abstract class Parser
     /**
      * Dispatches registered callbacks for the current room and Message type.
      * @param type Message type.
-     * @param message Message object. Each property is allowed to be null, in
-     * which case this method will have no effect.
+     * @param message Message object.
      * @returns A Promise to resolve all the listeners for this Message type.
      */
-    protected dispatch<T extends MessageType>(type: T,
-        message: ShallowNullable<Message<T>>): Promise<void>
+    protected dispatch<T extends MessageType>(type: T, message: Message<T>):
+        Promise<void>
     {
-        // early return: message handlers do not accept null arguments
-        if ((Object.keys(message) as (keyof Message<T>)[])
-            .some(key => message[key] === null))
-        {
-            return Promise.resolve();
-        }
-
         // unregistered rooms are delegated to a special listener
         const listener = this.messageListeners.hasOwnProperty(this.room) ?
             this.messageListeners[this.room] : this.newRoomListener;

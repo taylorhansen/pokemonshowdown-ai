@@ -188,12 +188,12 @@ export class MessageParser extends Parser
     {
         const type = this.line[1];
         this.nextLine();
-        if (type === "chat" || type === "battle")
-        {
-            return this.dispatch("init", {type});
-        }
+
         // ignore invalid messages
-        return Promise.resolve();
+        // TODO: don't ignore, instead print warnings to log from static parsers
+        //  and message parsers (must be testable)
+        if (type !== "chat" && type !== "battle") return Promise.resolve();
+        return this.dispatch("init", {type});
     }
 
     /**
@@ -208,6 +208,7 @@ export class MessageParser extends Parser
     {
         const args = MessageParser.parseJSON(this.getRestOfLine());
         this.nextLine();
+
         // ignore invalid messages
         if (!args) return Promise.resolve();
 
@@ -219,6 +220,12 @@ export class MessageParser extends Parser
             mon.ident = MessageParser.parsePokemonID(mon.ident);
             mon.details = MessageParser.parsePokemonDetails(mon.details);
             mon.condition = MessageParser.parsePokemonStatus(mon.condition);
+
+            // ignore invalid messages
+            if (!mon.ident || !mon.details || !mon.condition)
+            {
+                return Promise.resolve();
+            }
         }
 
         return this.dispatch("request", args);
@@ -235,11 +242,9 @@ export class MessageParser extends Parser
     {
         const args = MessageParser.parseJSON(this.getRestOfLine());
         this.nextLine();
+
         // ignore invalid messages
         if (!args) return Promise.resolve();
-
-        // challengeTo may be null, which Parser.handle usually rejects
-        args.challengeTo = args.challengeTo || {};
         return this.dispatch("updatechallenges", args);
     }
 
@@ -255,8 +260,10 @@ export class MessageParser extends Parser
         const line = this.line;
         const username = line[1];
         const isGuest = line[2] ? !MessageParser.parseInt(line[2]) : null;
-
         this.nextLine();
+
+        // ignore invalid messages
+        if (!username || !isGuest) return Promise.resolve();
         return this.dispatch("updateuser", {username, isGuest});
     }
 
@@ -277,12 +284,12 @@ export class MessageParser extends Parser
      */
     private parseBattleInit(): Promise<void>
     {
-        const args: ShallowNullable<BattleInitMessage> =
-        {
-            id: null, username: null, teamSizes: null, gameType: null,
-            gen: null, events: null
-        };
-        args.events = [];
+        let id: PlayerID | undefined;
+        let username: string | undefined;
+        let teamSizes: {[P in PlayerID]: number} | undefined;
+        let gameType: string | undefined;
+        let gen: number | undefined;
+        const events: AnyBattleEvent[] = [];
 
         while (this.lineN < this.lines.length)
         {
@@ -290,29 +297,35 @@ export class MessageParser extends Parser
             switch (line[0])
             {
                 case "player":
-                    args.id = MessageParser.parsePlayerId(line[1]);
-                    args.username = line[2];
+                    const playerId = MessageParser.parsePlayerId(line[1]);
+                    const playerName = line[2];
+                    if (playerId && playerName)
+                    {
+                        id = playerId;
+                        username = playerName;
+                    }
                     this.nextLine();
                     break;
                 case "teamsize":
                 {
-                    const id = MessageParser.parsePlayerId(line[1]);
-                    const size = MessageParser.parseInt(line[2]);
+                    const teamId = MessageParser.parsePlayerId(line[1]);
+                    const teamSize = MessageParser.parseInt(line[2]);
 
-                    if (!args.teamSizes)
+                    if (!teamSizes)
                     {
-                        args.teamSizes = {} as BattleInitMessage["teamSizes"];
+                        teamSizes = {} as BattleInitMessage["teamSizes"];
                     }
-                    if (id && size) args.teamSizes[id] = size;
+                    if (teamId && teamSize) teamSizes[teamId] = teamSize;
                     this.nextLine();
                     break;
                 }
                 case "gametype":
-                    args.gameType = line[1];
+                    gameType = line[1];
                     this.nextLine();
                     break;
                 case "gen":
-                    args.gen = MessageParser.parseInt(line[1]);
+                    const genNum = MessageParser.parseInt(line[1]);
+                    if (genNum) gen = genNum;
                     this.nextLine();
                     break;
                     // TODO: team preview
@@ -320,13 +333,21 @@ export class MessageParser extends Parser
                     if (isBattleEventPrefix(line[0]))
                     {
                         // start of initial events
-                        args.events.push(...this.parseBattleEvents());
+                        events.push(...this.parseBattleEvents());
                     }
                     // ignore
                     else this.nextLine();
             }
         }
-        return this.dispatch("battleinit", args);
+
+        // ignore invalid messages
+        if (!id || !username || !teamSizes ||
+            (!teamSizes.p1 || !teamSizes.p2) || !gameType || !gen)
+        {
+            return Promise.resolve();
+        }
+        return this.dispatch("battleinit",
+            {id, username, teamSizes, gameType, gen, events});
     }
 
     /**

@@ -184,7 +184,7 @@ export interface UpdateChallengesMessage
      */
     challengesFrom: {[user: string]: string};
     /** Current outgoing challenge from the client (TODO). */
-    challengeTo: {};
+    challengeTo: null;
 }
 
 /** Message that changes the client's username and guest status. */
