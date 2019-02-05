@@ -1,8 +1,10 @@
 /** @file Contains test arguments for battle messages. */
-import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
-    "../../src/bot/AnyMessageListener";
-import { BattleEvent, Cause, PokemonDetails, PokemonID, PokemonStatus,
-    TurnEvent } from "../../src/bot/messageData";
+import { AnyBattleEvent, Cause, TurnEvent } from
+    "../../src/bot/dispatcher/BattleEvent";
+import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
+    "../../src/bot/dispatcher/Message";
+import { PokemonDetails, PokemonID, PokemonStatus } from
+    "../../src/bot/helpers";
 
 export const username: string[] = ["user1", "user2"];
 
@@ -17,8 +19,8 @@ export const pokemonId: PokemonID[] =
 /** Test PokemonDetails. Matches corresponding pokemonId. */
 export const pokemonDetails: PokemonDetails[] =
 [
-    {species: "Magikarp", shiny: true, gender: "M", level: 50},
     {species: "Mewtwo", shiny: false, gender: null, level: 100},
+    {species: "Magikarp", shiny: true, gender: "M", level: 50},
     {species: "Porygon", shiny: false, gender: null, level: 100}
 ];
 
@@ -37,14 +39,13 @@ export const cause: Cause[] =
 ];
 
 /** Test BattleEvents except turn/upkeep. */
-export const battleEvent: BattleEvent[] =
+export const battleEvent: AnyBattleEvent[] =
 [
     {type: "ability", id: pokemonId[0], ability: "Pressure"},
     {type: "activate", id: pokemonId[1], volatile: "ingrain"},
     {type: "boost", id: pokemonId[2], stat: "atk", amount: 2},
     {type: "boost", id: pokemonId[2], stat: "evasion", amount: -1},
     {type: "cant", id: pokemonId[1], reason: "recharge"},
-    // message not being parsed correctly?
     {type: "cant", id: pokemonId[1], reason: "taunt", moveName: "Thunder Wave"},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "cureteam", id: pokemonId[2]},
@@ -100,9 +101,10 @@ export const battleEvent: BattleEvent[] =
 const startTurn: TurnEvent = {type: "turn", num: 1};
 
 /**
- * Test BattleInitArgs. Even indexes belong to p1 while odd ones belong to p2.
+ * Test BattleInitMessages. Even indexes belong to p1 while odd ones belong to
+ * p2.
  */
-export const battleInit: BattleInitArgs[] =
+export const battleInit: BattleInitMessage[] =
 [
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
@@ -121,8 +123,8 @@ export const battleInit: BattleInitArgs[] =
     }
 ];
 
-/** Test BattleProgressArgs. */
-export const battleProgress: BattleProgressArgs[] =
+/** Test BattleProgressMessages. */
+export const battleProgress: BattleProgressMessage[] =
 [
     {
         events: battleEvent.slice(7, 12)
@@ -140,8 +142,10 @@ export const battleProgress: BattleProgressArgs[] =
     }
 ];
 
-/** Test RequestArgs. Even indexes belong to p1 while odd ones belong to p2. */
-export const request: RequestArgs[] =
+/**
+ * Test RequestMessages. Even indexes belong to p1 while odd ones belong to p2.
+ */
+export const request: RequestMessage[] =
 [
     {
         side:
@@ -149,19 +153,15 @@ export const request: RequestArgs[] =
             pokemon:
             [
                 {
-                    ident: pokemonId[0],
-                    details: pokemonDetails[0],
-                    condition: pokemonStatus[0],
-                    active: true,
+                    ident: pokemonId[0], details: pokemonDetails[0],
+                    condition: pokemonStatus[0], active: true,
                     stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                    moves: ["splash"], baseAbility: "swiftswim",
-                    item: "choiceband", pokeball: "masterball"
+                    moves: ["psychocut"], baseAbility: "pressure",
+                    item: "leftovers", pokeball: "masterball"
                 },
                 {
-                    ident: pokemonId[2],
-                    details: pokemonDetails[2],
-                    condition: pokemonStatus[2],
-                    active: false,
+                    ident: pokemonId[2], details: pokemonDetails[2],
+                    condition: pokemonStatus[2], active: false,
                     stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
                     moves: ["tackle"], baseAbility: "trace",
                     item: "choicescarf", pokeball: "greatball"
@@ -187,14 +187,11 @@ export const request: RequestArgs[] =
             pokemon:
             [
                 {
-                    ident: pokemonId[1],
-                    details: pokemonDetails[1],
-                    condition: pokemonStatus[1],
-                    active: true,
+                    ident: pokemonId[1], details: pokemonDetails[1],
+                    condition: pokemonStatus[1], active: true,
                     stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                    moves: ["hiddenpowerfire70", "splash"],
-                    baseAbility: "pressure", item: "lifeorb",
-                    pokeball: "pokeball"
+                    moves: ["splash", "tackle"], baseAbility: "swiftswim",
+                    item: "lifeorb", pokeball: "pokeball"
                 }
             ]
         }

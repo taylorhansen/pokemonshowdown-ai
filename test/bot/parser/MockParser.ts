@@ -1,5 +1,4 @@
-import { MessageArgs } from "../../../src/bot/AnyMessageListener";
-import { MessageType } from "../../../src/bot/messageData";
+import { Message, MessageType } from "../../../src/bot/dispatcher/Message";
 import { Parser } from "../../../src/bot/parser/Parser";
 
 /** Mocks the Parser class. */
@@ -15,10 +14,9 @@ export class MockParser extends Parser
     }
 
     /** @override */
-    public handle<T extends MessageType>(type: T,
-        args: {[A in keyof MessageArgs<T>]: MessageArgs<T>[A] | null}):
+    public dispatch<T extends MessageType>(type: T, message: Message<T>):
         Promise<void>
     {
-        return super.handle(type, args);
+        return super.dispatch(type, message);
     }
 }

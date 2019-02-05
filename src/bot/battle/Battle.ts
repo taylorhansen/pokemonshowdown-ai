@@ -124,20 +124,21 @@ ${inspect(args, {colors: true, depth: null})}`);
         if (this.lastRequest.wait) return [];
 
         const choices: Choice[] = [];
-        if (!this.lastRequest.forceSwitch)
+        if (!this.lastRequest.forceSwitch && this.lastRequest.active)
         {
             // not forced to switch so we can move
-            if (this.lastRequest.active)
+            const moves = this.lastRequest.active[0].moves;
+            let struggle = true;
+            for (let i = 0; i < moves.length; ++i)
             {
-                const moves = this.lastRequest.active[0].moves;
-                for (let i = 0; i < moves.length; ++i)
+                if (!moves[i].disabled)
                 {
-                    if (!moves[i].disabled)
-                    {
-                        choices.push(`move ${i + 1}` as Choice);
-                    }
+                    choices.push(`move ${i + 1}` as Choice);
+                    struggle = false;
                 }
             }
+            // allow struggle choice if no other move option
+            if (struggle) choices.push("move 1");
         }
 
         if (!this.lastRequest.active || !this.lastRequest.active[0].trapped)

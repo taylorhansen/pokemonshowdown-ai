@@ -1,8 +1,11 @@
 import { expect } from "chai";
 import "mocha";
-import { MessageArgs, MessageHandler, UpdateChallengesArgs } from
-    "../../../src/bot/AnyMessageListener";
-import { MessageType, RoomType } from "../../../src/bot/messageData";
+import { Callback } from "../../../src/bot/dispatcher/CallbackDispatcher";
+import { Message, MessageType, UpdateChallengesMessage } from
+    "../../../src/bot/dispatcher/Message";
+import { MessageDispatchArgs } from
+    "../../../src/bot/dispatcher/MessageListener";
+import { RoomType } from "../../../src/bot/helpers";
 import { MessageParser } from "../../../src/bot/parser/MessageParser";
 import * as testArgs from "../../helpers/battleTestArgs";
 import { buildMessage, composeBattleInit, composeBattleProgress,
@@ -20,8 +23,8 @@ describe("MessageParser", function()
     it("Should handle multiple messages", async function()
     {
         let count = 2;
-        await parser.on("", "challstr", () => --count)
-            .on("", "init", () => --count)
+        await parser.on("", "challstr", () => { --count; })
+            .on("", "init", () => { --count; })
             .parse("|challstr|1234\n|init|battle");
         expect(count).to.equal(0);
     });
@@ -66,7 +69,7 @@ describe("MessageParser", function()
          * @returns A promise that resolves once the listener is executed.
          */
         function parse<T extends MessageType>(type: T, words: string[][],
-            handler: MessageHandler<T>): Promise<void>
+            handler: Callback<MessageDispatchArgs[T]>): Promise<void>
         {
             return parser.on("", type, handler).parse(buildMessage(words));
         }
@@ -78,19 +81,21 @@ describe("MessageParser", function()
          * @param givenArgs Expected message handler arguments.
          */
         function shouldParse<T extends MessageType>(type: T,
-            words: string[][], givenArgs: MessageArgs<T>): void
+            words: string[][], givenArgs: Message<T>): void
         {
-            it(`Should parse ${type}`, function()
+            it(`Should parse ${type}`, function(done)
             {
                 return parse(type, words, args =>
                 {
                     expect(givenArgs).to.deep.equal(args);
+                    done();
                 });
             });
         }
 
         /**
-         * Adds a test case that should not be correctly parsed.
+         * Adds a test case that should not be parsed and should be ignored by
+         * the parser.
          * @param type Message type.
          * @param words String arguments for the message.
          */
@@ -205,8 +210,8 @@ ${buildMessage(words)}`);
 
         describe("updatechallenges", function()
         {
-            const args: UpdateChallengesArgs =
-                {challengesFrom: {somebody: "gen4ou"}, challengeTo: {}};
+            const args: UpdateChallengesMessage =
+                {challengesFrom: {somebody: "gen4ou"}, challengeTo: null};
             shouldParse("updatechallenges",
                 [["updatechallenges", JSON.stringify(args)]], args);
 

@@ -1,7 +1,9 @@
-import { BattleInitArgs, BattleProgressArgs, RequestArgs } from
-    "../../src/bot/AnyMessageListener";
-import { BattleEvent, Cause, PokemonDetails, PokemonID, PokemonStatus } from
-    "../../src/bot/messageData";
+import { AnyBattleEvent, Cause } from
+    "../../src/bot/dispatcher/BattleEvent";
+import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
+    "../../src/bot/dispatcher/Message";
+import { PokemonDetails, PokemonID, PokemonStatus } from
+    "../../src/bot/helpers";
 
 /**
  * Creates an unparsed server message.
@@ -19,7 +21,7 @@ export function buildMessage(words: string[][]): string
  * @param data Data to stringify.
  * @returns A re-parseable |request| JSON string.
  */
-export function stringifyRequest(data: RequestArgs): string
+export function stringifyRequest(data: RequestMessage): string
 {
     // deep copy
     const obj: any = JSON.parse(JSON.stringify(data));
@@ -39,9 +41,9 @@ export function stringifyRequest(data: RequestArgs): string
 /**
  * Composes all the word segments of a `battleinit` message type.
  * @param args Arguments to be stringified.
- * @returns An unparsed BattleInitArgs.
+ * @returns An unparsed BattleInitMessage.
  */
-export function composeBattleInit(args: BattleInitArgs): string[][]
+export function composeBattleInit(args: BattleInitMessage): string[][]
 {
     const result: string[][] =
     [
@@ -59,9 +61,9 @@ export function composeBattleInit(args: BattleInitArgs): string[][]
 /**
  * Composes all the word segments of a `battleprogress` message type.
  * @param args Arguments to be stringified.
- * @returns An unparsed BattleProgressArgs.
+ * @returns An unparsed BattleProgressMessage.
  */
-export function composeBattleProgress(args: BattleProgressArgs): string[][]
+export function composeBattleProgress(args: BattleProgressMessage): string[][]
 {
     return args.events.map(composeBattleEvent);
 }
@@ -71,7 +73,7 @@ export function composeBattleProgress(args: BattleProgressArgs): string[][]
  * @param event Event to stringify.
  * @returns An unparsed BattleEvent.
  */
-export function composeBattleEvent(event: BattleEvent): string[]
+export function composeBattleEvent(event: AnyBattleEvent): string[]
 {
     let result: string[];
     switch (event.type)

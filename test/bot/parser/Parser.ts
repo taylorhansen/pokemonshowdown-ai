@@ -24,14 +24,14 @@ describe("Parser", function()
             parser.getListener(room);
 
             // make sure the listener works
-            parser.on(room, "deinit", () => handled = true);
-            parser.handle("deinit", {});
+            parser.on(room, "deinit", () => { handled = true; });
+            parser.dispatch("deinit", {});
             expect(handled).to.equal(true);
 
             // see if removing the listener no longer sets handled
             handled = false;
             parser.removeListener(room);
-            parser.handle("deinit", {});
+            parser.dispatch("deinit", {});
             expect(handled).to.equal(false);
         });
     });

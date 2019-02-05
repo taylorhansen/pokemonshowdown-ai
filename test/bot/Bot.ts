@@ -31,15 +31,15 @@ describe("Bot", function()
 
     it(`Should accept ${format} challenges`, function()
     {
-        parser.handle("updatechallenges",
-            {challengesFrom: {[username]: format}, challengeTo: {}});
+        parser.dispatch("updatechallenges",
+            {challengesFrom: {[username]: format}, challengeTo: null});
         expect(responses).to.deep.equal([`|/accept ${username}`]);
     });
 
     it(`Should not accept unsupported challenges`, function()
     {
-        parser.handle("updatechallenges",
-           {challengesFrom: {[username]: format + "1"}, challengeTo: {}});
+        parser.dispatch("updatechallenges",
+           {challengesFrom: {[username]: format + "1"}, challengeTo: null});
         expect(responses).to.deep.equal([`|/reject ${username}`]);
     });
 });

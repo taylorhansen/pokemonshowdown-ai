@@ -1,11 +1,14 @@
 import { expect } from "chai";
 import "mocha";
-import { AnyMessageListener, BattleInitArgs, RequestArgs } from
-    "../../../src/bot/AnyMessageListener";
 import { Choice } from "../../../src/bot/battle/Choice";
 import { Type } from "../../../src/bot/battle/dex/dex-types";
-import { BattleEvent, MoveEvent, PokemonDetails, PokemonID, PokemonStatus,
-    SetHPEvent } from "../../../src/bot/messageData";
+import { AnyBattleEvent, MoveEvent, SetHPEvent } from
+    "../../../src/bot/dispatcher/BattleEvent";
+import { BattleInitMessage, RequestMessage } from
+    "../../../src/bot/dispatcher/Message";
+import { MessageListener } from "../../../src/bot/dispatcher/MessageListener";
+import { PokemonDetails, PokemonID, PokemonStatus } from
+    "../../../src/bot/helpers";
 import * as testArgs from "../../helpers/battleTestArgs";
 import { MockBattle } from "./MockBattle";
 
@@ -21,21 +24,21 @@ describe("Battle", function()
     }
 
     let responses: Choice[];
-    let listener: AnyMessageListener;
+    let listener: MessageListener;
     let battle: MockBattle;
 
     beforeEach("Initialize Battle", function()
     {
         responses = [];
-        listener = new AnyMessageListener();
+        listener = new MessageListener();
         battle = new MockBattle(testArgs.username[0], listener, sender);
     });
 
     /**
-     * Checks the `side` property of a RequestArgs object.
+     * Checks the `side` property of a RequestMessage object.
      * @param args Args object.
      */
-    function checkRequestSide(args: RequestArgs): void
+    function checkRequestSide(args: RequestMessage): void
     {
         const team = battle.state.teams.us;
         expect(team.size).to.equal(args.side.pokemon.length);
@@ -78,10 +81,10 @@ describe("Battle", function()
     }
 
     /**
-     * Checks the `active` property of a RequestArgs object.
+     * Checks the `active` property of a RequestMessage object.
      * @param args Args object.
      */
-    function checkRequestActive(args: RequestArgs): void
+    function checkRequestActive(args: RequestMessage): void
     {
         if (!args.active) return;
         for (let i = 0; i < args.active[0].moves.length; ++i)
@@ -98,28 +101,29 @@ describe("Battle", function()
         {
             it("Should handle request", function()
             {
-                listener.getHandler("request")(args);
+                listener.dispatch("request", args);
                 checkRequestSide(args);
                 checkRequestActive(args);
             });
         }
 
-        it("Should not handle request a second time", function()
+        it("Should not handle request after battleinit", function()
         {
-            listener.getHandler("request")(testArgs.request[0]);
-            listener.getHandler("request")(testArgs.request[1]);
+            listener.dispatch("request", testArgs.request[0]);
+            listener.dispatch("battleinit", testArgs.battleInit[0]);
+            listener.dispatch("request", testArgs.request[1]);
             checkRequestSide(testArgs.request[0]);
-            checkRequestActive(testArgs.request[1]);
+            checkRequestActive(testArgs.request[0]);
         });
     });
 
     describe("request + battleinit", function()
     {
-        function testBattleInit(args: BattleInitArgs): void
+        function testBattleInit(args: BattleInitMessage): void
         {
             // testArgs: even/0 indexes are p1, odd are p2
             const i = args.id === "p1" ? 0 : 1;
-            const req: RequestArgs =
+            const req: RequestMessage =
             {
                 side: {pokemon: [testArgs.request[i].side.pokemon[0]]}
             };
@@ -128,21 +132,21 @@ describe("Battle", function()
             {
                 // corresponding end |request| message is always sent before
                 //  the events that lead up to this state
-                await listener.getHandler("request")(req);
+                await listener.dispatch("request", req);
                 checkRequestSide(req);
-                await listener.getHandler("battleinit")(args);
+                await listener.dispatch("battleinit", args);
 
                 // shouldn't modify current team data
                 checkRequestSide(req);
-                expect(battle.getSide("p1")).to.equal("us");
-                expect(battle.getSide("p2")).to.equal("them");
+                expect(battle.processor.getSide("p1")).to.equal("us");
+                expect(battle.processor.getSide("p2")).to.equal("them");
                 expect(battle.state.teams.them.size).to.equal(3);
 
                 expect(responses).to.have.lengthOf(1);
             });
         }
 
-        const a: BattleInitArgs =
+        const a: BattleInitMessage =
         {
             id: "p1", username: testArgs.username[0], teamSizes: {p1: 3, p2: 3},
             gameType: "singles", gen: 4,
@@ -168,7 +172,7 @@ describe("Battle", function()
 
         it("Should disable moves", async function()
         {
-            await listener.getHandler("request")(
+            await listener.dispatch("request",
             {
                 active:
                 [
@@ -176,12 +180,12 @@ describe("Battle", function()
                         moves:
                         [
                             {
-                                move: "Splash", id: "splash", pp: 64, maxpp: 64,
-                                target: "self", disabled: true
+                                move: "Psycho Cut", id: "psychocut", pp: 32,
+                                maxpp: 32, target: "self", disabled: true
                             },
                             {
-                                move: "Tackle", id: "tackle", pp: 56, maxpp: 56,
-                                target: "any", disabled: false
+                                move: "Reflect", id: "reflect", pp: 32,
+                                maxpp: 32, target: "self", disabled: false
                             }
                         ]
                     }
@@ -196,14 +200,14 @@ describe("Battle", function()
                             condition: testArgs.pokemonStatus[0],
                             active: true,
                             stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
-                            moves: ["splash", "tackle"],
-                            baseAbility: "swiftswim", item: "expertbelt",
+                            moves: ["psychocut", "reflect"],
+                            baseAbility: "pressure", item: "expertbelt",
                             pokeball: "pokeball"
                         }
                     ]
                 }
             });
-            await listener.getHandler("battleinit")(
+            await listener.dispatch("battleinit",
             {
                 id: "p1", username: testArgs.username[0],
                 teamSizes: {p1: 1, p2: 1}, gameType: "singles", gen: 4,
@@ -241,33 +245,68 @@ describe("Battle", function()
         {
             // an initial request+battleinit is required to start tracking the
             //  state properly
-            await listener.getHandler("request")({side: {pokemon: []}});
-            await listener.getHandler("battleinit")(
+            await listener.dispatch("request",
+            {
+                side:
+                {
+                    pokemon:
+                    [
+                        {
+                            ident: us1,
+                            details:
+                            {
+                                species: "Magikarp", level: 100, gender: "M",
+                                shiny: false
+                            },
+                            condition: {hp: 10, hpMax: 10, condition: ""},
+                            active: true,
+                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            baseAbility: "swiftswim",
+                            moves: [],
+                            item: "choiceband",
+                            pokeball: "pokeball"
+                        },
+                        {
+                            ident: us2,
+                            details:
+                            {
+                                species: "Gyarados", level: 100, gender: "M",
+                                shiny: false
+                            },
+                            condition: {hp: 1000, hpMax: 1000, condition: ""},
+                            active: false,
+                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            baseAbility: "intimidate",
+                            moves: [],
+                            item: "lifeorb",
+                            pokeball: "greatball"
+                        }
+                    ]
+                }
+            });
+            await listener.dispatch("battleinit",
             {
                 id: "p1", username: testArgs.username[0], gameType: "singles",
                 gen: 4, teamSizes: {p1: 2, p2: 2}, events: []
             });
 
             // clear invalid response from battleinit handler
-            // tslint:disable-next-line:no-unused-expression
-            expect(battle.lastChoices).to.be.empty;
             responses = [];
 
-            // setup teams
-            const us = battle.state.teams.us;
-            us.size = 2;
-            // tslint:disable:no-unused-expression
-            expect(us.switchIn("Magikarp", 100, "M", 10, 10)).to.not.be.null;
-            expect(us.reveal("Gyarados", 100, "M", 1000, 1000)).to.not.be.null;
-            const them = battle.state.teams.them;
-            them.size = 2;
-            expect(them.switchIn("Magikarp", 100, "M", 10, 10)).to.not.be.null;
-            // tslint:enable:no-unused-expression
+            // setup our team
+            battle.state.teams.us.pokemon[0].switchIn();
+            // setup opposing team
+            // tslint:disable-next-line:no-unused-expression
+            expect(battle.state.teams.them.switchIn(
+                    "Magikarp", 100, "M", 10, 10)).to.not.be.null;
         });
 
-        it("Should not choose action if given empty event", async function()
+        it("Should not choose action if requested to wait", async function()
         {
-            await listener.getHandler("battleprogress")({events: []});
+            await listener.dispatch("request",
+                {side: {pokemon: []}, wait: true});
+            await listener.dispatch("battleprogress",
+                {events: [{type: "upkeep"}]});
             // tslint:disable-next-line:no-unused-expression
             expect(responses).to.be.empty;
         });
@@ -276,10 +315,10 @@ describe("Battle", function()
         {
             const mon = battle.state.teams.us.active;
             mon.revealMove("splash");
-            mon.volatile.disableMove(0);
             mon.revealMove("tackle");
+            mon.volatile.disableMove(0);
 
-            await listener.getHandler("battleprogress")(
+            await listener.dispatch("battleprogress",
                 {events: [{type: "upkeep"}, {type: "turn", num: 1}]});
 
             expect(battle.lastChoices).to.have.members(["move 2", "switch 2"]);
@@ -288,7 +327,7 @@ describe("Battle", function()
 
         it("Should struggle if no available moves", async function()
         {
-            await listener.getHandler("battleprogress")(
+            await listener.dispatch("battleprogress",
                 {events: [{type: "upkeep"}, {type: "turn", num: 2}]});
             expect(battle.lastChoices).to.have.members(["move 1", "switch 2"]);
             expect(responses).to.have.lengthOf(1);
@@ -304,7 +343,7 @@ describe("Battle", function()
                 expect(battle.state.teams.us.active.getMove("splash"))
                     .to.be.null;
 
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -334,7 +373,7 @@ describe("Battle", function()
             {
                 const a = battle.state.teams.us.active;
                 a.switchOut();
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -369,14 +408,14 @@ describe("Battle", function()
 
             it("Should process selfSwitch move", async function()
             {
-                await listener.getHandler("battleprogress")({events: [event]});
+                await listener.dispatch("battleprogress", {events: [event]});
                 expect(battle.lastChoices).to.have.members(["switch 2"]);
                 expect(responses).to.have.lengthOf(1);
             });
 
             it("Should selfSwitch if opponent faints", async function()
             {
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events: [event, {type: "faint", id: event.targetId}]
                 });
@@ -391,7 +430,7 @@ describe("Battle", function()
 
                 // adding an upkeep+turn means that the move was completed, so a
                 //  selfSwitch choice should not be needed
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events: [event, {type: "upkeep"}, {type: "turn", num: 2}]
                 });
@@ -406,7 +445,7 @@ describe("Battle", function()
 
             it("Should wait for opponent selfSwitch choice", async function()
             {
-                await listener.getHandler("battleprogress")({events: [event2]});
+                await listener.dispatch("battleprogress", {events: [event2]});
                 // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
             });
@@ -414,7 +453,7 @@ describe("Battle", function()
             it("Should wait for opponent selfSwitch if client's pokemon faints",
             async function()
             {
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [event2, {type: "faint", id: event2.targetId}]});
                 expect(responses).to.have.lengthOf(0);
             });
@@ -422,7 +461,7 @@ describe("Battle", function()
             it("Should switchin if both faint after selfswitch move",
             async function()
             {
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -449,7 +488,7 @@ describe("Battle", function()
                 const us2Mon = battle.state.teams.us.pokemon[1];
 
                 us1Mon.volatile.boost("atk", 2);
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -484,7 +523,7 @@ describe("Battle", function()
                 const them1Mon = battle.state.teams.them.pokemon[0];
 
                 them1Mon.volatile.boost("atk", 2);
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -516,7 +555,7 @@ describe("Battle", function()
             it("Should set ability", async function()
             {
                 expect(battle.state.teams.us.active.baseAbility).to.equal("");
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events: [{type: "ability", id: us1, ability: "Swift Swim"}]
                 });
@@ -527,7 +566,7 @@ describe("Battle", function()
             it("Should set opponent ability", async function()
             {
                 expect(battle.state.teams.them.active.baseAbility).to.equal("");
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -547,7 +586,7 @@ describe("Battle", function()
                 const volatile = battle.state.teams.us.active.volatile;
 
                 expect(volatile.isConfused).to.be.false;
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -560,14 +599,14 @@ describe("Battle", function()
                 expect(volatile.isConfused).to.be.true;
                 expect(volatile.confuseTurns).to.equal(1);
 
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events: [{type: "activate", id: us1, volatile: "confusion"}]
                 });
                 expect(volatile.isConfused).to.be.true;
                 expect(volatile.confuseTurns).to.equal(2);
 
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [{type: "end", id: us1, volatile: "confusion"}]});
                 expect(volatile.isConfused).to.be.false;
                 expect(volatile.confuseTurns).to.equal(0);
@@ -587,7 +626,7 @@ describe("Battle", function()
                     expect(mon.volatile.isDisabled(0)).to.be.false;
                     expect(mon.volatile.isDisabled(1)).to.be.false;
 
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -624,7 +663,7 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(mon.volatile.isDisabled(0)).to.be.false;
 
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -650,7 +689,7 @@ describe("Battle", function()
 
                 // tslint:disable-next-line:no-unused-expression
                 expect(volatile.isConfused).to.be.false;
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -668,12 +707,12 @@ describe("Battle", function()
             {
                 const boosts = battle.state.teams.us.active.volatile.boosts;
                 expect(boosts.def).to.equal(0);
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events: [{type: "boost", id: us1, stat: "def", amount: 1}]
                 });
                 expect(boosts.def).to.equal(1);
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events: [{type: "boost", id: us1, stat: "def", amount: -3}]
                 });
@@ -689,7 +728,7 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(mon.getMove("thunderwave")).to.be.null;
 
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -710,7 +749,7 @@ describe("Battle", function()
             {
                 const mon = battle.state.teams.us.active;
                 mon.majorStatus = "psn";
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events: [{type: "curestatus", id: us1, majorStatus: "psn"}]
                 });
@@ -726,7 +765,7 @@ describe("Battle", function()
                 const mon2 = battle.state.teams.us.pokemon[1];
                 mon1.majorStatus = "slp";
                 mon2.majorStatus = "par";
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [{type: "cureteam", id: us1}]});
                 expect(mon1.majorStatus).to.equal("");
                 expect(mon2.majorStatus).to.equal("");
@@ -739,7 +778,7 @@ describe("Battle", function()
             {
                 it("Should set hp", async function()
                 {
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -765,7 +804,7 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.active.fainted).to.be.false;
 
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [{type: "faint", id: us1}, {type: "upkeep"}]});
 
                 // tslint:disable-next-line:no-unused-expression
@@ -780,7 +819,7 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.them.active.fainted).to.be.false;
 
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [{type: "faint", id: them1}, {type: "upkeep"}]});
 
                 // tslint:disable-next-line:no-unused-expression
@@ -803,7 +842,7 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(move).to.be.null;
 
-                await listener.getHandler("battleprogress")({events: [event]});
+                await listener.dispatch("battleprogress", {events: [event]});
 
                 move = mon.getMove("splash")!;
                 // tslint:disable-next-line:no-unused-expression
@@ -821,7 +860,7 @@ describe("Battle", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(mon.getMove(event1.moveName)).to.be.null;
 
-                await listener.getHandler("battleprogress")({events: [event1]});
+                await listener.dispatch("battleprogress", {events: [event1]});
 
                 // tslint:disable-next-line:no-unused-expression
                 expect(mon.getMove(event1.moveName)).to.be.null;
@@ -836,7 +875,7 @@ describe("Battle", function()
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.false;
                     // certain moves cause the lockedmove status
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -860,7 +899,7 @@ describe("Battle", function()
                     // tslint:disable-next-line:no-unused-expression
                     expect(move).to.be.null;
 
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -899,7 +938,7 @@ describe("Battle", function()
 
                 it("Should use double pp if targeted", async function()
                 {
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -918,7 +957,7 @@ describe("Battle", function()
 
                 it("Should not use double pp not if targeted", async function()
                 {
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -941,7 +980,7 @@ describe("Battle", function()
         {
             it("Should recharge after recharge move", async function()
             {
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -956,7 +995,7 @@ describe("Battle", function()
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(1);
 
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -976,7 +1015,7 @@ describe("Battle", function()
             {
                 // make it so we have 2 moves to choose from
                 battle.state.teams.us.active.revealMove("splash");
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -1001,7 +1040,7 @@ describe("Battle", function()
                 expect(responses).to.have.lengthOf(1);
 
                 // release the charged move
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                 {
                     events:
                     [
@@ -1036,7 +1075,7 @@ describe("Battle", function()
                         {id: them1, status: {hp: 2, hpMax: 20, condition: ""}}
                     ]
                 };
-                await listener.getHandler("battleprogress")({events: [event]});
+                await listener.dispatch("battleprogress", {events: [event]});
                 expect(hp1.current).to.equal(1);
                 expect(hp1.max).to.equal(10);
                 expect(hp2.current).to.equal(2);
@@ -1053,7 +1092,7 @@ describe("Battle", function()
                     const volatile = battle.state.teams.us.active.volatile;
                     expect(volatile.stallTurns).to.equal(0);
 
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -1063,7 +1102,7 @@ describe("Battle", function()
                     expect(volatile.stallTurns).to.equal(1);
 
                     // uses protect again
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -1073,14 +1112,14 @@ describe("Battle", function()
                     expect(volatile.stallTurns).to.equal(2);
 
                     // tries to use protect again but fails
-                    await listener.getHandler("battleprogress")({events: []});
+                    await listener.dispatch("battleprogress", {events: []});
                     expect(volatile.stallTurns).to.equal(0);
                 });
 
                 it("Should stop locked moves on the first move",
                 async function()
                 {
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -1101,7 +1140,7 @@ describe("Battle", function()
 
                 it("Should interrupt locked moves", async function()
                 {
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -1115,7 +1154,7 @@ describe("Battle", function()
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.true;
 
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -1139,7 +1178,7 @@ describe("Battle", function()
             {
                 const mon = battle.state.teams.us.active;
                 expect(mon.majorStatus).to.equal("");
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [{type: "status", id: us1, majorStatus: "frz"}]});
                 expect(mon.majorStatus).to.equal("frz");
             });
@@ -1149,7 +1188,7 @@ describe("Battle", function()
         {
             it("Should not choose action after winning", async function()
             {
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [{type: "win", winner: testArgs.username[0]}]});
                 // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
@@ -1157,7 +1196,7 @@ describe("Battle", function()
 
             it("Should not choose action after losing", async function()
             {
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [{type: "win", winner: testArgs.username[1]}]});
                 // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
@@ -1165,61 +1204,16 @@ describe("Battle", function()
 
             it("Should not choose action after tie", async function()
             {
-                await listener.getHandler("battleprogress")(
+                await listener.dispatch("battleprogress",
                     {events: [{type: "tie"}]});
                 // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
             });
-
-            for (const value of [true, false])
-            {
-                describe(`saveAlways = ${value}`, function()
-                {
-                    beforeEach("Set saveAlways", function()
-                    {
-                        battle.saveAlways = value;
-                        expect(battle.saved).to.equal(false);
-                    });
-
-                    it("Should save after win", async function()
-                    {
-                        await listener.getHandler("battleprogress")(
-                        {
-                            events:
-                            [
-                                {type: "win", winner: testArgs.username[0]}
-                            ]
-                        });
-                        expect(battle.saved).to.equal(true);
-                    });
-
-                    it(`Should ${value ? "" : "not "}save after loss`,
-                    async function()
-                    {
-                        await listener.getHandler("battleprogress")(
-                        {
-                            events:
-                            [
-                                {type: "win", winner: testArgs.username[1]}
-                            ]
-                        });
-                        expect(battle.saved).to.equal(value);
-                    });
-
-                    it(`Should ${value ? "" : "not "}save after tie`,
-                    async function()
-                    {
-                        await listener.getHandler("battleprogress")(
-                            {events: [{type: "tie"}]});
-                        expect(battle.saved).to.equal(value);
-                    });
-                });
-            }
         });
 
         describe("cause", function()
         {
-            function shouldntHandle(event: BattleEvent): void
+            function shouldntHandle(event: AnyBattleEvent): void
             {
                 // sample event cause
                 event.cause = {type: "fatigue"};
@@ -1228,7 +1222,7 @@ describe("Battle", function()
                 async function()
                 {
                     battle.state.teams.us.active.volatile.lockedMove = true;
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                         {events: [event]});
                     // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
@@ -1244,7 +1238,7 @@ describe("Battle", function()
                 it("Should end lockedmove status", async function()
                 {
                     battle.state.teams.us.active.volatile.lockedMove = true;
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [
@@ -1264,7 +1258,7 @@ describe("Battle", function()
             {
                 it("Should reveal item", async function()
                 {
-                    await listener.getHandler("battleprogress")(
+                    await listener.dispatch("battleprogress",
                     {
                         events:
                         [

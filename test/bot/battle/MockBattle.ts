@@ -1,21 +1,33 @@
-import { Battle } from "../../../src/bot/battle/Battle";
+import { Battle, ChoiceSender } from "../../../src/bot/battle/Battle";
 import { Choice } from "../../../src/bot/battle/Choice";
 import { BattleState } from "../../../src/bot/battle/state/BattleState";
-import { Side } from "../../../src/bot/battle/state/Side";
-import { PlayerID } from "../../../src/bot/messageData";
+import { MessageListener } from "../../../src/bot/dispatcher/MessageListener";
+import { MockEventProcessor } from "./MockEventProcessor";
 
-/** Mocks the Battle class to get access to certain fields. */
-export class MockBattle extends Battle
+/** Mocks the Battle class to get access to certain members. */
+export class MockBattle extends Battle<MockEventProcessor>
 {
-    /**
-     * Exposes Battle.state.
-     * @override
-     */
-    public state: BattleState;
+    /** Expose state for easier access. */
+    public get state(): BattleState { return this.processor.state; }
+    /** @override */
+    public processor: MockEventProcessor;
     /** Last given choices. */
     public lastChoices: Choice[] = [];
     /** Whether the AI state was saved. */
     public saved = false;
+
+    /**
+     * Creates a MockBattle object.
+     * @param username Client's username.
+     * @param listener Used to subscribe to server messages.
+     * @param sender Used to send the AI's choice to the server.
+     * @param processor Type of EventProcessor to use.
+     */
+    constructor(username: string, listener: MessageListener,
+        sender: ChoiceSender)
+    {
+        super(username, listener, sender, MockEventProcessor);
+    }
 
     /** @override */
     public async decide(choices: Choice[]): Promise<Choice>
@@ -28,14 +40,5 @@ export class MockBattle extends Battle
     public async save(): Promise<void>
     {
         this.saved = true;
-    }
-
-    /**
-     * Exposes Battle.getSide.
-     * @override
-     */
-    public getSide(id: PlayerID): Side
-    {
-        return super.getSide(id);
     }
 }

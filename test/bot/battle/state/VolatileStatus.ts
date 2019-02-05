@@ -1,7 +1,9 @@
 import { expect } from "chai";
 import "mocha";
-import { BoostableStatName, boostableStatNames, VolatileStatus } from
-    "./../../../../src/bot/battle/state/VolatileStatus";
+import { VolatileStatus } from
+    "../../../../src/bot/battle/state/VolatileStatus";
+import { BoostableStatName, boostableStatNames } from
+    "../../../../src/bot/helpers";
 
 describe("VolatileStatus", function()
 {
