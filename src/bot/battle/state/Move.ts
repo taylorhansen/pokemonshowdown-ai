@@ -73,17 +73,9 @@ export class Move
     }
 
     // istanbul ignore next: only used for logging
-    /**
-     * Encodes all move data into a string.
-     * @param indent Indentation level to use.
-     * @returns The Move in string form.
-     */
-    public toString(indent = 0): string
+    /** Encodes all move data into a string. */
+    public toString(): string
     {
-        const s = " ".repeat(indent);
-        return `\
-${s}id: ${this.id}
-${s}pp: ${this.pp}
-${s}ppMax: ${this.ppMax}`;
+        return `${this.id} (${this.pp}/${this.ppMax})`;
     }
 }

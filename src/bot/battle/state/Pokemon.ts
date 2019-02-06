@@ -311,20 +311,16 @@ export class Pokemon
     {
         const s = " ".repeat(indent);
         return `\
-${s}${this.speciesName}
-${s}active: ${this.active}
-${s}level: ${this._level}
-${s}gender: ${this.gender ? this.gender : "genderless"}
-${s}item: ${this.itemName ? this.itemName : "<unknown>"}
-${s}ability: ${this.baseAbilityName ? this.baseAbilityName : "<unknown>"}
-${s}hp: ${this.hp.toString()}
-${s}majorStatus: ${this.majorStatus ? this.majorStatus : "none"}
+${s}${this.speciesName}${this.gender ? ` ${this.gender}` : ""} lv${this.level} \
+${this.hp.toString()}${this.majorStatus ? ` ${this.majorStatus}` : ""}
+${s}active: ${this.active}\
+${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
+${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
+${s}ability: ${this.baseAbilityName ? this.baseAbilityName : "<unrevealed>"}
 ${s}possibleHPTypes: [${(Object.keys(types) as Type[])
     .filter(type => this._hpTypes[type]).join(", ")}]
-${this._moves.map(
-        (move, i) => `${s}move${i + 1}:${i < this.unrevealedMove ?
-                `\n${move.toString(indent + 4)}` : " <unrevealed>"}`)
-    .join("\n")}
-${s}volatile: ${this._volatile.toString()}`;
+${s}moves: ${this._moves.map((m, i) =>
+    i < this.unrevealedMove ? m.toString() : "<unrevealed>").join(", ")}
+`;
     }
 }
