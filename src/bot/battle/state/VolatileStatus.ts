@@ -201,13 +201,14 @@ export class VolatileStatus
         // encode temporary status turns
         const confused = tempStatusTurns(this._confuseTurns);
         const disabled = this.disableTurns.map(tempStatusTurns);
+        const stallFailRate = tempStatusTurns(this._stallTurns);
 
         const a =
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
             confused, ...disabled, this.lockedMove ? 1 : 0, ...twoTurn,
-            this.mustRecharge ? 1 : 0, this._stallTurns
+            this.mustRecharge ? 1 : 0, stallFailRate
         ];
         return a;
     }
