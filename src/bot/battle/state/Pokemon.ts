@@ -320,7 +320,6 @@ ${s}ability: ${this.baseAbilityName ? this.baseAbilityName : "<unrevealed>"}
 ${s}possibleHPTypes: [${(Object.keys(types) as Type[])
     .filter(type => this._hpTypes[type]).join(", ")}]
 ${s}moves: ${this._moves.map((m, i) =>
-    i < this.unrevealedMove ? m.toString() : "<unrevealed>").join(", ")}
-`;
+    i < this.unrevealedMove ? m.toString() : "<unrevealed>").join(", ")}`;
     }
 }

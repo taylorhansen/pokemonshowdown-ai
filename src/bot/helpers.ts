@@ -48,8 +48,11 @@ export interface PokemonID
 {
     /** Whose side the pokemon is on. */
     owner: PlayerID;
-    /** Active position (a, b, or c). */
-    position: string;
+    /**
+     * Active position (a, b, or c). Only really applicable in non-single
+     * battles.
+     */
+    position?: string;
     /** Display nickname. */
     nickname: string;
 }

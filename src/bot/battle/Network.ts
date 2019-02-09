@@ -74,7 +74,6 @@ class RewardTracker extends EventProcessor
 /** Neural network interface. */
 export class Network extends Battle<RewardTracker>
 {
-
     /** Neural network model. */
     private model: tf.Model;
     /** Number of input neurons. */

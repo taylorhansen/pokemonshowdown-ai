@@ -16,6 +16,14 @@ export const pokemonId: PokemonID[] =
     {owner: "p1", position: "a", nickname: "Pentagon"}
 ];
 
+/** Test PokemonIDs for RequestMessages. Corresponds to pokemonId array. */
+const requestId: PokemonID[] =
+[
+    {owner: "p1", nickname: "hi"},
+    {owner: "p2", nickname: "nou"},
+    {owner: "p1", nickname: "Pentagon"}
+];
+
 /** Test PokemonDetails. Matches corresponding pokemonId. */
 export const pokemonDetails: PokemonDetails[] =
 [
@@ -153,14 +161,14 @@ export const request: RequestMessage[] =
             pokemon:
             [
                 {
-                    ident: pokemonId[0], details: pokemonDetails[0],
+                    ident: requestId[0], details: pokemonDetails[0],
                     condition: pokemonStatus[0], active: true,
                     stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
                     moves: ["psychocut"], baseAbility: "pressure",
                     item: "leftovers", pokeball: "masterball"
                 },
                 {
-                    ident: pokemonId[2], details: pokemonDetails[2],
+                    ident: requestId[2], details: pokemonDetails[2],
                     condition: pokemonStatus[2], active: false,
                     stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
                     moves: ["tackle"], baseAbility: "trace",
@@ -187,7 +195,7 @@ export const request: RequestMessage[] =
             pokemon:
             [
                 {
-                    ident: pokemonId[1], details: pokemonDetails[1],
+                    ident: requestId[1], details: pokemonDetails[1],
                     condition: pokemonStatus[1], active: true,
                     stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
                     moves: ["splash", "tackle"], baseAbility: "swiftswim",

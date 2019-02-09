@@ -181,7 +181,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
  */
 export function stringifyID(id: PokemonID): string
 {
-    return `${id.owner}${id.position}: ${id.nickname}`;
+    return `${id.owner}${id.position ? id.position : ""}: ${id.nickname}`;
 }
 
 /**

@@ -5,8 +5,8 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     UpkeepEvent, WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage } from "../dispatcher/Message";
 import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
-    PokemonDetails, PokemonID, PokemonStatus, ShallowNullable } from
-    "../helpers";
+    PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
+import * as logger from "../logger";
 import { Parser } from "./Parser";
 
 /**
@@ -206,26 +206,41 @@ export class MessageParser extends Parser
      */
     private parseRequest(): Promise<void>
     {
-        const args = MessageParser.parseJSON(this.getRestOfLine());
+        const text = this.getRestOfLine();
+        const args = MessageParser.parseJSON(text);
         this.nextLine();
 
-        // ignore invalid messages
-        if (!args) return Promise.resolve();
+        if (!args)
+        {
+            logger.error(`Invalid request message json ${text}`);
+            return Promise.resolve();
+        }
 
         // some info is encoded in a string that needs to be further parsed
         for (const mon of args.side.pokemon)
         {
             // ident, details, and condition fields are the same format as
             //  the data from a |switch| message
-            mon.ident = MessageParser.parsePokemonID(mon.ident);
-            mon.details = MessageParser.parsePokemonDetails(mon.details);
-            mon.condition = MessageParser.parsePokemonStatus(mon.condition);
+            const ident = MessageParser.parsePokemonID(mon.ident,
+                /*pos*/ false);
+            if (!ident) logger.error(`Invalid PokemonID "${mon.ident}"`);
+            mon.ident = ident;
 
-            // ignore invalid messages
-            if (!mon.ident || !mon.details || !mon.condition)
+            const details = MessageParser.parsePokemonDetails(mon.details);
+            if (!details)
             {
-                return Promise.resolve();
+                logger.error(`Invalid PokemonDetails "${mon.details}"`);
             }
+            mon.details = details;
+
+            const condition = MessageParser.parsePokemonStatus(mon.condition);
+            if (!condition)
+            {
+                logger.error(`Invalid PokemonStatus "${mon.condition}"`);
+            }
+            mon.condition = condition;
+
+            if (!ident || !details || !condition) return Promise.resolve();
         }
 
         return this.dispatch("request", args);
@@ -926,20 +941,27 @@ export class MessageParser extends Parser
      * on and pos is its position on that side (applicable in non-single
      * battles). Name is just the Pokemon's nickname.
      * @param id Unparsed pokemon ID.
+     * @param pos Whether to require pos in format. This should only be false
+     * when parsing a `request` message. Default true.
      * @returns A parsed PokemonID object, or null if invalid.
      */
-    private static parsePokemonID(id?: string): PokemonID | null
+    private static parsePokemonID(id?: string, pos = true): PokemonID | null
     {
         if (!id) return null;
 
-        const i = id.indexOf(": ");
-        if (i === -1) return null;
+        const owner = id.substring(0, 2);
+        if (!isPlayerId(owner)) return null;
 
-        const owner = id.substring(0, i - 1);
-        if (owner !== "p1" && owner !== "p2") return null;
-        const position = id.substring(i - 1, i);
-        const nickname = id.substring(i + 2);
-        return { owner, position, nickname };
+        if (pos)
+        {
+            const result =
+            {
+                owner, position: id.substring(2, 3), nickname: id.substring(5)
+            };
+            return result;
+        }
+        // no pos required, in which case you'd only see "p1: <nickname>"
+        return {owner, nickname: id.substring(4)};
     }
 
     /**

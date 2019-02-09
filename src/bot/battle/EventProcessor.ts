@@ -6,7 +6,6 @@ import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
     PokemonStatus } from "../helpers";
 import * as logger from "../logger";
 import { dex } from "./dex/dex";
-import { Type } from "./dex/dex-types";
 import { BattleState } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
 import { Side } from "./state/Side";
