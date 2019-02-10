@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { Bot } from "../../src/bot/Bot";
+import { Logger } from "../../src/Logger";
 import { MockBattle } from "./battle/MockBattle";
 import { MockParser } from "./parser/MockParser";
 
@@ -24,7 +25,8 @@ describe("Bot", function()
     beforeEach("Initialize Bot", function()
     {
         parser = new MockParser();
-        bot = new Bot(parser, mockSend);
+        // TODO: MockBot class?
+        bot = new Bot(parser, mockSend, Logger.null);
         bot.addFormat(format, MockBattle);
         responses = [];
     });

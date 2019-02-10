@@ -3,6 +3,7 @@ import { Choice } from "../../../src/bot/battle/Choice";
 import { BattleState } from "../../../src/bot/battle/state/BattleState";
 import { RequestMessage } from "../../../src/bot/dispatcher/Message";
 import { MessageListener } from "../../../src/bot/dispatcher/MessageListener";
+import { Logger } from "../../../src/Logger";
 import { MockEventProcessor } from "./MockEventProcessor";
 
 /** Mocks the Battle class to get access to certain members. */
@@ -29,7 +30,7 @@ export class MockBattle extends Battle<MockEventProcessor>
     constructor(username: string, listener: MessageListener,
         sender: ChoiceSender)
     {
-        super(username, listener, sender, MockEventProcessor);
+        super(username, listener, sender, MockEventProcessor, Logger.null);
     }
 
     /** @override */

@@ -2,9 +2,9 @@ import * as tf from "@tensorflow/tfjs";
 import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
 import "@tensorflow/tfjs-node";
 import { modelPath } from "../../config";
+import { Logger } from "../../Logger";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PokemonID, PokemonStatus } from "../helpers";
-import * as logger from "../logger";
 import { Battle, ChoiceSender } from "./Battle";
 import { Choice, choiceIds, intToChoice } from "./Choice";
 import { EventProcessor } from "./EventProcessor";
@@ -53,10 +53,11 @@ class RewardTracker extends EventProcessor
     /**
      * Creates a RewardTracker object.
      * @param username Username of the client.
+     * @param logger Logger object.
      */
-    constructor(username: string)
+    constructor(username: string, logger: Logger)
     {
-        super(username);
+        super(username, logger);
 
         this.listener
         .on("faint", event =>
@@ -127,19 +128,22 @@ export class Network extends Battle<RewardTracker>
      * @param username Client's username.
      * @param listener Used to subscribe to server messages.
      * @param sender Used to send the AI's choice to the server.
+     * @param logger Logger object.
      */
     constructor(username: string, listener: MessageListener,
-        sender: ChoiceSender)
+        sender: ChoiceSender, logger: Logger)
     {
-        super(username, listener, sender, RewardTracker);
+        super(username, listener, sender, RewardTracker, logger);
     }
 
     /**
      * Loads a model from disk, or constructs the default one if it can't be
      * found or the model's input or output shape don't match what's required.
      * @param path Path to the model's folder created by `Model.save()`.
+     * @param logger Logger object. Default stdout.
      */
-    public static async loadModel(path: string): Promise<tf.Model>
+    public static async loadModel(path: string, logger = Logger.stdout):
+        Promise<tf.Model>
     {
         let model: tf.Model;
         try
@@ -230,8 +234,8 @@ export class Network extends Battle<RewardTracker>
         }
         catch (e)
         {
-            logger.error(`error opening model: ${e}`);
-            logger.debug("constructing default model");
+            this.logger.error(`error opening model: ${e}`);
+            this.logger.debug("constructing default model");
             this.setModel(Network.createModel());
         }
     }
@@ -245,13 +249,13 @@ export class Network extends Battle<RewardTracker>
         const state = this.processor.getStateArray();
         if (state.length > Network.inputLength)
         {
-            logger.error(`too many state values ${state.length}, expected \
+            this.logger.error(`too many state values ${state.length}, expected \
 ${Network.inputLength}`);
             state.splice(Network.inputLength);
         }
         else if (state.length < Network.inputLength)
         {
-            logger.error(`not enough state values ${state.length}, \
+            this.logger.error(`not enough state values ${state.length}, \
 expected ${Network.inputLength}`);
             do state.push(0); while (state.length < Network.inputLength);
         }
@@ -260,7 +264,7 @@ expected ${Network.inputLength}`);
         const prediction = this.model.predict(nextState) as tf.Tensor2D;
         const predictionData = Array.from(await prediction.data());
 
-        logger.debug(`prediction: \
+        this.logger.debug(`prediction: \
 {${predictionData.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
 
         // find the best choice that is a subset of our possible choices
@@ -271,7 +275,7 @@ expected ${Network.inputLength}`);
 
         if (this.lastState && this.lastChoice)
         {
-            logger.debug(`applying reward: ${this.processor.reward}`);
+            this.logger.debug(`applying reward: ${this.processor.reward}`);
             // apply the Q learning update rule
             // this makes the connection between present and future rewards by
             //  combining the network's perceived reward from its current state
@@ -289,8 +293,8 @@ expected ${Network.inputLength}`);
                 reward: this.processor.reward + nextMaxReward
             };
 
-            logger.debug(`accumulated reward: ${this.processor.reward}`);
-            logger.debug(`combined Q-value: ${this._decision.reward}`);
+            this.logger.debug(`accumulated reward: ${this.processor.reward}`);
+            this.logger.debug(`combined Q-value: ${this._decision.reward}`);
         }
         this.processor.resetReward();
 
@@ -308,11 +312,12 @@ export class DefaultNetwork extends Network
      * @param username Client's username.
      * @param listener Used to subscribe to server messages.
      * @param sender Used to send the AI's choice to the server.
+     * @param logger Logger object. Default stdout.
      */
     constructor(username: string, listener: MessageListener,
-        sender: ChoiceSender)
+        sender: ChoiceSender, logger = Logger.stdout)
     {
-        super(username, listener, sender);
+        super(username, listener, sender, logger);
         this.ready = this.load(modelPath);
     }
 }

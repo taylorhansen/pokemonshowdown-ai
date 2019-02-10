@@ -2,18 +2,23 @@
 import { client as WebSocketClient } from "websocket";
 import { DefaultNetwork } from "./bot/battle/Network";
 import { Bot } from "./bot/Bot";
-import * as logger from "./bot/logger";
 import { MessageParser } from "./bot/parser/MessageParser";
+import { Logger } from "./Logger";
 
 const ws = new WebSocketClient();
 ws.on("connect", connection =>
 {
+    const logger = Logger.stdout;
     logger.debug("connected");
 
-    const parser = new MessageParser();
-    function send(response: string): void { connection.sendUTF(response); }
+    const parser = new MessageParser(logger);
+    function send(response: string): void
+    {
+        connection.sendUTF(response);
+        logger.debug(`sent: ${response}`);
+    }
 
-    const bot = new Bot(parser, send);
+    const bot = new Bot(parser, send, logger);
     bot.addFormat("gen4randombattle", DefaultNetwork);
 
     connection.on("error", error =>

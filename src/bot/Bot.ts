@@ -1,11 +1,18 @@
+import { Logger } from "../Logger";
 import { BattleBase, BattleConstructor } from "./battle/Battle";
 import { Choice } from "./battle/Choice";
-import * as logger from "./logger";
 import { Parser } from "./parser/Parser";
+
+/** Sender function type. */
+export type Sender = (response: string) => void;
 
 /** Handles all bot actions. */
 export class Bot
 {
+    /** Used to send response messages to the server. */
+    private readonly send: Sender;
+    /** Logger object. */
+    private readonly logger: Logger;
     /** Supported formats and the object constructors to handle them. */
     private readonly formats:
         {[format: string]: BattleConstructor | undefined} = {};
@@ -13,17 +20,18 @@ export class Bot
     private readonly battles: {[room: string]: BattleBase} = {};
     /** Name of the user. */
     private username = "";
-    /** Used to send response messages to the server. */
-    private readonly send: (response: string) => void;
 
     /**
      * Creates a Bot.
      * @param parser Parses messages from the server.
      * @param send Sends responses to the server.
+     * @param logger Logger object.
      */
-    constructor(parser: Parser, send: (response: string) => void)
+    constructor(parser: Parser, send: Sender, logger: Logger)
     {
         this.send = send;
+        this.logger = logger;
+
         parser.on(null, "init", args =>
         {
             if (args.type === "battle" &&
@@ -34,7 +42,11 @@ export class Bot
                 const format = parser.room.split("-")[1];
                 const battleCtor = this.formats[format];
                 if (battleCtor) this.initBattle(parser, battleCtor);
-                else logger.error(`Unsupported format ${format}`);
+                else
+                {
+                    this.logger.error(`Unsupported format ${format}`);
+                    this.addResponses(parser.room, "|/leave");
+                }
             }
         })
         .on("", "updatechallenges", args =>
@@ -73,7 +85,8 @@ export class Bot
             this.addResponses(room, `|/choose ${choice}|${rqid}`);
         const listener = parser.getListener(room);
 
-        const battle = new battleCtor(this.username, listener, sender);
+        const battle = new battleCtor(this.username, listener, sender,
+            this.logger);
         this.battles[room] = battle;
 
         // once the battle's over we can respectfully leave
@@ -112,8 +125,10 @@ export class Bot
      */
     private addResponses(room: string | null, ...responses: string[]): void
     {
-        if (room) responses = responses.map(response => room + response);
-        responses.forEach(this.send);
-        logger.debug(`sent: ["${responses.join("\", \"")}"]`);
+        for (let response of responses)
+        {
+            if (room) response = room + response;
+            this.send(response);
+        }
     }
 }

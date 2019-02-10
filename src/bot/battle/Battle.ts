@@ -1,7 +1,7 @@
 import { inspect } from "util";
+import { Logger } from "../../Logger";
 import { RequestMessage } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
-import * as logger from "../logger";
 import { Choice } from "./Choice";
 import { EventProcessor, EventProcessorConstructor } from "./EventProcessor";
 
@@ -14,17 +14,20 @@ export type ChoiceSender = (choice: Choice) => void;
 /** Constructs an abstract Battle type. */
 export interface BattleConstructor
 {
-    new(username: string, listener: MessageListener, sender: ChoiceSender):
-        BattleBase;
+    new(username: string, listener: MessageListener, sender: ChoiceSender,
+        logger: Logger): BattleBase;
 }
 
-/** Contains abstract methods from the Battle class. */
+/**
+ * Contains public members from the Battle class. Used for polymorphism without
+ * having to supply a template argument.
+ */
 export abstract class BattleBase
 {
     /**
      * Decides what to do next.
      * @param choices The set of possible choices that can be made.
-     * @returns A Promise to compute the command to be sent, e.g. `move 1` or
+     * @returns A Promise to compute the Choice to be sent, e.g. `move 1` or
      * `switch 3`.
      */
     protected abstract decide(choices: Choice[]): Promise<Choice>;
@@ -39,6 +42,8 @@ export abstract class Battle<Processor extends EventProcessor>
 {
     /** Manages the BattleState by processing events. */
     protected readonly processor: Processor;
+    /** Logger object. */
+    protected readonly logger: Logger;
     /** Last |request| message that was processed. */
     protected lastRequest: RequestMessage;
     /** Used to send the AI's choice to the server. */
@@ -50,14 +55,16 @@ export abstract class Battle<Processor extends EventProcessor>
      * @param listener Used to subscribe to server messages.
      * @param sender Used to send the AI's choice to the server.
      * @param processor Type of EventProcessor to use.
+     * @param logger Logger object.
      */
     constructor(username: string, listener: MessageListener,
-        sender: ChoiceSender, processor: EventProcessorConstructor<Processor>)
+        sender: ChoiceSender, processor: EventProcessorConstructor<Processor>,
+        logger: Logger)
     {
         super();
-
-        this.processor = new processor(username);
+        this.processor = new processor(username, logger);
         this.sender = sender;
+        this.logger = logger;
 
         listener
         .on("battleinit", args =>
@@ -106,7 +113,7 @@ ${inspect(args, {colors: true, depth: null})}`);
     private async askAI(): Promise<void>
     {
         const choices = this.getChoices();
-        logger.debug(`choices: [${choices.join(", ")}]`);
+        this.logger.debug(`choices: [${choices.join(", ")}]`);
 
         const choice = await this.decide(choices);
         this.sender(choice);

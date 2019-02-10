@@ -20,13 +20,13 @@ import { URL } from "url";
 import { Choice, choiceIds } from "../src/bot/battle/Choice";
 import { Decision, Network, toColumn } from "../src/bot/battle/Network";
 import { PlayerID } from "../src/bot/helpers";
-import * as logger from "../src/bot/logger";
 import { MessageParser } from "../src/bot/parser/MessageParser";
 import { modelPath, modelsFolder } from "../src/config";
+import { Logger } from "../src/Logger";
 // @ts-ignore
 import s = require("./Pokemon-Showdown/sim/battle-stream");
 
-// TODO: step 4
+const logger = Logger.stdout;
 
 /** Waits for a keypress to continue. Used for step debugging. */
 async function keypress(): Promise<void>
@@ -52,13 +52,12 @@ async function selfPlay(model: tf.Model, maxTurns = 60): Promise<URL[]>
     {
         function sender(choice: Choice): void
         {
-            logger.debug(`${id} sent: ${choice}`);
             streams[id].write(choice);
         }
         // setup player
-        const parser = new MessageParser();
+        const parser = new MessageParser(Logger.null);
         const listener = parser.getListener("");
-        const ai = new Network(id, listener, sender);
+        const ai = new Network(id, listener, sender, Logger.null);
         ai.setModel(model);
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
@@ -71,15 +70,11 @@ async function selfPlay(model: tf.Model, maxTurns = 60): Promise<URL[]>
             {
                 try
                 {
-                    logger.disable();
                     await parser.parse(output);
-                    logger.enable();
                 }
                 catch (e)
                 {
-                    logger.enable();
                     logger.error(`${id}: ${e}`);
-                    logger.disable();
                 }
                 if (ai.decision) urls.push(await saveDecision(ai.decision));
                 // await keypress();
@@ -108,9 +103,9 @@ async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 100):
             streams[id].write(choice);
         }
         // setup player
-        const parser = new MessageParser();
+        const parser = new MessageParser(Logger.null);
         const listener = parser.getListener("");
-        const ai = new Network(id, listener, sender);
+        const ai = new Network(id, listener, sender, Logger.null);
         ai.setModel(models[id]);
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
@@ -121,10 +116,8 @@ async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 100):
             {
                 if (event.type === "win")
                 {
-                    logger.enable();
                     logger.debug(`winner: ${event.winner}`);
                     winner = event.winner as PlayerID;
-                    logger.disable();
                 }
             }));
         }
@@ -138,9 +131,7 @@ async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 100):
             {
                 try
                 {
-                    logger.disable();
                     await parser.parse(output);
-                    logger.enable();
                 }
                 catch (e)
                 {
@@ -157,7 +148,7 @@ async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 100):
 
 /** Folder to put all Decision files into. */
 const datasetFolder = `${modelsFolder}/datasets`;
-/** Filename counter. */
+/** Decision filename counter. */
 let numDatasets = 0;
 
 /**
@@ -234,7 +225,7 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
     const newModel = Network.createModel();
     newModel.setWeights(model.getWeights());
 
-    logger.debug("starting self-play");
+    logger.debug("self-play");
     const decisionFiles: URL[] = [];
     for (let i = 0; i < games; ++i)
     {
@@ -242,7 +233,7 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
         logger.debug(`game ${i + 1}`);
     }
 
-    logger.debug("applying learning algorithm (this may take a while)");
+    logger.debug("learning (this may take a while)");
     compile(newModel);
     await learn(newModel, decisionFiles);
 
@@ -266,7 +257,7 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
         logger.debug("new model wins");
         return newModel;
     }
-    logger.debug("old model wins");
+    logger.debug("old model not replaced");
     return model;
 }
 

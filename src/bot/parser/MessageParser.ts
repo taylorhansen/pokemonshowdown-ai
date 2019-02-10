@@ -1,3 +1,4 @@
+import { Logger } from "../../Logger";
 import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
     isBattleEventPrefix, MoveEvent, MustRechargeEvent, PrepareEvent, SetHPEvent,
@@ -6,7 +7,6 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
 import { BattleInitMessage } from "../dispatcher/Message";
 import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
-import * as logger from "../logger";
 import { Parser } from "./Parser";
 
 /**
@@ -28,12 +28,24 @@ export class MessageParser extends Parser
         return this.lines[this.lineN];
     }
 
+    /** Logger object. */
+    private readonly logger: Logger;
     /** Current room we're parsing messages from. */
     private _room: string;
     /** Message split up into lines and words. Words are separated by a `|`. */
     private lines: string[][];
     /** Current line number we're parsing at. */
     private lineN: number;
+
+    /**
+     * Creates a MessageParser.
+     * @param logger Logger object.
+     */
+    constructor(logger: Logger)
+    {
+        super();
+        this.logger = logger;
+    }
 
     /** @override */
     public async parse(message: string): Promise<void>
@@ -212,7 +224,7 @@ export class MessageParser extends Parser
 
         if (!args)
         {
-            logger.error(`Invalid request message json ${text}`);
+            this.logger.error(`Invalid request message json ${text}`);
             return Promise.resolve();
         }
 
@@ -223,20 +235,20 @@ export class MessageParser extends Parser
             //  the data from a |switch| message
             const ident = MessageParser.parsePokemonID(mon.ident,
                 /*pos*/ false);
-            if (!ident) logger.error(`Invalid PokemonID "${mon.ident}"`);
+            if (!ident) this.logger.error(`Invalid PokemonID "${mon.ident}"`);
             mon.ident = ident;
 
             const details = MessageParser.parsePokemonDetails(mon.details);
             if (!details)
             {
-                logger.error(`Invalid PokemonDetails "${mon.details}"`);
+                this.logger.error(`Invalid PokemonDetails "${mon.details}"`);
             }
             mon.details = details;
 
             const condition = MessageParser.parsePokemonStatus(mon.condition);
             if (!condition)
             {
-                logger.error(`Invalid PokemonStatus "${mon.condition}"`);
+                this.logger.error(`Invalid PokemonStatus "${mon.condition}"`);
             }
             mon.condition = condition;
 

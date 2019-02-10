@@ -7,6 +7,7 @@ import { MessageDispatchArgs } from
     "../../../src/bot/dispatcher/MessageListener";
 import { RoomType } from "../../../src/bot/helpers";
 import { MessageParser } from "../../../src/bot/parser/MessageParser";
+import { Logger } from "../../../src/Logger";
 import * as testArgs from "../../helpers/battleTestArgs";
 import { buildMessage, composeBattleInit, composeBattleProgress,
     stringifyRequest } from "../../helpers/buildMessage";
@@ -17,7 +18,7 @@ describe("MessageParser", function()
 
     beforeEach("Initialize MessageParser", function()
     {
-        parser = new MessageParser();
+        parser = new MessageParser(Logger.stdout);
     });
 
     it("Should handle multiple messages", async function()

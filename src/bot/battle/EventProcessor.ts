@@ -1,10 +1,10 @@
+import { Logger } from "../../Logger";
 import { AnyBattleEvent, Cause, MoveEvent, SwitchEvent } from
     "../dispatcher/BattleEvent";
 import { BattleEventListener } from "../dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "../dispatcher/Message";
 import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
     PokemonStatus } from "../helpers";
-import * as logger from "../logger";
 import { dex } from "./dex/dex";
 import { BattleState } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
@@ -13,7 +13,7 @@ import { SwitchInOptions, Team } from "./state/Team";
 
 export interface EventProcessorConstructor<T extends EventProcessor>
 {
-    new(username: string): T;
+    new(username: string, logger: Logger): T;
 }
 
 /** Modifies the BattleState by listening to game events. */
@@ -39,6 +39,8 @@ export class EventProcessor
     protected readonly listener = new BattleEventListener();
     /** Client's username. */
     protected readonly username: string;
+    /** Logger object. */
+    protected readonly logger: Logger;
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -48,10 +50,12 @@ export class EventProcessor
     /**
      * Creates an EventProcessor object.
      * @param username Username of the client.
+     * @param logger Logger object. Default stdout.
      */
-    constructor(username: string)
+    constructor(username: string, logger: Logger)
     {
         this.username = username;
+        this.logger = logger;
 
         this.listener
         .on("ability", event =>
@@ -213,7 +217,7 @@ export class EventProcessor
     /** Prints the state to the logger. */
     public printState(): void
     {
-        logger.debug(`state:\n${this.state.toString()}`);
+        this.logger.debug(`state:\n${this.state.toString()}`);
     }
 
     /**

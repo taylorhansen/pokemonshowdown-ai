@@ -1,6 +1,5 @@
 import { Message, MessageType } from "../dispatcher/Message";
 import { MessageHandler, MessageListener } from "../dispatcher/MessageListener";
-import { ShallowNullable } from "../helpers";
 
 /** Base class for parsers. */
 export abstract class Parser
