@@ -16,13 +16,15 @@
  */
 import * as tf from "@tensorflow/tfjs";
 import * as fs from "fs";
+import { dirname } from "path";
 import * as ProgressBar from "progress";
 import { URL } from "url";
 import { Choice, choiceIds } from "../src/bot/battle/Choice";
 import { Decision, Network, toColumn } from "../src/bot/battle/Network";
 import { PlayerID } from "../src/bot/helpers";
 import { MessageParser } from "../src/bot/parser/MessageParser";
-import { logsFolder, modelPath, modelsFolder } from "../src/config";
+import { evaluateFolder, modelPath, modelsFolder, selfPlayFolder } from
+    "../src/config";
 import { Logger } from "../src/Logger";
 // @ts-ignore
 import s = require("./Pokemon-Showdown/sim/battle-stream");
@@ -32,96 +34,60 @@ const logger = Logger.stdout;
 /** Maximum number of turns in a game before it's considered a tie. */
 const maxTurns = 100;
 
-/**
- * Plays a model against itself.
- * @param model Model to self-play.
- * @param logPath Path to store debug info.
- * @returns An array of Decision file URLs.
- */
-async function selfPlay(model: tf.Model, logPath?: string): Promise<URL[]>
+/** Options for starting a new game. */
+interface GameOptions
 {
-    const streams = s.getPlayerStreams(new s.BattleStream());
-    streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
+    /**
+     * Whether to save Decision objects to disk, which will be used for learning
+     * later.
+     */
+    saveDecisions: boolean;
+}
 
-    const urls: URL[] = [];
-    const promises: Promise<void>[] = [];
-
-    for (const id of ["p1", "p2"] as PlayerID[])
-    {
-        function sender(choice: Choice): void
-        {
-            streams[id].write(choice);
-        }
-
-        let file: fs.WriteStream | undefined;
-        let innerLog: Logger;
-        if (logPath)
-        {
-            file = fs.createWriteStream(logPath);
-            innerLog = new Logger(file, id + ": ");
-        }
-        else innerLog = Logger.null;
-
-        // setup player
-        const parser = new MessageParser(innerLog);
-        const listener = parser.getListener("");
-        const ai = new Network(id, listener, sender, innerLog);
-        ai.setModel(model);
-        streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
-
-        // parser event loop
-        const stream = streams[id];
-        promises.push(async function()
-        {
-            let output: string;
-            for (let i = 0; i < maxTurns && (output = await stream.read()); ++i)
-            {
-                innerLog.debug(`received:\n${output}`);
-                try
-                {
-                    await parser.parse(output);
-                }
-                catch (e)
-                {
-                    logger.error(`${id}: ${e}`);
-                }
-                if (ai.decision) urls.push(await saveDecision(ai.decision));
-            }
-            if (file) file.close();
-        }());
-    }
-
-    await Promise.all(promises);
-    return urls;
+/** Result object returned from `play()`. */
+interface GameResult
+{
+    /**
+     * URLs to saved Decision objects. Empty if `options.saveDecisions` was
+     * false.
+     */
+    decisions: URL[];
+    /** The winner of the game. Null if tied. */
+    winner: PlayerID | null;
 }
 
 /**
  * Pits two models against each other.
  * @param models Neural network models to represent p1 and p2.
- * @param logPath Path to store debug info.
- * @returns The PlayerID of the winner, or null if tied.
+ * @param options Game options.
+ * @param logPath Path to the file in which to store debug info.
+ * @returns A Promise to compute the result of the game.
  */
-async function play(models: {[P in PlayerID]: tf.Model}, logPath?: string):
-    Promise<PlayerID | null>
+async function play(models: {[P in PlayerID]: tf.Model},
+    options: GameOptions, logPath?: string): Promise<GameResult>
 {
     const streams = s.getPlayerStreams(new s.BattleStream());
     streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
+    const result: GameResult = {decisions: [], winner: null};
     const promises: Promise<void>[] = [];
-
-    let winner: PlayerID | null = null;
 
     for (const id of ["p1", "p2"] as PlayerID[])
     {
+        // sends player choices to the battle stream
         function sender(choice: Choice): void
         {
             streams[id].write(choice);
         }
 
+        // setup log file
         let file: fs.WriteStream | undefined;
         let innerLog: Logger;
         if (logPath)
         {
+            const dir = dirname(logPath);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
+
             file = fs.createWriteStream(logPath);
             innerLog = new Logger(file, id + ": ");
         }
@@ -134,16 +100,36 @@ async function play(models: {[P in PlayerID]: tf.Model}, logPath?: string):
         ai.setModel(models[id]);
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
-        // only need one listener for this
+        // setup callbacks
+        let perTurn: () => void | Promise<void>;
+        if (options.saveDecisions)
+        {
+            perTurn = async () =>
+            {
+                if (ai.decision)
+                {
+                    result.decisions.push(await saveDecision(ai.decision));
+                }
+            };
+        }
+        else perTurn = () => {};
+
+        // setup listeners
+        // only need one player to track this
         if (id === "p1")
         {
             listener.on("battleprogress", args => args.events.forEach(event =>
             {
-                if (event.type === "win") winner = event.winner as PlayerID;
+                if (event.type === "win")
+                {
+                    // since the usernames passed into the Network constructors
+                    //  are the same was their PlayerID, we can safely cast this
+                    result.winner = event.winner as PlayerID;
+                }
             }));
         }
 
-        // parser event loop
+        // start parser event loop
         const stream = streams[id];
         promises.push(async function()
         {
@@ -159,13 +145,14 @@ async function play(models: {[P in PlayerID]: tf.Model}, logPath?: string):
                 {
                     logger.error(`${id}: ${e}`);
                 }
+                perTurn();
             }
             if (file) file.close();
         }());
     }
 
     await Promise.all(promises);
-    return winner;
+    return result;
 }
 
 /** Folder to put all Decision files into. */
@@ -182,7 +169,7 @@ async function saveDecision(decision: Decision): Promise<URL>
 {
     if (!fs.existsSync(datasetFolder))
     {
-        fs.mkdirSync(datasetFolder);
+        fs.mkdirSync(datasetFolder, {recursive: true});
     }
     const path = `${datasetFolder}/${numDatasets++}.json`;
     const data = JSON.stringify(decision);
@@ -254,8 +241,9 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
     bar.update(0);
     for (let i = 0; i < games; ++i)
     {
-        decisionFiles.push(...(await selfPlay(newModel,
-            `${logsFolder}/self-play/game-${i + 1}`)));
+        const {decisions} = await play({p1: newModel, p2: newModel},
+            {saveDecisions: true}, `${selfPlayFolder}/game-${i + 1}`);
+        decisionFiles.push(...decisions);
         bar.tick();
     }
 
@@ -271,8 +259,8 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
     bar.update(0);
     for (let i = 0; i < games; ++i)
     {
-        const winner = await play({p1: newModel, p2: model},
-            `${logsFolder}/evaluate/game-${i + 1}`);
+        const {winner} = await play({p1: newModel, p2: model},
+            {saveDecisions: false}, `${evaluateFolder}/game-${i + 1}`);
         if (winner)
         {
             ++wins[winner];
@@ -292,10 +280,12 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
     return model;
 }
 
+/** Amount of training cycles to do. */
+const cycles = 1;
+
 (async function()
 {
     let model = await Network.loadModel(modelPath);
-    const cycles = 1;
     for (let i = 0; i < cycles; ++i)
     {
         logger.log(`TRAINING CYCLE ${i + 1}/${cycles}:`);
