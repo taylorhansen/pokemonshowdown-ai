@@ -70,7 +70,7 @@ export abstract class Battle<Processor extends EventProcessor>
         .on("battleinit", args =>
         {
             logger.debug(`battleinit:
-${inspect(args, {colors: true, depth: null})}`);
+${inspect(args, {colors: false, depth: null})}`);
 
             this.processor.initBattle(args);
             this.processor.printState();
@@ -80,7 +80,7 @@ ${inspect(args, {colors: true, depth: null})}`);
         .on("battleprogress", async args =>
         {
             logger.debug(`battleprogress:
-${inspect(args, {colors: true, depth: null})}`);
+${inspect(args, {colors: false, depth: null})}`);
 
             this.processor.handleEvents(args.events);
             this.processor.printState();
@@ -102,7 +102,7 @@ ${inspect(args, {colors: true, depth: null})}`);
         .on("request", args =>
         {
             logger.debug(`request:
-${inspect(args, {colors: true, depth: null})}`);
+${inspect(args, {colors: false, depth: null})}`);
 
             this.processor.handleRequest(args);
             this.lastRequest = args;

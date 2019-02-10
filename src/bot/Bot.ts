@@ -86,7 +86,7 @@ export class Bot
         const listener = parser.getListener(room);
 
         const battle = new battleCtor(this.username, listener, sender,
-            this.logger);
+            new Logger(this.logger.stream, this.logger.prefix + room + ": "));
         this.battles[room] = battle;
 
         // once the battle's over we can respectfully leave

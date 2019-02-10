@@ -5,18 +5,24 @@ export class Logger
 {
     /** Default stdout stream. */
     public static readonly stdout = new Logger(process.stdout);
+    /** Default stderr stream. */
+    public static readonly stderr = new Logger(process.stderr);
     /** Logger that doesn't do anything. */
     public static readonly null = new Logger();
     /** Stream that will be written to. */
     public readonly stream?: Writable;
+    /** Prefix added to each string. */
+    public readonly prefix: string;
 
     /**
      * Creates a Logger object.
      * @param stream Stream that will be written to.
+     * @param prefix Prefix added to each string.
      */
-    constructor(stream?: Writable)
+    constructor(stream?: Writable, prefix = "")
     {
         this.stream = stream;
+        this.prefix = prefix;
     }
 
     /**
@@ -26,7 +32,7 @@ export class Logger
     public print(message: string): void
     {
         if (!this.stream) return;
-        this.stream.write(message);
+        this.stream.write(this.prefix + message);
     }
 
     /**
@@ -35,7 +41,7 @@ export class Logger
      */
     public log(message: string): void
     {
-        this.print(message + "\n");
+        this.print(`${message}\n`);
     }
 
     /**
