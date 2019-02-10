@@ -8,7 +8,7 @@ export class Logger
     /** Logger that doesn't do anything. */
     public static readonly null = new Logger();
     /** Stream that will be written to. */
-    private readonly stream?: Writable;
+    public readonly stream?: Writable;
 
     /**
      * Creates a Logger object.
@@ -20,14 +20,31 @@ export class Logger
     }
 
     /**
+     * Writes raw text to the stream.
+     * @param message Message to write.
+     */
+    public print(message: string): void
+    {
+        if (!this.stream) return;
+        this.stream.write(message);
+    }
+
+    /**
+     * Writes text to the stream with newline.
+     * @param message Message to write.
+     */
+    public log(message: string): void
+    {
+        this.print(message + "\n");
+    }
+
+    /**
      * Writes a normal debug message.
      * @param message Message to write.
      */
     public debug(message: string): void
     {
-        if (!this.stream) return;
-        message = `debug: ${message}\n`;
-        this.stream.write(message);
+        this.log(`debug: ${message}`);
     }
 
     /**
@@ -36,13 +53,6 @@ export class Logger
      */
     public error(message: string): void
     {
-        if (!this.stream) return;
-        message = `error: ${message}\n`;
-        this.stream.write(message);
-    }
-
-    public clearLastLine(): void
-    {
-        if (!this.stream) return;
+        this.log(`error: ${message}`);
     }
 }

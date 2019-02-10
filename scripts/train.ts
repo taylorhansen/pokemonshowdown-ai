@@ -16,6 +16,7 @@
  */
 import * as tf from "@tensorflow/tfjs";
 import * as fs from "fs";
+import * as ProgressBar from "progress";
 import { URL } from "url";
 import { Choice, choiceIds } from "../src/bot/battle/Choice";
 import { Decision, Network, toColumn } from "../src/bot/battle/Network";
@@ -225,30 +226,37 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
     const newModel = Network.createModel();
     newModel.setWeights(model.getWeights());
 
-    logger.debug("self-play");
+    logger.log("beginning self-play");
     const decisionFiles: URL[] = [];
+    let bar = new ProgressBar("self-play games: [:bar] :current/:total",
+        {total: games, stream: logger.stream});
+    bar.update(0);
     for (let i = 0; i < games; ++i)
     {
         decisionFiles.push(...(await selfPlay(newModel)));
-        logger.debug(`game ${i + 1}`);
+        bar.tick();
     }
 
-    logger.debug("learning (this may take a while)");
+    logger.log("learning (this may take a while)");
     compile(newModel);
     await learn(newModel, decisionFiles);
 
     // challenge the old model to see if the newly trained one learned anything
-    logger.debug("evaluating new network (p1=new, p2=old)");
+    logger.log("evaluating new network (p1=new, p2=old)");
     const wins = {p1: 0, p2: 0};
+    bar = new ProgressBar("evaluation games: [:bar] :current/:total",
+        {total: games, stream: logger.stream});
+    bar.update(0);
     for (let i = 0; i < games; ++i)
     {
         const winner = await play({p1: newModel, p2: model});
         if (winner)
         {
             ++wins[winner];
-            logger.debug(`game ${i + 1}: ${winner}`);
+            bar.interrupt(`game ${i + 1}: ${winner}`);
         }
-        else logger.debug(`game ${i + 1}: tie`);
+        else bar.interrupt(`game ${i + 1}: tie`);
+        bar.tick();
     }
     logger.debug("done with evaluating");
     logger.debug(`wins: ${JSON.stringify(wins)}`);
@@ -267,7 +275,7 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
     const cycles = 1;
     for (let i = 0; i < cycles; ++i)
     {
-        logger.debug(`TRAINING CYCLE ${i + 1}:`);
+        logger.log(`TRAINING CYCLE ${i + 1}/${cycles}:`);
         model = await train(model);
     }
     await model.save(`file://${modelPath}`);
