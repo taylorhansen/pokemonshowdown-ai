@@ -69,14 +69,17 @@ async function selfPlay(model: tf.Model, maxTurns = 60): Promise<URL[]>
             let output: string;
             for (let i = 0; i < maxTurns && (output = await stream.read()); ++i)
             {
-                logger.debug(`${id} received:\n${output}`);
                 try
                 {
+                    logger.disable();
                     await parser.parse(output);
+                    logger.enable();
                 }
                 catch (e)
                 {
+                    logger.enable();
                     logger.error(`${id}: ${e}`);
+                    logger.disable();
                 }
                 if (ai.decision) urls.push(await saveDecision(ai.decision));
                 // await keypress();
@@ -88,7 +91,7 @@ async function selfPlay(model: tf.Model, maxTurns = 60): Promise<URL[]>
     return urls;
 }
 
-async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 60):
+async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 100):
     Promise<PlayerID | null>
 {
     const streams = s.getPlayerStreams(new s.BattleStream());
@@ -102,7 +105,6 @@ async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 60):
     {
         function sender(choice: Choice): void
         {
-            logger.debug(`${id} sent: ${choice}`);
             streams[id].write(choice);
         }
         // setup player
@@ -119,8 +121,10 @@ async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 60):
             {
                 if (event.type === "win")
                 {
+                    logger.enable();
                     logger.debug(`winner: ${event.winner}`);
                     winner = event.winner as PlayerID;
+                    logger.disable();
                 }
             }));
         }
@@ -132,10 +136,11 @@ async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 60):
             let output: string;
             for (let i = 0; i < maxTurns && (output = await stream.read()); ++i)
             {
-                logger.debug(`${id} received:\n${output}`);
                 try
                 {
+                    logger.disable();
                     await parser.parse(output);
+                    logger.enable();
                 }
                 catch (e)
                 {
@@ -143,8 +148,6 @@ async function play(models: {[P in PlayerID]: tf.Model}, maxTurns = 60):
                 }
                 // await keypress();
             }
-            // FIXME: this line is never reached
-            logger.debug(`done ${id}`);
         }());
     }
 
@@ -226,7 +229,7 @@ async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
  * @returns A new Model if it is proved to be better after self-play, or the
  * same one that's given if the new Model failed.
  */
-async function train(model: tf.Model, games = 7): Promise<tf.Model>
+async function train(model: tf.Model, games = 5): Promise<tf.Model>
 {
     const newModel = Network.createModel();
     newModel.setWeights(model.getWeights());
@@ -236,25 +239,35 @@ async function train(model: tf.Model, games = 7): Promise<tf.Model>
     for (let i = 0; i < games; ++i)
     {
         decisionFiles.push(...(await selfPlay(newModel)));
+        logger.debug(`game ${i + 1}`);
     }
-    logger.debug("done with self-play");
 
-    logger.debug("starting learning phase");
+    logger.debug("applying learning algorithm (this may take a while)");
     compile(newModel);
     await learn(newModel, decisionFiles);
-    logger.debug("done with learning phase");
 
     // challenge the old model to see if the newly trained one learned anything
-    logger.debug("evaluating new network");
+    logger.debug("evaluating new network (p1=new, p2=old)");
     const wins = {p1: 0, p2: 0};
     for (let i = 0; i < games; ++i)
     {
         const winner = await play({p1: newModel, p2: model});
-        if (winner) ++wins[winner];
+        if (winner)
+        {
+            ++wins[winner];
+            logger.debug(`game ${i + 1}: ${winner}`);
+        }
+        else logger.debug(`game ${i + 1}: tie`);
     }
     logger.debug("done with evaluating");
     logger.debug(`wins: ${JSON.stringify(wins)}`);
-    return wins.p1 > wins.p2 ? newModel : model;
+    if (wins.p1 > wins.p2)
+    {
+        logger.debug("new model wins");
+        return newModel;
+    }
+    logger.debug("old model wins");
+    return model;
 }
 
 (async function()
@@ -263,7 +276,8 @@ async function train(model: tf.Model, games = 7): Promise<tf.Model>
     const cycles = 1;
     for (let i = 0; i < cycles; ++i)
     {
-        model = await train(model, 1);
+        logger.debug(`TRAINING CYCLE ${i + 1}:`);
+        model = await train(model);
     }
     await model.save(`file://${modelPath}`);
 })();
