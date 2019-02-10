@@ -134,7 +134,8 @@ async function play(models: {[P in PlayerID]: tf.Model},
         promises.push(async function()
         {
             let output: string;
-            for (let i = 0; i < maxTurns && (output = await stream.read()); ++i)
+            for (let i = 0; i < maxTurns && !result.winner &&
+                (output = await stream.read()); ++i)
             {
                 innerLog.debug(`received:\n${output}`);
                 try
@@ -241,9 +242,12 @@ async function train(model: tf.Model, games = 5): Promise<tf.Model>
     bar.update(0);
     for (let i = 0; i < games; ++i)
     {
-        const {decisions} = await play({p1: newModel, p2: newModel},
+        const {decisions, winner} = await play({p1: newModel, p2: newModel},
             {saveDecisions: true}, `${selfPlayFolder}/game-${i + 1}`);
         decisionFiles.push(...decisions);
+
+        if (winner) bar.interrupt(`game ${i + 1}: ${winner}`);
+        else bar.interrupt(`game ${i + 1}: tie`);
         bar.tick();
     }
 
