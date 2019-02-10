@@ -194,6 +194,7 @@ function compile(model: tf.Model): void
  */
 async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
 {
+    let bar: ProgressBar;
     const dataset = {async iterator()
     {
         const files = [...decisionFiles];
@@ -216,11 +217,26 @@ async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
             predictionData[choiceIds[decision.choice]] = decision.reward;
             const target = toColumn(predictionData);
 
+            bar.tick();
             return {done: files.length <= 0, value: [state, target]};
         }};
     }};
 
-    return model.fitDataset(dataset, {epochs: 10});
+    const totalEpochs = 10;
+    return model.fitDataset(dataset,
+    {
+        epochs: totalEpochs,
+        callbacks:
+        {
+            onEpochBegin: async epoch =>
+            {
+                // epoch is zero-based so increment that so it looks nice
+                bar = new ProgressBar(
+                    `epoch ${epoch + 1}/${totalEpochs} [:bar] :current/:total`,
+                    {total: decisionFiles.length, width: 20});
+            }
+        }
+    });
 }
 
 /**
