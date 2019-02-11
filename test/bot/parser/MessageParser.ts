@@ -18,7 +18,7 @@ describe("MessageParser", function()
 
     beforeEach("Initialize MessageParser", function()
     {
-        parser = new MessageParser(Logger.stdout);
+        parser = new MessageParser(Logger.stderr);
     });
 
     it("Should handle multiple messages", async function()

@@ -1244,25 +1244,6 @@ describe("Battle and EventProcessor", function()
 
         describe("cause", function()
         {
-            function shouldntHandle(event: AnyBattleEvent): void
-            {
-                // sample event cause
-                event.cause = {type: "fatigue"};
-
-                it(`Shouldn't handle Causes from ${event.type} messages`,
-                async function()
-                {
-                    battle.state.teams.us.active.volatile.lockedMove = true;
-                    await listener.dispatch("battleprogress",
-                        {events: [event]});
-                    // tslint:disable-next-line:no-unused-expression
-                    expect(battle.state.teams.us.active.volatile.lockedMove)
-                        .to.be.true;
-                });
-            }
-            shouldntHandle({type: "sethp", newHPs: []});
-            shouldntHandle({type: "tie"});
-            shouldntHandle({type: "win", winner: testArgs.username[0]});
 
             describe("fatigue", function()
             {
@@ -1294,7 +1275,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "heal", id: us1,
+                                type: "damage", id: us1,
                                 status: {hp: 10, hpMax: 10, condition: ""},
                                 cause: {type: "item", item: "Leftovers"}
                             }

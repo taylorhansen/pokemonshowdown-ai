@@ -3,8 +3,8 @@ import { BoostableStatName, MajorStatus, PokemonDetails, PokemonID,
     PokemonStatus } from "../helpers";
 
 /**
- * Set of BattleEventPrefixes. Heal and drag are included here, but are parsed
- * as DamageEvents and SwitchEvents respectively.
+ * Set of BattleEventPrefixes. Heal, drag, and unboost are included here, but
+ * are parsed as DamageEvents, SwitchEvents, and BoostEvents respectively.
  */
 export const battleEventPrefixes =
 {
@@ -143,7 +143,7 @@ export interface CureTeamEvent extends BattleEventBase
 /** Event where a pokemon is damaged or healed. */
 export interface DamageEvent extends BattleEventBase
 {
-    type: "damage" | "heal";
+    type: "damage";
     /** ID of the pokemon being damaged. */
     id: PokemonID;
     /** New hp/status. */

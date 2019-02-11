@@ -58,12 +58,12 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "cureteam", id: pokemonId[2]},
     {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
-    {type: "end", id: pokemonId[2], volatile: "confusion"},
-    {type: "faint", id: pokemonId[2]},
     {
-        type: "heal", id: pokemonId[1], status: pokemonStatus[1],
+        type: "damage", id: pokemonId[1], status: pokemonStatus[1],
         cause: cause[1]
     },
+    {type: "end", id: pokemonId[2], volatile: "confusion"},
+    {type: "faint", id: pokemonId[2]},
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
         targetId: pokemonId[1]

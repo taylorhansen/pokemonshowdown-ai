@@ -107,7 +107,6 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             result = ["-cureteam", stringifyID(event.id)];
             break;
         case "damage":
-        case "heal":
             result =
             [
                 "-" + event.type, stringifyID(event.id),

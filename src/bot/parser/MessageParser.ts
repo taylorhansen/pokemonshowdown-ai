@@ -34,7 +34,9 @@ export class MessageParser extends Parser
     private _room: string;
     /** Message split up into lines and words. Words are separated by a `|`. */
     private lines: string[][];
-    /** Current line number we're parsing at. */
+    /** Current word index we're parsing at. */
+    private wordN: number;
+    /** Current line index we're parsing at. */
     private lineN: number;
 
     /**
@@ -74,12 +76,11 @@ export class MessageParser extends Parser
             // split each message into lines
             .split("\n")
             // split each line into word segments
-            .map(line => line
-                // since message lines start with a pipe character, omit that
-                //  when parsing the words or we'll get an empty string for the
-                //  first word of every line
-                .substr(1)
-                .split("|"));
+            // since message lines start with a pipe character, omit that
+            //  when parsing the words or we'll get an empty string for the
+            //  first word of every line
+            .map(line => line.substr(1).split("|"));
+        this.wordN = 0;
         this.lineN = 0;
 
         while (this.lineN < this.lines.length) await this.parseMessage();
@@ -92,7 +93,8 @@ export class MessageParser extends Parser
      */
     private async parseMessage(): Promise<void>
     {
-        switch (this.line[0])
+        const word = this.nextWord();
+        switch (word)
         {
             // taken from PROTOCOL.md in github.com/Zarel/Pokemon-Showdown
 
@@ -121,8 +123,8 @@ export class MessageParser extends Parser
                 return this.parseError();
 
             default:
-                if (["drag", "move", "switch"].includes(this.line[0]) ||
-                    isBattleEventPrefix(this.line[0]))
+                if (["drag", "move", "switch"].includes(word) ||
+                    isBattleEventPrefix(word))
                 {
                     return this.parseBattleProgress();
                 }
@@ -134,18 +136,64 @@ export class MessageParser extends Parser
     /** Advances the `line` field to the next line. */
     private nextLine(): void
     {
+        this.wordN = 0;
         ++this.lineN;
+    }
+
+    /** Gets the current word being parsed. */
+    private peekWord(): string
+    {
+        return this.line[this.wordN];
+    }
+
+    /** Gets the current word then advances to the next one. */
+    private nextWord(): string
+    {
+        return this.line[this.wordN++];
+    }
+
+    /** Gets the last parsed word. */
+    private previousWord(): string
+    {
+        return this.line[this.wordN - 1];
+    }
+
+    /** Backtracks the word index within the current line. */
+    private unGetWord(): void
+    {
+        --this.wordN;
+        if (this.wordN < 0) this.wordN = 0;
+    }
+
+    /**
+     * Checks whether we're out of lines to parse. If this is true, subsequent
+     * calls to `peekWord()`, `nextWord()`, `previousWord()`, and `isEol()` may
+     * cause an error.
+     */
+    private isEnd(): boolean
+    {
+        return this.lineN >= this.lines.length;
+    }
+
+    /**
+     * Checks whether we're out of words to parse in the current line. If this
+     * is true, calls to `peekWord()`, `nextWord()`, and `previousWord()`, may
+     * return undefined.
+     */
+    private isEol(): boolean
+    {
+        return this.wordN >= this.line.length;
     }
 
     /**
      * Gets all words of the given line strung together.
-     * @param index Index at which to start concatenating words.
+     * @param wordN Index at which to start concatenating words.
      * @param lineN Line index used to get the words. Omit to assume the current
      * line.
      */
-    private getRestOfLine(index = 1, lineN = this.lineN): string
+    private getRestOfLine(wordN = this.wordN, lineN = this.lineN): string
     {
-        return this.lines[lineN].slice(index).join("|");
+        return this.lines[lineN].slice(wordN).join("|");
     }
 
     /**
@@ -198,7 +246,7 @@ export class MessageParser extends Parser
      */
     private parseInit(): Promise<void>
     {
-        const type = this.line[1];
+        const type = this.nextWord();
         this.nextLine();
 
         // ignore invalid messages
@@ -284,9 +332,9 @@ export class MessageParser extends Parser
      */
     private parseUpdateUser(): Promise<void>
     {
-        const line = this.line;
-        const username = line[1];
-        const isGuest = line[2] ? !MessageParser.parseInt(line[2]) : null;
+        const username = this.nextWord();
+        const word = this.nextWord();
+        const isGuest = word ? !MessageParser.parseInt(word) : null;
         this.nextLine();
 
         // ignore invalid messages
@@ -318,46 +366,71 @@ export class MessageParser extends Parser
         let gen: number | undefined;
         const events: AnyBattleEvent[] = [];
 
-        while (this.lineN < this.lines.length)
+        // first prefix word was already parsed
+        this.unGetWord();
+
+        while (!this.isEnd())
         {
-            const line = this.line;
-            switch (line[0])
+            const prefix = this.nextWord();
+            switch (prefix)
             {
                 case "player":
-                    const playerId = MessageParser.parsePlayerId(line[1]);
-                    const playerName = line[2];
+                {
+                    const idWord = this.nextWord();
+                    const playerId = MessageParser.parsePlayerId(idWord);
+                    const playerName = this.nextWord();
                     if (playerId && playerName)
                     {
                         id = playerId;
                         username = playerName;
                     }
+                    if (!playerId)
+                    {
+                        this.logger.error(`Invalid PlayerID ${idWord}`);
+                    }
+                    if (!playerName) this.logger.error("No player name given");
                     this.nextLine();
                     break;
+                }
                 case "teamsize":
                 {
-                    const teamId = MessageParser.parsePlayerId(line[1]);
-                    const teamSize = MessageParser.parseInt(line[2]);
-
+                    const idWord = this.nextWord();
+                    const teamId = MessageParser.parsePlayerId(idWord);
+                    const sizeWord = this.nextWord();
+                    const teamSize = MessageParser.parseInt(sizeWord);
                     if (!teamSizes)
                     {
                         teamSizes = {} as BattleInitMessage["teamSizes"];
                     }
                     if (teamId && teamSize) teamSizes[teamId] = teamSize;
+                    if (!teamId)
+                    {
+                        this.logger.error(`Invalid PlayerID ${idWord}`);
+                    }
+                    if (!teamSize)
+                    {
+                        this.logger.error(`Invalid team size ${sizeWord}`);
+                    }
                     this.nextLine();
                     break;
                 }
                 case "gametype":
-                    gameType = line[1];
+                    gameType = this.nextWord();
+                    if (!gameType) this.logger.error("No game type given");
                     this.nextLine();
                     break;
                 case "gen":
-                    const genNum = MessageParser.parseInt(line[1]);
+                {
+                    const genWord = this.nextWord();
+                    const genNum = MessageParser.parseInt(genWord);
                     if (genNum) gen = genNum;
+                    else this.logger.error(`Invalid gen num ${genWord}`);
                     this.nextLine();
                     break;
+                }
                     // TODO: team preview
                 default:
-                    if (isBattleEventPrefix(line[0]))
+                    if (isBattleEventPrefix(prefix))
                     {
                         // start of initial events
                         events.push(...this.parseBattleEvents());
@@ -371,6 +444,7 @@ export class MessageParser extends Parser
         if (!id || !username || !teamSizes ||
             (!teamSizes.p1 || !teamSizes.p2) || !gameType || !gen)
         {
+            this.logger.debug("Ignoring invalid battleinit message");
             return Promise.resolve();
         }
         return this.dispatch("battleinit",
@@ -393,8 +467,11 @@ export class MessageParser extends Parser
      */
     private parseBattleEvents(): AnyBattleEvent[]
     {
+        // requires prefix to not have been parsed yet
+        this.unGetWord();
+
         const events: AnyBattleEvent[] = [];
-        while (this.lineN < this.lines.length)
+        while (!this.isEnd())
         {
             const event = this.parseBattleEvent();
             if (event) events.push(event);
@@ -403,12 +480,13 @@ export class MessageParser extends Parser
     }
 
     /**
-     * Parses a BattleEvent.
+     * Parses a BattleEvent. Each `parseXEvent()` method must assume that the
+     * prefix was already parsed and advance to the next line when done parsing.
      * @returns A BattleEvent, or null if invalid.
      */
     private parseBattleEvent(): AnyBattleEvent | null
     {
-        switch (this.line[0])
+        switch (this.nextWord())
         {
             case "-ability": return this.parseAbilityEvent();
             case "-activate": return this.parseActivateEvent();
@@ -449,9 +527,8 @@ export class MessageParser extends Parser
      */
     private parseAbilityEvent(): AbilityEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const ability = line[2];
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const ability = this.nextWord();
 
         this.nextLine();
         if (!id || !ability) return null;
@@ -469,9 +546,8 @@ export class MessageParser extends Parser
      */
     private parseActivateEvent(): ActivateEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const volatile = line[2];
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const volatile = this.nextWord();
 
         this.nextLine();
         if (!id || !volatile) return null;
@@ -490,15 +566,15 @@ export class MessageParser extends Parser
      */
     private parseBoostEvent(): BoostEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const stat = line[2] as BoostableStatName;
-        let amount = MessageParser.parseInt(line[3]);
+        const prefix = this.previousWord();
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const stat = this.nextWord() as BoostableStatName;
+        let amount = MessageParser.parseInt(this.nextWord());
 
         this.nextLine();
         if (!id || !stat || !amount) return null;
 
-        if (line[0] === "-unboost") amount = -amount;
+        if (prefix === "-unboost") amount = -amount;
         return {type: "boost", id, stat, amount};
     }
 
@@ -513,10 +589,9 @@ export class MessageParser extends Parser
      */
     private parseCantEvent(): CantEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const reason = line[2];
-        const moveName = line[3];
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const reason = this.nextWord();
+        const moveName = this.nextWord();
 
         this.nextLine();
         if (!id || !reason) return null;
@@ -536,9 +611,8 @@ export class MessageParser extends Parser
      */
     private parseCureStatusEvent(): CureStatusEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const majorStatus = MessageParser.parseMajorStatus(line[2]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const majorStatus = MessageParser.parseMajorStatus(this.nextWord());
 
         this.nextLine();
         if (!id || !majorStatus) return null;
@@ -556,7 +630,7 @@ export class MessageParser extends Parser
      */
     private parseCureTeamEvent(): CureTeamEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.line[1]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
 
         this.nextLine();
         if (!id) return null;
@@ -570,32 +644,22 @@ export class MessageParser extends Parser
      * @example
      * |<-damage or -heal>|<PokemonID>|<new PokemonStatus>
      *
-     * // optional message suffixes:
-     * |[from] item: <item name>
-     *
      * @returns A DamageEvent, or null if invalid.
      */
     private parseDamageEvent(): DamageEvent | null
     {
-        const line = this.line;
-        const type = line[0].substr(1); // get rid of the dash
-        const id = MessageParser.parsePokemonID(line[1]);
-        const status = MessageParser.parsePokemonStatus(line[2]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const status = MessageParser.parsePokemonStatus(this.nextWord());
+        const cause = this.parseCause();
 
         this.nextLine();
-        if ((type !== "damage" && type !== "heal") || !id || !status)
+        if (!id || !status)
         {
             return null;
         }
 
-        if (line.length > 3)
-        {
-            // FOR NOW: ignore errored (null) Causes
-            const cause = MessageParser.parseCause(line[3]);
-            if (cause) return {type, id, status, cause};
-        }
-
-        return {type, id, status};
+        if (cause) return {type: "damage", id, status, cause};
+        return {type: "damage", id, status};
     }
 
     /**
@@ -609,9 +673,8 @@ export class MessageParser extends Parser
      */
     private parseEndEvent(): EndEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const volatile = line[2];
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const volatile = this.nextWord();
 
         this.nextLine();
         if (!id || !volatile) return null;
@@ -630,7 +693,7 @@ export class MessageParser extends Parser
      */
     private parseFaintEvent(): FaintEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.line[1]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
 
         this.nextLine();
         if (!id) return null;
@@ -652,23 +715,19 @@ export class MessageParser extends Parser
      */
     private parseMoveEvent(): MoveEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const moveName = line[2];
-        const targetId = MessageParser.parsePokemonID(line[3]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const moveName = this.nextWord();
+        const targetId = MessageParser.parsePokemonID(this.nextWord());
+
+        // parse optional suffixes
+        let cause: Cause | null = null;
+        while (!cause && !this.isEol()) cause = this.parseCause();
 
         this.nextLine();
         if (!id || !moveName || !targetId) return null;
 
-        const event: MoveEvent = {type: "move", id, moveName, targetId};
-
-        // parse optional suffixes
-        for (let i = 4; i < line.length; ++i)
-        {
-            const cause = MessageParser.parseCause(line[i]);
-            if (cause) event.cause = cause;
-        }
-        return event;
+        if (cause) return {type: "move", id, moveName, targetId, cause};
+        return {type: "move", id, moveName, targetId};
     }
 
     /**
@@ -682,8 +741,7 @@ export class MessageParser extends Parser
      */
     private parseMustRechargeEvent(): MustRechargeEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
 
         this.nextLine();
         if (!id) return null;
@@ -701,10 +759,9 @@ export class MessageParser extends Parser
      */
     private parsePrepareEvent(): PrepareEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const moveName = line[2];
-        const targetId = MessageParser.parsePokemonID(line[3]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const moveName = this.nextWord();
+        const targetId = MessageParser.parsePokemonID(this.nextWord());
 
         this.nextLine();
         if (!id || !moveName || !targetId) return null;
@@ -723,16 +780,16 @@ export class MessageParser extends Parser
      */
     private parseSetHPEvent(): SetHPEvent | null
     {
-        const line = this.line;
-        this.nextLine();
         const event: SetHPEvent = {type: "sethp", newHPs: []};
-        for (let i = 1; i < line.length; i += 2)
+        while (!this.isEol())
         {
-            const id = MessageParser.parsePokemonID(line[i]);
-            const status = MessageParser.parsePokemonStatus(line[i + 1]);
+            const id = MessageParser.parsePokemonID(this.nextWord());
+            const status = MessageParser.parsePokemonStatus(this.nextWord());
             if (!id || !status) break;
             event.newHPs.push({id, status});
         }
+
+        this.nextLine();
         return event;
     }
 
@@ -747,9 +804,8 @@ export class MessageParser extends Parser
      */
     private parseSingleTurnEvent(): SingleTurnEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const status = line[2];
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const status = this.nextWord();
 
         this.nextLine();
         if (!id || !status) return null;
@@ -770,21 +826,20 @@ export class MessageParser extends Parser
      */
     private parseStartEvent(): StartEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const volatile = line[2];
-
-        this.nextLine();
-        if (!id || !volatile) return null;
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const volatile = this.nextWord();
 
         const otherArgs: string[] = [];
         let cause: Cause | null = null;
-        for (let i = 3; i < line.length; ++i)
+        while (!this.isEol())
         {
-            const s = line[i];
-            cause = MessageParser.parseCause(s);
+            const s = this.peekWord();
+            if (!cause) cause = this.parseCause();
             if (!cause) otherArgs.push(s);
         }
+
+        this.nextLine();
+        if (!id || !volatile) return null;
         if (cause) return {type: "start", id, volatile, otherArgs, cause};
         return {type: "start", id, volatile, otherArgs};
     }
@@ -800,9 +855,8 @@ export class MessageParser extends Parser
      */
     private parseStatusEvent(): StatusEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const majorStatus = MessageParser.parseMajorStatus(line[2]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const majorStatus = MessageParser.parseMajorStatus(this.nextWord());
 
         this.nextLine();
         if (!id || !majorStatus) return null;
@@ -820,10 +874,9 @@ export class MessageParser extends Parser
      */
     private parseSwitchEvent(): SwitchEvent | null
     {
-        const line = this.line;
-        const id = MessageParser.parsePokemonID(line[1]);
-        const details = MessageParser.parsePokemonDetails(line[2]);
-        const status = MessageParser.parsePokemonStatus(line[3]);
+        const id = MessageParser.parsePokemonID(this.nextWord());
+        const details = MessageParser.parsePokemonDetails(this.nextWord());
+        const status = MessageParser.parsePokemonStatus(this.nextWord());
 
         this.nextLine();
         if (!id || !details || !status) return null;
@@ -856,11 +909,10 @@ export class MessageParser extends Parser
      */
     private parseTurnEvent(): TurnEvent | null
     {
-        const num = MessageParser.parseInt(this.line[1]);
+        const num = MessageParser.parseInt(this.nextWord());
 
         this.nextLine();
         if (!num) return null;
-
         return {type: "turn", num};
     }
 
@@ -897,11 +949,12 @@ export class MessageParser extends Parser
 
     /**
      * Parses an event Cause.
-     * @param str String to parse.
      * @returns A Cause, or null if invalid.
      */
-    private static parseCause(str: string): Cause | null
+    private parseCause(): Cause | null
     {
+        const str = this.nextWord();
+        if (!str) return null;
         if (str === "[fatigue]") return {type: "fatigue"};
         else if (str.startsWith("[from] item: "))
         {
