@@ -169,7 +169,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         default:
             result = [];
     }
-    if (event.cause) result.push(stringifyCause(event.cause));
+    if (event.cause) result.push(...stringifyCause(event.cause));
     return result;
 }
 
@@ -217,13 +217,19 @@ ${status.condition ? ` ${status.condition}` : ""}`;
  * @param cause Cause object.
  * @returns The Cause in string form.
  */
-export function stringifyCause(cause: Cause): string
+export function stringifyCause(cause: Cause): string[]
 {
     switch (cause.type)
     {
-        case "fatigue": return "[fatigue]";
-        case "item": return `[from] item: ${cause.item}`;
-        case "lockedmove": return "[from]lockedmove";
-        default: return "";
+        case "ability":
+        {
+            const result = [`[from] ability: ${cause.ability}`];
+            if (cause.of) result.push(`[of] ${stringifyID(cause.of)}`);
+            return result;
+        }
+        case "fatigue": return ["[fatigue]"];
+        case "item": return [`[from] item: ${cause.item}`];
+        case "lockedmove": return ["[from]lockedmove"];
+        default: throw new Error(`Unhandled Cause type ${cause!.type}`);
     }
 }

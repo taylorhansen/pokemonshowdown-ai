@@ -2,8 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { Choice } from "../../../src/bot/battle/Choice";
 import { Type } from "../../../src/bot/battle/dex/dex-types";
-import { AnyBattleEvent, MoveEvent, SetHPEvent } from
-    "../../../src/bot/dispatcher/BattleEvent";
+import { MoveEvent, SetHPEvent } from "../../../src/bot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../../src/bot/dispatcher/Message";
 import { MessageListener } from "../../../src/bot/dispatcher/MessageListener";
@@ -493,7 +492,7 @@ describe("Battle and EventProcessor", function()
         {
             it("Should set ability", async function()
             {
-                expect(battle.state.teams.them.active.baseAbility).to.equal("");
+                expect(battle.state.teams.them.active.ability).to.equal("");
                 await listener.dispatch("battleprogress",
                 {
                     events:
@@ -501,13 +500,13 @@ describe("Battle and EventProcessor", function()
                         {type: "ability", id: them1, ability: "Swift Swim"}
                     ]
                 });
-                expect(battle.state.teams.them.active.baseAbility)
+                expect(battle.state.teams.them.active.ability)
                     .to.equal("swiftswim");
             });
 
             it("Should set opponent ability", async function()
             {
-                expect(battle.state.teams.them.active.baseAbility).to.equal("");
+                expect(battle.state.teams.them.active.ability).to.equal("");
                 await listener.dispatch("battleprogress",
                 {
                     events:
@@ -515,7 +514,7 @@ describe("Battle and EventProcessor", function()
                         {type: "ability", id: them1, ability: "Swift Swim"}
                     ]
                 });
-                expect(battle.state.teams.them.active.baseAbility)
+                expect(battle.state.teams.them.active.ability)
                     .to.equal("swiftswim");
             });
         });
@@ -883,7 +882,7 @@ describe("Battle and EventProcessor", function()
                 beforeEach("Switchin a Pressure pokemon", function()
                 {
                     battle.state.teams.them.switchIn("Zapdos", 100, "", 100,
-                            100)!.baseAbility = "Pressure";
+                            100)!.ability = "Pressure";
                 });
 
                 beforeEach("Reveal an attacking move", function()
@@ -1244,6 +1243,86 @@ describe("Battle and EventProcessor", function()
 
         describe("cause", function()
         {
+            it("Should reject Cause with no associated PokemonID",
+            async function()
+            {
+                let thrown = false;
+                try
+                {
+                    await listener.dispatch("battleprogress",
+                        {events: [{type: "tie", cause: {type: "fatigue"}}]});
+                }
+                catch (e) { thrown = true; }
+                // tslint:disable-next-line:no-unused-expression
+                expect(thrown).to.be.true;
+            });
+
+            describe("ability", function()
+            {
+                it("Should reveal ability", async function()
+                {
+                    const mon = battle.state.teams.them.switchIn("Arcanine",
+                        100, "M", 1000, 1000)!;
+                    const them2: PokemonID =
+                        {owner: "p2", position: "a", nickname: "Arcanine"};
+
+                    // tslint:disable-next-line:no-unused-expression
+                    expect(mon.ability).to.be.empty;
+                    await listener.dispatch("battleprogress",
+                    {
+                        events:
+                        [
+                            {
+                                type: "boost", id: us1, stat: "atk", amount: -1,
+                                cause:
+                                {
+                                    type: "ability", ability: "Intimidate",
+                                    of: them2
+                                }
+                            }
+                        ]
+                    });
+                    expect(mon.ability).to.equal("intimidate");
+                });
+
+                it("Should handle Trace correctly", async function()
+                {
+                    // reset team so we can switchin something else and fully
+                    //  validate ability reavealing mechanics
+                    battle.state.teams.us.size = 1;
+                    const mon1 = battle.state.teams.us.switchIn("Gardevoir",
+                        100, "F", 100, 100)!;
+                    const mon2 = battle.state.teams.them.active;
+
+                    // tslint:disable-next-line:no-unused-expression
+                    expect(mon1.ability).to.be.empty;
+                    // tslint:disable-next-line:no-unused-expression
+                    expect(mon2.ability).to.be.empty;
+                    await listener.dispatch("battleprogress",
+                    {
+                        events:
+                        [
+                            {
+                                type: "ability", ability: "Swift Swim",
+                                id:
+                                {
+                                    owner: "p1", position: "a",
+                                    nickname: "Gardevoir"
+                                },
+                                cause:
+                                {
+                                    type: "ability", ability: "Trace", of: them1
+                                }
+                            }
+                        ]
+                    });
+                    expect(mon1.ability).to.equal("swiftswim");
+                    expect(mon1.volatile.overrideAbilityName)
+                        .to.equal("swiftswim");
+                    expect(mon1.baseAbility).to.equal("trace");
+                    expect(mon2.ability).to.equal("swiftswim");
+                });
+            });
 
             describe("fatigue", function()
             {

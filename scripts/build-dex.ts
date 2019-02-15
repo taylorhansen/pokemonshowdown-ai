@@ -2,6 +2,7 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
+import { toIdName } from "../src/bot/helpers";
 // @ts-ignore
 import Dex = require("./Pokemon-Showdown/sim/dex");
 
@@ -67,12 +68,16 @@ import { Dex, MoveData, PokemonData } from \"./dex-types\";
 //  https://github.com/Zarel/Pokemon-Showdown/blob/master/sim/dex-data.js
 
 // counter for the unique identifier of a pokemon, move, etc.
-let uid = 0;
+// id numbers start at 1 so that 0 can mean nothing/unknown
+let uid = 1;
+
+/** Contains ability ids. */
+const abilities: {[name: string]: number} = {};
+let numAbilities = 0;
 
 // pokemon
 const pokedex = data.Pokedex;
-console.log(`/** Contains data for every pokemon in the supported generation. */
-const pokemon: {readonly [species: string]: PokemonData} =\n{`);
+console.log("const pokemon: {readonly [species: string]: PokemonData} =\n{");
 for (const name in pokedex)
 {
     if (!pokedex.hasOwnProperty(name)) continue;
@@ -85,33 +90,28 @@ for (const name in pokedex)
 
     const stats = mon.baseStats;
 
-    // showdown dex maps a number of 0 or 1 with the ability name
-    // we want the opposite of that, i.e. mapping the ability name with a number
-    //  indicating first or second ability
-    const abilities: string[] = [];
-    for (const abilityId in mon.abilities)
+    // get quoted base abilities
+    const baseAbilities: string[] = [];
+    for (const index in mon.abilities)
     {
-        if (!mon.abilities.hasOwnProperty(abilityId)) continue;
+        if (!mon.abilities.hasOwnProperty(index)) continue;
 
-        // mon.abilities[abilityId] gives us the display name, e.g.
-        //  "Serene Grace", but the actual name is all lowercase without spaces
-        //  and such, e.g. "serenegrace"
-        const abilityName = mon.abilities[abilityId].toLowerCase()
-            .replace(/[- ]+/, "");
-        abilities.push(`${abilityName}: ${parseInt(abilityId, 10)}`);
+        const idName = toIdName(mon.abilities[index]);
+        baseAbilities.push(quote(idName));
+        if (!abilities.hasOwnProperty(idName))
+        {
+            abilities[idName] = ++numAbilities;
+        }
     }
 
     const types: string[] = mon.types;
 
     // optionally fill in other forms if there are any from gen4
-    let otherForms;
+    let otherForms: string[] | undefined;
     if (mon.otherFormes)
     {
         const tmp = mon.otherFormes.filter(isGen4);
-        if (tmp.length > 0)
-        {
-            otherForms = tmp;
-        }
+        if (tmp.length > 0) otherForms = tmp;
     }
 
     console.log(`\
@@ -133,7 +133,7 @@ for (const name in pokedex)
         otherForms: [${otherForms.map(quote).join(", ")}],`);
     // tslint:enable:curly
     console.log(`\
-        abilities: {${abilities.join(", ")}},
+        abilities: [${baseAbilities.join(", ")}],
         types: [${types.map(t => quote(t.toLowerCase())).join(", ")}],
         baseStats: {hp: ${stats.hp}, atk: ${stats.atk}, def: ${stats.def}, \
 spa: ${stats.spa}, spd: ${stats.spd}, spe: ${stats.spe}},
@@ -141,16 +141,21 @@ spa: ${stats.spa}, spd: ${stats.spd}, spe: ${stats.spe}},
     },`);
     ++uid;
 }
-console.log("};\n");
 const numPokemon = uid;
+
+console.log(`};
+
+const abilities: {readonly [name: string]: number} =
+{
+${Object.keys(abilities).map(id => `    ${id}: ${abilities[id]},\n`).join("")}};
+`);
 
 // moves
 const moves = data.Movedex;
 const twoTurnMoves: {[name: string]: number} = {};
 let twoTurnUid = 0;
 
-console.log(`/** Contains data for every move in the supported generation. */
-const moves: {readonly [name: string]: MoveData} =\n{`);
+console.log("const moves: {readonly [name: string]: MoveData} =\n{");
 
 uid = 0;
 for (const moveName in moves)
@@ -216,8 +221,7 @@ export const numTwoTurnMoves = Object.keys(twoTurnMoves).length;\n`);
 
 // items
 const items = data.Items;
-console.log(`/** Contains data for every item in the supported generation. */
-const items: {readonly [name: string]: number} =\n{`);
+console.log(`const items: {readonly [name: string]: number} =\n{`);
 uid = 0;
 for (const itemName in items)
 {
@@ -232,8 +236,10 @@ for (const itemName in items)
 console.log("};\n");
 const numItems = uid;
 
-console.log(`export const dex: Dex =
+console.log(`/** Contains all relevant Pokemon-related data. */
+export const dex: Dex =
 {
-    pokemon, numPokemon: ${numPokemon}, moves, numMoves: ${numMoves}, \
-items, numItems: ${numItems}
+    pokemon, numPokemon: ${numPokemon}, abilities, \
+numAbilities: ${numAbilities}, moves,
+    numMoves: ${numMoves}, items, numItems: ${numItems}
 };`);

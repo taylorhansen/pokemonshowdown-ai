@@ -1,4 +1,4 @@
-import { MajorStatus, majorStatuses } from "../../helpers";
+import { MajorStatus, majorStatuses, toIdName } from "../../helpers";
 import { dex } from "../dex/dex";
 import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
@@ -33,34 +33,56 @@ export class Pokemon
     /** Pokemon species/form unique identifier. */
     private _species = 0;
 
-    /** Ability id name. Setter allows either id name or display name. */
+    /** Current ability id name. Can temporarily change while active. */
+    public get ability(): string
+    {
+        // ability has been overridden
+        if (this.volatile.overrideAbility)
+        {
+            return this.volatile.overrideAbilityName;
+        }
+        // not overridden
+        if (this._baseAbility) return this.baseAbilityName;
+        // not yet initialized
+        return "";
+    }
+    public set ability(ability: string)
+    {
+        // make sure ability name is converted to an id name
+        const name = toIdName(ability);
+        const id = dex.abilities[name];
+
+        if (!id) throw new Error(`Unknown ability "${ability}"`);
+
+        // initialize base ability for the first time
+        if (!this.baseAbilityName)
+        {
+            if (!this.data)
+            {
+                throw new Error("Base ability set before species data");
+            }
+            if (!this.data.abilities.includes(name))
+            {
+                throw new Error(
+                    `Species ${this.species} can't have base ability ${name}`);
+            }
+
+            this.baseAbilityName = name;
+            this._baseAbility = id;
+        }
+
+        // override current ability
+        this.volatile.overrideAbility = id;
+        this.volatile.overrideAbilityName = name;
+    }
     public get baseAbility(): string
     {
         return this.baseAbilityName;
     }
-    public set baseAbility(baseAbility: string)
-    {
-        if (!this.data) throw new Error("Base ability set before species data");
-
-        // make sure ability name is converted to an id name
-        const name = baseAbility.toLowerCase().replace(/[ -]+/g, "");
-
-        if (!this.data.abilities.hasOwnProperty(name))
-        {
-            throw new Error(
-                `Species ${this.species} can't have ability ${name}`);
-        }
-
-        this.baseAbilityName = name;
-        this._baseAbility = this.data.abilities[name];
-    }
     /** ID name of the base ability. */
     private baseAbilityName = "";
-    /**
-     * Base ability relative to its species. Can be 1 or 2 indicating which
-     * ability that is.
-     */
-    private _baseAbility?: number;
+    /** Base ability id number. */
+    private _baseAbility = 0;
 
     /** Item id name. Setter allows either id name or display name. */
     public get item(): string
@@ -174,6 +196,8 @@ export class Pokemon
     public switchIn(): void
     {
         this._active = true;
+        this.volatile.overrideAbility = this._baseAbility;
+        this.volatile.overrideAbilityName = this.baseAbilityName;
     }
 
     /**
@@ -316,7 +340,12 @@ ${this.hp.toString()}${this.majorStatus ? ` ${this.majorStatus}` : ""}
 ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
 ${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
-${s}ability: ${this.baseAbilityName ? this.baseAbilityName : "<unrevealed>"}
+${s}ability: \
+${this.ability ?
+    this.ability +
+        (this.volatile.overrideAbility !== this._baseAbility ?
+            ` (${this.baseAbilityName})` : "")
+    : "<unrevealed>"}
 ${s}possibleHPTypes: [${(Object.keys(types) as Type[])
     .filter(type => this._hpTypes[type]).join(", ")}]
 ${s}moves: ${this._moves.map((m, i) =>

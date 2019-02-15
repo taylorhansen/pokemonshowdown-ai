@@ -43,6 +43,7 @@ export const pokemonStatus: PokemonStatus[] =
 /** Test Causes. */
 export const cause: Cause[] =
 [
+    {type: "ability", ability: "Intimidate", of: pokemonId[0]},
     {type: "fatigue"}, {type: "item", item: "Leftovers"}, {type: "lockedmove"}
 ];
 
@@ -51,8 +52,8 @@ export const battleEvent: AnyBattleEvent[] =
 [
     {type: "ability", id: pokemonId[0], ability: "Pressure"},
     {type: "activate", id: pokemonId[1], volatile: "ingrain"},
-    {type: "boost", id: pokemonId[2], stat: "atk", amount: 2},
-    {type: "boost", id: pokemonId[2], stat: "evasion", amount: -1},
+    {type: "boost", id: pokemonId[2], stat: "atk", amount: -1, cause: cause[0]},
+    {type: "boost", id: pokemonId[2], stat: "evasion", amount: 2},
     {type: "cant", id: pokemonId[1], reason: "recharge"},
     {type: "cant", id: pokemonId[1], reason: "taunt", moveName: "Thunder Wave"},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
@@ -88,7 +89,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "singleturn", id: pokemonId[2], status: "Protect"},
     {
         type: "start", id: pokemonId[0], volatile: "confusion", otherArgs: [],
-        cause: cause[0]
+        cause: cause[3]
     },
     {
         type: "start", id: pokemonId[1], volatile: "Disable",

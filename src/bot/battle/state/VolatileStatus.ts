@@ -1,5 +1,5 @@
-import { BoostableStatName, boostableStatNames } from "../../helpers";
-import { numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
+import { BoostableStatName, boostableStatNames, toIdName } from "../../helpers";
+import { dex, numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
 import { oneHot, tempStatusTurns } from "./utility";
 
 /**
@@ -55,10 +55,39 @@ export class VolatileStatus
     /** Whether we have successfully stalled this turn. */
     private stalled = false;
 
+    /**
+     * Override ability id number. This should not be included in toString()
+     * since the parent Pokemon object should handle that. Should not be
+     * accessed other than by the parent Pokemon object.
+     */
+    public overrideAbility: number;
+    /** Name of override ability. */
+    public overrideAbilityName: string;
+
     /** Creates a VolatileStatus object. */
     constructor()
     {
         this.clear();
+    }
+
+    /**
+     * Clears all volatile status conditions. This does not affect shallow
+     * clones.
+     */
+    public clear(): void
+    {
+        this._boosts =
+        {
+            atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
+        };
+        this._confuseTurns = 0;
+        this.disableTurns = [0, 0, 0, 0];
+        this.lockedMove = false;
+        this.twoTurn = "";
+        this.mustRecharge = false;
+        this._stallTurns = 0;
+        this.overrideAbility = 0;
+        this.overrideAbilityName = "";
     }
 
     /**
@@ -98,24 +127,6 @@ export class VolatileStatus
         v._boosts = this._boosts;
         v._confuseTurns = this._confuseTurns;
         return v;
-    }
-
-    /**
-     * Clears all volatile status conditions. This does not affect shallow
-     * clones.
-     */
-    public clear(): void
-    {
-        this._boosts =
-        {
-            atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
-        };
-        this._confuseTurns = 0;
-        this.disableTurns = [0, 0, 0, 0];
-        this.lockedMove = false;
-        this.twoTurn = "";
-        this.mustRecharge = false;
-        this._stallTurns = 0;
     }
 
     /**
@@ -184,7 +195,7 @@ export class VolatileStatus
         return /*boostable stats*/Object.keys(boostableStatNames).length +
             /*confuse*/1 + /*disable*/4 + /*locked move*/1 +
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
-            /*stall turns*/1;
+            /*stall fail rate*/1 + /*override ability*/dex.numAbilities;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -195,8 +206,9 @@ export class VolatileStatus
     public toArray(): number[]
     {
         // one-hot encode categorical data
-        const twoTurn = oneHot(this.twoTurn ? twoTurnMoves[this.twoTurn] : -1,
+        const twoTurn = oneHot(this.twoTurn ? twoTurnMoves[this.twoTurn] : 0,
                 numTwoTurnMoves);
+        const overrideAbility = oneHot(this.overrideAbility, dex.numAbilities);
 
         // encode temporary status turns
         const confused = tempStatusTurns(this._confuseTurns);
@@ -208,7 +220,7 @@ export class VolatileStatus
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
             confused, ...disabled, this.lockedMove ? 1 : 0, ...twoTurn,
-            this.mustRecharge ? 1 : 0, stallFailRate
+            this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility
         ];
         return a;
     }

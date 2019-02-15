@@ -60,7 +60,18 @@ export class EventProcessor
         this.listener
         .on("ability", event =>
         {
-            this.getActive(event.id.owner).baseAbility = event.ability;
+            const active = this.getActive(event.id.owner);
+            if (event.cause && event.cause.type === "ability" &&
+                event.cause.ability === "Trace")
+            {
+                // trace ability: event.ability contains traced ability,
+                //  event.cause.of contains pokemon that was traced,
+                // initialize baseAbility if not already
+                active.ability = "Trace";
+                this.getActive(event.cause.of!.owner).ability = event.ability;
+            }
+
+            active.ability = event.ability;
         })
         .on("start", event =>
         {
@@ -250,7 +261,7 @@ export class EventProcessor
             const mon = team.reveal(details.species, details.level,
                     details.gender, status.hp, status.hpMax)!;
             mon.item = data.item;
-            mon.baseAbility = data.baseAbility;
+            mon.ability = data.baseAbility;
             mon.majorStatus = status.condition;
 
             // set active status
@@ -297,15 +308,20 @@ export class EventProcessor
             //  type should match its properties
             this.listener.dispatch(event.type as any, event, events, i);
 
-            // handle message suffixes
-            // these message types don't have an id field, so there's not enough
-            //  information to process any Causes
-            // and anyways, they shouldn't have any meaningful ones on them
-            if (event.cause && event.type !== "sethp" && event.type !== "tie" &&
-                event.type !== "turn" && event.type !== "upkeep" &&
-                event.type !== "win")
+            // this corner case should be handled in the AbilityEvent handler
+            if (event.type === "ability" && event.cause &&
+                event.cause.type === "ability" &&
+                event.cause.ability === "Trace")
             {
-                this.handleCause(this.getSide(event.id.owner), event.cause!);
+                continue;
+            }
+
+            // handle message suffixes
+            // some messages don't have an id field, which should default to
+            //  undefined here
+            if (event.cause)
+            {
+                this.handleCause(event.cause!, (event as any).id);
             }
         }
     }
@@ -326,20 +342,35 @@ export class EventProcessor
 
     /**
      * Handles an event Cause.
-     * @param side Side that it takes place.
      * @param cause Cause object.
+     * @param id Last mentioned id.
      */
-    private handleCause(side: Side, cause: Cause): void
+    private handleCause(cause: Cause, id?: PokemonID): void
     {
+        // should already be handled by other handlers
+        if (cause.type === "lockedmove") return;
+
+        let mon: Pokemon | undefined;
+        // some Causes have an of field which disambiguates where the Cause came
+        //  from
+        if (cause.of) mon = this.getActive(cause.of.owner);
+        // otherwise, the most recently mentioned id should do
+        else if (id) mon = this.getActive(id.owner);
+        else throw new Error("handleCause not given PokemonID");
+
         switch (cause.type)
         {
+            case "ability":
+                // specify owner of the ability
+                mon.ability = cause.ability;
+                break;
             case "fatigue":
                 // no longer locked into a move
-                this.state.teams[side].active.volatile.lockedMove = false;
+                mon.volatile.lockedMove = false;
                 break;
             case "item":
                 // reveal item
-                this.state.teams[side].active.item = cause.item;
+                mon.item = cause.item;
                 break;
         }
     }
@@ -371,7 +402,7 @@ export class EventProcessor
             // locked moves don't consume pp
             (event.cause && event.cause.type === "lockedmove") ? 0
             // pressure ability doubles pp usage if opponent is targeted
-            : (this.getActive(otherId(event.id.owner)).baseAbility ===
+            : (this.getActive(otherId(event.id.owner)).ability ===
                     "pressure" && event.targetId.owner !== event.id.owner) ? 2
             // but normally use 1 pp
             : 1;

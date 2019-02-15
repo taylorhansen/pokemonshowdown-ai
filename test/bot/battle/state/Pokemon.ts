@@ -54,7 +54,7 @@ describe("Pokemon", function()
         });
     });
 
-    describe("baseAbility", function()
+    describe("ability", function()
     {
         it("Should be empty initially", function()
         {
@@ -64,7 +64,7 @@ describe("Pokemon", function()
         it("Should not set baseAbility without first setting species",
         function()
         {
-            expect(() => mon.baseAbility = "swiftswim").to.throw();
+            expect(() => mon.ability = "swiftswim").to.throw();
             expect(mon.baseAbility).to.equal("");
         });
 
@@ -72,23 +72,42 @@ describe("Pokemon", function()
         function()
         {
             mon.species = "Bulbasaur";
-            expect(() => mon.baseAbility = "swiftswim").to.throw();
+            expect(() => mon.ability = "swiftswim").to.throw();
             expect(mon.baseAbility).to.equal("");
         });
 
         it("Should set baseAbility after setting species", function()
         {
             mon.species = "Magikarp";
-            mon.baseAbility = "swiftswim";
-            expect(mon.baseAbility).to.equal("swiftswim");
+            mon.ability = "swiftswim";
+            expect(mon.ability).to.equal("swiftswim");
         });
 
         it("Should allow display name", function()
         {
             mon.species = "Magikarp";
-            mon.baseAbility = "Swift Swim";
+            mon.ability = "Swift Swim";
             expect(mon.baseAbility).to.equal("swiftswim");
 
+        });
+
+        it("Should set volatile ability", function()
+        {
+            mon.switchIn();
+            mon.species = "Magikarp";
+            mon.ability = "swiftswim";
+            expect(mon.volatile.overrideAbilityName).to.equal("swiftswim");
+            mon.ability = "insomnia";
+            expect(mon.baseAbility).to.equal("swiftswim");
+            expect(mon.volatile.overrideAbilityName).to.equal("insomnia");
+        });
+
+        it("Should reject unknown ability", function()
+        {
+            mon.species = "Bulbasaur";
+            expect(() => mon.ability = "not_a real-ability").to.throw();
+            // tslint:disable-next-line:no-unused-expression
+            expect(mon.ability).to.be.empty;
         });
     });
 
@@ -285,7 +304,7 @@ describe("Pokemon", function()
         {
             // set some stuff for coverage
             mon.species = "Magikarp";
-            mon.baseAbility = "swiftswim";
+            mon.ability = "swiftswim";
             mon.hpType = "fire";
             mon.majorStatus = "psn";
             mon.gender = "F";

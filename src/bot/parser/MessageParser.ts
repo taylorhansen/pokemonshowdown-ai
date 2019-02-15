@@ -1,9 +1,9 @@
 import { Logger } from "../../Logger";
-import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
-    Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent, FaintEvent,
-    isBattleEventPrefix, MoveEvent, MustRechargeEvent, PrepareEvent, SetHPEvent,
-    SingleTurnEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent, TurnEvent,
-    UpkeepEvent, WinEvent } from "../dispatcher/BattleEvent";
+import { AbilityCause, AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent,
+    CantEvent, Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent,
+    FaintEvent, isBattleEventPrefix, MoveEvent, MustRechargeEvent, PrepareEvent,
+    SetHPEvent, SingleTurnEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent,
+    TurnEvent, UpkeepEvent, WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage } from "../dispatcher/Message";
 import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
@@ -479,12 +479,26 @@ export class MessageParser extends Parser
         return events;
     }
 
+    /** Parses a BattleEvent with optional Cause suffix at the end. */
+    private parseBattleEvent(): AnyBattleEvent | null
+    {
+        const event = this.parseBattleEventHelper();
+        let cause: Cause | null | undefined;
+        if (event)
+        {
+            while (!cause && !this.isEol()) cause = this.parseCause();
+            if (cause) event.cause = cause;
+        }
+        this.nextLine();
+        return event;
+    }
+
     /**
      * Parses a BattleEvent. Each `parseXEvent()` method must assume that the
-     * prefix was already parsed and advance to the next line when done parsing.
+     * prefix was already parsed, and should not advance the line index yet.
      * @returns A BattleEvent, or null if invalid.
      */
-    private parseBattleEvent(): AnyBattleEvent | null
+    private parseBattleEventHelper(): AnyBattleEvent | null
     {
         switch (this.nextWord())
         {
@@ -509,10 +523,7 @@ export class MessageParser extends Parser
             case "turn": return this.parseTurnEvent();
             case "upkeep": return this.parseUpkeepEvent();
             case "win": return this.parseWinEvent();
-            default:
-                // ignore
-                this.nextLine();
-                return null;
+            default: return null;
         }
     }
 
@@ -530,7 +541,6 @@ export class MessageParser extends Parser
         const id = MessageParser.parsePokemonID(this.nextWord());
         const ability = this.nextWord();
 
-        this.nextLine();
         if (!id || !ability) return null;
         return {type: "ability", id, ability};
     }
@@ -549,7 +559,6 @@ export class MessageParser extends Parser
         const id = MessageParser.parsePokemonID(this.nextWord());
         const volatile = this.nextWord();
 
-        this.nextLine();
         if (!id || !volatile) return null;
 
         return {type: "activate", id, volatile};
@@ -571,9 +580,7 @@ export class MessageParser extends Parser
         const stat = this.nextWord() as BoostableStatName;
         let amount = MessageParser.parseInt(this.nextWord());
 
-        this.nextLine();
         if (!id || !stat || !amount) return null;
-
         if (prefix === "-unboost") amount = -amount;
         return {type: "boost", id, stat, amount};
     }
@@ -593,9 +600,7 @@ export class MessageParser extends Parser
         const reason = this.nextWord();
         const moveName = this.nextWord();
 
-        this.nextLine();
         if (!id || !reason) return null;
-
         if (!moveName) return {type: "cant", id, reason};
         return {type: "cant", id, reason, moveName};
     }
@@ -614,7 +619,6 @@ export class MessageParser extends Parser
         const id = MessageParser.parsePokemonID(this.nextWord());
         const majorStatus = MessageParser.parseMajorStatus(this.nextWord());
 
-        this.nextLine();
         if (!id || !majorStatus) return null;
         return {type: "curestatus", id, majorStatus};
     }
@@ -632,7 +636,6 @@ export class MessageParser extends Parser
     {
         const id = MessageParser.parsePokemonID(this.nextWord());
 
-        this.nextLine();
         if (!id) return null;
         return {type: "cureteam", id};
     }
@@ -650,15 +653,8 @@ export class MessageParser extends Parser
     {
         const id = MessageParser.parsePokemonID(this.nextWord());
         const status = MessageParser.parsePokemonStatus(this.nextWord());
-        const cause = this.parseCause();
 
-        this.nextLine();
-        if (!id || !status)
-        {
-            return null;
-        }
-
-        if (cause) return {type: "damage", id, status, cause};
+        if (!id || !status) return null;
         return {type: "damage", id, status};
     }
 
@@ -676,9 +672,7 @@ export class MessageParser extends Parser
         const id = MessageParser.parsePokemonID(this.nextWord());
         const volatile = this.nextWord();
 
-        this.nextLine();
         if (!id || !volatile) return null;
-
         return {type: "end", id, volatile};
     }
 
@@ -695,7 +689,6 @@ export class MessageParser extends Parser
     {
         const id = MessageParser.parsePokemonID(this.nextWord());
 
-        this.nextLine();
         if (!id) return null;
         return {type: "faint", id};
     }
@@ -719,14 +712,7 @@ export class MessageParser extends Parser
         const moveName = this.nextWord();
         const targetId = MessageParser.parsePokemonID(this.nextWord());
 
-        // parse optional suffixes
-        let cause: Cause | null = null;
-        while (!cause && !this.isEol()) cause = this.parseCause();
-
-        this.nextLine();
         if (!id || !moveName || !targetId) return null;
-
-        if (cause) return {type: "move", id, moveName, targetId, cause};
         return {type: "move", id, moveName, targetId};
     }
 
@@ -743,7 +729,6 @@ export class MessageParser extends Parser
     {
         const id = MessageParser.parsePokemonID(this.nextWord());
 
-        this.nextLine();
         if (!id) return null;
         return {type: "mustrecharge", id};
     }
@@ -763,9 +748,7 @@ export class MessageParser extends Parser
         const moveName = this.nextWord();
         const targetId = MessageParser.parsePokemonID(this.nextWord());
 
-        this.nextLine();
         if (!id || !moveName || !targetId) return null;
-
         return {type: "prepare", id, moveName, targetId};
     }
 
@@ -788,8 +771,6 @@ export class MessageParser extends Parser
             if (!id || !status) break;
             event.newHPs.push({id, status});
         }
-
-        this.nextLine();
         return event;
     }
 
@@ -807,7 +788,6 @@ export class MessageParser extends Parser
         const id = MessageParser.parsePokemonID(this.nextWord());
         const status = this.nextWord();
 
-        this.nextLine();
         if (!id || !status) return null;
         return {type: "singleturn", id, status};
     }
@@ -838,7 +818,6 @@ export class MessageParser extends Parser
             if (!cause) otherArgs.push(s);
         }
 
-        this.nextLine();
         if (!id || !volatile) return null;
         if (cause) return {type: "start", id, volatile, otherArgs, cause};
         return {type: "start", id, volatile, otherArgs};
@@ -858,7 +837,6 @@ export class MessageParser extends Parser
         const id = MessageParser.parsePokemonID(this.nextWord());
         const majorStatus = MessageParser.parseMajorStatus(this.nextWord());
 
-        this.nextLine();
         if (!id || !majorStatus) return null;
         return {type: "status", id, majorStatus};
     }
@@ -878,7 +856,6 @@ export class MessageParser extends Parser
         const details = MessageParser.parsePokemonDetails(this.nextWord());
         const status = MessageParser.parsePokemonStatus(this.nextWord());
 
-        this.nextLine();
         if (!id || !details || !status) return null;
         return {type: "switch", id, details, status};
     }
@@ -894,7 +871,6 @@ export class MessageParser extends Parser
      */
     private parseUpkeepEvent(): UpkeepEvent
     {
-        this.nextLine();
         return {type: "upkeep"};
     }
 
@@ -911,7 +887,6 @@ export class MessageParser extends Parser
     {
         const num = MessageParser.parseInt(this.nextWord());
 
-        this.nextLine();
         if (!num) return null;
         return {type: "turn", num};
     }
@@ -927,7 +902,6 @@ export class MessageParser extends Parser
      */
     private parseTieEvent(): TieEvent
     {
-        this.nextLine();
         return {type: "tie"};
     }
 
@@ -942,9 +916,7 @@ export class MessageParser extends Parser
      */
     private parseWinEvent(): WinEvent
     {
-        const winner = this.getRestOfLine();
-        this.nextLine();
-        return {type: "win", winner};
+        return {type: "win", winner: this.getRestOfLine()};
     }
 
     /**
@@ -955,12 +927,32 @@ export class MessageParser extends Parser
     {
         const str = this.nextWord();
         if (!str) return null;
+        if (str.startsWith("[from] ability: "))
+        {
+            const result: AbilityCause =
+            {
+                type: "ability", ability: str.substr("[from] ability: ".length)
+            };
+            // parse possible "of" suffix
+            const next = this.peekWord();
+            if (next && next.startsWith("[of] "))
+            {
+                const id = MessageParser.parsePokemonID(
+                    next.substr("[of] ".length));
+                if (id)
+                {
+                    this.nextWord();
+                    result.of = id;
+                }
+            }
+            return result;
+        }
         if (str === "[fatigue]") return {type: "fatigue"};
-        else if (str.startsWith("[from] item: "))
+        if (str.startsWith("[from] item: "))
         {
             return {type: "item", item: str.substr("[from] item: ".length)};
         }
-        else if (str === "[from]lockedmove") return {type: "lockedmove"};
+        if (str === "[from]lockedmove") return {type: "lockedmove"};
         return null;
     }
 

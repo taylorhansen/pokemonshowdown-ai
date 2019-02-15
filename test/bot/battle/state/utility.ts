@@ -9,7 +9,7 @@ describe("utility", function()
     {
         it("Should encode class of values", function()
         {
-            expect(oneHot(2, 3)).to.deep.equal([0, 0, 1]);
+            expect(oneHot(2, 3)).to.deep.equal([0, 1, 0]);
         });
     });
 

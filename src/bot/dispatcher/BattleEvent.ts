@@ -282,13 +282,27 @@ export interface WinEvent extends BattleEventBase
 
 // battle event cause types
 
-export type Cause = FatigueCause | ItemCause | LockedMoveCause;
+export type Cause = AbilityCause | FatigueCause | ItemCause | LockedMoveCause;
 
 /** Base class for Causes. */
 interface CauseBase
 {
     /** The type of Cause this is. */
     type: string;
+    /** Additional PokemonID for context. */
+    of?: PokemonID;
+}
+
+export interface AbilityCause extends CauseBase
+{
+    type: "ability";
+    /** Name of the ability being activated. */
+    ability: string;
+    /**
+     * Either the ID of the pokemon with the ability or the ID of the recipient
+     * of the ability's effect. Meaning may depend on the context.
+     */
+    of?: PokemonID;
 }
 
 /** Caused by fatigue, or the completion of a multi-turn locked move. */

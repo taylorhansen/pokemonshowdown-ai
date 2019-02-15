@@ -32,11 +32,8 @@ export interface PokemonData
     readonly formLetter?: string;
     /** Alternate forms of this pokemon. */
     readonly otherForms?: string[];
-    /**
-     * ID of the abilities this species can have. 0 or 1 means it's the
-     * pokemon's first or second ability.
-     */
-    readonly abilities: {readonly [name: string]: 0 | 1};
+    /** Id names of the abilities this species can have. */
+    readonly abilities: string[];
     /** Types of the pokemon. */
     readonly types: ReadonlyArray<Type>;
     /** Base stats. */
@@ -82,6 +79,10 @@ export interface Dex
     readonly pokemon: {readonly [species: string]: PokemonData};
     /** Total number of pokemon species. */
     readonly numPokemon: number;
+    /** Maps ability id name to an id number. */
+    readonly abilities: {readonly [name: string]: number};
+    /** Total number of abilities. */
+    readonly numAbilities: number;
     /** Maps a move id name to its id number. */
     readonly moves: {readonly [name: string]: MoveData};
     /** Total number of moves. */
