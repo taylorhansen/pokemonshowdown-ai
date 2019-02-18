@@ -72,6 +72,16 @@ async function play(models: {[P in PlayerID]: tf.Model},
     const result: GameResult = {decisions: [], winner: null};
     const promises: Promise<void>[] = [];
 
+    // setup log file
+    let file: fs.WriteStream | undefined;
+    if (logPath)
+    {
+        const dir = dirname(logPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
+
+        file = fs.createWriteStream(logPath);
+    }
+
     for (const id of ["p1", "p2"] as PlayerID[])
     {
         // sends player choices to the battle stream
@@ -80,17 +90,9 @@ async function play(models: {[P in PlayerID]: tf.Model},
             streams[id].write(choice);
         }
 
-        // setup log file
-        let file: fs.WriteStream | undefined;
+        // setup logger
         let innerLog: Logger;
-        if (logPath)
-        {
-            const dir = dirname(logPath);
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
-
-            file = fs.createWriteStream(logPath);
-            innerLog = new Logger(file, id + ": ");
-        }
+        if (file) innerLog = new Logger(file, id + ": ");
         else innerLog = Logger.null;
 
         // setup player
