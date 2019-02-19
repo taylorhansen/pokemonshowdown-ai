@@ -25,6 +25,8 @@ describe("VolatileStatus", function()
             volatile.twoTurn = "Bounce";
             volatile.mustRecharge = true;
             volatile.stall(true);
+            volatile.overrideAbility = 1;
+            volatile.overrideAbilityName = "something"; // not actually valid
 
             volatile.clear();
             // tslint:disable:no-unused-expression
@@ -36,6 +38,9 @@ describe("VolatileStatus", function()
             expect(volatile.twoTurn).to.equal("");
             expect(volatile.mustRecharge).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
+            expect(volatile.overrideAbility).to.equal(0);
+            expect(volatile.overrideAbilityName).to.equal("");
+            expect(volatile.truant).to.be.false;
             // tslint:enable:no-unused-expression
         });
     });

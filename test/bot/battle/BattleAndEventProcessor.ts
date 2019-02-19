@@ -631,6 +631,46 @@ describe("Battle and EventProcessor", function()
 
         describe("cant", function()
         {
+            it("Should reveal ability", async function()
+            {
+                const mon = battle.state.teams.them.active;
+                mon.ability = "swiftswim";
+                await listener.dispatch("battleprogress",
+                {
+                    events: [{type: "cant", id: them1, reason: "ability: Damp"}]
+                });
+                expect(mon.ability).to.equal("damp");
+                expect(mon.baseAbility).to.equal("swiftswim");
+            });
+
+            it("Should properly handle truant ability", async function()
+            {
+                // tslint:disable:no-unused-expression
+                const mon = battle.state.teams.us.active;
+                mon.ability = "truant";
+                mon.volatile.mustRecharge = true;
+                expect(mon.volatile.truant).to.be.false;
+
+                await listener.dispatch("battleprogress",
+                    {events: [{type: "turn", num: 3}]});
+                expect(mon.volatile.truant).to.be.true;
+
+                await listener.dispatch("battleprogress",
+                {
+                    events:
+                    [
+                        {type: "cant", id: us1, reason: "ability: Truant"}
+                    ]
+                });
+                expect(mon.volatile.mustRecharge).to.be.false;
+                expect(mon.volatile.truant).to.be.true;
+
+                await listener.dispatch("battleprogress",
+                    {events: [{type: "turn", num: 4}]});
+                expect(mon.volatile.truant).to.be.false;
+                // tslint:enable:no-unused-expression
+            });
+
             it("Should reveal failed move", async function()
             {
                 const mon = battle.state.teams.them.active;

@@ -126,19 +126,28 @@ export class EventProcessor
         })
         .on("cant", event =>
         {
+            const active = this.getActive(event.id.owner);
             if (event.reason === "recharge")
             {
                 // successfully completed its recharge turn
-                this.getActive(event.id.owner).volatile.mustRecharge =
-                    false;
+                active.volatile.mustRecharge = false;
             }
+            else if (event.reason.startsWith("ability: "))
+            {
+                // can't move due to an ability
+                const ability = event.reason.substr("ability: ".length);
+                active.ability = ability;
+
+                // truant turn and recharge turn overlap
+                if (ability === "Truant") active.volatile.mustRecharge = false;
+            }
+
             if (event.moveName)
             {
-                const moveId =
-                    EventProcessor.parseIDName(event.moveName);
+                const moveId = EventProcessor.parseIDName(event.moveName);
                 // prevented from using a move, which might not have
                 //  been revealed before
-                this.getActive(event.id.owner).revealMove(moveId);
+                active.revealMove(moveId);
             }
         })
         .on("curestatus", event =>
@@ -300,6 +309,10 @@ export class EventProcessor
      */
     public handleEvents(events: AnyBattleEvent[]): void
     {
+        // this field should only stay true if one of these events contains a
+        //  |turn| message
+        this._newTurn = false;
+
         for (let i = 0; i < events.length; ++i)
         {
             const event = events[i];

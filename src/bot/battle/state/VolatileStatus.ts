@@ -64,6 +64,13 @@ export class VolatileStatus
     /** Name of override ability. */
     public overrideAbilityName: string;
 
+    /** Whether the Truant ability will activate next turn. */
+    public get truant(): boolean
+    {
+        return this._truant;
+    }
+    private _truant: boolean;
+
     /** Creates a VolatileStatus object. */
     constructor()
     {
@@ -88,11 +95,12 @@ export class VolatileStatus
         this._stallTurns = 0;
         this.overrideAbility = 0;
         this.overrideAbilityName = "";
+        this._truant = false;
     }
 
     /**
-     * Increments temporary status turns. Should be called once per turn by the
-     * parent Pokemon object.
+     * Updates temporary status counters. Must be called at the end of the turn,
+     * after a Choice has been sent to the server.
      */
     public updateStatusTurns(): void
     {
@@ -101,10 +109,7 @@ export class VolatileStatus
         // update disabled move turns
         for (let i = 0; i < this.disableTurns.length; ++i)
         {
-            if (this.disableTurns[i])
-            {
-                ++this.disableTurns[i];
-            }
+            if (this.disableTurns[i]) ++this.disableTurns[i];
         }
 
         // if twoTurn was set this turn, the two-turn move must be completed or
@@ -115,6 +120,12 @@ export class VolatileStatus
         //  counter will reset
         if (!this.stalled) this._stallTurns = 0;
         this.stalled = false;
+
+        if (this.overrideAbilityName === "truant")
+        {
+            this._truant = !this._truant;
+        }
+        else this._truant = false;
     }
 
     /**
@@ -195,7 +206,8 @@ export class VolatileStatus
         return /*boostable stats*/Object.keys(boostableStatNames).length +
             /*confuse*/1 + /*disable*/4 + /*locked move*/1 +
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
-            /*stall fail rate*/1 + /*override ability*/dex.numAbilities;
+            /*stall fail rate*/1 + /*override ability*/dex.numAbilities +
+            /*truant*/1;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -220,7 +232,8 @@ export class VolatileStatus
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
             confused, ...disabled, this.lockedMove ? 1 : 0, ...twoTurn,
-            this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility
+            this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility,
+            this._truant ? 1 : 0
         ];
         return a;
     }
@@ -249,7 +262,8 @@ ${VolatileStatus.pluralTurns(d)}`),
                 this.mustRecharge ? ["must recharge"] : [],
                 this._stallTurns ?
                     [`stalling for ${this._stallTurns - 1} \
-${VolatileStatus.pluralTurns(this._stallTurns)}`] : [])
+${VolatileStatus.pluralTurns(this._stallTurns)}`] : [],
+                this._truant ? ["truant next turn"] : [])
             .join(", ")}]`;
     }
 
