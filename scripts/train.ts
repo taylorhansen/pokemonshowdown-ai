@@ -82,6 +82,8 @@ async function play(models: {[P in PlayerID]: tf.Model},
         file = fs.createWriteStream(logPath);
     }
 
+    let done = false;
+
     for (const id of ["p1", "p2"] as PlayerID[])
     {
         // sends player choices to the battle stream
@@ -122,11 +124,20 @@ async function play(models: {[P in PlayerID]: tf.Model},
         {
             listener.on("battleprogress", args => args.events.forEach(event =>
             {
-                if (event.type === "win")
+                switch (event.type)
                 {
-                    // since the usernames passed into the Network constructors
-                    //  are the same was their PlayerID, we can safely cast this
-                    result.winner = event.winner as PlayerID;
+                    case "turn":
+                        if (event.num >= maxTurns) done = true;
+                        break;
+                    case "win":
+                        // since the usernames passed into the Network
+                        //  constructors are the same was their PlayerID, we can
+                        //  safely typecast the username
+                        result.winner = event.winner as PlayerID;
+                        // fallthrough
+                    case "tie":
+                        done = true;
+                        break;
                 }
             }));
         }
@@ -136,8 +147,7 @@ async function play(models: {[P in PlayerID]: tf.Model},
         promises.push(async function()
         {
             let output: string;
-            for (let i = 0; i < maxTurns && !result.winner &&
-                (output = await stream.read()); ++i)
+            while (!done && (output = await stream.read()))
             {
                 innerLog.debug(`received:\n${output}`);
                 try
@@ -150,6 +160,7 @@ async function play(models: {[P in PlayerID]: tf.Model},
                 }
                 perTurn();
             }
+            done = true;
             if (file) file.close();
         }());
     }
