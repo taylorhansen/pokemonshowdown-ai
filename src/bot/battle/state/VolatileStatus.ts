@@ -15,6 +15,15 @@ export class VolatileStatus
     {
         return this._boosts;
     }
+    /**
+     * Boosts a stat.
+     * @param stat Stat to be boosted.
+     * @param amount Whole number of stages to boost the stat by.
+     */
+    public boost(stat: BoostableStatName, amount: number): void
+    {
+        this._boosts[stat] += amount;
+    }
     private _boosts: {[N in BoostableStatName]: number};
 
     /** Whether the pokemon is confused. */
@@ -30,10 +39,41 @@ export class VolatileStatus
     {
         return this._confuseTurns;
     }
+    /**
+     * Sets the confusion flag. Should be called once per turn if it's on.
+     * @param flag Value of the flag.
+     */
+    public confuse(flag: boolean): void
+    {
+        this._confuseTurns = flag ? this._confuseTurns + 1 : 0;
+    }
     private _confuseTurns: number;
 
     // not passed when copying
 
+    /**
+     * Checks whether a move is disabled.
+     * @param move Index of the move.
+     * @returns Whether the move is disabled.
+     */
+    public isDisabled(move: number): boolean
+    {
+        return !!this.disableTurns[move];
+    }
+    /**
+     * Disables a certain move. If the move slot's index is not known, use the
+     * Pokemon class' interface.
+     * @param index Index of the move.
+     */
+    public disableMove(move: number): void
+    {
+        this.disableTurns[move] = 1;
+    }
+    /** Clears the disabled status. */
+    public enableMoves(): void
+    {
+        this.disableTurns = [0, 0, 0, 0];
+    }
     /** Turns for the disable status on each move. */
     private disableTurns: number[];
 
@@ -61,6 +101,15 @@ export class VolatileStatus
     public get stallTurns(): number
     {
         return this._stallTurns;
+    }
+    /**
+     * Sets the stall flag. Should be called once per turn if it's on.
+     * @param flag Value of the flag.
+     */
+    public stall(flag: boolean): void
+    {
+        this._stallTurns = flag ? this._stallTurns + 1 : 0;
+        this.stalled = flag;
     }
     private _stallTurns: number;
     /** Whether we have successfully stalled this turn. */
@@ -149,61 +198,6 @@ export class VolatileStatus
         v._boosts = this._boosts;
         v._confuseTurns = this._confuseTurns;
         return v;
-    }
-
-    /**
-     * Boosts a stat.
-     * @param stat Stat to be boosted.
-     * @param amount Whole number of stages to boost the stat by.
-     */
-    public boost(stat: BoostableStatName, amount: number): void
-    {
-        this._boosts[stat] += amount;
-    }
-
-    /**
-     * Sets the confusion flag. Should be called once per turn if it's on.
-     * @param flag Value of the flag.
-     */
-    public confuse(flag: boolean): void
-    {
-        this._confuseTurns = flag ? this._confuseTurns + 1 : 0;
-    }
-
-    /**
-     * Checks whether a move is disabled.
-     * @param move Index of the move.
-     * @returns Whether the move is disabled.
-     */
-    public isDisabled(move: number): boolean
-    {
-        return !!this.disableTurns[move];
-    }
-
-    /**
-     * Disables a certain move. If the move slot's index is not known, use the
-     * Pokemon class' interface.
-     * @param index Index of the move.
-     */
-    public disableMove(move: number): void
-    {
-        this.disableTurns[move] = 1;
-    }
-
-    /** Clears the disabled status. */
-    public enableMoves(): void
-    {
-        this.disableTurns = [0, 0, 0, 0];
-    }
-
-    /**
-     * Sets the stall flag. Should be called once per turn if it's on.
-     * @param flag Value of the flag.
-     */
-    public stall(flag: boolean): void
-    {
-        this._stallTurns = flag ? this._stallTurns + 1 : 0;
-        this.stalled = flag;
     }
 
     /**
