@@ -249,10 +249,11 @@ export class MessageParser extends Parser
         const type = this.nextWord();
         this.nextLine();
 
-        // ignore invalid messages
-        // TODO: don't ignore, instead print warnings to log from static parsers
-        //  and message parsers (must be testable)
-        if (type !== "chat" && type !== "battle") return Promise.resolve();
+        if (type !== "chat" && type !== "battle")
+        {
+            this.logger.error(`Unknown room type ${type}`);
+            return Promise.resolve();
+        }
         return this.dispatch("init", {type});
     }
 
@@ -266,41 +267,24 @@ export class MessageParser extends Parser
      */
     private parseRequest(): Promise<void>
     {
-        const text = this.getRestOfLine();
-        const args = MessageParser.parseJSON(text);
+        const args = this.parseJSON(this.getRestOfLine());
         this.nextLine();
 
-        if (!args)
-        {
-            this.logger.error(`Invalid request message json ${text}`);
-            return Promise.resolve();
-        }
+        if (!args) return Promise.resolve();
 
         // some info is encoded in a string that needs to be further parsed
         for (const mon of args.side.pokemon)
         {
             // ident, details, and condition fields are the same format as
             //  the data from a |switch| message
-            const ident = MessageParser.parsePokemonID(mon.ident,
-                /*pos*/ false);
-            if (!ident) this.logger.error(`Invalid PokemonID "${mon.ident}"`);
-            mon.ident = ident;
+            mon.ident = this.parsePokemonID(mon.ident, /*pos*/ false);
+            mon.details = this.parsePokemonDetails(mon.details);
+            mon.condition = this.parsePokemonStatus(mon.condition);
 
-            const details = MessageParser.parsePokemonDetails(mon.details);
-            if (!details)
+            if (!mon.ident || !mon.details || !mon.condition)
             {
-                this.logger.error(`Invalid PokemonDetails "${mon.details}"`);
+                return Promise.resolve();
             }
-            mon.details = details;
-
-            const condition = MessageParser.parsePokemonStatus(mon.condition);
-            if (!condition)
-            {
-                this.logger.error(`Invalid PokemonStatus "${mon.condition}"`);
-            }
-            mon.condition = condition;
-
-            if (!ident || !details || !condition) return Promise.resolve();
         }
 
         return this.dispatch("request", args);
@@ -315,10 +299,9 @@ export class MessageParser extends Parser
      */
     private parseUpdateChallenges(): Promise<void>
     {
-        const args = MessageParser.parseJSON(this.getRestOfLine());
+        const args = this.parseJSON(this.getRestOfLine());
         this.nextLine();
 
-        // ignore invalid messages
         if (!args) return Promise.resolve();
         return this.dispatch("updatechallenges", args);
     }
@@ -333,13 +316,14 @@ export class MessageParser extends Parser
     private parseUpdateUser(): Promise<void>
     {
         const username = this.nextWord();
+        if (!username) this.logger.error("Missing username");
         const word = this.nextWord();
-        const isGuest = word ? !MessageParser.parseInt(word) : null;
+        const isUser = word ? this.parseInt(word) : null;
+        if (isUser === null) this.logger.error("No user status given");
         this.nextLine();
 
-        // ignore invalid messages
-        if (!username || !isGuest) return Promise.resolve();
-        return this.dispatch("updateuser", {username, isGuest});
+        if (!username || isUser === null) return Promise.resolve();
+        return this.dispatch("updateuser", {username, isGuest: !isUser});
     }
 
     /**
@@ -377,40 +361,33 @@ export class MessageParser extends Parser
                 case "player":
                 {
                     const idWord = this.nextWord();
-                    const playerId = MessageParser.parsePlayerId(idWord);
+                    const playerId = this.parsePlayerId(idWord);
                     const playerName = this.nextWord();
-                    if (playerId && playerName)
+                    if (!playerName) this.logger.error("No player name given");
+                    else if (playerId)
                     {
                         id = playerId;
                         username = playerName;
                     }
-                    if (!playerId)
-                    {
-                        this.logger.error(`Invalid PlayerID ${idWord}`);
-                    }
-                    if (!playerName) this.logger.error("No player name given");
                     this.nextLine();
                     break;
                 }
                 case "teamsize":
                 {
                     const idWord = this.nextWord();
-                    const teamId = MessageParser.parsePlayerId(idWord);
+                    const teamId = this.parsePlayerId(idWord);
                     const sizeWord = this.nextWord();
-                    const teamSize = MessageParser.parseInt(sizeWord);
+                    const teamSize = this.parseInt(sizeWord, /*quiet*/true);
+                    if (!teamSize)
+                    {
+                        this.logger.error(`Invalid team size ${sizeWord}`);
+                    }
+
                     if (!teamSizes)
                     {
                         teamSizes = {} as BattleInitMessage["teamSizes"];
                     }
                     if (teamId && teamSize) teamSizes[teamId] = teamSize;
-                    if (!teamId)
-                    {
-                        this.logger.error(`Invalid PlayerID ${idWord}`);
-                    }
-                    if (!teamSize)
-                    {
-                        this.logger.error(`Invalid team size ${sizeWord}`);
-                    }
                     this.nextLine();
                     break;
                 }
@@ -422,7 +399,7 @@ export class MessageParser extends Parser
                 case "gen":
                 {
                     const genWord = this.nextWord();
-                    const genNum = MessageParser.parseInt(genWord);
+                    const genNum = this.parseInt(genWord, /*quiet*/true);
                     if (genNum) gen = genNum;
                     else this.logger.error(`Invalid gen num ${genWord}`);
                     this.nextLine();
@@ -538,8 +515,9 @@ export class MessageParser extends Parser
      */
     private parseAbilityEvent(): AbilityEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const ability = this.nextWord();
+        if (!ability) this.logger.error("Missing ability name");
 
         if (!id || !ability) return null;
         return {type: "ability", id, ability};
@@ -556,11 +534,11 @@ export class MessageParser extends Parser
      */
     private parseActivateEvent(): ActivateEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const volatile = this.nextWord();
+        if (!volatile) this.logger.error("Missing volatile name");
 
         if (!id || !volatile) return null;
-
         return {type: "activate", id, volatile};
     }
 
@@ -576,9 +554,10 @@ export class MessageParser extends Parser
     private parseBoostEvent(): BoostEvent | null
     {
         const prefix = this.previousWord();
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const stat = this.nextWord() as BoostableStatName;
-        let amount = MessageParser.parseInt(this.nextWord());
+        if (!stat) this.logger.error("Missing boostable stat name");
+        let amount = this.parseInt(this.nextWord());
 
         if (!id || !stat || !amount) return null;
         if (prefix === "-unboost") amount = -amount;
@@ -596,8 +575,9 @@ export class MessageParser extends Parser
      */
     private parseCantEvent(): CantEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const reason = this.nextWord();
+        if (!reason) this.logger.error("Missing cant reason");
         const moveName = this.nextWord();
 
         if (!id || !reason) return null;
@@ -616,8 +596,8 @@ export class MessageParser extends Parser
      */
     private parseCureStatusEvent(): CureStatusEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
-        const majorStatus = MessageParser.parseMajorStatus(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
+        const majorStatus = this.parseMajorStatus(this.nextWord());
 
         if (!id || !majorStatus) return null;
         return {type: "curestatus", id, majorStatus};
@@ -634,7 +614,7 @@ export class MessageParser extends Parser
      */
     private parseCureTeamEvent(): CureTeamEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
 
         if (!id) return null;
         return {type: "cureteam", id};
@@ -651,8 +631,8 @@ export class MessageParser extends Parser
      */
     private parseDamageEvent(): DamageEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
-        const status = MessageParser.parsePokemonStatus(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
+        const status = this.parsePokemonStatus(this.nextWord());
 
         if (!id || !status) return null;
         return {type: "damage", id, status};
@@ -669,7 +649,7 @@ export class MessageParser extends Parser
      */
     private parseEndEvent(): EndEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const volatile = this.nextWord();
 
         if (!id || !volatile) return null;
@@ -687,7 +667,7 @@ export class MessageParser extends Parser
      */
     private parseFaintEvent(): FaintEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
 
         if (!id) return null;
         return {type: "faint", id};
@@ -708,9 +688,9 @@ export class MessageParser extends Parser
      */
     private parseMoveEvent(): MoveEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const moveName = this.nextWord();
-        const targetId = MessageParser.parsePokemonID(this.nextWord());
+        const targetId = this.parsePokemonID(this.nextWord());
 
         if (!id || !moveName || !targetId) return null;
         return {type: "move", id, moveName, targetId};
@@ -727,7 +707,7 @@ export class MessageParser extends Parser
      */
     private parseMustRechargeEvent(): MustRechargeEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
 
         if (!id) return null;
         return {type: "mustrecharge", id};
@@ -744,9 +724,9 @@ export class MessageParser extends Parser
      */
     private parsePrepareEvent(): PrepareEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const moveName = this.nextWord();
-        const targetId = MessageParser.parsePokemonID(this.nextWord());
+        const targetId = this.parsePokemonID(this.nextWord());
 
         if (!id || !moveName || !targetId) return null;
         return {type: "prepare", id, moveName, targetId};
@@ -766,8 +746,8 @@ export class MessageParser extends Parser
         const event: SetHPEvent = {type: "sethp", newHPs: []};
         while (!this.isEol())
         {
-            const id = MessageParser.parsePokemonID(this.nextWord());
-            const status = MessageParser.parsePokemonStatus(this.nextWord());
+            const id = this.parsePokemonID(this.nextWord());
+            const status = this.parsePokemonStatus(this.nextWord());
             if (!id || !status) break;
             event.newHPs.push({id, status});
         }
@@ -785,8 +765,9 @@ export class MessageParser extends Parser
      */
     private parseSingleTurnEvent(): SingleTurnEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const status = this.nextWord();
+        if (!status) this.logger.error("Missing singleturn status");
 
         if (!id || !status) return null;
         return {type: "singleturn", id, status};
@@ -806,8 +787,9 @@ export class MessageParser extends Parser
      */
     private parseStartEvent(): StartEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
         const volatile = this.nextWord();
+        if (!volatile) this.logger.error("Missing start volatile");
 
         const otherArgs: string[] = [];
         let cause: Cause | null = null;
@@ -834,8 +816,8 @@ export class MessageParser extends Parser
      */
     private parseStatusEvent(): StatusEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
-        const majorStatus = MessageParser.parseMajorStatus(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
+        const majorStatus = this.parseMajorStatus(this.nextWord());
 
         if (!id || !majorStatus) return null;
         return {type: "status", id, majorStatus};
@@ -852,9 +834,9 @@ export class MessageParser extends Parser
      */
     private parseSwitchEvent(): SwitchEvent | null
     {
-        const id = MessageParser.parsePokemonID(this.nextWord());
-        const details = MessageParser.parsePokemonDetails(this.nextWord());
-        const status = MessageParser.parsePokemonStatus(this.nextWord());
+        const id = this.parsePokemonID(this.nextWord());
+        const details = this.parsePokemonDetails(this.nextWord());
+        const status = this.parsePokemonStatus(this.nextWord());
 
         if (!id || !details || !status) return null;
         return {type: "switch", id, details, status};
@@ -885,7 +867,7 @@ export class MessageParser extends Parser
      */
     private parseTurnEvent(): TurnEvent | null
     {
-        const num = MessageParser.parseInt(this.nextWord());
+        const num = this.parseInt(this.nextWord());
 
         if (!num) return null;
         return {type: "turn", num};
@@ -926,7 +908,11 @@ export class MessageParser extends Parser
     private parseCause(): Cause | null
     {
         const str = this.nextWord();
-        if (!str) return null;
+        if (!str)
+        {
+            this.logger.error("Missing Cause");
+            return null;
+        }
         if (str.startsWith("[from] ability: "))
         {
             const result: AbilityCause =
@@ -937,7 +923,7 @@ export class MessageParser extends Parser
             const next = this.peekWord();
             if (next && next.startsWith("[of] "))
             {
-                const id = MessageParser.parsePokemonID(
+                const id = this.parsePokemonID(
                     next.substr("[of] ".length));
                 if (id)
                 {
@@ -953,43 +939,67 @@ export class MessageParser extends Parser
             return {type: "item", item: str.substr("[from] item: ".length)};
         }
         if (str === "[from]lockedmove") return {type: "lockedmove"};
+        // could be either invalid or irrelevant
         return null;
     }
 
     /**
      * Parses a PlayerID.
      * @param id String to parse.
+     * @param quiet Whether to suppress logging an error if the string is
+     * invalid.
      * @returns A valid PlayerID, or null if invalid.
      */
-    private static parsePlayerId(id?: string): PlayerID | null
+    private parsePlayerId(id?: string, quiet?: boolean): PlayerID | null
     {
-        return isPlayerId(id) ? id : null;
+        if (!isPlayerId(id))
+        {
+            if (!quiet) this.logger.error(`Invalid PokemonID ${id}`);
+            return null;
+        }
+        return id;
     }
 
     /**
      * Parses an integer.
      * @param n String to parse.
+     * @param quiet Whether to suppress logging an error if the string is
+     * invalid.
      * @returns An integer, or null if invalid.
      */
-    private static parseInt(n?: string): number | null
+    private parseInt(n?: string, quiet?: boolean): number | null
     {
-        if (n)
+        if (!n)
         {
-            const parsed = parseInt(n, 10);
-            return isNaN(parsed) ? null : parsed;
+            if (!quiet) this.logger.error("Missing integer");
+            return null;
         }
-        return null;
+
+        const parsed = parseInt(n, 10);
+        if (isNaN(parsed))
+        {
+            if (!quiet) this.logger.error(`Invalid integer ${n}`);
+            return null;
+        }
+
+        return parsed;
     }
 
     /**
      * Parses a JSON object.
      * @param obj String to parse.
+     * @param quiet Whether to suppress logging an error if the string is
+     * invalid.
      * @returns An object, or null if invalid.
      */
-    private static parseJSON(obj?: string): any
+    private parseJSON(obj?: string, quiet?: boolean): any
     {
-        // any falsy type (empty string, null, etc) is invalid
-        return obj ? JSON.parse(obj) : null;
+        if (!obj)
+        {
+            if (!quiet) this.logger.error("Missing JSON");
+            return null;
+        }
+        return JSON.parse(obj);
     }
 
     /**
@@ -1000,14 +1010,28 @@ export class MessageParser extends Parser
      * @param id Unparsed pokemon ID.
      * @param pos Whether to require pos in format. This should only be false
      * when parsing a `request` message. Default true.
+     * @param quiet Whether to suppress logging an error if the string is
+     * invalid.
      * @returns A parsed PokemonID object, or null if invalid.
      */
-    private static parsePokemonID(id?: string, pos = true): PokemonID | null
+    private parsePokemonID(id?: string, pos = true, quiet = false):
+        PokemonID | null
     {
-        if (!id) return null;
+        if (!id)
+        {
+            if (!quiet) this.logger.error("missing PokemonID");
+            return null;
+        }
 
         const owner = id.substring(0, 2);
-        if (!isPlayerId(owner)) return null;
+        if (!isPlayerId(owner))
+        {
+            if (!quiet)
+            {
+                this.logger.error(`PokemonID has invalid PlayerID ${owner}`);
+            }
+            return null;
+        }
 
         if (pos)
         {
@@ -1027,16 +1051,24 @@ export class MessageParser extends Parser
      * optional. If gender is omitted then it's genderless, and if level is
      * omitted then it's assumed to be level 100.
      * @param details Unparsed pokemon details.
+     * @param quiet Whether to suppress logging an error if the string is
+     * invalid.
      * @returns A parsed PokemonDetails object, or null if invalid.
      */
-    private static parsePokemonDetails(details?: string): PokemonDetails | null
+    private parsePokemonDetails(details?: string, quiet?: boolean):
+        PokemonDetails | null
     {
-        if (!details) return null;
+        if (!details)
+        {
+            if (!quiet) this.logger.error("Missing PokemonDetails");
+            return null;
+        }
 
         // filter out empty strings
         const words = details.split(", ").filter(word => word.length > 0);
         if (words.length === 0)
         {
+            if (!quiet) this.logger.error("PokemonDetails is empty");
             return null;
         }
 
@@ -1064,11 +1096,18 @@ export class MessageParser extends Parser
      * mandatory but can be displayed as a percentage, and status condition is
      * optional.
      * @param status Unparsed pokemon status.
+     * @param quiet Whether to suppress logging an error if the string is
+     * invalid.
      * @returns A parsed PokemonStatus object, or null if empty.
      */
-    private static parsePokemonStatus(status?: string): PokemonStatus | null
+    private parsePokemonStatus(status?: string, quiet?: boolean):
+        PokemonStatus | null
     {
-        if (!status) return null;
+        if (!status)
+        {
+            if (!quiet) this.logger.error("Missing PokemonStatus");
+            return null;
+        }
 
         if (status === "0 fnt")
         {
@@ -1077,7 +1116,14 @@ export class MessageParser extends Parser
         }
 
         const slash = status.indexOf("/");
-        if (slash === -1) return null;
+        if (slash === -1)
+        {
+            if (!quiet)
+            {
+                this.logger.error(`Missing hp '/' in PokemonStatus ${status}`);
+            }
+            return null;
+        }
         let space = status.indexOf(" ", slash);
         // status condition can be omitted, in which case it'll end up as an
         //  empty string
@@ -1085,8 +1131,8 @@ export class MessageParser extends Parser
 
         const hp = parseInt(status.substring(0, slash), 10);
         const hpMax = parseInt(status.substring(slash + 1, space), 10);
-        const condition = MessageParser.parseMajorStatus(
-                status.substring(space + 1));
+        const condition = this.parseMajorStatus(
+            status.substring(space + 1), quiet);
         if (condition === null) return null;
         return { hp, hpMax, condition };
     }
@@ -1094,10 +1140,18 @@ export class MessageParser extends Parser
     /**
      * Parses a major status.
      * @param status Unparsed status string.
+     * @param quiet Whether to suppress logging an error if the string is
+     * invalid.
      * @returns The string if it's a valid MajorStatus, or null otherwise.
      */
-    private static parseMajorStatus(status?: string): MajorStatus | null
+    private parseMajorStatus(status?: string, quiet?: boolean):
+        MajorStatus | null
     {
-        return isMajorStatus(status) ? status : null;
+        if (!isMajorStatus(status))
+        {
+            if (!quiet) this.logger.error(`Invalid major status ${status}`);
+            return null;
+        }
+        return status;
     }
 }
