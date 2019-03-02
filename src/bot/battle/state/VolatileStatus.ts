@@ -38,7 +38,18 @@ export class VolatileStatus
     private disableTurns: number[];
 
     /** Whether the pokemon is locked into a move and is unable to switch. */
-    public lockedMove: boolean;
+    public get lockedMove(): boolean
+    {
+        return this.lockedMoveTurns !== 0;
+    }
+    public set lockedMove(value: boolean)
+    {
+        // reset lockedmove
+        if (!value) this.lockedMoveTurns = 0;
+        // start/continue counter
+        else ++this.lockedMoveTurns;
+    }
+    private lockedMoveTurns = 0;
 
     /** Two-turn move currently being prepared. */
     public twoTurn: keyof typeof twoTurnMoves | "";
@@ -89,7 +100,7 @@ export class VolatileStatus
         };
         this._confuseTurns = 0;
         this.disableTurns = [0, 0, 0, 0];
-        this.lockedMove = false;
+        this.lockedMoveTurns = 0;
         this.twoTurn = "";
         this.mustRecharge = false;
         this._stallTurns = 0;
@@ -225,13 +236,14 @@ export class VolatileStatus
         // encode temporary status turns
         const confused = tempStatusTurns(this._confuseTurns);
         const disabled = this.disableTurns.map(tempStatusTurns);
+        const lockedMove = tempStatusTurns(this.lockedMoveTurns);
         const stallFailRate = tempStatusTurns(this._stallTurns);
 
         const a =
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
-            confused, ...disabled, this.lockedMove ? 1 : 0, ...twoTurn,
+            confused, ...disabled, lockedMove, ...twoTurn,
             this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility,
             this._truant ? 1 : 0
         ];
