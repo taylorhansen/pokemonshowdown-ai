@@ -99,10 +99,10 @@ export class VolatileStatus
     }
 
     /**
-     * Updates temporary status counters. Must be called at the end of the turn,
-     * after a Choice has been sent to the server.
+     * Called at the end of the turn, after a Choice has been sent to the
+     * server.
      */
-    public updateStatusTurns(): void
+    public postTurn(): void
     {
         // confusion is handled separately since it depends on a message
 

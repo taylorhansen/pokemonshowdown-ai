@@ -406,9 +406,50 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.status.selfSwitch)
                     .to.equal("copyvolatile");
+            });
+        });
+
+        describe("wish", function()
+        {
+            it("Should process wish", async function()
+            {
+                // tslint:disable:no-unused-expression
+                const status = battle.state.teams.us.status;
+                expect(status.isWishing).to.be.false;
+
+                await listener.dispatch("battleprogress",
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Wish",
+                            targetId: us1
+                        },
+                        {type: "turn", num: 2}
+                    ]
+                });
+                expect(status.isWishing).to.be.true;
+
+                // using it again shouldn't reset the counter on the next turn
+                await listener.dispatch("battleprogress",
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Wish",
+                            targetId: us1
+                        }
+                    ]
+                });
+                expect(status.isWishing).to.be.true;
+
+                // wish should be consumed next turn
+                await listener.dispatch("battleprogress",
+                    {events: [{type: "turn", num: 3}]});
+                expect(status.isWishing).to.be.false;
+                // tslint:enable:no-unused-expression
             });
         });
 

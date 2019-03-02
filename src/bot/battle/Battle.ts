@@ -88,15 +88,8 @@ ${inspect(args, {colors: false, depth: null})}`);
             if (this.processor.battling)
             {
                 this.processor.printState();
-
                 if (!this.lastRequest.wait) await this.askAI();
-
-                if (this.processor.newTurn)
-                {
-                    // some statuses need to have their values updated every
-                    //  turn in case the next turn doesn't override them
-                    this.processor.updateStatusTurns();
-                }
+                this.processor.postAction();
             }
         })
         .on("request", args =>

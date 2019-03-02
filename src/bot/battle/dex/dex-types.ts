@@ -55,6 +55,8 @@ export interface MoveData
     readonly selfSwitch?: SelfSwitch;
     /** Self-inflicted volatile status effect. */
     readonly volatileEffect?: VolatileEffect;
+    /** Team-inflicted status effect. */
+    readonly sideCondition?: SideCondition;
 }
 
 /** Types of targets for a move. */
@@ -71,6 +73,14 @@ export type SelfSwitch = boolean | "copyvolatile";
 /** Volatile status effects for moves. */
 export type VolatileEffect = "lockedmove" | "mustrecharge" | "rage" | "roost" |
     "uproar";
+
+/**
+ * Team status effects. These are usually tracked over the course of multiple
+ * Battle decisions.
+ */
+export type SideCondition = "auroraveil" | "healingwish" | "lightscreen" |
+    "luckychant" | "lunardance" | "mist" | "reflect" | "safeguard" | "spikes" |
+    "stealthrock" | "stickyweb" | "tailwind" | "toxicspikes" | "wish";
 
 /** Type info for the dex variable. */
 export interface Dex

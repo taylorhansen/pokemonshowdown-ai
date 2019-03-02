@@ -19,13 +19,6 @@ export interface EventProcessorConstructor<T extends EventProcessor>
 /** Modifies the BattleState by listening to game events. */
 export class EventProcessor
 {
-    /** Whether a turn message was encountered in the last handleEvents call. */
-    public get newTurn(): boolean
-    {
-        return this._newTurn;
-    }
-    private _newTurn = false;
-
     /** Whether the battle is still going on. */
     public get battling(): boolean
     {
@@ -46,6 +39,8 @@ export class EventProcessor
      * them).
      */
     private sides: {readonly [ID in PlayerID]: Side};
+    /** Whether a turn message was encountered in the last handleEvents call. */
+    private newTurn = false;
 
     /**
      * Creates an EventProcessor object.
@@ -213,7 +208,7 @@ export class EventProcessor
         })
         .on("turn", () =>
         {
-            this._newTurn = true;
+            this.newTurn = true;
         })
         .on("upkeep", () =>
         {
@@ -240,14 +235,16 @@ export class EventProcessor
         this.logger.debug(`state:\n${this.state.toString()}`);
     }
 
-    /**
-     * Updates VolatileStatus turn counters. Must be called at the end of the
-     * turn, after a Choice has been sent to the server.
-     */
-    public updateStatusTurns(): void
+    /** Called after a Choice has been sent to the server. */
+    public postAction(): void
     {
-        this.state.teams.us.active.volatile.updateStatusTurns();
-        this.state.teams.them.active.volatile.updateStatusTurns();
+        // cleanup actions after a new turn
+        if (!this.newTurn) return;
+        for (const team of [this.state.teams.us, this.state.teams.them])
+        {
+            team.status.postTurn();
+            team.active.volatile.postTurn();
+        }
     }
 
     /** Processes a `request` message. */
@@ -311,7 +308,7 @@ export class EventProcessor
     {
         // this field should only stay true if one of these events contains a
         //  |turn| message
-        this._newTurn = false;
+        this.newTurn = false;
 
         for (let i = 0; i < events.length; ++i)
         {
@@ -423,10 +420,17 @@ export class EventProcessor
 
         const move = dex.moves[moveId];
 
-        // TODO: what if it's interrupted?
+        // set the lockedmove status
+        // however, events that come after this that interrupt the move could
+        //  cancel the effect
         if (move.volatileEffect === "lockedmove")
         {
             mon.volatile.lockedMove = true;
+        }
+
+        if (move.sideCondition === "wish")
+        {
+            this.getTeam(event.id.owner).status.wish();
         }
 
         // set selfswitch flag

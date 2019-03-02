@@ -5019,7 +5019,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
         id: 479,
         uid: 496,
         species: "Rotom",
-        otherForms: ["rotomheat", "rotomwash", "rotomfrost", "rotomfan", "rotommow"],
+        otherForms:["rotomheat", "rotomwash", "rotomfrost", "rotomfan", "rotommow"],
         abilities: ["levitate"],
         types: ["electric", "ghost"],
         baseStats: {hp: 50, atk: 50, def: 77, spa: 95, spd: 77, spe: 91},
@@ -5820,7 +5820,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     healingwish:
     {
-        uid: 76, pp: 16, target: "self"
+        uid: 76, pp: 16, target: "self", sideCondition: "healingwish"
     },
     healorder:
     {
@@ -5860,7 +5860,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     lightscreen:
     {
-        uid: 86, pp: 48, target: "allySide"
+        uid: 86, pp: 48, target: "allySide", sideCondition: "lightscreen"
     },
     lockon:
     {
@@ -5868,11 +5868,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     luckychant:
     {
-        uid: 88, pp: 48, target: "allySide"
+        uid: 88, pp: 48, target: "allySide", sideCondition: "luckychant"
     },
     lunardance:
     {
-        uid: 89, pp: 16, target: "self"
+        uid: 89, pp: 16, target: "self", sideCondition: "lunardance"
     },
     magiccoat:
     {
@@ -6028,7 +6028,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     reflect:
     {
-        uid: 128, pp: 32, target: "allySide"
+        uid: 128, pp: 32, target: "allySide", sideCondition: "reflect"
     },
     revenge:
     {
@@ -6120,7 +6120,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     spikes:
     {
-        uid: 151, pp: 32, target: "foeSide"
+        uid: 151, pp: 32, target: "foeSide", sideCondition: "spikes"
     },
     spite:
     {
@@ -6132,7 +6132,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     stealthrock:
     {
-        uid: 154, pp: 32, target: "foeSide"
+        uid: 154, pp: 32, target: "foeSide", sideCondition: "stealthrock"
     },
     stomp:
     {
@@ -6176,7 +6176,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     tailwind:
     {
-        uid: 165, pp: 48, target: "allySide"
+        uid: 165, pp: 48, target: "allySide", sideCondition: "tailwind"
     },
     takedown:
     {
@@ -6208,7 +6208,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     toxicspikes:
     {
-        uid: 173, pp: 32, target: "foeSide"
+        uid: 173, pp: 32, target: "foeSide", sideCondition: "toxicspikes"
     },
     transform:
     {
@@ -6264,7 +6264,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     wish:
     {
-        uid: 187, pp: 16, target: "self"
+        uid: 187, pp: 16, target: "self", sideCondition: "wish"
     },
     woodhammer:
     {
@@ -6992,7 +6992,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     mist:
     {
-        uid: 369, pp: 48, target: "allySide"
+        uid: 369, pp: 48, target: "allySide", sideCondition: "mist"
     },
     mistball:
     {
@@ -7168,7 +7168,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     safeguard:
     {
-        uid: 413, pp: 40, target: "allySide"
+        uid: 413, pp: 40, target: "allySide", sideCondition: "safeguard"
     },
     sandattack:
     {
