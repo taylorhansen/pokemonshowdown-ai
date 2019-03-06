@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { Choice } from "../../../src/bot/battle/Choice";
-import { Type } from "../../../src/bot/battle/dex/dex-types";
+import { Type, types } from "../../../src/bot/battle/dex/dex-types";
 import { MoveEvent, SetHPEvent } from "../../../src/bot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../../src/bot/dispatcher/Message";
@@ -65,8 +65,8 @@ describe("Battle and EventProcessor", function()
                 {
                     const hpType = moveId.substr("hiddenpower".length)
                             .replace(/\d+/, "");
-                    (Object.keys(mon.possibleHPTypes) as Type[])
-                        .forEach(type => expect(mon.possibleHPTypes[type])
+                    Object.keys(types).forEach(type =>
+                        expect(mon.hpType.isSet(type))
                             .to.be[type === hpType ? "true" : "false"]);
                     moveId = "hiddenpower";
                 }
@@ -225,7 +225,7 @@ describe("Battle and EventProcessor", function()
                 ]
             });
 
-            expect(battle.lastChoices).to.include.members(["move 2"]);
+            expect(battle.lastChoices).to.have.members(["move 2"]);
             expect(responses).to.have.lengthOf(1);
         });
     });

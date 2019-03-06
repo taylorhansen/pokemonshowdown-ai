@@ -25,4 +25,5 @@ describe("utility", function()
             expect(tempStatusTurns(2)).to.equal(1 / 2);
         });
     });
+
 });

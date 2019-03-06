@@ -139,38 +139,14 @@ describe("Pokemon", function()
 
     describe("hpType", function()
     {
-        it("Should rule out all types if one is set", function()
-        {
-            mon.hpType = "fire";
-            // tslint:disable-next-line:no-unused-expression
-            expect(mon.possibleHPTypes.fire).to.be.true;
-            // tslint:disable-next-line:no-unused-expression
-            expect((Object.keys(types) as Type[])
-                    .filter(type => type !== "fire")
-                    .every(type => !mon.possibleHPTypes[type])).to.be.true;
-        });
-
-        it("Should rule out one type", function()
-        {
-            mon.ruleOutHPType("fire");
-            // tslint:disable-next-line:no-unused-expression
-            expect(mon.possibleHPTypes.fire).to.be.false;
-            // tslint:disable-next-line:no-unused-expression
-            expect((Object.keys(types) as Type[])
-                    .filter(type => type !== "fire")
-                    .every(type => mon.possibleHPTypes[type])).to.be.true;
-        });
-
         it("Should reveal hidden power move and type", function()
         {
             mon.revealMove("hiddenpowerfire10");
-            // tslint:disable:no-unused-expression
-            expect(mon.possibleHPTypes.fire).to.be.true;
-            expect((Object.keys(types) as Type[])
-                    .filter(type => type !== "fire")
-                    .some(type => mon.possibleHPTypes[type])).to.be.false;
+            // tslint:disable-next-line:no-unused-expression
             expect(mon.getMove("hiddenpower")).to.not.be.null;
-            // tslint:enable:no-unused-expression
+            // tslint:disable-next-line:no-unused-expression
+            expect(mon.hpType.isSet("fire")).to.be.true;
+            expect(mon.hpType.possibleValues).to.have.members(["fire"]);
         });
     });
 
@@ -305,7 +281,7 @@ describe("Pokemon", function()
             // set some stuff for coverage
             mon.species = "Magikarp";
             mon.ability = "swiftswim";
-            mon.hpType = "fire";
+            mon.hpType.set("fire");
             mon.majorStatus = "psn";
             mon.gender = "F";
 

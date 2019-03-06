@@ -3,6 +3,7 @@ import { dex } from "../dex/dex";
 import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Move } from "./Move";
+import { PossibilityClass } from "./PossibilityClass";
 import { oneHot } from "./utility";
 import { VolatileStatus } from "./VolatileStatus";
 
@@ -108,22 +109,7 @@ export class Pokemon
     private _item = 0;
 
     /** Possible hidden power types. */
-    public get possibleHPTypes(): {readonly [T in Type]: boolean}
-    {
-        return this._hpTypes;
-    }
-    /** Rules out all possible hidden power types except this one. */
-    public set hpType(type: Type)
-    {
-        for (const hpType in this._hpTypes)
-        {
-            // istanbul ignore if
-            if (!this._hpTypes.hasOwnProperty(hpType)) continue;
-            this._hpTypes[hpType as Type] = hpType === type;
-        }
-    }
-    /** Possible hidden power types. */
-    private readonly _hpTypes: {[T in Type]: boolean} = {...types};
+    public readonly hpType = new PossibilityClass(types);
 
     /** Pokemon's level. Clamped between the closed interval `[1, 100]`. */
     public get level(): number
@@ -217,15 +203,6 @@ export class Pokemon
     }
 
     /**
-     * Rules out a possible hidden power type.
-     * @param type Type that can't be the pokemon's hidden power type.
-     */
-    public ruleOutHPType(type: Type): void
-    {
-        this._hpTypes[type] = false;
-    }
-
-    /**
      * Reveals a move to the client.
      * @param id ID name of the move.
      * @returns The new move.
@@ -237,8 +214,7 @@ export class Pokemon
         {
             // set hidden power type
             // format: hiddenpower<type><base power if gen2-5>
-            this.hpType = id.substr("hiddenpower".length).replace(/\d+/, "") as
-                Type;
+            this.hpType.set(id.substr("hiddenpower".length).replace(/\d+/, ""));
             id = "hiddenpower";
         }
         move.id = id;
@@ -304,9 +280,8 @@ export class Pokemon
         // one-hot encode categorical data
         const species = oneHot(this._species, dex.numPokemon);
         const item = oneHot(this._item, dex.numItems);
+        // FIXME: this is no longer a length of 2
         const baseAbility = oneHot(this._baseAbility!, 2);
-        const hpTypes = (Object.keys(types) as Type[])
-            .map(type => this._hpTypes[type] ? 1 : 0);
         const majorStatus = (Object.keys(majorStatuses) as MajorStatus[])
             // only include actual statuses, not the empty string
             .filter(status => status !== "")
@@ -315,7 +290,8 @@ export class Pokemon
         const a =
         [
             this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
-            ...species, ...item, ...baseAbility, ...hpTypes, this._level,
+            ...species, ...item, ...baseAbility, ...this.hpType.toArray(),
+            this._level,
             ...([] as number[]).concat(
                 ...this._moves.map(move => move.toArray())),
             ...this.hp.toArray(),
@@ -346,8 +322,7 @@ ${this.ability ?
         (this.volatile.overrideAbility !== this._baseAbility ?
             ` (${this.baseAbilityName})` : "")
     : "<unrevealed>"}
-${s}possibleHPTypes: [${(Object.keys(types) as Type[])
-    .filter(type => this._hpTypes[type]).join(", ")}]
+${s}possibleHPTypes: [${this.hpType.possibleValues.join(", ")}]
 ${s}moves: ${this._moves.map((m, i) =>
     i < this.unrevealedMove ? m.toString() : "<unrevealed>").join(", ")}`;
     }

@@ -3,12 +3,11 @@ export type StatName = "hp" | "atk" | "def" | "spa" | "spd" | "spe";
 
 const typesInternal =
 {
-    bug: true, dark: true, dragon: true, fire: true, flying: true, ghost: true,
-    electric: true, fighting: true, grass: true, ground: true, ice: true,
-    normal: true, poison: true, psychic: true, rock: true, steel: true,
-    water: true
+    bug: 0, dark: 1, dragon: 2, fire: 3, flying: 4, ghost: 5, electric: 6,
+    fighting: 7, grass: 8, ground: 9, ice: 10, normal: 11, poison: 12,
+    psychic: 13, rock: 14, steel: 15, water: 16
 };
-/** Set of Type names. */
+/** Set of Type names. Each type has a 0-based unique index. */
 export const types: Readonly<typeof typesInternal> = typesInternal;
 /** The different types a pokemon can have. */
 export type Type = keyof typeof typesInternal;
