@@ -100,7 +100,9 @@ for (const name in pokedex)
         baseAbilities.push(quote(idName));
         if (!abilities.hasOwnProperty(idName))
         {
-            abilities[idName] = ++numAbilities;
+            // post-increment so that id number is 0-based, since numAbilities
+            //  starts at 0
+            abilities[idName] = numAbilities++;
         }
     }
 

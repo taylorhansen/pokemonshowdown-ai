@@ -2,6 +2,16 @@
 
 /**
  * One-hot encodes a class of values.
+ * @param id 0-based integer to encode.
+ * @param length Number of classes to encode.
+ */
+export function oneHot0(id: number | null, length: number): number[]
+{
+    return Array.from({length}, (v, i) => i === id ? 1 : 0);
+}
+
+/**
+ * One-hot encodes a class of values.
  * @param id 1-based integer to encode.
  * @param length Number of classes to encode.
  */

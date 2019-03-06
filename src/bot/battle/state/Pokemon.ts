@@ -15,7 +15,6 @@ export class Pokemon
     {
         return this._active;
     }
-    /** Whether this is the current active pokemon. */
     private _active: boolean = false;
 
     /** Species/form display name. */
@@ -28,6 +27,7 @@ export class Pokemon
         this.speciesName = species;
         this.data = dex.pokemon[species];
         this._species = this.data.uid;
+        this._baseAbility.set(this.data.abilities);
     }
     /** ID name of the species. */
     private speciesName = "";
@@ -38,25 +38,25 @@ export class Pokemon
     public get ability(): string
     {
         // ability has been overridden
-        if (this.volatile.overrideAbility)
+        if (this.volatile.overrideAbilityName)
         {
             return this.volatile.overrideAbilityName;
         }
-        // not overridden
-        if (this._baseAbility) return this.baseAbilityName;
-        // not yet initialized
-        return "";
+        // not overridden/initialized
+        return this.baseAbility;
     }
     public set ability(ability: string)
     {
         // make sure ability name is converted to an id name
         const name = toIdName(ability);
-        const id = dex.abilities[name];
 
-        if (!id) throw new Error(`Unknown ability "${ability}"`);
+        if (!dex.abilities.hasOwnProperty(name))
+        {
+            throw new Error(`Unknown ability "${ability}"`);
+        }
 
-        // initialize base ability for the first time
-        if (!this.baseAbilityName)
+        // narrow down baseAbility
+        if (!this._baseAbility.definiteValue)
         {
             if (!this.data)
             {
@@ -68,22 +68,22 @@ export class Pokemon
                     `Species ${this.species} can't have base ability ${name}`);
             }
 
-            this.baseAbilityName = name;
-            this._baseAbility = id;
+            this._baseAbility.set(name);
         }
 
         // override current ability
+        const id = dex.abilities[name];
         this.volatile.overrideAbility = id;
         this.volatile.overrideAbilityName = name;
     }
+    /** Base ability id name. May be empty if not yet narrowed. */
     public get baseAbility(): string
     {
-        return this.baseAbilityName;
+        if (!this._baseAbility.definiteValue) return "";
+        return this._baseAbility.definiteValue.name;
     }
-    /** ID name of the base ability. */
-    private baseAbilityName = "";
-    /** Base ability id number. */
-    private _baseAbility = 0;
+    /** Base ability possibility tracker. */
+    private _baseAbility = new PossibilityClass(dex.abilities);
 
     /** Item id name. Setter allows either id name or display name. */
     public get item(): string
@@ -108,7 +108,7 @@ export class Pokemon
     /** Item the pokemon is holding. */
     private _item = 0;
 
-    /** Possible hidden power types. */
+    /** Hidden power type possibility tracker. */
     public readonly hpType = new PossibilityClass(types);
 
     /** Pokemon's level. Clamped between the closed interval `[1, 100]`. */
@@ -182,8 +182,14 @@ export class Pokemon
     public switchIn(): void
     {
         this._active = true;
-        this.volatile.overrideAbility = this._baseAbility;
-        this.volatile.overrideAbilityName = this.baseAbilityName;
+        if (this._baseAbility.definiteValue)
+        {
+            ({
+                name: this.volatile.overrideAbilityName,
+                id: this.volatile.overrideAbility
+            } =
+                this._baseAbility.definiteValue);
+        }
     }
 
     /**
@@ -263,7 +269,7 @@ export class Pokemon
      */
     public static getArraySize(active: boolean): number
     {
-        return /*gender*/2 + dex.numPokemon + dex.numItems + /*baseAbility*/2 +
+        return /*gender*/2 + dex.numPokemon + dex.numItems + dex.numAbilities +
             /*level*/1 + Move.getArraySize() * 4 + HP.getArraySize() +
             /*hidden power type*/Object.keys(types).length +
             /*majorStatus except empty*/Object.keys(majorStatuses).length - 1 +
@@ -276,12 +282,10 @@ export class Pokemon
      */
     public toArray(): number[]
     {
-
         // one-hot encode categorical data
         const species = oneHot(this._species, dex.numPokemon);
         const item = oneHot(this._item, dex.numItems);
         // FIXME: this is no longer a length of 2
-        const baseAbility = oneHot(this._baseAbility!, 2);
         const majorStatus = (Object.keys(majorStatuses) as MajorStatus[])
             // only include actual statuses, not the empty string
             .filter(status => status !== "")
@@ -290,8 +294,8 @@ export class Pokemon
         const a =
         [
             this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
-            ...species, ...item, ...baseAbility, ...this.hpType.toArray(),
-            this._level,
+            ...species, ...item, ...this._baseAbility.toArray(),
+            ...this.hpType.toArray(), this._level,
             ...([] as number[]).concat(
                 ...this._moves.map(move => move.toArray())),
             ...this.hp.toArray(),
@@ -317,12 +321,16 @@ ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
 ${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
 ${s}ability: \
-${this.ability ?
-    this.ability +
-        (this.volatile.overrideAbility !== this._baseAbility ?
-            ` (${this.baseAbilityName})` : "")
-    : "<unrevealed>"}
-${s}possibleHPTypes: [${this.hpType.possibleValues.join(", ")}]
+${this._baseAbility.definiteValue ?
+    (this.volatile.overrideAbilityName &&
+            this.volatile.overrideAbilityName !== this.baseAbility ?
+        `${this.volatile.overrideAbilityName} (${this.baseAbility})`
+        : this.baseAbility)
+    : `possibly ${this._baseAbility.toString()}`}
+${s}hiddenpower: \
+${this.hpType.definiteValue ?
+    this.hpType.definiteValue.name
+    : `possibly ${this.hpType.toString()}`}
 ${s}moves: ${this._moves.map((m, i) =>
     i < this.unrevealedMove ? m.toString() : "<unrevealed>").join(", ")}`;
     }

@@ -15,7 +15,9 @@ describe("PossibilityClass", function()
 
     it("Should initially include all keys", function()
     {
-        expect(possibility.possibleValues).to.have.members(["a", "b"]);
+        console.dir(possibility.possibleValues);
+        expect(possibility.possibleValues).to.have.deep.members(
+            [{name: "a", id: 0}, {name: "b", id: 1}]);
     });
 
     it("Should rule out all types if one is set", function()
@@ -23,7 +25,18 @@ describe("PossibilityClass", function()
         possibility.set("a");
         // tslint:disable-next-line:no-unused-expression
         expect(possibility.isSet("a")).to.be.true;
-        expect(possibility.possibleValues).to.have.members(["a"]);
+        // tslint:disable-next-line:no-unused-expression
+        expect(possibility.definiteValue).to.not.be.null;
+        expect(possibility.definiteValue!.name).to.equal("a");
+    });
+
+    it("Should rule out every type if given empty array", function()
+    {
+        possibility.set([]);
+        // tslint:disable-next-line:no-unused-expression
+        expect(possibility.definiteValue).to.be.null;
+        // tslint:disable-next-line:no-unused-expression
+        expect(possibility.possibleValues).to.be.empty;
     });
 
     it("Should rule out one type if removed", function()
@@ -31,7 +44,8 @@ describe("PossibilityClass", function()
         possibility.remove("a");
         // tslint:disable-next-line:no-unused-expression
         expect(possibility.isSet("a")).to.be.false;
-        expect(possibility.possibleValues).to.have.members(["b"]);
+        expect(possibility.possibleValues).to.have.deep.members(
+            [{name: "b", id: 1}]);
     });
 
     it("Should throw if unknown type is given", function()

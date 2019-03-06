@@ -68,10 +68,23 @@ describe("Pokemon", function()
             expect(mon.baseAbility).to.equal("");
         });
 
-        it("Should not set baseAbility if the species doesn't have the ability",
+        it("Should be defined if species has one ability", function()
+        {
+            mon.species = "Arceus";
+            expect(mon.baseAbility).to.equal("multitype");
+        });
+
+        it("Should not be defined if species has more than one ability",
         function()
         {
-            mon.species = "Bulbasaur";
+            mon.species = "Togepi";
+            // tslint:disable-next-line:no-unused-expression
+            expect(mon.baseAbility).to.be.empty;
+        });
+
+        it("Should reject invalid base ability initialization", function()
+        {
+            mon.species = "Togepi";
             expect(() => mon.ability = "swiftswim").to.throw();
             expect(mon.baseAbility).to.equal("");
         });
@@ -104,7 +117,7 @@ describe("Pokemon", function()
 
         it("Should reject unknown ability", function()
         {
-            mon.species = "Bulbasaur";
+            mon.species = "Togepi";
             expect(() => mon.ability = "not_a real-ability").to.throw();
             // tslint:disable-next-line:no-unused-expression
             expect(mon.ability).to.be.empty;
@@ -146,7 +159,9 @@ describe("Pokemon", function()
             expect(mon.getMove("hiddenpower")).to.not.be.null;
             // tslint:disable-next-line:no-unused-expression
             expect(mon.hpType.isSet("fire")).to.be.true;
-            expect(mon.hpType.possibleValues).to.have.members(["fire"]);
+            // tslint:disable-next-line:no-unused-expression
+            expect(mon.hpType.definiteValue).to.not.be.null;
+            expect(mon.hpType.definiteValue!.name).to.equal("fire");
         });
     });
 

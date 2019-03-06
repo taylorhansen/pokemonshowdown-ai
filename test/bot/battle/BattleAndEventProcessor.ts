@@ -234,11 +234,11 @@ describe("Battle and EventProcessor", function()
     {
         // PokemonIDs of the setup teams
         const us1: Readonly<PokemonID> =
-            {owner: "p1", position: "a", nickname: "Magikarp"};
+            {owner: "p1", position: "a", nickname: "Horsea"};
         const us2: Readonly<PokemonID> =
             {owner: "p1", position: "a", nickname: "Gyarados"};
         const them1: Readonly<PokemonID> =
-            {owner: "p2", position: "a", nickname: "Magikarp"};
+            {owner: "p2", position: "a", nickname: "Seaking"};
 
         beforeEach("Setup state", async function()
         {
@@ -255,7 +255,7 @@ describe("Battle and EventProcessor", function()
                             ident: us1,
                             details:
                             {
-                                species: "Magikarp", level: 100, gender: "M",
+                                species: "Horsea", level: 100, gender: "M",
                                 shiny: false
                             },
                             condition: {hp: 10, hpMax: 10, condition: ""},
@@ -298,7 +298,7 @@ describe("Battle and EventProcessor", function()
             // setup opposing team
             // tslint:disable-next-line:no-unused-expression
             expect(battle.state.teams.them.switchIn(
-                    "Magikarp", 100, "M", 10, 10)).to.not.be.null;
+                    "Seaking", 100, "M", 10, 10)).to.not.be.null;
         });
 
         it("Should not choose action if requested to wait", async function()
@@ -532,20 +532,6 @@ describe("Battle and EventProcessor", function()
         describe("ability", function()
         {
             it("Should set ability", async function()
-            {
-                expect(battle.state.teams.them.active.ability).to.equal("");
-                await listener.dispatch("battleprogress",
-                {
-                    events:
-                    [
-                        {type: "ability", id: them1, ability: "Swift Swim"}
-                    ]
-                });
-                expect(battle.state.teams.them.active.ability)
-                    .to.equal("swiftswim");
-            });
-
-            it("Should set opponent ability", async function()
             {
                 expect(battle.state.teams.them.active.ability).to.equal("");
                 await listener.dispatch("battleprogress",

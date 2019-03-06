@@ -38,7 +38,7 @@ describe("VolatileStatus", function()
             expect(volatile.twoTurn).to.equal("");
             expect(volatile.mustRecharge).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
-            expect(volatile.overrideAbility).to.equal(0);
+            expect(volatile.overrideAbility).to.be.null;
             expect(volatile.overrideAbilityName).to.equal("");
             expect(volatile.truant).to.be.false;
             // tslint:enable:no-unused-expression
