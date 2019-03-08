@@ -1,6 +1,6 @@
 import { BoostableStatName, boostableStatNames, toIdName } from "../../helpers";
 import { dex, numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
-import { oneHot, oneHot0, tempStatusTurns } from "./utility";
+import { oneHot, tempStatusTurns } from "./utility";
 
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
@@ -223,9 +223,9 @@ export class VolatileStatus
     public toArray(): number[]
     {
         // one-hot encode categorical data
-        const twoTurn = oneHot(this.twoTurn ? twoTurnMoves[this.twoTurn] : 0,
+        const twoTurn = oneHot(this.twoTurn ? twoTurnMoves[this.twoTurn] : null,
                 numTwoTurnMoves);
-        const overrideAbility = oneHot0(this.overrideAbility, dex.numAbilities);
+        const overrideAbility = oneHot(this.overrideAbility, dex.numAbilities);
 
         // encode temporary status turns
         const confused = tempStatusTurns(this._confuseTurns);

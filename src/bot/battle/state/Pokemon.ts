@@ -4,7 +4,6 @@ import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Move } from "./Move";
 import { PossibilityClass } from "./PossibilityClass";
-import { oneHot } from "./utility";
 import { VolatileStatus } from "./VolatileStatus";
 
 /** Holds all the possibly incomplete info about a pokemon. */
@@ -24,15 +23,17 @@ export class Pokemon
     }
     public set species(species: string)
     {
+        // set will throw if species doesn't exist so check for that first
+        this._species.set(species);
         this.speciesName = species;
         this.data = dex.pokemon[species];
-        this._species = this.data.uid;
         this._baseAbility.set(this.data.abilities);
     }
     /** ID name of the species. */
     private speciesName = "";
     /** Pokemon species/form unique identifier. */
-    private _species = 0;
+    private _species = new PossibilityClass<PokemonData>(dex.pokemon,
+        x => x.uid - 1);
 
     /** Current ability id name. Can temporarily change while active. */
     public get ability(): string
@@ -95,18 +96,16 @@ export class Pokemon
         // make sure item name is converted to an id name
         const name = item.toLowerCase().replace(/[ -]+/g, "");
 
-        if (!dex.items.hasOwnProperty(name))
-        {
-            throw new Error(`Invalid item name ${name}`);
-        }
+        // can throw if invalid name
+        try { this._item.set(item); }
+        catch (e) { throw new Error(`Invalid item name ${name}`); }
 
         this.itemName = name;
-        this._item = dex.items[item];
     }
     /** ID name of the held item. */
     private itemName = "";
     /** Item the pokemon is holding. */
-    private _item = 0;
+    private _item = new PossibilityClass(dex.items);
 
     /** Hidden power type possibility tracker. */
     public readonly hpType = new PossibilityClass(types);
@@ -283,8 +282,6 @@ export class Pokemon
     public toArray(): number[]
     {
         // one-hot encode categorical data
-        const species = oneHot(this._species, dex.numPokemon);
-        const item = oneHot(this._item, dex.numItems);
         // FIXME: this is no longer a length of 2
         const majorStatus = (Object.keys(majorStatuses) as MajorStatus[])
             // only include actual statuses, not the empty string
@@ -294,8 +291,9 @@ export class Pokemon
         const a =
         [
             this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
-            ...species, ...item, ...this._baseAbility.toArray(),
-            ...this.hpType.toArray(), this._level,
+            ...this._species.toArray(), ...this._item.toArray(),
+            ...this._baseAbility.toArray(), ...this.hpType.toArray(),
+            this._level,
             ...([] as number[]).concat(
                 ...this._moves.map(move => move.toArray())),
             ...this.hp.toArray(),

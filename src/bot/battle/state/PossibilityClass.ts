@@ -1,12 +1,17 @@
-/** Represents a class of possible items. */
-export class PossibilityClass
+/**
+ * Represents a class of possible items.
+ * @template T Value type of the map field.
+ */
+export class PossibilityClass<T = number>
 {
     /** Contains the onehot array. */
     private readonly data: boolean[];
     /** Maps value name to its unique 0-based index. */
-    private readonly map: {readonly [name: string]: number};
+    private readonly map: {readonly [name: string]: T};
     /** Amount of ones currently in data. */
     private numOnes: number;
+    /** Function used to get the 0-based index from a T. */
+    private idGetter: (x: T) => number;
 
     /**
      * Gets the class value and index if narrowed down sufficiently, otherwise
@@ -26,21 +31,34 @@ export class PossibilityClass
         {
             // istanbul ignore if
             if (!this.map.hasOwnProperty(name)) continue;
-            if (this.isSet(name)) result.push({name, id: this.map[name]});
+            if (this.isSet(name)) result.push({name, id: this.getId(name)});
         }
         return result;
     }
 
     /**
      * Creates a PossibilityClass.
-     * @param map Maps value name to its unique 0-based index.
-     * @param size Number of indexes.
+     * @param map Maps value name to an object with data on it.
+     * @param idGetter Function used to get the 0-based index of a corresponding
+     * data object. If no template parameter is provided and the given
+     * dictionary is directly name-to-index, this can be left blank.
      */
-    constructor(map: {readonly [name: string]: number})
+    constructor(map: {readonly [name: string]: T},
+        idGetter = (x: T) => x as any as number)
     {
         this.map = map;
+        this.idGetter = idGetter;
         this.data = Array.from({length: Object.keys(map).length}, () => true);
         this.numOnes = this.data.length;
+    }
+
+    /**
+     * Gets the 0-based index of a name. Assumes the given name already exists
+     * in the map field.
+     */
+    private getId(name: string): number
+    {
+        return this.idGetter(this.map[name]);
     }
 
     /** Removes a type from data possibility. */
@@ -48,9 +66,9 @@ export class PossibilityClass
     {
         this.check(name);
         // istanbul ignore else: can't test for else case
-        if (this.data[this.map[name]])
+        if (this.data[this.getId(name)])
         {
-            this.data[this.map[name]] = false;
+            this.data[this.getId(name)] = false;
             --this.numOnes;
 
             // set definiteValue if we've removed all other possibilities
@@ -65,7 +83,7 @@ export class PossibilityClass
     /** Checks if a value is in the data possibility. */
     public isSet(name: string): boolean
     {
-        return this.data[this.map[name]];
+        return this.data[this.getId(name)];
     }
 
     /** Rules out all possible types except what's given. */
@@ -83,7 +101,7 @@ export class PossibilityClass
         {
             // only one value to add
             this.check(name);
-            const id = this.map[name];
+            const id = this.getId(name);
             this.data[id] = true;
 
             this.numOnes = 1;
@@ -95,7 +113,7 @@ export class PossibilityClass
             for (const value of values)
             {
                 this.check(value);
-                this.data[this.map[value]] = true;
+                this.data[this.getId(value)] = true;
             }
 
             this.numOnes = values.length;
