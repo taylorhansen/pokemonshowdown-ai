@@ -68,8 +68,7 @@ import { Dex, MoveData, PokemonData } from \"./dex-types\";
 //  https://github.com/Zarel/Pokemon-Showdown/blob/master/sim/dex-data.js
 
 // counter for the unique identifier of a pokemon, move, etc.
-// id numbers start at 1 so that 0 can mean nothing/unknown
-let uid = 1;
+let uid = 0;
 
 /** Contains ability ids. */
 const abilities: {[name: string]: number} = {};
@@ -143,6 +142,7 @@ spa: ${stats.spa}, spd: ${stats.spd}, spe: ${stats.spe}},
     },`);
     ++uid;
 }
+
 const numPokemon = uid;
 
 console.log(`};

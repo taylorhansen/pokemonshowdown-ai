@@ -33,7 +33,7 @@ export class Pokemon
     private speciesName = "";
     /** Pokemon species/form unique identifier. */
     private _species = new PossibilityClass<PokemonData>(dex.pokemon,
-        x => x.uid - 1);
+            x => x.uid);
 
     /** Current ability id name. Can temporarily change while active. */
     public get ability(): string
