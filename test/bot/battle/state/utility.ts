@@ -9,7 +9,12 @@ describe("utility", function()
     {
         it("Should encode class of values", function()
         {
-            expect(oneHot(2, 3)).to.deep.equal([0, 1, 0]);
+            expect(oneHot(1, 3)).to.have.members([0, 1, 0]);
+        });
+
+        it("Should output 0's if index is null", function()
+        {
+            expect(oneHot(null, 3)).to.have.members([0, 0, 0]);
         });
     });
 
