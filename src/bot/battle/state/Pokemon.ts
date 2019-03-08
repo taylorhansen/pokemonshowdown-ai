@@ -1,6 +1,6 @@
 import { MajorStatus, majorStatuses, toIdName } from "../../helpers";
 import { dex } from "../dex/dex";
-import { PokemonData, Type, types } from "../dex/dex-types";
+import { PokemonData, types } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Move } from "./Move";
 import { PossibilityClass } from "./PossibilityClass";
@@ -97,7 +97,7 @@ export class Pokemon
         const name = item.toLowerCase().replace(/[ -]+/g, "");
 
         // can throw if invalid name
-        try { this._item.set(item); }
+        try { this._item.set(name); }
         catch (e) { throw new Error(`Invalid item name ${name}`); }
 
         this.itemName = name;
@@ -282,7 +282,6 @@ export class Pokemon
     public toArray(): number[]
     {
         // one-hot encode categorical data
-        // FIXME: this is no longer a length of 2
         const majorStatus = (Object.keys(majorStatuses) as MajorStatus[])
             // only include actual statuses, not the empty string
             .filter(status => status !== "")
