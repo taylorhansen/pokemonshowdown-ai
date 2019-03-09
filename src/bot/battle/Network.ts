@@ -241,11 +241,67 @@ export class Network extends Battle<RewardTracker>
     }
 
     /** @override */
-    protected async decide(choices: Choice[]): Promise<Choice>
+    protected async decide(choices: Choice[]): Promise<Choice[]>
     {
         if (choices.length === 0) throw new Error("No available choices!");
         await this.ready;
 
+        const state = this.getState();
+        const nextState = toColumn(state);
+        const prediction = this.model.predict(nextState) as tf.Tensor2D;
+        const predictionData = Array.from(await prediction.data());
+
+        this.logger.debug(`prediction: \
+{${predictionData.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
+
+        // find the best choice that is a subset of our possible choices
+        // include reward so we can use it for Q learning
+        const sortedChoices = choices.sort((a, b) =>
+                // sort by rewards in descending order (highest comes first)
+                predictionData[choiceIds[b]] - predictionData[choiceIds[a]]);
+
+        if (this.lastState && this.lastChoice)
+        {
+            this.logger.debug(`applying reward: ${this.processor.reward}`);
+            // apply the Q learning update rule
+            // this makes the connection between present and future rewards by
+            //  combining the network's perceived reward from its current state
+            //  with the reward it gained from its last state
+
+            // distant rewards should matter less so they don't outweight the
+            //  immediate gain by too much
+            const discount = 0.8;
+            const nextReward = predictionData[choiceIds[sortedChoices[0]]];
+
+            // this Decision object can be picked up by the caller for mass
+            //  learning later
+            this._decision =
+            {
+                state: this.lastState, choice: this.lastChoice,
+                reward: this.processor.reward + discount * nextReward
+            };
+
+            this.logger.debug(`accumulated reward: ${this.processor.reward}`);
+            this.logger.debug(`combined Q-value: ${this._decision.reward}`);
+        }
+        this.processor.resetReward();
+
+        this.lastChoice = sortedChoices[0];
+        this.lastState = state;
+        return sortedChoices;
+    }
+
+    /** @override */
+    protected acceptChoice(choice: Choice): void
+    {
+        this.lastChoice = choice;
+        // state may have changed
+        this.lastState = this.getState();
+    }
+
+    /** Gets the neural network input from the EventProcessor state. */
+    private getState(): number[]
+    {
         const state = this.processor.getStateArray();
         if (state.length > Network.inputLength)
         {
@@ -260,47 +316,7 @@ expected ${Network.inputLength}`);
             do state.push(0); while (state.length < Network.inputLength);
         }
 
-        const nextState = toColumn(state);
-        const prediction = this.model.predict(nextState) as tf.Tensor2D;
-        const predictionData = Array.from(await prediction.data());
-
-        this.logger.debug(`prediction: \
-{${predictionData.map((r, i) => `${intToChoice[i]}: ${r}`).join(", ")}}`);
-
-        // find the best choice that is a subset of our possible choices
-        // include reward so we can use it for Q learning
-        const bestChoice = choices
-            .map(c => ({choice: c, reward: predictionData[choiceIds[c]]}))
-            .reduce((prev, curr) => prev.reward < curr.reward ? curr : prev);
-
-        if (this.lastState && this.lastChoice)
-        {
-            this.logger.debug(`applying reward: ${this.processor.reward}`);
-            // apply the Q learning update rule
-            // this makes the connection between present and future rewards by
-            //  combining the network's perceived reward from its current state
-            //  with the reward it gained from its last state
-            // distant rewards should matter less so they don't outweight the
-            //  immediate gain by too much
-            const discount = 0.8;
-            const nextMaxReward = discount * bestChoice.reward;
-
-            // this Decision object can be picked up by the caller for mass
-            //  learning later
-            this._decision =
-            {
-                state: this.lastState, choice: this.lastChoice,
-                reward: this.processor.reward + nextMaxReward
-            };
-
-            this.logger.debug(`accumulated reward: ${this.processor.reward}`);
-            this.logger.debug(`combined Q-value: ${this._decision.reward}`);
-        }
-        this.processor.resetReward();
-
-        this.lastChoice = bestChoice.choice;
-        this.lastState = state;
-        return this.lastChoice;
+        return state;
     }
 }
 

@@ -173,6 +173,15 @@ ${buildMessage(words)}`);
             });
         });
 
+        describe("callback", function()
+        {
+            const name = "trapped";
+            const args = ["0"];
+            shouldParse("callback", [["callback", name, ...args]],
+                {name, args});
+            shouldntParse("callback", [["callback"]]);
+        });
+
         describe("challstr", function()
         {
             const challstr = "4|12352361236737sdagwflk";

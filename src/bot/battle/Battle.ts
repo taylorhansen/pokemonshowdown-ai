@@ -22,16 +22,7 @@ export interface BattleConstructor
  * Contains public members from the Battle class. Used for polymorphism without
  * having to supply a template argument.
  */
-export abstract class BattleBase
-{
-    /**
-     * Decides what to do next.
-     * @param choices The set of possible choices that can be made.
-     * @returns A Promise to compute the Choice to be sent, e.g. `move 1` or
-     * `switch 3`.
-     */
-    protected abstract decide(choices: Choice[]): Promise<Choice>;
-}
+export abstract class BattleBase {}
 
 /**
  * Manages the entire course of a battle in the client's point of view.
@@ -46,6 +37,8 @@ export abstract class Battle<Processor extends EventProcessor>
     protected readonly logger: Logger;
     /** Last |request| message that was processed. */
     protected lastRequest: RequestMessage;
+    /** Available choices from the last decision. */
+    protected lastChoices: Choice[] = [];
     /** Used to send the AI's choice to the server. */
     private readonly sender: ChoiceSender;
 
@@ -82,6 +75,9 @@ ${inspect(args, {colors: false, depth: null})}`);
             logger.debug(`battleprogress:
 ${inspect(args, {colors: false, depth: null})}`);
 
+            // last best choice was officially accepted by the server
+            this.acceptChoice(this.lastChoices[0]);
+
             this.processor.handleEvents(args.events);
             this.processor.printState();
 
@@ -99,7 +95,42 @@ ${inspect(args, {colors: false, depth: null})}`);
 
             this.processor.handleRequest(args);
             this.lastRequest = args;
+        })
+        .on("callback", args =>
+        {
+            if (args.name === "trapped")
+            {
+                // last choice is invalid because we're trapped now
+                // avoid repeated callback messages by eliminating all switch
+                //  choices
+                // TODO: use this to imply trapped in BattleState so this
+                //  doesn't happen multiple times
+                this.lastChoices = this.lastChoices
+                    .filter(c => !c.startsWith("switch"));
+            }
+            // first choice was rejected
+            else this.lastChoices.shift();
+
+            // retry using second choice
+            // TODO: re-decide instead of iterate if new info is found
+            this.sender(this.lastChoices[0]);
         });
+    }
+
+    /**
+     * Decides what to do next.
+     * @param choices The set of possible choices that can be made.
+     * @returns A Promise to sort the given choices in order of preference.
+     */
+    protected abstract decide(choices: Choice[]): Promise<Choice[]>;
+
+    /**
+     * Called when the server has officially accepted the Battle instance's
+     * Choice decision.
+     * @virtual
+     */
+    protected acceptChoice(choice: Choice): void
+    {
     }
 
     /** Asks the AI what to do next and sends the response. */
@@ -108,8 +139,8 @@ ${inspect(args, {colors: false, depth: null})}`);
         const choices = this.getChoices();
         this.logger.debug(`choices: [${choices.join(", ")}]`);
 
-        const choice = await this.decide(choices);
-        this.sender(choice);
+        this.lastChoices = await this.decide(choices);
+        this.sender(this.lastChoices[0]);
     }
 
     /**

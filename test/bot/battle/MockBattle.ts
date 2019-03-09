@@ -15,7 +15,7 @@ export class MockBattle extends Battle<MockEventProcessor>
     public processor: MockEventProcessor;
     /** @override */
     public lastRequest: RequestMessage;
-    /** Last given choices. */
+    /** @override */
     public lastChoices: Choice[] = [];
     /** Whether the AI state was saved. */
     public saved = false;
@@ -34,10 +34,10 @@ export class MockBattle extends Battle<MockEventProcessor>
     }
 
     /** @override */
-    public async decide(choices: Choice[]): Promise<Choice>
+    public async decide(choices: Choice[]): Promise<Choice[]>
     {
         this.lastChoices = choices;
-        return choices[0];
+        return choices;
     }
 
     /** @override */
