@@ -4,7 +4,7 @@
  */
 import { toIdName } from "../src/bot/helpers";
 // @ts-ignore
-import Dex = require("./Pokemon-Showdown/sim/dex");
+import Dex = require("./Pokemon-Showdown/.sim-dist/dex");
 
 // TODO: support other gens?
 
@@ -63,9 +63,6 @@ console.log(`\
  */
 import { Dex, MoveData, PokemonData } from \"./dex-types\";
 `);
-
-// implicitly uses typings from:
-//  https://github.com/Zarel/Pokemon-Showdown/blob/master/sim/dex-data.js
 
 // counter for the unique identifier of a pokemon, move, etc.
 let uid = 0;

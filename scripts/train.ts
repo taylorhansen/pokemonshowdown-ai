@@ -27,7 +27,7 @@ import { evaluateFolder, modelPath, modelsFolder, selfPlayFolder } from
     "../src/config";
 import { Logger } from "../src/Logger";
 // @ts-ignore
-import s = require("./Pokemon-Showdown/sim/battle-stream");
+import s = require("./Pokemon-Showdown/.sim-dist/battle-stream");
 
 /** Main logger for top-level. */
 const logger = Logger.stdout;
