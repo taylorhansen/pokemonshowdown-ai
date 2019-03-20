@@ -5,14 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "build:dex": "./build-dex.sh",
-    "init": "npm run init:ps",
-    "init:ps": "./init-ps.sh",
     "lint": "tslint -c tslint.json scripts/*.ts src/**/*.ts test/**/*.ts",
     "main": "ts-node src/index.ts",
     "test": "nyc npm run test:mocha",
-    "test:mocha": "mocha",
-    "train": "./train.sh"
+    "test:mocha": "mocha"
   },
   "nyc": {
     "extension": [
