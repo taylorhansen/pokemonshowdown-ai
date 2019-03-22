@@ -664,6 +664,127 @@ describe("Battle and EventProcessor", function()
                 // tslint:disable-next-line:no-unused-expression
                 expect(volatile.isConfused).to.be.false;
             });
+
+            describe("typeadd", function()
+            {
+                it("Should set third type", async function()
+                {
+                    const mon = battle.state.teams.us.active;
+                    const volatile = mon.volatile;
+
+                    expect(volatile.overrideTypes).to.have.members(
+                        ["water", "???"]);
+                    expect(volatile.addedType).to.equal("???");
+                    expect(mon.types).to.have.members(["water"]);
+                    await listener.dispatch("battleprogress",
+                    {
+                        events:
+                        [
+                            {
+                                type: "start", id: us1, volatile: "typeadd",
+                                otherArgs: ["Fire"]
+                            }
+                        ]
+                    });
+                    expect(volatile.overrideTypes).to.have.members(
+                        ["water", "???"]);
+                    expect(volatile.addedType).to.equal("fire");
+                    expect(mon.types).to.have.members(["water", "fire"]);
+                });
+            });
+
+            describe("typechange", function()
+            {
+                it("Should set first type and reset rest", async function()
+                {
+                    const mon = battle.state.teams.us.active;
+                    const volatile = mon.volatile;
+
+                    volatile.overrideTypes = ["flying", "water"];
+                    volatile.addedType = "poison";
+                    expect(mon.types).to.have.members(
+                        ["flying", "water", "poison"]);
+                    await listener.dispatch("battleprogress",
+                    {
+                        events:
+                        [
+                            {
+                                type: "start", id: us1, volatile: "typechange",
+                                otherArgs: ["Fire"]
+                            }
+                        ]
+                    });
+                    expect(volatile.overrideTypes).to.have.members(
+                        ["fire", "???"]);
+                    expect(volatile.addedType).to.equal("???");
+                    expect(mon.types).to.have.members(["fire"]);
+                });
+
+                it("Should set types 1 and 2 and reset type 3", async function()
+                {
+                    const mon = battle.state.teams.us.active;
+                    const volatile = mon.volatile;
+
+                    volatile.overrideTypes = ["flying", "water"];
+                    volatile.addedType = "poison";
+                    expect(mon.types).to.have.members(
+                        ["flying", "water", "poison"]);
+                    await listener.dispatch("battleprogress",
+                    {
+                        events:
+                        [
+                            {
+                                type: "start", id: us1, volatile: "typechange",
+                                otherArgs: ["Fire/Ground"]
+                            }
+                        ]
+                    });
+                    expect(volatile.overrideTypes).to.have.members(
+                        ["fire", "ground"]);
+                    expect(volatile.addedType).to.equal("???");
+                    expect(mon.types).to.have.members(["fire", "ground"]);
+                });
+
+                it("Should truncate type list if too long", async function()
+                {
+                    const mon = battle.state.teams.us.active;
+                    const volatile = mon.volatile;
+
+                    await listener.dispatch("battleprogress",
+                    {
+                        events:
+                        [
+                            {
+                                type: "start", id: us1, volatile: "typechange",
+                                otherArgs: ["Rock/Dragon/Water"]
+                            }
+                        ]
+                    });
+                    expect(volatile.overrideTypes).to.have.members(
+                        ["rock", "dragon"]);
+                });
+
+                it("Should remove types if changed to nothing", async function()
+                {
+                    const mon = battle.state.teams.us.active;
+                    const volatile = mon.volatile;
+
+                    await listener.dispatch("battleprogress",
+                    {
+                        events:
+                        [
+                            {
+                                type: "start", id: us1, volatile: "typechange",
+                                otherArgs: []
+                            }
+                        ]
+                    });
+                    expect(volatile.overrideTypes).to.have.members(
+                        ["???", "???"]);
+                    // tslint:disable-next-line:no-unused-expression
+                    expect(mon.types).to.be.empty;
+                });
+            });
         });
 
         describe("boost", function()

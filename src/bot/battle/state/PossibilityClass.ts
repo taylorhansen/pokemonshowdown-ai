@@ -87,7 +87,7 @@ export class PossibilityClass<T = number>
     }
 
     /** Rules out all possible types except what's given. */
-    public set(values: string | string[]): void
+    public set(values: string | ReadonlyArray<string>): void
     {
         for (let i = 0; i < this.data.length; ++i) this.data[i] = false;
         this.numOnes = 0;

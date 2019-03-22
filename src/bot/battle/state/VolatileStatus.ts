@@ -1,5 +1,6 @@
-import { BoostableStatName, boostableStatNames, toIdName } from "../../helpers";
+import { BoostableStatName, boostableStatNames } from "../../helpers";
 import { dex, numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
+import { Type, types } from "../dex/dex-types";
 import { oneHot, tempStatusTurns } from "./utility";
 
 /**
@@ -124,6 +125,15 @@ export class VolatileStatus
     /** Name of override ability. */
     public overrideAbilityName: string;
 
+    /**
+     * Temporarily overridden types. This should not be included in toString()
+     * since the parent Pokemon object should handle that. Should not be
+     * accessed other than by the parent Pokemon object.
+     */
+    public overrideTypes: Readonly<[Type, Type]>;
+    /** Temporary third type. */
+    public addedType: Type;
+
     /** Whether the Truant ability will activate next turn. */
     public get truant(): boolean
     {
@@ -155,6 +165,8 @@ export class VolatileStatus
         this._stallTurns = 0;
         this.overrideAbility = null;
         this.overrideAbilityName = "";
+        this.overrideTypes = ["???", "???"];
+        this.addedType = "???";
         this._truant = false;
     }
 
@@ -212,6 +224,7 @@ export class VolatileStatus
             /*confuse*/1 + /*disable*/4 + /*locked move*/1 +
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
             /*stall fail rate*/1 + /*override ability*/dex.numAbilities +
+            /*override types*/Object.keys(types).length +
             /*truant*/1;
     }
 
@@ -227,6 +240,11 @@ export class VolatileStatus
                 numTwoTurnMoves);
         const overrideAbility = oneHot(this.overrideAbility, dex.numAbilities);
 
+        // multi-hot encode type data
+        const overrideTypes = this.overrideTypes.concat(this.addedType);
+        const typeData = (Object.keys(types) as Type[])
+            .map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
+
         // encode temporary status turns
         const confused = tempStatusTurns(this._confuseTurns);
         const disabled = this.disableTurns.map(tempStatusTurns);
@@ -239,7 +257,7 @@ export class VolatileStatus
                 (key: BoostableStatName) => this._boosts[key]),
             confused, ...disabled, lockedMove, ...twoTurn,
             this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility,
-            this._truant ? 1 : 0
+            ...typeData, this._truant ? 1 : 0
         ];
         return a;
     }

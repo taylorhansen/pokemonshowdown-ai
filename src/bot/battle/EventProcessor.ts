@@ -6,6 +6,7 @@ import { BattleInitMessage, RequestMessage } from "../dispatcher/Message";
 import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
     PokemonStatus } from "../helpers";
 import { dex } from "./dex/dex";
+import { Type } from "./dex/dex-types";
 import { BattleState } from "./state/BattleState";
 import { Pokemon } from "./state/Pokemon";
 import { Side } from "./state/Side";
@@ -70,17 +71,48 @@ export class EventProcessor
         })
         .on("start", event =>
         {
-            if (event.volatile === "confusion")
+            const active = this.getActive(event.id.owner);
+            switch (event.volatile)
             {
-                // start/upkeep or end confusion status
-                this.getActive(event.id.owner).volatile.confuse(true);
-            }
-            else if (event.volatile === "Disable")
-            {
-                // disable a move
-                const active = this.getActive(event.id.owner);
-                const moveId = EventProcessor.parseIDName(event.otherArgs[0]);
-                active.disableMove(moveId);
+                case "confusion":
+                    // start/upkeep or end confusion status
+                    active.volatile.confuse(true);
+                    break;
+                case "Disable":
+                {
+                    // disable a move
+                    const moveId =
+                        EventProcessor.parseIDName(event.otherArgs[0]);
+                    active.disableMove(moveId);
+                    break;
+                }
+                case "typeadd":
+                    // set added type
+                    active.addType(event.otherArgs[0].toLowerCase() as Type);
+                    break;
+                case "typechange":
+                {
+                    // set types
+                    let types: Type[];
+
+                    if (event.otherArgs[0])
+                    {
+                        types = event.otherArgs[0].split("/")
+                            .map(type => type.toLowerCase()) as Type[];
+
+                        // make sure length is 2
+                        if (types.length > 2)
+                        {
+                            this.logger.error(
+                                `Too many types given (${types.join(", ")})`);
+                            types.splice(2);
+                        }
+                        else if (types.length === 1) types.push("???");
+                    }
+                    else types = ["???", "???"];
+
+                    active.changeType(types as [Type, Type]);
+                }
             }
         })
         .on("activate", event =>

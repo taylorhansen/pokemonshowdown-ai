@@ -2,6 +2,7 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
+import { Type } from "../src/bot/battle/dex/dex-types";
 import { toIdName } from "../src/bot/helpers";
 // @ts-ignore
 import Dex = require("./Pokemon-Showdown/.sim-dist/dex");
@@ -102,7 +103,12 @@ for (const name in pokedex)
         }
     }
 
-    const types: string[] = mon.types;
+    const types: Type[] = mon.types;
+    if (types.length > 2)
+    {
+        console.error("Error: Too many types for species " + name);
+    }
+    else if (types.length === 1) types.push("???");
 
     // optionally fill in other forms if there are any from gen4
     let otherForms: string[] | undefined;

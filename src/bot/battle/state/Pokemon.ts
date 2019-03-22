@@ -1,6 +1,6 @@
 import { MajorStatus, majorStatuses, toIdName } from "../../helpers";
 import { dex } from "../dex/dex";
-import { PokemonData, types } from "../dex/dex-types";
+import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Move } from "./Move";
 import { PossibilityClass } from "./PossibilityClass";
@@ -85,6 +85,38 @@ export class Pokemon
     }
     /** Base ability possibility tracker. */
     private _baseAbility = new PossibilityClass(dex.abilities);
+
+    /** The types of this pokemon. */
+    public get types(): ReadonlyArray<Type>
+    {
+        // TODO: store array data in multiHot and override in VolatileStatus
+        if (!this.data)
+        {
+            throw new Error("Base ability queried before species data");
+        }
+
+        let result: Type[];
+        if (this._active)
+        {
+            result = this.volatile.overrideTypes
+                .concat(this.volatile.addedType);
+        }
+        else result = this.data.types;
+
+        return result.filter(type => type !== "???");
+    }
+    /** Temporarily changes a primary and secondary types and resets third. */
+    public changeType(newTypes: [Type, Type]): void
+    {
+        this.volatile.overrideTypes = newTypes;
+        // reset added type
+        this.addType("???");
+    }
+    /** Changes temporary tertiary type. */
+    public addType(newType: Type): void
+    {
+        this.volatile.addedType = newType;
+    }
 
     /** Item id name. Setter allows either id name or display name. */
     public get item(): string
@@ -180,6 +212,9 @@ export class Pokemon
     /** Tells the pokemon that it is currently being switched in. */
     public switchIn(): void
     {
+        // need to setup temporarily overridable species data
+        if (!this.data) throw new Error("Species data not set");
+
         this._active = true;
         if (this._baseAbility.definiteValue)
         {
@@ -189,6 +224,8 @@ export class Pokemon
             } =
                 this._baseAbility.definiteValue);
         }
+
+        this.volatile.overrideTypes = this.data.types;
     }
 
     /**
@@ -270,7 +307,7 @@ export class Pokemon
     {
         return /*gender*/2 + dex.numPokemon + dex.numItems + dex.numAbilities +
             /*level*/1 + Move.getArraySize() * 4 + HP.getArraySize() +
-            /*hidden power type*/Object.keys(types).length +
+            /*base type and hidden power type*/Object.keys(types).length * 2 +
             /*majorStatus except empty*/Object.keys(majorStatuses).length - 1 +
             (active ? VolatileStatus.getArraySize() : 0);
     }
@@ -281,6 +318,15 @@ export class Pokemon
      */
     public toArray(): number[]
     {
+        // multi-hot encode type data if possible
+        let typeData: number[];
+        if (!this.data) typeData = Array.from(Object.keys(types), () => 0);
+        else
+        {
+            typeData = (Object.keys(types) as Type[])
+                .map(typeName => this.data!.types.includes(typeName) ? 1 : 0);
+        }
+
         // one-hot encode categorical data
         const majorStatus = (Object.keys(majorStatuses) as MajorStatus[])
             // only include actual statuses, not the empty string
@@ -290,7 +336,7 @@ export class Pokemon
         const a =
         [
             this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
-            ...this._species.toArray(), ...this._item.toArray(),
+            ...this._species.toArray(), ...typeData, ...this._item.toArray(),
             ...this._baseAbility.toArray(), ...this.hpType.toArray(),
             this._level,
             ...([] as number[]).concat(
@@ -316,7 +362,19 @@ ${s}${this.speciesName}${this.gender ? ` ${this.gender}` : ""} lv${this.level} \
 ${this.hp.toString()}${this.majorStatus ? ` ${this.majorStatus}` : ""}
 ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
-${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
+${s}type: \
+${this.data!.types
+    // show overridden types in parentheses
+    .map(
+        (type, i) => type +
+            (type !== this.volatile.overrideTypes[i] ?
+                ` (${this.volatile.overrideTypes[i]})` : ""))
+    // include third type in parentheses
+    .concat(
+        this.volatile.addedType !== "???" ?
+            [`(${this.volatile.addedType})`] : [])
+    // separate with commas
+    .join(", ")}
 ${s}ability: \
 ${this._baseAbility.definiteValue ?
     (this.volatile.overrideAbilityName &&
@@ -324,6 +382,7 @@ ${this._baseAbility.definiteValue ?
         `${this.volatile.overrideAbilityName} (${this.baseAbility})`
         : this.baseAbility)
     : `possibly ${this._baseAbility.toString()}`}
+${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
 ${s}hiddenpower: \
 ${this.hpType.definiteValue ?
     this.hpType.definiteValue.name

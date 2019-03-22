@@ -19,14 +19,21 @@ describe("Pokemon", function()
             expect(mon.active).to.equal(false);
         });
 
+        it("Should require species before switching", function()
+        {
+            expect(() => mon.switchIn()).to.throw();
+        });
+
         it("Should be active if switched in", function()
         {
+            mon.species = "Magikarp";
             mon.switchIn();
             expect(mon.active).to.equal(true);
         });
 
         it("Should be inactive if switched out", function()
         {
+            mon.species = "Magikarp";
             mon.switchIn();
             mon.switchOut();
             expect(mon.active).to.equal(false);
@@ -91,28 +98,41 @@ describe("Pokemon", function()
 
         it("Should set baseAbility after setting species", function()
         {
-            mon.species = "Magikarp";
-            mon.ability = "swiftswim";
-            expect(mon.ability).to.equal("swiftswim");
+            mon.species = "Togepi";
+            mon.ability = "hustle";
+            expect(mon.ability).to.equal("hustle");
         });
 
         it("Should allow display name", function()
         {
-            mon.species = "Magikarp";
-            mon.ability = "Swift Swim";
-            expect(mon.baseAbility).to.equal("swiftswim");
+            mon.species = "Togepi";
+            mon.ability = "Serene Grace";
+            expect(mon.baseAbility).to.equal("serenegrace");
 
         });
 
         it("Should set volatile ability", function()
         {
+            mon.species = "Togepi";
             mon.switchIn();
-            mon.species = "Magikarp";
+            // tslint:disable-next-line:no-unused-expression
+            expect(mon.volatile.overrideAbilityName).to.be.empty;
+            mon.ability = "hustle";
+            expect(mon.volatile.overrideAbilityName).to.equal("hustle");
             mon.ability = "swiftswim";
+            expect(mon.baseAbility).to.equal("hustle");
             expect(mon.volatile.overrideAbilityName).to.equal("swiftswim");
-            mon.ability = "insomnia";
-            expect(mon.baseAbility).to.equal("swiftswim");
-            expect(mon.volatile.overrideAbilityName).to.equal("insomnia");
+        });
+
+        it("Should set volatile ability if known", function()
+        {
+            mon.species = "Togepi";
+            mon.ability = "hustle";
+            mon.switchIn();
+            expect(mon.volatile.overrideAbilityName).to.equal("hustle");
+            mon.ability = "swiftswim";
+            expect(mon.baseAbility).to.equal("hustle");
+            expect(mon.volatile.overrideAbilityName).to.equal("swiftswim");
         });
 
         it("Should reject unknown ability", function()
@@ -121,6 +141,20 @@ describe("Pokemon", function()
             expect(() => mon.ability = "not_a real-ability").to.throw();
             // tslint:disable-next-line:no-unused-expression
             expect(mon.ability).to.be.empty;
+        });
+    });
+
+    describe("types", function()
+    {
+        it("Should error if species is not set", function()
+        {
+            expect(() => mon.types).to.throw();
+        });
+
+        it("Should get types if species is set", function()
+        {
+            mon.species = "Kingdra";
+            expect(mon.types).to.have.members(["water", "dragon"]);
         });
     });
 
