@@ -193,6 +193,20 @@ export class EventProcessor
         {
             this.getActive(event.id.owner).faint();
         })
+        .on("fieldend", event =>
+        {
+            if (event.effect === "move: Gravity")
+            {
+                this.state.status.gravity = false;
+            }
+        })
+        .on("fieldstart", event =>
+        {
+            if (event.effect === "move: Gravity")
+            {
+                this.state.status.gravity = true;
+            }
+        })
         .on("move", event =>
         {
             this.handleMove(event);

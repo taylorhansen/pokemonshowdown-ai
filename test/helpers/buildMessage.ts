@@ -116,6 +116,9 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "faint":
             result = ["faint", stringifyID(event.id)];
             break;
+        case "fieldstart": case "fieldend":
+            result = ["-" + event.type, event.effect];
+            break;
         case "move":
         case "prepare":
             result =

@@ -1,9 +1,11 @@
 import { Logger } from "../../Logger";
-import { AbilityCause, AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent,
-    CantEvent, Cause, CureStatusEvent, CureTeamEvent, DamageEvent, EndEvent,
-    FaintEvent, isBattleEventPrefix, MoveEvent, MustRechargeEvent, PrepareEvent,
-    SetHPEvent, SingleTurnEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent,
-    TurnEvent, UpkeepEvent, WinEvent } from "../dispatcher/BattleEvent";
+import { AbilityCause, AbilityEvent, ActivateEvent, AnyBattleEvent,
+    BattleEventPrefix, BoostEvent, CantEvent, Cause, CureStatusEvent,
+    CureTeamEvent, DamageEvent, EndEvent, FaintEvent, FieldEndEvent,
+    FieldStartEvent, isBattleEventPrefix, MoveEvent, MustRechargeEvent,
+    PrepareEvent, SetHPEvent, SingleTurnEvent, StartEvent, StatusEvent,
+    SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WinEvent } from
+    "../dispatcher/BattleEvent";
 import { BattleInitMessage } from "../dispatcher/Message";
 import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
@@ -497,7 +499,7 @@ export class MessageParser extends Parser
      */
     private parseBattleEventHelper(): AnyBattleEvent | null
     {
-        switch (this.nextWord())
+        switch (this.nextWord() as BattleEventPrefix)
         {
             case "-ability": return this.parseAbilityEvent();
             case "-activate": return this.parseActivateEvent();
@@ -508,6 +510,7 @@ export class MessageParser extends Parser
             case "-damage": case "-heal": return this.parseDamageEvent();
             case "-end": return this.parseEndEvent();
             case "faint": return this.parseFaintEvent();
+            case "-fieldstart": case "-fieldend": return this.parseFieldEvent();
             case "move": return this.parseMoveEvent();
             case "-mustrecharge": return this.parseMustRechargeEvent();
             case "-prepare": return this.parsePrepareEvent();
@@ -691,6 +694,28 @@ export class MessageParser extends Parser
 
         if (!id) return null;
         return {type: "faint", id};
+    }
+
+    /**
+     * Parses a FieldStartEvent or FieldEndEvent.
+     *
+     * Format:
+     * @example
+     * |<-fieldstart or -fieldend>|<effect>
+     *
+     * @returns A FieldStartEvent or FieldEndEvent, or null if invalid.
+     */
+    private parseFieldEvent(): FieldStartEvent | FieldEndEvent | null
+    {
+        // remove the dash from the prefix
+        const type = this.previousWord().substr(1);
+        const effect = this.nextWord();
+
+        if (!effect) return null;
+        if (type === "fieldstart") return {type, effect};
+        if (type === "fieldend") return {type, effect};
+        // istanbul ignore next: not reproduceable
+        return null;
     }
 
     /**

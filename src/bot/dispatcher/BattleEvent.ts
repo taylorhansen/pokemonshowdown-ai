@@ -10,10 +10,11 @@ export const battleEventPrefixes =
 {
     "-ability": true, "-activate": true, "-boost": true, cant: true,
     "-curestatus": true, "-cureteam": true, "-damage": true, drag: true,
-    "-end": true, faint: true, "-heal": true, move: true, "-mustrecharge": true,
-    "-prepare": true, "-sethp": true, "-singleturn": true, "-start": true,
-    "-status": true, switch: true, tie: true, turn: true, "-unboost": true,
-    upkeep: true, win: true
+    "-end": true, faint: true, "-fieldend": true, "-fieldstart": true,
+    "-heal": true, move: true, "-mustrecharge": true, "-prepare": true,
+    "-sethp": true, "-singleturn": true, "-start": true, "-status": true,
+    switch: true, tie: true, turn: true, "-unboost": true, upkeep: true,
+    win: true
 };
 
 /** Message line prefixes that are parsed as BattleEvents. */
@@ -31,10 +32,10 @@ export type AnyBattleEvent = BattleEvent<BattleEventType>;
 const battleEventTypesInternal =
 {
     ability: true, activate: true, boost: true, cant: true, curestatus: true,
-    cureteam: true, damage: true, end: true, faint: true, move: true,
-    mustrecharge: true, prepare: true, sethp: true, singleturn: true,
-    start: true, status: true, switch: true, tie: true, turn: true,
-    upkeep: true, win: true
+    cureteam: true, damage: true, end: true, faint: true, fieldend: true,
+    fieldstart: true, move: true, mustrecharge: true, prepare: true,
+    sethp: true, singleturn: true, start: true, status: true, switch: true,
+    tie: true, turn: true, upkeep: true, win: true
 };
 
 /** Names of BattleEvent types. */
@@ -55,6 +56,8 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "damage" ? DamageEvent
     : T extends "end" ? EndEvent
     : T extends "faint" ? FaintEvent
+    : T extends "fieldend" ? FieldEndEvent
+    : T extends "fieldstart" ? FieldStartEvent
     : T extends "move" ? MoveEvent
     : T extends "mustrecharge" ? MustRechargeEvent
     : T extends "prepare" ? PrepareEvent
@@ -166,6 +169,22 @@ export interface FaintEvent extends BattleEventBase
     type: "faint";
     /** ID of the pokemon that has fainted. */
     id: PokemonID;
+}
+
+/** Event where a field effect has ended. */
+export interface FieldEndEvent extends BattleEventBase
+{
+    type: "fieldend";
+    /** Name of the field effect. */
+    effect: string;
+}
+
+/** Event where a field effect has started. */
+export interface FieldStartEvent extends BattleEventBase
+{
+    type: "fieldstart";
+    /** Name of the field effect. */
+    effect: string;
 }
 
 /** Event where a move was used. */

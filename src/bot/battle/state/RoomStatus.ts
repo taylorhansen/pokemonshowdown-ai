@@ -1,7 +1,8 @@
-/** Temporary status conditions in the entire battle room. */
+/** Temporary status conditions for the entire field. */
 export class RoomStatus
 {
-    // TODO
+    /** Gravity field effect. */
+    public gravity = false;
 
     /**
      * Gets the size of the return value of `toArray()`.
@@ -9,7 +10,7 @@ export class RoomStatus
      */
     public static getArraySize(): number
     {
-        return 0;
+        return /*gravity*/1;
     }
 
     /**
@@ -18,7 +19,7 @@ export class RoomStatus
      */
     public toArray(): number[]
     {
-        return [];
+        return [this.gravity ? 1 : 0];
     }
 
     /**
@@ -27,6 +28,6 @@ export class RoomStatus
      */
     public toString(): string
     {
-        return "[]";
+        return `[${this.gravity ? "gravity" : ""}]`;
     }
 }

@@ -65,6 +65,8 @@ export const battleEvent: AnyBattleEvent[] =
     },
     {type: "end", id: pokemonId[2], volatile: "confusion"},
     {type: "faint", id: pokemonId[2]},
+    {type: "fieldend", effect: "move: Gravity"},
+    {type: "fieldstart", effect: "move: Gravity"},
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
         targetId: pokemonId[1]
@@ -140,13 +142,13 @@ export const battleProgress: BattleProgressMessage[] =
             .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
-        events: battleEvent.slice(12, 15)
+        events: battleEvent.slice(12, 16)
             .concat({type: "upkeep"}, ...battleEvent.slice(15, 17),
                 {type: "turn", num: 100})
     },
     {
-        events: battleEvent.slice(17, 21)
-            .concat({type: "upkeep"}, ...battleEvent.slice(21, 25),
+        events: battleEvent.slice(18, 23)
+            .concat({type: "upkeep"}, ...battleEvent.slice(23, 27),
                 {type: "turn", num: 9})
     }
 ];

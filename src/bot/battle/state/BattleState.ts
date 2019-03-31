@@ -13,7 +13,7 @@ export class BattleState
         {us: new Team("us"), them: new Team("them")};
 
     /** Global status conditions for the entire room. */
-    private readonly status = new RoomStatus();
+    public readonly status = new RoomStatus();
 
     /**
      * Gets the size of the return value of `toArray()`.
