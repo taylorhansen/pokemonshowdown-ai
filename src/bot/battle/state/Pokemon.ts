@@ -39,9 +39,9 @@ export class Pokemon
     public get ability(): string
     {
         // ability has been overridden
-        if (this.volatile.overrideAbilityName)
+        if (this.volatile.overrideAbility)
         {
-            return this.volatile.overrideAbilityName;
+            return this.volatile.overrideAbility;
         }
         // not overridden/initialized
         return this.baseAbility;
@@ -73,9 +73,7 @@ export class Pokemon
         }
 
         // override current ability
-        const id = dex.abilities[name];
-        this.volatile.overrideAbility = id;
-        this.volatile.overrideAbilityName = name;
+        this.volatile.overrideAbility = name;
     }
     /** Base ability id name. May be empty if not yet narrowed. */
     public get baseAbility(): string
@@ -212,20 +210,16 @@ export class Pokemon
     /** Tells the pokemon that it is currently being switched in. */
     public switchIn(): void
     {
-        // need to setup temporarily overridable species data
+        // copy overridable species data
         if (!this.data) throw new Error("Species data not set");
-
-        this._active = true;
         if (this._baseAbility.definiteValue)
         {
-            ({
-                name: this.volatile.overrideAbilityName,
-                id: this.volatile.overrideAbility
-            } =
-                this._baseAbility.definiteValue);
+            this.volatile.overrideAbility =
+                this._baseAbility.definiteValue.name;
         }
-
         this.volatile.overrideTypes = this.data.types;
+
+        this._active = true;
     }
 
     /**
@@ -375,13 +369,7 @@ ${this.data!.types
             [`(${this.volatile.addedType})`] : [])
     // separate with commas
     .join(", ")}
-${s}ability: \
-${this._baseAbility.definiteValue ?
-    (this.volatile.overrideAbilityName &&
-            this.volatile.overrideAbilityName !== this.baseAbility ?
-        `${this.volatile.overrideAbilityName} (${this.baseAbility})`
-        : this.baseAbility)
-    : `possibly ${this._baseAbility.toString()}`}
+${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
 ${s}hiddenpower: \
 ${this.hpType.definiteValue ?
@@ -389,5 +377,19 @@ ${this.hpType.definiteValue ?
     : `possibly ${this.hpType.toString()}`}
 ${s}moves: ${this._moves.map((m, i) =>
     i < this.unrevealedMove ? m.toString() : "<unrevealed>").join(", ")}`;
+    }
+
+    // istanbul ignore next: only used for logging
+    /** Displays the possible and overridden values of the ability. */
+    private stringifyAbility(): string
+    {
+        const baseVal = this._baseAbility.definiteValue;
+        const base = baseVal ?
+            baseVal.name : `possibly ${this._baseAbility.toString()}`;
+        const over = this.volatile.overrideAbility;
+
+        if (over === base) return base;
+        else if (over) return `${over} (suppressed: ${base})`;
+        else return `(suppressed: ${base})`;
     }
 }

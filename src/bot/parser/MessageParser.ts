@@ -1,10 +1,10 @@
 import { Logger } from "../../Logger";
 import { AbilityCause, AbilityEvent, ActivateEvent, AnyBattleEvent,
     BattleEventPrefix, BoostEvent, CantEvent, Cause, CureStatusEvent,
-    CureTeamEvent, DamageEvent, EndEvent, FaintEvent, FieldEndEvent,
-    FieldStartEvent, isBattleEventPrefix, MoveEvent, MustRechargeEvent,
-    PrepareEvent, SetHPEvent, SingleTurnEvent, StartEvent, StatusEvent,
-    SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WinEvent } from
+    CureTeamEvent, DamageEvent, EndAbilityEvent, EndEvent, FaintEvent,
+    FieldEndEvent, FieldStartEvent, isBattleEventPrefix, MoveEvent,
+    MustRechargeEvent, PrepareEvent, SetHPEvent, SingleTurnEvent, StartEvent,
+    StatusEvent, SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WinEvent } from
     "../dispatcher/BattleEvent";
 import { BattleInitMessage } from "../dispatcher/Message";
 import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
@@ -509,6 +509,7 @@ export class MessageParser extends Parser
             case "-cureteam": return this.parseCureTeamEvent();
             case "-damage": case "-heal": return this.parseDamageEvent();
             case "-end": return this.parseEndEvent();
+            case "-endability": return this.parseEndAbilityEvent();
             case "faint": return this.parseFaintEvent();
             case "-fieldstart": case "-fieldend": return this.parseFieldEvent();
             case "move": return this.parseMoveEvent();
@@ -677,6 +678,25 @@ export class MessageParser extends Parser
 
         if (!id || !volatile) return null;
         return {type: "end", id, volatile};
+    }
+
+    /**
+     * Parses an EndAbilityEvent.
+     *
+     * Format:
+     * @example
+     * |-endability|<PokemonID>|<ability name>
+     *
+     * @returns An AbilityEvent, or null if invalid.
+     */
+    private parseEndAbilityEvent(): EndAbilityEvent | null
+    {
+        const id = this.parsePokemonID(this.nextWord());
+        const ability = this.nextWord();
+        if (!ability) this.logger.error("Missing ability name");
+
+        if (!id || !ability) return null;
+        return {type: "endability", id, ability};
     }
 
     /**

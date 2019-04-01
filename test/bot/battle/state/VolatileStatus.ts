@@ -25,8 +25,7 @@ describe("VolatileStatus", function()
             volatile.twoTurn = "Bounce";
             volatile.mustRecharge = true;
             volatile.stall(true);
-            volatile.overrideAbility = 1;
-            volatile.overrideAbilityName = "something"; // not actually valid
+            volatile.overrideAbility = "swiftswim";
             volatile.overrideTypes = ["???", "water"];
             volatile.addedType = "ice";
 
@@ -40,8 +39,7 @@ describe("VolatileStatus", function()
             expect(volatile.twoTurn).to.equal("");
             expect(volatile.mustRecharge).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
-            expect(volatile.overrideAbility).to.be.null;
-            expect(volatile.overrideAbilityName).to.equal("");
+            expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
             expect(volatile.truant).to.be.false;
@@ -60,8 +58,7 @@ describe("VolatileStatus", function()
             volatile.twoTurn = "Bounce";
             volatile.mustRecharge = true;
             volatile.stall(true);
-            volatile.overrideAbility = 1;
-            volatile.overrideAbilityName = "something"; // not actually valid
+            volatile.overrideAbility = "swiftswim";
             volatile.overrideTypes = ["???", "water"];
             volatile.addedType = "ice";
 
@@ -80,8 +77,7 @@ describe("VolatileStatus", function()
             expect(volatile.twoTurn).to.equal("");
             expect(volatile.mustRecharge).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
-            expect(volatile.overrideAbility).to.be.null;
-            expect(volatile.overrideAbilityName).to.equal("");
+            expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
             expect(volatile.truant).to.be.false;

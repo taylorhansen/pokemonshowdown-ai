@@ -10,11 +10,11 @@ export const battleEventPrefixes =
 {
     "-ability": true, "-activate": true, "-boost": true, cant: true,
     "-curestatus": true, "-cureteam": true, "-damage": true, drag: true,
-    "-end": true, faint: true, "-fieldend": true, "-fieldstart": true,
-    "-heal": true, move: true, "-mustrecharge": true, "-prepare": true,
-    "-sethp": true, "-singleturn": true, "-start": true, "-status": true,
-    switch: true, tie: true, turn: true, "-unboost": true, upkeep: true,
-    win: true
+    "-end": true, "-endability": true, faint: true, "-fieldend": true,
+    "-fieldstart": true, "-heal": true, move: true, "-mustrecharge": true,
+    "-prepare": true, "-sethp": true, "-singleturn": true, "-start": true,
+    "-status": true, switch: true, tie: true, turn: true, "-unboost": true,
+    upkeep: true, win: true
 };
 
 /** Message line prefixes that are parsed as BattleEvents. */
@@ -32,10 +32,10 @@ export type AnyBattleEvent = BattleEvent<BattleEventType>;
 const battleEventTypesInternal =
 {
     ability: true, activate: true, boost: true, cant: true, curestatus: true,
-    cureteam: true, damage: true, end: true, faint: true, fieldend: true,
-    fieldstart: true, move: true, mustrecharge: true, prepare: true,
-    sethp: true, singleturn: true, start: true, status: true, switch: true,
-    tie: true, turn: true, upkeep: true, win: true
+    cureteam: true, damage: true, end: true, endability: true, faint: true,
+    fieldend: true, fieldstart: true, move: true, mustrecharge: true,
+    prepare: true, sethp: true, singleturn: true, start: true, status: true,
+    switch: true, tie: true, turn: true, upkeep: true, win: true
 };
 
 /** Names of BattleEvent types. */
@@ -55,6 +55,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "cureteam" ? CureTeamEvent
     : T extends "damage" ? DamageEvent
     : T extends "end" ? EndEvent
+    : T extends "endability" ? EndAbilityEvent
     : T extends "faint" ? FaintEvent
     : T extends "fieldend" ? FieldEndEvent
     : T extends "fieldstart" ? FieldStartEvent
@@ -161,6 +162,16 @@ export interface EndEvent extends BattleEventBase
     id: PokemonID;
     /** Volatile status name to be removed. */
     volatile: string;
+}
+
+/** Event where a pokemon's ability is temporarily removed. */
+export interface EndAbilityEvent extends BattleEventBase
+{
+    type: "endability";
+    /** ID of the pokemon. */
+    id: PokemonID;
+    /** Ability being removed. */
+    ability: string;
 }
 
 /** Event where a pokemon has fainted. */

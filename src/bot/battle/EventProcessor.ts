@@ -69,6 +69,10 @@ export class EventProcessor
 
             active.ability = event.ability;
         })
+        .on("endability", event =>
+        {
+            this.getActive(event.id.owner).volatile.overrideAbility = "";
+        })
         .on("start", event =>
         {
             const active = this.getActive(event.id.owner);

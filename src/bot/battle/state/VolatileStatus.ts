@@ -1,4 +1,4 @@
-import { BoostableStatName, boostableStatNames } from "../../helpers";
+import { BoostableStatName, boostableStatNames, toIdName } from "../../helpers";
 import { dex, numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
 import { Type, types } from "../dex/dex-types";
 import { oneHot, tempStatusTurns } from "./utility";
@@ -119,14 +119,32 @@ export class VolatileStatus
     /** Whether we have successfully stalled this turn. */
     private stalled = false;
 
-    /**
-     * Override ability id number. This should not be included in toString()
-     * since the parent Pokemon object should handle that. Should not be
-     * accessed other than by the parent Pokemon object.
-     */
-    public overrideAbility: number | null;
+    /** Override ability while active. */
+    public get overrideAbility(): string
+    {
+        return this.overrideAbilityName;
+    }
+    /** Set to the empty string to suppress base ability. */
+    public set overrideAbility(ability: string)
+    {
+        const name = toIdName(ability);
+
+        if (name)
+        {
+            if (!dex.abilities.hasOwnProperty(name))
+            {
+                throw new Error(`Unknown ability "${ability}"`);
+            }
+            this._overrideAbility = dex.abilities[name];
+        }
+        else this._overrideAbility = null;
+
+        this.overrideAbilityName = name;
+    }
+    /** ID number of ability. */
+    private _overrideAbility: number | null;
     /** Name of override ability. */
-    public overrideAbilityName: string;
+    private overrideAbilityName: string;
 
     /**
      * Temporarily overridden types. This should not be included in toString()
@@ -170,7 +188,7 @@ export class VolatileStatus
         this.twoTurn = "";
         this.mustRecharge = false;
         this._stallTurns = 0;
-        this.overrideAbility = null;
+        this._overrideAbility = null;
         this.overrideAbilityName = "";
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
@@ -247,7 +265,7 @@ export class VolatileStatus
         // one-hot encode categorical data
         const twoTurn = oneHot(this.twoTurn ? twoTurnMoves[this.twoTurn] : null,
                 numTwoTurnMoves);
-        const overrideAbility = oneHot(this.overrideAbility, dex.numAbilities);
+        const overrideAbility = oneHot(this._overrideAbility, dex.numAbilities);
 
         // multi-hot encode type data
         const overrideTypes = this.overrideTypes.concat(this.addedType);
