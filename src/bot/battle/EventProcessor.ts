@@ -234,12 +234,9 @@ export class EventProcessor
         })
         .on("singleturn", event =>
         {
-            // istanbul ignore else: hard to check else case
-            if (EventProcessor.isStallSingleTurn(event.status))
-            {
-                // user successfully used a stalling move
-                this.getActive(event.id.owner).volatile.stall(true);
-            }
+            const v = this.getActive(event.id.owner).volatile;
+            if (EventProcessor.isStallSingleTurn(event.status)) v.stall(true);
+            else if (event.status === "move: Roost") v.roost = true;
         })
         .on("status", event =>
         {

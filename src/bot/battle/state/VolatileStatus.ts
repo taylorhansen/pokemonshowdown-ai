@@ -165,6 +165,9 @@ export class VolatileStatus
     /** Smack Down move effect. */
     public smackDown: boolean;
 
+    /** Roost move effect (single turn). */
+    public roost: boolean;
+
     /** Creates a VolatileStatus object. */
     constructor()
     {
@@ -194,6 +197,7 @@ export class VolatileStatus
         this.addedType = "???";
         this._truant = false;
         this.smackDown = false;
+        this.roost = false;
     }
 
     /**
@@ -224,6 +228,8 @@ export class VolatileStatus
             this._truant = !this._truant;
         }
         else this._truant = false;
+
+        this.roost = false;
     }
 
     /**
@@ -246,13 +252,12 @@ export class VolatileStatus
      */
     public static getArraySize(): number
     {
-        // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
             /*confuse*/1 + /*ingrain*/1 + /*disable*/4 + /*locked move*/1 +
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
             /*stall fail rate*/1 + /*override ability*/dex.numAbilities +
             /*override types*/Object.keys(types).length +
-            /*truant*/1 + /*smack down*/1;
+            /*truant*/1 + /*smack down*/1 + /*roost*/1;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -284,7 +289,8 @@ export class VolatileStatus
                 (key: BoostableStatName) => this._boosts[key]),
             confused, this.ingrain ? 1 : 0, ...disabled, lockedMove, ...twoTurn,
             this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility,
-            ...typeData, this._truant ? 1 : 0, this.smackDown ? 1 : 0
+            ...typeData, this._truant ? 1 : 0, this.smackDown ? 1 : 0,
+            this.roost ? 1 : 0
         ];
         return a;
     }
@@ -316,7 +322,8 @@ ${VolatileStatus.pluralTurns(d)}`),
                     [`stalling for ${this._stallTurns - 1} \
 ${VolatileStatus.pluralTurns(this._stallTurns)}`] : [],
                 this._truant ? ["truant next turn"] : [],
-                this.smackDown ? ["smacked down"] : [])
+                this.smackDown ? ["smacked down"] : [],
+                this.roost ? ["roosting"] : [])
             .join(", ")}]`;
     }
 

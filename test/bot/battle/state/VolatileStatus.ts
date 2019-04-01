@@ -28,6 +28,7 @@ describe("VolatileStatus", function()
             volatile.overrideAbility = "swiftswim";
             volatile.overrideTypes = ["???", "water"];
             volatile.addedType = "ice";
+            volatile.roost = true;
 
             volatile.clear();
             // tslint:disable:no-unused-expression
@@ -43,6 +44,7 @@ describe("VolatileStatus", function()
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
             expect(volatile.truant).to.be.false;
+            expect(volatile.roost).to.be.false;
             // tslint:enable:no-unused-expression
         });
     });
