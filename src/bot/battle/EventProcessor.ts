@@ -75,7 +75,7 @@ export class EventProcessor
             switch (event.volatile)
             {
                 case "confusion":
-                    // start/upkeep or end confusion status
+                    // start confusion status
                     active.volatile.confuse(true);
                     break;
                 case "Disable":
@@ -112,7 +112,13 @@ export class EventProcessor
                     else types = ["???", "???"];
 
                     active.changeType(types as [Type, Type]);
+                    break;
                 }
+                case "move: Ingrain":
+                    active.volatile.ingrain = true;
+                    break;
+                default:
+                    this.logger.debug(`Ignoring start "${event.volatile}"`);
             }
         })
         .on("activate", event =>
@@ -129,22 +135,15 @@ export class EventProcessor
                 this.getActive(otherId(event.id.owner)).volatile
                     .lockedMove = false;
             }
+            else this.logger.debug(`Ignoring activate "${event.volatile}"`);
         })
         .on("end", event =>
         {
-            if (event.volatile === "confusion")
-            {
-                this.getActive(event.id.owner).volatile.confuse(false);
-            }
-            else
-            {
-                // istanbul ignore else: hard to reproduce and check
-                if (event.volatile === "move: Disable")
-                {
-                    // clear disabled status
-                    this.getActive(event.id.owner).volatile.enableMoves();
-                }
-            }
+            const v = this.getActive(event.id.owner).volatile;
+            if (event.volatile === "confusion") v.confuse(false);
+            else if (event.volatile === "move: Disable") v.enableMoves();
+            else if (event.volatile === "move: Ingrain") v.ingrain = false;
+            else this.logger.debug(`Ignoring end "${event.volatile}"`);
         })
         .on("boost", event =>
         {

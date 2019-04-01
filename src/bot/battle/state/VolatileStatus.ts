@@ -50,6 +50,9 @@ export class VolatileStatus
     }
     private _confuseTurns: number;
 
+    /** Ingrain move status. */
+    public ingrain: boolean;
+
     // not passed when copying
 
     /**
@@ -158,6 +161,7 @@ export class VolatileStatus
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
         };
         this._confuseTurns = 0;
+        this.ingrain = false;
         this.disableTurns = [0, 0, 0, 0];
         this.lockedMoveTurns = 0;
         this.twoTurn = "";
@@ -209,6 +213,7 @@ export class VolatileStatus
         const v = new VolatileStatus();
         v._boosts = this._boosts;
         v._confuseTurns = this._confuseTurns;
+        v.ingrain = this.ingrain;
         return v;
     }
 
@@ -221,7 +226,7 @@ export class VolatileStatus
     {
         // boostable stats
         return /*boostable stats*/Object.keys(boostableStatNames).length +
-            /*confuse*/1 + /*disable*/4 + /*locked move*/1 +
+            /*confuse*/1 + /*ingrain*/1 + /*disable*/4 + /*locked move*/1 +
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
             /*stall fail rate*/1 + /*override ability*/dex.numAbilities +
             /*override types*/Object.keys(types).length +
@@ -255,7 +260,7 @@ export class VolatileStatus
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
-            confused, ...disabled, lockedMove, ...twoTurn,
+            confused, this.ingrain ? 1 : 0, ...disabled, lockedMove, ...twoTurn,
             this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility,
             ...typeData, this._truant ? 1 : 0
         ];
@@ -277,6 +282,7 @@ export class VolatileStatus
             .concat(
                 this._confuseTurns ? [`confused for ${this._confuseTurns - 1} \
 ${VolatileStatus.pluralTurns(this._confuseTurns)}`] : [],
+                this.ingrain ? ["ingrain"] : [],
                 this.disableTurns
                     .filter(d => d !== 0)
                     .map((d, i) => `disabled move ${i + 1} for ${d} \
