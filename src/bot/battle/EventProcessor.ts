@@ -117,6 +117,9 @@ export class EventProcessor
                 case "move: Ingrain":
                     active.volatile.ingrain = true;
                     break;
+                case "Smack Down":
+                    active.volatile.smackDown = true;
+                    break;
                 default:
                     this.logger.debug(`Ignoring start "${event.volatile}"`);
             }

@@ -144,6 +144,9 @@ export class VolatileStatus
     }
     private _truant: boolean;
 
+    /** Smack Down move effect. */
+    public smackDown: boolean;
+
     /** Creates a VolatileStatus object. */
     constructor()
     {
@@ -172,6 +175,7 @@ export class VolatileStatus
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
         this._truant = false;
+        this.smackDown = false;
     }
 
     /**
@@ -230,7 +234,7 @@ export class VolatileStatus
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
             /*stall fail rate*/1 + /*override ability*/dex.numAbilities +
             /*override types*/Object.keys(types).length +
-            /*truant*/1;
+            /*truant*/1 + /*smack down*/1;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -262,7 +266,7 @@ export class VolatileStatus
                 (key: BoostableStatName) => this._boosts[key]),
             confused, this.ingrain ? 1 : 0, ...disabled, lockedMove, ...twoTurn,
             this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility,
-            ...typeData, this._truant ? 1 : 0
+            ...typeData, this._truant ? 1 : 0, this.smackDown ? 1 : 0
         ];
         return a;
     }
@@ -293,7 +297,8 @@ ${VolatileStatus.pluralTurns(d)}`),
                 this._stallTurns ?
                     [`stalling for ${this._stallTurns - 1} \
 ${VolatileStatus.pluralTurns(this._stallTurns)}`] : [],
-                this._truant ? ["truant next turn"] : [])
+                this._truant ? ["truant next turn"] : [],
+                this.smackDown ? ["smacked down"] : [])
             .join(", ")}]`;
     }
 
