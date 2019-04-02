@@ -20,6 +20,7 @@ describe("VolatileStatus", function()
         {
             volatile.boost("atk", 1);
             volatile.confuse(true);
+            volatile.magnetRise = true;
             volatile.disableMove(0);
             volatile.lockedMove = true;
             volatile.twoTurn = "Bounce";
@@ -35,6 +36,7 @@ describe("VolatileStatus", function()
             expect(volatile.boosts.atk).to.equal(0);
             expect(volatile.isConfused).to.be.false;
             expect(volatile.confuseTurns).to.equal(0);
+            expect(volatile.magnetRise).to.be.false;
             expect(volatile.isDisabled(0)).to.be.false;
             expect(volatile.lockedMove).to.be.false;
             expect(volatile.twoTurn).to.equal("");
@@ -55,6 +57,7 @@ describe("VolatileStatus", function()
         {
             volatile.boost("atk", 1);
             volatile.confuse(true);
+            volatile.magnetRise = true;
             volatile.disableMove(0);
             volatile.lockedMove = true;
             volatile.twoTurn = "Bounce";
@@ -73,6 +76,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.boosts.atk).to.equal(1);
             expect(newVolatile.isConfused).to.be.true;
             expect(newVolatile.confuseTurns).to.equal(1);
+            expect(newVolatile.magnetRise).to.be.true;
             // not passed
             expect(newVolatile.isDisabled(0)).to.be.false;
             expect(newVolatile.lockedMove).to.be.false;

@@ -53,6 +53,17 @@ export class VolatileStatus
     /** Ingrain move status. */
     public ingrain: boolean;
 
+    /** Magnet Rise move status (temporary). */
+    public get magnetRise(): boolean
+    {
+        return this.magnetRiseTurns > 0;
+    }
+    public set magnetRise(flag: boolean)
+    {
+        this.magnetRiseTurns = flag ? 1 : 0;
+    }
+    private magnetRiseTurns: number;
+
     // not passed when copying
 
     /**
@@ -186,6 +197,7 @@ export class VolatileStatus
         };
         this._confuseTurns = 0;
         this.ingrain = false;
+        this.magnetRiseTurns = 0;
         this.disableTurns = [0, 0, 0, 0];
         this.lockedMoveTurns = 0;
         this.twoTurn = "";
@@ -207,6 +219,8 @@ export class VolatileStatus
     public postTurn(): void
     {
         // confusion is handled separately since it depends on a message
+        // but magnet rise doesn't
+        if (this.magnetRise) ++this.magnetRiseTurns;
 
         // update disabled move turns
         for (let i = 0; i < this.disableTurns.length; ++i)
@@ -253,11 +267,12 @@ export class VolatileStatus
     public static getArraySize(): number
     {
         return /*boostable stats*/Object.keys(boostableStatNames).length +
-            /*confuse*/1 + /*ingrain*/1 + /*disable*/4 + /*locked move*/1 +
-            /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
-            /*stall fail rate*/1 + /*override ability*/dex.numAbilities +
-            /*override types*/Object.keys(types).length +
-            /*truant*/1 + /*smack down*/1 + /*roost*/1;
+            /*confuse*/1 + /*ingrain*/1 + /*magnet rise*/1 + /*disable*/4 +
+            /*locked move*/1 + /*two-turn status*/numTwoTurnMoves +
+            /*must recharge*/1 + /*stall fail rate*/1 +
+            /*override ability*/dex.numAbilities +
+            /*override types*/Object.keys(types).length + /*truant*/1 +
+            /*smack down*/1 + /*roost*/1;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -279,6 +294,7 @@ export class VolatileStatus
 
         // encode temporary status turns
         const confused = tempStatusTurns(this._confuseTurns);
+        const magnetRise = tempStatusTurns(this.magnetRiseTurns);
         const disabled = this.disableTurns.map(tempStatusTurns);
         const lockedMove = tempStatusTurns(this.lockedMoveTurns);
         const stallFailRate = tempStatusTurns(this._stallTurns);
@@ -287,10 +303,10 @@ export class VolatileStatus
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
-            confused, this.ingrain ? 1 : 0, ...disabled, lockedMove, ...twoTurn,
-            this.mustRecharge ? 1 : 0, stallFailRate, ...overrideAbility,
-            ...typeData, this._truant ? 1 : 0, this.smackDown ? 1 : 0,
-            this.roost ? 1 : 0
+            confused, this.ingrain ? 1 : 0, magnetRise, ...disabled, lockedMove,
+            ...twoTurn, this.mustRecharge ? 1 : 0, stallFailRate,
+            ...overrideAbility, ...typeData, this._truant ? 1 : 0,
+            this.smackDown ? 1 : 0, this.roost ? 1 : 0
         ];
         return a;
     }
@@ -311,6 +327,9 @@ export class VolatileStatus
                 this._confuseTurns ? [`confused for ${this._confuseTurns - 1} \
 ${VolatileStatus.pluralTurns(this._confuseTurns)}`] : [],
                 this.ingrain ? ["ingrain"] : [],
+                this.magnetRiseTurns ? [`magnet rise for \
+${this._confuseTurns - 1} \
+${VolatileStatus.pluralTurns(this._confuseTurns)}`] : [],
                 this.disableTurns
                     .filter(d => d !== 0)
                     .map((d, i) => `disabled move ${i + 1} for ${d} \

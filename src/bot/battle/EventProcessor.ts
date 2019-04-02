@@ -123,6 +123,10 @@ export class EventProcessor
                     break;
                 case "Smack Down":
                     active.volatile.smackDown = true;
+                    active.volatile.magnetRise = false;
+                    break;
+                case "Magnet Rise":
+                    active.volatile.magnetRise = true;
                     break;
                 default:
                     this.logger.debug(`Ignoring start "${event.volatile}"`);
@@ -150,6 +154,7 @@ export class EventProcessor
             if (event.volatile === "confusion") v.confuse(false);
             else if (event.volatile === "move: Disable") v.enableMoves();
             else if (event.volatile === "move: Ingrain") v.ingrain = false;
+            else if (event.volatile === "Magnet Rise") v.magnetRise = false;
             else this.logger.debug(`Ignoring end "${event.volatile}"`);
         })
         .on("boost", event =>
