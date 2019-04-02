@@ -14,29 +14,36 @@ describe("VolatileStatus", function()
         volatile = new VolatileStatus();
     });
 
+    function setEverything()
+    {
+        volatile.boost("atk", 1);
+        volatile.confuse(true);
+        volatile.magnetRise = true;
+        volatile.embargo = true;
+        volatile.disableMove(0);
+        volatile.lockedMove = true;
+        volatile.twoTurn = "Bounce";
+        volatile.mustRecharge = true;
+        volatile.stall(true);
+        volatile.overrideAbility = "swiftswim";
+        volatile.overrideTypes = ["???", "water"];
+        volatile.addedType = "ice";
+        volatile.roost = true;
+    }
+
     describe("clear", function()
     {
         it("Should clear all statuses", function()
         {
-            volatile.boost("atk", 1);
-            volatile.confuse(true);
-            volatile.magnetRise = true;
-            volatile.disableMove(0);
-            volatile.lockedMove = true;
-            volatile.twoTurn = "Bounce";
-            volatile.mustRecharge = true;
-            volatile.stall(true);
-            volatile.overrideAbility = "swiftswim";
-            volatile.overrideTypes = ["???", "water"];
-            volatile.addedType = "ice";
-            volatile.roost = true;
-
+            setEverything();
             volatile.clear();
+
             // tslint:disable:no-unused-expression
             expect(volatile.boosts.atk).to.equal(0);
             expect(volatile.isConfused).to.be.false;
             expect(volatile.confuseTurns).to.equal(0);
             expect(volatile.magnetRise).to.be.false;
+            expect(volatile.embargo).to.be.false;
             expect(volatile.isDisabled(0)).to.be.false;
             expect(volatile.lockedMove).to.be.false;
             expect(volatile.twoTurn).to.equal("");
@@ -55,17 +62,7 @@ describe("VolatileStatus", function()
     {
         it("Should copy only passable statuses", function()
         {
-            volatile.boost("atk", 1);
-            volatile.confuse(true);
-            volatile.magnetRise = true;
-            volatile.disableMove(0);
-            volatile.lockedMove = true;
-            volatile.twoTurn = "Bounce";
-            volatile.mustRecharge = true;
-            volatile.stall(true);
-            volatile.overrideAbility = "swiftswim";
-            volatile.overrideTypes = ["???", "water"];
-            volatile.addedType = "ice";
+            setEverything();
 
             const newVolatile = volatile.shallowClone();
             volatile.clear();
@@ -77,6 +74,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.isConfused).to.be.true;
             expect(newVolatile.confuseTurns).to.equal(1);
             expect(newVolatile.magnetRise).to.be.true;
+            expect(newVolatile.embargo).to.be.true;
             // not passed
             expect(newVolatile.isDisabled(0)).to.be.false;
             expect(newVolatile.lockedMove).to.be.false;

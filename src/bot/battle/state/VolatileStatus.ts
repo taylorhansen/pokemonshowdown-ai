@@ -64,6 +64,17 @@ export class VolatileStatus
     }
     private magnetRiseTurns: number;
 
+    /** Embargo move status (temporary). */
+    public get embargo(): boolean
+    {
+        return this.embargoTurns > 0;
+    }
+    public set embargo(flag: boolean)
+    {
+        this.embargoTurns = flag ? 1 : 0;
+    }
+    private embargoTurns: number;
+
     // not passed when copying
 
     /**
@@ -198,6 +209,7 @@ export class VolatileStatus
         this._confuseTurns = 0;
         this.ingrain = false;
         this.magnetRiseTurns = 0;
+        this.embargoTurns = 0;
         this.disableTurns = [0, 0, 0, 0];
         this.lockedMoveTurns = 0;
         this.twoTurn = "";
@@ -219,8 +231,8 @@ export class VolatileStatus
     public postTurn(): void
     {
         // confusion is handled separately since it depends on a message
-        // but magnet rise doesn't
         if (this.magnetRise) ++this.magnetRiseTurns;
+        if (this.embargo) ++this.embargoTurns;
 
         // update disabled move turns
         for (let i = 0; i < this.disableTurns.length; ++i)
@@ -256,6 +268,8 @@ export class VolatileStatus
         v._boosts = this._boosts;
         v._confuseTurns = this._confuseTurns;
         v.ingrain = this.ingrain;
+        v.magnetRiseTurns = this.magnetRiseTurns;
+        v.embargoTurns = this.embargoTurns;
         return v;
     }
 
@@ -267,10 +281,10 @@ export class VolatileStatus
     public static getArraySize(): number
     {
         return /*boostable stats*/Object.keys(boostableStatNames).length +
-            /*confuse*/1 + /*ingrain*/1 + /*magnet rise*/1 + /*disable*/4 +
-            /*locked move*/1 + /*two-turn status*/numTwoTurnMoves +
-            /*must recharge*/1 + /*stall fail rate*/1 +
-            /*override ability*/dex.numAbilities +
+            /*confuse*/1 + /*ingrain*/1 + /*magnet rise*/1 + /*embargo*/1 +
+            /*disable*/4 + /*locked move*/1 +
+            /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
+            /*stall fail rate*/1 + /*override ability*/dex.numAbilities +
             /*override types*/Object.keys(types).length + /*truant*/1 +
             /*smack down*/1 + /*roost*/1;
     }
@@ -295,6 +309,7 @@ export class VolatileStatus
         // encode temporary status turns
         const confused = tempStatusTurns(this._confuseTurns);
         const magnetRise = tempStatusTurns(this.magnetRiseTurns);
+        const embargo = tempStatusTurns(this.embargoTurns);
         const disabled = this.disableTurns.map(tempStatusTurns);
         const lockedMove = tempStatusTurns(this.lockedMoveTurns);
         const stallFailRate = tempStatusTurns(this._stallTurns);
@@ -303,8 +318,8 @@ export class VolatileStatus
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
-            confused, this.ingrain ? 1 : 0, magnetRise, ...disabled, lockedMove,
-            ...twoTurn, this.mustRecharge ? 1 : 0, stallFailRate,
+            confused, this.ingrain ? 1 : 0, magnetRise, embargo, ...disabled,
+            lockedMove, ...twoTurn, this.mustRecharge ? 1 : 0, stallFailRate,
             ...overrideAbility, ...typeData, this._truant ? 1 : 0,
             this.smackDown ? 1 : 0, this.roost ? 1 : 0
         ];
@@ -324,22 +339,23 @@ export class VolatileStatus
             .map((key: BoostableStatName) =>
                 `${key}: ${VolatileStatus.plus(this._boosts[key])}`)
             .concat(
-                this._confuseTurns ? [`confused for ${this._confuseTurns - 1} \
-${VolatileStatus.pluralTurns(this._confuseTurns)}`] : [],
+                this._confuseTurns ?
+                    [this.pluralTurns("confused", this._confuseTurns - 1)] : [],
                 this.ingrain ? ["ingrain"] : [],
-                this.magnetRiseTurns ? [`magnet rise for \
-${this._confuseTurns - 1} \
-${VolatileStatus.pluralTurns(this._confuseTurns)}`] : [],
+                this.magnetRiseTurns ?
+                    [this.pluralTurns("magnet rise", this.magnetRiseTurns - 1)]
+                    : [],
+                this.embargoTurns ?
+                    [this.pluralTurns("embargo", this.embargoTurns - 1)] : [],
                 this.disableTurns
                     .filter(d => d !== 0)
-                    .map((d, i) => `disabled move ${i + 1} for ${d} \
-${VolatileStatus.pluralTurns(d)}`),
+                    .map((d, i) =>
+                        this.pluralTurns(`disabled move ${i + 1}`, d)),
                 this.lockedMove ? ["lockedmove"] : [],
                 this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
                 this.mustRecharge ? ["must recharge"] : [],
                 this._stallTurns ?
-                    [`stalling for ${this._stallTurns - 1} \
-${VolatileStatus.pluralTurns(this._stallTurns)}`] : [],
+                    [this.pluralTurns("stalling", this._stallTurns - 1)] : [],
                 this._truant ? ["truant next turn"] : [],
                 this.smackDown ? ["smacked down"] : [],
                 this.roost ? ["roosting"] : [])
@@ -350,8 +366,6 @@ ${VolatileStatus.pluralTurns(this._stallTurns)}`] : [],
     /**
      * Converts a number to a string where positive numbers are preceded by a
      * `+` symbol.
-     * @param n Number to convert.
-     * @returns The number in string form with explicit sign.
      */
     private static plus(n: number): string
     {
@@ -359,13 +373,9 @@ ${VolatileStatus.pluralTurns(this._stallTurns)}`] : [],
     }
 
     // istanbul ignore next: only used in logging
-    /**
-     * Pluralizes the word "turns" if the turns parameter is not 1.
-     * @param turns Number of turns.
-     * @returns `turn` if 1, or `turns` if not 1.
-     */
-    private static pluralTurns(turns: number): string
+    /** Pluralizes the word "turns". */
+    private pluralTurns(name: string, turns: number): string
     {
-        return `turn${turns !== 1 ? "s" : ""}`;
+        return `${name} for turn${turns !== 1 ? "s" : ""}`;
     }
 }
