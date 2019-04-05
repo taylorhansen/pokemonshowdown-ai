@@ -13,6 +13,7 @@ export class RoomStatus
         return /*gravity*/1;
     }
 
+    // istanbul ignore next: unstable, hard to test
     /**
      * Formats room info into an array of numbers.
      * @returns All room data in array form.
@@ -22,6 +23,7 @@ export class RoomStatus
         return [this.gravity ? 1 : 0];
     }
 
+    // istanbul ignore next: only used in logging
     /**
      * Encodes all room status data into a string.
      * @returns The RoomStatus in string form.

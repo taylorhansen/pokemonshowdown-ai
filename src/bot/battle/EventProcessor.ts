@@ -71,7 +71,8 @@ export class EventProcessor
         })
         .on("endability", event =>
         {
-            this.getActive(event.id.owner).volatile.overrideAbility = "";
+            // NOTE: may be replaced with "|-start|PokemonID|Gastro Acid" later
+            this.getActive(event.id.owner).volatile.suppressAbility();
         })
         .on("start", event =>
         {

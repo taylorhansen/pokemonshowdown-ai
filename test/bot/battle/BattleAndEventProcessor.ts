@@ -1534,7 +1534,7 @@ describe("Battle and EventProcessor", function()
                         ]
                     });
                     expect(mon1.ability).to.equal("swiftswim");
-                    expect(mon1.volatile.overrideAbilityName)
+                    expect(mon1.volatile.overrideAbility)
                         .to.equal("swiftswim");
                     expect(mon1.baseAbility).to.equal("trace");
                     expect(mon2.ability).to.equal("swiftswim");

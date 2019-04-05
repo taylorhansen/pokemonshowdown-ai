@@ -116,12 +116,12 @@ describe("Pokemon", function()
             mon.species = "Togepi";
             mon.switchIn();
             // tslint:disable-next-line:no-unused-expression
-            expect(mon.volatile.overrideAbilityName).to.be.empty;
+            expect(mon.volatile.overrideAbility).to.be.empty;
             mon.ability = "hustle";
-            expect(mon.volatile.overrideAbilityName).to.equal("hustle");
+            expect(mon.volatile.overrideAbility).to.equal("hustle");
             mon.ability = "swiftswim";
             expect(mon.baseAbility).to.equal("hustle");
-            expect(mon.volatile.overrideAbilityName).to.equal("swiftswim");
+            expect(mon.volatile.overrideAbility).to.equal("swiftswim");
         });
 
         it("Should set volatile ability if known", function()
@@ -129,10 +129,10 @@ describe("Pokemon", function()
             mon.species = "Togepi";
             mon.ability = "hustle";
             mon.switchIn();
-            expect(mon.volatile.overrideAbilityName).to.equal("hustle");
+            expect(mon.volatile.overrideAbility).to.equal("hustle");
             mon.ability = "swiftswim";
             expect(mon.baseAbility).to.equal("hustle");
-            expect(mon.volatile.overrideAbilityName).to.equal("swiftswim");
+            expect(mon.volatile.overrideAbility).to.equal("swiftswim");
         });
 
         it("Should reject unknown ability", function()
@@ -141,6 +141,38 @@ describe("Pokemon", function()
             expect(() => mon.ability = "not_a real-ability").to.throw();
             // tslint:disable-next-line:no-unused-expression
             expect(mon.ability).to.be.empty;
+        });
+
+        describe("suppressAbility (baton passed)", function()
+        {
+            it("Should suppress new ability", function()
+            {
+                const newMon = new Pokemon(/*hpPercent*/ false);
+                newMon.species = "Magikarp";
+                mon.volatile.suppressAbility();
+                mon.copyVolatile(newMon);
+                mon.switchOut();
+                newMon.switchIn();
+
+                // tslint:disable-next-line:no-unused-expression
+                expect(newMon.volatile.isAbilitySuppressed()).to.be.true;
+                expect(newMon.ability).to.equal("<suppressed>");
+            });
+
+            it("Should not suppress if multitype", function()
+            {
+                const newMon = new Pokemon(/*hpPercent*/ false);
+                // arceus can only have this ability
+                newMon.species = "Arceus";
+                mon.volatile.suppressAbility();
+                mon.copyVolatile(newMon);
+                mon.switchOut();
+                newMon.switchIn();
+
+                // tslint:disable-next-line:no-unused-expression
+                expect(newMon.volatile.isAbilitySuppressed()).to.be.false;
+                expect(newMon.ability).to.equal("multitype");
+            });
         });
     });
 

@@ -20,12 +20,12 @@ describe("VolatileStatus", function()
         volatile.confuse(true);
         volatile.magnetRise = true;
         volatile.embargo = true;
+        volatile.overrideAbility = "swiftswim";
         volatile.disableMove(0);
         volatile.lockedMove = true;
         volatile.twoTurn = "Bounce";
         volatile.mustRecharge = true;
         volatile.stall(true);
-        volatile.overrideAbility = "swiftswim";
         volatile.overrideTypes = ["???", "water"];
         volatile.addedType = "ice";
         volatile.roost = true;
@@ -44,17 +44,27 @@ describe("VolatileStatus", function()
             expect(volatile.confuseTurns).to.equal(0);
             expect(volatile.magnetRise).to.be.false;
             expect(volatile.embargo).to.be.false;
+            expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.isDisabled(0)).to.be.false;
             expect(volatile.lockedMove).to.be.false;
             expect(volatile.twoTurn).to.equal("");
             expect(volatile.mustRecharge).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
-            expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
             expect(volatile.truant).to.be.false;
             expect(volatile.roost).to.be.false;
             // tslint:enable:no-unused-expression
+        });
+
+        it("Should clear suppressed ability", function()
+        {
+            volatile.suppressAbility();
+            volatile.clear();
+            // tslint:disable-next-line:no-unused-expression
+            expect(volatile.isAbilitySuppressed()).to.be.false;
+            // tslint:disable-next-line:no-unused-expression
+            expect(volatile.overrideAbility).to.be.empty;
         });
     });
 
@@ -86,6 +96,17 @@ describe("VolatileStatus", function()
             expect(volatile.addedType).to.equal("???");
             expect(volatile.truant).to.be.false;
             // tslint:enable:no-unused-expression
+        });
+
+        it("Should copy suppressed ability status", function()
+        {
+            volatile.suppressAbility();
+
+            const newVolatile = volatile.shallowClone();
+            volatile.clear();
+            // tslint:disable-next-line:no-unused-expression
+            expect(newVolatile.isAbilitySuppressed()).to.be.true;
+            expect(newVolatile.overrideAbility).to.equal("<suppressed>");
         });
     });
 
@@ -144,6 +165,32 @@ describe("VolatileStatus", function()
             volatile.confuse(false);
             expect(volatile.isConfused).to.equal(false);
             expect(volatile.confuseTurns).to.equal(0);
+        });
+    });
+
+    describe("overrideAbility", function()
+    {
+        it("Should set override ability", function()
+        {
+            volatile.overrideAbility = "Swift Swim";
+            expect(volatile.overrideAbility).to.equal("swiftswim");
+        });
+
+        it("Should throw if unknown ability", function()
+        {
+            expect(() => volatile.overrideAbility = "not-a real_ability")
+                .to.throw();
+        });
+
+        describe("suppressAbility", function()
+        {
+            it("Should suppress ability", function()
+            {
+                volatile.suppressAbility();
+                // tslint:disable-next-line:no-unused-expression
+                expect(volatile.isAbilitySuppressed()).to.be.true;
+                expect(volatile.overrideAbility).to.equal("<suppressed>");
+            });
         });
     });
 

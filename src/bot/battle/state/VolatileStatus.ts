@@ -75,6 +75,42 @@ export class VolatileStatus
     }
     private embargoTurns: number;
 
+    // situational
+
+    // override ability (isAbilitySuppressed is passed)
+    /** Override ability while active. */
+    public get overrideAbility(): string
+    {
+        return this.overrideAbilityName;
+    }
+    public set overrideAbility(ability: string)
+    {
+        const name = toIdName(ability);
+
+        if (!dex.abilities.hasOwnProperty(name))
+        {
+            throw new Error(`Unknown ability "${ability}"`);
+        }
+        this._overrideAbility = dex.abilities[name];
+
+        this.overrideAbilityName = name;
+    }
+    /** Whether the ability is being suppressed. */
+    public isAbilitySuppressed(): boolean
+    {
+        return this.overrideAbilityName === "<suppressed>";
+    }
+    /** Suppresses override ability. */
+    public suppressAbility(): void
+    {
+        this._overrideAbility = null;
+        this.overrideAbilityName = "<suppressed>";
+    }
+    /** ID number of ability. */
+    private _overrideAbility: number | null;
+    /** Name of override ability. */
+    private overrideAbilityName: string;
+
     // not passed when copying
 
     /**
@@ -141,33 +177,6 @@ export class VolatileStatus
     /** Whether we have successfully stalled this turn. */
     private stalled = false;
 
-    /** Override ability while active. */
-    public get overrideAbility(): string
-    {
-        return this.overrideAbilityName;
-    }
-    /** Set to the empty string to suppress base ability. */
-    public set overrideAbility(ability: string)
-    {
-        const name = toIdName(ability);
-
-        if (name)
-        {
-            if (!dex.abilities.hasOwnProperty(name))
-            {
-                throw new Error(`Unknown ability "${ability}"`);
-            }
-            this._overrideAbility = dex.abilities[name];
-        }
-        else this._overrideAbility = null;
-
-        this.overrideAbilityName = name;
-    }
-    /** ID number of ability. */
-    private _overrideAbility: number | null;
-    /** Name of override ability. */
-    private overrideAbilityName: string;
-
     /**
      * Temporarily overridden types. This should not be included in toString()
      * since the parent Pokemon object should handle that. Should not be
@@ -210,13 +219,13 @@ export class VolatileStatus
         this.ingrain = false;
         this.magnetRiseTurns = 0;
         this.embargoTurns = 0;
+        this._overrideAbility = null;
+        this.overrideAbilityName = "";
         this.disableTurns = [0, 0, 0, 0];
         this.lockedMoveTurns = 0;
         this.twoTurn = "";
         this.mustRecharge = false;
         this._stallTurns = 0;
-        this._overrideAbility = null;
-        this.overrideAbilityName = "";
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
         this._truant = false;
@@ -270,6 +279,7 @@ export class VolatileStatus
         v.ingrain = this.ingrain;
         v.magnetRiseTurns = this.magnetRiseTurns;
         v.embargoTurns = this.embargoTurns;
+        if (this.isAbilitySuppressed()) v.suppressAbility();
         return v;
     }
 
@@ -282,11 +292,11 @@ export class VolatileStatus
     {
         return /*boostable stats*/Object.keys(boostableStatNames).length +
             /*confuse*/1 + /*ingrain*/1 + /*magnet rise*/1 + /*embargo*/1 +
-            /*disable*/4 + /*locked move*/1 +
+            /*override ability*/dex.numAbilities + /*suppress ability*/1 +
+            /*disabled moves*/4 + /*locked move*/1 +
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
-            /*stall fail rate*/1 + /*override ability*/dex.numAbilities +
-            /*override types*/Object.keys(types).length + /*truant*/1 +
-            /*smack down*/1 + /*roost*/1;
+            /*stall fail rate*/1 + /*override types*/Object.keys(types).length +
+            /*truant*/1 + /*smack down*/1 + /*roost*/1;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -297,9 +307,9 @@ export class VolatileStatus
     public toArray(): number[]
     {
         // one-hot encode categorical data
+        const overrideAbility = oneHot(this._overrideAbility, dex.numAbilities);
         const twoTurn = oneHot(this.twoTurn ? twoTurnMoves[this.twoTurn] : null,
                 numTwoTurnMoves);
-        const overrideAbility = oneHot(this._overrideAbility, dex.numAbilities);
 
         // multi-hot encode type data
         const overrideTypes = this.overrideTypes.concat(this.addedType);
@@ -318,10 +328,11 @@ export class VolatileStatus
         [
             ...Object.keys(this._boosts).map(
                 (key: BoostableStatName) => this._boosts[key]),
-            confused, this.ingrain ? 1 : 0, magnetRise, embargo, ...disabled,
+            confused, this.ingrain ? 1 : 0, magnetRise, embargo,
+            ...overrideAbility, this.isAbilitySuppressed() ? 1 : 0, ...disabled,
             lockedMove, ...twoTurn, this.mustRecharge ? 1 : 0, stallFailRate,
-            ...overrideAbility, ...typeData, this._truant ? 1 : 0,
-            this.smackDown ? 1 : 0, this.roost ? 1 : 0
+            ...typeData, this._truant ? 1 : 0, this.smackDown ? 1 : 0,
+            this.roost ? 1 : 0
         ];
         return a;
     }
@@ -347,6 +358,7 @@ export class VolatileStatus
                     : [],
                 this.embargoTurns ?
                     [this.pluralTurns("embargo", this.embargoTurns - 1)] : [],
+                // suppress/override ability should be handled in Pokemon obj
                 this.disableTurns
                     .filter(d => d !== 0)
                     .map((d, i) =>

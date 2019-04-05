@@ -212,12 +212,20 @@ export class Pokemon
     {
         // copy overridable species data
         if (!this.data) throw new Error("Species data not set");
+
         if (this._baseAbility.definiteValue)
         {
-            this.volatile.overrideAbility =
-                this._baseAbility.definiteValue.name;
+            const ability = this._baseAbility.definiteValue.name;
+
+            // if batonpassed the suppressed status, the ability can't be
+            //  overridden unless it's multitype
+            if (!this._volatile.isAbilitySuppressed() ||
+                ability === "multitype")
+            {
+                this._volatile.overrideAbility = ability;
+            }
         }
-        this.volatile.overrideTypes = this.data.types;
+        this._volatile.overrideTypes = this.data.types;
 
         this._active = true;
     }
@@ -361,12 +369,12 @@ ${this.data!.types
     // show overridden types in parentheses
     .map(
         (type, i) => type +
-            (type !== this.volatile.overrideTypes[i] ?
-                ` (${this.volatile.overrideTypes[i]})` : ""))
+            (type !== this._volatile.overrideTypes[i] ?
+                ` (${this._volatile.overrideTypes[i]})` : ""))
     // include third type in parentheses
     .concat(
-        this.volatile.addedType !== "???" ?
-            [`(${this.volatile.addedType})`] : [])
+        this._volatile.addedType !== "???" ?
+            [`(${this._volatile.addedType})`] : [])
     // separate with commas
     .join(", ")}
 ${s}ability: ${this.stringifyAbility()}
@@ -380,16 +388,15 @@ ${s}moves: ${this._moves.map((m, i) =>
     }
 
     // istanbul ignore next: only used for logging
-    /** Displays the possible and overridden values of the ability. */
+    /** Displays the possible/overridden/suppressed values of the ability. */
     private stringifyAbility(): string
     {
         const baseVal = this._baseAbility.definiteValue;
         const base = baseVal ?
             baseVal.name : `possibly ${this._baseAbility.toString()}`;
-        const over = this.volatile.overrideAbility;
+        const over = this._active ? this._volatile.overrideAbility : "";
 
-        if (over === base) return base;
-        else if (over) return `${over} (suppressed: ${base})`;
-        else return `(suppressed: ${base})`;
+        if (!over || over === base) return base;
+        else return `${over} (base: ${base})`;
     }
 }
