@@ -181,8 +181,12 @@ export class EventProcessor
                 const ability = event.reason.substr("ability: ".length);
                 active.ability = ability;
 
-                // truant turn and recharge turn overlap
-                if (ability === "Truant") active.volatile.mustRecharge = false;
+                if (ability === "Truant")
+                {
+                    active.volatile.activateTruant();
+                    // truant turn and recharge turn overlap
+                    active.volatile.mustRecharge = false;
+                }
             }
 
             if (event.moveName)

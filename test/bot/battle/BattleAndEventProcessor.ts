@@ -820,17 +820,17 @@ describe("Battle and EventProcessor", function()
                 expect(mon.baseAbility).to.equal("swiftswim");
             });
 
-            it("Should properly handle truant ability", async function()
+            it("Should properly handle Truant ability", async function()
             {
                 // tslint:disable:no-unused-expression
                 const mon = battle.state.teams.us.active;
                 mon.ability = "truant";
                 mon.volatile.mustRecharge = true;
-                expect(mon.volatile.truant).to.be.false;
+                expect(mon.volatile.willTruant).to.be.false;
 
                 await listener.dispatch("battleprogress",
                     {events: [{type: "turn", num: 3}]});
-                expect(mon.volatile.truant).to.be.true;
+                expect(mon.volatile.willTruant).to.be.true;
 
                 await listener.dispatch("battleprogress",
                 {
@@ -840,11 +840,12 @@ describe("Battle and EventProcessor", function()
                     ]
                 });
                 expect(mon.volatile.mustRecharge).to.be.false;
-                expect(mon.volatile.truant).to.be.true;
+                // should be inverted on postTurn
+                expect(mon.volatile.willTruant).to.be.true;
 
                 await listener.dispatch("battleprogress",
                     {events: [{type: "turn", num: 4}]});
-                expect(mon.volatile.truant).to.be.false;
+                expect(mon.volatile.willTruant).to.be.false;
                 // tslint:enable:no-unused-expression
             });
 

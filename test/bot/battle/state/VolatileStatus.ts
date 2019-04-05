@@ -52,7 +52,7 @@ describe("VolatileStatus", function()
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
-            expect(volatile.truant).to.be.false;
+            expect(volatile.willTruant).to.be.false;
             expect(volatile.roost).to.be.false;
             // tslint:enable:no-unused-expression
         });
@@ -94,7 +94,7 @@ describe("VolatileStatus", function()
             expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
-            expect(volatile.truant).to.be.false;
+            expect(volatile.willTruant).to.be.false;
             // tslint:enable:no-unused-expression
         });
 

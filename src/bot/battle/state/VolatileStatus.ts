@@ -187,11 +187,17 @@ export class VolatileStatus
     public addedType: Type;
 
     /** Whether the Truant ability will activate next turn. */
-    public get truant(): boolean
+    public get willTruant(): boolean
     {
-        return this._truant;
+        return this._willTruant;
     }
-    private _truant: boolean;
+    /** Indicates that the Truant ability has activated. */
+    public activateTruant(): void
+    {
+        // this gets inverted on postTurn
+        this._willTruant = true;
+    }
+    private _willTruant: boolean;
 
     /** Smack Down move effect. */
     public smackDown: boolean;
@@ -228,7 +234,7 @@ export class VolatileStatus
         this._stallTurns = 0;
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
-        this._truant = false;
+        this._willTruant = false;
         this.smackDown = false;
         this.roost = false;
     }
@@ -260,9 +266,9 @@ export class VolatileStatus
 
         if (this.overrideAbilityName === "truant")
         {
-            this._truant = !this._truant;
+            this._willTruant = !this._willTruant;
         }
-        else this._truant = false;
+        else this._willTruant = false;
 
         this.roost = false;
     }
@@ -331,7 +337,7 @@ export class VolatileStatus
             confused, this.ingrain ? 1 : 0, magnetRise, embargo,
             ...overrideAbility, this.isAbilitySuppressed() ? 1 : 0, ...disabled,
             lockedMove, ...twoTurn, this.mustRecharge ? 1 : 0, stallFailRate,
-            ...typeData, this._truant ? 1 : 0, this.smackDown ? 1 : 0,
+            ...typeData, this._willTruant ? 1 : 0, this.smackDown ? 1 : 0,
             this.roost ? 1 : 0
         ];
         return a;
@@ -368,7 +374,7 @@ export class VolatileStatus
                 this.mustRecharge ? ["must recharge"] : [],
                 this._stallTurns ?
                     [this.pluralTurns("stalling", this._stallTurns - 1)] : [],
-                this._truant ? ["truant next turn"] : [],
+                this._willTruant ? ["truant next turn"] : [],
                 this.smackDown ? ["smacked down"] : [],
                 this.roost ? ["roosting"] : [])
             .join(", ")}]`;
