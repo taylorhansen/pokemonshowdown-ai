@@ -122,10 +122,6 @@ export class EventProcessor
                 case "move: Ingrain":
                     active.volatile.ingrain = true;
                     break;
-                case "Smack Down":
-                    active.volatile.smackDown = true;
-                    active.volatile.magnetRise = false;
-                    break;
                 case "Magnet Rise":
                     active.volatile.magnetRise = true;
                     break;
