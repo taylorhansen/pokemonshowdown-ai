@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { Type, types } from "../../../../src/bot/battle/dex/dex-types";
 import { Pokemon } from "./../../../../src/bot/battle/state/Pokemon";
+import { BattleState } from "../../../../src/bot/battle/state/BattleState";
 
 describe("Pokemon", function()
 {
@@ -178,9 +178,10 @@ describe("Pokemon", function()
 
     describe("types", function()
     {
-        it("Should error if species is not set", function()
+        it("Should return empty array if species is not set", function()
         {
-            expect(() => mon.types).to.throw();
+            // tslint:disable-next-line:no-unused-expression
+            expect(mon.types).to.be.empty;
         });
 
         it("Should get types if species is set", function()
@@ -354,6 +355,84 @@ describe("Pokemon", function()
             expect(mon.hp.max).to.equal(0);
         });
     });
+
+    // tslint:disable:no-unused-expression
+    describe("grounded", function()
+    {
+        it("Should be grounded if Gravity is active", function()
+        {
+            const state = new BattleState();
+            state.status.gravity = true;
+
+            state.teams.us.size = 1;
+            // tslint:disable-next-line:no-shadowed-variable
+            const mon = state.teams.us.switchIn("Pidgey", 1, "M", 1, 1)!;
+            expect(mon.isGrounded).to.be.true;
+            expect(mon.maybeGrounded).to.be.true;
+        });
+
+        it("Should be grounded if Ingrain", function()
+        {
+            mon.volatile.ingrain = true;
+            expect(mon.isGrounded).to.be.true;
+            expect(mon.maybeGrounded).to.be.true;
+        });
+
+        it("Should be grounded if holding iron ball", function()
+        {
+            mon.species = "Pidgey";
+            mon.item = "ironball";
+            expect(mon.isGrounded).to.be.true;
+            expect(mon.maybeGrounded).to.be.true;
+        });
+
+        it("Should ignore iron ball if Embargo", function()
+        {
+            mon.species = "Pidgey";
+            mon.item = "ironball";
+            mon.volatile.embargo = true;
+            expect(mon.isGrounded).to.be.false;
+            expect(mon.maybeGrounded).to.be.false;
+        });
+
+        it("Should not be grounded if Magnet Rise", function()
+        {
+            mon.volatile.magnetRise = true;
+            expect(mon.isGrounded).to.be.false;
+            expect(mon.maybeGrounded).to.be.false;
+        });
+
+        it("Should not be grounded if Levitate ability", function()
+        {
+            mon.species = "Bronzong";
+            mon.ability = "levitate";
+            // remove iron ball possibility
+            mon.item = "leftovers";
+            expect(mon.isGrounded).to.be.false;
+            expect(mon.maybeGrounded).to.be.false;
+        });
+
+        it("Should possibly be not grounded if able to have Levitate ability",
+        function()
+        {
+            mon.species = "Bronzong"; // can have levitate or heatproof
+            // remove iron ball possibility
+            mon.item = "leftovers";
+            mon.switchIn();
+            expect(mon.isGrounded).to.be.true;
+            expect(mon.maybeGrounded).to.be.false;
+        });
+
+        it("Should not be grounded if flying type", function()
+        {
+            mon.species = "Pidgey";
+            // remove iron ball possibility
+            mon.item = "lifeorb";
+            expect(mon.isGrounded).to.be.false;
+            expect(mon.maybeGrounded).to.be.false;
+        });
+    });
+    // tslint:enable:no-unused-expression
 
     describe("toArray", function()
     {

@@ -1,3 +1,4 @@
+import { BattleState } from "./BattleState";
 import { Pokemon } from "./Pokemon";
 import { Side } from "./Side";
 import { TeamStatus } from "./TeamStatus";
@@ -14,6 +15,9 @@ export class Team
 {
     /** Maximum team size. */
     public static readonly MAX_SIZE = 6;
+
+    /** Reference to the parent BattleState. */
+    private state?: BattleState;
 
     /** Gets the active pokemon. */
     public get active(): Pokemon
@@ -36,7 +40,8 @@ export class Team
         // clear pokemon array
         for (let i = 0; i < Team.MAX_SIZE; ++i)
         {
-            this._pokemon[i] = new Pokemon(/*hpPercent*/ this.side === "them");
+            this._pokemon[i] =
+                new Pokemon(/*hpPercent*/ this.side === "them", this.state);
         }
         this.unrevealed = 0;
     }
@@ -67,9 +72,11 @@ export class Team
     /**
      * Creates a Team object.
      * @param side The Side this Team is on.
+     * @param state Reference to the parent BattleState.
      */
-    constructor(side: Side)
+    constructor(side: Side, state?: BattleState)
     {
+        this.state = state;
         this.side = side;
     }
 
@@ -147,7 +154,7 @@ export class Team
         if (this.unrevealed === this._size) return -1;
 
         this._pokemon[this.unrevealed] =
-            new Pokemon(/*hpPercent*/ this.side === "them");
+            new Pokemon(/*hpPercent*/ this.side === "them", this.state);
 
         // initialize new pokemon
         const newMon = this._pokemon[this.unrevealed];

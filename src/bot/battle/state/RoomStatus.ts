@@ -1,8 +1,18 @@
+import { pluralTurns, tempStatusTurns } from "./utility";
+
 /** Temporary status conditions for the entire field. */
 export class RoomStatus
 {
-    /** Gravity field effect. */
-    public gravity = false;
+    /** Gravity field effect (temporary). */
+    public get gravity(): boolean
+    {
+        return this.gravityTurns > 0;
+    }
+    public set gravity(value: boolean)
+    {
+        this.gravityTurns = value ? 1 : 0;
+    }
+    private gravityTurns = 0;
 
     /**
      * Gets the size of the return value of `toArray()`.
@@ -20,7 +30,8 @@ export class RoomStatus
      */
     public toArray(): number[]
     {
-        return [this.gravity ? 1 : 0];
+        const gravity = tempStatusTurns(this.gravityTurns);
+        return [gravity];
     }
 
     // istanbul ignore next: only used in logging
@@ -30,6 +41,7 @@ export class RoomStatus
      */
     public toString(): string
     {
-        return `[${this.gravity ? "gravity" : ""}]`;
+        return `[${this.gravity ?
+            pluralTurns("gravity", this.gravityTurns - 1) : ""}]`;
     }
 }

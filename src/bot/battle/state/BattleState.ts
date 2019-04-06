@@ -10,7 +10,7 @@ export class BattleState
 {
     /** Team data. */
     public readonly teams: {readonly [S in Side]: Team} =
-        {us: new Team("us"), them: new Team("them")};
+        {us: new Team("us", this), them: new Team("them", this)};
 
     /** Global status conditions for the entire room. */
     public readonly status = new RoomStatus();

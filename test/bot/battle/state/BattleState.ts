@@ -39,8 +39,10 @@ describe("BattleState", function()
 
             for (const i of state.toArray())
             {
-                expect(isNumber(i)).to.equal(true);
-                expect(isFinite(i)).to.equal(true);
+                // tslint:disable-next-line:no-unused-expression
+                expect(isNumber(i)).to.be.true;
+                // tslint:disable-next-line:no-unused-expression
+                expect(isFinite(i)).to.be.true;
             }
         });
     });

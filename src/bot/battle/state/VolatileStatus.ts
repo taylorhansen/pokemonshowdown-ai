@@ -1,7 +1,7 @@
 import { BoostableStatName, boostableStatNames, toIdName } from "../../helpers";
 import { dex, numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
 import { Type, types } from "../dex/dex-types";
-import { oneHot, tempStatusTurns } from "./utility";
+import { oneHot, pluralTurns, tempStatusTurns } from "./utility";
 
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
@@ -199,9 +199,6 @@ export class VolatileStatus
     }
     private _willTruant: boolean;
 
-    /** Smack Down move effect. */
-    public smackDown: boolean;
-
     /** Roost move effect (single turn). */
     public roost: boolean;
 
@@ -235,7 +232,6 @@ export class VolatileStatus
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
         this._willTruant = false;
-        this.smackDown = false;
         this.roost = false;
     }
 
@@ -302,7 +298,7 @@ export class VolatileStatus
             /*disabled moves*/4 + /*locked move*/1 +
             /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
             /*stall fail rate*/1 + /*override types*/Object.keys(types).length +
-            /*truant*/1 + /*smack down*/1 + /*roost*/1;
+            /*truant*/1 + /*roost*/1;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -337,8 +333,7 @@ export class VolatileStatus
             confused, this.ingrain ? 1 : 0, magnetRise, embargo,
             ...overrideAbility, this.isAbilitySuppressed() ? 1 : 0, ...disabled,
             lockedMove, ...twoTurn, this.mustRecharge ? 1 : 0, stallFailRate,
-            ...typeData, this._willTruant ? 1 : 0, this.smackDown ? 1 : 0,
-            this.roost ? 1 : 0
+            ...typeData, this._willTruant ? 1 : 0, this.roost ? 1 : 0
         ];
         return a;
     }
@@ -357,25 +352,22 @@ export class VolatileStatus
                 `${key}: ${VolatileStatus.plus(this._boosts[key])}`)
             .concat(
                 this._confuseTurns ?
-                    [this.pluralTurns("confused", this._confuseTurns - 1)] : [],
+                    [pluralTurns("confused", this._confuseTurns - 1)] : [],
                 this.ingrain ? ["ingrain"] : [],
                 this.magnetRiseTurns ?
-                    [this.pluralTurns("magnet rise", this.magnetRiseTurns - 1)]
+                    [pluralTurns("magnet rise", this.magnetRiseTurns - 1)]
                     : [],
                 this.embargoTurns ?
-                    [this.pluralTurns("embargo", this.embargoTurns - 1)] : [],
-                // suppress/override ability should be handled in Pokemon obj
+                    [pluralTurns("embargo", this.embargoTurns - 1)] : [],
                 this.disableTurns
                     .filter(d => d !== 0)
-                    .map((d, i) =>
-                        this.pluralTurns(`disabled move ${i + 1}`, d)),
+                    .map((d, i) => pluralTurns(`disabled move ${i + 1}`, d)),
                 this.lockedMove ? ["lockedmove"] : [],
                 this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
                 this.mustRecharge ? ["must recharge"] : [],
                 this._stallTurns ?
-                    [this.pluralTurns("stalling", this._stallTurns - 1)] : [],
+                    [pluralTurns("stalling", this._stallTurns - 1)] : [],
                 this._willTruant ? ["truant next turn"] : [],
-                this.smackDown ? ["smacked down"] : [],
                 this.roost ? ["roosting"] : [])
             .join(", ")}]`;
     }
@@ -388,12 +380,5 @@ export class VolatileStatus
     private static plus(n: number): string
     {
         return (n > 0 ? "+" : "") + n;
-    }
-
-    // istanbul ignore next: only used in logging
-    /** Pluralizes the word "turns". */
-    private pluralTurns(name: string, turns: number): string
-    {
-        return `${name} for turn${turns !== 1 ? "s" : ""}`;
     }
 }

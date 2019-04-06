@@ -168,6 +168,32 @@ describe("VolatileStatus", function()
         });
     });
 
+    describe("magnet rise", function()
+    {
+        it("Should set magnetRise", function()
+        {
+            volatile.magnetRise = true;
+            // tslint:disable-next-line:no-unused-expression
+            expect(volatile.magnetRise).to.be.true;
+            volatile.magnetRise = false;
+            // tslint:disable-next-line:no-unused-expression
+            expect(volatile.magnetRise).to.be.false;
+        });
+    });
+
+    describe("embargo", function()
+    {
+        it("Should set embargo", function()
+        {
+            volatile.embargo = true;
+            // tslint:disable-next-line:no-unused-expression
+            expect(volatile.embargo).to.be.true;
+            volatile.embargo = false;
+            // tslint:disable-next-line:no-unused-expression
+            expect(volatile.embargo).to.be.false;
+        });
+    });
+
     describe("overrideAbility", function()
     {
         it("Should set override ability", function()

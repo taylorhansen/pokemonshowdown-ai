@@ -1,6 +1,7 @@
 import { MajorStatus, majorStatuses, toIdName } from "../../helpers";
 import { dex } from "../dex/dex";
 import { PokemonData, Type, types } from "../dex/dex-types";
+import { BattleState } from "./BattleState";
 import { HP } from "./HP";
 import { Move } from "./Move";
 import { PossibilityClass } from "./PossibilityClass";
@@ -9,6 +10,9 @@ import { VolatileStatus } from "./VolatileStatus";
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon
 {
+    /** Reference to the parent BattleState. */
+    private readonly state?: BattleState;
+
     /** Whether this is the current active pokemon. */
     public get active(): boolean
     {
@@ -87,11 +91,9 @@ export class Pokemon
     /** The types of this pokemon. */
     public get types(): ReadonlyArray<Type>
     {
-        // TODO: store array data in multiHot and override in VolatileStatus
-        if (!this.data)
-        {
-            throw new Error("Base ability queried before species data");
-        }
+        // uninitialized Pokemon objs should silently fail so toArray() doesn't
+        //  throw
+        if (!this.data) return [];
 
         let result: Type[];
         if (this._active)
@@ -182,6 +184,55 @@ export class Pokemon
     /** Minor status conditions. Cleared on switch. */
     private _volatile = new VolatileStatus();
 
+    /** Checks if the pokemon is grounded, ignoring incomplete information. */
+    public get isGrounded(): boolean
+    {
+        if (this.state && this.state.status.gravity) return true;
+
+        const v = this._volatile;
+        if (v.ingrain) return true;
+
+        const ignoringItem = v.embargo || this.ability === "klutz";
+        const item = ignoringItem ? "" : this.item;
+
+        // iron ball causes grounding
+        if (item === "ironball") return true;
+
+        // magnet rise and levitate lift
+        return !v.magnetRise && this.ability !== "levitate" &&
+            // flying type lifts
+            !this.types.includes("flying");
+    }
+    /**
+     * Checks if the pokemon may be grounded, based on incomplete information.
+     * Unnarrowed ability and item classes are included here.
+     */
+    public get maybeGrounded(): boolean
+    {
+        if (this.state && this.state.status.gravity) return true;
+
+        const v = this._volatile;
+        if (v.ingrain) return true;
+
+        const ignoringItem = v.embargo || v.overrideAbility === "klutz" ||
+            (!v.overrideAbility && this._baseAbility.isSet("klutz"));
+
+        // iron ball causes grounding
+        if (this._item.isSet("ironball") && !ignoringItem)
+        {
+            return true;
+        }
+
+        // magnet rise lifts
+        return !v.magnetRise &&
+            // levitate lifts
+            ((v.overrideAbility && v.overrideAbility !== "levitate") ||
+                (!v.overrideAbility &&
+                    !this._baseAbility.isSet("levitate"))) &&
+            // flying type lifts
+            !this.types.includes("flying");
+    }
+
     /** Dex data. */
     private data?: PokemonData;
     /** First index of the part of the moveset that is unknown. */
@@ -190,9 +241,11 @@ export class Pokemon
     /**
      * Creates a Pokemon.
      * @param hpPercent Whether to report HP as a percentage.
+     * @param state Reference to the parent BattleState.
      */
-    constructor(hpPercent: boolean)
+    constructor(hpPercent: boolean, state?: BattleState)
     {
+        this.state = state;
         this.hp = new HP(hpPercent);
         this._active = false;
         this._moves = Array.from({length: 4}, () => new Move());
@@ -311,9 +364,11 @@ export class Pokemon
             /*level*/1 + Move.getArraySize() * 4 + HP.getArraySize() +
             /*base type and hidden power type*/Object.keys(types).length * 2 +
             /*majorStatus except empty*/Object.keys(majorStatuses).length - 1 +
-            (active ? VolatileStatus.getArraySize() : 0);
+            (active ? VolatileStatus.getArraySize() : 0) +
+            /*grounded*/2;
     }
 
+    // istanbul ignore next: unstable, hard to test
     /**
      * Formats pokemon info into an array of numbers.
      * @returns All pokemon data in array form.
@@ -347,6 +402,7 @@ export class Pokemon
             ...majorStatus
         ];
         if (this._active) a.push(...this._volatile.toArray());
+        a.push(this.isGrounded ? 1 : 0, this.maybeGrounded ? 1 : 0);
         return a;
     }
 
@@ -364,6 +420,8 @@ ${s}${this.speciesName}${this.gender ? ` ${this.gender}` : ""} lv${this.level} \
 ${this.hp.toString()}${this.majorStatus ? ` ${this.majorStatus}` : ""}
 ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
+${s}grounded: \
+${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}type: \
 ${this.data!.types
     // show overridden types in parentheses

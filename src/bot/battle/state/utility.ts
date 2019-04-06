@@ -20,3 +20,10 @@ export function tempStatusTurns(turns: number): number
 {
     return turns === 0 ? 0 : 1 / turns;
 }
+
+// istanbul ignore next: only used in logging
+/** Pluralizes the word "turns". */
+export function pluralTurns(name: string, turns: number): string
+{
+    return `${name} for turn${turns !== 1 ? "s" : ""}`;
+}
