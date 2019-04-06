@@ -63,14 +63,10 @@ export class Pokemon
         // narrow down baseAbility
         if (!this._baseAbility.definiteValue)
         {
-            if (!this.data)
-            {
-                throw new Error("Base ability set before species data");
-            }
-            if (!this.data.abilities.includes(name))
+            if (!this.canHaveAbility(name))
             {
                 throw new Error(
-                    `Species ${this.species} can't have base ability ${name}`);
+                    `Pokemon ${this.species} can't have base ability ${name}`);
             }
 
             this._baseAbility.set(name);
@@ -84,6 +80,24 @@ export class Pokemon
     {
         if (!this._baseAbility.definiteValue) return "";
         return this._baseAbility.definiteValue.name;
+    }
+    /** Checks if this pokemon can have the given ability. */
+    public canHaveAbility(ability: string): boolean
+    {
+        if (!this.data)
+        {
+            throw new Error("Base ability queried before species data");
+        }
+        return this.data.abilities.includes(ability) &&
+            this._baseAbility.isSet(ability);
+    }
+    /**
+     * Sets each provided ability as a possibility if it's possible to have it.
+     * @returns True if the abilities were narrowed.
+     */
+    public narrowAbilities(abilities: string[]): boolean
+    {
+        return this._baseAbility.narrow(abilities);
     }
     /** Base ability possibility tracker. */
     private _baseAbility = new PossibilityClass(dex.abilities);

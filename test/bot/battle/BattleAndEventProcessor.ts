@@ -343,33 +343,38 @@ describe("Battle and EventProcessor", function()
             expect(responses).to.have.lengthOf(1);
         });
 
-        it("Should re-choose choices if trapped", async function()
+        describe("trapping", function()
         {
-            await listener.dispatch("battleprogress",
-                {events: [{type: "upkeep"}, {type: "turn", num: 2}]});
-            expect(battle.lastChoices).to.have.members(["move 1", "switch 2"]);
-            expect(responses).to.have.lengthOf(1);
+            it("Should re-choose choices", async function()
+            {
+                await listener.dispatch("battleprogress",
+                    {events: [{type: "upkeep"}, {type: "turn", num: 2}]});
+                expect(battle.lastChoices).to.have.members(
+                    ["move 1", "switch 2"]);
+                expect(responses).to.have.lengthOf(1);
 
-            // trapped and can't switch
-            await listener.dispatch("callback", {name: "trapped", args: ["0"]});
-            expect(battle.lastChoices).to.have.members(["move 1"]);
-            expect(responses).to.have.lengthOf(2);
+                // trapped and can't switch
+                await listener.dispatch("callback",
+                    {name: "trapped", args: ["0"]});
+                expect(battle.lastChoices).to.have.members(["move 1"]);
+                expect(responses).to.have.lengthOf(2);
 
-            // accepted last choice
-            await listener.dispatch("battleprogress",
-                {events: [{type: "upkeep"}, {type: "turn", num: 3}]});
-            expect(battle.lastChoices).to.have.members(["move 1", "switch 2"]);
-            expect(responses).to.have.lengthOf(3);
-            // MockBattle leaves preferred choices in the order they were given,
-            //  so move 1 was the last choice
-            expect(responses[responses.length - 1]).to.equal("move 1");
+                // accepted last choice
+                await listener.dispatch("battleprogress",
+                    {events: [{type: "upkeep"}, {type: "turn", num: 3}]});
+                expect(battle.lastChoices).to.have.members(
+                    ["move 1", "switch 2"]);
+                expect(responses).to.have.lengthOf(3);
+                // MockBattle leaves preferred choices in the order they were
+                //  given, so move 1 was the last choice
+                expect(responses[responses.length - 1]).to.equal("move 1");
 
-            // can't use last move
-            await listener.dispatch("callback", {name: "cant", args: []});
-            // this usually can't happen but just for the sake of illustration
-            //  for now
-            expect(battle.lastChoices).to.have.members(["switch 2"]);
-            expect(responses).to.have.lengthOf(4);
+                // can't use last move
+                // this usually can't happen but just in case
+                await listener.dispatch("callback", {name: "cant", args: []});
+                expect(battle.lastChoices).to.have.members(["switch 2"]);
+                expect(responses).to.have.lengthOf(4);
+            });
         });
 
         describe("event processing", function()
@@ -477,6 +482,8 @@ describe("Battle and EventProcessor", function()
                 // wish should be consumed next turn
                 await listener.dispatch("battleprogress",
                     {events: [{type: "turn", num: 3}]});
+                // accept Battle's response
+                await listener.dispatch("battleprogress", {events: []});
                 expect(status.isWishing).to.be.false;
                 // tslint:enable:no-unused-expression
             });
@@ -830,6 +837,8 @@ describe("Battle and EventProcessor", function()
 
                 await listener.dispatch("battleprogress",
                     {events: [{type: "turn", num: 3}]});
+                // accept Battle's response
+                await listener.dispatch("battleprogress", {events: []});
                 expect(mon.volatile.willTruant).to.be.true;
 
                 await listener.dispatch("battleprogress",
@@ -845,6 +854,8 @@ describe("Battle and EventProcessor", function()
 
                 await listener.dispatch("battleprogress",
                     {events: [{type: "turn", num: 4}]});
+                // accept Battle's response
+                await listener.dispatch("battleprogress", {events: []});
                 expect(mon.volatile.willTruant).to.be.false;
                 // tslint:enable:no-unused-expression
             });
@@ -1358,9 +1369,11 @@ describe("Battle and EventProcessor", function()
                     });
                     expect(volatile.stallTurns).to.equal(2);
 
-                    // tries to use protect again but fails
+                    // doesn't successfully protect this turn
                     await listener.dispatch("battleprogress",
                         {events: [{type: "turn", num: 4}]});
+                    // accept Battle's response
+                    await listener.dispatch("battleprogress", {events: []});
                     expect(volatile.stallTurns).to.equal(0);
                 });
 

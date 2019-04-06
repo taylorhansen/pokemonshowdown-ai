@@ -294,9 +294,11 @@ export class Network extends Battle<RewardTracker>
     /** @override */
     protected acceptChoice(choice: Choice): void
     {
+        // state/choice may have changed while cycling through choices
         this.lastChoice = choice;
-        // state may have changed
         this.lastState = this.getState();
+
+        super.acceptChoice(choice);
     }
 
     /** Gets the neural network input from the EventProcessor state. */

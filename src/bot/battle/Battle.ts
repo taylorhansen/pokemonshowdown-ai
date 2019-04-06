@@ -75,7 +75,7 @@ ${inspect(args, {colors: false, depth: null})}`);
             logger.debug(`battleprogress:
 ${inspect(args, {colors: false, depth: null})}`);
 
-            // last best choice was officially accepted by the server
+            // last choice was officially accepted by the server
             this.acceptChoice(this.lastChoices[0]);
 
             this.processor.handleEvents(args.events);
@@ -85,7 +85,6 @@ ${inspect(args, {colors: false, depth: null})}`);
             {
                 this.processor.printState();
                 if (!this.lastRequest.wait) await this.askAI();
-                this.processor.postAction();
             }
         })
         .on("request", args =>
@@ -96,23 +95,28 @@ ${inspect(args, {colors: false, depth: null})}`);
             this.processor.handleRequest(args);
             this.lastRequest = args;
         })
-        .on("callback", args =>
+        .on("callback", async args =>
         {
             if (args.name === "trapped")
             {
                 // last choice is invalid because we're trapped now
                 // avoid repeated callback messages by eliminating all switch
                 //  choices
-                // TODO: use this to imply trapped in BattleState so this
-                //  doesn't happen multiple times
                 this.lastChoices = this.lastChoices
                     .filter(c => !c.startsWith("switch"));
+
+                // choices are usually restricted by the request message unless
+                //  this was not known before, which means the opposing pokemon
+                //  has a trapping ability
+                this.processor.trapped();
+
+                // re-sort the choices we have left based on new info
+                this.lastChoices = await this.decide(this.lastChoices);
             }
             // first choice was rejected
             else this.lastChoices.shift();
 
             // retry using second choice
-            // TODO: re-decide instead of iterate if new info is found
             this.sender(this.lastChoices[0]);
         });
     }
@@ -126,11 +130,12 @@ ${inspect(args, {colors: false, depth: null})}`);
 
     /**
      * Called when the server has officially accepted the Battle instance's
-     * Choice decision.
+     * Choice decision. If overridden, this should be called last.
      * @virtual
      */
     protected acceptChoice(choice: Choice): void
     {
+        this.processor.postAction();
     }
 
     /** Asks the AI what to do next and sends the response. */

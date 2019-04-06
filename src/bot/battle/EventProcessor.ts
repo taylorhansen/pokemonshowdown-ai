@@ -396,6 +396,31 @@ export class EventProcessor
     }
 
     /**
+     * Called when the current active pokemon is trapped by an unknown ability.
+     */
+    public trapped(): void
+    {
+        const us = this.state.teams.us.active;
+        const them = this.state.teams.them.active;
+
+        // opposing pokemon can have only one of these abilities here
+        const abilities: string[] = [];
+
+        // arena trap traps grounded pokemon
+        if (us.isGrounded) abilities.push("arenatrap");
+
+        // magnet pull traps steel types
+        if (us.types.includes("steel")) abilities.push("magnetpull");
+
+        // shadow tag traps all pokemon who don't have it
+        if (us.ability !== "shadowtag") abilities.push("shadowtag");
+
+        // istanbul ignore else: not useful to test for this
+        if (abilities.length > 0) them.narrowAbilities(abilities);
+        else this.logger.error("Can't figure out why we're trapped");
+    }
+
+    /**
      * Sets the HP of a pokemon.
      * @param id Pokemon's ID.
      * @param status New HP/status.

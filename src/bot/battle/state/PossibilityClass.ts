@@ -120,6 +120,25 @@ export class PossibilityClass<T = number>
         }
     }
 
+    /**
+     * Removes currently set value names that are not in the given array.
+     * Assumes that the given value names are part of the map keys.
+     * @returns True if the values were narrowed.
+     */
+    public narrow(values: string[]): boolean
+    {
+        // already as narrow as it can be
+        if (this._definiteValue) return false;
+
+        values = values.filter(value => this.isSet(value));
+        if (values.length > 0)
+        {
+            this.set(values);
+            return true;
+        }
+        return false;
+    }
+
     /** Gets NN data array form. */
     public toArray(): number[]
     {
