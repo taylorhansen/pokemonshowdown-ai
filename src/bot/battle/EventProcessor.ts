@@ -295,7 +295,7 @@ export class EventProcessor
     }
 
     /** Called after a Choice has been sent to the server. */
-    public postAction(): void
+    public postTurn(): void
     {
         // cleanup actions after a new turn
         if (!this.newTurn) return;

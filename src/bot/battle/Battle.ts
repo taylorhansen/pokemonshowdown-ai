@@ -77,6 +77,7 @@ ${inspect(args, {colors: false, depth: null})}`);
 
             // last choice was officially accepted by the server
             this.acceptChoice(this.lastChoices[0]);
+            this.processor.postTurn();
 
             this.processor.handleEvents(args.events);
             this.processor.printState();
@@ -130,12 +131,11 @@ ${inspect(args, {colors: false, depth: null})}`);
 
     /**
      * Called when the server has officially accepted the Battle instance's
-     * Choice decision. If overridden, this should be called last.
+     * Choice decision.
      * @virtual
      */
     protected acceptChoice(choice: Choice): void
     {
-        this.processor.postAction();
     }
 
     /** Asks the AI what to do next and sends the response. */

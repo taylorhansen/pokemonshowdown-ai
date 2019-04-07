@@ -297,8 +297,6 @@ export class Network extends Battle<RewardTracker>
         // state/choice may have changed while cycling through choices
         this.lastChoice = choice;
         this.lastState = this.getState();
-
-        super.acceptChoice(choice);
     }
 
     /** Gets the neural network input from the EventProcessor state. */
