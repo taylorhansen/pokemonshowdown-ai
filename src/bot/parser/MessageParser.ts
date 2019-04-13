@@ -1,11 +1,12 @@
 import { Logger } from "../../Logger";
+import { WeatherType } from "../battle/state/Weather";
 import { AbilityCause, AbilityEvent, ActivateEvent, AnyBattleEvent,
     BattleEventPrefix, BoostEvent, CantEvent, Cause, CureStatusEvent,
     CureTeamEvent, DamageEvent, EndAbilityEvent, EndEvent, FaintEvent,
     FieldEndEvent, FieldStartEvent, isBattleEventPrefix, MoveEvent,
     MustRechargeEvent, PrepareEvent, SetHPEvent, SingleTurnEvent, StartEvent,
-    StatusEvent, SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WinEvent } from
-    "../dispatcher/BattleEvent";
+    StatusEvent, SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WeatherEvent,
+    WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage } from "../dispatcher/Message";
 import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
@@ -523,6 +524,7 @@ export class MessageParser extends Parser
             case "tie": return this.parseTieEvent();
             case "turn": return this.parseTurnEvent();
             case "upkeep": return this.parseUpkeepEvent();
+            case "-weather": return this.parseWeatherEvent();
             case "win": return this.parseWinEvent();
             default: return null;
         }
@@ -950,6 +952,22 @@ export class MessageParser extends Parser
     private parseTieEvent(): TieEvent
     {
         return {type: "tie"};
+    }
+
+    /**
+     * Parses a WeatherEvent.
+     *
+     * Format:
+     * @example
+     * |-weather|<WeatherType>|<[upkeep] or AbilityCause/MoveCause>
+     *
+     * @returns A WeatherEvent.
+     */
+    private parseWeatherEvent(): WeatherEvent
+    {
+        const weatherType = this.nextWord() as WeatherType;
+        const upkeep = this.peekWord() === "[upkeep]";
+        return {type: "weather", weatherType, upkeep};
     }
 
     /**

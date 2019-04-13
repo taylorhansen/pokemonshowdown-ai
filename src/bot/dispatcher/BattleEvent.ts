@@ -1,4 +1,5 @@
 /** @file Interfaces and helper functions for handling BattleEvents. */
+import { WeatherType } from "../battle/state/Weather";
 import { BoostableStatName, MajorStatus, PokemonDetails, PokemonID,
     PokemonStatus } from "../helpers";
 
@@ -14,7 +15,7 @@ export const battleEventPrefixes =
     "-fieldstart": true, "-heal": true, move: true, "-mustrecharge": true,
     "-prepare": true, "-sethp": true, "-singleturn": true, "-start": true,
     "-status": true, switch: true, tie: true, turn: true, "-unboost": true,
-    upkeep: true, win: true
+    upkeep: true, "-weather": true, win: true
 };
 
 /** Message line prefixes that are parsed as BattleEvents. */
@@ -35,7 +36,7 @@ const battleEventTypesInternal =
     cureteam: true, damage: true, end: true, endability: true, faint: true,
     fieldend: true, fieldstart: true, move: true, mustrecharge: true,
     prepare: true, sethp: true, singleturn: true, start: true, status: true,
-    switch: true, tie: true, turn: true, upkeep: true, win: true
+    switch: true, tie: true, turn: true, upkeep: true, weather: true, win: true
 };
 
 /** Names of BattleEvent types. */
@@ -70,6 +71,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "tie" ? TieEvent
     : T extends "turn" ? TurnEvent
     : T extends "upkeep" ? UpkeepEvent
+    : T extends "weather" ? WeatherEvent
     : T extends "win" ? WinEvent
     : never;
 
@@ -300,6 +302,15 @@ export interface TurnEvent extends BattleEventBase
 export interface UpkeepEvent extends BattleEventBase
 {
     type: "upkeep";
+}
+
+export interface WeatherEvent extends BattleEventBase
+{
+    type: "weather";
+    /** Type of weather. */
+    weatherType: WeatherType;
+    /** Whether this is an upkeep message. */
+    upkeep: boolean;
 }
 
 /** Event indicating that the game has ended with a winner. */

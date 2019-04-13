@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import "mocha";
 import { Choice } from "../../../src/bot/battle/Choice";
-import { Type, types } from "../../../src/bot/battle/dex/dex-types";
+import { types } from "../../../src/bot/battle/dex/dex-types";
+import { Weather } from "../../../src/bot/battle/state/Weather";
 import { MoveEvent, SetHPEvent } from "../../../src/bot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../../src/bot/dispatcher/Message";
@@ -1442,6 +1443,95 @@ describe("Battle and EventProcessor", function()
                 await listener.dispatch("battleprogress",
                     {events: [{type: "status", id: us1, majorStatus: "frz"}]});
                 expect(mon.majorStatus).to.equal("frz");
+            });
+        });
+
+        describe("weather", function()
+        {
+            let weather: Weather;
+
+            beforeEach("Initialize Weather reference", function()
+            {
+                weather = battle.state.status.weather;
+            });
+
+            it("Should reset weather", async function()
+            {
+                await listener.dispatch("battleprogress",
+                {
+                    events:
+                    [
+                        {type: "weather", weatherType: "none", upkeep: true}
+                    ]
+                });
+                expect(weather.type).to.equal("none");
+                // tslint:disable-next-line:no-unused-expression
+                expect(weather.source).to.be.undefined;
+                // tslint:disable-next-line:no-unused-expression
+                expect(weather.duration).to.be.null;
+                expect(weather.turns).to.equal(0);
+            });
+
+            it("Should handle weather change due to ability", async function()
+            {
+                await listener.dispatch("battleprogress",
+                {
+                    events:
+                    [
+                        {
+                            type: "weather", weatherType: "RainDance",
+                            upkeep: false,
+                            cause:
+                            {
+                                type: "ability", ability: "Drizzle", of: us1
+                            }
+                        }
+                    ]
+                });
+                const mon = battle.processor.getActive(us1.owner);
+                expect(mon.ability).to.equal("drizzle");
+                expect(weather.type).to.equal("RainDance");
+                expect(weather.source).to.equal(mon);
+                // tslint:disable-next-line:no-unused-expression
+                expect(weather.duration).to.be.null;
+                expect(weather.turns).to.equal(0);
+            });
+
+            it("Should handle weather change due to move", async function()
+            {
+                await listener.dispatch("battleprogress",
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Sunny Day",
+                            targetId: us1
+                        },
+                        {
+                            type: "weather", weatherType: "SunnyDay",
+                            upkeep: false
+                        }
+                    ]
+                });
+                const mon = battle.processor.getActive(us1.owner);
+                expect(weather.type).to.equal("SunnyDay");
+                expect(weather.source).to.equal(mon);
+                expect(weather.duration).to.equal(5);
+                expect(weather.turns).to.equal(0);
+            });
+
+            it("Should upkeep weather", async function()
+            {
+                const mon = battle.processor.getActive(us1.owner);
+                weather.set("Hail", mon);
+                await listener.dispatch("battleprogress",
+                {
+                    events:
+                    [
+                        {type: "weather", weatherType: "Hail", upkeep: true}
+                    ]
+                });
+                expect(weather.turns).to.equal(1);
             });
         });
 

@@ -277,6 +277,46 @@ export class EventProcessor
             //  was used, then it would emit an upkeep
             this.state.teams.us.status.selfSwitch = false;
             this.state.teams.them.status.selfSwitch = false;
+        })
+        .on("weather", (event, events, i) =>
+        {
+            const weather = this.state.status.weather;
+            if (event.weatherType === "none") weather.reset();
+            else if (event.upkeep) weather.upkeep(event.weatherType);
+            else if (event.cause && event.cause.type === "ability" &&
+                event.cause.of)
+            {
+                weather.set(event.weatherType,
+                    this.getActive(event.cause.of.owner), /*ability*/true);
+            }
+            else
+            {
+                const lastEvent = events[i - 1];
+                if (lastEvent)
+                {
+                    if (lastEvent.type === "move")
+                    {
+                        // caused by a move
+                        const source = this.getActive(lastEvent.id.owner);
+                        weather.set(event.weatherType, source);
+                    }
+                    else
+                    {
+                        // if switched in, only an ability would activate, which
+                        //  was already handled earlier, so there would be no
+                        //  other way to cause the weather effect
+                        // istanbul ignore next: should never happen
+                        if (lastEvent.type !== "switch")
+                        {
+                            this.logger.error(
+                                "Don't know how weather was caused");
+                        }
+                    }
+                }
+                // same as above here
+                // istanbul ignore next: should never happen
+                else this.logger.error("Don't know how weather was caused");
+            }
         });
     }
 

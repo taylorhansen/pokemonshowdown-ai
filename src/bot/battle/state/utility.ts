@@ -21,9 +21,29 @@ export function tempStatusTurns(turns: number): number
     return turns === 0 ? 0 : 1 / turns;
 }
 
-// istanbul ignore next: only used in logging
-/** Pluralizes the word "turns". */
-export function pluralTurns(name: string, turns: number): string
+/**
+ * Interpolates max status duration and current number of turns.
+ * @param turns Number of turns the status has been active (including current
+ * turn).
+ * @param duration Maximum amount of turns the status can be active.
+ * @returns Encoded turn data for toArray() functions.
+ */
+export function limitedStatusTurns(turns: number, duration: number): number
 {
-    return `${name} for turn${turns !== 1 ? "s" : ""}`;
+    // turns left / total duration
+    return (duration - turns - 1) / duration;
+}
+
+// istanbul ignore next: only used in logging
+/**
+ * Pluralizes the word "turns". E.g. `pluralTurns("tox", 1)` returns
+ * `"tox for 1 turn"`.
+ * @param name Name of status.
+ * @param turns Number of turns.
+ * @param limit Max number of turns.
+ */
+export function pluralTurns(name: string, turns: number, limit?: number): string
+{
+    return `${name} for ${turns}${limit ? `/${limit}` : ""} \
+turn${turns !== 1 ? "s" : ""}`;
 }

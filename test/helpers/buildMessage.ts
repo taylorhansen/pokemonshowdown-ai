@@ -166,6 +166,10 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "upkeep":
             result = ["upkeep"];
             break;
+        case "weather":
+            result = ["-weather", event.weatherType];
+            if (event.upkeep) result.push("[upkeep]");
+            break;
         case "win":
             result = ["win", event.winner];
             break;

@@ -106,7 +106,18 @@ export const battleEvent: AnyBattleEvent[] =
         type: "switch", id: pokemonId[1], details: pokemonDetails[1],
         status: pokemonStatus[1]
     },
-    {type: "tie"}, {type: "win", winner: username[1]}
+    {type: "tie"},
+    {
+        type: "weather", weatherType: "Hail", upkeep: false,
+        cause:
+        {
+            type: "ability", ability: "Snow Warning",
+            of: {owner: "p2", position: "a", nickname: "Abomasnow"}
+        }
+    },
+    {type: "weather", weatherType: "none", upkeep: false},
+    {type: "weather", weatherType: "RainDance", upkeep: true},
+    {type: "win", winner: username[1]}
 ];
 
 const startTurn: TurnEvent = {type: "turn", num: 1};
@@ -120,17 +131,17 @@ export const battleInit: BattleInitMessage[] =
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(0, 3).concat(startTurn)
+        events: battleEvent.slice(0, 4).concat(startTurn)
     },
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(3, 5).concat(startTurn)
+        events: battleEvent.slice(4, 8).concat(startTurn)
     },
     {
         id: "p2", username: username[1], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(5, 7).concat(startTurn)
+        events: battleEvent.slice(8, 10).concat(startTurn)
     }
 ];
 
@@ -138,17 +149,17 @@ export const battleInit: BattleInitMessage[] =
 export const battleProgress: BattleProgressMessage[] =
 [
     {
-        events: battleEvent.slice(7, 12)
+        events: battleEvent.slice(10, 13)
             .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
-        events: battleEvent.slice(12, 16)
-            .concat({type: "upkeep"}, ...battleEvent.slice(15, 17),
+        events: battleEvent.slice(13, 17)
+            .concat({type: "upkeep"}, ...battleEvent.slice(17, 20),
                 {type: "turn", num: 100})
     },
     {
-        events: battleEvent.slice(18, 23)
-            .concat({type: "upkeep"}, ...battleEvent.slice(23, 27),
+        events: battleEvent.slice(20, 24)
+            .concat({type: "upkeep"}, ...battleEvent.slice(24, 30),
                 {type: "turn", num: 9})
     }
 ];

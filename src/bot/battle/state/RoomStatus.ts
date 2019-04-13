@@ -1,4 +1,5 @@
 import { pluralTurns, tempStatusTurns } from "./utility";
+import { Weather } from "./Weather";
 
 /** Temporary status conditions for the entire field. */
 export class RoomStatus
@@ -14,13 +15,16 @@ export class RoomStatus
     }
     private gravityTurns = 0;
 
+    /** Weather effect (usually temporary). */
+    public readonly weather = new Weather();
+
     /**
      * Gets the size of the return value of `toArray()`.
      * @returns The size of the return value of `toArray()`.
      */
     public static getArraySize(): number
     {
-        return /*gravity*/1;
+        return /*gravity*/1 + Weather.getArraySize();
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -31,7 +35,9 @@ export class RoomStatus
     public toArray(): number[]
     {
         const gravity = tempStatusTurns(this.gravityTurns);
-        return [gravity];
+        const weather = this.weather.toArray();
+
+        return [gravity, ...weather];
     }
 
     // istanbul ignore next: only used in logging
@@ -41,7 +47,11 @@ export class RoomStatus
      */
     public toString(): string
     {
-        return `[${this.gravity ?
-            pluralTurns("gravity", this.gravityTurns - 1) : ""}]`;
+        return `[${([] as string[])
+            .concat(
+                this.gravity ?
+                    [pluralTurns("gravity", this.gravityTurns - 1)] : [],
+                [`weather: ${this.weather.toString()}`])
+            .join(", ")}]`;
     }
 }
