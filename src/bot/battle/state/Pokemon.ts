@@ -154,7 +154,14 @@ export class Pokemon
     private _item = new PossibilityClass(dex.items);
 
     /** Hidden power type possibility tracker. */
-    public readonly hpType = new PossibilityClass(types);
+    public readonly hpType = new PossibilityClass(
+        (() =>
+        {
+            const result = Object.assign({}, types) as {[T in Type]: number};
+            // hidden power can't have ??? type
+            delete result["???"];
+            return result;
+        })());
 
     /** Pokemon's level. Clamped between the closed interval `[1, 100]`. */
     public get level(): number
@@ -376,7 +383,8 @@ export class Pokemon
     {
         return /*gender*/2 + dex.numPokemon + dex.numItems + dex.numAbilities +
             /*level*/1 + Move.getArraySize() * 4 + HP.getArraySize() +
-            /*base type and hidden power type*/Object.keys(types).length * 2 +
+            // base type and hidden power type excluding ??? type
+            (Object.keys(types).length - 1) * 2 +
             /*majorStatus except empty*/Object.keys(majorStatuses).length - 1 +
             (active ? VolatileStatus.getArraySize() : 0) +
             /*grounded*/2;
@@ -391,11 +399,14 @@ export class Pokemon
     {
         // multi-hot encode type data if possible
         let typeData: number[];
-        if (!this.data) typeData = Array.from(Object.keys(types), () => 0);
+        // remove ??? type from base type data since it's impossible to have it
+        const filteredTypes = Object.keys(types).filter(t => t !== "???") as
+            Type[];
+        if (!this.data) typeData = Array.from(filteredTypes, () => 0);
         else
         {
-            typeData = (Object.keys(types) as Type[])
-                .map(typeName => this.data!.types.includes(typeName) ? 1 : 0);
+            typeData = filteredTypes
+                .map(type => this.data!.types.includes(type) ? 1 : 0);
         }
 
         // one-hot encode categorical data
@@ -436,19 +447,7 @@ ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
 ${s}grounded: \
 ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
-${s}type: \
-${this.data!.types
-    // show overridden types in parentheses
-    .map(
-        (type, i) => type +
-            (type !== this._volatile.overrideTypes[i] ?
-                ` (${this._volatile.overrideTypes[i]})` : ""))
-    // include third type in parentheses
-    .concat(
-        this._volatile.addedType !== "???" ?
-            [`(${this._volatile.addedType})`] : [])
-    // separate with commas
-    .join(", ")}
+${s}type: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
 ${s}hiddenpower: \
@@ -457,6 +456,34 @@ ${this.hpType.definiteValue ?
     : `possibly ${this.hpType.toString()}`}
 ${s}moves: ${this._moves.map((m, i) =>
     i < this.unrevealedMove ? m.toString() : "<unrevealed>").join(", ")}`;
+    }
+
+    // istanbul ignore next: only used for logging
+    /** Displays type values. */
+    private stringifyTypes(): string
+    {
+        const result: string[] = [];
+
+        for (let i = 0; i < this.data!.types.length; ++i)
+        {
+            let type: string = this.data!.types[i];
+
+            // show overridden types in parentheses
+            const override = this._volatile.overrideTypes[i];
+            if (override !== "???" && override !== type)
+            {
+                type += ` (${override})`;
+            }
+            result.push(type);
+        }
+
+        // include third type in parentheses
+        if (this._volatile.addedType !== "???")
+        {
+            result.push(`(${this._volatile.addedType})`);
+        }
+
+        return result.join(", ");
     }
 
     // istanbul ignore next: only used for logging

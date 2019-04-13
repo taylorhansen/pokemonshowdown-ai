@@ -3,9 +3,9 @@ export type StatName = "hp" | "atk" | "def" | "spa" | "spd" | "spe";
 
 const typesInternal =
 {
-    "???": 0, bug: 1, dark: 2, dragon: 3, fire: 4, flying: 5, ghost: 6,
-    electric: 7, fighting: 8, grass: 9, ground: 10, ice: 11, normal: 12,
-    poison: 13, psychic: 14, rock: 15, steel: 16, water: 17
+    bug: 0, dark: 1, dragon: 2, fire: 3, flying: 4, ghost: 5, electric: 6,
+    fighting: 7, grass: 8, ground: 9, ice: 10, normal: 11, poison: 12,
+    psychic: 13, rock: 14, steel: 15, water: 16, "???": 17
 };
 /** Set of Type names. Each type has a 0-based unique index. */
 export const types: Readonly<typeof typesInternal> = typesInternal;
