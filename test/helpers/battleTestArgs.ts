@@ -89,6 +89,8 @@ export const battleEvent: AnyBattleEvent[] =
         ]
     },
     {type: "singleturn", id: pokemonId[2], status: "Protect"},
+    {type: "sideend", id: "p1", condition: "Spikes"},
+    {type: "sidestart", id: "p2", condition: "move: Stealth Rock"},
     {
         type: "start", id: pokemonId[0], volatile: "confusion", otherArgs: [],
         cause: cause[3]
@@ -158,7 +160,7 @@ export const battleProgress: BattleProgressMessage[] =
                 {type: "turn", num: 100})
     },
     {
-        events: battleEvent.slice(20, 24)
+        events: battleEvent.slice(20, 26)
             .concat({type: "upkeep"}, ...battleEvent.slice(24, 30),
                 {type: "turn", num: 9})
     }

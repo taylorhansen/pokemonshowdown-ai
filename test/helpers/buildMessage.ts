@@ -140,6 +140,10 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                     .reduce((a1, a2) => a1.concat(a2), [])
             ];
             break;
+        case "sideend": case "sidestart":
+            // username not actually known as info is lost
+            result = [`-${event.type}`, `${event.id}: <user>`, event.condition];
+            break;
         case "singleturn":
             result = ["-singleturn", stringifyID(event.id), event.status];
             break;

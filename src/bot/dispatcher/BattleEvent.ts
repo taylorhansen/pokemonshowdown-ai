@@ -1,6 +1,6 @@
 /** @file Interfaces and helper functions for handling BattleEvents. */
 import { WeatherType } from "../battle/state/Weather";
-import { BoostableStatName, MajorStatus, PokemonDetails, PokemonID,
+import { BoostableStatName, MajorStatus, PlayerID, PokemonDetails, PokemonID,
     PokemonStatus } from "../helpers";
 
 /**
@@ -13,9 +13,10 @@ export const battleEventPrefixes =
     "-curestatus": true, "-cureteam": true, "-damage": true, drag: true,
     "-end": true, "-endability": true, faint: true, "-fieldend": true,
     "-fieldstart": true, "-heal": true, move: true, "-mustrecharge": true,
-    "-prepare": true, "-sethp": true, "-singleturn": true, "-start": true,
-    "-status": true, switch: true, tie: true, turn: true, "-unboost": true,
-    upkeep: true, "-weather": true, win: true
+    "-prepare": true, "-sethp": true, "-sideend": true, "-sidestart": true,
+    "-singleturn": true, "-start": true, "-status": true, switch: true,
+    tie: true, turn: true, "-unboost": true, upkeep: true, "-weather": true,
+    win: true
 };
 
 /** Message line prefixes that are parsed as BattleEvents. */
@@ -35,8 +36,9 @@ const battleEventTypesInternal =
     ability: true, activate: true, boost: true, cant: true, curestatus: true,
     cureteam: true, damage: true, end: true, endability: true, faint: true,
     fieldend: true, fieldstart: true, move: true, mustrecharge: true,
-    prepare: true, sethp: true, singleturn: true, start: true, status: true,
-    switch: true, tie: true, turn: true, upkeep: true, weather: true, win: true
+    prepare: true, sethp: true, sideend: true, sidestart: true,
+    singleturn: true, start: true, status: true, switch: true, tie: true,
+    turn: true, upkeep: true, weather: true, win: true
 };
 
 /** Names of BattleEvent types. */
@@ -64,6 +66,8 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "mustrecharge" ? MustRechargeEvent
     : T extends "prepare" ? PrepareEvent
     : T extends "sethp" ? SetHPEvent
+    : T extends "sideend" ? SideEndEvent
+    : T extends "sidestart" ? SideStartEvent
     : T extends "singleturn" ? SingleTurnEvent
     : T extends "start" ? StartEvent
     : T extends "status" ? StatusEvent
@@ -238,6 +242,26 @@ export interface SetHPEvent extends BattleEventBase
     type: "sethp";
     /** PokemonIDs with their corresponding new statuses. */
     newHPs: {id: PokemonID, status: PokemonStatus}[];
+}
+
+/** Event where a side condition has ended. */
+export interface SideEndEvent extends BattleEventBase
+{
+    type: "sideend";
+    /** ID of the player whose side is affected. */
+    id: PlayerID;
+    /** Name of the side condition. */
+    condition: string;
+}
+
+/** Event where a side condition has started. */
+export interface SideStartEvent extends BattleEventBase
+{
+    type: "sidestart";
+    /** ID of the player whose side is affected. */
+    id: PlayerID;
+    /** Name of the side condition. */
+    condition: string;
 }
 
 /** Event where a status is temporarily added for a single turn. */

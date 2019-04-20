@@ -4,9 +4,9 @@ import { AbilityCause, AbilityEvent, ActivateEvent, AnyBattleEvent,
     BattleEventPrefix, BoostEvent, CantEvent, Cause, CureStatusEvent,
     CureTeamEvent, DamageEvent, EndAbilityEvent, EndEvent, FaintEvent,
     FieldEndEvent, FieldStartEvent, isBattleEventPrefix, MoveEvent,
-    MustRechargeEvent, PrepareEvent, SetHPEvent, SingleTurnEvent, StartEvent,
-    StatusEvent, SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WeatherEvent,
-    WinEvent } from "../dispatcher/BattleEvent";
+    MustRechargeEvent, PrepareEvent, SetHPEvent, SideEndEvent, SideStartEvent,
+    SingleTurnEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent, TurnEvent,
+    UpkeepEvent, WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage } from "../dispatcher/Message";
 import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
     PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
@@ -517,6 +517,8 @@ export class MessageParser extends Parser
             case "-mustrecharge": return this.parseMustRechargeEvent();
             case "-prepare": return this.parsePrepareEvent();
             case "-sethp": return this.parseSetHPEvent();
+            case "-sideend": return this.parseSideEndEvent();
+            case "-sidestart": return this.parseSideStartEvent();
             case "-singleturn": return this.parseSingleTurnEvent();
             case "-start": return this.parseStartEvent();
             case "-status": return this.parseStatusEvent();
@@ -822,13 +824,51 @@ export class MessageParser extends Parser
     }
 
     /**
+     * Parses a SideEndEvent.
+     *
+     * Format:
+     * @example
+     * |-sideend|<PlayerID>: <username>|<condition>
+     *
+     * @returns A SideEndEvent, or null if invalid.
+     */
+    private parseSideEndEvent(): SideEndEvent | null
+    {
+        const id = this.parsePlayerId(this.nextWord().substring(0, 2));
+        const condition = this.nextWord();
+        if (!condition) this.logger.error("Missing side condition");
+
+        if (!id || !condition) return null;
+        return {type: "sideend", id, condition};
+    }
+
+    /**
+     * Parses a SideStart.
+     *
+     * Format:
+     * @example
+     * |-sidestart|<PlayerID>: <username>|<condition>
+     *
+     * @returns A SideStartEvent, or null if invalid.
+     */
+    private parseSideStartEvent(): SideStartEvent | null
+    {
+        const id = this.parsePlayerId(this.nextWord().substring(0, 2));
+        const condition = this.nextWord();
+        if (!condition) this.logger.error("Missing side condition");
+
+        if (!id || !condition) return null;
+        return {type: "sidestart", id, condition};
+    }
+
+    /**
      * Parses a SingleTurnEvent.
      *
      * Format:
      * @example
      * |-singleturn|<PokemonID>|<status>
      *
-     * @returns A SingleTurn, or null if invalid.
+     * @returns A SingleTurnEvent, or null if invalid.
      */
     private parseSingleTurnEvent(): SingleTurnEvent | null
     {
