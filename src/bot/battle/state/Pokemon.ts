@@ -109,7 +109,7 @@ export class Pokemon
         //  throw
         if (!this.data) return [];
 
-        let result: Type[];
+        let result: ReadonlyArray<Type>;
         if (this._active)
         {
             result = this.volatile.overrideTypes
@@ -119,7 +119,7 @@ export class Pokemon
 
         return result.filter(type => type !== "???");
     }
-    /** Temporarily changes a primary and secondary types and resets third. */
+    /** Temporarily changes primary and secondary types and resets third. */
     public changeType(newTypes: [Type, Type]): void
     {
         this.volatile.overrideTypes = newTypes;
