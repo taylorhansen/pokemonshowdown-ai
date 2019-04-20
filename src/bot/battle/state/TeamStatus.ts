@@ -13,6 +13,13 @@ export class TeamStatus
     public get isWishing(): boolean { return this.wishDuration !== 0; }
     private wishDuration = 0;
 
+    /** Spikes layers. */
+    public spikes = 0;
+    /** Stealth rock layers. */
+    public stealthRock = 0;
+    /** Toxic Spikes layers. */
+    public toxicSpikes = 0;
+
     /**
      * Called at the end of the turn, after a Choice has been sent to the
      * server.
@@ -28,7 +35,7 @@ export class TeamStatus
      */
     public static getArraySize(): number
     {
-        return /*selfSwitch*/ 2 + /*wish*/ 1;
+        return /*selfSwitch*/ 2 + /*wish*/ 1 + /*entry hazards*/ 3;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -41,7 +48,8 @@ export class TeamStatus
         const result =
         [
             this.selfSwitch ? 1 : 0, this.selfSwitch === "copyvolatile" ? 1 : 0,
-            this.wishDuration ? 1 : 0
+            this.wishDuration ? 1 : 0, this.spikes, this.stealthRock,
+            this.toxicSpikes
         ];
         return result;
     }
@@ -55,7 +63,10 @@ export class TeamStatus
     {
         return `[${([] as string[]).concat(
                 this.selfSwitch ? [`selfSwitch: ${this.selfSwitch}`] : [],
-                this.wishDuration ? ["wishing"] : []
-            ).join(", ")}]`;
+                this.wishDuration ? ["wishing"] : [],
+                this.spikes ? [`spikes ${this.spikes}`] : [],
+                this.stealthRock ? [`stealth rock ${this.stealthRock}`] : [],
+                this.toxicSpikes ? [`toxic spikes ${this.toxicSpikes}`] : [])
+            .join(", ")}]`;
     }
 }

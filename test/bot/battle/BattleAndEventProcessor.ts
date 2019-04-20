@@ -1340,6 +1340,41 @@ describe("Battle and EventProcessor", function()
             });
         });
 
+        describe("sideend/sidestart", function()
+        {
+            for (const condition of
+                    ["Spikes", "move: Stealth Rock", "move: Toxic Spikes"])
+            {
+                // get VolatileStatus corresponding field name
+                let field: "spikes" | "stealthRock" | "toxicSpikes";
+                if (condition.startsWith("move: "))
+                {
+                    field = condition.substr("move: ".length) as any;
+                }
+                else field = condition as any;
+                field = field.replace(" ", "") as any;
+                field = field.charAt(0).toLowerCase() + field.substr(1) as any;
+
+                it(`Should start/end ${condition}`, async function()
+                {
+                    const team = battle.state.teams.us.status;
+                    expect(team[field]).to.equal(0);
+
+                    await listener.dispatch("battleprogress",
+                        {events: [{type: "sidestart", id: "p1", condition}]});
+                    expect(team[field]).to.equal(1);
+
+                    await listener.dispatch("battleprogress",
+                        {events: [{type: "sidestart", id: "p1", condition}]});
+                    expect(team[field]).to.equal(2);
+
+                    await listener.dispatch("battleprogress",
+                        {events: [{type: "sideend", id: "p1", condition}]});
+                    expect(team[field]).to.equal(0);
+                });
+            }
+        });
+
         describe("singleturn", function()
         {
             describe("stall", function()

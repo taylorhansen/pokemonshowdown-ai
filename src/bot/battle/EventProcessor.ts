@@ -1,6 +1,6 @@
 import { Logger } from "../../Logger";
-import { AnyBattleEvent, Cause, MoveEvent, SwitchEvent } from
-    "../dispatcher/BattleEvent";
+import { AnyBattleEvent, Cause, MoveEvent, SideEndEvent, SideStartEvent,
+    SwitchEvent } from "../dispatcher/BattleEvent";
 import { BattleEventListener } from "../dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "../dispatcher/Message";
 import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
@@ -242,6 +242,8 @@ export class EventProcessor
         {
             for (const pair of event.newHPs) this.setHP(pair.id, pair.status);
         })
+        .on("sideend", event => this.handleSideCondition(event))
+        .on("sidestart", event => this.handleSideCondition(event))
         .on("singleturn", event =>
         {
             const v = this.getActive(event.id.owner).volatile;
@@ -505,6 +507,32 @@ export class EventProcessor
             case "item":
                 // reveal item
                 mon.item = cause.item;
+                break;
+        }
+    }
+
+    /** Handles a side end/start event. */
+    private handleSideCondition(event: SideEndEvent | SideStartEvent): void
+    {
+        let condition = event.condition;
+        if (condition.startsWith("move: "))
+        {
+            condition = condition.substr("move: ".length);
+        }
+        const team = this.getTeam(event.id).status;
+        switch (condition)
+        {
+            case "Spikes":
+                if (event.type === "sidestart") ++team.spikes;
+                else team.spikes = 0;
+                break;
+            case "Stealth Rock":
+                if (event.type === "sidestart") ++team.stealthRock;
+                else team.stealthRock = 0;
+                break;
+            case "Toxic Spikes":
+                if (event.type === "sidestart") ++team.toxicSpikes;
+                else team.toxicSpikes = 0;
                 break;
         }
     }
