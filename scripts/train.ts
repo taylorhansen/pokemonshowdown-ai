@@ -19,10 +19,12 @@ import * as fs from "fs";
 import { dirname } from "path";
 import * as ProgressBar from "progress";
 import { URL } from "url";
-import { Choice, choiceIds } from "../src/bot/battle/Choice";
-import { Decision, Network, toColumn } from "../src/bot/battle/Network";
+import { Decision, Network, toColumn } from "../src/ai/Network";
+import { Choice } from "../src/battle/agent/Choice";
+import { MessageListener } from "../src/bot/dispatcher/MessageListener";
 import { PlayerID } from "../src/bot/helpers";
-import { MessageParser } from "../src/bot/parser/MessageParser";
+import { parsePSMessage } from "../src/bot/parser/parsePSMessage";
+import { PSBattle } from "../src/bot/PSBattle";
 import { evaluateFolder, modelPath, modelsFolder, selfPlayFolder } from
     "../src/config";
 import { Logger } from "../src/Logger";
@@ -70,7 +72,8 @@ async function play(models: {[P in PlayerID]: tf.Model},
     streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
     const result: GameResult = {decisions: [], winner: null};
-    const promises: Promise<void>[] = [];
+    const eventLoops: Promise<void>[] = [];
+    const filePromises: Promise<URL>[] = [];
 
     // setup log file
     let file: fs.WriteStream | undefined;
@@ -86,37 +89,31 @@ async function play(models: {[P in PlayerID]: tf.Model},
 
     for (const id of ["p1", "p2"] as PlayerID[])
     {
-        // sends player choices to the battle stream
-        function sender(choice: Choice): void
-        {
-            streams[id].write(choice);
-        }
 
-        // setup logger
         let innerLog: Logger;
         if (file) innerLog = new Logger(file, id + ": ");
         else innerLog = Logger.null;
 
-        // setup player
-        const parser = new MessageParser(innerLog);
-        const listener = parser.getListener("");
-        const ai = new Network(id, listener, sender, innerLog);
-        ai.setModel(models[id]);
+        const agent = new Network(innerLog);
+        agent.setModel(models[id]);
+
+        // sends player choices to the battle stream
+        function sender(choice: Choice): void
+        {
+            streams[id].write(choice);
+
+            // FIXME: duplicate Decisions can be saved if BattleAgent#decide()
+            //  wasn't called between sender calls
+            if (options.saveDecisions && agent.decision)
+            {
+                filePromises.push(saveDecision(agent.decision));
+            }
+        }
+
+        const battle = new PSBattle(id, agent, sender, innerLog);
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
-        // setup callbacks
-        let perTurn: () => void | Promise<void>;
-        if (options.saveDecisions)
-        {
-            perTurn = async () =>
-            {
-                if (ai.decision)
-                {
-                    result.decisions.push(await saveDecision(ai.decision));
-                }
-            };
-        }
-        else perTurn = () => {};
+        const listener = new MessageListener();
 
         // setup listeners
         // only need one player to track this
@@ -141,10 +138,15 @@ async function play(models: {[P in PlayerID]: tf.Model},
                 }
             }));
         }
+        // basic functionality
+        listener.on("battleinit", msg => battle.init(msg));
+        listener.on("battleprogress", msg => battle.progress(msg));
+        listener.on("request", msg => battle.request(msg));
+        listener.on("callback", msg => battle.callback(msg));
 
         // start parser event loop
         const stream = streams[id];
-        promises.push(async function()
+        eventLoops.push(async function()
         {
             let output: string;
             while (!done && (output = await stream.read()))
@@ -152,20 +154,22 @@ async function play(models: {[P in PlayerID]: tf.Model},
                 innerLog.debug(`received:\n${output}`);
                 try
                 {
-                    await parser.parse(output);
+                    await parsePSMessage(output, listener, innerLog);
                 }
                 catch (e)
                 {
                     logger.error(`${id}: ${e}`);
+                    console.trace();
                 }
-                perTurn();
             }
             done = true;
             if (file) file.close();
         }());
     }
 
-    await Promise.all(promises);
+    await Promise.all(eventLoops);
+
+    result.decisions = await Promise.all(filePromises);
     return result;
 }
 
@@ -208,6 +212,7 @@ function compile(model: tf.Model): void
 async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
 {
     let bar: ProgressBar;
+
     const dataset = {async iterator()
     {
         const files = [...decisionFiles];
@@ -216,19 +221,14 @@ async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
             // early return: no more data
             if (files.length === 0) return {done: true, value: null as any};
 
-            // read and delete a random Decision file
+            // consume a random Decision file
             const n = Math.floor(Math.random() * files.length);
             const url = files.splice(n, 1)[0];
             const file = fs.readFileSync(url);
             const decision: Decision = JSON.parse(file.toString());
 
             const state = toColumn(decision.state);
-
-            // setup target prediction to learn from
-            const prediction = model.predict(state) as tf.Tensor2D;
-            const predictionData = Array.from(await prediction.data());
-            predictionData[choiceIds[decision.choice]] = decision.reward;
-            const target = toColumn(predictionData);
+            const target = toColumn(decision.target);
 
             bar.tick();
             return {done: files.length <= 0, value: [state, target]};

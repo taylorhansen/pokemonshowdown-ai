@@ -1,5 +1,5 @@
 /** @file Interfaces and helper functions for handling BattleEvents. */
-import { WeatherType } from "../battle/state/Weather";
+import { WeatherType } from "../../battle/state/Weather";
 import { BoostableStatName, MajorStatus, PlayerID, PokemonDetails, PokemonID,
     PokemonStatus } from "../helpers";
 

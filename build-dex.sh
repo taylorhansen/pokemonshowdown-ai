@@ -2,7 +2,7 @@
 # uses Pokemon-Showdown's dex data to build our own dex file
 
 echo Building dex...
-dex_file=src/bot/battle/dex/dex.ts
+dex_file=src/battle/dex/dex.ts
 ts-node scripts/build-dex.ts > $dex_file
 
 # try to fix any style errors

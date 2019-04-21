@@ -2,7 +2,7 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
-import { Type } from "../src/bot/battle/dex/dex-types";
+import { Type } from "../src/battle/dex/dex-types";
 import { toIdName } from "../src/bot/helpers";
 // @ts-ignore
 import Dex = require("./Pokemon-Showdown/.sim-dist/dex");
