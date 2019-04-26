@@ -194,6 +194,11 @@ export class Pokemon
     /** Info about the pokemon's hit points. */
     public readonly hp: HP;
 
+    /** Cures this Pokemon from its major status condition. */
+    public cure(): void
+    {
+        this.majorStatus = "";
+    }
     /** Current major status condition. Not cleared on switch. */
     public majorStatus: MajorStatus = "";
 
@@ -355,11 +360,39 @@ export class Pokemon
     /**
      * Indicates that a move has been used.
      * @param id ID name of the move.
-     * @param pp Amount of PP to use.
+     * @param target Target of the move.
+     * @param nopp Whether to not consume pp for this action.
      */
-    public useMove(id: string, pp: number): void
+    public useMove(id: string, target: Pokemon, nopp?: boolean): void
     {
+        // struggle is only used when there are no moves left
+        if (id === "struggle") return;
+
+        const pp =
+            // don't consume pp
+            nopp ? 0
+            // pressure ability doubles pp usage if opponent is targeted
+            : (target.ability === "pressure" && target !== this) ? 2
+            // but normally use 1 pp
+            : 1;
+
         (this.getMove(id) || this.revealMove(id)).use(pp);
+
+        const move = dex.moves[id];
+
+        // handle volatile effect flags
+        if (move.volatileEffect === "lockedmove")
+        {
+            this.volatile.lockedMove = true;
+        }
+
+        // handle team status flags
+        if (this.team)
+        {
+            if (move.sideCondition === "wish") this.team.status.wish();
+            this.team.status.selfSwitch = move.selfSwitch || false;
+        }
+
     }
 
     /**
@@ -383,6 +416,29 @@ export class Pokemon
         if (!this.getMove(id)) this.revealMove(id);
         const index = this.moves.findIndex(move => move.id === id);
         this.volatile.disableMove(index);
+    }
+
+    /**
+     * Called when this pokemon is being trapped by an unknown ability.
+     * @param by Opponent pokemon with the trapping ability.
+     */
+    public trapped(by: Pokemon): void
+    {
+        // opposing pokemon can have only one of these abilities here
+        const abilities: string[] = [];
+
+        // arena trap traps grounded pokemon
+        if (this.isGrounded) abilities.push("arenatrap");
+
+        // magnet pull traps steel types
+        if (this.types.includes("steel")) abilities.push("magnetpull");
+
+        // shadow tag traps all pokemon who don't have it
+        if (this.ability !== "shadowtag") abilities.push("shadowtag");
+
+        // istanbul ignore else: not useful to test for this
+        if (abilities.length > 0) by.narrowAbilities(abilities);
+        else throw new Error("Can't figure out why we're trapped");
     }
 
     /**

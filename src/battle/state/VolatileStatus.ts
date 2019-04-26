@@ -1,6 +1,7 @@
+import { BoostableStatName, boostableStatNames, toIdName } from
+    "../../bot/helpers";
 import { dex, numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
 import { Type, types } from "../dex/dex-types";
-import { BoostableStatName, boostableStatNames, toIdName } from "../../bot/helpers";
 import { oneHot, pluralTurns, tempStatusTurns } from "./utility";
 
 /**

@@ -15,10 +15,10 @@ describe("Team", function()
     {
         it("Should reset pokemon when size is set", function()
         {
-            team.size = Team.MAX_SIZE;
+            team.size = Team.maxSize;
             const teamCopy = [...team.pokemon];
-            team.size = Team.MAX_SIZE;
-            for (let i = 0; i < Team.MAX_SIZE; ++i)
+            team.size = Team.maxSize;
+            for (let i = 0; i < Team.maxSize; ++i)
             {
                 expect(team.pokemon[i]).to.not.equal(teamCopy[i]);
             }
@@ -36,10 +36,10 @@ describe("Team", function()
             expect(team.size).to.equal(1);
         });
 
-        it(`Should be ${Team.MAX_SIZE} if set to a larger number`, function()
+        it(`Should be ${Team.maxSize} if set to a larger number`, function()
         {
-            team.size = Team.MAX_SIZE + 1;
-            expect(team.size).to.equal(Team.MAX_SIZE);
+            team.size = Team.maxSize + 1;
+            expect(team.size).to.equal(Team.maxSize);
         });
 
         it("Should not set hpPercent on our team", function()

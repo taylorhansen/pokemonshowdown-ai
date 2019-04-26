@@ -170,8 +170,7 @@ for (const moveName in moves)
     // only gen4 and under moves allowed
     if (move.num <= 0 || move.num >= 468 || move.isNonstandard) continue;
 
-    // hidden power moves can have any type, but only one move really exists,
-    //  not sure why PS dex includes every possible type
+    // hidden power moves can have any type, but only one move really exists
     if (move.id === "hiddenpower" && move.type !== "Normal") continue;
 
     const target = quote(move.target);

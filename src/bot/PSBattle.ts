@@ -13,7 +13,7 @@ import { PSEventHandler } from "./PSEventHandler";
  */
 export type ChoiceSender = (choice: Choice) => void;
 
-/** Manages the entire course of a battle in the client's point of view. */
+/** Translates server messages to PSEventHandler calls. */
 export class PSBattle
 {
     /** Name of the user. */
@@ -110,7 +110,7 @@ export class PSBattle
             // choices are usually restricted by the request message unless
             //  this was not known before, which means the opposing pokemon
             //  has a trapping ability
-            this.eventHandler.trapped();
+            this.state.teams.us.active.trapped(this.state.teams.them.active);
 
             // re-sort the choices we have left based on new info
             this.lastChoices = await this.agent.decide(this.state,

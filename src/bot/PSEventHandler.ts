@@ -1,18 +1,17 @@
-import { dex } from "../battle/dex/dex";
 import { Type } from "../battle/dex/dex-types";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
 import { Side } from "../battle/state/Side";
 import { SwitchInOptions, Team } from "../battle/state/Team";
 import { Logger } from "../Logger";
-import { AnyBattleEvent, Cause, MoveEvent, SideEndEvent, SideStartEvent,
-    SwitchEvent } from "./dispatcher/BattleEvent";
+import { AnyBattleEvent, Cause, SideEndEvent, SideStartEvent } from
+    "./dispatcher/BattleEvent";
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
 import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
     PokemonStatus } from "./helpers";
 
-/** Modifies the BattleState by listening to game events. */
+/** Translates BattleEvents to BattleState mutations. */
 export class PSEventHandler
 {
     /** Whether the battle is still going on. */
@@ -190,14 +189,8 @@ export class PSEventHandler
                 active.revealMove(moveId);
             }
         })
-        .on("curestatus", event =>
-        {
-            this.getActive(event.id.owner).majorStatus = "";
-        })
-        .on("cureteam", event =>
-        {
-            this.getTeam(event.id.owner).cure();
-        })
+        .on("curestatus", event => this.getActive(event.id.owner).cure())
+        .on("cureteam", event => this.getTeam(event.id.owner).cure())
         .on("damage", event =>
         {
             this.setHP(event.id, event.status);
@@ -221,9 +214,11 @@ export class PSEventHandler
             }
         })
         .on("move", event =>
-        {
-            this.handleMove(event);
-        })
+            this.getActive(event.id.owner)
+                .useMove(
+                    PSEventHandler.parseIDName(event.moveName),
+                    this.getActive(event.targetId.owner),
+                    /*nopp*/ event.cause && event.cause.type === "lockedmove"))
         .on("mustrecharge", event =>
         {
             this.getActive(event.id.owner).volatile.mustRecharge = true;
@@ -254,16 +249,19 @@ export class PSEventHandler
         })
         .on("switch", event =>
         {
-            this.handleSwitch(event);
+            const team = this.getTeam(event.id.owner);
+
+            // consume pending copyvolatile status flags
+            const options: SwitchInOptions = {};
+            options.copyVolatile = team.status.selfSwitch === "copyvolatile";
+            team.status.selfSwitch = false;
+
+            team.switchIn(event.details.species, event.details.level,
+                event.details.gender, event.status.hp, event.status.hpMax,
+                options);
         })
-        .on("tie", () =>
-        {
-            this._battling = false;
-        })
-        .on("win", () =>
-        {
-            this._battling = false;
-        })
+        .on("tie", () => { this._battling = false; })
+        .on("win", () => { this._battling = false; })
         .on("turn", () =>
         {
             this.newTurn = true;
@@ -278,7 +276,7 @@ export class PSEventHandler
             // selfSwitch is the result of a move, which only occurs in
             //  the middle of all the turn's main events (args.events)
             // if the simulator ignored the fact that a selfSwitch move
-            //  was used, then it would emit an upkeep
+            //  was used, then it would emit an upkeep event
             this.state.teams.us.status.selfSwitch = false;
             this.state.teams.them.status.selfSwitch = false;
         })
@@ -440,31 +438,6 @@ export class PSEventHandler
     }
 
     /**
-     * Called when the current active pokemon is trapped by an unknown ability.
-     */
-    public trapped(): void
-    {
-        const us = this.state.teams.us.active;
-        const them = this.state.teams.them.active;
-
-        // opposing pokemon can have only one of these abilities here
-        const abilities: string[] = [];
-
-        // arena trap traps grounded pokemon
-        if (us.isGrounded) abilities.push("arenatrap");
-
-        // magnet pull traps steel types
-        if (us.types.includes("steel")) abilities.push("magnetpull");
-
-        // shadow tag traps all pokemon who don't have it
-        if (us.ability !== "shadowtag") abilities.push("shadowtag");
-
-        // istanbul ignore else: not useful to test for this
-        if (abilities.length > 0) them.narrowAbilities(abilities);
-        else this.logger.error("Can't figure out why we're trapped");
-    }
-
-    /**
      * Sets the HP of a pokemon.
      * @param id Pokemon's ID.
      * @param status New HP/status.
@@ -548,65 +521,6 @@ export class PSEventHandler
     private static isStallSingleTurn(status: string): boolean
     {
         return ["Protect", "move: Protect", "move: Endure"].includes(status);
-    }
-
-    /**
-     * Handles a MoveEvent.
-     * @param event Event to process.
-     */
-    private handleMove(event: MoveEvent): void
-    {
-        const mon = this.getActive(event.id.owner);
-        const moveId = PSEventHandler.parseIDName(event.moveName);
-
-        // struggle is only used when there are no moves left
-        if (moveId === "struggle") return;
-
-        const pp =
-            // locked moves don't consume pp
-            (event.cause && event.cause.type === "lockedmove") ? 0
-            // pressure ability doubles pp usage if opponent is targeted
-            : (this.getActive(otherId(event.id.owner)).ability ===
-                    "pressure" && event.targetId.owner !== event.id.owner) ? 2
-            // but normally use 1 pp
-            : 1;
-        mon.useMove(moveId, pp);
-
-        const move = dex.moves[moveId];
-
-        // set the lockedmove status
-        // however, events that come after this that interrupt the move could
-        //  cancel the effect
-        if (move.volatileEffect === "lockedmove")
-        {
-            mon.volatile.lockedMove = true;
-        }
-
-        if (move.sideCondition === "wish")
-        {
-            this.getTeam(event.id.owner).status.wish();
-        }
-
-        // set selfswitch flag
-        this.getTeam(event.id.owner).status.selfSwitch =
-            move.selfSwitch || false;
-    }
-
-    /**
-     * Handles a SwitchEvent.
-     * @param event Event to process.
-     */
-    private handleSwitch(event: SwitchEvent): void
-    {
-        const team = this.getTeam(event.id.owner);
-
-        // consume pending copyvolatile status flags
-        const options: SwitchInOptions = {};
-        options.copyVolatile = team.status.selfSwitch === "copyvolatile";
-        team.status.selfSwitch = false;
-
-        team.switchIn(event.details.species, event.details.level,
-            event.details.gender, event.status.hp, event.status.hpMax, options);
     }
 
     // istanbul ignore next: trivial

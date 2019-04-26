@@ -14,7 +14,7 @@ export interface SwitchInOptions
 export class Team
 {
     /** Maximum team size. */
-    public static readonly MAX_SIZE = 6;
+    public static readonly maxSize = 6;
 
     /** Reference to the parent BattleState. */
     public readonly state?: BattleState;
@@ -37,10 +37,10 @@ export class Team
     }
     public set size(size: number)
     {
-        this._size = Math.max(1, Math.min(size, Team.MAX_SIZE));
+        this._size = Math.max(1, Math.min(size, Team.maxSize));
 
         // clear pokemon array
-        for (let i = 0; i < Team.MAX_SIZE; ++i)
+        for (let i = 0; i < Team.maxSize; ++i)
         {
             this._pokemon[i] =
                 new Pokemon(/*hpPercent*/ this.side === "them", this);
@@ -55,7 +55,7 @@ export class Team
     }
 
     /** List of pokemon. */
-    private readonly _pokemon = new Array<Pokemon>(Team.MAX_SIZE);
+    private readonly _pokemon = new Array<Pokemon>(Team.maxSize);
     /** Team size for this battle. */
     private _size = 0;
 
@@ -170,7 +170,7 @@ export class Team
     /** Cures all pokemon of any major status conditions. */
     public cure(): void
     {
-        for (const mon of this._pokemon) mon.majorStatus = "";
+        for (const mon of this._pokemon) mon.cure();
     }
 
     /**
@@ -184,7 +184,7 @@ export class Team
             // active pokemon
             Pokemon.getArraySize(/*active*/ true) +
             // side pokemon
-            (Team.MAX_SIZE - 1) * Pokemon.getArraySize(/*active*/ false) +
+            (Team.maxSize - 1) * Pokemon.getArraySize(/*active*/ false) +
             // status
             TeamStatus.getArraySize();
     }

@@ -285,7 +285,7 @@ describe("Pokemon", function()
         {
             it("Should use move", function()
             {
-                mon.useMove("splash", 1);
+                mon.useMove("splash", mon);
                 expect(mon.moves[0].pp).to.equal(63);
             });
         });
