@@ -217,21 +217,6 @@ describe("Pokemon", function()
         });
     });
 
-    describe("hpType", function()
-    {
-        it("Should reveal hidden power move and type", function()
-        {
-            mon.revealMove("hiddenpowerfire10");
-            // tslint:disable-next-line:no-unused-expression
-            expect(mon.getMove("hiddenpower")).to.not.be.null;
-            // tslint:disable-next-line:no-unused-expression
-            expect(mon.hpType.isSet("fire")).to.be.true;
-            // tslint:disable-next-line:no-unused-expression
-            expect(mon.hpType.definiteValue).to.not.be.null;
-            expect(mon.hpType.definiteValue!.name).to.equal("fire");
-        });
-    });
-
     describe("level", function()
     {
         it("Should be 0 initially", function()
@@ -265,42 +250,14 @@ describe("Pokemon", function()
     });
 
     // tslint:disable:no-unused-expression
-    describe("moves", function()
+    describe("moveset", function()
     {
-        it("Should be empty initially", function()
-        {
-            expect(mon.moves).to.be.empty;
-        });
-
-        describe("revealMove", function()
-        {
-            it("Should reveal move", function()
-            {
-                mon.revealMove("splash");
-                expect(mon.moves).to.have.lengthOf(1);
-            });
-        });
-
         describe("useMove", function()
         {
             it("Should use move", function()
             {
                 mon.useMove("splash", mon);
-                expect(mon.moves[0].pp).to.equal(63);
-            });
-        });
-
-        describe("getMove", function()
-        {
-            it("Should not get move if not revealed", function()
-            {
-                expect(mon.getMove("splash")).to.be.null;
-            });
-
-            it("Should get move if revealed", function()
-            {
-                mon.revealMove("splash");
-                expect(mon.getMove("splash")).to.not.be.null;
+                expect(mon.moveset.get("splash")!.pp).to.equal(63);
             });
         });
 
@@ -308,7 +265,7 @@ describe("Pokemon", function()
         {
             it("Should disable move", function()
             {
-                mon.revealMove("splash");
+                mon.moveset.reveal("splash");
                 expect(mon.volatile.isDisabled(0)).to.be.false;
                 mon.disableMove("splash");
                 expect(mon.volatile.isDisabled(0)).to.be.true;
@@ -317,9 +274,9 @@ describe("Pokemon", function()
             // likely not actually possible but just in case
             it("Should reveal disabled move", function()
             {
-                expect(mon.getMove("splash")).to.be.null;
+                expect(mon.moveset.get("splash")).to.be.null;
                 mon.disableMove("splash");
-                expect(mon.getMove("splash")).to.not.be.null;
+                expect(mon.moveset.get("splash")).to.not.be.null;
                 expect(mon.volatile.isDisabled(0)).to.be.true;
             });
         });
@@ -434,19 +391,14 @@ describe("Pokemon", function()
     });
     // tslint:enable:no-unused-expression
 
-    describe("toArray", function()
+    describe("#toArray()", function()
     {
         it("Should be the same length as Pokemon.getArraySize()", function()
         {
-            // set some stuff for coverage
-            mon.species = "Magikarp";
-            mon.ability = "swiftswim";
-            mon.hpType.set("fire");
-            mon.majorStatus = "psn";
-            mon.gender = "F";
-
             expect(mon.toArray()).to.have.lengthOf(
                 Pokemon.getArraySize(/*active*/ false));
+
+            mon.species = "Magikarp";
             mon.switchIn();
             expect(mon.toArray()).to.have.lengthOf(
                 Pokemon.getArraySize(/*active*/ true));

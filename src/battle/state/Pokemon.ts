@@ -2,7 +2,7 @@ import { MajorStatus, majorStatuses, toIdName } from "../../bot/helpers";
 import { dex } from "../dex/dex";
 import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
-import { Move } from "./Move";
+import { Moveset } from "./Moveset";
 import { PossibilityClass } from "./PossibilityClass";
 import { Team } from "./Team";
 import { VolatileStatus } from "./VolatileStatus";
@@ -153,16 +153,6 @@ export class Pokemon
     /** Item the pokemon is holding. */
     private _item = new PossibilityClass(dex.items);
 
-    /** Hidden power type possibility tracker. */
-    public readonly hpType = new PossibilityClass(
-        (() =>
-        {
-            const result = Object.assign({}, types) as {[T in Type]: number};
-            // hidden power can't have ??? type
-            delete result["???"];
-            return result;
-        })());
-
     /** Pokemon's level. Clamped between the closed interval `[1, 100]`. */
     public get level(): number
     {
@@ -175,13 +165,47 @@ export class Pokemon
     /** Pokemon's level from 1 to 100. */
     private _level = 0;
 
-    /** Known moveset. */
-    public get moves(): ReadonlyArray<Move>
+    /**
+     * Indicates that a move has been used.
+     * @param id ID name of the move.
+     * @param target Pokemon that was targeted by the move.
+     * @param nopp Whether to not consume pp for this move.
+     */
+    public useMove(id: string, target: Pokemon, nopp?: boolean): void
     {
-        return this._moves.slice(0, this.unrevealedMove);
+        // struggle doesn't occupy a moveslot
+        if (id === "struggle") return;
+
+        const pp =
+            // locked moves don't consume pp
+            nopp ? 0
+            // pressure doubles pp usage if opponent is targeted
+            : (target !== this && target.ability === "pressure") ? 2
+            // otherwise only 1 is used
+            : 1;
+        this.moveset.getOrReveal(id).pp -= pp;
+
+        // apply move effects
+        const move = dex.moves[id];
+        if (move.volatileEffect === "lockedmove")
+        {
+            this.volatile.lockedMove = true;
+        }
+        if (this.team)
+        {
+            if (move.sideCondition === "wish") this.team.status.wish();
+            this.team.status.selfSwitch = move.selfSwitch || false;
+        }
     }
-    /** Known moveset. */
-    private readonly _moves: Move[];
+    /**
+     * Applies the disabled volatile status to a move.
+     * @param id ID name of the move.
+     */
+    public disableMove(id: string): void
+    {
+        this.volatile.disableMove(this.moveset.getOrRevealIndex(id));
+    }
+    public readonly moveset = new Moveset();
 
     /** Pokemon's gender. */
     public gender: string | null;
@@ -280,7 +304,6 @@ export class Pokemon
         this.team = team;
         this.hp = new HP(hpPercent);
         this._active = false;
-        this._moves = Array.from({length: 4}, () => new Move());
     }
 
     /**
@@ -338,87 +361,6 @@ export class Pokemon
     }
 
     /**
-     * Reveals a move to the client.
-     * @param id ID name of the move.
-     * @returns The new move.
-     */
-    public revealMove(id: string): Move
-    {
-        const move = new Move();
-        if (id.startsWith("hiddenpower") && id.length > "hiddenpower".length)
-        {
-            // set hidden power type
-            // format: hiddenpower<type><base power if gen2-5>
-            this.hpType.set(id.substr("hiddenpower".length).replace(/\d+/, ""));
-            id = "hiddenpower";
-        }
-        move.id = id;
-        this._moves[this.unrevealedMove++] = move;
-        return move;
-    }
-
-    /**
-     * Indicates that a move has been used.
-     * @param id ID name of the move.
-     * @param target Target of the move.
-     * @param nopp Whether to not consume pp for this action.
-     */
-    public useMove(id: string, target: Pokemon, nopp?: boolean): void
-    {
-        // struggle is only used when there are no moves left
-        if (id === "struggle") return;
-
-        const pp =
-            // don't consume pp
-            nopp ? 0
-            // pressure ability doubles pp usage if opponent is targeted
-            : (target.ability === "pressure" && target !== this) ? 2
-            // but normally use 1 pp
-            : 1;
-
-        (this.getMove(id) || this.revealMove(id)).use(pp);
-
-        const move = dex.moves[id];
-
-        // handle volatile effect flags
-        if (move.volatileEffect === "lockedmove")
-        {
-            this.volatile.lockedMove = true;
-        }
-
-        // handle team status flags
-        if (this.team)
-        {
-            if (move.sideCondition === "wish") this.team.status.wish();
-            this.team.status.selfSwitch = move.selfSwitch || false;
-        }
-
-    }
-
-    /**
-     * Gets the pokemon's move by name.
-     * @param id ID name of the move.
-     * @returns The pokemon's move that matches the ID name, or null if not
-     * found.
-     */
-    public getMove(id: string): Move | null
-    {
-        const index = this.moves.findIndex(move => move.id === id);
-        return index !== -1 ? this.moves[index] : null;
-    }
-
-    /**
-     * Applies the disabled volatile status to a move.
-     * @param id ID name of the move.
-     */
-    public disableMove(id: string): void
-    {
-        if (!this.getMove(id)) this.revealMove(id);
-        const index = this.moves.findIndex(move => move.id === id);
-        this.volatile.disableMove(index);
-    }
-
-    /**
      * Called when this pokemon is being trapped by an unknown ability.
      * @param by Opponent pokemon with the trapping ability.
      */
@@ -445,24 +387,18 @@ export class Pokemon
      * Gets the size of the return value of `toArray()`.
      * @param active Whether to include active pokemon data, e.g. volatile
      * status.
-     * @returns The size of the return value of `toArray()`.
      */
     public static getArraySize(active: boolean): number
     {
         return /*gender*/2 + dex.numPokemon + dex.numItems + dex.numAbilities +
-            /*level*/1 + Move.getArraySize() * 4 + HP.getArraySize() +
-            // base type and hidden power type excluding ??? type
-            (Object.keys(types).length - 1) * 2 +
+            /*level*/1 + /*moveset*/Moveset.getArraySize() + HP.getArraySize() +
+            /*base type excluding ??? type*/Object.keys(types).length - 1 +
             /*majorStatus except empty*/Object.keys(majorStatuses).length - 1 +
-            (active ? VolatileStatus.getArraySize() : 0) +
-            /*grounded*/2;
+            (active ? VolatileStatus.getArraySize() : 0) + /*grounded*/2;
     }
 
     // istanbul ignore next: unstable, hard to test
-    /**
-     * Formats pokemon info into an array of numbers.
-     * @returns All pokemon data in array form.
-     */
+    /** Formats pokemon info into an array of numbers. */
     public toArray(): number[]
     {
         // multi-hot encode type data if possible
@@ -487,12 +423,8 @@ export class Pokemon
         [
             this.gender === "M" ? 1 : 0, this.gender === "F" ? 1 : 0,
             ...this._species.toArray(), ...typeData, ...this._item.toArray(),
-            ...this._baseAbility.toArray(), ...this.hpType.toArray(),
-            this._level,
-            ...([] as number[]).concat(
-                ...this._moves.map(move => move.toArray())),
-            ...this.hp.toArray(),
-            ...majorStatus
+            ...this._baseAbility.toArray(), this._level,
+            ...this.moveset.toArray(), ...this.hp.toArray(), ...majorStatus
         ];
         if (this._active) a.push(...this._volatile.toArray());
         a.push(this.isGrounded ? 1 : 0, this.maybeGrounded ? 1 : 0);
@@ -518,12 +450,7 @@ ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}type: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
-${s}hiddenpower: \
-${this.hpType.definiteValue ?
-    this.hpType.definiteValue.name
-    : `possibly ${this.hpType.toString()}`}
-${s}moves: ${this._moves.map((m, i) =>
-    i < this.unrevealedMove ? m.toString() : "<unrevealed>").join(", ")}`;
+${s}moveset: ${this.moveset.toString()}`;
     }
 
     // istanbul ignore next: only used for logging

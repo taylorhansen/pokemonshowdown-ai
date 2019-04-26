@@ -186,7 +186,7 @@ export class PSEventHandler
                 const moveId = PSEventHandler.parseIDName(event.moveName);
                 // prevented from using a move, which might not have
                 //  been revealed before
-                active.revealMove(moveId);
+                active.moveset.reveal(moveId);
             }
         })
         .on("curestatus", event => this.getActive(event.id.owner).cure())
@@ -375,7 +375,7 @@ export class PSEventHandler
             if (data.active) mon.switchIn();
             else mon.switchOut();
 
-            for (const moveId of data.moves) mon.revealMove(moveId);
+            for (const moveId of data.moves) mon.moveset.reveal(moveId);
         }
     }
 

@@ -70,12 +70,12 @@ describe("Battle and EventProcessor", function()
                     const hpType = moveId.substr("hiddenpower".length)
                             .replace(/\d+/, "");
                     Object.keys(types).forEach(type =>
-                        expect(mon.hpType.isSet(type))
+                        expect(mon.moveset.hpType.isSet(type))
                             .to.be[type === hpType ? "true" : "false"]);
                     moveId = "hiddenpower";
                 }
 
-                const move = mon.getMove(moveId)!;
+                const move = mon.moveset.get(moveId)!;
                 // tslint:disable-next-line:no-unused-expression
                 expect(move).to.not.be.null;
                 expect(move.id).to.equal(moveId);
@@ -387,7 +387,7 @@ describe("Battle and EventProcessor", function()
 
                 // move hasn't been revealed yet
                 // tslint:disable-next-line:no-unused-expression
-                expect(battle.state.teams.us.active.getMove("splash"))
+                expect(battle.state.teams.us.active.moveset.get("splash"))
                     .to.be.null;
 
                 await battle.progress(
@@ -402,7 +402,7 @@ describe("Battle and EventProcessor", function()
                     ]
                 });
 
-                const move = battle.state.teams.us.active.getMove("splash");
+                const move = battle.state.teams.us.active.moveset.get("splash");
                 // tslint:disable-next-line:no-unused-expression
                 expect(move).to.not.be.null;
                 expect(move!.pp).to.equal(63);
@@ -624,8 +624,8 @@ describe("Battle and EventProcessor", function()
             {
                 // tslint:disable:no-unused-expression
                 const mon = battle.state.teams.us.active;
-                mon.revealMove("splash");
-                mon.revealMove("tackle");
+                mon.moveset.reveal("splash");
+                mon.moveset.reveal("tackle");
                 expect(mon.volatile.isDisabled(0)).to.be.false;
                 expect(mon.volatile.isDisabled(1)).to.be.false;
 
@@ -867,7 +867,7 @@ describe("Battle and EventProcessor", function()
             {
                 const mon = battle.state.teams.them.active;
                 // tslint:disable-next-line:no-unused-expression
-                expect(mon.getMove("thunderwave")).to.be.null;
+                expect(mon.moveset.get("thunderwave")).to.be.null;
 
                 await battle.progress(
                 {
@@ -880,7 +880,7 @@ describe("Battle and EventProcessor", function()
                     ]
                 });
                 // tslint:disable-next-line:no-unused-expression
-                expect(mon.getMove("thunderwave")).to.not.be.null;
+                expect(mon.moveset.get("thunderwave")).to.not.be.null;
             });
         });
 
@@ -1010,13 +1010,13 @@ describe("Battle and EventProcessor", function()
             it("Should reveal move", async function()
             {
                 const mon = battle.state.teams.us.active;
-                let move = mon.getMove("splash")!;
+                let move = mon.moveset.get("splash")!;
                 // tslint:disable-next-line:no-unused-expression
                 expect(move).to.be.null;
 
                 await battle.progress({events: [event]});
 
-                move = mon.getMove("splash")!;
+                move = mon.moveset.get("splash")!;
                 // tslint:disable-next-line:no-unused-expression
                 expect(move).to.not.be.null;
                 expect(move.id).to.equal("splash");
@@ -1030,12 +1030,12 @@ describe("Battle and EventProcessor", function()
 
                 const mon = battle.state.teams.us.active;
                 // tslint:disable-next-line:no-unused-expression
-                expect(mon.getMove(event1.moveName)).to.be.null;
+                expect(mon.moveset.get(event1.moveName)).to.be.null;
 
                 await battle.progress({events: [event1]});
 
                 // tslint:disable-next-line:no-unused-expression
-                expect(mon.getMove(event1.moveName)).to.be.null;
+                expect(mon.moveset.get(event1.moveName)).to.be.null;
             });
 
             describe("lockedmove", function()
@@ -1083,7 +1083,8 @@ describe("Battle and EventProcessor", function()
 
                 it("Should not consume pp", async function()
                 {
-                    let move = battle.state.teams.us.active.getMove("splash");
+                    let move =
+                        battle.state.teams.us.active.moveset.get("splash");
                     // tslint:disable-next-line:no-unused-expression
                     expect(move).to.be.null;
 
@@ -1098,7 +1099,7 @@ describe("Battle and EventProcessor", function()
                         ]
                     });
 
-                    move = battle.state.teams.us.active.getMove("splash")!;
+                    move = battle.state.teams.us.active.moveset.get("splash")!;
                     // tslint:disable-next-line:no-unused-expression
                     expect(move).to.not.be.null;
                     expect(move.pp).to.equal(64);
@@ -1119,7 +1120,7 @@ describe("Battle and EventProcessor", function()
 
                 beforeEach("Reveal an attacking move", function()
                 {
-                    const move = battle.state.teams.us.active.revealMove(
+                    const move = battle.state.teams.us.active.moveset.reveal(
                         "tackle");
                     expect(move.pp).to.equal(56);
                 });
@@ -1136,7 +1137,7 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    const move = battle.state.teams.us.active.getMove(
+                    const move = battle.state.teams.us.active.moveset.get(
                         "tackle")!;
                     // tslint:disable-next-line:no-unused-expression
                     expect(move).to.not.be.null;
@@ -1155,7 +1156,7 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    const move = battle.state.teams.us.active.getMove(
+                    const move = battle.state.teams.us.active.moveset.get(
                         "tackle")!;
                     // tslint:disable-next-line:no-unused-expression
                     expect(move).to.not.be.null;
@@ -1236,7 +1237,7 @@ describe("Battle and EventProcessor", function()
             it("Should prepare two-turn move", async function()
             {
                 // make it so we have 2 moves to choose from
-                battle.state.teams.us.active.revealMove("splash");
+                battle.state.teams.us.active.moveset.reveal("splash");
                 battle.request(
                 {
                     active:
