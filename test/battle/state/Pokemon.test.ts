@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { BattleState } from "../../../src/battle/state/BattleState";
-import { Pokemon } from "./../../../src/battle/state/Pokemon";
+import { Pokemon } from "../../../src/battle/state/Pokemon";
 
 describe("Pokemon", function()
 {
