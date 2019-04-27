@@ -23,9 +23,7 @@ describe("PossibilityClass", function()
         it("Should rule out all types if one is set", function()
         {
             possibility.set("a");
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.isSet("a")).to.be.true;
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.definiteValue).to.not.be.null;
             expect(possibility.definiteValue!.name).to.equal("a");
             expect(possibility.possibleValues).to.have.deep.members(
@@ -35,16 +33,13 @@ describe("PossibilityClass", function()
         it("Should rule out every type if given empty array", function()
         {
             possibility.set([]);
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.definiteValue).to.be.null;
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.possibleValues).to.be.empty;
         });
 
         it("Should rule out one type if removed", function()
         {
             possibility.remove("a");
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.isSet("a")).to.be.false;
             expect(possibility.possibleValues).to.have.deep.members(
                 [{name: "b", id: 1}, {name: "c", id: 2}]);
@@ -57,12 +52,9 @@ describe("PossibilityClass", function()
 
         it("Should narrow values", function()
         {
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.narrow(["a"])).to.be.true;
 
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.isSet("a")).to.be.true;
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.definiteValue).to.not.be.null;
             expect(possibility.definiteValue!.name).to.equal("a");
             expect(possibility.possibleValues).to.have.deep.members(
@@ -72,14 +64,10 @@ describe("PossibilityClass", function()
         it("Should not narrow unset values", function()
         {
             possibility.set("c");
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.narrow(["a"])).to.be.false;
 
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.isSet("a")).to.be.false;
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.isSet("c")).to.be.true;
-            // tslint:disable-next-line:no-unused-expression
             expect(possibility.definiteValue).to.not.be.null;
             expect(possibility.definiteValue!.name).to.equal("c");
             expect(possibility.possibleValues).to.have.deep.members(

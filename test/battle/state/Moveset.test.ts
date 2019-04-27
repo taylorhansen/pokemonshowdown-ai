@@ -15,14 +15,12 @@ describe("Moveset", function()
     {
         it("Should be null if not revealed", function()
         {
-            // tslint:disable-next-line:no-unused-expression
             expect(moveset.get("splash")).to.be.null;
         });
 
         it("Should not be null if revealed", function()
         {
             moveset.reveal("splash");
-            // tslint:disable-next-line:no-unused-expression
             expect(moveset.get("splash")).to.not.be.null;
         });
     });
@@ -43,14 +41,12 @@ describe("Moveset", function()
     {
         it("Should not be null if not revealed", function()
         {
-            // tslint:disable-next-line:no-unused-expression
             expect(moveset.getOrReveal("splash")).to.not.be.null;
         });
 
         it("Should not be null if revealed", function()
         {
             moveset.reveal("splash");
-            // tslint:disable-next-line:no-unused-expression
             expect(moveset.get("splash")).to.not.be.null;
         });
     });
@@ -76,11 +72,8 @@ describe("Moveset", function()
         it("Should reveal hidden power move and type", function()
         {
             moveset.reveal("hiddenpowerfire10");
-            // tslint:disable-next-line:no-unused-expression
             expect(moveset.get("hiddenpower")).to.not.be.null;
-            // tslint:disable-next-line:no-unused-expression
             expect(moveset.hpType.isSet("fire")).to.be.true;
-            // tslint:disable-next-line:no-unused-expression
             expect(moveset.hpType.definiteValue).to.not.be.null;
             expect(moveset.hpType.definiteValue!.name).to.equal("fire");
         });

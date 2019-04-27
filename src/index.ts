@@ -1,5 +1,5 @@
 /* istanbul ignore file */
-import { DefaultNetwork } from "./ai/Network";
+import { DefaultNetwork } from "./ai/DefaultNetwork";
 import { PSBot } from "./bot/PSBot";
 
 // create client object

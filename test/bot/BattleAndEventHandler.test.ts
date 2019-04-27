@@ -52,7 +52,6 @@ describe("Battle and EventProcessor", function()
             const status: PokemonStatus = data.condition;
             const mon = team.pokemon.find(p => p.species === details.species)!;
 
-            // tslint:disable-next-line:no-unused-expression
             expect(mon).to.exist;
             expect(mon.species).to.equal(details.species);
             expect(mon.level).to.equal(details.level);
@@ -76,7 +75,6 @@ describe("Battle and EventProcessor", function()
                 }
 
                 const move = mon.moveset.get(moveId)!;
-                // tslint:disable-next-line:no-unused-expression
                 expect(move).to.not.be.null;
                 expect(move.id).to.equal(moveId);
             }
@@ -92,7 +90,6 @@ describe("Battle and EventProcessor", function()
         if (!args.active) return;
         for (let i = 0; i < args.active[0].moves.length; ++i)
         {
-            // tslint:disable-next-line:no-unused-expression
             expect(battle.state.teams.us.active.volatile.isDisabled(i))
                 .to.be.false;
         }
@@ -300,7 +297,6 @@ describe("Battle and EventProcessor", function()
             // setup our team
             battle.state.teams.us.pokemon[0].switchIn();
             // setup opposing team
-            // tslint:disable-next-line:no-unused-expression
             expect(battle.state.teams.them.switchIn(
                     "Seaking", 100, "M", 10, 10)).to.not.be.null;
         });
@@ -311,7 +307,6 @@ describe("Battle and EventProcessor", function()
                 {side: {pokemon: []}, wait: true});
             await battle.progress(
                 {events: [{type: "upkeep"}]});
-            // tslint:disable-next-line:no-unused-expression
             expect(responses).to.be.empty;
         });
 
@@ -386,7 +381,6 @@ describe("Battle and EventProcessor", function()
             {
 
                 // move hasn't been revealed yet
-                // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.active.moveset.get("splash"))
                     .to.be.null;
 
@@ -403,7 +397,6 @@ describe("Battle and EventProcessor", function()
                 });
 
                 const move = battle.state.teams.us.active.moveset.get("splash");
-                // tslint:disable-next-line:no-unused-expression
                 expect(move).to.not.be.null;
                 expect(move!.pp).to.equal(63);
 
@@ -427,7 +420,6 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.status.selfSwitch).to.be.true;
             });
 
@@ -452,7 +444,6 @@ describe("Battle and EventProcessor", function()
         {
             it("Should process wish", async function()
             {
-                // tslint:disable:no-unused-expression
                 const status = battle.state.teams.us.status;
                 expect(status.isWishing).to.be.false;
 
@@ -488,7 +479,6 @@ describe("Battle and EventProcessor", function()
                 // accept Battle's response
                 await battle.progress({events: []});
                 expect(status.isWishing).to.be.false;
-                // tslint:enable:no-unused-expression
             });
         });
 
@@ -589,7 +579,6 @@ describe("Battle and EventProcessor", function()
         {
             it("Should activate/end/start confusion", async function()
             {
-                // tslint:disable:no-unused-expression
                 const volatile = battle.state.teams.us.active.volatile;
 
                 expect(volatile.isConfused).to.be.false;
@@ -617,12 +606,10 @@ describe("Battle and EventProcessor", function()
                     {events: [{type: "end", id: us1, volatile: "confusion"}]});
                 expect(volatile.isConfused).to.be.false;
                 expect(volatile.confuseTurns).to.equal(0);
-                // tslint:enable:no-unused-expression
             });
 
             it("Should disable/reenable move in BattleState", async function()
             {
-                // tslint:disable:no-unused-expression
                 const mon = battle.state.teams.us.active;
                 mon.moveset.reveal("splash");
                 mon.moveset.reveal("tackle");
@@ -655,14 +642,12 @@ describe("Battle and EventProcessor", function()
                 });
                 expect(mon.volatile.isDisabled(0)).to.be.false;
                 expect(mon.volatile.isDisabled(1)).to.be.false;
-                // tslint:enable:no-unused-expression
             });
 
             it("Should ignore invalid volatiles", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
 
-                // tslint:disable-next-line:no-unused-expression
                 expect(volatile.isConfused).to.be.false;
                 await battle.progress(
                 {
@@ -671,7 +656,6 @@ describe("Battle and EventProcessor", function()
                         {type: "start", id: us1, volatile: "", otherArgs: []}
                     ]
                 });
-                // tslint:disable-next-line:no-unused-expression
                 expect(volatile.isConfused).to.be.false;
             });
 
@@ -791,7 +775,6 @@ describe("Battle and EventProcessor", function()
                     });
                     expect(volatile.overrideTypes).to.have.members(
                         ["???", "???"]);
-                    // tslint:disable-next-line:no-unused-expression
                     expect(mon.types).to.be.empty;
                 });
             });
@@ -832,7 +815,6 @@ describe("Battle and EventProcessor", function()
 
             it("Should properly handle Truant ability", async function()
             {
-                // tslint:disable:no-unused-expression
                 const mon = battle.state.teams.us.active;
                 mon.ability = "truant";
                 mon.volatile.mustRecharge = true;
@@ -860,13 +842,11 @@ describe("Battle and EventProcessor", function()
                 // accept Battle's response
                 await battle.progress({events: []});
                 expect(mon.volatile.willTruant).to.be.false;
-                // tslint:enable:no-unused-expression
             });
 
             it("Should reveal failed move", async function()
             {
                 const mon = battle.state.teams.them.active;
-                // tslint:disable-next-line:no-unused-expression
                 expect(mon.moveset.get("thunderwave")).to.be.null;
 
                 await battle.progress(
@@ -879,7 +859,6 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                // tslint:disable-next-line:no-unused-expression
                 expect(mon.moveset.get("thunderwave")).to.not.be.null;
             });
         });
@@ -939,7 +918,6 @@ describe("Battle and EventProcessor", function()
 
             it("Should handle faint", async function()
             {
-                // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.active.fainted).to.be.false;
 
                 battle.request(
@@ -962,7 +940,6 @@ describe("Battle and EventProcessor", function()
                 await battle.progress(
                     {events: [{type: "faint", id: us1}, {type: "upkeep"}]});
 
-                // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.us.active.fainted).to.be.true;
 
                 expect(battle.lastChoices).to.have.members(["switch 2"]);
@@ -971,7 +948,6 @@ describe("Battle and EventProcessor", function()
 
             it("Should wait for opponent replacement", async function()
             {
-                // tslint:disable-next-line:no-unused-expression
                 expect(battle.state.teams.them.active.fainted).to.be.false;
 
                 battle.request(
@@ -994,7 +970,6 @@ describe("Battle and EventProcessor", function()
                 await battle.progress(
                     {events: [{type: "faint", id: them1}, {type: "upkeep"}]});
 
-                // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
             });
         });
@@ -1011,13 +986,11 @@ describe("Battle and EventProcessor", function()
             {
                 const mon = battle.state.teams.us.active;
                 let move = mon.moveset.get("splash")!;
-                // tslint:disable-next-line:no-unused-expression
                 expect(move).to.be.null;
 
                 await battle.progress({events: [event]});
 
                 move = mon.moveset.get("splash")!;
-                // tslint:disable-next-line:no-unused-expression
                 expect(move).to.not.be.null;
                 expect(move.id).to.equal("splash");
                 expect(move.pp).to.equal(63);
@@ -1029,12 +1002,10 @@ describe("Battle and EventProcessor", function()
                 event1.moveName = "Struggle";
 
                 const mon = battle.state.teams.us.active;
-                // tslint:disable-next-line:no-unused-expression
                 expect(mon.moveset.get(event1.moveName)).to.be.null;
 
                 await battle.progress({events: [event1]});
 
-                // tslint:disable-next-line:no-unused-expression
                 expect(mon.moveset.get(event1.moveName)).to.be.null;
             });
 
@@ -1043,7 +1014,6 @@ describe("Battle and EventProcessor", function()
                 it("Should activate lockedmove status and restrict choices",
                 async function()
                 {
-                    // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.false;
                     battle.request(
@@ -1074,7 +1044,6 @@ describe("Battle and EventProcessor", function()
                             {type: "upkeep"}, {type: "turn", num: 60}
                         ]
                     });
-                    // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.true;
                     expect(battle.lastChoices).to.have.members(["move 1"]);
@@ -1085,7 +1054,6 @@ describe("Battle and EventProcessor", function()
                 {
                     let move =
                         battle.state.teams.us.active.moveset.get("splash");
-                    // tslint:disable-next-line:no-unused-expression
                     expect(move).to.be.null;
 
                     await battle.progress(
@@ -1100,7 +1068,6 @@ describe("Battle and EventProcessor", function()
                     });
 
                     move = battle.state.teams.us.active.moveset.get("splash")!;
-                    // tslint:disable-next-line:no-unused-expression
                     expect(move).to.not.be.null;
                     expect(move.pp).to.equal(64);
                 });
@@ -1139,7 +1106,6 @@ describe("Battle and EventProcessor", function()
                     });
                     const move = battle.state.teams.us.active.moveset.get(
                         "tackle")!;
-                    // tslint:disable-next-line:no-unused-expression
                     expect(move).to.not.be.null;
                     expect(move.pp).to.equal(54);
                 });
@@ -1158,7 +1124,6 @@ describe("Battle and EventProcessor", function()
                     });
                     const move = battle.state.teams.us.active.moveset.get(
                         "tackle")!;
-                    // tslint:disable-next-line:no-unused-expression
                     expect(move).to.not.be.null;
                     expect(move.pp).to.equal(55);
                 });
@@ -1433,7 +1398,6 @@ describe("Battle and EventProcessor", function()
                             {type: "activate", id: them1, volatile: "Protect"}
                         ]
                     });
-                    // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.false;
                 });
@@ -1450,7 +1414,6 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.true;
 
@@ -1465,7 +1428,6 @@ describe("Battle and EventProcessor", function()
                             {type: "activate", id: them1, volatile: "Protect"}
                         ]
                     });
-                    // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.false;
                 });
@@ -1503,9 +1465,7 @@ describe("Battle and EventProcessor", function()
                     ]
                 });
                 expect(weather.type).to.equal("none");
-                // tslint:disable-next-line:no-unused-expression
                 expect(weather.source).to.be.undefined;
-                // tslint:disable-next-line:no-unused-expression
                 expect(weather.duration).to.be.null;
                 expect(weather.turns).to.equal(0);
             });
@@ -1530,7 +1490,6 @@ describe("Battle and EventProcessor", function()
                 expect(mon.ability).to.equal("drizzle");
                 expect(weather.type).to.equal("RainDance");
                 expect(weather.source).to.equal(mon);
-                // tslint:disable-next-line:no-unused-expression
                 expect(weather.duration).to.be.null;
                 expect(weather.turns).to.equal(0);
             });
@@ -1579,7 +1538,6 @@ describe("Battle and EventProcessor", function()
             {
                 await battle.progress(
                     {events: [{type: "win", winner: testArgs.username[0]}]});
-                // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
             });
 
@@ -1587,7 +1545,6 @@ describe("Battle and EventProcessor", function()
             {
                 await battle.progress(
                     {events: [{type: "win", winner: testArgs.username[1]}]});
-                // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
             });
 
@@ -1595,7 +1552,6 @@ describe("Battle and EventProcessor", function()
             {
                 await battle.progress(
                     {events: [{type: "tie"}]});
-                // tslint:disable-next-line:no-unused-expression
                 expect(responses).to.be.empty;
             });
         });
@@ -1612,7 +1568,6 @@ describe("Battle and EventProcessor", function()
                         {events: [{type: "tie", cause: {type: "fatigue"}}]});
                 }
                 catch (e) { thrown = true; }
-                // tslint:disable-next-line:no-unused-expression
                 expect(thrown).to.be.true;
             });
 
@@ -1625,7 +1580,6 @@ describe("Battle and EventProcessor", function()
                     const them2: PokemonID =
                         {owner: "p2", position: "a", nickname: "Arcanine"};
 
-                    // tslint:disable-next-line:no-unused-expression
                     expect(mon.ability).to.be.empty;
                     await battle.progress(
                     {
@@ -1653,9 +1607,7 @@ describe("Battle and EventProcessor", function()
                         100, "F", 100, 100)!;
                     const mon2 = battle.state.teams.them.active;
 
-                    // tslint:disable-next-line:no-unused-expression
                     expect(mon1.ability).to.be.empty;
-                    // tslint:disable-next-line:no-unused-expression
                     expect(mon2.ability).to.be.empty;
                     await battle.progress(
                     {
@@ -1698,7 +1650,6 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    // tslint:disable-next-line:no-unused-expression
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.false;
                 });

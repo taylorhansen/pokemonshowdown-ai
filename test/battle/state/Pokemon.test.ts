@@ -85,7 +85,6 @@ describe("Pokemon", function()
         function()
         {
             mon.species = "Togepi";
-            // tslint:disable-next-line:no-unused-expression
             expect(mon.baseAbility).to.be.empty;
         });
 
@@ -115,7 +114,6 @@ describe("Pokemon", function()
         {
             mon.species = "Togepi";
             mon.switchIn();
-            // tslint:disable-next-line:no-unused-expression
             expect(mon.volatile.overrideAbility).to.be.empty;
             mon.ability = "hustle";
             expect(mon.volatile.overrideAbility).to.equal("hustle");
@@ -139,7 +137,6 @@ describe("Pokemon", function()
         {
             mon.species = "Togepi";
             expect(() => mon.ability = "not_a real-ability").to.throw();
-            // tslint:disable-next-line:no-unused-expression
             expect(mon.ability).to.be.empty;
         });
 
@@ -154,7 +151,6 @@ describe("Pokemon", function()
                 mon.switchOut();
                 newMon.switchIn();
 
-                // tslint:disable-next-line:no-unused-expression
                 expect(newMon.volatile.isAbilitySuppressed()).to.be.true;
                 expect(newMon.ability).to.equal("<suppressed>");
             });
@@ -169,7 +165,6 @@ describe("Pokemon", function()
                 mon.switchOut();
                 newMon.switchIn();
 
-                // tslint:disable-next-line:no-unused-expression
                 expect(newMon.volatile.isAbilitySuppressed()).to.be.false;
                 expect(newMon.ability).to.equal("multitype");
             });
@@ -180,7 +175,6 @@ describe("Pokemon", function()
     {
         it("Should return empty array if species is not set", function()
         {
-            // tslint:disable-next-line:no-unused-expression
             expect(mon.types).to.be.empty;
         });
 
@@ -249,7 +243,6 @@ describe("Pokemon", function()
         });
     });
 
-    // tslint:disable:no-unused-expression
     describe("moveset", function()
     {
         describe("useMove", function()
@@ -281,27 +274,23 @@ describe("Pokemon", function()
             });
         });
     });
-    // tslint:enable:no-unused-expression
 
     describe("faint", function()
     {
         it("Should be fainted initially", function()
         {
-            // tslint:disable-next-line:no-unused-expression
             expect(mon.fainted).to.be.true;
         });
 
         it("Should not be fainted after restoring hp", function()
         {
             mon.hp.set(100, 100);
-            // tslint:disable-next-line:no-unused-expression
             expect(mon.fainted).to.be.false;
         });
 
         it("Should be fainted after fainting", function()
         {
             mon.faint();
-            // tslint:disable-next-line:no-unused-expression
             expect(mon.fainted).to.be.true;
         });
 
@@ -313,7 +302,6 @@ describe("Pokemon", function()
         });
     });
 
-    // tslint:disable:no-unused-expression
     describe("grounded", function()
     {
         it("Should be grounded if Gravity is active", function()
@@ -389,7 +377,6 @@ describe("Pokemon", function()
             expect(mon.maybeGrounded).to.be.false;
         });
     });
-    // tslint:enable:no-unused-expression
 
     describe("#toArray()", function()
     {

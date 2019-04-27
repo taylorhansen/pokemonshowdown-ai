@@ -17,9 +17,7 @@ describe("Weather", function()
     it("Should initially be reset", function()
     {
         expect(weather.type).to.equal("none");
-        // tslint:disable-next-line:no-unused-expression
         expect(weather.source).to.be.undefined;
-        // tslint:disable-next-line:no-unused-expression
         expect(weather.duration).to.be.null;
         expect(weather.turns).to.equal(0);
     });
@@ -31,9 +29,7 @@ describe("Weather", function()
             weather.set("SunnyDay", source);
             weather.reset();
             expect(weather.type).to.equal("none");
-            // tslint:disable-next-line:no-unused-expression
             expect(weather.source).to.be.undefined;
-            // tslint:disable-next-line:no-unused-expression
             expect(weather.duration).to.be.null;
             expect(weather.turns).to.equal(0);
         });
@@ -65,7 +61,6 @@ describe("Weather", function()
             weather.set("RainDance", source, /*ability*/true);
             expect(weather.type).to.equal("RainDance");
             expect(weather.source).to.equal(source);
-            // tslint:disable-next-line:no-unused-expression
             expect(weather.duration).to.be.null;
             expect(weather.turns).to.equal(0);
         });
@@ -77,9 +72,7 @@ describe("Weather", function()
         {
             weather.upkeep("none");
             expect(weather.type).to.equal("none");
-            // tslint:disable-next-line:no-unused-expression
             expect(weather.source).to.be.undefined;
-            // tslint:disable-next-line:no-unused-expression
             expect(weather.duration).to.be.null;
             expect(weather.turns).to.equal(0);
         });
@@ -100,11 +93,9 @@ describe("Weather", function()
             for (let i = 0; i < 8; ++i)
             {
                 weather.upkeep("SunnyDay");
-                // tslint:disable-next-line:no-unused-expression
                 expect(source.item).to.be.empty;
                 expect(weather.type).to.equal("SunnyDay");
                 expect(weather.source).to.equal(source);
-                // tslint:disable-next-line:no-unused-expression
                 expect(weather.duration).to.be.null;
                 expect(weather.turns).to.equal(0);
             }

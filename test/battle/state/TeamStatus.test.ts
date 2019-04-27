@@ -8,7 +8,6 @@ describe("TeamStatus", function()
     {
         const status = new TeamStatus();
         status.selfSwitch = "copyvolatile";
-        // tslint:disable-next-line:no-unused-expression
         expect(status.toArray()).to.not.be.empty;
     });
 });

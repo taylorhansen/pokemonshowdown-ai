@@ -15,7 +15,6 @@ describe("Move", function()
     {
         it("Should be empty initially", function()
         {
-            // tslint:disable-next-line:no-unused-expression
             expect(move.id).to.be.empty;
         });
 

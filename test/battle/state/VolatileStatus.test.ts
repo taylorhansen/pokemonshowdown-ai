@@ -37,7 +37,6 @@ describe("VolatileStatus", function()
             setEverything();
             volatile.clear();
 
-            // tslint:disable:no-unused-expression
             expect(volatile.boosts.atk).to.equal(0);
             expect(volatile.isConfused).to.be.false;
             expect(volatile.confuseTurns).to.equal(0);
@@ -53,16 +52,13 @@ describe("VolatileStatus", function()
             expect(volatile.addedType).to.equal("???");
             expect(volatile.willTruant).to.be.false;
             expect(volatile.roost).to.be.false;
-            // tslint:enable:no-unused-expression
         });
 
         it("Should clear suppressed ability", function()
         {
             volatile.suppressAbility();
             volatile.clear();
-            // tslint:disable-next-line:no-unused-expression
             expect(volatile.isAbilitySuppressed()).to.be.false;
-            // tslint:disable-next-line:no-unused-expression
             expect(volatile.overrideAbility).to.be.empty;
         });
     });
@@ -75,7 +71,6 @@ describe("VolatileStatus", function()
 
             const newVolatile = volatile.shallowClone();
             volatile.clear();
-            // tslint:disable:no-unused-expression
             expect(newVolatile).to.not.equal(volatile);
             // passed
             expect(newVolatile.boosts).to.not.equal(volatile.boosts);
@@ -94,7 +89,6 @@ describe("VolatileStatus", function()
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
             expect(volatile.willTruant).to.be.false;
-            // tslint:enable:no-unused-expression
         });
 
         it("Should copy suppressed ability status", function()
@@ -103,7 +97,6 @@ describe("VolatileStatus", function()
 
             const newVolatile = volatile.shallowClone();
             volatile.clear();
-            // tslint:disable-next-line:no-unused-expression
             expect(newVolatile.isAbilitySuppressed()).to.be.true;
             expect(newVolatile.overrideAbility).to.equal("<suppressed>");
         });
@@ -172,10 +165,8 @@ describe("VolatileStatus", function()
         it("Should set magnetRise", function()
         {
             volatile.magnetRise = true;
-            // tslint:disable-next-line:no-unused-expression
             expect(volatile.magnetRise).to.be.true;
             volatile.magnetRise = false;
-            // tslint:disable-next-line:no-unused-expression
             expect(volatile.magnetRise).to.be.false;
         });
     });
@@ -185,10 +176,8 @@ describe("VolatileStatus", function()
         it("Should set embargo", function()
         {
             volatile.embargo = true;
-            // tslint:disable-next-line:no-unused-expression
             expect(volatile.embargo).to.be.true;
             volatile.embargo = false;
-            // tslint:disable-next-line:no-unused-expression
             expect(volatile.embargo).to.be.false;
         });
     });
@@ -212,7 +201,6 @@ describe("VolatileStatus", function()
             it("Should suppress ability", function()
             {
                 volatile.suppressAbility();
-                // tslint:disable-next-line:no-unused-expression
                 expect(volatile.isAbilitySuppressed()).to.be.true;
                 expect(volatile.overrideAbility).to.equal("<suppressed>");
             });

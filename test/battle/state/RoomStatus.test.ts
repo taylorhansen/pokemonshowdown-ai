@@ -16,10 +16,8 @@ describe("Room", function()
         it("Should set gravity", function()
         {
             room.gravity = true;
-            // tslint:disable-next-line:no-unused-expression
             expect(room.gravity).to.be.true;
             room.gravity = false;
-            // tslint:disable-next-line:no-unused-expression
             expect(room.gravity).to.be.false;
         });
     });

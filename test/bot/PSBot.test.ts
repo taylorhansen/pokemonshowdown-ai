@@ -40,7 +40,6 @@ describe("PSBot", function()
     {
         bot = new PSBot(Logger.null);
         await bot.connect("ws://localhost:8000/showdown/websocket");
-        // tslint:disable-next-line:no-unused-expression
         expect(connection).to.exist;
     });
 

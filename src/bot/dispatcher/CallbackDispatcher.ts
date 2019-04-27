@@ -1,3 +1,5 @@
+import { SpecificDispatcher } from "./SpecificDispatcher";
+
 /** Converts an array type to a sync/async function type with the given args. */
 export type Callback<Args extends any[]> =
     (...args: Args) => void | Promise<void>;
@@ -51,35 +53,5 @@ export class CallbackDispatcher<DispatchArgs extends {[type: string]: any[]}>
             this.dispatchers[type] = new SpecificDispatcher<any[]>() as any;
         }
         return this.dispatchers[type] as SpecificDispatcher<DispatchArgs[T]>;
-    }
-}
-
-/**
- * Holds event callbacks for one specific type of event.
- * @template Args Array of argument types for the callback type.
- */
-class SpecificDispatcher<Args extends any[]>
-{
-    /** Currently registered callback functions. */
-    private readonly callbacks: Callback<Args>[] = [];
-
-    /**
-     * Adds a callback for this event type.
-     * @param callback Function to be called once `dispatch` is called.
-     */
-    public addCallback(callback: Callback<Args>): void
-    {
-        this.callbacks.push(callback);
-    }
-
-    /**
-     * Calls every registered function using the provided arguments.
-     * @param args Provided arguments.
-     * @returns A Promise to compute every callback in the order they were
-     * added.
-     */
-    public async dispatch(...args: Args): Promise<void>
-    {
-        await Promise.all(this.callbacks.map(callback => callback(...args)));
     }
 }

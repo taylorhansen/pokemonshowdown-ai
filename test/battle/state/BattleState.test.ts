@@ -39,9 +39,7 @@ describe("BattleState", function()
 
             for (const i of state.toArray())
             {
-                // tslint:disable-next-line:no-unused-expression
                 expect(isNumber(i)).to.be.true;
-                // tslint:disable-next-line:no-unused-expression
                 expect(isFinite(i)).to.be.true;
             }
         });
