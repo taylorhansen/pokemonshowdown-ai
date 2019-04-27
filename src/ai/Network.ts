@@ -5,9 +5,9 @@ import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice, choiceIds, intToChoice } from "../battle/agent/Choice";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
-import { Side } from "../battle/state/Side";
 import { modelPath } from "../config";
 import { Logger } from "../Logger";
+import { RewardTracker } from "./RewardTracker";
 
 /** Preprocessed network decision evaluation data. */
 export interface Decision
@@ -26,34 +26,6 @@ export interface Decision
 export function toColumn(arr: TensorLike2D): tf.Tensor2D
 {
     return tf.tensor2d(arr, [1, arr.length], "float32");
-}
-
-/** Accumulates a reward value for the Network. */
-export class RewardTracker
-{
-    /** Accumulated reward so far. */
-    public get value(): number
-    {
-        return this._reward;
-    }
-    private _reward = 0;
-
-    /** Resets accumulated reward. */
-    public reset(): void
-    {
-        this._reward = 0;
-    }
-
-    /**
-     * Rewards one side of the battle.
-     * @param side The team that was rewarded for something.
-     * @param reward Value of the reward.
-     */
-    public apply(side: Side, reward: number): void
-    {
-        // rewarding one side means punishing the other
-        this._reward += reward * (side === "us" ? 1 : -1);
-    }
 }
 
 /** Holds the reward values for different events. */
