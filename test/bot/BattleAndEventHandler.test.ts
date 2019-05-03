@@ -6,12 +6,9 @@ import { Weather } from "../../src/battle/state/Weather";
 import { MoveEvent, SetHPEvent } from "../../src/bot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../src/bot/dispatcher/Message";
-import { MessageListener } from "../../src/bot/dispatcher/MessageListener";
 import { PokemonDetails, PokemonID, PokemonStatus } from
     "../../src/bot/helpers";
-import { Logger } from "../../src/Logger";
 import * as testArgs from "../helpers/battleTestArgs";
-import { MockBattleAgent } from "./MockBattleAgent";
 import { MockPSBattle } from "./MockPSBattle";
 
 describe("Battle and EventProcessor", function()
@@ -26,14 +23,11 @@ describe("Battle and EventProcessor", function()
     }
 
     let responses: Choice[];
-    let listener: MessageListener;
     let battle: MockPSBattle;
 
     beforeEach("Initialize Battle", function()
     {
         responses = [];
-        listener = new MessageListener();
-
         battle = new MockPSBattle(testArgs.username[0], sender);
     });
 

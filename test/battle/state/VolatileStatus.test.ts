@@ -22,7 +22,7 @@ describe("VolatileStatus", function()
         volatile.overrideAbility = "swiftswim";
         volatile.disableMove(0);
         volatile.lockedMove = true;
-        volatile.twoTurn = "Bounce";
+        volatile.twoTurn = "bounce";
         volatile.mustRecharge = true;
         volatile.stall(true);
         volatile.overrideTypes = ["???", "water"];

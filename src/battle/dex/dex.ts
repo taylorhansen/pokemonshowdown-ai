@@ -7386,15 +7386,15 @@ const moves: {readonly [name: string]: MoveData} =
 
 const twoTurnMovesInternal =
 {
-    Bounce: 0,
-    Dig: 1,
-    Dive: 2,
-    Fly: 3,
-    "Razor Wind": 4,
-    "Solar Beam": 5,
-    "Shadow Force": 6,
-    "Skull Bash": 7,
-    "Sky Attack": 8
+    bounce: 0,
+    dig: 1,
+    dive: 2,
+    fly: 3,
+    razorwind: 4,
+    solarbeam: 5,
+    shadowforce: 6,
+    skullbash: 7,
+    skyattack: 8
 };
 
 /** Set of all two-turn moves. Maps move name to its id within this object. */

@@ -92,6 +92,7 @@ export const boostableStatNames =
 /** Names of pokemon stats that can be boosted. */
 export type BoostableStatName = keyof typeof boostableStatNames;
 
+// istanbul ignore next: trivial
 /** Converts a display name into an id name. */
 export function toIdName(str: string): string
 {

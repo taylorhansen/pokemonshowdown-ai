@@ -219,7 +219,7 @@ for (const moveName in twoTurnMoves)
 {
     if (!twoTurnMoves.hasOwnProperty(moveName)) continue;
 
-    console.log(`    ${maybeQuote(moveName)}: ${twoTurnMoves[moveName]},`);
+    console.log(`    ${toIdName(moveName)}: ${twoTurnMoves[moveName]},`);
 }
 console.log(`};
 

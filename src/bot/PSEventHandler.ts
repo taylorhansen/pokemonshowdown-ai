@@ -1,3 +1,4 @@
+import { twoTurnMoves } from "../battle/dex/dex";
 import { Type } from "../battle/dex/dex-types";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
@@ -9,7 +10,7 @@ import { AnyBattleEvent, Cause, SideEndEvent, SideStartEvent } from
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
 import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
-    PokemonStatus } from "./helpers";
+    PokemonStatus, toIdName } from "./helpers";
 
 /** Translates BattleEvents to BattleState mutations. */
 export class PSEventHandler
@@ -82,8 +83,7 @@ export class PSEventHandler
                 case "Disable":
                 {
                     // disable a move
-                    const moveId =
-                        PSEventHandler.parseIDName(event.otherArgs[0]);
+                    const moveId = toIdName(event.otherArgs[0]);
                     active.disableMove(moveId);
                     break;
                 }
@@ -183,7 +183,7 @@ export class PSEventHandler
 
             if (event.moveName)
             {
-                const moveId = PSEventHandler.parseIDName(event.moveName);
+                const moveId = toIdName(event.moveName);
                 // prevented from using a move, which might not have
                 //  been revealed before
                 active.moveset.reveal(moveId);
@@ -216,9 +216,10 @@ export class PSEventHandler
         .on("move", event =>
             this.getActive(event.id.owner)
                 .useMove(
-                    PSEventHandler.parseIDName(event.moveName),
+                    toIdName(event.moveName),
                     this.getActive(event.targetId.owner),
-                    /*nopp*/ event.cause && event.cause.type === "lockedmove"))
+                    // don't consume pp if locked into using the move
+                    event.cause && event.cause.type === "lockedmove"))
         .on("mustrecharge", event =>
         {
             this.getActive(event.id.owner).volatile.mustRecharge = true;
@@ -228,7 +229,7 @@ export class PSEventHandler
             // moveName should be one of the two-turn moves being
             //  prepared
             this.getActive(event.id.owner).volatile.twoTurn =
-                event.moveName as any;
+                toIdName(event.moveName) as any;
         })
         .on("sethp", event =>
         {
@@ -521,17 +522,6 @@ export class PSEventHandler
     private static isStallSingleTurn(status: string): boolean
     {
         return ["Protect", "move: Protect", "move: Endure"].includes(status);
-    }
-
-    // istanbul ignore next: trivial
-    /**
-     * Converts a display name to an id name.
-     * @param name Name to convert.
-     * @returns The resulting ID name.
-     */
-    protected static parseIDName(name: string): string
-    {
-        return name.toLowerCase().replace(/[ -]/g, "");
     }
 
     // istanbul ignore next: trivial
