@@ -5820,7 +5820,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     healingwish:
     {
-        uid: 76, pp: 16, target: "self", sideCondition: "healingwish"
+        uid: 76, pp: 16, target: "self"
     },
     healorder:
     {
@@ -6268,7 +6268,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     wish:
     {
-        uid: 188, pp: 16, target: "self", sideCondition: "wish"
+        uid: 188, pp: 16, target: "self"
     },
     woodhammer:
     {

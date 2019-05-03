@@ -193,7 +193,7 @@ export class Pokemon
         }
         if (this.team)
         {
-            if (move.sideCondition === "wish") this.team.status.wish();
+            if (id === "wish") this.team.status.wish();
             this.team.status.selfSwitch = move.selfSwitch || false;
         }
     }
