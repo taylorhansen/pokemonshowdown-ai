@@ -12,8 +12,8 @@ export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
 /** Set of MajorPrefixes. */
 export const majorPrefixes =
 {
-    callback: true, challstr: true, deinit: true, error: true, init: true,
-    request: true, updatechallenges: true, updateuser: true
+    challstr: true, deinit: true, error: true, init: true, request: true,
+    updatechallenges: true, updateuser: true
 };
 
 /** Message types that are parsed as a single standalone line. */
@@ -33,7 +33,6 @@ export function isMajorPrefix(value: any): value is MajorPrefix
 export type Message<T extends MessageType> =
     T extends "battleinit" ? BattleInitMessage
     : T extends "battleprogress" ? BattleProgressMessage
-    : T extends "callback" ? CallbackMessage
     : T extends "challstr" ? ChallStrMessage
     : T extends "deinit" ? DeInitMessage
     : T extends "error" ? ErrorMessage
@@ -65,15 +64,6 @@ export interface BattleProgressMessage
 {
     /** Sequence of events in the battle in the order they were parsed. */
     events: AnyBattleEvent[];
-}
-
-/** Message that represents an invalid choice. */
-export interface CallbackMessage
-{
-    /** Name of callback. */
-    name: string;
-    /** Related arguments. */
-    args: string[];
 }
 
 /** Message that provides the challenge string to verify login info. */

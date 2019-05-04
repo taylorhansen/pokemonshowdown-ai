@@ -179,11 +179,11 @@ export class PSBot
             }
         });
 
-        this.listener.on("callback", (msg, room) =>
+        this.listener.on("error", (msg, room) =>
         {
             if (this.battles.hasOwnProperty(room))
             {
-                return this.battles[room].callback(msg);
+                return this.battles[room].error(msg);
             }
         });
     }

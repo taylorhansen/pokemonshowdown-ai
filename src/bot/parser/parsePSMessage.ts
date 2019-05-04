@@ -134,8 +134,6 @@ class MessageParser
                 return this.parseRequest();
             case "error": // e.g. invalid move/switch choice
                 return this.parseError();
-            case "callback": // info about an invalid choice
-                return this.parseCallback();
             default:
                 if (["drag", "move", "switch"].includes(word) ||
                     isBattleEventPrefix(word))
@@ -220,25 +218,6 @@ class MessageParser
         Promise<void>
     {
         return this.listener.dispatch(type, message, this.room);
-    }
-
-    /**
-     * Parses a `callback` message.
-     *
-     * Format:
-     * @example
-     * |callback|<name>|<args...>
-     */
-    private parseCallback(): Promise<void>
-    {
-        const name = this.nextWord();
-        if (!name)
-        {
-            this.logger.error("No callback name provided");
-            return Promise.resolve();
-        }
-        const args = this.getRestOfLine().split("|");
-        return this.dispatch("callback", {name, args});
     }
 
     /**

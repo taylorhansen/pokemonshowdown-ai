@@ -164,7 +164,7 @@ async function play(options: GameOptions): Promise<GameResult>
         listener.on("battleinit", msg => battle.init(msg));
         listener.on("battleprogress", msg => battle.progress(msg));
         listener.on("request", msg => battle.request(msg));
-        listener.on("callback", msg => battle.callback(msg));
+        listener.on("error", msg => battle.error(msg));
 
         // start parser event loop
         const stream = streams[id];

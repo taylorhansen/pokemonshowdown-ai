@@ -93,19 +93,19 @@ describe("Battle and EventProcessor", function()
     {
         for (const args of testArgs.request)
         {
-            it("Should handle request", function()
+            it("Should handle request", async function()
             {
-                battle.request(args);
+                await battle.request(args);
                 checkRequestSide(args);
                 checkRequestActive(args);
             });
         }
 
-        it("Should not handle request after battleinit", function()
+        it("Should not handle request after battleinit", async function()
         {
-            battle.request(testArgs.request[0]);
-            battle.init(testArgs.battleInit[0]);
-            battle.request(testArgs.request[1]);
+            await battle.request(testArgs.request[0]);
+            await battle.init(testArgs.battleInit[0]);
+            await battle.request(testArgs.request[1]);
             checkRequestSide(testArgs.request[0]);
             checkRequestActive(testArgs.request[0]);
         });
@@ -126,7 +126,7 @@ describe("Battle and EventProcessor", function()
             {
                 // corresponding end |request| message is always sent before
                 //  the events that lead up to this state
-                battle.request(req);
+                await battle.request(req);
                 checkRequestSide(req);
                 await battle.init(args);
 
@@ -166,7 +166,7 @@ describe("Battle and EventProcessor", function()
 
         it("Should disable moves", async function()
         {
-            battle.request(
+            await battle.request(
             {
                 active:
                 [
@@ -239,7 +239,7 @@ describe("Battle and EventProcessor", function()
         {
             // an initial request+battleinit is required to start tracking the
             //  state properly
-            battle.request(
+            await battle.request(
             {
                 active: [{moves: []}],
                 side:
@@ -297,10 +297,8 @@ describe("Battle and EventProcessor", function()
 
         it("Should not choose action if requested to wait", async function()
         {
-            battle.request(
-                {side: {pokemon: []}, wait: true});
-            await battle.progress(
-                {events: [{type: "upkeep"}]});
+            await battle.request({side: {pokemon: []}, wait: true});
+            await battle.progress({events: [{type: "upkeep"}]});
             expect(responses).to.be.empty;
         });
 
@@ -308,7 +306,7 @@ describe("Battle and EventProcessor", function()
         {
             // moves that can't be used at this time are given by the request
             //  message
-            battle.request(
+            await battle.request(
             {
                 active:
                 [
@@ -336,9 +334,9 @@ describe("Battle and EventProcessor", function()
             expect(responses).to.have.lengthOf(1);
         });
 
-        describe("trapping", function()
+        describe("error", function()
         {
-            it("Should re-choose choices", async function()
+            it("Should re-choose choices if trapped", async function()
             {
                 await battle.progress(
                     {events: [{type: "upkeep"}, {type: "turn", num: 2}]});
@@ -347,25 +345,39 @@ describe("Battle and EventProcessor", function()
                 expect(responses).to.have.lengthOf(1);
 
                 // trapped and can't switch
-                await battle.callback({name: "trapped", args: ["0"]});
+                await battle.error({reason: "[Unavailable choice]"});
+                await battle.request(
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {move: "Splash", id: "splash", disabled: false}
+                            ],
+                            trapped: true
+                        }
+                    ],
+                    side: battle.lastRequest.side
+                });
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(2);
+            });
 
-                // accepted last choice
+            it("Should choose next choice if invalid", async function()
+            {
                 await battle.progress(
                     {events: [{type: "upkeep"}, {type: "turn", num: 3}]});
                 expect(battle.lastChoices).to.have.members(
                     ["move 1", "switch 2"]);
-                expect(responses).to.have.lengthOf(3);
-                // MockBattle leaves preferred choices in the order they were
-                //  given, so move 1 was the last choice
-                expect(responses[responses.length - 1]).to.equal("move 1");
+                expect(responses).to.have.lengthOf(1);
 
-                // can't use last move
-                // this usually can't happen but just in case
-                await battle.callback({name: "cant", args: []});
+                // can't use last move choice
+                // usually one can always use a move but this is just for
+                //  testing purposes
+                await battle.error({reason: "[Invalid choice]"});
                 expect(battle.lastChoices).to.have.members(["switch 2"]);
-                expect(responses).to.have.lengthOf(4);
+                expect(responses).to.have.lengthOf(2);
             });
         });
 
@@ -914,7 +926,7 @@ describe("Battle and EventProcessor", function()
             {
                 expect(battle.state.teams.us.active.fainted).to.be.false;
 
-                battle.request(
+                await battle.request(
                 {
                     active:
                     [
@@ -944,7 +956,7 @@ describe("Battle and EventProcessor", function()
             {
                 expect(battle.state.teams.them.active.fainted).to.be.false;
 
-                battle.request(
+                await battle.request(
                 {
                     active:
                     [
@@ -1010,7 +1022,7 @@ describe("Battle and EventProcessor", function()
                 {
                     expect(battle.state.teams.us.active.volatile.lockedMove)
                         .to.be.false;
-                    battle.request(
+                    await battle.request(
                     {
                         active:
                         [
@@ -1128,7 +1140,7 @@ describe("Battle and EventProcessor", function()
         {
             it("Should recharge after recharge move", async function()
             {
-                battle.request(
+                await battle.request(
                 {
                     active:
                     [
@@ -1160,7 +1172,7 @@ describe("Battle and EventProcessor", function()
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(1);
 
-                battle.request(
+                await battle.request(
                 {
                     active:
                     [
@@ -1197,7 +1209,7 @@ describe("Battle and EventProcessor", function()
             {
                 // make it so we have 2 moves to choose from
                 battle.state.teams.us.active.moveset.reveal("splash");
-                battle.request(
+                await battle.request(
                 {
                     active:
                     [
@@ -1239,7 +1251,7 @@ describe("Battle and EventProcessor", function()
                 expect(responses).to.have.lengthOf(1);
 
                 // release the charged move
-                battle.request(
+                await battle.request(
                 {
                     active:
                     [

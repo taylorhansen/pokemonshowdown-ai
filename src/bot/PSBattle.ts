@@ -3,7 +3,7 @@ import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice } from "../battle/agent/Choice";
 import { BattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
-import { BattleInitMessage, BattleProgressMessage, CallbackMessage,
+import { BattleInitMessage, BattleProgressMessage, ErrorMessage,
     RequestMessage } from "./dispatcher/Message";
 import { PSEventHandler } from "./PSEventHandler";
 
@@ -33,6 +33,11 @@ export class PSBattle
     private readonly agent: BattleAgent;
     /** Used to send the BattleAgent's choice to the server. */
     private readonly sender: ChoiceSender;
+    /**
+     * Whether the last unhandled `|error|` message indicated an unavailable
+     * choice. The next message should be a `|request|` if this is true.
+     */
+    private unavailableChoice = false;
 
     /**
      * Creates a PSBattle.
@@ -79,48 +84,62 @@ export class PSBattle
         this.eventHandler.handleEvents(msg.events);
         this.eventHandler.printState();
 
-        if (this.eventHandler.battling)
+        if (this.eventHandler.battling && !this.lastRequest.wait)
         {
-            this.eventHandler.printState();
-            if (!this.lastRequest.wait) await this.askAgent();
+            return this.askAgent();
         }
     }
 
     /** Handles a RequestMessage. */
-    public request(msg: RequestMessage): void
+    public async request(msg: RequestMessage): Promise<void>
     {
         this.logger.debug(`request:\n${
             inspect(msg, {colors: false, depth: null})}`);
+
+        if (this.unavailableChoice)
+        {
+            // new info is being revealed
+            this.unavailableChoice = false;
+
+            if (this.lastRequest.active &&
+                !this.lastRequest.active[0].trapped && msg.active &&
+                msg.active[0].trapped)
+            {
+                // active pokemon is now known to be trapped
+                this.lastChoices = this.lastChoices
+                    .filter(c => !c.startsWith("switch"));
+
+                // since this was previously unknown, the opposing pokemon must
+                //  have a trapping ability
+                this.state.teams.us.active.trapped(
+                    this.state.teams.them.active);
+
+                // re-choose based on this new info
+                this.lastChoices = await this.agent.decide(this.state,
+                        this.lastChoices);
+                this.sender(this.lastChoices[0]);
+            }
+        }
 
         this.eventHandler.handleRequest(msg);
         this.lastRequest = msg;
     }
 
-    /** Handles a CallbackMessage. */
-    public async callback(msg: CallbackMessage): Promise<void>
+    /** Handles an ErrorMessage. */
+    public async error(msg: ErrorMessage): Promise<void>
     {
-        if (msg.name === "trapped")
+        if (msg.reason.startsWith("[Unavailable choice]"))
         {
-            // last choice is invalid because we're trapped now
-            // avoid repeated callback messages by eliminating all switch
-            //  choices
-            this.lastChoices = this.lastChoices
-                .filter(c => !c.startsWith("switch"));
-
-            // choices are usually restricted by the request message unless
-            //  this was not known before, which means the opposing pokemon
-            //  has a trapping ability
-            this.state.teams.us.active.trapped(this.state.teams.them.active);
-
-            // re-sort the choices we have left based on new info
-            this.lastChoices = await this.agent.decide(this.state,
-                    this.lastChoices);
+            // rejected last choice based on unknown info
+            // wait for another (guaranteed) request message before proceeding
+            this.unavailableChoice = true;
         }
-        // first choice was rejected
-        else this.lastChoices.shift();
-
-        // retry using second choice
-        this.sender(this.lastChoices[0]);
+        else if (msg.reason.startsWith("[Invalid choice]"))
+        {
+            // rejected last choice based on known info
+            this.lastChoices.shift();
+            this.sender(this.lastChoices[0]);
+        }
     }
 
     /** Asks the BattleAgent what to do next and sends the response. */
