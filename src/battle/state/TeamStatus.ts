@@ -8,9 +8,10 @@ export class TeamStatus
     /** Starts the Wish move countdown if not already started. */
     public wish(): void
     {
+        // after this turn this will be 1
         if (!this.wishDuration) this.wishDuration = 2;
     }
-    public get isWishing(): boolean { return this.wishDuration !== 0; }
+    public get isWishing(): boolean { return this.wishDuration > 0; }
     private wishDuration = 0;
 
     /** Spikes layers. */

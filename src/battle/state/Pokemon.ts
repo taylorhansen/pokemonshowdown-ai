@@ -1,5 +1,5 @@
 import { MajorStatus, majorStatuses, toIdName } from "../../bot/helpers";
-import { dex } from "../dex/dex";
+import { dex, twoTurnMoves } from "../dex/dex";
 import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Moveset } from "./Moveset";
@@ -184,6 +184,11 @@ export class Pokemon
             // otherwise only 1 is used
             : 1;
         this.moveset.getOrReveal(id).pp -= pp;
+
+        // release two-turn move
+        // while this could be the event that prepares the move, a separate
+        //  event is responsible for distinguishing that
+        if (twoTurnMoves.hasOwnProperty(id)) this.volatile.twoTurn = "";
 
         // apply move effects
         const move = dex.moves[id];

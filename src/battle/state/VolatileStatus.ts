@@ -78,7 +78,7 @@ export class VolatileStatus
 
     // situational
 
-    // override ability (isAbilitySuppressed is passed)
+    // override ability (only #isAbilitySuppressed is passed)
     /** Override ability while active. */
     public get overrideAbility(): string
     {
@@ -155,7 +155,18 @@ export class VolatileStatus
     private lockedMoveTurns = 0;
 
     /** Two-turn move currently being prepared. */
-    public twoTurn: keyof typeof twoTurnMoves | "";
+    public get twoTurn(): keyof typeof twoTurnMoves | ""
+    {
+        return this._twoTurn;
+    }
+    public set twoTurn(twoTurn: keyof typeof twoTurnMoves | "")
+    {
+        this._twoTurn = twoTurn;
+        // after this turn this will be 1
+        this.twoTurnCounter = twoTurn ? 2 : 0;
+    }
+    private _twoTurn: keyof typeof twoTurnMoves | "";
+    private twoTurnCounter: number;
 
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge: boolean;
@@ -176,7 +187,7 @@ export class VolatileStatus
     }
     private _stallTurns: number;
     /** Whether we have successfully stalled this turn. */
-    private stalled = false;
+    private stalled: boolean;
 
     /**
      * Temporarily overridden types. This should not be included in toString()
@@ -195,7 +206,7 @@ export class VolatileStatus
     /** Indicates that the Truant ability has activated. */
     public activateTruant(): void
     {
-        // this gets inverted on postTurn
+        // this is what the field should've been before this turn
         this._willTruant = true;
     }
     private _willTruant: boolean;
@@ -227,9 +238,11 @@ export class VolatileStatus
         this.overrideAbilityName = "";
         this.disableTurns = [0, 0, 0, 0];
         this.lockedMoveTurns = 0;
-        this.twoTurn = "";
+        this._twoTurn = "";
+        this.twoTurnCounter = 0;
         this.mustRecharge = false;
         this._stallTurns = 0;
+        this.stalled = false;
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
         this._willTruant = false;
@@ -242,7 +255,8 @@ export class VolatileStatus
      */
     public postTurn(): void
     {
-        // confusion is handled separately since it depends on a message
+        // confusion is handled separately since it depends on an event
+        // other statuses like these are silent
         if (this.magnetRise) ++this.magnetRiseTurns;
         if (this.embargo) ++this.embargoTurns;
 
@@ -254,7 +268,12 @@ export class VolatileStatus
 
         // if twoTurn was set this turn, the two-turn move must be completed or
         //  interrupted on the next turn
-        this.twoTurn = "";
+        // if the move is never used, this code will clean it up
+        if (this.twoTurnCounter)
+        {
+            --this.twoTurnCounter;
+            if (this.twoTurnCounter <= 0) this.twoTurn = "";
+        }
 
         // stalling moves must be used successfully every turn or the turn
         //  counter will reset

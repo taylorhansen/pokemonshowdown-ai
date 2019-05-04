@@ -79,11 +79,14 @@ export class PSBattle
 
         // last choice was officially accepted by the server
         this.agent.acceptChoice(this.lastChoices[0]);
-        this.eventHandler.postTurn();
 
         this.eventHandler.handleEvents(msg.events);
         this.eventHandler.printState();
 
+        // possibly update per-turn statuses
+        this.eventHandler.postTurn();
+
+        // possibly send a response
         if (this.eventHandler.battling && !this.lastRequest.wait)
         {
             return this.askAgent();

@@ -614,6 +614,54 @@ describe("Battle and EventProcessor", function()
                 expect(volatile.confuseTurns).to.equal(0);
             });
 
+            it("Should start/end magnet rise", async function()
+            {
+                const volatile = battle.state.teams.us.active.volatile;
+
+                expect(volatile.magnetRise).to.be.false;
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "Magnet Rise",
+                            otherArgs: []
+                        }
+                    ]
+                });
+                expect(volatile.magnetRise).to.be.true;
+
+                await battle.progress(
+                {
+                    events: [{type: "end", id: us1, volatile: "Magnet Rise"}]
+                });
+                expect(volatile.magnetRise).to.be.false;
+            });
+
+            it("Should start/end embargo", async function()
+            {
+                const volatile = battle.state.teams.us.active.volatile;
+
+                expect(volatile.embargo).to.be.false;
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "Embargo",
+                            otherArgs: []
+                        }
+                    ]
+                });
+                expect(volatile.embargo).to.be.true;
+
+                await battle.progress(
+                {
+                    events: [{type: "end", id: us1, volatile: "Embargo"}]
+                });
+                expect(volatile.embargo).to.be.false;
+            });
+
             it("Should disable/reenable move in BattleState", async function()
             {
                 const mon = battle.state.teams.us.active;
@@ -826,12 +874,13 @@ describe("Battle and EventProcessor", function()
                 mon.volatile.mustRecharge = true;
                 expect(mon.volatile.willTruant).to.be.false;
 
+                // completed a turn without truant activating
                 await battle.progress(
                     {events: [{type: "turn", num: 3}]});
-                // accept Battle's response
-                await battle.progress({events: []});
+                expect(responses).to.have.lengthOf(1);
                 expect(mon.volatile.willTruant).to.be.true;
 
+                // next turn truant activates
                 await battle.progress(
                 {
                     events:
@@ -839,14 +888,14 @@ describe("Battle and EventProcessor", function()
                         {type: "cant", id: us1, reason: "ability: Truant"}
                     ]
                 });
+                expect(responses).to.have.lengthOf(2);
                 expect(mon.volatile.mustRecharge).to.be.false;
-                // should be inverted on postTurn
                 expect(mon.volatile.willTruant).to.be.true;
 
+                // complete this turn
                 await battle.progress(
                     {events: [{type: "turn", num: 4}]});
-                // accept Battle's response
-                await battle.progress({events: []});
+                expect(responses).to.have.lengthOf(3);
                 expect(mon.volatile.willTruant).to.be.false;
             });
 
@@ -1208,8 +1257,10 @@ describe("Battle and EventProcessor", function()
             it("Should prepare two-turn move", async function()
             {
                 // make it so we have 2 moves to choose from
-                battle.state.teams.us.active.moveset.reveal("splash");
-                await battle.request(
+                const mon = battle.state.teams.us.active;
+                mon.moveset.reveal("splash");
+
+                const request: RequestMessage =
                 {
                     active:
                     [
@@ -1224,8 +1275,10 @@ describe("Battle and EventProcessor", function()
                             trapped: true
                         }
                     ],
-                    side: battle.lastRequest.side
-                });
+                    side: battle.lastRequest.side,
+                    wait: true
+                };
+                await battle.request({...request});
                 await battle.progress(
                 {
                     events:
@@ -1241,36 +1294,37 @@ describe("Battle and EventProcessor", function()
                             type: "prepare", id: us1, moveName: "Solar Beam",
                             targetId: them1
                         },
-                        {type: "upkeep"}, {type: "turn", num: 10}
+                        {type: "upkeep"}
                     ]
                 });
+                expect(mon.volatile.twoTurn).to.equal("solarbeam");
+
+                // simulate intermediate choice by sending turn after
+                delete request.wait;
+                await battle.request({...request});
+                await battle.progress({events: [{type: "turn", num: 2}]});
+                expect(mon.volatile.twoTurn).to.equal("solarbeam");
                 // the use of a two-turn move should restrict the client's
                 //  choices to only the move being prepared, which temporarily
                 //  takes the spot of the first move
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(1);
 
-                // release the charged move
-                await battle.request(
-                {
-                    active:
-                    [
-                        {
-                            moves:
-                            [
-                                {
-                                    move: "Solar Beam", id: "solarbeam", pp: 15,
-                                    maxpp: 16, disabled: false, target: "any"
-                                },
-                                {
-                                    move: "Splash", id: "splash", pp: 64,
-                                    maxpp: 64, disabled: false, target: "self"
-                                }
-                            ]
-                        }
-                    ],
-                    side: battle.lastRequest.side
-                });
+                // release the charged move, freeing the pokemon's choices
+                request.active![0].moves =
+                [
+                    {
+                        move: "Solar Beam", id: "solarbeam", pp: 15, maxpp: 16,
+                        disabled: false, target: "any"
+                    },
+                    {
+                        move: "Splash", id: "splash", pp: 64, maxpp: 64,
+                        disabled: false, target: "self"
+                    }
+                ];
+                delete request.active![0].trapped;
+                request.wait = true;
+                await battle.request({...request});
                 await battle.progress(
                 {
                     events:
@@ -1279,16 +1333,101 @@ describe("Battle and EventProcessor", function()
                             type: "move", id: us1, moveName: "Solar Beam",
                             targetId: them1, cause: {type: "lockedmove"}
                         },
-                        {type: "upkeep"}, {type: "turn", num: 11}
+                        {type: "upkeep"}
                     ]
                 });
+                expect(mon.volatile.twoTurn).to.be.empty;
+
+                // simulate intermediate choice by sending turn after
+                delete request.wait;
+                await battle.request({...request});
+                await battle.progress({events: [{type: "turn", num: 3}]});
                 // should now be able to choose other choices
                 expect(battle.lastChoices).to.have.members(
                     ["move 1", "move 2", "switch 2"]);
                 expect(responses).to.have.lengthOf(2);
+                expect(mon.volatile.twoTurn).to.be.empty;
             });
 
-            // TODO: interrupted two-turn moves
+            it("Should interrupt two-turn move", async function()
+            {
+                // make it so we have 2 moves to choose from
+                const mon = battle.state.teams.us.active;
+                mon.moveset.reveal("splash");
+
+                const request: RequestMessage =
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    move: "Solar Beam", id: "solarbeam",
+                                    disabled: false
+                                }
+                            ],
+                            trapped: true
+                        }
+                    ],
+                    side: battle.lastRequest.side,
+                    wait: true
+                };
+                await battle.request({...request});
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Solar Beam",
+                            targetId: them1
+                            // note: server also sends |[still] term at eol,
+                            //  which supresses animation and is technically
+                            //  supposed to hide targetId (applies to doubles)
+                        },
+                        {
+                            type: "prepare", id: us1, moveName: "Solar Beam",
+                            targetId: them1
+                        },
+                        {type: "upkeep"}
+                    ]
+                });
+                expect(mon.volatile.twoTurn).to.equal("solarbeam");
+
+                // simulate intermediate choice by sending turn after
+                delete request.wait;
+                await battle.request({...request});
+                await battle.progress({events: [{type: "turn", num: 2}]});
+                expect(mon.volatile.twoTurn).to.equal("solarbeam");
+                // the use of a two-turn move should restrict the client's
+                //  choices to only the move being prepared, which temporarily
+                //  takes the spot of the first move
+                expect(battle.lastChoices).to.have.members(["move 1"]);
+                expect(responses).to.have.lengthOf(1);
+
+                // interrupt the charged move somehow
+                request.active![0].moves =
+                [
+                    {
+                        move: "Solar Beam", id: "solarbeam", pp: 15, maxpp: 16,
+                        disabled: false, target: "any"
+                    },
+                    {
+                        move: "Splash", id: "splash", pp: 64, maxpp: 64,
+                        disabled: false, target: "self"
+                    }
+                ];
+                delete request.active![0].trapped;
+                await battle.request({...request});
+                await battle.progress({events: [{type: "turn", num: 3}]});
+                // should now be able to choose other choices
+                expect(battle.lastChoices).to.have.members(
+                    ["move 1", "move 2", "switch 2"]);
+                expect(responses).to.have.lengthOf(2);
+                expect(mon.volatile.twoTurn).to.be.empty;
+            });
+
+            // TODO: shorted two-turn move (e.g. solarbeam with sun/powerherb)
         });
 
         describe("sethp", function()

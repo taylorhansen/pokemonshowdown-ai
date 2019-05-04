@@ -337,7 +337,7 @@ export class PSEventHandler
         this.logger.debug(`State:\n${this.state.toString()}`);
     }
 
-    /** Called after a Choice has been sent to the server. */
+    /** Called before the BattleAgent decides. */
     public postTurn(): void
     {
         // cleanup actions after a new turn
