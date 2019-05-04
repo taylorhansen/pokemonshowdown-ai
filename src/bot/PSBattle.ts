@@ -51,13 +51,13 @@ export class PSBattle
         this.sender = sender;
         this.state = new BattleState(agent);
         this.eventHandler = new eventHandlerCtor(this.username, this.state,
-                logger);
+                logger.prefix("PSEventHandler: "));
     }
 
     /** Handles a BattleInitMessage. */
     public init(msg: BattleInitMessage): Promise<void>
     {
-        this.logger.debug(`battleinit: ${
+        this.logger.debug(`battleinit:\n${
             inspect(msg, {colors: false, depth: null})}`);
 
         this.eventHandler.initBattle(msg);
@@ -69,7 +69,7 @@ export class PSBattle
     /** Handles a BattleProgressMessage. */
     public async progress(msg: BattleProgressMessage): Promise<void>
     {
-        this.logger.debug(`battleprogress: ${
+        this.logger.debug(`battleprogress:\n${
             inspect(msg, {colors: false, depth: null})}`);
 
         // last choice was officially accepted by the server
@@ -89,7 +89,7 @@ export class PSBattle
     /** Handles a RequestMessage. */
     public request(msg: RequestMessage): void
     {
-        this.logger.debug(`request: ${
+        this.logger.debug(`request:\n${
             inspect(msg, {colors: false, depth: null})}`);
 
         this.eventHandler.handleRequest(msg);
@@ -127,7 +127,7 @@ export class PSBattle
     private async askAgent(): Promise<void>
     {
         const choices = this.getChoices();
-        this.logger.debug(`choices: [${choices.join(", ")}]`);
+        this.logger.debug(`Choices: [${choices.join(", ")}]`);
 
         this.lastChoices = await this.agent.decide(this.state, choices);
         this.sender(this.lastChoices[0]);

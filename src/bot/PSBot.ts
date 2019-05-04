@@ -10,7 +10,7 @@ import { PSBattle } from "./PSBattle";
 export class PSBot
 {
     /** Logs data to the user. */
-    private readonly logger = Logger.stdout;
+    private readonly logger: Logger;
     /** Websocket client. Used for connecting to the server. */
     private readonly client = new WSClient();
     /** Listens to server messages. */
@@ -87,9 +87,9 @@ export class PSBot
             {
                 if (data.type === "utf8" && data.utf8Data)
                 {
-                    this.logger.debug(`Received: ${data.utf8Data}`);
+                    this.logger.debug(`Received:\n${data.utf8Data}`);
                     return parsePSMessage(data.utf8Data, this.listener,
-                        this.logger);
+                        this.logger.prefix("Parser: "));
                 }
             });
 
@@ -198,7 +198,7 @@ export class PSBot
             this.addResponses(room, `|/choose ${choice}`);
 
         this.battles[room] = new PSBattle(this.username, agent, sender,
-                this.logger);
+                this.logger.prefix(`PSBattle(${room}): `));
     }
 
     /**

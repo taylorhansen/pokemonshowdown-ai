@@ -334,7 +334,7 @@ export class PSEventHandler
     /** Prints the state to the logger. */
     public printState(): void
     {
-        this.logger.debug(`state:\n${this.state.toString()}`);
+        this.logger.debug(`State:\n${this.state.toString()}`);
     }
 
     /** Called after a Choice has been sent to the server. */
@@ -468,7 +468,7 @@ export class PSEventHandler
         if (cause.of) mon = this.getActive(cause.of.owner);
         // otherwise, the most recently mentioned id should do
         else if (id) mon = this.getActive(id.owner);
-        else throw new Error("handleCause not given PokemonID");
+        else throw new Error("No PokemonID given");
 
         switch (cause.type)
         {

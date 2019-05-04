@@ -18,6 +18,7 @@ import * as tf from "@tensorflow/tfjs";
 import * as fs from "fs";
 import { dirname } from "path";
 import * as ProgressBar from "progress";
+import { Writable } from "stream";
 import { URL } from "url";
 import { Decision, Network, toColumn } from "../src/ai/Network";
 import { Choice } from "../src/battle/agent/Choice";
@@ -31,26 +32,52 @@ import { Logger } from "../src/Logger";
 // @ts-ignore
 import s = require("./Pokemon-Showdown/.sim-dist/battle-stream");
 
-/** Main logger for top-level. */
-const logger = Logger.stdout;
+/** Current progress bar. */
+let bar: ProgressBar | undefined;
+
+/** Output stream that doesn't interfere with the progress bar. */
+const logStream = new Writable();
+type CB = (error: Error | null | undefined) => void;
+logStream.write = function(chunk: any, enc?: string | CB, cb?: CB)
+{
+    if (bar)
+    {
+        // remove last newline, since ProgressBar#interrupt() adds it
+        if (typeof chunk === "string" && chunk.endsWith("\n"))
+        {
+            chunk = chunk.substr(0, chunk.length - 1);
+        }
+        bar.interrupt(chunk);
+    }
+    else process.stderr.write(chunk, enc as any, cb);
+    return false;
+};
+
 /** Maximum number of turns in a game before it's considered a tie. */
 const maxTurns = 100;
 
+/** Models to represent p1 and p2. */
+type Models = {[P in PlayerID]: tf.Model};
+
 /** Options for starting a new game. */
-interface GameOptions
+interface GameOptions extends Models
 {
     /**
      * Whether to save Decision objects to disk, which will be used for learning
      * later.
      */
-    saveDecisions: boolean;
+    saveDecisions?: boolean;
+    /** Path to the file in which to store debug info. */
+    logPath?: string;
+    /** Logger object. */
+    logger?: Logger;
 }
 
 /** Result object returned from `play()`. */
 interface GameResult
 {
     /**
-     * URLs to saved Decision objects. Empty if `options.saveDecisions` was
+     * URLs to saved Decision objects. Empty if `GameOptions#saveDecisions` was
      * false.
      */
     decisions: URL[];
@@ -58,48 +85,42 @@ interface GameResult
     winner: PlayerID | null;
 }
 
-/**
- * Pits two models against each other.
- * @param models Neural network models to represent p1 and p2.
- * @param options Game options.
- * @param logPath Path to the file in which to store debug info.
- * @returns A Promise to compute the result of the game.
- */
-async function play(models: {[P in PlayerID]: tf.Model},
-    options: GameOptions, logPath?: string): Promise<GameResult>
+/** Pits two models against each other. */
+async function play(options: GameOptions): Promise<GameResult>
 {
+    const logger = options.logger || Logger.null;
+
     const streams = s.getPlayerStreams(new s.BattleStream());
     streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
-    const result: GameResult = {decisions: [], winner: null};
+    let winner: PlayerID | null = null;
     const eventLoops: Promise<void>[] = [];
     const filePromises: Promise<URL>[] = [];
 
     // setup log file
-    let file: fs.WriteStream | undefined;
-    if (logPath)
+    let file: fs.WriteStream | null;
+    if (options.logPath)
     {
-        const dir = dirname(logPath);
+        const dir = dirname(options.logPath);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
 
-        file = fs.createWriteStream(logPath);
+        file = fs.createWriteStream(options.logPath);
     }
+    else file = null;
 
     let done = false;
 
     for (const id of ["p1", "p2"] as PlayerID[])
     {
+        const innerLog = logger.pipeDebug(file).prefix(`Play(${id}): `);
 
-        let innerLog: Logger;
-        if (file) innerLog = new Logger(file, id + ": ");
-        else innerLog = Logger.null;
-
-        const agent = new Network(innerLog);
-        agent.setModel(models[id]);
+        const agent = new Network(innerLog.prefix("Network: "));
+        agent.setModel(options[id]);
 
         // sends player choices to the battle stream
         function sender(choice: Choice): void
         {
+            innerLog.debug(`Sending ${choice}`);
             streams[id].write(choice);
 
             // FIXME: duplicate Decisions can be saved if BattleAgent#decide()
@@ -110,7 +131,8 @@ async function play(models: {[P in PlayerID]: tf.Model},
             }
         }
 
-        const battle = new PSBattle(id, agent, sender, innerLog);
+        const battle = new PSBattle(id, agent, sender,
+            innerLog.prefix("PSBattle: "));
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
         const listener = new MessageListener();
@@ -130,7 +152,7 @@ async function play(models: {[P in PlayerID]: tf.Model},
                         // since the usernames passed into the Network
                         //  constructors are the same was their PlayerID, we can
                         //  safely typecast the username
-                        result.winner = event.winner as PlayerID;
+                        winner = event.winner as PlayerID;
                         // fallthrough
                     case "tie":
                         done = true;
@@ -154,11 +176,12 @@ async function play(models: {[P in PlayerID]: tf.Model},
                 innerLog.debug(`received:\n${output}`);
                 try
                 {
-                    await parsePSMessage(output, listener, innerLog);
+                    await parsePSMessage(output, listener,
+                        innerLog.prefix("Parser: "));
                 }
                 catch (e)
                 {
-                    logger.error(`${id}: ${e}`);
+                    innerLog.error(e);
                     console.trace();
                 }
             }
@@ -168,9 +191,7 @@ async function play(models: {[P in PlayerID]: tf.Model},
     }
 
     await Promise.all(eventLoops);
-
-    result.decisions = await Promise.all(filePromises);
-    return result;
+    return {winner, decisions: await Promise.all(filePromises)};
 }
 
 /** Folder to put all Decision files into. */
@@ -211,8 +232,6 @@ function compile(model: tf.Model): void
  */
 async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
 {
-    let bar: ProgressBar;
-
     const dataset = {async iterator()
     {
         const files = [...decisionFiles];
@@ -230,7 +249,7 @@ async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
             const state = toColumn(decision.state);
             const target = toColumn(decision.target);
 
-            bar.tick();
+            if (bar) bar.tick();
             return {done: files.length <= 0, value: [state, target]};
         }};
     }};
@@ -255,61 +274,83 @@ async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
 /**
  * Trains and evaluates a neural network model.
  * @param model Model to train.
+ * @param logger Logger object.
  * @param games Amount of games to play during self-play and evaluation.
  * @returns A new Model if it is proved to be better after self-play, or the
  * same one that's given if the new Model failed.
  */
-async function train(model: tf.Model, games = 5): Promise<tf.Model>
+async function train(model: tf.Model, logger = Logger.null, games = 5):
+    Promise<tf.Model>
 {
     const newModel = Network.createModel();
     newModel.setWeights(model.getWeights());
 
-    logger.log("beginning self-play");
+    logger.debug("Beginning self-play");
     const decisionFiles: URL[] = [];
-    let bar = new ProgressBar("self-play games: [:bar] :current/:total",
-        {total: games, stream: logger.stream});
+    bar = new ProgressBar("Self-play games: [:bar] :current/:total",
+        {total: games, clear: true});
     bar.update(0);
     for (let i = 0; i < games; ++i)
     {
-        const {decisions, winner} = await play({p1: newModel, p2: newModel},
-            {saveDecisions: true}, `${selfPlayFolder}/game-${i + 1}`);
+        const innerLog = logger.prefix(`Game(${i + 1}/${games}): `);
+        innerLog.debug("Start");
+
+        const {decisions, winner} = await play(
+        {
+            p1: newModel, p2: newModel, saveDecisions: true,
+            logPath: `${selfPlayFolder}/game-${i + 1}`, logger: innerLog
+        });
+
         decisionFiles.push(...decisions);
 
-        if (winner) bar.interrupt(`game ${i + 1}: ${winner}`);
-        else bar.interrupt(`game ${i + 1}: tie`);
+        if (winner) innerLog.debug(`Winner: ${winner}`);
+        else innerLog.debug("Tie");
         bar.tick();
     }
+    bar = undefined;
 
-    logger.log("learning (this may take a while)");
+    logger.debug("Learning (this may take a while)");
     compile(newModel);
     await learn(newModel, decisionFiles);
 
     // challenge the old model to see if the newly trained one learned anything
-    logger.log("evaluating new network (p1=new, p2=old)");
+    logger.debug("Evaluating new network (p1=new, p2=old)");
     const wins = {p1: 0, p2: 0};
-    bar = new ProgressBar("evaluation games: [:bar] :current/:total",
-        {total: games, stream: logger.stream});
+    bar = new ProgressBar("Evaluation games: [:bar] :current/:total",
+        {total: games, clear: true});
     bar.update(0);
     for (let i = 0; i < games; ++i)
     {
-        const {winner} = await play({p1: newModel, p2: model},
-            {saveDecisions: false}, `${evaluateFolder}/game-${i + 1}`);
+        const innerLog = logger.prefix(`Game(${i + 1}/${games}): `);
+        innerLog.debug("Start");
+
+        const {winner} = await play(
+        {
+            p1: newModel, p2: model, logPath: `${evaluateFolder}/game-${i + 1}`,
+            logger: innerLog
+        });
+
         if (winner)
         {
             ++wins[winner];
-            bar.interrupt(`game ${i + 1}: ${winner}`);
+            innerLog.debug(`Winner: ${winner}`);
         }
-        else bar.interrupt(`game ${i + 1}: tie`);
+        else innerLog.debug("Tie");
         bar.tick();
     }
-    logger.debug("done with evaluating");
-    logger.debug(`wins: ${JSON.stringify(wins)}`);
+    bar = undefined;
+
+    logger.debug(`Wins: ${JSON.stringify(wins)}`);
     if (wins.p1 > wins.p2)
     {
-        logger.debug("new model wins");
+        logger.debug("New model (p1) wins, replace old model");
         return newModel;
     }
-    logger.debug("old model not replaced");
+    else if (wins.p1 < wins.p2)
+    {
+        logger.debug("Old model (p2) wins, not replaced");
+    }
+    else logger.debug("Tie, old model not replaced");
     return model;
 }
 
@@ -318,11 +359,16 @@ const cycles = 1;
 
 (async function()
 {
-    let model = await Network.loadModel(modelPath);
+    /** Main top-level logger. */
+    const logger = new Logger(logStream, logStream, /*prefix*/"Train: ");
+
+    let model = await Network.loadModel(modelPath, logger.prefix("Network: "));
     for (let i = 0; i < cycles; ++i)
     {
-        logger.log(`TRAINING CYCLE ${i + 1}/${cycles}:`);
-        model = await train(model);
+        logger.debug(`Starting training cycle ${i + 1}/${cycles}`);
+        model = await train(model,
+            logger.prefix(`Cycle(${i + 1}/${cycles}): `));
     }
+    logger.debug("Saving model");
     await model.save(`file://${modelPath}`);
 })();

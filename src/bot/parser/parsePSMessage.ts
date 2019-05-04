@@ -1164,7 +1164,7 @@ class MessageParser
     {
         if (!id)
         {
-            if (!quiet) this.logger.error("missing PokemonID");
+            if (!quiet) this.logger.error("Missing PokemonID");
             return null;
         }
 

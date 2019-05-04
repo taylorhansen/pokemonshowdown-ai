@@ -447,10 +447,10 @@ ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
 ${s}grounded: \
 ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
-${s}type: ${this.stringifyTypes()}
+${s}types: [${this.stringifyTypes()}]
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.itemName ? this.itemName : "<unrevealed>"}
-${s}moveset: ${this.moveset.toString()}`;
+${s}moveset: [${this.moveset.toString()}]`;
     }
 
     // istanbul ignore next: only used for logging
@@ -467,9 +467,12 @@ ${s}moveset: ${this.moveset.toString()}`;
             const override = this._volatile.overrideTypes[i];
             if (override !== "???" && override !== type)
             {
-                type += ` (${override})`;
+                if (type === "???") type = `(${override})`;
+                else type += ` (${override})`;
             }
-            result.push(type);
+
+            // skip completely blank types
+            if (type !== "???") result.push(type);
         }
 
         // include third type in parentheses

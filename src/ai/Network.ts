@@ -5,7 +5,6 @@ import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice, choiceIds, intToChoice } from "../battle/agent/Choice";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
-import { modelPath } from "../config";
 import { Logger } from "../Logger";
 import { RewardTracker } from "./RewardTracker";
 
@@ -87,7 +86,7 @@ export class Network implements BattleAgent
         const prediction = this.model.predict(stateTensor) as tf.Tensor2D;
         const predictionData = await prediction.data();
 
-        this.logger.debug(`prediction: {${
+        this.logger.debug(`Prediction: {${
             Array.prototype.map.call(predictionData, (r: number, i: number) =>
                     `${intToChoice[i]}: ${r}`).join(", ")}}`);
 
@@ -99,7 +98,7 @@ export class Network implements BattleAgent
 
         if (this.lastStateData && this.lastChoice)
         {
-            this.logger.debug(`applying reward: ${this.reward.value}`);
+            this.logger.debug(`Applying reward: ${this.reward.value}`);
             // apply the Q learning update rule
             // this makes the connection between present and future rewards by
             //  combining the network's predicted reward from its current state
@@ -118,7 +117,7 @@ export class Network implements BattleAgent
             //  learning later
             this._decision = {state: this.lastStateData, target};
 
-            this.logger.debug(`combined Q-value: ${target[id]}`);
+            this.logger.debug(`Combined Q-value: ${target[id]}`);
         }
         this.reward.reset();
 
@@ -156,8 +155,8 @@ export class Network implements BattleAgent
         }
         catch (e)
         {
-            logger.error(`error opening model: ${e}`);
-            logger.debug("constructing default model");
+            logger.error(`Error opening model: ${e}`);
+            logger.debug("Constructing default model");
             model = Network.createModel();
             Network.verifyModel(model);
         }
