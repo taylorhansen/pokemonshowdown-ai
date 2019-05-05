@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import { createServer, Server } from "http";
 import "mocha";
-import { connection as WSConnection, server as WSServer } from "websocket";
+import { connection as WSConnection, IMessage, server as WSServer } from
+    "websocket";
 import { PSBot } from "../../src/bot/PSBot";
 import { Logger } from "../../src/Logger";
 import { MockBattleAgent } from "./MockBattleAgent";
@@ -16,6 +17,8 @@ describe("PSBot", function()
     let server: WSServer;
     /** Current connection from server to client. */
     let connection: WSConnection;
+    /** Promise to get the next message from the current connection. */
+    let message: Promise<IMessage>;
 
     before("Initialize websocket server", function()
     {
@@ -32,6 +35,7 @@ describe("PSBot", function()
             if (req.httpRequest.url === "/showdown/websocket")
             {
                 connection = req.accept();
+                message = new Promise(res => connection.on("message", res));
             }
         });
     });
@@ -50,47 +54,36 @@ describe("PSBot", function()
             bot.acceptChallenges(format, MockBattleAgent);
         });
 
-        it(`Should accept ${format} challenges`, function(done)
+        it(`Should accept ${format} challenges`, async function()
         {
-            connection.on("message", message =>
-            {
-                expect(message.type).to.equal("utf8");
-                expect(message.utf8Data).to.equal(`|/accept ${username}`);
-                done();
-            });
-
             connection.sendUTF(`|updatechallenges|\
 {"challengesFrom":{"${username}":"${format}"},"challengeTo":null}`);
+
+            const msg = await message;
+            expect(msg.type).to.equal("utf8");
+            expect(msg.utf8Data).to.equal(`|/accept ${username}`);
         });
 
-        it(`Should not accept unsupported challenges`, function(done)
+        it(`Should not accept unsupported challenges`, async function()
         {
-            connection.on("message", message =>
-            {
-                expect(message.type).to.equal("utf8");
-                expect(message.utf8Data).to.equal(`|/reject ${username}`);
-                done();
-            });
-
             connection.sendUTF(`|updatechallenges|\
 {"challengesFrom":{"${username}":"notarealformat"},"challengeTo":null}`);
+
+            const msg = await message;
+            expect(msg.type).to.equal("utf8");
+            expect(msg.utf8Data).to.equal(`|/reject ${username}`);
         });
     });
 
     describe("#setAvatar()", function()
     {
-        it("Should set avatar", function(done)
+        it("Should set avatar", async function()
         {
             const avatar = 1;
-
-            connection.on("message", message =>
-            {
-                expect(message.type).to.equal("utf8");
-                expect(message.utf8Data).to.equal(`|/avatar ${avatar}`);
-                done();
-            });
-
             bot.setAvatar(avatar);
+            const msg = await message;
+            expect(msg.type).to.equal("utf8");
+            expect(msg.utf8Data).to.equal(`|/avatar ${avatar}`);
         });
     });
 
