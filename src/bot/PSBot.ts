@@ -1,3 +1,4 @@
+import fetch, { RequestInit } from "node-fetch";
 import { client as WSClient } from "websocket";
 import { BattleAgent, BattleAgentCtor } from "../battle/agent/BattleAgent";
 import { Choice } from "../battle/agent/Choice";
@@ -5,6 +6,19 @@ import { Logger } from "../Logger";
 import { MessageListener } from "./dispatcher/MessageListener";
 import { parsePSMessage } from "./parser/parsePSMessage";
 import { PSBattle } from "./PSBattle";
+
+/** Options for login. */
+export interface LoginOptions
+{
+    /** Account username. */
+    username: string;
+    /** Account password. */
+    password?: string;
+    /** Domain to login with. */
+    domain: string;
+    /** Server id used for login. */
+    serverid: string;
+}
 
 /** Manages the connection to a PokemonShowdown server. */
 export class PSBot
@@ -21,6 +35,8 @@ export class PSBot
     private readonly battles: {[room: string]: PSBattle} = {};
     /** Username of the client. */
     private username: string;
+    /** Callback for when the challstr is received. */
+    private challstr: (challstr: string) => Promise<void> = async function() {};
     /** Sends a response to the server. */
     private sender: (response: string) => void;
     /** Function to call to resolve the `connect()` promise. */
@@ -35,6 +51,16 @@ export class PSBot
         this.logger = logger;
         this.initClient();
         this.initListeners();
+    }
+
+    /**
+     * Allows the PSBot to accept battle challenges for the given format.
+     * @param format Name of the format to use.
+     * @param ctor The type of BattleAgent to use for this format.
+     */
+    public acceptChallenges(format: string, ctor: BattleAgentCtor): void
+    {
+        this.formats[format] = ctor;
     }
 
     /**
@@ -56,14 +82,54 @@ export class PSBot
         });
     }
 
-    /**
-     * Allows the PSBot to accept battle challenges for the given format.
-     * @param format Name of the format to use.
-     * @param ctor The type of BattleAgent to use for this format.
-     */
-    public acceptChallenges(format: string, ctor: BattleAgentCtor): void
+    /** Sets up this PSBot to login once connected. */
+    public login(options: LoginOptions): void
     {
-        this.formats[format] = ctor;
+        this.challstr = async challstr =>
+        {
+            // challstr callback consumed, no need to call again
+            this.challstr = async function() {};
+
+            // url to make the post request to
+            const url = `${options.domain}/~~${options.serverid}/action.php`;
+
+            const init: RequestInit =
+            {
+                method: "POST",
+                headers: {"Content-Type": "application/x-www-form-urlencoded"}
+            };
+
+            // used to complete the login
+            let assertion: string;
+
+            if (!options.password)
+            {
+                // login without password
+                init.body = `act=getassertion&userid=${options.username}&\
+challstr=${challstr}`;
+                const res = await fetch(url, init);
+                assertion = await res.text();
+            }
+            else
+            {
+                // login with password
+                init.body = `act=login&name=${options.username}&\
+pass=${options.password}&challstr=${challstr}`;
+                const res = await fetch(url, init);
+                const text = await res.text();
+                console.log(`text: ${text}`);
+                // response text returns "]" followed by json
+                ({assertion} = JSON.parse(text.substr(1)));
+            }
+
+            this.sender(`|/trn ${options.username},0,${assertion}`);
+        };
+    }
+
+    /** Sets avatar id. */
+    public setAvatar(avatar: number): void
+    {
+        this.sender(`|/avatar ${avatar}`);
     }
 
     /** Initializes websocket client. */
@@ -105,6 +171,9 @@ export class PSBot
     /** Initializes the parser's message listeners. */
     private initListeners(): void
     {
+        // call challstr callback
+        this.listener.on("challstr", msg => this.challstr(msg.challstr));
+
         this.listener.on("init", (msg, room) =>
         {
             if (!this.battles.hasOwnProperty(room) && msg.type === "battle")

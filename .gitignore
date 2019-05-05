@@ -17,6 +17,9 @@ logs/
 # clone of pokemon showdown repo
 scripts/Pokemon-Showdown/
 
+# private config
+src/config.ts
+
 # neural network weights files
 models/
 

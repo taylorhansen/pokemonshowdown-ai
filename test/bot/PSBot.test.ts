@@ -14,7 +14,7 @@ describe("PSBot", function()
     let bot: PSBot;
     let httpServer: Server;
     let server: WSServer;
-    // current connection from server to client
+    /** Current connection from server to client. */
     let connection: WSConnection;
 
     before("Initialize websocket server", function()
@@ -74,6 +74,23 @@ describe("PSBot", function()
 
             connection.sendUTF(`|updatechallenges|\
 {"challengesFrom":{"${username}":"notarealformat"},"challengeTo":null}`);
+        });
+    });
+
+    describe("#setAvatar()", function()
+    {
+        it("Should set avatar", function(done)
+        {
+            const avatar = 1;
+
+            connection.on("message", message =>
+            {
+                expect(message.type).to.equal("utf8");
+                expect(message.utf8Data).to.equal(`|/avatar ${avatar}`);
+                done();
+            });
+
+            bot.setAvatar(avatar);
         });
     });
 

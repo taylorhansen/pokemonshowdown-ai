@@ -3,6 +3,7 @@ node_js: 8
 install:
   - npm i
   - npm i -g codecov
+  - cp src/config.example.ts src/config.ts
 script:
   - npm run build
   - npm test

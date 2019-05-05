@@ -7,6 +7,8 @@ My current goal for now is to have it play in Generation 4.
 The code is pretty unstable right now so I wouldn't recommend trying to use it out of the box.
 
 ## Compiling/running
+Before running the main client, create a `src/config.ts` file using [`src/config.example.ts`](/src/config.example.ts) as a guide.
+
 ```sh
 # compile everything
 npm install
@@ -14,7 +16,7 @@ npm run build
 # directly execute the program
 node dist/index.js
 
-# compile and run client
+# run using ts-node client
 npm run main
 # lint for style errors
 npm run lint

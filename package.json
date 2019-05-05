@@ -39,8 +39,10 @@
   "dependencies": {
     "@tensorflow/tfjs": "^0.13.5",
     "@tensorflow/tfjs-node": "^0.1.21",
+    "@types/node-fetch": "^2.3.3",
     "@types/progress": "^2.0.3",
     "@types/websocket": "0.0.40",
+    "node-fetch": "^2.5.0",
     "progress": "^2.0.3",
     "websocket": "^1.0.28"
   },
