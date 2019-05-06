@@ -1,10 +1,10 @@
-import { MajorStatus, majorStatuses, toIdName } from "../../bot/helpers";
 import { dex, twoTurnMoves } from "../dex/dex";
 import { PokemonData, Type, types } from "../dex/dex-types";
 import { HP } from "./HP";
 import { Moveset } from "./Moveset";
 import { PossibilityClass } from "./PossibilityClass";
 import { Team } from "./Team";
+import { MajorStatus, majorStatuses } from "./utility";
 import { VolatileStatus } from "./VolatileStatus";
 
 /** Holds all the possibly incomplete info about a pokemon. */
@@ -52,10 +52,7 @@ export class Pokemon
     }
     public set ability(ability: string)
     {
-        // make sure ability name is converted to an id name
-        const name = toIdName(ability);
-
-        if (!dex.abilities.hasOwnProperty(name))
+        if (!dex.abilities.hasOwnProperty(ability))
         {
             throw new Error(`Unknown ability "${ability}"`);
         }
@@ -63,17 +60,17 @@ export class Pokemon
         // narrow down baseAbility
         if (!this._baseAbility.definiteValue)
         {
-            if (!this.canHaveAbility(name))
+            if (!this.canHaveAbility(ability))
             {
-                throw new Error(
-                    `Pokemon ${this.species} can't have base ability ${name}`);
+                throw new Error(`Pokemon ${this.species} can't have base \
+ability ${ability}`);
             }
 
-            this._baseAbility.set(name);
+            this._baseAbility.set(ability);
         }
 
         // override current ability
-        this.volatile.overrideAbility = name;
+        this.volatile.overrideAbility = ability;
     }
     /** Base ability id name. May be empty if not yet narrowed. */
     public get baseAbility(): string

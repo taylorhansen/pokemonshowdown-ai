@@ -3,9 +3,9 @@ import { createServer, Server } from "http";
 import "mocha";
 import { connection as WSConnection, IMessage, server as WSServer } from
     "websocket";
-import { PSBot } from "../../src/bot/PSBot";
 import { Logger } from "../../src/Logger";
-import { MockBattleAgent } from "./MockBattleAgent";
+import { PSBot } from "../../src/psbot/PSBot";
+import { MockBattleAgent } from "../battle/agent/MockBattleAgent";
 
 describe("PSBot", function()
 {

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { CallbackDispatcher } from
-    "../../../src/bot/dispatcher/CallbackDispatcher";
+    "../../../src/psbot/dispatcher/CallbackDispatcher";
 
 describe("CallbackDispatcher", function()
 {

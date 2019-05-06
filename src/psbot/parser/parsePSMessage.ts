@@ -1,4 +1,6 @@
 /** @file Exposes the `parsePSMessage` function. */
+import { BoostableStatName, isMajorStatus, MajorStatus } from
+    "../../battle/state/utility";
 import { WeatherType } from "../../battle/state/Weather";
 import { Logger } from "../../Logger";
 import { AbilityCause, AbilityEvent, ActivateEvent, AnyBattleEvent,
@@ -10,8 +12,8 @@ import { AbilityCause, AbilityEvent, ActivateEvent, AnyBattleEvent,
     UpkeepEvent, WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage, Message, MessageType } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
-import { BoostableStatName, isMajorStatus, isPlayerId, MajorStatus, PlayerID,
-    PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
+import { isPlayerId, PlayerID, PokemonDetails, PokemonID, PokemonStatus } from
+    "../helpers";
 
 /**
  * Parses a message from a PokemonShowdown server.

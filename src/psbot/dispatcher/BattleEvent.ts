@@ -1,7 +1,7 @@
 /** @file Interfaces and helper functions for handling BattleEvents. */
+import { BoostableStatName, MajorStatus } from "../../battle/state/utility";
 import { WeatherType } from "../../battle/state/Weather";
-import { BoostableStatName, MajorStatus, PlayerID, PokemonDetails, PokemonID,
-    PokemonStatus } from "../helpers";
+import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
 /**
  * Set of BattleEventPrefixes. Heal, drag, and unboost are included here, but

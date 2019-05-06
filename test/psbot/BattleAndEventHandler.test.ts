@@ -3,11 +3,11 @@ import "mocha";
 import { Choice } from "../../src/battle/agent/Choice";
 import { types } from "../../src/battle/dex/dex-types";
 import { Weather } from "../../src/battle/state/Weather";
-import { MoveEvent, SetHPEvent } from "../../src/bot/dispatcher/BattleEvent";
+import { MoveEvent, SetHPEvent } from "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
-    "../../src/bot/dispatcher/Message";
+    "../../src/psbot/dispatcher/Message";
 import { PokemonDetails, PokemonID, PokemonStatus } from
-    "../../src/bot/helpers";
+    "../../src/psbot/helpers";
 import * as testArgs from "../helpers/battleTestArgs";
 import { MockPSBattle } from "./MockPSBattle";
 
@@ -1137,7 +1137,7 @@ describe("Battle and EventProcessor", function()
                 beforeEach("Switchin a Pressure pokemon", function()
                 {
                     battle.state.teams.them.switchIn("Zapdos", 100, "", 100,
-                            100)!.ability = "Pressure";
+                            100)!.ability = "pressure";
                 });
 
                 beforeEach("Reveal an attacking move", function()

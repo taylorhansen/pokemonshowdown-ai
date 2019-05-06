@@ -1,8 +1,7 @@
-import { BoostableStatName, boostableStatNames, toIdName } from
-    "../../bot/helpers";
 import { dex, numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
 import { Type, types } from "../dex/dex-types";
-import { oneHot, pluralTurns, tempStatusTurns } from "./utility";
+import { BoostableStatName, boostableStatNames, oneHot, pluralTurns,
+    tempStatusTurns } from "./utility";
 
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
@@ -86,15 +85,13 @@ export class VolatileStatus
     }
     public set overrideAbility(ability: string)
     {
-        const name = toIdName(ability);
-
-        if (!dex.abilities.hasOwnProperty(name))
+        if (!dex.abilities.hasOwnProperty(ability))
         {
             throw new Error(`Unknown ability "${ability}"`);
         }
-        this._overrideAbility = dex.abilities[name];
+        this._overrideAbility = dex.abilities[ability];
 
-        this.overrideAbilityName = name;
+        this.overrideAbilityName = ability;
     }
     /** Whether the ability is being suppressed. */
     public isAbilitySuppressed(): boolean

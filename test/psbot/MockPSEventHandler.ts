@@ -2,8 +2,8 @@ import { BattleState } from "../../src/battle/state/BattleState";
 import { Pokemon } from "../../src/battle/state/Pokemon";
 import { Side } from "../../src/battle/state/Side";
 import { Team } from "../../src/battle/state/Team";
-import { PlayerID } from "../../src/bot/helpers";
-import { PSEventHandler } from "../../src/bot/PSEventHandler";
+import { PlayerID } from "../../src/psbot/helpers";
+import { PSEventHandler } from "../../src/psbot/PSEventHandler";
 
 /** Mocks the PSEventHandler class to expose certain members. */
 export class MockPSEventHandler extends PSEventHandler

@@ -1,3 +1,5 @@
+import { MajorStatus } from "../battle/state/utility";
+
 /** @file Contains useful helper types. */
 
 /** Player ID in a battle. */
@@ -59,42 +61,4 @@ export interface PokemonStatus
     hp: number;
     hpMax: number;
     condition: MajorStatus;
-}
-
-// major status
-
-/** Hold the set of all major status names. Empty string means no status. */
-export const majorStatuses =
-{
-    "": 0, brn: 1, par: 2, psn: 3, tox: 4, slp: 5, frz: 6
-};
-
-/** Major pokemon status conditions. */
-export type MajorStatus = keyof typeof majorStatuses;
-
-/**
- * Checks if a value matches a major status.
- * @param status Value to be checked.
- * @returns True if the name matches, false otherwise.
- */
-export function isMajorStatus(status: any): status is MajorStatus
-{
-    return majorStatuses.hasOwnProperty(status);
-}
-
-/** Holds the set of all boostable stat names. */
-export const boostableStatNames =
-{
-    atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true,
-    evasion: true
-};
-
-/** Names of pokemon stats that can be boosted. */
-export type BoostableStatName = keyof typeof boostableStatNames;
-
-// istanbul ignore next: trivial
-/** Converts a display name into an id name. */
-export function toIdName(str: string): string
-{
-    return str.toLowerCase().replace(/[ -]/g, "");
 }

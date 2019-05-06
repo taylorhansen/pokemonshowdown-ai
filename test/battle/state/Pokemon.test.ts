@@ -102,14 +102,6 @@ describe("Pokemon", function()
             expect(mon.ability).to.equal("hustle");
         });
 
-        it("Should allow display name", function()
-        {
-            mon.species = "Togepi";
-            mon.ability = "Serene Grace";
-            expect(mon.baseAbility).to.equal("serenegrace");
-
-        });
-
         it("Should set volatile ability", function()
         {
             mon.species = "Togepi";

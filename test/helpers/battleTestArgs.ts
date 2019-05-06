@@ -1,10 +1,10 @@
 /** @file Contains test arguments for battle messages. */
 import { AnyBattleEvent, Cause, TurnEvent } from
-    "../../src/bot/dispatcher/BattleEvent";
+    "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
-    "../../src/bot/dispatcher/Message";
+    "../../src/psbot/dispatcher/Message";
 import { PokemonDetails, PokemonID, PokemonStatus } from
-    "../../src/bot/helpers";
+    "../../src/psbot/helpers";
 
 export const username: string[] = ["user1", "user2"];
 

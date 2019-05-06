@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import "mocha";
-import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 import { BoostableStatName, boostableStatNames } from
-    "../../../src/bot/helpers";
+    "../../../src/battle/state/utility";
+import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 
 describe("VolatileStatus", function()
 {
@@ -186,7 +186,7 @@ describe("VolatileStatus", function()
     {
         it("Should set override ability", function()
         {
-            volatile.overrideAbility = "Swift Swim";
+            volatile.overrideAbility = "swiftswim";
             expect(volatile.overrideAbility).to.equal("swiftswim");
         });
 

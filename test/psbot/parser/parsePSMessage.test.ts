@@ -1,13 +1,13 @@
 import { expect } from "chai";
 import "mocha";
-import { Callback } from "../../../src/bot/dispatcher/CallbackDispatcher";
-import { Message, MessageType, UpdateChallengesMessage } from
-    "../../../src/bot/dispatcher/Message";
-import { MessageDispatchArgs, MessageListener } from
-    "../../../src/bot/dispatcher/MessageListener";
-import { RoomType } from "../../../src/bot/helpers";
-import { parsePSMessage } from "../../../src/bot/parser/parsePSMessage";
 import { Logger } from "../../../src/Logger";
+import { Callback } from "../../../src/psbot/dispatcher/CallbackDispatcher";
+import { Message, MessageType, UpdateChallengesMessage } from
+    "../../../src/psbot/dispatcher/Message";
+import { MessageDispatchArgs, MessageListener } from
+    "../../../src/psbot/dispatcher/MessageListener";
+import { RoomType } from "../../../src/psbot/helpers";
+import { parsePSMessage } from "../../../src/psbot/parser/parsePSMessage";
 import * as testArgs from "../../helpers/battleTestArgs";
 import { buildMessage, composeBattleInit, composeBattleProgress,
     stringifyRequest } from "../../helpers/buildMessage";

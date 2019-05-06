@@ -1,8 +1,8 @@
 /* istanbul ignore file */
 import { DefaultNetwork } from "./ai/DefaultNetwork";
-import { PSBot } from "./bot/PSBot";
 import { domain, password, serverid, username } from "./config";
 import { Logger } from "./Logger";
+import { PSBot } from "./psbot/PSBot";
 
 // create client object
 const bot = new PSBot(Logger.stdout.prefix("PSBot: "));

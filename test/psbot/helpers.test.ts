@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { otherId } from "../../src/bot/helpers";
+import { otherId } from "../../src/psbot/helpers";
 
 /**
  * Describes a test case given to a function.
@@ -38,7 +38,7 @@ function testFunc<T, Args extends any[]>(name: string,
     });
 }
 
-describe("bot/helpers", function()
+describe("psbot/helpers", function()
 {
     testFunc("otherId", otherId,
     [
