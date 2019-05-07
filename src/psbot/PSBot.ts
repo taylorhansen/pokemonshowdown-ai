@@ -34,11 +34,12 @@ export class PSBot
     /** Keeps track of all the battles we're in. */
     private readonly battles: {[room: string]: PSBattle} = {};
     /** Username of the client. */
-    private username: string;
+    private username?: string;
     /** Callback for when the challstr is received. */
     private challstr: (challstr: string) => Promise<void> = async function() {};
     /** Sends a response to the server. */
-    private sender: (response: string) => void;
+    private sender: (response: string) => void =
+        () => { throw new Error("Sender not initialized"); }
     /** Function to call to resolve the `connect()` promise. */
     private connected: (result: boolean) => void = () => {};
 
@@ -142,7 +143,7 @@ pass=${options.password}&challstr=${challstr}`;
             this.sender = (response: string) =>
             {
                 connection.sendUTF(response);
-                this.logger.debug(`Send: ${response}`);
+                this.logger.debug(`Sent: ${response}`);
             };
 
             connection.on("error", error =>
@@ -263,6 +264,7 @@ pass=${options.password}&challstr=${challstr}`;
      */
     private initBattle(agent: BattleAgent, room: string): void
     {
+        if (!this.username) throw new Error("Username not initialized");
         const sender = (choice: Choice) =>
             this.addResponses(room, `|/choose ${choice}`);
 

@@ -209,8 +209,8 @@ ability ${ability}`);
     }
     public readonly moveset = new Moveset();
 
-    /** Pokemon's gender. */
-    public gender: string | null;
+    /** Pokemon's gender. M=male, F=female, null=genderless. */
+    public gender: string | null | undefined;
 
     /** Whether this pokemon is fainted. */
     public get fainted(): boolean

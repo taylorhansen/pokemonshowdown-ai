@@ -48,10 +48,11 @@ export class Network implements BattleAgent
 
     /** Used for logging info. */
     protected readonly logger: Logger;
+    // TODO: guarantee that ready/model are resolved
     /** Resolves once the Network model is ready to be used. */
-    protected ready: Promise<any>;
+    protected ready!: Promise<any>;
     /** Neural network model. */
-    private model: tf.Model;
+    private model!: tf.Model;
     /** Last state input array. */
     private lastStateData?: number[];
     /** Last choice taken by the AI. */

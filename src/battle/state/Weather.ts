@@ -15,33 +15,35 @@ const weatherItems: {readonly [T in WeatherType]: string} =
 /** Tracks weather effects. */
 export class Weather
 {
+    // all fields are initialized on #reset() in the constructor
+
     /** Current weather type. */
     public get type(): WeatherType
     {
         return this._type;
     }
-    private _type: WeatherType;
+    private _type!: WeatherType;
 
-    /** The pokemon that caused the weather condition. */
-    public get source(): Pokemon | undefined
+    /** The pokemon that caused the weather condition if there is one. */
+    public get source(): Pokemon | null
     {
         return this._source;
     }
-    private _source?: Pokemon;
+    private _source!: Pokemon | null;
 
     /** Number gives duration, null means infinite. */
     public get duration(): number | null
     {
         return this._duration;
     }
-    private _duration: number | null;
+    private _duration!: number | null;
 
     /** Number of turns the weather has been active. */
     public get turns(): number
     {
         return this._turns;
     }
-    private _turns: number;
+    private _turns!: number;
 
     /** Creates a Weather object. */
     constructor()
@@ -53,7 +55,7 @@ export class Weather
     public reset(): void
     {
         this._type = "none";
-        this._source = undefined;
+        this._source = null;
         this._duration = null;
         this._turns = 0;
     }

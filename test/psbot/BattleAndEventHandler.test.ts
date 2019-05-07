@@ -318,7 +318,7 @@ describe("Battle and EventProcessor", function()
                         ]
                     }
                 ],
-                side: battle.lastRequest.side
+                side: battle.lastRequest!.side
             });
             await battle.progress({events: []});
 
@@ -358,7 +358,7 @@ describe("Battle and EventProcessor", function()
                             trapped: true
                         }
                     ],
-                    side: battle.lastRequest.side
+                    side: battle.lastRequest!.side
                 });
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(2);
@@ -511,7 +511,7 @@ describe("Battle and EventProcessor", function()
                             type: "switch", id: us2,
                             details:
                             {
-                                species: us2Mon.species, gender: us2Mon.gender,
+                                species: us2Mon.species, gender: us2Mon.gender!,
                                 level: us2Mon.level, shiny: false
                             },
                             status:
@@ -989,7 +989,7 @@ describe("Battle and EventProcessor", function()
                             ]
                         }
                     ],
-                    side: battle.lastRequest.side,
+                    side: battle.lastRequest!.side,
                     forceSwitch: [true], noCancel: true
                 });
                 await battle.progress(
@@ -1019,7 +1019,7 @@ describe("Battle and EventProcessor", function()
                             ]
                         }
                     ],
-                    side: battle.lastRequest.side,
+                    side: battle.lastRequest!.side,
                     wait: true
                 });
                 await battle.progress(
@@ -1086,7 +1086,7 @@ describe("Battle and EventProcessor", function()
                                 trapped: true
                             }
                         ],
-                        side: battle.lastRequest.side
+                        side: battle.lastRequest!.side
                     });
                     await battle.progress(
                     {
@@ -1204,7 +1204,7 @@ describe("Battle and EventProcessor", function()
                             trapped: true
                         }
                     ],
-                    side: battle.lastRequest.side
+                    side: battle.lastRequest!.side
                 });
                 await battle.progress(
                 {
@@ -1236,7 +1236,7 @@ describe("Battle and EventProcessor", function()
                             trapped: false
                         }
                     ],
-                    side: battle.lastRequest.side
+                    side: battle.lastRequest!.side
                 });
                 await battle.progress(
                 {
@@ -1275,7 +1275,7 @@ describe("Battle and EventProcessor", function()
                             trapped: true
                         }
                     ],
-                    side: battle.lastRequest.side,
+                    side: battle.lastRequest!.side,
                     wait: true
                 };
                 await battle.request({...request});
@@ -1370,7 +1370,7 @@ describe("Battle and EventProcessor", function()
                             trapped: true
                         }
                     ],
-                    side: battle.lastRequest.side,
+                    side: battle.lastRequest!.side,
                     wait: true
                 };
                 await battle.request({...request});
@@ -1610,7 +1610,7 @@ describe("Battle and EventProcessor", function()
                     ]
                 });
                 expect(weather.type).to.equal("none");
-                expect(weather.source).to.be.undefined;
+                expect(weather.source).to.be.null;
                 expect(weather.duration).to.be.null;
                 expect(weather.turns).to.equal(0);
             });

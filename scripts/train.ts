@@ -17,18 +17,18 @@
 import * as tf from "@tensorflow/tfjs";
 import * as fs from "fs";
 import { dirname } from "path";
-import * as ProgressBar from "progress";
+import ProgressBar from "progress";
 import { Writable } from "stream";
 import { URL } from "url";
 import { Decision, Network, toColumn } from "../src/ai/Network";
 import { Choice } from "../src/battle/agent/Choice";
-import { MessageListener } from "../src/bot/dispatcher/MessageListener";
-import { PlayerID } from "../src/bot/helpers";
-import { parsePSMessage } from "../src/bot/parser/parsePSMessage";
-import { PSBattle } from "../src/bot/PSBattle";
 import { evaluateFolder, modelPath, modelsFolder, selfPlayFolder } from
     "../src/config";
 import { Logger } from "../src/Logger";
+import { MessageListener } from "../src/psbot/dispatcher/MessageListener";
+import { PlayerID } from "../src/psbot/helpers";
+import { parsePSMessage } from "../src/psbot/parser/parsePSMessage";
+import { PSBattle } from "../src/psbot/PSBattle";
 // @ts-ignore
 import s = require("./Pokemon-Showdown/.sim-dist/battle-stream");
 

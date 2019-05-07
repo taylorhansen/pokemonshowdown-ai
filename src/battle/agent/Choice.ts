@@ -14,6 +14,7 @@ export const choiceIds: Readonly<typeof choiceIdsInternal> = choiceIdsInternal;
 export const intToChoice: ReadonlyArray<Choice> = (function()
 {
     const result: Choice[] = [];
-    Object.keys(choiceIds).forEach((choice: Choice, i) => result[i] = choice);
+    (Object.keys(choiceIds) as Choice[]).forEach(
+        (choice, i) => result[i] = choice);
     return result;
 })();

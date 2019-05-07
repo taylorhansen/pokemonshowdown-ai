@@ -45,13 +45,13 @@ class MessageParser
     /** Logger object. */
     private readonly logger: Logger;
     /** Current room we're parsing messages from. */
-    private room: string;
+    private room = "";
     /** Message split up into lines and words. Words are separated by a `|`. */
-    private lines: string[][];
+    private lines: string[][] = [];
     /** Current word index we're parsing at. */
-    private wordN: number;
+    private wordN = 0;
     /** Current line index we're parsing at. */
-    private lineN: number;
+    private lineN = 0;
 
     /**
      * Creates a MessageParser.

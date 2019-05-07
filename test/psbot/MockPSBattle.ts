@@ -10,13 +10,13 @@ import { MockPSEventHandler } from "./MockPSEventHandler";
 export class MockPSBattle extends PSBattle
 {
     /** @override */
-    public readonly eventHandler: MockPSEventHandler;
+    public readonly eventHandler!: MockPSEventHandler;
     /** @override */
-    public readonly state: BattleState;
+    public readonly state!: BattleState;
     /** @override */
-    public lastRequest: RequestMessage;
+    public lastRequest?: RequestMessage;
     /** @override */
-    public lastChoices: Choice[];
+    public lastChoices!: Choice[];
 
     /**
      * Creates a MockPSBattle.

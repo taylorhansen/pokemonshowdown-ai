@@ -25,7 +25,7 @@ export class PSBattle
     /** Manages the BattleState by processing events. */
     protected readonly eventHandler: PSEventHandler;
     /** Last |request| message that was processed. */
-    protected lastRequest: RequestMessage;
+    protected lastRequest?: RequestMessage;
     /** Available choices from the last decision. */
     protected lastChoices: Choice[] = [];
 
@@ -87,7 +87,8 @@ export class PSBattle
         this.eventHandler.postTurn();
 
         // possibly send a response
-        if (this.eventHandler.battling && !this.lastRequest.wait)
+        if (this.eventHandler.battling && this.lastRequest &&
+            !this.lastRequest.wait)
         {
             return this.askAgent();
         }
@@ -104,7 +105,7 @@ export class PSBattle
             // new info is being revealed
             this.unavailableChoice = false;
 
-            if (this.lastRequest.active &&
+            if (this.lastRequest && this.lastRequest.active &&
                 !this.lastRequest.active[0].trapped && msg.active &&
                 msg.active[0].trapped)
             {
@@ -161,7 +162,11 @@ export class PSBattle
      */
     private getChoices(): Choice[]
     {
+        if (!this.lastRequest) throw new Error("No previous request message");
+
         const choices: Choice[] = [];
+
+        // move choices
         if (!this.lastRequest.forceSwitch && this.lastRequest.active)
         {
             // not forced to switch so we can move
@@ -179,6 +184,7 @@ export class PSBattle
             if (struggle) choices.push("move 1");
         }
 
+        // switch choices
         if (!this.lastRequest.active || !this.lastRequest.active[0].trapped)
         {
             // not trapped so we can switch

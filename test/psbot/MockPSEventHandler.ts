@@ -9,7 +9,7 @@ import { PSEventHandler } from "../../src/psbot/PSEventHandler";
 export class MockPSEventHandler extends PSEventHandler
 {
     /** @override */
-    public state: BattleState;
+    public state!: BattleState;
 
     /** @override */
     public getActive(team: PlayerID | Side): Pokemon

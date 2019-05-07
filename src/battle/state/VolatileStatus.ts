@@ -9,6 +9,8 @@ import { BoostableStatName, boostableStatNames, oneHot, pluralTurns,
  */
 export class VolatileStatus
 {
+    // all fields are initialized on #clear() in the constructor
+
     // passed when copying
 
     /** Stat boost stages. */
@@ -25,7 +27,7 @@ export class VolatileStatus
     {
         this._boosts[stat] += amount;
     }
-    private _boosts: {[N in BoostableStatName]: number};
+    private _boosts!: {[N in BoostableStatName]: number};
 
     /** Whether the pokemon is confused. */
     public get isConfused(): boolean
@@ -48,10 +50,10 @@ export class VolatileStatus
     {
         this._confuseTurns = flag ? this._confuseTurns + 1 : 0;
     }
-    private _confuseTurns: number;
+    private _confuseTurns!: number;
 
     /** Ingrain move status. */
-    public ingrain: boolean;
+    public ingrain!: boolean;
 
     /** Magnet Rise move status (temporary). */
     public get magnetRise(): boolean
@@ -62,7 +64,7 @@ export class VolatileStatus
     {
         this.magnetRiseTurns = flag ? 1 : 0;
     }
-    private magnetRiseTurns: number;
+    private magnetRiseTurns!: number;
 
     /** Embargo move status (temporary). */
     public get embargo(): boolean
@@ -73,7 +75,7 @@ export class VolatileStatus
     {
         this.embargoTurns = flag ? 1 : 0;
     }
-    private embargoTurns: number;
+    private embargoTurns!: number;
 
     // situational
 
@@ -105,9 +107,9 @@ export class VolatileStatus
         this.overrideAbilityName = "<suppressed>";
     }
     /** ID number of ability. */
-    private _overrideAbility: number | null;
+    private _overrideAbility!: number | null;
     /** Name of override ability. */
-    private overrideAbilityName: string;
+    private overrideAbilityName!: string;
 
     // not passed when copying
 
@@ -135,7 +137,7 @@ export class VolatileStatus
         this.disableTurns = [0, 0, 0, 0];
     }
     /** Turns for the disable status on each move. */
-    private disableTurns: number[];
+    private disableTurns!: number[];
 
     /** Whether the pokemon is locked into a move and is unable to switch. */
     public get lockedMove(): boolean
@@ -149,7 +151,7 @@ export class VolatileStatus
         // start/continue counter
         else ++this.lockedMoveTurns;
     }
-    private lockedMoveTurns = 0;
+    private lockedMoveTurns!: number;
 
     /** Two-turn move currently being prepared. */
     public get twoTurn(): keyof typeof twoTurnMoves | ""
@@ -162,11 +164,11 @@ export class VolatileStatus
         // after this turn this will be 1
         this.twoTurnCounter = twoTurn ? 2 : 0;
     }
-    private _twoTurn: keyof typeof twoTurnMoves | "";
-    private twoTurnCounter: number;
+    private _twoTurn!: keyof typeof twoTurnMoves | "";
+    private twoTurnCounter!: number;
 
     /** Whether this pokemon must recharge on the next turn. */
-    public mustRecharge: boolean;
+    public mustRecharge!: boolean;
 
     /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
     public get stallTurns(): number
@@ -182,18 +184,18 @@ export class VolatileStatus
         this._stallTurns = flag ? this._stallTurns + 1 : 0;
         this.stalled = flag;
     }
-    private _stallTurns: number;
+    private _stallTurns!: number;
     /** Whether we have successfully stalled this turn. */
-    private stalled: boolean;
+    private stalled!: boolean;
 
     /**
      * Temporarily overridden types. This should not be included in toString()
      * since the parent Pokemon object should handle that. Should not be
      * accessed other than by the parent Pokemon object.
      */
-    public overrideTypes: Readonly<[Type, Type]>;
+    public overrideTypes!: Readonly<[Type, Type]>;
     /** Temporary third type. */
-    public addedType: Type;
+    public addedType!: Type;
 
     /** Whether the Truant ability will activate next turn. */
     public get willTruant(): boolean
@@ -206,10 +208,10 @@ export class VolatileStatus
         // this is what the field should've been before this turn
         this._willTruant = true;
     }
-    private _willTruant: boolean;
+    private _willTruant!: boolean;
 
     /** Roost move effect (single turn). */
-    public roost: boolean;
+    public roost!: boolean;
 
     /** Creates a VolatileStatus object. */
     constructor()
@@ -345,8 +347,8 @@ export class VolatileStatus
 
         const a =
         [
-            ...Object.keys(this._boosts).map(
-                (key: BoostableStatName) => this._boosts[key]),
+            ...(Object.keys(this._boosts) as BoostableStatName[]).map(
+                key => this._boosts[key]),
             confused, this.ingrain ? 1 : 0, magnetRise, embargo,
             ...overrideAbility, this.isAbilitySuppressed() ? 1 : 0, ...disabled,
             lockedMove, ...twoTurn, this.mustRecharge ? 1 : 0, stallFailRate,
@@ -362,11 +364,9 @@ export class VolatileStatus
      */
     public toString(): string
     {
-        return `[${
-            Object.keys(this._boosts)
-            .filter((key: BoostableStatName) => this._boosts[key] !== 0)
-            .map((key: BoostableStatName) =>
-                `${key}: ${VolatileStatus.plus(this._boosts[key])}`)
+        return `[${(Object.keys(this._boosts) as BoostableStatName[])
+            .filter(key => this._boosts[key] !== 0)
+            .map(key => `${key}: ${VolatileStatus.plus(this._boosts[key])}`)
             .concat(
                 this._confuseTurns ?
                     [pluralTurns("confused", this._confuseTurns - 1)] : [],

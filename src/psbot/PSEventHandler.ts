@@ -34,7 +34,7 @@ export class PSEventHandler
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
      */
-    private sides: {readonly [ID in PlayerID]: Side};
+    private sides?: {readonly [ID in PlayerID]: Side};
     /** Whether a turn message was encountered in the last handleEvents call. */
     private newTurn = false;
 
@@ -554,6 +554,7 @@ export class PSEventHandler
      */
     protected getSide(id: PlayerID): Side
     {
+        if (!this.sides) throw new Error("Sides not initialized");
         return this.sides[id];
     }
 }
