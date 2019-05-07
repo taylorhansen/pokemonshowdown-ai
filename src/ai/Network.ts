@@ -1,7 +1,8 @@
 import * as tf from "@tensorflow/tfjs";
 import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
+import * as tfl from "@tensorflow/tfjs-layers";
 import "@tensorflow/tfjs-node";
-import { BattleAgent } from "../battle/agent/BattleAgent";
+import { BattleAgent, BattleAgentCtor } from "../battle/agent/BattleAgent";
 import { Choice, choiceIds, intToChoice } from "../battle/agent/Choice";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
@@ -48,11 +49,8 @@ export class Network implements BattleAgent
 
     /** Used for logging info. */
     protected readonly logger: Logger;
-    // TODO: guarantee that ready/model are resolved
-    /** Resolves once the Network model is ready to be used. */
-    protected ready!: Promise<any>;
-    /** Neural network model. */
-    private model!: tf.Model;
+    /** Predicts which Choice to make. */
+    private readonly model: tf.LayersModel;
     /** Last state input array. */
     private lastStateData?: number[];
     /** Last choice taken by the AI. */
@@ -64,8 +62,10 @@ export class Network implements BattleAgent
      * Creates a Network object.
      * @param logger Used for logging info.
      */
-    constructor(logger: Logger)
+    constructor(model: tf.LayersModel, logger: Logger)
     {
+        Network.verifyModel(model);
+        this.model = model;
         this.logger = logger;
     }
 
@@ -79,12 +79,11 @@ export class Network implements BattleAgent
     public async decide(state: BattleState, choices: Choice[]):
         Promise<Choice[]>
     {
-        if (choices.length === 0) throw new Error("No available choices!");
-        await this.ready;
+        if (choices.length === 0) throw new Error("No available choices");
 
         const stateData = this.getStateData(state);
         const stateTensor = toColumn(stateData);
-        const prediction = this.model.predict(stateTensor) as tf.Tensor2D;
+        const prediction = this.model.predict(stateTensor, {}) as tf.Tensor2D;
         const predictionData = await prediction.data();
 
         this.logger.debug(`Prediction: {${
@@ -140,18 +139,47 @@ export class Network implements BattleAgent
     }
 
     /**
+     * Saves neural network data to disk.
+     * @param path Base file name/path for model folder.
+     */
+    public async save(path: string): Promise<void>
+    {
+        await this.model.save(`file://${path}`);
+    }
+
+    /**
+     * Loads a Network model from disk, or constructs the default one if it
+     * can't be found or the model's input or output shape are invalid.
+     * @param path Path to the model's folder created by `LayersModel#save()`.
+     * @param logger Logger object. Default stdout.
+     */
+    public static async loadNetwork(path: string, logger = Logger.stderr):
+        Promise<BattleAgentCtor>
+    {
+        const model = await Network.loadModel(path, logger);
+
+        return class extends Network
+        {
+            constructor()
+            {
+                super(model, logger);
+            }
+        };
+    }
+
+    /**
      * Loads a model from disk, or constructs the default one if it can't be
      * found or the model's input or output shape don't match what's required.
      * @param path Path to the model's folder created by `Model.save()`.
      * @param logger Logger object. Default stdout.
      */
     public static async loadModel(path: string, logger = Logger.stdout):
-        Promise<tf.Model>
+        Promise<tf.LayersModel>
     {
-        let model: tf.Model;
+        let model: tf.LayersModel;
         try
         {
-            model = await tf.loadModel(`file://${path}/model.json`);
+            model = await tfl.loadLayersModel(`file://${path}/model.json`);
             Network.verifyModel(model);
         }
         catch (e)
@@ -165,7 +193,7 @@ export class Network implements BattleAgent
     }
 
     /** Constructs a valid default model for a Network object. */
-    public static createModel(): tf.Model
+    public static createModel(): tf.LayersModel
     {
         // setup all the layers
         const outNeurons = Object.keys(choiceIds).length;
@@ -184,7 +212,7 @@ export class Network implements BattleAgent
      * Verifies a neural network model. Throws an error if invalid.
      * @param model Model to verify.
      */
-    private static verifyModel(model: tf.Model): void
+    private static verifyModel(model: tf.LayersModel): void
     {
         // loaded models must have the correct input/output shape
         const input = model.input;
@@ -199,40 +227,10 @@ export class Network implements BattleAgent
      * @param shape Given input shape.
      * @return True if the input shape is valid.
      */
-    private static isValidInputShape(shape: number[]): boolean
+    private static isValidInputShape(shape: (number | null)[]): boolean
     {
         return shape.length === 2 && shape[0] === null &&
             shape[1] === Network.inputLength;
-    }
-
-    /**
-     * Sets the neural network model. If the model's input and output shapes
-     * do not match what is required, then an Error will be thrown.
-     * @param model Model to be used.
-     */
-    public setModel(model: tf.Model): void
-    {
-        Network.verifyModel(model);
-        this.model = model;
-    }
-
-    /**
-     * Saves AI state to storage.
-     * @param path Base file name/path for model folder.
-     */
-    public async save(path: string): Promise<void>
-    {
-        await this.ready;
-        await this.model.save(`file://${path}`);
-    }
-
-    /**
-     * Loads a model from disk.
-     * @param path Path to the folder created by `Model.save()`.
-     */
-    public async load(path: string): Promise<void>
-    {
-        this.model = await Network.loadModel(path, this.logger);
     }
 
     /** Gets the neural network input from the BattleState. */

@@ -183,7 +183,12 @@ pass=${options.password}&challstr=${challstr}`;
                 // room names follow the format battle-<format>-<id>
                 const format = room.split("-")[1];
                 const agentCtor = this.formats[format];
-                if (agentCtor) this.initBattle(new agentCtor(), room);
+                if (agentCtor)
+                {
+                    this.initBattle(
+                        new agentCtor(this.logger.prefix(`Agent(${room}): `)),
+                        room);
+                }
                 else
                 {
                     this.logger.error(`Unsupported format ${format}`);

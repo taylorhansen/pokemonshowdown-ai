@@ -57,7 +57,7 @@ logStream.write = function(chunk: any, enc?: string | CB, cb?: CB)
 const maxTurns = 100;
 
 /** Models to represent p1 and p2. */
-type Models = {[P in PlayerID]: tf.Model};
+type Models = {[P in PlayerID]: tf.LayersModel};
 
 /** Options for starting a new game. */
 interface GameOptions extends Models
@@ -114,8 +114,7 @@ async function play(options: GameOptions): Promise<GameResult>
     {
         const innerLog = logger.pipeDebug(file).prefix(`Play(${id}): `);
 
-        const agent = new Network(innerLog.prefix("Network: "));
-        agent.setModel(options[id]);
+        const agent = new Network(options[id], innerLog.prefix("Network: "));
 
         // sends player choices to the battle stream
         function sender(choice: Choice): void
@@ -220,7 +219,7 @@ async function saveDecision(decision: Decision): Promise<URL>
  * Compiles a model for training.
  * @param model Model to compile.
  */
-function compile(model: tf.Model): void
+function compile(model: tf.LayersModel): void
 {
     model.compile(
         {loss: "meanSquaredError", optimizer: "adam", metrics: ["mae"]});
@@ -230,16 +229,14 @@ function compile(model: tf.Model): void
  * Trains a model from an array of Decision file URLs.
  * @param decisionFiles Paths to each Decision file.
  */
-async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
+async function learn(model: tf.LayersModel, decisionFiles: URL[]):
+    Promise<tf.History>
 {
-    const dataset = {async iterator()
+    const dataset = tf.data.generator(function*()
     {
         const files = [...decisionFiles];
-        return {async next()
+        while (files.length > 0)
         {
-            // early return: no more data
-            if (files.length === 0) return {done: true, value: null as any};
-
             // consume a random Decision file
             const n = Math.floor(Math.random() * files.length);
             const url = files.splice(n, 1)[0];
@@ -250,25 +247,11 @@ async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
             const target = toColumn(decision.target);
 
             if (bar) bar.tick();
-            return {done: files.length <= 0, value: [state, target]};
-        }};
-    }};
-
-    const totalEpochs = 10;
-    return model.fitDataset(dataset,
-    {
-        epochs: totalEpochs,
-        callbacks:
-        {
-            onEpochBegin: async epoch =>
-            {
-                // epoch is zero-based so increment that so it looks nice
-                bar = new ProgressBar(
-                    `epoch ${epoch + 1}/${totalEpochs} [:bar] :current/:total`,
-                    {total: decisionFiles.length, width: 20});
-            }
+            yield {xs: state, ys: target};
         }
     });
+
+    return model.fitDataset(dataset, {epochs: 10});
 }
 
 /**
@@ -279,8 +262,8 @@ async function learn(model: tf.Model, decisionFiles: URL[]): Promise<tf.History>
  * @returns A new Model if it is proved to be better after self-play, or the
  * same one that's given if the new Model failed.
  */
-async function train(model: tf.Model, logger = Logger.null, games = 5):
-    Promise<tf.Model>
+async function train(model: tf.LayersModel, logger = Logger.null, games = 5):
+    Promise<tf.LayersModel>
 {
     const newModel = Network.createModel();
     newModel.setWeights(model.getWeights());

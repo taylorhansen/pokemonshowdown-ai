@@ -37,8 +37,10 @@
   "author": "Taylor Hansen (CrazyGuy108)",
   "license": "MIT",
   "dependencies": {
-    "@tensorflow/tfjs": "^0.13.5",
-    "@tensorflow/tfjs-node": "^0.1.21",
+    "@tensorflow/tfjs": "^1.1.2",
+    "@tensorflow/tfjs-core": "^1.1.2",
+    "@tensorflow/tfjs-layers": "^1.1.2",
+    "@tensorflow/tfjs-node": "^1.1.2",
     "@types/node-fetch": "^2.3.3",
     "@types/websocket": "0.0.40",
     "node-fetch": "^2.5.0",

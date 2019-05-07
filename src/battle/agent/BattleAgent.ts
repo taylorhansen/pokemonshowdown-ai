@@ -1,9 +1,10 @@
+import { Logger } from "../../Logger";
 import { BattleState } from "../state/BattleState";
 import { Pokemon } from "../state/Pokemon";
 import { Choice } from "./Choice";
 
 /** Type for constructing BattleAgents. */
-export type BattleAgentCtor = new() => BattleAgent;
+export type BattleAgentCtor = new(logger?: Logger) => BattleAgent;
 
 /**
  * Makes decisions in a battle. Can be reused for multiple battles of the same
