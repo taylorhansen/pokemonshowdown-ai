@@ -7401,8 +7401,39 @@ const twoTurnMovesInternal =
 export const twoTurnMoves: Readonly<typeof twoTurnMovesInternal> =
     twoTurnMovesInternal;
 
+/** Types of two-turn moves. */
+export type TwoTurnMove = keyof typeof twoTurnMovesInternal;
+
 /** Number of two-turn moves that exist. */
-export const numTwoTurnMoves = Object.keys(twoTurnMoves).length;
+export const numTwoTurnMoves = 9;
+
+/** Checks if a value is a TwoTurnMove. */
+export function isTwoTurnMove(value: any): value is TwoTurnMove
+{
+    return twoTurnMovesInternal.hasOwnProperty(value);
+}
+
+const futureMovesInternal =
+{
+    doomdesire: 0,
+    futuresight: 1
+};
+
+/** Set of all future moves. Maps move name to its id within this object. */
+export const futureMoves: Readonly<typeof futureMovesInternal> =
+    futureMovesInternal;
+
+/** Types of future moves. */
+export type FutureMove = keyof typeof futureMovesInternal;
+
+/** Number of future moves that exist. */
+export const numFutureMoves = 2;
+
+/** Checks if a value is a FutureMove. */
+export function isFutureMove(value: any): value is FutureMove
+{
+    return futureMovesInternal.hasOwnProperty(value);
+}
 
 const items: {readonly [name: string]: number} =
 {

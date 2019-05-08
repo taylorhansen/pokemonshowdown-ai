@@ -698,6 +698,42 @@ describe("Battle and EventProcessor", function()
                 expect(mon.volatile.isDisabled(1)).to.be.false;
             });
 
+            it("Should start/end future move", async function()
+            {
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "Future Sight",
+                            otherArgs: []
+                        },
+                        {type: "upkeep"}, {type: "turn", num: 2}
+                    ]
+                });
+
+                const status = battle.state.teams.us.status;
+                expect(status.futureMoveTurns.futuresight).to.equal(2);
+
+                // run down future move counter
+                await battle.progress({events: [{type: "turn", num: 3}]});
+                expect(status.futureMoveTurns.futuresight).to.equal(1);
+                await battle.progress({events: [{type: "turn", num: 3}]});
+                expect(status.futureMoveTurns.futuresight).to.equal(0);
+
+                // hope this doesn't throw
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "end", id: us1, volatile: "Future Sight",
+                            otherArgs: []
+                        }
+                    ]
+                });
+            });
+
             it("Should ignore invalid volatiles", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;

@@ -1,6 +1,11 @@
+/** @file Contains useful helper types. */
 import { MajorStatus } from "../battle/state/utility";
 
-/** @file Contains useful helper types. */
+/** Converts a display name into an id name. */
+export function toIdName(str: string): string
+{
+    return str.toLowerCase().replace(/[ -]/g, "");
+}
 
 /** Player ID in a battle. */
 export type PlayerID = "p1" | "p2";

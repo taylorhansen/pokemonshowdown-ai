@@ -1,3 +1,4 @@
+import { FutureMove, futureMoves, numFutureMoves } from "../dex/dex";
 import { SelfSwitch } from "../dex/dex-types";
 
 /** Temporary status conditions for a certain team. */
@@ -14,6 +15,36 @@ export class TeamStatus
     public get isWishing(): boolean { return this.wishDuration > 0; }
     private wishDuration = 0;
 
+    /** Turns left on each type of future move. */
+    public get futureMoveTurns(): {readonly [id in FutureMove]: number}
+    {
+        return this._futureMoveTurns;
+    }
+    /** Starts a future move. */
+    public startFutureMove(id: FutureMove): void
+    {
+        // countdown starts at 2 on the next postTurn()
+        this._futureMoveTurns[id] = 3;
+    }
+    /** Ensures that a future move has ended. */
+    public endFutureMove(id: FutureMove): void
+    {
+        if (this._futureMoveTurns[id] > 0)
+        {
+            throw new Error(`Future move '${id}' not yet completed`);
+        }
+    }
+    private readonly _futureMoveTurns: {[id in FutureMove]: number} =
+        (function()
+        {
+            const result = {...futureMoves};
+            for (const id of Object.keys(result) as FutureMove[])
+            {
+                result[id] = 0;
+            }
+            return result;
+        })();
+
     /** Spikes layers. */
     public spikes = 0;
     /** Stealth rock layers. */
@@ -28,6 +59,11 @@ export class TeamStatus
     public postTurn(): void
     {
         if (this.wishDuration) --this.wishDuration;
+
+        for (const id of Object.keys(this._futureMoveTurns) as FutureMove[])
+        {
+            if (this._futureMoveTurns[id]) --this._futureMoveTurns[id];
+        }
     }
 
     /**
@@ -36,7 +72,8 @@ export class TeamStatus
      */
     public static getArraySize(): number
     {
-        return /*selfSwitch*/ 2 + /*wish*/ 1 + /*entry hazards*/ 3;
+        return /*selfSwitch*/ 2 + /*wish*/ 1 + /*future moves*/numFutureMoves +
+            /*entry hazards*/ 3;
     }
 
     // istanbul ignore next: unstable, hard to test
@@ -49,8 +86,8 @@ export class TeamStatus
         const result =
         [
             this.selfSwitch ? 1 : 0, this.selfSwitch === "copyvolatile" ? 1 : 0,
-            this.wishDuration ? 1 : 0, this.spikes, this.stealthRock,
-            this.toxicSpikes
+            this.wishDuration ? 1 : 0, ...Object.values(this._futureMoveTurns),
+            this.spikes, this.stealthRock, this.toxicSpikes
         ];
         return result;
     }
@@ -65,6 +102,9 @@ export class TeamStatus
         return `[${([] as string[]).concat(
                 this.selfSwitch ? [`selfSwitch: ${this.selfSwitch}`] : [],
                 this.wishDuration ? ["wishing"] : [],
+                Object.entries(this._futureMoveTurns)
+                    .filter(([id, turns]) => turns > 0)
+                    .map(([id, turns]) => `${id} turns: ${turns}`),
                 this.spikes ? [`spikes ${this.spikes}`] : [],
                 this.stealthRock ? [`stealth rock ${this.stealthRock}`] : [],
                 this.toxicSpikes ? [`toxic spikes ${this.toxicSpikes}`] : [])

@@ -3,7 +3,7 @@
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
 import { Type } from "../src/battle/dex/dex-types";
-import { toIdName } from "../src/bot/helpers";
+import { toIdName } from "../src/psbot/helpers";
 // @ts-ignore
 import Dex = require("./Pokemon-Showdown/.sim-dist/dex");
 
@@ -157,8 +157,12 @@ ${Object.keys(abilities).map(id => `    ${id}: ${abilities[id]},\n`).join("")}};
 
 // moves
 const moves = data.Movedex;
+
 const twoTurnMoves: {[name: string]: number} = {};
 let twoTurnUid = 0;
+
+const futureMoves: {[name: string]: number} = {};
+let futureUid = 0;
 
 console.log("const moves: {readonly [name: string]: MoveData} =\n{");
 
@@ -200,6 +204,9 @@ for (const moveName in moves)
     // two turn moves are also recorded in a different object
     if (move.flags.charge === 1) twoTurnMoves[move.name] = twoTurnUid++;
 
+    // future moves are also recorded in a different object
+    if (move.isFutureMove) futureMoves[move.name] = futureUid++;
+
     console.log(`\
     ${move.id}:
     {
@@ -213,22 +220,51 @@ ${sideCondition ? `, sideCondition: ${sideCondition}` : ""}
 console.log("};\n");
 const numMoves = uid;
 
-// build set of all two turn moves
-console.log("const twoTurnMovesInternal =\n{");
-for (const moveName in twoTurnMoves)
+/**
+ * Creates a map and length number for types of moves.
+ * @param obj Maps move id name to a 0-based id number.
+ * @param name Name for the variable.
+ * @param display Name in the docs. Omit to assume `name` argument.
+ */
+function specificMoves(obj: {[id: string]: number}, name: string,
+    display?: string)
 {
-    if (!twoTurnMoves.hasOwnProperty(moveName)) continue;
+    display = display || name;
 
-    console.log(`    ${toIdName(moveName)}: ${twoTurnMoves[moveName]},`);
+    // build set of all moves of this specific type
+    console.log(`const ${name}MovesInternal =
+{`);
+
+    for (const moveName in obj)
+    {
+        if (!obj.hasOwnProperty(moveName)) continue;
+
+        console.log(`    ${toIdName(moveName)}: ${obj[moveName]},`);
+    }
+
+    const cap = name.slice(0, 1).toUpperCase() + name.slice(1);
+
+    console.log(`};
+
+/** Set of all ${display} moves. Maps move name to its id within this object. */
+export const ${name}Moves: Readonly<typeof ${name}MovesInternal> =
+    ${name}MovesInternal;
+
+/** Types of ${display} moves. */
+export type ${cap}Move = keyof typeof ${name}MovesInternal;
+
+/** Number of ${display} moves that exist. */
+export const num${cap}Moves = ${Object.keys(obj).length};
+
+/** Checks if a value is a ${cap}Move. */
+export function is${cap}Move(value: any): value is ${cap}Move
+{
+    return ${name}MovesInternal.hasOwnProperty(value);
+}\n`);
 }
-console.log(`};
 
-/** Set of all two-turn moves. Maps move name to its id within this object. */
-export const twoTurnMoves: Readonly<typeof twoTurnMovesInternal> =
-    twoTurnMovesInternal;
-
-/** Number of two-turn moves that exist. */
-export const numTwoTurnMoves = Object.keys(twoTurnMoves).length;\n`);
+specificMoves(twoTurnMoves, "twoTurn", "two-turn");
+specificMoves(futureMoves, "future");
 
 // items
 const items = data.Items;

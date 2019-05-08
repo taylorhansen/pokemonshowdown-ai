@@ -48,13 +48,6 @@ export function pluralTurns(name: string, turns: number, limit?: number): string
 turn${turns !== 1 ? "s" : ""}`;
 }
 
-// istanbul ignore next: trivial
-/** Converts a display name into an id name. */
-export function toIdName(str: string): string
-{
-    return str.toLowerCase().replace(/[ -]/g, "");
-}
-
 const majorStatusesInternal =
 {
     "": 0, brn: 1, par: 2, psn: 3, tox: 4, slp: 5, frz: 6

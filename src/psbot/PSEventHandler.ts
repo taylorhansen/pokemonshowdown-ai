@@ -1,16 +1,16 @@
+import { isFutureMove } from "../battle/dex/dex";
 import { Type } from "../battle/dex/dex-types";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
 import { Side } from "../battle/state/Side";
 import { SwitchInOptions, Team } from "../battle/state/Team";
-import { toIdName } from "../battle/state/utility";
 import { Logger } from "../Logger";
 import { AnyBattleEvent, Cause, SideEndEvent, SideStartEvent } from
     "./dispatcher/BattleEvent";
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
 import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
-    PokemonStatus } from "./helpers";
+    PokemonStatus, toIdName } from "./helpers";
 
 /** Translates BattleEvents to BattleState mutations. */
 export class PSEventHandler
@@ -76,7 +76,11 @@ export class PSEventHandler
         .on("start", event =>
         {
             const active = this.getActive(event.id.owner);
-            switch (event.volatile)
+
+            let ev = event.volatile;
+            if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
+
+            switch (ev)
             {
                 case "confusion":
                     // start confusion status
@@ -117,7 +121,7 @@ export class PSEventHandler
                     active.changeType(types as [Type, Type]);
                     break;
                 }
-                case "move: Ingrain":
+                case "Ingrain":
                     active.volatile.ingrain = true;
                     break;
                 case "Magnet Rise":
@@ -127,7 +131,17 @@ export class PSEventHandler
                     active.volatile.embargo = true;
                     break;
                 default:
-                    this.logger.debug(`Ignoring start "${event.volatile}"`);
+                {
+                    const moveId = toIdName(ev);
+                    if (isFutureMove(moveId))
+                    {
+                        active.team!.status.startFutureMove(moveId);
+                    }
+                    else
+                    {
+                        this.logger.debug(`Ignoring start "${event.volatile}"`);
+                    }
+                }
             }
         })
         .on("activate", event =>
@@ -148,12 +162,19 @@ export class PSEventHandler
         })
         .on("end", event =>
         {
-            const v = this.getActive(event.id.owner).volatile;
-            if (event.volatile === "confusion") v.confuse(false);
-            else if (event.volatile === "move: Disable") v.enableMoves();
-            else if (event.volatile === "move: Ingrain") v.ingrain = false;
-            else if (event.volatile === "Magnet Rise") v.magnetRise = false;
-            else if (event.volatile === "Embargo") v.embargo = false;
+            const team = this.getTeam(event.id.owner);
+            const v = team.active.volatile;
+
+            let ev = event.volatile;
+            if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
+            const id = toIdName(ev);
+
+            if (ev === "confusion") v.confuse(false);
+            else if (ev === "Disable") v.enableMoves();
+            else if (ev === "Ingrain") v.ingrain = false;
+            else if (ev === "Magnet Rise") v.magnetRise = false;
+            else if (ev === "Embargo") v.embargo = false;
+            else if (isFutureMove(id)) team.status.endFutureMove(id);
             else this.logger.debug(`Ignoring end "${event.volatile}"`);
         })
         .on("boost", event =>
