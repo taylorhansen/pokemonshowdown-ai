@@ -15,7 +15,7 @@ export type PlayerID = "p1" | "p2";
  * @param id Given player id.
  * @returns The other PlayerID.
  */
-export function otherId(id: PlayerID): PlayerID
+export function otherPlayerID(id: PlayerID): PlayerID
 {
     if (id === "p1")
     {
@@ -29,7 +29,7 @@ export function otherId(id: PlayerID): PlayerID
  * @param id Value to check.
  * @returns True if the value is part of the PlayerID type union.
  */
-export function isPlayerId(id: any): id is PlayerID
+export function isPlayerID(id: any): id is PlayerID
 {
     return id === "p1" || id === "p2";
 }

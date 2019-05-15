@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { BoostableStatName, boostableStatNames } from
-    "../../../src/battle/state/utility";
+import { BoostName, boostNames } from "../../../src/battle/state/utility";
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 
 describe("VolatileStatus", function()
@@ -106,22 +105,22 @@ describe("VolatileStatus", function()
     {
         it("Should not be boosted initially", function()
         {
-            for (const stat in boostableStatNames)
+            for (const stat in boostNames)
             {
-                if (!boostableStatNames.hasOwnProperty(stat)) continue;
+                if (!boostNames.hasOwnProperty(stat)) continue;
 
-                expect(volatile.boosts[stat as BoostableStatName]).to.equal(0);
+                expect(volatile.boosts[stat as BoostName]).to.equal(0);
             }
         });
 
-        for (const stat in boostableStatNames)
+        for (const stat in boostNames)
         {
-            if (!boostableStatNames.hasOwnProperty(stat)) continue;
+            if (!boostNames.hasOwnProperty(stat)) continue;
 
             it(`Should boost ${stat}`, function()
             {
-                volatile.boost(stat as BoostableStatName, 1);
-                expect(volatile.boosts[stat as BoostableStatName]).to.equal(1);
+                volatile.boost(stat as BoostName, 1);
+                expect(volatile.boosts[stat as BoostName]).to.equal(1);
             });
         }
     });

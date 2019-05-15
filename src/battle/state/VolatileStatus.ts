@@ -1,7 +1,7 @@
 import { dex, numTwoTurnMoves, twoTurnMoves } from "../dex/dex";
 import { Type, types } from "../dex/dex-types";
-import { BoostableStatName, boostableStatNames, oneHot, pluralTurns,
-    tempStatusTurns } from "./utility";
+import { BoostName, boostNames, oneHot, pluralTurns, tempStatusTurns } from
+    "./utility";
 
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
@@ -14,7 +14,7 @@ export class VolatileStatus
     // passed when copying
 
     /** Stat boost stages. */
-    public get boosts(): {readonly [N in BoostableStatName]: number}
+    public get boosts(): {readonly [N in BoostName]: number}
     {
         return this._boosts;
     }
@@ -23,11 +23,11 @@ export class VolatileStatus
      * @param stat Stat to be boosted.
      * @param amount Whole number of stages to boost the stat by.
      */
-    public boost(stat: BoostableStatName, amount: number): void
+    public boost(stat: BoostName, amount: number): void
     {
         this._boosts[stat] += amount;
     }
-    private _boosts!: {[N in BoostableStatName]: number};
+    private _boosts!: {[N in BoostName]: number};
 
     /** Whether the pokemon is confused. */
     public get isConfused(): boolean
@@ -311,7 +311,7 @@ export class VolatileStatus
      */
     public static getArraySize(): number
     {
-        return /*boostable stats*/Object.keys(boostableStatNames).length +
+        return /*boostable stats*/Object.keys(boostNames).length +
             /*confuse*/1 + /*ingrain*/1 + /*magnet rise*/1 + /*embargo*/1 +
             /*override ability*/dex.numAbilities + /*suppress ability*/1 +
             /*disabled moves*/4 + /*locked move*/1 +
@@ -347,7 +347,7 @@ export class VolatileStatus
 
         const a =
         [
-            ...(Object.keys(this._boosts) as BoostableStatName[]).map(
+            ...(Object.keys(this._boosts) as BoostName[]).map(
                 key => this._boosts[key]),
             confused, this.ingrain ? 1 : 0, magnetRise, embargo,
             ...overrideAbility, this.isAbilitySuppressed() ? 1 : 0, ...disabled,
@@ -364,7 +364,7 @@ export class VolatileStatus
      */
     public toString(): string
     {
-        return `[${(Object.keys(this._boosts) as BoostableStatName[])
+        return `[${(Object.keys(this._boosts) as BoostName[])
             .filter(key => this._boosts[key] !== 0)
             .map(key => `${key}: ${VolatileStatus.plus(this._boosts[key])}`)
             .concat(

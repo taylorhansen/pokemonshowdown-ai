@@ -1,6 +1,6 @@
 /** @file Interfaces and helper functions for handling BattleEvents. */
-import { BoostableStatName, MajorStatus } from "../../battle/state/utility";
-import { WeatherType } from "../../battle/state/Weather";
+import { BoostName, MajorStatus, WeatherType } from
+    "../../battle/state/utility";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
 /**
@@ -115,7 +115,7 @@ export interface BoostEvent extends BattleEventBase
     /** ID of the pokemom being boosted. */
     id: PokemonID;
     /** Name of stat being boosted. */
-    stat: BoostableStatName;
+    stat: BoostName;
     /** Amount to boost by. */
     amount: number;
 }

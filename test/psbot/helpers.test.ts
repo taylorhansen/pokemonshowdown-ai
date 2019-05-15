@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { otherId } from "../../src/psbot/helpers";
+import { otherPlayerID } from "../../src/psbot/helpers";
 
 /**
  * Describes a test case given to a function.
@@ -40,7 +40,7 @@ function testFunc<T, Args extends any[]>(name: string,
 
 describe("psbot/helpers", function()
 {
-    testFunc("otherId", otherId,
+    testFunc("otherPlayerID()", otherPlayerID,
     [
         {desc: "Should return p1 if given p2", expected: "p1", args: ["p2"]},
         {desc: "Should return p2 if given p1", expected: "p2", args: ["p1"]}

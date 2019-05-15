@@ -15,7 +15,11 @@ import { buildMessage, composeBattleInit, composeBattleProgress,
 describe("parsePSMessage()", function()
 {
     let listener: MessageListener;
-    const parse = (data: string) => parsePSMessage(data, listener, Logger.null);
+
+    function parse(data: string, logger?: Logger)
+    {
+        return parsePSMessage(data, listener, logger);
+    }
 
     beforeEach("Initialize MessageListener", function()
     {
@@ -59,13 +63,16 @@ describe("parsePSMessage()", function()
          * @param type Message type.
          * @param words Words to compose the message.
          * @param handler Message handler that can be invoked.
+         * @param quiet Whether to suppress Logger. Default false.
          * @returns A promise that resolves once the listener is executed.
          */
         function parseWords<T extends MessageType>(type: T, words: string[][],
-            handler: Callback<MessageDispatchArgs[T]>): Promise<void>
+            handler: Callback<MessageDispatchArgs[T]>, quiet = false):
+            Promise<void>
         {
             listener.on(type, handler);
-            return parse(buildMessage(words));
+            return parse(buildMessage(words),
+                quiet ? Logger.null : Logger.stderr);
         }
 
         /**
@@ -101,7 +108,7 @@ describe("parsePSMessage()", function()
                 {
                     throw new Error(`Parsed an invalid ${type}! Message:
 ${buildMessage(words)}`);
-                });
+                }, /*quiet*/true);
             });
         }
 
@@ -132,8 +139,8 @@ ${buildMessage(words)}`);
                 ];
                 return parseWords("battleinit", words, args =>
                 {
-                    expect(args.events.length).to.equal(0);
-                });
+                    expect(args.events).to.be.empty;
+                }, /*quiet*/true);
             });
         });
 
@@ -161,7 +168,7 @@ ${buildMessage(words)}`);
                 await parseWords("battleprogress", words, args =>
                 {
                     expect(args.events.length).to.equal(0);
-                });
+                }, /*quiet*/true);
             });
         });
 

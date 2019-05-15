@@ -1,9 +1,5 @@
 import { Pokemon } from "./Pokemon";
-import { limitedStatusTurns, pluralTurns } from "./utility";
-
-/** Types of weather conditions. */
-export type WeatherType = "none" | "SunnyDay" | "RainDance" | "Sandstorm" |
-    "Hail";
+import { limitedStatusTurns, pluralTurns, WeatherType } from "./utility";
 
 /** Maps weather type to its weather-extending item name. */
 const weatherItems: {readonly [T in WeatherType]: string} =

@@ -9,7 +9,7 @@ import { AnyBattleEvent, Cause, SideEndEvent, SideStartEvent } from
     "./dispatcher/BattleEvent";
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
-import { isPlayerId, otherId, PlayerID, PokemonDetails, PokemonID,
+import { isPlayerID, otherPlayerID, PlayerID, PokemonDetails, PokemonID,
     PokemonStatus, toIdName } from "./helpers";
 
 /** Translates BattleEvents to BattleState mutations. */
@@ -155,7 +155,7 @@ export class PSEventHandler
             {
                 // user successfully stalled an attack
                 // locked moves get canceled if they don't succeed
-                this.getActive(otherId(event.id.owner)).volatile
+                this.getActive(otherPlayerID(event.id.owner)).volatile
                     .lockedMove = false;
             }
             else this.logger.debug(`Ignoring activate "${event.volatile}"`);
@@ -412,14 +412,14 @@ export class PSEventHandler
         const id = args.id;
         if (args.username === this.username)
         {
-            this.sides = {[id]: "us", [otherId(id)]: "them"} as any;
+            this.sides = {[id]: "us", [otherPlayerID(id)]: "them"} as any;
             // we already know our team's size from the initial request
             //  message but not the other team
-            this.state.teams.them.size = args.teamSizes[otherId(id)];
+            this.state.teams.them.size = args.teamSizes[otherPlayerID(id)];
         }
         else
         {
-            this.sides = {[id]: "them", [otherId(id)]: "us"} as any;
+            this.sides = {[id]: "them", [otherPlayerID(id)]: "us"} as any;
             this.state.teams.them.size = args.teamSizes[id];
         }
         this.handleEvents(args.events);
@@ -564,7 +564,7 @@ export class PSEventHandler
      */
     protected getTeam(team: PlayerID | Side): Team
     {
-        if (isPlayerId(team)) team = this.getSide(team);
+        if (isPlayerID(team)) team = this.getSide(team);
         return this.state.teams[team];
     }
 

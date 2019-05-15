@@ -69,12 +69,44 @@ export function isMajorStatus(status: any): status is MajorStatus
     return majorStatuses.hasOwnProperty(status);
 }
 
-/** Holds the set of all boostable stat names. */
-export const boostableStatNames =
+const boostNamesInternal =
 {
     atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true,
     evasion: true
 };
+/** Holds the set of all boostable stat names. */
+export const boostNames: Readonly<typeof boostNamesInternal> =
+    boostNamesInternal;
 
 /** Names of pokemon stats that can be boosted. */
-export type BoostableStatName = keyof typeof boostableStatNames;
+export type BoostName = keyof typeof boostNames;
+
+/**
+ * Checks if a value matches a boost name.
+ * @param stat Value to be checked.
+ * @returns True if the name matches, false otherwise.
+ */
+export function isBoostName(stat: any): stat is BoostName
+{
+    return boostNames.hasOwnProperty(stat);
+}
+
+const weatherTypesInternal =
+    {none: true, SunnyDay: true, RainDance: true, Sandstorm: true, Hail: true};
+
+/** Holds the set of all weather types. */
+export const weatherTypes: Readonly<typeof weatherTypesInternal> =
+    weatherTypesInternal;
+
+/** Types of weather conditions. */
+export type WeatherType = keyof typeof weatherTypes;
+
+/**
+ * Checks if a value matches a weather type.
+ * @param type Value to be checked.
+ * @returns True if the name matches, false otherwise.
+ */
+export function isWeatherType(type: any): type is WeatherType
+{
+    return weatherTypes.hasOwnProperty(type);
+}
