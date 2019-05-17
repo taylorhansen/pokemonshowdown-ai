@@ -16,13 +16,14 @@
  */
 import * as tf from "@tensorflow/tfjs";
 import * as fs from "fs";
-import { dirname } from "path";
+import { dirname, join } from "path";
 import ProgressBar from "progress";
 import { Writable } from "stream";
 import { URL } from "url";
 import { Decision, Network, toColumn } from "../src/ai/Network";
-import { Choice } from "../src/battle/agent/Choice";
-import { evaluateFolder, modelPath, modelsFolder, selfPlayFolder } from
+import { Choice, choiceIds } from "../src/battle/agent/Choice";
+import { BattleState } from "../src/battle/state/BattleState";
+import { evaluateFolder, latestModelPath, modelsFolder, selfPlayFolder } from
     "../src/config";
 import { Logger } from "../src/Logger";
 import { MessageListener } from "../src/psbot/dispatcher/MessageListener";
@@ -53,15 +54,14 @@ logStream.write = function(chunk: any, enc?: string | CB, cb?: CB)
     return false;
 };
 
-/** Maximum number of turns in a game before it's considered a tie. */
-const maxTurns = 100;
-
 /** Models to represent p1 and p2. */
 type Models = {[P in PlayerID]: tf.LayersModel};
 
 /** Options for starting a new game. */
 interface GameOptions extends Models
 {
+    /** Maximum amount of turns before the game is considered a tie. */
+    maxTurns: number;
     /**
      * Whether to save Decision objects to disk, which will be used for learning
      * later.
@@ -145,7 +145,7 @@ async function play(options: GameOptions): Promise<GameResult>
                 switch (event.type)
                 {
                     case "turn":
-                        if (event.num >= maxTurns) done = true;
+                        if (event.num >= options.maxTurns) done = true;
                         break;
                     case "win":
                         // since the usernames passed into the Network
@@ -216,16 +216,6 @@ async function saveDecision(decision: Decision): Promise<URL>
 }
 
 /**
- * Compiles a model for training.
- * @param model Model to compile.
- */
-function compile(model: tf.LayersModel): void
-{
-    model.compile(
-        {loss: "meanSquaredError", optimizer: "adam", metrics: ["mae"]});
-}
-
-/**
  * Trains a model from an array of Decision file URLs.
  * @param decisionFiles Paths to each Decision file.
  */
@@ -238,6 +228,8 @@ async function learn(model: tf.LayersModel, decisionFiles: URL[]):
         while (files.length > 0)
         {
             // consume a random Decision file
+            // this helps break the correlation between consecutive samples for
+            //  better generalization
             const n = Math.floor(Math.random() * files.length);
             const url = files.splice(n, 1)[0];
             const file = fs.readFileSync(url);
@@ -255,19 +247,20 @@ async function learn(model: tf.LayersModel, decisionFiles: URL[]):
 }
 
 /**
- * Trains and evaluates a neural network model.
- * @param model Model to train.
- * @param logger Logger object.
+ * Does a training cycle, where a model is trained through self-play then
+ * evaluated by playing against a different model.
+ * @param toTrain Model to train through self-play.
+ * @param model Model to compare against.
  * @param games Amount of games to play during self-play and evaluation.
- * @returns A new Model if it is proved to be better after self-play, or the
- * same one that's given if the new Model failed.
+ * @param maxTurns Max amount of turns before a game is considered a tie.
+ * @param logger Logger object.
+ * @returns `toTrain` if it is proved to be better after self-play, or `model`
+ * if the newly trained `toTrain` model failed.
  */
-async function train(model: tf.LayersModel, logger = Logger.null, games = 5):
+async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
+    games: number, maxTurns: number, logger = Logger.null):
     Promise<tf.LayersModel>
 {
-    const newModel = Network.createModel();
-    newModel.setWeights(model.getWeights());
-
     logger.debug("Beginning self-play");
     const decisionFiles: URL[] = [];
     bar = new ProgressBar("Self-play games: [:bar] :current/:total",
@@ -280,7 +273,7 @@ async function train(model: tf.LayersModel, logger = Logger.null, games = 5):
 
         const {decisions, winner} = await play(
         {
-            p1: newModel, p2: newModel, saveDecisions: true,
+            p1: toTrain, p2: toTrain, maxTurns, saveDecisions: true,
             logPath: `${selfPlayFolder}/game-${i + 1}`, logger: innerLog
         });
 
@@ -293,8 +286,7 @@ async function train(model: tf.LayersModel, logger = Logger.null, games = 5):
     bar = undefined;
 
     logger.debug("Learning (this may take a while)");
-    compile(newModel);
-    await learn(newModel, decisionFiles);
+    await learn(toTrain, decisionFiles);
 
     // challenge the old model to see if the newly trained one learned anything
     logger.debug("Evaluating new network (p1=new, p2=old)");
@@ -309,8 +301,8 @@ async function train(model: tf.LayersModel, logger = Logger.null, games = 5):
 
         const {winner} = await play(
         {
-            p1: newModel, p2: model, logPath: `${evaluateFolder}/game-${i + 1}`,
-            logger: innerLog
+            p1: toTrain, p2: model, maxTurns,
+            logPath: `${evaluateFolder}/game-${i + 1}`, logger: innerLog
         });
 
         if (winner)
@@ -327,7 +319,7 @@ async function train(model: tf.LayersModel, logger = Logger.null, games = 5):
     if (wins.p1 > wins.p2)
     {
         logger.debug("New model (p1) wins, replace old model");
-        return newModel;
+        return toTrain;
     }
     else if (wins.p1 < wins.p2)
     {
@@ -337,21 +329,63 @@ async function train(model: tf.LayersModel, logger = Logger.null, games = 5):
     return model;
 }
 
-/** Amount of training cycles to do. */
-const cycles = 1;
-
-(async function()
+/** Creates a model for training. */
+function createModel(): tf.LayersModel
 {
-    /** Main top-level logger. */
+    // setup all the layers
+    const outNeurons = Object.keys(choiceIds).length;
+
+    const model = tf.sequential();
+
+    model.add(tf.layers.dense(
+    {
+        inputShape: [BattleState.getArraySize()], units: 10, activation: "tanh"
+    }));
+    model.add(tf.layers.dense({units: outNeurons, activation: "linear"}));
+
+    return model;
+}
+
+/** Compiles a model so it can be trained. */
+function compileModel(model: tf.LayersModel): void
+{
+    model.compile(
+        {loss: "meanSquaredError", optimizer: "adam", metrics: ["mae"]});
+}
+
+/**
+ * Trains the latest network for a given number of cycles.
+ * @param cycles Amount of cycles to train for.
+ * @param games Amount of games per cycle for training and evaluation.
+ * @param maxTurns Max amount of turns before a game is considered a tie.
+ */
+async function train(cycles: number, games: number, maxTurns: number)
+{
     const logger = new Logger(logStream, logStream, /*prefix*/"Train: ");
 
-    let model = await Network.loadModel(modelPath, logger.prefix("Network: "));
+    const modelUrl = `file://${latestModelPath}`;
+    const modelJsonUrl = `file://${join(latestModelPath, "model.json")}`;
+
     for (let i = 0; i < cycles; ++i)
     {
+        // load two copies of the same network
+        if (!fs.existsSync(modelUrl)) await createModel().save(modelUrl);
+        const model = await Network.loadModel(modelJsonUrl);
+        const toTrain = await Network.loadModel(modelJsonUrl);
+
+        compileModel(toTrain);
+
         logger.debug(`Starting training cycle ${i + 1}/${cycles}`);
-        model = await train(model,
+        const bestModel = await cycle(toTrain, model, games, maxTurns,
             logger.prefix(`Cycle(${i + 1}/${cycles}): `));
+
+        // the model that's better will be used to complete the next cycle
+        if (bestModel === toTrain)
+        {
+            logger.debug("Saving model");
+            await bestModel.save(modelUrl);
+        }
     }
-    logger.debug("Saving model");
-    await model.save(`file://${modelPath}`);
-})();
+}
+
+train(1, 5, 100);

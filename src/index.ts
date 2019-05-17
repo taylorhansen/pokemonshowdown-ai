@@ -1,6 +1,7 @@
 /* istanbul ignore file */
 import { Network } from "./ai/Network";
-import { domain, modelPath, password, serverid, username } from "./config";
+import { domain, latestModelPath, password, serverid, username } from
+    "./config";
 import { Logger } from "./Logger";
 import { PSBot } from "./psbot/PSBot";
 
@@ -9,7 +10,7 @@ const bot = new PSBot(Logger.stdout.prefix("PSBot: "));
 
 // configure client to accept certain challenges
 // here the neural network has to be loaded from disk first
-Network.loadNetwork(modelPath)
+Network.loadNetwork(`file://${latestModelPath}/model.json`)
     .then(net => bot.acceptChallenges("gen4randombattle", net));
 
 // configure client to login once connected

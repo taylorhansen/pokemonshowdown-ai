@@ -109,7 +109,8 @@ export class Network implements BattleAgent
             const discount = 0.8;
 
             const target = Array.from(predictionData);
-            // for now: calculate q-value for only the best choice
+            // calculate q-value for only the best choice, since we only have
+            //  a reward value from the last action
             const id = choiceIds[sortedChoices[0]];
             target[id] = this.reward.value + discount * predictionData[id];
 
@@ -140,23 +141,24 @@ export class Network implements BattleAgent
 
     /**
      * Saves neural network data to disk.
-     * @param path Base file name/path for model folder.
+     * @param url Base URL for model folder, e.g. `file://my-model`.
      */
-    public async save(path: string): Promise<void>
+    public async save(url: string): Promise<void>
     {
-        await this.model.save(`file://${path}`);
+        await this.model.save(url);
     }
 
     /**
      * Loads a Network model from disk, or constructs the default one if it
      * can't be found or the model's input or output shape are invalid.
-     * @param path Path to the model's folder created by `LayersModel#save()`.
-     * @param logger Logger object. Default stdout.
+     * @param url URL to the `model.json` created by `LayersModel#save()`, e.g.
+     * `file://my-model/model.json`.
+     * @param logger Logger object. Default stderr.
      */
-    public static async loadNetwork(path: string, logger = Logger.stderr):
+    public static async loadNetwork(url: string, logger = Logger.stderr):
         Promise<BattleAgentCtor>
     {
-        const model = await Network.loadModel(path, logger);
+        const model = await Network.loadModel(url);
 
         return class extends Network
         {
@@ -170,42 +172,14 @@ export class Network implements BattleAgent
     /**
      * Loads a model from disk, or constructs the default one if it can't be
      * found or the model's input or output shape don't match what's required.
-     * @param path Path to the model's folder created by `Model.save()`.
-     * @param logger Logger object. Default stdout.
+     * @param url URL to the `model.json` created by `LayersModel#save()`, e.g.
+     * `file://my-model/model.json`.
      */
-    public static async loadModel(path: string, logger = Logger.stdout):
-        Promise<tf.LayersModel>
+    public static async loadModel(url: string): Promise<tf.LayersModel>
     {
-        let model: tf.LayersModel;
-        try
-        {
-            model = await tfl.loadLayersModel(`file://${path}/model.json`);
-            Network.verifyModel(model);
-        }
-        catch (e)
-        {
-            logger.error(`Error opening model: ${e}`);
-            logger.debug("Constructing default model");
-            model = Network.createModel();
-            Network.verifyModel(model);
-        }
+        const model = await tfl.loadLayersModel(url);
+        Network.verifyModel(model);
         return model;
-    }
-
-    /** Constructs a valid default model for a Network object. */
-    public static createModel(): tf.LayersModel
-    {
-        // setup all the layers
-        const outNeurons = Object.keys(choiceIds).length;
-
-        const dense1 = tf.layers.dense({units: 10, activation: "tanh"});
-        const dense2 = tf.layers.dense(
-            {units: outNeurons, activation: "linear"});
-
-        const input = tf.input({shape: [Network.inputLength]});
-        const output = dense2.apply(dense1.apply(input)) as tf.SymbolicTensor;
-
-        return tf.model({inputs: input, outputs: output});
     }
 
     /**
@@ -218,7 +192,8 @@ export class Network implements BattleAgent
         const input = model.input;
         if (Array.isArray(input) || !Network.isValidInputShape(input.shape))
         {
-            throw new Error("Invalid input shape");
+            throw new Error("Loaded LayersModel has invalid input shape. Try \
+creating a new model based on the updated BattleState size.");
         }
     }
 
