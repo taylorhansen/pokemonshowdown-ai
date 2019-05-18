@@ -15,15 +15,17 @@
  * 5. Repeat steps 2-4 as desired.
  */
 import * as tf from "@tensorflow/tfjs";
+import { datasetFromIteratorFn } from "@tensorflow/tfjs-data/dist/dataset";
+import { iteratorFromFunction } from
+    "@tensorflow/tfjs-data/dist/iterators/lazy_iterator";
 import * as fs from "fs";
 import { dirname, join } from "path";
 import ProgressBar from "progress";
 import { Writable } from "stream";
-import { URL } from "url";
 import { Decision, Network, toColumn } from "../src/ai/Network";
 import { Choice, choiceIds } from "../src/battle/agent/Choice";
 import { BattleState } from "../src/battle/state/BattleState";
-import { evaluateFolder, latestModelPath, modelsFolder, selfPlayFolder } from
+import { evaluateFolder, latestModelFolder, modelsFolder, selfPlayFolder } from
     "../src/config";
 import { Logger } from "../src/Logger";
 import { MessageListener } from "../src/psbot/dispatcher/MessageListener";
@@ -32,6 +34,15 @@ import { parsePSMessage } from "../src/psbot/parser/parsePSMessage";
 import { PSBattle } from "../src/psbot/PSBattle";
 // @ts-ignore
 import s = require("./Pokemon-Showdown/.sim-dist/battle-stream");
+
+/** Checks if given path is an existing directory. */
+async function isDir(url: string): Promise<boolean>
+{
+    let stat: fs.Stats;
+    try { stat = await fs.promises.stat(url); }
+    catch (e) { return false; }
+    return stat.isDirectory();
+}
 
 /** Current progress bar. */
 let bar: ProgressBar | undefined;
@@ -77,10 +88,10 @@ interface GameOptions extends Models
 interface GameResult
 {
     /**
-     * URLs to saved Decision objects. Empty if `GameOptions#saveDecisions` was
+     * Paths to saved Decision objects. Empty if `GameOptions#saveDecisions` was
      * false.
      */
-    decisions: URL[];
+    decisions: string[];
     /** The winner of the game. Null if tied. */
     winner: PlayerID | null;
 }
@@ -95,14 +106,15 @@ async function play(options: GameOptions): Promise<GameResult>
 
     let winner: PlayerID | null = null;
     const eventLoops: Promise<void>[] = [];
-    const filePromises: Promise<URL>[] = [];
+    const filePromises: Promise<string>[] = [];
 
     // setup log file
     let file: fs.WriteStream | null;
     if (options.logPath)
     {
         const dir = dirname(options.logPath);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
+
+        if (!await isDir(dir)) await fs.promises.mkdir(dir);
 
         file = fs.createWriteStream(options.logPath);
     }
@@ -185,12 +197,15 @@ async function play(options: GameOptions): Promise<GameResult>
                 }
             }
             done = true;
-            if (file) file.close();
         }());
     }
 
     await Promise.all(eventLoops);
-    return {winner, decisions: await Promise.all(filePromises)};
+    const decisions = await Promise.all(filePromises);
+
+    if (file) file.close();
+
+    return {winner, decisions};
 }
 
 /** Folder to put all Decision files into. */
@@ -201,46 +216,49 @@ let numDatasets = 0;
 /**
  * Saves a Decision object to disk.
  * @param decision Decision object to save.
- * @returns A Promise to save the object and return its file URL.
+ * @returns A Promise to save the object and return its path.
  */
-async function saveDecision(decision: Decision): Promise<URL>
+async function saveDecision(decision: Decision): Promise<string>
 {
-    if (!fs.existsSync(datasetFolder))
-    {
-        fs.mkdirSync(datasetFolder, {recursive: true});
-    }
+    // make sure the datasetFolder exists
+    if (!await isDir(datasetFolder)) await fs.promises.mkdir(datasetFolder);
+
     const path = `${datasetFolder}/${numDatasets++}.json`;
     const data = JSON.stringify(decision);
-    fs.writeFileSync(path, data);
-    return new URL(`file://${path}`);
+    await fs.promises.writeFile(path, data);
+    return path;
 }
 
-/**
- * Trains a model from an array of Decision file URLs.
- * @param decisionFiles Paths to each Decision file.
- */
-async function learn(model: tf.LayersModel, decisionFiles: URL[]):
+/** Trains a model from an array of Decision file paths. */
+async function learn(model: tf.LayersModel, decisionFiles: string[]):
     Promise<tf.History>
 {
-    const dataset = tf.data.generator(function*()
+    const dataset = datasetFromIteratorFn<tf.TensorContainerObject>(
+        async function()
     {
         const files = [...decisionFiles];
-        while (files.length > 0)
+        return iteratorFromFunction<tf.TensorContainerObject>(async function()
         {
+            // done if no more files
+            // iterator requires value=null if done, but the tensorflow source
+            //  allows implicit null and our tsconfig doesn't, so get around
+            //  that by using an any-cast
+            if (files.length <= 0) return {value: null as any, done: true};
+
             // consume a random Decision file
             // this helps break the correlation between consecutive samples for
             //  better generalization
             const n = Math.floor(Math.random() * files.length);
             const url = files.splice(n, 1)[0];
-            const file = fs.readFileSync(url);
+            const file = await fs.promises.readFile(url);
             const decision: Decision = JSON.parse(file.toString());
 
             const state = toColumn(decision.state);
             const target = toColumn(decision.target);
 
             if (bar) bar.tick();
-            yield {xs: state, ys: target};
-        }
+            return {value: {xs: state, ys: target}, done: false};
+        });
     });
 
     return model.fitDataset(dataset, {epochs: 10});
@@ -262,7 +280,7 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
     Promise<tf.LayersModel>
 {
     logger.debug("Beginning self-play");
-    const decisionFiles: URL[] = [];
+    const decisionFiles: string[] = [];
     bar = new ProgressBar("Self-play games: [:bar] :current/:total",
         {total: games, clear: true});
     bar.update(0);
@@ -363,19 +381,27 @@ async function train(cycles: number, games: number, maxTurns: number)
 {
     const logger = new Logger(logStream, logStream, /*prefix*/"Train: ");
 
-    const modelUrl = `file://${latestModelPath}`;
-    const modelJsonUrl = `file://${join(latestModelPath, "model.json")}`;
+    const modelJsonUrl = `file://${join(latestModelFolder, "model.json")}`;
+
+    let toTrain: tf.LayersModel;
+    try { toTrain = await Network.loadModel(modelJsonUrl); }
+    catch (e)
+    {
+        logger.error(`Error opening model: ${e}`);
+        logger.debug("Creating default model");
+
+        toTrain = createModel();
+        await toTrain.save(`file://${latestModelFolder}`);
+    }
+    compileModel(toTrain);
+
+    // this seems to be the only way to easily clone a tf.LayersModel
+    let model = await Network.loadModel(modelJsonUrl);
 
     for (let i = 0; i < cycles; ++i)
     {
-        // load two copies of the same network
-        if (!fs.existsSync(modelUrl)) await createModel().save(modelUrl);
-        const model = await Network.loadModel(modelJsonUrl);
-        const toTrain = await Network.loadModel(modelJsonUrl);
-
-        compileModel(toTrain);
-
         logger.debug(`Starting training cycle ${i + 1}/${cycles}`);
+
         const bestModel = await cycle(toTrain, model, games, maxTurns,
             logger.prefix(`Cycle(${i + 1}/${cycles}): `));
 
@@ -383,7 +409,16 @@ async function train(cycles: number, games: number, maxTurns: number)
         if (bestModel === toTrain)
         {
             logger.debug("Saving model");
-            await bestModel.save(modelUrl);
+            await bestModel.save(modelJsonUrl);
+            // update adversary model
+            model = await Network.loadModel(modelJsonUrl);
+            logger.debug("Done");
+        }
+        else
+        {
+            // failed to learn, rollback to previous version
+            toTrain = await Network.loadModel(modelJsonUrl);
+            compileModel(toTrain);
         }
     }
 }

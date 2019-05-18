@@ -1,4 +1,5 @@
 import fetch, { RequestInit } from "node-fetch";
+import { resolve } from "url";
 import { client as WSClient } from "websocket";
 import { BattleAgent, BattleAgentCtor } from "../battle/agent/BattleAgent";
 import { Choice } from "../battle/agent/Choice";
@@ -72,13 +73,13 @@ export class PSBot
     public connect(url: string): Promise<boolean>
     {
         this.client.connect(url);
-        return new Promise(resolve =>
+        return new Promise(res =>
         {
             this.connected = result =>
             {
                 // reset connected callback, since the promise is now resolved
                 this.connected = () => {};
-                resolve(result);
+                res(result);
             };
         });
     }
@@ -92,7 +93,8 @@ export class PSBot
             this.challstr = async function() {};
 
             // url to make the post request to
-            const url = `${options.domain}/~~${options.serverid}/action.php`;
+            const url = resolve(options.domain,
+                `~~${options.serverid}/action.php`);
 
             const init: RequestInit =
             {
