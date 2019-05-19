@@ -29,12 +29,6 @@ describe("Move", function()
             expect(() => move.id = "something invalid").to.throw();
             expect(move.id).to.equal("");
         });
-
-        it("Should initialize pp", function()
-        {
-            move.id = "splash";
-            expect(move.pp).to.equal(64);
-        });
     });
 
     describe("pp", function()
@@ -44,10 +38,11 @@ describe("Move", function()
             expect(move.pp).to.equal(0);
         });
 
-        it("Should set pp if id is set", function()
+        it("Should initialize pp when id is set", function()
         {
             move.id = "splash";
             expect(move.pp).to.equal(64);
+            expect(move.maxpp).to.equal(64);
         });
 
         it("Should set pp to 0 if overused", function()
@@ -61,7 +56,7 @@ describe("Move", function()
         {
             move.id = "splash";
             move.pp = 100;
-            expect(move.pp).to.equal(64);
+            expect(move.pp).to.equal(move.maxpp);
         });
     });
 

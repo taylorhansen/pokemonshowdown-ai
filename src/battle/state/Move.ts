@@ -20,7 +20,7 @@ export class Move
         const data = dex.moves[id];
         this._id = data.uid;
         this._pp = data.pp;
-        this.ppMax = data.pp;
+        this._maxpp = data.pp;
     }
     private _id: number | null = null;
     /** Move id name. */
@@ -33,24 +33,30 @@ export class Move
     }
     public set pp(pp: number)
     {
-        this._pp = Math.max(0, Math.min(pp, this.ppMax));
+        this._pp = Math.max(0, Math.min(pp, this._maxpp));
     }
     /** Current power points. */
     private _pp = 0;
+
+    /** Max amount of power points this move can have. */
+    public get maxpp(): number
+    {
+        return this._maxpp;
+    }
     /** Maximum amount of power points. */
-    private ppMax = 0;
+    private _maxpp = 0;
 
     /** Gets the size of the return value of `toArray()`. */
     public static getArraySize(): number
     {
-        return /*move id*/dex.numMoves + /*pp*/1;
+        return /*move id*/dex.numMoves + /*pp and maxpp*/2;
     }
 
     // istanbul ignore next: unstable, hard to test
     /** Formats move info into an array of numbers. */
     public toArray(): number[]
     {
-        return [...oneHot(this._id, dex.numMoves), this._pp];
+        return [...oneHot(this._id, dex.numMoves), this._pp, this._maxpp];
     }
 
     // istanbul ignore next: only used for logging
@@ -60,7 +66,7 @@ export class Move
      */
     public toString(type?: string): string
     {
-        return `${this.id}${type ? ` <${type}>` : ""} \
-(${this.pp}/${this.ppMax})`;
+        return `${this.idName}${type ? ` <${type}>` : ""} \
+(${this._pp}/${this._maxpp})`;
     }
 }
