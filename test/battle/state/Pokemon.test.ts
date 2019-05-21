@@ -235,14 +235,52 @@ describe("Pokemon", function()
         });
     });
 
-    describe("moveset", function()
+    describe("#moveset", function()
     {
-        describe("useMove", function()
+        describe("#useMove()", function()
         {
             it("Should use move", function()
             {
-                mon.useMove("splash", mon);
+                mon.useMove("splash", [mon]);
                 expect(mon.moveset.get("splash")!.pp).to.equal(63);
+            });
+
+            describe("pressure ability handling", function()
+            {
+                let target: Pokemon;
+
+                beforeEach("Setup pressure mon", function()
+                {
+                    target = new Pokemon(/*hpPercent=*/true);
+                    target.species = "Zapdos";
+                    target.ability = "pressure";
+                });
+
+                beforeEach("Reveal an attacking move", function()
+                {
+                    const move = mon.moveset.reveal("tackle");
+                    expect(move.pp).to.equal(56);
+                });
+
+                it("Should use double pp if targeted", function()
+                {
+                    mon.useMove("tackle", [target]);
+                    expect(mon.moveset.get("tackle")!.pp).to.equal(54);
+                });
+
+                it("Should not use double pp if not targeted", function()
+                {
+                    mon.useMove("tackle", [mon]);
+                    expect(mon.moveset.get("tackle")!.pp).to.equal(55);
+                });
+
+                it("Should not use double pp if mold breaker", function()
+                {
+                    mon.species = "Rampardos";
+                    mon.ability = "moldbreaker";
+                    mon.useMove("tackle", [target]);
+                    expect(mon.moveset.get("tackle")!.pp).to.equal(55);
+                });
             });
         });
 

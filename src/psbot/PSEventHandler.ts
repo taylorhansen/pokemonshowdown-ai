@@ -1,8 +1,8 @@
-import { isFutureMove } from "../battle/dex/dex";
+import { dex, isFutureMove } from "../battle/dex/dex";
 import { Type } from "../battle/dex/dex-types";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
-import { Side } from "../battle/state/Side";
+import { otherSide, Side } from "../battle/state/Side";
 import { SwitchInOptions, Team } from "../battle/state/Team";
 import { Logger } from "../Logger";
 import { AnyBattleEvent, Cause, SideEndEvent, SideStartEvent } from
@@ -237,12 +237,13 @@ export class PSEventHandler
             }
         })
         .on("move", event =>
-            this.getActive(event.id.owner)
-                .useMove(
-                    toIdName(event.moveName),
-                    this.getActive(event.targetId.owner),
-                    // don't consume pp if locked into using the move
-                    event.cause && event.cause.type === "lockedmove"))
+        {
+            const moveId = toIdName(event.moveName);
+            const mon = this.getActive(event.id.owner);
+            mon.useMove(moveId, this.getTargets(moveId, mon),
+                // don't consume pp if locked into using the move
+                /*nopp*/ event.cause && event.cause.type === "lockedmove");
+        })
         .on("mustrecharge", event =>
         {
             this.getActive(event.id.owner).volatile.mustRecharge = true;
@@ -545,6 +546,42 @@ export class PSEventHandler
     private static isStallSingleTurn(status: string): boolean
     {
         return ["Protect", "move: Protect", "move: Endure"].includes(status);
+    }
+
+    /**
+     * Gets the active Pokemon targets of a move.
+     * @param moveId Move that will be used.
+     * @param user Pokemon that used the move.
+     */
+    protected getTargets(moveId: string, user: Pokemon): Pokemon[]
+    {
+        const targetType = dex.moves[moveId].target;
+        switch (targetType)
+        {
+            case "adjacentAlly":
+                // TODO: support doubles/triples
+                return [];
+            case "adjacentAllyOrSelf": case "allySide":
+            case "allyTeam": case "self":
+                return [user];
+            case "adjacentFoe": case "all": case "allAdjacent":
+            case "allAdjacentFoes": case "any": case "foeSide": case "normal":
+            case "randomNormal": case "scripted":
+                if (user.team)
+                {
+                    return [
+                        ...(targetType === "all" ? [user] : []),
+                        this.getActive(otherSide(user.team.side))
+                    ];
+                }
+                else throw new Error("Move user has no team");
+            case "all":
+                if (user.team)
+                {
+                    return [user, this.getActive(otherSide(user.team.side))];
+                }
+                else throw new Error("Move user has no team");
+        }
     }
 
     // istanbul ignore next: trivial

@@ -1163,62 +1163,6 @@ describe("Battle and EventProcessor", function()
                     expect(move.pp).to.equal(64);
                 });
             });
-
-            describe("pressure", function()
-            {
-                // id of the pokemon that has the pressure ability
-                const them2: PokemonID =
-                    {owner: "p2", position: "a", nickname: "Zapdos"};
-
-                beforeEach("Switchin a Pressure pokemon", function()
-                {
-                    battle.state.teams.them.switchIn("Zapdos", 100, "", 100,
-                            100)!.ability = "pressure";
-                });
-
-                beforeEach("Reveal an attacking move", function()
-                {
-                    const move = battle.state.teams.us.active.moveset.reveal(
-                        "tackle");
-                    expect(move.pp).to.equal(56);
-                });
-
-                it("Should use double pp if targeted", async function()
-                {
-                    await battle.progress(
-                    {
-                        events:
-                        [
-                            {
-                                type: "move", id: us1, moveName: "Tackle",
-                                targetId: them2
-                            }
-                        ]
-                    });
-                    const move = battle.state.teams.us.active.moveset.get(
-                        "tackle")!;
-                    expect(move).to.not.be.null;
-                    expect(move.pp).to.equal(54);
-                });
-
-                it("Should not use double pp not if targeted", async function()
-                {
-                    await battle.progress(
-                    {
-                        events:
-                        [
-                            {
-                                type: "move", id: us1, moveName: "Tackle",
-                                targetId: us1
-                            }
-                        ]
-                    });
-                    const move = battle.state.teams.us.active.moveset.get(
-                        "tackle")!;
-                    expect(move).to.not.be.null;
-                    expect(move.pp).to.equal(55);
-                });
-            });
         });
 
         describe("mustrecharge", function()

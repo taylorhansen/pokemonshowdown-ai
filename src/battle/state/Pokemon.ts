@@ -165,22 +165,22 @@ ability ${ability}`);
     /**
      * Indicates that a move has been used.
      * @param id ID name of the move.
-     * @param target Pokemon that was targeted by the move.
+     * @param targets Targets of the move.
      * @param nopp Whether to not consume pp for this move.
      */
-    public useMove(id: string, target: Pokemon, nopp?: boolean): void
+    public useMove(id: string, targets: Pokemon[], nopp?: boolean): void
     {
         // struggle doesn't occupy a moveslot
         if (id === "struggle") return;
 
-        const pp =
-            // locked moves don't consume pp
+        this.moveset.getOrReveal(id).pp -=
             nopp ? 0
-            // pressure doubles pp usage if opponent is targeted
-            : (target !== this && target.ability === "pressure") ? 2
-            // otherwise only 1 is used
-            : 1;
-        this.moveset.getOrReveal(id).pp -= pp;
+            // mold breaker cancels pressure
+            : this.ability === "moldbreaker" ? 1
+            // consume 1 pp + 1 more for each target with pressure ability
+            // TODO: in gen>=5, don't count allies
+            : targets.filter(m => m !== this && m.ability === "pressure")
+                .length + 1;
 
         // release two-turn move
         // while this could be the event that prepares the move, a separate
