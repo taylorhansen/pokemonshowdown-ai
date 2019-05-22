@@ -1,3 +1,4 @@
+// istanbul ignore file
 /** @file Contains config info. */
 import { join } from "path";
 

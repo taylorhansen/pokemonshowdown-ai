@@ -5,7 +5,9 @@
 import { Type } from "../src/battle/dex/dex-types";
 import { toIdName } from "../src/psbot/helpers";
 // @ts-ignore
-import Dex = require("./Pokemon-Showdown/.sim-dist/dex");
+import { ModdedDex } from "./Pokemon-Showdown/.sim-dist/dex";
+
+const dex = new ModdedDex("gen4");
 
 // TODO: support other gens?
 
@@ -55,10 +57,11 @@ function maybeQuote(str: string): string
     return /[- ']/.test(str) ? quote(str) : str;
 }
 
-const data = Dex.mod("gen4").data;
+const data = dex.data;
 
 // import statement at the top of the file
 console.log(`\
+// istanbul ignore file
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */

@@ -1,4 +1,4 @@
-/* istanbul ignore file */
+// istanbul ignore file
 import { join } from "path";
 import { Network } from "./ai/Network";
 import { domain, latestModelFolder, password, serverid, username } from

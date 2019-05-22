@@ -1,3 +1,4 @@
+// istanbul ignore file
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
