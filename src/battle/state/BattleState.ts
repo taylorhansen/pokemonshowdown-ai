@@ -1,4 +1,3 @@
-import { BattleAgent } from "../agent/BattleAgent";
 import { RoomStatus } from "./RoomStatus";
 import { Side } from "./Side";
 import { Team } from "./Team";
@@ -11,17 +10,6 @@ export class BattleState
         {us: new Team("us", this), them: new Team("them", this)};
     /** Global status conditions for the entire room. */
     public readonly status = new RoomStatus();
-    /** Used for calling state mutation listeners. */
-    public readonly agent?: BattleAgent;
-
-    /**
-     * Creates a BattleState object.
-     * @param agent Used for calling state mutation listeners.
-     */
-    constructor(agent?: BattleAgent)
-    {
-        this.agent = agent;
-    }
 
     /**
      * Gets the size of the return value of `toArray()`.

@@ -51,7 +51,7 @@ describe("PSBot", function()
     {
         beforeEach("Setup listener", function()
         {
-            bot.acceptChallenges(format, MockBattleAgent);
+            bot.acceptChallenges(format, new MockBattleAgent());
         });
 
         it(`Should accept ${format} challenges`, async function()

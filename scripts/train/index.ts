@@ -4,14 +4,13 @@
  *
  * The algorithm is as follows:
  * 1. Construct a neural network.
- * 2. Play the network against itself, storing (state, action, reward) tuples
- *    to disk after each decision.
+ * 2. Play the network against itself, storing Decision objects during play to
+ *    be used for learning later.
  * 3. After a number of games, train a copy of the neural network using all of
- *    the saved tuples.
+ *    the stored Decisions.
  * 4. Evaluate the newly trained network against the old one to see if the old
- *    one should be replaced on the next iteration. This is done by playing
- *    some number of games, each with a tiebreaker if the max turn cap is
- *    reached.
+ *    one should be replaced on the next training cycle. This is done by playing
+ *    some number of games and seeing if the new network beats the old one.
  * 5. Repeat steps 2-4 as desired.
  */
 import * as tf from "@tensorflow/tfjs";
@@ -22,18 +21,20 @@ import * as fs from "fs";
 import { dirname, join } from "path";
 import ProgressBar from "progress";
 import { Writable } from "stream";
-import { Decision, Network, toColumn } from "../src/ai/Network";
-import { Choice, choiceIds } from "../src/battle/agent/Choice";
-import { BattleState } from "../src/battle/state/BattleState";
-import { evaluateFolder, latestModelFolder, modelsFolder, selfPlayFolder } from
-    "../src/config";
-import { Logger } from "../src/Logger";
-import { MessageListener } from "../src/psbot/dispatcher/MessageListener";
-import { PlayerID } from "../src/psbot/helpers";
-import { parsePSMessage } from "../src/psbot/parser/parsePSMessage";
-import { PSBattle } from "../src/psbot/PSBattle";
+import { Network, toColumn } from "../../src/ai/Network";
+import { Choice, choiceIds } from "../../src/battle/agent/Choice";
+import { BattleState } from "../../src/battle/state/BattleState";
+import { evaluateFolder, latestModelFolder, selfPlayFolder } from
+    "../../src/config";
+import { Logger } from "../../src/Logger";
+import { MessageListener } from "../../src/psbot/dispatcher/MessageListener";
+import { PlayerID } from "../../src/psbot/helpers";
+import { parsePSMessage } from "../../src/psbot/parser/parsePSMessage";
 // @ts-ignore
-import s = require("./Pokemon-Showdown/.sim-dist/battle-stream");
+import s = require("../Pokemon-Showdown/.sim-dist/battle-stream");
+import { Decision } from "./Decision";
+import { TrainBattle } from "./TrainBattle";
+import { TrainNetwork } from "./TrainNetwork";
 
 /** Checks if given path is an existing directory. */
 async function isDir(url: string): Promise<boolean>
@@ -68,30 +69,43 @@ logStream.write = function(chunk: any, enc?: string | CB, cb?: CB)
 /** Models to represent p1 and p2. */
 type Models = {[P in PlayerID]: tf.LayersModel};
 
-/** Options for starting a new game. */
-interface GameOptions extends Models
+interface GameOptionsBase
 {
     /** Maximum amount of turns before the game is considered a tie. */
     maxTurns: number;
     /**
-     * Whether to save Decision objects to disk, which will be used for learning
-     * later.
+     * Whether to emit Decision objects, which will be used for learning later.
      */
-    saveDecisions?: boolean;
+    emitDecisions?: boolean;
     /** Path to the file in which to store debug info. */
     logPath?: string;
     /** Logger object. */
     logger?: Logger;
 }
 
+interface EmitDecisions extends GameOptionsBase
+{
+    emitDecisions: true;
+    /** Calculate the target Q values using this discount rate. */
+    gamma: number;
+}
+
+interface NonEmitDecisions extends GameOptionsBase
+{
+    emitDecisions?: false;
+}
+
+/** Options for starting a new game. */
+type GameOptions = Models & (EmitDecisions | NonEmitDecisions);
+
 /** Result object returned from `play()`. */
 interface GameResult
 {
     /**
-     * Paths to saved Decision objects. Empty if `GameOptions#saveDecisions` was
-     * false.
+     * Paths to emitted Decision objects. Empty if `GameOptions#emitDecisions`
+     * was false.
      */
-    decisions: string[];
+    decisions: Decision[];
     /** The winner of the game. Null if tied. */
     winner: PlayerID | null;
 }
@@ -106,7 +120,7 @@ async function play(options: GameOptions): Promise<GameResult>
 
     let winner: PlayerID | null = null;
     const eventLoops: Promise<void>[] = [];
-    const filePromises: Promise<string>[] = [];
+    const decisions: Decision[] = [];
 
     // setup log file
     let file: fs.WriteStream | null;
@@ -126,32 +140,25 @@ async function play(options: GameOptions): Promise<GameResult>
     {
         const innerLog = logger.pipeDebug(file).prefix(`Play(${id}): `);
 
-        const agent = new Network(options[id], innerLog.prefix("Network: "));
+        const agent = new TrainNetwork(options[id],
+            innerLog.prefix("Network: "));
 
         // sends player choices to the battle stream
-        function sender(choice: Choice): void
+        function sender(c: Choice): void
         {
-            innerLog.debug(`Sending ${choice}`);
-            streams[id].write(choice);
-
-            // FIXME: duplicate Decisions can be saved if BattleAgent#decide()
-            //  wasn't called between sender calls
-            if (options.saveDecisions && agent.decision)
-            {
-                filePromises.push(saveDecision(agent.decision));
-            }
+            innerLog.debug(`Sending choice '${c}'`);
+            streams[id].write(c);
         }
 
-        const battle = new PSBattle(id, agent, sender,
+        const battle = new TrainBattle(id, agent, sender,
             innerLog.prefix("PSBattle: "));
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
-        const listener = new MessageListener();
-
         // setup listeners
-        // only need one player to track this
+        const listener = new MessageListener();
         if (id === "p1")
         {
+            // only need one player to track these
             listener.on("battleprogress", args => args.events.forEach(event =>
             {
                 switch (event.type)
@@ -173,90 +180,81 @@ async function play(options: GameOptions): Promise<GameResult>
         }
         // basic functionality
         listener.on("battleinit", msg => battle.init(msg));
-        listener.on("battleprogress", msg => battle.progress(msg));
+        let lastChoice: Choice | undefined;
+        let choice: Choice | undefined;
+        listener.on("battleprogress", msg =>
+        {
+            // last choice was officially accepted by the server
+            // create and save a Decision object
+            if (options.emitDecisions)
+            {
+                lastChoice = choice;
+                choice = battle.lastChoice;
+                const reward = battle.getReward();
+                // ensure that the network has sent at least two choices
+                // this way the TrainingNetwork will have the state and
+                //  prediction tensors it needs to calculate the Q value
+                if (lastChoice && choice)
+                {
+                    // FIXME: Q-values grow stale as training goes on
+                    decisions.push(agent.getDecision(lastChoice, choice,
+                        reward, options.gamma));
+                }
+            }
+
+            battle.progress(msg);
+        });
         listener.on("request", msg => battle.request(msg));
         listener.on("error", msg => battle.error(msg));
 
         // start parser event loop
         const stream = streams[id];
+        const parserLog = innerLog.prefix("Parser: ");
         eventLoops.push(async function()
         {
             let output: string;
             while (!done && (output = await stream.read()))
             {
                 innerLog.debug(`received:\n${output}`);
-                try
-                {
-                    await parsePSMessage(output, listener,
-                        innerLog.prefix("Parser: "));
-                }
-                catch (e)
-                {
-                    innerLog.error(e);
-                    console.trace();
-                }
+                try { await parsePSMessage(output, listener, parserLog); }
+                catch (e) { innerLog.error(`${e}\n${(e as Error).stack}`); }
             }
             done = true;
         }());
     }
 
     await Promise.all(eventLoops);
-    const decisions = await Promise.all(filePromises);
 
     if (file) file.close();
 
     return {winner, decisions};
 }
 
-/** Folder to put all Decision files into. */
-const datasetFolder = `${modelsFolder}/datasets`;
-/** Decision filename counter. */
-let numDatasets = 0;
-
-/**
- * Saves a Decision object to disk.
- * @param decision Decision object to save.
- * @returns A Promise to save the object and return its path.
- */
-async function saveDecision(decision: Decision): Promise<string>
-{
-    // make sure the datasetFolder exists
-    if (!await isDir(datasetFolder)) await fs.promises.mkdir(datasetFolder);
-
-    const path = `${datasetFolder}/${numDatasets++}.json`;
-    const data = JSON.stringify(decision);
-    await fs.promises.writeFile(path, data);
-    return path;
-}
-
-/** Trains a model from an array of Decision file paths. */
-async function learn(model: tf.LayersModel, decisionFiles: string[]):
+/** Trains a model from an array of Decision objects. */
+async function learn(model: tf.LayersModel, decisions: Decision[]):
     Promise<tf.History>
 {
     const dataset = datasetFromIteratorFn<tf.TensorContainerObject>(
-        async function()
+    async function()
     {
-        const files = [...decisionFiles];
-        return iteratorFromFunction<tf.TensorContainerObject>(async function()
+        const ds = [...decisions];
+        return iteratorFromFunction<tf.TensorContainerObject>(function()
         {
             // done if no more files
             // iterator requires value=null if done, but the tensorflow source
             //  allows implicit null and our tsconfig doesn't, so get around
             //  that by using an any-cast
-            if (files.length <= 0) return {value: null as any, done: true};
+            if (ds.length <= 0) return {value: null as any, done: true};
 
             // consume a random Decision file
             // this helps break the correlation between consecutive samples for
             //  better generalization
-            const n = Math.floor(Math.random() * files.length);
-            const url = files.splice(n, 1)[0];
-            const file = await fs.promises.readFile(url);
-            const decision: Decision = JSON.parse(file.toString());
+            const n = Math.floor(Math.random() * ds.length);
+            const decision = ds.splice(n, 1)[0];
 
             const state = toColumn(decision.state);
             const target = toColumn(decision.target);
 
-            if (bar) bar.tick();
             return {value: {xs: state, ys: target}, done: false};
         });
     });
@@ -280,7 +278,7 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
     Promise<tf.LayersModel>
 {
     logger.debug("Beginning self-play");
-    const decisionFiles: string[] = [];
+    const decisions: Decision[] = [];
     bar = new ProgressBar("Self-play games: [:bar] :current/:total",
         {total: games, clear: true});
     bar.update(0);
@@ -289,22 +287,24 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
         const innerLog = logger.prefix(`Game(${i + 1}/${games}): `);
         innerLog.debug("Start");
 
-        const {decisions, winner} = await play(
+        const {decisions: ds, winner} = await play(
         {
-            p1: toTrain, p2: toTrain, maxTurns, saveDecisions: true,
+            p1: toTrain, p2: toTrain, maxTurns, emitDecisions: true, gamma: 0.8,
             logPath: `${selfPlayFolder}/game-${i + 1}`, logger: innerLog
         });
 
-        decisionFiles.push(...decisions);
+        decisions.push(...ds);
 
         if (winner) innerLog.debug(`Winner: ${winner}`);
         else innerLog.debug("Tie");
         bar.tick();
     }
+    // clear bar so the main logger doesn't try to print above it anymore
+    bar.terminate();
     bar = undefined;
 
     logger.debug("Learning (this may take a while)");
-    await learn(toTrain, decisionFiles);
+    await learn(toTrain, decisions);
 
     // challenge the old model to see if the newly trained one learned anything
     logger.debug("Evaluating new network (p1=new, p2=old)");
@@ -331,6 +331,7 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
         else innerLog.debug("Tie");
         bar.tick();
     }
+    bar.terminate();
     bar = undefined;
 
     logger.debug(`Wins: ${JSON.stringify(wins)}`);
@@ -381,6 +382,7 @@ async function train(cycles: number, games: number, maxTurns: number)
 {
     const logger = new Logger(logStream, logStream, /*prefix*/"Train: ");
 
+    const modelUrl = `file://${latestModelFolder}/`;
     const modelJsonUrl = `file://${join(latestModelFolder, "model.json")}`;
 
     let toTrain: tf.LayersModel;
@@ -409,14 +411,20 @@ async function train(cycles: number, games: number, maxTurns: number)
         if (bestModel === toTrain)
         {
             logger.debug("Saving model");
-            await bestModel.save(modelJsonUrl);
+            await bestModel.save(modelUrl);
             // update adversary model
-            model = await Network.loadModel(modelJsonUrl);
+            // in the last cycle we don't need to do this though
+            if (i + 1 < cycles)
+            {
+                model.dispose();
+                model = await Network.loadModel(modelJsonUrl);
+            }
             logger.debug("Done");
         }
         else
         {
             // failed to learn, rollback to previous version
+            toTrain.dispose();
             toTrain = await Network.loadModel(modelJsonUrl);
             compileModel(toTrain);
         }

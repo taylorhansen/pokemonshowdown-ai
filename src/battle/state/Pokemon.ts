@@ -354,12 +354,6 @@ ability ${ability}`);
     public faint(): void
     {
         this.hp.set(0, 0);
-
-        if (this.team && this.team.state && this.team.state.agent &&
-            this.team.state.agent.onFaint)
-        {
-            this.team.state.agent.onFaint(this);
-        }
     }
 
     /**

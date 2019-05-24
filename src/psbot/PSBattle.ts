@@ -54,7 +54,7 @@ export class PSBattle
         this.logger = logger;
         this.agent = agent;
         this.sender = sender;
-        this.state = new BattleState(agent);
+        this.state = new BattleState();
         this.eventHandler = new eventHandlerCtor(this.username, this.state,
                 logger.prefix("PSEventHandler: "));
     }
@@ -76,9 +76,6 @@ export class PSBattle
     {
         this.logger.debug(`battleprogress:\n${
             inspect(msg, {colors: false, depth: null})}`);
-
-        // last choice was officially accepted by the server
-        this.agent.acceptChoice(this.lastChoices[0]);
 
         this.eventHandler.handleEvents(msg.events);
         this.eventHandler.printState();

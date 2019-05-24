@@ -1,7 +1,7 @@
 import fetch, { RequestInit } from "node-fetch";
 import { resolve } from "url";
 import { client as WSClient } from "websocket";
-import { BattleAgent, BattleAgentCtor } from "../battle/agent/BattleAgent";
+import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice } from "../battle/agent/Choice";
 import { Logger } from "../Logger";
 import { MessageListener } from "./dispatcher/MessageListener";
@@ -12,13 +12,13 @@ import { PSBattle } from "./PSBattle";
 export interface LoginOptions
 {
     /** Account username. */
-    username: string;
+    readonly username: string;
     /** Account password. */
-    password?: string;
+    readonly password?: string;
     /** Domain to login with. */
-    domain: string;
+    readonly domain: string;
     /** Server id used for login. */
-    serverid: string;
+    readonly serverid: string;
 }
 
 /** Manages the connection to a PokemonShowdown server. */
@@ -31,7 +31,7 @@ export class PSBot
     /** Listens to server messages. */
     private readonly listener = new MessageListener();
     /** Dictionary of accepted formats. */
-    private readonly formats: {[format: string]: BattleAgentCtor} = {};
+    private readonly formats: {[format: string]: BattleAgent} = {};
     /** Keeps track of all the battles we're in. */
     private readonly battles: {[room: string]: PSBattle} = {};
     /** Username of the client. */
@@ -58,11 +58,11 @@ export class PSBot
     /**
      * Allows the PSBot to accept battle challenges for the given format.
      * @param format Name of the format to use.
-     * @param ctor The type of BattleAgent to use for this format.
+     * @param agent The BattleAgent to use for this format.
      */
-    public acceptChallenges(format: string, ctor: BattleAgentCtor): void
+    public acceptChallenges(format: string, agent: BattleAgent): void
     {
-        this.formats[format] = ctor;
+        this.formats[format] = agent;
     }
 
     /**
@@ -184,12 +184,10 @@ pass=${options.password}&challstr=${challstr}`;
                 // joining a new battle
                 // room names follow the format battle-<format>-<id>
                 const format = room.split("-")[1];
-                const agentCtor = this.formats[format];
-                if (agentCtor)
+                if (this.formats.hasOwnProperty(format))
                 {
-                    this.initBattle(
-                        new agentCtor(this.logger.prefix(`Agent(${room}): `)),
-                        room);
+                    // lookup registered BattleAgent
+                    this.initBattle(this.formats[format], room);
                 }
                 else
                 {
@@ -207,29 +205,22 @@ pass=${options.password}&challstr=${challstr}`;
                 {
                     if (this.formats.hasOwnProperty(msg.challengesFrom[user]))
                     {
-                        this.addResponses(null, `|/accept ${user}`);
+                        this.addResponses("", `|/accept ${user}`);
                     }
-                    else this.addResponses(null, `|/reject ${user}`);
+                    else this.addResponses("", `|/reject ${user}`);
                 }
             }
         });
 
-        this.listener.on("updateuser", msg =>
-        {
-            this.username = msg.username;
-        });
+        this.listener.on("updateuser", m => { this.username = m.username; });
 
         // once a battle is over we can respectfully leave
         this.listener.on("battleprogress", (msg, room) =>
-            msg.events.forEach(event =>
-                ["tie", "win"].includes(event.type) ?
-                    this.addResponses(room, "|gg", "|/leave") : undefined));
+            msg.events.some(e => ["tie", "win"].includes(e.type)) ?
+                this.addResponses(room, "|gg", "|/leave") : undefined);
 
         // cleanup after leaving a room
-        this.listener.on("deinit", (msg, room) =>
-        {
-            delete this.battles[room];
-        });
+        this.listener.on("deinit", (m, room) => { delete this.battles[room]; });
 
         // delegate battle-related messages to their appropriate PSBattle
         this.listener.on("battleinit", (msg, room) =>
@@ -281,16 +272,12 @@ pass=${options.password}&challstr=${challstr}`;
 
     /**
      * Sends a list of responses to the server.
-     * @param room Room to send the response from. Can be null if it doesn't
-     * matter.
+     * @param room Room to send the response from. Can be empty if no room in
+     * particular.
      * @param responses Responses to be sent to the server.
      */
-    private addResponses(room: string | null, ...responses: string[]): void
+    private addResponses(room: string, ...responses: string[]): void
     {
-        for (let response of responses)
-        {
-            if (room) response = room + response;
-            this.sender(response);
-        }
+        for (const response of responses) this.sender(room + response);
     }
 }

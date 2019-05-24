@@ -287,15 +287,7 @@ export class PSEventHandler
         })
         .on("tie", () => { this._battling = false; })
         .on("win", () => { this._battling = false; })
-        .on("turn", () =>
-        {
-            this.newTurn = true;
-
-            if (this.state.agent && this.state.agent.onTurn)
-            {
-                this.state.agent.onTurn();
-            }
-        })
+        .on("turn", () => { this.newTurn = true; })
         .on("upkeep", () =>
         {
             // selfSwitch is the result of a move, which only occurs in
