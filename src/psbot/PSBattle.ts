@@ -20,6 +20,8 @@ export class PSBattle
     protected readonly username: string;
     /** Logger object. */
     protected readonly logger: Logger;
+    /** Makes the decisions for this battle. */
+    protected readonly agent: BattleAgent;
     /** State object. */
     protected readonly state: BattleState;
     /** Manages the BattleState by processing events. */
@@ -29,15 +31,15 @@ export class PSBattle
     /** Available choices from the last decision. */
     protected lastChoices: Choice[] = [];
 
-    /** Makes the decisions for this battle. */
-    private readonly agent: BattleAgent;
     /** Used to send the BattleAgent's choice to the server. */
     private readonly sender: ChoiceSender;
     /**
      * Whether the last unhandled `|error|` message indicated an unavailable
-     * choice. The next message should be a `|request|` if this is true.
+     * choice. The next message should be a `|request|` to reveal new info if
+     * this is true.
      */
-    private unavailableChoice = false;
+    protected unavailableChoice(): boolean { return this._unavailableChoice; }
+    private _unavailableChoice = false;
 
     /**
      * Creates a PSBattle.
@@ -84,11 +86,14 @@ export class PSBattle
         this.eventHandler.postTurn();
 
         // possibly send a response
-        if (this.eventHandler.battling && this.lastRequest &&
-            !this.lastRequest.wait)
-        {
-            return this.askAgent();
-        }
+        if (this.shouldRespond()) return this.askAgent();
+    }
+
+    /** Whether this object should ask its BattleAgent to respond. */
+    protected shouldRespond(): boolean
+    {
+        return this.eventHandler.battling && !!this.lastRequest &&
+            !this.lastRequest.wait;
     }
 
     /** Handles a RequestMessage. */
@@ -97,10 +102,10 @@ export class PSBattle
         this.logger.debug(`request:\n${
             inspect(msg, {colors: false, depth: null})}`);
 
-        if (this.unavailableChoice)
+        if (this._unavailableChoice)
         {
             // new info is being revealed
-            this.unavailableChoice = false;
+            this._unavailableChoice = false;
 
             if (this.lastRequest && this.lastRequest.active &&
                 !this.lastRequest.active[0].trapped && msg.active &&
@@ -114,12 +119,15 @@ export class PSBattle
                 //  have a trapping ability
                 this.state.teams.us.active.trapped(
                     this.state.teams.them.active);
-
-                // re-choose based on this new info
-                this.lastChoices = await this.agent.decide(this.state,
-                        this.lastChoices);
-                this.sender(this.lastChoices[0]);
             }
+            // don't know what happened so just eliminate the last choice
+            else this.lastChoices.shift();
+
+            // re-sort remaining choices based on new info
+            this.lastChoices = await this.agent.decide(this.state,
+                    this.lastChoices);
+
+            this.sender(this.lastChoices[0]);
         }
 
         this.eventHandler.handleRequest(msg);
@@ -133,7 +141,7 @@ export class PSBattle
         {
             // rejected last choice based on unknown info
             // wait for another (guaranteed) request message before proceeding
-            this.unavailableChoice = true;
+            this._unavailableChoice = true;
         }
         else if (msg.reason.startsWith("[Invalid choice]"))
         {

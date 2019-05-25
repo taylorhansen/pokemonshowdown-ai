@@ -22,7 +22,7 @@ import { dirname, join } from "path";
 import ProgressBar from "progress";
 import { Writable } from "stream";
 import { Network, toColumn } from "../../src/ai/Network";
-import { Choice, choiceIds } from "../../src/battle/agent/Choice";
+import { Choice, intToChoice } from "../../src/battle/agent/Choice";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { evaluateFolder, latestModelFolder, selfPlayFolder } from
     "../../src/config";
@@ -166,30 +166,7 @@ async function play(options: GameOptions): Promise<GameResult>
         }
         // basic functionality
         listener.on("battleinit", msg => battle.init(msg));
-        let lastChoice: Choice | undefined;
-        let choice: Choice | undefined;
-        listener.on("battleprogress", msg =>
-        {
-            // last choice was officially accepted by the server
-            // create and save a Experience object
-            // FIXME: what if no choice was made?
-            if (options.emitExperiences)
-            {
-                lastChoice = choice;
-                choice = battle.lastChoice;
-                const reward = battle.getReward();
-                // ensure that the network has sent at least two choices
-                // this way the TrainingNetwork will have the state tensors it
-                //  needs to emit an Experience object
-                if (lastChoice && choice)
-                {
-                    experiences.push(agent.getExperience(lastChoice, reward,
-                        choice));
-                }
-            }
-
-            battle.progress(msg);
-        });
+        listener.on("battleprogress", msg => battle.progress(msg));
         listener.on("request", msg => battle.request(msg));
         listener.on("error", msg => battle.error(msg));
 
@@ -205,7 +182,12 @@ async function play(options: GameOptions): Promise<GameResult>
                 try { await parsePSMessage(output, listener, parserLog); }
                 catch (e) { innerLog.error(`${e}\n${(e as Error).stack}`); }
             }
+
             done = true;
+            if (options.emitExperiences)
+            {
+                experiences.push(...battle.experiences);
+            }
         }());
     }
 
@@ -359,7 +341,7 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
 function createModel(): tf.LayersModel
 {
     // setup all the layers
-    const outNeurons = Object.keys(choiceIds).length;
+    const outNeurons = intToChoice.length;
 
     const model = tf.sequential();
 

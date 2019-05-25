@@ -9,6 +9,11 @@ export class TrainNetwork extends Network
     private lastStateData?: number[];
     /** Tensor data that generated `prediction`. */
     private stateData?: number[];
+    /**
+     * Whether to update `#lastStateData` on `#getPrediction()`. Resets back to
+     * true once that method is called.
+     */
+    public updateLast = true;
 
     /**
      * Creates an Experience object for training the model.
@@ -34,7 +39,13 @@ export class TrainNetwork extends Network
     /** @override */
     protected async getPrediction(stateData: number[]): Promise<number[]>
     {
-        this.lastStateData = this.stateData;
+        // store buffer of state data
+        if (this.updateLast)
+        {
+            this.lastStateData = this.stateData;
+        }
+        // consume updateLast flag
+        else this.updateLast = true;
         this.stateData = stateData;
         return super.getPrediction(stateData);
     }
