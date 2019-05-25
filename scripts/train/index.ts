@@ -4,10 +4,10 @@
  *
  * The algorithm is as follows:
  * 1. Construct a neural network.
- * 2. Play the network against itself, storing Decision objects during play to
+ * 2. Play the network against itself, storing Experience objects during play to
  *    be used for learning later.
  * 3. After a number of games, train a copy of the neural network using all of
- *    the stored Decisions.
+ *    the stored Experiences.
  * 4. Evaluate the newly trained network against the old one to see if the old
  *    one should be replaced on the next training cycle. This is done by playing
  *    some number of games and seeing if the new network beats the old one.
@@ -32,7 +32,7 @@ import { PlayerID } from "../../src/psbot/helpers";
 import { parsePSMessage } from "../../src/psbot/parser/parsePSMessage";
 // @ts-ignore
 import s = require("../Pokemon-Showdown/.sim-dist/battle-stream");
-import { Decision } from "./Decision";
+import { Experience } from "./Experience";
 import { TrainBattle } from "./TrainBattle";
 import { TrainNetwork } from "./TrainNetwork";
 
@@ -69,43 +69,29 @@ logStream.write = function(chunk: any, enc?: string | CB, cb?: CB)
 /** Models to represent p1 and p2. */
 type Models = {[P in PlayerID]: tf.LayersModel};
 
-interface GameOptionsBase
+interface GameOptions extends Models
 {
     /** Maximum amount of turns before the game is considered a tie. */
     maxTurns: number;
     /**
-     * Whether to emit Decision objects, which will be used for learning later.
+     * Whether to emit Experience objects, which will be used for learning
+     * later.
      */
-    emitDecisions?: boolean;
+    emitExperiences?: boolean;
     /** Path to the file in which to store debug info. */
     logPath?: string;
     /** Logger object. */
     logger?: Logger;
 }
 
-interface EmitDecisions extends GameOptionsBase
-{
-    emitDecisions: true;
-    /** Calculate the target Q values using this discount rate. */
-    gamma: number;
-}
-
-interface NonEmitDecisions extends GameOptionsBase
-{
-    emitDecisions?: false;
-}
-
-/** Options for starting a new game. */
-type GameOptions = Models & (EmitDecisions | NonEmitDecisions);
-
 /** Result object returned from `play()`. */
 interface GameResult
 {
     /**
-     * Paths to emitted Decision objects. Empty if `GameOptions#emitDecisions`
-     * was false.
+     * Paths to emitted Experience objects. Empty if
+     * `GameOptions#emitExperiences` was false.
      */
-    decisions: Decision[];
+    experiences: Experience[];
     /** The winner of the game. Null if tied. */
     winner: PlayerID | null;
 }
@@ -120,7 +106,7 @@ async function play(options: GameOptions): Promise<GameResult>
 
     let winner: PlayerID | null = null;
     const eventLoops: Promise<void>[] = [];
-    const decisions: Decision[] = [];
+    const experiences: Experience[] = [];
 
     // setup log file
     let file: fs.WriteStream | null;
@@ -185,20 +171,20 @@ async function play(options: GameOptions): Promise<GameResult>
         listener.on("battleprogress", msg =>
         {
             // last choice was officially accepted by the server
-            // create and save a Decision object
-            if (options.emitDecisions)
+            // create and save a Experience object
+            // FIXME: what if no choice was made?
+            if (options.emitExperiences)
             {
                 lastChoice = choice;
                 choice = battle.lastChoice;
                 const reward = battle.getReward();
                 // ensure that the network has sent at least two choices
-                // this way the TrainingNetwork will have the state and
-                //  prediction tensors it needs to calculate the Q value
+                // this way the TrainingNetwork will have the state tensors it
+                //  needs to emit an Experience object
                 if (lastChoice && choice)
                 {
-                    // FIXME: Q-values grow stale as training goes on
-                    decisions.push(agent.getDecision(lastChoice, choice,
-                        reward, options.gamma));
+                    experiences.push(agent.getExperience(lastChoice, reward,
+                        choice));
                 }
             }
 
@@ -227,35 +213,56 @@ async function play(options: GameOptions): Promise<GameResult>
 
     if (file) file.close();
 
-    return {winner, decisions};
+    return {winner, experiences};
 }
 
-/** Trains a model from an array of Decision objects. */
-async function learn(model: tf.LayersModel, decisions: Decision[]):
-    Promise<tf.History>
+/**
+ * Trains a model from an array of Experience objects.
+ * @param model Model to train.
+ * @param experiences Experience objects that will be used for each epoch of
+ * training.
+ * @param gamma Discount factor for calculating Q-values. This is used to scale
+ * down future expected rewards so they don't outweigh the immediate gain by
+ * too much.
+ */
+async function learn(model: tf.LayersModel, experiences: Experience[],
+    gamma: number): Promise<tf.History>
 {
     const dataset = datasetFromIteratorFn<tf.TensorContainerObject>(
     async function()
     {
-        const ds = [...decisions];
-        return iteratorFromFunction<tf.TensorContainerObject>(function()
+        // create new experience buffer to sample from
+        const exp = [...experiences];
+        return iteratorFromFunction<tf.TensorContainerObject>(async function()
         {
             // done if no more files
             // iterator requires value=null if done, but the tensorflow source
             //  allows implicit null and our tsconfig doesn't, so get around
             //  that by using an any-cast
-            if (ds.length <= 0) return {value: null as any, done: true};
+            if (exp.length <= 0) return {value: null as any, done: true};
 
-            // consume a random Decision file
+            // sample a random Experience object
             // this helps break the correlation between consecutive samples for
             //  better generalization
-            const n = Math.floor(Math.random() * ds.length);
-            const decision = ds.splice(n, 1)[0];
+            const n = Math.floor(Math.random() * exp.length);
+            const experience = exp.splice(n, 1)[0];
 
-            const state = toColumn(decision.state);
-            const target = toColumn(decision.target);
+            const xs = toColumn(experience.state);
 
-            return {value: {xs: state, ys: target}, done: false};
+            // calculate target Q-value
+            // a Q network learns the immediate reward plus a scaled-down total
+            //  future reward
+            // total future reward is calculated using a recent prediction
+            const targetData = await (model.predict(xs) as tf.Tensor2D)
+                .data();
+            const futureReward = await (model.predict(
+                    toColumn(experience.nextState)) as tf.Tensor2D).data();
+            targetData[experience.action] = experience.reward +
+                // choose future reward given the best action (i.e. max reward)
+                gamma * futureReward[experience.nextAction];
+            const ys = toColumn(targetData);
+
+            return {value: {xs, ys}, done: false};
         });
     });
 
@@ -278,7 +285,7 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
     Promise<tf.LayersModel>
 {
     logger.debug("Beginning self-play");
-    const decisions: Decision[] = [];
+    const experiences: Experience[] = [];
     bar = new ProgressBar("Self-play games: [:bar] :current/:total",
         {total: games, clear: true});
     bar.update(0);
@@ -287,13 +294,13 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
         const innerLog = logger.prefix(`Game(${i + 1}/${games}): `);
         innerLog.debug("Start");
 
-        const {decisions: ds, winner} = await play(
+        const {experiences: exp, winner} = await play(
         {
-            p1: toTrain, p2: toTrain, maxTurns, emitDecisions: true, gamma: 0.8,
+            p1: toTrain, p2: toTrain, maxTurns, emitExperiences: true,
             logPath: `${selfPlayFolder}/game-${i + 1}`, logger: innerLog
         });
 
-        decisions.push(...ds);
+        experiences.push(...exp);
 
         if (winner) innerLog.debug(`Winner: ${winner}`);
         else innerLog.debug("Tie");
@@ -304,7 +311,7 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
     bar = undefined;
 
     logger.debug("Learning (this may take a while)");
-    await learn(toTrain, decisions);
+    await learn(toTrain, experiences, /*gamma*/0.8);
 
     // challenge the old model to see if the newly trained one learned anything
     logger.debug("Evaluating new network (p1=new, p2=old)");

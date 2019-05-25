@@ -45,8 +45,8 @@ export class Network implements BattleAgent
     {
         if (choices.length === 0) throw new Error("No available choices");
 
-        const stateData = this.getStateData(state);
-        const predictionData = await this.getPrediction(stateData);
+        const predictionData = await this.getPrediction(
+            this.getStateData(state));
 
         this.logger.debug(`Prediction: {${
             predictionData.map((q: number, i: number) =>
