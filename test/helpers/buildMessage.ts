@@ -125,7 +125,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             [
                 event.type === "prepare" ? "-prepare" : event.type,
                 stringifyID(event.id), event.moveName,
-                stringifyID(event.targetId)
+                ...(event.targetId ? [stringifyID(event.targetId)] : [])
             ];
             break;
         case "mustrecharge":

@@ -573,16 +573,19 @@ const eventField: Parser<FieldEndEvent | FieldStartEvent | null> = transform(
  *
  * Format:
  * @example
- * |move|<user PokemonID>|<move name>|<target PokemonID>
+ * |move|<user PokemonID>|<move name>|<optional target PokemonID>
  *
  * // optional message suffixes (may parse later?)
  * |[miss]
- * |[from]<effect name>
+ * |[still]
  */
 const eventMove: Parser<MoveEvent> = transform(
-    sequence(sequence(word("move"), pokemonId), sequence(anyWord, pokemonId)),
-    ([[_, id], [moveName, targetId]]) =>
-        ({type: "move", id, moveName, targetId}));
+    sequence(
+        sequence(word("move"), pokemonId),
+        sequence(anyWord, maybe(pokemonId))),
+    ([[_, id], [moveName, targetId]]) => targetId ?
+        {type: "move", id, moveName, targetId}
+        : {type: "move", id, moveName});
 
 /**
  * Parses a MustRechargeEvent.
@@ -600,14 +603,15 @@ const eventMustRecharge: Parser<MustRechargeEvent> = transform(
  *
  * Format:
  * @example
- * |-prepare|<user PokemonID>|<move name>|<target PokemonID>
+ * |-prepare|<user PokemonID>|<move name>|<optional target PokemonID>
  */
 const eventPrepare: Parser<PrepareEvent> = transform(
     sequence(
         sequence(word("-prepare"), pokemonId),
-        sequence(anyWord, pokemonId)),
-    ([[_, id], [moveName, targetId]]) =>
-        ({type: "prepare", id, moveName, targetId}));
+        sequence(anyWord, maybe(pokemonId))),
+    ([[_, id], [moveName, targetId]]) => targetId ?
+        {type: "prepare", id, moveName, targetId}
+        : {type: "prepare", id, moveName});
 
 /**
  * Parses a SetHPEvent.

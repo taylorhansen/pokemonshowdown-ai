@@ -71,6 +71,7 @@ export const battleEvent: AnyBattleEvent[] =
         type: "move", id: pokemonId[0], moveName: "Splash",
         targetId: pokemonId[1]
     },
+    {type: "move", id: pokemonId[1], moveName: "Splash"},
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
         targetId: pokemonId[0], cause: cause[2]
@@ -80,6 +81,7 @@ export const battleEvent: AnyBattleEvent[] =
         type: "prepare", id: pokemonId[1], moveName: "Solar Beam",
         targetId: pokemonId[0]
     },
+    {type: "prepare", id: pokemonId[0], moveName: "Razor Wind"},
     {
         type: "sethp",
         newHPs:
@@ -143,7 +145,7 @@ export const battleInit: BattleInitMessage[] =
     {
         id: "p2", username: username[1], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(8, 10).concat(startTurn)
+        events: battleEvent.slice(8, 12).concat(startTurn)
     }
 ];
 
@@ -151,17 +153,17 @@ export const battleInit: BattleInitMessage[] =
 export const battleProgress: BattleProgressMessage[] =
 [
     {
-        events: battleEvent.slice(10, 13)
+        events: battleEvent.slice(12, 15)
             .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
-        events: battleEvent.slice(13, 17)
-            .concat({type: "upkeep"}, ...battleEvent.slice(17, 20),
+        events: battleEvent.slice(15, 19)
+            .concat({type: "upkeep"}, ...battleEvent.slice(19, 22),
                 {type: "turn", num: 100})
     },
     {
-        events: battleEvent.slice(20, 26)
-            .concat({type: "upkeep"}, ...battleEvent.slice(24, 30),
+        events: battleEvent.slice(22, 28)
+            .concat({type: "upkeep"}, ...battleEvent.slice(28, 34),
                 {type: "turn", num: 9})
     }
 ];

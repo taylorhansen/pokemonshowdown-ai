@@ -213,7 +213,7 @@ export interface MoveEvent extends BattleEventBase
     /** Display name of the move being used. */
     moveName: string;
     /** ID of the target pokemon. */
-    targetId: PokemonID;
+    targetId?: PokemonID;
 }
 
 /** Event where a pokemon must recharge on the next turn. */
@@ -233,7 +233,7 @@ export interface PrepareEvent extends BattleEventBase
     /** Display name of the move being prepared. */
     moveName: string;
     /** ID of the target pokemon. */
-    targetId: PokemonID;
+    targetId?: PokemonID;
 }
 
 /** Event where the HP of multiple pokemon is being modified at once. */
