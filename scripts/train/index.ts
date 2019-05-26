@@ -13,10 +13,10 @@
  *    some number of games and seeing if the new network beats the old one.
  * 5. Repeat steps 2-4 as desired.
  */
-import * as tf from "@tensorflow/tfjs";
 import { datasetFromIteratorFn } from "@tensorflow/tfjs-data/dist/dataset";
 import { iteratorFromFunction } from
     "@tensorflow/tfjs-data/dist/iterators/lazy_iterator";
+import * as tf from "@tensorflow/tfjs-node";
 import * as fs from "fs";
 import { dirname, join } from "path";
 import ProgressBar from "progress";
@@ -206,9 +206,10 @@ async function play(options: GameOptions): Promise<GameResult>
  * @param gamma Discount factor for calculating Q-values. This is used to scale
  * down future expected rewards so they don't outweigh the immediate gain by
  * too much.
+ * @param epochs Number of epochs to run.
  */
 async function learn(model: tf.LayersModel, experiences: Experience[],
-    gamma: number): Promise<tf.History>
+    gamma: number, epochs: number): Promise<tf.History>
 {
     const dataset = datasetFromIteratorFn<tf.TensorContainerObject>(
     async function()
@@ -236,7 +237,7 @@ async function learn(model: tf.LayersModel, experiences: Experience[],
             //  future reward
             // total future reward is calculated using a recent prediction
             const targetData = await (model.predict(xs) as tf.Tensor2D)
-                .data();
+                    .data<"float32">();
             const futureReward = await (model.predict(
                     toColumn(experience.nextState)) as tf.Tensor2D).data();
             targetData[experience.action] = experience.reward +
@@ -246,9 +247,14 @@ async function learn(model: tf.LayersModel, experiences: Experience[],
 
             return {value: {xs, ys}, done: false};
         });
-    });
+    })
+    .repeat(epochs);
 
-    return model.fitDataset(dataset, {epochs: 10});
+    return model.fitDataset(dataset,
+        // technically datasets have an unspecified length, but since we know
+        //  when it will terminate (end of experience array), we can provide
+        //  this info so we get a nice animating progress bar
+        {epochs, batchesPerEpoch: experiences.length});
 }
 
 /**
@@ -293,7 +299,7 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
     bar = undefined;
 
     logger.debug("Learning (this may take a while)");
-    await learn(toTrain, experiences, /*gamma*/0.8);
+    await learn(toTrain, experiences, /*gamma*/0.8, /*epochs*/10);
 
     // challenge the old model to see if the newly trained one learned anything
     logger.debug("Evaluating new network (p1=new, p2=old)");

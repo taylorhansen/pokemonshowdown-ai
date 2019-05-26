@@ -1,7 +1,4 @@
-import * as tf from "@tensorflow/tfjs";
-import { TensorLike2D } from "@tensorflow/tfjs-core/dist/types";
-import * as tfl from "@tensorflow/tfjs-layers";
-import "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs-node";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice, choiceIds, intToChoice } from "../battle/agent/Choice";
 import { BattleState } from "../battle/state/BattleState";
@@ -12,7 +9,7 @@ import { Logger } from "../Logger";
  * @param arr Array to convert.
  * @returns A 2D Tensor representing the column vector.
  */
-export function toColumn(arr: TensorLike2D): tf.Tensor2D
+export function toColumn(arr: number[] | Float32Array): tf.Tensor2D
 {
     return tf.tensor2d(arr, [1, arr.length], "float32");
 }
@@ -103,7 +100,7 @@ export class Network implements BattleAgent
      */
     public static async loadModel(url: string): Promise<tf.LayersModel>
     {
-        const model = await tfl.loadLayersModel(url);
+        const model = await tf.loadLayersModel(url);
         Network.verifyModel(model);
         return model;
     }

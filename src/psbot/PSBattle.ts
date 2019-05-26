@@ -38,7 +38,10 @@ export class PSBattle
      * choice. The next message should be a `|request|` to reveal new info if
      * this is true.
      */
-    protected unavailableChoice(): boolean { return this._unavailableChoice; }
+    protected get unavailableChoice(): boolean
+    {
+        return this._unavailableChoice;
+    }
     private _unavailableChoice = false;
 
     /**
