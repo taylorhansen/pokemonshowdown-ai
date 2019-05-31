@@ -47,7 +47,7 @@ describe("PSBot", function()
         expect(connection).to.exist;
     });
 
-    describe("updatechallenges", function()
+    describe("#acceptChallenges()", function()
     {
         beforeEach("Setup listener", function()
         {

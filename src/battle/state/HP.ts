@@ -2,27 +2,18 @@
 export class HP
 {
     /** Current HP. */
-    public get current(): number
-    {
-        return this._current;
-    }
+    public get current(): number { return this._current; }
+    private _current: number;
 
     /** Maximum HP. */
-    public get max(): number
-    {
-        return this._max;
-    }
+    public get max(): number { return this._max; }
+    private _max: number;
 
     /**
      * Whether this is represented as a percentage. If true, `max` is `100` and
      * `current` is the percentage.
      */
     public readonly isPercent: boolean;
-
-    /** Current HP backing field. */
-    private _current: number;
-    /** Maximum HP backing field. */
-    private _max: number;
 
     /**
      * Creates a full HP object.
@@ -44,25 +35,6 @@ export class HP
     {
         this._max = max;
         this._current = Math.min(Math.max(0, current), this._max);
-    }
-
-    /**
-     * Gets the size of the return value of `toArray()`.
-     * status.
-     * @returns The size of the return value of `toArray()`.
-     */
-    public static getArraySize(): number
-    {
-        return /*current*/1 + /*max*/1;
-    }
-
-    /**
-     * Formats hp info into an array of numbers.
-     * @returns All hp data in array form.
-     */
-    public toArray(): number[]
-    {
-        return [this._current, this._max];
     }
 
     /**

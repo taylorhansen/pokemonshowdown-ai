@@ -12,6 +12,7 @@ export class TeamStatus
         // after this turn this will be 1
         if (!this.wishDuration) this.wishDuration = 2;
     }
+    /** Whether Wish has been used. */
     public get isWishing(): boolean { return this.wishDuration > 0; }
     private wishDuration = 0;
 
@@ -45,15 +46,15 @@ export class TeamStatus
             return result;
         })();
 
-    /** Spikes layers. */
+    /** Spikes layers. Max 3. */
     public spikes = 0;
-    /** Stealth rock layers. */
+    /** Stealth rock layers. Max 1. */
     public stealthRock = 0;
-    /** Toxic Spikes layers. */
+    /** Toxic Spikes layers. Max 2. */
     public toxicSpikes = 0;
 
     /**
-     * Called at the end of the turn, after a Choice has been sent to the
+     * Called at the end of the turn, before a Choice has been sent to the
      * server.
      */
     public postTurn(): void
@@ -66,32 +67,6 @@ export class TeamStatus
         }
     }
 
-    /**
-     * Gets the size of the return value of `toArray()`.
-     * @returns The size of the return value of `toArray()`.
-     */
-    public static getArraySize(): number
-    {
-        return /*selfSwitch*/ 2 + /*wish*/ 1 + /*future moves*/numFutureMoves +
-            /*entry hazards*/ 3;
-    }
-
-    // istanbul ignore next: unstable, hard to test
-    /**
-     * Formats team status info into an array of numbers.
-     * @returns All team status data in array form.
-     */
-    public toArray(): number[]
-    {
-        const result =
-        [
-            this.selfSwitch ? 1 : 0, this.selfSwitch === "copyvolatile" ? 1 : 0,
-            this.wishDuration ? 1 : 0, ...Object.values(this._futureMoveTurns),
-            this.spikes, this.stealthRock, this.toxicSpikes
-        ];
-        return result;
-    }
-
     // istanbul ignore next: only used for logging
     /**
      * Encodes all team status data into a string
@@ -101,7 +76,7 @@ export class TeamStatus
     {
         return `[${([] as string[]).concat(
                 this.selfSwitch ? [`selfSwitch: ${this.selfSwitch}`] : [],
-                this.wishDuration ? ["wishing"] : [],
+                this.isWishing ? ["wishing"] : [],
                 Object.entries(this._futureMoveTurns)
                     .filter(([id, turns]) => turns > 0)
                     .map(([id, turns]) => `${id} turns: ${turns}`),

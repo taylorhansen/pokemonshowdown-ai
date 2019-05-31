@@ -11,32 +11,6 @@ export class BattleState
     /** Global status conditions for the entire room. */
     public readonly status = new RoomStatus();
 
-    /**
-     * Gets the size of the return value of `toArray()`.
-     * @returns The size of the return value of `toArray()`.
-     */
-    public static getArraySize(): number
-    {
-        // status + 2 teams
-        return RoomStatus.getArraySize() + Team.getArraySize() * 2;
-    }
-
-    /**
-     * Formats battle info into an array of numbers. As the battle state
-     * changes, the length of this array should not change.
-     * @returns All battle data in array form.
-     */
-    public toArray(): number[]
-    {
-        const a =
-        [
-            ...this.status.toArray(),
-            ...this.teams.us.toArray(),
-            ...this.teams.them.toArray()
-        ];
-        return a;
-    }
-
     // istanbul ignore next: only used for logging
     /**
      * Encodes all state data into a string.

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { BoostName, boostNames } from "../../../src/battle/state/utility";
+import { BoostName, boostNames } from "../../../src/battle/dex/dex-types";
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 
 describe("VolatileStatus", function()
@@ -29,7 +29,7 @@ describe("VolatileStatus", function()
         volatile.roost = true;
     }
 
-    describe("clear", function()
+    describe("#clear()", function()
     {
         it("Should clear all statuses", function()
         {
@@ -62,7 +62,7 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("shallowClone", function()
+    describe("#shallowClone()", function()
     {
         it("Should copy only passable statuses", function()
         {
@@ -101,7 +101,7 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("boost", function()
+    describe("#boosts/#boost()", function()
     {
         it("Should not be boosted initially", function()
         {
@@ -125,7 +125,7 @@ describe("VolatileStatus", function()
         }
     });
 
-    describe("disableMove", function()
+    describe("#disableMove()/#isDisabled()", function()
     {
         it("Should not be disabled initially", function()
         {
@@ -141,7 +141,7 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("confuse", function()
+    describe("#confuse()", function()
     {
         it("Should increment/reset confuseTurns", function()
         {
@@ -159,9 +159,9 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("magnet rise", function()
+    describe("#magnetRise", function()
     {
-        it("Should set magnetRise", function()
+        it("Should set magnet rise", function()
         {
             volatile.magnetRise = true;
             expect(volatile.magnetRise).to.be.true;
@@ -170,7 +170,7 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("embargo", function()
+    describe("#embargo", function()
     {
         it("Should set embargo", function()
         {
@@ -181,7 +181,7 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("overrideAbility", function()
+    describe("#overrideAbility", function()
     {
         it("Should set override ability", function()
         {
@@ -194,19 +194,19 @@ describe("VolatileStatus", function()
             expect(() => volatile.overrideAbility = "not-a real_ability")
                 .to.throw();
         });
+    });
 
-        describe("suppressAbility", function()
+    describe("#suppressAbility()", function()
+    {
+        it("Should suppress ability", function()
         {
-            it("Should suppress ability", function()
-            {
-                volatile.suppressAbility();
-                expect(volatile.isAbilitySuppressed()).to.be.true;
-                expect(volatile.overrideAbility).to.equal("<suppressed>");
-            });
+            volatile.suppressAbility();
+            expect(volatile.isAbilitySuppressed()).to.be.true;
+            expect(volatile.overrideAbility).to.equal("<suppressed>");
         });
     });
 
-    describe("stall", function()
+    describe("#stall", function()
     {
         it("Should increment/reset stallTurns", function()
         {
@@ -217,16 +217,6 @@ describe("VolatileStatus", function()
             expect(volatile.stallTurns).to.equal(2);
             volatile.stall(false);
             expect(volatile.stallTurns).to.equal(0);
-        });
-    });
-
-    describe("toArray", function()
-    {
-        it("Should have the same size as VolatileStatus.getArraySize()",
-        function()
-        {
-            expect(volatile.toArray()).to.have.lengthOf(
-                VolatileStatus.getArraySize());
         });
     });
 });

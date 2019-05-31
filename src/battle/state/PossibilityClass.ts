@@ -1,155 +1,90 @@
-/**
- * Represents a class of possible items.
- * @template T Value type of the map field.
- */
-export class PossibilityClass<T = number>
+/** Represents a set of possible values. */
+export class PossibilityClass<TData>
 {
-    /** Contains the onehot array. */
-    private readonly data: boolean[];
-    /** Maps value name to its unique 0-based index. */
-    private readonly map: {readonly [name: string]: T};
-    /** Amount of ones currently in data. */
-    private numOnes: number;
-    /** Function used to get the 0-based index from a T. */
-    private idGetter: (x: T) => number;
+    /** Maps value name to data. */
+    public readonly map: {readonly [name: string]: TData};
+    /** Function to call when fully narrowed. */
+    private readonly onSet?:
+        (value: {readonly name: string, readonly data: TData}) => void;
+
+    /** The set of possible values this value can be. */
+    public get possibleValues(): ReadonlySet<string>
+    {
+        return this._possibleValues;
+    }
+    private _possibleValues: Set<string>;
 
     /**
-     * Gets the class value and index if narrowed down sufficiently, otherwise
+     * Gets the class name and data if narrowed down sufficiently, otherwise
      * null.
      */
-    public get definiteValue(): {name: string, id: number} | null
+    public get definiteValue():
+        {readonly name: string, readonly data: TData} | null
     {
         return this._definiteValue;
     }
-    private _definiteValue: {name: string, id: number} | null = null;
-
-    /** Gets all the possible values/indexes that haven't been ruled out. */
-    public get possibleValues(): {name: string, id: number}[]
-    {
-        const result: {name: string, id: number}[] = [];
-        for (const name in this.map)
-        {
-            // istanbul ignore if
-            if (!this.map.hasOwnProperty(name)) continue;
-            if (this.isSet(name)) result.push({name, id: this.getId(name)});
-        }
-        return result;
-    }
+    private _definiteValue:
+        {readonly name: string, readonly data: TData} | null = null;
 
     /**
      * Creates a PossibilityClass.
-     * @param map Maps value name to an object with data on it.
-     * @param idGetter Function used to get the 0-based index of a corresponding
-     * data object. If no template parameter is provided and the given
-     * dictionary is directly name-to-index, this can be left blank.
+     * @param map Base dictionary object. Should not change during the lifetime
+     * of this object.
+     * @param onSet Function to call when fully narrowed.
      */
-    constructor(map: {readonly [name: string]: T},
-        idGetter = (x: T) => x as any as number)
+    constructor(map: {readonly [name: string]: TData},
+        onSet?: (value: {readonly name: string, readonly data: TData}) => void)
     {
         this.map = map;
-        this.idGetter = idGetter;
-        this.data = Array.from({length: Object.keys(map).length}, () => true);
-        this.numOnes = this.data.length;
-    }
-
-    /**
-     * Gets the 0-based index of a name. Assumes the given name already exists
-     * in the map field.
-     */
-    private getId(name: string): number
-    {
-        return this.idGetter(this.map[name]);
+        this.onSet = onSet;
+        this._possibleValues = new Set(Object.keys(map));
     }
 
     /** Removes a type from data possibility. */
     public remove(name: string): void
     {
-        this.check(name);
-        // istanbul ignore else: can't test for else case
-        if (this.data[this.getId(name)])
-        {
-            this.data[this.getId(name)] = false;
-            --this.numOnes;
+        if (!this._possibleValues.delete(this.check(name))) return;
 
-            // set definiteValue if we've removed all other possibilities
-            if (this.numOnes === 1)
-            {
-                this._definiteValue = this.possibleValues[0];
-            }
-            else this._definiteValue = null;
+        const size = this._possibleValues.size;
+        if (size === 1)
+        {
+            const value = this._possibleValues.values().next().value;
+            this._definiteValue = {name: value, data: this.map[name]};
+            if (this.onSet) this.onSet(this._definiteValue);
+        }
+        else if (size < 1)
+        {
+            throw new Error("All possibilities have been ruled out");
         }
     }
 
     /** Checks if a value is in the data possibility. */
     public isSet(name: string): boolean
     {
-        return this.data[this.getId(name)];
+        return this._possibleValues.has(name);
     }
 
-    /** Rules out all possible types except what's given. */
-    public set(values: string | ReadonlyArray<string>): void
+    /** Removes currently set value names that are not in the given array. */
+    public narrow(...values: string[]): void
     {
-        for (let i = 0; i < this.data.length; ++i) this.data[i] = false;
-        this.numOnes = 0;
-        this._definiteValue = null;
+        values.forEach(x => this.check(x));
 
-        let name: string | null = null;
-        if (typeof values === "string") name = values;
-        else if (values.length === 1) name = values[0];
+        // intersect the current set with the given one
+        const newValues = [...this._possibleValues]
+            .filter(x => values.includes(x));
+        this._possibleValues = new Set(newValues);
 
-        if (name !== null)
+        if (newValues.length === 1)
         {
-            // only one value to add
-            this.check(name);
-            const id = this.getId(name);
-            this.data[id] = true;
-
-            this.numOnes = 1;
-            this._definiteValue = {name, id};
+            // new definite value
+            const name = newValues[0];
+            this._definiteValue = {name, data: this.map[name]};
+            if (this.onSet) this.onSet(this._definiteValue);
         }
-        else if (values.length > 1)
+        else if (newValues.length < 1)
         {
-            // multiple values have to be added
-            for (const value of values)
-            {
-                this.check(value);
-                this.data[this.getId(value)] = true;
-            }
-
-            this.numOnes = values.length;
+            throw new Error("All possibilities have been ruled out");
         }
-    }
-
-    /**
-     * Removes currently set value names that are not in the given array.
-     * Assumes that the given value names are part of the map keys.
-     * @returns True if the values were narrowed.
-     */
-    public narrow(values: string[]): boolean
-    {
-        // already as narrow as it can be
-        if (this._definiteValue) return false;
-
-        values = values.filter(value => this.isSet(value));
-        if (values.length > 0)
-        {
-            this.set(values);
-            return true;
-        }
-        return false;
-    }
-
-    /** Gets NN data array form. */
-    public toArray(): number[]
-    {
-        if (this.numOnes === 0)
-        {
-            return Array.from({length: this.data.length}, () => 0);
-        }
-
-        const sumReciprocal = 1 / this.numOnes;
-        return Array.from({length: this.data.length},
-            (v, i) => this.data[i] ? sumReciprocal : 0);
     }
 
     /**
@@ -158,14 +93,16 @@ export class PossibilityClass<T = number>
      */
     public toString(): string
     {
-        return this.possibleValues.map(value => value.name).join(", ");
+        return [...this._possibleValues].join(", ");
     }
 
-    private check(name: string): void
+    /** Checks that a given name is part of this object's map. */
+    private check(name: string): string
     {
         if (!this.map.hasOwnProperty(name))
         {
             throw new Error("PossibilityClass has no value name " + name);
         }
+        return name;
     }
 }

@@ -1,6 +1,6 @@
 /** @file Interfaces and helper functions for handling BattleEvents. */
 import { BoostName, MajorStatus, WeatherType } from
-    "../../battle/state/utility";
+    "../../battle/dex/dex-types";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
 /**

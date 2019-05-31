@@ -12,7 +12,7 @@ describe("Pokemon", function()
         mon = new Pokemon(/*hpPercent*/ false);
     });
 
-    describe("active", function()
+    describe("#active", function()
     {
         it("Should be inactive initially", function()
         {
@@ -26,14 +26,14 @@ describe("Pokemon", function()
 
         it("Should be active if switched in", function()
         {
-            mon.species = "Magikarp";
+            mon.species.narrow("Magikarp");
             mon.switchIn();
             expect(mon.active).to.equal(true);
         });
 
         it("Should be inactive if switched out", function()
         {
-            mon.species = "Magikarp";
+            mon.species.narrow("Magikarp");
             mon.switchIn();
             mon.switchOut();
             expect(mon.active).to.equal(false);
@@ -47,97 +47,94 @@ describe("Pokemon", function()
         });
     });
 
-    describe("species", function()
+    describe("#species", function()
     {
         it("Should be empty initially", function()
         {
-            expect(mon.species).to.equal("");
-        });
-
-        it("Should set species name", function()
-        {
-            mon.species = "Magikarp";
-            expect(mon.species).to.equal("Magikarp");
+            expect(mon.species.definiteValue).to.be.null;
         });
     });
 
-    describe("ability", function()
+    describe("#ability", function()
     {
         it("Should be empty initially", function()
         {
-            expect(mon.baseAbility).to.equal("");
+            expect(mon.baseAbility.definiteValue).to.be.null;
         });
 
         it("Should not set baseAbility without first setting species",
         function()
         {
             expect(() => mon.ability = "swiftswim").to.throw();
-            expect(mon.baseAbility).to.equal("");
+            expect(mon.baseAbility.definiteValue).to.be.null;
         });
 
         it("Should be defined if species has one ability", function()
         {
-            mon.species = "Arceus";
-            expect(mon.baseAbility).to.equal("multitype");
+            mon.species.narrow("Arceus");
+            expect(mon.baseAbility.definiteValue).to.not.be.null;
+            expect(mon.baseAbility.definiteValue!.name).to.equal("multitype");
         });
 
         it("Should not be defined if species has more than one ability",
         function()
         {
-            mon.species = "Togepi";
-            expect(mon.baseAbility).to.be.empty;
+            mon.species.narrow("Togepi");
+            expect(mon.baseAbility.definiteValue).to.be.null;
         });
 
         it("Should reject invalid base ability initialization", function()
         {
-            mon.species = "Togepi";
+            mon.species.narrow("Togepi");
             expect(() => mon.ability = "swiftswim").to.throw();
-            expect(mon.baseAbility).to.equal("");
+            expect(mon.baseAbility.definiteValue).to.be.null;
         });
 
         it("Should set baseAbility after setting species", function()
         {
-            mon.species = "Togepi";
+            mon.species.narrow("Togepi");
             mon.ability = "hustle";
             expect(mon.ability).to.equal("hustle");
         });
 
         it("Should set volatile ability", function()
         {
-            mon.species = "Togepi";
+            mon.species.narrow("Togepi");
             mon.switchIn();
             expect(mon.volatile.overrideAbility).to.be.empty;
             mon.ability = "hustle";
             expect(mon.volatile.overrideAbility).to.equal("hustle");
             mon.ability = "swiftswim";
-            expect(mon.baseAbility).to.equal("hustle");
+            expect(mon.baseAbility.definiteValue).to.not.be.null;
+            expect(mon.baseAbility.definiteValue!.name).to.equal("hustle");
             expect(mon.volatile.overrideAbility).to.equal("swiftswim");
         });
 
         it("Should set volatile ability if known", function()
         {
-            mon.species = "Togepi";
+            mon.species.narrow("Togepi");
             mon.ability = "hustle";
             mon.switchIn();
             expect(mon.volatile.overrideAbility).to.equal("hustle");
             mon.ability = "swiftswim";
-            expect(mon.baseAbility).to.equal("hustle");
+            expect(mon.baseAbility.definiteValue).to.not.be.null;
+            expect(mon.baseAbility.definiteValue!.name).to.equal("hustle");
             expect(mon.volatile.overrideAbility).to.equal("swiftswim");
         });
 
         it("Should reject unknown ability", function()
         {
-            mon.species = "Togepi";
+            mon.species.narrow("Togepi");
             expect(() => mon.ability = "not_a real-ability").to.throw();
             expect(mon.ability).to.be.empty;
         });
 
-        describe("suppressAbility (baton passed)", function()
+        describe("VolatileStatus#suppressAbility() (baton passed)", function()
         {
             it("Should suppress new ability", function()
             {
                 const newMon = new Pokemon(/*hpPercent*/ false);
-                newMon.species = "Magikarp";
+                newMon.species.narrow("Magikarp");
                 mon.volatile.suppressAbility();
                 mon.copyVolatile(newMon);
                 mon.switchOut();
@@ -151,7 +148,7 @@ describe("Pokemon", function()
             {
                 const newMon = new Pokemon(/*hpPercent*/ false);
                 // arceus can only have this ability
-                newMon.species = "Arceus";
+                newMon.species.narrow("Arceus");
                 mon.volatile.suppressAbility();
                 mon.copyVolatile(newMon);
                 mon.switchOut();
@@ -163,7 +160,7 @@ describe("Pokemon", function()
         });
     });
 
-    describe("types", function()
+    describe("#types", function()
     {
         it("Should return empty array if species is not set", function()
         {
@@ -172,38 +169,12 @@ describe("Pokemon", function()
 
         it("Should get types if species is set", function()
         {
-            mon.species = "Kingdra";
+            mon.species.narrow("Kingdra");
             expect(mon.types).to.have.members(["water", "dragon"]);
         });
     });
 
-    describe("item", function()
-    {
-        it("Should be empty initially", function()
-        {
-            expect(mon.item).to.equal("");
-        });
-
-        it("Should set item name", function()
-        {
-            mon.item = "choiceband";
-            expect(mon.item).to.equal("choiceband");
-        });
-
-        it("Should allow display name", function()
-        {
-            mon.item = "Choice Band";
-            expect(mon.item).to.equal("choiceband");
-        });
-
-        it("should not set invalid item name", function()
-        {
-            expect(() => mon.item = "something that isn't an item").to.throw();
-            expect(mon.item).to.equal("");
-        });
-    });
-
-    describe("level", function()
+    describe("#level", function()
     {
         it("Should be 0 initially", function()
         {
@@ -252,7 +223,7 @@ describe("Pokemon", function()
                 beforeEach("Setup pressure mon", function()
                 {
                     target = new Pokemon(/*hpPercent=*/true);
-                    target.species = "Zapdos";
+                    target.species.narrow("Zapdos");
                     target.ability = "pressure";
                 });
 
@@ -276,7 +247,7 @@ describe("Pokemon", function()
 
                 it("Should not use double pp if mold breaker", function()
                 {
-                    mon.species = "Rampardos";
+                    mon.species.narrow("Rampardos");
                     mon.ability = "moldbreaker";
                     mon.useMove("tackle", [target]);
                     expect(mon.moveset.get("tackle")!.pp).to.equal(55);
@@ -284,7 +255,7 @@ describe("Pokemon", function()
             });
         });
 
-        describe("disableMove", function()
+        describe("#disableMove()", function()
         {
             it("Should disable move", function()
             {
@@ -305,7 +276,7 @@ describe("Pokemon", function()
         });
     });
 
-    describe("faint", function()
+    describe("#faint()", function()
     {
         it("Should be fainted initially", function()
         {
@@ -332,7 +303,7 @@ describe("Pokemon", function()
         });
     });
 
-    describe("grounded", function()
+    describe("#isGrounded/#maybeGrounded", function()
     {
         it("Should be grounded if Gravity is active", function()
         {
@@ -355,16 +326,16 @@ describe("Pokemon", function()
 
         it("Should be grounded if holding iron ball", function()
         {
-            mon.species = "Pidgey";
-            mon.item = "ironball";
+            mon.species.narrow("Pidgey");
+            mon.item.narrow("ironball");
             expect(mon.isGrounded).to.be.true;
             expect(mon.maybeGrounded).to.be.true;
         });
 
         it("Should ignore iron ball if Embargo", function()
         {
-            mon.species = "Pidgey";
-            mon.item = "ironball";
+            mon.species.narrow("Pidgey");
+            mon.item.narrow("ironball");
             mon.volatile.embargo = true;
             expect(mon.isGrounded).to.be.false;
             expect(mon.maybeGrounded).to.be.false;
@@ -379,10 +350,10 @@ describe("Pokemon", function()
 
         it("Should not be grounded if Levitate ability", function()
         {
-            mon.species = "Bronzong";
+            mon.species.narrow("Bronzong");
             mon.ability = "levitate";
             // remove iron ball possibility
-            mon.item = "leftovers";
+            mon.item.narrow("leftovers");
             expect(mon.isGrounded).to.be.false;
             expect(mon.maybeGrounded).to.be.false;
         });
@@ -390,9 +361,9 @@ describe("Pokemon", function()
         it("Should possibly be not grounded if able to have Levitate ability",
         function()
         {
-            mon.species = "Bronzong"; // can have levitate or heatproof
+            mon.species.narrow("Bronzong"); // can have levitate or heatproof
             // remove iron ball possibility
-            mon.item = "leftovers";
+            mon.item.narrow("leftovers");
             mon.switchIn();
             expect(mon.isGrounded).to.be.true;
             expect(mon.maybeGrounded).to.be.false;
@@ -400,25 +371,11 @@ describe("Pokemon", function()
 
         it("Should not be grounded if flying type", function()
         {
-            mon.species = "Pidgey";
+            mon.species.narrow("Pidgey");
             // remove iron ball possibility
-            mon.item = "lifeorb";
+            mon.item.narrow("lifeorb");
             expect(mon.isGrounded).to.be.false;
             expect(mon.maybeGrounded).to.be.false;
-        });
-    });
-
-    describe("#toArray()", function()
-    {
-        it("Should be the same length as Pokemon.getArraySize()", function()
-        {
-            expect(mon.toArray()).to.have.lengthOf(
-                Pokemon.getArraySize(/*active*/ false));
-
-            mon.species = "Magikarp";
-            mon.switchIn();
-            expect(mon.toArray()).to.have.lengthOf(
-                Pokemon.getArraySize(/*active*/ true));
         });
     });
 });

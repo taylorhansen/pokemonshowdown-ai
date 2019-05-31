@@ -78,12 +78,4 @@ describe("Moveset", function()
             expect(moveset.hpType.definiteValue!.name).to.equal("fire");
         });
     });
-
-    describe("#toArray()", function()
-    {
-        it("Should be the same length as #getArraySize()", function()
-        {
-            expect(moveset.toArray()).to.have.lengthOf(Moveset.getArraySize());
-        });
-    });
 });

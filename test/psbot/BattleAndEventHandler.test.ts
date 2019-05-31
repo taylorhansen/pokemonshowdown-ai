@@ -44,15 +44,21 @@ describe("Battle and EventProcessor", function()
         {
             const details: PokemonDetails = data.details;
             const status: PokemonStatus = data.condition;
-            const mon = team.pokemon.find(p => p.species === details.species)!;
+            const mon = team.pokemon.find(
+                p => !!p && !!p.species.definiteValue &&
+                    p.species.definiteValue.name === details.species)!;
 
             expect(mon).to.exist;
-            expect(mon.species).to.equal(details.species);
+            expect(mon.species.definiteValue!.name).to.equal(details.species);
             expect(mon.level).to.equal(details.level);
             expect(mon.hp.current).to.equal(status.hp);
             expect(mon.hp.max).to.equal(status.hpMax);
-            expect(mon.item).to.equal(data.item);
-            expect(mon.baseAbility).to.equal(data.baseAbility);
+            // TODO: handle case where there's no item (have to change typings)
+            expect(mon.item.definiteValue).to.not.be.null;
+            expect(mon.item.definiteValue!.name).to.equal(data.item);
+            expect(mon.baseAbility.definiteValue).to.not.be.null;
+            expect(mon.baseAbility.definiteValue!.name)
+                .to.equal(data.baseAbility);
             expect(mon.majorStatus).to.equal(status.condition);
             expect(mon.active).to.equal(data.active);
 
@@ -70,7 +76,7 @@ describe("Battle and EventProcessor", function()
 
                 const move = mon.moveset.get(moveId)!;
                 expect(move).to.not.be.null;
-                expect(move.id).to.equal(moveId);
+                expect(move.name).to.equal(moveId);
             }
         }
     }
@@ -89,7 +95,7 @@ describe("Battle and EventProcessor", function()
         }
     }
 
-    describe("request", function()
+    describe("#request()", function()
     {
         for (const args of testArgs.request)
         {
@@ -111,7 +117,7 @@ describe("Battle and EventProcessor", function()
         });
     });
 
-    describe("request + battleinit", function()
+    describe("#request()/#battleinit()", function()
     {
         function testBattleInit(args: BattleInitMessage): void
         {
@@ -225,7 +231,7 @@ describe("Battle and EventProcessor", function()
         });
     });
 
-    describe("battleprogress", function()
+    describe("#battleprogress()", function()
     {
         // PokemonIDs of the setup teams
         const us1: Readonly<PokemonID> =
@@ -289,7 +295,7 @@ describe("Battle and EventProcessor", function()
             responses = [];
 
             // setup our team
-            battle.state.teams.us.pokemon[0].switchIn();
+            battle.state.teams.us.active.switchIn();
             // setup opposing team
             expect(battle.state.teams.them.switchIn(
                     "Seaking", 100, "M", 10, 10)).to.not.be.null;
@@ -334,17 +340,24 @@ describe("Battle and EventProcessor", function()
             expect(responses).to.have.lengthOf(1);
         });
 
-        describe("error", function()
+        describe("#error()", function()
         {
             it("Should re-choose choices if trapped", async function()
             {
+                // introduce a pokemon that can have a trapping ability
+                const trapper = battle.state.teams.them.switchIn("Dugtrio",
+                    100, "M", 100, 100)!;
+                expect(trapper).to.not.be.null;
+
+                // ask for a choice
                 await battle.progress(
                     {events: [{type: "upkeep"}, {type: "turn", num: 2}]});
                 expect(battle.lastChoices).to.have.members(
                     ["move 1", "switch 2"]);
                 expect(responses).to.have.lengthOf(1);
 
-                // trapped and can't switch
+                // (assuming ai chooses to switch) reject the choice, since the
+                //  simulator "knows" the opponent has a trapping ability
                 await battle.error({reason: "[Unavailable choice]"});
                 await battle.request(
                 {
@@ -360,6 +373,12 @@ describe("Battle and EventProcessor", function()
                     ],
                     side: battle.lastRequest!.side
                 });
+                // trapping ability should be revealed now
+                expect(trapper.baseAbility.definiteValue).to.not.be.null;
+                expect(trapper.baseAbility.definiteValue!.name)
+                    .to.equal("arenatrap");
+
+                // can only move
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(2);
             });
@@ -498,8 +517,8 @@ describe("Battle and EventProcessor", function()
 
             it("Should copy volatile", async function()
             {
-                const us1Mon = battle.state.teams.us.pokemon[0];
-                const us2Mon = battle.state.teams.us.pokemon[1];
+                const us1Mon = battle.state.teams.us.active;
+                const us2Mon = battle.state.teams.us.pokemon[1]!;
 
                 us1Mon.volatile.boost("atk", 2);
                 await battle.progress(
@@ -511,8 +530,9 @@ describe("Battle and EventProcessor", function()
                             type: "switch", id: us2,
                             details:
                             {
-                                species: us2Mon.species, gender: us2Mon.gender!,
-                                level: us2Mon.level, shiny: false
+                                species: us2Mon.species.definiteValue!.name,
+                                gender: us2Mon.gender!, level: us2Mon.level,
+                                shiny: false
                             },
                             status:
                             {
@@ -534,7 +554,7 @@ describe("Battle and EventProcessor", function()
 
             it("Should copy opponent volatile", async function()
             {
-                const them1Mon = battle.state.teams.them.pokemon[0];
+                const them1Mon = battle.state.teams.them.active;
 
                 them1Mon.volatile.boost("atk", 2);
                 await battle.progress(
@@ -558,7 +578,7 @@ describe("Battle and EventProcessor", function()
                         {type: "upkeep"}, {type: "turn", num: 2}
                     ]
                 });
-                const them2Mon = battle.state.teams.them.pokemon[0];
+                const them2Mon = battle.state.teams.them.active;
                 expect(them1Mon).to.not.equal(them2Mon);
                 expect(them2Mon.volatile.boosts.atk).to.equal(2);
             });
@@ -900,7 +920,9 @@ describe("Battle and EventProcessor", function()
                     events: [{type: "cant", id: them1, reason: "ability: Damp"}]
                 });
                 expect(mon.ability).to.equal("damp");
-                expect(mon.baseAbility).to.equal("swiftswim");
+                expect(mon.baseAbility.definiteValue).to.not.be.null;
+                expect(mon.baseAbility.definiteValue!.name)
+                    .to.equal("swiftswim");
             });
 
             it("Should properly handle Truant ability", async function()
@@ -972,8 +994,8 @@ describe("Battle and EventProcessor", function()
         {
             it("Should cure team", async function()
             {
-                const mon1 = battle.state.teams.us.pokemon[0];
-                const mon2 = battle.state.teams.us.pokemon[1];
+                const mon1 = battle.state.teams.us.active;
+                const mon2 = battle.state.teams.us.pokemon[1]!;
                 mon1.majorStatus = "slp";
                 mon2.majorStatus = "par";
                 await battle.progress(
@@ -1083,7 +1105,7 @@ describe("Battle and EventProcessor", function()
 
                 move = mon.moveset.get("splash")!;
                 expect(move).to.not.be.null;
-                expect(move.id).to.equal("splash");
+                expect(move.name).to.equal("splash");
                 expect(move.pp).to.equal(63);
             });
 
@@ -1755,7 +1777,9 @@ describe("Battle and EventProcessor", function()
                     expect(mon1.ability).to.equal("swiftswim");
                     expect(mon1.volatile.overrideAbility)
                         .to.equal("swiftswim");
-                    expect(mon1.baseAbility).to.equal("trace");
+                    expect(mon1.baseAbility.definiteValue).to.not.be.null;
+                    expect(mon1.baseAbility.definiteValue!.name)
+                        .to.equal("trace");
                     expect(mon2.ability).to.equal("swiftswim");
                 });
             });
@@ -1784,19 +1808,26 @@ describe("Battle and EventProcessor", function()
             {
                 it("Should reveal item", async function()
                 {
+                    // reset team and introduce a pokemon with an unknown item
+                    battle.state.teams.us.size = 1;
+                    const mon = battle.state.teams.us.switchIn("Pikachu", 100,
+                        "M", 90, 100)!;
+                    expect(mon).to.not.be.null;
+                    expect(mon.item.definiteValue).to.be.null;
+
                     await battle.progress(
                     {
                         events:
                         [
                             {
                                 type: "damage", id: us1,
-                                status: {hp: 10, hpMax: 10, condition: ""},
+                                status: {hp: 100, hpMax: 100, condition: ""},
                                 cause: {type: "item", item: "Leftovers"}
                             }
                         ]
                     });
-                    expect(battle.state.teams.us.active.item)
-                        .to.equal("leftovers");
+                    expect(mon.item.definiteValue).to.not.be.null;
+                    expect(mon.item.definiteValue!.name).to.equal("leftovers");
                 });
             });
         });

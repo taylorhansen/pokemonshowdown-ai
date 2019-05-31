@@ -4,7 +4,7 @@ import { otherSide } from "../../../src/battle/state/Side";
 
 describe("Side", function()
 {
-    describe("otherSide", function()
+    describe("otherSide()", function()
     {
         it("Should return \"us\" if given \"them\"", function()
         {

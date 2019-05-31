@@ -11,18 +11,9 @@ describe("Team", function()
         team = new Team("us");
     });
 
-    describe("size", function()
+    describe("#size", function()
     {
-        it("Should reset pokemon when size is set", function()
-        {
-            team.size = Team.maxSize;
-            const teamCopy = [...team.pokemon];
-            team.size = Team.maxSize;
-            for (let i = 0; i < Team.maxSize; ++i)
-            {
-                expect(team.pokemon[i]).to.not.equal(teamCopy[i]);
-            }
-        });
+        // TODO: test size clearing behavior
 
         it("Should be 1 if set to 0", function()
         {
@@ -47,7 +38,7 @@ describe("Team", function()
             team.size = 3;
             for (const mon of team.pokemon)
             {
-                expect(mon.hp.isPercent).to.equal(false);
+                if (mon) expect(mon.hp.isPercent).to.equal(false);
             }
         });
 
@@ -57,12 +48,12 @@ describe("Team", function()
             team.size = 3;
             for (const mon of team.pokemon)
             {
-                expect(mon.hp.isPercent).to.equal(true);
+                if (mon) expect(mon.hp.isPercent).to.equal(true);
             }
         });
     });
 
-    describe("switchIn", function()
+    describe("#switchIn()", function()
     {
         it("Should not overflow team size", function()
         {
@@ -96,7 +87,7 @@ describe("Team", function()
         });
     });
 
-    describe("reveal", function()
+    describe("#reveal()", function()
     {
         it("Should not overflow team size", function()
         {
@@ -107,7 +98,7 @@ describe("Team", function()
         });
     });
 
-    describe("cure", function()
+    describe("#cure()", function()
     {
         it("Should cure all team pokemon", function()
         {
@@ -119,17 +110,6 @@ describe("Team", function()
             team.cure();
             expect(mon1.majorStatus).to.equal("");
             expect(mon2.majorStatus).to.equal("");
-        });
-    });
-
-    describe("toArray", function()
-    {
-        it("Should be same size as Team.getArraySize()", function()
-        {
-            team.size = 1;
-            team.switchIn("Magikarp", 100, "M", 100, 100);
-            const arr = team.toArray();
-            expect(arr).to.have.lengthOf(Team.getArraySize());
         });
     });
 });

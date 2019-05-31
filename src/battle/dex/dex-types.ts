@@ -12,6 +12,88 @@ export const types: Readonly<typeof typesInternal> = typesInternal;
 /** The different types a pokemon can have. */
 export type Type = keyof typeof typesInternal;
 
+/** Set of HPType names. Each type has a 0-based unique index. */
+export const hpTypes =
+{
+    bug: 0, dark: 1, dragon: 2, fire: 3, flying: 4, ghost: 5, electric: 6,
+    fighting: 7, grass: 8, ground: 9, ice: 10, poison: 11, psychic: 12,
+    rock: 13, steel: 14, water: 15
+} as const;
+/** Number of possible hidden power types. */
+export const numHPTypes = Object.keys(hpTypes).length;
+/** The different hidden power types a pokemon can have. */
+export type HPType = keyof typeof hpTypes;
+
+/** Maps weather type to its weather-extending item name. */
+export const weatherItems: {readonly [T in WeatherType]: string} =
+{
+    none: "", SunnyDay: "heatrock", RainDance: "damprock",
+    Sandstorm: "smoothrock", Hail: "icyrock"
+};
+
+const majorStatusesInternal =
+{
+    "": 0, brn: 1, par: 2, psn: 3, tox: 4, slp: 5, frz: 6
+};
+/** Hold the set of all major status names. Empty string means no status. */
+export const majorStatuses: Readonly<typeof majorStatusesInternal> =
+    majorStatusesInternal;
+
+/** Major pokemon status conditions. */
+export type MajorStatus = keyof typeof majorStatuses;
+
+/**
+ * Checks if a value matches a major status.
+ * @param status Value to be checked.
+ * @returns True if the name matches, false otherwise.
+ */
+export function isMajorStatus(status: any): status is MajorStatus
+{
+    return majorStatuses.hasOwnProperty(status);
+}
+
+const boostNamesInternal =
+{
+    atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true,
+    evasion: true
+};
+/** Holds the set of all boostable stat names. */
+export const boostNames: Readonly<typeof boostNamesInternal> =
+    boostNamesInternal;
+
+/** Names of pokemon stats that can be boosted. */
+export type BoostName = keyof typeof boostNames;
+
+/**
+ * Checks if a value matches a boost name.
+ * @param stat Value to be checked.
+ * @returns True if the name matches, false otherwise.
+ */
+export function isBoostName(stat: any): stat is BoostName
+{
+    return boostNames.hasOwnProperty(stat);
+}
+
+const weatherTypesInternal =
+    {none: true, SunnyDay: true, RainDance: true, Sandstorm: true, Hail: true};
+
+/** Holds the set of all weather types. */
+export const weatherTypes: Readonly<typeof weatherTypesInternal> =
+    weatherTypesInternal;
+
+/** Types of weather conditions. */
+export type WeatherType = keyof typeof weatherTypes;
+
+/**
+ * Checks if a value matches a weather type.
+ * @param type Value to be checked.
+ * @returns True if the name matches, false otherwise.
+ */
+export function isWeatherType(type: any): type is WeatherType
+{
+    return weatherTypes.hasOwnProperty(type);
+}
+
 /** Format of each pokemon entry in the Dex. */
 export interface PokemonData
 {

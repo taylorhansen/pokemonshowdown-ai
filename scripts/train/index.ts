@@ -21,9 +21,9 @@ import * as fs from "fs";
 import { dirname, join } from "path";
 import ProgressBar from "progress";
 import { Writable } from "stream";
+import { sizeBattleState } from "../../src/ai/encodeBattleState";
 import { Network, toColumn } from "../../src/ai/Network";
 import { Choice, intToChoice } from "../../src/battle/agent/Choice";
-import { BattleState } from "../../src/battle/state/BattleState";
 import { evaluateFolder, latestModelFolder, selfPlayFolder } from
     "../../src/config";
 import { Logger } from "../../src/Logger";
@@ -353,7 +353,7 @@ function createModel(): tf.LayersModel
 
     model.add(tf.layers.dense(
     {
-        inputShape: [BattleState.getArraySize()], units: 10, activation: "tanh"
+        inputShape: [sizeBattleState], units: 10, activation: "tanh"
     }));
     model.add(tf.layers.dense({units: outNeurons, activation: "linear"}));
 

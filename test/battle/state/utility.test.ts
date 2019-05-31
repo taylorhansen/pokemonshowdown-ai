@@ -1,33 +1,30 @@
 import { expect } from "chai";
 import "mocha";
-import { oneHot, tempStatusTurns } from "../../../src/battle/state/utility";
+import { pluralTurns } from "../../../src/battle/state/utility";
 
 describe("utility", function()
 {
-    describe("oneHot", function()
+    describe("pluralTurns()", function()
     {
-        it("Should encode class of values", function()
+        it("Should use singular", function()
         {
-            expect(oneHot(1, 3)).to.have.members([0, 1, 0]);
+            expect(pluralTurns("tox", 1)).to.equal("tox for 1 turn");
         });
 
-        it("Should output 0's if index is null", function()
+        it("Should use singular with limit", function()
         {
-            expect(oneHot(null, 3)).to.have.members([0, 0, 0]);
+            expect(pluralTurns("tox", 1, 1)).to.equal("tox for 1/1 turn");
+        });
+
+        it("Should use plural", function()
+        {
+            expect(pluralTurns("tox", 5)).to.equal("tox for 5 turns");
+        });
+
+        it("Should use plural with limit", function()
+        {
+            expect(pluralTurns("reflect", 2, 5))
+                .to.equal("reflect for 2/5 turns");
         });
     });
-
-    describe("tempStatusTurns", function()
-    {
-        it("Should return 0 if given 0", function()
-        {
-            expect(tempStatusTurns(0)).to.equal(0);
-        });
-
-        it("Should decrease status likelihood", function()
-        {
-            expect(tempStatusTurns(2)).to.equal(1 / 2);
-        });
-    });
-
 });

@@ -1,11 +1,6 @@
-import { Type, types } from "../dex/dex-types";
+import { hpTypes } from "../dex/dex-types";
 import { Move } from "./Move";
 import { PossibilityClass } from "./PossibilityClass";
-
-/** Hidden power types dictionary. */
-const possibleHPTypes = Object.assign({}, types) as {[T in Type]: number};
-delete possibleHPTypes["???"];
-delete possibleHPTypes.normal;
 
 /** Tracks the moves and hidden power type of a Pokemon. */
 export class Moveset
@@ -14,13 +9,25 @@ export class Moveset
     public static readonly maxSize = 4;
 
     /** Hidden power type possibility tracker. */
-    public readonly hpType = new PossibilityClass(possibleHPTypes);
+    public readonly hpType = new PossibilityClass(hpTypes);
 
-    /** Contained moves. */
-    private readonly moves: ReadonlyArray<Move> =
-        Array.from({length: Moveset.maxSize}, () => new Move());
-    /** Index of the first unrevealed move. */
+    /** Contained moves. Null is unrevealed while undefined is nonexistent. */
+    public get moves(): readonly (Move | null | undefined)[]
+    {
+        return this._moves;
+    }
+    private readonly _moves =
+        new Array<Move | null | undefined>(Moveset.maxSize);
+    /** Index of the first unknown move. Previous indexes should be defined. */
     private unrevealed = 0;
+
+    /** Creates a Moveset of specified size. */
+    constructor(size = Moveset.maxSize)
+    {
+        // TODO: possible corner case: infer pokemon sets with less than 4 moves
+        size = Math.max(1, Math.min(size, Moveset.maxSize));
+        this._moves.fill(null, 0, size);
+    }
 
     /**
      * Gets the move by name.
@@ -30,7 +37,7 @@ export class Moveset
     public get(id: string): Move | null
     {
         const index = this.getIndex(id);
-        return index >= 0 ? this.moves[index] : null;
+        return index >= 0 ? this._moves[index] || null : null;
     }
 
     /**
@@ -40,7 +47,7 @@ export class Moveset
      */
     public reveal(id: string): Move
     {
-        return this.moves[this.revealIndex(id)];
+        return this._moves[this.revealIndex(id)]!;
     }
 
     /** Gets a move, calling `reveal()` if not initially found. */
@@ -58,11 +65,12 @@ export class Moveset
     }
 
     /** Gets the index of a move by name, or -1 if not found. */
-    private getIndex(id: string): number
+    private getIndex(name: string): number
     {
         for (let i = 0; i < this.unrevealed; ++i)
         {
-            if (this.moves[i].id === id) return i;
+            const move = this._moves[i];
+            if (move && move.name === name) return i;
         }
         return -1;
     }
@@ -74,57 +82,41 @@ export class Moveset
         const index = this.getIndex(id);
         if (index >= 0) return index;
 
-        if (this.unrevealed >= this.moves.length)
+        if (this.unrevealed >= this._moves.length)
         {
             throw new Error("Moveset is already full");
         }
 
-        const move = this.moves[this.unrevealed];
+        const move = new Move();
+        this._moves[this.unrevealed] = move;
         if (id.startsWith("hiddenpower") && id.length > "hiddenpower".length)
         {
             // set hidden power type
             // format: hiddenpower<type><base power if gen2-5>
-            this.hpType.set(id.substr("hiddenpower".length).replace(/\d+/, ""));
+            this.hpType.narrow(
+                id.substr("hiddenpower".length).replace(/\d+/, ""));
             id = "hiddenpower";
         }
-        move.id = id;
+        move.name = id;
         return this.unrevealed++;
-    }
-
-    /** Gets the size of the return value of `toArray()`. */
-    public static getArraySize(): number
-    {
-        return /*hpType*/Object.keys(possibleHPTypes).length +
-            /*moves*/Move.getArraySize() * Moveset.maxSize;
-    }
-
-    // istanbul ignore next: unstable, hard to test
-    /** Formats moveset info into an array of numbers. */
-    public toArray(): number[]
-    {
-        const result =
-        [
-            ...this.hpType.toArray(),
-            ...this.moves.map(m => m.toArray()).reduce((a, b) => a.concat(b))
-        ];
-        return result;
     }
 
     // istanbul ignore next: only used for logging
     /** Encodes all moveset data into a string. */
     public toString(): string
     {
-        return this.moves
-            .map((m, i) =>
-                i < this.unrevealed ? this.stringifyMove(m) : "<unrevealed>")
+        return this._moves
+            .map(m => this.stringifyMove(m))
             .join(", ");
     }
 
     // istanbul ignore next: only used for logging
     /** Stringifies a Move, inserting hidden power type if needed. */
-    private stringifyMove(move: Move): string
+    private stringifyMove(move: Move | null | undefined): string
     {
-        if (move.id !== "hiddenpower") return move.toString();
+        if (move === null) return "<unrevealed>";
+        if (!move) return "<empty>";
+        if (move.name !== "hiddenpower") return move.toString();
 
         const hpStr = this.hpType.definiteValue ?
             this.hpType.definiteValue.name

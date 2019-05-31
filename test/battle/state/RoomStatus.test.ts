@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { RoomStatus } from "../../../src/battle/state/RoomStatus";
 
-describe("Room", function()
+describe("RoomStatus", function()
 {
     let room: RoomStatus;
 
@@ -11,7 +11,7 @@ describe("Room", function()
         room = new RoomStatus();
     });
 
-    describe("gravity", function()
+    describe("#gravity", function()
     {
         it("Should set gravity", function()
         {
@@ -19,14 +19,6 @@ describe("Room", function()
             expect(room.gravity).to.be.true;
             room.gravity = false;
             expect(room.gravity).to.be.false;
-        });
-    });
-
-    describe("toArray", function()
-    {
-        it("Should be the same size as RoomStatus.getArraySize()", function()
-        {
-            expect(room.toArray()).to.have.lengthOf(RoomStatus.getArraySize());
         });
     });
 });

@@ -22,7 +22,7 @@ describe("Weather", function()
         expect(weather.turns).to.equal(0);
     });
 
-    describe("reset", function()
+    describe("#reset()", function()
     {
         it("Should reset weather", function()
         {
@@ -35,7 +35,7 @@ describe("Weather", function()
         });
     });
 
-    describe("set", function()
+    describe("#set()", function()
     {
         it("Should set duration to 5", function()
         {
@@ -48,7 +48,7 @@ describe("Weather", function()
 
         it("Should set duration to 8 if weather rock", function()
         {
-            source.item = "smoothrock";
+            source.item.narrow("smoothrock");
             weather.set("Sandstorm", source);
             expect(weather.type).to.equal("Sandstorm");
             expect(weather.source).to.equal(source);
@@ -66,7 +66,7 @@ describe("Weather", function()
         });
     });
 
-    describe("upkeep", function()
+    describe("#upkeep()", function()
     {
         it("Should do nothing if no weather", function()
         {
@@ -93,7 +93,7 @@ describe("Weather", function()
             for (let i = 0; i < 8; ++i)
             {
                 weather.upkeep("SunnyDay");
-                expect(source.item).to.be.empty;
+                expect(source.item.definiteValue).to.be.null;
                 expect(weather.type).to.equal("SunnyDay");
                 expect(weather.source).to.equal(source);
                 expect(weather.duration).to.be.null;
@@ -118,7 +118,8 @@ describe("Weather", function()
             while (i < 5);
 
             // at this point, the weather has been kept past 5 turns
-            expect(source.item).to.equal("heatrock");
+            expect(source.item.definiteValue).to.not.be.null;
+            expect(source.item.definiteValue!.name).to.equal("heatrock");
             expect(weather.type).to.equal("SunnyDay");
             expect(weather.source).to.equal(source);
             expect(weather.duration).to.equal(8);
@@ -135,25 +136,17 @@ an item`,
         function()
         {
             weather.set("Sandstorm", source);
-            source.item = "leftovers";
+            source.item.narrow("leftovers");
             for (let i = 0; i < 4; ++i) weather.upkeep("Sandstorm");
             expect(() => weather.upkeep("Sandstorm")).to.throw();
         });
 
         it("Should always throw if kept past 8 turn duration", function()
         {
-            source.item = "damprock";
+            source.item.narrow("damprock");
             weather.set("RainDance", source);
             for (let i = 0; i < 7; ++i) weather.upkeep("RainDance");
             expect(() => weather.upkeep("RainDance")).to.throw();
-        });
-    });
-
-    describe("toArray", function()
-    {
-        it("Should have the same size as Weather.getArraySize()", function()
-        {
-            expect(weather.toArray()).to.have.lengthOf(Weather.getArraySize());
         });
     });
 });

@@ -340,13 +340,6 @@ export class PSEventHandler
     }
 
     // istanbul ignore next: unstable, hard to verify
-    /** Gets the state data in array form. */
-    public getStateArray(): number[]
-    {
-        return this.state.toArray();
-    }
-
-    // istanbul ignore next: unstable, hard to verify
     /** Prints the state to the logger. */
     public printState(): void
     {
@@ -384,7 +377,7 @@ export class PSEventHandler
             //  set the teamsize
             const mon = team.reveal(details.species, details.level,
                     details.gender, status.hp, status.hpMax)!;
-            mon.item = data.item;
+            mon.item.narrow(data.item);
             mon.ability = data.baseAbility;
             mon.majorStatus = status.condition;
 
@@ -498,7 +491,7 @@ export class PSEventHandler
                 break;
             case "item":
                 // reveal item
-                mon.item = cause.item;
+                mon.item.narrow(toIdName(cause.item));
                 break;
         }
     }

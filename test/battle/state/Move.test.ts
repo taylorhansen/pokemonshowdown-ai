@@ -11,27 +11,27 @@ describe("Move", function()
         move = new Move();
     });
 
-    describe("id", function()
+    describe("#name", function()
     {
         it("Should be empty initially", function()
         {
-            expect(move.id).to.be.empty;
+            expect(move.name).to.be.empty;
         });
 
         it("Should set id name", function()
         {
-            move.id = "splash";
-            expect(move.id).to.equal("splash");
+            move.name = "splash";
+            expect(move.name).to.equal("splash");
         });
 
         it("Should not set invalid id name", function()
         {
-            expect(() => move.id = "something invalid").to.throw();
-            expect(move.id).to.equal("");
+            expect(() => move.name = "something invalid").to.throw();
+            expect(move.name).to.be.empty;
         });
     });
 
-    describe("pp", function()
+    describe("#pp", function()
     {
         it("Should start at 0", function()
         {
@@ -40,31 +40,23 @@ describe("Move", function()
 
         it("Should initialize pp when id is set", function()
         {
-            move.id = "splash";
+            move.name = "splash";
             expect(move.pp).to.equal(64);
             expect(move.maxpp).to.equal(64);
         });
 
         it("Should set pp to 0 if overused", function()
         {
-            move.id = "splash";
+            move.name = "splash";
             move.pp = -1;
             expect(move.pp).to.equal(0);
         });
 
         it("Should set to max if over", function()
         {
-            move.id = "splash";
+            move.name = "splash";
             move.pp = 100;
             expect(move.pp).to.equal(move.maxpp);
-        });
-    });
-
-    describe("toArray", function()
-    {
-        it("Should have the same length as Move.getArraySize()", function()
-        {
-            expect(move.toArray()).to.have.lengthOf(Move.getArraySize());
         });
     });
 });

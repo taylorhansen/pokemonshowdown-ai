@@ -4,7 +4,7 @@ import { HP } from "../../../src/battle/state/HP";
 
 describe("HP", function()
 {
-    describe("set", function()
+    describe("#set()", function()
     {
         it("Should set current and max hp", function()
         {
@@ -15,7 +15,7 @@ describe("HP", function()
         });
     });
 
-    describe("current", function()
+    describe("#current", function()
     {
         it("Should be 0 if set to a negative number", function()
         {
@@ -32,25 +32,7 @@ describe("HP", function()
         });
     });
 
-    describe("toArray", function()
-    {
-        it("Should be the same size as HP.getArraySize()", function()
-        {
-            const hp = new HP(/*isPercent*/ false);
-            expect(hp.toArray()).to.have.lengthOf(HP.getArraySize());
-        });
-
-        it("Should contain current and max", function()
-        {
-            const hp = new HP(/*isPercent*/ false);
-            hp.set(50, 100);
-            const arr = hp.toArray();
-            expect(arr[0]).to.equal(50);
-            expect(arr[1]).to.equal(100);
-        });
-    });
-
-    describe("toString", function()
+    describe("#toString()", function()
     {
         it("Should not display percent", function()
         {

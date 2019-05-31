@@ -48,13 +48,4 @@ describe("TeamStatus", function()
             expect(status.futureMoveTurns.doomdesire).to.equal(2);
         });
     });
-
-    describe("#toArray()", function()
-    {
-        it("Should be the same size as TeamStatus.getArraySize()", function()
-        {
-            expect(status.toArray())
-                .to.have.lengthOf(TeamStatus.getArraySize());
-        });
-    });
 });

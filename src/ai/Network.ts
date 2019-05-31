@@ -3,6 +3,7 @@ import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice, choiceIds, intToChoice } from "../battle/agent/Choice";
 import { BattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
+import { encodeBattleState, sizeBattleState } from "./encodeBattleState";
 
 /**
  * Turns a tensor-like object into a column vector.
@@ -17,9 +18,6 @@ export function toColumn(arr: number[] | Float32Array): tf.Tensor2D
 /** Neural network interface. */
 export class Network implements BattleAgent
 {
-    /** Number of input neurons. */
-    private static readonly inputLength = BattleState.getArraySize();
-
     /** Used for logging info. */
     protected readonly logger: Logger;
     /** Predicts which Choice to make. */
@@ -115,14 +113,14 @@ export class Network implements BattleAgent
         if (Array.isArray(model.input) ||
             !Network.isValidInputShape(model.input.shape))
         {
-            throw new Error(`Loaded LayersModel has invalid input shape. Try to
-create a new model with an input shape of (null, ${Network.inputLength})`);
+            throw new Error(`Loaded LayersModel has invalid input shape. Try \
+to create a new model with an input shape of (null, ${sizeBattleState})`);
         }
         if (Array.isArray(model.output) ||
             !Network.isValidOutputShape(model.output.shape))
         {
-            throw new Error(`Loaded LayersModel has invalid output shape. Try to
-create a new model with an output shape of (null, ${intToChoice.length})`);
+            throw new Error(`Loaded LayersModel has invalid output shape. Try \
+to create a new model with an output shape of (null, ${intToChoice.length})`);
         }
     }
 
@@ -130,7 +128,7 @@ create a new model with an output shape of (null, ${intToChoice.length})`);
     private static isValidInputShape(shape: (number | null)[]): boolean
     {
         return shape.length === 2 && shape[0] === null &&
-            shape[1] === Network.inputLength;
+            shape[1] === sizeBattleState;
     }
 
     /** Ensures that a network output shape is valid. */
@@ -143,18 +141,18 @@ create a new model with an output shape of (null, ${intToChoice.length})`);
     /** Gets the neural network input from the BattleState. */
     private getStateData(state: BattleState): number[]
     {
-        const data = state.toArray();
-        if (data.length > Network.inputLength)
+        const data = encodeBattleState(state);
+        if (data.length > sizeBattleState)
         {
             this.logger.error(`Too many state values ${data.length}, expected \
-${Network.inputLength}`);
-            data.splice(Network.inputLength);
+${sizeBattleState}`);
+            data.splice(sizeBattleState);
         }
-        else if (data.length < Network.inputLength)
+        else if (data.length < sizeBattleState)
         {
             this.logger.error(`Not enough state values ${data.length}, \
-expected ${Network.inputLength}`);
-            do data.push(0); while (data.length < Network.inputLength);
+expected ${sizeBattleState}`);
+            do data.push(0); while (data.length < sizeBattleState);
         }
 
         return data;
