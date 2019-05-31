@@ -4,7 +4,6 @@
   "description": "desc",
   "main": "dist/index.js",
   "scripts": {
-    "prebuild": "rm -rf dist",
     "build": "tsc",
     "start": "node dist/index.js",
     "pretest": "tslint -c tslint.json -e src/battle/dex/dex.ts --project .",
