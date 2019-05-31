@@ -15,7 +15,7 @@ export function dispatch<T extends MessageType>(type: T, msg: Message<T>):
 {
     return function(input, info)
     {
-        const result = info.listener.dispatch(type, msg, info.room);
+        const result = info.listener.dispatch(type as any, msg, info.room);
         return {result, remaining: input};
     };
 }

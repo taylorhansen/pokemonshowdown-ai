@@ -11,6 +11,7 @@
         "import-spacing": false,
         "indent": [true, "spaces", 4],
         "interface-name": [true, "never-prefix"],
+        "interface-over-type-literal": false,
         "linebreak-style": [true, "LF"],
         "max-classes-per-file": [true, 1, "exclude-class-expressions"],
         "max-line-length": [true, 80],

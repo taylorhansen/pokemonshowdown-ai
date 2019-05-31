@@ -13,8 +13,7 @@ export class CallbackDispatcher<DispatchArgs extends {[type: string]: any[]}>
 {
     /** Contains the callback dispatchers for each event type. */
     private readonly dispatchers:
-        {[T in keyof DispatchArgs]?: SpecificDispatcher<DispatchArgs[T]>} =
-            {} as any;
+        {[T in keyof DispatchArgs]?: SpecificDispatcher<DispatchArgs[T]>} = {};
 
     /**
      * Adds a callback for a certain event type.
@@ -50,8 +49,8 @@ export class CallbackDispatcher<DispatchArgs extends {[type: string]: any[]}>
     {
         if (!this.dispatchers.hasOwnProperty(type))
         {
-            this.dispatchers[type] = new SpecificDispatcher<any[]>() as any;
+            this.dispatchers[type] = new SpecificDispatcher<DispatchArgs[T]>();
         }
-        return this.dispatchers[type] as SpecificDispatcher<DispatchArgs[T]>;
+        return this.dispatchers[type]!;
     }
 }

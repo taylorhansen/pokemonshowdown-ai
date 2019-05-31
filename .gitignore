@@ -4,6 +4,7 @@ coverage/
 
 # holds all the compiled js files
 dist/
+*.tsbuildinfo
 
 # npm packages
 node_modules/

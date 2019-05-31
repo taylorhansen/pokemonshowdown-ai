@@ -5,13 +5,11 @@ import { CallbackDispatcher } from
 
 describe("CallbackDispatcher", function()
 {
-    type DispatchType = "a" | "b";
-    type Dispatch<T extends DispatchType> =
-        T extends "a" ? [number]
-        : T extends "b" ? [string, number]
-        : never;
+    type DispatchArgs = {a: [number], b: [string, number]};
+    type DispatchType = keyof DispatchArgs;
     class Dispatcher extends
-        CallbackDispatcher<{[T in DispatchType]: Dispatch<T>}> {}
+        CallbackDispatcher<DispatchArgs> {}
+
     let dispatcher: Dispatcher;
 
     beforeEach("Initialize CallbackDispatcher", function()
@@ -25,7 +23,7 @@ describe("CallbackDispatcher", function()
      * @param givenArgs Arguments to the handler.
      */
     function shouldHandle<T extends DispatchType>(type: T,
-            ...givenArgs: Dispatch<T>): void
+        ...givenArgs: DispatchArgs[T]): void
     {
         it(`Should handle a normal message type ${type}`, function(done)
         {

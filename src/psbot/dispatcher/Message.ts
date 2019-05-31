@@ -6,9 +6,6 @@ import { PlayerID, PokemonDetails, PokemonID, PokemonStatus, RoomType } from
     "../helpers";
 import { AnyBattleEvent } from "./BattleEvent";
 
-/** Main message type produced by the MessageParser. */
-export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
-
 /** Set of MajorPrefixes. */
 export const majorPrefixes =
 {
@@ -28,6 +25,9 @@ export function isMajorPrefix(value: any): value is MajorPrefix
 {
     return majorPrefixes.hasOwnProperty(value);
 }
+
+/** Main message type produced by the MessageParser. */
+export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
 
 /** Argument object type for MessageHandlers. */
 export type Message<T extends MessageType> =
