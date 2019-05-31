@@ -41,29 +41,29 @@ export type RoomType = "chat" | "battle";
 export interface PokemonID
 {
     /** Whose side the pokemon is on. */
-    owner: PlayerID;
+    readonly owner: PlayerID;
     /**
      * Active position (a, b, or c). Only really applicable in non-single
      * battles.
      */
-    position?: string;
+    readonly position?: string;
     /** Display nickname. */
-    nickname: string;
+    readonly nickname: string;
 }
 
 /** Holds a couple details about a pokemon. */
 export interface PokemonDetails
 {
-    species: string;
-    shiny: boolean;
-    gender: string | null;
-    level: number;
+    readonly species: string;
+    readonly shiny: boolean;
+    readonly gender: string | null;
+    readonly level: number;
 }
 
 /** Details pokemon hp (can be percent) and status conditions. */
 export interface PokemonStatus
 {
-    hp: number;
-    hpMax: number;
-    condition: MajorStatus;
+    readonly hp: number;
+    readonly hpMax: number;
+    readonly condition: MajorStatus;
 }

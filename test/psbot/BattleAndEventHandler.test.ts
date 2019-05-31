@@ -146,7 +146,7 @@ describe("Battle and EventProcessor", function()
             });
         }
 
-        const a: BattleInitMessage =
+        let a: BattleInitMessage =
         {
             id: "p1", username: testArgs.username[0], teamSizes: {p1: 3, p2: 3},
             gameType: "singles", gen: 4,
@@ -164,10 +164,9 @@ describe("Battle and EventProcessor", function()
                 }
             ]
         };
-        testBattleInit({...a});
+        testBattleInit(a);
 
-        a.id = "p2";
-        a.username = testArgs.username[1];
+        a = {...a, id: "p2", username: testArgs.username[1]};
         testBattleInit(a);
 
         it("Should disable moves", async function()
@@ -1262,7 +1261,7 @@ describe("Battle and EventProcessor", function()
                 const mon = battle.state.teams.us.active;
                 mon.moveset.reveal("splash");
 
-                const request: RequestMessage =
+                let request: RequestMessage =
                 {
                     active:
                     [
@@ -1280,7 +1279,7 @@ describe("Battle and EventProcessor", function()
                     side: battle.lastRequest!.side,
                     wait: true
                 };
-                await battle.request({...request});
+                await battle.request(request);
                 await battle.progress(
                 {
                     events:
@@ -1302,8 +1301,8 @@ describe("Battle and EventProcessor", function()
                 expect(mon.volatile.twoTurn).to.equal("solarbeam");
 
                 // simulate intermediate choice by sending turn after
-                delete request.wait;
-                await battle.request({...request});
+                request = {...request, wait: false};
+                await battle.request(request);
                 await battle.progress({events: [{type: "turn", num: 2}]});
                 expect(mon.volatile.twoTurn).to.equal("solarbeam");
                 // the use of a two-turn move should restrict the client's
@@ -1313,20 +1312,23 @@ describe("Battle and EventProcessor", function()
                 expect(responses).to.have.lengthOf(1);
 
                 // release the charged move, freeing the pokemon's choices
-                request.active![0].moves =
-                [
-                    {
-                        move: "Solar Beam", id: "solarbeam", pp: 15, maxpp: 16,
-                        disabled: false, target: "any"
-                    },
-                    {
-                        move: "Splash", id: "splash", pp: 64, maxpp: 64,
-                        disabled: false, target: "self"
-                    }
-                ];
-                delete request.active![0].trapped;
-                request.wait = true;
-                await battle.request({...request});
+                request =
+                {
+                    ...request,
+                    active: [{moves:
+                    [
+                        {
+                            move: "Solar Beam", id: "solarbeam", pp: 15,
+                            maxpp: 16, disabled: false, target: "any"
+                        },
+                        {
+                            move: "Splash", id: "splash", pp: 64, maxpp: 64,
+                            disabled: false, target: "self"
+                        }
+                    ]}],
+                    wait: true
+                };
+                await battle.request(request);
                 await battle.progress(
                 {
                     events:
@@ -1341,8 +1343,8 @@ describe("Battle and EventProcessor", function()
                 expect(mon.volatile.twoTurn).to.be.empty;
 
                 // simulate intermediate choice by sending turn after
-                delete request.wait;
-                await battle.request({...request});
+                request = {...request, wait: false};
+                await battle.request(request);
                 await battle.progress({events: [{type: "turn", num: 3}]});
                 // should now be able to choose other choices
                 expect(battle.lastChoices).to.have.members(
@@ -1357,7 +1359,7 @@ describe("Battle and EventProcessor", function()
                 const mon = battle.state.teams.us.active;
                 mon.moveset.reveal("splash");
 
-                const request: RequestMessage =
+                let request: RequestMessage =
                 {
                     active:
                     [
@@ -1375,7 +1377,7 @@ describe("Battle and EventProcessor", function()
                     side: battle.lastRequest!.side,
                     wait: true
                 };
-                await battle.request({...request});
+                await battle.request(request);
                 await battle.progress(
                 {
                     events:
@@ -1397,8 +1399,8 @@ describe("Battle and EventProcessor", function()
                 expect(mon.volatile.twoTurn).to.equal("solarbeam");
 
                 // simulate intermediate choice by sending turn after
-                delete request.wait;
-                await battle.request({...request});
+                request = {...request, wait: false};
+                await battle.request(request);
                 await battle.progress({events: [{type: "turn", num: 2}]});
                 expect(mon.volatile.twoTurn).to.equal("solarbeam");
                 // the use of a two-turn move should restrict the client's
@@ -1408,19 +1410,22 @@ describe("Battle and EventProcessor", function()
                 expect(responses).to.have.lengthOf(1);
 
                 // interrupt the charged move somehow
-                request.active![0].moves =
-                [
-                    {
-                        move: "Solar Beam", id: "solarbeam", pp: 15, maxpp: 16,
-                        disabled: false, target: "any"
-                    },
-                    {
-                        move: "Splash", id: "splash", pp: 64, maxpp: 64,
-                        disabled: false, target: "self"
-                    }
-                ];
-                delete request.active![0].trapped;
-                await battle.request({...request});
+                request =
+                {
+                    ...request,
+                    active: [{moves:
+                    [
+                        {
+                            move: "Solar Beam", id: "solarbeam", pp: 15,
+                            maxpp: 16, disabled: false, target: "any"
+                        },
+                        {
+                            move: "Splash", id: "splash", pp: 64, maxpp: 64,
+                            disabled: false, target: "self"
+                        }
+                    ]}]
+                };
+                await battle.request(request);
                 await battle.progress({events: [{type: "turn", num: 3}]});
                 // should now be able to choose other choices
                 expect(battle.lastChoices).to.have.members(

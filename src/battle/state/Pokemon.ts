@@ -75,13 +75,13 @@ ability ${ability}`);
         () => { if (this.active) this.setOverrideAbility(); });
 
     /** The types of this pokemon. */
-    public get types(): ReadonlyArray<Type>
+    public get types(): readonly Type[]
     {
         // uninitialized Pokemon objs should silently fail so toArray() doesn't
         //  throw
         if (!this.species.definiteValue) return [];
 
-        let result: ReadonlyArray<Type>;
+        let result: readonly Type[];
         if (this._active)
         {
             result = this.volatile.overrideTypes
@@ -92,7 +92,7 @@ ability ${ability}`);
         return result.filter(type => type !== "???");
     }
     /** Temporarily changes primary and secondary types and resets third. */
-    public changeType(newTypes: [Type, Type]): void
+    public changeType(newTypes: readonly [Type, Type]): void
     {
         this.volatile.overrideTypes = newTypes;
         // reset added type
@@ -125,7 +125,8 @@ ability ${ability}`);
      * @param targets Targets of the move.
      * @param nopp Whether to not consume pp for this move.
      */
-    public useMove(id: string, targets: Pokemon[], nopp?: boolean): void
+    public useMove(id: string, targets: readonly Pokemon[], nopp?: boolean):
+        void
     {
         // struggle doesn't occupy a moveslot
         if (id === "struggle") return;

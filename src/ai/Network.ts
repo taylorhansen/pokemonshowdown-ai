@@ -125,14 +125,15 @@ to create a new model with an output shape of (null, ${intToChoice.length})`);
     }
 
     /** Ensures that a network input shape is valid. */
-    private static isValidInputShape(shape: (number | null)[]): boolean
+    private static isValidInputShape(shape: readonly (number | null)[]): boolean
     {
         return shape.length === 2 && shape[0] === null &&
             shape[1] === sizeBattleState;
     }
 
     /** Ensures that a network output shape is valid. */
-    private static isValidOutputShape(shape: (number | null)[]): boolean
+    private static isValidOutputShape(shape: readonly (number | null)[]):
+        boolean
     {
         return shape.length === 2 && shape[0] === null &&
             shape[1] === intToChoice.length;

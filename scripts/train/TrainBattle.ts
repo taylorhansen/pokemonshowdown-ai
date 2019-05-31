@@ -15,7 +15,7 @@ import { TrainNetwork } from "./TrainNetwork";
 export class TrainBattle extends PSBattle
 {
     /** Buffer of Experience objects. */
-    public get experiences(): ReadonlyArray<Experience>
+    public get experiences(): readonly Experience[]
     {
         return this._experiences;
     }

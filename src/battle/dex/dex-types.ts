@@ -1,16 +1,15 @@
 /** Names of certain stats. */
 export type StatName = "hp" | "atk" | "def" | "spa" | "spd" | "spe";
 
-const typesInternal =
+/** Set of Type names. Each type has a 0-based unique index. */
+export const types =
 {
     bug: 0, dark: 1, dragon: 2, fire: 3, flying: 4, ghost: 5, electric: 6,
     fighting: 7, grass: 8, ground: 9, ice: 10, normal: 11, poison: 12,
     psychic: 13, rock: 14, steel: 15, water: 16, "???": 17
-};
-/** Set of Type names. Each type has a 0-based unique index. */
-export const types: Readonly<typeof typesInternal> = typesInternal;
+} as const;
 /** The different types a pokemon can have. */
-export type Type = keyof typeof typesInternal;
+export type Type = keyof typeof types;
 
 /** Set of HPType names. Each type has a 0-based unique index. */
 export const hpTypes =
@@ -31,17 +30,13 @@ export const weatherItems: {readonly [T in WeatherType]: string} =
     Sandstorm: "smoothrock", Hail: "icyrock"
 };
 
-const majorStatusesInternal =
+/** Hold the set of all major status names. Empty string means no status. */
+export const majorStatuses =
 {
     "": 0, brn: 1, par: 2, psn: 3, tox: 4, slp: 5, frz: 6
-};
-/** Hold the set of all major status names. Empty string means no status. */
-export const majorStatuses: Readonly<typeof majorStatusesInternal> =
-    majorStatusesInternal;
-
+} as const;
 /** Major pokemon status conditions. */
 export type MajorStatus = keyof typeof majorStatuses;
-
 /**
  * Checks if a value matches a major status.
  * @param status Value to be checked.
@@ -52,18 +47,20 @@ export function isMajorStatus(status: any): status is MajorStatus
     return majorStatuses.hasOwnProperty(status);
 }
 
-const boostNamesInternal =
+/** Holds the set of all boostable stat names. */
+export const statsExceptHP =
+    {atk: true, def: true, spa: true, spd: true, spe: true} as const;
+/** Names of pokemon stats that can be boosted. */
+export type StatExceptHP = keyof typeof statsExceptHP;
+
+/** Holds the set of all boostable stat names. */
+export const boostNames =
 {
     atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true,
     evasion: true
-};
-/** Holds the set of all boostable stat names. */
-export const boostNames: Readonly<typeof boostNamesInternal> =
-    boostNamesInternal;
-
+} as const;
 /** Names of pokemon stats that can be boosted. */
 export type BoostName = keyof typeof boostNames;
-
 /**
  * Checks if a value matches a boost name.
  * @param stat Value to be checked.
@@ -74,16 +71,13 @@ export function isBoostName(stat: any): stat is BoostName
     return boostNames.hasOwnProperty(stat);
 }
 
-const weatherTypesInternal =
-    {none: true, SunnyDay: true, RainDance: true, Sandstorm: true, Hail: true};
-
 /** Holds the set of all weather types. */
-export const weatherTypes: Readonly<typeof weatherTypesInternal> =
-    weatherTypesInternal;
-
+export const weatherTypes =
+{
+    none: true, SunnyDay: true, RainDance: true, Sandstorm: true, Hail: true
+} as const;
 /** Types of weather conditions. */
 export type WeatherType = keyof typeof weatherTypes;
-
 /**
  * Checks if a value matches a weather type.
  * @param type Value to be checked.
@@ -112,11 +106,11 @@ export interface PokemonData
     /** Letter of the alternate form. */
     readonly formLetter?: string;
     /** Alternate forms of this pokemon. */
-    readonly otherForms?: ReadonlyArray<string>;
+    readonly otherForms?: readonly string[];
     /** Id names of the abilities this species can have. */
-    readonly abilities: ReadonlyArray<string>;
+    readonly abilities: readonly string[];
     /** Types of the pokemon. */
-    readonly types: Readonly<[Type, Type]>;
+    readonly types: readonly [Type, Type];
     /** Base stats. */
     readonly baseStats: {readonly [S in StatName]: number};
     /** Pokemon's weight in kg. Affected by certain moves. */

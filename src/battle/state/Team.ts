@@ -7,7 +7,7 @@ import { TeamStatus } from "./TeamStatus";
 export interface SwitchInOptions
 {
     /** Whether volatile status should be copied onto the replacing pokemon. */
-    copyVolatile?: boolean;
+    readonly copyVolatile?: boolean;
 }
 
 /** Team state. */

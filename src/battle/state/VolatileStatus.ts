@@ -1,4 +1,4 @@
-import { dex, twoTurnMoves } from "../dex/dex";
+import { dex, TwoTurnMove, twoTurnMoves } from "../dex/dex";
 import { BoostName, Type } from "../dex/dex-types";
 import { Moveset } from "./Moveset";
 import { pluralTurns } from "./utility";
@@ -128,7 +128,7 @@ export class VolatileStatus
     /** Clears the disabled status. */
     public enableMoves(): void { this._disableTurns.fill(0); }
     /** Turns for the disable status on each move. */
-    public get disableTurns(): number[] { return this._disableTurns; }
+    public get disableTurns(): readonly number[] { return this._disableTurns; }
     // ctor will initialize values
     private readonly _disableTurns = new Array<number>(Moveset.maxSize);
 
@@ -146,17 +146,17 @@ export class VolatileStatus
     private _lockedMoveTurns!: number;
 
     /** Two-turn move currently being prepared. */
-    public get twoTurn(): keyof typeof twoTurnMoves | ""
+    public get twoTurn(): TwoTurnMove | ""
     {
         return this._twoTurn;
     }
-    public set twoTurn(twoTurn: keyof typeof twoTurnMoves | "")
+    public set twoTurn(twoTurn: TwoTurnMove | "")
     {
         this._twoTurn = twoTurn;
         // after this turn this will be 1
         this.twoTurnCounter = twoTurn ? 2 : 0;
     }
-    private _twoTurn!: keyof typeof twoTurnMoves | "";
+    private _twoTurn!: TwoTurnMove | "";
     private twoTurnCounter!: number;
 
     /** Whether this pokemon must recharge on the next turn. */
@@ -182,7 +182,7 @@ export class VolatileStatus
      * since the parent Pokemon object should handle that. Should not be
      * accessed other than by the parent Pokemon object.
      */
-    public overrideTypes!: Readonly<[Type, Type]>;
+    public overrideTypes!: readonly [Type, Type];
     /** Temporary third type. */
     public addedType!: Type;
 

@@ -277,8 +277,8 @@ export class PSEventHandler
             const team = this.getTeam(event.id.owner);
 
             // consume pending copyvolatile status flags
-            const options: SwitchInOptions = {};
-            options.copyVolatile = team.status.selfSwitch === "copyvolatile";
+            const options: SwitchInOptions =
+                {copyVolatile: team.status.selfSwitch === "copyvolatile"};
             team.status.selfSwitch = false;
 
             team.switchIn(event.details.species, event.details.level,
@@ -415,7 +415,7 @@ export class PSEventHandler
      * Processes BattleEvents sent from the server to update the internal
      * BattleState.
      */
-    public handleEvents(events: AnyBattleEvent[]): void
+    public handleEvents(events: readonly AnyBattleEvent[]): void
     {
         // this field should only stay true if one of these events contains a
         //  |turn| message

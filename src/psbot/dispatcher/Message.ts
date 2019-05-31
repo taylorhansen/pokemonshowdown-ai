@@ -2,6 +2,7 @@
  * @file Interfaces and helper functions for dealing with the arguments of a
  * MessageHandler.
  */
+import { StatExceptHP } from "../../battle/dex/dex-types";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus, RoomType } from
     "../helpers";
 import { AnyBattleEvent } from "./BattleEvent";
@@ -11,11 +12,9 @@ export const majorPrefixes =
 {
     challstr: true, deinit: true, error: true, init: true, request: true,
     updatechallenges: true, updateuser: true
-};
-
+} as const;
 /** Message types that are parsed as a single standalone line. */
 export type MajorPrefix = keyof typeof majorPrefixes;
-
 /**
  * Checks if a value is a Majorprefix. Usable as a type guard.
  * @param value Value to check.
@@ -46,31 +45,31 @@ export type Message<T extends MessageType> =
 export interface BattleInitMessage
 {
     /** PlayerID of a player. */
-    id: PlayerID;
+    readonly id: PlayerID;
     /** Username of a player. */
-    username: string;
+    readonly username: string;
     /** Fixed size of each team. */
-    teamSizes: {[P in PlayerID]: number};
+    readonly teamSizes: {readonly [P in PlayerID]: number};
     /** Game type, e.g. `singles`. */
-    gameType: string;
+    readonly gameType: string;
     /** Cartridge generation. */
-    gen: number;
+    readonly gen: number;
     /** Initial events. */
-    events: AnyBattleEvent[];
+    readonly events: readonly AnyBattleEvent[];
 }
 
 /** Message for handling parsed BattleEvents. */
 export interface BattleProgressMessage
 {
     /** Sequence of events in the battle in the order they were parsed. */
-    events: AnyBattleEvent[];
+    readonly events: readonly AnyBattleEvent[];
 }
 
 /** Message that provides the challenge string to verify login info. */
 export interface ChallStrMessage
 {
     /** String used to verify account login. */
-    challstr: string;
+    readonly challstr: string;
 }
 
 /** Message that indicates the leaving of a room. */
@@ -82,14 +81,14 @@ export interface DeInitMessage
 export interface ErrorMessage
 {
     /** Why the requested action failed. */
-    reason: string;
+    readonly reason: string;
 }
 
 /** Message that indicates the joining of a room. */
 export interface InitMessage
 {
     /** Type of room we're joining. */
-    type: RoomType;
+    readonly type: RoomType;
 }
 
 /**
@@ -103,26 +102,26 @@ export interface RequestMessage
      * Whether the opponent is the only one making a decision, meaning the
      * client has to wait.
      */
-    wait?: boolean;
+    readonly wait?: boolean;
     /** Corresponds to which active pokemon slots must be filled. */
-    forceSwitch?: boolean[];
+    readonly forceSwitch?: readonly boolean[];
     /** Active pokemon info. */
-    active?: RequestActive[];
+    readonly active?: readonly RequestActive[];
     /** Basic info about the entire team. */
-    side: RequestSide;
+    readonly side: RequestSide;
     /** Request id for verification. */
-    rqid?: number;
+    readonly rqid?: number;
     /** Whether the given request cannot be canceled. */
-    noCancel?: boolean;
+    readonly noCancel?: boolean;
 }
 
 /** Active pokemon info. */
 export interface RequestActive
 {
     /** Move statuses. */
-    moves: RequestMove[];
+    readonly moves: readonly RequestMove[];
     /** Whether the pokemon is trapped and can't switch. */
-    trapped?: boolean;
+    readonly trapped?: boolean;
 }
 
 /**
@@ -132,47 +131,47 @@ export interface RequestActive
 export interface RequestMove
 {
     /** Name of the move. */
-    move: string;
+    readonly move: string;
     /** Move id name. */
-    id: string;
+    readonly id: string;
     /** Current amount of power points. */
-    pp?: number;
+    readonly pp?: number;
     /** Maximum amount of power points. */
-    maxpp?: number;
+    readonly maxpp?: number;
     /** Target of the move. */
-    target?: string;
+    readonly target?: string;
     /** Whether the move is currently disabled. */
-    disabled: boolean;
+    readonly disabled: boolean;
 }
 
 /** Basic team info. */
 export interface RequestSide
 {
     /** List of all pokemon on the team. */
-    pokemon: RequestPokemon[];
+    readonly pokemon: readonly RequestPokemon[];
 }
 
 /** Basic pokemon info. */
 export interface RequestPokemon
 {
     /** Parsed PokemonID. */
-    ident: PokemonID;
+    readonly ident: PokemonID;
     /** Parsed PokemonDetails. */
-    details: PokemonDetails;
+    readonly details: PokemonDetails;
     /** Parsed PokemonStatus. */
-    condition: PokemonStatus;
+    readonly condition: PokemonStatus;
     /** True if this pokemon is active. */
-    active: boolean;
+    readonly active: boolean;
     /** Pokemon's stats. */
-    stats: {atk: number, def: number, spa: number, spd: number, spe: number};
+    readonly stats: Readonly<Record<StatExceptHP, number>>;
     /** List of move id names. */
-    moves: string[];
+    readonly moves: readonly string[];
     /** Base ability id name. */
-    baseAbility: string;
+    readonly baseAbility: string;
     /** Item id name. */
-    item: string;
+    readonly item: string;
     /** Pokeball id name. */
-    pokeball: string;
+    readonly pokeball: string;
 }
 
 /** Message that indicates a change in ingoing/outgoing challenges. */
@@ -182,16 +181,16 @@ export interface UpdateChallengesMessage
      * Maps users challenging the client to the battle format they're being
      * challenged to.
      */
-    challengesFrom: {[user: string]: string};
+    readonly challengesFrom: {readonly [user: string]: string};
     /** Current outgoing challenge from the client (TODO). */
-    challengeTo: null;
+    readonly challengeTo: null;
 }
 
 /** Message that changes the client's username and guest status. */
 export interface UpdateUserMessage
 {
     /** New username. */
-    username: string;
+    readonly username: string;
     /** Whether this is a guest account. */
-    isGuest: boolean;
+    readonly isGuest: boolean;
 }

@@ -371,10 +371,8 @@ function battleEvents(input: Input, info: Info): Result<AnyBattleEvent[]>
 function battleEvent(input: Input, info: Info): Result<AnyBattleEvent | null>
 {
     const r1 = battleEventHelper(input, info);
-    const event = r1.result;
-    input = r1.remaining;
 
-    if (event)
+    if (r1.result)
     {
         let cause: Cause | undefined;
         // parse an optional cause suffix
@@ -387,10 +385,14 @@ function battleEvent(input: Input, info: Info): Result<AnyBattleEvent | null>
             // not a valid/relevant Cause so skip it
             else input = input.next();
         }
-        if (cause) event.cause = cause;
+
+        if (cause)
+        {
+            return {result: {...r1.result, cause}, remaining: r1.remaining};
+        }
     }
 
-    return {result: event, remaining: input};
+    return r1;
 }
 
 /**
@@ -822,21 +824,21 @@ function battleEventCause(input: Input, info: Info): Result<Cause | null>
     const str = input.get();
     if (str.startsWith("[from] ability: "))
     {
-        const result: AbilityCause =
-        {
-            type: "ability", ability: str.substr("[from] ability: ".length)
-        };
+        const ability = str.substr("[from] ability: ".length);
 
         // parse possible "of" suffix
-        const next = input.next().get();
+        const nextInput = input.next();
+        const next = nextInput.get();
         if (next && next.startsWith("[of] "))
         {
-            const id = parsePokemonID(next.substr("[of] ".length));
-            result.of = id;
-            input = input.next();
+            const of = parsePokemonID(next.substr("[of] ".length));
+            return {
+                result: {type: "ability", ability, of},
+                remaining: nextInput.next()
+            };
         }
 
-        return {result, remaining: input.next()};
+        return {result: {type: "ability", ability}, remaining: nextInput};
     }
     if (str === "[fatigue]")
     {

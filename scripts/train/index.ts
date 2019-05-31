@@ -67,21 +67,21 @@ logStream.write = function(chunk: any, enc?: string | CB, cb?: CB)
 };
 
 /** Models to represent p1 and p2. */
-type Models = {[P in PlayerID]: tf.LayersModel};
+type Models = {readonly [P in PlayerID]: tf.LayersModel};
 
 interface GameOptions extends Models
 {
     /** Maximum amount of turns before the game is considered a tie. */
-    maxTurns: number;
+    readonly maxTurns: number;
     /**
      * Whether to emit Experience objects, which will be used for learning
      * later.
      */
-    emitExperiences?: boolean;
+    readonly emitExperiences?: boolean;
     /** Path to the file in which to store debug info. */
-    logPath?: string;
+    readonly logPath?: string;
     /** Logger object. */
-    logger?: Logger;
+    readonly logger?: Logger;
 }
 
 /** Result object returned from `play()`. */
@@ -208,7 +208,7 @@ async function play(options: GameOptions): Promise<GameResult>
  * too much.
  * @param epochs Number of epochs to run.
  */
-async function learn(model: tf.LayersModel, experiences: Experience[],
+async function learn(model: tf.LayersModel, experiences: readonly Experience[],
     gamma: number, epochs: number): Promise<tf.History>
 {
     const dataset = datasetFromIteratorFn<tf.TensorContainerObject>(

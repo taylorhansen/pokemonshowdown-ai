@@ -65,7 +65,7 @@ export class PossibilityClass<TData>
     }
 
     /** Removes currently set value names that are not in the given array. */
-    public narrow(...values: string[]): void
+    public narrow(...values: readonly string[]): void
     {
         values.forEach(x => this.check(x));
 

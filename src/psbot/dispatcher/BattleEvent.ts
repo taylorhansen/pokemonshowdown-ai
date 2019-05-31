@@ -17,21 +17,17 @@ export const battleEventPrefixes =
     "-singleturn": true, "-start": true, "-status": true, switch: true,
     tie: true, turn: true, "-unboost": true, upkeep: true, "-weather": true,
     win: true
-};
-
+} as const;
 /** Message line prefixes that are parsed as BattleEvents. */
 export type BattleEventPrefix = keyof typeof battleEventPrefixes;
-
 /** Checks if a string is a BattleEventPrefix. Usable as a type guard. */
 export function isBattleEventPrefix(value: any): value is BattleEventPrefix
 {
     return battleEventPrefixes.hasOwnProperty(value);
 }
 
-/** Stands for any type of event that can happen during a battle. */
-export type AnyBattleEvent = BattleEvent<BattleEventType>;
-
-const battleEventTypesInternal =
+/** Names of BattleEvent types. */
+export const battleEventTypes =
 {
     ability: true, activate: true, boost: true, cant: true, curestatus: true,
     cureteam: true, damage: true, end: true, endability: true, faint: true,
@@ -39,14 +35,9 @@ const battleEventTypesInternal =
     prepare: true, sethp: true, sideend: true, sidestart: true,
     singleturn: true, start: true, status: true, switch: true, tie: true,
     turn: true, upkeep: true, weather: true, win: true
-};
-
+} as const;
 /** Names of BattleEvent types. */
-export const battleEventTypes: Readonly<typeof battleEventTypesInternal> =
-    battleEventTypesInternal;
-
-/** Names of BattleEvent types. */
-export type BattleEventType = keyof typeof battleEventTypesInternal;
+export type BattleEventType = keyof typeof battleEventTypes;
 
 /** Maps BattleEventType to a BattleEvent interface type. */
 export type BattleEvent<T extends BattleEventType> =
@@ -79,270 +70,274 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "win" ? WinEvent
     : never;
 
+/** Stands for any type of event that can happen during a battle. */
+export type AnyBattleEvent = BattleEvent<BattleEventType>;
+
 /** Base class for BattleEvents. */
 interface BattleEventBase
 {
     /** Type of event this is. */
-    type: string;
+    readonly type: string;
     /** Cause of event. */
-    cause?: Cause;
+    readonly cause?: Cause;
 }
 
 /** Event where a pokemon's ability is revealed and activated. */
 export interface AbilityEvent extends BattleEventBase
 {
-    type: "ability";
+    readonly type: "ability";
     /** ID of the pokemon. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Ability being activated. */
-    ability: string;
+    readonly ability: string;
 }
 
 /** Event where a volatile status is mentioned. */
 export interface ActivateEvent extends BattleEventBase
 {
-    type: "activate";
+    readonly type: "activate";
     /** ID of the pokemon whose status is being activated. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Volatile status name. */
-    volatile: string;
+    readonly volatile: string;
 }
 
 /** Event where a stat is being boosted or unboosted. */
 export interface BoostEvent extends BattleEventBase
 {
-    type: "boost";
+    readonly type: "boost";
     /** ID of the pokemom being boosted. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Name of stat being boosted. */
-    stat: BoostName;
+    readonly stat: BoostName;
     /** Amount to boost by. */
-    amount: number;
+    readonly amount: number;
 }
 
 /** Event where an action is prevented from being completed. */
 export interface CantEvent extends BattleEventBase
 {
-    type: "cant";
+    readonly type: "cant";
     /** ID of the pokemom. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Why the action couldn't be completed. */
-    reason: string;
+    readonly reason: string;
     /** The move that the pokemon wasn't able to use. */
-    moveName?: string;
+    readonly moveName?: string;
 }
 
 /** Event where a pokemon's major status is cured. */
 export interface CureStatusEvent extends BattleEventBase
 {
-    type: "curestatus";
+    readonly type: "curestatus";
     /** ID of the pokemon being cured. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Status condition the pokemon is being cured of. */
-    majorStatus: MajorStatus;
+    readonly majorStatus: MajorStatus;
 }
 
 /** Event where all of a team's pokemon are cured of major statuses. */
 export interface CureTeamEvent extends BattleEventBase
 {
-    type: "cureteam";
+    readonly type: "cureteam";
     /** ID of the pokemon whose team is being cured of a major status. */
-    id: PokemonID;
+    readonly id: PokemonID;
 }
 
 /** Event where a pokemon is damaged or healed. */
 export interface DamageEvent extends BattleEventBase
 {
-    type: "damage";
+    readonly type: "damage";
     /** ID of the pokemon being damaged. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** New hp/status. */
-    status: PokemonStatus;
+    readonly status: PokemonStatus;
 }
 
 /** Event addon where a volatile status has ended. */
 export interface EndEvent extends BattleEventBase
 {
-    type: "end";
+    readonly type: "end";
     /** ID of the pokemon ending a volatile status. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Volatile status name to be removed. */
-    volatile: string;
+    readonly volatile: string;
 }
 
 /** Event where a pokemon's ability is temporarily removed. */
 export interface EndAbilityEvent extends BattleEventBase
 {
-    type: "endability";
+    readonly type: "endability";
     /** ID of the pokemon. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Ability being removed. */
-    ability: string;
+    readonly ability: string;
 }
 
 /** Event where a pokemon has fainted. */
 export interface FaintEvent extends BattleEventBase
 {
-    type: "faint";
+    readonly type: "faint";
     /** ID of the pokemon that has fainted. */
-    id: PokemonID;
+    readonly id: PokemonID;
 }
 
 /** Event where a field effect has ended. */
 export interface FieldEndEvent extends BattleEventBase
 {
-    type: "fieldend";
+    readonly type: "fieldend";
     /** Name of the field effect. */
-    effect: string;
+    readonly effect: string;
 }
 
 /** Event where a field effect has started. */
 export interface FieldStartEvent extends BattleEventBase
 {
-    type: "fieldstart";
+    readonly type: "fieldstart";
     /** Name of the field effect. */
-    effect: string;
+    readonly effect: string;
 }
 
 /** Event where a move was used. */
 export interface MoveEvent extends BattleEventBase
 {
-    type: "move";
+    readonly type: "move";
     /** ID of the pokemon who used the move. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Display name of the move being used. */
-    moveName: string;
+    readonly moveName: string;
     /** ID of the target pokemon. */
-    targetId?: PokemonID;
+    readonly targetId?: PokemonID;
 }
 
 /** Event where a pokemon must recharge on the next turn. */
 export interface MustRechargeEvent extends BattleEventBase
 {
-    type: "mustrecharge";
+    readonly type: "mustrecharge";
     /** ID of the pokemon that needs to recharge. */
-    id: PokemonID;
+    readonly id: PokemonID;
 }
 
 /** Event where a move is being prepared, and will fire next turn. */
 export interface PrepareEvent extends BattleEventBase
 {
-    type: "prepare";
+    readonly type: "prepare";
     /** ID of the pokemon preparing the move. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Display name of the move being prepared. */
-    moveName: string;
+    readonly moveName: string;
     /** ID of the target pokemon. */
-    targetId?: PokemonID;
+    readonly targetId?: PokemonID;
 }
 
 /** Event where the HP of multiple pokemon is being modified at once. */
 export interface SetHPEvent extends BattleEventBase
 {
-    type: "sethp";
+    readonly type: "sethp";
     /** PokemonIDs with their corresponding new statuses. */
-    newHPs: {id: PokemonID, status: PokemonStatus}[];
+    readonly newHPs:
+        readonly {readonly id: PokemonID, readonly status: PokemonStatus}[];
 }
 
 /** Event where a side condition has ended. */
 export interface SideEndEvent extends BattleEventBase
 {
-    type: "sideend";
+    readonly type: "sideend";
     /** ID of the player whose side is affected. */
-    id: PlayerID;
+    readonly id: PlayerID;
     /** Name of the side condition. */
-    condition: string;
+    readonly condition: string;
 }
 
 /** Event where a side condition has started. */
 export interface SideStartEvent extends BattleEventBase
 {
-    type: "sidestart";
+    readonly type: "sidestart";
     /** ID of the player whose side is affected. */
-    id: PlayerID;
+    readonly id: PlayerID;
     /** Name of the side condition. */
-    condition: string;
+    readonly condition: string;
 }
 
 /** Event where a status is temporarily added for a single turn. */
 export interface SingleTurnEvent extends BattleEventBase
 {
-    type: "singleturn";
+    readonly type: "singleturn";
     /** ID of the pokemon getting the status. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Name of the temporary status. */
-    status: string;
+    readonly status: string;
 }
 
 /** Event where a volatile status condition has started. */
 export interface StartEvent extends BattleEventBase
 {
-    type: "start";
+    readonly type: "start";
     /** ID of the pokemon starting a volatile status. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Type of volatile status condition. */
-    volatile: string;
+    readonly volatile: string;
     /** Additional info if provided. */
-    otherArgs: string[];
+    readonly otherArgs: readonly string[];
 }
 
 /** Event where a pokemon is afflicted with a status. */
 export interface StatusEvent extends BattleEventBase
 {
-    type: "status";
+    readonly type: "status";
     /** ID of the pokemon being afflicted with a status condition. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Status condition being afflicted. */
-    majorStatus: MajorStatus;
+    readonly majorStatus: MajorStatus;
 }
 
 /** Event where a pokemon was switched in. */
 export interface SwitchEvent extends BattleEventBase
 {
-    type: "switch";
+    readonly type: "switch";
     /** ID of the pokemon being switched in. */
-    id: PokemonID;
+    readonly id: PokemonID;
     /** Some details on species, level, etc. */
-    details: PokemonDetails;
+    readonly details: PokemonDetails;
     /** HP and any status conditions. */
-    status: PokemonStatus;
+    readonly status: PokemonStatus;
 }
 
 /** Event indicating that the game has ended in a tie. */
 export interface TieEvent extends BattleEventBase
 {
-    type: "tie";
+    readonly type: "tie";
 }
 
 /** Event indicating that a new turn has started. */
 export interface TurnEvent extends BattleEventBase
 {
-    type: "turn";
+    readonly type: "turn";
     /** New turn number. */
-    num: number;
+    readonly num: number;
 }
 
 /** Event indicating that the main BattleEvents are over. */
 export interface UpkeepEvent extends BattleEventBase
 {
-    type: "upkeep";
+    readonly type: "upkeep";
 }
 
 export interface WeatherEvent extends BattleEventBase
 {
-    type: "weather";
+    readonly type: "weather";
     /** Type of weather. */
-    weatherType: WeatherType;
+    readonly weatherType: WeatherType;
     /** Whether this is an upkeep message. */
-    upkeep: boolean;
+    readonly upkeep: boolean;
 }
 
 /** Event indicating that the game has ended with a winner. */
 export interface WinEvent extends BattleEventBase
 {
-    type: "win";
+    readonly type: "win";
     /** Username of the winner. */
-    winner: string;
+    readonly winner: string;
 }
 
 // battle event cause types
@@ -353,39 +348,39 @@ export type Cause = AbilityCause | FatigueCause | ItemCause | LockedMoveCause;
 interface CauseBase
 {
     /** The type of Cause this is. */
-    type: string;
+    readonly type: string;
     /** Additional PokemonID for context. */
-    of?: PokemonID;
+    readonly of?: PokemonID;
 }
 
 export interface AbilityCause extends CauseBase
 {
-    type: "ability";
+    readonly type: "ability";
     /** Name of the ability being activated. */
-    ability: string;
+    readonly ability: string;
     /**
      * Either the ID of the pokemon with the ability or the ID of the recipient
      * of the ability's effect. Meaning may depend on the context.
      */
-    of?: PokemonID;
+    readonly of?: PokemonID;
 }
 
 /** Caused by fatigue, or the completion of a multi-turn locked move. */
 export interface FatigueCause extends CauseBase
 {
-    type: "fatigue";
+    readonly type: "fatigue";
 }
 
 /** Caused by a held item. */
 export interface ItemCause extends CauseBase
 {
-    type: "item";
+    readonly type: "item";
     /** Item name. */
-    item: string;
+    readonly item: string;
 }
 
 /** Locked into a certain move. */
 export interface LockedMoveCause extends CauseBase
 {
-    type: "lockedmove";
+    readonly type: "lockedmove";
 }
