@@ -71,7 +71,7 @@ export class VolatileStatus
 
     // situational
 
-    // override ability (only #isAbilitySuppressed is passed)
+    // override ability (only #isAbilitySuppressed() is passed)
     /** Override ability while active. */
     public get overrideAbility(): string { return this.overrideAbilityName; }
     public set overrideAbility(ability: string)

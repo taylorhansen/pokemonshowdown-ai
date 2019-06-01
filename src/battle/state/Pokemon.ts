@@ -19,15 +19,8 @@ export class Pokemon
     }
     private _active: boolean = false;
 
-    /** Species/form display name. */
-    public readonly species = new PossibilityClass(dex.pokemon,
-            value => this.baseAbility.narrow(...value.data.abilities));
-    /** Dex data. Will be defined if species is set. */
-    public get data(): PokemonData
-    {
-        if (this.species.definiteValue) return this.species.definiteValue.data;
-        throw new Error("Species not initialized");
-    }
+    /** Species/form dex data. */
+    public readonly species: PokemonData;
 
     /** Current ability id name. Can temporarily change while active. */
     public get ability(): string
@@ -66,7 +59,7 @@ ability ${ability}`);
     /** Checks if this pokemon can have the given ability. */
     public canHaveAbility(ability: string): boolean
     {
-        return this.data.abilities.includes(ability) &&
+        return this.species.abilities.includes(ability) &&
             this.baseAbility.isSet(ability);
     }
     /** Base ability possibility tracker. */
@@ -77,17 +70,13 @@ ability ${ability}`);
     /** The types of this pokemon. */
     public get types(): readonly Type[]
     {
-        // uninitialized Pokemon objs should silently fail so toArray() doesn't
-        //  throw
-        if (!this.species.definiteValue) return [];
-
         let result: readonly Type[];
         if (this._active)
         {
             result = this.volatile.overrideTypes
                 .concat(this.volatile.addedType);
         }
-        else result = this.data.types;
+        else result = this.species.types;
 
         return result.filter(type => type !== "???");
     }
@@ -255,10 +244,16 @@ ability ${ability}`);
      * @param hpPercent Whether to report HP as a percentage.
      * @param team Reference to the parent Team.
      */
-    constructor(hpPercent: boolean, team?: Team)
+    constructor(species: string, hpPercent: boolean, team?: Team)
     {
-        this.team = team;
+        if (!dex.pokemon.hasOwnProperty(species))
+        {
+            throw new Error(`Unknown pokemon '${species}'`);
+        }
+        this.species = dex.pokemon[species];
+        this.baseAbility.narrow(...this.species.abilities);
         this.hp = new HP(hpPercent);
+        this.team = team;
         this._active = false;
     }
 
@@ -274,7 +269,7 @@ ability ${ability}`);
     /** Tells the pokemon that it is currently being switched in. */
     public switchIn(): void
     {
-        this._volatile.overrideTypes = this.data.types;
+        this._volatile.overrideTypes = this.species.types;
         this.setOverrideAbility();
         this._active = true;
     }
@@ -345,9 +340,8 @@ ability ${ability}`);
     {
         const s = " ".repeat(indent);
         return `\
-${s}${this.species.definiteValue ?
-    this.species.definiteValue.name : "<unrevealed>"}\
-${this.gender ? ` ${this.gender}` : ""} lv${this.level} ${this.hp.toString()}\
+${s}${this.species.name} ${this.gender ? ` ${this.gender}` : ""} \
+lv${this.level} ${this.hp.toString()}\
 ${this.majorStatus ? ` ${this.majorStatus}` : ""}
 ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
@@ -366,9 +360,9 @@ ${s}moveset: [${this.moveset.toString()}]`;
     {
         const result: string[] = [];
 
-        for (let i = 0; i < this.data.types.length; ++i)
+        for (let i = 0; i < this.species.types.length; ++i)
         {
-            let type: string = this.data.types[i];
+            let type: string = this.species.types[i];
 
             // show overridden types in parentheses
             const override = this._volatile.overrideTypes[i];

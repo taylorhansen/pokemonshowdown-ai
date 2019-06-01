@@ -11,7 +11,7 @@ describe("Weather", function()
     beforeEach("Initialize Weather", function()
     {
         weather = new Weather();
-        source = new Pokemon(/*hpPercent*/false);
+        source = new Pokemon("Magikarp", /*hpPercent*/false);
     });
 
     it("Should initially be reset", function()

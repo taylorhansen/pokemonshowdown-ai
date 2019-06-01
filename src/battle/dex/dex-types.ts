@@ -96,7 +96,7 @@ export interface PokemonData
     /** Unique ID number that belongs to a single pokemon or form. */
     readonly uid: number;
     /** Species name. */
-    readonly species: string;
+    readonly name: string;
     /** Species this pokemon is derived from. */
     readonly baseSpecies?: string;
     /** Alternate form this pokemon is derived from. */

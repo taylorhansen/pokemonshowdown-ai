@@ -247,31 +247,20 @@ export function encodePokemon(mon?: Pokemon | null): number[]
         ];
     }
 
-    // multi-hot encode base types
-    let typeData: number[];
-    if (!mon.data) typeData = filteredTypes.map(() => 0);
-    else
-    {
-        typeData = filteredTypes
-            .map(type => mon.data!.types.includes(type) ? 1 : 0);
-    }
-
-    // one-hot encode major status
-    const majorStatus = (Object.keys(majorStatuses) as MajorStatus[])
-        // only include actual statuses, not the empty string
-        .filter(status => status !== "")
-        .map(status => mon.majorStatus === status ? 1 : 0);
-
     const a =
     [
         mon.gender === "M" ? 1 : 0, mon.gender === "F" ? 1 : 0,
         mon.gender === null ? 1 : 0,
-        ...encodePossiblityClass(mon.species, d => d.uid, dex.numPokemon),
+        ...oneHot(mon.species.uid, dex.numPokemon),
         ...encodePossiblityClass(mon.item, d => d, dex.numItems),
         ...encodePossiblityClass(mon.baseAbility, d => d, dex.numAbilities),
         mon.level, ...encodeMoveset(mon.moveset), ...encodeHP(mon.hp),
-        mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0, ...typeData,
-        ...majorStatus
+        mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0,
+        ...filteredTypes.map(type => mon.species.types.includes(type) ? 1 : 0),
+        ...(Object.keys(majorStatuses) as MajorStatus[])
+            // only include actual statuses, not the empty string
+            .filter(status => status !== "")
+            .map(status => mon.majorStatus === status ? 1 : 0)
     ];
     if (mon.active) a.push(...encodeVolatileStatus(mon.volatile));
     return a;

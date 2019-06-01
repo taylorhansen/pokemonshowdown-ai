@@ -198,20 +198,14 @@ describe("BattleState encoders", function()
     testEncoder("Pokemon", encodePokemon,
     {
         name: "Inactive",
-        init()
-        {
-            const mon = new Pokemon(/*hpPercent*/false);
-            mon.species.narrow("Magikarp");
-            return mon;
-        },
+        init: () => new Pokemon("Magikarp", /*hpPercent*/false),
         size: sizePokemon
     },
     {
         name: "Active",
         init()
         {
-            const mon = new Pokemon(/*hpPercent*/false);
-            mon.species.narrow("Magikarp");
+            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
             mon.switchIn();
             return mon;
         },

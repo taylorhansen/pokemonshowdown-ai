@@ -107,8 +107,7 @@ export class Team
         {
             const m = this._pokemon[i];
             // TODO: in gen5 check everything since it could be illusion
-            if (m && m.species.definiteValue &&
-                m.species.definiteValue.name === species)
+            if (m && m.species.name === species)
             {
                 index = i;
                 break;
@@ -176,11 +175,10 @@ export class Team
         if (this.unrevealed === this._size) return -1;
 
         const newMon =
-            new Pokemon(/*hpPercent*/ this.side === "them", this);
+            new Pokemon(species, /*hpPercent*/ this.side === "them", this);
         this._pokemon[this.unrevealed] = newMon;
 
         // initialize new pokemon
-        newMon.species.narrow(species);
         newMon.level = level;
         newMon.gender = gender;
         newMon.hp.set(hp, hpMax);

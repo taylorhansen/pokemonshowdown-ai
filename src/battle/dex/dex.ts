@@ -10,7 +10,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 350,
         uid: 0,
-        species: "Milotic",
+        name: "Milotic",
         abilities: ["marvelscale"],
         types: ["water", "???"],
         baseStats: {hp: 95, atk: 60, def: 79, spa: 100, spd: 125, spe: 81},
@@ -20,7 +20,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 479,
         uid: 1,
-        species: "Rotom-Heat",
+        name: "Rotom-Heat",
         baseSpecies: "Rotom",
         form: "Heat",
         formLetter: "H",
@@ -33,7 +33,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 479,
         uid: 2,
-        species: "Rotom-Wash",
+        name: "Rotom-Wash",
         baseSpecies: "Rotom",
         form: "Wash",
         formLetter: "W",
@@ -46,7 +46,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 479,
         uid: 3,
-        species: "Rotom-Frost",
+        name: "Rotom-Frost",
         baseSpecies: "Rotom",
         form: "Frost",
         formLetter: "F",
@@ -59,7 +59,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 479,
         uid: 4,
-        species: "Rotom-Fan",
+        name: "Rotom-Fan",
         baseSpecies: "Rotom",
         form: "Fan",
         formLetter: "S",
@@ -72,7 +72,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 479,
         uid: 5,
-        species: "Rotom-Mow",
+        name: "Rotom-Mow",
         baseSpecies: "Rotom",
         form: "Mow",
         formLetter: "C",
@@ -85,7 +85,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 12,
         uid: 6,
-        species: "Butterfree",
+        name: "Butterfree",
         abilities: ["compoundeyes"],
         types: ["bug", "flying"],
         baseStats: {hp: 60, atk: 45, def: 50, spa: 80, spd: 80, spe: 70},
@@ -95,7 +95,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 15,
         uid: 7,
-        species: "Beedrill",
+        name: "Beedrill",
         abilities: ["swarm"],
         types: ["bug", "poison"],
         baseStats: {hp: 65, atk: 80, def: 40, spa: 45, spd: 80, spe: 75},
@@ -105,7 +105,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 18,
         uid: 8,
-        species: "Pidgeot",
+        name: "Pidgeot",
         abilities: ["keeneye", "tangledfeet"],
         types: ["normal", "flying"],
         baseStats: {hp: 83, atk: 80, def: 75, spa: 70, spd: 70, spe: 91},
@@ -115,7 +115,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 25,
         uid: 9,
-        species: "Pikachu",
+        name: "Pikachu",
         abilities: ["static"],
         types: ["electric", "???"],
         baseStats: {hp: 35, atk: 55, def: 30, spa: 50, spd: 40, spe: 90},
@@ -125,7 +125,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 26,
         uid: 10,
-        species: "Raichu",
+        name: "Raichu",
         abilities: ["static"],
         types: ["electric", "???"],
         baseStats: {hp: 60, atk: 90, def: 55, spa: 90, spd: 80, spe: 100},
@@ -135,7 +135,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 31,
         uid: 11,
-        species: "Nidoqueen",
+        name: "Nidoqueen",
         abilities: ["poisonpoint", "rivalry"],
         types: ["poison", "ground"],
         baseStats: {hp: 90, atk: 82, def: 87, spa: 75, spd: 85, spe: 76},
@@ -145,7 +145,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 34,
         uid: 12,
-        species: "Nidoking",
+        name: "Nidoking",
         abilities: ["poisonpoint", "rivalry"],
         types: ["poison", "ground"],
         baseStats: {hp: 81, atk: 92, def: 77, spa: 85, spd: 75, spe: 85},
@@ -155,7 +155,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 35,
         uid: 13,
-        species: "Clefairy",
+        name: "Clefairy",
         abilities: ["cutecharm", "magicguard"],
         types: ["normal", "???"],
         baseStats: {hp: 70, atk: 45, def: 48, spa: 60, spd: 65, spe: 35},
@@ -165,7 +165,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 36,
         uid: 14,
-        species: "Clefable",
+        name: "Clefable",
         abilities: ["cutecharm", "magicguard"],
         types: ["normal", "???"],
         baseStats: {hp: 95, atk: 70, def: 73, spa: 85, spd: 90, spe: 60},
@@ -175,7 +175,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 39,
         uid: 15,
-        species: "Jigglypuff",
+        name: "Jigglypuff",
         abilities: ["cutecharm"],
         types: ["normal", "???"],
         baseStats: {hp: 115, atk: 45, def: 20, spa: 45, spd: 25, spe: 20},
@@ -185,7 +185,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 40,
         uid: 16,
-        species: "Wigglytuff",
+        name: "Wigglytuff",
         abilities: ["cutecharm"],
         types: ["normal", "???"],
         baseStats: {hp: 140, atk: 70, def: 45, spa: 75, spd: 50, spe: 45},
@@ -195,7 +195,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 45,
         uid: 17,
-        species: "Vileplume",
+        name: "Vileplume",
         abilities: ["chlorophyll"],
         types: ["grass", "poison"],
         baseStats: {hp: 75, atk: 80, def: 85, spa: 100, spd: 90, spe: 50},
@@ -205,7 +205,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 62,
         uid: 18,
-        species: "Poliwrath",
+        name: "Poliwrath",
         abilities: ["waterabsorb", "damp"],
         types: ["water", "fighting"],
         baseStats: {hp: 90, atk: 85, def: 95, spa: 70, spd: 90, spe: 70},
@@ -215,7 +215,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 65,
         uid: 19,
-        species: "Alakazam",
+        name: "Alakazam",
         abilities: ["synchronize", "innerfocus"],
         types: ["psychic", "???"],
         baseStats: {hp: 55, atk: 50, def: 45, spa: 135, spd: 85, spe: 120},
@@ -225,7 +225,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 71,
         uid: 20,
-        species: "Victreebel",
+        name: "Victreebel",
         abilities: ["chlorophyll"],
         types: ["grass", "poison"],
         baseStats: {hp: 80, atk: 105, def: 65, spa: 100, spd: 60, spe: 70},
@@ -235,7 +235,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 76,
         uid: 21,
-        species: "Golem",
+        name: "Golem",
         abilities: ["rockhead", "sturdy"],
         types: ["rock", "ground"],
         baseStats: {hp: 80, atk: 110, def: 130, spa: 55, spd: 65, spe: 45},
@@ -245,7 +245,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 122,
         uid: 22,
-        species: "Mr. Mime",
+        name: "Mr. Mime",
         abilities: ["soundproof", "filter"],
         types: ["psychic", "???"],
         baseStats: {hp: 40, atk: 45, def: 65, spa: 100, spd: 120, spe: 90},
@@ -255,7 +255,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 144,
         uid: 23,
-        species: "Articuno",
+        name: "Articuno",
         abilities: ["pressure"],
         types: ["ice", "flying"],
         baseStats: {hp: 90, atk: 85, def: 100, spa: 95, spd: 125, spe: 85},
@@ -265,7 +265,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 145,
         uid: 24,
-        species: "Zapdos",
+        name: "Zapdos",
         abilities: ["pressure"],
         types: ["electric", "flying"],
         baseStats: {hp: 90, atk: 90, def: 85, spa: 125, spd: 90, spe: 100},
@@ -275,7 +275,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 146,
         uid: 25,
-        species: "Moltres",
+        name: "Moltres",
         abilities: ["pressure"],
         types: ["fire", "flying"],
         baseStats: {hp: 90, atk: 100, def: 90, spa: 125, spd: 85, spe: 90},
@@ -285,7 +285,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 152,
         uid: 26,
-        species: "Chikorita",
+        name: "Chikorita",
         abilities: ["overgrow"],
         types: ["grass", "???"],
         baseStats: {hp: 45, atk: 49, def: 65, spa: 49, spd: 65, spe: 45},
@@ -295,7 +295,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 153,
         uid: 27,
-        species: "Bayleef",
+        name: "Bayleef",
         abilities: ["overgrow"],
         types: ["grass", "???"],
         baseStats: {hp: 60, atk: 62, def: 80, spa: 63, spd: 80, spe: 60},
@@ -305,7 +305,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 154,
         uid: 28,
-        species: "Meganium",
+        name: "Meganium",
         abilities: ["overgrow"],
         types: ["grass", "???"],
         baseStats: {hp: 80, atk: 82, def: 100, spa: 83, spd: 100, spe: 80},
@@ -315,7 +315,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 155,
         uid: 29,
-        species: "Cyndaquil",
+        name: "Cyndaquil",
         abilities: ["blaze"],
         types: ["fire", "???"],
         baseStats: {hp: 39, atk: 52, def: 43, spa: 60, spd: 50, spe: 65},
@@ -325,7 +325,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 156,
         uid: 30,
-        species: "Quilava",
+        name: "Quilava",
         abilities: ["blaze"],
         types: ["fire", "???"],
         baseStats: {hp: 58, atk: 64, def: 58, spa: 80, spd: 65, spe: 80},
@@ -335,7 +335,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 157,
         uid: 31,
-        species: "Typhlosion",
+        name: "Typhlosion",
         abilities: ["blaze"],
         types: ["fire", "???"],
         baseStats: {hp: 78, atk: 84, def: 78, spa: 109, spd: 85, spe: 100},
@@ -345,7 +345,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 158,
         uid: 32,
-        species: "Totodile",
+        name: "Totodile",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 50, atk: 65, def: 64, spa: 44, spd: 48, spe: 43},
@@ -355,7 +355,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 159,
         uid: 33,
-        species: "Croconaw",
+        name: "Croconaw",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 65, atk: 80, def: 80, spa: 59, spd: 63, spe: 58},
@@ -365,7 +365,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 160,
         uid: 34,
-        species: "Feraligatr",
+        name: "Feraligatr",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 85, atk: 105, def: 100, spa: 79, spd: 83, spe: 78},
@@ -375,7 +375,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 174,
         uid: 35,
-        species: "Igglybuff",
+        name: "Igglybuff",
         abilities: ["cutecharm"],
         types: ["normal", "???"],
         baseStats: {hp: 90, atk: 30, def: 15, spa: 40, spd: 20, spe: 15},
@@ -385,7 +385,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 175,
         uid: 36,
-        species: "Togepi",
+        name: "Togepi",
         abilities: ["hustle", "serenegrace"],
         types: ["normal", "???"],
         baseStats: {hp: 35, atk: 20, def: 65, spa: 40, spd: 65, spe: 20},
@@ -395,7 +395,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 176,
         uid: 37,
-        species: "Togetic",
+        name: "Togetic",
         abilities: ["hustle", "serenegrace"],
         types: ["normal", "flying"],
         baseStats: {hp: 55, atk: 40, def: 85, spa: 80, spd: 105, spe: 40},
@@ -405,7 +405,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 173,
         uid: 38,
-        species: "Cleffa",
+        name: "Cleffa",
         abilities: ["cutecharm", "magicguard"],
         types: ["normal", "???"],
         baseStats: {hp: 50, atk: 25, def: 28, spa: 45, spd: 55, spe: 15},
@@ -415,7 +415,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 181,
         uid: 39,
-        species: "Ampharos",
+        name: "Ampharos",
         abilities: ["static"],
         types: ["electric", "???"],
         baseStats: {hp: 90, atk: 75, def: 75, spa: 115, spd: 90, spe: 55},
@@ -425,7 +425,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 182,
         uid: 40,
-        species: "Bellossom",
+        name: "Bellossom",
         abilities: ["chlorophyll"],
         types: ["grass", "???"],
         baseStats: {hp: 75, atk: 80, def: 85, spa: 90, spd: 100, spe: 50},
@@ -435,7 +435,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 183,
         uid: 41,
-        species: "Marill",
+        name: "Marill",
         abilities: ["thickfat", "hugepower"],
         types: ["water", "???"],
         baseStats: {hp: 70, atk: 20, def: 50, spa: 20, spd: 50, spe: 40},
@@ -445,7 +445,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 184,
         uid: 42,
-        species: "Azumarill",
+        name: "Azumarill",
         abilities: ["thickfat", "hugepower"],
         types: ["water", "???"],
         baseStats: {hp: 100, atk: 50, def: 80, spa: 50, spd: 80, spe: 50},
@@ -455,7 +455,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 189,
         uid: 43,
-        species: "Jumpluff",
+        name: "Jumpluff",
         abilities: ["chlorophyll", "leafguard"],
         types: ["grass", "flying"],
         baseStats: {hp: 75, atk: 55, def: 70, spa: 55, spd: 85, spe: 110},
@@ -465,7 +465,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 209,
         uid: 44,
-        species: "Snubbull",
+        name: "Snubbull",
         abilities: ["intimidate", "runaway"],
         types: ["normal", "???"],
         baseStats: {hp: 60, atk: 80, def: 50, spa: 40, spd: 40, spe: 30},
@@ -475,7 +475,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 210,
         uid: 45,
-        species: "Granbull",
+        name: "Granbull",
         abilities: ["intimidate", "quickfeet"],
         types: ["normal", "???"],
         baseStats: {hp: 90, atk: 120, def: 75, spa: 60, spd: 60, spe: 45},
@@ -485,7 +485,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 243,
         uid: 46,
-        species: "Raikou",
+        name: "Raikou",
         abilities: ["pressure"],
         types: ["electric", "???"],
         baseStats: {hp: 90, atk: 85, def: 75, spa: 115, spd: 100, spe: 115},
@@ -495,7 +495,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 244,
         uid: 47,
-        species: "Entei",
+        name: "Entei",
         abilities: ["pressure"],
         types: ["fire", "???"],
         baseStats: {hp: 115, atk: 115, def: 85, spa: 90, spd: 75, spe: 100},
@@ -505,7 +505,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 245,
         uid: 48,
-        species: "Suicune",
+        name: "Suicune",
         abilities: ["pressure"],
         types: ["water", "???"],
         baseStats: {hp: 100, atk: 75, def: 115, spa: 90, spd: 115, spe: 85},
@@ -515,7 +515,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 267,
         uid: 49,
-        species: "Beautifly",
+        name: "Beautifly",
         abilities: ["swarm"],
         types: ["bug", "flying"],
         baseStats: {hp: 60, atk: 70, def: 50, spa: 90, spd: 50, spe: 65},
@@ -525,7 +525,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 280,
         uid: 50,
-        species: "Ralts",
+        name: "Ralts",
         abilities: ["synchronize", "trace"],
         types: ["psychic", "???"],
         baseStats: {hp: 28, atk: 25, def: 25, spa: 45, spd: 35, spe: 40},
@@ -535,7 +535,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 281,
         uid: 51,
-        species: "Kirlia",
+        name: "Kirlia",
         abilities: ["synchronize", "trace"],
         types: ["psychic", "???"],
         baseStats: {hp: 38, atk: 35, def: 35, spa: 65, spd: 55, spe: 50},
@@ -545,7 +545,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 282,
         uid: 52,
-        species: "Gardevoir",
+        name: "Gardevoir",
         abilities: ["synchronize", "trace"],
         types: ["psychic", "???"],
         baseStats: {hp: 68, atk: 65, def: 65, spa: 125, spd: 115, spe: 80},
@@ -555,7 +555,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 295,
         uid: 53,
-        species: "Exploud",
+        name: "Exploud",
         abilities: ["soundproof"],
         types: ["normal", "???"],
         baseStats: {hp: 104, atk: 91, def: 63, spa: 91, spd: 63, spe: 68},
@@ -565,7 +565,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 298,
         uid: 54,
-        species: "Azurill",
+        name: "Azurill",
         abilities: ["thickfat", "hugepower"],
         types: ["normal", "???"],
         baseStats: {hp: 50, atk: 20, def: 40, spa: 20, spd: 40, spe: 20},
@@ -575,7 +575,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 303,
         uid: 55,
-        species: "Mawile",
+        name: "Mawile",
         abilities: ["hypercutter", "intimidate"],
         types: ["steel", "???"],
         baseStats: {hp: 50, atk: 85, def: 85, spa: 55, spd: 55, spe: 50},
@@ -585,7 +585,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 311,
         uid: 56,
-        species: "Plusle",
+        name: "Plusle",
         abilities: ["plus"],
         types: ["electric", "???"],
         baseStats: {hp: 60, atk: 50, def: 40, spa: 85, spd: 75, spe: 95},
@@ -595,7 +595,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 312,
         uid: 57,
-        species: "Minun",
+        name: "Minun",
         abilities: ["minus"],
         types: ["electric", "???"],
         baseStats: {hp: 60, atk: 40, def: 50, spa: 75, spd: 85, spe: 95},
@@ -605,7 +605,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 352,
         uid: 58,
-        species: "Kecleon",
+        name: "Kecleon",
         abilities: ["colorchange"],
         types: ["normal", "???"],
         baseStats: {hp: 60, atk: 90, def: 70, spa: 60, spd: 120, spe: 40},
@@ -615,7 +615,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 355,
         uid: 59,
-        species: "Duskull",
+        name: "Duskull",
         abilities: ["levitate"],
         types: ["ghost", "???"],
         baseStats: {hp: 20, atk: 40, def: 90, spa: 30, spd: 90, spe: 25},
@@ -625,7 +625,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 356,
         uid: 60,
-        species: "Dusclops",
+        name: "Dusclops",
         abilities: ["pressure"],
         types: ["ghost", "???"],
         baseStats: {hp: 40, atk: 70, def: 130, spa: 60, spd: 130, spe: 25},
@@ -635,7 +635,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 377,
         uid: 61,
-        species: "Regirock",
+        name: "Regirock",
         abilities: ["clearbody"],
         types: ["rock", "???"],
         baseStats: {hp: 80, atk: 100, def: 200, spa: 50, spd: 100, spe: 50},
@@ -645,7 +645,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 378,
         uid: 62,
-        species: "Regice",
+        name: "Regice",
         abilities: ["clearbody"],
         types: ["ice", "???"],
         baseStats: {hp: 80, atk: 50, def: 100, spa: 100, spd: 200, spe: 50},
@@ -655,7 +655,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 379,
         uid: 63,
-        species: "Registeel",
+        name: "Registeel",
         abilities: ["clearbody"],
         types: ["steel", "???"],
         baseStats: {hp: 80, atk: 75, def: 150, spa: 75, spd: 150, spe: 50},
@@ -665,7 +665,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 396,
         uid: 64,
-        species: "Starly",
+        name: "Starly",
         abilities: ["keeneye"],
         types: ["normal", "flying"],
         baseStats: {hp: 40, atk: 55, def: 30, spa: 30, spd: 30, spe: 60},
@@ -675,7 +675,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 398,
         uid: 65,
-        species: "Staraptor",
+        name: "Staraptor",
         abilities: ["intimidate"],
         types: ["normal", "flying"],
         baseStats: {hp: 85, atk: 120, def: 70, spa: 50, spd: 50, spe: 100},
@@ -685,7 +685,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 407,
         uid: 66,
-        species: "Roserade",
+        name: "Roserade",
         abilities: ["naturalcure", "poisonpoint"],
         types: ["grass", "poison"],
         baseStats: {hp: 60, atk: 70, def: 55, spa: 125, spd: 105, spe: 90},
@@ -695,7 +695,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 439,
         uid: 67,
-        species: "Mime Jr.",
+        name: "Mime Jr.",
         abilities: ["soundproof", "filter"],
         types: ["psychic", "???"],
         baseStats: {hp: 20, atk: 25, def: 45, spa: 70, spd: 90, spe: 60},
@@ -705,7 +705,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 468,
         uid: 68,
-        species: "Togekiss",
+        name: "Togekiss",
         abilities: ["hustle", "serenegrace"],
         types: ["normal", "flying"],
         baseStats: {hp: 85, atk: 50, def: 95, spa: 120, spd: 115, spe: 80},
@@ -715,7 +715,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 477,
         uid: 69,
-        species: "Dusknoir",
+        name: "Dusknoir",
         abilities: ["pressure"],
         types: ["ghost", "???"],
         baseStats: {hp: 45, atk: 100, def: 135, spa: 65, spd: 135, spe: 45},
@@ -725,7 +725,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 485,
         uid: 70,
-        species: "Heatran",
+        name: "Heatran",
         abilities: ["flashfire"],
         types: ["fire", "steel"],
         baseStats: {hp: 91, atk: 90, def: 106, spa: 130, spd: 106, spe: 77},
@@ -735,7 +735,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 24,
         uid: 71,
-        species: "Arbok",
+        name: "Arbok",
         abilities: ["intimidate", "shedskin"],
         types: ["poison", "???"],
         baseStats: {hp: 60, atk: 85, def: 69, spa: 65, spd: 79, spe: 80},
@@ -745,7 +745,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 51,
         uid: 72,
-        species: "Dugtrio",
+        name: "Dugtrio",
         abilities: ["sandveil", "arenatrap"],
         types: ["ground", "???"],
         baseStats: {hp: 35, atk: 80, def: 50, spa: 50, spd: 70, spe: 120},
@@ -755,7 +755,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 83,
         uid: 73,
-        species: "Farfetch'd",
+        name: "Farfetch'd",
         abilities: ["keeneye", "innerfocus"],
         types: ["normal", "flying"],
         baseStats: {hp: 52, atk: 65, def: 55, spa: 58, spd: 62, spe: 60},
@@ -765,7 +765,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 85,
         uid: 74,
-        species: "Dodrio",
+        name: "Dodrio",
         abilities: ["runaway", "earlybird"],
         types: ["normal", "flying"],
         baseStats: {hp: 60, atk: 110, def: 70, spa: 60, spd: 60, spe: 100},
@@ -775,7 +775,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 94,
         uid: 75,
-        species: "Gengar",
+        name: "Gengar",
         abilities: ["levitate"],
         types: ["ghost", "poison"],
         baseStats: {hp: 60, atk: 65, def: 60, spa: 130, spd: 75, spe: 110},
@@ -785,7 +785,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 101,
         uid: 76,
-        species: "Electrode",
+        name: "Electrode",
         abilities: ["soundproof", "static"],
         types: ["electric", "???"],
         baseStats: {hp: 60, atk: 50, def: 70, spa: 80, spd: 80, spe: 140},
@@ -795,7 +795,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 103,
         uid: 77,
-        species: "Exeggutor",
+        name: "Exeggutor",
         abilities: ["chlorophyll"],
         types: ["grass", "psychic"],
         baseStats: {hp: 95, atk: 95, def: 85, spa: 125, spd: 65, spe: 55},
@@ -805,7 +805,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 164,
         uid: 78,
-        species: "Noctowl",
+        name: "Noctowl",
         abilities: ["insomnia", "keeneye"],
         types: ["normal", "flying"],
         baseStats: {hp: 100, atk: 50, def: 50, spa: 76, spd: 96, spe: 70},
@@ -815,7 +815,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 168,
         uid: 79,
-        species: "Ariados",
+        name: "Ariados",
         abilities: ["swarm", "insomnia"],
         types: ["bug", "poison"],
         baseStats: {hp: 70, atk: 90, def: 70, spa: 60, spd: 60, spe: 40},
@@ -825,7 +825,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 211,
         uid: 80,
-        species: "Qwilfish",
+        name: "Qwilfish",
         abilities: ["poisonpoint", "swiftswim"],
         types: ["water", "poison"],
         baseStats: {hp: 65, atk: 95, def: 75, spa: 55, spd: 55, spe: 85},
@@ -835,7 +835,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 219,
         uid: 81,
-        species: "Magcargo",
+        name: "Magcargo",
         abilities: ["magmaarmor", "flamebody"],
         types: ["fire", "rock"],
         baseStats: {hp: 50, atk: 50, def: 120, spa: 80, spd: 80, spe: 30},
@@ -845,7 +845,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 222,
         uid: 82,
-        species: "Corsola",
+        name: "Corsola",
         abilities: ["hustle", "naturalcure"],
         types: ["water", "rock"],
         baseStats: {hp: 55, atk: 55, def: 85, spa: 65, spd: 85, spe: 35},
@@ -855,7 +855,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 226,
         uid: 83,
-        species: "Mantine",
+        name: "Mantine",
         abilities: ["swiftswim", "waterabsorb"],
         types: ["water", "flying"],
         baseStats: {hp: 65, atk: 40, def: 70, spa: 80, spd: 140, spe: 70},
@@ -865,7 +865,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 277,
         uid: 84,
-        species: "Swellow",
+        name: "Swellow",
         abilities: ["guts"],
         types: ["normal", "flying"],
         baseStats: {hp: 60, atk: 85, def: 60, spa: 50, spd: 50, spe: 125},
@@ -875,7 +875,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 278,
         uid: 85,
-        species: "Wingull",
+        name: "Wingull",
         abilities: ["keeneye"],
         types: ["water", "flying"],
         baseStats: {hp: 40, atk: 30, def: 30, spa: 55, spd: 30, spe: 85},
@@ -885,7 +885,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 279,
         uid: 86,
-        species: "Pelipper",
+        name: "Pelipper",
         abilities: ["keeneye"],
         types: ["water", "flying"],
         baseStats: {hp: 60, atk: 50, def: 100, spa: 85, spd: 70, spe: 65},
@@ -895,7 +895,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 284,
         uid: 87,
-        species: "Masquerain",
+        name: "Masquerain",
         abilities: ["intimidate"],
         types: ["bug", "flying"],
         baseStats: {hp: 70, atk: 60, def: 62, spa: 80, spd: 82, spe: 60},
@@ -905,7 +905,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 301,
         uid: 88,
-        species: "Delcatty",
+        name: "Delcatty",
         abilities: ["cutecharm", "normalize"],
         types: ["normal", "???"],
         baseStats: {hp: 70, atk: 65, def: 65, spa: 55, spd: 55, spe: 70},
@@ -915,7 +915,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 313,
         uid: 89,
-        species: "Volbeat",
+        name: "Volbeat",
         abilities: ["illuminate", "swarm"],
         types: ["bug", "???"],
         baseStats: {hp: 65, atk: 73, def: 55, spa: 47, spd: 75, spe: 85},
@@ -925,7 +925,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 314,
         uid: 90,
-        species: "Illumise",
+        name: "Illumise",
         abilities: ["oblivious", "tintedlens"],
         types: ["bug", "???"],
         baseStats: {hp: 65, atk: 47, def: 55, spa: 73, spd: 75, spe: 85},
@@ -935,7 +935,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 324,
         uid: 91,
-        species: "Torkoal",
+        name: "Torkoal",
         abilities: ["whitesmoke"],
         types: ["fire", "???"],
         baseStats: {hp: 70, atk: 85, def: 140, spa: 85, spd: 70, spe: 20},
@@ -945,7 +945,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 337,
         uid: 92,
-        species: "Lunatone",
+        name: "Lunatone",
         abilities: ["levitate"],
         types: ["rock", "psychic"],
         baseStats: {hp: 70, atk: 55, def: 65, spa: 95, spd: 85, spe: 70},
@@ -955,7 +955,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 338,
         uid: 93,
-        species: "Solrock",
+        name: "Solrock",
         abilities: ["levitate"],
         types: ["rock", "psychic"],
         baseStats: {hp: 70, atk: 95, def: 85, spa: 55, spd: 65, spe: 70},
@@ -965,7 +965,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 351,
         uid: 94,
-        species: "Castform",
+        name: "Castform",
         otherForms: ["castformsunny", "castformrainy", "castformsnowy"],
         abilities: ["forecast"],
         types: ["normal", "???"],
@@ -976,7 +976,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 351,
         uid: 95,
-        species: "Castform-Sunny",
+        name: "Castform-Sunny",
         baseSpecies: "Castform",
         form: "Sunny",
         formLetter: "S",
@@ -989,7 +989,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 351,
         uid: 96,
-        species: "Castform-Rainy",
+        name: "Castform-Rainy",
         baseSpecies: "Castform",
         form: "Rainy",
         formLetter: "R",
@@ -1002,7 +1002,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 358,
         uid: 97,
-        species: "Chimecho",
+        name: "Chimecho",
         abilities: ["levitate"],
         types: ["psychic", "???"],
         baseStats: {hp: 65, atk: 50, def: 70, spa: 95, spd: 80, spe: 65},
@@ -1012,7 +1012,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 412,
         uid: 98,
-        species: "Burmy",
+        name: "Burmy",
         baseForm: "Plant",
         abilities: ["shedskin"],
         types: ["bug", "???"],
@@ -1023,7 +1023,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 413,
         uid: 99,
-        species: "Wormadam",
+        name: "Wormadam",
         baseForm: "Plant",
         otherForms: ["wormadamsandy", "wormadamtrash"],
         abilities: ["anticipation"],
@@ -1035,7 +1035,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 413,
         uid: 100,
-        species: "Wormadam-Sandy",
+        name: "Wormadam-Sandy",
         baseSpecies: "Wormadam",
         form: "Sandy",
         formLetter: "G",
@@ -1048,7 +1048,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 413,
         uid: 101,
-        species: "Wormadam-Trash",
+        name: "Wormadam-Trash",
         baseSpecies: "Wormadam",
         form: "Trash",
         formLetter: "S",
@@ -1061,7 +1061,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 421,
         uid: 102,
-        species: "Cherrim",
+        name: "Cherrim",
         baseForm: "Overcast",
         otherForms: ["cherrimsunshine"],
         abilities: ["flowergift"],
@@ -1073,7 +1073,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 103,
-        species: "Arceus",
+        name: "Arceus",
         baseForm: "Normal",
         otherForms: ["arceusbug", "arceusdark", "arceusdragon", "arceuselectric", "arceusfighting", "arceusfire", "arceusflying", "arceusghost", "arceusgrass", "arceusground", "arceusice", "arceuspoison", "arceuspsychic", "arceusrock", "arceussteel", "arceuswater"],
         abilities: ["multitype"],
@@ -1085,7 +1085,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 1,
         uid: 104,
-        species: "Bulbasaur",
+        name: "Bulbasaur",
         abilities: ["overgrow"],
         types: ["grass", "poison"],
         baseStats: {hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45},
@@ -1095,7 +1095,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 2,
         uid: 105,
-        species: "Ivysaur",
+        name: "Ivysaur",
         abilities: ["overgrow"],
         types: ["grass", "poison"],
         baseStats: {hp: 60, atk: 62, def: 63, spa: 80, spd: 80, spe: 60},
@@ -1105,7 +1105,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 3,
         uid: 106,
-        species: "Venusaur",
+        name: "Venusaur",
         abilities: ["overgrow"],
         types: ["grass", "poison"],
         baseStats: {hp: 80, atk: 82, def: 83, spa: 100, spd: 100, spe: 80},
@@ -1115,7 +1115,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 4,
         uid: 107,
-        species: "Charmander",
+        name: "Charmander",
         abilities: ["blaze"],
         types: ["fire", "???"],
         baseStats: {hp: 39, atk: 52, def: 43, spa: 60, spd: 50, spe: 65},
@@ -1125,7 +1125,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 5,
         uid: 108,
-        species: "Charmeleon",
+        name: "Charmeleon",
         abilities: ["blaze"],
         types: ["fire", "???"],
         baseStats: {hp: 58, atk: 64, def: 58, spa: 80, spd: 65, spe: 80},
@@ -1135,7 +1135,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 6,
         uid: 109,
-        species: "Charizard",
+        name: "Charizard",
         abilities: ["blaze"],
         types: ["fire", "flying"],
         baseStats: {hp: 78, atk: 84, def: 78, spa: 109, spd: 85, spe: 100},
@@ -1145,7 +1145,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 7,
         uid: 110,
-        species: "Squirtle",
+        name: "Squirtle",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 44, atk: 48, def: 65, spa: 50, spd: 64, spe: 43},
@@ -1155,7 +1155,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 8,
         uid: 111,
-        species: "Wartortle",
+        name: "Wartortle",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 59, atk: 63, def: 80, spa: 65, spd: 80, spe: 58},
@@ -1165,7 +1165,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 9,
         uid: 112,
-        species: "Blastoise",
+        name: "Blastoise",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 79, atk: 83, def: 100, spa: 85, spd: 105, spe: 78},
@@ -1175,7 +1175,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 10,
         uid: 113,
-        species: "Caterpie",
+        name: "Caterpie",
         abilities: ["shielddust"],
         types: ["bug", "???"],
         baseStats: {hp: 45, atk: 30, def: 35, spa: 20, spd: 20, spe: 45},
@@ -1185,7 +1185,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 11,
         uid: 114,
-        species: "Metapod",
+        name: "Metapod",
         abilities: ["shedskin"],
         types: ["bug", "???"],
         baseStats: {hp: 50, atk: 20, def: 55, spa: 25, spd: 25, spe: 30},
@@ -1195,7 +1195,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 13,
         uid: 115,
-        species: "Weedle",
+        name: "Weedle",
         abilities: ["shielddust"],
         types: ["bug", "poison"],
         baseStats: {hp: 40, atk: 35, def: 30, spa: 20, spd: 20, spe: 50},
@@ -1205,7 +1205,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 14,
         uid: 116,
-        species: "Kakuna",
+        name: "Kakuna",
         abilities: ["shedskin"],
         types: ["bug", "poison"],
         baseStats: {hp: 45, atk: 25, def: 50, spa: 25, spd: 25, spe: 35},
@@ -1215,7 +1215,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 16,
         uid: 117,
-        species: "Pidgey",
+        name: "Pidgey",
         abilities: ["keeneye", "tangledfeet"],
         types: ["normal", "flying"],
         baseStats: {hp: 40, atk: 45, def: 40, spa: 35, spd: 35, spe: 56},
@@ -1225,7 +1225,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 17,
         uid: 118,
-        species: "Pidgeotto",
+        name: "Pidgeotto",
         abilities: ["keeneye", "tangledfeet"],
         types: ["normal", "flying"],
         baseStats: {hp: 63, atk: 60, def: 55, spa: 50, spd: 50, spe: 71},
@@ -1235,7 +1235,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 19,
         uid: 119,
-        species: "Rattata",
+        name: "Rattata",
         abilities: ["runaway", "guts"],
         types: ["normal", "???"],
         baseStats: {hp: 30, atk: 56, def: 35, spa: 25, spd: 35, spe: 72},
@@ -1245,7 +1245,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 20,
         uid: 120,
-        species: "Raticate",
+        name: "Raticate",
         abilities: ["runaway", "guts"],
         types: ["normal", "???"],
         baseStats: {hp: 55, atk: 81, def: 60, spa: 50, spd: 70, spe: 97},
@@ -1255,7 +1255,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 21,
         uid: 121,
-        species: "Spearow",
+        name: "Spearow",
         abilities: ["keeneye"],
         types: ["normal", "flying"],
         baseStats: {hp: 40, atk: 60, def: 30, spa: 31, spd: 31, spe: 70},
@@ -1265,7 +1265,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 22,
         uid: 122,
-        species: "Fearow",
+        name: "Fearow",
         abilities: ["keeneye"],
         types: ["normal", "flying"],
         baseStats: {hp: 65, atk: 90, def: 65, spa: 61, spd: 61, spe: 100},
@@ -1275,7 +1275,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 23,
         uid: 123,
-        species: "Ekans",
+        name: "Ekans",
         abilities: ["intimidate", "shedskin"],
         types: ["poison", "???"],
         baseStats: {hp: 35, atk: 60, def: 44, spa: 40, spd: 54, spe: 55},
@@ -1285,7 +1285,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 27,
         uid: 124,
-        species: "Sandshrew",
+        name: "Sandshrew",
         abilities: ["sandveil"],
         types: ["ground", "???"],
         baseStats: {hp: 50, atk: 75, def: 85, spa: 20, spd: 30, spe: 40},
@@ -1295,7 +1295,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 28,
         uid: 125,
-        species: "Sandslash",
+        name: "Sandslash",
         abilities: ["sandveil"],
         types: ["ground", "???"],
         baseStats: {hp: 75, atk: 100, def: 110, spa: 45, spd: 55, spe: 65},
@@ -1305,7 +1305,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 29,
         uid: 126,
-        species: "Nidoran-F",
+        name: "Nidoran-F",
         abilities: ["poisonpoint", "rivalry"],
         types: ["poison", "???"],
         baseStats: {hp: 55, atk: 47, def: 52, spa: 40, spd: 40, spe: 41},
@@ -1315,7 +1315,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 30,
         uid: 127,
-        species: "Nidorina",
+        name: "Nidorina",
         abilities: ["poisonpoint", "rivalry"],
         types: ["poison", "???"],
         baseStats: {hp: 70, atk: 62, def: 67, spa: 55, spd: 55, spe: 56},
@@ -1325,7 +1325,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 32,
         uid: 128,
-        species: "Nidoran-M",
+        name: "Nidoran-M",
         abilities: ["poisonpoint", "rivalry"],
         types: ["poison", "???"],
         baseStats: {hp: 46, atk: 57, def: 40, spa: 40, spd: 40, spe: 50},
@@ -1335,7 +1335,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 33,
         uid: 129,
-        species: "Nidorino",
+        name: "Nidorino",
         abilities: ["poisonpoint", "rivalry"],
         types: ["poison", "???"],
         baseStats: {hp: 61, atk: 72, def: 57, spa: 55, spd: 55, spe: 65},
@@ -1345,7 +1345,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 37,
         uid: 130,
-        species: "Vulpix",
+        name: "Vulpix",
         abilities: ["flashfire"],
         types: ["fire", "???"],
         baseStats: {hp: 38, atk: 41, def: 40, spa: 50, spd: 65, spe: 65},
@@ -1355,7 +1355,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 38,
         uid: 131,
-        species: "Ninetales",
+        name: "Ninetales",
         abilities: ["flashfire"],
         types: ["fire", "???"],
         baseStats: {hp: 73, atk: 76, def: 75, spa: 81, spd: 100, spe: 100},
@@ -1365,7 +1365,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 41,
         uid: 132,
-        species: "Zubat",
+        name: "Zubat",
         abilities: ["innerfocus"],
         types: ["poison", "flying"],
         baseStats: {hp: 40, atk: 45, def: 35, spa: 30, spd: 40, spe: 55},
@@ -1375,7 +1375,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 42,
         uid: 133,
-        species: "Golbat",
+        name: "Golbat",
         abilities: ["innerfocus"],
         types: ["poison", "flying"],
         baseStats: {hp: 75, atk: 80, def: 70, spa: 65, spd: 75, spe: 90},
@@ -1385,7 +1385,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 43,
         uid: 134,
-        species: "Oddish",
+        name: "Oddish",
         abilities: ["chlorophyll"],
         types: ["grass", "poison"],
         baseStats: {hp: 45, atk: 50, def: 55, spa: 75, spd: 65, spe: 30},
@@ -1395,7 +1395,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 44,
         uid: 135,
-        species: "Gloom",
+        name: "Gloom",
         abilities: ["chlorophyll"],
         types: ["grass", "poison"],
         baseStats: {hp: 60, atk: 65, def: 70, spa: 85, spd: 75, spe: 40},
@@ -1405,7 +1405,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 46,
         uid: 136,
-        species: "Paras",
+        name: "Paras",
         abilities: ["effectspore", "dryskin"],
         types: ["bug", "grass"],
         baseStats: {hp: 35, atk: 70, def: 55, spa: 45, spd: 55, spe: 25},
@@ -1415,7 +1415,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 47,
         uid: 137,
-        species: "Parasect",
+        name: "Parasect",
         abilities: ["effectspore", "dryskin"],
         types: ["bug", "grass"],
         baseStats: {hp: 60, atk: 95, def: 80, spa: 60, spd: 80, spe: 30},
@@ -1425,7 +1425,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 48,
         uid: 138,
-        species: "Venonat",
+        name: "Venonat",
         abilities: ["compoundeyes", "tintedlens"],
         types: ["bug", "poison"],
         baseStats: {hp: 60, atk: 55, def: 50, spa: 40, spd: 55, spe: 45},
@@ -1435,7 +1435,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 49,
         uid: 139,
-        species: "Venomoth",
+        name: "Venomoth",
         abilities: ["shielddust", "tintedlens"],
         types: ["bug", "poison"],
         baseStats: {hp: 70, atk: 65, def: 60, spa: 90, spd: 75, spe: 90},
@@ -1445,7 +1445,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 50,
         uid: 140,
-        species: "Diglett",
+        name: "Diglett",
         abilities: ["sandveil", "arenatrap"],
         types: ["ground", "???"],
         baseStats: {hp: 10, atk: 55, def: 25, spa: 35, spd: 45, spe: 95},
@@ -1455,7 +1455,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 52,
         uid: 141,
-        species: "Meowth",
+        name: "Meowth",
         abilities: ["pickup", "technician"],
         types: ["normal", "???"],
         baseStats: {hp: 40, atk: 45, def: 35, spa: 40, spd: 40, spe: 90},
@@ -1465,7 +1465,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 53,
         uid: 142,
-        species: "Persian",
+        name: "Persian",
         abilities: ["limber", "technician"],
         types: ["normal", "???"],
         baseStats: {hp: 65, atk: 70, def: 60, spa: 65, spd: 65, spe: 115},
@@ -1475,7 +1475,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 54,
         uid: 143,
-        species: "Psyduck",
+        name: "Psyduck",
         abilities: ["damp", "cloudnine"],
         types: ["water", "???"],
         baseStats: {hp: 50, atk: 52, def: 48, spa: 65, spd: 50, spe: 55},
@@ -1485,7 +1485,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 55,
         uid: 144,
-        species: "Golduck",
+        name: "Golduck",
         abilities: ["damp", "cloudnine"],
         types: ["water", "???"],
         baseStats: {hp: 80, atk: 82, def: 78, spa: 95, spd: 80, spe: 85},
@@ -1495,7 +1495,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 56,
         uid: 145,
-        species: "Mankey",
+        name: "Mankey",
         abilities: ["vitalspirit", "angerpoint"],
         types: ["fighting", "???"],
         baseStats: {hp: 40, atk: 80, def: 35, spa: 35, spd: 45, spe: 70},
@@ -1505,7 +1505,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 57,
         uid: 146,
-        species: "Primeape",
+        name: "Primeape",
         abilities: ["vitalspirit", "angerpoint"],
         types: ["fighting", "???"],
         baseStats: {hp: 65, atk: 105, def: 60, spa: 60, spd: 70, spe: 95},
@@ -1515,7 +1515,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 58,
         uid: 147,
-        species: "Growlithe",
+        name: "Growlithe",
         abilities: ["intimidate", "flashfire"],
         types: ["fire", "???"],
         baseStats: {hp: 55, atk: 70, def: 45, spa: 70, spd: 50, spe: 60},
@@ -1525,7 +1525,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 59,
         uid: 148,
-        species: "Arcanine",
+        name: "Arcanine",
         abilities: ["intimidate", "flashfire"],
         types: ["fire", "???"],
         baseStats: {hp: 90, atk: 110, def: 80, spa: 100, spd: 80, spe: 95},
@@ -1535,7 +1535,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 60,
         uid: 149,
-        species: "Poliwag",
+        name: "Poliwag",
         abilities: ["waterabsorb", "damp"],
         types: ["water", "???"],
         baseStats: {hp: 40, atk: 50, def: 40, spa: 40, spd: 40, spe: 90},
@@ -1545,7 +1545,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 61,
         uid: 150,
-        species: "Poliwhirl",
+        name: "Poliwhirl",
         abilities: ["waterabsorb", "damp"],
         types: ["water", "???"],
         baseStats: {hp: 65, atk: 65, def: 65, spa: 50, spd: 50, spe: 90},
@@ -1555,7 +1555,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 63,
         uid: 151,
-        species: "Abra",
+        name: "Abra",
         abilities: ["synchronize", "innerfocus"],
         types: ["psychic", "???"],
         baseStats: {hp: 25, atk: 20, def: 15, spa: 105, spd: 55, spe: 90},
@@ -1565,7 +1565,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 64,
         uid: 152,
-        species: "Kadabra",
+        name: "Kadabra",
         abilities: ["synchronize", "innerfocus"],
         types: ["psychic", "???"],
         baseStats: {hp: 40, atk: 35, def: 30, spa: 120, spd: 70, spe: 105},
@@ -1575,7 +1575,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 66,
         uid: 153,
-        species: "Machop",
+        name: "Machop",
         abilities: ["guts", "noguard"],
         types: ["fighting", "???"],
         baseStats: {hp: 70, atk: 80, def: 50, spa: 35, spd: 35, spe: 35},
@@ -1585,7 +1585,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 67,
         uid: 154,
-        species: "Machoke",
+        name: "Machoke",
         abilities: ["guts", "noguard"],
         types: ["fighting", "???"],
         baseStats: {hp: 80, atk: 100, def: 70, spa: 50, spd: 60, spe: 45},
@@ -1595,7 +1595,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 68,
         uid: 155,
-        species: "Machamp",
+        name: "Machamp",
         abilities: ["guts", "noguard"],
         types: ["fighting", "???"],
         baseStats: {hp: 90, atk: 130, def: 80, spa: 65, spd: 85, spe: 55},
@@ -1605,7 +1605,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 69,
         uid: 156,
-        species: "Bellsprout",
+        name: "Bellsprout",
         abilities: ["chlorophyll"],
         types: ["grass", "poison"],
         baseStats: {hp: 50, atk: 75, def: 35, spa: 70, spd: 30, spe: 40},
@@ -1615,7 +1615,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 70,
         uid: 157,
-        species: "Weepinbell",
+        name: "Weepinbell",
         abilities: ["chlorophyll"],
         types: ["grass", "poison"],
         baseStats: {hp: 65, atk: 90, def: 50, spa: 85, spd: 45, spe: 55},
@@ -1625,7 +1625,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 72,
         uid: 158,
-        species: "Tentacool",
+        name: "Tentacool",
         abilities: ["clearbody", "liquidooze"],
         types: ["water", "poison"],
         baseStats: {hp: 40, atk: 40, def: 35, spa: 50, spd: 100, spe: 70},
@@ -1635,7 +1635,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 73,
         uid: 159,
-        species: "Tentacruel",
+        name: "Tentacruel",
         abilities: ["clearbody", "liquidooze"],
         types: ["water", "poison"],
         baseStats: {hp: 80, atk: 70, def: 65, spa: 80, spd: 120, spe: 100},
@@ -1645,7 +1645,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 74,
         uid: 160,
-        species: "Geodude",
+        name: "Geodude",
         abilities: ["rockhead", "sturdy"],
         types: ["rock", "ground"],
         baseStats: {hp: 40, atk: 80, def: 100, spa: 30, spd: 30, spe: 20},
@@ -1655,7 +1655,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 75,
         uid: 161,
-        species: "Graveler",
+        name: "Graveler",
         abilities: ["rockhead", "sturdy"],
         types: ["rock", "ground"],
         baseStats: {hp: 55, atk: 95, def: 115, spa: 45, spd: 45, spe: 35},
@@ -1665,7 +1665,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 77,
         uid: 162,
-        species: "Ponyta",
+        name: "Ponyta",
         abilities: ["runaway", "flashfire"],
         types: ["fire", "???"],
         baseStats: {hp: 50, atk: 85, def: 55, spa: 65, spd: 65, spe: 90},
@@ -1675,7 +1675,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 78,
         uid: 163,
-        species: "Rapidash",
+        name: "Rapidash",
         abilities: ["runaway", "flashfire"],
         types: ["fire", "???"],
         baseStats: {hp: 65, atk: 100, def: 70, spa: 80, spd: 80, spe: 105},
@@ -1685,7 +1685,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 79,
         uid: 164,
-        species: "Slowpoke",
+        name: "Slowpoke",
         abilities: ["oblivious", "owntempo"],
         types: ["water", "psychic"],
         baseStats: {hp: 90, atk: 65, def: 65, spa: 40, spd: 40, spe: 15},
@@ -1695,7 +1695,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 80,
         uid: 165,
-        species: "Slowbro",
+        name: "Slowbro",
         abilities: ["oblivious", "owntempo"],
         types: ["water", "psychic"],
         baseStats: {hp: 95, atk: 75, def: 110, spa: 100, spd: 80, spe: 30},
@@ -1705,7 +1705,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 81,
         uid: 166,
-        species: "Magnemite",
+        name: "Magnemite",
         abilities: ["magnetpull", "sturdy"],
         types: ["electric", "steel"],
         baseStats: {hp: 25, atk: 35, def: 70, spa: 95, spd: 55, spe: 45},
@@ -1715,7 +1715,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 82,
         uid: 167,
-        species: "Magneton",
+        name: "Magneton",
         abilities: ["magnetpull", "sturdy"],
         types: ["electric", "steel"],
         baseStats: {hp: 50, atk: 60, def: 95, spa: 120, spd: 70, spe: 70},
@@ -1725,7 +1725,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 84,
         uid: 168,
-        species: "Doduo",
+        name: "Doduo",
         abilities: ["runaway", "earlybird"],
         types: ["normal", "flying"],
         baseStats: {hp: 35, atk: 85, def: 45, spa: 35, spd: 35, spe: 75},
@@ -1735,7 +1735,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 86,
         uid: 169,
-        species: "Seel",
+        name: "Seel",
         abilities: ["thickfat", "hydration"],
         types: ["water", "???"],
         baseStats: {hp: 65, atk: 45, def: 55, spa: 45, spd: 70, spe: 45},
@@ -1745,7 +1745,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 87,
         uid: 170,
-        species: "Dewgong",
+        name: "Dewgong",
         abilities: ["thickfat", "hydration"],
         types: ["water", "ice"],
         baseStats: {hp: 90, atk: 70, def: 80, spa: 70, spd: 95, spe: 70},
@@ -1755,7 +1755,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 88,
         uid: 171,
-        species: "Grimer",
+        name: "Grimer",
         abilities: ["stench", "stickyhold"],
         types: ["poison", "???"],
         baseStats: {hp: 80, atk: 80, def: 50, spa: 40, spd: 50, spe: 25},
@@ -1765,7 +1765,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 89,
         uid: 172,
-        species: "Muk",
+        name: "Muk",
         abilities: ["stench", "stickyhold"],
         types: ["poison", "???"],
         baseStats: {hp: 105, atk: 105, def: 75, spa: 65, spd: 100, spe: 50},
@@ -1775,7 +1775,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 90,
         uid: 173,
-        species: "Shellder",
+        name: "Shellder",
         abilities: ["shellarmor", "skilllink"],
         types: ["water", "???"],
         baseStats: {hp: 30, atk: 65, def: 100, spa: 45, spd: 25, spe: 40},
@@ -1785,7 +1785,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 91,
         uid: 174,
-        species: "Cloyster",
+        name: "Cloyster",
         abilities: ["shellarmor", "skilllink"],
         types: ["water", "ice"],
         baseStats: {hp: 50, atk: 95, def: 180, spa: 85, spd: 45, spe: 70},
@@ -1795,7 +1795,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 92,
         uid: 175,
-        species: "Gastly",
+        name: "Gastly",
         abilities: ["levitate"],
         types: ["ghost", "poison"],
         baseStats: {hp: 30, atk: 35, def: 30, spa: 100, spd: 35, spe: 80},
@@ -1805,7 +1805,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 93,
         uid: 176,
-        species: "Haunter",
+        name: "Haunter",
         abilities: ["levitate"],
         types: ["ghost", "poison"],
         baseStats: {hp: 45, atk: 50, def: 45, spa: 115, spd: 55, spe: 95},
@@ -1815,7 +1815,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 95,
         uid: 177,
-        species: "Onix",
+        name: "Onix",
         abilities: ["rockhead", "sturdy"],
         types: ["rock", "ground"],
         baseStats: {hp: 35, atk: 45, def: 160, spa: 30, spd: 45, spe: 70},
@@ -1825,7 +1825,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 96,
         uid: 178,
-        species: "Drowzee",
+        name: "Drowzee",
         abilities: ["insomnia", "forewarn"],
         types: ["psychic", "???"],
         baseStats: {hp: 60, atk: 48, def: 45, spa: 43, spd: 90, spe: 42},
@@ -1835,7 +1835,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 97,
         uid: 179,
-        species: "Hypno",
+        name: "Hypno",
         abilities: ["insomnia", "forewarn"],
         types: ["psychic", "???"],
         baseStats: {hp: 85, atk: 73, def: 70, spa: 73, spd: 115, spe: 67},
@@ -1845,7 +1845,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 98,
         uid: 180,
-        species: "Krabby",
+        name: "Krabby",
         abilities: ["hypercutter", "shellarmor"],
         types: ["water", "???"],
         baseStats: {hp: 30, atk: 105, def: 90, spa: 25, spd: 25, spe: 50},
@@ -1855,7 +1855,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 99,
         uid: 181,
-        species: "Kingler",
+        name: "Kingler",
         abilities: ["hypercutter", "shellarmor"],
         types: ["water", "???"],
         baseStats: {hp: 55, atk: 130, def: 115, spa: 50, spd: 50, spe: 75},
@@ -1865,7 +1865,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 100,
         uid: 182,
-        species: "Voltorb",
+        name: "Voltorb",
         abilities: ["soundproof", "static"],
         types: ["electric", "???"],
         baseStats: {hp: 40, atk: 30, def: 50, spa: 55, spd: 55, spe: 100},
@@ -1875,7 +1875,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 102,
         uid: 183,
-        species: "Exeggcute",
+        name: "Exeggcute",
         abilities: ["chlorophyll"],
         types: ["grass", "psychic"],
         baseStats: {hp: 60, atk: 40, def: 80, spa: 60, spd: 45, spe: 40},
@@ -1885,7 +1885,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 104,
         uid: 184,
-        species: "Cubone",
+        name: "Cubone",
         abilities: ["rockhead", "lightningrod"],
         types: ["ground", "???"],
         baseStats: {hp: 50, atk: 50, def: 95, spa: 40, spd: 50, spe: 35},
@@ -1895,7 +1895,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 105,
         uid: 185,
-        species: "Marowak",
+        name: "Marowak",
         abilities: ["rockhead", "lightningrod"],
         types: ["ground", "???"],
         baseStats: {hp: 60, atk: 80, def: 110, spa: 50, spd: 80, spe: 45},
@@ -1905,7 +1905,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 106,
         uid: 186,
-        species: "Hitmonlee",
+        name: "Hitmonlee",
         abilities: ["limber", "reckless"],
         types: ["fighting", "???"],
         baseStats: {hp: 50, atk: 120, def: 53, spa: 35, spd: 110, spe: 87},
@@ -1915,7 +1915,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 107,
         uid: 187,
-        species: "Hitmonchan",
+        name: "Hitmonchan",
         abilities: ["keeneye", "ironfist"],
         types: ["fighting", "???"],
         baseStats: {hp: 50, atk: 105, def: 79, spa: 35, spd: 110, spe: 76},
@@ -1925,7 +1925,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 108,
         uid: 188,
-        species: "Lickitung",
+        name: "Lickitung",
         abilities: ["owntempo", "oblivious"],
         types: ["normal", "???"],
         baseStats: {hp: 90, atk: 55, def: 75, spa: 60, spd: 75, spe: 30},
@@ -1935,7 +1935,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 109,
         uid: 189,
-        species: "Koffing",
+        name: "Koffing",
         abilities: ["levitate"],
         types: ["poison", "???"],
         baseStats: {hp: 40, atk: 65, def: 95, spa: 60, spd: 45, spe: 35},
@@ -1945,7 +1945,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 110,
         uid: 190,
-        species: "Weezing",
+        name: "Weezing",
         abilities: ["levitate"],
         types: ["poison", "???"],
         baseStats: {hp: 65, atk: 90, def: 120, spa: 85, spd: 70, spe: 60},
@@ -1955,7 +1955,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 111,
         uid: 191,
-        species: "Rhyhorn",
+        name: "Rhyhorn",
         abilities: ["lightningrod", "rockhead"],
         types: ["ground", "rock"],
         baseStats: {hp: 80, atk: 85, def: 95, spa: 30, spd: 30, spe: 25},
@@ -1965,7 +1965,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 112,
         uid: 192,
-        species: "Rhydon",
+        name: "Rhydon",
         abilities: ["lightningrod", "rockhead"],
         types: ["ground", "rock"],
         baseStats: {hp: 105, atk: 130, def: 120, spa: 45, spd: 45, spe: 40},
@@ -1975,7 +1975,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 113,
         uid: 193,
-        species: "Chansey",
+        name: "Chansey",
         abilities: ["naturalcure", "serenegrace"],
         types: ["normal", "???"],
         baseStats: {hp: 250, atk: 5, def: 5, spa: 35, spd: 105, spe: 50},
@@ -1985,7 +1985,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 114,
         uid: 194,
-        species: "Tangela",
+        name: "Tangela",
         abilities: ["chlorophyll", "leafguard"],
         types: ["grass", "???"],
         baseStats: {hp: 65, atk: 55, def: 115, spa: 100, spd: 40, spe: 60},
@@ -1995,7 +1995,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 115,
         uid: 195,
-        species: "Kangaskhan",
+        name: "Kangaskhan",
         abilities: ["earlybird", "scrappy"],
         types: ["normal", "???"],
         baseStats: {hp: 105, atk: 95, def: 80, spa: 40, spd: 80, spe: 90},
@@ -2005,7 +2005,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 116,
         uid: 196,
-        species: "Horsea",
+        name: "Horsea",
         abilities: ["swiftswim", "sniper"],
         types: ["water", "???"],
         baseStats: {hp: 30, atk: 40, def: 70, spa: 70, spd: 25, spe: 60},
@@ -2015,7 +2015,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 117,
         uid: 197,
-        species: "Seadra",
+        name: "Seadra",
         abilities: ["poisonpoint", "sniper"],
         types: ["water", "???"],
         baseStats: {hp: 55, atk: 65, def: 95, spa: 95, spd: 45, spe: 85},
@@ -2025,7 +2025,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 118,
         uid: 198,
-        species: "Goldeen",
+        name: "Goldeen",
         abilities: ["swiftswim", "waterveil"],
         types: ["water", "???"],
         baseStats: {hp: 45, atk: 67, def: 60, spa: 35, spd: 50, spe: 63},
@@ -2035,7 +2035,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 119,
         uid: 199,
-        species: "Seaking",
+        name: "Seaking",
         abilities: ["swiftswim", "waterveil"],
         types: ["water", "???"],
         baseStats: {hp: 80, atk: 92, def: 65, spa: 65, spd: 80, spe: 68},
@@ -2045,7 +2045,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 120,
         uid: 200,
-        species: "Staryu",
+        name: "Staryu",
         abilities: ["illuminate", "naturalcure"],
         types: ["water", "???"],
         baseStats: {hp: 30, atk: 45, def: 55, spa: 70, spd: 55, spe: 85},
@@ -2055,7 +2055,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 121,
         uid: 201,
-        species: "Starmie",
+        name: "Starmie",
         abilities: ["illuminate", "naturalcure"],
         types: ["water", "psychic"],
         baseStats: {hp: 60, atk: 75, def: 85, spa: 100, spd: 85, spe: 115},
@@ -2065,7 +2065,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 123,
         uid: 202,
-        species: "Scyther",
+        name: "Scyther",
         abilities: ["swarm", "technician"],
         types: ["bug", "flying"],
         baseStats: {hp: 70, atk: 110, def: 80, spa: 55, spd: 80, spe: 105},
@@ -2075,7 +2075,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 124,
         uid: 203,
-        species: "Jynx",
+        name: "Jynx",
         abilities: ["oblivious", "forewarn"],
         types: ["ice", "psychic"],
         baseStats: {hp: 65, atk: 50, def: 35, spa: 115, spd: 95, spe: 95},
@@ -2085,7 +2085,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 125,
         uid: 204,
-        species: "Electabuzz",
+        name: "Electabuzz",
         abilities: ["static"],
         types: ["electric", "???"],
         baseStats: {hp: 65, atk: 83, def: 57, spa: 95, spd: 85, spe: 105},
@@ -2095,7 +2095,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 126,
         uid: 205,
-        species: "Magmar",
+        name: "Magmar",
         abilities: ["flamebody"],
         types: ["fire", "???"],
         baseStats: {hp: 65, atk: 95, def: 57, spa: 100, spd: 85, spe: 93},
@@ -2105,7 +2105,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 127,
         uid: 206,
-        species: "Pinsir",
+        name: "Pinsir",
         abilities: ["hypercutter", "moldbreaker"],
         types: ["bug", "???"],
         baseStats: {hp: 65, atk: 125, def: 100, spa: 55, spd: 70, spe: 85},
@@ -2115,7 +2115,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 128,
         uid: 207,
-        species: "Tauros",
+        name: "Tauros",
         abilities: ["intimidate", "angerpoint"],
         types: ["normal", "???"],
         baseStats: {hp: 75, atk: 100, def: 95, spa: 40, spd: 70, spe: 110},
@@ -2125,7 +2125,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 129,
         uid: 208,
-        species: "Magikarp",
+        name: "Magikarp",
         abilities: ["swiftswim"],
         types: ["water", "???"],
         baseStats: {hp: 20, atk: 10, def: 55, spa: 15, spd: 20, spe: 80},
@@ -2135,7 +2135,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 130,
         uid: 209,
-        species: "Gyarados",
+        name: "Gyarados",
         abilities: ["intimidate"],
         types: ["water", "flying"],
         baseStats: {hp: 95, atk: 125, def: 79, spa: 60, spd: 100, spe: 81},
@@ -2145,7 +2145,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 131,
         uid: 210,
-        species: "Lapras",
+        name: "Lapras",
         abilities: ["waterabsorb", "shellarmor"],
         types: ["water", "ice"],
         baseStats: {hp: 130, atk: 85, def: 80, spa: 85, spd: 95, spe: 60},
@@ -2155,7 +2155,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 132,
         uid: 211,
-        species: "Ditto",
+        name: "Ditto",
         abilities: ["limber"],
         types: ["normal", "???"],
         baseStats: {hp: 48, atk: 48, def: 48, spa: 48, spd: 48, spe: 48},
@@ -2165,7 +2165,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 133,
         uid: 212,
-        species: "Eevee",
+        name: "Eevee",
         abilities: ["runaway", "adaptability"],
         types: ["normal", "???"],
         baseStats: {hp: 55, atk: 55, def: 50, spa: 45, spd: 65, spe: 55},
@@ -2175,7 +2175,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 134,
         uid: 213,
-        species: "Vaporeon",
+        name: "Vaporeon",
         abilities: ["waterabsorb"],
         types: ["water", "???"],
         baseStats: {hp: 130, atk: 65, def: 60, spa: 110, spd: 95, spe: 65},
@@ -2185,7 +2185,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 135,
         uid: 214,
-        species: "Jolteon",
+        name: "Jolteon",
         abilities: ["voltabsorb"],
         types: ["electric", "???"],
         baseStats: {hp: 65, atk: 65, def: 60, spa: 110, spd: 95, spe: 130},
@@ -2195,7 +2195,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 136,
         uid: 215,
-        species: "Flareon",
+        name: "Flareon",
         abilities: ["flashfire"],
         types: ["fire", "???"],
         baseStats: {hp: 65, atk: 130, def: 60, spa: 95, spd: 110, spe: 65},
@@ -2205,7 +2205,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 137,
         uid: 216,
-        species: "Porygon",
+        name: "Porygon",
         abilities: ["trace", "download"],
         types: ["normal", "???"],
         baseStats: {hp: 65, atk: 60, def: 70, spa: 85, spd: 75, spe: 40},
@@ -2215,7 +2215,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 138,
         uid: 217,
-        species: "Omanyte",
+        name: "Omanyte",
         abilities: ["swiftswim", "shellarmor"],
         types: ["rock", "water"],
         baseStats: {hp: 35, atk: 40, def: 100, spa: 90, spd: 55, spe: 35},
@@ -2225,7 +2225,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 139,
         uid: 218,
-        species: "Omastar",
+        name: "Omastar",
         abilities: ["swiftswim", "shellarmor"],
         types: ["rock", "water"],
         baseStats: {hp: 70, atk: 60, def: 125, spa: 115, spd: 70, spe: 55},
@@ -2235,7 +2235,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 140,
         uid: 219,
-        species: "Kabuto",
+        name: "Kabuto",
         abilities: ["swiftswim", "battlearmor"],
         types: ["rock", "water"],
         baseStats: {hp: 30, atk: 80, def: 90, spa: 55, spd: 45, spe: 55},
@@ -2245,7 +2245,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 141,
         uid: 220,
-        species: "Kabutops",
+        name: "Kabutops",
         abilities: ["swiftswim", "battlearmor"],
         types: ["rock", "water"],
         baseStats: {hp: 60, atk: 115, def: 105, spa: 65, spd: 70, spe: 80},
@@ -2255,7 +2255,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 142,
         uid: 221,
-        species: "Aerodactyl",
+        name: "Aerodactyl",
         abilities: ["rockhead", "pressure"],
         types: ["rock", "flying"],
         baseStats: {hp: 80, atk: 105, def: 65, spa: 60, spd: 75, spe: 130},
@@ -2265,7 +2265,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 143,
         uid: 222,
-        species: "Snorlax",
+        name: "Snorlax",
         abilities: ["immunity", "thickfat"],
         types: ["normal", "???"],
         baseStats: {hp: 160, atk: 110, def: 65, spa: 65, spd: 110, spe: 30},
@@ -2275,7 +2275,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 147,
         uid: 223,
-        species: "Dratini",
+        name: "Dratini",
         abilities: ["shedskin"],
         types: ["dragon", "???"],
         baseStats: {hp: 41, atk: 64, def: 45, spa: 50, spd: 50, spe: 50},
@@ -2285,7 +2285,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 148,
         uid: 224,
-        species: "Dragonair",
+        name: "Dragonair",
         abilities: ["shedskin"],
         types: ["dragon", "???"],
         baseStats: {hp: 61, atk: 84, def: 65, spa: 70, spd: 70, spe: 70},
@@ -2295,7 +2295,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 149,
         uid: 225,
-        species: "Dragonite",
+        name: "Dragonite",
         abilities: ["innerfocus"],
         types: ["dragon", "flying"],
         baseStats: {hp: 91, atk: 134, def: 95, spa: 100, spd: 100, spe: 80},
@@ -2305,7 +2305,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 150,
         uid: 226,
-        species: "Mewtwo",
+        name: "Mewtwo",
         abilities: ["pressure"],
         types: ["psychic", "???"],
         baseStats: {hp: 106, atk: 110, def: 90, spa: 154, spd: 90, spe: 130},
@@ -2315,7 +2315,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 151,
         uid: 227,
-        species: "Mew",
+        name: "Mew",
         abilities: ["synchronize"],
         types: ["psychic", "???"],
         baseStats: {hp: 100, atk: 100, def: 100, spa: 100, spd: 100, spe: 100},
@@ -2325,7 +2325,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 161,
         uid: 228,
-        species: "Sentret",
+        name: "Sentret",
         abilities: ["runaway", "keeneye"],
         types: ["normal", "???"],
         baseStats: {hp: 35, atk: 46, def: 34, spa: 35, spd: 45, spe: 20},
@@ -2335,7 +2335,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 162,
         uid: 229,
-        species: "Furret",
+        name: "Furret",
         abilities: ["runaway", "keeneye"],
         types: ["normal", "???"],
         baseStats: {hp: 85, atk: 76, def: 64, spa: 45, spd: 55, spe: 90},
@@ -2345,7 +2345,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 163,
         uid: 230,
-        species: "Hoothoot",
+        name: "Hoothoot",
         abilities: ["insomnia", "keeneye"],
         types: ["normal", "flying"],
         baseStats: {hp: 60, atk: 30, def: 30, spa: 36, spd: 56, spe: 50},
@@ -2355,7 +2355,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 165,
         uid: 231,
-        species: "Ledyba",
+        name: "Ledyba",
         abilities: ["swarm", "earlybird"],
         types: ["bug", "flying"],
         baseStats: {hp: 40, atk: 20, def: 30, spa: 40, spd: 80, spe: 55},
@@ -2365,7 +2365,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 166,
         uid: 232,
-        species: "Ledian",
+        name: "Ledian",
         abilities: ["swarm", "earlybird"],
         types: ["bug", "flying"],
         baseStats: {hp: 55, atk: 35, def: 50, spa: 55, spd: 110, spe: 85},
@@ -2375,7 +2375,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 167,
         uid: 233,
-        species: "Spinarak",
+        name: "Spinarak",
         abilities: ["swarm", "insomnia"],
         types: ["bug", "poison"],
         baseStats: {hp: 40, atk: 60, def: 40, spa: 40, spd: 40, spe: 30},
@@ -2385,7 +2385,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 169,
         uid: 234,
-        species: "Crobat",
+        name: "Crobat",
         abilities: ["innerfocus"],
         types: ["poison", "flying"],
         baseStats: {hp: 85, atk: 90, def: 80, spa: 70, spd: 80, spe: 130},
@@ -2395,7 +2395,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 170,
         uid: 235,
-        species: "Chinchou",
+        name: "Chinchou",
         abilities: ["voltabsorb", "illuminate"],
         types: ["water", "electric"],
         baseStats: {hp: 75, atk: 38, def: 38, spa: 56, spd: 56, spe: 67},
@@ -2405,7 +2405,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 171,
         uid: 236,
-        species: "Lanturn",
+        name: "Lanturn",
         abilities: ["voltabsorb", "illuminate"],
         types: ["water", "electric"],
         baseStats: {hp: 125, atk: 58, def: 58, spa: 76, spd: 76, spe: 67},
@@ -2415,7 +2415,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 172,
         uid: 237,
-        species: "Pichu",
+        name: "Pichu",
         otherForms: ["pichuspikyeared"],
         abilities: ["static"],
         types: ["electric", "???"],
@@ -2426,7 +2426,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 172,
         uid: 238,
-        species: "Pichu-Spiky-eared",
+        name: "Pichu-Spiky-eared",
         baseSpecies: "Pichu",
         form: "Spiky-eared",
         formLetter: "S",
@@ -2439,7 +2439,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 177,
         uid: 239,
-        species: "Natu",
+        name: "Natu",
         abilities: ["synchronize", "earlybird"],
         types: ["psychic", "flying"],
         baseStats: {hp: 40, atk: 50, def: 45, spa: 70, spd: 45, spe: 70},
@@ -2449,7 +2449,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 178,
         uid: 240,
-        species: "Xatu",
+        name: "Xatu",
         abilities: ["synchronize", "earlybird"],
         types: ["psychic", "flying"],
         baseStats: {hp: 65, atk: 75, def: 70, spa: 95, spd: 70, spe: 95},
@@ -2459,7 +2459,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 179,
         uid: 241,
-        species: "Mareep",
+        name: "Mareep",
         abilities: ["static"],
         types: ["electric", "???"],
         baseStats: {hp: 55, atk: 40, def: 40, spa: 65, spd: 45, spe: 35},
@@ -2469,7 +2469,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 180,
         uid: 242,
-        species: "Flaaffy",
+        name: "Flaaffy",
         abilities: ["static"],
         types: ["electric", "???"],
         baseStats: {hp: 70, atk: 55, def: 55, spa: 80, spd: 60, spe: 45},
@@ -2479,7 +2479,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 185,
         uid: 243,
-        species: "Sudowoodo",
+        name: "Sudowoodo",
         abilities: ["sturdy", "rockhead"],
         types: ["rock", "???"],
         baseStats: {hp: 70, atk: 100, def: 115, spa: 30, spd: 65, spe: 30},
@@ -2489,7 +2489,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 186,
         uid: 244,
-        species: "Politoed",
+        name: "Politoed",
         abilities: ["waterabsorb", "damp"],
         types: ["water", "???"],
         baseStats: {hp: 90, atk: 75, def: 75, spa: 90, spd: 100, spe: 70},
@@ -2499,7 +2499,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 187,
         uid: 245,
-        species: "Hoppip",
+        name: "Hoppip",
         abilities: ["chlorophyll", "leafguard"],
         types: ["grass", "flying"],
         baseStats: {hp: 35, atk: 35, def: 40, spa: 35, spd: 55, spe: 50},
@@ -2509,7 +2509,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 188,
         uid: 246,
-        species: "Skiploom",
+        name: "Skiploom",
         abilities: ["chlorophyll", "leafguard"],
         types: ["grass", "flying"],
         baseStats: {hp: 55, atk: 45, def: 50, spa: 45, spd: 65, spe: 80},
@@ -2519,7 +2519,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 190,
         uid: 247,
-        species: "Aipom",
+        name: "Aipom",
         abilities: ["runaway", "pickup"],
         types: ["normal", "???"],
         baseStats: {hp: 55, atk: 70, def: 55, spa: 40, spd: 55, spe: 85},
@@ -2529,7 +2529,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 191,
         uid: 248,
-        species: "Sunkern",
+        name: "Sunkern",
         abilities: ["chlorophyll", "solarpower"],
         types: ["grass", "???"],
         baseStats: {hp: 30, atk: 30, def: 30, spa: 30, spd: 30, spe: 30},
@@ -2539,7 +2539,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 192,
         uid: 249,
-        species: "Sunflora",
+        name: "Sunflora",
         abilities: ["chlorophyll", "solarpower"],
         types: ["grass", "???"],
         baseStats: {hp: 75, atk: 75, def: 55, spa: 105, spd: 85, spe: 30},
@@ -2549,7 +2549,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 193,
         uid: 250,
-        species: "Yanma",
+        name: "Yanma",
         abilities: ["speedboost", "compoundeyes"],
         types: ["bug", "flying"],
         baseStats: {hp: 65, atk: 65, def: 45, spa: 75, spd: 45, spe: 95},
@@ -2559,7 +2559,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 194,
         uid: 251,
-        species: "Wooper",
+        name: "Wooper",
         abilities: ["damp", "waterabsorb"],
         types: ["water", "ground"],
         baseStats: {hp: 55, atk: 45, def: 45, spa: 25, spd: 25, spe: 15},
@@ -2569,7 +2569,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 195,
         uid: 252,
-        species: "Quagsire",
+        name: "Quagsire",
         abilities: ["damp", "waterabsorb"],
         types: ["water", "ground"],
         baseStats: {hp: 95, atk: 85, def: 85, spa: 65, spd: 65, spe: 35},
@@ -2579,7 +2579,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 196,
         uid: 253,
-        species: "Espeon",
+        name: "Espeon",
         abilities: ["synchronize"],
         types: ["psychic", "???"],
         baseStats: {hp: 65, atk: 65, def: 60, spa: 130, spd: 95, spe: 110},
@@ -2589,7 +2589,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 197,
         uid: 254,
-        species: "Umbreon",
+        name: "Umbreon",
         abilities: ["synchronize"],
         types: ["dark", "???"],
         baseStats: {hp: 95, atk: 65, def: 110, spa: 60, spd: 130, spe: 65},
@@ -2599,7 +2599,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 198,
         uid: 255,
-        species: "Murkrow",
+        name: "Murkrow",
         abilities: ["insomnia", "superluck"],
         types: ["dark", "flying"],
         baseStats: {hp: 60, atk: 85, def: 42, spa: 85, spd: 42, spe: 91},
@@ -2609,7 +2609,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 199,
         uid: 256,
-        species: "Slowking",
+        name: "Slowking",
         abilities: ["oblivious", "owntempo"],
         types: ["water", "psychic"],
         baseStats: {hp: 95, atk: 75, def: 80, spa: 100, spd: 110, spe: 30},
@@ -2619,7 +2619,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 200,
         uid: 257,
-        species: "Misdreavus",
+        name: "Misdreavus",
         abilities: ["levitate"],
         types: ["ghost", "???"],
         baseStats: {hp: 60, atk: 60, def: 60, spa: 85, spd: 85, spe: 85},
@@ -2629,7 +2629,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 201,
         uid: 258,
-        species: "Unown",
+        name: "Unown",
         baseForm: "A",
         abilities: ["levitate"],
         types: ["psychic", "???"],
@@ -2640,7 +2640,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 202,
         uid: 259,
-        species: "Wobbuffet",
+        name: "Wobbuffet",
         abilities: ["shadowtag"],
         types: ["psychic", "???"],
         baseStats: {hp: 190, atk: 33, def: 58, spa: 33, spd: 58, spe: 33},
@@ -2650,7 +2650,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 203,
         uid: 260,
-        species: "Girafarig",
+        name: "Girafarig",
         abilities: ["innerfocus", "earlybird"],
         types: ["normal", "psychic"],
         baseStats: {hp: 70, atk: 80, def: 65, spa: 90, spd: 65, spe: 85},
@@ -2660,7 +2660,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 204,
         uid: 261,
-        species: "Pineco",
+        name: "Pineco",
         abilities: ["sturdy"],
         types: ["bug", "???"],
         baseStats: {hp: 50, atk: 65, def: 90, spa: 35, spd: 35, spe: 15},
@@ -2670,7 +2670,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 205,
         uid: 262,
-        species: "Forretress",
+        name: "Forretress",
         abilities: ["sturdy"],
         types: ["bug", "steel"],
         baseStats: {hp: 75, atk: 90, def: 140, spa: 60, spd: 60, spe: 40},
@@ -2680,7 +2680,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 206,
         uid: 263,
-        species: "Dunsparce",
+        name: "Dunsparce",
         abilities: ["serenegrace", "runaway"],
         types: ["normal", "???"],
         baseStats: {hp: 100, atk: 70, def: 70, spa: 65, spd: 65, spe: 45},
@@ -2690,7 +2690,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 207,
         uid: 264,
-        species: "Gligar",
+        name: "Gligar",
         abilities: ["hypercutter", "sandveil"],
         types: ["ground", "flying"],
         baseStats: {hp: 65, atk: 75, def: 105, spa: 35, spd: 65, spe: 85},
@@ -2700,7 +2700,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 208,
         uid: 265,
-        species: "Steelix",
+        name: "Steelix",
         abilities: ["rockhead", "sturdy"],
         types: ["steel", "ground"],
         baseStats: {hp: 75, atk: 85, def: 200, spa: 55, spd: 65, spe: 30},
@@ -2710,7 +2710,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 212,
         uid: 266,
-        species: "Scizor",
+        name: "Scizor",
         abilities: ["swarm", "technician"],
         types: ["bug", "steel"],
         baseStats: {hp: 70, atk: 130, def: 100, spa: 55, spd: 80, spe: 65},
@@ -2720,7 +2720,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 213,
         uid: 267,
-        species: "Shuckle",
+        name: "Shuckle",
         abilities: ["sturdy", "gluttony"],
         types: ["bug", "rock"],
         baseStats: {hp: 20, atk: 10, def: 230, spa: 10, spd: 230, spe: 5},
@@ -2730,7 +2730,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 214,
         uid: 268,
-        species: "Heracross",
+        name: "Heracross",
         abilities: ["swarm", "guts"],
         types: ["bug", "fighting"],
         baseStats: {hp: 80, atk: 125, def: 75, spa: 40, spd: 95, spe: 85},
@@ -2740,7 +2740,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 215,
         uid: 269,
-        species: "Sneasel",
+        name: "Sneasel",
         abilities: ["innerfocus", "keeneye"],
         types: ["dark", "ice"],
         baseStats: {hp: 55, atk: 95, def: 55, spa: 35, spd: 75, spe: 115},
@@ -2750,7 +2750,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 216,
         uid: 270,
-        species: "Teddiursa",
+        name: "Teddiursa",
         abilities: ["pickup", "quickfeet"],
         types: ["normal", "???"],
         baseStats: {hp: 60, atk: 80, def: 50, spa: 50, spd: 50, spe: 40},
@@ -2760,7 +2760,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 217,
         uid: 271,
-        species: "Ursaring",
+        name: "Ursaring",
         abilities: ["guts", "quickfeet"],
         types: ["normal", "???"],
         baseStats: {hp: 90, atk: 130, def: 75, spa: 75, spd: 75, spe: 55},
@@ -2770,7 +2770,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 218,
         uid: 272,
-        species: "Slugma",
+        name: "Slugma",
         abilities: ["magmaarmor", "flamebody"],
         types: ["fire", "???"],
         baseStats: {hp: 40, atk: 40, def: 40, spa: 70, spd: 40, spe: 20},
@@ -2780,7 +2780,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 220,
         uid: 273,
-        species: "Swinub",
+        name: "Swinub",
         abilities: ["oblivious", "snowcloak"],
         types: ["ice", "ground"],
         baseStats: {hp: 50, atk: 50, def: 40, spa: 30, spd: 30, spe: 50},
@@ -2790,7 +2790,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 221,
         uid: 274,
-        species: "Piloswine",
+        name: "Piloswine",
         abilities: ["oblivious", "snowcloak"],
         types: ["ice", "ground"],
         baseStats: {hp: 100, atk: 100, def: 80, spa: 60, spd: 60, spe: 50},
@@ -2800,7 +2800,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 223,
         uid: 275,
-        species: "Remoraid",
+        name: "Remoraid",
         abilities: ["hustle", "sniper"],
         types: ["water", "???"],
         baseStats: {hp: 35, atk: 65, def: 35, spa: 65, spd: 35, spe: 65},
@@ -2810,7 +2810,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 224,
         uid: 276,
-        species: "Octillery",
+        name: "Octillery",
         abilities: ["suctioncups", "sniper"],
         types: ["water", "???"],
         baseStats: {hp: 75, atk: 105, def: 75, spa: 105, spd: 75, spe: 45},
@@ -2820,7 +2820,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 225,
         uid: 277,
-        species: "Delibird",
+        name: "Delibird",
         abilities: ["vitalspirit", "hustle"],
         types: ["ice", "flying"],
         baseStats: {hp: 45, atk: 55, def: 45, spa: 65, spd: 45, spe: 75},
@@ -2830,7 +2830,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 227,
         uid: 278,
-        species: "Skarmory",
+        name: "Skarmory",
         abilities: ["keeneye", "sturdy"],
         types: ["steel", "flying"],
         baseStats: {hp: 65, atk: 80, def: 140, spa: 40, spd: 70, spe: 70},
@@ -2840,7 +2840,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 228,
         uid: 279,
-        species: "Houndour",
+        name: "Houndour",
         abilities: ["earlybird", "flashfire"],
         types: ["dark", "fire"],
         baseStats: {hp: 45, atk: 60, def: 30, spa: 80, spd: 50, spe: 65},
@@ -2850,7 +2850,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 229,
         uid: 280,
-        species: "Houndoom",
+        name: "Houndoom",
         abilities: ["earlybird", "flashfire"],
         types: ["dark", "fire"],
         baseStats: {hp: 75, atk: 90, def: 50, spa: 110, spd: 80, spe: 95},
@@ -2860,7 +2860,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 230,
         uid: 281,
-        species: "Kingdra",
+        name: "Kingdra",
         abilities: ["swiftswim", "sniper"],
         types: ["water", "dragon"],
         baseStats: {hp: 75, atk: 95, def: 95, spa: 95, spd: 95, spe: 85},
@@ -2870,7 +2870,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 231,
         uid: 282,
-        species: "Phanpy",
+        name: "Phanpy",
         abilities: ["pickup"],
         types: ["ground", "???"],
         baseStats: {hp: 90, atk: 60, def: 60, spa: 40, spd: 40, spe: 40},
@@ -2880,7 +2880,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 232,
         uid: 283,
-        species: "Donphan",
+        name: "Donphan",
         abilities: ["sturdy"],
         types: ["ground", "???"],
         baseStats: {hp: 90, atk: 120, def: 120, spa: 60, spd: 60, spe: 50},
@@ -2890,7 +2890,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 233,
         uid: 284,
-        species: "Porygon2",
+        name: "Porygon2",
         abilities: ["trace", "download"],
         types: ["normal", "???"],
         baseStats: {hp: 85, atk: 80, def: 90, spa: 105, spd: 95, spe: 60},
@@ -2900,7 +2900,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 234,
         uid: 285,
-        species: "Stantler",
+        name: "Stantler",
         abilities: ["intimidate", "frisk"],
         types: ["normal", "???"],
         baseStats: {hp: 73, atk: 95, def: 62, spa: 85, spd: 65, spe: 85},
@@ -2910,7 +2910,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 235,
         uid: 286,
-        species: "Smeargle",
+        name: "Smeargle",
         abilities: ["owntempo", "technician"],
         types: ["normal", "???"],
         baseStats: {hp: 55, atk: 20, def: 35, spa: 20, spd: 45, spe: 75},
@@ -2920,7 +2920,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 236,
         uid: 287,
-        species: "Tyrogue",
+        name: "Tyrogue",
         abilities: ["guts", "steadfast"],
         types: ["fighting", "???"],
         baseStats: {hp: 35, atk: 35, def: 35, spa: 35, spd: 35, spe: 35},
@@ -2930,7 +2930,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 237,
         uid: 288,
-        species: "Hitmontop",
+        name: "Hitmontop",
         abilities: ["intimidate", "technician"],
         types: ["fighting", "???"],
         baseStats: {hp: 50, atk: 95, def: 95, spa: 35, spd: 110, spe: 70},
@@ -2940,7 +2940,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 238,
         uid: 289,
-        species: "Smoochum",
+        name: "Smoochum",
         abilities: ["oblivious", "forewarn"],
         types: ["ice", "psychic"],
         baseStats: {hp: 45, atk: 30, def: 15, spa: 85, spd: 65, spe: 65},
@@ -2950,7 +2950,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 239,
         uid: 290,
-        species: "Elekid",
+        name: "Elekid",
         abilities: ["static"],
         types: ["electric", "???"],
         baseStats: {hp: 45, atk: 63, def: 37, spa: 65, spd: 55, spe: 95},
@@ -2960,7 +2960,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 240,
         uid: 291,
-        species: "Magby",
+        name: "Magby",
         abilities: ["flamebody"],
         types: ["fire", "???"],
         baseStats: {hp: 45, atk: 75, def: 37, spa: 70, spd: 55, spe: 83},
@@ -2970,7 +2970,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 241,
         uid: 292,
-        species: "Miltank",
+        name: "Miltank",
         abilities: ["thickfat", "scrappy"],
         types: ["normal", "???"],
         baseStats: {hp: 95, atk: 80, def: 105, spa: 40, spd: 70, spe: 100},
@@ -2980,7 +2980,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 242,
         uid: 293,
-        species: "Blissey",
+        name: "Blissey",
         abilities: ["naturalcure", "serenegrace"],
         types: ["normal", "???"],
         baseStats: {hp: 255, atk: 10, def: 10, spa: 75, spd: 135, spe: 55},
@@ -2990,7 +2990,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 246,
         uid: 294,
-        species: "Larvitar",
+        name: "Larvitar",
         abilities: ["guts"],
         types: ["rock", "ground"],
         baseStats: {hp: 50, atk: 64, def: 50, spa: 45, spd: 50, spe: 41},
@@ -3000,7 +3000,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 247,
         uid: 295,
-        species: "Pupitar",
+        name: "Pupitar",
         abilities: ["shedskin"],
         types: ["rock", "ground"],
         baseStats: {hp: 70, atk: 84, def: 70, spa: 65, spd: 70, spe: 51},
@@ -3010,7 +3010,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 248,
         uid: 296,
-        species: "Tyranitar",
+        name: "Tyranitar",
         abilities: ["sandstream"],
         types: ["rock", "dark"],
         baseStats: {hp: 100, atk: 134, def: 110, spa: 95, spd: 100, spe: 61},
@@ -3020,7 +3020,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 249,
         uid: 297,
-        species: "Lugia",
+        name: "Lugia",
         abilities: ["pressure"],
         types: ["psychic", "flying"],
         baseStats: {hp: 106, atk: 90, def: 130, spa: 90, spd: 154, spe: 110},
@@ -3030,7 +3030,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 250,
         uid: 298,
-        species: "Ho-Oh",
+        name: "Ho-Oh",
         abilities: ["pressure"],
         types: ["fire", "flying"],
         baseStats: {hp: 106, atk: 130, def: 90, spa: 110, spd: 154, spe: 90},
@@ -3040,7 +3040,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 251,
         uid: 299,
-        species: "Celebi",
+        name: "Celebi",
         abilities: ["naturalcure"],
         types: ["psychic", "grass"],
         baseStats: {hp: 100, atk: 100, def: 100, spa: 100, spd: 100, spe: 100},
@@ -3050,7 +3050,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 252,
         uid: 300,
-        species: "Treecko",
+        name: "Treecko",
         abilities: ["overgrow"],
         types: ["grass", "???"],
         baseStats: {hp: 40, atk: 45, def: 35, spa: 65, spd: 55, spe: 70},
@@ -3060,7 +3060,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 253,
         uid: 301,
-        species: "Grovyle",
+        name: "Grovyle",
         abilities: ["overgrow"],
         types: ["grass", "???"],
         baseStats: {hp: 50, atk: 65, def: 45, spa: 85, spd: 65, spe: 95},
@@ -3070,7 +3070,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 254,
         uid: 302,
-        species: "Sceptile",
+        name: "Sceptile",
         abilities: ["overgrow"],
         types: ["grass", "???"],
         baseStats: {hp: 70, atk: 85, def: 65, spa: 105, spd: 85, spe: 120},
@@ -3080,7 +3080,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 255,
         uid: 303,
-        species: "Torchic",
+        name: "Torchic",
         abilities: ["blaze"],
         types: ["fire", "???"],
         baseStats: {hp: 45, atk: 60, def: 40, spa: 70, spd: 50, spe: 45},
@@ -3090,7 +3090,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 256,
         uid: 304,
-        species: "Combusken",
+        name: "Combusken",
         abilities: ["blaze"],
         types: ["fire", "fighting"],
         baseStats: {hp: 60, atk: 85, def: 60, spa: 85, spd: 60, spe: 55},
@@ -3100,7 +3100,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 257,
         uid: 305,
-        species: "Blaziken",
+        name: "Blaziken",
         abilities: ["blaze"],
         types: ["fire", "fighting"],
         baseStats: {hp: 80, atk: 120, def: 70, spa: 110, spd: 70, spe: 80},
@@ -3110,7 +3110,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 258,
         uid: 306,
-        species: "Mudkip",
+        name: "Mudkip",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 50, atk: 70, def: 50, spa: 50, spd: 50, spe: 40},
@@ -3120,7 +3120,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 259,
         uid: 307,
-        species: "Marshtomp",
+        name: "Marshtomp",
         abilities: ["torrent"],
         types: ["water", "ground"],
         baseStats: {hp: 70, atk: 85, def: 70, spa: 60, spd: 70, spe: 50},
@@ -3130,7 +3130,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 260,
         uid: 308,
-        species: "Swampert",
+        name: "Swampert",
         abilities: ["torrent"],
         types: ["water", "ground"],
         baseStats: {hp: 100, atk: 110, def: 90, spa: 85, spd: 90, spe: 60},
@@ -3140,7 +3140,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 261,
         uid: 309,
-        species: "Poochyena",
+        name: "Poochyena",
         abilities: ["runaway", "quickfeet"],
         types: ["dark", "???"],
         baseStats: {hp: 35, atk: 55, def: 35, spa: 30, spd: 30, spe: 35},
@@ -3150,7 +3150,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 262,
         uid: 310,
-        species: "Mightyena",
+        name: "Mightyena",
         abilities: ["intimidate", "quickfeet"],
         types: ["dark", "???"],
         baseStats: {hp: 70, atk: 90, def: 70, spa: 60, spd: 60, spe: 70},
@@ -3160,7 +3160,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 263,
         uid: 311,
-        species: "Zigzagoon",
+        name: "Zigzagoon",
         abilities: ["pickup", "gluttony"],
         types: ["normal", "???"],
         baseStats: {hp: 38, atk: 30, def: 41, spa: 30, spd: 41, spe: 60},
@@ -3170,7 +3170,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 264,
         uid: 312,
-        species: "Linoone",
+        name: "Linoone",
         abilities: ["pickup", "gluttony"],
         types: ["normal", "???"],
         baseStats: {hp: 78, atk: 70, def: 61, spa: 50, spd: 61, spe: 100},
@@ -3180,7 +3180,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 265,
         uid: 313,
-        species: "Wurmple",
+        name: "Wurmple",
         abilities: ["shielddust"],
         types: ["bug", "???"],
         baseStats: {hp: 45, atk: 45, def: 35, spa: 20, spd: 30, spe: 20},
@@ -3190,7 +3190,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 266,
         uid: 314,
-        species: "Silcoon",
+        name: "Silcoon",
         abilities: ["shedskin"],
         types: ["bug", "???"],
         baseStats: {hp: 50, atk: 35, def: 55, spa: 25, spd: 25, spe: 15},
@@ -3200,7 +3200,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 268,
         uid: 315,
-        species: "Cascoon",
+        name: "Cascoon",
         abilities: ["shedskin"],
         types: ["bug", "???"],
         baseStats: {hp: 50, atk: 35, def: 55, spa: 25, spd: 25, spe: 15},
@@ -3210,7 +3210,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 269,
         uid: 316,
-        species: "Dustox",
+        name: "Dustox",
         abilities: ["shielddust"],
         types: ["bug", "poison"],
         baseStats: {hp: 60, atk: 50, def: 70, spa: 50, spd: 90, spe: 65},
@@ -3220,7 +3220,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 270,
         uid: 317,
-        species: "Lotad",
+        name: "Lotad",
         abilities: ["swiftswim", "raindish"],
         types: ["water", "grass"],
         baseStats: {hp: 40, atk: 30, def: 30, spa: 40, spd: 50, spe: 30},
@@ -3230,7 +3230,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 271,
         uid: 318,
-        species: "Lombre",
+        name: "Lombre",
         abilities: ["swiftswim", "raindish"],
         types: ["water", "grass"],
         baseStats: {hp: 60, atk: 50, def: 50, spa: 60, spd: 70, spe: 50},
@@ -3240,7 +3240,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 272,
         uid: 319,
-        species: "Ludicolo",
+        name: "Ludicolo",
         abilities: ["swiftswim", "raindish"],
         types: ["water", "grass"],
         baseStats: {hp: 80, atk: 70, def: 70, spa: 90, spd: 100, spe: 70},
@@ -3250,7 +3250,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 273,
         uid: 320,
-        species: "Seedot",
+        name: "Seedot",
         abilities: ["chlorophyll", "earlybird"],
         types: ["grass", "???"],
         baseStats: {hp: 40, atk: 40, def: 50, spa: 30, spd: 30, spe: 30},
@@ -3260,7 +3260,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 274,
         uid: 321,
-        species: "Nuzleaf",
+        name: "Nuzleaf",
         abilities: ["chlorophyll", "earlybird"],
         types: ["grass", "dark"],
         baseStats: {hp: 70, atk: 70, def: 40, spa: 60, spd: 40, spe: 60},
@@ -3270,7 +3270,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 275,
         uid: 322,
-        species: "Shiftry",
+        name: "Shiftry",
         abilities: ["chlorophyll", "earlybird"],
         types: ["grass", "dark"],
         baseStats: {hp: 90, atk: 100, def: 60, spa: 90, spd: 60, spe: 80},
@@ -3280,7 +3280,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 276,
         uid: 323,
-        species: "Taillow",
+        name: "Taillow",
         abilities: ["guts"],
         types: ["normal", "flying"],
         baseStats: {hp: 40, atk: 55, def: 30, spa: 30, spd: 30, spe: 85},
@@ -3290,7 +3290,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 283,
         uid: 324,
-        species: "Surskit",
+        name: "Surskit",
         abilities: ["swiftswim"],
         types: ["bug", "water"],
         baseStats: {hp: 40, atk: 30, def: 32, spa: 50, spd: 52, spe: 65},
@@ -3300,7 +3300,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 285,
         uid: 325,
-        species: "Shroomish",
+        name: "Shroomish",
         abilities: ["effectspore", "poisonheal"],
         types: ["grass", "???"],
         baseStats: {hp: 60, atk: 40, def: 60, spa: 40, spd: 60, spe: 35},
@@ -3310,7 +3310,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 286,
         uid: 326,
-        species: "Breloom",
+        name: "Breloom",
         abilities: ["effectspore", "poisonheal"],
         types: ["grass", "fighting"],
         baseStats: {hp: 60, atk: 130, def: 80, spa: 60, spd: 60, spe: 70},
@@ -3320,7 +3320,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 287,
         uid: 327,
-        species: "Slakoth",
+        name: "Slakoth",
         abilities: ["truant"],
         types: ["normal", "???"],
         baseStats: {hp: 60, atk: 60, def: 60, spa: 35, spd: 35, spe: 30},
@@ -3330,7 +3330,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 288,
         uid: 328,
-        species: "Vigoroth",
+        name: "Vigoroth",
         abilities: ["vitalspirit"],
         types: ["normal", "???"],
         baseStats: {hp: 80, atk: 80, def: 80, spa: 55, spd: 55, spe: 90},
@@ -3340,7 +3340,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 289,
         uid: 329,
-        species: "Slaking",
+        name: "Slaking",
         abilities: ["truant"],
         types: ["normal", "???"],
         baseStats: {hp: 150, atk: 160, def: 100, spa: 95, spd: 65, spe: 100},
@@ -3350,7 +3350,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 290,
         uid: 330,
-        species: "Nincada",
+        name: "Nincada",
         abilities: ["compoundeyes"],
         types: ["bug", "ground"],
         baseStats: {hp: 31, atk: 45, def: 90, spa: 30, spd: 30, spe: 40},
@@ -3360,7 +3360,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 291,
         uid: 331,
-        species: "Ninjask",
+        name: "Ninjask",
         abilities: ["speedboost"],
         types: ["bug", "flying"],
         baseStats: {hp: 61, atk: 90, def: 45, spa: 50, spd: 50, spe: 160},
@@ -3370,7 +3370,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 292,
         uid: 332,
-        species: "Shedinja",
+        name: "Shedinja",
         abilities: ["wonderguard"],
         types: ["bug", "ghost"],
         baseStats: {hp: 1, atk: 90, def: 45, spa: 30, spd: 30, spe: 40},
@@ -3380,7 +3380,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 293,
         uid: 333,
-        species: "Whismur",
+        name: "Whismur",
         abilities: ["soundproof"],
         types: ["normal", "???"],
         baseStats: {hp: 64, atk: 51, def: 23, spa: 51, spd: 23, spe: 28},
@@ -3390,7 +3390,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 294,
         uid: 334,
-        species: "Loudred",
+        name: "Loudred",
         abilities: ["soundproof"],
         types: ["normal", "???"],
         baseStats: {hp: 84, atk: 71, def: 43, spa: 71, spd: 43, spe: 48},
@@ -3400,7 +3400,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 296,
         uid: 335,
-        species: "Makuhita",
+        name: "Makuhita",
         abilities: ["thickfat", "guts"],
         types: ["fighting", "???"],
         baseStats: {hp: 72, atk: 60, def: 30, spa: 20, spd: 30, spe: 25},
@@ -3410,7 +3410,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 297,
         uid: 336,
-        species: "Hariyama",
+        name: "Hariyama",
         abilities: ["thickfat", "guts"],
         types: ["fighting", "???"],
         baseStats: {hp: 144, atk: 120, def: 60, spa: 40, spd: 60, spe: 50},
@@ -3420,7 +3420,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 299,
         uid: 337,
-        species: "Nosepass",
+        name: "Nosepass",
         abilities: ["sturdy", "magnetpull"],
         types: ["rock", "???"],
         baseStats: {hp: 30, atk: 45, def: 135, spa: 45, spd: 90, spe: 30},
@@ -3430,7 +3430,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 300,
         uid: 338,
-        species: "Skitty",
+        name: "Skitty",
         abilities: ["cutecharm", "normalize"],
         types: ["normal", "???"],
         baseStats: {hp: 50, atk: 45, def: 45, spa: 35, spd: 35, spe: 50},
@@ -3440,7 +3440,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 302,
         uid: 339,
-        species: "Sableye",
+        name: "Sableye",
         abilities: ["keeneye", "stall"],
         types: ["dark", "ghost"],
         baseStats: {hp: 50, atk: 75, def: 75, spa: 65, spd: 65, spe: 50},
@@ -3450,7 +3450,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 304,
         uid: 340,
-        species: "Aron",
+        name: "Aron",
         abilities: ["sturdy", "rockhead"],
         types: ["steel", "rock"],
         baseStats: {hp: 50, atk: 70, def: 100, spa: 40, spd: 40, spe: 30},
@@ -3460,7 +3460,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 305,
         uid: 341,
-        species: "Lairon",
+        name: "Lairon",
         abilities: ["sturdy", "rockhead"],
         types: ["steel", "rock"],
         baseStats: {hp: 60, atk: 90, def: 140, spa: 50, spd: 50, spe: 40},
@@ -3470,7 +3470,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 306,
         uid: 342,
-        species: "Aggron",
+        name: "Aggron",
         abilities: ["sturdy", "rockhead"],
         types: ["steel", "rock"],
         baseStats: {hp: 70, atk: 110, def: 180, spa: 60, spd: 60, spe: 50},
@@ -3480,7 +3480,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 307,
         uid: 343,
-        species: "Meditite",
+        name: "Meditite",
         abilities: ["purepower"],
         types: ["fighting", "psychic"],
         baseStats: {hp: 30, atk: 40, def: 55, spa: 40, spd: 55, spe: 60},
@@ -3490,7 +3490,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 308,
         uid: 344,
-        species: "Medicham",
+        name: "Medicham",
         abilities: ["purepower"],
         types: ["fighting", "psychic"],
         baseStats: {hp: 60, atk: 60, def: 75, spa: 60, spd: 75, spe: 80},
@@ -3500,7 +3500,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 309,
         uid: 345,
-        species: "Electrike",
+        name: "Electrike",
         abilities: ["static", "lightningrod"],
         types: ["electric", "???"],
         baseStats: {hp: 40, atk: 45, def: 40, spa: 65, spd: 40, spe: 65},
@@ -3510,7 +3510,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 310,
         uid: 346,
-        species: "Manectric",
+        name: "Manectric",
         abilities: ["static", "lightningrod"],
         types: ["electric", "???"],
         baseStats: {hp: 70, atk: 75, def: 60, spa: 105, spd: 60, spe: 105},
@@ -3520,7 +3520,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 315,
         uid: 347,
-        species: "Roselia",
+        name: "Roselia",
         abilities: ["naturalcure", "poisonpoint"],
         types: ["grass", "poison"],
         baseStats: {hp: 50, atk: 60, def: 45, spa: 100, spd: 80, spe: 65},
@@ -3530,7 +3530,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 316,
         uid: 348,
-        species: "Gulpin",
+        name: "Gulpin",
         abilities: ["liquidooze", "stickyhold"],
         types: ["poison", "???"],
         baseStats: {hp: 70, atk: 43, def: 53, spa: 43, spd: 53, spe: 40},
@@ -3540,7 +3540,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 317,
         uid: 349,
-        species: "Swalot",
+        name: "Swalot",
         abilities: ["liquidooze", "stickyhold"],
         types: ["poison", "???"],
         baseStats: {hp: 100, atk: 73, def: 83, spa: 73, spd: 83, spe: 55},
@@ -3550,7 +3550,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 318,
         uid: 350,
-        species: "Carvanha",
+        name: "Carvanha",
         abilities: ["roughskin"],
         types: ["water", "dark"],
         baseStats: {hp: 45, atk: 90, def: 20, spa: 65, spd: 20, spe: 65},
@@ -3560,7 +3560,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 319,
         uid: 351,
-        species: "Sharpedo",
+        name: "Sharpedo",
         abilities: ["roughskin"],
         types: ["water", "dark"],
         baseStats: {hp: 70, atk: 120, def: 40, spa: 95, spd: 40, spe: 95},
@@ -3570,7 +3570,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 320,
         uid: 352,
-        species: "Wailmer",
+        name: "Wailmer",
         abilities: ["waterveil", "oblivious"],
         types: ["water", "???"],
         baseStats: {hp: 130, atk: 70, def: 35, spa: 70, spd: 35, spe: 60},
@@ -3580,7 +3580,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 321,
         uid: 353,
-        species: "Wailord",
+        name: "Wailord",
         abilities: ["waterveil", "oblivious"],
         types: ["water", "???"],
         baseStats: {hp: 170, atk: 90, def: 45, spa: 90, spd: 45, spe: 60},
@@ -3590,7 +3590,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 322,
         uid: 354,
-        species: "Numel",
+        name: "Numel",
         abilities: ["oblivious", "simple"],
         types: ["fire", "ground"],
         baseStats: {hp: 60, atk: 60, def: 40, spa: 65, spd: 45, spe: 35},
@@ -3600,7 +3600,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 323,
         uid: 355,
-        species: "Camerupt",
+        name: "Camerupt",
         abilities: ["magmaarmor", "solidrock"],
         types: ["fire", "ground"],
         baseStats: {hp: 70, atk: 100, def: 70, spa: 105, spd: 75, spe: 40},
@@ -3610,7 +3610,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 325,
         uid: 356,
-        species: "Spoink",
+        name: "Spoink",
         abilities: ["thickfat", "owntempo"],
         types: ["psychic", "???"],
         baseStats: {hp: 60, atk: 25, def: 35, spa: 70, spd: 80, spe: 60},
@@ -3620,7 +3620,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 326,
         uid: 357,
-        species: "Grumpig",
+        name: "Grumpig",
         abilities: ["thickfat", "owntempo"],
         types: ["psychic", "???"],
         baseStats: {hp: 80, atk: 45, def: 65, spa: 90, spd: 110, spe: 80},
@@ -3630,7 +3630,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 327,
         uid: 358,
-        species: "Spinda",
+        name: "Spinda",
         abilities: ["owntempo", "tangledfeet"],
         types: ["normal", "???"],
         baseStats: {hp: 60, atk: 60, def: 60, spa: 60, spd: 60, spe: 60},
@@ -3640,7 +3640,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 328,
         uid: 359,
-        species: "Trapinch",
+        name: "Trapinch",
         abilities: ["hypercutter", "arenatrap"],
         types: ["ground", "???"],
         baseStats: {hp: 45, atk: 100, def: 45, spa: 45, spd: 45, spe: 10},
@@ -3650,7 +3650,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 329,
         uid: 360,
-        species: "Vibrava",
+        name: "Vibrava",
         abilities: ["levitate"],
         types: ["ground", "dragon"],
         baseStats: {hp: 50, atk: 70, def: 50, spa: 50, spd: 50, spe: 70},
@@ -3660,7 +3660,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 330,
         uid: 361,
-        species: "Flygon",
+        name: "Flygon",
         abilities: ["levitate"],
         types: ["ground", "dragon"],
         baseStats: {hp: 80, atk: 100, def: 80, spa: 80, spd: 80, spe: 100},
@@ -3670,7 +3670,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 331,
         uid: 362,
-        species: "Cacnea",
+        name: "Cacnea",
         abilities: ["sandveil"],
         types: ["grass", "???"],
         baseStats: {hp: 50, atk: 85, def: 40, spa: 85, spd: 40, spe: 35},
@@ -3680,7 +3680,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 332,
         uid: 363,
-        species: "Cacturne",
+        name: "Cacturne",
         abilities: ["sandveil"],
         types: ["grass", "dark"],
         baseStats: {hp: 70, atk: 115, def: 60, spa: 115, spd: 60, spe: 55},
@@ -3690,7 +3690,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 333,
         uid: 364,
-        species: "Swablu",
+        name: "Swablu",
         abilities: ["naturalcure"],
         types: ["normal", "flying"],
         baseStats: {hp: 45, atk: 40, def: 60, spa: 40, spd: 75, spe: 50},
@@ -3700,7 +3700,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 334,
         uid: 365,
-        species: "Altaria",
+        name: "Altaria",
         abilities: ["naturalcure"],
         types: ["dragon", "flying"],
         baseStats: {hp: 75, atk: 70, def: 90, spa: 70, spd: 105, spe: 80},
@@ -3710,7 +3710,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 335,
         uid: 366,
-        species: "Zangoose",
+        name: "Zangoose",
         abilities: ["immunity"],
         types: ["normal", "???"],
         baseStats: {hp: 73, atk: 115, def: 60, spa: 60, spd: 60, spe: 90},
@@ -3720,7 +3720,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 336,
         uid: 367,
-        species: "Seviper",
+        name: "Seviper",
         abilities: ["shedskin"],
         types: ["poison", "???"],
         baseStats: {hp: 73, atk: 100, def: 60, spa: 100, spd: 60, spe: 65},
@@ -3730,7 +3730,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 339,
         uid: 368,
-        species: "Barboach",
+        name: "Barboach",
         abilities: ["oblivious", "anticipation"],
         types: ["water", "ground"],
         baseStats: {hp: 50, atk: 48, def: 43, spa: 46, spd: 41, spe: 60},
@@ -3740,7 +3740,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 340,
         uid: 369,
-        species: "Whiscash",
+        name: "Whiscash",
         abilities: ["oblivious", "anticipation"],
         types: ["water", "ground"],
         baseStats: {hp: 110, atk: 78, def: 73, spa: 76, spd: 71, spe: 60},
@@ -3750,7 +3750,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 341,
         uid: 370,
-        species: "Corphish",
+        name: "Corphish",
         abilities: ["hypercutter", "shellarmor"],
         types: ["water", "???"],
         baseStats: {hp: 43, atk: 80, def: 65, spa: 50, spd: 35, spe: 35},
@@ -3760,7 +3760,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 342,
         uid: 371,
-        species: "Crawdaunt",
+        name: "Crawdaunt",
         abilities: ["hypercutter", "shellarmor"],
         types: ["water", "dark"],
         baseStats: {hp: 63, atk: 120, def: 85, spa: 90, spd: 55, spe: 55},
@@ -3770,7 +3770,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 343,
         uid: 372,
-        species: "Baltoy",
+        name: "Baltoy",
         abilities: ["levitate"],
         types: ["ground", "psychic"],
         baseStats: {hp: 40, atk: 40, def: 55, spa: 40, spd: 70, spe: 55},
@@ -3780,7 +3780,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 344,
         uid: 373,
-        species: "Claydol",
+        name: "Claydol",
         abilities: ["levitate"],
         types: ["ground", "psychic"],
         baseStats: {hp: 60, atk: 70, def: 105, spa: 70, spd: 120, spe: 75},
@@ -3790,7 +3790,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 345,
         uid: 374,
-        species: "Lileep",
+        name: "Lileep",
         abilities: ["suctioncups"],
         types: ["rock", "grass"],
         baseStats: {hp: 66, atk: 41, def: 77, spa: 61, spd: 87, spe: 23},
@@ -3800,7 +3800,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 346,
         uid: 375,
-        species: "Cradily",
+        name: "Cradily",
         abilities: ["suctioncups"],
         types: ["rock", "grass"],
         baseStats: {hp: 86, atk: 81, def: 97, spa: 81, spd: 107, spe: 43},
@@ -3810,7 +3810,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 347,
         uid: 376,
-        species: "Anorith",
+        name: "Anorith",
         abilities: ["battlearmor"],
         types: ["rock", "bug"],
         baseStats: {hp: 45, atk: 95, def: 50, spa: 40, spd: 50, spe: 75},
@@ -3820,7 +3820,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 348,
         uid: 377,
-        species: "Armaldo",
+        name: "Armaldo",
         abilities: ["battlearmor"],
         types: ["rock", "bug"],
         baseStats: {hp: 75, atk: 125, def: 100, spa: 70, spd: 80, spe: 45},
@@ -3830,7 +3830,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 349,
         uid: 378,
-        species: "Feebas",
+        name: "Feebas",
         abilities: ["swiftswim", "oblivious"],
         types: ["water", "???"],
         baseStats: {hp: 20, atk: 15, def: 20, spa: 10, spd: 55, spe: 80},
@@ -3840,7 +3840,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 351,
         uid: 379,
-        species: "Castform-Snowy",
+        name: "Castform-Snowy",
         baseSpecies: "Castform",
         form: "Snowy",
         formLetter: "S",
@@ -3853,7 +3853,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 353,
         uid: 380,
-        species: "Shuppet",
+        name: "Shuppet",
         abilities: ["insomnia", "frisk"],
         types: ["ghost", "???"],
         baseStats: {hp: 44, atk: 75, def: 35, spa: 63, spd: 33, spe: 45},
@@ -3863,7 +3863,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 354,
         uid: 381,
-        species: "Banette",
+        name: "Banette",
         abilities: ["insomnia", "frisk"],
         types: ["ghost", "???"],
         baseStats: {hp: 64, atk: 115, def: 65, spa: 83, spd: 63, spe: 65},
@@ -3873,7 +3873,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 357,
         uid: 382,
-        species: "Tropius",
+        name: "Tropius",
         abilities: ["chlorophyll", "solarpower"],
         types: ["grass", "flying"],
         baseStats: {hp: 99, atk: 68, def: 83, spa: 72, spd: 87, spe: 51},
@@ -3883,7 +3883,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 359,
         uid: 383,
-        species: "Absol",
+        name: "Absol",
         abilities: ["pressure", "superluck"],
         types: ["dark", "???"],
         baseStats: {hp: 65, atk: 130, def: 60, spa: 75, spd: 60, spe: 75},
@@ -3893,7 +3893,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 360,
         uid: 384,
-        species: "Wynaut",
+        name: "Wynaut",
         abilities: ["shadowtag"],
         types: ["psychic", "???"],
         baseStats: {hp: 95, atk: 23, def: 48, spa: 23, spd: 48, spe: 23},
@@ -3903,7 +3903,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 361,
         uid: 385,
-        species: "Snorunt",
+        name: "Snorunt",
         abilities: ["innerfocus", "icebody"],
         types: ["ice", "???"],
         baseStats: {hp: 50, atk: 50, def: 50, spa: 50, spd: 50, spe: 50},
@@ -3913,7 +3913,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 362,
         uid: 386,
-        species: "Glalie",
+        name: "Glalie",
         abilities: ["innerfocus", "icebody"],
         types: ["ice", "???"],
         baseStats: {hp: 80, atk: 80, def: 80, spa: 80, spd: 80, spe: 80},
@@ -3923,7 +3923,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 363,
         uid: 387,
-        species: "Spheal",
+        name: "Spheal",
         abilities: ["thickfat", "icebody"],
         types: ["ice", "water"],
         baseStats: {hp: 70, atk: 40, def: 50, spa: 55, spd: 50, spe: 25},
@@ -3933,7 +3933,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 364,
         uid: 388,
-        species: "Sealeo",
+        name: "Sealeo",
         abilities: ["thickfat", "icebody"],
         types: ["ice", "water"],
         baseStats: {hp: 90, atk: 60, def: 70, spa: 75, spd: 70, spe: 45},
@@ -3943,7 +3943,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 365,
         uid: 389,
-        species: "Walrein",
+        name: "Walrein",
         abilities: ["thickfat", "icebody"],
         types: ["ice", "water"],
         baseStats: {hp: 110, atk: 80, def: 90, spa: 95, spd: 90, spe: 65},
@@ -3953,7 +3953,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 366,
         uid: 390,
-        species: "Clamperl",
+        name: "Clamperl",
         abilities: ["shellarmor"],
         types: ["water", "???"],
         baseStats: {hp: 35, atk: 64, def: 85, spa: 74, spd: 55, spe: 32},
@@ -3963,7 +3963,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 367,
         uid: 391,
-        species: "Huntail",
+        name: "Huntail",
         abilities: ["swiftswim"],
         types: ["water", "???"],
         baseStats: {hp: 55, atk: 104, def: 105, spa: 94, spd: 75, spe: 52},
@@ -3973,7 +3973,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 368,
         uid: 392,
-        species: "Gorebyss",
+        name: "Gorebyss",
         abilities: ["swiftswim"],
         types: ["water", "???"],
         baseStats: {hp: 55, atk: 84, def: 105, spa: 114, spd: 75, spe: 52},
@@ -3983,7 +3983,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 369,
         uid: 393,
-        species: "Relicanth",
+        name: "Relicanth",
         abilities: ["swiftswim", "rockhead"],
         types: ["water", "rock"],
         baseStats: {hp: 100, atk: 90, def: 130, spa: 45, spd: 65, spe: 55},
@@ -3993,7 +3993,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 370,
         uid: 394,
-        species: "Luvdisc",
+        name: "Luvdisc",
         abilities: ["swiftswim"],
         types: ["water", "???"],
         baseStats: {hp: 43, atk: 30, def: 55, spa: 40, spd: 65, spe: 97},
@@ -4003,7 +4003,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 371,
         uid: 395,
-        species: "Bagon",
+        name: "Bagon",
         abilities: ["rockhead"],
         types: ["dragon", "???"],
         baseStats: {hp: 45, atk: 75, def: 60, spa: 40, spd: 30, spe: 50},
@@ -4013,7 +4013,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 372,
         uid: 396,
-        species: "Shelgon",
+        name: "Shelgon",
         abilities: ["rockhead"],
         types: ["dragon", "???"],
         baseStats: {hp: 65, atk: 95, def: 100, spa: 60, spd: 50, spe: 50},
@@ -4023,7 +4023,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 373,
         uid: 397,
-        species: "Salamence",
+        name: "Salamence",
         abilities: ["intimidate"],
         types: ["dragon", "flying"],
         baseStats: {hp: 95, atk: 135, def: 80, spa: 110, spd: 80, spe: 100},
@@ -4033,7 +4033,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 374,
         uid: 398,
-        species: "Beldum",
+        name: "Beldum",
         abilities: ["clearbody"],
         types: ["steel", "psychic"],
         baseStats: {hp: 40, atk: 55, def: 80, spa: 35, spd: 60, spe: 30},
@@ -4043,7 +4043,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 375,
         uid: 399,
-        species: "Metang",
+        name: "Metang",
         abilities: ["clearbody"],
         types: ["steel", "psychic"],
         baseStats: {hp: 60, atk: 75, def: 100, spa: 55, spd: 80, spe: 50},
@@ -4053,7 +4053,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 376,
         uid: 400,
-        species: "Metagross",
+        name: "Metagross",
         abilities: ["clearbody"],
         types: ["steel", "psychic"],
         baseStats: {hp: 80, atk: 135, def: 130, spa: 95, spd: 90, spe: 70},
@@ -4063,7 +4063,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 380,
         uid: 401,
-        species: "Latias",
+        name: "Latias",
         abilities: ["levitate"],
         types: ["dragon", "psychic"],
         baseStats: {hp: 80, atk: 80, def: 90, spa: 110, spd: 130, spe: 110},
@@ -4073,7 +4073,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 381,
         uid: 402,
-        species: "Latios",
+        name: "Latios",
         abilities: ["levitate"],
         types: ["dragon", "psychic"],
         baseStats: {hp: 80, atk: 90, def: 80, spa: 130, spd: 110, spe: 110},
@@ -4083,7 +4083,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 382,
         uid: 403,
-        species: "Kyogre",
+        name: "Kyogre",
         abilities: ["drizzle"],
         types: ["water", "???"],
         baseStats: {hp: 100, atk: 100, def: 90, spa: 150, spd: 140, spe: 90},
@@ -4093,7 +4093,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 383,
         uid: 404,
-        species: "Groudon",
+        name: "Groudon",
         abilities: ["drought"],
         types: ["ground", "???"],
         baseStats: {hp: 100, atk: 150, def: 140, spa: 100, spd: 90, spe: 90},
@@ -4103,7 +4103,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 384,
         uid: 405,
-        species: "Rayquaza",
+        name: "Rayquaza",
         abilities: ["airlock"],
         types: ["dragon", "flying"],
         baseStats: {hp: 105, atk: 150, def: 90, spa: 150, spd: 90, spe: 95},
@@ -4113,7 +4113,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 385,
         uid: 406,
-        species: "Jirachi",
+        name: "Jirachi",
         abilities: ["serenegrace"],
         types: ["steel", "psychic"],
         baseStats: {hp: 100, atk: 100, def: 100, spa: 100, spd: 100, spe: 100},
@@ -4123,7 +4123,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 386,
         uid: 407,
-        species: "Deoxys",
+        name: "Deoxys",
         baseForm: "Normal",
         otherForms: ["deoxysattack", "deoxysdefense", "deoxysspeed"],
         abilities: ["pressure"],
@@ -4135,7 +4135,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 386,
         uid: 408,
-        species: "Deoxys-Attack",
+        name: "Deoxys-Attack",
         baseSpecies: "Deoxys",
         form: "Attack",
         formLetter: "A",
@@ -4148,7 +4148,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 386,
         uid: 409,
-        species: "Deoxys-Defense",
+        name: "Deoxys-Defense",
         baseSpecies: "Deoxys",
         form: "Defense",
         formLetter: "D",
@@ -4161,7 +4161,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 386,
         uid: 410,
-        species: "Deoxys-Speed",
+        name: "Deoxys-Speed",
         baseSpecies: "Deoxys",
         form: "Speed",
         formLetter: "S",
@@ -4174,7 +4174,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 387,
         uid: 411,
-        species: "Turtwig",
+        name: "Turtwig",
         abilities: ["overgrow"],
         types: ["grass", "???"],
         baseStats: {hp: 55, atk: 68, def: 64, spa: 45, spd: 55, spe: 31},
@@ -4184,7 +4184,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 388,
         uid: 412,
-        species: "Grotle",
+        name: "Grotle",
         abilities: ["overgrow"],
         types: ["grass", "???"],
         baseStats: {hp: 75, atk: 89, def: 85, spa: 55, spd: 65, spe: 36},
@@ -4194,7 +4194,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 389,
         uid: 413,
-        species: "Torterra",
+        name: "Torterra",
         abilities: ["overgrow"],
         types: ["grass", "ground"],
         baseStats: {hp: 95, atk: 109, def: 105, spa: 75, spd: 85, spe: 56},
@@ -4204,7 +4204,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 390,
         uid: 414,
-        species: "Chimchar",
+        name: "Chimchar",
         abilities: ["blaze"],
         types: ["fire", "???"],
         baseStats: {hp: 44, atk: 58, def: 44, spa: 58, spd: 44, spe: 61},
@@ -4214,7 +4214,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 391,
         uid: 415,
-        species: "Monferno",
+        name: "Monferno",
         abilities: ["blaze"],
         types: ["fire", "fighting"],
         baseStats: {hp: 64, atk: 78, def: 52, spa: 78, spd: 52, spe: 81},
@@ -4224,7 +4224,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 392,
         uid: 416,
-        species: "Infernape",
+        name: "Infernape",
         abilities: ["blaze"],
         types: ["fire", "fighting"],
         baseStats: {hp: 76, atk: 104, def: 71, spa: 104, spd: 71, spe: 108},
@@ -4234,7 +4234,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 393,
         uid: 417,
-        species: "Piplup",
+        name: "Piplup",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 53, atk: 51, def: 53, spa: 61, spd: 56, spe: 40},
@@ -4244,7 +4244,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 394,
         uid: 418,
-        species: "Prinplup",
+        name: "Prinplup",
         abilities: ["torrent"],
         types: ["water", "???"],
         baseStats: {hp: 64, atk: 66, def: 68, spa: 81, spd: 76, spe: 50},
@@ -4254,7 +4254,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 395,
         uid: 419,
-        species: "Empoleon",
+        name: "Empoleon",
         abilities: ["torrent"],
         types: ["water", "steel"],
         baseStats: {hp: 84, atk: 86, def: 88, spa: 111, spd: 101, spe: 60},
@@ -4264,7 +4264,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 397,
         uid: 420,
-        species: "Staravia",
+        name: "Staravia",
         abilities: ["intimidate"],
         types: ["normal", "flying"],
         baseStats: {hp: 55, atk: 75, def: 50, spa: 40, spd: 40, spe: 80},
@@ -4274,7 +4274,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 399,
         uid: 421,
-        species: "Bidoof",
+        name: "Bidoof",
         abilities: ["simple", "unaware"],
         types: ["normal", "???"],
         baseStats: {hp: 59, atk: 45, def: 40, spa: 35, spd: 40, spe: 31},
@@ -4284,7 +4284,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 400,
         uid: 422,
-        species: "Bibarel",
+        name: "Bibarel",
         abilities: ["simple", "unaware"],
         types: ["normal", "water"],
         baseStats: {hp: 79, atk: 85, def: 60, spa: 55, spd: 60, spe: 71},
@@ -4294,7 +4294,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 401,
         uid: 423,
-        species: "Kricketot",
+        name: "Kricketot",
         abilities: ["shedskin"],
         types: ["bug", "???"],
         baseStats: {hp: 37, atk: 25, def: 41, spa: 25, spd: 41, spe: 25},
@@ -4304,7 +4304,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 402,
         uid: 424,
-        species: "Kricketune",
+        name: "Kricketune",
         abilities: ["swarm"],
         types: ["bug", "???"],
         baseStats: {hp: 77, atk: 85, def: 51, spa: 55, spd: 51, spe: 65},
@@ -4314,7 +4314,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 403,
         uid: 425,
-        species: "Shinx",
+        name: "Shinx",
         abilities: ["rivalry", "intimidate"],
         types: ["electric", "???"],
         baseStats: {hp: 45, atk: 65, def: 34, spa: 40, spd: 34, spe: 45},
@@ -4324,7 +4324,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 404,
         uid: 426,
-        species: "Luxio",
+        name: "Luxio",
         abilities: ["rivalry", "intimidate"],
         types: ["electric", "???"],
         baseStats: {hp: 60, atk: 85, def: 49, spa: 60, spd: 49, spe: 60},
@@ -4334,7 +4334,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 405,
         uid: 427,
-        species: "Luxray",
+        name: "Luxray",
         abilities: ["rivalry", "intimidate"],
         types: ["electric", "???"],
         baseStats: {hp: 80, atk: 120, def: 79, spa: 95, spd: 79, spe: 70},
@@ -4344,7 +4344,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 406,
         uid: 428,
-        species: "Budew",
+        name: "Budew",
         abilities: ["naturalcure", "poisonpoint"],
         types: ["grass", "poison"],
         baseStats: {hp: 40, atk: 30, def: 35, spa: 50, spd: 70, spe: 55},
@@ -4354,7 +4354,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 408,
         uid: 429,
-        species: "Cranidos",
+        name: "Cranidos",
         abilities: ["moldbreaker"],
         types: ["rock", "???"],
         baseStats: {hp: 67, atk: 125, def: 40, spa: 30, spd: 30, spe: 58},
@@ -4364,7 +4364,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 409,
         uid: 430,
-        species: "Rampardos",
+        name: "Rampardos",
         abilities: ["moldbreaker"],
         types: ["rock", "???"],
         baseStats: {hp: 97, atk: 165, def: 60, spa: 65, spd: 50, spe: 58},
@@ -4374,7 +4374,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 410,
         uid: 431,
-        species: "Shieldon",
+        name: "Shieldon",
         abilities: ["sturdy"],
         types: ["rock", "steel"],
         baseStats: {hp: 30, atk: 42, def: 118, spa: 42, spd: 88, spe: 30},
@@ -4384,7 +4384,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 411,
         uid: 432,
-        species: "Bastiodon",
+        name: "Bastiodon",
         abilities: ["sturdy"],
         types: ["rock", "steel"],
         baseStats: {hp: 60, atk: 52, def: 168, spa: 47, spd: 138, spe: 30},
@@ -4394,7 +4394,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 414,
         uid: 433,
-        species: "Mothim",
+        name: "Mothim",
         abilities: ["swarm"],
         types: ["bug", "flying"],
         baseStats: {hp: 70, atk: 94, def: 50, spa: 94, spd: 50, spe: 66},
@@ -4404,7 +4404,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 415,
         uid: 434,
-        species: "Combee",
+        name: "Combee",
         abilities: ["honeygather"],
         types: ["bug", "flying"],
         baseStats: {hp: 30, atk: 30, def: 42, spa: 30, spd: 42, spe: 70},
@@ -4414,7 +4414,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 416,
         uid: 435,
-        species: "Vespiquen",
+        name: "Vespiquen",
         abilities: ["pressure"],
         types: ["bug", "flying"],
         baseStats: {hp: 70, atk: 80, def: 102, spa: 80, spd: 102, spe: 40},
@@ -4424,7 +4424,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 417,
         uid: 436,
-        species: "Pachirisu",
+        name: "Pachirisu",
         abilities: ["runaway", "pickup"],
         types: ["electric", "???"],
         baseStats: {hp: 60, atk: 45, def: 70, spa: 45, spd: 90, spe: 95},
@@ -4434,7 +4434,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 418,
         uid: 437,
-        species: "Buizel",
+        name: "Buizel",
         abilities: ["swiftswim"],
         types: ["water", "???"],
         baseStats: {hp: 55, atk: 65, def: 35, spa: 60, spd: 30, spe: 85},
@@ -4444,7 +4444,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 419,
         uid: 438,
-        species: "Floatzel",
+        name: "Floatzel",
         abilities: ["swiftswim"],
         types: ["water", "???"],
         baseStats: {hp: 85, atk: 105, def: 55, spa: 85, spd: 50, spe: 115},
@@ -4454,7 +4454,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 420,
         uid: 439,
-        species: "Cherubi",
+        name: "Cherubi",
         abilities: ["chlorophyll"],
         types: ["grass", "???"],
         baseStats: {hp: 45, atk: 35, def: 45, spa: 62, spd: 53, spe: 35},
@@ -4464,7 +4464,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 421,
         uid: 440,
-        species: "Cherrim-Sunshine",
+        name: "Cherrim-Sunshine",
         baseSpecies: "Cherrim",
         form: "Sunshine",
         formLetter: "S",
@@ -4477,7 +4477,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 422,
         uid: 441,
-        species: "Shellos",
+        name: "Shellos",
         baseForm: "West",
         abilities: ["stickyhold", "stormdrain"],
         types: ["water", "???"],
@@ -4488,7 +4488,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 423,
         uid: 442,
-        species: "Gastrodon",
+        name: "Gastrodon",
         baseForm: "West",
         abilities: ["stickyhold", "stormdrain"],
         types: ["water", "ground"],
@@ -4499,7 +4499,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 424,
         uid: 443,
-        species: "Ambipom",
+        name: "Ambipom",
         abilities: ["technician", "pickup"],
         types: ["normal", "???"],
         baseStats: {hp: 75, atk: 100, def: 66, spa: 60, spd: 66, spe: 115},
@@ -4509,7 +4509,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 425,
         uid: 444,
-        species: "Drifloon",
+        name: "Drifloon",
         abilities: ["aftermath", "unburden"],
         types: ["ghost", "flying"],
         baseStats: {hp: 90, atk: 50, def: 34, spa: 60, spd: 44, spe: 70},
@@ -4519,7 +4519,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 426,
         uid: 445,
-        species: "Drifblim",
+        name: "Drifblim",
         abilities: ["aftermath", "unburden"],
         types: ["ghost", "flying"],
         baseStats: {hp: 150, atk: 80, def: 44, spa: 90, spd: 54, spe: 80},
@@ -4529,7 +4529,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 427,
         uid: 446,
-        species: "Buneary",
+        name: "Buneary",
         abilities: ["runaway", "klutz"],
         types: ["normal", "???"],
         baseStats: {hp: 55, atk: 66, def: 44, spa: 44, spd: 56, spe: 85},
@@ -4539,7 +4539,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 428,
         uid: 447,
-        species: "Lopunny",
+        name: "Lopunny",
         abilities: ["cutecharm", "klutz"],
         types: ["normal", "???"],
         baseStats: {hp: 65, atk: 76, def: 84, spa: 54, spd: 96, spe: 105},
@@ -4549,7 +4549,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 429,
         uid: 448,
-        species: "Mismagius",
+        name: "Mismagius",
         abilities: ["levitate"],
         types: ["ghost", "???"],
         baseStats: {hp: 60, atk: 60, def: 60, spa: 105, spd: 105, spe: 105},
@@ -4559,7 +4559,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 430,
         uid: 449,
-        species: "Honchkrow",
+        name: "Honchkrow",
         abilities: ["insomnia", "superluck"],
         types: ["dark", "flying"],
         baseStats: {hp: 100, atk: 125, def: 52, spa: 105, spd: 52, spe: 71},
@@ -4569,7 +4569,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 431,
         uid: 450,
-        species: "Glameow",
+        name: "Glameow",
         abilities: ["limber", "owntempo"],
         types: ["normal", "???"],
         baseStats: {hp: 49, atk: 55, def: 42, spa: 42, spd: 37, spe: 85},
@@ -4579,7 +4579,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 432,
         uid: 451,
-        species: "Purugly",
+        name: "Purugly",
         abilities: ["thickfat", "owntempo"],
         types: ["normal", "???"],
         baseStats: {hp: 71, atk: 82, def: 64, spa: 64, spd: 59, spe: 112},
@@ -4589,7 +4589,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 433,
         uid: 452,
-        species: "Chingling",
+        name: "Chingling",
         abilities: ["levitate"],
         types: ["psychic", "???"],
         baseStats: {hp: 45, atk: 30, def: 50, spa: 65, spd: 50, spe: 45},
@@ -4599,7 +4599,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 434,
         uid: 453,
-        species: "Stunky",
+        name: "Stunky",
         abilities: ["stench", "aftermath"],
         types: ["poison", "dark"],
         baseStats: {hp: 63, atk: 63, def: 47, spa: 41, spd: 41, spe: 74},
@@ -4609,7 +4609,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 435,
         uid: 454,
-        species: "Skuntank",
+        name: "Skuntank",
         abilities: ["stench", "aftermath"],
         types: ["poison", "dark"],
         baseStats: {hp: 103, atk: 93, def: 67, spa: 71, spd: 61, spe: 84},
@@ -4619,7 +4619,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 436,
         uid: 455,
-        species: "Bronzor",
+        name: "Bronzor",
         abilities: ["levitate", "heatproof"],
         types: ["steel", "psychic"],
         baseStats: {hp: 57, atk: 24, def: 86, spa: 24, spd: 86, spe: 23},
@@ -4629,7 +4629,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 437,
         uid: 456,
-        species: "Bronzong",
+        name: "Bronzong",
         abilities: ["levitate", "heatproof"],
         types: ["steel", "psychic"],
         baseStats: {hp: 67, atk: 89, def: 116, spa: 79, spd: 116, spe: 33},
@@ -4639,7 +4639,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 438,
         uid: 457,
-        species: "Bonsly",
+        name: "Bonsly",
         abilities: ["sturdy", "rockhead"],
         types: ["rock", "???"],
         baseStats: {hp: 50, atk: 80, def: 95, spa: 10, spd: 45, spe: 10},
@@ -4649,7 +4649,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 440,
         uid: 458,
-        species: "Happiny",
+        name: "Happiny",
         abilities: ["naturalcure", "serenegrace"],
         types: ["normal", "???"],
         baseStats: {hp: 100, atk: 5, def: 5, spa: 15, spd: 65, spe: 30},
@@ -4659,7 +4659,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 441,
         uid: 459,
-        species: "Chatot",
+        name: "Chatot",
         abilities: ["keeneye", "tangledfeet"],
         types: ["normal", "flying"],
         baseStats: {hp: 76, atk: 65, def: 45, spa: 92, spd: 42, spe: 91},
@@ -4669,7 +4669,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 442,
         uid: 460,
-        species: "Spiritomb",
+        name: "Spiritomb",
         abilities: ["pressure"],
         types: ["ghost", "dark"],
         baseStats: {hp: 50, atk: 92, def: 108, spa: 92, spd: 108, spe: 35},
@@ -4679,7 +4679,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 443,
         uid: 461,
-        species: "Gible",
+        name: "Gible",
         abilities: ["sandveil"],
         types: ["dragon", "ground"],
         baseStats: {hp: 58, atk: 70, def: 45, spa: 40, spd: 45, spe: 42},
@@ -4689,7 +4689,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 444,
         uid: 462,
-        species: "Gabite",
+        name: "Gabite",
         abilities: ["sandveil"],
         types: ["dragon", "ground"],
         baseStats: {hp: 68, atk: 90, def: 65, spa: 50, spd: 55, spe: 82},
@@ -4699,7 +4699,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 445,
         uid: 463,
-        species: "Garchomp",
+        name: "Garchomp",
         abilities: ["sandveil"],
         types: ["dragon", "ground"],
         baseStats: {hp: 108, atk: 130, def: 95, spa: 80, spd: 85, spe: 102},
@@ -4709,7 +4709,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 446,
         uid: 464,
-        species: "Munchlax",
+        name: "Munchlax",
         abilities: ["pickup", "thickfat"],
         types: ["normal", "???"],
         baseStats: {hp: 135, atk: 85, def: 40, spa: 40, spd: 85, spe: 5},
@@ -4719,7 +4719,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 447,
         uid: 465,
-        species: "Riolu",
+        name: "Riolu",
         abilities: ["steadfast", "innerfocus"],
         types: ["fighting", "???"],
         baseStats: {hp: 40, atk: 70, def: 40, spa: 35, spd: 40, spe: 60},
@@ -4729,7 +4729,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 448,
         uid: 466,
-        species: "Lucario",
+        name: "Lucario",
         abilities: ["steadfast", "innerfocus"],
         types: ["fighting", "steel"],
         baseStats: {hp: 70, atk: 110, def: 70, spa: 115, spd: 70, spe: 90},
@@ -4739,7 +4739,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 449,
         uid: 467,
-        species: "Hippopotas",
+        name: "Hippopotas",
         abilities: ["sandstream"],
         types: ["ground", "???"],
         baseStats: {hp: 68, atk: 72, def: 78, spa: 38, spd: 42, spe: 32},
@@ -4749,7 +4749,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 450,
         uid: 468,
-        species: "Hippowdon",
+        name: "Hippowdon",
         abilities: ["sandstream"],
         types: ["ground", "???"],
         baseStats: {hp: 108, atk: 112, def: 118, spa: 68, spd: 72, spe: 47},
@@ -4759,7 +4759,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 451,
         uid: 469,
-        species: "Skorupi",
+        name: "Skorupi",
         abilities: ["battlearmor", "sniper"],
         types: ["poison", "bug"],
         baseStats: {hp: 40, atk: 50, def: 90, spa: 30, spd: 55, spe: 65},
@@ -4769,7 +4769,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 452,
         uid: 470,
-        species: "Drapion",
+        name: "Drapion",
         abilities: ["battlearmor", "sniper"],
         types: ["poison", "dark"],
         baseStats: {hp: 70, atk: 90, def: 110, spa: 60, spd: 75, spe: 95},
@@ -4779,7 +4779,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 453,
         uid: 471,
-        species: "Croagunk",
+        name: "Croagunk",
         abilities: ["anticipation", "dryskin"],
         types: ["poison", "fighting"],
         baseStats: {hp: 48, atk: 61, def: 40, spa: 61, spd: 40, spe: 50},
@@ -4789,7 +4789,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 454,
         uid: 472,
-        species: "Toxicroak",
+        name: "Toxicroak",
         abilities: ["anticipation", "dryskin"],
         types: ["poison", "fighting"],
         baseStats: {hp: 83, atk: 106, def: 65, spa: 86, spd: 65, spe: 85},
@@ -4799,7 +4799,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 455,
         uid: 473,
-        species: "Carnivine",
+        name: "Carnivine",
         abilities: ["levitate"],
         types: ["grass", "???"],
         baseStats: {hp: 74, atk: 100, def: 72, spa: 90, spd: 72, spe: 46},
@@ -4809,7 +4809,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 456,
         uid: 474,
-        species: "Finneon",
+        name: "Finneon",
         abilities: ["swiftswim", "stormdrain"],
         types: ["water", "???"],
         baseStats: {hp: 49, atk: 49, def: 56, spa: 49, spd: 61, spe: 66},
@@ -4819,7 +4819,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 457,
         uid: 475,
-        species: "Lumineon",
+        name: "Lumineon",
         abilities: ["swiftswim", "stormdrain"],
         types: ["water", "???"],
         baseStats: {hp: 69, atk: 69, def: 76, spa: 69, spd: 86, spe: 91},
@@ -4829,7 +4829,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 458,
         uid: 476,
-        species: "Mantyke",
+        name: "Mantyke",
         abilities: ["swiftswim", "waterabsorb"],
         types: ["water", "flying"],
         baseStats: {hp: 45, atk: 20, def: 50, spa: 60, spd: 120, spe: 50},
@@ -4839,7 +4839,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 459,
         uid: 477,
-        species: "Snover",
+        name: "Snover",
         abilities: ["snowwarning"],
         types: ["grass", "ice"],
         baseStats: {hp: 60, atk: 62, def: 50, spa: 62, spd: 60, spe: 40},
@@ -4849,7 +4849,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 460,
         uid: 478,
-        species: "Abomasnow",
+        name: "Abomasnow",
         abilities: ["snowwarning"],
         types: ["grass", "ice"],
         baseStats: {hp: 90, atk: 92, def: 75, spa: 92, spd: 85, spe: 60},
@@ -4859,7 +4859,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 461,
         uid: 479,
-        species: "Weavile",
+        name: "Weavile",
         abilities: ["pressure"],
         types: ["dark", "ice"],
         baseStats: {hp: 70, atk: 120, def: 65, spa: 45, spd: 85, spe: 125},
@@ -4869,7 +4869,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 462,
         uid: 480,
-        species: "Magnezone",
+        name: "Magnezone",
         abilities: ["magnetpull", "sturdy"],
         types: ["electric", "steel"],
         baseStats: {hp: 70, atk: 70, def: 115, spa: 130, spd: 90, spe: 60},
@@ -4879,7 +4879,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 463,
         uid: 481,
-        species: "Lickilicky",
+        name: "Lickilicky",
         abilities: ["owntempo", "oblivious"],
         types: ["normal", "???"],
         baseStats: {hp: 110, atk: 85, def: 95, spa: 80, spd: 95, spe: 50},
@@ -4889,7 +4889,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 464,
         uid: 482,
-        species: "Rhyperior",
+        name: "Rhyperior",
         abilities: ["lightningrod", "solidrock"],
         types: ["ground", "rock"],
         baseStats: {hp: 115, atk: 140, def: 130, spa: 55, spd: 55, spe: 40},
@@ -4899,7 +4899,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 465,
         uid: 483,
-        species: "Tangrowth",
+        name: "Tangrowth",
         abilities: ["chlorophyll", "leafguard"],
         types: ["grass", "???"],
         baseStats: {hp: 100, atk: 100, def: 125, spa: 110, spd: 50, spe: 50},
@@ -4909,7 +4909,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 466,
         uid: 484,
-        species: "Electivire",
+        name: "Electivire",
         abilities: ["motordrive"],
         types: ["electric", "???"],
         baseStats: {hp: 75, atk: 123, def: 67, spa: 95, spd: 85, spe: 95},
@@ -4919,7 +4919,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 467,
         uid: 485,
-        species: "Magmortar",
+        name: "Magmortar",
         abilities: ["flamebody"],
         types: ["fire", "???"],
         baseStats: {hp: 75, atk: 95, def: 67, spa: 125, spd: 95, spe: 83},
@@ -4929,7 +4929,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 469,
         uid: 486,
-        species: "Yanmega",
+        name: "Yanmega",
         abilities: ["speedboost", "tintedlens"],
         types: ["bug", "flying"],
         baseStats: {hp: 86, atk: 76, def: 86, spa: 116, spd: 56, spe: 95},
@@ -4939,7 +4939,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 470,
         uid: 487,
-        species: "Leafeon",
+        name: "Leafeon",
         abilities: ["leafguard"],
         types: ["grass", "???"],
         baseStats: {hp: 65, atk: 110, def: 130, spa: 60, spd: 65, spe: 95},
@@ -4949,7 +4949,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 471,
         uid: 488,
-        species: "Glaceon",
+        name: "Glaceon",
         abilities: ["snowcloak"],
         types: ["ice", "???"],
         baseStats: {hp: 65, atk: 60, def: 110, spa: 130, spd: 95, spe: 65},
@@ -4959,7 +4959,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 472,
         uid: 489,
-        species: "Gliscor",
+        name: "Gliscor",
         abilities: ["hypercutter", "sandveil"],
         types: ["ground", "flying"],
         baseStats: {hp: 75, atk: 95, def: 125, spa: 45, spd: 75, spe: 95},
@@ -4969,7 +4969,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 473,
         uid: 490,
-        species: "Mamoswine",
+        name: "Mamoswine",
         abilities: ["oblivious", "snowcloak"],
         types: ["ice", "ground"],
         baseStats: {hp: 110, atk: 130, def: 80, spa: 70, spd: 60, spe: 80},
@@ -4979,7 +4979,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 474,
         uid: 491,
-        species: "Porygon-Z",
+        name: "Porygon-Z",
         abilities: ["adaptability", "download"],
         types: ["normal", "???"],
         baseStats: {hp: 85, atk: 80, def: 70, spa: 135, spd: 75, spe: 90},
@@ -4989,7 +4989,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 475,
         uid: 492,
-        species: "Gallade",
+        name: "Gallade",
         abilities: ["steadfast"],
         types: ["psychic", "fighting"],
         baseStats: {hp: 68, atk: 125, def: 65, spa: 65, spd: 115, spe: 80},
@@ -4999,7 +4999,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 476,
         uid: 493,
-        species: "Probopass",
+        name: "Probopass",
         abilities: ["sturdy", "magnetpull"],
         types: ["rock", "steel"],
         baseStats: {hp: 60, atk: 55, def: 145, spa: 75, spd: 150, spe: 40},
@@ -5009,7 +5009,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 478,
         uid: 494,
-        species: "Froslass",
+        name: "Froslass",
         abilities: ["snowcloak"],
         types: ["ice", "ghost"],
         baseStats: {hp: 70, atk: 80, def: 70, spa: 80, spd: 70, spe: 110},
@@ -5019,7 +5019,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 479,
         uid: 495,
-        species: "Rotom",
+        name: "Rotom",
         otherForms: ["rotomheat", "rotomwash", "rotomfrost", "rotomfan", "rotommow"],
         abilities: ["levitate"],
         types: ["electric", "ghost"],
@@ -5030,7 +5030,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 480,
         uid: 496,
-        species: "Uxie",
+        name: "Uxie",
         abilities: ["levitate"],
         types: ["psychic", "???"],
         baseStats: {hp: 75, atk: 75, def: 130, spa: 75, spd: 130, spe: 95},
@@ -5040,7 +5040,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 481,
         uid: 497,
-        species: "Mesprit",
+        name: "Mesprit",
         abilities: ["levitate"],
         types: ["psychic", "???"],
         baseStats: {hp: 80, atk: 105, def: 105, spa: 105, spd: 105, spe: 80},
@@ -5050,7 +5050,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 482,
         uid: 498,
-        species: "Azelf",
+        name: "Azelf",
         abilities: ["levitate"],
         types: ["psychic", "???"],
         baseStats: {hp: 75, atk: 125, def: 70, spa: 125, spd: 70, spe: 115},
@@ -5060,7 +5060,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 483,
         uid: 499,
-        species: "Dialga",
+        name: "Dialga",
         abilities: ["pressure"],
         types: ["steel", "dragon"],
         baseStats: {hp: 100, atk: 120, def: 120, spa: 150, spd: 100, spe: 90},
@@ -5070,7 +5070,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 484,
         uid: 500,
-        species: "Palkia",
+        name: "Palkia",
         abilities: ["pressure"],
         types: ["water", "dragon"],
         baseStats: {hp: 90, atk: 120, def: 100, spa: 150, spd: 120, spe: 100},
@@ -5080,7 +5080,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 486,
         uid: 501,
-        species: "Regigigas",
+        name: "Regigigas",
         abilities: ["slowstart"],
         types: ["normal", "???"],
         baseStats: {hp: 110, atk: 160, def: 110, spa: 80, spd: 110, spe: 100},
@@ -5090,7 +5090,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 487,
         uid: 502,
-        species: "Giratina",
+        name: "Giratina",
         baseForm: "Altered",
         otherForms: ["giratinaorigin"],
         abilities: ["pressure"],
@@ -5102,7 +5102,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 487,
         uid: 503,
-        species: "Giratina-Origin",
+        name: "Giratina-Origin",
         baseSpecies: "Giratina",
         form: "Origin",
         formLetter: "O",
@@ -5115,7 +5115,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 488,
         uid: 504,
-        species: "Cresselia",
+        name: "Cresselia",
         abilities: ["levitate"],
         types: ["psychic", "???"],
         baseStats: {hp: 120, atk: 70, def: 120, spa: 75, spd: 130, spe: 85},
@@ -5125,7 +5125,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 489,
         uid: 505,
-        species: "Phione",
+        name: "Phione",
         abilities: ["hydration"],
         types: ["water", "???"],
         baseStats: {hp: 80, atk: 80, def: 80, spa: 80, spd: 80, spe: 80},
@@ -5135,7 +5135,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 490,
         uid: 506,
-        species: "Manaphy",
+        name: "Manaphy",
         abilities: ["hydration"],
         types: ["water", "???"],
         baseStats: {hp: 100, atk: 100, def: 100, spa: 100, spd: 100, spe: 100},
@@ -5145,7 +5145,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 491,
         uid: 507,
-        species: "Darkrai",
+        name: "Darkrai",
         abilities: ["baddreams"],
         types: ["dark", "???"],
         baseStats: {hp: 70, atk: 90, def: 90, spa: 135, spd: 90, spe: 125},
@@ -5155,7 +5155,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 492,
         uid: 508,
-        species: "Shaymin",
+        name: "Shaymin",
         baseForm: "Land",
         otherForms: ["shayminsky"],
         abilities: ["naturalcure"],
@@ -5167,7 +5167,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 492,
         uid: 509,
-        species: "Shaymin-Sky",
+        name: "Shaymin-Sky",
         baseSpecies: "Shaymin",
         form: "Sky",
         formLetter: "S",
@@ -5180,7 +5180,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 510,
-        species: "Arceus-Bug",
+        name: "Arceus-Bug",
         baseSpecies: "Arceus",
         form: "Bug",
         formLetter: "B",
@@ -5193,7 +5193,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 511,
-        species: "Arceus-Dark",
+        name: "Arceus-Dark",
         baseSpecies: "Arceus",
         form: "Dark",
         formLetter: "D",
@@ -5206,7 +5206,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 512,
-        species: "Arceus-Dragon",
+        name: "Arceus-Dragon",
         baseSpecies: "Arceus",
         form: "Dragon",
         formLetter: "D",
@@ -5219,7 +5219,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 513,
-        species: "Arceus-Electric",
+        name: "Arceus-Electric",
         baseSpecies: "Arceus",
         form: "Electric",
         formLetter: "E",
@@ -5232,7 +5232,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 514,
-        species: "Arceus-Fighting",
+        name: "Arceus-Fighting",
         baseSpecies: "Arceus",
         form: "Fighting",
         formLetter: "F",
@@ -5245,7 +5245,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 515,
-        species: "Arceus-Fire",
+        name: "Arceus-Fire",
         baseSpecies: "Arceus",
         form: "Fire",
         formLetter: "F",
@@ -5258,7 +5258,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 516,
-        species: "Arceus-Flying",
+        name: "Arceus-Flying",
         baseSpecies: "Arceus",
         form: "Flying",
         formLetter: "F",
@@ -5271,7 +5271,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 517,
-        species: "Arceus-Ghost",
+        name: "Arceus-Ghost",
         baseSpecies: "Arceus",
         form: "Ghost",
         formLetter: "G",
@@ -5284,7 +5284,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 518,
-        species: "Arceus-Grass",
+        name: "Arceus-Grass",
         baseSpecies: "Arceus",
         form: "Grass",
         formLetter: "G",
@@ -5297,7 +5297,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 519,
-        species: "Arceus-Ground",
+        name: "Arceus-Ground",
         baseSpecies: "Arceus",
         form: "Ground",
         formLetter: "G",
@@ -5310,7 +5310,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 520,
-        species: "Arceus-Ice",
+        name: "Arceus-Ice",
         baseSpecies: "Arceus",
         form: "Ice",
         formLetter: "I",
@@ -5323,7 +5323,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 521,
-        species: "Arceus-Poison",
+        name: "Arceus-Poison",
         baseSpecies: "Arceus",
         form: "Poison",
         formLetter: "P",
@@ -5336,7 +5336,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 522,
-        species: "Arceus-Psychic",
+        name: "Arceus-Psychic",
         baseSpecies: "Arceus",
         form: "Psychic",
         formLetter: "P",
@@ -5349,7 +5349,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 523,
-        species: "Arceus-Rock",
+        name: "Arceus-Rock",
         baseSpecies: "Arceus",
         form: "Rock",
         formLetter: "R",
@@ -5362,7 +5362,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 524,
-        species: "Arceus-Steel",
+        name: "Arceus-Steel",
         baseSpecies: "Arceus",
         form: "Steel",
         formLetter: "S",
@@ -5375,7 +5375,7 @@ const pokemon: {readonly [species: string]: PokemonData} =
     {
         id: 493,
         uid: 525,
-        species: "Arceus-Water",
+        name: "Arceus-Water",
         baseSpecies: "Arceus",
         form: "Water",
         formLetter: "W",

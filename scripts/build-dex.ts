@@ -126,7 +126,7 @@ for (const name in pokedex)
     {
         id: ${mon.num},
         uid: ${uid},
-        species: ${quote(mon.species)},`);
+        name: ${quote(mon.species)},`);
     // tslint:disable:curly
     if (mon.baseSpecies) console.log(`\
         baseSpecies: ${quote(mon.baseSpecies)},`);

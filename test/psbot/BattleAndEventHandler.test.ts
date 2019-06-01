@@ -45,11 +45,10 @@ describe("Battle and EventProcessor", function()
             const details: PokemonDetails = data.details;
             const status: PokemonStatus = data.condition;
             const mon = team.pokemon.find(
-                p => !!p && !!p.species.definiteValue &&
-                    p.species.definiteValue.name === details.species)!;
+                p => !!p && p.species.name === details.species)!;
 
             expect(mon).to.exist;
-            expect(mon.species.definiteValue!.name).to.equal(details.species);
+            expect(mon.species.name).to.equal(details.species);
             expect(mon.level).to.equal(details.level);
             expect(mon.hp.current).to.equal(status.hp);
             expect(mon.hp.max).to.equal(status.hpMax);
@@ -529,7 +528,7 @@ describe("Battle and EventProcessor", function()
                             type: "switch", id: us2,
                             details:
                             {
-                                species: us2Mon.species.definiteValue!.name,
+                                species: us2Mon.species.name,
                                 gender: us2Mon.gender!, level: us2Mon.level,
                                 shiny: false
                             },
