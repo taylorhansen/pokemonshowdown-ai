@@ -680,6 +680,30 @@ describe("Battle and EventProcessor", function()
                 expect(volatile.embargo).to.be.false;
             });
 
+            it("Should start/end taunt", async function()
+            {
+                const volatile = battle.state.teams.us.active.volatile;
+
+                expect(volatile.taunt).to.be.false;
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "move: Taunt",
+                            otherArgs: []
+                        }
+                    ]
+                });
+                expect(volatile.taunt).to.be.true;
+
+                await battle.progress(
+                {
+                    events: [{type: "end", id: us1, volatile: "move: Taunt"}]
+                });
+                expect(volatile.taunt).to.be.false;
+            });
+
             it("Should disable/reenable move in BattleState", async function()
             {
                 const mon = battle.state.teams.us.active;

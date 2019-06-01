@@ -1,7 +1,7 @@
-import { dex, TwoTurnMove, twoTurnMoves } from "../dex/dex";
+import { dex, TwoTurnMove } from "../dex/dex";
 import { BoostName, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
-import { pluralTurns } from "./utility";
+import { pluralTurns, plus } from "./utility";
 
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
@@ -68,6 +68,13 @@ export class VolatileStatus
     /** Amount of turns the pokemon has been embargoed. */
     public get embargoTurns(): number { return this._embargoTurns; }
     private _embargoTurns!: number;
+
+    /** Taunt move status (temporary). */
+    public get taunt(): boolean { return this._tauntTurns > 0; }
+    public set taunt(flag: boolean) { this._tauntTurns = flag ? 1 : 0; }
+    /** Amount of turns the pokemon has been taunted. */
+    public get tauntTurns(): number { return this._tauntTurns; }
+    private _tauntTurns!: number;
 
     // situational
 
@@ -216,6 +223,7 @@ export class VolatileStatus
         this.ingrain = false;
         this._magnetRiseTurns = 0;
         this._embargoTurns = 0;
+        this._tauntTurns = 0;
         this._overrideAbility = null;
         this.overrideAbilityName = "";
         this.enableMoves();
@@ -241,6 +249,7 @@ export class VolatileStatus
         // other statuses like these are silent
         if (this.magnetRise) ++this._magnetRiseTurns;
         if (this.embargo) ++this._embargoTurns;
+        if (this.taunt) ++this._tauntTurns;
 
         // update disabled move turns
         for (let i = 0; i < this._disableTurns.length; ++i)
@@ -296,7 +305,7 @@ export class VolatileStatus
     {
         return `[${(Object.keys(this._boosts) as BoostName[])
             .filter(key => this._boosts[key] !== 0)
-            .map(key => `${key}: ${VolatileStatus.plus(this._boosts[key])}`)
+            .map(key => `${key}: ${plus(this._boosts[key])}`)
             .concat(
                 this._confuseTurns ?
                     [pluralTurns("confused", this._confuseTurns - 1)] : [],
@@ -306,6 +315,8 @@ export class VolatileStatus
                     : [],
                 this._embargoTurns ?
                     [pluralTurns("embargo", this._embargoTurns - 1)] : [],
+                this._tauntTurns ?
+                    [pluralTurns("taunt", this._tauntTurns - 1)] : [],
                 this._disableTurns
                     .filter(d => d !== 0)
                     .map((d, i) => pluralTurns(`disabled move ${i + 1}`, d)),
@@ -317,15 +328,5 @@ export class VolatileStatus
                 this._willTruant ? ["truant next turn"] : [],
                 this.roost ? ["roosting"] : [])
             .join(", ")}]`;
-    }
-
-    // istanbul ignore next: only used in logging
-    /**
-     * Converts a number to a string where positive numbers are preceded by a
-     * `+` symbol.
-     */
-    private static plus(n: number): string
-    {
-        return (n > 0 ? "+" : "") + n;
     }
 }

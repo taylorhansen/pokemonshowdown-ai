@@ -130,6 +130,9 @@ export class PSEventHandler
                 case "Embargo":
                     active.volatile.embargo = true;
                     break;
+                case "Taunt":
+                    active.volatile.taunt = true;
+                    break;
                 default:
                 {
                     const moveId = toIdName(ev);
@@ -174,6 +177,7 @@ export class PSEventHandler
             else if (ev === "Ingrain") v.ingrain = false;
             else if (ev === "Magnet Rise") v.magnetRise = false;
             else if (ev === "Embargo") v.embargo = false;
+            else if (ev === "Taunt") v.taunt = false;
             else if (isFutureMove(id)) team.status.endFutureMove(id);
             else this.logger.debug(`Ignoring end "${event.volatile}"`);
         })
