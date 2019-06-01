@@ -1,5 +1,5 @@
 import { FutureMove, futureMoves, numFutureMoves } from "../dex/dex";
-import { SelfSwitch } from "../dex/dex-types";
+import { SelfSwitch } from "../dex/dex-util";
 
 /** Temporary status conditions for a certain team. */
 export class TeamStatus

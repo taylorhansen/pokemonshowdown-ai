@@ -2,7 +2,7 @@
  * @file Interfaces and helper functions for dealing with the arguments of a
  * MessageHandler.
  */
-import { StatExceptHP } from "../../battle/dex/dex-types";
+import { StatExceptHP } from "../../battle/dex/dex-util";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus, RoomType } from
     "../helpers";
 import { AnyBattleEvent } from "./BattleEvent";

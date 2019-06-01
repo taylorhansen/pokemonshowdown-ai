@@ -2,7 +2,7 @@
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import { Dex, MoveData, PokemonData } from "./dex-types";
+import { Dex, MoveData, PokemonData } from "./dex-util";
 
 const pokemon: {readonly [species: string]: PokemonData} =
 {

@@ -1,5 +1,5 @@
 import { dex, twoTurnMoves } from "../dex/dex";
-import { MajorStatus, PokemonData, Type } from "../dex/dex-types";
+import { MajorStatus, PokemonData, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { Moveset } from "./Moveset";
 import { PossibilityClass } from "./PossibilityClass";

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { Choice } from "../../src/battle/agent/Choice";
-import { types } from "../../src/battle/dex/dex-types";
+import { types } from "../../src/battle/dex/dex-util";
 import { Weather } from "../../src/battle/state/Weather";
 import { MoveEvent, SetHPEvent } from "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from

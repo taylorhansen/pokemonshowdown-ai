@@ -1,5 +1,5 @@
 import { dex, isFutureMove } from "../battle/dex/dex";
-import { Type } from "../battle/dex/dex-types";
+import { Type } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";

@@ -1,4 +1,4 @@
-import { hpTypes } from "../dex/dex-types";
+import { hpTypes } from "../dex/dex-util";
 import { Move } from "./Move";
 import { PossibilityClass } from "./PossibilityClass";
 

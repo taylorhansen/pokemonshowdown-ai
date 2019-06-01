@@ -1,4 +1,4 @@
-import { weatherItems, WeatherType } from "../dex/dex-types";
+import { weatherItems, WeatherType } from "../dex/dex-util";
 import { Pokemon } from "./Pokemon";
 import { pluralTurns } from "./utility";
 

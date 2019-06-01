@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { BoostName, boostNames } from "../../../src/battle/dex/dex-types";
+import { BoostName, boostNames } from "../../../src/battle/dex/dex-util";
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 
 describe("VolatileStatus", function()

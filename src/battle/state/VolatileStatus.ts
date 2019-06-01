@@ -1,5 +1,5 @@
 import { dex, TwoTurnMove, twoTurnMoves } from "../dex/dex";
-import { BoostName, Type } from "../dex/dex-types";
+import { BoostName, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
 import { pluralTurns } from "./utility";
 
