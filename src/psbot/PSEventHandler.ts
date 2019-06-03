@@ -1,5 +1,5 @@
 import { dex, isFutureMove } from "../battle/dex/dex";
-import { Type } from "../battle/dex/dex-util";
+import { BoostName, boostNames, Type } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
@@ -183,8 +183,8 @@ export class PSEventHandler
         })
         .on("boost", event =>
         {
-            this.getActive(event.id.owner).volatile
-                .boost(event.stat, event.amount);
+            this.getActive(event.id.owner).volatile.boosts[event.stat] +=
+                event.amount;
         })
         .on("cant", event =>
         {
@@ -214,6 +214,37 @@ export class PSEventHandler
                 // prevented from using a move, which might not have
                 //  been revealed before
                 active.moveset.reveal(toIdName(event.moveName));
+            }
+        })
+        .on("clearallboost", () =>
+            (Object.keys(boostNames) as BoostName[]).forEach(stat =>
+            {
+                this.state.teams.us.active.volatile.boosts[stat] = 0;
+                this.state.teams.them.active.volatile.boosts[stat] = 0;
+            }))
+        .on("clearnegativeboost", () =>
+            (Object.keys(boostNames) as BoostName[]).forEach(stat =>
+                (["us", "them"] as Side[]).forEach(side =>
+                {
+                    const boosts =
+                        this.state.teams[side].active.volatile.boosts;
+                    if (boosts[stat] < 0) boosts[stat] = 0;
+                })))
+        .on("clearpositiveboost", () =>
+            (Object.keys(boostNames) as BoostName[]).forEach(stat =>
+                (["us", "them"] as Side[]).forEach(side =>
+                {
+                    const boosts =
+                        this.state.teams[side].active.volatile.boosts;
+                    if (boosts[stat] > 0) boosts[stat] = 0;
+                })))
+        .on("copyboost", event =>
+        {
+            const source = this.getActive(event.source.owner).volatile.boosts;
+            const target = this.getActive(event.target.owner).volatile.boosts;
+            for (const stat of Object.keys(boostNames) as BoostName[])
+            {
+                source[stat] = target[stat];
             }
         })
         .on("curestatus", event => this.getActive(event.id.owner).cure())
@@ -257,6 +288,14 @@ export class PSEventHandler
             this.getActive(event.id.owner).volatile.overrideSpecies =
                 event.details.species;
         })
+        .on("invertboost", event =>
+        {
+            const boosts = this.getActive(event.id.owner).volatile.boosts;
+            for (const stat of Object.keys(boostNames) as BoostName[])
+            {
+                boosts[stat] = -boosts[stat];
+            }
+        })
         .on("move", event =>
         {
             const moveId = toIdName(event.moveName);
@@ -276,6 +315,11 @@ export class PSEventHandler
             this.getActive(event.id.owner).volatile.twoTurn =
                 toIdName(event.moveName) as any;
         })
+        .on("setboost", event =>
+        {
+            this.getActive(event.id.owner).volatile.boosts[event.stat] =
+                event.amount;
+        })
         .on("sethp", event =>
         {
             for (const pair of event.newHPs) this.setHP(pair.id, pair.status);
@@ -293,6 +337,15 @@ export class PSEventHandler
             this.getActive(event.id.owner).majorStatus =
                 event.majorStatus;
         })
+        .on("swapboost", event =>
+        {
+            const source = this.getActive(event.source.owner).volatile.boosts;
+            const target = this.getActive(event.target.owner).volatile.boosts;
+            for (const stat of event.stats)
+            {
+                [source[stat], target[stat]] = [target[stat], source[stat]];
+            }
+        })
         .on("switch", event =>
         {
             const team = this.getTeam(event.id.owner);
@@ -309,6 +362,11 @@ export class PSEventHandler
         .on("tie", () => { this._battling = false; })
         .on("win", () => { this._battling = false; })
         .on("turn", () => { this.newTurn = true; })
+        .on("unboost", event =>
+        {
+            this.getActive(event.id.owner).volatile.boosts[event.stat] -=
+                event.amount;
+        })
         .on("upkeep", () =>
         {
             // selfSwitch is the result of a move, which only occurs in

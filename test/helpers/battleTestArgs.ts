@@ -52,10 +52,14 @@ export const battleEvent: AnyBattleEvent[] =
 [
     {type: "ability", id: pokemonId[0], ability: "Pressure"},
     {type: "activate", id: pokemonId[1], volatile: "ingrain"},
-    {type: "boost", id: pokemonId[2], stat: "atk", amount: -1, cause: cause[0]},
-    {type: "boost", id: pokemonId[2], stat: "evasion", amount: 2},
+    {type: "boost", id: pokemonId[1], stat: "atk", amount: 1, cause: cause[0]},
     {type: "cant", id: pokemonId[1], reason: "recharge"},
     {type: "cant", id: pokemonId[1], reason: "taunt", moveName: "Thunder Wave"},
+    {type: "clearallboost"},
+    {type: "clearboost", id: pokemonId[2]},
+    {type: "clearnegativeboost", id: pokemonId[0]},
+    {type: "clearpositiveboost", id: pokemonId[1]},
+    {type: "copyboost", source: pokemonId[2], target: pokemonId[0]},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "cureteam", id: pokemonId[2]},
     {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
@@ -75,6 +79,7 @@ export const battleEvent: AnyBattleEvent[] =
         type: "formechange", id: pokemonId[0], details: pokemonDetails[0],
         status: pokemonStatus[0]
     },
+    {type: "invertboost", id: pokemonId[2]},
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
         targetId: pokemonId[1]
@@ -90,6 +95,7 @@ export const battleEvent: AnyBattleEvent[] =
         targetId: pokemonId[0]
     },
     {type: "prepare", id: pokemonId[0], moveName: "Razor Wind"},
+    {type: "setboost", id: pokemonId[2], stat: "evasion", amount: 6},
     {
         type: "sethp",
         newHPs:
@@ -111,6 +117,10 @@ export const battleEvent: AnyBattleEvent[] =
     },
     {type: "status", id: pokemonId[0], majorStatus: "slp"},
     {
+        type: "swapboost", source: pokemonId[2], target: pokemonId[1],
+        stats: ["atk", "accuracy"]
+    },
+    {
         type: "switch", id: pokemonId[0], details: pokemonDetails[0],
         status: pokemonStatus[0]
     },
@@ -127,6 +137,7 @@ export const battleEvent: AnyBattleEvent[] =
             of: {owner: "p2", position: "a", nickname: "Abomasnow"}
         }
     },
+    {type: "unboost", id: pokemonId[2], stat: "evasion", amount: 2},
     {type: "weather", weatherType: "none", upkeep: false},
     {type: "weather", weatherType: "RainDance", upkeep: true},
     {type: "win", winner: username[1]}
@@ -161,17 +172,17 @@ export const battleInit: BattleInitMessage[] =
 export const battleProgress: BattleProgressMessage[] =
 [
     {
-        events: battleEvent.slice(12, 15)
+        events: battleEvent.slice(12, 19)
             .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
-        events: battleEvent.slice(15, 19)
-            .concat({type: "upkeep"}, ...battleEvent.slice(19, 22),
+        events: battleEvent.slice(19, 23)
+            .concat({type: "upkeep"}, ...battleEvent.slice(23, 26),
                 {type: "turn", num: 100})
     },
     {
-        events: battleEvent.slice(22, 28)
-            .concat({type: "upkeep"}, ...battleEvent.slice(28, 36),
+        events: battleEvent.slice(26, 32)
+            .concat({type: "upkeep"}, ...battleEvent.slice(32, 44),
                 {type: "turn", num: 9})
     }
 ];

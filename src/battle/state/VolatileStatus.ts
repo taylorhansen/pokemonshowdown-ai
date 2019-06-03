@@ -14,18 +14,9 @@ export class VolatileStatus
     // passed when copying
 
     /** Stat boost stages. */
-    public get boosts(): {readonly [N in BoostName]: number}
+    public get boosts(): {[N in BoostName]: number}
     {
         return this._boosts;
-    }
-    /**
-     * Boosts a stat.
-     * @param stat Stat to be boosted.
-     * @param amount Whole number of stages to boost the stat by.
-     */
-    public boost(stat: BoostName, amount: number): void
-    {
-        this._boosts[stat] += amount;
     }
     private _boosts!: {[N in BoostName]: number};
 

@@ -1,20 +1,24 @@
 /** @file Exposes the `parsePSMessage` function. */
+import { BoostName, boostNames } from "../../battle/dex/dex-util";
 import { Logger } from "../../Logger";
 import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventPrefix,
-    BoostEvent, CantEvent, Cause, CureStatusEvent, CureTeamEvent, DamageEvent,
+    BoostEvent, CantEvent, Cause, ClearAllBoostEvent, ClearBoostEvent,
+    ClearNegativeBoostEvent, ClearPositiveBoostEvent, CopyBoostEvent,
+    CureStatusEvent, CureTeamEvent, DamageEvent,
     DetailsChangeEvent, EndAbilityEvent, EndEvent, FaintEvent, FieldEndEvent,
-    FieldStartEvent, FormeChangeEvent, isBattleEventPrefix, MoveEvent,
-    MustRechargeEvent, PrepareEvent, SetHPEvent, SideEndEvent, SideStartEvent,
-    SingleTurnEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent, TurnEvent,
-    UpkeepEvent, WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
+    FieldStartEvent, FormeChangeEvent, InvertBoostEvent, isBattleEventPrefix,
+    MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent,
+    SideEndEvent, SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent,
+    SwapBoostEvent, SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent,
+    WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
 import { chain, many, maybe, sequence, transform } from "./combinators";
 import { anyWord, boostName, dispatch, integer, json, majorStatus,
-    parsePokemonDetails, parsePokemonID, parsePokemonStatus, playerId,
-    playerIdWithName, pokemonDetails, pokemonId, pokemonStatus, restOfLine,
-    skipLine, weatherType, word } from "./helpers";
+    parseBoostName, parsePokemonDetails, parsePokemonID, parsePokemonStatus,
+    playerId, playerIdWithName, pokemonDetails, pokemonId, pokemonStatus,
+    restOfLine, skipLine, weatherType, word } from "./helpers";
 import { iter } from "./Iter";
 import { Info, Input, Parser, Result } from "./types";
 
@@ -402,8 +406,13 @@ function battleEventHelper(input: Input, info: Info):
         case "-activate": return eventActivate(input, info);
         case "detailschange": case "drag": case "-formechange": case "switch":
             return eventAllDetails(input, info);
-        case "-boost": case "-unboost": return eventBoost(input, info);
+        case "-boost": return eventBoost(input, info);
         case "cant": return eventCant(input, info);
+        case "-clearallboost": return eventClearAllBoost(input, info);
+        case "-clearboost": return eventClearBoost(input, info);
+        case "-clearnegativeboost": return eventClearNegativeBoost(input, info);
+        case "-clearpositiveboost": return eventClearPositiveBoost(input, info);
+        case "-copyboost": return eventCopyBoost(input, info);
         case "-curestatus": return eventCureStatus(input, info);
         case "-cureteam": return eventCureTeam(input, info);
         case "-damage": case "-heal": return eventDamage(input, info);
@@ -411,17 +420,21 @@ function battleEventHelper(input: Input, info: Info):
         case "-endability": return eventEndAbility(input, info);
         case "faint": return eventFaint(input, info);
         case "-fieldstart": case "-fieldend": return eventField(input, info);
+        case "-invertboost": return eventInvertBoost(input, info);
         case "move": return eventMove(input, info);
         case "-mustrecharge": return eventMustRecharge(input, info);
         case "-prepare": return eventPrepare(input, info);
+        case "-setboost": return eventSetBoost(input, info);
         case "-sethp": return eventSetHP(input, info);
         case "-sideend": return eventSideEnd(input, info);
         case "-sidestart": return eventSideStart(input, info);
         case "-singleturn": return eventSingleTurn(input, info);
         case "-start": return eventStart(input, info);
         case "-status": return eventStatus(input, info);
+        case "-swapboost": return eventSwapBoost(input, info);
         case "tie": return eventTie(input, info);
         case "turn": return eventTurn(input, info);
+        case "-unboost": return eventUnboost(input, info);
         case "upkeep": return eventUpkeep(input, info);
         case "-weather": return eventWeather(input, info);
         case "win": return eventWin(input, info);
@@ -460,12 +473,11 @@ const eventActivate: Parser<ActivateEvent> = transform(
  *
  * Format:
  * @example
- * |<-boost or -unboost>|<PokemonID>|<stat name>|<amount>
+ * |-boost|<PokemonID>|<stat name>|<amount>
  */
 const eventBoost: Parser<BoostEvent> = transform(
-    sequence(word("-boost", "-unboost"), pokemonId, boostName, integer),
-    ([prefix, id, stat, a]) =>
-        ({type: "boost", id, stat, amount: prefix === "-unboost" ? -a : a}));
+    sequence(word("-boost"), pokemonId, boostName, integer),
+    ([_, id, stat, amount]) => ({type: "boost", id, stat, amount}));
 
 /**
  * Parses a CantEvent.
@@ -480,6 +492,60 @@ const eventCant: Parser<CantEvent> = transform(
         moveName ?
             {type: "cant", id, reason, moveName}
             : {type: "cant", id, reason});
+
+/**
+ * Parses a ClearAllBoostEvent.
+ *
+ * Format:
+ * @example
+ * |-clearallboost
+ */
+const eventClearAllBoost: Parser<ClearAllBoostEvent> =
+    transform(word("-clearallboost"), () => ({type: "clearallboost"}));
+
+/**
+ * Parses a ClearBoostEvent.
+ *
+ * Format:
+ * @example
+ * |-clearboost|<PokemonID>
+ */
+const eventClearBoost: Parser<ClearBoostEvent> = transform(
+    sequence(word("-clearboost"), pokemonId),
+    ([_, id]) => ({type: "clearboost", id}));
+
+/**
+ * Parses a ClearNegativeBoostEvent.
+ *
+ * Format:
+ * @example
+ * |-clearnegativeboost|<PokemonID>
+ */
+const eventClearNegativeBoost: Parser<ClearNegativeBoostEvent> = transform(
+    sequence(word("-clearnegativeboost"), pokemonId),
+    ([_, id]) => ({type: "clearnegativeboost", id}));
+
+/**
+ * Parses a ClearPositiveBoostEvent.
+ *
+ * Format:
+ * @example
+ * |-clearpositiveboost|<PokemonID>
+ */
+const eventClearPositiveBoost: Parser<ClearPositiveBoostEvent> = transform(
+    sequence(word("-clearpositiveboost"), pokemonId),
+    ([_, id]) => ({type: "clearpositiveboost", id}));
+
+/**
+ * Parses a CopyBoostEvent.
+ *
+ * Format:
+ * @example
+ * |-copyboost|<source PokemonID>|<target PokemonID>
+ */
+const eventCopyBoost: Parser<CopyBoostEvent> = transform(
+    sequence(word("-copyboost"), pokemonId, pokemonId),
+    ([_, source, target]) => ({type: "copyboost", source, target}));
 
 /**
  * Parses a CureStatusEvent.
@@ -559,6 +625,17 @@ const eventField: Parser<FieldEndEvent | FieldStartEvent> = transform(
         {type: "fieldstart", effect} : {type: "fieldend", effect});
 
 /**
+ * Parses a InvertBoostEvent.
+ *
+ * Format:
+ * @example
+ * |-invertboost|<PokemonID>
+ */
+const eventInvertBoost: Parser<InvertBoostEvent> = transform(
+    sequence(word("-invertboost"), pokemonId),
+    ([_, id]) => ({type: "invertboost", id}));
+
+/**
  * Parses a MoveEvent.
  *
  * Format:
@@ -597,6 +674,17 @@ const eventPrepare: Parser<PrepareEvent> = transform(
     ([_, id, moveName, targetId]) => targetId ?
         {type: "prepare", id, moveName, targetId}
         : {type: "prepare", id, moveName});
+
+/**
+ * Parses a SetBoostEvent.
+ *
+ * Format:
+ * @example
+ * |-setboost|<PokemonID>|<stat name>|<amount>
+ */
+const eventSetBoost: Parser<SetBoostEvent> = transform(
+    sequence(word("-setboost"), pokemonId, boostName, integer),
+    ([_, id, stat, amount]) => ({type: "setboost", id, stat, amount}));
 
 /**
  * Parses a SetHPEvent.
@@ -715,6 +803,28 @@ const eventStatus: Parser<StatusEvent> = transform(
     ([_, id, status]) => ({type: "status", id, majorStatus: status}));
 
 /**
+ * Parses a SwapBoostEvent.
+ *
+ * Format:
+ * @example
+ * |-swapboost|<PokemonID>|<other PokemonID>|<optional <stat1>, <stat2>, <...>>
+ */
+const eventSwapBoost: Parser<SwapBoostEvent> = transform(
+    sequence(
+        word("-swapboost"), pokemonId, pokemonId,
+        maybe(
+            // parse comma-separated list of boost names
+            input =>
+            ({
+                result: input.get().split(", ").map(parseBoostName),
+                remaining: input.next()
+            }),
+            // if omitted, assume all boosts
+            Object.keys(boostNames) as BoostName[])),
+    ([_, source, target, stats]) =>
+        ({type: "swapboost", source, target, stats}));
+
+/**
  * Parses a DetailsChangeEvent, FormeChangeEvent, SwitchEvent.
  *
  * Format:
@@ -738,6 +848,17 @@ const eventAllDetails:
         case "-formechange": return {type: "formechange", id, details, status};
     }
 });
+
+/**
+ * Parses an UnboostEvent.
+ *
+ * Format:
+ * @example
+ * |-unboost|<PokemonID>|<stat name>|<amount>
+ */
+const eventUnboost: Parser<UnboostEvent> = transform(
+    sequence(word("-unboost"), pokemonId, boostName, integer),
+    ([_, id, stat, amount]) => ({type: "unboost", id, stat, amount}));
 
 /**
  * Parses an UpkeepEvent.

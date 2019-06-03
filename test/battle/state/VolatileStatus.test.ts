@@ -14,7 +14,7 @@ describe("VolatileStatus", function()
 
     function setEverything()
     {
-        volatile.boost("atk", 1);
+        volatile.boosts.atk = 1;
         volatile.confuse(true);
         volatile.magnetRise = true;
         volatile.embargo = true;
@@ -108,28 +108,15 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#boosts/#boost()", function()
+    describe("#boosts", function()
     {
         it("Should not be boosted initially", function()
         {
-            for (const stat in boostNames)
+            for (const stat of Object.keys(boostNames) as BoostName[])
             {
-                if (!boostNames.hasOwnProperty(stat)) continue;
-
-                expect(volatile.boosts[stat as BoostName]).to.equal(0);
+                expect(volatile.boosts[stat]).to.equal(0);
             }
         });
-
-        for (const stat in boostNames)
-        {
-            if (!boostNames.hasOwnProperty(stat)) continue;
-
-            it(`Should boost ${stat}`, function()
-            {
-                volatile.boost(stat as BoostName, 1);
-                expect(volatile.boosts[stat as BoostName]).to.equal(1);
-            });
-        }
     });
 
     describe("#disableMove()/#isDisabled()", function()

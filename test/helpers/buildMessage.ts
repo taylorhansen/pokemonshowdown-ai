@@ -86,15 +86,33 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             result = ["-" + event.type, stringifyID(event.id), event.volatile];
             break;
         case "boost":
+        case "unboost":
+        case "setboost":
             result =
             [
-                `-${event.amount < 0 ? "un" : ""}boost`, stringifyID(event.id),
-                event.stat, Math.abs(event.amount).toString()
+                `-${event.type}`, stringifyID(event.id), event.stat,
+                event.amount.toString()
             ];
             break;
         case "cant":
             result = ["cant", stringifyID(event.id), event.reason];
             if (event.moveName) result.push(event.moveName);
+            break;
+        case "clearallboost":
+            result = ["-clearallboost"];
+            break;
+        case "clearboost":
+        case "clearnegativeboost":
+        case "clearpositiveboost":
+        case "invertboost":
+            result = [`-${event.type}`, stringifyID(event.id)];
+            break;
+        case "copyboost":
+            result =
+            [
+                "-copyboost", stringifyID(event.source),
+                stringifyID(event.target)
+            ];
             break;
         case "curestatus":
         case "status":
@@ -166,6 +184,13 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             [
                 "-start", stringifyID(event.id), event.volatile,
                 ...event.otherArgs
+            ];
+            break;
+        case "swapboost":
+            result =
+            [
+                "-swapboost", stringifyID(event.source),
+                stringifyID(event.target), event.stats.join(", ")
             ];
             break;
         case "tie":

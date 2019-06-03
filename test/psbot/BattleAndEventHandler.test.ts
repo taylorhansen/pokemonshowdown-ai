@@ -105,15 +105,6 @@ describe("Battle and EventProcessor", function()
                 checkRequestActive(args);
             });
         }
-
-        it("Should not handle request after battleinit", async function()
-        {
-            await battle.request(testArgs.request[0]);
-            await battle.init(testArgs.battleInit[0]);
-            await battle.request(testArgs.request[1]);
-            checkRequestSide(testArgs.request[0]);
-            checkRequestActive(testArgs.request[0]);
-        });
     });
 
     describe("#request()/#battleinit()", function()
@@ -518,7 +509,7 @@ describe("Battle and EventProcessor", function()
                 const us1Mon = battle.state.teams.us.active;
                 const us2Mon = battle.state.teams.us.pokemon[1]!;
 
-                us1Mon.volatile.boost("atk", 2);
+                us1Mon.volatile.boosts.atk = 2;
                 await battle.progress(
                 {
                     events:
@@ -554,7 +545,7 @@ describe("Battle and EventProcessor", function()
             {
                 const them1Mon = battle.state.teams.them.active;
 
-                them1Mon.volatile.boost("atk", 2);
+                them1Mon.volatile.boosts.atk = 2;
                 await battle.progress(
                 {
                     events:
@@ -912,22 +903,173 @@ describe("Battle and EventProcessor", function()
             });
         });
 
-        describe("boost", function()
+        describe("boost messages", function()
         {
-            it("Should boost stat", async function()
+            describe("boost", function()
             {
-                const boosts = battle.state.teams.us.active.volatile.boosts;
-                expect(boosts.def).to.equal(0);
-                await battle.progress(
+                it("Should boost stat", async function()
                 {
-                    events: [{type: "boost", id: us1, stat: "def", amount: 1}]
+                    const boosts = battle.state.teams.us.active.volatile.boosts;
+                    expect(boosts.def).to.equal(0);
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            {type: "boost", id: us1, stat: "def", amount: 1}
+                        ]
+                    });
+                    expect(boosts.def).to.equal(1);
                 });
-                expect(boosts.def).to.equal(1);
-                await battle.progress(
+            });
+
+            describe("clearallboost", function()
+            {
+                it("Should clear all boosts", async function()
                 {
-                    events: [{type: "boost", id: us1, stat: "def", amount: -3}]
+                    const boost1 = battle.state.teams.us.active.volatile.boosts;
+                    const boost2 =
+                        battle.state.teams.them.active.volatile.boosts;
+                    boost1.atk = 1;
+                    boost1.accuracy = -4;
+                    boost2.def = -1;
+                    await battle.progress({events: [{type: "clearallboost"}]});
+                    expect(boost1.atk).to.equal(0);
+                    expect(boost1.accuracy).to.equal(0);
+                    expect(boost2.def).to.equal(0);
                 });
-                expect(boosts.def).to.equal(-2);
+            });
+
+            describe("clearnegativeboost", function()
+            {
+                it("Should clear negative boosts", async function()
+                {
+                    const boosts = battle.state.teams.us.active.volatile.boosts;
+                    boosts.atk = 1;
+                    boosts.evasion = -3;
+                    await battle.progress(
+                        {events: [{type: "clearnegativeboost", id: us1}]});
+                    expect(boosts.atk).to.equal(1);
+                    expect(boosts.evasion).to.equal(0);
+                });
+            });
+
+            describe("clearpositiveboost", function()
+            {
+                it("Should clear positive boosts", async function()
+                {
+                    const boosts = battle.state.teams.us.active.volatile.boosts;
+                    boosts.atk = 1;
+                    boosts.evasion = -3;
+                    await battle.progress(
+                        {events: [{type: "clearpositiveboost", id: us1}]});
+                    expect(boosts.atk).to.equal(0);
+                    expect(boosts.evasion).to.equal(-3);
+                });
+            });
+
+            describe("copyboost", function()
+            {
+                it("Should copy and override boosts", async function()
+                {
+                    const boost1 = battle.state.teams.us.active.volatile.boosts;
+                    const boost2 =
+                        battle.state.teams.them.active.volatile.boosts;
+                    boost1.atk = 1;
+                    boost1.accuracy = -4;
+                    boost2.def = -1;
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            {type: "copyboost", source: us1, target: them1}
+                        ]
+                    });
+                    expect(boost1.atk).to.equal(0);
+                    expect(boost1.def).to.equal(-1);
+                    expect(boost1.accuracy).to.equal(0);
+                    expect(boost2.def).to.equal(-1);
+                });
+            });
+
+            describe("invertboost", function()
+            {
+                it("Should invert boosts", async function()
+                {
+                    const boosts = battle.state.teams.us.active.volatile.boosts;
+                    boosts.spa = 4;
+                    boosts.spe = -6;
+                    await battle.progress(
+                        {events: [{type: "invertboost", id: us1}]});
+                    expect(boosts.spa).to.equal(-4);
+                    expect(boosts.spe).to.equal(6);
+                });
+            });
+
+            describe("setboost", function()
+            {
+                it("Should set boost", async function()
+                {
+                    const boosts = battle.state.teams.us.active.volatile.boosts;
+                    boosts.atk = 1;
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            {type: "setboost", id: us1, stat: "atk", amount: 5}
+                        ]
+                    });
+                    expect(boosts.atk).to.equal(5);
+                });
+            });
+
+            describe("swapboost", function()
+            {
+                it("Should swap boosts", async function()
+                {
+                    const boost1 = battle.state.teams.us.active.volatile.boosts;
+                    const boost2 =
+                        battle.state.teams.them.active.volatile.boosts;
+                    boost1.atk = -1;
+                    boost1.spd = 3;
+                    boost2.evasion = -2;
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            {
+                                type: "swapboost", source: us1, target: them1,
+                                stats: ["atk", "evasion"]
+                            }
+                        ]
+                    });
+
+                    // mentioned stats should be swapped
+                    expect(boost1.atk).to.equal(0);
+                    expect(boost1.evasion).to.equal(-2);
+                    expect(boost2.atk).to.equal(-1);
+                    expect(boost2.evasion).to.equal(0);
+
+                    // unmentioned should be kept the same
+                    expect(boost1.spd).to.equal(3);
+                    expect(boost2.spd).to.equal(0);
+                });
+            });
+
+            describe("unboost", function()
+            {
+                it("Should unboost stat", async function()
+                {
+                    const boosts = battle.state.teams.us.active.volatile.boosts;
+                    expect(boosts.spe).to.equal(0);
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            {type: "unboost", id: us1, stat: "spe", amount: 1}
+                        ]
+                    });
+                    expect(boosts.spe).to.equal(-1);
+                });
             });
         });
 
@@ -1076,7 +1218,6 @@ describe("Battle and EventProcessor", function()
 
         describe("faint", function()
         {
-
             it("Should handle faint", async function()
             {
                 expect(battle.state.teams.us.active.fainted).to.be.false;
