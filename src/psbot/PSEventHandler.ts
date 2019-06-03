@@ -222,6 +222,17 @@ export class PSEventHandler
         {
             this.setHP(event.id, event.status);
         })
+        .on("detailschange", event =>
+        {
+            const active = this.getActive(event.id.owner);
+            active.setSpecies(event.details.species);
+
+            // set other details just in case
+            active.level = event.details.level;
+            active.gender = event.details.gender;
+            active.hp.set(event.status.hp, event.status.hpMax);
+            active.majorStatus = event.status.condition;
+        })
         .on("faint", event =>
         {
             this.getActive(event.id.owner).faint();
@@ -239,6 +250,12 @@ export class PSEventHandler
             {
                 this.state.status.gravity = true;
             }
+        })
+        .on("formechange", event =>
+        {
+            // TODO: set other details?
+            this.getActive(event.id.owner).volatile.overrideSpecies =
+                event.details.species;
         })
         .on("move", event =>
         {

@@ -2,11 +2,11 @@
 import { Logger } from "../../Logger";
 import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventPrefix,
     BoostEvent, CantEvent, Cause, CureStatusEvent, CureTeamEvent, DamageEvent,
-    EndAbilityEvent, EndEvent, FaintEvent, FieldEndEvent, FieldStartEvent,
-    isBattleEventPrefix, MoveEvent, MustRechargeEvent, PrepareEvent, SetHPEvent,
-    SideEndEvent, SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent,
-    SwitchEvent, TieEvent, TurnEvent, UpkeepEvent, WeatherEvent, WinEvent } from
-    "../dispatcher/BattleEvent";
+    DetailsChangeEvent, EndAbilityEvent, EndEvent, FaintEvent, FieldEndEvent,
+    FieldStartEvent, FormeChangeEvent, isBattleEventPrefix, MoveEvent,
+    MustRechargeEvent, PrepareEvent, SetHPEvent, SideEndEvent, SideStartEvent,
+    SingleTurnEvent, StartEvent, StatusEvent, SwitchEvent, TieEvent, TurnEvent,
+    UpkeepEvent, WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
@@ -400,6 +400,8 @@ function battleEventHelper(input: Input, info: Info):
     {
         case "-ability": return eventAbility(input, info);
         case "-activate": return eventActivate(input, info);
+        case "detailschange": case "drag": case "-formechange": case "switch":
+            return eventAllDetails(input, info);
         case "-boost": case "-unboost": return eventBoost(input, info);
         case "cant": return eventCant(input, info);
         case "-curestatus": return eventCureStatus(input, info);
@@ -418,7 +420,6 @@ function battleEventHelper(input: Input, info: Info):
         case "-singleturn": return eventSingleTurn(input, info);
         case "-start": return eventStart(input, info);
         case "-status": return eventStatus(input, info);
-        case "switch": case "drag": return eventSwitch(input, info);
         case "tie": return eventTie(input, info);
         case "turn": return eventTurn(input, info);
         case "upkeep": return eventUpkeep(input, info);
@@ -714,15 +715,29 @@ const eventStatus: Parser<StatusEvent> = transform(
     ([_, id, status]) => ({type: "status", id, majorStatus: status}));
 
 /**
- * Parses a SwitchEvent.
+ * Parses a DetailsChangeEvent, FormeChangeEvent, SwitchEvent.
  *
  * Format:
  * @example
- * |<switch or drag>|<replacing PokemonID>|<PokemonDetails>|<PokemonStatus>
+ * |<switch or drag or detailschange or -formechange>|<replacing PokemonID>|\
+ * <PokemonDetails>|<PokemonStatus>
  */
-const eventSwitch: Parser<SwitchEvent> = transform(
-    sequence(word("switch", "drag"), pokemonId, pokemonDetails, pokemonStatus),
-    ([_, id, details, status]) => ({type: "switch", id, details, status}));
+const eventAllDetails:
+    Parser<SwitchEvent | DetailsChangeEvent | FormeChangeEvent> = transform(
+    sequence(
+        word("switch", "drag", "detailschange", "-formechange"), pokemonId,
+        pokemonDetails, pokemonStatus),
+    function([type, id, details, status])
+{
+    switch (type)
+    {
+        case "drag":
+            type = "switch";
+            // fallthrough
+        case "switch": case "detailschange": return {type, id, details, status};
+        case "-formechange": return {type: "formechange", id, details, status};
+    }
+});
 
 /**
  * Parses an UpkeepEvent.

@@ -83,12 +83,18 @@ export class VolatileStatus
     public get overrideAbility(): string { return this.overrideAbilityName; }
     public set overrideAbility(ability: string)
     {
+        if (!ability)
+        {
+            this._overrideAbility = null;
+            this.overrideAbilityName = "";
+            return;
+        }
+
         if (!dex.abilities.hasOwnProperty(ability))
         {
             throw new Error(`Unknown ability "${ability}"`);
         }
         this._overrideAbility = dex.abilities[ability];
-
         this.overrideAbilityName = ability;
     }
     /**
@@ -116,6 +122,37 @@ export class VolatileStatus
     private overrideAbilityName!: string;
 
     // not passed when copying
+
+    /** Temporary form change. */
+    public get overrideSpecies(): string { return this.overrideSpeciesName; }
+    public set overrideSpecies(species: string)
+    {
+        if (!species)
+        {
+            this._overrideSpecies = null;
+            this.overrideSpeciesName = "";
+            return;
+        }
+
+        if (!dex.pokemon.hasOwnProperty(species))
+        {
+            throw new Error(`Unknown species "${species}"`);
+        }
+        this._overrideSpecies = dex.pokemon[species].uid;
+        this.overrideSpeciesName = species;
+    }
+    /**
+     * Override species id number. Defaults to null if `overrideSpecies` is not
+     * initialized.
+     */
+    public get overrideSpeciesId(): number | null
+    {
+        return this._overrideSpecies;
+    }
+    /** ID number of species. */
+    private _overrideSpecies!: number | null;
+    /** Name of override species. */
+    private overrideSpeciesName!: string;
 
     /**
      * Checks whether a move is disabled.
@@ -226,6 +263,8 @@ export class VolatileStatus
         this._tauntTurns = 0;
         this._overrideAbility = null;
         this.overrideAbilityName = "";
+        this._overrideSpecies = null;
+        this.overrideSpeciesName = "";
         this.enableMoves();
         this._lockedMoveTurns = 0;
         this._twoTurn = "";

@@ -37,12 +37,67 @@ describe("Pokemon", function()
         });
     });
 
-    describe("#species", function()
+    describe("#species/#setSpecies()", function()
     {
         it("Should initialize dex data", function()
         {
             const mon = new Pokemon("Magikarp", false);
             expect(mon.species.name).to.equal("Magikarp");
+        });
+
+        it("Should throw in ctor if invalid species", function()
+        {
+            expect(() => new Pokemon("not-a real species", false)).to.throw();
+        });
+
+        it("Should throw if invalid setSpecies", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            expect(() => mon.setSpecies("not a real_species")).to.throw();
+        });
+
+        it("Should change dex data", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.setSpecies("Horsea");
+            expect(mon.species.name).to.equal("Horsea");
+        });
+    });
+
+    describe("#volatile#overrideSpecies", function()
+    {
+        it("Should initially be empty if inactive", function()
+        {
+            const mon = new Pokemon("Togepi", false);
+            expect(mon.active).to.be.false;
+            expect(mon.volatile.overrideSpecies).to.be.empty;
+            expect(mon.volatile.overrideSpeciesId).to.be.null;
+        });
+
+        it("Should set volatile ability after switchin", function()
+        {
+            const mon = new Pokemon("Togepi", false);
+            mon.switchIn();
+            expect(mon.volatile.overrideSpecies).to.equal("Togepi");
+            expect(mon.volatile.overrideSpeciesId).to.not.be.null;
+        });
+
+        it("Should set volatile species", function()
+        {
+            const mon = new Pokemon("Togepi", false);
+            mon.switchIn();
+            mon.volatile.overrideSpecies = "Togetic";
+            expect(mon.volatile.overrideSpecies).to.equal("Togetic");
+            expect(mon.volatile.overrideSpeciesId).to.not.be.null;
+        });
+
+        it("Should throw if invalid volatile species", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.switchIn();
+            expect(() => mon.setSpecies("not a real_species")).to.throw();
+            expect(mon.volatile.overrideSpecies).to.equal("Magikarp");
+            expect(mon.volatile.overrideSpeciesId).to.not.be.null;
         });
     });
 
@@ -79,6 +134,15 @@ describe("Pokemon", function()
             expect(mon.baseAbility.definiteValue!.name).to.equal("hustle");
         });
 
+        it("Should re-set baseAbility if species is re-set", function()
+        {
+            const mon = new Pokemon("Togepi", false);
+            mon.setSpecies("Magikarp");
+            expect(mon.ability).to.equal("swiftswim");
+            expect(mon.baseAbility.definiteValue).to.not.be.null;
+            expect(mon.baseAbility.definiteValue!.name).to.equal("swiftswim");
+        });
+
         it("Should set volatile ability", function()
         {
             const mon = new Pokemon("Togepi", false);
@@ -104,6 +168,25 @@ describe("Pokemon", function()
             expect(mon.volatile.overrideAbility).to.equal("swiftswim");
         });
 
+        it("Should re-set volatile ability if species is re-set", function()
+        {
+            const mon = new Pokemon("Togepi", false);
+            mon.ability = "hustle";
+            mon.switchIn();
+            mon.setSpecies("Magikarp");
+            expect(mon.volatile.overrideAbility).to.equal("swiftswim");
+        });
+
+        it("Should clear volatile ability if species is re-set and new base " +
+            "ability is unknown", function()
+        {
+            const mon = new Pokemon("Togepi", false);
+            mon.ability = "hustle";
+            mon.switchIn();
+            mon.setSpecies("Bronzong");
+            expect(mon.volatile.overrideAbility).to.be.empty;
+        });
+
         it("Should reject unknown ability", function()
         {
             const mon = new Pokemon("Togepi", false);
@@ -111,7 +194,7 @@ describe("Pokemon", function()
             expect(mon.ability).to.be.empty;
         });
 
-        describe("VolatileStatus#suppressAbility() (baton passed)", function()
+        describe("#volatile#suppressAbility() (baton passed)", function()
         {
             it("Should suppress new ability", function()
             {

@@ -113,11 +113,25 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 stringifyStatus(event.status)
             ];
             break;
+        case "detailschange": case "switch":
+            result =
+            [
+                event.type, stringifyID(event.id),
+                stringifyDetails(event.details), stringifyStatus(event.status)
+            ];
+            break;
         case "faint":
             result = ["faint", stringifyID(event.id)];
             break;
         case "fieldstart": case "fieldend":
             result = ["-" + event.type, event.effect];
+            break;
+        case "formechange":
+            result =
+            [
+                "-formechange", stringifyID(event.id),
+                stringifyDetails(event.details), stringifyStatus(event.status)
+            ];
             break;
         case "move":
         case "prepare":
@@ -152,13 +166,6 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             [
                 "-start", stringifyID(event.id), event.volatile,
                 ...event.otherArgs
-            ];
-            break;
-        case "switch":
-            result =
-            [
-                "switch", stringifyID(event.id),
-                stringifyDetails(event.details), stringifyStatus(event.status)
             ];
             break;
         case "tie":

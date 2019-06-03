@@ -19,6 +19,7 @@ describe("VolatileStatus", function()
         volatile.magnetRise = true;
         volatile.embargo = true;
         volatile.overrideAbility = "swiftswim";
+        volatile.overrideSpecies = "Magikarp";
         volatile.disableMove(0);
         volatile.lockedMove = true;
         volatile.twoTurn = "bounce";
@@ -42,6 +43,9 @@ describe("VolatileStatus", function()
             expect(volatile.magnetRise).to.be.false;
             expect(volatile.embargo).to.be.false;
             expect(volatile.overrideAbility).to.be.empty;
+            expect(volatile.overrideAbilityId).to.be.null;
+            expect(volatile.overrideSpecies).to.be.empty;
+            expect(volatile.overrideSpeciesId).to.be.null;
             expect(volatile.isDisabled(0)).to.be.false;
             expect(volatile.lockedMove).to.be.false;
             expect(volatile.twoTurn).to.equal("");
@@ -85,6 +89,9 @@ describe("VolatileStatus", function()
             expect(volatile.mustRecharge).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.overrideAbility).to.be.empty;
+            expect(volatile.overrideAbilityId).to.be.null;
+            expect(volatile.overrideSpecies).to.be.empty;
+            expect(volatile.overrideSpeciesId).to.be.null;
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
             expect(volatile.willTruant).to.be.false;
@@ -181,17 +188,34 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#overrideAbility", function()
+    describe("#overrideAbility/#overrideAbilityId", function()
     {
         it("Should set override ability", function()
         {
             volatile.overrideAbility = "swiftswim";
             expect(volatile.overrideAbility).to.equal("swiftswim");
+            expect(volatile.overrideAbilityId).to.not.be.null;
         });
 
         it("Should throw if unknown ability", function()
         {
             expect(() => volatile.overrideAbility = "not-a real_ability")
+                .to.throw();
+        });
+    });
+
+    describe("#overrideSpecies/#overrideSpeciesId", function()
+    {
+        it("Should set override species", function()
+        {
+            volatile.overrideSpecies = "Magikarp";
+            expect(volatile.overrideSpecies).to.equal("Magikarp");
+            expect(volatile.overrideSpeciesId).to.not.be.null;
+        });
+
+        it("Should throw if unknown species", function()
+        {
+            expect(() => volatile.overrideSpecies = "not-a real_species")
                 .to.throw();
         });
     });

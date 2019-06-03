@@ -505,7 +505,7 @@ describe("Battle and EventProcessor", function()
             });
         });
 
-        describe("copyVolatile", function()
+        describe("switch (copyVolatile)", function()
         {
             // batonpass used by us
             const event1: MoveEvent =
@@ -1048,6 +1048,32 @@ describe("Battle and EventProcessor", function()
             });
         });
 
+        describe("detailschange", function()
+        {
+            it("Should change details", async function()
+            {
+                const active = battle.state.teams.us.active;
+                expect(active.species.name).to.equal("Horsea");
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "detailschange",
+                            id: us1,
+                            details:
+                            {
+                                species: "Kingdra", level: 100, shiny: false,
+                                gender: "F"
+                            },
+                            status: {hp: 100, hpMax: 100, condition: ""}
+                        }
+                    ]
+                });
+                expect(active.species.name).to.equal("Kingdra");
+            });
+        });
+
         describe("faint", function()
         {
 
@@ -1106,6 +1132,36 @@ describe("Battle and EventProcessor", function()
                     {events: [{type: "faint", id: them1}, {type: "upkeep"}]});
 
                 expect(responses).to.be.empty;
+            });
+        });
+
+        describe("formechange", function()
+        {
+            it("Should temporarily change form", async function()
+            {
+                const active = battle.state.teams.us.active;
+                expect(active.species.name).to.equal("Horsea");
+                expect(active.volatile.overrideSpecies).to.equal("Horsea");
+                expect(active.volatile.overrideSpeciesId).to.not.be.null;
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "formechange",
+                            id: us1,
+                            details:
+                            {
+                                species: "Kingdra", level: 100, shiny: false,
+                                gender: "F"
+                            },
+                            status: {hp: 100, hpMax: 100, condition: ""}
+                        }
+                    ]
+                });
+                expect(active.species.name).to.equal("Horsea");
+                expect(active.volatile.overrideSpecies).to.equal("Kingdra");
+                expect(active.volatile.overrideSpeciesId).to.not.be.null;
             });
         });
 

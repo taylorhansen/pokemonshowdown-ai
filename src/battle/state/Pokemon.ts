@@ -20,7 +20,23 @@ export class Pokemon
     private _active: boolean = false;
 
     /** Species/form dex data. */
-    public readonly species: PokemonData;
+    public get species(): PokemonData
+    {
+        return this._species;
+    }
+    /** Sets species data. */
+    public setSpecies(species: string): void
+    {
+        if (!dex.pokemon.hasOwnProperty(species))
+        {
+            throw new Error(`Unknown species '${species}'`);
+        }
+
+        this._species = dex.pokemon[species];
+        if (this._active) this._volatile.overrideSpecies = this._species.name;
+        this.initBaseAbility();
+    }
+    private _species!: PokemonData;
 
     /** Current ability id name. Can temporarily change while active. */
     public get ability(): string
@@ -31,8 +47,8 @@ export class Pokemon
             return this.volatile.overrideAbility;
         }
         // not overridden/initialized
-        if (!this.baseAbility.definiteValue) return "";
-        return this.baseAbility.definiteValue.name;
+        if (!this._baseAbility.definiteValue) return "";
+        return this._baseAbility.definiteValue.name;
     }
     public set ability(ability: string)
     {
@@ -42,15 +58,15 @@ export class Pokemon
         }
 
         // narrow down baseAbility
-        if (!this.baseAbility.definiteValue)
+        if (!this._baseAbility.definiteValue)
         {
             if (!this.canHaveAbility(ability))
             {
-                throw new Error(`Pokemon ${this.species} can't have base \
+                throw new Error(`Pokemon ${this._species} can't have base \
 ability ${ability}`);
             }
 
-            this.baseAbility.narrow(ability);
+            this._baseAbility.narrow(ability);
         }
 
         // override current ability
@@ -59,13 +75,26 @@ ability ${ability}`);
     /** Checks if this pokemon can have the given ability. */
     public canHaveAbility(ability: string): boolean
     {
-        return this.species.abilities.includes(ability) &&
-            this.baseAbility.isSet(ability);
+        return this._species.abilities.includes(ability) &&
+            this._baseAbility.isSet(ability);
     }
     /** Base ability possibility tracker. */
-    public readonly baseAbility = new PossibilityClass(dex.abilities,
-        // update override ability value once known
-        () => { if (this.active) this.setOverrideAbility(); });
+    public get baseAbility(): PossibilityClass<typeof dex.abilities[""]>
+    {
+        return this._baseAbility;
+    }
+    /** Resets base ability according to current pokemon data. */
+    private initBaseAbility(): void
+    {
+        this._baseAbility = new PossibilityClass(dex.abilities,
+            this.onBaseAbilitySet);
+        this._baseAbility.narrow(...this.species.abilities);
+        this.onBaseAbilitySet();
+    }
+    /** Callback for when ability info needs to be updated. */
+    private readonly onBaseAbilitySet =
+        () => { if (this.active) this.setOverrideAbility(); }
+    private _baseAbility!: PossibilityClass<typeof dex.abilities[""]>;
 
     /** The types of this pokemon. */
     public get types(): readonly Type[]
@@ -76,7 +105,7 @@ ability ${ability}`);
             result = this.volatile.overrideTypes
                 .concat(this.volatile.addedType);
         }
-        else result = this.species.types;
+        else result = this._species.types;
 
         return result.filter(type => type !== "???");
     }
@@ -224,7 +253,7 @@ ability ${ability}`);
         if (v.ingrain) return true;
 
         const ignoringItem = v.embargo || v.overrideAbility === "klutz" ||
-            (!v.overrideAbility && this.baseAbility.isSet("klutz"));
+            (!v.overrideAbility && this._baseAbility.isSet("klutz"));
 
         // iron ball causes grounding
         if (this.item.isSet("ironball") && !ignoringItem) return true;
@@ -234,7 +263,7 @@ ability ${ability}`);
             // levitate lifts
             ((v.overrideAbility && v.overrideAbility !== "levitate") ||
                 (!v.overrideAbility &&
-                    !this.baseAbility.isSet("levitate"))) &&
+                    !this._baseAbility.isSet("levitate"))) &&
             // flying type lifts
             !this.types.includes("flying");
     }
@@ -246,12 +275,7 @@ ability ${ability}`);
      */
     constructor(species: string, hpPercent: boolean, team?: Team)
     {
-        if (!dex.pokemon.hasOwnProperty(species))
-        {
-            throw new Error(`Unknown pokemon '${species}'`);
-        }
-        this.species = dex.pokemon[species];
-        this.baseAbility.narrow(...this.species.abilities);
+        this.setSpecies(species);
         this.hp = new HP(hpPercent);
         this.team = team;
         this._active = false;
@@ -269,25 +293,30 @@ ability ${ability}`);
     /** Tells the pokemon that it is currently being switched in. */
     public switchIn(): void
     {
-        this._volatile.overrideTypes = this.species.types;
         this.setOverrideAbility();
+        this._volatile.overrideSpecies = this._species.name;
+        this._volatile.overrideTypes = this._species.types;
         this._active = true;
     }
 
     private setOverrideAbility(): void
     {
-        if (this.baseAbility.definiteValue)
+        // if not multitype and suppressed, do nothing
+        if (this._volatile.isAbilitySuppressed() &&
+            (!this._baseAbility.definiteValue ||
+                    this._baseAbility.definiteValue.name !== "multitype"))
         {
-            const ability = this.baseAbility.definiteValue.name;
-
-            // if batonpassed the suppressed status, the ability can be
-            //  overridden unless it's multitype
-            if (!this._volatile.isAbilitySuppressed() ||
-                ability === "multitype")
-            {
-                this._volatile.overrideAbility = ability;
-            }
+            return;
         }
+
+        // if multitype or not suppressed, set regardless
+        if (this._baseAbility.definiteValue)
+        {
+            this._volatile.overrideAbility =
+                this._baseAbility.definiteValue.name;
+        }
+        // if no definite base ability set to empty
+        else this._volatile.overrideAbility = "";
     }
 
     /**
@@ -340,7 +369,7 @@ ability ${ability}`);
     {
         const s = " ".repeat(indent);
         return `\
-${s}${this.species.name} ${this.gender ? ` ${this.gender}` : ""} \
+${s}${this._species.name} ${this.gender ? ` ${this.gender}` : ""} \
 lv${this.level} ${this.hp.toString()}\
 ${this.majorStatus ? ` ${this.majorStatus}` : ""}
 ${s}active: ${this.active}\
@@ -360,9 +389,9 @@ ${s}moveset: [${this.moveset.toString()}]`;
     {
         const result: string[] = [];
 
-        for (let i = 0; i < this.species.types.length; ++i)
+        for (let i = 0; i < this._species.types.length; ++i)
         {
-            let type: string = this.species.types[i];
+            let type: string = this._species.types[i];
 
             // show overridden types in parentheses
             const override = this._volatile.overrideTypes[i];
@@ -389,9 +418,9 @@ ${s}moveset: [${this.moveset.toString()}]`;
     /** Displays the possible/overridden/suppressed values of the ability. */
     private stringifyAbility(): string
     {
-        const baseVal = this.baseAbility.definiteValue;
+        const baseVal = this._baseAbility.definiteValue;
         const base = baseVal ?
-            baseVal.name : `possibly ${this.baseAbility.toString()}`;
+            baseVal.name : `possibly ${this._baseAbility.toString()}`;
         const over = this._active ? this._volatile.overrideAbility : "";
 
         if (!over || over === base) return base;

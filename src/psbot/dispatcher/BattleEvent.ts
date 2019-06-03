@@ -9,13 +9,13 @@ import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 export const battleEventPrefixes =
 {
     "-ability": true, "-activate": true, "-boost": true, cant: true,
-    "-curestatus": true, "-cureteam": true, "-damage": true, drag: true,
-    "-end": true, "-endability": true, faint: true, "-fieldend": true,
-    "-fieldstart": true, "-heal": true, move: true, "-mustrecharge": true,
-    "-prepare": true, "-sethp": true, "-sideend": true, "-sidestart": true,
-    "-singleturn": true, "-start": true, "-status": true, switch: true,
-    tie: true, turn: true, "-unboost": true, upkeep: true, "-weather": true,
-    win: true
+    "-curestatus": true, "-cureteam": true, "-damage": true,
+    detailschange: true, drag: true, "-end": true, "-endability": true,
+    faint: true, "-fieldend": true, "-fieldstart": true, "-formechange": true,
+    "-heal": true, move: true, "-mustrecharge": true, "-prepare": true,
+    "-sethp": true, "-sideend": true, "-sidestart": true, "-singleturn": true,
+    "-start": true, "-status": true, switch: true, tie: true, turn: true,
+    "-unboost": true, upkeep: true, "-weather": true, win: true
 } as const;
 /** Message line prefixes that are parsed as BattleEvents. */
 export type BattleEventPrefix = keyof typeof battleEventPrefixes;
@@ -29,11 +29,12 @@ export function isBattleEventPrefix(value: any): value is BattleEventPrefix
 export const battleEventTypes =
 {
     ability: true, activate: true, boost: true, cant: true, curestatus: true,
-    cureteam: true, damage: true, end: true, endability: true, faint: true,
-    fieldend: true, fieldstart: true, move: true, mustrecharge: true,
-    prepare: true, sethp: true, sideend: true, sidestart: true,
-    singleturn: true, start: true, status: true, switch: true, tie: true,
-    turn: true, upkeep: true, weather: true, win: true
+    cureteam: true, damage: true, detailschange: true, end: true,
+    endability: true, faint: true, fieldend: true, fieldstart: true,
+    formechange: true, move: true, mustrecharge: true, prepare: true,
+    sethp: true, sideend: true, sidestart: true, singleturn: true, start: true,
+    status: true, switch: true, tie: true, turn: true, upkeep: true,
+    weather: true, win: true
 } as const;
 /** Names of BattleEvent types. */
 export type BattleEventType = keyof typeof battleEventTypes;
@@ -47,11 +48,13 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "curestatus" ? CureStatusEvent
     : T extends "cureteam" ? CureTeamEvent
     : T extends "damage" ? DamageEvent
+    : T extends "detailschange" ? DetailsChangeEvent
     : T extends "end" ? EndEvent
     : T extends "endability" ? EndAbilityEvent
     : T extends "faint" ? FaintEvent
     : T extends "fieldend" ? FieldEndEvent
     : T extends "fieldstart" ? FieldStartEvent
+    : T extends "formechange" ? FormeChangeEvent
     : T extends "move" ? MoveEvent
     : T extends "mustrecharge" ? MustRechargeEvent
     : T extends "prepare" ? PrepareEvent
@@ -151,6 +154,35 @@ export interface DamageEvent extends BattleEventBase
     readonly id: PokemonID;
     /** New hp/status. */
     readonly status: PokemonStatus;
+}
+
+/** Event where id, details, and status of a pokemon are revealed or changed. */
+interface AllDetailsEvent extends BattleEventBase
+{
+    /** ID of the pokemon being revealed or changed. */
+    readonly id: PokemonID;
+    /** Some details on species, level, etc. */
+    readonly details: PokemonDetails;
+    /** HP and any status conditions. */
+    readonly status: PokemonStatus;
+}
+
+/** Event where a pokemon permanently changes form. */
+export interface DetailsChangeEvent extends AllDetailsEvent
+{
+    readonly type: "detailschange";
+}
+
+/** Event where a pokemon temporarily changes form. */
+export interface FormeChangeEvent extends AllDetailsEvent
+{
+    readonly type: "formechange";
+}
+
+/** Event where a pokemon was switched in. */
+export interface SwitchEvent extends AllDetailsEvent
+{
+    readonly type: "switch";
 }
 
 /** Event addon where a volatile status has ended. */
@@ -288,18 +320,6 @@ export interface StatusEvent extends BattleEventBase
     readonly id: PokemonID;
     /** Status condition being afflicted. */
     readonly majorStatus: MajorStatus;
-}
-
-/** Event where a pokemon was switched in. */
-export interface SwitchEvent extends BattleEventBase
-{
-    readonly type: "switch";
-    /** ID of the pokemon being switched in. */
-    readonly id: PokemonID;
-    /** Some details on species, level, etc. */
-    readonly details: PokemonDetails;
-    /** HP and any status conditions. */
-    readonly status: PokemonStatus;
 }
 
 /** Event indicating that the game has ended in a tie. */
