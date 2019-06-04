@@ -43,8 +43,8 @@ export const pokemonStatus: PokemonStatus[] =
 /** Test Causes. */
 export const cause: Cause[] =
 [
-    {type: "ability", ability: "Intimidate", of: pokemonId[0]},
-    {type: "fatigue"}, {type: "item", item: "Leftovers"}, {type: "lockedmove"}
+    {type: "ability", ability: "Wonder Guard"}, {type: "fatigue"},
+    {type: "item", item: "Leftovers"}, {type: "lockedmove"}
 ];
 
 /** Test BattleEvents except turn/upkeep. */
@@ -72,6 +72,7 @@ export const battleEvent: AnyBattleEvent[] =
         status: pokemonStatus[0]
     },
     {type: "end", id: pokemonId[2], volatile: "confusion"},
+    {type: "endability", id: pokemonId[1], ability: "Swift Swim"},
     {type: "faint", id: pokemonId[2]},
     {type: "fieldend", effect: "move: Gravity"},
     {type: "fieldstart", effect: "move: Gravity"},
@@ -125,7 +126,7 @@ export const battleEvent: AnyBattleEvent[] =
         status: pokemonStatus[0]
     },
     {
-        type: "switch", id: pokemonId[1], details: pokemonDetails[1],
+        type: "drag", id: pokemonId[1], details: pokemonDetails[1],
         status: pokemonStatus[1]
     },
     {type: "tie"},
@@ -182,7 +183,7 @@ export const battleProgress: BattleProgressMessage[] =
     },
     {
         events: battleEvent.slice(26, 32)
-            .concat({type: "upkeep"}, ...battleEvent.slice(32, 44),
+            .concat({type: "upkeep"}, ...battleEvent.slice(32, 46),
                 {type: "turn", num: 9})
     }
 ];

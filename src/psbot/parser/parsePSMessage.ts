@@ -60,6 +60,7 @@ function parseRoom(data: string): {room: string, pos: number}
     if (data.startsWith(">"))
     {
         let pos = data.indexOf("\n", 1);
+        // istanbul ignore if: can't test
         if (pos === -1) pos = data.length;
         return {room: data.substring(1, pos), pos: pos + 1};
     }
@@ -765,6 +766,7 @@ function eventStartHelper(input: Input, info: Info):
     {
         const s = input.get();
 
+        // istanbul ignore else: nothing else to parse after cause
         if (!cause)
         {
             // attempt to parse Cause object, which could fail either loudly or
@@ -780,6 +782,7 @@ function eventStartHelper(input: Input, info: Info):
             }
             catch (e) {}
         }
+        else input = input.next();
 
         if (!cause)
         {
@@ -841,10 +844,8 @@ const eventAllDetails:
 {
     switch (type)
     {
-        case "drag":
-            type = "switch";
-            // fallthrough
-        case "switch": case "detailschange": return {type, id, details, status};
+        case "drag": case "switch": case "detailschange":
+            return {type, id, details, status};
         case "-formechange": return {type: "formechange", id, details, status};
     }
 });

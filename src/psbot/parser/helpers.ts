@@ -164,6 +164,10 @@ export function parsePokemonID(id: string, pos = true): PokemonID
 
     if (pos)
     {
+        if (id.substring(3, 5) !== ": ")
+        {
+            throw new Error(`Invalid PokemonID ${id}`);
+        }
         return {
             owner, position: id.substring(2, 3), nickname: id.substring(5)
         };

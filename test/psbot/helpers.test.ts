@@ -38,7 +38,7 @@ function testFunc<T, Args extends any[]>(name: string,
     });
 }
 
-describe("psbot/helpers", function()
+describe("PSBot Helpers", function()
 {
     testFunc("otherPlayerID()", otherPlayerID,
     [

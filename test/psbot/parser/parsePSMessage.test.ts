@@ -32,6 +32,12 @@ describe("parsePSMessage()", function()
         return parse("");
     });
 
+    it("Should skip unsupported message types", function()
+    {
+        // shouldn't throw
+        return parse("|what");
+    });
+
     it("Should handle multiple messages", async function()
     {
         let count = 2;
@@ -52,6 +58,16 @@ describe("parsePSMessage()", function()
                 done();
             });
             parse(`>${roomName}\n|init|battle`);
+        });
+
+        it("Should infer empty room", function(done)
+        {
+            listener.on("init", (msg, room) =>
+            {
+                expect(room).to.be.empty;
+                done();
+            });
+            parse(`|init|battle`);
         });
     });
 
@@ -119,23 +135,27 @@ ${buildMessage(words)}`);
                 shouldParse("battleinit", composeBattleInit(args), args);
             }
 
-            it("Should ignore unexpected message types", function()
-            {
-                const givenArgs = testArgs.battleInit[0];
-                const words = [...composeBattleInit(givenArgs), ["lol"]];
-                return parseWords("battleinit", words, args =>
-                {
-                    expect(args).to.deep.equal(givenArgs);
-                });
-            });
-
-            it("Should not include invalid events", function()
+            it("Should not include unsupported events", function()
             {
                 const words =
                 [
                     ["player", "p2", "someuser"], ["teamsize", "p1", "6"],
                     ["teamsize", "p2", "6"], ["gametype", "singles"],
-                    ["gen", "4"], ["switch"]
+                    ["gen", "4"], ["lol"]
+                ];
+                return parseWords("battleinit", words, args =>
+                {
+                    expect(args.events).to.be.empty;
+                }, /*quiet*/true);
+            });
+
+            it("Should ignore invalid battleinit", function()
+            {
+                const words =
+                [
+                    ["player", "p2", "someuser"], ["lol", "p1", "6"],
+                    ["teamsize", "p2", "6"], ["gametype", "singles"],
+                    ["gen", "4"]
                 ];
                 return parseWords("battleinit", words, args =>
                 {
@@ -197,6 +217,7 @@ ${buildMessage(words)}`);
                 shouldParse("init", [["init", type]], {type});
             }
             shouldntParse("init", [["init"]]);
+            shouldntParse("init", [["init", "x"]]);
         });
 
         describe("request", function()

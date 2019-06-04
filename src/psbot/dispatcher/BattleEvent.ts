@@ -3,8 +3,8 @@ import { BoostName, MajorStatus, WeatherType } from "../../battle/dex/dex-util";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
 /**
- * Set of BattleEventPrefixes. Heal, drag, and unboost are included here, but
- * are parsed as DamageEvents, SwitchEvents, and BoostEvents respectively.
+ * Set of BattleEventPrefixes. Heal is included here, but is parsed as
+ * a DamageEvent instead.
  */
 export const battleEventPrefixes =
 {
@@ -34,7 +34,7 @@ export const battleEventTypes =
     ability: true, activate: true, boost: true, cant: true, clearallboost: true,
     clearboost: true, clearnegativeboost: true, clearpositiveboost: true,
     copyboost: true, curestatus: true, cureteam: true, damage: true,
-    detailschange: true, end: true, endability: true, faint: true,
+    detailschange: true, drag: true, end: true, endability: true, faint: true,
     fieldend: true, fieldstart: true, formechange: true, invertboost: true,
     move: true, mustrecharge: true, prepare: true, setboost: true, sethp: true,
     sideend: true, sidestart: true, singleturn: true, start: true, status: true,
@@ -77,7 +77,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "start" ? StartEvent
     : T extends "status" ? StatusEvent
     : T extends "swapboost" ? SwapBoostEvent
-    : T extends "switch" ? SwitchEvent
+    : T extends "switch" | "drag" ? SwitchEvent
     : T extends "tie" ? TieEvent
     : T extends "turn" ? TurnEvent
     : T extends "unboost" ? UnboostEvent
@@ -236,7 +236,7 @@ export interface FormeChangeEvent extends AllDetailsEvent
 /** Event where a pokemon was switched in. */
 export interface SwitchEvent extends AllDetailsEvent
 {
-    readonly type: "switch";
+    readonly type: "switch" | "drag";
 }
 
 /** Event addon where a volatile status has ended. */

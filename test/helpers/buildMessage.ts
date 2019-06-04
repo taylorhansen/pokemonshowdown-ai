@@ -79,7 +79,8 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
     switch (event.type)
     {
         case "ability":
-            result = ["-ability", stringifyID(event.id), event.ability];
+        case "endability":
+            result = [`-${event.type}`, stringifyID(event.id), event.ability];
             break;
         case "activate":
         case "end":
@@ -131,7 +132,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 stringifyStatus(event.status)
             ];
             break;
-        case "detailschange": case "switch":
+        case "detailschange": case "drag": case "switch":
             result =
             [
                 event.type, stringifyID(event.id),
@@ -210,7 +211,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             result = ["win", event.winner];
             break;
         default:
-            result = [];
+            throw new Error(`Can't stringify '${event}'`);
     }
     if (event.cause) result.push(...stringifyCause(event.cause));
     return result;
