@@ -695,6 +695,28 @@ describe("Battle and EventProcessor", function()
                 expect(volatile.taunt).to.be.false;
             });
 
+            it("Should start/end substitute", async function()
+            {
+                const volatile = battle.state.teams.us.active.volatile;
+
+                expect(volatile.substitute).to.be.false;
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "Substitute",
+                            otherArgs: []
+                        }
+                    ]
+                });
+                expect(volatile.substitute).to.be.true;
+
+                await battle.progress(
+                    {events: [{type: "end", id: us1, volatile: "Substitute"}]});
+                expect(volatile.substitute).to.be.false;
+            });
+
             it("Should disable/reenable move in BattleState", async function()
             {
                 const mon = battle.state.teams.us.active;

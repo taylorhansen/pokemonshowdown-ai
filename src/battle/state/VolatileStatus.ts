@@ -67,6 +67,9 @@ export class VolatileStatus
     public get tauntTurns(): number { return this._tauntTurns; }
     private _tauntTurns!: number;
 
+    /** Substitute move status. */
+    public substitute!: boolean;
+
     // situational
 
     // override ability (only #isAbilitySuppressed() is passed)
@@ -252,6 +255,7 @@ export class VolatileStatus
         this._magnetRiseTurns = 0;
         this._embargoTurns = 0;
         this._tauntTurns = 0;
+        this.substitute = false;
         this._overrideAbility = null;
         this.overrideAbilityName = "";
         this._overrideSpecies = null;
@@ -322,6 +326,7 @@ export class VolatileStatus
         v.ingrain = this.ingrain;
         v._magnetRiseTurns = this._magnetRiseTurns;
         v._embargoTurns = this._embargoTurns;
+        v.substitute = this.substitute;
         if (this.isAbilitySuppressed()) v.suppressAbility();
         return v;
     }
@@ -347,6 +352,7 @@ export class VolatileStatus
                     [pluralTurns("embargo", this._embargoTurns - 1)] : [],
                 this._tauntTurns ?
                     [pluralTurns("taunt", this._tauntTurns - 1)] : [],
+                this.substitute ? ["substitute"] : [],
                 this._disableTurns
                     .filter(d => d !== 0)
                     .map((d, i) => pluralTurns(`disabled move ${i + 1}`, d)),

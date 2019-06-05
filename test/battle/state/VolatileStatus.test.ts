@@ -18,6 +18,7 @@ describe("VolatileStatus", function()
         volatile.confuse(true);
         volatile.magnetRise = true;
         volatile.embargo = true;
+        volatile.substitute = true;
         volatile.overrideAbility = "swiftswim";
         volatile.overrideSpecies = "Magikarp";
         volatile.disableMove(0);
@@ -42,6 +43,7 @@ describe("VolatileStatus", function()
             expect(volatile.confuseTurns).to.equal(0);
             expect(volatile.magnetRise).to.be.false;
             expect(volatile.embargo).to.be.false;
+            expect(volatile.substitute).to.be.false;
             expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.overrideAbilityId).to.be.null;
             expect(volatile.overrideSpecies).to.be.empty;
@@ -82,6 +84,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.confuseTurns).to.equal(1);
             expect(newVolatile.magnetRise).to.be.true;
             expect(newVolatile.embargo).to.be.true;
+            expect(newVolatile.substitute).to.be.true;
             // not passed
             expect(newVolatile.isDisabled(0)).to.be.false;
             expect(newVolatile.lockedMove).to.be.false;

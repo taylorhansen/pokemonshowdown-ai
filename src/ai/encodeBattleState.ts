@@ -77,7 +77,7 @@ export function encodePossiblityClass<TData>(pc: PossibilityClass<TData>,
 /** Length of the return value of `encodeVolatileStatus()`. */
 export const sizeVolatileStatus =
     /*boostable stats*/Object.keys(boostNames).length + /*confuse*/1 +
-    /*ingrain*/1 + /*magnet rise*/1 + /*embargo*/1 +
+    /*ingrain*/1 + /*magnet rise*/1 + /*embargo*/1 + /*substitute*/1 +
     /*override ability*/dex.numAbilities + /*override species*/dex.numPokemon +
     /*suppress ability*/1 + /*disabled moves*/4 + /*locked move*/1 +
     /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
@@ -110,7 +110,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         ...(Object.keys(status.boosts) as BoostName[]).map(
                 key => status.boosts[key]),
         confused, status.ingrain ? 1 : 0, magnetRise, embargo,
-        ...overrideAbility, ...overrideSpecies,
+        status.substitute ? 1 : 0, ...overrideAbility, ...overrideSpecies,
         status.isAbilitySuppressed() ? 1 : 0, ...disabled, lockedMove,
         ...twoTurn, status.mustRecharge ? 1 : 0, stallFailRate, ...typeData,
         status.willTruant ? 1 : 0, status.roost ? 1 : 0
