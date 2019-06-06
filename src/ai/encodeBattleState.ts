@@ -74,46 +74,52 @@ export function encodePossiblityClass<TData>(pc: PossibilityClass<TData>,
     return result;
 }
 
+const typeArr = Object.keys(types) as readonly Type[];
+
 /** Length of the return value of `encodeVolatileStatus()`. */
 export const sizeVolatileStatus =
     /*boostable stats*/Object.keys(boostNames).length + /*confuse*/1 +
-    /*ingrain*/1 + /*magnet rise*/1 + /*embargo*/1 + /*substitute*/1 +
-    /*override ability*/dex.numAbilities + /*override species*/dex.numPokemon +
+    /*embargo*/1 + /*ingrain*/1 + /*magnet rise*/1 + /*substitute*/1 +
     /*suppress ability*/1 + /*disabled moves*/4 + /*locked move*/1 +
-    /*two-turn status*/numTwoTurnMoves + /*must recharge*/1 +
-    /*stall fail rate*/1 + /*override types*/Object.keys(types).length +
-    /*truant*/1 + /*roost*/1;
+    /*must recharge*/1 + /*override ability*/dex.numAbilities +
+    /*override species*/dex.numPokemon + /*override types*/typeArr.length +
+    /*roost*/1 + /*stall fail rate*/1 + /*taunt*/1 +
+    /*two-turn status*/numTwoTurnMoves + /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
 export function encodeVolatileStatus(status: VolatileStatus): number[]
 {
-    // one-hot encode categorical data
-    const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
-    const overrideSpecies = oneHot(status.overrideSpeciesId, dex.numPokemon);
-    const twoTurn = oneHot(status.twoTurn ? twoTurnMoves[status.twoTurn] : null,
-            numTwoTurnMoves);
-
-    // multi-hot encode type data
-    const overrideTypes = status.overrideTypes.concat(status.addedType);
-    const typeData = (Object.keys(types) as Type[])
-        .map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
-
-    // encode temporary status turns
+    // passable
+    const boosts = (Object.keys(status.boosts) as BoostName[])
+        .map(key => status.boosts[key]);
     const confused = tempStatusTurns(status.confuseTurns);
-    const magnetRise = tempStatusTurns(status.magnetRiseTurns);
     const embargo = tempStatusTurns(status.embargoTurns);
+    const ingrain = status.ingrain ? 1 : 0;
+    const magnetRise = tempStatusTurns(status.magnetRiseTurns);
+    const substitute = status.substitute ? 1 : 0;
+    const suppressed = status.isAbilitySuppressed() ? 1 : 0;
+
+    // non-passable
     const disabled = status.disableTurns.map(tempStatusTurns);
     const lockedMove = tempStatusTurns(status.lockedMoveTurns);
+    const mustRecharge = status.mustRecharge ? 1 : 0;
+    const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
+    const overrideSpecies = oneHot(status.overrideSpeciesId, dex.numPokemon);
+    const overrideTypes = status.overrideTypes.concat(status.addedType);
+    const overrideTypeData =
+        typeArr.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
+    const roost = status.roost ? 1 : 0;
     const stallFailRate = tempStatusTurns(status.stallTurns);
+    const taunt = tempStatusTurns(status.tauntTurns);
+    const twoTurn = oneHot(status.twoTurn ? twoTurnMoves[status.twoTurn] : null,
+            numTwoTurnMoves);
+    const willTruant = status.willTruant ? 1 : 0;
 
     return [
-        ...(Object.keys(status.boosts) as BoostName[]).map(
-                key => status.boosts[key]),
-        confused, status.ingrain ? 1 : 0, magnetRise, embargo,
-        status.substitute ? 1 : 0, ...overrideAbility, ...overrideSpecies,
-        status.isAbilitySuppressed() ? 1 : 0, ...disabled, lockedMove,
-        ...twoTurn, status.mustRecharge ? 1 : 0, stallFailRate, ...typeData,
-        status.willTruant ? 1 : 0, status.roost ? 1 : 0
+        ...boosts, confused, embargo, ingrain, magnetRise, substitute,
+        suppressed, ...disabled, lockedMove, mustRecharge,
+        ...overrideAbility, ...overrideSpecies, ...overrideTypeData,
+        roost, stallFailRate, taunt, ...twoTurn, willTruant
     ];
 }
 

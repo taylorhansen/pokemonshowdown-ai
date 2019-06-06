@@ -82,22 +82,24 @@ describe("VolatileStatus", function()
             expect(newVolatile.boosts.atk).to.equal(1);
             expect(newVolatile.isConfused).to.be.true;
             expect(newVolatile.confuseTurns).to.equal(1);
-            expect(newVolatile.magnetRise).to.be.true;
             expect(newVolatile.embargo).to.be.true;
+            expect(newVolatile.embargoTurns).to.equal(1);
+            expect(newVolatile.magnetRise).to.be.true;
+            expect(newVolatile.magnetRiseTurns).to.equal(1);
             expect(newVolatile.substitute).to.be.true;
             // not passed
             expect(newVolatile.isDisabled(0)).to.be.false;
             expect(newVolatile.lockedMove).to.be.false;
-            expect(volatile.twoTurn).to.equal("");
-            expect(volatile.mustRecharge).to.be.false;
-            expect(volatile.stallTurns).to.equal(0);
-            expect(volatile.overrideAbility).to.be.empty;
-            expect(volatile.overrideAbilityId).to.be.null;
-            expect(volatile.overrideSpecies).to.be.empty;
-            expect(volatile.overrideSpeciesId).to.be.null;
-            expect(volatile.overrideTypes).to.have.members(["???", "???"]);
-            expect(volatile.addedType).to.equal("???");
-            expect(volatile.willTruant).to.be.false;
+            expect(newVolatile.mustRecharge).to.be.false;
+            expect(newVolatile.overrideAbility).to.be.empty;
+            expect(newVolatile.overrideAbilityId).to.be.null;
+            expect(newVolatile.overrideSpecies).to.be.empty;
+            expect(newVolatile.overrideSpeciesId).to.be.null;
+            expect(newVolatile.overrideTypes).to.have.members(["???", "???"]);
+            expect(newVolatile.addedType).to.equal("???");
+            expect(newVolatile.stallTurns).to.equal(0);
+            expect(newVolatile.twoTurn).to.equal("");
+            expect(newVolatile.willTruant).to.be.false;
         });
 
         it("Should copy suppressed ability status", function()
@@ -108,6 +110,7 @@ describe("VolatileStatus", function()
             volatile.clear();
             expect(newVolatile.isAbilitySuppressed()).to.be.true;
             expect(newVolatile.overrideAbility).to.equal("<suppressed>");
+            expect(newVolatile.overrideAbilityId).to.be.null;
         });
     });
 
@@ -119,22 +122,6 @@ describe("VolatileStatus", function()
             {
                 expect(volatile.boosts[stat]).to.equal(0);
             }
-        });
-    });
-
-    describe("#disableMove()/#isDisabled()", function()
-    {
-        it("Should not be disabled initially", function()
-        {
-            expect(volatile.isDisabled(0)).to.equal(false);
-        });
-
-        it("Should disable/enable move", function()
-        {
-            volatile.disableMove(0);
-            expect(volatile.isDisabled(0)).to.equal(true);
-            volatile.enableMoves();
-            expect(volatile.isDisabled(0)).to.equal(false);
         });
     });
 
@@ -156,14 +143,19 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#magnetRise", function()
+    describe("#disableMove()/#isDisabled()", function()
     {
-        it("Should set magnet rise", function()
+        it("Should not be disabled initially", function()
         {
-            volatile.magnetRise = true;
-            expect(volatile.magnetRise).to.be.true;
-            volatile.magnetRise = false;
-            expect(volatile.magnetRise).to.be.false;
+            expect(volatile.isDisabled(0)).to.equal(false);
+        });
+
+        it("Should disable/enable move", function()
+        {
+            volatile.disableMove(0);
+            expect(volatile.isDisabled(0)).to.equal(true);
+            volatile.enableMoves();
+            expect(volatile.isDisabled(0)).to.equal(false);
         });
     });
 
@@ -175,6 +167,28 @@ describe("VolatileStatus", function()
             expect(volatile.embargo).to.be.true;
             volatile.embargo = false;
             expect(volatile.embargo).to.be.false;
+        });
+    });
+
+    describe("#magnetRise", function()
+    {
+        it("Should set magnet rise", function()
+        {
+            volatile.magnetRise = true;
+            expect(volatile.magnetRise).to.be.true;
+            volatile.magnetRise = false;
+            expect(volatile.magnetRise).to.be.false;
+        });
+    });
+
+    describe("#suppressAbility()", function()
+    {
+        it("Should suppress ability", function()
+        {
+            volatile.suppressAbility();
+            expect(volatile.isAbilitySuppressed()).to.be.true;
+            expect(volatile.overrideAbility).to.equal("<suppressed>");
+            expect(volatile.overrideAbilityId).to.be.null;
         });
     });
 
@@ -207,16 +221,6 @@ describe("VolatileStatus", function()
         {
             expect(() => volatile.overrideSpecies = "not-a real_species")
                 .to.throw();
-        });
-    });
-
-    describe("#suppressAbility()", function()
-    {
-        it("Should suppress ability", function()
-        {
-            volatile.suppressAbility();
-            expect(volatile.isAbilitySuppressed()).to.be.true;
-            expect(volatile.overrideAbility).to.equal("<suppressed>");
         });
     });
 

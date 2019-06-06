@@ -40,6 +40,13 @@ export class VolatileStatus
     }
     private _confuseTurns!: number;
 
+    /** Embargo move status (temporary). */
+    public get embargo(): boolean { return this._embargoTurns > 0; }
+    public set embargo(flag: boolean) { this._embargoTurns = flag ? 1 : 0; }
+    /** Amount of turns the pokemon has been embargoed. */
+    public get embargoTurns(): number { return this._embargoTurns; }
+    private _embargoTurns!: number;
+
     /** Ingrain move status. */
     public ingrain!: boolean;
 
@@ -53,26 +60,24 @@ export class VolatileStatus
     public get magnetRiseTurns(): number { return this._magnetRiseTurns; }
     private _magnetRiseTurns!: number;
 
-    /** Embargo move status (temporary). */
-    public get embargo(): boolean { return this._embargoTurns > 0; }
-    public set embargo(flag: boolean) { this._embargoTurns = flag ? 1 : 0; }
-    /** Amount of turns the pokemon has been embargoed. */
-    public get embargoTurns(): number { return this._embargoTurns; }
-    private _embargoTurns!: number;
-
-    /** Taunt move status (temporary). */
-    public get taunt(): boolean { return this._tauntTurns > 0; }
-    public set taunt(flag: boolean) { this._tauntTurns = flag ? 1 : 0; }
-    /** Amount of turns the pokemon has been taunted. */
-    public get tauntTurns(): number { return this._tauntTurns; }
-    private _tauntTurns!: number;
-
     /** Substitute move status. */
     public substitute!: boolean;
 
-    // situational
+    // should only pass #isAbilitySuppressed()
+    /** Whether the current ability is being suppressed. */
+    public isAbilitySuppressed(): boolean
+    {
+        return this.overrideAbilityName === "<suppressed>";
+    }
+    /** Suppresses override ability. */
+    public suppressAbility(): void
+    {
+        this._overrideAbility = null;
+        this.overrideAbilityName = "<suppressed>";
+    }
 
-    // override ability (only #isAbilitySuppressed() is passed)
+    // not passed when copying
+
     /** Override ability while active. */
     public get overrideAbility(): string { return this.overrideAbilityName; }
     public set overrideAbility(ability: string)
@@ -99,54 +104,10 @@ export class VolatileStatus
     {
         return this._overrideAbility;
     }
-    /** Whether the ability is being suppressed. */
-    public isAbilitySuppressed(): boolean
-    {
-        return this.overrideAbilityName === "<suppressed>";
-    }
-    /** Suppresses override ability. */
-    public suppressAbility(): void
-    {
-        this._overrideAbility = null;
-        this.overrideAbilityName = "<suppressed>";
-    }
     /** ID number of ability. */
     private _overrideAbility!: number | null;
     /** Name of override ability. */
     private overrideAbilityName!: string;
-
-    // not passed when copying
-
-    /** Temporary form change. */
-    public get overrideSpecies(): string { return this.overrideSpeciesName; }
-    public set overrideSpecies(species: string)
-    {
-        if (!species)
-        {
-            this._overrideSpecies = null;
-            this.overrideSpeciesName = "";
-            return;
-        }
-
-        if (!dex.pokemon.hasOwnProperty(species))
-        {
-            throw new Error(`Unknown species "${species}"`);
-        }
-        this._overrideSpecies = dex.pokemon[species].uid;
-        this.overrideSpeciesName = species;
-    }
-    /**
-     * Override species id number. Defaults to null if `overrideSpecies` is not
-     * initialized.
-     */
-    public get overrideSpeciesId(): number | null
-    {
-        return this._overrideSpecies;
-    }
-    /** ID number of species. */
-    private _overrideSpecies!: number | null;
-    /** Name of override species. */
-    private overrideSpeciesName!: string;
 
     /**
      * Checks whether a move is disabled.
@@ -183,22 +144,51 @@ export class VolatileStatus
     public get lockedMoveTurns(): number { return this._lockedMoveTurns; }
     private _lockedMoveTurns!: number;
 
-    /** Two-turn move currently being prepared. */
-    public get twoTurn(): TwoTurnMove | ""
-    {
-        return this._twoTurn;
-    }
-    public set twoTurn(twoTurn: TwoTurnMove | "")
-    {
-        this._twoTurn = twoTurn;
-        // after this turn this will be 1
-        this.twoTurnCounter = twoTurn ? 2 : 0;
-    }
-    private _twoTurn!: TwoTurnMove | "";
-    private twoTurnCounter!: number;
-
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge!: boolean;
+
+    /** Temporary form change. */
+    public get overrideSpecies(): string { return this.overrideSpeciesName; }
+    public set overrideSpecies(species: string)
+    {
+        if (!species)
+        {
+            this._overrideSpecies = null;
+            this.overrideSpeciesName = "";
+            return;
+        }
+
+        if (!dex.pokemon.hasOwnProperty(species))
+        {
+            throw new Error(`Unknown species "${species}"`);
+        }
+        this._overrideSpecies = dex.pokemon[species].uid;
+        this.overrideSpeciesName = species;
+    }
+    /**
+     * Override species id number. Defaults to null if `overrideSpecies` is not
+     * initialized.
+     */
+    public get overrideSpeciesId(): number | null
+    {
+        return this._overrideSpecies;
+    }
+    /** ID number of species. */
+    private _overrideSpecies!: number | null;
+    /** Name of override species. */
+    private overrideSpeciesName!: string;
+
+    /**
+     * Temporarily overridden types. This should not be included in toString()
+     * since the parent Pokemon object should handle that. Should not be
+     * accessed other than by the parent Pokemon object.
+     */
+    public overrideTypes!: readonly [Type, Type];
+    /** Temporary third type. */
+    public addedType!: Type;
+
+    /** Roost move effect (single turn). */
+    public roost!: boolean;
 
     /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
     public get stallTurns(): number { return this._stallTurns; }
@@ -215,14 +205,26 @@ export class VolatileStatus
     /** Whether we have successfully stalled this turn. */
     private stalled!: boolean;
 
-    /**
-     * Temporarily overridden types. This should not be included in toString()
-     * since the parent Pokemon object should handle that. Should not be
-     * accessed other than by the parent Pokemon object.
-     */
-    public overrideTypes!: readonly [Type, Type];
-    /** Temporary third type. */
-    public addedType!: Type;
+    /** Taunt move status (temporary). */
+    public get taunt(): boolean { return this._tauntTurns > 0; }
+    public set taunt(flag: boolean) { this._tauntTurns = flag ? 1 : 0; }
+    /** Amount of turns the pokemon has been taunted. */
+    public get tauntTurns(): number { return this._tauntTurns; }
+    private _tauntTurns!: number;
+
+    /** Two-turn move currently being prepared. */
+    public get twoTurn(): TwoTurnMove | ""
+    {
+        return this._twoTurn;
+    }
+    public set twoTurn(twoTurn: TwoTurnMove | "")
+    {
+        this._twoTurn = twoTurn;
+        // after this turn this will be 1
+        this.twoTurnCounter = twoTurn ? 2 : 0;
+    }
+    private _twoTurn!: TwoTurnMove | "";
+    private twoTurnCounter!: number;
 
     /** Whether the Truant ability will activate next turn. */
     public get willTruant(): boolean { return this._willTruant; }
@@ -230,9 +232,6 @@ export class VolatileStatus
     public activateTruant(): void { this._willTruant = true; }
     // note: above will invert to false on postTurn() so it's properly synced
     private _willTruant!: boolean;
-
-    /** Roost move effect (single turn). */
-    public roost!: boolean;
 
     /** Creates a VolatileStatus object. */
     constructor()
@@ -251,26 +250,27 @@ export class VolatileStatus
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
         };
         this._confuseTurns = 0;
+        this._embargoTurns = 0;
         this.ingrain = false;
         this._magnetRiseTurns = 0;
-        this._embargoTurns = 0;
-        this._tauntTurns = 0;
         this.substitute = false;
+
+        this.enableMoves();
+        this._lockedMoveTurns = 0;
+        this.mustRecharge = false;
         this._overrideAbility = null;
         this.overrideAbilityName = "";
         this._overrideSpecies = null;
         this.overrideSpeciesName = "";
-        this.enableMoves();
-        this._lockedMoveTurns = 0;
-        this._twoTurn = "";
-        this.twoTurnCounter = 0;
-        this.mustRecharge = false;
-        this._stallTurns = 0;
-        this.stalled = false;
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
-        this._willTruant = false;
         this.roost = false;
+        this._stallTurns = 0;
+        this.stalled = false;
+        this._tauntTurns = 0;
+        this._twoTurn = "";
+        this.twoTurnCounter = 0;
+        this._willTruant = false;
     }
 
     /**
@@ -281,8 +281,8 @@ export class VolatileStatus
     {
         // confusion is handled separately since it depends on an event
         // other statuses like these are silent
-        if (this.magnetRise) ++this._magnetRiseTurns;
         if (this.embargo) ++this._embargoTurns;
+        if (this.magnetRise) ++this._magnetRiseTurns;
         if (this.taunt) ++this._tauntTurns;
 
         // update disabled move turns
@@ -323,9 +323,9 @@ export class VolatileStatus
         const v = new VolatileStatus();
         v._boosts = this._boosts;
         v._confuseTurns = this._confuseTurns;
+        v._embargoTurns = this._embargoTurns;
         v.ingrain = this.ingrain;
         v._magnetRiseTurns = this._magnetRiseTurns;
-        v._embargoTurns = this._embargoTurns;
         v.substitute = this.substitute;
         if (this.isAbilitySuppressed()) v.suppressAbility();
         return v;
@@ -338,31 +338,31 @@ export class VolatileStatus
      */
     public toString(): string
     {
-        return `[${(Object.keys(this._boosts) as BoostName[])
-            .filter(key => this._boosts[key] !== 0)
-            .map(key => `${key}: ${plus(this._boosts[key])}`)
-            .concat(
-                this._confuseTurns ?
-                    [pluralTurns("confused", this._confuseTurns - 1)] : [],
-                this.ingrain ? ["ingrain"] : [],
-                this._magnetRiseTurns ?
-                    [pluralTurns("magnet rise", this._magnetRiseTurns - 1)]
-                    : [],
-                this._embargoTurns ?
-                    [pluralTurns("embargo", this._embargoTurns - 1)] : [],
-                this._tauntTurns ?
-                    [pluralTurns("taunt", this._tauntTurns - 1)] : [],
-                this.substitute ? ["substitute"] : [],
-                this._disableTurns
-                    .filter(d => d !== 0)
-                    .map((d, i) => pluralTurns(`disabled move ${i + 1}`, d)),
-                this.lockedMove ? ["lockedmove"] : [],
-                this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
-                this.mustRecharge ? ["must recharge"] : [],
-                this._stallTurns ?
-                    [pluralTurns("stalling", this._stallTurns - 1)] : [],
-                this._willTruant ? ["truant next turn"] : [],
-                this.roost ? ["roosting"] : [])
-            .join(", ")}]`;
+        return `[${([] as string[]).concat(
+            (Object.keys(this._boosts) as BoostName[])
+                .filter(key => this._boosts[key] !== 0)
+                .map(key => `${key}: ${plus(this._boosts[key])}`),
+            this._confuseTurns ?
+                [pluralTurns("confused", this._confuseTurns - 1)] : [],
+            this._embargoTurns ?
+                [pluralTurns("embargo", this._embargoTurns - 1)] : [],
+            this.ingrain ? ["ingrain"] : [],
+            this._magnetRiseTurns ?
+                [pluralTurns("magnet rise", this._magnetRiseTurns - 1)] : [],
+            this.substitute ? ["substitute"] : [],
+            this._disableTurns
+                .filter(d => d !== 0)
+                .map((d, i) => pluralTurns(`disabled move ${i + 1}`, d)),
+            this.lockedMove ? ["lockedmove"] : [],
+            this.mustRecharge ? ["must recharge"] : [],
+            // override ability/species/type handled by Pokemon#toString()
+            this.roost ? ["roosting"] : [],
+            this._stallTurns ?
+                [pluralTurns("stalled", this._stallTurns - 1)] : [],
+            this._tauntTurns ?
+                [pluralTurns("taunt", this._tauntTurns - 1)] : [],
+            this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
+            this._willTruant ? ["truant next turn"] : [])
+        .join(", ")}]`;
     }
 }

@@ -369,18 +369,29 @@ ability ${ability}`);
     {
         const s = " ".repeat(indent);
         return `\
-${s}${this._species.name} ${this.gender ? ` ${this.gender}` : ""} \
-lv${this.level} ${this.hp.toString()}\
+${s}${this.stringifySpecies()} ${this.gender ? ` ${this.gender}` : ""} \
+L${this.level} ${this.hp.toString()}\
 ${this.majorStatus ? ` ${this.majorStatus}` : ""}
 ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
 ${s}grounded: \
 ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
-${s}types: [${this.stringifyTypes()}]
+${s}types: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.item.definiteValue ?
     this.item.definiteValue.name : "<unrevealed>"}
 ${s}moveset: [${this.moveset.toString()}]`;
+    }
+
+    // istanbul ignore next: only used for logging
+    /** Displays the species as well as whether it's overridden. */
+    private stringifySpecies(): string
+    {
+        const base = this._species.name;
+        const over = this._active ? this._volatile.overrideSpecies : "";
+
+        if (!over || over === base) return base;
+        else return `${over} (base: ${base})`;
     }
 
     // istanbul ignore next: only used for logging
@@ -411,7 +422,7 @@ ${s}moveset: [${this.moveset.toString()}]`;
             result.push(`(${this._volatile.addedType})`);
         }
 
-        return result.join(", ");
+        return `[${result.join(", ")}]`;
     }
 
     // istanbul ignore next: only used for logging
