@@ -6,9 +6,9 @@ import { Experience } from "./Experience";
 export class TrainNetwork extends Network
 {
     /** Tensor data that generated `lastPrediction`. */
-    private lastStateData?: readonly number[];
+    private lastStateData?: number[];
     /** Tensor data that generated `prediction`. */
-    private stateData?: readonly number[];
+    private stateData?: number[];
     /**
      * Whether to update `#lastStateData` on `#getPrediction()`. Resets back to
      * true once that method is called.

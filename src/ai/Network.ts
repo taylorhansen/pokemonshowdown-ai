@@ -12,6 +12,7 @@ import { encodeBattleState, sizeBattleState } from "./encodeBattleState";
  */
 export function toColumn(arr: number[] | Float32Array): tf.Tensor2D
 {
+    // TODO: shouldn't the parameters be readonly?
     return tf.tensor2d(arr, [1, arr.length], "float32");
 }
 
@@ -110,17 +111,27 @@ export class Network implements BattleAgent
     private static verifyModel(model: tf.LayersModel): void
     {
         // loaded models must have the correct input/output shape
-        if (Array.isArray(model.input) ||
-            !Network.isValidInputShape(model.input.shape))
+        if (Array.isArray(model.input))
         {
-            throw new Error(`Loaded LayersModel has invalid input shape. Try \
-to create a new model with an input shape of (null, ${sizeBattleState})`);
+            throw new Error("Loaded LayersModel should have only one input " +
+            `layer but found ${model.input.length}`);
         }
-        if (Array.isArray(model.output) ||
-            !Network.isValidOutputShape(model.output.shape))
+        if (!Network.isValidInputShape(model.input.shape))
         {
-            throw new Error(`Loaded LayersModel has invalid output shape. Try \
-to create a new model with an output shape of (null, ${intToChoice.length})`);
+            throw new Error("Loaded LayersModel has invalid input shape " +
+                `(${model.input.shape.join(", ")}). Try to create a new ` +
+                `model with an input shape of (, ${sizeBattleState})`);
+        }
+        if (Array.isArray(model.output))
+        {
+            throw new Error("Loaded LayersModel should have only one output " +
+            `layer but found ${model.output.length}`);
+        }
+        if (!Network.isValidOutputShape(model.output.shape))
+        {
+            throw new Error("Loaded LayersModel has invalid output shape " +
+                `(${model.output.shape.join(", ")}). Try to create a new ` +
+                `model with an output shape of (, ${intToChoice.length})`);
         }
     }
 
