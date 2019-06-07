@@ -74,7 +74,9 @@ export function encodePossiblityClass<TData>(pc: PossibilityClass<TData>,
     return result;
 }
 
-const typeArr = Object.keys(types) as readonly Type[];
+// TODO: guarantee order? move to dex-util once figured out
+/** Types without `???` type. */
+const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
 
 /** Length of the return value of `encodeVolatileStatus()`. */
 export const sizeVolatileStatus =
@@ -82,9 +84,10 @@ export const sizeVolatileStatus =
     /*embargo*/1 + /*ingrain*/1 + /*magnet rise*/1 + /*substitute*/1 +
     /*suppress ability*/1 + /*disabled moves*/4 + /*locked move*/1 +
     /*must recharge*/1 + /*override ability*/dex.numAbilities +
-    /*override species*/dex.numPokemon + /*override types*/typeArr.length +
-    /*roost*/1 + /*stall fail rate*/1 + /*taunt*/1 +
-    /*two-turn status*/numTwoTurnMoves + /*will truant*/1;
+    /*override species*/dex.numPokemon +
+    /*override types*/filteredTypes.length + /*roost*/1 +
+    /*stall fail rate*/1 + /*taunt*/1 + /*two-turn status*/numTwoTurnMoves +
+    /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
 export function encodeVolatileStatus(status: VolatileStatus): number[]
@@ -107,7 +110,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const overrideSpecies = oneHot(status.overrideSpeciesId, dex.numPokemon);
     const overrideTypes = status.overrideTypes.concat(status.addedType);
     const overrideTypeData =
-        typeArr.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
+        filteredTypes.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
     const roost = status.roost ? 1 : 0;
     const stallFailRate = tempStatusTurns(status.stallTurns);
     const taunt = tempStatusTurns(status.tauntTurns);
@@ -204,9 +207,6 @@ export const sizePokemon = /*gender*/3 + dex.numPokemon + dex.numItems +
 
 /** Length of the return value of `encodePokemon()` when active. */
 export const sizeActivePokemon = sizePokemon + sizeVolatileStatus;
-
-/** Types without `???` type. */
-const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
 
 /**
  * Formats pokemon info into an array of numbers. Null means unknown, while
