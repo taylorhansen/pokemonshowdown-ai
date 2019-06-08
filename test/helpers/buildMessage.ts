@@ -1,4 +1,4 @@
-import { AnyBattleEvent, Cause } from
+import { AnyBattleEvent, From } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
@@ -213,7 +213,9 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         default:
             throw new Error(`Can't stringify '${event}'`);
     }
-    if (event.cause) result.push(...stringifyCause(event.cause));
+    if (event.from) result.push(stringifyFromSuffix(event.from));
+    if (event.of) result.push(`[of] ${stringifyID(event.of)}`);
+    if (event.fatigue) result.push("[fatigue]");
     return result;
 }
 
@@ -256,24 +258,14 @@ export function stringifyStatus(status: PokemonStatus): string
 ${status.condition ? ` ${status.condition}` : ""}`;
 }
 
-/**
- * Stringifies a Cause.
- * @param cause Cause object.
- * @returns The Cause in string form.
- */
-export function stringifyCause(cause: Cause): string[]
+/** Stringifies a From suffix. */
+export function stringifyFromSuffix(from: From): string
 {
-    switch (cause.type)
+    switch (from.type)
     {
-        case "ability":
-        {
-            const result = [`[from] ability: ${cause.ability}`];
-            if (cause.of) result.push(`[of] ${stringifyID(cause.of)}`);
-            return result;
-        }
-        case "fatigue": return ["[fatigue]"];
-        case "item": return [`[from] item: ${cause.item}`];
-        case "lockedmove": return ["[from]lockedmove"];
-        default: throw new Error(`Unhandled Cause type ${cause!.type}`);
+        case "ability": return `[from] ability: ${from.ability}`;
+        case "item": return `[from] item: ${from.item}`;
+        case "lockedmove": return "[from]lockedmove";
+        default: throw new Error(`Unhandled From suffix type ${from!.type}`);
     }
 }

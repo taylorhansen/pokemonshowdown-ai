@@ -2,23 +2,23 @@
 import { BoostName, boostNames } from "../../battle/dex/dex-util";
 import { Logger } from "../../Logger";
 import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventPrefix,
-    BoostEvent, CantEvent, Cause, ClearAllBoostEvent, ClearBoostEvent,
+    BoostEvent, CantEvent, ClearAllBoostEvent, ClearBoostEvent,
     ClearNegativeBoostEvent, ClearPositiveBoostEvent, CopyBoostEvent,
-    CureStatusEvent, CureTeamEvent, DamageEvent,
-    DetailsChangeEvent, EndAbilityEvent, EndEvent, FaintEvent, FieldEndEvent,
-    FieldStartEvent, FormeChangeEvent, InvertBoostEvent, isBattleEventPrefix,
-    MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent,
-    SideEndEvent, SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent,
-    SwapBoostEvent, SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent,
-    WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
+    CureStatusEvent, CureTeamEvent, DamageEvent, DetailsChangeEvent,
+    EndAbilityEvent, EndEvent, FaintEvent, FieldEndEvent, FieldStartEvent,
+    FormeChangeEvent, InvertBoostEvent, isBattleEventPrefix, MoveEvent,
+    MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
+    SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent, SwapBoostEvent,
+    SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
+    WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
 import { chain, many, maybe, sequence, transform } from "./combinators";
 import { anyWord, boostName, dispatch, integer, json, majorStatus,
-    parseBoostName, parsePokemonDetails, parsePokemonID, parsePokemonStatus,
-    playerId, playerIdWithName, pokemonDetails, pokemonId, pokemonStatus,
-    restOfLine, skipLine, weatherType, word } from "./helpers";
+    parseBoostName, parseFromSuffix, parsePokemonDetails, parsePokemonID,
+    parsePokemonStatus, playerId, playerIdWithName, pokemonDetails, pokemonId,
+    pokemonStatus, restOfLine, skipLine, weatherType, word } from "./helpers";
 import { iter } from "./Iter";
 import { Info, Input, Parser, Result } from "./types";
 
@@ -346,8 +346,7 @@ function battleEvents(input: Input, info: Info): Result<AnyBattleEvent[]>
 
     while (!input.done)
     {
-        // the parser doesn't have to consume the whole line since the rest of
-        //  it will be skipped over
+        // invalid BattleEvents can throw, so filter those out
         try
         {
             const r = battleEvent(input, info);
@@ -364,33 +363,43 @@ function battleEvents(input: Input, info: Info): Result<AnyBattleEvent[]>
 }
 
 /**
- * Parses a BattleEvent with optional Cause suffix. Throws if invalid. Can also
- * return null in the result if the failure is meant to be silent.
+ * Parses a BattleEvent with optional suffixes. Throws if invalid. Result
+ * contains null if the event type is unsupported.
  */
 function battleEvent(input: Input, info: Info): Result<AnyBattleEvent | null>
 {
     const r1 = battleEventHelper(input, info);
+    if (!r1.result) return r1;
 
-    if (r1.result)
+    // parse optional suffixes
+    let event: AnyBattleEvent = r1.result;
+    while (!input.done && input.get() !== "\n")
     {
-        let cause: Cause | undefined;
-        // parse an optional cause suffix
-        // may have to go through unconsumed input to get to it
-        while (!cause && !input.done && input.get() !== "\n")
+        const s = input.get();
+        const matches = s.match(
+            // matches "[x]", "[x]y", and "[x] y", where the named group
+            //  "prefix" matches to "x" and "value" matches to "y" or undefined
+            /^\[(?<prefix>\w+)\]\s?(?<value>.*)/);
+        if (matches && matches.groups)
         {
-            const r2 = battleEventCause(input, info);
-            input = r2.remaining;
-            if (r2.result) cause = r2.result;
-            // not a valid/relevant Cause so skip it
-            else input = input.next();
+            const prefix = matches.groups.prefix;
+            const value = matches.groups.value;
+            if (prefix === "of")
+            {
+                event = {...event, of: parsePokemonID(value)};
+            }
+            else if (prefix === "from")
+            {
+                const from = parseFromSuffix(value);
+                // istanbul ignore else: trivial
+                if (from) event = {...event, from};
+            }
+            else if (prefix === "fatigue") event = {...event, fatigue: true};
         }
-
-        if (cause)
-        {
-            return {result: {...r1.result, cause}, remaining: r1.remaining};
-        }
+        input = input.next();
     }
 
+    r1.result = event;
     return r1;
 }
 
@@ -488,11 +497,25 @@ const eventBoost: Parser<BoostEvent> = transform(
  * |cant|<PokemonID>|<reason>|<move (optional)>
  */
 const eventCant: Parser<CantEvent> = transform(
-    sequence(word("cant"), pokemonId, anyWord, maybe(anyWord)),
+    sequence(word("cant"), pokemonId, anyWord, eventCantHelper),
     ([_, id, reason, moveName]) =>
         moveName ?
             {type: "cant", id, reason, moveName}
             : {type: "cant", id, reason});
+
+/**
+ * Parses the `moveName` part of a `|cant|` message without accidentally parsing
+ * a suffix.
+ */
+function eventCantHelper(input: Input, info: Info): Result<string | undefined>
+{
+    const s = input.get();
+    if (s.startsWith("[") || s === "\n")
+    {
+        return {result: undefined, remaining: input};
+    }
+    return {result: s, remaining: input.next()};
+}
 
 /**
  * Parses a ClearAllBoostEvent.
@@ -748,50 +771,25 @@ const eventSingleTurn: Parser<SingleTurnEvent> = transform(
  */
 const eventStart: Parser<StartEvent> = transform(
     sequence(word("-start"), pokemonId, anyWord, eventStartHelper),
-    ([_, id, volatile, {otherArgs, cause}]) =>
-        cause ? {type: "start", id, volatile, otherArgs, cause}
-        : {type: "start", id, volatile, otherArgs});
+    ([_, id, volatile, otherArgs]) =>
+        ({type: "start", id, volatile, otherArgs}));
 
 /**
- * Equivalent to `sequence(some(anyWord), maybe(battleEventCause))` but is
- * non-greedy and turns the result into a dictionary instead of an array.
+ * Parses the `otherArgs` part of a `|start|` message without accidentally
+ * parsing a suffix.
  */
-function eventStartHelper(input: Input, info: Info):
-    Result<{otherArgs: string[], cause?: Cause}>
+function eventStartHelper(input: Input, info: Info): Result<string[]>
 {
-    const otherArgs: string[] = [];
-    let cause: Cause | undefined;
+    const result: string[] = [];
 
     while (!input.done && input.get() !== "\n")
     {
         const s = input.get();
-
-        // istanbul ignore else: nothing else to parse after cause
-        if (!cause)
-        {
-            // attempt to parse Cause object, which could fail either loudly or
-            //  quietly
-            try
-            {
-                const r = battleEventCause(input, info);
-                if (r.result)
-                {
-                    cause = r.result;
-                    input = r.remaining;
-                }
-            }
-            catch (e) {}
-        }
-        else input = input.next();
-
-        if (!cause)
-        {
-            otherArgs.push(s);
-            input = input.next();
-        }
+        if (!s.startsWith("[")) result.push(s);
+        input = input.next();
     }
 
-    return {result: cause ? {otherArgs, cause} : {otherArgs}, remaining: input};
+    return {result, remaining: input};
 }
 
 /**
@@ -914,50 +912,3 @@ const eventWeather: Parser<WeatherEvent> = transform(
  */
 const eventWin: Parser<WinEvent> = transform(sequence(word("win"), restOfLine),
         ([_, winner]) => ({type: "win", winner}));
-
-// cause parser
-
-/**
- * Parses an event Cause. Throws if invalid. Can also return null in the result
- * if the failure is meant to be silent.
- */
-function battleEventCause(input: Input, info: Info): Result<Cause | null>
-{
-    const str = input.get();
-    if (str.startsWith("[from] ability: "))
-    {
-        const ability = str.substr("[from] ability: ".length);
-
-        // parse possible "of" suffix
-        const nextInput = input.next();
-        const next = nextInput.get();
-        if (next && next.startsWith("[of] "))
-        {
-            const of = parsePokemonID(next.substr("[of] ".length));
-            return {
-                result: {type: "ability", ability, of},
-                remaining: nextInput.next()
-            };
-        }
-
-        return {result: {type: "ability", ability}, remaining: nextInput};
-    }
-    if (str === "[fatigue]")
-    {
-        return {result: {type: "fatigue"}, remaining: input.next()};
-    }
-    if (str.startsWith("[from] item: "))
-    {
-        return {
-            result: {type: "item", item: str.substr("[from] item: ".length)},
-            remaining: input.next()
-        };
-    }
-    if (str === "[from]lockedmove")
-    {
-        return {result: {type: "lockedmove"}, remaining: input.next()};
-    }
-
-    // could be either invalid or irrelevant
-    return {result: null, remaining: input};
-}

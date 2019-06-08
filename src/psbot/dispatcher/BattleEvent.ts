@@ -94,8 +94,15 @@ interface BattleEventBase
 {
     /** Type of event this is. */
     readonly type: string;
-    /** Cause of event. */
-    readonly cause?: Cause;
+    /** Optional From suffix object. */
+    readonly from?: From;
+    /** Additional PokemonID for context. */
+    readonly of?: PokemonID;
+    /**
+     * Whether the event was caused from fatigue, or the completion of a
+     * multi-turn locked move.
+     */
+    readonly fatigue?: boolean;
 }
 
 /** Event where a pokemon's ability is revealed and activated. */
@@ -458,49 +465,36 @@ export interface WinEvent extends BattleEventBase
     readonly winner: string;
 }
 
-// battle event cause types
+// from suffix types
 
 /** Optional event suffixes. */
-export type Cause = AbilityCause | FatigueCause | ItemCause | LockedMoveCause;
+export type From = FromAbility | FromItem | FromLockedMove;
 
-/** Base class for Causes. */
-interface CauseBase
+/** Base class for From suffixes. */
+interface FromBase
 {
-    /** The type of Cause this is. */
+    /** Which type of cause this is. */
     readonly type: string;
-    /** Additional PokemonID for context. */
-    readonly of?: PokemonID;
 }
 
-/** Caused by an ability. */
-export interface AbilityCause extends CauseBase
+/** Caused from an ability being activated. */
+export interface FromAbility extends FromBase
 {
     readonly type: "ability";
     /** Name of the ability being activated. */
     readonly ability: string;
-    /**
-     * Either the ID of the pokemon with the ability or the ID of the recipient
-     * of the ability's effect. Meaning may depend on the context.
-     */
-    readonly of?: PokemonID;
 }
 
-/** Caused by fatigue, or the completion of a multi-turn locked move. */
-export interface FatigueCause extends CauseBase
-{
-    readonly type: "fatigue";
-}
-
-/** Caused by a held item. */
-export interface ItemCause extends CauseBase
+/** Caused from a held item. */
+export interface FromItem extends FromBase
 {
     readonly type: "item";
     /** Item name. */
     readonly item: string;
 }
 
-/** Locked into a certain move. */
-export interface LockedMoveCause extends CauseBase
+/** Caused from being locked into using the last move. */
+export interface FromLockedMove extends FromBase
 {
     readonly type: "lockedmove";
 }

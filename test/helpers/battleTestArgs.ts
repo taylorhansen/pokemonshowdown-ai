@@ -1,5 +1,5 @@
 /** @file Contains test arguments for battle messages. */
-import { AnyBattleEvent, Cause, TurnEvent } from
+import { AnyBattleEvent, From, TurnEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
@@ -40,10 +40,10 @@ export const pokemonStatus: PokemonStatus[] =
     {hp: 0, hpMax: 0, condition: ""}
 ];
 
-/** Test Causes. */
-export const cause: Cause[] =
+/** Test From suffixes. */
+export const from: From[] =
 [
-    {type: "ability", ability: "Wonder Guard"}, {type: "fatigue"},
+    {type: "ability", ability: "Wonder Guard"},
     {type: "item", item: "Leftovers"}, {type: "lockedmove"}
 ];
 
@@ -52,7 +52,7 @@ export const battleEvent: AnyBattleEvent[] =
 [
     {type: "ability", id: pokemonId[0], ability: "Pressure"},
     {type: "activate", id: pokemonId[1], volatile: "ingrain"},
-    {type: "boost", id: pokemonId[1], stat: "atk", amount: 1, cause: cause[0]},
+    {type: "boost", id: pokemonId[1], stat: "atk", amount: 1, from: from[0]},
     {type: "cant", id: pokemonId[1], reason: "recharge"},
     {type: "cant", id: pokemonId[1], reason: "taunt", moveName: "Thunder Wave"},
     {type: "clearallboost"},
@@ -65,7 +65,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
     {
         type: "damage", id: pokemonId[1], status: pokemonStatus[1],
-        cause: cause[1]
+        from: from[1]
     },
     {
         type: "detailschange", id: pokemonId[0], details: pokemonDetails[0],
@@ -88,7 +88,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "move", id: pokemonId[1], moveName: "Splash"},
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
-        targetId: pokemonId[0], cause: cause[2]
+        targetId: pokemonId[0], from: from[2]
     },
     {type: "mustrecharge", id: pokemonId[2]},
     {
@@ -110,11 +110,11 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "sidestart", id: "p2", condition: "move: Stealth Rock"},
     {
         type: "start", id: pokemonId[0], volatile: "confusion", otherArgs: [],
-        cause: cause[3]
+        fatigue: true
     },
     {
         type: "start", id: pokemonId[1], volatile: "Disable",
-        otherArgs: ["Splash"]
+        otherArgs: ["Splash"], from: from[2]
     },
     {type: "status", id: pokemonId[0], majorStatus: "slp"},
     {
@@ -132,11 +132,8 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "tie"},
     {
         type: "weather", weatherType: "Hail", upkeep: false,
-        cause:
-        {
-            type: "ability", ability: "Snow Warning",
-            of: {owner: "p2", position: "a", nickname: "Abomasnow"}
-        }
+        from: {type: "ability", ability: "Snow Warning"},
+        of: {owner: "p2", position: "a", nickname: "Abomasnow"}
     },
     {type: "unboost", id: pokemonId[2], stat: "evasion", amount: 2},
     {type: "weather", weatherType: "none", upkeep: false},

@@ -5,7 +5,7 @@ import { Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
 import { SwitchInOptions, Team } from "../battle/state/Team";
 import { Logger } from "../Logger";
-import { AnyBattleEvent, Cause, SideEndEvent, SideStartEvent } from
+import { AnyBattleEvent, From, SideEndEvent, SideStartEvent } from
     "./dispatcher/BattleEvent";
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
@@ -54,14 +54,15 @@ export class PSEventHandler
         .on("ability", event =>
         {
             const active = this.getActive(event.id.owner);
-            if (event.cause && event.cause.type === "ability" &&
-                event.cause.ability === "Trace")
+            if (event.from && event.from.type === "ability" &&
+                event.from.ability === "Trace" && event.of)
             {
-                // trace ability: event.ability contains traced ability,
-                //  event.cause.of contains pokemon that was traced,
+                // trace ability: event.ability contains the Traced ability,
+                //  event.of contains pokemon that was traced, event.id contains
+                //  the pokemon with Trace
                 // initialize baseAbility if not already
                 active.ability = "trace";
-                this.getActive(event.cause.of!.owner).ability =
+                this.getActive(event.of.owner).ability =
                     toIdName(event.ability);
             }
             // now that trace has activated, it will be overridden by the
@@ -306,7 +307,7 @@ export class PSEventHandler
             const mon = this.getActive(event.id.owner);
             mon.useMove(moveId, this.getTargets(moveId, mon),
                 // don't consume pp if locked into using the move
-                /*nopp*/ event.cause && event.cause.type === "lockedmove");
+                /*nopp*/ event.from && event.from.type === "lockedmove");
         })
         .on("mustrecharge", event =>
         {
@@ -385,11 +386,11 @@ export class PSEventHandler
             const weather = this.state.status.weather;
             if (event.weatherType === "none") weather.reset();
             else if (event.upkeep) weather.upkeep(event.weatherType);
-            else if (event.cause && event.cause.type === "ability" &&
-                event.cause.of)
+            else if (event.from && event.from.type === "ability" &&
+                event.of)
             {
                 weather.set(event.weatherType,
-                    this.getActive(event.cause.of.owner), /*ability*/true);
+                    this.getActive(event.of.owner), /*ability*/true);
             }
             else
             {
@@ -512,20 +513,50 @@ export class PSEventHandler
             //  type should match its properties
             this.listener.dispatch(event.type as any, event, events, i);
 
-            // this corner case should be handled in the AbilityEvent handler
-            if (event.type === "ability" && event.cause &&
-                event.cause.type === "ability" &&
-                event.cause.ability === "Trace")
-            {
-                continue;
-            }
+            this.handleSuffixes(event);
+        }
+    }
 
-            // handle message suffixes
-            // some messages don't have an id field, which should default to
-            //  undefined here
-            if (event.cause)
+    private handleSuffixes(event: AnyBattleEvent): void
+    {
+        // these corner cases should already be handled
+        if (event.type === "ability" && event.from &&
+            event.from.type === "ability" &&
+            event.from.ability === "Trace" && event.of)
+        {
+            return;
+        }
+        if (event.from && event.from.type === "lockedmove") return;
+
+        let id: PokemonID | undefined;
+        if (event.of) id = event.of;
+        // TODO: find a better way to handle suffixes that reveal info
+        // if no [of] suffix, try find a PokemonID from the event
+        else if ((event as any).id &&
+            ["p1", "p2"].includes((event as any).id.owner))
+        {
+            id = (event as any).id;
+        }
+        if (!id)
+        {
+            if (event.fatigue || event.from)
             {
-                this.handleCause(event.cause!, (event as any).id);
+                throw new Error("No PokemonID given to handle suffixes with");
+            }
+            return;
+        }
+        const mon = this.getActive(id.owner);
+
+        // stopped using multi-turn locked move due to fatigue
+        if (event.fatigue) mon.volatile.lockedMove = false;
+        // something happened because of an item or ability
+        if (event.from)
+        {
+            const f = event.from;
+            if (f.type === "ability") mon.ability = toIdName(f.ability);
+            else if (f.type === "item")
+            {
+                mon.item.narrow(toIdName(f.item));
             }
         }
     }
@@ -542,41 +573,6 @@ export class PSEventHandler
         mon.hp.set(status.hp, status.hpMax);
         // this should already be covered by the `status` event but just in case
         mon.majorStatus = status.condition;
-    }
-
-    /**
-     * Handles an event Cause.
-     * @param cause Cause object.
-     * @param id Last mentioned id.
-     */
-    private handleCause(cause: Cause, id?: PokemonID): void
-    {
-        // should already be handled by other handlers
-        if (cause.type === "lockedmove") return;
-
-        let mon: Pokemon | undefined;
-        // some Causes have an of field which disambiguates where the Cause came
-        //  from
-        if (cause.of) mon = this.getActive(cause.of.owner);
-        // otherwise, the most recently mentioned id should do
-        else if (id) mon = this.getActive(id.owner);
-        else throw new Error("No PokemonID given");
-
-        switch (cause.type)
-        {
-            case "ability":
-                // specify owner of the ability
-                mon.ability = toIdName(cause.ability);
-                break;
-            case "fatigue":
-                // no longer locked into a move
-                mon.volatile.lockedMove = false;
-                break;
-            case "item":
-                // reveal item
-                mon.item.narrow(toIdName(cause.item));
-                break;
-        }
     }
 
     /** Handles a side end/start event. */

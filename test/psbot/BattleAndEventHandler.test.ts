@@ -1416,7 +1416,7 @@ describe("Battle and EventProcessor", function()
                         [
                             {
                                 type: "move", id: us1, moveName: "Splash",
-                                targetId: us1, cause: {type: "lockedmove"}
+                                targetId: us1, from: {type: "lockedmove"}
                             }
                         ]
                     });
@@ -1577,7 +1577,7 @@ describe("Battle and EventProcessor", function()
                     [
                         {
                             type: "move", id: us1, moveName: "Solar Beam",
-                            targetId: them1, cause: {type: "lockedmove"}
+                            targetId: them1, from: {type: "lockedmove"}
                         },
                         {type: "upkeep"}
                     ]
@@ -1873,10 +1873,7 @@ describe("Battle and EventProcessor", function()
                         {
                             type: "weather", weatherType: "RainDance",
                             upkeep: false,
-                            cause:
-                            {
-                                type: "ability", ability: "Drizzle", of: us1
-                            }
+                            from: {type: "ability", ability: "Drizzle"}, of: us1
                         }
                     ]
                 });
@@ -1950,22 +1947,22 @@ describe("Battle and EventProcessor", function()
             });
         });
 
-        describe("cause", function()
+        describe("suffixes", function()
         {
-            it("Should reject Cause with no associated PokemonID",
+            it("Should reject suffix with no associated PokemonID",
             async function()
             {
                 let thrown = false;
                 try
                 {
                     await battle.progress(
-                        {events: [{type: "tie", cause: {type: "fatigue"}}]});
+                        {events: [{type: "tie", fatigue: true}]});
                 }
                 catch (e) { thrown = true; }
                 expect(thrown).to.be.true;
             });
 
-            describe("ability", function()
+            describe("from ability", function()
             {
                 it("Should reveal ability", async function()
                 {
@@ -1981,11 +1978,8 @@ describe("Battle and EventProcessor", function()
                         [
                             {
                                 type: "boost", id: us1, stat: "atk", amount: -1,
-                                cause:
-                                {
-                                    type: "ability", ability: "Intimidate",
-                                    of: them2
-                                }
+                                from: {type: "ability", ability: "Intimidate"},
+                                of: them2
                             }
                         ]
                     });
@@ -2014,10 +2008,8 @@ describe("Battle and EventProcessor", function()
                                     owner: "p1", position: "a",
                                     nickname: "Gardevoir"
                                 },
-                                cause:
-                                {
-                                    type: "ability", ability: "Trace", of: them1
-                                }
+                                from: {type: "ability", ability: "Trace"},
+                                of: them1
                             }
                         ]
                     });
@@ -2031,27 +2023,7 @@ describe("Battle and EventProcessor", function()
                 });
             });
 
-            describe("fatigue", function()
-            {
-                it("Should end lockedmove status", async function()
-                {
-                    battle.state.teams.us.active.volatile.lockedMove = true;
-                    await battle.progress(
-                    {
-                        events:
-                        [
-                            {
-                                type: "start", id: us1, volatile: "confusion",
-                                otherArgs: [], cause: {type: "fatigue"}
-                            }
-                        ]
-                    });
-                    expect(battle.state.teams.us.active.volatile.lockedMove)
-                        .to.be.false;
-                });
-            });
-
-            describe("item", function()
+            describe("from item", function()
             {
                 it("Should reveal item", async function()
                 {
@@ -2069,12 +2041,32 @@ describe("Battle and EventProcessor", function()
                             {
                                 type: "damage", id: us1,
                                 status: {hp: 100, hpMax: 100, condition: ""},
-                                cause: {type: "item", item: "Leftovers"}
+                                from: {type: "item", item: "Leftovers"}
                             }
                         ]
                     });
                     expect(mon.item.definiteValue).to.not.be.null;
                     expect(mon.item.definiteValue!.name).to.equal("leftovers");
+                });
+            });
+
+            describe("fatigue", function()
+            {
+                it("Should end lockedmove status", async function()
+                {
+                    battle.state.teams.us.active.volatile.lockedMove = true;
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            {
+                                type: "start", id: us1, volatile: "confusion",
+                                otherArgs: [], fatigue: true
+                            }
+                        ]
+                    });
+                    expect(battle.state.teams.us.active.volatile.lockedMove)
+                        .to.be.false;
                 });
             });
         });

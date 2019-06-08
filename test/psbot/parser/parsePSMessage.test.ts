@@ -100,13 +100,15 @@ describe("parsePSMessage()", function()
         function shouldParse<T extends MessageType>(type: T,
             words: string[][], givenArgs: Message<T>): void
         {
-            it(`Should parse ${type}`, function(done)
+            it(`Should parse ${type}`, async function()
             {
-                return parseWords(type, words, (msg, room) =>
+                let tested = false;
+                await parseWords(type, words, (msg, room) =>
                 {
-                    expect(givenArgs).to.deep.equal(msg);
-                    done();
+                    expect(msg).to.deep.equal(givenArgs);
+                    tested = true;
                 });
+                expect(tested).to.be.true;
             });
         }
 

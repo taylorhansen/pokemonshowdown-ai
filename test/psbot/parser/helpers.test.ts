@@ -2,9 +2,10 @@ import { expect } from "chai";
 import "mocha";
 import { Logger } from "../../../src/Logger";
 import { MessageListener } from "../../../src/psbot/dispatcher/MessageListener";
-import { anyWord, boostName, dispatch, integer, majorStatus, playerId,
-    playerIdWithName, pokemonDetails, pokemonId, pokemonStatus, restOfLine,
-    skipLine, weatherType, word } from "../../../src/psbot/parser/helpers";
+import { anyWord, boostName, dispatch, integer, majorStatus, parseFromSuffix,
+    playerId, playerIdWithName, pokemonDetails, pokemonId, pokemonStatus,
+    restOfLine, skipLine, weatherType, word } from
+    "../../../src/psbot/parser/helpers";
 import { iter } from "../../../src/psbot/parser/Iter";
 import { Info, Parser } from "../../../src/psbot/parser/types";
 
@@ -186,5 +187,40 @@ describe("Parser Helpers", function()
         testSuccess("Should parse word union", word("x", "y"), ["y", "x"], "y",
             "x");
         testFailure("Should throw if invalid word", word("x", "y"), ["z"]);
+    });
+
+    describe("parseFromSuffix()", function()
+    {
+        it("Should return null if invalid", function()
+        {
+            expect(parseFromSuffix("not_a valid-suffix")).to.be.null;
+        });
+
+        describe("ability", function()
+        {
+            it("Should parse ability", function()
+            {
+                expect(parseFromSuffix("ability: Wonder Guard"))
+                    .to.deep.equal({type: "ability", ability: "Wonder Guard"});
+            });
+        });
+
+        describe("item", function()
+        {
+            it("Should parse item", function()
+            {
+                expect(parseFromSuffix("item: Leftovers"))
+                    .to.deep.equal({type: "item", item: "Leftovers"});
+            });
+        });
+
+        describe("lockedmove", function()
+        {
+            it("Should parse lockedmove", function()
+            {
+                expect(parseFromSuffix("lockedmove"))
+                    .to.deep.equal({type: "lockedmove"});
+            });
+        });
     });
 });
