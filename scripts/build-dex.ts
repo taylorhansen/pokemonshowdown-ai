@@ -2,7 +2,7 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
-import { Type } from "../src/battle/dex/dex-types";
+import { Type } from "../src/battle/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
 // @ts-ignore
 import { ModdedDex } from "./Pokemon-Showdown/.sim-dist/dex";
@@ -65,7 +65,7 @@ console.log(`\
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import { Dex, MoveData, PokemonData } from \"./dex-types\";
+import { Dex, MoveData, PokemonData } from "./dex-util";
 `);
 
 // counter for the unique identifier of a pokemon, move, etc.
