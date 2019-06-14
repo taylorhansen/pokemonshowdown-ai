@@ -1,7 +1,7 @@
 // istanbul ignore file
 import { join } from "path";
 import { Network } from "./ai/Network";
-import { domain, latestModelFolder, password, serverid, username } from
+import { latestModelFolder, loginServer, password, playServer, username } from
     "./config";
 import { Logger } from "./Logger";
 import { PSBot } from "./psbot/PSBot";
@@ -15,10 +15,10 @@ Network.loadNetwork(`file://${join(latestModelFolder, "model.json")}`)
     .then(net => bot.acceptChallenges("gen4randombattle", net));
 
 // configure client to login once connected
-bot.login({username, password, domain, serverid});
+if (username) bot.login({username, password, loginServer});
 
 // connect to locally hosted PokemonShowdown server
-bot.connect("ws://localhost:8000/showdown/websocket").then(connected =>
+bot.connect(playServer).then(connected =>
 {
     if (!connected) return;
 

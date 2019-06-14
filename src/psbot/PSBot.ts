@@ -15,10 +15,8 @@ export interface LoginOptions
     readonly username: string;
     /** Account password. */
     readonly password?: string;
-    /** Domain to login with. */
-    readonly domain: string;
-    /** Server id used for login. */
-    readonly serverid: string;
+    /** Server url used for login. */
+    readonly loginServer: string;
 }
 
 /** Manages the connection to a PokemonShowdown server. */
@@ -92,39 +90,35 @@ export class PSBot
             // challstr callback consumed, no need to call again
             this.challstr = async function() {};
 
-            // url to make the post request to
-            const url = resolve(options.domain,
-                `~~${options.serverid}/action.php`);
-
             const init: RequestInit =
             {
                 method: "POST",
                 headers: {"Content-Type": "application/x-www-form-urlencoded"}
             };
 
-            // used to complete the login
+            // get the assertion string used to confirm login
             let assertion: string;
 
             if (!options.password)
             {
                 // login without password
-                init.body = `act=getassertion&userid=${options.username}&\
-challstr=${challstr}`;
-                const res = await fetch(url, init);
+                init.body = `act=getassertion&userid=${options.username}` +
+                    `&challstr=${challstr}`;
+                const res = await fetch(options.loginServer, init);
                 assertion = await res.text();
             }
             else
             {
                 // login with password
-                init.body = `act=login&name=${options.username}&\
-pass=${options.password}&challstr=${challstr}`;
-                const res = await fetch(url, init);
+                init.body = `act=login&name=${options.username}` +
+                    `&pass=${options.password}&challstr=${challstr}`;
+                const res = await fetch(options.loginServer, init);
                 const text = await res.text();
-                console.log(`text: ${text}`);
                 // response text returns "]" followed by json
                 ({assertion} = JSON.parse(text.substr(1)));
             }
 
+            // complete the login
             this.sender(`|/trn ${options.username},0,${assertion}`);
         };
     }

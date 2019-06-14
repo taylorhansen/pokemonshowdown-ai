@@ -20,12 +20,18 @@ export const evaluateFolder = join(logsFolder, "evaluate/");
 
 // login info
 
-/** Account username. */
-export const username = "username";
-/** Account password. Optional. */
-export const password = "password";
-/** Domain to login with. */
-export const domain = "https://play.pokemonshowdown.com/";
+/** Account username. Set to the empty string to use a default guest account. */
+export const username = "";
+/** Account password. Set to the empty string to login without a password. */
+export const password = "";
+/** Path to the `action.php` used to login to an account. */
+export const loginServer =
+    "https://play.pokemonshowdown.com/~~showdown/action.php";
+/**
+ * Websocket route used for actual server play. To connect to the official
+ * server, use `ws://sim.smogon.com:8000/...` or `wss://sim.smogon.com/...`
+ */
+export const playServer = "ws://localhost:8000/showdown/websocket";
 /** Server id used for login. */
 export const serverid = "showdown";
 /** Account avatar id. */
