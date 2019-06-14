@@ -6,7 +6,7 @@ import { encodeBattleState, encodeHP, encodeMove, encodeMoveset,
     encodeTeamStatus, encodeVolatileStatus, encodeWeather, limitedStatusTurns,
     oneHot, sizeActivePokemon, sizeBattleState, sizeMove, sizeMoveset,
     sizePokemon, sizeRoomStatus, sizeTeam, sizeTeamStatus, sizeVolatileStatus,
-    sizeWeather, tempStatusTurns } from "../../src/ai/encodeBattleState";
+    sizeWeather } from "../../src/ai/encodeBattleState";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";
 import { Move } from "../../src/battle/state/Move";
@@ -34,34 +34,29 @@ describe("BattleState encoders", function()
         });
     });
 
-    describe("tempStatusTurns()", function()
-    {
-        it("Should return 0 if given 0", function()
-        {
-            expect(tempStatusTurns(0)).to.equal(0);
-        });
-
-        it("Should decrease status likelihood", function()
-        {
-            expect(tempStatusTurns(2)).to.equal(1 / 2);
-        });
-    });
-
     describe("limitedStatusTurns()", function()
     {
+        it("Should return 1 if just started", function()
+        {
+            expect(limitedStatusTurns(1, 5)).to.equal(1);
+        });
+
         it("Should interpolate status turns", function()
         {
-            expect(limitedStatusTurns(3, 5)).to.equal(1 / 5);
+            expect(limitedStatusTurns(2, 5)).to.equal(4 / 5);
+            expect(limitedStatusTurns(3, 5)).to.equal(3 / 5);
+            expect(limitedStatusTurns(4, 5)).to.equal(2 / 5);
+            expect(limitedStatusTurns(5, 5)).to.equal(1 / 5);
         });
 
         it("Should return 0 if no more turns left", function()
         {
-            expect(limitedStatusTurns(1, 2)).to.equal(0);
+            expect(limitedStatusTurns(6, 5)).to.equal(0);
         });
 
-        it("Should return 0 if at/over duration", function()
+        it("Should return 0 if over duration", function()
         {
-            expect(limitedStatusTurns(2, 2)).to.equal(0);
+            expect(limitedStatusTurns(7, 5)).to.equal(0);
         });
     });
 

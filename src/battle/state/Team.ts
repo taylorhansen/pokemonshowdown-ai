@@ -86,6 +86,13 @@ export class Team
         this._pokemon.fill(null, 0, size);
     }
 
+    /** Called at the end of every turn to update temp statuses. */
+    public postTurn(): void
+    {
+        this.status.postTurn();
+        for (const mon of this._pokemon) if (mon) mon.postTurn();
+    }
+
     /**
      * Indicates that a new pokemon has been switched in and will replace the
      * current active pokemon.

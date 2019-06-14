@@ -281,6 +281,12 @@ ability ${ability}`);
         this._active = false;
     }
 
+    /** Called at the end of every turn to update temp statuses. */
+    public postTurn(): void
+    {
+        if (this._active) this._volatile.postTurn();
+    }
+
     /**
      * Copies volatile status state to another pokemon.
      * @param mon Pokemon that will receive the volatile status.

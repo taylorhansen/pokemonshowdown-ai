@@ -25,28 +25,20 @@ export function oneHot(id: number | null, length: number): number[]
 }
 
 /**
- * Encodes the number of turns that a temporary status has persisted.
- * @param turns Number of turns.
- * @returns Status turn data for encoder functions as a "likelihood" that the
- * status will persist on the next turn.
- */
-export function tempStatusTurns(turns: number): number
-{
-    return turns === 0 ? 0 : 1 / turns;
-}
-
-/**
- * Interpolates max status duration and current number of turns.
+ * Interpolates max status duration and current number of turns. Use this when
+ * the duration (or max possible duration) of a status is known.
  * @param turns Number of turns the status has been active (including current
- * turn).
- * @param duration Maximum amount of turns the status can be active.
+ * turn). E.g. if the status started during this turn and the end of the current
+ * turn hasn't been reached yet, `turns` should be 1, and should be incremented
+ * at the end of every turn.
+ * @param duration Maximum amount of turns the status will last.
  * @returns Status turn data for encoder functions as a "likelihood" that the
  * status will persist on the next turn.
  */
 export function limitedStatusTurns(turns: number, duration: number): number
 {
-    // turns left / total duration
-    return Math.max(0, (duration - turns - 1) / duration);
+    // turns left excluding current turn / total expected duration
+    return Math.max(0, (duration - turns + 1) / duration);
 }
 
 /**
@@ -95,16 +87,17 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     // passable
     const boosts = (Object.keys(status.boosts) as BoostName[])
         .map(key => status.boosts[key]);
-    const confused = tempStatusTurns(status.confuseTurns);
-    const embargo = tempStatusTurns(status.embargoTurns);
+    const confused = limitedStatusTurns(status.confuseTurns, 5);
+    const embargo = limitedStatusTurns(status.embargoTurns, 5);
     const ingrain = status.ingrain ? 1 : 0;
-    const magnetRise = tempStatusTurns(status.magnetRiseTurns);
+    const magnetRise = limitedStatusTurns(status.magnetRiseTurns, 5);
     const substitute = status.substitute ? 1 : 0;
     const suppressed = status.isAbilitySuppressed() ? 1 : 0;
 
     // non-passable
-    const disabled = status.disableTurns.map(tempStatusTurns);
-    const lockedMove = tempStatusTurns(status.lockedMoveTurns);
+    const disabled = status.disableTurns.map(
+        turns => limitedStatusTurns(turns, 7));
+    const lockedMove = limitedStatusTurns(status.lockedMoveTurns, 3);
     const mustRecharge = status.mustRecharge ? 1 : 0;
     const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
     const overrideSpecies = oneHot(status.overrideSpeciesId, dex.numPokemon);
@@ -112,8 +105,10 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const overrideTypeData =
         filteredTypes.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
     const roost = status.roost ? 1 : 0;
-    const stallFailRate = tempStatusTurns(status.stallTurns);
-    const taunt = tempStatusTurns(status.tauntTurns);
+    // fail rate halves each time a stalling move is used, capped at 87.5% in
+    //  gen4
+    const stallFailRate = Math.min(0.875, 1 - Math.pow(2, -status.stallTurns));
+    const taunt = limitedStatusTurns(status.tauntTurns, 5);
     const twoTurn = oneHot(status.twoTurn ? twoTurnMoves[status.twoTurn] : null,
             numTwoTurnMoves);
     const willTruant = status.willTruant ? 1 : 0;
@@ -352,7 +347,8 @@ export const sizeRoomStatus = /*gravity*/1 + sizeWeather;
 export function encodeRoomStatus(status: RoomStatus): number[]
 {
     return [
-        tempStatusTurns(status.gravityTurns), ...encodeWeather(status.weather)
+        limitedStatusTurns(status.gravityTurns, 5),
+        ...encodeWeather(status.weather)
     ];
 }
 

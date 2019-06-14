@@ -11,6 +11,14 @@ export class BattleState
     /** Global status conditions for the entire room. */
     public readonly status = new RoomStatus();
 
+    /** Called at the end of every turn to update temp statuses. */
+    public postTurn(): void
+    {
+        this.status.postTurn();
+        this.teams.us.postTurn();
+        this.teams.them.postTurn();
+    }
+
     // istanbul ignore next: only used for logging
     /**
      * Encodes all state data into a string.

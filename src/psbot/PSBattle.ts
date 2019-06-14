@@ -85,9 +85,6 @@ export class PSBattle
         this.eventHandler.handleEvents(msg.events);
         this.eventHandler.printState();
 
-        // possibly update per-turn statuses
-        this.eventHandler.postTurn();
-
         // possibly send a response
         if (this.shouldRespond()) return this.askAgent();
     }

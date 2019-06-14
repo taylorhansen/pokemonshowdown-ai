@@ -430,18 +430,6 @@ export class PSEventHandler
         this.logger.debug(`State:\n${this.state.toString()}`);
     }
 
-    /** Called before the BattleAgent decides. */
-    public postTurn(): void
-    {
-        // cleanup actions after a new turn
-        if (!this.newTurn) return;
-        for (const team of [this.state.teams.us, this.state.teams.them])
-        {
-            team.status.postTurn();
-            team.active.volatile.postTurn();
-        }
-    }
-
     /** Processes a `request` message. */
     public handleRequest(args: RequestMessage): void
     {
@@ -515,6 +503,9 @@ export class PSEventHandler
 
             this.handleSuffixes(event);
         }
+
+        // update per-turn statuses
+        if (this.newTurn) this.state.postTurn();
     }
 
     private handleSuffixes(event: AnyBattleEvent): void
