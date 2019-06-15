@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "build:watch": "tsc --watch",
     "start": "node dist/index.js",
     "pretest": "tslint -c tslint.json -e src/battle/dex/dex.ts --project .",
     "test": "nyc mocha",
