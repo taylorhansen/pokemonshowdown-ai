@@ -21,6 +21,8 @@ import * as fs from "fs";
 import { dirname, join } from "path";
 import ProgressBar from "progress";
 import { Writable } from "stream";
+// @ts-ignore
+import s = require("../../Pokemon-Showdown/.sim-dist/battle-stream");
 import { sizeBattleState } from "../../src/ai/encodeBattleState";
 import { Network, toColumn } from "../../src/ai/Network";
 import { Choice, intToChoice } from "../../src/battle/agent/Choice";
@@ -30,8 +32,6 @@ import { Logger } from "../../src/Logger";
 import { MessageListener } from "../../src/psbot/dispatcher/MessageListener";
 import { PlayerID } from "../../src/psbot/helpers";
 import { parsePSMessage } from "../../src/psbot/parser/parsePSMessage";
-// @ts-ignore
-import s = require("../Pokemon-Showdown/.sim-dist/battle-stream");
 import { Experience } from "./Experience";
 import { TrainBattle } from "./TrainBattle";
 import { TrainNetwork } from "./TrainNetwork";

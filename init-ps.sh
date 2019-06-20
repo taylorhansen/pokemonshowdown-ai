@@ -1,18 +1,18 @@
 #!/usr/bin/env sh
 # clones the Pokemon-Showdown github repository
 
-ps_dir=./scripts/Pokemon-Showdown
-if [ -d $ps_dir ]
+ps_dir=./Pokemon-Showdown/
+if [ ! -d $ps_dir ]
 then
-    cd $ps_dir
-    git checkout master
-    git fetch origin master
-    git reset --hard origin/master
-else
-    git clone https://github.com/Zarel/Pokemon-Showdown $ps_dir
-    cd $ps_dir
+    echo "Submodule not detected!"
+    echo "Updating"
+    git submodule init Pokemon-Showdown
+    git submodule update
 fi
+cd $ps_dir
 
+# TODO: if this gets too complicated, manage changes using a fork instead
+# for now, these changes are currently gitignored
 echo "Installing default config"
 cp config/config-example.js config/config.js
 

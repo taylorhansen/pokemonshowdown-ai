@@ -2,10 +2,10 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
+// @ts-ignore
+import { ModdedDex } from "../Pokemon-Showdown/.sim-dist/dex";
 import { Type } from "../src/battle/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
-// @ts-ignore
-import { ModdedDex } from "./Pokemon-Showdown/.sim-dist/dex";
 
 const dex = new ModdedDex("gen4");
 
