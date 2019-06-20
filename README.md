@@ -14,11 +14,17 @@ This project has three parts:
 Before running the main client, create a `src/config.ts` file using [`src/config.example.ts`](/src/config.example.ts) as a guide.
 
 ```sh
+# download the repository
+git clone --recursive https://github.com/taylorhansen/pokemonshowdown-ai
+cd pokemonshowdown-ai
+
 # compile everything
 npm install
 npm run build
+
 # connect to the server and accept challenges
 npm start
+
 # lint and run tests
 npm test
 ```
