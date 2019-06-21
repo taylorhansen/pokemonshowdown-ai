@@ -15,9 +15,6 @@ npm-debug.log
 # random logs for reference
 logs/
 
-# clone of pokemon showdown repo
-scripts/Pokemon-Showdown/
-
 # private config
 src/config.ts
 

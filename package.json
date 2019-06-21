@@ -17,8 +17,9 @@
     ],
     "exclude": [
       "coverage/",
-      "scripts/",
       "dist/",
+      "Pokemon-Showdown/",
+      "scripts/",
       "src/config.example.ts",
       "test/"
     ],
