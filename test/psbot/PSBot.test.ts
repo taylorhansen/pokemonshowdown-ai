@@ -1,50 +1,44 @@
 import { expect } from "chai";
-import { createServer, Server } from "http";
 import "mocha";
-import { connection as WSConnection, IMessage, server as WSServer } from
-    "websocket";
 import { Logger } from "../../src/Logger";
 import { PSBot } from "../../src/psbot/PSBot";
 import { MockBattleAgent } from "../battle/agent/MockBattleAgent";
+import { MockPSServer } from "./MockPSServer";
 
 describe("PSBot", function()
 {
     const username = "someuser";
+    const password = "somepassword";
+    const challstr = "some-challstr";
     const format = "gen4randombattle";
+    const assertion = "someassertion";
+    const port = 8000;
+    const loginServer = `http://localhost:${port}/~~showdown/action.php`;
+    const playServer = `ws://localhost:${port}/showdown/websocket`;
 
     let bot: PSBot;
-    let httpServer: Server;
-    let server: WSServer;
-    /** Current connection from server to client. */
-    let connection: WSConnection;
-    /** Promise to get the next message from the current connection. */
-    let message: Promise<IMessage>;
+    let server: MockPSServer;
 
-    before("Initialize websocket server", function()
+    before("Initialize mock server", function()
     {
-        httpServer = createServer(function(req, res)
-        {
-            res.writeHead(404);
-            res.end();
-        });
-        httpServer.listen(8000);
-
-        server = new WSServer({httpServer});
-        server.on("request", req =>
-        {
-            if (req.httpRequest.url === "/showdown/websocket")
-            {
-                connection = req.accept();
-                message = new Promise(res => connection.on("message", res));
-            }
-        });
+        server = new MockPSServer(assertion, port);
     });
 
     beforeEach("Initialize and connect PSBot", async function()
     {
         bot = new PSBot(Logger.null);
-        await bot.connect("ws://localhost:8000/showdown/websocket");
-        expect(connection).to.exist;
+        expect(await bot.connect(playServer)).to.be.true;
+        expect(server.isConnected).to.be.true;
+    });
+
+    afterEach("Disconnect PSBot from server", function()
+    {
+        server.disconnect();
+    });
+
+    after("Shutdown websocket server", function()
+    {
+        server.shutdown();
     });
 
     describe("#acceptChallenges()", function()
@@ -56,20 +50,20 @@ describe("PSBot", function()
 
         it(`Should accept ${format} challenges`, async function()
         {
-            connection.sendUTF(`|updatechallenges|\
+            server.sendToClient(`|updatechallenges|\
 {"challengesFrom":{"${username}":"${format}"},"challengeTo":null}`);
 
-            const msg = await message;
+            const msg = await server.nextMessage();
             expect(msg.type).to.equal("utf8");
             expect(msg.utf8Data).to.equal(`|/accept ${username}`);
         });
 
         it(`Should not accept unsupported challenges`, async function()
         {
-            connection.sendUTF(`|updatechallenges|\
+            server.sendToClient(`|updatechallenges|\
 {"challengesFrom":{"${username}":"notarealformat"},"challengeTo":null}`);
 
-            const msg = await message;
+            const msg = await server.nextMessage();
             expect(msg.type).to.equal("utf8");
             expect(msg.utf8Data).to.equal(`|/reject ${username}`);
         });
@@ -81,22 +75,36 @@ describe("PSBot", function()
         {
             const avatar = 1;
             bot.setAvatar(avatar);
-            const msg = await message;
+            const msg = await server.nextMessage();
             expect(msg.type).to.equal("utf8");
             expect(msg.utf8Data).to.equal(`|/avatar ${avatar}`);
         });
     });
 
-    afterEach("Disconnect PSBot from server", function()
+    describe("#login()", function()
     {
-        connection.removeAllListeners();
-        connection.close();
-    });
+        it("Should login without password", async function()
+        {
+            bot.login({username, loginServer});
+            server.sendToClient(`|challstr|${challstr}`);
 
-    after("Shutdown websocket server", function()
-    {
-        httpServer.close();
-        server.removeAllListeners();
-        server.shutDown();
+            const msg = await server.nextMessage();
+            expect(server.lastQuery).to.deep.equal(
+                {act: "getassertion", userid: username, challstr});
+            expect(msg.type).to.equal("utf8");
+            expect(msg.utf8Data).to.equal(`|/trn ${username},0,${assertion}`);
+        });
+
+        it("Should login with password", async function()
+        {
+            bot.login({username, password, loginServer});
+            server.sendToClient(`|challstr|${challstr}`);
+
+            const msg = await server.nextMessage();
+            expect(server.lastQuery).to.deep.equal(
+                {act: "login", name: username, pass: password, challstr});
+            expect(msg.type).to.equal("utf8");
+            expect(msg.utf8Data).to.equal(`|/trn ${username},0,${assertion}`);
+        });
     });
 });

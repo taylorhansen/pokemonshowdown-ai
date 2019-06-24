@@ -1,5 +1,4 @@
 import fetch, { RequestInit } from "node-fetch";
-import { resolve } from "url";
 import { client as WSClient } from "websocket";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice } from "../battle/agent/Choice";
