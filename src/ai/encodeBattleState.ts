@@ -106,7 +106,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         filteredTypes.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
     const roost = status.roost ? 1 : 0;
     const slowStart = limitedStatusTurns(status.slowStartTurns, 5);
-    // fail rate halves each time a stalling move is used, capped at 87.5% in
+    // success rate halves each time a stalling move is used, capped at 12.5% in
     //  gen4
     const stallFailRate = Math.min(0.875, 1 - Math.pow(2, -status.stallTurns));
     const taunt = limitedStatusTurns(status.tauntTurns, 5);
