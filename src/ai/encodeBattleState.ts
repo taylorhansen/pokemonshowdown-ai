@@ -77,7 +77,7 @@ export const sizeVolatileStatus =
     /*suppress ability*/1 + /*disabled moves*/4 + /*locked move*/1 +
     /*must recharge*/1 + /*override ability*/dex.numAbilities +
     /*override species*/dex.numPokemon +
-    /*override types*/filteredTypes.length + /*roost*/1 +
+    /*override types*/filteredTypes.length + /*roost*/1 + /*slow start*/1 +
     /*stall fail rate*/1 + /*taunt*/1 + /*two-turn status*/numTwoTurnMoves +
     /*will truant*/1;
 
@@ -105,6 +105,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const overrideTypeData =
         filteredTypes.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
     const roost = status.roost ? 1 : 0;
+    const slowStart = limitedStatusTurns(status.slowStartTurns, 5);
     // fail rate halves each time a stalling move is used, capped at 87.5% in
     //  gen4
     const stallFailRate = Math.min(0.875, 1 - Math.pow(2, -status.stallTurns));
@@ -115,9 +116,9 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
 
     return [
         ...boosts, confused, embargo, ingrain, magnetRise, substitute,
-        suppressed, ...disabled, lockedMove, mustRecharge,
-        ...overrideAbility, ...overrideSpecies, ...overrideTypeData,
-        roost, stallFailRate, taunt, ...twoTurn, willTruant
+        suppressed, ...disabled, lockedMove, mustRecharge, ...overrideAbility,
+        ...overrideSpecies, ...overrideTypeData, roost, slowStart,
+        stallFailRate, taunt, ...twoTurn, willTruant
     ];
 }
 

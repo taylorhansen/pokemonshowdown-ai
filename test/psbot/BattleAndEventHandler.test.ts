@@ -753,6 +753,34 @@ describe("Battle and EventProcessor", function()
                 expect(mon.volatile.isDisabled(1)).to.be.false;
             });
 
+            it("Should start/end slowstart", async function()
+            {
+                const volatile = battle.state.teams.us.active.volatile;
+
+                expect(volatile.slowStart).to.be.false;
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "Slow Start",
+                            otherArgs: []
+                        }
+                    ]
+                });
+                expect(volatile.slowStart).to.be.true;
+                expect(volatile.slowStartTurns).to.equal(1);
+
+                await battle.progress({events: [{type: "turn", num: 2}]});
+                expect(volatile.slowStart).to.be.true;
+                expect(volatile.slowStartTurns).to.equal(2);
+
+                await battle.progress(
+                    {events: [{type: "end", id: us1, volatile: "Slow Start"}]});
+                expect(volatile.slowStart).to.be.false;
+                expect(volatile.slowStartTurns).to.equal(0);
+            });
+
             it("Should start/end future move", async function()
             {
                 await battle.progress(
@@ -787,21 +815,6 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-            });
-
-            it("Should ignore invalid volatiles", async function()
-            {
-                const volatile = battle.state.teams.us.active.volatile;
-
-                expect(volatile.isConfused).to.be.false;
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {type: "start", id: us1, volatile: "", otherArgs: []}
-                    ]
-                });
-                expect(volatile.isConfused).to.be.false;
             });
 
             describe("typeadd", function()

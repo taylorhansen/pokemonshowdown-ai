@@ -190,6 +190,13 @@ export class VolatileStatus
     /** Roost move effect (single turn). */
     public roost!: boolean;
 
+    /** Slow Start ability status (temporary). */
+    public get slowStart(): boolean { return this._slowStartTurns > 0; }
+    public set slowStart(flag: boolean) { this._slowStartTurns = flag ? 1 : 0; }
+    /** Amount of turns the pokemon has had the Slow Start effect. */
+    public get slowStartTurns(): number { return this._slowStartTurns; }
+    private _slowStartTurns!: number;
+
     /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
     public get stallTurns(): number { return this._stallTurns; }
     /**
@@ -265,6 +272,7 @@ export class VolatileStatus
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
         this.roost = false;
+        this._slowStartTurns = 0;
         this._stallTurns = 0;
         this.stalled = false;
         this._tauntTurns = 0;
@@ -284,6 +292,7 @@ export class VolatileStatus
         if (this.embargo) ++this._embargoTurns;
         if (this.magnetRise) ++this._magnetRiseTurns;
         if (this.taunt) ++this._tauntTurns;
+        if (this.slowStart) ++this._slowStartTurns;
 
         // update disabled move turns
         for (let i = 0; i < this._disableTurns.length; ++i)
@@ -355,8 +364,10 @@ export class VolatileStatus
                 .map((d, i) => pluralTurns(`disabled move ${i + 1}`, d)),
             this.lockedMove ? ["lockedmove"] : [],
             this.mustRecharge ? ["must recharge"] : [],
-            // override ability/species/type handled by Pokemon#toString()
+            // override ability/species/type are handled by Pokemon#toString()
             this.roost ? ["roosting"] : [],
+            this.slowStart ?
+                [pluralTurns("slow start", this._slowStartTurns - 1, 5)] : [],
             this._stallTurns ?
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
             this._tauntTurns ?

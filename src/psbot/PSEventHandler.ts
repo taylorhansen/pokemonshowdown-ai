@@ -137,9 +137,13 @@ export class PSEventHandler
                 case "Substitute":
                     active.volatile.substitute = true;
                     break;
+                case "Slow Start":
+                    active.volatile.slowStart = true;
+                    break;
                 default:
                 {
                     const moveId = toIdName(ev);
+                    // istanbul ignore else: not useful to test
                     if (isFutureMove(moveId))
                     {
                         active.team!.status.startFutureMove(moveId);
@@ -183,6 +187,7 @@ export class PSEventHandler
             else if (ev === "Embargo") v.embargo = false;
             else if (ev === "Taunt") v.taunt = false;
             else if (ev === "Substitute") v.substitute = false;
+            else if (ev === "Slow Start") v.slowStart = false;
             else if (isFutureMove(id)) team.status.endFutureMove(id);
             else this.logger.debug(`Ignoring end "${event.volatile}"`);
         })
