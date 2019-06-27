@@ -248,7 +248,7 @@ describe("Battle and EventProcessor", function()
                                 species: "Horsea", level: 100, gender: "M",
                                 shiny: false
                             },
-                            condition: {hp: 10, hpMax: 10, condition: ""},
+                            condition: {hp: 10, hpMax: 10, condition: null},
                             active: true,
                             stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
                             baseAbility: "swiftswim",
@@ -263,7 +263,7 @@ describe("Battle and EventProcessor", function()
                                 species: "Gyarados", level: 100, gender: "M",
                                 shiny: false
                             },
-                            condition: {hp: 1000, hpMax: 1000, condition: ""},
+                            condition: {hp: 1000, hpMax: 1000, condition: null},
                             active: false,
                             stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
                             baseAbility: "intimidate",
@@ -562,7 +562,7 @@ describe("Battle and EventProcessor", function()
                                 species: "Gyarados", gender: "F", level: 100,
                                 shiny: false
                             },
-                            status: {hp: 100, hpMax: 100, condition: ""}
+                            status: {hp: 100, hpMax: 100, condition: null}
                         },
                         {type: "upkeep"}, {type: "turn", num: 2}
                     ]
@@ -1185,7 +1185,7 @@ describe("Battle and EventProcessor", function()
                 {
                     events: [{type: "curestatus", id: us1, majorStatus: "psn"}]
                 });
-                expect(mon.majorStatus).to.equal("");
+                expect(mon.majorStatus).to.be.null;
             });
         });
 
@@ -1199,8 +1199,8 @@ describe("Battle and EventProcessor", function()
                 mon2.majorStatus = "par";
                 await battle.progress(
                     {events: [{type: "cureteam", id: us1}]});
-                expect(mon1.majorStatus).to.equal("");
-                expect(mon2.majorStatus).to.equal("");
+                expect(mon1.majorStatus).to.be.null;
+                expect(mon2.majorStatus).to.be.null;
             });
         });
 
@@ -1243,7 +1243,7 @@ describe("Battle and EventProcessor", function()
                                 species: "Kingdra", level: 100, shiny: false,
                                 gender: "F"
                             },
-                            status: {hp: 100, hpMax: 100, condition: ""}
+                            status: {hp: 100, hpMax: 100, condition: null}
                         }
                     ]
                 });
@@ -1331,7 +1331,7 @@ describe("Battle and EventProcessor", function()
                                 species: "Kingdra", level: 100, shiny: false,
                                 gender: "F"
                             },
-                            status: {hp: 100, hpMax: 100, condition: ""}
+                            status: {hp: 100, hpMax: 100, condition: null}
                         }
                     ]
                 });
@@ -1703,8 +1703,8 @@ describe("Battle and EventProcessor", function()
                     type: "sethp",
                     newHPs:
                     [
-                        {id: us1, status: {hp: 1, hpMax: 10, condition: ""}},
-                        {id: them1, status: {hp: 2, hpMax: 20, condition: ""}}
+                        {id: us1, status: {hp: 1, hpMax: 10, condition: null}},
+                        {id: them1, status: {hp: 2, hpMax: 20, condition: null}}
                     ]
                 };
                 await battle.progress({events: [event]});
@@ -1846,7 +1846,7 @@ describe("Battle and EventProcessor", function()
             it("Should afflict with status", async function()
             {
                 const mon = battle.state.teams.us.active;
-                expect(mon.majorStatus).to.equal("");
+                expect(mon.majorStatus).to.be.null;
                 await battle.progress(
                     {events: [{type: "status", id: us1, majorStatus: "frz"}]});
                 expect(mon.majorStatus).to.equal("frz");
@@ -2053,7 +2053,7 @@ describe("Battle and EventProcessor", function()
                         [
                             {
                                 type: "damage", id: us1,
-                                status: {hp: 100, hpMax: 100, condition: ""},
+                                status: {hp: 100, hpMax: 100, condition: null},
                                 from: {type: "item", item: "Leftovers"}
                             }
                         ]

@@ -65,5 +65,5 @@ export interface PokemonStatus
 {
     readonly hp: number;
     readonly hpMax: number;
-    readonly condition: MajorStatus;
+    readonly condition: MajorStatus | null;
 }

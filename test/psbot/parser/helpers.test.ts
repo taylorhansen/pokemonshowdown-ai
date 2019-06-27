@@ -131,9 +131,9 @@ describe("Parser Helpers", function()
     describe("pokemonStatus", function()
     {
         testSuccess("Should parse fainted", pokemonStatus, ["0 fnt"],
-            {hp: 0, hpMax: 0, condition: ""});
+            {hp: 0, hpMax: 0, condition: null});
         testSuccess("Should parse hp fraction", pokemonStatus, ["10/100"],
-            {hp: 10, hpMax: 100, condition: ""});
+            {hp: 10, hpMax: 100, condition: null});
         testSuccess("Should parse PokemonStatus with major status",
             pokemonStatus, ["46/90 psn"],
             {hp: 46, hpMax: 90, condition: "psn"});

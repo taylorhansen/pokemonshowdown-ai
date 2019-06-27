@@ -199,7 +199,7 @@ export function encodeHP(hp?: HP | null): number[]
 export const sizePokemon = /*gender*/3 + dex.numPokemon + dex.numItems +
     dex.numAbilities + /*level*/1 + sizeMoveset + sizeHP + /*grounded*/2 +
     /*base type excluding ??? type*/Object.keys(types).length - 1 +
-    /*majorStatus except empty*/Object.keys(majorStatuses).length - 1;
+    /*majorStatus*/Object.keys(majorStatuses).length;
 
 /** Length of the return value of `encodePokemon()` when active. */
 export const sizeActivePokemon = sizePokemon + sizeVolatileStatus;
@@ -226,8 +226,7 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             // grounded
             0.5, 0.5,
             ...filteredTypes.map(() => 1 / filteredTypes.length),
-            ...Array.from(
-                {length: Object.keys(majorStatuses).length - 1}, () => 0)
+            ...Array.from({length: Object.keys(majorStatuses).length}, () => 0)
         ];
     }
     if (!mon)
@@ -246,8 +245,7 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             // grounded
             -1, -1,
             ...filteredTypes.map(() => -1),
-            ...Array.from(
-                {length: Object.keys(majorStatuses).length - 1}, () => 0)
+            ...Array.from({length: Object.keys(majorStatuses).length}, () => 0)
         ];
     }
 
@@ -261,10 +259,8 @@ export function encodePokemon(mon?: Pokemon | null): number[]
         mon.level, ...encodeMoveset(mon.moveset), ...encodeHP(mon.hp),
         mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0,
         ...filteredTypes.map(type => mon.species.types.includes(type) ? 1 : 0),
-        ...(Object.keys(majorStatuses) as MajorStatus[])
-            // only include actual statuses, not the empty string
-            .filter(status => status !== "")
-            .map(status => mon.majorStatus === status ? 1 : 0)
+        ...oneHot(mon.majorStatus && majorStatuses[mon.majorStatus],
+            Object.keys(majorStatuses).length)
     ];
     if (mon.active) a.push(...encodeVolatileStatus(mon.volatile));
     return a;

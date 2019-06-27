@@ -108,8 +108,8 @@ describe("Team", function()
             const mon2 = team.reveal("Porygon", 100, "M", 100, 100)!;
             mon2.majorStatus = "frz";
             team.cure();
-            expect(mon1.majorStatus).to.equal("");
-            expect(mon2.majorStatus).to.equal("");
+            expect(mon1.majorStatus).to.be.null;
+            expect(mon2.majorStatus).to.be.null;
         });
     });
 });

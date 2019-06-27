@@ -199,10 +199,10 @@ ability ${ability}`);
     /** Cures this Pokemon from its major status condition. */
     public cure(): void
     {
-        this.majorStatus = "";
+        this.majorStatus = null;
     }
     /** Current major status condition. Not cleared on switch. */
-    public majorStatus: MajorStatus = "";
+    public majorStatus: MajorStatus | null = null;
 
     /** Minor status conditions. Cleared on switch. */
     public get volatile(): VolatileStatus

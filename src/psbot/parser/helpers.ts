@@ -211,7 +211,7 @@ export function parsePokemonDetails(input: string): PokemonDetails
 
 /**
  * Parses a pokemon's status in the form `<hp>/<hpMax> <status>`. HP can be
- * displayed as a percentage.
+ * displayed as a percentage and status is optional.
  * @param status Unparsed pokemon status.
  * @param logger Used to log an error if invalid. Optional.
  * @returns A parsed PokemonStatus object. Throws if invalid.
@@ -221,7 +221,7 @@ export function parsePokemonStatus(status: string): PokemonStatus
     if (status === "0 fnt")
     {
         // fainted pokemon
-        return {hp: 0, hpMax: 0, condition: ""};
+        return {hp: 0, hpMax: 0, condition: null};
     }
 
     const slash = status.indexOf("/");
@@ -236,7 +236,8 @@ export function parsePokemonStatus(status: string): PokemonStatus
 
     const hp = parseInt(status.substring(0, slash), 10);
     const hpMax = parseInt(status.substring(slash + 1, space), 10);
-    const condition = parseMajorStatus(status.substr(space + 1));
+    const condStr = status.substr(space + 1);
+    const condition = condStr ? parseMajorStatus(condStr) : null;
     return {hp, hpMax, condition};
 }
 

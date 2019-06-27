@@ -30,10 +30,10 @@ export const weatherItems: {readonly [T in WeatherType]: string} =
     Sandstorm: "smoothrock", Hail: "icyrock"
 };
 
-/** Hold the set of all major status names. Empty string means no status. */
+/** Hold the set of all major status names. Maps status name to a unique id. */
 export const majorStatuses =
 {
-    "": 0, brn: 1, par: 2, psn: 3, tox: 4, slp: 5, frz: 6
+    brn: 0, par: 1, psn: 2, tox: 3, slp: 4, frz: 5
 } as const;
 /** Major pokemon status conditions. */
 export type MajorStatus = keyof typeof majorStatuses;

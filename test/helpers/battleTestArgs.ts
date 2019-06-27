@@ -36,8 +36,8 @@ export const pokemonDetails: PokemonDetails[] =
 export const pokemonStatus: PokemonStatus[] =
 [
     {hp: 100, hpMax: 100, condition: "par"},
-    {hp: 9001, hpMax: 9001, condition: ""},
-    {hp: 0, hpMax: 0, condition: ""}
+    {hp: 9001, hpMax: 9001, condition: null},
+    {hp: 0, hpMax: 0, condition: null}
 ];
 
 /** Test From suffixes. */
