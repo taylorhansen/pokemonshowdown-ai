@@ -47,18 +47,15 @@ export function isMajorStatus(status: any): status is MajorStatus
     return majorStatuses.hasOwnProperty(status);
 }
 
-/** Holds the set of all boostable stat names. */
+/** Holds the set of all stat names except HP. */
 export const statsExceptHP =
     {atk: true, def: true, spa: true, spd: true, spe: true} as const;
-/** Names of pokemon stats that can be boosted. */
+/** Names of pokemon stats except HP. */
 export type StatExceptHP = keyof typeof statsExceptHP;
 
 /** Holds the set of all boostable stat names. */
 export const boostNames =
-{
-    atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true,
-    evasion: true
-} as const;
+    {...statsExceptHP, accuracy: true, evasion: true} as const;
 /** Names of pokemon stats that can be boosted. */
 export type BoostName = keyof typeof boostNames;
 /**
