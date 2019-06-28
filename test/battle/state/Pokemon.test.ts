@@ -10,14 +10,14 @@ describe("Pokemon", function()
         it("Should be inactive initially", function()
         {
             const mon = new Pokemon("Magikarp", /*hpPercent*/false);
-            expect(mon.active).to.equal(false);
+            expect(mon.active).to.be.false;
         });
 
         it("Should be active if switched in", function()
         {
             const mon = new Pokemon("Magikarp", false);
             mon.switchIn();
-            expect(mon.active).to.equal(true);
+            expect(mon.active).to.be.true;
         });
 
         it("Should be inactive if switched out", function()
@@ -25,15 +25,15 @@ describe("Pokemon", function()
             const mon = new Pokemon("Magikarp", false);
             mon.switchIn();
             mon.switchOut();
-            expect(mon.active).to.equal(false);
+            expect(mon.active).to.be.false;
         });
 
         it("Should clear volatile when switched out", function()
         {
             const mon = new Pokemon("Magikarp", false);
-            mon.volatile.lockedMove = true;
+            mon.volatile.lockedMove.start();
             mon.switchOut();
-            expect(mon.volatile.lockedMove).to.equal(false);
+            expect(mon.volatile.lockedMove.isActive).to.be.false;
         });
     });
 
@@ -329,9 +329,9 @@ describe("Pokemon", function()
             {
                 const mon = new Pokemon("Magikarp", false);
                 mon.moveset.reveal("splash");
-                expect(mon.volatile.isDisabled(0)).to.be.false;
+                expect(mon.volatile.disabledMoves[0].isActive).to.be.false;
                 mon.disableMove("splash");
-                expect(mon.volatile.isDisabled(0)).to.be.true;
+                expect(mon.volatile.disabledMoves[0].isActive).to.be.true;
             });
 
             // likely not actually possible but just in case
@@ -341,7 +341,7 @@ describe("Pokemon", function()
                 expect(mon.moveset.get("splash")).to.be.null;
                 mon.disableMove("splash");
                 expect(mon.moveset.get("splash")).to.not.be.null;
-                expect(mon.volatile.isDisabled(0)).to.be.true;
+                expect(mon.volatile.disabledMoves[0].isActive).to.be.true;
             });
         });
     });
@@ -429,7 +429,7 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("Pidgey", false);
             mon.item.narrow("ironball");
-            mon.volatile.embargo = true;
+            mon.volatile.embargo.start();
             expect(mon.isGrounded).to.be.false;
             expect(mon.maybeGrounded).to.be.false;
         });
@@ -439,7 +439,7 @@ describe("Pokemon", function()
             const mon = new Pokemon("Magikarp", false);
             // remove iron ball possibility
             mon.item.narrow("leftovers");
-            mon.volatile.magnetRise = true;
+            mon.volatile.magnetRise.start();
             expect(mon.isGrounded).to.be.false;
             expect(mon.maybeGrounded).to.be.false;
         });

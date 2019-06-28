@@ -85,7 +85,7 @@ export class PSEventHandler
             {
                 case "confusion":
                     // start confusion status
-                    active.volatile.confuse(true);
+                    active.volatile.confusion.start();
                     break;
                 case "Disable":
                 {
@@ -126,19 +126,19 @@ export class PSEventHandler
                     active.volatile.ingrain = true;
                     break;
                 case "Magnet Rise":
-                    active.volatile.magnetRise = true;
+                    active.volatile.magnetRise.start();
                     break;
                 case "Embargo":
-                    active.volatile.embargo = true;
+                    active.volatile.embargo.start();
                     break;
                 case "Taunt":
-                    active.volatile.taunt = true;
+                    active.volatile.taunt.start();
                     break;
                 case "Substitute":
                     active.volatile.substitute = true;
                     break;
                 case "Slow Start":
-                    active.volatile.slowStart = true;
+                    active.volatile.slowStart.start();
                     break;
                 default:
                 {
@@ -159,7 +159,7 @@ export class PSEventHandler
         {
             if (event.volatile === "confusion")
             {
-                this.getActive(event.id.owner).volatile.confuse(true);
+                this.getActive(event.id.owner).volatile.confusion.tick();
             }
             else if (event.volatile === "Mat Block" ||
                 PSEventHandler.isStallSingleTurn(event.volatile))
@@ -167,7 +167,7 @@ export class PSEventHandler
                 // user successfully stalled an attack
                 // locked moves get canceled if they don't succeed
                 this.getActive(otherPlayerID(event.id.owner)).volatile
-                    .lockedMove = false;
+                    .lockedMove.end();
             }
             else this.logger.debug(`Ignoring activate "${event.volatile}"`);
         })
@@ -180,14 +180,14 @@ export class PSEventHandler
             if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
             const id = toIdName(ev);
 
-            if (ev === "confusion") v.confuse(false);
+            if (ev === "confusion") v.confusion.end();
             else if (ev === "Disable") v.enableMoves();
             else if (ev === "Ingrain") v.ingrain = false;
-            else if (ev === "Magnet Rise") v.magnetRise = false;
-            else if (ev === "Embargo") v.embargo = false;
-            else if (ev === "Taunt") v.taunt = false;
+            else if (ev === "Magnet Rise") v.magnetRise.end();
+            else if (ev === "Embargo") v.embargo.end();
+            else if (ev === "Taunt") v.taunt.end();
             else if (ev === "Substitute") v.substitute = false;
-            else if (ev === "Slow Start") v.slowStart = false;
+            else if (ev === "Slow Start") v.slowStart.end();
             else if (isFutureMove(id)) team.status.endFutureMove(id);
             else this.logger.debug(`Ignoring end "${event.volatile}"`);
         })
@@ -544,7 +544,7 @@ export class PSEventHandler
         const mon = this.getActive(id.owner);
 
         // stopped using multi-turn locked move due to fatigue
-        if (event.fatigue) mon.volatile.lockedMove = false;
+        if (event.fatigue) mon.volatile.lockedMove.end();
         // something happened because of an item or ability
         if (event.from)
         {

@@ -11,6 +11,7 @@ import { PossibilityClass } from "../battle/state/PossibilityClass";
 import { RoomStatus } from "../battle/state/RoomStatus";
 import { Team } from "../battle/state/Team";
 import { TeamStatus } from "../battle/state/TeamStatus";
+import { TempStatus } from "../battle/state/TempStatus";
 import { VolatileStatus } from "../battle/state/VolatileStatus";
 import { Weather } from "../battle/state/Weather";
 
@@ -66,19 +67,30 @@ export function encodePossiblityClass<TData>(pc: PossibilityClass<TData>,
     return result;
 }
 
+/** Length of the return value of `encodeTempStatus()`. */
+export const sizeTempStatus = 1;
+
+/** Formats temporary status info into an array of numbers. */
+export function encodeTempStatus(ts: TempStatus): number[]
+{
+    return [limitedStatusTurns(ts.turns, ts.duration)];
+}
+
 // TODO: guarantee order? move to dex-util once figured out
 /** Types without `???` type. */
 const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
 
 /** Length of the return value of `encodeVolatileStatus()`. */
 export const sizeVolatileStatus =
-    /*boostable stats*/Object.keys(boostNames).length + /*confuse*/1 +
-    /*embargo*/1 + /*ingrain*/1 + /*magnet rise*/1 + /*substitute*/1 +
-    /*suppress ability*/1 + /*disabled moves*/4 + /*locked move*/1 +
-    /*must recharge*/1 + /*override ability*/dex.numAbilities +
-    /*override species*/dex.numPokemon +
-    /*override types*/filteredTypes.length + /*roost*/1 + /*slow start*/1 +
-    /*stall fail rate*/1 + /*taunt*/1 + /*two-turn status*/numTwoTurnMoves +
+    /*boostable stats*/Object.keys(boostNames).length +
+    /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus + /*ingrain*/1 +
+    /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
+    /*disabled moves*/Moveset.maxSize * sizeTempStatus +
+    /*locked move*/sizeTempStatus + /*must recharge*/1 +
+    /*override ability*/dex.numAbilities + /*override species*/dex.numPokemon +
+    /*override types*/filteredTypes.length + /*roost*/1 +
+    /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
+    /*taunt*/sizeTempStatus + /*two-turn status*/numTwoTurnMoves +
     /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
@@ -87,17 +99,17 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     // passable
     const boosts = (Object.keys(status.boosts) as BoostName[])
         .map(key => status.boosts[key]);
-    const confused = limitedStatusTurns(status.confuseTurns, 5);
-    const embargo = limitedStatusTurns(status.embargoTurns, 5);
+    const confused = encodeTempStatus(status.confusion);
+    const embargo = encodeTempStatus(status.embargo);
     const ingrain = status.ingrain ? 1 : 0;
-    const magnetRise = limitedStatusTurns(status.magnetRiseTurns, 5);
+    const magnetRise = encodeTempStatus(status.magnetRise);
     const substitute = status.substitute ? 1 : 0;
     const suppressed = status.isAbilitySuppressed() ? 1 : 0;
 
     // non-passable
-    const disabled = status.disableTurns.map(
-        turns => limitedStatusTurns(turns, 7));
-    const lockedMove = limitedStatusTurns(status.lockedMoveTurns, 3);
+    const disabled = status.disabledMoves.map(encodeTempStatus)
+        .reduce((a, b) => a.concat(b));
+    const lockedMove = encodeTempStatus(status.lockedMove);
     const mustRecharge = status.mustRecharge ? 1 : 0;
     const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
     const overrideSpecies = oneHot(status.overrideSpeciesId, dex.numPokemon);
@@ -105,20 +117,20 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const overrideTypeData =
         filteredTypes.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
     const roost = status.roost ? 1 : 0;
-    const slowStart = limitedStatusTurns(status.slowStartTurns, 5);
+    const slowStart = encodeTempStatus(status.slowStart);
     // success rate halves each time a stalling move is used, capped at 12.5% in
     //  gen4
     const stallFailRate = Math.min(0.875, 1 - Math.pow(2, -status.stallTurns));
-    const taunt = limitedStatusTurns(status.tauntTurns, 5);
+    const taunt = encodeTempStatus(status.taunt);
     const twoTurn = oneHot(status.twoTurn ? twoTurnMoves[status.twoTurn] : null,
             numTwoTurnMoves);
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
-        ...boosts, confused, embargo, ingrain, magnetRise, substitute,
-        suppressed, ...disabled, lockedMove, mustRecharge, ...overrideAbility,
-        ...overrideSpecies, ...overrideTypeData, roost, slowStart,
-        stallFailRate, taunt, ...twoTurn, willTruant
+        ...boosts, ...confused, ...embargo, ingrain, ...magnetRise, substitute,
+        suppressed, ...disabled, ...lockedMove, mustRecharge,
+        ...overrideAbility, ...overrideSpecies, ...overrideTypeData, roost,
+        ...slowStart, stallFailRate, ...taunt, ...twoTurn, willTruant
     ];
 }
 

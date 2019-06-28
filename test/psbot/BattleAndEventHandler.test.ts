@@ -89,8 +89,8 @@ describe("Battle and EventProcessor", function()
         if (!args.active) return;
         for (let i = 0; i < args.active[0].moves.length; ++i)
         {
-            expect(battle.state.teams.us.active.volatile.isDisabled(i))
-                .to.be.false;
+            expect(battle.state.teams.us.active.volatile.disabledMoves[i]
+                .isActive).to.be.false;
         }
     }
 
@@ -393,7 +393,6 @@ describe("Battle and EventProcessor", function()
         {
             it("Should process events", async function()
             {
-
                 // move hasn't been revealed yet
                 expect(battle.state.teams.us.active.moveset.get("splash"))
                     .to.be.null;
@@ -596,7 +595,7 @@ describe("Battle and EventProcessor", function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
 
-                expect(volatile.isConfused).to.be.false;
+                expect(volatile.confusion.isActive).to.be.false;
                 await battle.progress(
                 {
                     events:
@@ -607,27 +606,27 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                expect(volatile.isConfused).to.be.true;
-                expect(volatile.confuseTurns).to.equal(1);
+                expect(volatile.confusion.isActive).to.be.true;
+                expect(volatile.confusion.turns).to.equal(1);
 
                 await battle.progress(
                 {
                     events: [{type: "activate", id: us1, volatile: "confusion"}]
                 });
-                expect(volatile.isConfused).to.be.true;
-                expect(volatile.confuseTurns).to.equal(2);
+                expect(volatile.confusion.isActive).to.be.true;
+                expect(volatile.confusion.turns).to.equal(2);
 
                 await battle.progress(
                     {events: [{type: "end", id: us1, volatile: "confusion"}]});
-                expect(volatile.isConfused).to.be.false;
-                expect(volatile.confuseTurns).to.equal(0);
+                expect(volatile.confusion.isActive).to.be.false;
+                expect(volatile.confusion.turns).to.equal(0);
             });
 
             it("Should start/end magnet rise", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
 
-                expect(volatile.magnetRise).to.be.false;
+                expect(volatile.magnetRise.isActive).to.be.false;
                 await battle.progress(
                 {
                     events:
@@ -638,20 +637,20 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                expect(volatile.magnetRise).to.be.true;
+                expect(volatile.magnetRise.isActive).to.be.true;
 
                 await battle.progress(
                 {
                     events: [{type: "end", id: us1, volatile: "Magnet Rise"}]
                 });
-                expect(volatile.magnetRise).to.be.false;
+                expect(volatile.magnetRise.isActive).to.be.false;
             });
 
             it("Should start/end embargo", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
 
-                expect(volatile.embargo).to.be.false;
+                expect(volatile.embargo.isActive).to.be.false;
                 await battle.progress(
                 {
                     events:
@@ -662,20 +661,20 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                expect(volatile.embargo).to.be.true;
+                expect(volatile.embargo.isActive).to.be.true;
 
                 await battle.progress(
                 {
                     events: [{type: "end", id: us1, volatile: "Embargo"}]
                 });
-                expect(volatile.embargo).to.be.false;
+                expect(volatile.embargo.isActive).to.be.false;
             });
 
             it("Should start/end taunt", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
 
-                expect(volatile.taunt).to.be.false;
+                expect(volatile.taunt.isActive).to.be.false;
                 await battle.progress(
                 {
                     events:
@@ -686,13 +685,13 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                expect(volatile.taunt).to.be.true;
+                expect(volatile.taunt.isActive).to.be.true;
 
                 await battle.progress(
                 {
                     events: [{type: "end", id: us1, volatile: "move: Taunt"}]
                 });
-                expect(volatile.taunt).to.be.false;
+                expect(volatile.taunt.isActive).to.be.false;
             });
 
             it("Should start/end substitute", async function()
@@ -722,8 +721,8 @@ describe("Battle and EventProcessor", function()
                 const mon = battle.state.teams.us.active;
                 mon.moveset.reveal("splash");
                 mon.moveset.reveal("tackle");
-                expect(mon.volatile.isDisabled(0)).to.be.false;
-                expect(mon.volatile.isDisabled(1)).to.be.false;
+                expect(mon.volatile.disabledMoves[0].isActive).to.be.false;
+                expect(mon.volatile.disabledMoves[1].isActive).to.be.false;
 
                 // disable the move
                 await battle.progress(
@@ -737,8 +736,8 @@ describe("Battle and EventProcessor", function()
                         {type: "upkeep"}, {type: "turn", num: 2}
                     ]
                 });
-                expect(mon.volatile.isDisabled(0)).to.be.true;
-                expect(mon.volatile.isDisabled(1)).to.be.false;
+                expect(mon.volatile.disabledMoves[0].isActive).to.be.true;
+                expect(mon.volatile.disabledMoves[1].isActive).to.be.false;
 
                 // reenable the move
                 await battle.progress(
@@ -749,15 +748,15 @@ describe("Battle and EventProcessor", function()
                         {type: "upkeep"}, {type: "turn", num: 3}
                     ]
                 });
-                expect(mon.volatile.isDisabled(0)).to.be.false;
-                expect(mon.volatile.isDisabled(1)).to.be.false;
+                expect(mon.volatile.disabledMoves[0].isActive).to.be.false;
+                expect(mon.volatile.disabledMoves[1].isActive).to.be.false;
             });
 
             it("Should start/end slowstart", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
 
-                expect(volatile.slowStart).to.be.false;
+                expect(volatile.slowStart.isActive).to.be.false;
                 await battle.progress(
                 {
                     events:
@@ -768,17 +767,17 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                expect(volatile.slowStart).to.be.true;
-                expect(volatile.slowStartTurns).to.equal(1);
+                expect(volatile.slowStart.isActive).to.be.true;
+                expect(volatile.slowStart.turns).to.equal(1);
 
                 await battle.progress({events: [{type: "turn", num: 2}]});
-                expect(volatile.slowStart).to.be.true;
-                expect(volatile.slowStartTurns).to.equal(2);
+                expect(volatile.slowStart.isActive).to.be.true;
+                expect(volatile.slowStart.turns).to.equal(2);
 
                 await battle.progress(
                     {events: [{type: "end", id: us1, volatile: "Slow Start"}]});
-                expect(volatile.slowStart).to.be.false;
-                expect(volatile.slowStartTurns).to.equal(0);
+                expect(volatile.slowStart.isActive).to.be.false;
+                expect(volatile.slowStart.turns).to.equal(0);
             });
 
             it("Should start/end future move", async function()
@@ -1381,8 +1380,8 @@ describe("Battle and EventProcessor", function()
                 it("Should activate lockedmove status and restrict choices",
                 async function()
                 {
-                    expect(battle.state.teams.us.active.volatile.lockedMove)
-                        .to.be.false;
+                    expect(battle.state.teams.us.active.volatile.lockedMove
+                        .isActive).to.be.false;
                     await battle.request(
                     {
                         active:
@@ -1411,8 +1410,8 @@ describe("Battle and EventProcessor", function()
                             {type: "upkeep"}, {type: "turn", num: 60}
                         ]
                     });
-                    expect(battle.state.teams.us.active.volatile.lockedMove)
-                        .to.be.true;
+                    expect(battle.state.teams.us.active.volatile.lockedMove
+                        .isActive).to.be.true;
                     expect(battle.lastChoices).to.have.members(["move 1"]);
                     expect(responses).to.have.lengthOf(1);
                 });
@@ -1805,8 +1804,8 @@ describe("Battle and EventProcessor", function()
                             {type: "activate", id: them1, volatile: "Protect"}
                         ]
                     });
-                    expect(battle.state.teams.us.active.volatile.lockedMove)
-                        .to.be.false;
+                    expect(battle.state.teams.us.active.volatile.lockedMove
+                        .isActive).to.be.false;
                 });
 
                 it("Should interrupt locked moves", async function()
@@ -1821,8 +1820,8 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    expect(battle.state.teams.us.active.volatile.lockedMove)
-                        .to.be.true;
+                    expect(battle.state.teams.us.active.volatile.lockedMove
+                        .isActive).to.be.true;
 
                     await battle.progress(
                     {
@@ -1835,8 +1834,8 @@ describe("Battle and EventProcessor", function()
                             {type: "activate", id: them1, volatile: "Protect"}
                         ]
                     });
-                    expect(battle.state.teams.us.active.volatile.lockedMove)
-                        .to.be.false;
+                    expect(battle.state.teams.us.active.volatile.lockedMove
+                        .isActive).to.be.false;
                 });
             });
         });
@@ -2067,7 +2066,7 @@ describe("Battle and EventProcessor", function()
             {
                 it("Should end lockedmove status", async function()
                 {
-                    battle.state.teams.us.active.volatile.lockedMove = true;
+                    battle.state.teams.us.active.volatile.lockedMove.start();
                     await battle.progress(
                     {
                         events:
@@ -2078,8 +2077,8 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    expect(battle.state.teams.us.active.volatile.lockedMove)
-                        .to.be.false;
+                    expect(battle.state.teams.us.active.volatile.lockedMove
+                        .isActive).to.be.false;
                 });
             });
         });

@@ -167,7 +167,7 @@ ability ${ability}`);
         const move = dex.moves[id];
         if (move.volatileEffect === "lockedmove")
         {
-            this.volatile.lockedMove = true;
+            this.volatile.lockedMove.start();
         }
         if (this.team)
         {
@@ -181,7 +181,7 @@ ability ${ability}`);
      */
     public disableMove(id: string): void
     {
-        this.volatile.disableMove(this.moveset.getOrRevealIndex(id));
+        this.volatile.disabledMoves[this.moveset.getOrRevealIndex(id)].start();
     }
     public readonly moveset = new Moveset();
 
@@ -226,7 +226,7 @@ ability ${ability}`);
         const v = this._volatile;
         if (v.ingrain) return true;
 
-        const ignoringItem = v.embargo || this.ability === "klutz";
+        const ignoringItem = v.embargo.isActive || this.ability === "klutz";
         const item = ignoringItem || !this.item.definiteValue ?
             "" : this.item.definiteValue.name;
 
@@ -234,7 +234,7 @@ ability ${ability}`);
         if (item === "ironball") return true;
 
         // magnet rise and levitate lift
-        return !v.magnetRise && this.ability !== "levitate" &&
+        return !v.magnetRise.isActive && this.ability !== "levitate" &&
             // flying type lifts
             !this.types.includes("flying");
     }
@@ -252,14 +252,15 @@ ability ${ability}`);
         const v = this._volatile;
         if (v.ingrain) return true;
 
-        const ignoringItem = v.embargo || v.overrideAbility === "klutz" ||
+        const ignoringItem = v.embargo.isActive ||
+            v.overrideAbility === "klutz" ||
             (!v.overrideAbility && this._baseAbility.isSet("klutz"));
 
         // iron ball causes grounding
         if (this.item.isSet("ironball") && !ignoringItem) return true;
 
         // magnet rise lifts
-        return !v.magnetRise &&
+        return !v.magnetRise.isActive &&
             // levitate lifts
             ((v.overrideAbility && v.overrideAbility !== "levitate") ||
                 (!v.overrideAbility &&

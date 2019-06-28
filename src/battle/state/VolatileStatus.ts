@@ -1,6 +1,7 @@
 import { dex, TwoTurnMove } from "../dex/dex";
 import { BoostName, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
+import { TempStatus } from "./TempStatus";
 import { pluralTurns, plus } from "./utility";
 
 /**
@@ -20,45 +21,13 @@ export class VolatileStatus
     }
     private _boosts!: {[N in BoostName]: number};
 
-    /** Whether the pokemon is confused. */
-    public get isConfused(): boolean
-    {
-        return this.confuseTurns !== 0;
-    }
-    /**
-     * Number of turns this pokemon has been confused, including the turn it
-     * started.
-     */
-    public get confuseTurns(): number { return this._confuseTurns; }
-    /**
-     * Sets the confusion flag. Should be called once per turn if it's on.
-     * @param flag Value of the flag.
-     */
-    public confuse(flag: boolean): void
-    {
-        this._confuseTurns = flag ? this._confuseTurns + 1 : 0;
-    }
-    private _confuseTurns!: number;
-
-    /** Embargo move status (temporary). */
-    public get embargo(): boolean { return this._embargoTurns > 0; }
-    public set embargo(flag: boolean) { this._embargoTurns = flag ? 1 : 0; }
-    /** Amount of turns the pokemon has been embargoed. */
-    public get embargoTurns(): number { return this._embargoTurns; }
-    private _embargoTurns!: number;
+    public readonly confusion = new TempStatus("confused", 3);
+    public readonly embargo = new TempStatus("embargo", 3);
 
     /** Ingrain move status. */
     public ingrain!: boolean;
 
-    /** Magnet Rise move status (temporary). */
-    public get magnetRise(): boolean { return this._magnetRiseTurns > 0; }
-    public set magnetRise(flag: boolean)
-    {
-        this._magnetRiseTurns = flag ? 1 : 0;
-    }
-    /** Amount of turns that Magnet Rise has been in effect. */
-    public get magnetRiseTurns(): number { return this._magnetRiseTurns; }
-    private _magnetRiseTurns!: number;
+    public readonly magnetRise = new TempStatus("magnet rise", 3);
 
     /** Substitute move status. */
     public substitute!: boolean;
@@ -82,6 +51,9 @@ export class VolatileStatus
     public get overrideAbility(): string { return this.overrideAbilityName; }
     public set overrideAbility(ability: string)
     {
+        // reset truant if it no longer applies
+        if (ability !== "truant") this._willTruant = false;
+
         if (!ability)
         {
             this._overrideAbility = null;
@@ -109,40 +81,17 @@ export class VolatileStatus
     /** Name of override ability. */
     private overrideAbilityName!: string;
 
-    /**
-     * Checks whether a move is disabled.
-     * @param move Index of the move.
-     * @returns Whether the move is disabled.
-     */
-    public isDisabled(move: number): boolean
+    /** List of disabled move statuses. */
+    public readonly disabledMoves: readonly TempStatus[] =
+        Array.from({length: Moveset.maxSize},
+            (_, i) => new TempStatus(`disabled move ${i + 1}`, 7));
+    /** Removes disable status. */
+    public enableMoves(): void
     {
-        return !!this._disableTurns[move];
+        for (const disabled of this.disabledMoves) disabled.end();
     }
-    /**
-     * Disables a certain move. If the move slot's index is not known, use the
-     * Pokemon class' interface.
-     * @param index Index of the move.
-     */
-    public disableMove(move: number): void { this._disableTurns[move] = 1; }
-    /** Clears the disabled status. */
-    public enableMoves(): void { this._disableTurns.fill(0); }
-    /** Turns for the disable status on each move. */
-    public get disableTurns(): readonly number[] { return this._disableTurns; }
-    // ctor will initialize values
-    private readonly _disableTurns = new Array<number>(Moveset.maxSize);
 
-    /** Whether the pokemon is locked into a move and is unable to switch. */
-    public get lockedMove(): boolean { return this._lockedMoveTurns !== 0; }
-    public set lockedMove(value: boolean)
-    {
-        // reset lockedmove
-        if (!value) this._lockedMoveTurns = 0;
-        // start/continue counter
-        else ++this._lockedMoveTurns;
-    }
-    /** Amount of turns the pokemon was locked into a move. */
-    public get lockedMoveTurns(): number { return this._lockedMoveTurns; }
-    private _lockedMoveTurns!: number;
+    public readonly lockedMove = new TempStatus("locked move", 3);
 
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge!: boolean;
@@ -190,12 +139,7 @@ export class VolatileStatus
     /** Roost move effect (single turn). */
     public roost!: boolean;
 
-    /** Slow Start ability status (temporary). */
-    public get slowStart(): boolean { return this._slowStartTurns > 0; }
-    public set slowStart(flag: boolean) { this._slowStartTurns = flag ? 1 : 0; }
-    /** Amount of turns the pokemon has had the Slow Start effect. */
-    public get slowStartTurns(): number { return this._slowStartTurns; }
-    private _slowStartTurns!: number;
+    public readonly slowStart = new TempStatus("slow start", 5);
 
     /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
     public get stallTurns(): number { return this._stallTurns; }
@@ -212,12 +156,7 @@ export class VolatileStatus
     /** Whether we have successfully stalled this turn. */
     private stalled!: boolean;
 
-    /** Taunt move status (temporary). */
-    public get taunt(): boolean { return this._tauntTurns > 0; }
-    public set taunt(flag: boolean) { this._tauntTurns = flag ? 1 : 0; }
-    /** Amount of turns the pokemon has been taunted. */
-    public get tauntTurns(): number { return this._tauntTurns; }
-    private _tauntTurns!: number;
+    public readonly taunt = new TempStatus("taunt", 5);
 
     /** Two-turn move currently being prepared. */
     public get twoTurn(): TwoTurnMove | ""
@@ -236,8 +175,18 @@ export class VolatileStatus
     /** Whether the Truant ability will activate next turn. */
     public get willTruant(): boolean { return this._willTruant; }
     /** Indicates that the Truant ability has activated. */
-    public activateTruant(): void { this._willTruant = true; }
-    // note: above will invert to false on postTurn() so it's properly synced
+    public activateTruant(): void
+    {
+        if (this.overrideAbilityName !== "truant")
+        {
+            throw new Error("Expected ability to equal truant but found " +
+                (this.overrideAbilityName ?
+                    this.overrideAbilityName : "no ability"));
+        }
+
+        // will invert to false on postTurn() so it's properly synced
+        this._willTruant = true;
+    }
     private _willTruant!: boolean;
 
     /** Creates a VolatileStatus object. */
@@ -256,14 +205,14 @@ export class VolatileStatus
         {
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
         };
-        this._confuseTurns = 0;
-        this._embargoTurns = 0;
+        this.confusion.end();
+        this.embargo.end();
         this.ingrain = false;
-        this._magnetRiseTurns = 0;
+        this.magnetRise.end();
         this.substitute = false;
 
         this.enableMoves();
-        this._lockedMoveTurns = 0;
+        this.lockedMove.end();
         this.mustRecharge = false;
         this._overrideAbility = null;
         this.overrideAbilityName = "";
@@ -272,10 +221,10 @@ export class VolatileStatus
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
         this.roost = false;
-        this._slowStartTurns = 0;
+        this.slowStart.end();
         this._stallTurns = 0;
         this.stalled = false;
-        this._tauntTurns = 0;
+        this.taunt.end();
         this._twoTurn = "";
         this.twoTurnCounter = 0;
         this._willTruant = false;
@@ -288,17 +237,21 @@ export class VolatileStatus
     public postTurn(): void
     {
         // confusion is handled separately since it depends on an event
-        // other statuses like these are silent
-        if (this.embargo) ++this._embargoTurns;
-        if (this.magnetRise) ++this._magnetRiseTurns;
-        if (this.taunt) ++this._tauntTurns;
-        if (this.slowStart) ++this._slowStartTurns;
+        // other statuses like these are silently updated
+        this.embargo.tick();
+        this.magnetRise.tick();
+        this.taunt.tick();
+        this.slowStart.tick();
+        for (const disabled of this.disabledMoves) disabled.tick();
 
-        // update disabled move turns
-        for (let i = 0; i < this._disableTurns.length; ++i)
-        {
-            if (this._disableTurns[i]) ++this._disableTurns[i];
-        }
+        // after roost is used, the user is no longer grounded at the end of
+        //  the turn
+        this.roost = false;
+
+        // stalling moves must be used successfully every turn or the turn
+        //  counter will reset
+        if (!this.stalled) this._stallTurns = 0;
+        this.stalled = false;
 
         // if twoTurn was set this turn, the two-turn move must be completed or
         //  interrupted on the next turn
@@ -309,18 +262,11 @@ export class VolatileStatus
             if (this.twoTurnCounter <= 0) this.twoTurn = "";
         }
 
-        // stalling moves must be used successfully every turn or the turn
-        //  counter will reset
-        if (!this.stalled) this._stallTurns = 0;
-        this.stalled = false;
-
         if (this.overrideAbilityName === "truant")
         {
             this._willTruant = !this._willTruant;
         }
         else this._willTruant = false;
-
-        this.roost = false;
     }
 
     /**
@@ -331,10 +277,10 @@ export class VolatileStatus
     {
         const v = new VolatileStatus();
         v._boosts = this._boosts;
-        v._confuseTurns = this._confuseTurns;
-        v._embargoTurns = this._embargoTurns;
+        this.confusion.copyTo(v.confusion);
+        this.embargo.copyTo(v.embargo);
         v.ingrain = this.ingrain;
-        v._magnetRiseTurns = this._magnetRiseTurns;
+        this.magnetRise.copyTo(v.magnetRise);
         v.substitute = this.substitute;
         if (this.isAbilitySuppressed()) v.suppressAbility();
         return v;
@@ -351,27 +297,20 @@ export class VolatileStatus
             (Object.keys(this._boosts) as BoostName[])
                 .filter(key => this._boosts[key] !== 0)
                 .map(key => `${key}: ${plus(this._boosts[key])}`),
-            this._confuseTurns ?
-                [pluralTurns("confused", this._confuseTurns - 1)] : [],
-            this._embargoTurns ?
-                [pluralTurns("embargo", this._embargoTurns - 1)] : [],
+            this.confusion.isActive ? [this.confusion.toString()] : [],
+            this.embargo.isActive ? [this.embargo.toString()] : [],
             this.ingrain ? ["ingrain"] : [],
-            this._magnetRiseTurns ?
-                [pluralTurns("magnet rise", this._magnetRiseTurns - 1)] : [],
-            this.substitute ? ["substitute"] : [],
-            this._disableTurns
-                .filter(d => d !== 0)
-                .map((d, i) => pluralTurns(`disabled move ${i + 1}`, d)),
-            this.lockedMove ? ["lockedmove"] : [],
+            this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
+            this.substitute ? ["has substitute"] : [],
+            // override ability/species/etc are handled by Pokemon#toString()
+            this.disabledMoves.filter(d => !d.isActive).map(d => d.toString()),
+            this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.mustRecharge ? ["must recharge"] : [],
-            // override ability/species/type are handled by Pokemon#toString()
             this.roost ? ["roosting"] : [],
-            this.slowStart ?
-                [pluralTurns("slow start", this._slowStartTurns - 1, 5)] : [],
+            this.slowStart.isActive ? [this.slowStart.toString()] : [],
             this._stallTurns ?
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
-            this._tauntTurns ?
-                [pluralTurns("taunt", this._tauntTurns - 1)] : [],
+            this.taunt.isActive ? [this.taunt.toString()] : [],
             this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
             this._willTruant ? ["truant next turn"] : [])
         .join(", ")}]`;
