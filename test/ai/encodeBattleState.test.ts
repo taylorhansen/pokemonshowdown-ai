@@ -28,6 +28,11 @@ describe("BattleState encoders", function()
             expect(oneHot(1, 3)).to.have.members([0, 1, 0]);
         });
 
+        it("Should encode class of values with custom 1/0 values", function()
+        {
+            expect(oneHot(1, 3, 10, 3)).to.have.members([3, 10, 3]);
+        });
+
         it("Should output 0's if index is null", function()
         {
             expect(oneHot(null, 3)).to.have.members([0, 0, 0]);

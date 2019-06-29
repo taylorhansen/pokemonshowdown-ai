@@ -19,10 +19,13 @@ import { Weather } from "../battle/state/Weather";
  * One-hot encodes a class of values.
  * @param id 0-based integer to encode.
  * @param length Number of classes to encode.
+ * @param one Value to use for the one. Default `1`.
+ * @param zero Value to use for the zero. Default `0`.
  */
-export function oneHot(id: number | null, length: number): number[]
+export function oneHot(id: number | null, length: number, one = 1, zero = 0):
+    number[]
 {
-    return Array.from({length}, (v, i) => i === id ? 1 : 0);
+    return Array.from({length}, (v, i) => i === id ? one : zero);
 }
 
 /**
