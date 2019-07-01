@@ -8,23 +8,32 @@ describe("utility", function()
     {
         it("Should use singular", function()
         {
-            expect(pluralTurns("tox", 1)).to.equal("tox for 1 turn");
+            expect(pluralTurns(1)).to.equal("1 turn");
         });
 
-        it("Should use singular with limit", function()
+        it("Should use singular denom", function()
         {
-            expect(pluralTurns("tox", 1, 1)).to.equal("tox for 1/1 turn");
+            expect(pluralTurns(2, 1)).to.equal("2/1 turn");
         });
 
         it("Should use plural", function()
         {
-            expect(pluralTurns("tox", 5)).to.equal("tox for 5 turns");
+            expect(pluralTurns(5)).to.equal("5 turns");
         });
 
-        it("Should use plural with limit", function()
+        it("Should use plural denom", function()
         {
-            expect(pluralTurns("reflect", 2, 5))
-                .to.equal("reflect for 2/5 turns");
+            expect(pluralTurns(1, 5)).to.equal("1/5 turns");
+        });
+
+        it("Should use status prefix", function()
+        {
+            expect(pluralTurns("tox", 1)).to.equal("tox for 1 turn");
+        });
+
+        it("Should use status prefix with denom", function()
+        {
+            expect(pluralTurns("slp", 3, 4)).to.equal("slp for 3/4 turns");
         });
     });
 });

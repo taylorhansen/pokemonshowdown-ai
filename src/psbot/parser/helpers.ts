@@ -287,6 +287,7 @@ export function parseFromSuffix(value: string): From | null
     {
         return {type: "item", item: value.substr("item: ".length)};
     }
-    if (value.startsWith("lockedmove")) return {type: "lockedmove"};
+    if (value === "lockedmove") return {type: "lockedmove"};
+    if (value === "psn") return {type: "psn"};
     return null;
 }

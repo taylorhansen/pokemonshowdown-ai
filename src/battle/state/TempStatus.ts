@@ -1,6 +1,6 @@
 import { pluralTurns } from "./utility";
 
-/** Represents a temporary status condition with a limited amount of turns. */
+/** Counts turns for a temporary status condition. */
 export class TempStatus
 {
     /** Whether the status is currently active. */
@@ -13,47 +13,40 @@ export class TempStatus
     private _turns = 0;
 
     /**
-     * Creates a TempStatus
+     * Creates a TempStatus.
      * @param name Name of the status.
-     * @param duration Max amount of turns this status can last.
+     * @param duration Max amount of turns the status can last.
      */
     constructor(public readonly name: string, public readonly duration: number)
     {
-        this.name = name;
-        this.duration = duration;
     }
 
     /** Starts the status. */
-    public start(): void
-    {
-        this._turns = 1;
-    }
+    public start(): void { this._turns = 1; }
 
     /** Increments turn counter if active. */
     public tick(): void
     {
-        if (this.isActive)
+        if (!this.isActive) return;
+
+        if (this.duration && this._turns > this.duration)
         {
-            if (this.duration && this._turns > this.duration)
-            {
-                throw new Error(`TempStatus '${this.name}' lasted longer ` +
-                    `than expected (${this._turns})`);
-            }
-            ++this._turns;
+            throw new Error("TurnCounter status lasted longer than expected (" +
+                `${pluralTurns(this._turns, this.duration)})`);
         }
+
+        ++this._turns;
     }
 
-    /** Ends the status. */
-    public end(): void
-    {
-        this._turns = 0;
-    }
+    /** Ends this status. */
+    public end(): void { this._turns = 0; }
 
     /**
      * Copies turn data over to another TempStatus object, as long as the names
      * and durations match.
+     * @override
      */
-    public copyTo(ts: TempStatus): void
+    public copyTo(ts: this): void
     {
         if (this.name !== ts.name || this.duration !== ts.duration)
         {

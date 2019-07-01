@@ -222,5 +222,14 @@ describe("Parser Helpers", function()
                     .to.deep.equal({type: "lockedmove"});
             });
         });
+
+        describe("psn", function()
+        {
+            it("Should parse psn", function()
+            {
+                expect(parseFromSuffix("psn"))
+                    .to.deep.equal({type: "psn"});
+            });
+        });
     });
 });

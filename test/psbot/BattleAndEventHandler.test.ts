@@ -52,13 +52,13 @@ describe("Battle and EventProcessor", function()
             expect(mon.level).to.equal(details.level);
             expect(mon.hp.current).to.equal(status.hp);
             expect(mon.hp.max).to.equal(status.hpMax);
-            // TODO: handle case where there's no item (have to change typings)
+            // TODO: handle case where there's no item? (have to change typings)
             expect(mon.item.definiteValue).to.not.be.null;
             expect(mon.item.definiteValue!.name).to.equal(data.item);
             expect(mon.baseAbility.definiteValue).to.not.be.null;
             expect(mon.baseAbility.definiteValue!.name)
                 .to.equal(data.baseAbility);
-            expect(mon.majorStatus).to.equal(status.condition);
+            expect(mon.majorStatus.current).to.equal(status.condition);
             expect(mon.active).to.equal(data.active);
 
             for (let moveId of data.moves)
@@ -525,7 +525,7 @@ describe("Battle and EventProcessor", function()
                             status:
                             {
                                 hp: us2Mon.hp.current, hpMax: us2Mon.hp.max,
-                                condition: us2Mon.majorStatus
+                                condition: us2Mon.majorStatus.current
                             }
                         },
                         {type: "upkeep"}, {type: "turn", num: 2}
@@ -1172,6 +1172,29 @@ describe("Battle and EventProcessor", function()
                 });
                 expect(mon.moveset.get("thunderwave")).to.not.be.null;
             });
+
+            it("Should tick sleep counter", async function()
+            {
+                const mon = battle.state.teams.us.active;
+                mon.majorStatus.afflict("slp");
+
+                await battle.progress(
+                    {events: [{type: "cant", id: us1, reason: "slp"}]});
+
+                expect(mon.majorStatus.turns).to.equal(2);
+            });
+
+            it("Should tick sleep counter twice if earlybird", async function()
+            {
+                const mon = battle.state.teams.us.active;
+                mon.ability = "earlybird";
+                mon.majorStatus.afflict("slp");
+
+                await battle.progress(
+                    {events: [{type: "cant", id: us1, reason: "slp"}]});
+
+                expect(mon.majorStatus.turns).to.equal(3);
+            });
         });
 
         describe("curestatus", function()
@@ -1179,12 +1202,25 @@ describe("Battle and EventProcessor", function()
             it("Should cure status", async function()
             {
                 const mon = battle.state.teams.us.active;
-                mon.majorStatus = "psn";
+                mon.majorStatus.afflict("slp");
+                mon.majorStatus.tick();
                 await battle.progress(
                 {
-                    events: [{type: "curestatus", id: us1, majorStatus: "psn"}]
+                    events: [{type: "curestatus", id: us1, majorStatus: "slp"}]
                 });
-                expect(mon.majorStatus).to.be.null;
+                expect(mon.majorStatus.current).to.be.null;
+            });
+
+            it("Should infer early bird if awake in 0 turns", async function()
+            {
+                const mon = battle.state.teams.us.active;
+                mon.majorStatus.afflict("slp");
+                await battle.progress(
+                {
+                    events: [{type: "curestatus", id: us1, majorStatus: "slp"}]
+                });
+                expect(mon.majorStatus.current).to.be.null;
+                expect(mon.ability).to.equal("earlybird");
             });
         });
 
@@ -1194,12 +1230,12 @@ describe("Battle and EventProcessor", function()
             {
                 const mon1 = battle.state.teams.us.active;
                 const mon2 = battle.state.teams.us.pokemon[1]!;
-                mon1.majorStatus = "slp";
-                mon2.majorStatus = "par";
+                mon1.majorStatus.afflict("slp");
+                mon2.majorStatus.afflict("par");
                 await battle.progress(
                     {events: [{type: "cureteam", id: us1}]});
-                expect(mon1.majorStatus).to.be.null;
-                expect(mon2.majorStatus).to.be.null;
+                expect(mon1.majorStatus.current).to.be.null;
+                expect(mon2.majorStatus.current).to.be.null;
             });
         });
 
@@ -1213,14 +1249,32 @@ describe("Battle and EventProcessor", function()
                     [
                         {
                             type: "damage", id: us1,
-                            status: {hp: 1, hpMax: 10, condition: "brn"}
+                            status: {hp: 1, hpMax: 10, condition: null}
                         }
                     ]
                 });
                 const mon = battle.state.teams.us.active;
                 expect(mon.hp.current).to.equal(1);
                 expect(mon.hp.max).to.equal(10);
-                expect(mon.majorStatus).to.equal("brn");
+                expect(mon.majorStatus.current).to.be.null;
+            });
+
+            it("Should tick toxic counter if from poison", async function()
+            {
+                const mon = battle.state.teams.us.active;
+                mon.majorStatus.afflict("tox");
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "damage", id: us1,
+                            status: {hp: 1, hpMax: 10, condition: "tox"},
+                            from: {type: "psn"}
+                        }
+                    ]
+                });
+                expect(mon.majorStatus.turns).to.equal(2);
             });
         });
 
@@ -1845,10 +1899,10 @@ describe("Battle and EventProcessor", function()
             it("Should afflict with status", async function()
             {
                 const mon = battle.state.teams.us.active;
-                expect(mon.majorStatus).to.be.null;
+                expect(mon.majorStatus.current).to.be.null;
                 await battle.progress(
                     {events: [{type: "status", id: us1, majorStatus: "frz"}]});
-                expect(mon.majorStatus).to.equal("frz");
+                expect(mon.majorStatus.current).to.equal("frz");
             });
         });
 

@@ -5,7 +5,7 @@ import { Pokemon } from "../../../src/battle/state/Pokemon";
 
 describe("Pokemon", function()
 {
-    describe("#active", function()
+    describe("#active/#switchOut()/#switchIn()", function()
     {
         it("Should be inactive initially", function()
         {
@@ -34,6 +34,27 @@ describe("Pokemon", function()
             mon.volatile.lockedMove.start();
             mon.switchOut();
             expect(mon.volatile.lockedMove.isActive).to.be.false;
+        });
+
+        it("Should clear toxic turns when switched out", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.majorStatus.afflict("tox");
+            mon.majorStatus.tick();
+            expect(mon.majorStatus.turns).to.equal(2);
+            mon.switchOut();
+            expect(mon.majorStatus.turns).to.equal(1);
+        });
+
+        it("Should not clear other major status turns when switched out",
+        function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.majorStatus.afflict("slp");
+            mon.majorStatus.tick();
+            expect(mon.majorStatus.turns).to.equal(2);
+            mon.switchOut();
+            expect(mon.majorStatus.turns).to.equal(2);
         });
     });
 
@@ -403,7 +424,6 @@ describe("Pokemon", function()
             state.status.gravity = true;
 
             state.teams.us.size = 1;
-            // tslint:disable-next-line:no-shadowed-variable
             const mon = state.teams.us.switchIn("Pidgey", 1, "M", 1, 1)!;
             expect(mon.isGrounded).to.be.true;
             expect(mon.maybeGrounded).to.be.true;

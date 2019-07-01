@@ -236,11 +236,11 @@ export class VolatileStatus
      */
     public postTurn(): void
     {
-        // confusion is handled separately since it depends on an event
-        // other statuses like these are silently updated
+        // confusion counter handled by in-game events
         this.embargo.tick();
         this.magnetRise.tick();
         this.taunt.tick();
+        // toxic counter handled by in-game events
         this.slowStart.tick();
         for (const disabled of this.disabledMoves) disabled.tick();
 
@@ -311,6 +311,7 @@ export class VolatileStatus
             this._stallTurns ?
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
             this.taunt.isActive ? [this.taunt.toString()] : [],
+            // toxic turns handled by Pokemon#toString()
             this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
             this._willTruant ? ["truant next turn"] : [])
         .join(", ")}]`;

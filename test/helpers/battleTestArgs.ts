@@ -35,7 +35,7 @@ export const pokemonDetails: PokemonDetails[] =
 /** Test PokemonStatuses. Matches corresponding pokemonId. */
 export const pokemonStatus: PokemonStatus[] =
 [
-    {hp: 100, hpMax: 100, condition: "par"},
+    {hp: 100, hpMax: 100, condition: null},
     {hp: 9001, hpMax: 9001, condition: null},
     {hp: 0, hpMax: 0, condition: null}
 ];

@@ -1,6 +1,7 @@
 import { dex, twoTurnMoves } from "../dex/dex";
-import { MajorStatus, PokemonData, Type } from "../dex/dex-util";
+import { PokemonData, Type } from "../dex/dex-util";
 import { HP } from "./HP";
+import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Moveset } from "./Moveset";
 import { PossibilityClass } from "./PossibilityClass";
 import { Team } from "./Team";
@@ -196,13 +197,8 @@ ability ${ability}`);
     /** Info about the pokemon's hit points. */
     public readonly hp: HP;
 
-    /** Cures this Pokemon from its major status condition. */
-    public cure(): void
-    {
-        this.majorStatus = null;
-    }
-    /** Current major status condition. Not cleared on switch. */
-    public majorStatus: MajorStatus | null = null;
+    /** Major status turn counter manager. */
+    public readonly majorStatus = new MajorStatusCounter();
 
     /** Minor status conditions. Cleared on switch. */
     public get volatile(): VolatileStatus
@@ -285,6 +281,7 @@ ability ${ability}`);
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
+        // sleep counter handled by in-game events
         if (this._active) this._volatile.postTurn();
     }
 
@@ -334,6 +331,8 @@ ability ${ability}`);
     {
         this._active = false;
         this._volatile.clear();
+        // toxic counter resets on switch
+        if (this.majorStatus.current === "tox") this.majorStatus.resetCounter();
     }
 
     /** Tells the pokemon that it has fainted. */
@@ -377,8 +376,8 @@ ability ${ability}`);
         const s = " ".repeat(indent);
         return `\
 ${s}${this.stringifySpecies()} ${this.gender ? ` ${this.gender}` : ""} \
-L${this.level} ${this.hp.toString()}\
-${this.majorStatus ? ` ${this.majorStatus}` : ""}
+L${this.level} ${this.hp.toString()}
+${s}status: ${this.majorStatus.toString()}
 ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
 ${s}grounded: \

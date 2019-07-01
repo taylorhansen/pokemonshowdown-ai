@@ -196,7 +196,7 @@ export class Team
     /** Cures all pokemon of any major status conditions. */
     public cure(): void
     {
-        for (const mon of this._pokemon) if (mon) mon.cure();
+        for (const mon of this._pokemon) if (mon) mon.majorStatus.cure();
     }
 
     // istanbul ignore next: only used for logging

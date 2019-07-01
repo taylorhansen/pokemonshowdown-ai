@@ -468,7 +468,7 @@ export interface WinEvent extends BattleEventBase
 // from suffix types
 
 /** Optional event suffixes. */
-export type From = FromAbility | FromItem | FromLockedMove;
+export type From = FromAbility | FromItem | FromLockedMove | FromPsn;
 
 /** Base class for From suffixes. */
 interface FromBase
@@ -497,4 +497,10 @@ export interface FromItem extends FromBase
 export interface FromLockedMove extends FromBase
 {
     readonly type: "lockedmove";
+}
+
+/** Caused from being poisoned. */
+export interface FromPsn extends FromBase
+{
+    readonly type: "psn";
 }

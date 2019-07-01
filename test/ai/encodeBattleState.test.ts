@@ -1,14 +1,16 @@
 import { expect } from "chai";
 import "mocha";
 import { isNumber } from "util";
-import { encodeBattleState, encodeHP, encodeMove, encodeMoveset,
-    encodePokemon, encodePossiblityClass, encodeRoomStatus, encodeTeam,
-    encodeTeamStatus, encodeVolatileStatus, encodeWeather, limitedStatusTurns,
-    oneHot, sizeActivePokemon, sizeBattleState, sizeMove, sizeMoveset,
-    sizePokemon, sizeRoomStatus, sizeTeam, sizeTeamStatus, sizeVolatileStatus,
-    sizeWeather } from "../../src/ai/encodeBattleState";
+import { encodeBattleState, encodeHP, encodeMajorStatusCounter, encodeMove,
+    encodeMoveset, encodePokemon, encodePossiblityClass, encodeRoomStatus,
+    encodeTeam, encodeTeamStatus, encodeTempStatus, encodeVolatileStatus,
+    encodeWeather, limitedStatusTurns, oneHot, sizeActivePokemon,
+    sizeBattleState, sizeMajorStatusCounter, sizeMove, sizeMoveset, sizePokemon,
+    sizeRoomStatus, sizeTeam, sizeTeamStatus, sizeTempStatus,
+    sizeVolatileStatus, sizeWeather } from "../../src/ai/encodeBattleState";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";
+import { MajorStatusCounter } from "../../src/battle/state/MajorStatusCounter";
 import { Move } from "../../src/battle/state/Move";
 import { Moveset } from "../../src/battle/state/Moveset";
 import { Pokemon } from "../../src/battle/state/Pokemon";
@@ -16,6 +18,7 @@ import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
 import { RoomStatus } from "../../src/battle/state/RoomStatus";
 import { Team } from "../../src/battle/state/Team";
 import { TeamStatus } from "../../src/battle/state/TeamStatus";
+import { TempStatus } from "../../src/battle/state/TempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
 import { Weather } from "../../src/battle/state/Weather";
 
@@ -160,10 +163,22 @@ describe("BattleState encoders", function()
         values: [0, 0, 0]
     });
 
+    testEncoder("TempStatus", encodeTempStatus,
+    {
+        init: () => new TempStatus("taunt", 5),
+        size: sizeTempStatus
+    });
+
     testEncoder("VolatileStatus", encodeVolatileStatus,
     {
         init: () => new VolatileStatus(),
         size: sizeVolatileStatus
+    });
+
+    testEncoder("MajorStatusCounter", encodeMajorStatusCounter,
+    {
+        init: () => new MajorStatusCounter(),
+        size: sizeMajorStatusCounter
     });
 
     testEncoder("Move", encodeMove,

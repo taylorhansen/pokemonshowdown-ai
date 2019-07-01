@@ -104,12 +104,12 @@ describe("Team", function()
         {
             team.size = 2;
             const mon1 = team.reveal("Magikarp", 100, "M", 100, 100)!;
-            mon1.majorStatus = "brn";
+            mon1.majorStatus.afflict("brn");
             const mon2 = team.reveal("Porygon", 100, "M", 100, 100)!;
-            mon2.majorStatus = "frz";
+            mon2.majorStatus.afflict("frz");
             team.cure();
-            expect(mon1.majorStatus).to.be.null;
-            expect(mon2.majorStatus).to.be.null;
+            expect(mon1.majorStatus.current).to.be.null;
+            expect(mon2.majorStatus.current).to.be.null;
         });
     });
 });

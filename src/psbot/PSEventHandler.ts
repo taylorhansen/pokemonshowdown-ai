@@ -204,6 +204,10 @@ export class PSEventHandler
                 // successfully completed its recharge turn
                 active.volatile.mustRecharge = false;
             }
+            else if (event.reason === "slp")
+            {
+                active.majorStatus.assert("slp").tick(active.ability);
+            }
             else if (event.reason.startsWith("ability: "))
             {
                 // can't move due to an ability
@@ -257,11 +261,29 @@ export class PSEventHandler
                 source[stat] = target[stat];
             }
         })
-        .on("curestatus", event => this.getActive(event.id.owner).cure())
+        .on("curestatus", event =>
+        {
+            const active = this.getActive(event.id.owner);
+            const status = active.majorStatus;
+            status.assert(event.majorStatus);
+            if (status.current === "slp" && status.turns === 1)
+            {
+                // cured in 0 turns, must have early bird ability
+                active.ability = "earlybird";
+            }
+            status.cure();
+        })
         .on("cureteam", event => this.getTeam(event.id.owner).cure())
         .on("damage", event =>
         {
-            this.setHP(event.id, event.status);
+            const active = this.getActive(event.id.owner);
+            active.hp.set(event.status.hp, event.status.hpMax);
+
+            if (event.from && event.from.type === "psn" &&
+                active.majorStatus.current === "tox")
+            {
+                active.majorStatus.tick();
+            }
         })
         .on("detailschange", event =>
         {
@@ -272,12 +294,8 @@ export class PSEventHandler
             active.level = event.details.level;
             active.gender = event.details.gender;
             active.hp.set(event.status.hp, event.status.hpMax);
-            active.majorStatus = event.status.condition;
         })
-        .on("faint", event =>
-        {
-            this.getActive(event.id.owner).faint();
-        })
+        .on("faint", event => { this.getActive(event.id.owner).faint(); })
         .on("fieldend", event =>
         {
             if (event.effect === "move: Gravity")
@@ -332,7 +350,12 @@ export class PSEventHandler
         })
         .on("sethp", event =>
         {
-            for (const pair of event.newHPs) this.setHP(pair.id, pair.status);
+            for (const pair of event.newHPs)
+            {
+                const active = this.getActive(pair.id.owner);
+                active.hp.set(pair.status.hp, pair.status.hpMax);
+                active.majorStatus.assert(pair.status.condition);
+            }
         })
         .on("sideend", event => this.handleSideCondition(event))
         .on("sidestart", event => this.handleSideCondition(event))
@@ -344,8 +367,8 @@ export class PSEventHandler
         })
         .on("status", event =>
         {
-            this.getActive(event.id.owner).majorStatus =
-                event.majorStatus;
+            this.getActive(event.id.owner).majorStatus.afflict(
+                    event.majorStatus);
         })
         .on("swapboost", event =>
         {
@@ -456,7 +479,7 @@ export class PSEventHandler
                     details.gender, status.hp, status.hpMax)!;
             mon.item.narrow(data.item);
             mon.ability = data.baseAbility;
-            mon.majorStatus = status.condition;
+            mon.majorStatus.assert(status.condition);
 
             // set active status
             if (data.active) mon.switchIn();
@@ -555,20 +578,6 @@ export class PSEventHandler
                 mon.item.narrow(toIdName(f.item));
             }
         }
-    }
-
-    /**
-     * Sets the HP of a pokemon.
-     * @param id Pokemon's ID.
-     * @param status New HP/status.
-     * @virtual
-     */
-    protected setHP(id: PokemonID, status: PokemonStatus): void
-    {
-        const mon = this.getActive(id.owner);
-        mon.hp.set(status.hp, status.hpMax);
-        // this should already be covered by the `status` event but just in case
-        mon.majorStatus = status.condition;
     }
 
     /** Handles a side end/start event. */

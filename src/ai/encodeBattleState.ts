@@ -4,6 +4,7 @@ import { BoostName, boostNames, hpTypes, MajorStatus, majorStatuses, numHPTypes,
     Type, types, WeatherType, weatherTypes } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { HP } from "../battle/state/HP";
+import { MajorStatusCounter } from "../battle/state/MajorStatusCounter";
 import { Move } from "../battle/state/Move";
 import { Moveset } from "../battle/state/Moveset";
 import { Pokemon } from "../battle/state/Pokemon";
@@ -125,6 +126,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     //  gen4
     const stallFailRate = Math.min(0.875, 1 - Math.pow(2, -status.stallTurns));
     const taunt = encodeTempStatus(status.taunt);
+    // toxic handled by encodePokemon()
     const twoTurn = oneHot(status.twoTurn ? twoTurnMoves[status.twoTurn] : null,
             numTwoTurnMoves);
     const willTruant = status.willTruant ? 1 : 0;
@@ -135,6 +137,34 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         ...overrideAbility, ...overrideSpecies, ...overrideTypeData, roost,
         ...slowStart, stallFailRate, ...taunt, ...twoTurn, willTruant
     ];
+}
+
+/** Length of the return value of `encodeMajorStatusCounter()`. */
+export const sizeMajorStatusCounter = Object.keys(majorStatuses).length;
+
+/**
+ * Formats major status info into an array of numbers. Null means unknown, while
+ * undefined means nonexistent.
+ */
+export function encodeMajorStatusCounter(status?: MajorStatusCounter | null):
+    number[]
+{
+    if (!status)
+    {
+        // both unrevealed and nonexistent can't have a major status
+        return Array.from(Object.keys(majorStatuses), () => 0);
+    }
+
+    return oneHot(
+        // convert to unique integer id or leave as null
+        status.current && majorStatuses[status.current], sizeMajorStatusCounter,
+        // %hp that will be taken away at the end of the next turn by toxic dmg
+        status.current === "tox" ? Math.min(1, 0.0625 * status.turns)
+        // chance of staying asleep
+        : status.current === "slp" ?
+            limitedStatusTurns(status.turns, status.duration!)
+            // irrelevant
+            : 1);
 }
 
 /** Length of the return value of `encodeMove()`. */
@@ -240,8 +270,9 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             ...encodeMoveset(null), ...encodeHP(null),
             // grounded
             0.5, 0.5,
+            // could be any of these types
             ...filteredTypes.map(() => 1 / filteredTypes.length),
-            ...Array.from({length: Object.keys(majorStatuses).length}, () => 0)
+            ...encodeMajorStatusCounter(null)
         ];
     }
     if (!mon)
@@ -260,12 +291,11 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             // grounded
             -1, -1,
             ...filteredTypes.map(() => -1),
-            ...Array.from({length: Object.keys(majorStatuses).length}, () => 0)
+            ...encodeMajorStatusCounter()
         ];
     }
 
-    const a =
-    [
+    return [
         mon.gender === "M" ? 1 : 0, mon.gender === "F" ? 1 : 0,
         mon.gender === null ? 1 : 0,
         ...oneHot(mon.species.uid, dex.numPokemon),
@@ -274,11 +304,9 @@ export function encodePokemon(mon?: Pokemon | null): number[]
         mon.level, ...encodeMoveset(mon.moveset), ...encodeHP(mon.hp),
         mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0,
         ...filteredTypes.map(type => mon.species.types.includes(type) ? 1 : 0),
-        ...oneHot(mon.majorStatus && majorStatuses[mon.majorStatus],
-            Object.keys(majorStatuses).length)
+        ...encodeMajorStatusCounter(mon.majorStatus),
+        ...(mon.active ? encodeVolatileStatus(mon.volatile) : [])
     ];
-    if (mon.active) a.push(...encodeVolatileStatus(mon.volatile));
-    return a;
 }
 
 /** Length of the return value of `encodeTeamStatus()`. */
