@@ -1,15 +1,11 @@
-import { pluralTurns } from "./utility";
+import { TempStatus } from "./TempStatus";
 import { Weather } from "./Weather";
 
 /** Temporary status conditions for the entire field. */
 export class RoomStatus
 {
-    /** Gravity field effect (temporary). */
-    public get gravity(): boolean { return this._gravityTurns > 0; }
-    public set gravity(value: boolean) { this._gravityTurns = value ? 1 : 0; }
-    /** The amount of turns Gravity was in effect. */
-    public get gravityTurns(): number { return this._gravityTurns; }
-    private _gravityTurns = 0;
+    /** Gravity field effect. */
+    public readonly gravity = new TempStatus("gravity", 5);
 
     /** Weather effect (usually temporary). */
     public readonly weather = new Weather();
@@ -19,7 +15,7 @@ export class RoomStatus
     {
         // weather is updated manually by in-game events, whereas with gravity
         //  it's silent
-        if (this.gravity) ++this._gravityTurns;
+        this.gravity.tick();
     }
 
     // istanbul ignore next: only used in logging
@@ -29,10 +25,8 @@ export class RoomStatus
      */
     public toString(): string
     {
-        return `[${([] as string[])
-            .concat(
-                this.gravity ?
-                    [pluralTurns("gravity", this._gravityTurns - 1)] : [],
+        return `[${([] as string[]).concat(
+                this.gravity.isActive ? [this.gravity.toString()] : [],
                 [`weather: ${this.weather.toString()}`])
             .join(", ")}]`;
     }

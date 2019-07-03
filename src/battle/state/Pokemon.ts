@@ -172,7 +172,10 @@ ability ${ability}`);
         }
         if (this.team)
         {
-            if (id === "wish") this.team.status.wish();
+            // wish can be used consecutively, but only the first time will
+            //  count
+            if (id === "wish") this.team.status.wish.start(/*restart*/false);
+
             this.team.status.selfSwitch = move.selfSwitch || false;
         }
     }
@@ -214,7 +217,8 @@ ability ${ability}`);
      */
     public get isGrounded(): boolean
     {
-        if (this.team && this.team.state && this.team.state.status.gravity)
+        if (this.team && this.team.state &&
+            this.team.state.status.gravity.isActive)
         {
             return true;
         }
@@ -240,7 +244,8 @@ ability ${ability}`);
      */
     public get maybeGrounded(): boolean
     {
-        if (this.team && this.team.state && this.team.state.status.gravity)
+        if (this.team && this.team.state &&
+            this.team.state.status.gravity.isActive)
         {
             return true;
         }

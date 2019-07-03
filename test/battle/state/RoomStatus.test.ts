@@ -13,12 +13,12 @@ describe("RoomStatus", function()
 
     describe("#gravity", function()
     {
-        it("Should set gravity", function()
+        it("Should tick on #postTurn()", function()
         {
-            room.gravity = true;
-            expect(room.gravity).to.be.true;
-            room.gravity = false;
-            expect(room.gravity).to.be.false;
+            room.gravity.start();
+            expect(room.gravity.turns).to.equal(1);
+            room.postTurn();
+            expect(room.gravity.turns).to.equal(2);
         });
     });
 });

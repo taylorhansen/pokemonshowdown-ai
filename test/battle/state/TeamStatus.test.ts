@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { FutureMove } from "../../../src/battle/dex/dex";
+import { FutureMove, futureMoves } from "../../../src/battle/dex/dex";
 import { TeamStatus } from "../../../src/battle/state/TeamStatus";
 
 describe("TeamStatus", function()
@@ -12,40 +12,51 @@ describe("TeamStatus", function()
         status = new TeamStatus();
     });
 
-    describe("#futureMoveTurns", function()
+    describe("#wish", function()
     {
-        it("Should be 0 initially", function()
+        it("Should have silent=true", function()
         {
-            for (const id of Object.keys(status.futureMoveTurns) as
-                FutureMove[])
-            {
-                expect(status.futureMoveTurns[id]).to.equal(0);
-            }
+            expect(status.wish).to.have.property("silent", true);
         });
     });
 
-    describe("#startFutureMove()", function()
+    describe("#futureMoves", function()
     {
-        it("Should start future move", function()
+        for (const id of Object.keys(futureMoves) as FutureMove[])
         {
-            status.startFutureMove("doomdesire");
-            expect(status.futureMoveTurns.doomdesire).to.equal(3);
-        });
+            describe(id, function()
+            {
+                it("Should have silent=true", function()
+                {
+                    expect(status.futureMoves[id])
+                        .to.have.property("silent", true);
+                });
+            });
+        }
     });
 
     describe("#postTurn()", function()
     {
-        it("Should not decrement inactive future moves", function()
+        it("Should tick wish turns", function()
         {
+            status.wish.start();
+            expect(status.wish.turns).to.equal(1);
             status.postTurn();
-            expect(status.futureMoveTurns.futuresight).to.equal(0);
+            expect(status.wish.turns).to.equal(2);
+            status.postTurn();
+            expect(status.wish.turns).to.equal(0);
         });
 
-        it("Should decrement future move turns", function()
+        it("Should tick future move turns", function()
         {
-            status.startFutureMove("doomdesire");
+            status.futureMoves.futuresight.start();
+            expect(status.futureMoves.futuresight.turns).to.equal(1);
             status.postTurn();
-            expect(status.futureMoveTurns.doomdesire).to.equal(2);
+            expect(status.futureMoves.futuresight.turns).to.equal(2);
+            status.postTurn();
+            expect(status.futureMoves.futuresight.turns).to.equal(3);
+            status.postTurn();
+            expect(status.futureMoves.futuresight.turns).to.equal(0);
         });
     });
 });

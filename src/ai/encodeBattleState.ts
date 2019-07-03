@@ -35,7 +35,7 @@ export function oneHot(id: number | null, length: number, one = 1, zero = 0):
  * @param turns Number of turns the status has been active (including current
  * turn). E.g. if the status started during this turn and the end of the current
  * turn hasn't been reached yet, `turns` should be 1, and should be incremented
- * at the end of every turn.
+ * by the end of each turn.
  * @param duration Maximum amount of turns the status will last.
  * @returns Status turn data for encoder functions as a "likelihood" that the
  * status will persist on the next turn.
@@ -318,9 +318,11 @@ export function encodeTeamStatus(status: TeamStatus): number[]
 {
     return [
         status.selfSwitch ? 1 : 0, status.selfSwitch === "copyvolatile" ? 1 : 0,
-        status.isWishing ? 1 : 0,
+        ...encodeTempStatus(status.wish),
         // TODO: guarantee order of future move turn values
-        ...Object.values(status.futureMoveTurns),
+        ...Object.values(status.futureMoves)
+            .map(encodeTempStatus)
+            .reduce((a, b) => a.concat(b), []),
         // divide hazard level by their max levels
         // TODO: factor out into constants somewhere
         status.spikes / 3, status.stealthRock, status.toxicSpikes / 2
@@ -387,8 +389,7 @@ export const sizeRoomStatus = /*gravity*/1 + sizeWeather;
 export function encodeRoomStatus(status: RoomStatus): number[]
 {
     return [
-        limitedStatusTurns(status.gravityTurns, 5),
-        ...encodeWeather(status.weather)
+        ...encodeTempStatus(status.gravity), ...encodeWeather(status.weather)
     ];
 }
 

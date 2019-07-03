@@ -146,11 +146,12 @@ export class PSEventHandler
                     // istanbul ignore else: not useful to test
                     if (isFutureMove(moveId))
                     {
-                        active.team!.status.startFutureMove(moveId);
+                        active.team!.status.futureMoves[moveId]
+                            .start(/*restart*/false);
                     }
                     else
                     {
-                        this.logger.debug(`Ignoring start "${event.volatile}"`);
+                        this.logger.debug(`Ignoring start '${event.volatile}'`);
                     }
                 }
             }
@@ -188,7 +189,7 @@ export class PSEventHandler
             else if (ev === "Taunt") v.taunt.end();
             else if (ev === "Substitute") v.substitute = false;
             else if (ev === "Slow Start") v.slowStart.end();
-            else if (isFutureMove(id)) team.status.endFutureMove(id);
+            else if (isFutureMove(id)) team.status.futureMoves[id].end();
             else this.logger.debug(`Ignoring end "${event.volatile}"`);
         })
         .on("boost", event =>
@@ -300,14 +301,14 @@ export class PSEventHandler
         {
             if (event.effect === "move: Gravity")
             {
-                this.state.status.gravity = false;
+                this.state.status.gravity.end();
             }
         })
         .on("fieldstart", event =>
         {
             if (event.effect === "move: Gravity")
             {
-                this.state.status.gravity = true;
+                this.state.status.gravity.start();
             }
         })
         .on("formechange", event =>

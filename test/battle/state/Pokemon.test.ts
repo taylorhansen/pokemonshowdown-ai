@@ -400,13 +400,22 @@ describe("Pokemon", function()
 
     describe("#isGrounded/#maybeGrounded", function()
     {
+        /**
+         * Checks the `isGrounded` and `maybeGrounded` properties of a Pokemon.
+         */
+        function checkGrounded(mon: Pokemon, isGrounded: boolean,
+            maybeGrounded: boolean): void
+        {
+            expect(mon).to.have.property("isGrounded", isGrounded);
+            expect(mon).to.have.property("maybeGrounded", maybeGrounded);
+        }
+
         it("Should not be grounded if flying type", function()
         {
             const mon = new Pokemon("Pidgey", false);
             // remove iron ball possibility
             mon.item.narrow("lifeorb");
-            expect(mon.isGrounded).to.be.false;
-            expect(mon.maybeGrounded).to.be.false;
+            checkGrounded(mon, false, false);
         });
 
         it("Should be grounded if not flying type", function()
@@ -414,35 +423,31 @@ describe("Pokemon", function()
             const mon = new Pokemon("Magikarp", false);
             // remove iron ball possibility
             mon.item.narrow("lifeorb");
-            expect(mon.isGrounded).to.be.true;
-            expect(mon.maybeGrounded).to.be.true;
+            checkGrounded(mon, true, true);
         });
 
         it("Should be grounded if Gravity is active", function()
         {
             const state = new BattleState();
-            state.status.gravity = true;
+            state.status.gravity.start();
 
             state.teams.us.size = 1;
             const mon = state.teams.us.switchIn("Pidgey", 1, "M", 1, 1)!;
-            expect(mon.isGrounded).to.be.true;
-            expect(mon.maybeGrounded).to.be.true;
+            checkGrounded(mon, true, true);
         });
 
         it("Should be grounded if Ingrain", function()
         {
             const mon = new Pokemon("Pidgey", false);
             mon.volatile.ingrain = true;
-            expect(mon.isGrounded).to.be.true;
-            expect(mon.maybeGrounded).to.be.true;
+            checkGrounded(mon, true, true);
         });
 
         it("Should be grounded if holding iron ball", function()
         {
             const mon = new Pokemon("Pidgey", false);
             mon.item.narrow("ironball");
-            expect(mon.isGrounded).to.be.true;
-            expect(mon.maybeGrounded).to.be.true;
+            checkGrounded(mon, true, true);
         });
 
         it("Should ignore iron ball if Embargo", function()
@@ -450,8 +455,7 @@ describe("Pokemon", function()
             const mon = new Pokemon("Pidgey", false);
             mon.item.narrow("ironball");
             mon.volatile.embargo.start();
-            expect(mon.isGrounded).to.be.false;
-            expect(mon.maybeGrounded).to.be.false;
+            checkGrounded(mon, false, false);
         });
 
         it("Should not be grounded if Magnet Rise", function()
@@ -460,8 +464,7 @@ describe("Pokemon", function()
             // remove iron ball possibility
             mon.item.narrow("leftovers");
             mon.volatile.magnetRise.start();
-            expect(mon.isGrounded).to.be.false;
-            expect(mon.maybeGrounded).to.be.false;
+            checkGrounded(mon, false, false);
         });
 
         it("Should not be grounded if Levitate ability", function()
@@ -470,8 +473,7 @@ describe("Pokemon", function()
             mon.ability = "levitate";
             // remove iron ball possibility
             mon.item.narrow("leftovers");
-            expect(mon.isGrounded).to.be.false;
-            expect(mon.maybeGrounded).to.be.false;
+            checkGrounded(mon, false, false);
         });
 
         it("Should possibly be not grounded if able to have Levitate ability",
@@ -482,8 +484,7 @@ describe("Pokemon", function()
             // remove iron ball possibility
             mon.item.narrow("leftovers");
             mon.switchIn();
-            expect(mon.isGrounded).to.be.true;
-            expect(mon.maybeGrounded).to.be.false;
+            checkGrounded(mon, true, false);
         });
     });
 });

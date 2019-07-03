@@ -1,50 +1,21 @@
-import { FutureMove, futureMoves, numFutureMoves } from "../dex/dex";
+import { FutureMove, futureMoves } from "../dex/dex";
 import { SelfSwitch } from "../dex/dex-util";
+import { TempStatus } from "./TempStatus";
 
 /** Temporary status conditions for a certain team. */
 export class TeamStatus
 {
+    /**
+     * Whether the team has to switch pokemon and how that switch will be
+     * handled.
+     */
     public selfSwitch: SelfSwitch = false;
 
-    /** Starts the Wish move countdown if not already started. */
-    public wish(): void
-    {
-        // after this turn this will be 1
-        if (!this.wishDuration) this.wishDuration = 2;
-    }
-    /** Whether Wish has been used. */
-    public get isWishing(): boolean { return this.wishDuration > 0; }
-    private wishDuration = 0;
+    /** Wish move status, always ends next turn. */
+    public readonly wish = new TempStatus("wishing", 2, /*silent*/true);
 
-    /** Turns left on each type of future move. */
-    public get futureMoveTurns(): {readonly [id in FutureMove]: number}
-    {
-        return this._futureMoveTurns;
-    }
-    /** Starts a future move. */
-    public startFutureMove(id: FutureMove): void
-    {
-        // countdown starts at 2 on the next postTurn()
-        this._futureMoveTurns[id] = 3;
-    }
-    /** Ensures that a future move has ended. */
-    public endFutureMove(id: FutureMove): void
-    {
-        if (this._futureMoveTurns[id] > 0)
-        {
-            throw new Error(`Future move '${id}' not yet completed`);
-        }
-    }
-    private readonly _futureMoveTurns: {[id in FutureMove]: number} =
-        (function()
-        {
-            const result = {...futureMoves};
-            for (const id of Object.keys(result) as FutureMove[])
-            {
-                result[id] = 0;
-            }
-            return result;
-        })();
+    /** Turn counters for each type of future move. */
+    public readonly futureMoves: {readonly [id in FutureMove]: TempStatus};
 
     /** Spikes layers. Max 3. */
     public spikes = 0;
@@ -53,17 +24,28 @@ export class TeamStatus
     /** Toxic Spikes layers. Max 2. */
     public toxicSpikes = 0;
 
+    /** Creates a TeamStatus. */
+    constructor()
+    {
+        const future = {} as {[id in FutureMove]: TempStatus};
+        for (const id of Object.keys(futureMoves) as FutureMove[])
+        {
+            future[id] = new TempStatus(id, 3, /*silent*/true);
+        }
+        this.futureMoves = future;
+    }
+
     /**
      * Called at the end of the turn, before a Choice has been sent to the
      * server.
      */
     public postTurn(): void
     {
-        if (this.wishDuration) --this.wishDuration;
+        this.wish.tick();
 
-        for (const id of Object.keys(this._futureMoveTurns) as FutureMove[])
+        for (const id of Object.keys(this.futureMoves) as FutureMove[])
         {
-            if (this._futureMoveTurns[id]) --this._futureMoveTurns[id];
+            this.futureMoves[id].tick();
         }
     }
 
@@ -76,10 +58,10 @@ export class TeamStatus
     {
         return `[${([] as string[]).concat(
                 this.selfSwitch ? [`selfSwitch: ${this.selfSwitch}`] : [],
-                this.isWishing ? ["wishing"] : [],
-                Object.entries(this._futureMoveTurns)
-                    .filter(([id, turns]) => turns > 0)
-                    .map(([id, turns]) => `${id} turns: ${turns}`),
+                this.wish.isActive ? [this.wish.toString()] : [],
+                Object.entries(this.futureMoves)
+                    .filter(([id, counter]) => counter.isActive)
+                    .map(([id, counter]) => counter.toString()),
                 this.spikes ? [`spikes ${this.spikes}`] : [],
                 this.stealthRock ? [`stealth rock ${this.stealthRock}`] : [],
                 this.toxicSpikes ? [`toxic spikes ${this.toxicSpikes}`] : [])

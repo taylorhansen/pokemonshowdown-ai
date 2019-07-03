@@ -15,24 +15,49 @@ export class TempStatus
     /**
      * Creates a TempStatus.
      * @param name Name of the status.
-     * @param duration Max amount of turns the status can last.
+     * @param duration Max amount of `#tick()`s the status will last. After the
+     * last tick, `#end()` should be called.
+     * @param silent Default false. Indicates whether the status can or should
+     * end silently once its duration is reached on the last `#tick()` call.
      */
-    constructor(public readonly name: string, public readonly duration: number)
+    constructor(public readonly name: string, public readonly duration: number,
+        public readonly silent = false)
     {
     }
 
-    /** Starts the status. */
-    public start(): void { this._turns = 1; }
+    /**
+     * Starts the status' turn counter. If not already active.
+     * @param restart Default true. Whether the status should be restarted if
+     * called while active.
+     */
+    public start(restart = true): void
+    {
+        if (restart || !this.isActive) this._turns = 1;
+    }
 
-    /** Increments turn counter if active. */
+    /**
+     * Increments turn counter if active. If the `silent` field is true, this
+     * will automatically call `#end()` if the duration was reached, rather
+     * than throwing an error on the next call.
+     */
     public tick(): void
     {
         if (!this.isActive) return;
 
-        if (this.duration && this._turns > this.duration)
+        if (!this.silent)
         {
-            throw new Error("TurnCounter status lasted longer than expected (" +
-                `${pluralTurns(this._turns, this.duration)})`);
+            if (this._turns > this.duration)
+            {
+
+                throw new Error(
+                    `TempStatus '${this.name}' lasted longer than expected (` +
+                    `${pluralTurns(this._turns, this.duration)})`);
+            }
+        }
+        else if (this._turns + 1 > this.duration)
+        {
+            this.end();
+            return;
         }
 
         ++this._turns;

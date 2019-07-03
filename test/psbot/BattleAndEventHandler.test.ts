@@ -458,7 +458,7 @@ describe("Battle and EventProcessor", function()
             it("Should process wish", async function()
             {
                 const status = battle.state.teams.us.status;
-                expect(status.isWishing).to.be.false;
+                expect(status.wish.isActive).to.be.false;
 
                 await battle.progress(
                 {
@@ -471,7 +471,8 @@ describe("Battle and EventProcessor", function()
                         {type: "turn", num: 2}
                     ]
                 });
-                expect(status.isWishing).to.be.true;
+                expect(status.wish.isActive).to.be.true;
+                expect(status.wish.turns).to.equal(2);
 
                 // using it again shouldn't reset the counter on the next turn
                 await battle.progress(
@@ -484,14 +485,14 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                expect(status.isWishing).to.be.true;
+                expect(status.wish.isActive).to.be.true;
+                expect(status.wish.turns).to.equal(2);
 
                 // wish should be consumed next turn
                 await battle.progress(
                     {events: [{type: "turn", num: 3}]});
-                // accept Battle's response
-                await battle.progress({events: []});
-                expect(status.isWishing).to.be.false;
+                expect(status.wish.isActive).to.be.false;
+                expect(status.wish.turns).to.equal(0);
             });
         });
 
@@ -795,15 +796,13 @@ describe("Battle and EventProcessor", function()
                 });
 
                 const status = battle.state.teams.us.status;
-                expect(status.futureMoveTurns.futuresight).to.equal(2);
+                expect(status.futureMoves.futuresight.turns).to.equal(2);
 
                 // run down future move counter
                 await battle.progress({events: [{type: "turn", num: 3}]});
-                expect(status.futureMoveTurns.futuresight).to.equal(1);
-                await battle.progress({events: [{type: "turn", num: 3}]});
-                expect(status.futureMoveTurns.futuresight).to.equal(0);
+                expect(status.futureMoves.futuresight.turns).to.equal(3);
 
-                // hope this doesn't throw
+                // on this turn the future move activates
                 await battle.progress(
                 {
                     events:
@@ -811,9 +810,11 @@ describe("Battle and EventProcessor", function()
                         {
                             type: "end", id: us1, volatile: "Future Sight",
                             otherArgs: []
-                        }
+                        },
+                        {type: "turn", num: 4}
                     ]
                 });
+                expect(status.futureMoves.futuresight.turns).to.equal(0);
             });
 
             describe("typeadd", function()
