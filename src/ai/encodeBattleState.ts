@@ -192,7 +192,7 @@ export function encodeMove(move?: Move | null): number[]
 
 /** Length of the return value of `encodeMoveset()`. */
 export const sizeMoveset = /*hiddenpower*/Object.keys(hpTypes).length +
-    Moveset.maxSize * sizeMove;
+    /*happiness*/1 + Moveset.maxSize * sizeMove;
 
 /** Formats moveset info into an array of numbers. */
 export function encodeMoveset(moveset?: Moveset | null): number[]
@@ -204,6 +204,7 @@ export function encodeMoveset(moveset?: Moveset | null): number[]
         const move = encodeMove(null);
         return [
             ...hpTypeKeys.map(() => 1 / hpTypeKeys.length),
+            0.5, // happiness
             ...([] as number[]).concat(
                 ...Array.from({length: Moveset.maxSize}, () => move))
         ];
@@ -214,12 +215,15 @@ export function encodeMoveset(moveset?: Moveset | null): number[]
         const move = encodeMove();
         return [
             ...Object.keys(hpTypes).map(() => -1),
+            -1, // happiness
             ...([] as number[]).concat(
                 ...Array.from({length: Moveset.maxSize}, () => move))
         ];
     }
     return [
         ...encodePossiblityClass(moveset.hpType, i => i, numHPTypes),
+        // interpolate happiness value
+        (moveset.happiness === null ? /*half*/127.5 : moveset.happiness) / 255,
         ...([] as number[]).concat(...moveset.moves.map(encodeMove))
     ];
 }

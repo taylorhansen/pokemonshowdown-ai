@@ -78,4 +78,47 @@ describe("Moveset", function()
             expect(moveset.hpType.definiteValue!.name).to.equal("fire");
         });
     });
+
+    describe("#happiness", function()
+    {
+        it("Should be null initially", function()
+        {
+            expect(moveset).to.have.property("happiness", null);
+        });
+
+        it("Should calc from return power", function()
+        {
+            moveset.reveal("return102");
+            expect(moveset.get("return")).to.not.be.null;
+            expect(moveset).to.have.property("happiness", 255);
+        });
+
+        it("Should calc from frustration power", function()
+        {
+            moveset.reveal("frustration102");
+            expect(moveset.get("frustration")).to.not.be.null;
+            expect(moveset).to.have.property("happiness", 0);
+        });
+
+        it("Should cap at 255 max", function()
+        {
+            moveset.happiness = 500;
+            expect(moveset).to.have.property("happiness", 255);
+        });
+
+        it("Should cap at 0 min", function()
+        {
+            moveset.happiness = -500;
+            expect(moveset).to.have.property("happiness", 0);
+        });
+
+        it("Should be resettable", function()
+        {
+            // TODO: is this necessary?
+            moveset.happiness = 255;
+            expect(moveset).to.have.property("happiness", 255);
+            moveset.happiness = null;
+            expect(moveset).to.have.property("happiness", null);
+        });
+    });
 });

@@ -11,6 +11,15 @@ export class Moveset
     /** Hidden power type possibility tracker. */
     public readonly hpType = new PossibilityClass(hpTypes);
 
+    /** Happiness value between 0 and 255, or null if unknown. */
+    public get happiness(): number | null { return this._happiness; }
+    public set happiness(value: number | null)
+    {
+        if (value === null) this._happiness = null;
+        else this._happiness = Math.max(0, Math.min(value, 255));
+    }
+    private _happiness: number | null = null;
+
     /** Contained moves. Null is unrevealed while undefined is nonexistent. */
     public get moves(): readonly (Move | null | undefined)[]
     {
@@ -89,6 +98,8 @@ export class Moveset
 
         const move = new Move();
         this._moves[this.unrevealed] = move;
+        // TODO: should this chain be handled by PSEventHandler? format is
+        //  specific only to showdown anyways
         if (id.startsWith("hiddenpower") && id.length > "hiddenpower".length)
         {
             // set hidden power type
@@ -96,6 +107,22 @@ export class Moveset
             this.hpType.narrow(
                 id.substr("hiddenpower".length).replace(/\d+/, ""));
             id = "hiddenpower";
+        }
+        else if (id.startsWith("return") && id.length > "return".length)
+        {
+            // calculate happiness value from base power
+            // use the public setter so it gets clamped
+            this.happiness = 2.5 * parseInt(id.substr("return".length), 10);
+            id = "return";
+        }
+        else if (id.startsWith("frustration") &&
+            id.length > "frustration".length)
+        {
+            // calculate happiness value from base power
+            // use the public setter so it gets clamped
+            this.happiness =
+                255 - (2.5 * parseInt(id.substr("frustration".length), 10));
+            id = "frustration";
         }
         move.name = id;
         return this.unrevealed++;
@@ -116,11 +143,27 @@ export class Moveset
     {
         if (move === null) return "<unrevealed>";
         if (!move) return "<empty>";
-        if (move.name !== "hiddenpower") return move.toString();
 
-        const hpStr = this.hpType.definiteValue ?
-            this.hpType.definiteValue.name
-            : `possibly ${this.hpType.toString()}`;
-        return move.toString(hpStr);
+        let info = "";
+        if (move.name === "hiddenpower")
+        {
+            info = this.hpType.definiteValue ?
+                this.hpType.definiteValue.name
+                : `possibly ${this.hpType.toString()}`;
+        }
+        else if (move.name === "return")
+        {
+            // calculate power from happiness value
+            info = this._happiness !== null ?
+                Math.max(1, this._happiness / 2.5).toString() : "1-102";
+        }
+        else if (move.name === "frustration")
+        {
+            // calculate power from happiness value
+            info = this._happiness !== null ?
+                Math.max(1, (255 - this._happiness) / 2.5).toString() : "1-102";
+        }
+
+        return move.toString(info);
     }
 }

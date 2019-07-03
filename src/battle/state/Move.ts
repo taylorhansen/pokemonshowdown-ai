@@ -12,7 +12,7 @@ export class Move
     {
         if (!dex.moves.hasOwnProperty(id))
         {
-            throw new Error(`Invalid move name ${id}`);
+            throw new Error(`Invalid move name '${id}'`);
         }
 
         this._name = id;
@@ -45,11 +45,12 @@ export class Move
     // istanbul ignore next: only used for logging
     /**
      * Encodes all move data into a string.
-     * @param type Extra info about this move that should be recorded.
+     * @param info Optional. Extra info about this move that should be
+     * displayed.
      */
-    public toString(type?: string): string
+    public toString(info = ""): string
     {
-        return `${this._name}${type ? ` <${type}>` : ""} \
+        return `${this._name}${info ? ` <${info}>` : ""} \
 (${this._pp}/${this._maxpp})`;
     }
 }

@@ -126,16 +126,12 @@ ability ${ability}`);
     /** Item id name. */
     public readonly item = new PossibilityClass(dex.items);
 
-    /** Pokemon's level. Clamped between the closed interval `[1, 100]`. */
-    public get level(): number
-    {
-        return this._level;
-    }
+    /** Pokemon's level from 1 to 100. */
+    public get level(): number { return this._level; }
     public set level(level: number)
     {
         this._level = Math.max(1, Math.min(level, 100));
     }
-    /** Pokemon's level from 1 to 100. */
     private _level = 0;
 
     /**
