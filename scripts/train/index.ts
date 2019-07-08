@@ -130,10 +130,19 @@ async function play(options: GameOptions): Promise<GameResult>
             innerLog.prefix("Network: "));
 
         // sends player choices to the battle stream
-        function sender(c: Choice): void
+        function sender(...args: string[]): void
         {
-            innerLog.debug(`Sending choice '${c}'`);
-            streams[id].write(c);
+            for (const arg of args)
+            {
+                // extract choice from args
+                // format: |/choose <choice>
+                if (arg.startsWith("|/choose "))
+                {
+                    const choice = arg.substr("|/choose ".length);
+                    innerLog.debug(`Sending choice '${choice}'`);
+                    streams[id].write(choice);
+                }
+            }
         }
 
         const battle = new TrainBattle(id, agent, sender,

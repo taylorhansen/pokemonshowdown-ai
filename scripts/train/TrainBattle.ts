@@ -2,7 +2,8 @@ import { Choice } from "../../src/battle/agent/Choice";
 import { Logger } from "../../src/Logger";
 import { ErrorMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
-import { ChoiceSender, PSBattle } from "../../src/psbot/PSBattle";
+import { PSBattle } from "../../src/psbot/PSBattle";
+import { Sender } from "../../src/psbot/PSBot";
 import { Experience } from "./Experience";
 import { TrainEventHandler } from "./TrainEventHandler";
 import { TrainNetwork } from "./TrainNetwork";
@@ -34,7 +35,7 @@ export class TrainBattle extends PSBattle
      */
     private nextChoice?: Choice;
 
-    constructor(username: string, agent: TrainNetwork, sender: ChoiceSender,
+    constructor(username: string, agent: TrainNetwork, sender: Sender,
         logger: Logger, eventHandlerCtor = TrainEventHandler)
     {
         super(username, agent, sender, logger, eventHandlerCtor);
