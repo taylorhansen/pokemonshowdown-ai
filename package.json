@@ -1,7 +1,7 @@
 {
   "name": "pokemonshowdown-ai",
   "version": "0.0.1",
-  "description": "desc",
+  "description": "AI project for Pokemon Showdown",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -32,12 +32,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/CrazyGuy108/pokemonshowdown-ai"
+    "url": "https://github.com/taylorhansen/pokemonshowdown-ai"
   },
   "keywords": [
     "pokemon"
   ],
-  "author": "Taylor Hansen (CrazyGuy108)",
+  "author": "Taylor Hansen (taylorhansen)",
   "license": "MIT",
   "dependencies": {
     "@tensorflow/tfjs-data": "^1.2.7",
