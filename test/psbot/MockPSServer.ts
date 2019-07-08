@@ -20,6 +20,11 @@ export class MockPSServer
     }
     private _lastQuery: querystring.ParsedUrlQuery = {};
 
+    /** Username required for login. */
+    public username = "";
+    /** Password required for login. */
+    public password?: string;
+
     /** Assertion string used for login testing. */
     private assertion: string;
     /** HTTP server. */
@@ -59,10 +64,22 @@ export class MockPSServer
                     switch (this._lastQuery.act)
                     {
                         case "getassertion":
-                            res.end(this.assertion);
+                            if (this.password) res.end(";");
+                            else res.end(this.assertion);
                             break;
                         case "login":
-                            res.end(`]{"assertion":"${this.assertion}"}`);
+                            if (this.username === this._lastQuery.name &&
+                                this.password &&
+                                this.password === this._lastQuery.pass)
+                            {
+                                res.end(`]{"actionsuccess":true,` +
+                                    `"assertion":"${this.assertion}"}`);
+                            }
+                            else
+                            {
+                                res.end(`]{"actionsuccess":false,` +
+                                    `"assertion":";"}`);
+                            }
                             break;
                         default:
                             res.writeHead(404);

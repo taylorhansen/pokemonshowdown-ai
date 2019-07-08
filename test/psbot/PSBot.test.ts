@@ -85,8 +85,11 @@ describe("PSBot", function()
     {
         it("Should login without password", async function()
         {
-            bot.login({username, loginServer});
+            server.username = username;
+            server.password = undefined;
+            const promise = bot.login({username, loginServer});
             server.sendToClient(`|challstr|${challstr}`);
+            await promise;
 
             const msg = await server.nextMessage();
             expect(server.lastQuery).to.deep.equal(
@@ -95,16 +98,51 @@ describe("PSBot", function()
             expect(msg.utf8Data).to.equal(`|/trn ${username},0,${assertion}`);
         });
 
+        it("Should reject login without password if registered",
+        async function()
+        {
+            server.username = username;
+            server.password = password;
+            const promise = bot.login({username, loginServer});
+            server.sendToClient(`|challstr|${challstr}`);
+
+            try { await promise; throw new Error("Login didn't reject"); }
+            catch (e)
+            {
+                expect(e).to.be.instanceOf(Error)
+                    .and.have.property("message",
+                        "A password is required for this account");
+            }
+        });
+
         it("Should login with password", async function()
         {
-            bot.login({username, password, loginServer});
+            server.username = username;
+            server.password = password;
+            const promise = bot.login({username, password, loginServer});
             server.sendToClient(`|challstr|${challstr}`);
+            await promise;
 
             const msg = await server.nextMessage();
             expect(server.lastQuery).to.deep.equal(
                 {act: "login", name: username, pass: password, challstr});
             expect(msg.type).to.equal("utf8");
             expect(msg.utf8Data).to.equal(`|/trn ${username},0,${assertion}`);
+        });
+
+        it("Should reject login with invalid password", async function()
+        {
+            server.username = username;
+            server.password = password + "1";
+            const promise = bot.login({username, password, loginServer});
+            server.sendToClient(`|challstr|${challstr}`);
+
+            try { await promise; throw new Error("Login didn't reject"); }
+            catch (e)
+            {
+                expect(e).to.be.instanceOf(Error)
+                    .and.have.property("message", "Invalid password");
+            }
         });
     });
 });

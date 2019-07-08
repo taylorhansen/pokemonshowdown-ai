@@ -87,44 +87,81 @@ export class PSBot
     }
 
     /** Sets up this PSBot to login once connected. */
-    public login(options: LoginOptions): void
+    public login(options: LoginOptions): Promise<void>
     {
-        this.challstr = async challstr =>
+        return new Promise((res, rej) =>
         {
-            // challstr callback consumed, no need to call again
-            this.challstr = async function() {};
-
-            const init: RequestInit =
+            this.challstr = async challstr =>
             {
-                method: "POST",
-                headers: {"Content-Type": "application/x-www-form-urlencoded"}
+                // challstr callback consumed, no need to call again
+                this.challstr = async function() {};
+
+                const init: RequestInit =
+                {
+                    method: "POST",
+                    headers:
+                    {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    }
+                };
+
+                // get the assertion string used to confirm login
+                let assertion: string;
+
+                if (!options.password)
+                {
+                    // login without password
+                    init.body = `act=getassertion&userid=${options.username}` +
+                        `&challstr=${challstr}`;
+                    const result = await fetch(options.loginServer, init);
+                    assertion = await result.text();
+
+                    if (assertion.startsWith(";"))
+                    {
+                        // login attempt was rejected
+                        if (assertion.startsWith(";;"))
+                        {
+                            // error message was provided
+                            rej(new Error(assertion.substr(2)));
+                        }
+                        else
+                        {
+                            rej(new Error(
+                                    "A password is required for this account"));
+                        }
+                        return;
+                    }
+                }
+                else
+                {
+                    // login with password
+                    init.body = `act=login&name=${options.username}` +
+                        `&pass=${options.password}&challstr=${challstr}`;
+                    const result = await fetch(options.loginServer, init);
+                    const text = await result.text();
+                    // response text returns "]" followed by json
+                    const json = JSON.parse(text.substr(1));
+
+                    assertion = json.assertion;
+                    if (!json.actionsuccess)
+                    {
+                        // login attempt was rejected
+                        if (assertion.startsWith(";;"))
+                        {
+                            // error message was provided
+                            rej(new Error(assertion.substr(2)));
+                        }
+                        else rej(new Error("Invalid password"));
+                        return;
+                    }
+                }
+
+                // complete the login
+                this.addResponses("",
+                    `|/trn ${options.username},0,${assertion}`);
+                res();
             };
-
-            // get the assertion string used to confirm login
-            let assertion: string;
-
-            if (!options.password)
-            {
-                // login without password
-                init.body = `act=getassertion&userid=${options.username}` +
-                    `&challstr=${challstr}`;
-                const res = await fetch(options.loginServer, init);
-                assertion = await res.text();
-            }
-            else
-            {
-                // login with password
-                init.body = `act=login&name=${options.username}` +
-                    `&pass=${options.password}&challstr=${challstr}`;
-                const res = await fetch(options.loginServer, init);
-                const text = await res.text();
-                // response text returns "]" followed by json
-                ({assertion} = JSON.parse(text.substr(1)));
-            }
-
-            // complete the login
-            this.addResponses("", `|/trn ${options.username},0,${assertion}`);
-        };
+        });
     }
 
     /** Sets avatar id. */
