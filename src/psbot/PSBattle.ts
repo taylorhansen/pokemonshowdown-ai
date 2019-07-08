@@ -45,10 +45,6 @@ export class PSBattle implements RoomHandler
         private readonly sender: Sender,
         protected readonly logger: Logger, eventHandlerCtor = PSEventHandler)
     {
-        this.username = username;
-        this.logger = logger;
-        this.agent = agent;
-        this.sender = sender;
         this.state = new BattleState();
         this.eventHandler = new eventHandlerCtor(this.username, this.state,
                 logger.prefix("PSEventHandler: "));
