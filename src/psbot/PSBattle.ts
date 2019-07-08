@@ -5,23 +5,13 @@ import { BattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
 import { BattleInitMessage, BattleProgressMessage, ErrorMessage,
     RequestMessage } from "./dispatcher/Message";
+import { Sender } from "./PSBot";
 import { PSEventHandler } from "./PSEventHandler";
-
-/**
- * Sends a Choice to the server.
- * @param choice Choice to send.
- */
-export type ChoiceSender = (choice: Choice) => void;
+import { RoomHandler } from "./RoomHandler";
 
 /** Translates server messages to PSEventHandler calls. */
-export class PSBattle
+export class PSBattle implements RoomHandler
 {
-    /** Name of the user. */
-    protected readonly username: string;
-    /** Logger object. */
-    protected readonly logger: Logger;
-    /** Makes the decisions for this battle. */
-    protected readonly agent: BattleAgent;
     /** State object. */
     protected readonly state: BattleState;
     /** Manages the BattleState by processing events. */
@@ -31,8 +21,6 @@ export class PSBattle
     /** Available choices from the last decision. */
     protected lastChoices: Choice[] = [];
 
-    /** Used to send the BattleAgent's choice to the server. */
-    private readonly sender: ChoiceSender;
     /**
      * Whether the last unhandled `|error|` message indicated an unavailable
      * choice. The next message should be a `|request|` to reveal new info if
@@ -47,13 +35,15 @@ export class PSBattle
     /**
      * Creates a PSBattle.
      * @param username Client's username.
-     * @param agent BattleAgent to be used.
-     * @param sender Used to send the BattleAgent's choice to the server.
+     * @param agent Makes the decisions for this battle.
+     * @param sender Used to send messages to the server.
      * @param logger Logger object.
      * @param eventHandlerCtor The type of PSEventHandler to use.
      */
-    constructor(username: string, agent: BattleAgent, sender: ChoiceSender,
-        logger: Logger, eventHandlerCtor = PSEventHandler)
+    constructor(protected readonly username: string,
+        protected readonly agent: BattleAgent,
+        private readonly sender: Sender,
+        protected readonly logger: Logger, eventHandlerCtor = PSEventHandler)
     {
         this.username = username;
         this.logger = logger;
@@ -64,7 +54,7 @@ export class PSBattle
                 logger.prefix("PSEventHandler: "));
     }
 
-    /** Handles a BattleInitMessage. */
+    /** @override */
     public init(msg: BattleInitMessage): Promise<void>
     {
         this.logger.debug(`battleinit:\n${
@@ -76,7 +66,7 @@ export class PSBattle
         return this.askAgent();
     }
 
-    /** Handles a BattleProgressMessage. */
+    /** @override */
     public async progress(msg: BattleProgressMessage): Promise<void>
     {
         this.logger.debug(`battleprogress:\n${
@@ -96,7 +86,7 @@ export class PSBattle
             !this.lastRequest.wait;
     }
 
-    /** Handles a RequestMessage. */
+    /** @override */
     public async request(msg: RequestMessage): Promise<void>
     {
         this.logger.debug(`request:\n${
@@ -127,14 +117,14 @@ export class PSBattle
             this.lastChoices = await this.agent.decide(this.state,
                     this.lastChoices);
 
-            this.sender(this.lastChoices[0]);
+            this.sender(`|/choose ${this.lastChoices[0]}`);
         }
 
         this.eventHandler.handleRequest(msg);
         this.lastRequest = msg;
     }
 
-    /** Handles an ErrorMessage. */
+    /** @override */
     public async error(msg: ErrorMessage): Promise<void>
     {
         if (msg.reason.startsWith("[Unavailable choice]"))
@@ -147,7 +137,7 @@ export class PSBattle
         {
             // rejected last choice based on known info
             this.lastChoices.shift();
-            this.sender(this.lastChoices[0]);
+            this.sender(`|/choose ${this.lastChoices[0]}`);
         }
     }
 
@@ -158,7 +148,7 @@ export class PSBattle
         this.logger.debug(`Choices: [${choices.join(", ")}]`);
 
         this.lastChoices = await this.agent.decide(this.state, choices);
-        this.sender(this.lastChoices[0]);
+        this.sender(`|/choose ${this.lastChoices[0]}`);
     }
 
     /**

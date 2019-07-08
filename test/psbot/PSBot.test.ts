@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { Logger } from "../../src/Logger";
 import { PSBot } from "../../src/psbot/PSBot";
-import { MockBattleAgent } from "../battle/agent/MockBattleAgent";
+import { FakeRoomHandler } from "./FakeRoomHandler";
 import { MockPSServer } from "./MockPSServer";
 
 describe("PSBot", function()
@@ -45,7 +45,7 @@ describe("PSBot", function()
     {
         beforeEach("Setup listener", function()
         {
-            bot.acceptChallenges(format, new MockBattleAgent());
+            bot.acceptChallenges(format, () => new FakeRoomHandler());
         });
 
         it(`Should accept ${format} challenges`, async function()

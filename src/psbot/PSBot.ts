@@ -1,11 +1,9 @@
 import fetch, { RequestInit } from "node-fetch";
 import { client as WSClient } from "websocket";
-import { BattleAgent } from "../battle/agent/BattleAgent";
-import { Choice } from "../battle/agent/Choice";
 import { Logger } from "../Logger";
 import { MessageListener } from "./dispatcher/MessageListener";
 import { parsePSMessage } from "./parser/parsePSMessage";
-import { PSBattle } from "./PSBattle";
+import { RoomHandler } from "./RoomHandler";
 
 /** Options for login. */
 export interface LoginOptions
@@ -18,36 +16,45 @@ export interface LoginOptions
     readonly loginServer: string;
 }
 
+/** Function type for sending responses to a server. */
+export type Sender = (...responses: string[]) => void;
+
+/**
+ * Creates a RoomHandler for a room that the PSBot has joined.
+ * @param room Room name.
+ * @param username Username of the PSBot.
+ * @param sender The function that will be used for sending responses.
+ */
+export type HandlerFactory = (room: string, username: string, sender: Sender) =>
+    RoomHandler;
+
 /** Manages the connection to a PokemonShowdown server. */
 export class PSBot
 {
-    /** Logs data to the user. */
-    private readonly logger: Logger;
     /** Websocket client. Used for connecting to the server. */
     private readonly client = new WSClient();
     /** Listens to server messages. */
     private readonly listener = new MessageListener();
-    /** Dictionary of accepted formats. */
-    private readonly formats: {[format: string]: BattleAgent} = {};
-    /** Keeps track of all the battles we're in. */
-    private readonly battles: {[room: string]: PSBattle} = {};
+    /** Tracks current room handlers. */
+    private readonly rooms: {[room: string]: RoomHandler} = {};
+    /** Dictionary of accepted formats for battle challenges. */
+    private readonly formats: {[format: string]: HandlerFactory} = {};
     /** Username of the client. */
     private username?: string;
     /** Callback for when the challstr is received. */
     private challstr: (challstr: string) => Promise<void> = async function() {};
     /** Sends a response to the server. */
-    private sender: (response: string) => void =
+    private sender: Sender =
         () => { throw new Error("Sender not initialized"); }
     /** Function to call to resolve the `connect()` promise. */
     private connected: (result: boolean) => void = () => {};
 
     /**
      * Creates a PSBot.
-     * @param logger Logger object to use.
+     * @param logger Used to log debug info.
      */
-    constructor(logger = Logger.stderr)
+    constructor(private readonly logger = Logger.stderr)
     {
-        this.logger = logger;
         this.initClient();
         this.initListeners();
     }
@@ -55,11 +62,11 @@ export class PSBot
     /**
      * Allows the PSBot to accept battle challenges for the given format.
      * @param format Name of the format to use.
-     * @param agent The BattleAgent to use for this format.
+     * @param fn RoomHandler factory function.
      */
-    public acceptChallenges(format: string, agent: BattleAgent): void
+    public acceptChallenges(format: string, fn: HandlerFactory): void
     {
-        this.formats[format] = agent;
+        this.formats[format] = fn;
     }
 
     /**
@@ -118,14 +125,14 @@ export class PSBot
             }
 
             // complete the login
-            this.sender(`|/trn ${options.username},0,${assertion}`);
+            this.addResponses("", `|/trn ${options.username},0,${assertion}`);
         };
     }
 
     /** Sets avatar id. */
     public setAvatar(avatar: number): void
     {
-        this.sender(`|/avatar ${avatar}`);
+        this.addResponses("", `|/avatar ${avatar}`);
     }
 
     /** Initializes websocket client. */
@@ -135,10 +142,13 @@ export class PSBot
         {
             this.logger.debug("Connected");
 
-            this.sender = (response: string) =>
+            this.sender = (...responses: string[]) =>
             {
-                connection.sendUTF(response);
-                this.logger.debug(`Sent: ${response}`);
+                for (const response of responses)
+                {
+                    connection.sendUTF(response);
+                    this.logger.debug(`Sent: ${response}`);
+                }
             };
 
             connection.on("error", error =>
@@ -172,7 +182,7 @@ export class PSBot
 
         this.listener.on("init", (msg, room) =>
         {
-            if (!this.battles.hasOwnProperty(room) && msg.type === "battle")
+            if (!this.rooms.hasOwnProperty(room) && msg.type === "battle")
             {
                 // joining a new battle
                 // room names follow the format battle-<format>-<id>
@@ -180,7 +190,15 @@ export class PSBot
                 if (this.formats.hasOwnProperty(format))
                 {
                     // lookup registered BattleAgent
-                    this.initBattle(this.formats[format], room);
+                    if (!this.username)
+                    {
+                        throw new Error("Username not initialized");
+                    }
+                    const sender = (...responses: string[]) =>
+                        this.addResponses(room, ...responses);
+
+                    this.rooms[room] =
+                        this.formats[format](room, this.username, sender);
                 }
                 else
                 {
@@ -213,54 +231,40 @@ export class PSBot
                 this.addResponses(room, "|gg", "|/leave") : undefined);
 
         // cleanup after leaving a room
-        this.listener.on("deinit", (m, room) => { delete this.battles[room]; });
+        this.listener.on("deinit", (m, room) => { delete this.rooms[room]; });
 
         // delegate battle-related messages to their appropriate PSBattle
         this.listener.on("battleinit", (msg, room) =>
         {
-            if (this.battles.hasOwnProperty(room))
+            if (this.rooms.hasOwnProperty(room))
             {
-                return this.battles[room].init(msg);
+                return this.rooms[room].init(msg);
             }
         });
 
         this.listener.on("battleprogress", (msg, room) =>
         {
-            if (this.battles.hasOwnProperty(room))
+            if (this.rooms.hasOwnProperty(room))
             {
-                return this.battles[room].progress(msg);
+                return this.rooms[room].progress(msg);
             }
         });
 
         this.listener.on("request", (msg, room) =>
         {
-            if (this.battles.hasOwnProperty(room))
+            if (this.rooms.hasOwnProperty(room))
             {
-                return this.battles[room].request(msg);
+                return this.rooms[room].request(msg);
             }
         });
 
         this.listener.on("error", (msg, room) =>
         {
-            if (this.battles.hasOwnProperty(room))
+            if (this.rooms.hasOwnProperty(room))
             {
-                return this.battles[room].error(msg);
+                return this.rooms[room].error(msg);
             }
         });
-    }
-
-    /**
-     * Starts a new battle.
-     * @param agent BattleAgent to be used.
-     */
-    private initBattle(agent: BattleAgent, room: string): void
-    {
-        if (!this.username) throw new Error("Username not initialized");
-        const sender = (choice: Choice) =>
-            this.addResponses(room, `|/choose ${choice}`);
-
-        this.battles[room] = new PSBattle(this.username, agent, sender,
-                this.logger.prefix(`PSBattle(${room}): `));
     }
 
     /**
@@ -271,6 +275,6 @@ export class PSBot
      */
     private addResponses(room: string, ...responses: string[]): void
     {
-        for (const response of responses) this.sender(room + response);
+        this.sender(...responses.map(res => room + res));
     }
 }

@@ -13,22 +13,17 @@ import { MockPSBattle } from "./MockPSBattle";
 
 describe("Battle and EventProcessor", function()
 {
-    /**
-     * Adds to the responses array.
-     * @param choice Response to add.
-     */
-    function sender(choice: Choice): void
-    {
-        responses.push(choice);
-    }
-
     let responses: Choice[];
     let battle: MockPSBattle;
 
     beforeEach("Initialize Battle", function()
     {
         responses = [];
-        battle = new MockPSBattle(testArgs.username[0], sender);
+        battle = new MockPSBattle(testArgs.username[0],
+            (...args: string[]) =>
+                responses.push(...args.map(
+                    // format: |/choose <choice>
+                    arg => arg.substr(9)[1] as Choice)));
     });
 
     /**

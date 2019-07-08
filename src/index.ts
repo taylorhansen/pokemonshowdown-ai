@@ -4,6 +4,7 @@ import { Network } from "./ai/Network";
 import { latestModelFolder, loginServer, password, playServer, username } from
     "./config";
 import { Logger } from "./Logger";
+import { PSBattle } from "./psbot/PSBattle";
 import { PSBot } from "./psbot/PSBot";
 
 (async function()
@@ -19,9 +20,13 @@ import { PSBot } from "./psbot/PSBot";
     // update avatar
     bot.setAvatar(50);
 
+    // load neural network from disk
+    const network = await Network.loadNetwork(
+        `file://${join(latestModelFolder, "model.json")}`);
+
     // configure client to accept certain challenges
-    // here the neural network has to be loaded from disk first
     bot.acceptChallenges("gen4randombattle",
-        await Network.loadNetwork(
-            `file://${join(latestModelFolder, "model.json")}`));
+        (room, user, sender) =>
+            new PSBattle(user, network, sender,
+                Logger.stdout.prefix(`PSBattle(${room})`)));
 })();
