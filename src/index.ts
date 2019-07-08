@@ -15,7 +15,8 @@ import { PSBot } from "./psbot/PSBot";
     // configure client to login once connected
     if (username) bot.login({username, password, loginServer});
 
-    if (!(await bot.connect(playServer))) return;
+    try { await bot.connect(playServer); }
+    catch (e) { console.log("connection error: " + e); }
 
     // update avatar
     bot.setAvatar(50);

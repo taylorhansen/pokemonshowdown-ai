@@ -47,7 +47,7 @@ export class PSBot
     private sender: Sender =
         () => { throw new Error("Sender not initialized"); }
     /** Function to call to resolve the `connect()` promise. */
-    private connected: (result: boolean) => void = () => {};
+    private connected: (err?: Error) => void = () => {};
 
     /**
      * Creates a PSBot.
@@ -69,21 +69,19 @@ export class PSBot
         this.formats[format] = fn;
     }
 
-    /**
-     * Connects to the server and starts handling messages.
-     * @returns A Promise to connect to the server. Resolve to true if
-     * successful, otherwise false.
-     */
-    public connect(url: string): Promise<boolean>
+    /** Connects to the server and starts handling messages. */
+    public connect(url: string): Promise<void>
     {
         this.client.connect(url);
-        return new Promise(res =>
+        return new Promise((res, rej) =>
         {
-            this.connected = result =>
+            this.connected = err =>
             {
                 // reset connected callback, since the promise is now resolved
                 this.connected = () => {};
-                res(result);
+
+                if (!err) res();
+                else rej(err);
             };
         });
     }
@@ -165,12 +163,12 @@ export class PSBot
                 }
             });
 
-            this.connected(true);
+            this.connected();
         });
         this.client.on("connectFailed", err =>
         {
             this.logger.error(`Failed to connect: ${err}`);
-            this.connected(false);
+            this.connected(err);
         });
     }
 

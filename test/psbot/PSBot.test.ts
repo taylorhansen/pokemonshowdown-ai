@@ -27,7 +27,7 @@ describe("PSBot", function()
     beforeEach("Initialize and connect PSBot", async function()
     {
         bot = new PSBot(Logger.null);
-        expect(await bot.connect(playServer)).to.be.true;
+        await bot.connect(playServer);
         expect(server.isConnected).to.be.true;
     });
 
