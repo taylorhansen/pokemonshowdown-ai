@@ -271,8 +271,10 @@ specificMoves(futureMoves, "future");
 
 // items
 const items = data.Items;
-console.log(`const items: {readonly [name: string]: number} =\n{`);
-uid = 0;
+console.log(`const items: {readonly [name: string]: number} =
+{
+    none: 0,`);
+uid = 1;
 for (const itemName in items)
 {
     if (!items.hasOwnProperty(itemName)) continue;
@@ -280,8 +282,7 @@ for (const itemName in items)
     // only gen4 and under items allowed
     if (item.gen > 4 || item.isNonstandard) continue;
 
-    console.log(`    ${item.id}: ${uid},`);
-    ++uid;
+    console.log(`    ${item.id}: ${uid++},`);
 }
 console.log("};\n");
 const numItems = uid;
