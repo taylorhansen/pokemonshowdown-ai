@@ -5,12 +5,12 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventPrefix,
     BoostEvent, CantEvent, ClearAllBoostEvent, ClearBoostEvent,
     ClearNegativeBoostEvent, ClearPositiveBoostEvent, CopyBoostEvent,
     CureStatusEvent, CureTeamEvent, DamageEvent, DetailsChangeEvent,
-    EndAbilityEvent, EndEvent, FaintEvent, FieldEndEvent, FieldStartEvent,
-    FormeChangeEvent, InvertBoostEvent, isBattleEventPrefix, MoveEvent,
-    MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
-    SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent, SwapBoostEvent,
-    SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
-    WinEvent } from "../dispatcher/BattleEvent";
+    EndAbilityEvent, EndEvent, EndItemEvent, FaintEvent, FieldEndEvent,
+    FieldStartEvent, FormeChangeEvent, InvertBoostEvent, isBattleEventPrefix,
+    ItemEvent, MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent,
+    SetHPEvent, SideEndEvent, SideStartEvent, SingleTurnEvent, StartEvent,
+    StatusEvent, SwapBoostEvent, SwitchEvent, TieEvent, TurnEvent, UnboostEvent,
+    UpkeepEvent, WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
@@ -395,6 +395,7 @@ function battleEvent(input: Input, info: Info): Result<AnyBattleEvent | null>
                 if (from) event = {...event, from};
             }
             else if (prefix === "fatigue") event = {...event, fatigue: true};
+            else if (prefix === "eat") event = {...event, eat: true};
         }
         input = input.next();
     }
@@ -431,6 +432,7 @@ function battleEventHelper(input: Input, info: Info):
         case "faint": return eventFaint(input, info);
         case "-fieldstart": case "-fieldend": return eventField(input, info);
         case "-invertboost": return eventInvertBoost(input, info);
+        case "-item": case "-enditem": return eventItem(input, info);
         case "move": return eventMove(input, info);
         case "-mustrecharge": return eventMustRecharge(input, info);
         case "-prepare": return eventPrepare(input, info);
@@ -649,7 +651,7 @@ const eventField: Parser<FieldEndEvent | FieldStartEvent> = transform(
         {type: "fieldstart", effect} : {type: "fieldend", effect});
 
 /**
- * Parses a InvertBoostEvent.
+ * Parses an InvertBoostEvent.
  *
  * Format:
  * @example
@@ -658,6 +660,18 @@ const eventField: Parser<FieldEndEvent | FieldStartEvent> = transform(
 const eventInvertBoost: Parser<InvertBoostEvent> = transform(
     sequence(word("-invertboost"), pokemonId),
     ([_, id]) => ({type: "invertboost", id}));
+
+/**
+ * Parses an ItemEvent or EndItemEvent.
+ *
+ * Format:
+ * @example
+ * |<-item or -enditem>|<PokemonID>|<item name>
+ */
+const eventItem: Parser<ItemEvent | EndItemEvent> = transform(
+    sequence(word("-item", "-enditem"), pokemonId, anyWord),
+    ([type, id, item]) => type === "-item" ?
+        {type: "item", id, item} : {type: "enditem", id, item});
 
 /**
  * Parses a MoveEvent.

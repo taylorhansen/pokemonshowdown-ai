@@ -152,6 +152,9 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 stringifyDetails(event.details), stringifyStatus(event.status)
             ];
             break;
+        case "item": case "enditem":
+            result = ["-" + event.type, stringifyID(event.id), event.item];
+            break;
         case "move":
         case "prepare":
             result =
@@ -216,6 +219,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
     if (event.from) result.push(stringifyFromSuffix(event.from));
     if (event.of) result.push(`[of] ${stringifyID(event.of)}`);
     if (event.fatigue) result.push("[fatigue]");
+    if (event.eat) result.push("[eat]");
     return result;
 }
 
@@ -266,6 +270,9 @@ export function stringifyFromSuffix(from: From): string
         case "ability": return `[from] ability: ${from.ability}`;
         case "item": return `[from] item: ${from.item}`;
         case "lockedmove": return "[from]lockedmove";
+        case "move": return `[from] move: ${from.move}`;
+        case "psn": return "[from] psn";
+        case "stealeat": return "[from] stealeat";
         default: throw new Error(`Unhandled From suffix type ${from!.type}`);
     }
 }

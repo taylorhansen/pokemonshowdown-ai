@@ -172,6 +172,9 @@ export class VolatileStatus
     private _twoTurn!: TwoTurnMove | "";
     private twoTurnCounter!: number;
 
+    /** Whether the Unburden ability would be active here. */
+    public unburden!: boolean;
+
     /** Whether the Truant ability will activate next turn. */
     public get willTruant(): boolean { return this._willTruant; }
     /** Indicates that the Truant ability has activated. */
@@ -227,6 +230,7 @@ export class VolatileStatus
         this.taunt.end();
         this._twoTurn = "";
         this.twoTurnCounter = 0;
+        this.unburden = false;
         this._willTruant = false;
     }
 

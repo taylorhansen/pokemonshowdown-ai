@@ -325,6 +325,29 @@ export class PSEventHandler
                 boosts[stat] = -boosts[stat];
             }
         })
+        .on("item", event =>
+        {
+            const mon = this.getActive(event.id.owner);
+            mon.setItem(toIdName(event.item));
+        })
+        .on("enditem", event =>
+        {
+            const mon = this.getActive(event.id.owner);
+
+            // handle causes
+            let consumed: string | undefined;
+            if (!event.from || event.from.type !== "move" ||
+                // knockoff and transfer moves don't consume items but rather
+                //  disable or remove them
+                !["Knock Off", "Thief", "Covet", "Trick", "Switcheroo"]
+                    .includes(event.from.move))
+            {
+                // other causes are exempt
+                consumed = toIdName(event.item);
+            }
+
+            mon.removeItem(consumed);
+        })
         .on("move", event =>
         {
             const moveId = toIdName(event.moveName);
@@ -478,7 +501,7 @@ export class PSEventHandler
             //  set the teamsize
             const mon = team.reveal(details.species, details.level,
                     details.gender, status.hp, status.hpMax)!;
-            mon.item.narrow(data.item);
+            mon.setItem(data.item);
             mon.ability = data.baseAbility;
             mon.majorStatus.assert(status.condition);
 
@@ -576,7 +599,7 @@ export class PSEventHandler
             if (f.type === "ability") mon.ability = toIdName(f.ability);
             else if (f.type === "item")
             {
-                mon.item.narrow(toIdName(f.item));
+                mon.setItem(toIdName(f.item));
             }
         }
     }

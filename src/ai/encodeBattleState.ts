@@ -95,7 +95,7 @@ export const sizeVolatileStatus =
     /*override types*/filteredTypes.length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
     /*taunt*/sizeTempStatus + /*two-turn status*/numTwoTurnMoves +
-    /*will truant*/1;
+    /*unburden*/1 + /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
 export function encodeVolatileStatus(status: VolatileStatus): number[]
@@ -129,13 +129,14 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     // toxic handled by encodePokemon()
     const twoTurn = oneHot(status.twoTurn ? twoTurnMoves[status.twoTurn] : null,
             numTwoTurnMoves);
+    const unburden = status.unburden ? 1 : 0;
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
         ...boosts, ...confused, ...embargo, ingrain, ...magnetRise, substitute,
         suppressed, ...disabled, ...lockedMove, mustRecharge,
         ...overrideAbility, ...overrideSpecies, ...overrideTypeData, roost,
-        ...slowStart, stallFailRate, ...taunt, ...twoTurn, willTruant
+        ...slowStart, stallFailRate, ...taunt, ...twoTurn, unburden, willTruant
     ];
 }
 

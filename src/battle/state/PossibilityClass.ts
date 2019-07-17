@@ -40,6 +40,12 @@ export class PossibilityClass<TData>
         this._possibleValues = new Set(Object.keys(map));
     }
 
+    /** Resets `possibleValues` to when it was first constructed. */
+    public reset(): void
+    {
+        this._possibleValues = new Set(Object.keys(this.map));
+    }
+
     /** Removes a type from data possibility. */
     public remove(name: string): void
     {

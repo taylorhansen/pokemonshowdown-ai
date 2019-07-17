@@ -2,8 +2,10 @@ import { expect } from "chai";
 import "mocha";
 import { Choice } from "../../src/battle/agent/Choice";
 import { types } from "../../src/battle/dex/dex-util";
+import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
 import { Weather } from "../../src/battle/state/Weather";
-import { MoveEvent, SetHPEvent } from "../../src/psbot/dispatcher/BattleEvent";
+import { EndItemEvent, MoveEvent, SetHPEvent } from
+    "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
 import { PokemonDetails, PokemonID, PokemonStatus } from
@@ -1387,6 +1389,157 @@ describe("Battle and EventProcessor", function()
                 expect(active.species.name).to.equal("Horsea");
                 expect(active.volatile.overrideSpecies).to.equal("Kingdra");
                 expect(active.volatile.overrideSpeciesId).to.not.be.null;
+            });
+        });
+
+        describe("item messages", function()
+        {
+            describe("item", function()
+            {
+                /**
+                 * Creates an `|-item|` message test.
+                 * @param name Name of the test.
+                 * @param precon Precondition for the pokemon's `item` field.
+                 * Executes before the message is handled.
+                 */
+                function test(name: string,
+                    precon: (item: PossibilityClass<number>) => any): void
+                {
+                    it(name, async function()
+                    {
+                        const item = battle.state.teams.them.active.item;
+                        precon(item);
+                        // pokemon gains some item
+                        await battle.progress(
+                        {
+                            events:
+                            [
+                                {type: "item", id: them1, item: "Life Orb"}
+                            ]
+                        });
+                        // should set current item
+                        expect(item.definiteValue).to.not.be.null;
+                        expect(item.definiteValue!.name).to.equal("lifeorb");
+                    });
+                }
+
+                test("Should reveal item",
+                    item => expect(item.definiteValue).to.be.null);
+                test("Should reset item if already revealed",
+                    item => item.narrow("leftovers"));
+            });
+
+            describe("enditem", function()
+            {
+                it("Should remove item", async function()
+                {
+                    const item = battle.state.teams.them.active.item;
+                    item.narrow("lifeorb");
+                    await battle.progress(
+                    {
+                        events: [{type: "enditem", id: them1, item: "Life Orb"}]
+                    });
+                    expect(item.definiteValue).to.not.be.null;
+                    expect(item.definiteValue!.name).to.equal("none");
+                });
+
+                describe("lastItem (Recycle)", function()
+                {
+                    /**
+                     * Tests an `|-enditem|` message for setting
+                     * `Pokemon#lastItem`.
+                     * @param name Name of the test.
+                     * @param setLastItem Whether `lastItem` should be set.
+                     * @param suffix Optional message suffix.
+                     */
+                    function test(name: string, setLastItem: boolean,
+                        suffix?: "eat" | "stealeat" | {move: string}): void
+                    {
+                        it(name, async function()
+                        {
+                            const mon = battle.state.teams.them.active;
+
+                            // consume/remove some item
+                            let event: EndItemEvent =
+                                {type: "enditem", id: them1, item: "Lum Berry"};
+                            if (suffix === "eat") event = {...event, eat: true};
+                            else if (suffix === "stealeat")
+                            {
+                                event = {...event, from: {type: "stealeat"}};
+                            }
+                            else if (suffix && suffix.move)
+                            {
+                                event =
+                                {
+                                    ...event,
+                                    from: {type: "move", move: suffix.move}
+                                };
+                            }
+                            await battle.progress({events: [event]});
+
+                            // make sure item gets removed
+                            expect(mon.item.definiteValue).to.not.be.null;
+                            expect(mon.item.definiteValue!.name)
+                                .to.equal("none");
+
+                            // test Pokemon#lastItem
+                            if (setLastItem)
+                            {
+                                expect(mon.lastItem.definiteValue)
+                                    .to.not.be.null;
+                                expect(mon.lastItem.definiteValue!.name)
+                                    .to.equal("lumberry");
+                            }
+                            else expect(mon.lastItem.definiteValue).to.be.null;
+                        });
+                    }
+
+                    test("Should set lastItem normally", true);
+                    test("Should set lastItem if eaten", true, "eat");
+                    test("Should set lastItem if eaten by opponent", true,
+                        "stealeat");
+                    test("Should set lastItem if Flung", true, {move: "Fling"});
+                    test("Should not set lastItem if Knocked Off", false,
+                        {move: "Knock Off"});
+                    test("Should not set lastItem if stolen by Thief", false,
+                        {move: "Thief"});
+                    test("Should not set lastItem if stolen by Covet", false,
+                        {move: "Covet"});
+                    test("Should not set lastItem if moved by Trick", false,
+                        {move: "Trick"});
+                    test("Should not set lastItem if moved by Switcheroo",
+                        false, {move: "Switcheroo"});
+                });
+
+                describe("unburden", function()
+                {
+                    it("Should activate when item is removed", async function()
+                    {
+                        const v = battle.state.teams.them.active.volatile;
+                        expect(v.unburden).to.be.false;
+                        await battle.progress(
+                        {
+                            events: [{type: "enditem", id: them1, item: "Mail"}]
+                        });
+                        expect(v.unburden).to.be.true;
+                    });
+
+                    it("Should not activate when a new item is gained",
+                    async function()
+                    {
+                        const v = battle.state.teams.them.active.volatile;
+                        expect(v.unburden).to.be.false;
+                        await battle.progress(
+                        {
+                            events:
+                            [
+                                {type: "enditem", id: them1, item: "Mail"},
+                                {type: "item", id: them1, item: "Life Orb"}
+                            ]
+                        });
+                        expect(v.unburden).to.be.false;
+                    });
+                });
             });
         });
 

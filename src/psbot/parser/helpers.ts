@@ -273,7 +273,7 @@ export function parseWeatherType(type: string): WeatherType
 
 /**
  * Parses a From suffix, e.g. `[from] ability: Trace`, where `[from]` is
- * assumed to be trimmed first.
+ * assumed to be trimmed out first.
  * @param value Value of the suffix, e.g. `ability: Trace`.
  * @returns A From object, or null if invalid/unsupported.
  */
@@ -288,6 +288,11 @@ export function parseFromSuffix(value: string): From | null
         return {type: "item", item: value.substr("item: ".length)};
     }
     if (value === "lockedmove") return {type: "lockedmove"};
+    if (value.startsWith("move: "))
+    {
+        return {type: "move", move: value.substr("move: ".length)};
+    }
     if (value === "psn") return {type: "psn"};
+    if (value === "stealeat") return {type: "stealeat"};
     return null;
 }

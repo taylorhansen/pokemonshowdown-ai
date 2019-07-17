@@ -12,13 +12,13 @@ export const battleEventPrefixes =
     "-clearallboost": true, "-clearboost": true, "-clearnegativeboost": true,
     "-clearpositiveboost": true, "-copyboost": true, "-curestatus": true,
     "-cureteam": true, "-damage": true, detailschange: true, drag: true,
-    "-end": true, "-endability": true, faint: true, "-fieldend": true,
-    "-fieldstart": true, "-formechange": true, "-heal": true,
-    "-invertboost": true, move: true, "-mustrecharge": true, "-prepare": true,
-    "-setboost": true, "-sethp": true, "-sideend": true, "-sidestart": true,
-    "-singleturn": true, "-start": true, "-status": true, "-swapboost": true,
-    switch: true, tie: true, turn: true, "-unboost": true, upkeep: true,
-    "-weather": true, win: true
+    "-end": true, "-endability": true, "-enditem": true, faint: true,
+    "-fieldend": true, "-fieldstart": true, "-formechange": true, "-heal": true,
+    "-invertboost": true, "-item": true, move: true, "-mustrecharge": true,
+    "-prepare": true, "-setboost": true, "-sethp": true, "-sideend": true,
+    "-sidestart": true, "-singleturn": true, "-start": true, "-status": true,
+    "-swapboost": true, switch: true, tie: true, turn: true, "-unboost": true,
+    upkeep: true, "-weather": true, win: true
 } as const;
 /** Message line prefixes that are parsed as BattleEvents. */
 export type BattleEventPrefix = keyof typeof battleEventPrefixes;
@@ -34,12 +34,12 @@ export const battleEventTypes =
     ability: true, activate: true, boost: true, cant: true, clearallboost: true,
     clearboost: true, clearnegativeboost: true, clearpositiveboost: true,
     copyboost: true, curestatus: true, cureteam: true, damage: true,
-    detailschange: true, drag: true, end: true, endability: true, faint: true,
-    fieldend: true, fieldstart: true, formechange: true, invertboost: true,
-    move: true, mustrecharge: true, prepare: true, setboost: true, sethp: true,
-    sideend: true, sidestart: true, singleturn: true, start: true, status: true,
-    swapboost: true, switch: true, tie: true, turn: true, unboost: true,
-    upkeep: true, weather: true, win: true
+    detailschange: true, drag: true, end: true, endability: true, enditem: true,
+    faint: true, fieldend: true, fieldstart: true, formechange: true,
+    invertboost: true, item: true, move: true, mustrecharge: true,
+    prepare: true, setboost: true, sethp: true, sideend: true, sidestart: true,
+    singleturn: true, start: true, status: true, swapboost: true, switch: true,
+    tie: true, turn: true, unboost: true, upkeep: true, weather: true, win: true
 } as const;
 /** Names of BattleEvent types. */
 export type BattleEventType = keyof typeof battleEventTypes;
@@ -61,11 +61,13 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "detailschange" ? DetailsChangeEvent
     : T extends "end" ? EndEvent
     : T extends "endability" ? EndAbilityEvent
+    : T extends "enditem" ? EndItemEvent
     : T extends "faint" ? FaintEvent
     : T extends "fieldend" ? FieldEndEvent
     : T extends "fieldstart" ? FieldStartEvent
     : T extends "formechange" ? FormeChangeEvent
     : T extends "invertboost" ? InvertBoostEvent
+    : T extends "item" ? ItemEvent
     : T extends "move" ? MoveEvent
     : T extends "mustrecharge" ? MustRechargeEvent
     : T extends "prepare" ? PrepareEvent
@@ -103,6 +105,8 @@ interface BattleEventBase
      * multi-turn locked move.
      */
     readonly fatigue?: boolean;
+    /** Whether the event was due to eating. */
+    readonly eat?: boolean;
 }
 
 /** Event where a pokemon's ability is revealed and activated. */
@@ -266,6 +270,16 @@ export interface EndAbilityEvent extends BattleEventBase
     readonly ability: string;
 }
 
+/** Event where a pokemon's item is being removed or consumed. */
+export interface EndItemEvent extends BattleEventBase
+{
+    readonly type: "enditem";
+    /** ID of the pokemon whose item is being removed. */
+    readonly id: PokemonID;
+    /** Name of the item. */
+    readonly item: string;
+}
+
 /** Event where a pokemon has fainted. */
 export interface FaintEvent extends BattleEventBase
 {
@@ -296,6 +310,16 @@ export interface InvertBoostEvent extends BattleEventBase
     readonly type: "invertboost";
     /** ID of the pokemon whose boosts are being inverted. */
     readonly id: PokemonID;
+}
+
+/** Event where a pokemon's item is being revealed and/or activated. */
+export interface ItemEvent extends BattleEventBase
+{
+    readonly type: "item";
+    /** ID of the pokemon whose item is activating. */
+    readonly id: PokemonID;
+    /** Name of the item. */
+    readonly item: string;
 }
 
 /** Event where a move was used. */
@@ -468,7 +492,8 @@ export interface WinEvent extends BattleEventBase
 // from suffix types
 
 /** Optional event suffixes. */
-export type From = FromAbility | FromItem | FromLockedMove | FromPsn;
+export type From = FromAbility | FromItem | FromLockedMove | FromMove |
+    FromPsn | FromStealEat;
 
 /** Base class for From suffixes. */
 interface FromBase
@@ -499,8 +524,22 @@ export interface FromLockedMove extends FromBase
     readonly type: "lockedmove";
 }
 
+/** Caused from a pokemon's move. */
+export interface FromMove extends FromBase
+{
+    readonly type: "move";
+    /** Move name. */
+    readonly move: string;
+}
+
 /** Caused from being poisoned. */
 export interface FromPsn extends FromBase
 {
     readonly type: "psn";
+}
+
+/** Caused from a berry being stolen and consumed */
+export interface FromStealEat extends FromBase
+{
+    readonly type: "stealeat";
 }

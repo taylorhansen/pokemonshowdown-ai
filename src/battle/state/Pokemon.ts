@@ -123,8 +123,40 @@ ability ${ability}`);
         this.volatile.addedType = newType;
     }
 
-    /** Item id name. */
+    /**
+     * Indicates that an item has been revealed or gained.
+     * @param item Item id name.
+     * @param gained Whether the item was just gained. If false or omitted, then
+     * it's just now being revealed.
+     */
+    public setItem(item: string, gained = false): void
+    {
+        // override any possibilities of other items
+        this.item.reset();
+        this.item.narrow(item);
+
+        // (de)activate unburden ability if the pokemon has it
+        this.volatile.unburden = gained && item === "none";
+    }
+    /**
+     * Indicates that an item was just removed from this Pokemon.
+     * @param consumed If the item was consumed (can be brought back using
+     * Recycle), set this to the item's name.
+     */
+    public removeItem(consumed?: string): void
+    {
+        if (consumed)
+        {
+            this.lastItem.reset();
+            this.lastItem.narrow(consumed);
+        }
+
+        this.setItem("none", /*gained*/true);
+    }
+    /** Item possibilities. */
     public readonly item = new PossibilityClass(dex.items);
+    /** Last consumed item possibilities. */
+    public readonly lastItem = new PossibilityClass(dex.items);
 
     /** Pokemon's level from 1 to 100. */
     public get level(): number { return this._level; }

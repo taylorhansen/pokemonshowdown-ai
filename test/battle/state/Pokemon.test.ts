@@ -255,6 +255,110 @@ describe("Pokemon", function()
         });
     });
 
+    describe("#setItem()", function()
+    {
+        it("Should narrow item", function()
+        {
+            const mon = new Pokemon("Magikarp", true); // opponent
+            expect(mon.item.definiteValue).to.be.null;
+
+            mon.setItem("lifeorb");
+            expect(mon.item.definiteValue).to.not.be.null;
+            expect(mon.item.definiteValue!.name).to.equal("lifeorb");
+        });
+
+        it("Should re-narrow item even if already revealed", function()
+        {
+            const mon = new Pokemon("Magikarp", true);
+            mon.item.narrow("leftovers");
+
+            mon.setItem("lifeorb");
+            expect(mon.item.definiteValue).to.not.be.null;
+            expect(mon.item.definiteValue!.name).to.equal("lifeorb");
+        });
+
+        describe("#volatile.unburden", function()
+        {
+            it("Should not set unburden normally", function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+                mon.setItem("lifeorb");
+
+                mon.switchIn();
+                expect(mon.volatile.unburden).to.be.false;
+            });
+
+            it("Should not set unburden if revealed to have no item", function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+                mon.setItem("none");
+
+                mon.switchIn();
+                expect(mon.volatile.unburden).to.be.false;
+            });
+
+            it("Should set unburden if item was just removed", function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+                mon.switchIn();
+
+                mon.setItem("none", /*gained*/true);
+                expect(mon.volatile.unburden).to.be.true;
+            });
+        });
+    });
+
+    describe("#removeItem()", function()
+    {
+        it("Should remove item", function()
+        {
+            const mon = new Pokemon("Magikarp", true);
+            mon.item.narrow("focussash");
+
+            mon.removeItem();
+            expect(mon.item.definiteValue).to.not.be.null;
+            expect(mon.item.definiteValue!.name).to.equal("none");
+        });
+
+        describe("#volatile.unburden", function()
+        {
+            it("Should set unburden if item was just removed", function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+                mon.switchIn();
+
+                mon.removeItem();
+                expect(mon.volatile.unburden).to.be.true;
+            });
+        });
+
+        describe("#lastItem", function()
+        {
+            it("Should not set lastItem if no consumed parameter", function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+                mon.switchIn();
+                mon.setItem("leftovers");
+
+                mon.removeItem();
+                expect(mon.lastItem.definiteValue).to.be.null;
+            });
+
+            it("Should set lastItem if consumed parameter was provided",
+            function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+                mon.switchIn();
+                mon.setItem("leftovers");
+                expect(mon.lastItem.definiteValue).to.be.null;
+
+                mon.removeItem("leftovers");
+                expect(mon.lastItem.definiteValue).to.not.be.null;
+                expect(mon.lastItem.definiteValue!.name).to.equal("leftovers");
+            });
+        });
+    });
+
     describe("#level", function()
     {
         it("Should be 0 initially", function()

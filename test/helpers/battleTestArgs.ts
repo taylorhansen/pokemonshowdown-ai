@@ -44,7 +44,8 @@ export const pokemonStatus: PokemonStatus[] =
 export const from: From[] =
 [
     {type: "ability", ability: "Wonder Guard"},
-    {type: "item", item: "Leftovers"}, {type: "lockedmove"}
+    {type: "item", item: "Leftovers"}, {type: "lockedmove"}, {type: "stealeat"},
+    {type: "move", move: "Trick"}
 ];
 
 /** Test BattleEvents except turn/upkeep. */
@@ -73,6 +74,8 @@ export const battleEvent: AnyBattleEvent[] =
     },
     {type: "end", id: pokemonId[2], volatile: "confusion"},
     {type: "endability", id: pokemonId[1], ability: "Swift Swim"},
+    {type: "enditem", id: pokemonId[0], item: "Lum Berry", eat: true},
+    {type: "enditem", id: pokemonId[2], item: "Sitrus Berry", from: from[3]},
     {type: "faint", id: pokemonId[2]},
     {type: "fieldend", effect: "move: Gravity"},
     {type: "fieldstart", effect: "move: Gravity"},
@@ -85,6 +88,7 @@ export const battleEvent: AnyBattleEvent[] =
         type: "move", id: pokemonId[0], moveName: "Splash",
         targetId: pokemonId[1]
     },
+    {type: "item", id: pokemonId[2], item: "Leftovers", from: from[4]},
     {type: "move", id: pokemonId[1], moveName: "Splash"},
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
@@ -152,17 +156,17 @@ export const battleInit: BattleInitMessage[] =
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(0, 4).concat(startTurn)
+        events: battleEvent.slice(0, 6).concat(startTurn)
     },
     {
         id: "p1", username: username[0], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(4, 8).concat(startTurn)
+        events: battleEvent.slice(6, 10).concat(startTurn)
     },
     {
         id: "p2", username: username[1], gameType: "singles", gen: 4,
         teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(8, 12).concat(startTurn)
+        events: battleEvent.slice(10, 14).concat(startTurn)
     }
 ];
 
@@ -170,17 +174,17 @@ export const battleInit: BattleInitMessage[] =
 export const battleProgress: BattleProgressMessage[] =
 [
     {
-        events: battleEvent.slice(12, 19)
+        events: battleEvent.slice(14, 21)
             .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
-        events: battleEvent.slice(19, 23)
-            .concat({type: "upkeep"}, ...battleEvent.slice(23, 26),
+        events: battleEvent.slice(21, 26)
+            .concat({type: "upkeep"}, ...battleEvent.slice(26, 29),
                 {type: "turn", num: 100})
     },
     {
-        events: battleEvent.slice(26, 32)
-            .concat({type: "upkeep"}, ...battleEvent.slice(32, 46),
+        events: battleEvent.slice(29, 35)
+            .concat({type: "upkeep"}, ...battleEvent.slice(35, 49),
                 {type: "turn", num: 9})
     }
 ];

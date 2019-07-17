@@ -32,6 +32,7 @@ describe("VolatileStatus", function()
         volatile.stall(true);
         volatile.taunt.start();
         volatile.twoTurn = "bounce";
+        volatile.unburden = true;
         volatile.activateTruant();
     }
 
@@ -62,6 +63,7 @@ describe("VolatileStatus", function()
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.taunt.isActive).to.be.false;
             expect(volatile.twoTurn).to.be.empty;
+            expect(volatile.unburden).to.be.false;
             expect(volatile.willTruant).to.be.false;
         });
 
@@ -109,6 +111,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.stallTurns).to.equal(0);
             expect(newVolatile.taunt.isActive).to.be.false;
             expect(newVolatile.twoTurn).to.be.empty;
+            expect(newVolatile.unburden).to.be.false;
             expect(newVolatile.willTruant).to.be.false;
         });
 
