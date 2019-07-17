@@ -126,13 +126,16 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             result = ["-cureteam", stringifyID(event.id)];
             break;
         case "damage":
+        case "heal":
             result =
             [
                 "-" + event.type, stringifyID(event.id),
                 stringifyStatus(event.status)
             ];
             break;
-        case "detailschange": case "drag": case "switch":
+        case "detailschange":
+        case "drag":
+        case "switch":
             result =
             [
                 event.type, stringifyID(event.id),
@@ -142,7 +145,8 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "faint":
             result = ["faint", stringifyID(event.id)];
             break;
-        case "fieldstart": case "fieldend":
+        case "fieldstart":
+        case "fieldend":
             result = ["-" + event.type, event.effect];
             break;
         case "formechange":
@@ -152,7 +156,8 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 stringifyDetails(event.details), stringifyStatus(event.status)
             ];
             break;
-        case "item": case "enditem":
+        case "item":
+        case "enditem":
             result = ["-" + event.type, stringifyID(event.id), event.item];
             break;
         case "move":
@@ -176,7 +181,8 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                     .reduce((a1, a2) => a1.concat(a2), [])
             ];
             break;
-        case "sideend": case "sidestart":
+        case "sideend":
+        case "sidestart":
             // username not actually known as info is lost
             result = [`-${event.type}`, `${event.id}: <user>`, event.condition];
             break;

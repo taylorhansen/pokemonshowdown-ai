@@ -63,7 +63,6 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "copyboost", source: pokemonId[2], target: pokemonId[0]},
     {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "cureteam", id: pokemonId[2]},
-    {type: "damage", id: pokemonId[1], status: pokemonStatus[1]},
     {
         type: "damage", id: pokemonId[1], status: pokemonStatus[1],
         from: from[1]
@@ -71,6 +70,10 @@ export const battleEvent: AnyBattleEvent[] =
     {
         type: "detailschange", id: pokemonId[0], details: pokemonDetails[0],
         status: pokemonStatus[0]
+    },
+    {
+        type: "drag", id: pokemonId[1], details: pokemonDetails[1],
+        status: pokemonStatus[1]
     },
     {type: "end", id: pokemonId[2], volatile: "confusion"},
     {type: "endability", id: pokemonId[1], ability: "Swift Swim"},
@@ -83,6 +86,7 @@ export const battleEvent: AnyBattleEvent[] =
         type: "formechange", id: pokemonId[0], details: pokemonDetails[0],
         status: pokemonStatus[0]
     },
+    {type: "heal", id: pokemonId[1], status: pokemonStatus[1]},
     {type: "invertboost", id: pokemonId[2]},
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
@@ -128,10 +132,6 @@ export const battleEvent: AnyBattleEvent[] =
     {
         type: "switch", id: pokemonId[0], details: pokemonDetails[0],
         status: pokemonStatus[0]
-    },
-    {
-        type: "drag", id: pokemonId[1], details: pokemonDetails[1],
-        status: pokemonStatus[1]
     },
     {type: "tie"},
     {

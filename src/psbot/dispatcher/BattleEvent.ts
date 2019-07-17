@@ -2,10 +2,7 @@
 import { BoostName, MajorStatus, WeatherType } from "../../battle/dex/dex-util";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
-/**
- * Set of BattleEventPrefixes. Heal is included here, but is parsed as
- * a DamageEvent instead.
- */
+/** Set of BattleEventPrefixes. */
 export const battleEventPrefixes =
 {
     "-ability": true, "-activate": true, "-boost": true, cant: true,
@@ -36,7 +33,7 @@ export const battleEventTypes =
     copyboost: true, curestatus: true, cureteam: true, damage: true,
     detailschange: true, drag: true, end: true, endability: true, enditem: true,
     faint: true, fieldend: true, fieldstart: true, formechange: true,
-    invertboost: true, item: true, move: true, mustrecharge: true,
+    heal: true, invertboost: true, item: true, move: true, mustrecharge: true,
     prepare: true, setboost: true, sethp: true, sideend: true, sidestart: true,
     singleturn: true, start: true, status: true, swapboost: true, switch: true,
     tie: true, turn: true, unboost: true, upkeep: true, weather: true, win: true
@@ -59,6 +56,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "cureteam" ? CureTeamEvent
     : T extends "damage" ? DamageEvent
     : T extends "detailschange" ? DetailsChangeEvent
+    : T extends "drag" ? DragEvent
     : T extends "end" ? EndEvent
     : T extends "endability" ? EndAbilityEvent
     : T extends "enditem" ? EndItemEvent
@@ -66,6 +64,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "fieldend" ? FieldEndEvent
     : T extends "fieldstart" ? FieldStartEvent
     : T extends "formechange" ? FormeChangeEvent
+    : T extends "heal" ? HealEvent
     : T extends "invertboost" ? InvertBoostEvent
     : T extends "item" ? ItemEvent
     : T extends "move" ? MoveEvent
@@ -79,7 +78,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "start" ? StartEvent
     : T extends "status" ? StatusEvent
     : T extends "swapboost" ? SwapBoostEvent
-    : T extends "switch" | "drag" ? SwitchEvent
+    : T extends "switch" ? SwitchEvent
     : T extends "tie" ? TieEvent
     : T extends "turn" ? TurnEvent
     : T extends "unboost" ? UnboostEvent
@@ -211,7 +210,7 @@ export interface CureTeamEvent extends BattleEventBase
     readonly id: PokemonID;
 }
 
-/** Event where a pokemon is damaged or healed. */
+/** Event where a pokemon is damaged. */
 export interface DamageEvent extends BattleEventBase
 {
     readonly type: "damage";
@@ -238,6 +237,12 @@ export interface DetailsChangeEvent extends AllDetailsEvent
     readonly type: "detailschange";
 }
 
+/** Event where a pokemon was switched in unintentionally. */
+export interface DragEvent extends AllDetailsEvent
+{
+    readonly type: "drag";
+}
+
 /** Event where a pokemon temporarily changes form. */
 export interface FormeChangeEvent extends AllDetailsEvent
 {
@@ -247,7 +252,7 @@ export interface FormeChangeEvent extends AllDetailsEvent
 /** Event where a pokemon was switched in. */
 export interface SwitchEvent extends AllDetailsEvent
 {
-    readonly type: "switch" | "drag";
+    readonly type: "switch";
 }
 
 /** Event addon where a volatile status has ended. */
@@ -302,6 +307,16 @@ export interface FieldStartEvent extends BattleEventBase
     readonly type: "fieldstart";
     /** Name of the field effect. */
     readonly effect: string;
+}
+
+/** Event where a pokemon is healed. */
+export interface HealEvent extends BattleEventBase
+{
+    readonly type: "heal";
+    /** ID of the pokemon being healed. */
+    readonly id: PokemonID;
+    /** New hp/status. */
+    readonly status: PokemonStatus;
 }
 
 /** Event where a pokemon's boosts are being inverted. */

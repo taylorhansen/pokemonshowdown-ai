@@ -5,8 +5,8 @@ import { Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
 import { SwitchInOptions, Team } from "../battle/state/Team";
 import { Logger } from "../Logger";
-import { AnyBattleEvent, From, SideEndEvent, SideStartEvent } from
-    "./dispatcher/BattleEvent";
+import { AnyBattleEvent, DamageEvent, DragEvent, HealEvent, SideEndEvent,
+    SideStartEvent, SwitchEvent } from "./dispatcher/BattleEvent";
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonDetails, PokemonID,
@@ -275,17 +275,7 @@ export class PSEventHandler
             status.cure();
         })
         .on("cureteam", event => this.getTeam(event.id.owner).cure())
-        .on("damage", event =>
-        {
-            const active = this.getActive(event.id.owner);
-            active.hp.set(event.status.hp, event.status.hpMax);
-
-            if (event.from && event.from.type === "psn" &&
-                active.majorStatus.current === "tox")
-            {
-                active.majorStatus.tick();
-            }
-        })
+        .on("damage", event => this.handleDamage(event))
         .on("detailschange", event =>
         {
             const active = this.getActive(event.id.owner);
@@ -296,6 +286,7 @@ export class PSEventHandler
             active.gender = event.details.gender;
             active.hp.set(event.status.hp, event.status.hpMax);
         })
+        .on("drag", event => this.handleSwitch(event))
         .on("faint", event => { this.getActive(event.id.owner).faint(); })
         .on("fieldend", event =>
         {
@@ -317,6 +308,7 @@ export class PSEventHandler
             this.getActive(event.id.owner).volatile.overrideSpecies =
                 event.details.species;
         })
+        .on("heal", event => this.handleDamage(event))
         .on("invertboost", event =>
         {
             const boosts = this.getActive(event.id.owner).volatile.boosts;
@@ -403,19 +395,7 @@ export class PSEventHandler
                 [source[stat], target[stat]] = [target[stat], source[stat]];
             }
         })
-        .on("switch", event =>
-        {
-            const team = this.getTeam(event.id.owner);
-
-            // consume pending copyvolatile status flags
-            const options: SwitchInOptions =
-                {copyVolatile: team.status.selfSwitch === "copyvolatile"};
-            team.status.selfSwitch = false;
-
-            team.switchIn(event.details.species, event.details.level,
-                event.details.gender, event.status.hp, event.status.hpMax,
-                options);
-        })
+        .on("switch", event => this.handleSwitch(event))
         .on("tie", () => { this._battling = false; })
         .on("win", () => { this._battling = false; })
         .on("turn", () => { this.newTurn = true; })
@@ -604,6 +584,20 @@ export class PSEventHandler
         }
     }
 
+    /** Handles a damage/heal event. */
+    private handleDamage(event: DamageEvent | HealEvent): void
+    {
+        const active = this.getActive(event.id.owner);
+        active.hp.set(event.status.hp, event.status.hpMax);
+
+        // increment toxic turns if taking damage from it
+        if (event.from && event.from.type === "psn" &&
+            active.majorStatus.current === "tox")
+        {
+            active.majorStatus.tick();
+        }
+    }
+
     /** Handles a side end/start event. */
     private handleSideCondition(event: SideEndEvent | SideStartEvent): void
     {
@@ -628,6 +622,20 @@ export class PSEventHandler
                 else team.toxicSpikes = 0;
                 break;
         }
+    }
+
+    /** Handles a drag/switch event. */
+    private handleSwitch(event: DragEvent | SwitchEvent): void
+    {
+        const team = this.getTeam(event.id.owner);
+
+        // consume pending copyvolatile status flags
+        const options: SwitchInOptions =
+            {copyVolatile: team.status.selfSwitch === "copyvolatile"};
+        team.status.selfSwitch = false;
+
+        team.switchIn(event.details.species, event.details.level,
+            event.details.gender, event.status.hp, event.status.hpMax, options);
     }
 
     /**

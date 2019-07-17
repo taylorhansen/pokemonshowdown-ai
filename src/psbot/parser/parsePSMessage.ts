@@ -5,12 +5,13 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventPrefix,
     BoostEvent, CantEvent, ClearAllBoostEvent, ClearBoostEvent,
     ClearNegativeBoostEvent, ClearPositiveBoostEvent, CopyBoostEvent,
     CureStatusEvent, CureTeamEvent, DamageEvent, DetailsChangeEvent,
-    EndAbilityEvent, EndEvent, EndItemEvent, FaintEvent, FieldEndEvent,
-    FieldStartEvent, FormeChangeEvent, InvertBoostEvent, isBattleEventPrefix,
-    ItemEvent, MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent,
-    SetHPEvent, SideEndEvent, SideStartEvent, SingleTurnEvent, StartEvent,
-    StatusEvent, SwapBoostEvent, SwitchEvent, TieEvent, TurnEvent, UnboostEvent,
-    UpkeepEvent, WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
+    DragEvent, EndAbilityEvent, EndEvent, EndItemEvent, FaintEvent,
+    FieldEndEvent, FieldStartEvent, FormeChangeEvent, HealEvent,
+    InvertBoostEvent, isBattleEventPrefix, ItemEvent, MoveEvent,
+    MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
+    SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent, SwapBoostEvent,
+    SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
+    WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
@@ -596,15 +597,16 @@ const eventCureTeam: Parser<CureTeamEvent> = transform(
     ([_, id]) => ({type: "cureteam", id}));
 
 /**
- * Parses a DamageEvent.
+ * Parses a DamageEvent or HealEvent.
  *
  * Format:
  * @example
  * |<-damage or -heal>|<PokemonID>|<new PokemonStatus>
  */
-const eventDamage: Parser<DamageEvent> = transform(
+const eventDamage: Parser<DamageEvent | HealEvent> = transform(
     sequence(word("-damage", "-heal"), pokemonId, pokemonStatus),
-    ([_, id, status]) => ({type: "damage", id, status}));
+    ([prefix, id, status]) =>
+        ({type: prefix.substr(1) as "damage" | "heal", id, status}));
 
 /**
  * Parses an EndEvent.
@@ -840,7 +842,7 @@ const eventSwapBoost: Parser<SwapBoostEvent> = transform(
         ({type: "swapboost", source, target, stats}));
 
 /**
- * Parses a DetailsChangeEvent, FormeChangeEvent, SwitchEvent.
+ * Parses a DetailsChangeEvent, DragEvent, FormeChangeEvent, or SwitchEvent.
  *
  * Format:
  * @example
@@ -848,19 +850,21 @@ const eventSwapBoost: Parser<SwapBoostEvent> = transform(
  * <PokemonDetails>|<PokemonStatus>
  */
 const eventAllDetails:
-    Parser<SwitchEvent | DetailsChangeEvent | FormeChangeEvent> = transform(
-    sequence(
-        word("switch", "drag", "detailschange", "-formechange"), pokemonId,
-        pokemonDetails, pokemonStatus),
-    function([type, id, details, status])
-{
-    switch (type)
-    {
-        case "drag": case "switch": case "detailschange":
-            return {type, id, details, status};
-        case "-formechange": return {type: "formechange", id, details, status};
-    }
-});
+    Parser<SwitchEvent | DragEvent | DetailsChangeEvent | FormeChangeEvent> =
+    transform(
+        sequence(
+            word("switch", "drag", "detailschange", "-formechange"), pokemonId,
+            pokemonDetails, pokemonStatus),
+        function([type, id, details, status])
+        {
+            switch (type)
+            {
+                case "drag": case "switch": case "detailschange":
+                    return {type, id, details, status};
+                case "-formechange":
+                    return {type: "formechange", id, details, status};
+            }
+        });
 
 /**
  * Parses an UnboostEvent.
