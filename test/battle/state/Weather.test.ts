@@ -41,7 +41,7 @@ describe("Weather", function()
         {
             weather.set("Hail", source);
             expect(weather.type).to.equal("Hail");
-            expect(weather.source).to.equal(source);
+            expect(weather.source).to.equal(source.item);
             expect(weather.duration).to.equal(5);
             expect(weather.turns).to.equal(0);
         });
@@ -51,7 +51,7 @@ describe("Weather", function()
             source.item.narrow("smoothrock");
             weather.set("Sandstorm", source);
             expect(weather.type).to.equal("Sandstorm");
-            expect(weather.source).to.equal(source);
+            expect(weather.source).to.equal(source.item);
             expect(weather.duration).to.equal(8);
             expect(weather.turns).to.equal(0);
         });
@@ -60,7 +60,7 @@ describe("Weather", function()
         {
             weather.set("RainDance", source, /*ability*/true);
             expect(weather.type).to.equal("RainDance");
-            expect(weather.source).to.equal(source);
+            expect(weather.source).to.equal(source.item);
             expect(weather.duration).to.be.null;
             expect(weather.turns).to.equal(0);
         });
@@ -82,7 +82,7 @@ describe("Weather", function()
             weather.set("SunnyDay", source);
             weather.upkeep("SunnyDay");
             expect(weather.type).to.equal("SunnyDay");
-            expect(weather.source).to.equal(source);
+            expect(weather.source).to.equal(source.item);
             expect(weather.duration).to.equal(5);
             expect(weather.turns).to.equal(1);
         });
@@ -95,7 +95,7 @@ describe("Weather", function()
                 weather.upkeep("SunnyDay");
                 expect(source.item.definiteValue).to.be.null;
                 expect(weather.type).to.equal("SunnyDay");
-                expect(weather.source).to.equal(source);
+                expect(weather.source).to.equal(source.item);
                 expect(weather.duration).to.be.null;
                 expect(weather.turns).to.equal(0);
             }
@@ -109,7 +109,7 @@ describe("Weather", function()
             do
             {
                 expect(weather.type).to.equal("SunnyDay");
-                expect(weather.source).to.equal(source);
+                expect(weather.source).to.equal(source.item);
                 expect(weather.duration).to.equal(5);
                 expect(weather.turns).to.equal(i);
                 weather.upkeep("SunnyDay");
@@ -121,7 +121,7 @@ describe("Weather", function()
             expect(source.item.definiteValue).to.not.be.null;
             expect(source.item.definiteValue!.name).to.equal("heatrock");
             expect(weather.type).to.equal("SunnyDay");
-            expect(weather.source).to.equal(source);
+            expect(weather.source).to.equal(source.item);
             expect(weather.duration).to.equal(8);
             expect(weather.turns).to.equal(5);
         });

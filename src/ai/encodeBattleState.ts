@@ -366,7 +366,8 @@ export function encodeWeather(weather: Weather): number[]
     {
         // possibly no, but could have a weather rock
         // TODO: scale by likelihood that it has the item
-        if (weather.duration === 5 && weather.source && !weather.source.item)
+        if (weather.duration === 5 && weather.source &&
+            !weather.source.definiteValue)
         {
             persistence = -0.5;
         }
@@ -374,13 +375,15 @@ export function encodeWeather(weather: Weather): number[]
     }
     // could have weather rock so take average of both durations
     // TODO: interpolate instead by likelihood that it has the item
-    else if (weather.duration === 5 && weather.source && !weather.source.item)
+    else if (weather.duration === 5 && weather.source &&
+        !weather.source.definiteValue)
     {
         persistence = limitedStatusTurns(weather.turns, 6.5);
     }
     else persistence = limitedStatusTurns(weather.turns, weather.duration);
 
     // one-hot encode weather type, inserting the persistence value as the "one"
+    // TODO: guarantee order
     return (Object.keys(weatherTypes) as WeatherType[])
         // no weather is the default so doesn't need to be included here
         .filter(t => t !== "none")

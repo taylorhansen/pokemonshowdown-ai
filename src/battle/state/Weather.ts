@@ -1,5 +1,6 @@
 import { weatherItems, WeatherType } from "../dex/dex-util";
 import { Pokemon } from "./Pokemon";
+import { PossibilityClass } from "./PossibilityClass";
 import { pluralTurns } from "./utility";
 
 /** Tracks weather effects. */
@@ -15,11 +16,11 @@ export class Weather
     private _type!: WeatherType;
 
     /** The pokemon that caused the weather condition if there is one. */
-    public get source(): Pokemon | null
+    public get source(): PossibilityClass<number> | null
     {
         return this._source;
     }
-    private _source!: Pokemon | null;
+    private _source!: PossibilityClass<number> | null;
 
     /** Number gives duration, null means infinite. */
     public get duration(): number | null
@@ -53,13 +54,16 @@ export class Weather
     /**
      * Changes the current weather.
      * @param type Type of weather being activated.
-     * @param source The Pokemon that caused the change.
+     * @param source The Pokemon that caused the weather.
      * @param ability Whether this was caused by an ability.
      */
     public set(type: WeatherType, source: Pokemon, ability?: boolean): void
     {
         this._type = type;
-        this._source = source;
+        // snapshot pokemon's item possibility
+        // future modifications will apply until the item is removed from the
+        //  source pokemon
+        this._source = source.item;
 
         // gen<6: ability-caused weather lasts forever
         if (ability) this._duration = null;
@@ -101,10 +105,10 @@ export class Weather
                 if (this._duration === 5)
                 {
                     // somehow still going
-                    if (!this._source.item.definiteValue)
+                    if (!this._source.definiteValue)
                     {
                         // must have a weather rock
-                        this._source.item.narrow(weatherItems[type]);
+                        this._source.narrow(weatherItems[type]);
                         this._duration = 8;
                     }
                     else throw new Error(errorString());

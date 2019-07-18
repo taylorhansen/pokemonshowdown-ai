@@ -2112,7 +2112,7 @@ describe("Battle and EventProcessor", function()
                 const mon = battle.eventHandler.getActive(us1.owner);
                 expect(mon.ability).to.equal("drizzle");
                 expect(weather.type).to.equal("RainDance");
-                expect(weather.source).to.equal(mon);
+                expect(weather.source).to.equal(mon.item);
                 expect(weather.duration).to.be.null;
                 expect(weather.turns).to.equal(0);
             });
@@ -2135,7 +2135,7 @@ describe("Battle and EventProcessor", function()
                 });
                 const mon = battle.eventHandler.getActive(us1.owner);
                 expect(weather.type).to.equal("SunnyDay");
-                expect(weather.source).to.equal(mon);
+                expect(weather.source).to.equal(mon.item);
                 expect(weather.duration).to.equal(5);
                 expect(weather.turns).to.equal(0);
             });
