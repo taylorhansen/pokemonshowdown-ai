@@ -320,7 +320,11 @@ export class PSEventHandler
         .on("item", event =>
         {
             const mon = this.getActive(event.id.owner);
-            mon.setItem(toIdName(event.item));
+            mon.setItem(toIdName(event.item),
+                // see if the item was just gained
+                !!event.from && event.from.type === "move" &&
+                ["Thief", "Covet", "Trick", "Switcheroo", "Recycle"]
+                    .includes(event.from.move));
         })
         .on("enditem", event =>
         {

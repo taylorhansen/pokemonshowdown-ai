@@ -267,12 +267,18 @@ describe("Pokemon", function()
             expect(mon.item.definiteValue!.name).to.equal("lifeorb");
         });
 
-        it("Should re-narrow item even if already revealed", function()
+        it("Should re-narrow item if gained", function()
         {
             const mon = new Pokemon("Magikarp", true);
-            mon.item.narrow("leftovers");
+            const item = mon.item;
+            item.narrow("leftovers");
 
-            mon.setItem("lifeorb");
+            mon.setItem("lifeorb", /*gained*/true);
+            // old item reference stays the same
+            expect(item.definiteValue).to.not.be.null;
+            expect(item.definiteValue!.name).to.equal("leftovers");
+            // new item reference gets created
+            expect(mon.item).to.not.equal(item);
             expect(mon.item.definiteValue).to.not.be.null;
             expect(mon.item.definiteValue!.name).to.equal("lifeorb");
         });
@@ -313,9 +319,15 @@ describe("Pokemon", function()
         it("Should remove item", function()
         {
             const mon = new Pokemon("Magikarp", true);
-            mon.item.narrow("focussash");
+            const item = mon.item;
+            item.narrow("focussash");
 
             mon.removeItem();
+            // old item reference stays the same
+            expect(item.definiteValue).to.not.be.null;
+            expect(item.definiteValue!.name).to.equal("focussash");
+            // new item reference gets created
+            expect(mon.item).to.not.equal(item);
             expect(mon.item.definiteValue).to.not.be.null;
             expect(mon.item.definiteValue!.name).to.equal("none");
         });
@@ -341,18 +353,23 @@ describe("Pokemon", function()
                 mon.setItem("leftovers");
 
                 mon.removeItem();
-                expect(mon.lastItem.definiteValue).to.be.null;
+                expect(mon.item.definiteValue).to.not.be.null;
+                expect(mon.item.definiteValue!.name).to.equal("none");
             });
 
             it("Should set lastItem if consumed parameter was provided",
             function()
             {
                 const mon = new Pokemon("Magikarp", true);
+                const item = mon.item;
                 mon.switchIn();
                 mon.setItem("leftovers");
-                expect(mon.lastItem.definiteValue).to.be.null;
+                expect(mon.lastItem.definiteValue).to.not.be.null;
+                expect(mon.lastItem.definiteValue!.name).to.equal("none");
 
                 mon.removeItem("leftovers");
+                // current held item possibility gets reassigned to lastItem
+                expect(mon.lastItem).to.equal(item);
                 expect(mon.lastItem.definiteValue).to.not.be.null;
                 expect(mon.lastItem.definiteValue!.name).to.equal("leftovers");
             });

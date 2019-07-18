@@ -132,11 +132,12 @@ ability ${ability}`);
     public setItem(item: string, gained = false): void
     {
         // override any possibilities of other items
-        this.item.reset();
-        this.item.narrow(item);
+        if (gained) this._item = new PossibilityClass(dex.items);
+
+        this._item.narrow(item);
 
         // (de)activate unburden ability if the pokemon has it
-        this.volatile.unburden = gained && item === "none";
+        this.volatile.unburden = item === "none" && gained;
     }
     /**
      * Indicates that an item was just removed from this Pokemon.
@@ -147,16 +148,20 @@ ability ${ability}`);
     {
         if (consumed)
         {
-            this.lastItem.reset();
-            this.lastItem.narrow(consumed);
+            // move possibility object to last item slot
+            this._lastItem = this._item;
+            this._lastItem.narrow(consumed);
         }
 
+        // this should reset the _item reference so there aren't any duplicates
         this.setItem("none", /*gained*/true);
     }
-    /** Item possibilities. */
-    public readonly item = new PossibilityClass(dex.items);
-    /** Last consumed item possibilities. */
-    public readonly lastItem = new PossibilityClass(dex.items);
+    /** Current reference to held item possibilities. */
+    public get item(): PossibilityClass<number> { return this._item; }
+    private _item = new PossibilityClass(dex.items);
+    /** Current reference to last consumed item possibilities. */
+    public get lastItem(): PossibilityClass<number> { return this._lastItem; }
+    private _lastItem = new PossibilityClass(dex.items);
 
     /** Pokemon's level from 1 to 100. */
     public get level(): number { return this._level; }
@@ -255,8 +260,8 @@ ability ${ability}`);
         if (v.ingrain) return true;
 
         const ignoringItem = v.embargo.isActive || this.ability === "klutz";
-        const item = ignoringItem || !this.item.definiteValue ?
-            "" : this.item.definiteValue.name;
+        const item = ignoringItem || !this._item.definiteValue ?
+            "" : this._item.definiteValue.name;
 
         // iron ball causes grounding
         if (item === "ironball") return true;
@@ -286,7 +291,7 @@ ability ${ability}`);
             (!v.overrideAbility && this._baseAbility.isSet("klutz"));
 
         // iron ball causes grounding
-        if (this.item.isSet("ironball") && !ignoringItem) return true;
+        if (this._item.isSet("ironball") && !ignoringItem) return true;
 
         // magnet rise lifts
         return !v.magnetRise.isActive &&
@@ -309,6 +314,7 @@ ability ${ability}`);
         this.hp = new HP(hpPercent);
         this.team = team;
         this._active = false;
+        this._lastItem.narrow("none");
     }
 
     /** Called at the end of every turn to update temp statuses. */
@@ -417,8 +423,7 @@ ${s}grounded: \
 ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}types: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
-${s}item: ${this.item.definiteValue ?
-    this.item.definiteValue.name : "<unrevealed>"}
+${s}item: ${this.stringifyItem()}
 ${s}moveset: [${this.moveset.toString()}]`;
     }
 
@@ -474,6 +479,20 @@ ${s}moveset: [${this.moveset.toString()}]`;
         const over = this._active ? this._volatile.overrideAbility : "";
 
         if (!over || over === base) return base;
-        else return `${over} (base: ${base})`;
+        return `${over} (base: ${base})`;
+    }
+
+    // istanbul ignore next: only used for logging
+    /** Displays the last and current values of the held item field. */
+    private stringifyItem(): string
+    {
+        const baseVal = this._item.definiteValue;
+        const base = baseVal ? baseVal.name : "<unrevealed>";
+
+        const lastVal = this._lastItem.definiteValue;
+        const last = lastVal ? lastVal.name : "<unknown>";
+
+        if (last === "none") return base;
+        return `${base} (consumed: ${last})`;
     }
 }

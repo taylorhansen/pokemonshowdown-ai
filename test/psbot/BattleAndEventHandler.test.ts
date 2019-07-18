@@ -4,7 +4,7 @@ import { Choice } from "../../src/battle/agent/Choice";
 import { types } from "../../src/battle/dex/dex-util";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
 import { Weather } from "../../src/battle/state/Weather";
-import { EndItemEvent, MoveEvent, SetHPEvent } from
+import { EndItemEvent, ItemEvent, MoveEvent, SetHPEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
@@ -1401,46 +1401,53 @@ describe("Battle and EventProcessor", function()
                  * @param name Name of the test.
                  * @param precon Precondition for the pokemon's `item` field.
                  * Executes before the message is handled.
+                 * @param move If provided, the item was transferred due to this
+                 * move.
                  */
                 function test(name: string,
-                    precon: (item: PossibilityClass<number>) => any): void
+                    precon: (item: PossibilityClass<number>) => any,
+                    move?: string): void
                 {
                     it(name, async function()
                     {
-                        const item = battle.state.teams.them.active.item;
-                        precon(item);
+                        const mon = battle.state.teams.them.active;
+                        precon(mon.item);
+
+                        let ev: ItemEvent =
+                                {type: "item", id: them1, item: "Life Orb"};
+                        if (move) ev = {...ev, from: {type: "move", move}};
+
+                        const item = mon.item;
+
                         // pokemon gains some item
-                        await battle.progress(
-                        {
-                            events:
-                            [
-                                {type: "item", id: them1, item: "Life Orb"}
-                            ]
-                        });
+                        await battle.progress({events: [ev]});
+                        // reference gets reassigned if the item was gained
+                        if (move) expect(mon.item).to.not.equal(item);
                         // should set current item
-                        expect(item.definiteValue).to.not.be.null;
-                        expect(item.definiteValue!.name).to.equal("lifeorb");
+                        expect(mon.item.definiteValue).to.not.be.null;
+                        expect(mon.item.definiteValue!.name)
+                            .to.equal("lifeorb");
                     });
                 }
 
                 test("Should reveal item",
                     item => expect(item.definiteValue).to.be.null);
-                test("Should reset item if already revealed",
-                    item => item.narrow("leftovers"));
+                test("Should reset item if gained",
+                    item => item.narrow("leftovers"), "Trick");
             });
 
             describe("enditem", function()
             {
                 it("Should remove item", async function()
                 {
-                    const item = battle.state.teams.them.active.item;
-                    item.narrow("lifeorb");
+                    const mon = battle.state.teams.them.active;
+                    mon.item.narrow("lifeorb");
                     await battle.progress(
                     {
                         events: [{type: "enditem", id: them1, item: "Life Orb"}]
                     });
-                    expect(item.definiteValue).to.not.be.null;
-                    expect(item.definiteValue!.name).to.equal("none");
+                    expect(mon.item.definiteValue).to.not.be.null;
+                    expect(mon.item.definiteValue!.name).to.equal("none");
                 });
 
                 describe("lastItem (Recycle)", function()
@@ -1458,6 +1465,7 @@ describe("Battle and EventProcessor", function()
                         it(name, async function()
                         {
                             const mon = battle.state.teams.them.active;
+                            const item = mon.item;
 
                             // consume/remove some item
                             let event: EndItemEvent =
@@ -1485,12 +1493,14 @@ describe("Battle and EventProcessor", function()
                             // test Pokemon#lastItem
                             if (setLastItem)
                             {
-                                expect(mon.lastItem.definiteValue)
-                                    .to.not.be.null;
-                                expect(mon.lastItem.definiteValue!.name)
-                                    .to.equal("lumberry");
+                                // item reference moved to lastItem slot
+                                expect(mon.lastItem).to.equal(item);
                             }
-                            else expect(mon.lastItem.definiteValue).to.be.null;
+                            // item reference was thrown away
+                            else expect(mon.lastItem).to.not.equal(item);
+                            expect(mon.lastItem.definiteValue).to.not.be.null;
+                            expect(mon.lastItem.definiteValue!.name)
+                                .to.equal(setLastItem ? "lumberry" : "none");
                         });
                     }
 
@@ -1529,12 +1539,19 @@ describe("Battle and EventProcessor", function()
                     {
                         const v = battle.state.teams.them.active.volatile;
                         expect(v.unburden).to.be.false;
+                        // item message requires a cause to let us know the item
+                        //  is being gained, not revealed
+                        // having it revealed would cause it to overnarrow since
+                        //  it would already know that the item is none
                         await battle.progress(
                         {
                             events:
                             [
                                 {type: "enditem", id: them1, item: "Mail"},
-                                {type: "item", id: them1, item: "Life Orb"}
+                                {
+                                    type: "item", id: them1, item: "Life Orb",
+                                    from: {type: "move", move: "Covet"}
+                                }
                             ]
                         });
                         expect(v.unburden).to.be.false;
