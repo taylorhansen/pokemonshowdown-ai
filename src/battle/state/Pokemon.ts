@@ -84,18 +84,22 @@ ability ${ability}`);
     {
         return this._baseAbility;
     }
-    /** Resets base ability according to current pokemon data. */
+    /** Sets base ability according to current pokemon data. */
     private initBaseAbility(): void
     {
-        this._baseAbility = new PossibilityClass(dex.abilities,
-            this.onBaseAbilitySet);
+        this._baseAbility = new PossibilityClass(dex.abilities);
         this._baseAbility.narrow(...this.species.abilities);
-        this.onBaseAbilitySet();
+
+        // reset override ability
+        if (this._active) this.setOverrideAbility();
+        else if (!this._baseAbility.definiteValue)
+        {
+            // wait until narrowed to try again
+            this._baseAbility.onNarrow(() =>
+                { if (this._active) this.setOverrideAbility(); });
+        }
     }
-    /** Callback for when ability info needs to be updated. */
-    private readonly onBaseAbilitySet =
-        () => { if (this.active) this.setOverrideAbility(); }
-    private _baseAbility!: PossibilityClass<typeof dex.abilities[""]>;
+    private _baseAbility!: PossibilityClass<typeof dex.abilities[string]>;
 
     /** The types of this pokemon. */
     public get types(): readonly Type[]
@@ -342,6 +346,7 @@ ability ${ability}`);
         this._active = true;
     }
 
+    /** Sets override ability if base ability is narrowed. */
     private setOverrideAbility(): void
     {
         // if not multitype and suppressed, do nothing

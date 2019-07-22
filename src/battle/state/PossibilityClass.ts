@@ -3,11 +3,8 @@ export class PossibilityClass<TData>
 {
     /** Maps value name to data. */
     public readonly map: {readonly [name: string]: TData};
-    /** Function to call when fully narrowed. */
-    private readonly onSet?:
-        (value: {readonly name: string, readonly data: TData}) => void;
 
-    /** The set of possible values this value can be. */
+    /** The set of possible values this object can be. */
     public get possibleValues(): ReadonlySet<string>
     {
         return this._possibleValues;
@@ -26,18 +23,24 @@ export class PossibilityClass<TData>
     private _definiteValue:
         {readonly name: string, readonly data: TData} | null = null;
 
+    /** Listeners for when fully narrowed. */
+    private narrowListeners: (() => void)[] = [];
+
     /**
      * Creates a PossibilityClass.
      * @param map Base dictionary object. Should not change during the lifetime
      * of this object.
-     * @param onSet Function to call when fully narrowed.
      */
-    constructor(map: {readonly [name: string]: TData},
-        onSet?: (value: {readonly name: string, readonly data: TData}) => void)
+    constructor(map: {readonly [name: string]: TData})
     {
         this.map = map;
-        this.onSet = onSet;
         this._possibleValues = new Set(Object.keys(map));
+    }
+
+    /** Adds a listener for when this object gets fully narrowed. */
+    public onNarrow(f: () => void): void
+    {
+        this.narrowListeners.push(f);
     }
 
     /** Removes a type from data possibility. */
@@ -50,7 +53,7 @@ export class PossibilityClass<TData>
         {
             const value = this._possibleValues.values().next().value;
             this._definiteValue = {name: value, data: this.map[name]};
-            if (this.onSet) this.onSet(this._definiteValue);
+            this.narrowed();
         }
         else if (size < 1)
         {
@@ -79,7 +82,7 @@ export class PossibilityClass<TData>
             // new definite value
             const name = newValues[0];
             this._definiteValue = {name, data: this.map[name]};
-            if (this.onSet) this.onSet(this._definiteValue);
+            this.narrowed();
         }
         else if (newValues.length < 1)
         {
@@ -105,4 +108,7 @@ export class PossibilityClass<TData>
         }
         return name;
     }
+
+    /** Calls all `#onNarrow()` listeners. */
+    private narrowed(): void { for (const f of this.narrowListeners) f(); }
 }

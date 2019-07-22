@@ -44,4 +44,15 @@ describe("PossibilityClass", function()
         pc.narrow("c");
         expect(() => pc.narrow("a")).to.throw();
     });
+
+    it("Should set listener", function(done)
+    {
+        pc.onNarrow(() =>
+        {
+            expect(pc.definiteValue).to.not.be.null;
+            expect(pc.definiteValue!.name).to.equal("a");
+            done();
+        });
+        pc.narrow("a");
+    });
 });

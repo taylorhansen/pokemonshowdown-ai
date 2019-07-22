@@ -204,6 +204,7 @@ describe("Pokemon", function()
             const mon = new Pokemon("Togepi", false);
             mon.ability = "hustle";
             mon.switchIn();
+            // usually a form change
             mon.setSpecies("Bronzong");
             expect(mon.volatile.overrideAbility).to.be.empty;
         });
