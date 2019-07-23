@@ -47,10 +47,11 @@ describe("PossibilityClass", function()
 
     it("Should set listener", function(done)
     {
-        pc.onNarrow(() =>
+        pc.onNarrow(p =>
         {
-            expect(pc.definiteValue).to.not.be.null;
-            expect(pc.definiteValue!.name).to.equal("a");
+            expect(pc).to.equal(p);
+            expect(p.definiteValue).to.not.be.null;
+            expect(p.definiteValue!.name).to.equal("a");
             done();
         });
         pc.narrow("a");

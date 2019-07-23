@@ -24,7 +24,7 @@ export class PossibilityClass<TData>
         {readonly name: string, readonly data: TData} | null = null;
 
     /** Listeners for when fully narrowed. */
-    private narrowListeners: (() => void)[] = [];
+    private narrowListeners: ((pc: this) => void)[] = [];
 
     /**
      * Creates a PossibilityClass.
@@ -38,7 +38,7 @@ export class PossibilityClass<TData>
     }
 
     /** Adds a listener for when this object gets fully narrowed. */
-    public onNarrow(f: () => void): void
+    public onNarrow(f: (pc: this) => void): void
     {
         this.narrowListeners.push(f);
     }
@@ -110,5 +110,5 @@ export class PossibilityClass<TData>
     }
 
     /** Calls all `#onNarrow()` listeners. */
-    private narrowed(): void { for (const f of this.narrowListeners) f(); }
+    private narrowed(): void { for (const f of this.narrowListeners) f(this); }
 }
