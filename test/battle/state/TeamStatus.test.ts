@@ -58,5 +58,17 @@ describe("TeamStatus", function()
             status.postTurn();
             expect(status.futureMoves.futuresight.turns).to.equal(0);
         });
+
+        it("Should tick reflect/lightscreen turns", function()
+        {
+            status.reflect.start(/*source*/ null);
+            status.lightScreen.start(null);
+
+            expect(status.reflect.turns).to.equal(0);
+            expect(status.lightScreen.turns).to.equal(0);
+            status.postTurn();
+            expect(status.reflect.turns).to.equal(1);
+            expect(status.lightScreen.turns).to.equal(1);
+        });
     });
 });

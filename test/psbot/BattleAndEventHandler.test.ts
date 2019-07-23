@@ -1936,6 +1936,18 @@ describe("Battle and EventProcessor", function()
 
         describe("sideend/sidestart", function()
         {
+            function camelCase(s: string)
+            {
+                const words = s.split(" ");
+                words[0] = words[0].toLowerCase();
+                for (let i = 1; i < words.length; ++i)
+                {
+                    words[i] = words[i].charAt(0).toUpperCase() +
+                        words[i].substr(1).toLowerCase();
+                }
+                return words.join("");
+            }
+
             for (const condition of
                     ["Spikes", "move: Stealth Rock", "move: Toxic Spikes"])
             {
@@ -1946,25 +1958,96 @@ describe("Battle and EventProcessor", function()
                     field = condition.substr("move: ".length) as any;
                 }
                 else field = condition as any;
-                field = field.replace(" ", "") as any;
-                field = field.charAt(0).toLowerCase() + field.substr(1) as any;
+                field = camelCase(field) as any;
 
                 it(`Should start/end ${condition}`, async function()
                 {
-                    const team = battle.state.teams.us.status;
-                    expect(team[field]).to.equal(0);
+                    const ts = battle.state.teams.us.status;
+                    expect(ts[field]).to.equal(0);
 
                     await battle.progress(
                         {events: [{type: "sidestart", id: "p1", condition}]});
-                    expect(team[field]).to.equal(1);
+                    expect(ts[field]).to.equal(1);
 
                     await battle.progress(
                         {events: [{type: "sidestart", id: "p1", condition}]});
-                    expect(team[field]).to.equal(2);
+                    expect(ts[field]).to.equal(2);
 
                     await battle.progress(
                         {events: [{type: "sideend", id: "p1", condition}]});
-                    expect(team[field]).to.equal(0);
+                    expect(ts[field]).to.equal(0);
+                });
+            }
+
+            for (const status of ["Reflect", "Light Screen"] as const)
+            {
+                const field: "reflect" | "lightScreen" =
+                    camelCase(status) as any;
+
+                it(`Should start/end ${field.toLowerCase()} and infer ` +
+                    "lightclay item", async function()
+                {
+                    const ts = battle.state.teams.them.status;
+                    expect(ts[field].type).to.equal("none");
+
+                    // start the side condition due to move
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            {
+                                type: "move", id: them1, moveName: status,
+                                targetId: them1
+                            },
+                            {
+                                type: "sidestart", id: them1.owner,
+                                condition: status
+                            }
+                        ]
+                    });
+
+                    const mon = battle.state.teams.them.active;
+
+                    expect(ts[field].type).to.equal(field.toLowerCase());
+                    expect(ts[field].source).to.equal(mon.item);
+
+                    for (let i = 0; i < 5; ++i)
+                    {
+                        expect(ts[field].turns).to.equal(i);
+                        expect(ts[field].duration).to.equal(5);
+                        expect(mon.item.definiteValue).to.be.null;
+                        await battle.progress(
+                            {events: [{type: "turn", num: i + 2}]});
+                    }
+
+                    // lasted >5 turns, infer item
+                    expect(mon.item.definiteValue).to.not.be.null;
+                    expect(mon.item.definiteValue!.name).to.equal("lightclay");
+
+                    // run down the duration
+                    for (let i = 0; i < 2; ++i)
+                    {
+                        expect(ts[field].duration).to.equal(8);
+                        await battle.progress(
+                            {events: [{type: "turn", num: i + 7}]});
+                    }
+
+                    // end the side condition due to timeout
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            {
+                                type: "sideend", id: them1.owner,
+                                condition: status
+                            },
+                            {type: "turn", num: 9}
+                        ]
+                    });
+                    expect(ts[field].type).to.equal("none");
+                    expect(ts[field].source).to.be.null;
+                    expect(ts[field].turns).to.equal(0);
+                    expect(ts[field].duration).to.be.null;
                 });
             }
         });

@@ -377,8 +377,10 @@ export class PSEventHandler
                 active.majorStatus.assert(pair.status.condition);
             }
         })
-        .on("sideend", event => this.handleSideCondition(event))
-        .on("sidestart", event => this.handleSideCondition(event))
+        .on("sideend", (event, events, i) =>
+            this.handleSideCondition(event, events, i))
+        .on("sidestart", (event, events, i) =>
+            this.handleSideCondition(event, events, i))
         .on("singleturn", event =>
         {
             const v = this.getActive(event.id.owner).volatile;
@@ -613,27 +615,56 @@ export class PSEventHandler
     }
 
     /** Handles a side end/start event. */
-    private handleSideCondition(event: SideEndEvent | SideStartEvent): void
+    private handleSideCondition(event: SideEndEvent | SideStartEvent,
+        events: AnyBattleEvent[], i: number): void
     {
+        const ts = this.getTeam(event.id).status;
+
         let condition = event.condition;
         if (condition.startsWith("move: "))
         {
             condition = condition.substr("move: ".length);
         }
-        const team = this.getTeam(event.id).status;
         switch (condition)
         {
             case "Spikes":
-                if (event.type === "sidestart") ++team.spikes;
-                else team.spikes = 0;
+                if (event.type === "sidestart") ++ts.spikes;
+                else ts.spikes = 0;
                 break;
             case "Stealth Rock":
-                if (event.type === "sidestart") ++team.stealthRock;
-                else team.stealthRock = 0;
+                if (event.type === "sidestart") ++ts.stealthRock;
+                else ts.stealthRock = 0;
                 break;
             case "Toxic Spikes":
-                if (event.type === "sidestart") ++team.toxicSpikes;
-                else team.toxicSpikes = 0;
+                if (event.type === "sidestart") ++ts.toxicSpikes;
+                else ts.toxicSpikes = 0;
+                break;
+            case "Reflect":
+            case "Light Screen":
+                if (event.type === "sidestart")
+                {
+                    const lastEvent = events[i - 1];
+                    if (!lastEvent)
+                    {
+                        this.logger.error(`Don't know how ${condition} was ` +
+                            "caused since this is the first event");
+                        break;
+                    }
+                    if (lastEvent.type !== "move")
+                    {
+                        this.logger.error(`Don't know how ${condition} was ` +
+                            "caused since no move caused it");
+                        break;
+                    }
+                    const source = this.getActive(lastEvent.id.owner);
+                    if (condition === "Reflect") ts.reflect.start(source);
+                    else ts.lightScreen.start(source);
+                }
+                else
+                {
+                    if (condition === "Reflect") ts.reflect.reset();
+                    else ts.lightScreen.reset();
+                }
                 break;
         }
     }

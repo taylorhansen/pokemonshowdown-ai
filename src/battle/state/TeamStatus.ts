@@ -1,5 +1,6 @@
 import { FutureMove, futureMoves } from "../dex/dex";
 import { SelfSwitch } from "../dex/dex-util";
+import { ItemTempStatus } from "./ItemTempStatus";
 import { TempStatus } from "./TempStatus";
 
 /** Temporary status conditions for a certain team. */
@@ -24,6 +25,13 @@ export class TeamStatus
     /** Toxic Spikes layers. Max 2. */
     public toxicSpikes = 0;
 
+    /** Reflect status. */
+    public readonly reflect = new ItemTempStatus([5, 8], {reflect: "lightclay"},
+        "reflect");
+    /** Light Screen status. */
+    public readonly lightScreen = new ItemTempStatus([5, 8],
+        {lightscreen: "lightclay"}, "lightscreen");
+
     /** Creates a TeamStatus. */
     constructor()
     {
@@ -47,6 +55,9 @@ export class TeamStatus
         {
             this.futureMoves[id].tick();
         }
+
+        this.reflect.tick();
+        this.lightScreen.tick();
     }
 
     // istanbul ignore next: only used for logging
