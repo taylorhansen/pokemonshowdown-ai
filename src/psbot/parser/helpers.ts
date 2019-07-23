@@ -56,8 +56,8 @@ export const majorStatus = transform(anyWord, parseMajorStatus);
 /** Parser that consumes a BoostableStatName. */
 export const boostName = transform(anyWord, parseBoostName);
 
-/** Parser that consumes a WeatherType. */
-export const weatherType = transform(anyWord, parseWeatherType);
+/** Parser that consumes a WeatherType or `"none"`. */
+export const weatherTypeOrNone = transform(anyWord, parseWeatherTypeOrNone);
 
 /** Advances input to the next newline. This is a no-op if already on one. */
 export function skipLine(input: Input, info: Info): Result<undefined>
@@ -261,10 +261,10 @@ export function parseBoostName(stat: string): BoostName
     return stat;
 }
 
-/** Parses a weather type. Throws if invalid. */
-export function parseWeatherType(type: string): WeatherType
+/** Parses a weather type or `"none"`. Throws if invalid. */
+export function parseWeatherTypeOrNone(type: string): WeatherType | "none"
 {
-    if (!isWeatherType(type))
+    if (!isWeatherType(type) && type !== "none")
     {
         throw new Error(`Invalid weather type '${type}'`);
     }

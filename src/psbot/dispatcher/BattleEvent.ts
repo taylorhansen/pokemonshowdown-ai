@@ -490,8 +490,8 @@ export interface UpkeepEvent extends BattleEventBase
 export interface WeatherEvent extends BattleEventBase
 {
     readonly type: "weather";
-    /** Type of weather. */
-    readonly weatherType: WeatherType;
+    /** Type of weather, or `"none"` if being reset. */
+    readonly weatherType: WeatherType | "none";
     /** Whether this is an upkeep message. */
     readonly upkeep: boolean;
 }

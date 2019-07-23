@@ -1,9 +1,10 @@
 import { dex, numFutureMoves, numTwoTurnMoves, twoTurnMoves } from
     "../battle/dex/dex";
-import { BoostName, boostNames, hpTypes, MajorStatus, majorStatuses, numHPTypes,
-    Type, types, WeatherType, weatherTypes } from "../battle/dex/dex-util";
+import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes, Type, types,
+    weatherItems } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { HP } from "../battle/state/HP";
+import { ItemTempStatus } from "../battle/state/ItemTempStatus";
 import { MajorStatusCounter } from "../battle/state/MajorStatusCounter";
 import { Move } from "../battle/state/Move";
 import { Moveset } from "../battle/state/Moveset";
@@ -14,7 +15,6 @@ import { Team } from "../battle/state/Team";
 import { TeamStatus } from "../battle/state/TeamStatus";
 import { TempStatus } from "../battle/state/TempStatus";
 import { VolatileStatus } from "../battle/state/VolatileStatus";
-import { Weather } from "../battle/state/Weather";
 
 /**
  * One-hot encodes a class of values.
@@ -80,6 +80,39 @@ export function encodeTempStatus(ts: TempStatus): number[]
     return [limitedStatusTurns(ts.turns, ts.duration)];
 }
 
+/**
+ * Formats temporary status info into an array of numbers. Length is the number
+ * of different types that can occupy this object plus one.
+ */
+export function encodeItemTempStatus<TStatusType extends string>(
+    its: ItemTempStatus<TStatusType>): number[]
+{
+    // modify one-hot value to interpolate status turns/duration
+    let one: number;
+
+    // not applicable
+    if (its.type === "none") one = 0;
+    // infinite duration
+    else if (its.duration === null) one = 1;
+    else if (its.duration === its.durations[0] && its.source &&
+        !its.source.definiteValue)
+    {
+        // could have extension item so take average of both durations
+        // TODO: interpolate instead by likelihood that the source has the item
+        one = limitedStatusTurns(its.turns,
+            (its.durations[0] + its.durations[1]) / 2);
+    }
+    else one = limitedStatusTurns(its.turns, its.duration);
+
+    return [
+        // TODO: guarantee order
+        ...(Object.keys(its.items) as TStatusType[])
+            .map(t => t === its.type ? one : 0),
+        // indicate whether the extended duration is being used
+        its.duration === its.durations[1] ? 1 : 0
+    ];
+}
+
 // TODO: guarantee order? move to dex-util once figured out
 /** Types without `???` type. */
 const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
@@ -89,7 +122,7 @@ export const sizeVolatileStatus =
     /*boostable stats*/Object.keys(boostNames).length +
     /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus + /*ingrain*/1 +
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
-    /*disabled moves*/Moveset.maxSize * sizeTempStatus +
+    /*disabled moves*/(Moveset.maxSize * sizeTempStatus) +
     /*locked move*/sizeTempStatus + /*must recharge*/1 +
     /*override ability*/dex.numAbilities + /*override species*/dex.numPokemon +
     /*override types*/filteredTypes.length + /*roost*/1 +
@@ -345,59 +378,16 @@ export function encodeTeam(team: Team): number[]
         encodeTeamStatus(team.status));
 }
 
-/** Length of the return value of `encodeWeather()`. */
-export const sizeWeather =
-    // weather types excluding none
-    Object.keys(weatherTypes).length - 1;
-
-/** Formats weather info into an array of numbers. */
-export function encodeWeather(weather: Weather): number[]
-{
-    // encode likelihood of the weather persisting for next turn
-    // -1 = no, 0 = n/a, 1 = yes, in between = maybe
-    let persistence: number;
-
-    // weather not applicable
-    if (weather.type === "none") persistence = 0;
-    // infinite duration
-    else if (weather.duration === null) persistence = 1;
-    // 1 turn left
-    else if (weather.duration - weather.turns === 1)
-    {
-        // possibly no, but could have a weather rock
-        // TODO: scale by likelihood that it has the item
-        if (weather.duration === 5 && weather.source &&
-            !weather.source.definiteValue)
-        {
-            persistence = -0.5;
-        }
-        else persistence = -1;
-    }
-    // could have weather rock so take average of both durations
-    // TODO: interpolate instead by likelihood that it has the item
-    else if (weather.duration === 5 && weather.source &&
-        !weather.source.definiteValue)
-    {
-        persistence = limitedStatusTurns(weather.turns, 6.5);
-    }
-    else persistence = limitedStatusTurns(weather.turns, weather.duration);
-
-    // one-hot encode weather type, inserting the persistence value as the "one"
-    // TODO: guarantee order
-    return (Object.keys(weatherTypes) as WeatherType[])
-        // no weather is the default so doesn't need to be included here
-        .filter(t => t !== "none")
-        .map(t => t === weather.type ? persistence : 0);
-}
-
 /** Length of the return value of `encodeRoomStatus()`. */
-export const sizeRoomStatus = /*gravity*/1 + sizeWeather;
+export const sizeRoomStatus = /*gravity*/1 +
+    /*weather*/(Object.keys(weatherItems).length + 1);
 
 /** Formats room status info into an array of numbers. */
 export function encodeRoomStatus(status: RoomStatus): number[]
 {
     return [
-        ...encodeTempStatus(status.gravity), ...encodeWeather(status.weather)
+        ...encodeTempStatus(status.gravity),
+        ...encodeItemTempStatus(status.weather)
     ];
 }
 

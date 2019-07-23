@@ -4,7 +4,7 @@ import { Logger } from "../../../src/Logger";
 import { MessageListener } from "../../../src/psbot/dispatcher/MessageListener";
 import { anyWord, boostName, dispatch, integer, majorStatus, parseFromSuffix,
     playerId, playerIdWithName, pokemonDetails, pokemonId, pokemonStatus,
-    restOfLine, skipLine, weatherType, word } from
+    restOfLine, skipLine, weatherTypeOrNone, word } from
     "../../../src/psbot/parser/helpers";
 import { iter } from "../../../src/psbot/parser/Iter";
 import { Info, Parser } from "../../../src/psbot/parser/types";
@@ -154,11 +154,14 @@ describe("Parser Helpers", function()
         testFailure("Should throw if invalid BoostName", boostName, ["hp"]);
     });
 
-    describe("weatherType", function()
+    describe("weatherTypeOrNone", function()
     {
-        testSuccess("Should parse WeatherType", weatherType, ["RainDance"],
-            "RainDance");
-        testFailure("Should throw if invalid WeatherType", weatherType, ["sn"]);
+        testSuccess("Should parse WeatherType", weatherTypeOrNone,
+            ["RainDance"], "RainDance");
+        testSuccess("Should parse \"none\"", weatherTypeOrNone,
+            ["none"], "none");
+        testFailure("Should throw if invalid WeatherType", weatherTypeOrNone,
+            ["sn"]);
     });
 
     describe("skipLine", function()

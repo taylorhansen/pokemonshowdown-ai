@@ -23,13 +23,6 @@ export const numHPTypes = Object.keys(hpTypes).length;
 /** The different hidden power types a pokemon can have. */
 export type HPType = keyof typeof hpTypes;
 
-/** Maps weather type to its weather-extending item name. */
-export const weatherItems: {readonly [T in WeatherType]: string} =
-{
-    none: "", SunnyDay: "heatrock", RainDance: "damprock",
-    Sandstorm: "smoothrock", Hail: "icyrock"
-};
-
 /** Hold the set of all major status names. Maps status name to a unique id. */
 export const majorStatuses =
 {
@@ -68,13 +61,14 @@ export function isBoostName(stat: any): stat is BoostName
     return boostNames.hasOwnProperty(stat);
 }
 
-/** Holds the set of all weather types. */
-export const weatherTypes =
+/** Holds the set of all weather types, mapping to its extension item. */
+export const weatherItems =
 {
-    none: true, SunnyDay: true, RainDance: true, Sandstorm: true, Hail: true
+    SunnyDay: "heatrock", RainDance: "damprock", Sandstorm: "smoothrock",
+    Hail: "icyrock"
 } as const;
 /** Types of weather conditions. */
-export type WeatherType = keyof typeof weatherTypes;
+export type WeatherType = keyof typeof weatherItems;
 /**
  * Checks if a value matches a weather type.
  * @param type Value to be checked.
@@ -82,7 +76,7 @@ export type WeatherType = keyof typeof weatherTypes;
  */
 export function isWeatherType(type: any): type is WeatherType
 {
-    return weatherTypes.hasOwnProperty(type);
+    return weatherItems.hasOwnProperty(type);
 }
 
 /** Format of each pokemon entry in the Dex. */

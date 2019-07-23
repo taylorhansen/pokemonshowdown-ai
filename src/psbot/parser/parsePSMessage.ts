@@ -19,7 +19,8 @@ import { chain, many, maybe, sequence, transform } from "./combinators";
 import { anyWord, boostName, dispatch, integer, json, majorStatus,
     parseBoostName, parseFromSuffix, parsePokemonDetails, parsePokemonID,
     parsePokemonStatus, playerId, playerIdWithName, pokemonDetails, pokemonId,
-    pokemonStatus, restOfLine, skipLine, weatherType, word } from "./helpers";
+    pokemonStatus, restOfLine, skipLine, weatherTypeOrNone, word } from
+    "./helpers";
 import { iter } from "./Iter";
 import { Info, Input, Parser, Result } from "./types";
 
@@ -917,7 +918,8 @@ const eventTie: Parser<TieEvent> = transform(word("tie"),
 const eventWeather: Parser<WeatherEvent> = transform(
     sequence(
         word("-weather"),
-        weatherType,
+        weatherTypeOrNone,
+        // transform presence of word into boolean
         transform(maybe(word("[upkeep]")), upkeep => !!upkeep)),
     ([_, type, upkeep]) => ({type: "weather", weatherType: type, upkeep}));
 

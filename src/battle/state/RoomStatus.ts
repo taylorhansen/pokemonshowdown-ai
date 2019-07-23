@@ -1,5 +1,6 @@
+import { weatherItems } from "../dex/dex-util";
+import { ItemTempStatus } from "./ItemTempStatus";
 import { TempStatus } from "./TempStatus";
-import { Weather } from "./Weather";
 
 /** Temporary status conditions for the entire field. */
 export class RoomStatus
@@ -8,7 +9,7 @@ export class RoomStatus
     public readonly gravity = new TempStatus("gravity", 5);
 
     /** Weather effect (usually temporary). */
-    public readonly weather = new Weather();
+    public readonly weather = new ItemTempStatus([5, 8], weatherItems);
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void

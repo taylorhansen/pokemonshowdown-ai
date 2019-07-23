@@ -421,40 +421,50 @@ export class PSEventHandler
         {
             const weather = this.state.status.weather;
             if (event.weatherType === "none") weather.reset();
-            else if (event.upkeep) weather.upkeep(event.weatherType);
+            else if (event.upkeep)
+            {
+                if (weather.type === event.weatherType) weather.tick();
+                else
+                {
+                    this.logger.error(`Weather is '${weather.type}' but ` +
+                        `upkept weather is '${event.weatherType}'`);
+                }
+            }
+            // find out what caused the weather to change
             else if (event.from && event.from.type === "ability" &&
                 event.of)
             {
-                weather.set(event.weatherType,
-                    this.getActive(event.of.owner), /*ability*/true);
+                // gen<=4: ability-caused weather is infinite
+                weather.start(this.getActive(event.of.owner),
+                    event.weatherType, /*infinite*/true);
             }
             else
             {
                 const lastEvent = events[i - 1];
-                if (lastEvent)
+                if (!lastEvent)
                 {
-                    if (lastEvent.type === "move")
-                    {
-                        // caused by a move
-                        const source = this.getActive(lastEvent.id.owner);
-                        weather.set(event.weatherType, source);
-                    }
-                    else
-                    {
-                        // if switched in, only an ability would activate, which
-                        //  was already handled earlier, so there would be no
-                        //  other way to cause the weather effect
-                        // istanbul ignore next: should never happen
-                        if (lastEvent.type !== "switch")
-                        {
-                            this.logger.error(
-                                "Don't know how weather was caused");
-                        }
-                    }
+                    // istanbul ignore next: should never happen
+                    this.logger.error("Don't know how weather was caused " +
+                        "since this is the first event");
+                    return;
                 }
-                // same as above here
-                // istanbul ignore next: should never happen
-                else this.logger.error("Don't know how weather was caused");
+
+                if (lastEvent.type === "move")
+                {
+                    // caused by a move
+                    const source = this.getActive(lastEvent.id.owner);
+                    weather.start(source, event.weatherType);
+                }
+                else if (lastEvent.type !== "switch")
+                {
+                    // if switched in, only an ability would activate, which was
+                    //  already handled earlier, so there would be no other way
+                    //  to cause the weather effect
+                    // istanbul ignore next: should never happen
+                    this.logger.error("Don't know how weather was caused " +
+                        "since this isn't preceeded by a move or switch");
+                }
+                else /*istanbul ignore next: ok */ {}
             }
         });
     }

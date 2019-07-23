@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import "mocha";
 import { Choice } from "../../src/battle/agent/Choice";
-import { types } from "../../src/battle/dex/dex-util";
+import { types, WeatherType } from "../../src/battle/dex/dex-util";
+import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
-import { Weather } from "../../src/battle/state/Weather";
 import { EndItemEvent, ItemEvent, MoveEvent, SetHPEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
@@ -2074,7 +2074,7 @@ describe("Battle and EventProcessor", function()
 
         describe("weather", function()
         {
-            let weather: Weather;
+            let weather: ItemTempStatus<WeatherType>;
 
             beforeEach("Initialize Weather reference", function()
             {
@@ -2087,7 +2087,7 @@ describe("Battle and EventProcessor", function()
                 {
                     events:
                     [
-                        {type: "weather", weatherType: "none", upkeep: true}
+                        {type: "weather", weatherType: "none", upkeep: false}
                     ]
                 });
                 expect(weather.type).to.equal("none");
@@ -2112,7 +2112,8 @@ describe("Battle and EventProcessor", function()
                 const mon = battle.eventHandler.getActive(us1.owner);
                 expect(mon.ability).to.equal("drizzle");
                 expect(weather.type).to.equal("RainDance");
-                expect(weather.source).to.equal(mon.item);
+                // no need to track source item
+                expect(weather.source).to.be.null;
                 expect(weather.duration).to.be.null;
                 expect(weather.turns).to.equal(0);
             });
@@ -2124,8 +2125,8 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "move", id: us1, moveName: "Sunny Day",
-                            targetId: us1
+                            type: "move", id: them1, moveName: "Sunny Day",
+                            targetId: them1
                         },
                         {
                             type: "weather", weatherType: "SunnyDay",
@@ -2133,8 +2134,9 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                const mon = battle.eventHandler.getActive(us1.owner);
+                const mon = battle.eventHandler.getActive(them1.owner);
                 expect(weather.type).to.equal("SunnyDay");
+                // don't know opponent's item, so source reference is stored
                 expect(weather.source).to.equal(mon.item);
                 expect(weather.duration).to.equal(5);
                 expect(weather.turns).to.equal(0);
@@ -2143,7 +2145,8 @@ describe("Battle and EventProcessor", function()
             it("Should upkeep weather", async function()
             {
                 const mon = battle.eventHandler.getActive(us1.owner);
-                weather.set("Hail", mon);
+                weather.start(mon, "Hail");
+                expect(weather.turns).to.equal(0);
                 await battle.progress(
                 {
                     events:

@@ -1,15 +1,16 @@
 import { expect } from "chai";
 import "mocha";
 import { isNumber } from "util";
-import { encodeBattleState, encodeHP, encodeMajorStatusCounter, encodeMove,
-    encodeMoveset, encodePokemon, encodePossiblityClass, encodeRoomStatus,
-    encodeTeam, encodeTeamStatus, encodeTempStatus, encodeVolatileStatus,
-    encodeWeather, limitedStatusTurns, oneHot, sizeActivePokemon,
-    sizeBattleState, sizeMajorStatusCounter, sizeMove, sizeMoveset, sizePokemon,
-    sizeRoomStatus, sizeTeam, sizeTeamStatus, sizeTempStatus,
-    sizeVolatileStatus, sizeWeather } from "../../src/ai/encodeBattleState";
+import { encodeBattleState, encodeHP, encodeItemTempStatus,
+    encodeMajorStatusCounter, encodeMove, encodeMoveset, encodePokemon,
+    encodePossiblityClass, encodeRoomStatus, encodeTeam, encodeTeamStatus,
+    encodeTempStatus, encodeVolatileStatus, limitedStatusTurns, oneHot,
+    sizeActivePokemon, sizeBattleState, sizeMajorStatusCounter, sizeMove,
+    sizeMoveset, sizePokemon, sizeRoomStatus, sizeTeam, sizeTeamStatus,
+    sizeTempStatus, sizeVolatileStatus } from "../../src/ai/encodeBattleState";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";
+import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
 import { MajorStatusCounter } from "../../src/battle/state/MajorStatusCounter";
 import { Move } from "../../src/battle/state/Move";
 import { Moveset } from "../../src/battle/state/Moveset";
@@ -20,7 +21,6 @@ import { Team } from "../../src/battle/state/Team";
 import { TeamStatus } from "../../src/battle/state/TeamStatus";
 import { TempStatus } from "../../src/battle/state/TempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
-import { Weather } from "../../src/battle/state/Weather";
 
 describe("BattleState encoders", function()
 {
@@ -169,6 +169,12 @@ describe("BattleState encoders", function()
         size: sizeTempStatus
     });
 
+    testEncoder("ItemTempStatus", encodeItemTempStatus,
+    {
+        init: () => new ItemTempStatus([5, 8], {reflect: "lightclay"}),
+        size: 2
+    });
+
     testEncoder("VolatileStatus", encodeVolatileStatus,
     {
         init: () => new VolatileStatus(),
@@ -243,12 +249,6 @@ describe("BattleState encoders", function()
             return team;
         },
         size: sizeTeam
-    });
-
-    testEncoder("Weather", encodeWeather,
-    {
-        init: () => new Weather(),
-        size: sizeWeather
     });
 
     testEncoder("RoomStatus", encodeRoomStatus,
