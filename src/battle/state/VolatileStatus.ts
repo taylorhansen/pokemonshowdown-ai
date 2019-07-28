@@ -159,7 +159,11 @@ export class VolatileStatus
     /** Whether we have successfully stalled this turn. */
     private stalled!: boolean;
 
+    /** Taunt move status. */
     public readonly taunt = new TempStatus("taunt", 5);
+
+    /** Torment move status. */
+    public torment!: boolean;
 
     /** Two-turn move currently being prepared. */
     public get twoTurn(): TwoTurnMove | ""
@@ -232,6 +236,7 @@ export class VolatileStatus
         this._stallTurns = 0;
         this.stalled = false;
         this.taunt.end();
+        this.torment = false;
         this._twoTurn = "";
         this.twoTurnCounter = 0;
         this.unburden = false;
@@ -320,6 +325,7 @@ export class VolatileStatus
             this._stallTurns ?
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
             this.taunt.isActive ? [this.taunt.toString()] : [],
+            this.torment ? ["torment"] : [],
             // toxic turns handled by Pokemon#toString()
             this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
             this._willTruant ? ["truant next turn"] : [])

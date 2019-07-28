@@ -134,6 +134,9 @@ export class PSEventHandler
                 case "Taunt":
                     active.volatile.taunt.start();
                     break;
+                case "Torment":
+                    active.volatile.torment = true;
+                    break;
                 case "Substitute":
                     active.volatile.substitute = true;
                     break;

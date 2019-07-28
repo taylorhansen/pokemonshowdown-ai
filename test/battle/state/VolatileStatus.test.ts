@@ -32,6 +32,7 @@ describe("VolatileStatus", function()
         volatile.slowStart.start();
         volatile.stall(true);
         volatile.taunt.start();
+        volatile.torment = true;
         volatile.twoTurn = "bounce";
         volatile.unburden = true;
         volatile.activateTruant();
@@ -64,6 +65,7 @@ describe("VolatileStatus", function()
             expect(volatile.slowStart.isActive).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.taunt.isActive).to.be.false;
+            expect(volatile.torment).to.be.false;
             expect(volatile.twoTurn).to.be.empty;
             expect(volatile.unburden).to.be.false;
             expect(volatile.willTruant).to.be.false;

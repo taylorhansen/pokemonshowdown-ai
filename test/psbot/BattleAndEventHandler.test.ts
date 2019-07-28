@@ -692,6 +692,24 @@ describe("Battle and EventProcessor", function()
                 expect(volatile.taunt.isActive).to.be.false;
             });
 
+            it("Should start torment", async function()
+            {
+                const volatile = battle.state.teams.us.active.volatile;
+
+                expect(volatile.torment).to.be.false;
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "start", id: us1, volatile: "Torment",
+                            otherArgs: []
+                        }
+                    ]
+                });
+                expect(volatile.torment).to.be.true;
+            });
+
             it("Should start/end substitute", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
