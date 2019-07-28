@@ -122,7 +122,7 @@ export const sizeVolatileStatus =
     /*boostable stats*/Object.keys(boostNames).length +
     /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus + /*ingrain*/1 +
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
-    /*disabled moves*/(Moveset.maxSize * sizeTempStatus) +
+    /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*locked move*/sizeTempStatus + /*must recharge*/1 +
     /*override ability*/dex.numAbilities + /*override species*/dex.numPokemon +
     /*override types*/filteredTypes.length + /*roost*/1 +
@@ -146,6 +146,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     // non-passable
     const disabled = status.disabledMoves.map(encodeTempStatus)
         .reduce((a, b) => a.concat(b));
+    const lastUsed = oneHot(status.lastUsed, Moveset.maxSize);
     const lockedMove = encodeTempStatus(status.lockedMove);
     const mustRecharge = status.mustRecharge ? 1 : 0;
     const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
@@ -167,7 +168,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
 
     return [
         ...boosts, ...confused, ...embargo, ingrain, ...magnetRise, substitute,
-        suppressed, ...disabled, ...lockedMove, mustRecharge,
+        suppressed, ...disabled, ...lastUsed, ...lockedMove, mustRecharge,
         ...overrideAbility, ...overrideSpecies, ...overrideTypeData, roost,
         ...slowStart, stallFailRate, ...taunt, ...twoTurn, unburden, willTruant
     ];

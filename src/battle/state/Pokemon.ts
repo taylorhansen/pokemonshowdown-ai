@@ -196,6 +196,8 @@ ability ${ability}`);
             : targets.filter(m => m !== this && m.ability === "pressure")
                 .length + 1;
 
+        this._volatile.lastUsed = this.moveset.getOrRevealIndex(id);
+
         // release two-turn move
         // while this could be the event that prepares the move, a separate
         //  event is responsible for distinguishing that

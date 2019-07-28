@@ -22,6 +22,7 @@ describe("VolatileStatus", function()
         volatile.substitute = true;
         volatile.overrideAbility = "truant";
         volatile.disabledMoves[0].start();
+        volatile.lastUsed = 1;
         volatile.lockedMove.start();
         volatile.mustRecharge = true;
         volatile.overrideSpecies = "Magikarp";
@@ -52,6 +53,7 @@ describe("VolatileStatus", function()
             expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.overrideAbilityId).to.be.null;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
+            expect(volatile.lastUsed).to.equal(-1);
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             expect(volatile.overrideSpecies).to.be.empty;
@@ -100,6 +102,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.overrideAbility).to.be.empty;
             expect(newVolatile.overrideAbilityId).to.be.null;
             expect(newVolatile.disabledMoves[0].isActive).to.be.false;
+            expect(newVolatile.lastUsed).to.equal(-1);
             expect(newVolatile.lockedMove.isActive).to.be.false;
             expect(newVolatile.mustRecharge).to.be.false;
             expect(newVolatile.overrideSpecies).to.be.empty;

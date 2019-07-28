@@ -91,6 +91,9 @@ export class VolatileStatus
         for (const disabled of this.disabledMoves) disabled.end();
     }
 
+    /** Index of the last used move, or -1 if none yet. */
+    public lastUsed!: number;
+
     public readonly lockedMove = new TempStatus("locked move", 3);
 
     /** Whether this pokemon must recharge on the next turn. */
@@ -215,6 +218,7 @@ export class VolatileStatus
         this.substitute = false;
 
         this.enableMoves();
+        this.lastUsed = -1;
         this.lockedMove.end();
         this.mustRecharge = false;
         this._overrideAbility = null;
@@ -308,6 +312,7 @@ export class VolatileStatus
             this.substitute ? ["has substitute"] : [],
             // override ability/species/etc are handled by Pokemon#toString()
             this.disabledMoves.filter(d => !d.isActive).map(d => d.toString()),
+            this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.mustRecharge ? ["must recharge"] : [],
             this.roost ? ["roosting"] : [],

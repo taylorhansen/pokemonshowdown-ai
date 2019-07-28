@@ -414,7 +414,7 @@ describe("Pokemon", function()
         });
     });
 
-    describe("#moveset", function()
+    describe("#moveset methods", function()
     {
         describe("#useMove()", function()
         {
@@ -462,6 +462,24 @@ describe("Pokemon", function()
                     mon.ability = "moldbreaker";
                     mon.useMove("tackle", [target]);
                     expect(mon.moveset.get("tackle")!.pp).to.equal(55);
+                });
+            });
+
+            describe("#volatile#lastUsed", function()
+            {
+                it("Should set last used", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.useMove("splash", [mon]);
+                    expect(mon.volatile.lastUsed).to.equal(0);
+                });
+
+                it("Should set last used again", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.useMove("splash", [mon]);
+                    mon.useMove("tackle", []);
+                    expect(mon.volatile.lastUsed).to.equal(1);
                 });
             });
         });
