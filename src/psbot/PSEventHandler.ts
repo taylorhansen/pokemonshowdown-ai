@@ -173,6 +173,10 @@ export class PSEventHandler
                 this.getActive(otherPlayerID(event.id.owner)).volatile
                     .lockedMove.end();
             }
+            else if (event.volatile === "move: Charge")
+            {
+                this.getActive(event.id.owner).volatile.charge.start();
+            }
             else this.logger.debug(`Ignoring activate "${event.volatile}"`);
         })
         .on("end", event =>

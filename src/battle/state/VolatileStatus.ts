@@ -81,6 +81,9 @@ export class VolatileStatus
     /** Name of override ability. */
     private overrideAbilityName!: string;
 
+    /** Charge move status. */
+    public readonly charge = new TempStatus("charging", 2, /*silent*/true);
+
     /** List of disabled move statuses. */
     public readonly disabledMoves: readonly TempStatus[] =
         Array.from({length: Moveset.maxSize},
@@ -221,6 +224,7 @@ export class VolatileStatus
         this.magnetRise.end();
         this.substitute = false;
 
+        this.charge.end();
         this.enableMoves();
         this.lastUsed = -1;
         this.lockedMove.end();
@@ -255,6 +259,7 @@ export class VolatileStatus
         this.taunt.tick();
         // toxic counter handled by in-game events
         this.slowStart.tick();
+        this.charge.tick();
         for (const disabled of this.disabledMoves) disabled.tick();
 
         // after roost is used, the user is no longer grounded at the end of
@@ -316,6 +321,7 @@ export class VolatileStatus
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
             this.substitute ? ["has substitute"] : [],
             // override ability/species/etc are handled by Pokemon#toString()
+            this.charge.isActive ? [this.charge.toString()] : [],
             this.disabledMoves.filter(d => !d.isActive).map(d => d.toString()),
             this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],

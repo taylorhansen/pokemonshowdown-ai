@@ -21,6 +21,7 @@ describe("VolatileStatus", function()
         volatile.magnetRise.start();
         volatile.substitute = true;
         volatile.overrideAbility = "truant";
+        volatile.charge.start();
         volatile.disabledMoves[0].start();
         volatile.lastUsed = 1;
         volatile.lockedMove.start();
@@ -53,6 +54,7 @@ describe("VolatileStatus", function()
             expect(volatile.substitute).to.be.false;
             expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.overrideAbilityId).to.be.null;
+            expect(volatile.charge.isActive).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
             expect(volatile.lastUsed).to.equal(-1);
             expect(volatile.lockedMove.isActive).to.be.false;
@@ -103,6 +105,7 @@ describe("VolatileStatus", function()
             // not passed
             expect(newVolatile.overrideAbility).to.be.empty;
             expect(newVolatile.overrideAbilityId).to.be.null;
+            expect(newVolatile.charge.isActive).to.be.false;
             expect(newVolatile.disabledMoves[0].isActive).to.be.false;
             expect(newVolatile.lastUsed).to.equal(-1);
             expect(newVolatile.lockedMove.isActive).to.be.false;
@@ -187,6 +190,22 @@ describe("VolatileStatus", function()
         {
             expect(() => volatile.overrideAbility = "not-a real_ability")
                 .to.throw();
+        });
+    });
+
+    describe("#charge", function()
+    {
+        it("Should have silent=true", function()
+        {
+            expect(volatile.charge).to.have.property("silent", true);
+        });
+
+        it("Should tick on #postTurn()", function()
+        {
+            volatile.charge.start();
+            expect(volatile.charge.turns).to.equal(1);
+            volatile.postTurn();
+            expect(volatile.charge.turns).to.equal(2);
         });
     });
 

@@ -589,6 +589,21 @@ describe("Battle and EventProcessor", function()
 
         describe("activate/end/start", function()
         {
+            it("Should activate Charge", async function()
+            {
+                const volatile = battle.state.teams.us.active.volatile;
+                expect(volatile.charge.isActive).to.be.false;
+
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {type: "activate", id: us1, volatile: "move: Charge"}
+                    ]
+                });
+                expect(volatile.charge.isActive).to.be.true;
+            });
+
             it("Should activate/end/start confusion", async function()
             {
                 const volatile = battle.state.teams.us.active.volatile;
