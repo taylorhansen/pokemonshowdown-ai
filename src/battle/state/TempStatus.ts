@@ -26,7 +26,8 @@ export class TempStatus
     }
 
     /**
-     * Starts the status' turn counter. If not already active.
+     * Starts the status' turn counter, restarting by default if not already
+     * active.
      * @param restart Default true. Whether the status should be restarted if
      * called while active.
      */
