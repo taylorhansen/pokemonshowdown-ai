@@ -201,13 +201,13 @@ ability ${ability}`);
         // release two-turn move
         // while this could be the event that prepares the move, a separate
         //  event is responsible for distinguishing that
-        if (twoTurnMoves.hasOwnProperty(id)) this.volatile.twoTurn = "";
+        if (twoTurnMoves.hasOwnProperty(id)) this.volatile.twoTurn.reset();
 
         // apply move effects
         const move = dex.moves[id];
         if (move.volatileEffect === "lockedmove")
         {
-            this.volatile.lockedMove.start();
+            this.volatile.lockedMove.start(id as any);
         }
         if (this.team)
         {

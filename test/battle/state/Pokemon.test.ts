@@ -31,7 +31,7 @@ describe("Pokemon", function()
         it("Should clear volatile when switched out", function()
         {
             const mon = new Pokemon("Magikarp", false);
-            mon.volatile.lockedMove.start();
+            mon.volatile.lockedMove.start("thrash");
             mon.switchOut();
             expect(mon.volatile.lockedMove.isActive).to.be.false;
         });

@@ -7385,6 +7385,51 @@ const moves: {readonly [name: string]: MoveData} =
     }
 };
 
+const futureMovesInternal =
+{
+    doomdesire: 0,
+    futuresight: 1
+};
+
+/** Set of all future moves. Maps move name to its id within this object. */
+export const futureMoves: Readonly<typeof futureMovesInternal> =
+    futureMovesInternal;
+
+/** Types of future moves. */
+export type FutureMove = keyof typeof futureMovesInternal;
+
+/** Number of future moves that exist. */
+export const numFutureMoves = 2;
+
+/** Checks if a value is a FutureMove. */
+export function isFutureMove(value: any): value is FutureMove
+{
+    return futureMovesInternal.hasOwnProperty(value);
+}
+
+const lockedMovesInternal =
+{
+    outrage: 0,
+    petaldance: 1,
+    thrash: 2
+};
+
+/** Set of all locked moves. Maps move name to its id within this object. */
+export const lockedMoves: Readonly<typeof lockedMovesInternal> =
+    lockedMovesInternal;
+
+/** Types of locked moves. */
+export type LockedMove = keyof typeof lockedMovesInternal;
+
+/** Number of locked moves that exist. */
+export const numLockedMoves = 3;
+
+/** Checks if a value is a LockedMove. */
+export function isLockedMove(value: any): value is LockedMove
+{
+    return lockedMovesInternal.hasOwnProperty(value);
+}
+
 const twoTurnMovesInternal =
 {
     bounce: 0,
@@ -7412,28 +7457,6 @@ export const numTwoTurnMoves = 9;
 export function isTwoTurnMove(value: any): value is TwoTurnMove
 {
     return twoTurnMovesInternal.hasOwnProperty(value);
-}
-
-const futureMovesInternal =
-{
-    doomdesire: 0,
-    futuresight: 1
-};
-
-/** Set of all future moves. Maps move name to its id within this object. */
-export const futureMoves: Readonly<typeof futureMovesInternal> =
-    futureMovesInternal;
-
-/** Types of future moves. */
-export type FutureMove = keyof typeof futureMovesInternal;
-
-/** Number of future moves that exist. */
-export const numFutureMoves = 2;
-
-/** Checks if a value is a FutureMove. */
-export function isFutureMove(value: any): value is FutureMove
-{
-    return futureMovesInternal.hasOwnProperty(value);
 }
 
 const items: {readonly [name: string]: number} =

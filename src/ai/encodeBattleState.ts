@@ -1,4 +1,4 @@
-import { dex, numFutureMoves, numTwoTurnMoves, twoTurnMoves } from
+import { dex, numFutureMoves, numLockedMoves, numTwoTurnMoves } from
     "../battle/dex/dex";
 import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes, Type, types,
     weatherItems } from "../battle/dex/dex-util";
@@ -14,6 +14,7 @@ import { RoomStatus } from "../battle/state/RoomStatus";
 import { Team } from "../battle/state/Team";
 import { TeamStatus } from "../battle/state/TeamStatus";
 import { TempStatus } from "../battle/state/TempStatus";
+import { VariableTempStatus } from "../battle/state/VariableTempStatus";
 import { VolatileStatus } from "../battle/state/VolatileStatus";
 
 /**
@@ -114,6 +115,27 @@ export function encodeItemTempStatus<TStatusType extends string>(
     ];
 }
 
+/**
+ * Formats temporary status info into an array of numbers. Length is the number
+ * of different types that can occupy this object.
+ */
+export function encodeVariableTempStatus<TStatusType extends string>(
+    vts: VariableTempStatus<TStatusType>): number[]
+{
+    // modify one-hot value to interpolate status turns/duration
+    let one: number;
+
+    // not applicable
+    if (vts.type === "none") one = 0;
+    // infinite duration
+    else if (vts.duration === null) one = 1;
+    else one = limitedStatusTurns(vts.turns + 1, vts.duration);
+
+    // TODO: guarantee order?
+    return (Object.keys(vts.map) as TStatusType[])
+        .map(t => t === vts.type ? one : 0);
+}
+
 // TODO: guarantee order? move to dex-util once figured out
 /** Types without `???` type. */
 const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
@@ -125,13 +147,12 @@ export const sizeVolatileStatus =
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
     /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
-    /*locked move*/sizeTempStatus + /*must recharge*/1 +
+    /*locked move variants*/numLockedMoves + /*must recharge*/1 +
     /*override ability*/dex.numAbilities + /*override species*/dex.numPokemon +
     /*override types*/filteredTypes.length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
-    /*taunt*/sizeTempStatus + /*torment*/1 +
-    /*two-turn status*/numTwoTurnMoves + /*unburden*/1 +
-    /*uproar*/sizeTempStatus + /*will truant*/1;
+    /*taunt*/sizeTempStatus + /*torment*/1 + /*two-turn*/numTwoTurnMoves +
+    /*unburden*/1 + /*uproar*/sizeTempStatus + /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
 export function encodeVolatileStatus(status: VolatileStatus): number[]
@@ -152,7 +173,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const disabled = status.disabledMoves.map(encodeTempStatus)
         .reduce((a, b) => a.concat(b));
     const lastUsed = oneHot(status.lastUsed, Moveset.maxSize);
-    const lockedMove = encodeTempStatus(status.lockedMove);
+    const lockedMove = encodeVariableTempStatus(status.lockedMove);
     const mustRecharge = status.mustRecharge ? 1 : 0;
     const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
     const overrideSpecies = oneHot(status.overrideSpeciesId, dex.numPokemon);
@@ -167,8 +188,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const taunt = encodeTempStatus(status.taunt);
     const torment = status.torment ? 1 : 0;
     // toxic handled by encodePokemon()
-    const twoTurn = oneHot(status.twoTurn ? twoTurnMoves[status.twoTurn] : null,
-            numTwoTurnMoves);
+    const twoTurn = encodeVariableTempStatus(status.twoTurn);
     const unburden = status.unburden ? 1 : 0;
     const uproar = encodeTempStatus(status.uproar);
     const willTruant = status.willTruant ? 1 : 0;

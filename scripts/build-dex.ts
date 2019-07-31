@@ -161,11 +161,14 @@ ${Object.keys(abilities).map(id => `    ${id}: ${abilities[id]},\n`).join("")}};
 // moves
 const moves = data.Movedex;
 
-const twoTurnMoves: {[name: string]: number} = {};
-let twoTurnUid = 0;
-
 const futureMoves: {[name: string]: number} = {};
 let futureUid = 0;
+
+const lockedMoves: {[name: string]: number} = {};
+let lockedMoveUid = 0;
+
+const twoTurnMoves: {[name: string]: number} = {};
+let twoTurnUid = 0;
 
 console.log("const moves: {readonly [name: string]: MoveData} =\n{");
 
@@ -196,6 +199,10 @@ for (const moveName in moves)
     if (move.self && move.self.volatileStatus)
     {
         volatileEffect = quote(move.self.volatileStatus);
+        if (move.self.volatileStatus === "lockedmove")
+        {
+            lockedMoves[move.name] = lockedMoveUid++;
+        }
     }
 
     let sideCondition: string | undefined;
@@ -266,8 +273,9 @@ export function is${cap}Move(value: any): value is ${cap}Move
 }\n`);
 }
 
-specificMoves(twoTurnMoves, "twoTurn", "two-turn");
 specificMoves(futureMoves, "future");
+specificMoves(lockedMoves, "locked");
+specificMoves(twoTurnMoves, "twoTurn", "two-turn");
 
 // items
 const items = data.Items;

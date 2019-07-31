@@ -25,7 +25,7 @@ describe("VolatileStatus", function()
         volatile.charge.start();
         volatile.disabledMoves[0].start();
         volatile.lastUsed = 1;
-        volatile.lockedMove.start();
+        volatile.lockedMove.start("outrage");
         volatile.mustRecharge = true;
         volatile.overrideSpecies = "Magikarp";
         volatile.overrideTypes = ["???", "water"];
@@ -35,7 +35,7 @@ describe("VolatileStatus", function()
         volatile.stall(true);
         volatile.taunt.start();
         volatile.torment = true;
-        volatile.twoTurn = "bounce";
+        volatile.twoTurn.start("solarbeam");
         volatile.unburden = true;
         volatile.uproar.start();
         volatile.activateTruant();
@@ -71,7 +71,7 @@ describe("VolatileStatus", function()
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.taunt.isActive).to.be.false;
             expect(volatile.torment).to.be.false;
-            expect(volatile.twoTurn).to.be.empty;
+            expect(volatile.twoTurn.isActive).to.be.false;
             expect(volatile.unburden).to.be.false;
             expect(volatile.uproar.isActive).to.be.false;
             expect(volatile.willTruant).to.be.false;
@@ -123,7 +123,8 @@ describe("VolatileStatus", function()
             expect(newVolatile.slowStart.isActive).to.be.false;
             expect(newVolatile.stallTurns).to.equal(0);
             expect(newVolatile.taunt.isActive).to.be.false;
-            expect(newVolatile.twoTurn).to.be.empty;
+            expect(newVolatile.torment).to.be.false;
+            expect(newVolatile.twoTurn.isActive).to.be.false;
             expect(newVolatile.unburden).to.be.false;
             expect(newVolatile.uproar.isActive).to.be.false;
             expect(newVolatile.willTruant).to.be.false;
@@ -312,19 +313,19 @@ describe("VolatileStatus", function()
 
     describe("#twoTurn", function()
     {
-        it("Should set two-turn move", function()
+        it("Should have silent=true", function()
         {
-            volatile.twoTurn = "bounce";
-            expect(volatile.twoTurn).to.equal("bounce");
+            expect(volatile.twoTurn).to.have.property("silent", true);
         });
 
-        it("Should countdown on #postTurn()", function()
+        it("Should tick on #postTurn()", function()
         {
-            volatile.twoTurn = "dig";
+            volatile.twoTurn.start("dig");
             volatile.postTurn();
-            expect(volatile.twoTurn).to.equal("dig");
+            expect(volatile.twoTurn.turns).to.equal(1);
             volatile.postTurn();
-            expect(volatile.twoTurn).to.be.empty;
+            expect(volatile.twoTurn.isActive).to.be.false;
+            expect(volatile.twoTurn.turns).to.equal(0);
         });
     });
 

@@ -1805,13 +1805,13 @@ describe("Battle and EventProcessor", function()
                         {type: "upkeep"}
                     ]
                 });
-                expect(mon.volatile.twoTurn).to.equal("solarbeam");
+                expect(mon.volatile.twoTurn.type).to.equal("solarbeam");
 
                 // simulate intermediate choice by sending turn after
                 request = {...request, wait: false};
                 await battle.request(request);
                 await battle.progress({events: [{type: "turn", num: 2}]});
-                expect(mon.volatile.twoTurn).to.equal("solarbeam");
+                expect(mon.volatile.twoTurn.type).to.equal("solarbeam");
                 // the use of a two-turn move should restrict the client's
                 //  choices to only the move being prepared, which temporarily
                 //  takes the spot of the first move
@@ -1847,7 +1847,7 @@ describe("Battle and EventProcessor", function()
                         {type: "upkeep"}
                     ]
                 });
-                expect(mon.volatile.twoTurn).to.be.empty;
+                expect(mon.volatile.twoTurn.isActive).to.be.false;
 
                 // simulate intermediate choice by sending turn after
                 request = {...request, wait: false};
@@ -1857,7 +1857,7 @@ describe("Battle and EventProcessor", function()
                 expect(battle.lastChoices).to.have.members(
                     ["move 1", "move 2", "switch 2"]);
                 expect(responses).to.have.lengthOf(2);
-                expect(mon.volatile.twoTurn).to.be.empty;
+                expect(mon.volatile.twoTurn.isActive).to.be.false;
             });
 
             it("Should interrupt two-turn move", async function()
@@ -1903,13 +1903,13 @@ describe("Battle and EventProcessor", function()
                         {type: "upkeep"}
                     ]
                 });
-                expect(mon.volatile.twoTurn).to.equal("solarbeam");
+                expect(mon.volatile.twoTurn.type).to.equal("solarbeam");
 
                 // simulate intermediate choice by sending turn after
                 request = {...request, wait: false};
                 await battle.request(request);
                 await battle.progress({events: [{type: "turn", num: 2}]});
-                expect(mon.volatile.twoTurn).to.equal("solarbeam");
+                expect(mon.volatile.twoTurn.type).to.equal("solarbeam");
                 // the use of a two-turn move should restrict the client's
                 //  choices to only the move being prepared, which temporarily
                 //  takes the spot of the first move
@@ -1933,12 +1933,14 @@ describe("Battle and EventProcessor", function()
                     ]}]
                 };
                 await battle.request(request);
+                // absence of twoturn move indicates that the pokemon was
+                //  prevented from completing the move
                 await battle.progress({events: [{type: "turn", num: 3}]});
                 // should now be able to choose other choices
                 expect(battle.lastChoices).to.have.members(
                     ["move 1", "move 2", "switch 2"]);
                 expect(responses).to.have.lengthOf(2);
-                expect(mon.volatile.twoTurn).to.be.empty;
+                expect(mon.volatile.twoTurn.isActive).to.be.false;
             });
 
             // TODO: shorted two-turn move (e.g. solarbeam with sun/powerherb)
@@ -2405,7 +2407,8 @@ describe("Battle and EventProcessor", function()
             {
                 it("Should end lockedmove status", async function()
                 {
-                    battle.state.teams.us.active.volatile.lockedMove.start();
+                    battle.state.teams.us.active.volatile.lockedMove
+                        .start("thrash");
                     await battle.progress(
                     {
                         events:

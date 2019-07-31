@@ -182,7 +182,7 @@ export class PSEventHandler
                 // locked moves get canceled if they don't succeed
                 // TODO: cover other cases of move failure (#74)
                 this.getActive(otherPlayerID(event.id.owner)).volatile
-                    .lockedMove.end();
+                    .lockedMove.reset();
             }
             else if (ev === "move: Charge")
             {
@@ -383,8 +383,8 @@ export class PSEventHandler
         {
             // moveName should be one of the two-turn moves being
             //  prepared
-            this.getActive(event.id.owner).volatile.twoTurn =
-                toIdName(event.moveName) as any;
+            this.getActive(event.id.owner).volatile.twoTurn.start(
+                    toIdName(event.moveName) as any);
         })
         .on("setboost", event =>
         {
@@ -610,7 +610,7 @@ export class PSEventHandler
         const mon = this.getActive(id.owner);
 
         // stopped using multi-turn locked move due to fatigue
-        if (event.fatigue) mon.volatile.lockedMove.end();
+        if (event.fatigue) mon.volatile.lockedMove.reset();
         // something happened because of an item or ability
         if (event.from)
         {

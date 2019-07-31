@@ -1,8 +1,9 @@
-import { dex, TwoTurnMove } from "../dex/dex";
+import { dex, lockedMoves, twoTurnMoves } from "../dex/dex";
 import { BoostName, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
 import { TempStatus } from "./TempStatus";
 import { pluralTurns, plus } from "./utility";
+import { VariableTempStatus } from "./VariableTempStatus";
 
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
@@ -100,7 +101,8 @@ export class VolatileStatus
     /** Index of the last used move, or -1 if none yet. */
     public lastUsed!: number;
 
-    public readonly lockedMove = new TempStatus("locked move", 3);
+    /** Tracks locked moves, e.g. petaldance variants. */
+    public readonly lockedMove = new VariableTempStatus(lockedMoves, 2);
 
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge!: boolean;
@@ -172,18 +174,8 @@ export class VolatileStatus
     public torment!: boolean;
 
     /** Two-turn move currently being prepared. */
-    public get twoTurn(): TwoTurnMove | ""
-    {
-        return this._twoTurn;
-    }
-    public set twoTurn(twoTurn: TwoTurnMove | "")
-    {
-        this._twoTurn = twoTurn;
-        // after this turn this will be 1
-        this.twoTurnCounter = twoTurn ? 2 : 0;
-    }
-    private _twoTurn!: TwoTurnMove | "";
-    private twoTurnCounter!: number;
+    public readonly twoTurn = new VariableTempStatus(twoTurnMoves, 1,
+            /*silent*/true);
 
     /** Whether the Unburden ability would be active here. */
     public unburden!: boolean;
@@ -234,7 +226,7 @@ export class VolatileStatus
         this.charge.end();
         this.enableMoves();
         this.lastUsed = -1;
-        this.lockedMove.end();
+        this.lockedMove.reset();
         this.mustRecharge = false;
         this._overrideAbility = null;
         this.overrideAbilityName = "";
@@ -248,8 +240,7 @@ export class VolatileStatus
         this.stalled = false;
         this.taunt.end();
         this.torment = false;
-        this._twoTurn = "";
-        this.twoTurnCounter = 0;
+        this.twoTurn.reset();
         this.unburden = false;
         this.uproar.end();
         this._willTruant = false;
@@ -269,6 +260,7 @@ export class VolatileStatus
         this.slowStart.tick();
         this.charge.tick();
         for (const disabled of this.disabledMoves) disabled.tick();
+        this.lockedMove.tick();
 
         // after roost is used, the user is no longer grounded at the end of
         //  the turn
@@ -279,14 +271,7 @@ export class VolatileStatus
         if (!this.stalled) this._stallTurns = 0;
         this.stalled = false;
 
-        // if twoTurn was set this turn, the two-turn move must be completed or
-        //  interrupted on the next turn
-        // if the move is never used, this code will clean it up
-        if (this.twoTurnCounter)
-        {
-            --this.twoTurnCounter;
-            if (this.twoTurnCounter <= 0) this.twoTurn = "";
-        }
+        this.twoTurn.tick();
 
         if (this.overrideAbilityName === "truant")
         {
@@ -341,9 +326,10 @@ export class VolatileStatus
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
             this.taunt.isActive ? [this.taunt.toString()] : [],
             this.torment ? ["torment"] : [],
-            this.uproar.isActive ? [this.uproar.toString()] : [],
             // toxic turns handled by Pokemon#toString()
-            this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
+            this.twoTurn.isActive ?
+                [`preparing ${this.twoTurn.toString()}`] : [],
+            this.uproar.isActive ? [this.uproar.toString()] : [],
             this._willTruant ? ["truant next turn"] : [])
         .join(", ")}]`;
     }
