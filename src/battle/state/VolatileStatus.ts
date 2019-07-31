@@ -81,6 +81,9 @@ export class VolatileStatus
     /** Name of override ability. */
     private overrideAbilityName!: string;
 
+    /** Bide move status. */
+    public readonly bide = new TempStatus("bide", 1);
+
     /** Charge move status. */
     public readonly charge = new TempStatus("charging", 2, /*silent*/true);
 
@@ -224,6 +227,7 @@ export class VolatileStatus
         this.magnetRise.end();
         this.substitute = false;
 
+        this.bide.end();
         this.charge.end();
         this.enableMoves();
         this.lastUsed = -1;
@@ -321,6 +325,7 @@ export class VolatileStatus
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
             this.substitute ? ["has substitute"] : [],
             // override ability/species/etc are handled by Pokemon#toString()
+            this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
             this.disabledMoves.filter(d => !d.isActive).map(d => d.toString()),
             this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],

@@ -21,6 +21,7 @@ describe("VolatileStatus", function()
         volatile.magnetRise.start();
         volatile.substitute = true;
         volatile.overrideAbility = "truant";
+        volatile.bide.start();
         volatile.charge.start();
         volatile.disabledMoves[0].start();
         volatile.lastUsed = 1;
@@ -54,6 +55,7 @@ describe("VolatileStatus", function()
             expect(volatile.substitute).to.be.false;
             expect(volatile.overrideAbility).to.be.empty;
             expect(volatile.overrideAbilityId).to.be.null;
+            expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
             expect(volatile.lastUsed).to.equal(-1);
@@ -105,6 +107,7 @@ describe("VolatileStatus", function()
             // not passed
             expect(newVolatile.overrideAbility).to.be.empty;
             expect(newVolatile.overrideAbilityId).to.be.null;
+            expect(newVolatile.bide.isActive).to.be.false;
             expect(newVolatile.charge.isActive).to.be.false;
             expect(newVolatile.disabledMoves[0].isActive).to.be.false;
             expect(newVolatile.lastUsed).to.equal(-1);

@@ -83,6 +83,9 @@ export class PSEventHandler
 
             switch (ev)
             {
+                case "Bide":
+                    active.volatile.bide.start();
+                    break;
                 case "confusion":
                     // start confusion status
                     active.volatile.confusion.start();
@@ -161,23 +164,28 @@ export class PSEventHandler
         })
         .on("activate", event =>
         {
-            if (event.volatile === "confusion")
+            const ev = event.volatile;
+            if (ev === "confusion")
             {
                 this.getActive(event.id.owner).volatile.confusion.tick();
             }
-            else if (event.volatile === "Mat Block" ||
-                PSEventHandler.isStallSingleTurn(event.volatile))
+            else if (ev === "Mat Block" || PSEventHandler.isStallSingleTurn(ev))
             {
                 // user successfully stalled an attack
                 // locked moves get canceled if they don't succeed
+                // TODO: cover other cases of move failure (#74)
                 this.getActive(otherPlayerID(event.id.owner)).volatile
                     .lockedMove.end();
             }
-            else if (event.volatile === "move: Charge")
+            else if (ev === "move: Charge")
             {
                 this.getActive(event.id.owner).volatile.charge.start();
             }
-            else this.logger.debug(`Ignoring activate "${event.volatile}"`);
+            else if (ev === "move: Bide")
+            {
+                this.getActive(event.id.owner).volatile.bide.tick();
+            }
+            else this.logger.debug(`Ignoring activate '${event.volatile}'`);
         })
         .on("end", event =>
         {
@@ -188,7 +196,8 @@ export class PSEventHandler
             if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
             const id = toIdName(ev);
 
-            if (ev === "confusion") v.confusion.end();
+            if (ev === "Bide") v.bide.end();
+            else if (ev === "confusion") v.confusion.end();
             else if (ev === "Disable") v.enableMoves();
             else if (ev === "Ingrain") v.ingrain = false;
             else if (ev === "Magnet Rise") v.magnetRise.end();
@@ -197,7 +206,7 @@ export class PSEventHandler
             else if (ev === "Substitute") v.substitute = false;
             else if (ev === "Slow Start") v.slowStart.end();
             else if (isFutureMove(id)) team.status.futureMoves[id].end();
-            else this.logger.debug(`Ignoring end "${event.volatile}"`);
+            else this.logger.debug(`Ignoring end '${event.volatile}'`);
         })
         .on("boost", event =>
         {
