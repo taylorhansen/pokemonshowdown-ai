@@ -242,7 +242,9 @@ function specificMoves(obj: {[id: string]: number}, name: string,
     display = display || name;
 
     // build set of all moves of this specific type
-    console.log(`const ${name}MovesInternal =
+    console.log(`
+/** Set of all ${display} moves. Maps move name to its id within this object. */
+export const ${name}Moves =
 {`);
 
     for (const moveName in obj)
@@ -254,14 +256,10 @@ function specificMoves(obj: {[id: string]: number}, name: string,
 
     const cap = name.slice(0, 1).toUpperCase() + name.slice(1);
 
-    console.log(`};
-
-/** Set of all ${display} moves. Maps move name to its id within this object. */
-export const ${name}Moves: Readonly<typeof ${name}MovesInternal> =
-    ${name}MovesInternal;
+    console.log(`} as const;
 
 /** Types of ${display} moves. */
-export type ${cap}Move = keyof typeof ${name}MovesInternal;
+export type ${cap}Move = keyof typeof ${name}Moves;
 
 /** Number of ${display} moves that exist. */
 export const num${cap}Moves = ${Object.keys(obj).length};
@@ -269,7 +267,7 @@ export const num${cap}Moves = ${Object.keys(obj).length};
 /** Checks if a value is a ${cap}Move. */
 export function is${cap}Move(value: any): value is ${cap}Move
 {
-    return ${name}MovesInternal.hasOwnProperty(value);
+    return ${name}Moves.hasOwnProperty(value);
 }\n`);
 }
 

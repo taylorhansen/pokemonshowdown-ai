@@ -7385,18 +7385,15 @@ const moves: {readonly [name: string]: MoveData} =
     }
 };
 
-const futureMovesInternal =
+/** Set of all future moves. Maps move name to its id within this object. */
+export const futureMoves =
 {
     doomdesire: 0,
     futuresight: 1
-};
-
-/** Set of all future moves. Maps move name to its id within this object. */
-export const futureMoves: Readonly<typeof futureMovesInternal> =
-    futureMovesInternal;
+} as const;
 
 /** Types of future moves. */
-export type FutureMove = keyof typeof futureMovesInternal;
+export type FutureMove = keyof typeof futureMoves;
 
 /** Number of future moves that exist. */
 export const numFutureMoves = 2;
@@ -7404,22 +7401,19 @@ export const numFutureMoves = 2;
 /** Checks if a value is a FutureMove. */
 export function isFutureMove(value: any): value is FutureMove
 {
-    return futureMovesInternal.hasOwnProperty(value);
+    return futureMoves.hasOwnProperty(value);
 }
 
-const lockedMovesInternal =
+/** Set of all locked moves. Maps move name to its id within this object. */
+export const lockedMoves =
 {
     outrage: 0,
     petaldance: 1,
     thrash: 2
-};
-
-/** Set of all locked moves. Maps move name to its id within this object. */
-export const lockedMoves: Readonly<typeof lockedMovesInternal> =
-    lockedMovesInternal;
+} as const;
 
 /** Types of locked moves. */
-export type LockedMove = keyof typeof lockedMovesInternal;
+export type LockedMove = keyof typeof lockedMoves;
 
 /** Number of locked moves that exist. */
 export const numLockedMoves = 3;
@@ -7427,10 +7421,11 @@ export const numLockedMoves = 3;
 /** Checks if a value is a LockedMove. */
 export function isLockedMove(value: any): value is LockedMove
 {
-    return lockedMovesInternal.hasOwnProperty(value);
+    return lockedMoves.hasOwnProperty(value);
 }
 
-const twoTurnMovesInternal =
+/** Set of all two-turn moves. Maps move name to its id within this object. */
+export const twoTurnMoves =
 {
     bounce: 0,
     dig: 1,
@@ -7441,14 +7436,10 @@ const twoTurnMovesInternal =
     shadowforce: 6,
     skullbash: 7,
     skyattack: 8
-};
-
-/** Set of all two-turn moves. Maps move name to its id within this object. */
-export const twoTurnMoves: Readonly<typeof twoTurnMovesInternal> =
-    twoTurnMovesInternal;
+} as const;
 
 /** Types of two-turn moves. */
-export type TwoTurnMove = keyof typeof twoTurnMovesInternal;
+export type TwoTurnMove = keyof typeof twoTurnMoves;
 
 /** Number of two-turn moves that exist. */
 export const numTwoTurnMoves = 9;
@@ -7456,7 +7447,7 @@ export const numTwoTurnMoves = 9;
 /** Checks if a value is a TwoTurnMove. */
 export function isTwoTurnMove(value: any): value is TwoTurnMove
 {
-    return twoTurnMovesInternal.hasOwnProperty(value);
+    return twoTurnMoves.hasOwnProperty(value);
 }
 
 const items: {readonly [name: string]: number} =
