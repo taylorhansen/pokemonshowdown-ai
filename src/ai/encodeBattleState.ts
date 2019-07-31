@@ -35,8 +35,9 @@ export function oneHot(id: number | null, length: number, one = 1, zero = 0):
  * @param turns Number of turns the status has been active (including current
  * turn). E.g. if the status started during this turn and the end of the current
  * turn hasn't been reached yet, `turns` should be 1, and should be incremented
- * by the end of each turn.
- * @param duration Maximum amount of turns the status will last.
+ * at the end of each turn. Values higher than `duration` will return zero.
+ * @param duration Maximum amount of turns the status will last. Should be the
+ * maximum value of `turns`.
  * @returns Status turn data for encoder functions as a "likelihood" that the
  * status will persist on the next turn.
  */
@@ -99,10 +100,10 @@ export function encodeItemTempStatus<TStatusType extends string>(
     {
         // could have extension item so take average of both durations
         // TODO: interpolate instead by likelihood that the source has the item
-        one = limitedStatusTurns(its.turns,
+        one = limitedStatusTurns(its.turns + 1,
             (its.durations[0] + its.durations[1]) / 2);
     }
-    else one = limitedStatusTurns(its.turns, its.duration);
+    else one = limitedStatusTurns(its.turns + 1, its.duration);
 
     return [
         // TODO: guarantee order
