@@ -188,6 +188,9 @@ export class VolatileStatus
     /** Whether the Unburden ability would be active here. */
     public unburden!: boolean;
 
+    /** Uproar move status. */
+    public readonly uproar = new TempStatus("uproar", 5);
+
     /** Whether the Truant ability will activate next turn. */
     public get willTruant(): boolean { return this._willTruant; }
     /** Indicates that the Truant ability has activated. */
@@ -248,6 +251,7 @@ export class VolatileStatus
         this._twoTurn = "";
         this.twoTurnCounter = 0;
         this.unburden = false;
+        this.uproar.end();
         this._willTruant = false;
     }
 
@@ -337,6 +341,7 @@ export class VolatileStatus
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
             this.taunt.isActive ? [this.taunt.toString()] : [],
             this.torment ? ["torment"] : [],
+            this.uproar.isActive ? [this.uproar.toString()] : [],
             // toxic turns handled by Pokemon#toString()
             this.twoTurn ? [`preparing ${this.twoTurn}`] : [],
             this._willTruant ? ["truant next turn"] : [])

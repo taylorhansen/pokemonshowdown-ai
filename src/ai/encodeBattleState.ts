@@ -129,7 +129,8 @@ export const sizeVolatileStatus =
     /*override types*/filteredTypes.length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
     /*taunt*/sizeTempStatus + /*torment*/1 +
-    /*two-turn status*/numTwoTurnMoves + /*unburden*/1 + /*will truant*/1;
+    /*two-turn status*/numTwoTurnMoves + /*unburden*/1 +
+    /*uproar*/sizeTempStatus + /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
 export function encodeVolatileStatus(status: VolatileStatus): number[]
@@ -168,6 +169,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const twoTurn = oneHot(status.twoTurn ? twoTurnMoves[status.twoTurn] : null,
             numTwoTurnMoves);
     const unburden = status.unburden ? 1 : 0;
+    const uproar = encodeTempStatus(status.uproar);
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
@@ -175,7 +177,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         suppressed, ...bide, ...charge, ...disabled, ...lastUsed, ...lockedMove,
         mustRecharge, ...overrideAbility, ...overrideSpecies,
         ...overrideTypeData, roost, ...slowStart, stallFailRate, ...taunt,
-        torment, ...twoTurn, unburden, willTruant
+        torment, ...twoTurn, unburden, ...uproar, willTruant
     ];
 }
 

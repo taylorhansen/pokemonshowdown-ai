@@ -134,17 +134,24 @@ export class PSEventHandler
                 case "Embargo":
                     active.volatile.embargo.start();
                     break;
+                case "Substitute":
+                    active.volatile.substitute = true;
+                    break;
+                case "Slow Start":
+                    active.volatile.slowStart.start();
+                    break;
                 case "Taunt":
                     active.volatile.taunt.start();
                     break;
                 case "Torment":
                     active.volatile.torment = true;
                     break;
-                case "Substitute":
-                    active.volatile.substitute = true;
-                    break;
-                case "Slow Start":
-                    active.volatile.slowStart.start();
+                case "Uproar":
+                    if (event.otherArgs[0] === "[upkeep]")
+                    {
+                        active.volatile.uproar.tick();
+                    }
+                    else active.volatile.uproar.start();
                     break;
                 default:
                 {
