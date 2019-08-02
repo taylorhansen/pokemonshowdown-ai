@@ -5,7 +5,7 @@ import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 /** The types of BattleEvents that can exist. Used as event prefixes. */
 export const battleEventTypes =
 {
-    "-ability": true, "-activate": true, "-boost": true, cant: true,
+    "\n": true, "-ability": true, "-activate": true, "-boost": true, cant: true,
     "-clearallboost": true, "-clearboost": true, "-clearnegativeboost": true,
     "-clearpositiveboost": true, "-copyboost": true, "-curestatus": true,
     "-cureteam": true, "-damage": true, detailschange: true, drag: true,
@@ -27,7 +27,8 @@ export function isBattleEventType(value: any): value is BattleEventType
 
 /** Maps BattleEventType to a BattleEvent interface type. */
 export type BattleEvent<T extends BattleEventType> =
-    T extends "-ability" ? AbilityEvent
+    T extends "\n" ? EmptyEvent
+    : T extends "-ability" ? AbilityEvent
     : T extends "-activate" ? ActivateEvent
     : T extends "-boost" ? BoostEvent
     : T extends "cant" ? CantEvent
@@ -90,6 +91,12 @@ interface BattleEventBase
     readonly fatigue?: boolean;
     /** Whether the event was due to eating. */
     readonly eat?: boolean;
+}
+
+/** Event that wraps the main events, separating them from upkeep events. */
+export interface EmptyEvent extends BattleEventBase
+{
+    readonly type: "\n";
 }
 
 /** Event where a pokemon's ability is revealed and activated. */

@@ -78,6 +78,9 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
     let result: string[];
     switch (event.type)
     {
+        case "\n":
+            result = [];
+            break;
         case "-ability":
         case "-endability":
             result = [event.type, stringifyID(event.id), event.ability];

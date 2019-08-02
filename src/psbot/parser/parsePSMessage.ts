@@ -5,7 +5,7 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
     BoostEvent, CantEvent, ClearAllBoostEvent, ClearBoostEvent,
     ClearNegativeBoostEvent, ClearPositiveBoostEvent, CopyBoostEvent,
     CureStatusEvent, CureTeamEvent, DamageEvent, DetailsChangeEvent,
-    DragEvent, EndAbilityEvent, EndEvent, EndItemEvent, FaintEvent,
+    DragEvent, EmptyEvent, EndAbilityEvent, EndEvent, EndItemEvent, FaintEvent,
     FieldEndEvent, FieldStartEvent, FormeChangeEvent, HealEvent,
     InvertBoostEvent, isBattleEventType, ItemEvent, MoveEvent,
     MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
@@ -415,6 +415,7 @@ function battleEventHelper(input: Input, info: Info):
 {
     switch (input.get() as BattleEventType)
     {
+        case "\n": return eventEmpty(input, info);
         case "-ability": return eventAbility(input, info);
         case "-activate": return eventActivate(input, info);
         case "detailschange": case "drag": case "-formechange": case "switch":
@@ -458,6 +459,16 @@ function battleEventHelper(input: Input, info: Info):
 }
 
 // event parsers
+
+/**
+ * Parses an EmptyEvent.
+ *
+ * Format:
+ * @example
+ * |
+ */
+const eventEmpty: Parser<EmptyEvent> = (input, info) =>
+    ({result: {type: "\n"}, remaining: input});
 
 /**
  * Parses an AbilityEvent.

@@ -51,6 +51,7 @@ export const from: From[] =
 /** Test BattleEvents except turn/upkeep. */
 export const battleEvent: AnyBattleEvent[] =
 [
+    {type: "\n"},
     {type: "-ability", id: pokemonId[0], ability: "Pressure"},
     {type: "-activate", id: pokemonId[1], volatile: "ingrain"},
     {type: "-boost", id: pokemonId[1], stat: "atk", amount: 1, from: from[0]},
@@ -184,7 +185,7 @@ export const battleProgress: BattleProgressMessage[] =
     },
     {
         events: battleEvent.slice(29, 35)
-            .concat({type: "upkeep"}, ...battleEvent.slice(35, 49),
+            .concat({type: "upkeep"}, ...battleEvent.slice(35, 50),
                 {type: "turn", num: 9})
     }
 ];
