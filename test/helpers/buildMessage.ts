@@ -78,20 +78,20 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
     let result: string[];
     switch (event.type)
     {
-        case "ability":
-        case "endability":
-            result = [`-${event.type}`, stringifyID(event.id), event.ability];
+        case "-ability":
+        case "-endability":
+            result = [event.type, stringifyID(event.id), event.ability];
             break;
-        case "activate":
-        case "end":
-            result = ["-" + event.type, stringifyID(event.id), event.volatile];
+        case "-activate":
+        case "-end":
+            result = [event.type, stringifyID(event.id), event.volatile];
             break;
-        case "boost":
-        case "unboost":
-        case "setboost":
+        case "-boost":
+        case "-unboost":
+        case "-setboost":
             result =
             [
-                `-${event.type}`, stringifyID(event.id), event.stat,
+                event.type, stringifyID(event.id), event.stat,
                 event.amount.toString()
             ];
             break;
@@ -99,38 +99,33 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             result = ["cant", stringifyID(event.id), event.reason];
             if (event.moveName) result.push(event.moveName);
             break;
-        case "clearallboost":
+        case "-clearallboost":
             result = ["-clearallboost"];
             break;
-        case "clearboost":
-        case "clearnegativeboost":
-        case "clearpositiveboost":
-        case "invertboost":
-            result = [`-${event.type}`, stringifyID(event.id)];
+        case "-clearboost":
+        case "-clearnegativeboost":
+        case "-clearpositiveboost":
+        case "-invertboost":
+            result = [event.type, stringifyID(event.id)];
             break;
-        case "copyboost":
+        case "-copyboost":
             result =
             [
-                "-copyboost", stringifyID(event.source),
-                stringifyID(event.target)
+                event.type, stringifyID(event.source), stringifyID(event.target)
             ];
             break;
-        case "curestatus":
-        case "status":
+        case "-curestatus":
+        case "-status":
+            result = [event.type, stringifyID(event.id), event.majorStatus];
+            break;
+        case "-cureteam":
+            result = [event.type, stringifyID(event.id)];
+            break;
+        case "-damage":
+        case "-heal":
             result =
             [
-                "-" + event.type, stringifyID(event.id), event.majorStatus
-            ];
-            break;
-        case "cureteam":
-            result = ["-cureteam", stringifyID(event.id)];
-            break;
-        case "damage":
-        case "heal":
-            result =
-            [
-                "-" + event.type, stringifyID(event.id),
-                stringifyStatus(event.status)
+                event.type, stringifyID(event.id), stringifyStatus(event.status)
             ];
             break;
         case "detailschange":
@@ -145,61 +140,60 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "faint":
             result = ["faint", stringifyID(event.id)];
             break;
-        case "fieldstart":
-        case "fieldend":
-            result = ["-" + event.type, event.effect];
+        case "-fieldstart":
+        case "-fieldend":
+            result = [event.type, event.effect];
             break;
-        case "formechange":
+        case "-formechange":
             result =
             [
-                "-formechange", stringifyID(event.id),
+                event.type, stringifyID(event.id),
                 stringifyDetails(event.details), stringifyStatus(event.status)
             ];
             break;
-        case "item":
-        case "enditem":
-            result = ["-" + event.type, stringifyID(event.id), event.item];
+        case "-item":
+        case "-enditem":
+            result = [event.type, stringifyID(event.id), event.item];
             break;
         case "move":
-        case "prepare":
+        case "-prepare":
             result =
             [
-                event.type === "prepare" ? "-prepare" : event.type,
-                stringifyID(event.id), event.moveName,
+                event.type, stringifyID(event.id), event.moveName,
                 ...(event.targetId ? [stringifyID(event.targetId)] : [])
             ];
             break;
-        case "mustrecharge":
-            result = ["-mustrecharge", stringifyID(event.id)];
+        case "-mustrecharge":
+            result = [event.type, stringifyID(event.id)];
             break;
-        case "sethp":
+        case "-sethp":
             result =
             [
-                "-sethp",
+                event.type,
                 ...event.newHPs.map(pair =>
                         [stringifyID(pair.id), stringifyStatus(pair.status)])
                     .reduce((a1, a2) => a1.concat(a2), [])
             ];
             break;
-        case "sideend":
-        case "sidestart":
+        case "-sideend":
+        case "-sidestart":
             // username not actually known as info is lost
-            result = [`-${event.type}`, `${event.id}: <user>`, event.condition];
+            result = [event.type, `${event.id}: <user>`, event.condition];
             break;
-        case "singleturn":
-            result = ["-singleturn", stringifyID(event.id), event.status];
+        case "-singleturn":
+            result = [event.type, stringifyID(event.id), event.status];
             break;
-        case "start":
+        case "-start":
             result =
             [
-                "-start", stringifyID(event.id), event.volatile,
+                event.type, stringifyID(event.id), event.volatile,
                 ...event.otherArgs
             ];
             break;
-        case "swapboost":
+        case "-swapboost":
             result =
             [
-                "-swapboost", stringifyID(event.source),
+                event.type, stringifyID(event.source),
                 stringifyID(event.target), event.stats.join(", ")
             ];
             break;
@@ -212,8 +206,8 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "upkeep":
             result = ["upkeep"];
             break;
-        case "weather":
-            result = ["-weather", event.weatherType];
+        case "-weather":
+            result = [event.type, event.weatherType];
             if (event.upkeep) result.push("[upkeep]");
             break;
         case "win":

@@ -51,20 +51,20 @@ export const from: From[] =
 /** Test BattleEvents except turn/upkeep. */
 export const battleEvent: AnyBattleEvent[] =
 [
-    {type: "ability", id: pokemonId[0], ability: "Pressure"},
-    {type: "activate", id: pokemonId[1], volatile: "ingrain"},
-    {type: "boost", id: pokemonId[1], stat: "atk", amount: 1, from: from[0]},
+    {type: "-ability", id: pokemonId[0], ability: "Pressure"},
+    {type: "-activate", id: pokemonId[1], volatile: "ingrain"},
+    {type: "-boost", id: pokemonId[1], stat: "atk", amount: 1, from: from[0]},
     {type: "cant", id: pokemonId[1], reason: "recharge"},
     {type: "cant", id: pokemonId[1], reason: "taunt", moveName: "Thunder Wave"},
-    {type: "clearallboost"},
-    {type: "clearboost", id: pokemonId[2]},
-    {type: "clearnegativeboost", id: pokemonId[0]},
-    {type: "clearpositiveboost", id: pokemonId[1]},
-    {type: "copyboost", source: pokemonId[2], target: pokemonId[0]},
-    {type: "curestatus", id: pokemonId[0], majorStatus: "psn"},
-    {type: "cureteam", id: pokemonId[2]},
+    {type: "-clearallboost"},
+    {type: "-clearboost", id: pokemonId[2]},
+    {type: "-clearnegativeboost", id: pokemonId[0]},
+    {type: "-clearpositiveboost", id: pokemonId[1]},
+    {type: "-copyboost", source: pokemonId[2], target: pokemonId[0]},
+    {type: "-curestatus", id: pokemonId[0], majorStatus: "psn"},
+    {type: "-cureteam", id: pokemonId[2]},
     {
-        type: "damage", id: pokemonId[1], status: pokemonStatus[1],
+        type: "-damage", id: pokemonId[1], status: pokemonStatus[1],
         from: from[1]
     },
     {
@@ -75,58 +75,58 @@ export const battleEvent: AnyBattleEvent[] =
         type: "drag", id: pokemonId[1], details: pokemonDetails[1],
         status: pokemonStatus[1]
     },
-    {type: "end", id: pokemonId[2], volatile: "confusion"},
-    {type: "endability", id: pokemonId[1], ability: "Swift Swim"},
-    {type: "enditem", id: pokemonId[0], item: "Lum Berry", eat: true},
-    {type: "enditem", id: pokemonId[2], item: "Sitrus Berry", from: from[3]},
+    {type: "-end", id: pokemonId[2], volatile: "confusion"},
+    {type: "-endability", id: pokemonId[1], ability: "Swift Swim"},
+    {type: "-enditem", id: pokemonId[0], item: "Lum Berry", eat: true},
+    {type: "-enditem", id: pokemonId[2], item: "Sitrus Berry", from: from[3]},
     {type: "faint", id: pokemonId[2]},
-    {type: "fieldend", effect: "move: Gravity"},
-    {type: "fieldstart", effect: "move: Gravity"},
+    {type: "-fieldend", effect: "move: Gravity"},
+    {type: "-fieldstart", effect: "move: Gravity"},
     {
-        type: "formechange", id: pokemonId[0], details: pokemonDetails[0],
+        type: "-formechange", id: pokemonId[0], details: pokemonDetails[0],
         status: pokemonStatus[0]
     },
-    {type: "heal", id: pokemonId[1], status: pokemonStatus[1]},
-    {type: "invertboost", id: pokemonId[2]},
+    {type: "-heal", id: pokemonId[1], status: pokemonStatus[1]},
+    {type: "-invertboost", id: pokemonId[2]},
+    {type: "-item", id: pokemonId[2], item: "Leftovers", from: from[4]},
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
         targetId: pokemonId[1]
     },
-    {type: "item", id: pokemonId[2], item: "Leftovers", from: from[4]},
     {type: "move", id: pokemonId[1], moveName: "Splash"},
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
         targetId: pokemonId[0], from: from[2]
     },
-    {type: "mustrecharge", id: pokemonId[2]},
+    {type: "-mustrecharge", id: pokemonId[2]},
     {
-        type: "prepare", id: pokemonId[1], moveName: "Solar Beam",
+        type: "-prepare", id: pokemonId[1], moveName: "Solar Beam",
         targetId: pokemonId[0]
     },
-    {type: "prepare", id: pokemonId[0], moveName: "Razor Wind"},
-    {type: "setboost", id: pokemonId[2], stat: "evasion", amount: 6},
+    {type: "-prepare", id: pokemonId[0], moveName: "Razor Wind"},
+    {type: "-setboost", id: pokemonId[2], stat: "evasion", amount: 6},
     {
-        type: "sethp",
+        type: "-sethp",
         newHPs:
         [
             {id: pokemonId[0], status: pokemonStatus[0]},
             {id: pokemonId[1], status: pokemonStatus[1]}
         ]
     },
-    {type: "singleturn", id: pokemonId[2], status: "Protect"},
-    {type: "sideend", id: "p1", condition: "Spikes"},
-    {type: "sidestart", id: "p2", condition: "move: Stealth Rock"},
+    {type: "-singleturn", id: pokemonId[2], status: "Protect"},
+    {type: "-sideend", id: "p1", condition: "Spikes"},
+    {type: "-sidestart", id: "p2", condition: "move: Stealth Rock"},
     {
-        type: "start", id: pokemonId[0], volatile: "confusion", otherArgs: [],
+        type: "-start", id: pokemonId[0], volatile: "confusion", otherArgs: [],
         fatigue: true
     },
     {
-        type: "start", id: pokemonId[1], volatile: "Disable",
+        type: "-start", id: pokemonId[1], volatile: "Disable",
         otherArgs: ["Splash"], from: from[2]
     },
-    {type: "status", id: pokemonId[0], majorStatus: "slp"},
+    {type: "-status", id: pokemonId[0], majorStatus: "slp"},
     {
-        type: "swapboost", source: pokemonId[2], target: pokemonId[1],
+        type: "-swapboost", source: pokemonId[2], target: pokemonId[1],
         stats: ["atk", "accuracy"]
     },
     {
@@ -135,13 +135,13 @@ export const battleEvent: AnyBattleEvent[] =
     },
     {type: "tie"},
     {
-        type: "weather", weatherType: "Hail", upkeep: false,
+        type: "-weather", weatherType: "Hail", upkeep: false,
         from: {type: "ability", ability: "Snow Warning"},
         of: {owner: "p2", position: "a", nickname: "Abomasnow"}
     },
-    {type: "unboost", id: pokemonId[2], stat: "evasion", amount: 2},
-    {type: "weather", weatherType: "none", upkeep: false},
-    {type: "weather", weatherType: "RainDance", upkeep: true},
+    {type: "-unboost", id: pokemonId[2], stat: "evasion", amount: 2},
+    {type: "-weather", weatherType: "none", upkeep: false},
+    {type: "-weather", weatherType: "RainDance", upkeep: true},
     {type: "win", winner: username[1]}
 ];
 

@@ -579,7 +579,7 @@ describe("Battle and EventProcessor", function()
                 {
                     events:
                     [
-                        {type: "ability", id: them1, ability: "Swift Swim"}
+                        {type: "-ability", id: them1, ability: "Swift Swim"}
                     ]
                 });
                 expect(battle.state.teams.them.active.ability)
@@ -598,7 +598,7 @@ describe("Battle and EventProcessor", function()
                 {
                     events:
                     [
-                        {type: "activate", id: us1, volatile: "move: Charge"}
+                        {type: "-activate", id: us1, volatile: "move: Charge"}
                     ]
                 });
                 expect(volatile.charge.isActive).to.be.true;
@@ -614,7 +614,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "confusion",
+                            type: "-start", id: us1, volatile: "confusion",
                             otherArgs: []
                         }
                     ]
@@ -624,13 +624,16 @@ describe("Battle and EventProcessor", function()
 
                 await battle.progress(
                 {
-                    events: [{type: "activate", id: us1, volatile: "confusion"}]
+                    events:
+                    [
+                        {type: "-activate", id: us1, volatile: "confusion"}
+                    ]
                 });
                 expect(volatile.confusion.isActive).to.be.true;
                 expect(volatile.confusion.turns).to.equal(2);
 
                 await battle.progress(
-                    {events: [{type: "end", id: us1, volatile: "confusion"}]});
+                    {events: [{type: "-end", id: us1, volatile: "confusion"}]});
                 expect(volatile.confusion.isActive).to.be.false;
                 expect(volatile.confusion.turns).to.equal(0);
             });
@@ -645,7 +648,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "Magnet Rise",
+                            type: "-start", id: us1, volatile: "Magnet Rise",
                             otherArgs: []
                         }
                     ]
@@ -654,7 +657,7 @@ describe("Battle and EventProcessor", function()
 
                 await battle.progress(
                 {
-                    events: [{type: "end", id: us1, volatile: "Magnet Rise"}]
+                    events: [{type: "-end", id: us1, volatile: "Magnet Rise"}]
                 });
                 expect(volatile.magnetRise.isActive).to.be.false;
             });
@@ -669,7 +672,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "Embargo",
+                            type: "-start", id: us1, volatile: "Embargo",
                             otherArgs: []
                         }
                     ]
@@ -678,7 +681,7 @@ describe("Battle and EventProcessor", function()
 
                 await battle.progress(
                 {
-                    events: [{type: "end", id: us1, volatile: "Embargo"}]
+                    events: [{type: "-end", id: us1, volatile: "Embargo"}]
                 });
                 expect(volatile.embargo.isActive).to.be.false;
             });
@@ -693,7 +696,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "move: Taunt",
+                            type: "-start", id: us1, volatile: "move: Taunt",
                             otherArgs: []
                         }
                     ]
@@ -702,7 +705,7 @@ describe("Battle and EventProcessor", function()
 
                 await battle.progress(
                 {
-                    events: [{type: "end", id: us1, volatile: "move: Taunt"}]
+                    events: [{type: "-end", id: us1, volatile: "move: Taunt"}]
                 });
                 expect(volatile.taunt.isActive).to.be.false;
             });
@@ -717,7 +720,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "Torment",
+                            type: "-start", id: us1, volatile: "Torment",
                             otherArgs: []
                         }
                     ]
@@ -735,7 +738,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "Substitute",
+                            type: "-start", id: us1, volatile: "Substitute",
                             otherArgs: []
                         }
                     ]
@@ -743,7 +746,9 @@ describe("Battle and EventProcessor", function()
                 expect(volatile.substitute).to.be.true;
 
                 await battle.progress(
-                    {events: [{type: "end", id: us1, volatile: "Substitute"}]});
+                {
+                    events: [{type: "-end", id: us1, volatile: "Substitute"}]
+                });
                 expect(volatile.substitute).to.be.false;
             });
 
@@ -761,7 +766,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "Disable",
+                            type: "-start", id: us1, volatile: "Disable",
                             otherArgs: ["Splash"]
                         },
                         {type: "upkeep"}, {type: "turn", num: 2}
@@ -775,7 +780,7 @@ describe("Battle and EventProcessor", function()
                 {
                     events:
                     [
-                        {type: "end", id: us1, volatile: "move: Disable"},
+                        {type: "-end", id: us1, volatile: "move: Disable"},
                         {type: "upkeep"}, {type: "turn", num: 3}
                     ]
                 });
@@ -793,7 +798,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "Slow Start",
+                            type: "-start", id: us1, volatile: "Slow Start",
                             otherArgs: []
                         }
                     ]
@@ -806,7 +811,9 @@ describe("Battle and EventProcessor", function()
                 expect(volatile.slowStart.turns).to.equal(2);
 
                 await battle.progress(
-                    {events: [{type: "end", id: us1, volatile: "Slow Start"}]});
+                {
+                    events: [{type: "-end", id: us1, volatile: "Slow Start"}]
+                });
                 expect(volatile.slowStart.isActive).to.be.false;
                 expect(volatile.slowStart.turns).to.equal(0);
             });
@@ -818,7 +825,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "start", id: us1, volatile: "Future Sight",
+                            type: "-start", id: us1, volatile: "Future Sight",
                             otherArgs: []
                         },
                         {type: "upkeep"}, {type: "turn", num: 2}
@@ -838,7 +845,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "end", id: us1, volatile: "Future Sight",
+                            type: "-end", id: us1, volatile: "Future Sight",
                             otherArgs: []
                         },
                         {type: "turn", num: 4}
@@ -863,7 +870,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "start", id: us1, volatile: "typeadd",
+                                type: "-start", id: us1, volatile: "typeadd",
                                 otherArgs: ["Fire"]
                             }
                         ]
@@ -891,7 +898,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "start", id: us1, volatile: "typechange",
+                                type: "-start", id: us1, volatile: "typechange",
                                 otherArgs: ["Fire"]
                             }
                         ]
@@ -916,7 +923,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "start", id: us1, volatile: "typechange",
+                                type: "-start", id: us1, volatile: "typechange",
                                 otherArgs: ["Fire/Ground"]
                             }
                         ]
@@ -937,7 +944,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "start", id: us1, volatile: "typechange",
+                                type: "-start", id: us1, volatile: "typechange",
                                 otherArgs: ["Rock/Dragon/Water"]
                             }
                         ]
@@ -956,7 +963,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "start", id: us1, volatile: "typechange",
+                                type: "-start", id: us1, volatile: "typechange",
                                 otherArgs: []
                             }
                         ]
@@ -980,7 +987,7 @@ describe("Battle and EventProcessor", function()
                     {
                         events:
                         [
-                            {type: "boost", id: us1, stat: "def", amount: 1}
+                            {type: "-boost", id: us1, stat: "def", amount: 1}
                         ]
                     });
                     expect(boosts.def).to.equal(1);
@@ -997,7 +1004,7 @@ describe("Battle and EventProcessor", function()
                     boost1.atk = 1;
                     boost1.accuracy = -4;
                     boost2.def = -1;
-                    await battle.progress({events: [{type: "clearallboost"}]});
+                    await battle.progress({events: [{type: "-clearallboost"}]});
                     expect(boost1.atk).to.equal(0);
                     expect(boost1.accuracy).to.equal(0);
                     expect(boost2.def).to.equal(0);
@@ -1012,7 +1019,7 @@ describe("Battle and EventProcessor", function()
                     boosts.atk = 1;
                     boosts.evasion = -3;
                     await battle.progress(
-                        {events: [{type: "clearnegativeboost", id: us1}]});
+                        {events: [{type: "-clearnegativeboost", id: us1}]});
                     expect(boosts.atk).to.equal(1);
                     expect(boosts.evasion).to.equal(0);
                 });
@@ -1026,7 +1033,7 @@ describe("Battle and EventProcessor", function()
                     boosts.atk = 1;
                     boosts.evasion = -3;
                     await battle.progress(
-                        {events: [{type: "clearpositiveboost", id: us1}]});
+                        {events: [{type: "-clearpositiveboost", id: us1}]});
                     expect(boosts.atk).to.equal(0);
                     expect(boosts.evasion).to.equal(-3);
                 });
@@ -1046,7 +1053,7 @@ describe("Battle and EventProcessor", function()
                     {
                         events:
                         [
-                            {type: "copyboost", source: us1, target: them1}
+                            {type: "-copyboost", source: us1, target: them1}
                         ]
                     });
                     expect(boost1.atk).to.equal(0);
@@ -1064,7 +1071,7 @@ describe("Battle and EventProcessor", function()
                     boosts.spa = 4;
                     boosts.spe = -6;
                     await battle.progress(
-                        {events: [{type: "invertboost", id: us1}]});
+                        {events: [{type: "-invertboost", id: us1}]});
                     expect(boosts.spa).to.equal(-4);
                     expect(boosts.spe).to.equal(6);
                 });
@@ -1080,7 +1087,7 @@ describe("Battle and EventProcessor", function()
                     {
                         events:
                         [
-                            {type: "setboost", id: us1, stat: "atk", amount: 5}
+                            {type: "-setboost", id: us1, stat: "atk", amount: 5}
                         ]
                     });
                     expect(boosts.atk).to.equal(5);
@@ -1102,7 +1109,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "swapboost", source: us1, target: them1,
+                                type: "-swapboost", source: us1, target: them1,
                                 stats: ["atk", "evasion"]
                             }
                         ]
@@ -1130,7 +1137,7 @@ describe("Battle and EventProcessor", function()
                     {
                         events:
                         [
-                            {type: "unboost", id: us1, stat: "spe", amount: 1}
+                            {type: "-unboost", id: us1, stat: "spe", amount: 1}
                         ]
                     });
                     expect(boosts.spe).to.equal(-1);
@@ -1237,7 +1244,7 @@ describe("Battle and EventProcessor", function()
                 mon.majorStatus.tick();
                 await battle.progress(
                 {
-                    events: [{type: "curestatus", id: us1, majorStatus: "slp"}]
+                    events: [{type: "-curestatus", id: us1, majorStatus: "slp"}]
                 });
                 expect(mon.majorStatus.current).to.be.null;
             });
@@ -1248,7 +1255,7 @@ describe("Battle and EventProcessor", function()
                 mon.majorStatus.afflict("slp");
                 await battle.progress(
                 {
-                    events: [{type: "curestatus", id: us1, majorStatus: "slp"}]
+                    events: [{type: "-curestatus", id: us1, majorStatus: "slp"}]
                 });
                 expect(mon.majorStatus.current).to.be.null;
                 expect(mon.ability).to.equal("earlybird");
@@ -1264,7 +1271,7 @@ describe("Battle and EventProcessor", function()
                 mon1.majorStatus.afflict("slp");
                 mon2.majorStatus.afflict("par");
                 await battle.progress(
-                    {events: [{type: "cureteam", id: us1}]});
+                    {events: [{type: "-cureteam", id: us1}]});
                 expect(mon1.majorStatus.current).to.be.null;
                 expect(mon2.majorStatus.current).to.be.null;
             });
@@ -1279,7 +1286,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "damage", id: us1,
+                            type: "-damage", id: us1,
                             status: {hp: 1, hpMax: 10, condition: null}
                         }
                     ]
@@ -1299,7 +1306,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "damage", id: us1,
+                            type: "-damage", id: us1,
                             status: {hp: 1, hpMax: 10, condition: "tox"},
                             from: {type: "psn"}
                         }
@@ -1408,7 +1415,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "formechange",
+                            type: "-formechange",
                             id: us1,
                             details:
                             {
@@ -1447,7 +1454,7 @@ describe("Battle and EventProcessor", function()
                         precon(mon.item);
 
                         let ev: ItemEvent =
-                                {type: "item", id: them1, item: "Life Orb"};
+                                {type: "-item", id: them1, item: "Life Orb"};
                         if (move) ev = {...ev, from: {type: "move", move}};
 
                         const item = mon.item;
@@ -1477,7 +1484,10 @@ describe("Battle and EventProcessor", function()
                     mon.item.narrow("lifeorb");
                     await battle.progress(
                     {
-                        events: [{type: "enditem", id: them1, item: "Life Orb"}]
+                        events:
+                        [
+                            {type: "-enditem", id: them1, item: "Life Orb"}
+                        ]
                     });
                     expect(mon.item.definiteValue).to.not.be.null;
                     expect(mon.item.definiteValue!.name).to.equal("none");
@@ -1502,7 +1512,9 @@ describe("Battle and EventProcessor", function()
 
                             // consume/remove some item
                             let event: EndItemEvent =
-                                {type: "enditem", id: them1, item: "Lum Berry"};
+                            {
+                                type: "-enditem", id: them1, item: "Lum Berry"
+                            };
                             if (suffix === "eat") event = {...event, eat: true};
                             else if (suffix === "stealeat")
                             {
@@ -1562,7 +1574,10 @@ describe("Battle and EventProcessor", function()
                         expect(v.unburden).to.be.false;
                         await battle.progress(
                         {
-                            events: [{type: "enditem", id: them1, item: "Mail"}]
+                            events:
+                            [
+                                {type: "-enditem", id: them1, item: "Mail"}
+                            ]
                         });
                         expect(v.unburden).to.be.true;
                     });
@@ -1580,9 +1595,9 @@ describe("Battle and EventProcessor", function()
                         {
                             events:
                             [
-                                {type: "enditem", id: them1, item: "Mail"},
+                                {type: "-enditem", id: them1, item: "Mail"},
                                 {
-                                    type: "item", id: them1, item: "Life Orb",
+                                    type: "-item", id: them1, item: "Life Orb",
                                     from: {type: "move", move: "Covet"}
                                 }
                             ]
@@ -1723,7 +1738,7 @@ describe("Battle and EventProcessor", function()
                             targetId: them1
                         },
                         {type: "upkeep"}, {type: "turn", num: 4},
-                        {type: "mustrecharge", id: us1}
+                        {type: "-mustrecharge", id: us1}
                     ]
                 });
                 expect(battle.lastChoices).to.have.members(["move 1"]);
@@ -1799,7 +1814,7 @@ describe("Battle and EventProcessor", function()
                             //  supposed to hide targetId (applies to doubles)
                         },
                         {
-                            type: "prepare", id: us1, moveName: "Solar Beam",
+                            type: "-prepare", id: us1, moveName: "Solar Beam",
                             targetId: them1
                         },
                         {type: "upkeep"}
@@ -1897,7 +1912,7 @@ describe("Battle and EventProcessor", function()
                             //  supposed to hide targetId (applies to doubles)
                         },
                         {
-                            type: "prepare", id: us1, moveName: "Solar Beam",
+                            type: "-prepare", id: us1, moveName: "Solar Beam",
                             targetId: them1
                         },
                         {type: "upkeep"}
@@ -1954,7 +1969,7 @@ describe("Battle and EventProcessor", function()
                 const hp2 = battle.state.teams.them.active.hp;
                 const event: SetHPEvent =
                 {
-                    type: "sethp",
+                    type: "-sethp",
                     newHPs:
                     [
                         {id: us1, status: {hp: 1, hpMax: 10, condition: null}},
@@ -2001,15 +2016,15 @@ describe("Battle and EventProcessor", function()
                     expect(ts[field]).to.equal(0);
 
                     await battle.progress(
-                        {events: [{type: "sidestart", id: "p1", condition}]});
+                        {events: [{type: "-sidestart", id: "p1", condition}]});
                     expect(ts[field]).to.equal(1);
 
                     await battle.progress(
-                        {events: [{type: "sidestart", id: "p1", condition}]});
+                        {events: [{type: "-sidestart", id: "p1", condition}]});
                     expect(ts[field]).to.equal(2);
 
                     await battle.progress(
-                        {events: [{type: "sideend", id: "p1", condition}]});
+                        {events: [{type: "-sideend", id: "p1", condition}]});
                     expect(ts[field]).to.equal(0);
                 });
             }
@@ -2035,7 +2050,7 @@ describe("Battle and EventProcessor", function()
                                 targetId: them1
                             },
                             {
-                                type: "sidestart", id: them1.owner,
+                                type: "-sidestart", id: them1.owner,
                                 condition: status
                             }
                         ]
@@ -2073,7 +2088,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "sideend", id: them1.owner,
+                                type: "-sideend", id: them1.owner,
                                 condition: status
                             },
                             {type: "turn", num: 9}
@@ -2100,7 +2115,7 @@ describe("Battle and EventProcessor", function()
                     {
                         events:
                         [
-                            {type: "singleturn", id: us1, status: "Protect"},
+                            {type: "-singleturn", id: us1, status: "Protect"},
                             {type: "turn", num: 2}
                         ]
                     });
@@ -2111,7 +2126,7 @@ describe("Battle and EventProcessor", function()
                     {
                         events:
                         [
-                            {type: "singleturn", id: us1, status: "Protect"},
+                            {type: "-singleturn", id: us1, status: "Protect"},
                             {type: "turn", num: 3}
                         ]
                     });
@@ -2139,7 +2154,7 @@ describe("Battle and EventProcessor", function()
                                 type: "move", id: us1, moveName: "Outrage",
                                 targetId: them1
                             },
-                            {type: "activate", id: them1, volatile: "Protect"}
+                            {type: "-activate", id: them1, volatile: "Protect"}
                         ]
                     });
                     expect(battle.state.teams.us.active.volatile.lockedMove
@@ -2169,7 +2184,7 @@ describe("Battle and EventProcessor", function()
                                 type: "move", id: us1, moveName: "Outrage",
                                 targetId: them1
                             },
-                            {type: "activate", id: them1, volatile: "Protect"}
+                            {type: "-activate", id: them1, volatile: "Protect"}
                         ]
                     });
                     expect(battle.state.teams.us.active.volatile.lockedMove
@@ -2185,7 +2200,7 @@ describe("Battle and EventProcessor", function()
                 const mon = battle.state.teams.us.active;
                 expect(mon.majorStatus.current).to.be.null;
                 await battle.progress(
-                    {events: [{type: "status", id: us1, majorStatus: "frz"}]});
+                    {events: [{type: "-status", id: us1, majorStatus: "frz"}]});
                 expect(mon.majorStatus.current).to.equal("frz");
             });
         });
@@ -2205,7 +2220,7 @@ describe("Battle and EventProcessor", function()
                 {
                     events:
                     [
-                        {type: "weather", weatherType: "none", upkeep: false}
+                        {type: "-weather", weatherType: "none", upkeep: false}
                     ]
                 });
                 expect(weather.type).to.equal("none");
@@ -2221,7 +2236,7 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "weather", weatherType: "RainDance",
+                            type: "-weather", weatherType: "RainDance",
                             upkeep: false,
                             from: {type: "ability", ability: "Drizzle"}, of: us1
                         }
@@ -2247,7 +2262,7 @@ describe("Battle and EventProcessor", function()
                             targetId: them1
                         },
                         {
-                            type: "weather", weatherType: "SunnyDay",
+                            type: "-weather", weatherType: "SunnyDay",
                             upkeep: false
                         }
                     ]
@@ -2269,7 +2284,7 @@ describe("Battle and EventProcessor", function()
                 {
                     events:
                     [
-                        {type: "weather", weatherType: "Hail", upkeep: true}
+                        {type: "-weather", weatherType: "Hail", upkeep: true}
                     ]
                 });
                 expect(weather.turns).to.equal(1);
@@ -2330,7 +2345,8 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "boost", id: us1, stat: "atk", amount: -1,
+                                type: "-boost", id: us1, stat: "atk",
+                                amount: -1,
                                 from: {type: "ability", ability: "Intimidate"},
                                 of: them2
                             }
@@ -2355,7 +2371,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "ability", ability: "Swift Swim",
+                                type: "-ability", ability: "Swift Swim",
                                 id:
                                 {
                                     owner: "p1", position: "a",
@@ -2392,7 +2408,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "damage", id: us1,
+                                type: "-damage", id: us1,
                                 status: {hp: 100, hpMax: 100, condition: null},
                                 from: {type: "item", item: "Leftovers"}
                             }
@@ -2414,7 +2430,7 @@ describe("Battle and EventProcessor", function()
                         events:
                         [
                             {
-                                type: "start", id: us1, volatile: "confusion",
+                                type: "-start", id: us1, volatile: "confusion",
                                 otherArgs: [], fatigue: true
                             }
                         ]

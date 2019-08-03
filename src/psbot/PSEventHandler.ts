@@ -51,7 +51,7 @@ export class PSEventHandler
         this.logger = logger;
 
         this.listener
-        .on("ability", event =>
+        .on("-ability", event =>
         {
             const active = this.getActive(event.id.owner);
             if (event.from && event.from.type === "ability" &&
@@ -69,12 +69,12 @@ export class PSEventHandler
             //  opponent's ability
             active.ability = toIdName(event.ability);
         })
-        .on("endability", event =>
+        .on("-endability", event =>
         {
             // NOTE: may be replaced with "|-start|PokemonID|Gastro Acid" later
             this.getActive(event.id.owner).volatile.suppressAbility();
         })
-        .on("start", event =>
+        .on("-start", event =>
         {
             const active = this.getActive(event.id.owner);
 
@@ -169,7 +169,7 @@ export class PSEventHandler
                 }
             }
         })
-        .on("activate", event =>
+        .on("-activate", event =>
         {
             const ev = event.volatile;
             if (ev === "confusion")
@@ -194,7 +194,7 @@ export class PSEventHandler
             }
             else this.logger.debug(`Ignoring activate '${event.volatile}'`);
         })
-        .on("end", event =>
+        .on("-end", event =>
         {
             const team = this.getTeam(event.id.owner);
             const v = team.active.volatile;
@@ -215,7 +215,7 @@ export class PSEventHandler
             else if (isFutureMove(id)) team.status.futureMoves[id].end();
             else this.logger.debug(`Ignoring end '${event.volatile}'`);
         })
-        .on("boost", event =>
+        .on("-boost", event =>
         {
             this.getActive(event.id.owner).volatile.boosts[event.stat] +=
                 event.amount;
@@ -254,13 +254,13 @@ export class PSEventHandler
                 active.moveset.reveal(toIdName(event.moveName));
             }
         })
-        .on("clearallboost", () =>
+        .on("-clearallboost", () =>
             (Object.keys(boostNames) as BoostName[]).forEach(stat =>
             {
                 this.state.teams.us.active.volatile.boosts[stat] = 0;
                 this.state.teams.them.active.volatile.boosts[stat] = 0;
             }))
-        .on("clearnegativeboost", () =>
+        .on("-clearnegativeboost", () =>
             (Object.keys(boostNames) as BoostName[]).forEach(stat =>
                 (["us", "them"] as Side[]).forEach(side =>
                 {
@@ -268,7 +268,7 @@ export class PSEventHandler
                         this.state.teams[side].active.volatile.boosts;
                     if (boosts[stat] < 0) boosts[stat] = 0;
                 })))
-        .on("clearpositiveboost", () =>
+        .on("-clearpositiveboost", () =>
             (Object.keys(boostNames) as BoostName[]).forEach(stat =>
                 (["us", "them"] as Side[]).forEach(side =>
                 {
@@ -276,7 +276,7 @@ export class PSEventHandler
                         this.state.teams[side].active.volatile.boosts;
                     if (boosts[stat] > 0) boosts[stat] = 0;
                 })))
-        .on("copyboost", event =>
+        .on("-copyboost", event =>
         {
             const source = this.getActive(event.source.owner).volatile.boosts;
             const target = this.getActive(event.target.owner).volatile.boosts;
@@ -285,7 +285,7 @@ export class PSEventHandler
                 source[stat] = target[stat];
             }
         })
-        .on("curestatus", event =>
+        .on("-curestatus", event =>
         {
             const active = this.getActive(event.id.owner);
             const status = active.majorStatus;
@@ -297,8 +297,8 @@ export class PSEventHandler
             }
             status.cure();
         })
-        .on("cureteam", event => this.getTeam(event.id.owner).cure())
-        .on("damage", event => this.handleDamage(event))
+        .on("-cureteam", event => this.getTeam(event.id.owner).cure())
+        .on("-damage", event => this.handleDamage(event))
         .on("detailschange", event =>
         {
             const active = this.getActive(event.id.owner);
@@ -311,28 +311,28 @@ export class PSEventHandler
         })
         .on("drag", event => this.handleSwitch(event))
         .on("faint", event => { this.getActive(event.id.owner).faint(); })
-        .on("fieldend", event =>
+        .on("-fieldend", event =>
         {
             if (event.effect === "move: Gravity")
             {
                 this.state.status.gravity.end();
             }
         })
-        .on("fieldstart", event =>
+        .on("-fieldstart", event =>
         {
             if (event.effect === "move: Gravity")
             {
                 this.state.status.gravity.start();
             }
         })
-        .on("formechange", event =>
+        .on("-formechange", event =>
         {
             // TODO: set other details?
             this.getActive(event.id.owner).volatile.overrideSpecies =
                 event.details.species;
         })
-        .on("heal", event => this.handleDamage(event))
-        .on("invertboost", event =>
+        .on("-heal", event => this.handleDamage(event))
+        .on("-invertboost", event =>
         {
             const boosts = this.getActive(event.id.owner).volatile.boosts;
             for (const stat of Object.keys(boostNames) as BoostName[])
@@ -340,7 +340,7 @@ export class PSEventHandler
                 boosts[stat] = -boosts[stat];
             }
         })
-        .on("item", event =>
+        .on("-item", event =>
         {
             const mon = this.getActive(event.id.owner);
             mon.setItem(toIdName(event.item),
@@ -349,7 +349,7 @@ export class PSEventHandler
                 ["Thief", "Covet", "Trick", "Switcheroo", "Recycle"]
                     .includes(event.from.move));
         })
-        .on("enditem", event =>
+        .on("-enditem", event =>
         {
             const mon = this.getActive(event.id.owner);
 
@@ -375,23 +375,23 @@ export class PSEventHandler
                 // don't consume pp if locked into using the move
                 /*nopp*/ event.from && event.from.type === "lockedmove");
         })
-        .on("mustrecharge", event =>
+        .on("-mustrecharge", event =>
         {
             this.getActive(event.id.owner).volatile.mustRecharge = true;
         })
-        .on("prepare", event =>
+        .on("-prepare", event =>
         {
             // moveName should be one of the two-turn moves being
             //  prepared
             this.getActive(event.id.owner).volatile.twoTurn.start(
                     toIdName(event.moveName) as any);
         })
-        .on("setboost", event =>
+        .on("-setboost", event =>
         {
             this.getActive(event.id.owner).volatile.boosts[event.stat] =
                 event.amount;
         })
-        .on("sethp", event =>
+        .on("-sethp", event =>
         {
             for (const pair of event.newHPs)
             {
@@ -400,22 +400,22 @@ export class PSEventHandler
                 active.majorStatus.assert(pair.status.condition);
             }
         })
-        .on("sideend", (event, events, i) =>
+        .on("-sideend", (event, events, i) =>
             this.handleSideCondition(event, events, i))
-        .on("sidestart", (event, events, i) =>
+        .on("-sidestart", (event, events, i) =>
             this.handleSideCondition(event, events, i))
-        .on("singleturn", event =>
+        .on("-singleturn", event =>
         {
             const v = this.getActive(event.id.owner).volatile;
             if (PSEventHandler.isStallSingleTurn(event.status)) v.stall(true);
             else if (event.status === "move: Roost") v.roost = true;
         })
-        .on("status", event =>
+        .on("-status", event =>
         {
             this.getActive(event.id.owner).majorStatus.afflict(
                     event.majorStatus);
         })
-        .on("swapboost", event =>
+        .on("-swapboost", event =>
         {
             const source = this.getActive(event.source.owner).volatile.boosts;
             const target = this.getActive(event.target.owner).volatile.boosts;
@@ -428,7 +428,7 @@ export class PSEventHandler
         .on("tie", () => { this._battling = false; })
         .on("win", () => { this._battling = false; })
         .on("turn", () => { this.newTurn = true; })
-        .on("unboost", event =>
+        .on("-unboost", event =>
         {
             this.getActive(event.id.owner).volatile.boosts[event.stat] -=
                 event.amount;
@@ -442,7 +442,7 @@ export class PSEventHandler
             this.state.teams.us.status.selfSwitch = false;
             this.state.teams.them.status.selfSwitch = false;
         })
-        .on("weather", (event, events, i) =>
+        .on("-weather", (event, events, i) =>
         {
             const weather = this.state.status.weather;
             if (event.weatherType === "none") weather.reset();
@@ -582,7 +582,7 @@ export class PSEventHandler
     private handleSuffixes(event: AnyBattleEvent): void
     {
         // these corner cases should already be handled
-        if (event.type === "ability" && event.from &&
+        if (event.type === "-ability" && event.from &&
             event.from.type === "ability" &&
             event.from.ability === "Trace" && event.of)
         {
@@ -651,20 +651,20 @@ export class PSEventHandler
         switch (condition)
         {
             case "Spikes":
-                if (event.type === "sidestart") ++ts.spikes;
+                if (event.type === "-sidestart") ++ts.spikes;
                 else ts.spikes = 0;
                 break;
             case "Stealth Rock":
-                if (event.type === "sidestart") ++ts.stealthRock;
+                if (event.type === "-sidestart") ++ts.stealthRock;
                 else ts.stealthRock = 0;
                 break;
             case "Toxic Spikes":
-                if (event.type === "sidestart") ++ts.toxicSpikes;
+                if (event.type === "-sidestart") ++ts.toxicSpikes;
                 else ts.toxicSpikes = 0;
                 break;
             case "Reflect":
             case "Light Screen":
-                if (event.type === "sidestart")
+                if (event.type === "-sidestart")
                 {
                     const lastEvent = events[i - 1];
                     if (!lastEvent)

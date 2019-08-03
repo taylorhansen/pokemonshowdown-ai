@@ -1,13 +1,13 @@
 /** @file Exposes the `parsePSMessage` function. */
 import { BoostName, boostNames } from "../../battle/dex/dex-util";
 import { Logger } from "../../Logger";
-import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventPrefix,
+import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
     BoostEvent, CantEvent, ClearAllBoostEvent, ClearBoostEvent,
     ClearNegativeBoostEvent, ClearPositiveBoostEvent, CopyBoostEvent,
     CureStatusEvent, CureTeamEvent, DamageEvent, DetailsChangeEvent,
     DragEvent, EndAbilityEvent, EndEvent, EndItemEvent, FaintEvent,
     FieldEndEvent, FieldStartEvent, FormeChangeEvent, HealEvent,
-    InvertBoostEvent, isBattleEventPrefix, ItemEvent, MoveEvent,
+    InvertBoostEvent, isBattleEventType, ItemEvent, MoveEvent,
     MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
     SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent, SwapBoostEvent,
     SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
@@ -95,7 +95,7 @@ async function messages(input: Input, info: Info): Promise<void>
 /** Parses a Message. */
 function message(input: Input, info: Info): Result<Promise<void>>
 {
-    const prefix = input.get() as MajorPrefix | "player" | BattleEventPrefix;
+    const prefix = input.get() as MajorPrefix | "player" | BattleEventType;
 
     switch (prefix)
     {
@@ -108,7 +108,7 @@ function message(input: Input, info: Info): Result<Promise<void>>
         case "updateuser": return messageUpdateUser(input, info);
         case "player": return messageBattleInit(input, info);
         default:
-            if (isBattleEventPrefix(prefix))
+            if (isBattleEventType(prefix))
             {
                 return messageBattleProgress(input, info);
             }
@@ -296,7 +296,7 @@ function messageBattleInit(input: Input, info: Info): Result<Promise<void>>
             }
                 // TODO: team preview
             default:
-                if (isBattleEventPrefix(prefix))
+                if (isBattleEventType(prefix))
                 {
                     // start of initial events
                     const r = battleEvents(input, info);
@@ -413,7 +413,7 @@ function battleEvent(input: Input, info: Info): Result<AnyBattleEvent | null>
 function battleEventHelper(input: Input, info: Info):
     Result<AnyBattleEvent | null>
 {
-    switch (input.get() as BattleEventPrefix)
+    switch (input.get() as BattleEventType)
     {
         case "-ability": return eventAbility(input, info);
         case "-activate": return eventActivate(input, info);
@@ -440,8 +440,7 @@ function battleEventHelper(input: Input, info: Info):
         case "-prepare": return eventPrepare(input, info);
         case "-setboost": return eventSetBoost(input, info);
         case "-sethp": return eventSetHP(input, info);
-        case "-sideend": return eventSideEnd(input, info);
-        case "-sidestart": return eventSideStart(input, info);
+        case "-sideend": case "-sidestart": return eventSide(input, info);
         case "-singleturn": return eventSingleTurn(input, info);
         case "-start": return eventStart(input, info);
         case "-status": return eventStatus(input, info);
@@ -469,7 +468,7 @@ function battleEventHelper(input: Input, info: Info):
  */
 const eventAbility: Parser<AbilityEvent> = transform(
     sequence(word("-ability"), pokemonId, anyWord),
-    ([_, id, ability]) => ({type: "ability", id, ability}));
+    ([type, id, ability]) => ({type, id, ability}));
 
 /**
  * Parses an ActivateEvent.
@@ -480,7 +479,7 @@ const eventAbility: Parser<AbilityEvent> = transform(
  */
 const eventActivate: Parser<ActivateEvent> = transform(
     sequence(word("-activate"), pokemonId, anyWord),
-    ([_, id, volatile]) => ({type: "activate", id, volatile}));
+    ([type, id, volatile]) => ({type, id, volatile}));
 
 /**
  * Parses a BoostEvent.
@@ -491,7 +490,7 @@ const eventActivate: Parser<ActivateEvent> = transform(
  */
 const eventBoost: Parser<BoostEvent> = transform(
     sequence(word("-boost"), pokemonId, boostName, integer),
-    ([_, id, stat, amount]) => ({type: "boost", id, stat, amount}));
+    ([type, id, stat, amount]) => ({type, id, stat, amount}));
 
 /**
  * Parses a CantEvent.
@@ -502,10 +501,8 @@ const eventBoost: Parser<BoostEvent> = transform(
  */
 const eventCant: Parser<CantEvent> = transform(
     sequence(word("cant"), pokemonId, anyWord, eventCantHelper),
-    ([_, id, reason, moveName]) =>
-        moveName ?
-            {type: "cant", id, reason, moveName}
-            : {type: "cant", id, reason});
+    ([type, id, reason, moveName]) =>
+        moveName ? {type, id, reason, moveName} : {type, id, reason});
 
 /**
  * Parses the `moveName` part of a `|cant|` message without accidentally parsing
@@ -529,7 +526,7 @@ function eventCantHelper(input: Input, info: Info): Result<string | undefined>
  * |-clearallboost
  */
 const eventClearAllBoost: Parser<ClearAllBoostEvent> =
-    transform(word("-clearallboost"), () => ({type: "clearallboost"}));
+    transform(word("-clearallboost"), type => ({type}));
 
 /**
  * Parses a ClearBoostEvent.
@@ -539,8 +536,7 @@ const eventClearAllBoost: Parser<ClearAllBoostEvent> =
  * |-clearboost|<PokemonID>
  */
 const eventClearBoost: Parser<ClearBoostEvent> = transform(
-    sequence(word("-clearboost"), pokemonId),
-    ([_, id]) => ({type: "clearboost", id}));
+    sequence(word("-clearboost"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses a ClearNegativeBoostEvent.
@@ -551,7 +547,7 @@ const eventClearBoost: Parser<ClearBoostEvent> = transform(
  */
 const eventClearNegativeBoost: Parser<ClearNegativeBoostEvent> = transform(
     sequence(word("-clearnegativeboost"), pokemonId),
-    ([_, id]) => ({type: "clearnegativeboost", id}));
+    ([type, id]) => ({type, id}));
 
 /**
  * Parses a ClearPositiveBoostEvent.
@@ -562,7 +558,7 @@ const eventClearNegativeBoost: Parser<ClearNegativeBoostEvent> = transform(
  */
 const eventClearPositiveBoost: Parser<ClearPositiveBoostEvent> = transform(
     sequence(word("-clearpositiveboost"), pokemonId),
-    ([_, id]) => ({type: "clearpositiveboost", id}));
+    ([type, id]) => ({type, id}));
 
 /**
  * Parses a CopyBoostEvent.
@@ -573,7 +569,7 @@ const eventClearPositiveBoost: Parser<ClearPositiveBoostEvent> = transform(
  */
 const eventCopyBoost: Parser<CopyBoostEvent> = transform(
     sequence(word("-copyboost"), pokemonId, pokemonId),
-    ([_, source, target]) => ({type: "copyboost", source, target}));
+    ([type, source, target]) => ({type, source, target}));
 
 /**
  * Parses a CureStatusEvent.
@@ -584,7 +580,7 @@ const eventCopyBoost: Parser<CopyBoostEvent> = transform(
  */
 const eventCureStatus: Parser<CureStatusEvent> = transform(
     sequence(word("-curestatus"), pokemonId, majorStatus),
-    ([_, id, status]) => ({type: "curestatus", id, majorStatus: status}));
+    ([type, id, status]) => ({type, id, majorStatus: status}));
 
 /**
  * Parses a CureTeamEvent.
@@ -594,8 +590,7 @@ const eventCureStatus: Parser<CureStatusEvent> = transform(
  * |-cureteam|<PokemonID>
  */
 const eventCureTeam: Parser<CureTeamEvent> = transform(
-    sequence(word("-cureteam"), pokemonId),
-    ([_, id]) => ({type: "cureteam", id}));
+    sequence(word("-cureteam"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses a DamageEvent or HealEvent.
@@ -606,8 +601,7 @@ const eventCureTeam: Parser<CureTeamEvent> = transform(
  */
 const eventDamage: Parser<DamageEvent | HealEvent> = transform(
     sequence(word("-damage", "-heal"), pokemonId, pokemonStatus),
-    ([prefix, id, status]) =>
-        ({type: prefix.substr(1) as "damage" | "heal", id, status}));
+    ([type, id, status]) => ({type, id, status}));
 
 /**
  * Parses an EndEvent.
@@ -618,7 +612,7 @@ const eventDamage: Parser<DamageEvent | HealEvent> = transform(
  */
 const eventEnd: Parser<EndEvent> = transform(
     sequence(word("-end"), pokemonId, anyWord),
-    ([_, id, volatile]) => ({type: "end", id, volatile}));
+    ([type, id, volatile]) => ({type, id, volatile}));
 
 /**
  * Parses an EndAbilityEvent.
@@ -629,7 +623,7 @@ const eventEnd: Parser<EndEvent> = transform(
  */
 const eventEndAbility: Parser<EndAbilityEvent> = transform(
     sequence(word("-endability"), pokemonId, anyWord),
-    ([_, id, ability]) => ({type: "endability", id, ability}));
+    ([type, id, ability]) => ({type, id, ability}));
 
 /**
  * Parses a FaintEvent.
@@ -638,8 +632,8 @@ const eventEndAbility: Parser<EndAbilityEvent> = transform(
  * @example
  * |faint|<PokemonID>
  */
-const eventFaint: Parser<FaintEvent> = transform(
-    sequence(word("faint"), pokemonId), ([_, id]) => ({type: "faint", id}));
+const eventFaint: Parser<FaintEvent> =
+    transform(sequence(word("faint"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses a FieldStartEvent or FieldEndEvent.
@@ -650,8 +644,7 @@ const eventFaint: Parser<FaintEvent> = transform(
  */
 const eventField: Parser<FieldEndEvent | FieldStartEvent> = transform(
     sequence(word("-fieldstart", "-fieldend"), anyWord),
-    ([prefix, effect]) => prefix === "-fieldstart" ?
-        {type: "fieldstart", effect} : {type: "fieldend", effect});
+    ([type, effect]) => ({type, effect}));
 
 /**
  * Parses an InvertBoostEvent.
@@ -661,8 +654,7 @@ const eventField: Parser<FieldEndEvent | FieldStartEvent> = transform(
  * |-invertboost|<PokemonID>
  */
 const eventInvertBoost: Parser<InvertBoostEvent> = transform(
-    sequence(word("-invertboost"), pokemonId),
-    ([_, id]) => ({type: "invertboost", id}));
+    sequence(word("-invertboost"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses an ItemEvent or EndItemEvent.
@@ -673,8 +665,7 @@ const eventInvertBoost: Parser<InvertBoostEvent> = transform(
  */
 const eventItem: Parser<ItemEvent | EndItemEvent> = transform(
     sequence(word("-item", "-enditem"), pokemonId, anyWord),
-    ([type, id, item]) => type === "-item" ?
-        {type: "item", id, item} : {type: "enditem", id, item});
+    ([type, id, item]) => ({type, id, item}));
 
 /**
  * Parses a MoveEvent.
@@ -689,8 +680,8 @@ const eventItem: Parser<ItemEvent | EndItemEvent> = transform(
  */
 const eventMove: Parser<MoveEvent> = transform(
     sequence(word("move"), pokemonId, anyWord, maybe(pokemonId)),
-    ([_, id, moveName, targetId]) => targetId ?
-        {type: "move", id, moveName, targetId} : {type: "move", id, moveName});
+    ([type, id, moveName, targetId]) =>
+        targetId ? {type, id, moveName, targetId} : {type, id, moveName});
 
 /**
  * Parses a MustRechargeEvent.
@@ -700,8 +691,7 @@ const eventMove: Parser<MoveEvent> = transform(
  * |-mustrecharge|<PokemonID>
  */
 const eventMustRecharge: Parser<MustRechargeEvent> = transform(
-    sequence(word("-mustrecharge"), pokemonId),
-    ([_, id]) => ({type: "mustrecharge", id}));
+    sequence(word("-mustrecharge"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses a PrepareEvent.
@@ -712,9 +702,8 @@ const eventMustRecharge: Parser<MustRechargeEvent> = transform(
  */
 const eventPrepare: Parser<PrepareEvent> = transform(
     sequence(word("-prepare"), pokemonId, anyWord, maybe(pokemonId)),
-    ([_, id, moveName, targetId]) => targetId ?
-        {type: "prepare", id, moveName, targetId}
-        : {type: "prepare", id, moveName});
+    ([type, id, moveName, targetId]) =>
+        targetId ? {type, id, moveName, targetId} : {type, id, moveName});
 
 /**
  * Parses a SetBoostEvent.
@@ -725,7 +714,7 @@ const eventPrepare: Parser<PrepareEvent> = transform(
  */
 const eventSetBoost: Parser<SetBoostEvent> = transform(
     sequence(word("-setboost"), pokemonId, boostName, integer),
-    ([_, id, stat, amount]) => ({type: "setboost", id, stat, amount}));
+    ([type, id, stat, amount]) => ({type, id, stat, amount}));
 
 /**
  * Parses a SetHPEvent.
@@ -741,29 +730,18 @@ const eventSetHP: Parser<SetHPEvent> = transform(
             transform(
                 sequence(pokemonId, pokemonStatus),
                 ([id, status]) => ({id, status})))),
-    ([_, newHPs]) => ({type: "sethp", newHPs}));
+    ([type, newHPs]) => ({type, newHPs}));
 
 /**
- * Parses a SideEndEvent.
+ * Parses a SideEndEvent or SideStartEvent.
  *
  * Format:
  * @example
- * |-sideend|<PlayerID>: <username>|<condition>
+ * |<-sideend or -sidestart>|<PlayerID>: <username>|<condition>
  */
-const eventSideEnd: Parser<SideEndEvent> = transform(
-    sequence(word("-sideend"), playerIdWithName, anyWord),
-    ([_, {id}, condition]) => ({type: "sideend", id, condition}));
-
-/**
- * Parses a SideStartEvent.
- *
- * Format:
- * @example
- * |-sidestart|<PlayerID>: <username>|<condition>
- */
-const eventSideStart: Parser<SideStartEvent> = transform(
-    sequence(word("-sidestart"), playerIdWithName, anyWord),
-    ([_, {id}, condition]) => ({type: "sidestart", id, condition}));
+const eventSide: Parser<SideEndEvent | SideStartEvent> = transform(
+    sequence(word("-sideend", "-sidestart"), playerIdWithName, anyWord),
+    ([type, {id}, condition]) => ({type, id, condition}));
 
 /**
  * Parses a SingleTurnEvent.
@@ -774,7 +752,7 @@ const eventSideStart: Parser<SideStartEvent> = transform(
  */
 const eventSingleTurn: Parser<SingleTurnEvent> = transform(
     sequence(word("-singleturn"), pokemonId, anyWord),
-    ([_, id, status]) => ({type: "singleturn", id, status}));
+    ([type, id, status]) => ({type, id, status}));
 
 /**
  * Parses a StartEvent.
@@ -788,8 +766,7 @@ const eventSingleTurn: Parser<SingleTurnEvent> = transform(
  */
 const eventStart: Parser<StartEvent> = transform(
     sequence(word("-start"), pokemonId, anyWord, eventStartHelper),
-    ([_, id, volatile, otherArgs]) =>
-        ({type: "start", id, volatile, otherArgs}));
+    ([type, id, volatile, otherArgs]) => ({type, id, volatile, otherArgs}));
 
 /**
  * Parses the `otherArgs` part of a `|start|` message without accidentally
@@ -818,7 +795,7 @@ function eventStartHelper(input: Input, info: Info): Result<string[]>
  */
 const eventStatus: Parser<StatusEvent> = transform(
     sequence(word("-status"), pokemonId, majorStatus),
-    ([_, id, status]) => ({type: "status", id, majorStatus: status}));
+    ([type, id, status]) => ({type, id, majorStatus: status}));
 
 /**
  * Parses a SwapBoostEvent.
@@ -839,8 +816,7 @@ const eventSwapBoost: Parser<SwapBoostEvent> = transform(
             }),
             // if omitted, assume all boosts
             Object.keys(boostNames) as BoostName[])),
-    ([_, source, target, stats]) =>
-        ({type: "swapboost", source, target, stats}));
+    ([type, source, target, stats]) => ({type, source, target, stats}));
 
 /**
  * Parses a DetailsChangeEvent, DragEvent, FormeChangeEvent, or SwitchEvent.
@@ -856,16 +832,7 @@ const eventAllDetails:
         sequence(
             word("switch", "drag", "detailschange", "-formechange"), pokemonId,
             pokemonDetails, pokemonStatus),
-        function([type, id, details, status])
-        {
-            switch (type)
-            {
-                case "drag": case "switch": case "detailschange":
-                    return {type, id, details, status};
-                case "-formechange":
-                    return {type: "formechange", id, details, status};
-            }
-        });
+        ([type, id, details, status]) => ({type, id, details, status}));
 
 /**
  * Parses an UnboostEvent.
@@ -876,7 +843,7 @@ const eventAllDetails:
  */
 const eventUnboost: Parser<UnboostEvent> = transform(
     sequence(word("-unboost"), pokemonId, boostName, integer),
-    ([_, id, stat, amount]) => ({type: "unboost", id, stat, amount}));
+    ([type, id, stat, amount]) => ({type, id, stat, amount}));
 
 /**
  * Parses an UpkeepEvent.
@@ -885,8 +852,8 @@ const eventUnboost: Parser<UnboostEvent> = transform(
  * @example
  * |upkeep
  */
-const eventUpkeep: Parser<UpkeepEvent> = transform(word("upkeep"),
-        () => ({type: "upkeep"}));
+const eventUpkeep: Parser<UpkeepEvent> =
+    transform(word("upkeep"), () => ({type: "upkeep"}));
 
 /**
  * Parses a TurnEvent.
@@ -895,8 +862,8 @@ const eventUpkeep: Parser<UpkeepEvent> = transform(word("upkeep"),
  * @example
  * |turn|<new turn number>
  */
-const eventTurn: Parser<TurnEvent> = transform(sequence(word("turn"), integer),
-        ([_, num]) => ({type: "turn", num}));
+const eventTurn: Parser<TurnEvent> =
+    transform(sequence(word("turn"), integer), ([type, num]) => ({type, num}));
 
 /**
  * Parses a TieEvent.
@@ -905,8 +872,8 @@ const eventTurn: Parser<TurnEvent> = transform(sequence(word("turn"), integer),
  * @example
  * |tie
  */
-const eventTie: Parser<TieEvent> = transform(word("tie"),
-        () => ({type: "tie"}));
+const eventTie: Parser<TieEvent> =
+    transform(word("tie"), () => ({type: "tie"}));
 
 /**
  * Parses a WeatherEvent.
@@ -919,9 +886,9 @@ const eventWeather: Parser<WeatherEvent> = transform(
     sequence(
         word("-weather"),
         weatherTypeOrNone,
-        // transform presence of word into boolean
+        // transform presence of upkeep word into boolean
         transform(maybe(word("[upkeep]")), upkeep => !!upkeep)),
-    ([_, type, upkeep]) => ({type: "weather", weatherType: type, upkeep}));
+    ([type, weatherType, upkeep]) => ({type, weatherType, upkeep}));
 
 /**
  * Parses a WinEvent.
@@ -931,4 +898,4 @@ const eventWeather: Parser<WeatherEvent> = transform(
  * |win|<username>
  */
 const eventWin: Parser<WinEvent> = transform(sequence(word("win"), restOfLine),
-        ([_, winner]) => ({type: "win", winner}));
+        ([type, winner]) => ({type, winner}));
