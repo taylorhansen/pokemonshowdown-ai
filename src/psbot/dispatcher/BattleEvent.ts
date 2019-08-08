@@ -12,11 +12,11 @@ export const battleEventTypes =
     "-end": true, "-endability": true, "-enditem": true, "-fail": true,
     faint: true, "-fieldend": true, "-fieldstart": true, "-formechange": true,
     "-heal": true, "-immune": true, "-invertboost": true, "-item": true,
-    move: true, "-mustrecharge": true, "-prepare": true, "-setboost": true,
-    "-sethp": true, "-sideend": true, "-sidestart": true, "-singleturn": true,
-    "-start": true, "-status": true, "-swapboost": true, switch: true,
-    tie: true, turn: true, "-unboost": true, upkeep: true, "-weather": true,
-    win: true
+    "-miss": true, move: true, "-mustrecharge": true, "-prepare": true,
+    "-setboost": true, "-sethp": true, "-sideend": true, "-sidestart": true,
+    "-singleturn": true, "-start": true, "-status": true, "-swapboost": true,
+    switch: true, tie: true, turn: true, "-unboost": true, upkeep: true,
+    "-weather": true, win: true
 } as const;
 /** The types of BattleEvents that can exist. Used as event prefixes. */
 export type BattleEventType = keyof typeof battleEventTypes;
@@ -55,6 +55,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "-immune" ? ImmuneEvent
     : T extends "-invertboost" ? InvertBoostEvent
     : T extends "-item" ? ItemEvent
+    : T extends "-miss" ? MissEvent
     : T extends "move" ? MoveEvent
     : T extends "-mustrecharge" ? MustRechargeEvent
     : T extends "-prepare" ? PrepareEvent
@@ -94,6 +95,8 @@ interface BattleEventBase
     readonly fatigue?: boolean;
     /** Whether the event was due to eating. */
     readonly eat?: boolean;
+    /** Whether the mentioned effect (usually a move) missed its target. */
+    readonly miss?: boolean;
 }
 
 /** Event that wraps the main events, separating them from upkeep events. */
@@ -345,6 +348,16 @@ export interface ItemEvent extends BattleEventBase
     readonly id: PokemonID;
     /** Name of the item. */
     readonly item: string;
+}
+
+/** Event where a move missed one of its targets. */
+export interface MissEvent extends BattleEventBase
+{
+    readonly type: "-miss";
+    /** ID of the pokemon who used the move. */
+    readonly id: PokemonID;
+    /** ID of the target pokemon. */
+    readonly targetId: PokemonID;
 }
 
 /** Event where a move was used. */

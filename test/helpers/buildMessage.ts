@@ -159,6 +159,12 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "-enditem":
             result = [event.type, stringifyID(event.id), event.item];
             break;
+        case "-miss":
+            result =
+            [
+                event.type, stringifyID(event.id), stringifyID(event.targetId)
+            ];
+            break;
         case "move":
         case "-prepare":
             result =
@@ -215,6 +221,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
     if (event.of) result.push(`[of] ${stringifyID(event.of)}`);
     if (event.fatigue) result.push("[fatigue]");
     if (event.eat) result.push("[eat]");
+    if (event.miss) result.push("[miss]");
     return result;
 }
 

@@ -7,11 +7,11 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
     CureStatusEvent, CureTeamEvent, DamageEvent, DetailsChangeEvent,
     DragEvent, EmptyEvent, EndAbilityEvent, EndEvent, EndItemEvent, FailEvent,
     FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent, HealEvent,
-    ImmuneEvent, InvertBoostEvent, isBattleEventType, ItemEvent, MoveEvent,
-    MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
-    SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent, SwapBoostEvent,
-    SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
-    WinEvent } from "../dispatcher/BattleEvent";
+    ImmuneEvent, InvertBoostEvent, isBattleEventType, ItemEvent, MissEvent,
+    MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent,
+    SideEndEvent, SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent,
+    SwapBoostEvent, SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent,
+    WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
@@ -398,6 +398,7 @@ function battleEvent(input: Input, info: Info): Result<AnyBattleEvent | null>
             }
             else if (prefix === "fatigue") event = {...event, fatigue: true};
             else if (prefix === "eat") event = {...event, eat: true};
+            else if (prefix === "miss") event = {...event, miss: true};
         }
         input = input.next();
     }
@@ -438,6 +439,7 @@ function battleEventHelper(input: Input, info: Info):
         case "-immune": return eventImmune(input, info);
         case "-invertboost": return eventInvertBoost(input, info);
         case "-item": case "-enditem": return eventItem(input, info);
+        case "-miss": return eventMiss(input, info);
         case "move": return eventMove(input, info);
         case "-mustrecharge": return eventMustRecharge(input, info);
         case "-prepare": return eventPrepare(input, info);
@@ -699,6 +701,17 @@ const eventInvertBoost: Parser<InvertBoostEvent> = transform(
 const eventItem: Parser<ItemEvent | EndItemEvent> = transform(
     sequence(word("-item", "-enditem"), pokemonId, anyWord),
     ([type, id, item]) => ({type, id, item}));
+
+/**
+ * Parses a MissEvent.
+ *
+ * Format:
+ * @example
+ * |-miss|<user PokemonID>|<target PokemonID>
+ */
+const eventMiss: Parser<MissEvent> = transform(
+    sequence(word("-miss"), pokemonId, pokemonId),
+    ([type, id, targetId]) => ({type, id, targetId}));
 
 /**
  * Parses a MoveEvent.

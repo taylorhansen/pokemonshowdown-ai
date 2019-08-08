@@ -92,11 +92,12 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-immune", id: pokemonId[0]},
     {type: "-invertboost", id: pokemonId[2]},
     {type: "-item", id: pokemonId[2], item: "Leftovers", from: from[4]},
+    {type: "-miss", id: pokemonId[2], targetId: pokemonId[0]},
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
         targetId: pokemonId[1]
     },
-    {type: "move", id: pokemonId[1], moveName: "Splash"},
+    {type: "move", id: pokemonId[1], moveName: "Splash", miss: true},
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
         targetId: pokemonId[0], from: from[2]
@@ -187,7 +188,7 @@ export const battleProgress: BattleProgressMessage[] =
     },
     {
         events: battleEvent.slice(29, 35)
-            .concat({type: "upkeep"}, ...battleEvent.slice(35, 52),
+            .concat({type: "upkeep"}, ...battleEvent.slice(35, 53),
                 {type: "turn", num: 9})
     }
 ];
