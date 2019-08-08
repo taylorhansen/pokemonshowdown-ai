@@ -9,13 +9,14 @@ export const battleEventTypes =
     "-clearallboost": true, "-clearboost": true, "-clearnegativeboost": true,
     "-clearpositiveboost": true, "-copyboost": true, "-curestatus": true,
     "-cureteam": true, "-damage": true, detailschange: true, drag: true,
-    "-end": true, "-endability": true, "-enditem": true, faint: true,
-    "-fieldend": true, "-fieldstart": true, "-formechange": true, "-heal": true,
-    "-invertboost": true, "-item": true, move: true, "-mustrecharge": true,
-    "-prepare": true, "-setboost": true, "-sethp": true, "-sideend": true,
-    "-sidestart": true, "-singleturn": true, "-start": true, "-status": true,
-    "-swapboost": true, switch: true, tie: true, turn: true, "-unboost": true,
-    upkeep: true, "-weather": true, win: true
+    "-end": true, "-endability": true, "-enditem": true, "-fail": true,
+    faint: true, "-fieldend": true, "-fieldstart": true, "-formechange": true,
+    "-heal": true, "-immune": true, "-invertboost": true, "-item": true,
+    move: true, "-mustrecharge": true, "-prepare": true, "-setboost": true,
+    "-sethp": true, "-sideend": true, "-sidestart": true, "-singleturn": true,
+    "-start": true, "-status": true, "-swapboost": true, switch: true,
+    tie: true, turn: true, "-unboost": true, upkeep: true, "-weather": true,
+    win: true
 } as const;
 /** The types of BattleEvents that can exist. Used as event prefixes. */
 export type BattleEventType = keyof typeof battleEventTypes;
@@ -45,11 +46,13 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "-end" ? EndEvent
     : T extends "-endability" ? EndAbilityEvent
     : T extends "-enditem" ? EndItemEvent
+    : T extends "-fail" ? FailEvent
     : T extends "faint" ? FaintEvent
     : T extends "-fieldend" ? FieldEndEvent
     : T extends "-fieldstart" ? FieldStartEvent
     : T extends "-formechange" ? FormeChangeEvent
     : T extends "-heal" ? HealEvent
+    : T extends "-immune" ? ImmuneEvent
     : T extends "-invertboost" ? InvertBoostEvent
     : T extends "-item" ? ItemEvent
     : T extends "move" ? MoveEvent
@@ -276,6 +279,14 @@ export interface EndItemEvent extends BattleEventBase
     readonly item: string;
 }
 
+/** Event where a pokemon has failed at a certain action. */
+export interface FailEvent extends BattleEventBase
+{
+    readonly type: "-fail";
+    /** ID of the pokemon. */
+    readonly id: PokemonID;
+}
+
 /** Event where a pokemon has fainted. */
 export interface FaintEvent extends BattleEventBase
 {
@@ -308,6 +319,14 @@ export interface HealEvent extends BattleEventBase
     readonly id: PokemonID;
     /** New hp/status. */
     readonly status: PokemonStatus;
+}
+
+/** Event where a pokemon's immunity was mentioned. */
+export interface ImmuneEvent extends BattleEventBase
+{
+    readonly type: "-immune";
+    /** ID of the pokemon who was immune to the last action. */
+    readonly id: PokemonID;
 }
 
 /** Event where a pokemon's boosts are being inverted. */

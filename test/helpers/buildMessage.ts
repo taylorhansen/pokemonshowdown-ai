@@ -103,12 +103,19 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             if (event.moveName) result.push(event.moveName);
             break;
         case "-clearallboost":
-            result = ["-clearallboost"];
+        case "tie":
+        case "upkeep":
+            result = [event.type];
             break;
         case "-clearboost":
         case "-clearnegativeboost":
         case "-clearpositiveboost":
+        case "-cureteam":
+        case "-fail":
+        case "faint":
+        case "-immune":
         case "-invertboost":
+        case "-mustrecharge":
             result = [event.type, stringifyID(event.id)];
             break;
         case "-copyboost":
@@ -120,9 +127,6 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "-curestatus":
         case "-status":
             result = [event.type, stringifyID(event.id), event.majorStatus];
-            break;
-        case "-cureteam":
-            result = [event.type, stringifyID(event.id)];
             break;
         case "-damage":
         case "-heal":
@@ -139,9 +143,6 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 event.type, stringifyID(event.id),
                 stringifyDetails(event.details), stringifyStatus(event.status)
             ];
-            break;
-        case "faint":
-            result = ["faint", stringifyID(event.id)];
             break;
         case "-fieldstart":
         case "-fieldend":
@@ -165,9 +166,6 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 event.type, stringifyID(event.id), event.moveName,
                 ...(event.targetId ? [stringifyID(event.targetId)] : [])
             ];
-            break;
-        case "-mustrecharge":
-            result = [event.type, stringifyID(event.id)];
             break;
         case "-sethp":
             result =
@@ -200,14 +198,8 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 stringifyID(event.target), event.stats.join(", ")
             ];
             break;
-        case "tie":
-            result = ["tie"];
-            break;
         case "turn":
             result = ["turn", event.num.toString()];
-            break;
-        case "upkeep":
-            result = ["upkeep"];
             break;
         case "-weather":
             result = [event.type, event.weatherType];
@@ -217,7 +209,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             result = ["win", event.winner];
             break;
         default:
-            throw new Error(`Can't stringify '${event}'`);
+            throw new Error(`Can't stringify event: ${JSON.stringify(event)}`);
     }
     if (event.from) result.push(stringifyFromSuffix(event.from));
     if (event.of) result.push(`[of] ${stringifyID(event.of)}`);

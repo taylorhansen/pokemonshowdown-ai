@@ -5,9 +5,9 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
     BoostEvent, CantEvent, ClearAllBoostEvent, ClearBoostEvent,
     ClearNegativeBoostEvent, ClearPositiveBoostEvent, CopyBoostEvent,
     CureStatusEvent, CureTeamEvent, DamageEvent, DetailsChangeEvent,
-    DragEvent, EmptyEvent, EndAbilityEvent, EndEvent, EndItemEvent, FaintEvent,
-    FieldEndEvent, FieldStartEvent, FormeChangeEvent, HealEvent,
-    InvertBoostEvent, isBattleEventType, ItemEvent, MoveEvent,
+    DragEvent, EmptyEvent, EndAbilityEvent, EndEvent, EndItemEvent, FailEvent,
+    FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent, HealEvent,
+    ImmuneEvent, InvertBoostEvent, isBattleEventType, ItemEvent, MoveEvent,
     MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
     SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent, SwapBoostEvent,
     SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
@@ -432,8 +432,10 @@ function battleEventHelper(input: Input, info: Info):
         case "-damage": case "-heal": return eventDamage(input, info);
         case "-end": return eventEnd(input, info);
         case "-endability": return eventEndAbility(input, info);
+        case "-fail": return eventFail(input, info);
         case "faint": return eventFaint(input, info);
         case "-fieldstart": case "-fieldend": return eventField(input, info);
+        case "-immune": return eventImmune(input, info);
         case "-invertboost": return eventInvertBoost(input, info);
         case "-item": case "-enditem": return eventItem(input, info);
         case "move": return eventMove(input, info);
@@ -637,6 +639,16 @@ const eventEndAbility: Parser<EndAbilityEvent> = transform(
     ([type, id, ability]) => ({type, id, ability}));
 
 /**
+ * Parses a FailEvent.
+ *
+ * Format:
+ * @example
+ * |-fail|<PokemonID>
+ */
+const eventFail: Parser<FailEvent> =
+    transform(sequence(word("-fail"), pokemonId), ([type, id]) => ({type, id}));
+
+/**
  * Parses a FaintEvent.
  *
  * Format:
@@ -656,6 +668,16 @@ const eventFaint: Parser<FaintEvent> =
 const eventField: Parser<FieldEndEvent | FieldStartEvent> = transform(
     sequence(word("-fieldstart", "-fieldend"), anyWord),
     ([type, effect]) => ({type, effect}));
+
+/**
+ * Parses an ImmuneEvent.
+ *
+ * Format:
+ * @example
+ * |-immune|<PokemonID>
+ */
+const eventImmune: Parser<ImmuneEvent> = transform(
+    sequence(word("-immune"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses an InvertBoostEvent.

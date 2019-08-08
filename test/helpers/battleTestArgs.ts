@@ -80,6 +80,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-endability", id: pokemonId[1], ability: "Swift Swim"},
     {type: "-enditem", id: pokemonId[0], item: "Lum Berry", eat: true},
     {type: "-enditem", id: pokemonId[2], item: "Sitrus Berry", from: from[3]},
+    {type: "-fail", id: pokemonId[1]},
     {type: "faint", id: pokemonId[2]},
     {type: "-fieldend", effect: "move: Gravity"},
     {type: "-fieldstart", effect: "move: Gravity"},
@@ -88,6 +89,7 @@ export const battleEvent: AnyBattleEvent[] =
         status: pokemonStatus[0]
     },
     {type: "-heal", id: pokemonId[1], status: pokemonStatus[1]},
+    {type: "-immune", id: pokemonId[0]},
     {type: "-invertboost", id: pokemonId[2]},
     {type: "-item", id: pokemonId[2], item: "Leftovers", from: from[4]},
     {
@@ -185,7 +187,7 @@ export const battleProgress: BattleProgressMessage[] =
     },
     {
         events: battleEvent.slice(29, 35)
-            .concat({type: "upkeep"}, ...battleEvent.slice(35, 50),
+            .concat({type: "upkeep"}, ...battleEvent.slice(35, 52),
                 {type: "turn", num: 9})
     }
 ];
