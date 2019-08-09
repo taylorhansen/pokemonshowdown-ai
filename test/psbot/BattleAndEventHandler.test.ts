@@ -4,6 +4,7 @@ import { Choice } from "../../src/battle/agent/Choice";
 import { types, WeatherType } from "../../src/battle/dex/dex-util";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
+import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
 import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent, SetHPEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
@@ -589,167 +590,160 @@ describe("Battle and EventProcessor", function()
 
         describe("activate/end/start", function()
         {
-            it("Should activate Charge", async function()
+            /** Used in below `test()` function. */
+            interface EventType
             {
-                const volatile = battle.state.teams.us.active.volatile;
-                expect(volatile.charge.isActive).to.be.false;
+                /** Type of event to execute. */
+                type: "-start" | "-activate" | "-end";
+                /** Postcondition for the VolatileStatus. */
+                post: (v: VolatileStatus) => void;
+            }
 
-                await battle.progress(
+            /**
+             * Creates a test case for a VolatileStatus field related to
+             * -start/-activate/-end events.
+             * @param status Name of the status as it appears in the event.
+             * @param pre Precondition/setup for the VolatileStatus.
+             * @param eventTypes List of event types that will be executed in
+             * order with their respective postconditions.
+             */
+            function test(status: string, pre: (v: VolatileStatus) => void,
+                eventTypes: EventType[]): void
+            {
+                const s = eventTypes.map(eventType => eventType.type.substr(1))
+                    .join("/");
+
+                it(`Should ${s} ${status}`, async function()
                 {
-                    events:
-                    [
-                        {type: "-activate", id: us1, volatile: "move: Charge"}
-                    ]
+                    const volatile = battle.state.teams.us.active.volatile;
+                    pre(volatile);
+
+                    for (const eventType of eventTypes)
+                    {
+                        let event: AnyBattleEvent;
+                        if (eventType.type === "-start")
+                        {
+                            event =
+                            {
+                                type: "-start", id: us1, volatile: status,
+                                otherArgs: []
+                            };
+                        }
+                        else
+                        {
+                            event =
+                            {
+                                type: eventType.type, id: us1, volatile: status
+                            };
+                        }
+
+                        await battle.progress({events: [event]});
+                        eventType.post(volatile);
+                    }
                 });
-                expect(volatile.charge.isActive).to.be.true;
-            });
+            }
 
-            it("Should activate/end/start confusion", async function()
+            test("move: Charge", v => expect(v.charge.isActive).to.be.false,
+            [
+                {
+                    type: "-activate",
+                    post: v => expect(v.charge.isActive).to.be.true
+                }
+            ]);
+
+            test("confusion", v => expect(v.confusion.isActive).to.be.false,
+            [
+                {
+                    type: "-start",
+                    post(v)
+                    {
+                        expect(v.confusion.isActive).to.be.true;
+                        expect(v.confusion.turns).to.equal(1);
+                    }
+                },
+                {
+                    type: "-activate",
+                    post(v)
+                    {
+                        expect(v.confusion.isActive).to.be.true;
+                        // turns incremented explicitly, not during post-turn
+                        expect(v.confusion.turns).to.equal(2);
+                    }
+                },
+                {
+                    type: "-end",
+                    post(v)
+                    {
+                        expect(v.confusion.isActive).to.be.false;
+                        expect(v.confusion.turns).to.equal(0);
+                    }
+                }
+            ]);
+
+            /**
+             * Tests a start/end event combo concerning a VolatileStatus field.
+             * @param status Name of the status as it appears in the event.
+             * @param get Getter for the corresponding VolatileStatus field.
+             * Should return a boolean, which will be tested for true or false
+             * depending on whether a -start or -end message is tested.
+             * @param eventTypes Order of events to execute. Default -start then
+             * -end.
+             */
+            function testBoolean(status: string,
+                get: (v: VolatileStatus) => boolean,
+                eventTypes: ("-start" | "-end")[] = ["-start", "-end"]): void
             {
-                const volatile = battle.state.teams.us.active.volatile;
+                test(status, v => expect(get(v)).to.be.false,
+                    eventTypes.map(type =>
+                    ({
+                        type,
+                        post: v => expect(get(v))
+                            .to.be[type === "-start" ? "true" : "false"]
+                    })));
+            }
 
-                expect(volatile.confusion.isActive).to.be.false;
+            testBoolean("Bide", v => v.bide.isActive);
+            testBoolean("Magnet Rise", v => v.magnetRise.isActive);
+            testBoolean("Embargo", v => v.embargo.isActive);
+            testBoolean("move: Taunt", v => v.taunt.isActive);
+            testBoolean("Torment", v => v.torment, ["-start"]);
+            testBoolean("Substitute", v => v.substitute);
+            testBoolean("Slow Start", v => v.slowStart.isActive);
+
+            it("Should start/end future move", async function()
+            {
                 await battle.progress(
                 {
                     events:
                     [
                         {
-                            type: "-start", id: us1, volatile: "confusion",
+                            type: "-start", id: us1, volatile: "Future Sight",
                             otherArgs: []
-                        }
+                        },
+                        {type: "upkeep"}, {type: "turn", num: 2}
                     ]
                 });
-                expect(volatile.confusion.isActive).to.be.true;
-                expect(volatile.confusion.turns).to.equal(1);
 
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {type: "-activate", id: us1, volatile: "confusion"}
-                    ]
-                });
-                expect(volatile.confusion.isActive).to.be.true;
-                expect(volatile.confusion.turns).to.equal(2);
+                const status = battle.state.teams.us.status;
+                expect(status.futureMoves.futuresight.turns).to.equal(2);
 
-                await battle.progress(
-                    {events: [{type: "-end", id: us1, volatile: "confusion"}]});
-                expect(volatile.confusion.isActive).to.be.false;
-                expect(volatile.confusion.turns).to.equal(0);
-            });
+                // run down future move counter
+                await battle.progress({events: [{type: "turn", num: 3}]});
+                expect(status.futureMoves.futuresight.turns).to.equal(3);
 
-            it("Should start/end magnet rise", async function()
-            {
-                const volatile = battle.state.teams.us.active.volatile;
-
-                expect(volatile.magnetRise.isActive).to.be.false;
+                // on this turn the future move activates
                 await battle.progress(
                 {
                     events:
                     [
                         {
-                            type: "-start", id: us1, volatile: "Magnet Rise",
+                            type: "-end", id: us1, volatile: "Future Sight",
                             otherArgs: []
-                        }
+                        },
+                        {type: "turn", num: 4}
                     ]
                 });
-                expect(volatile.magnetRise.isActive).to.be.true;
-
-                await battle.progress(
-                {
-                    events: [{type: "-end", id: us1, volatile: "Magnet Rise"}]
-                });
-                expect(volatile.magnetRise.isActive).to.be.false;
-            });
-
-            it("Should start/end embargo", async function()
-            {
-                const volatile = battle.state.teams.us.active.volatile;
-
-                expect(volatile.embargo.isActive).to.be.false;
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {
-                            type: "-start", id: us1, volatile: "Embargo",
-                            otherArgs: []
-                        }
-                    ]
-                });
-                expect(volatile.embargo.isActive).to.be.true;
-
-                await battle.progress(
-                {
-                    events: [{type: "-end", id: us1, volatile: "Embargo"}]
-                });
-                expect(volatile.embargo.isActive).to.be.false;
-            });
-
-            it("Should start/end taunt", async function()
-            {
-                const volatile = battle.state.teams.us.active.volatile;
-
-                expect(volatile.taunt.isActive).to.be.false;
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {
-                            type: "-start", id: us1, volatile: "move: Taunt",
-                            otherArgs: []
-                        }
-                    ]
-                });
-                expect(volatile.taunt.isActive).to.be.true;
-
-                await battle.progress(
-                {
-                    events: [{type: "-end", id: us1, volatile: "move: Taunt"}]
-                });
-                expect(volatile.taunt.isActive).to.be.false;
-            });
-
-            it("Should start torment", async function()
-            {
-                const volatile = battle.state.teams.us.active.volatile;
-
-                expect(volatile.torment).to.be.false;
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {
-                            type: "-start", id: us1, volatile: "Torment",
-                            otherArgs: []
-                        }
-                    ]
-                });
-                expect(volatile.torment).to.be.true;
-            });
-
-            it("Should start/end substitute", async function()
-            {
-                const volatile = battle.state.teams.us.active.volatile;
-
-                expect(volatile.substitute).to.be.false;
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {
-                            type: "-start", id: us1, volatile: "Substitute",
-                            otherArgs: []
-                        }
-                    ]
-                });
-                expect(volatile.substitute).to.be.true;
-
-                await battle.progress(
-                {
-                    events: [{type: "-end", id: us1, volatile: "Substitute"}]
-                });
-                expect(volatile.substitute).to.be.false;
+                expect(status.futureMoves.futuresight.turns).to.equal(0);
             });
 
             it("Should disable/reenable move in BattleState", async function()
@@ -786,72 +780,6 @@ describe("Battle and EventProcessor", function()
                 });
                 expect(mon.volatile.disabledMoves[0].isActive).to.be.false;
                 expect(mon.volatile.disabledMoves[1].isActive).to.be.false;
-            });
-
-            it("Should start/end slowstart", async function()
-            {
-                const volatile = battle.state.teams.us.active.volatile;
-
-                expect(volatile.slowStart.isActive).to.be.false;
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {
-                            type: "-start", id: us1, volatile: "Slow Start",
-                            otherArgs: []
-                        }
-                    ]
-                });
-                expect(volatile.slowStart.isActive).to.be.true;
-                expect(volatile.slowStart.turns).to.equal(1);
-
-                await battle.progress({events: [{type: "turn", num: 2}]});
-                expect(volatile.slowStart.isActive).to.be.true;
-                expect(volatile.slowStart.turns).to.equal(2);
-
-                await battle.progress(
-                {
-                    events: [{type: "-end", id: us1, volatile: "Slow Start"}]
-                });
-                expect(volatile.slowStart.isActive).to.be.false;
-                expect(volatile.slowStart.turns).to.equal(0);
-            });
-
-            it("Should start/end future move", async function()
-            {
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {
-                            type: "-start", id: us1, volatile: "Future Sight",
-                            otherArgs: []
-                        },
-                        {type: "upkeep"}, {type: "turn", num: 2}
-                    ]
-                });
-
-                const status = battle.state.teams.us.status;
-                expect(status.futureMoves.futuresight.turns).to.equal(2);
-
-                // run down future move counter
-                await battle.progress({events: [{type: "turn", num: 3}]});
-                expect(status.futureMoves.futuresight.turns).to.equal(3);
-
-                // on this turn the future move activates
-                await battle.progress(
-                {
-                    events:
-                    [
-                        {
-                            type: "-end", id: us1, volatile: "Future Sight",
-                            otherArgs: []
-                        },
-                        {type: "turn", num: 4}
-                    ]
-                });
-                expect(status.futureMoves.futuresight.turns).to.equal(0);
             });
 
             describe("typeadd", function()
