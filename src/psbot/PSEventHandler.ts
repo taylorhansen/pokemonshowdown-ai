@@ -176,14 +176,6 @@ export class PSEventHandler
             {
                 this.getActive(event.id.owner).volatile.confusion.tick();
             }
-            else if (ev === "Mat Block" || PSEventHandler.isStallSingleTurn(ev))
-            {
-                // user successfully stalled an attack
-                // locked moves get canceled if they don't succeed
-                // TODO: cover other cases of move failure (#74)
-                this.getActive(otherPlayerID(event.id.owner)).volatile
-                    .lockedMove.reset();
-            }
             else if (ev === "move: Charge")
             {
                 this.getActive(event.id.owner).volatile.charge.start();
@@ -367,13 +359,35 @@ export class PSEventHandler
 
             mon.removeItem(consumed);
         })
-        .on("move", event =>
+        .on("move", (event, events, i) =>
         {
             const moveId = toIdName(event.moveName);
             const mon = this.getActive(event.id.owner);
-            mon.useMove(moveId, this.getTargets(moveId, mon),
-                // don't consume pp if locked into using the move
-                /*nopp*/ event.from && event.from.type === "lockedmove");
+            const targets = this.getTargets(moveId, mon);
+
+            let unsuccessful: "failed" | "evaded" | undefined;
+            if (event.miss) unsuccessful = "evaded";
+
+            // look ahead at minor events to see if the move failed
+            while (events[++i] && events[i].type.startsWith("-"))
+            {
+                const e = events[i];
+                if ((e.type === "-activate" &&
+                        (e.volatile === "Mat Block" ||
+                            PSEventHandler.isStallSingleTurn(e.volatile))) ||
+                    ["-immune", "-miss"].includes(e.type))
+                {
+                    // opponent successfully evaded an attack
+                    unsuccessful = "evaded";
+                }
+                // move failed on its own
+                else if (e.type === "-fail") unsuccessful = "failed";
+            }
+
+            // don't consume pp if locked into using the move
+            const nopp = event.from && event.from.type === "lockedmove";
+
+            mon.useMove({moveId, targets, unsuccessful, nopp});
         })
         .on("-mustrecharge", event =>
         {

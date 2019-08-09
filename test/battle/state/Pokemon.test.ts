@@ -2,6 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
+import { Team } from "../../../src/battle/state/Team";
 
 describe("Pokemon", function()
 {
@@ -418,11 +419,19 @@ describe("Pokemon", function()
     {
         describe("#useMove()", function()
         {
-            it("Should use move", function()
+            it("Should use and reveal move", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.useMove("splash", [mon]);
+                expect(mon.moveset.get("splash")).to.be.null;
+                mon.useMove({moveId: "splash", targets: [mon]});
                 expect(mon.moveset.get("splash")!.pp).to.equal(63);
+            });
+
+            it("Should not reveal struggle as a move slot", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.useMove({moveId: "struggle", targets: [mon]});
+                expect(mon.moveset.get("struggle")).to.be.null;
             });
 
             describe("pressure ability handling", function()
@@ -445,14 +454,14 @@ describe("Pokemon", function()
                 it("Should use double pp if targeted", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
-                    mon.useMove("tackle", [target]);
+                    mon.useMove({moveId: "tackle", targets: [target]});
                     expect(mon.moveset.get("tackle")!.pp).to.equal(54);
                 });
 
                 it("Should not use double pp if not targeted", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
-                    mon.useMove("tackle", [mon]);
+                    mon.useMove({moveId: "tackle", targets: [mon]});
                     expect(mon.moveset.get("tackle")!.pp).to.equal(55);
                 });
 
@@ -460,7 +469,7 @@ describe("Pokemon", function()
                 {
                     const mon = new Pokemon("Rampardos", false);
                     mon.ability = "moldbreaker";
-                    mon.useMove("tackle", [target]);
+                    mon.useMove({moveId: "tackle", targets: [target]});
                     expect(mon.moveset.get("tackle")!.pp).to.equal(55);
                 });
             });
@@ -470,18 +479,101 @@ describe("Pokemon", function()
                 it("Should set last used", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
-                    mon.useMove("splash", [mon]);
+                    mon.useMove({moveId: "splash", targets: [mon]});
                     expect(mon.volatile.lastUsed).to.equal(0);
                 });
 
                 it("Should set last used again", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
-                    mon.useMove("splash", [mon]);
-                    mon.useMove("tackle", []);
+                    mon.useMove({moveId: "splash", targets: [mon]});
+                    mon.useMove({moveId: "tackle", targets: []});
                     expect(mon.volatile.lastUsed).to.equal(1);
                 });
             });
+
+            describe("two-turn", function()
+            {
+                it("Should reset two-turn status", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.useMove({moveId: "bounce", targets: []});
+                    mon.volatile.twoTurn.start("bounce");
+                    mon.postTurn();
+
+                    mon.useMove({moveId: "bounce", targets: [], nopp: true});
+                    expect(mon.volatile.twoTurn.isActive).to.be.false;
+                });
+            });
+
+            describe("lockedmove", function()
+            {
+                it("Should lock move", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.useMove({moveId: "petaldance", targets: [mon]});
+                    expect(mon.volatile.lockedMove.isActive).to.be.true;
+                });
+
+                it("Should not lock move if failed", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.volatile.lockedMove.start("petaldance");
+                    mon.useMove(
+                    {
+                        moveId: "petaldance", targets: [mon],
+                        unsuccessful: "failed"
+                    });
+                    expect(mon.volatile.lockedMove.isActive).to.be.false;
+                });
+
+                it("Should not lock move if evaded", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.volatile.lockedMove.start("petaldance");
+                    mon.useMove(
+                    {
+                        moveId: "petaldance", targets: [mon],
+                        unsuccessful: "evaded"
+                    });
+                    expect(mon.volatile.lockedMove.isActive).to.be.false;
+                });
+            });
+
+            function testTeamStatus(name: string, moveId: string,
+                pred: (team: Team) => boolean): void
+            {
+                describe(name, function()
+                {
+                    function setup(failed: boolean): Team
+                    {
+                        const team = new Team("us");
+                        team.size = 1;
+                        const mon = team.switchIn("Magikarp", 100, "M", 100,
+                            100)!;
+                        mon.useMove(
+                        {
+                            moveId, targets: [mon],
+                            unsuccessful: failed ? "failed" : undefined
+                        });
+                        return team;
+                    }
+
+                    it(`Should set ${name}`, function()
+                    {
+                        expect(pred(setup(false))).to.be.true;
+                    });
+
+                    it(`Should not set ${name} if failed=true`, function()
+                    {
+                        expect(pred(setup(true))).to.be.false;
+                    });
+                });
+            }
+
+            testTeamStatus("wish", "wish", team => team.status.wish.isActive);
+            testTeamStatus("selfSwitch", "uturn",
+                team => !!team.status.selfSwitch);
         });
 
         describe("#disableMove()", function()

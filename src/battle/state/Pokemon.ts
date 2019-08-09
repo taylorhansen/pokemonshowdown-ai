@@ -7,6 +7,23 @@ import { PossibilityClass } from "./PossibilityClass";
 import { Team } from "./Team";
 import { VolatileStatus } from "./VolatileStatus";
 
+/** Options for `Pokemon#useMove()`. */
+export interface MoveOptions
+{
+    /** ID name of the move. */
+    moveId: string;
+    /** Targets of the move. */
+    targets: readonly Pokemon[];
+    /**
+     * Optional. Indicates that the move was unsuccessful due to the move
+     * failing on its own (`"failed"`), or that the opponent evaded it due to
+     * an immunity, protect, miss, etc. (`"evaded"`).
+     */
+    unsuccessful?: "failed" | "evaded";
+    /** Whether to not consume pp for this move. Default false. */
+    nopp?: boolean;
+}
+
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon
 {
@@ -175,45 +192,51 @@ ability ${ability}`);
     }
     private _level = 0;
 
-    /**
-     * Indicates that a move has been used.
-     * @param id ID name of the move.
-     * @param targets Targets of the move.
-     * @param nopp Whether to not consume pp for this move.
-     */
-    public useMove(id: string, targets: readonly Pokemon[], nopp?: boolean):
-        void
+    /** Indicates that a move has been used. */
+    public useMove(options: Readonly<MoveOptions>): void
     {
         // struggle doesn't occupy a moveslot
-        if (id === "struggle") return;
+        if (options.moveId === "struggle") return;
 
-        this.moveset.getOrReveal(id).pp -=
-            nopp ? 0
+        this.moveset.getOrReveal(options.moveId).pp -=
+            options.nopp ? 0
             // mold breaker cancels pressure
             : this.ability === "moldbreaker" ? 1
             // consume 1 pp + 1 more for each target with pressure ability
             // TODO: in gen>=5, don't count allies
-            : targets.filter(m => m !== this && m.ability === "pressure")
-                .length + 1;
+            : options.targets.filter(
+                m => m !== this && m.ability === "pressure").length + 1;
 
-        this._volatile.lastUsed = this.moveset.getOrRevealIndex(id);
+        this._volatile.lastUsed = this.moveset.getOrRevealIndex(options.moveId);
 
         // release two-turn move
         // while this could be the event that prepares the move, a separate
         //  event is responsible for distinguishing that
-        if (twoTurnMoves.hasOwnProperty(id)) this.volatile.twoTurn.reset();
+        if (twoTurnMoves.hasOwnProperty(options.moveId))
+        {
+            this.volatile.twoTurn.reset();
+        }
+
+        if (options.unsuccessful)
+        {
+            this.volatile.lockedMove.reset();
+            return;
+        }
 
         // apply move effects
-        const move = dex.moves[id];
+        const move = dex.moves[options.moveId];
         if (move.volatileEffect === "lockedmove")
         {
-            this.volatile.lockedMove.start(id as any);
+            this.volatile.lockedMove.start(options.moveId as any);
         }
         if (this.team)
         {
             // wish can be used consecutively, but only the first time will
             //  count
-            if (id === "wish") this.team.status.wish.start(/*restart*/false);
+            if (options.moveId === "wish")
+            {
+                this.team.status.wish.start(/*restart*/false);
+            }
 
             this.team.status.selfSwitch = move.selfSwitch || false;
         }

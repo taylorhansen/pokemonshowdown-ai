@@ -4,7 +4,7 @@ import { Choice } from "../../src/battle/agent/Choice";
 import { types, WeatherType } from "../../src/battle/dex/dex-util";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
-import { EndItemEvent, ItemEvent, MoveEvent, SetHPEvent } from
+import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent, SetHPEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
@@ -1610,11 +1610,6 @@ describe("Battle and EventProcessor", function()
 
         describe("move", function()
         {
-            // sample move event
-            const event: MoveEvent =
-            {
-                type: "move", id: us1, moveName: "Splash", targetId: us1
-            };
 
             it("Should reveal move", async function()
             {
@@ -1622,7 +1617,16 @@ describe("Battle and EventProcessor", function()
                 let move = mon.moveset.get("splash")!;
                 expect(move).to.be.null;
 
-                await battle.progress({events: [event]});
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Splash",
+                            targetId: us1
+                        }
+                    ]
+                });
 
                 move = mon.moveset.get("splash")!;
                 expect(move).to.not.be.null;
@@ -1630,17 +1634,38 @@ describe("Battle and EventProcessor", function()
                 expect(move.pp).to.equal(63);
             });
 
-            it("Should not reveal Struggle as a move slot", async function()
+            describe("unsuccessful", function()
             {
-                const event1 = {...event};
-                event1.moveName = "Struggle";
+                function shouldCancelLockedMove(name: string,
+                    event: AnyBattleEvent, miss?: boolean): void
+                {
+                    it(`Should cancel lockedmove if ${name}`, async function()
+                    {
+                        const mon = battle.state.teams.us.active;
+                        expect(mon.volatile.lockedMove.isActive).to.be.false;
 
-                const mon = battle.state.teams.us.active;
-                expect(mon.moveset.get(event1.moveName)).to.be.null;
+                        await battle.progress(
+                        {
+                            events:
+                            [
+                                {
+                                    type: "move", id: us1,
+                                    moveName: "Petal Dance", targetId: them1,
+                                    miss
+                                },
+                                event
+                            ]
+                        });
+                        expect(mon.volatile.lockedMove.isActive).to.be.false;
+                    });
+                }
 
-                await battle.progress({events: [event1]});
-
-                expect(mon.moveset.get(event1.moveName)).to.be.null;
+                shouldCancelLockedMove("protected",
+                    {type: "-activate", id: them1, volatile: "move: Protect"});
+                shouldCancelLockedMove("immune", {type: "-immune", id: us1});
+                shouldCancelLockedMove("missed",
+                    {type: "-miss", id: us1, targetId: them1}, /*miss*/true);
+                shouldCancelLockedMove("failed", {type: "-fail", id: us1});
             });
 
             describe("lockedmove", function()
