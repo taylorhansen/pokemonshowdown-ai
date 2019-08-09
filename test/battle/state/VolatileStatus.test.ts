@@ -14,6 +14,7 @@ describe("VolatileStatus", function()
 
     function setEverything()
     {
+        volatile.aquaRing = true;
         volatile.boosts.atk = 1;
         volatile.confusion.start();
         volatile.embargo.start();
@@ -48,6 +49,7 @@ describe("VolatileStatus", function()
             setEverything();
             volatile.clear();
 
+            expect(volatile.aquaRing).to.be.false;
             expect(volatile.boosts.atk).to.equal(0);
             expect(volatile.confusion.isActive).to.be.false;
             expect(volatile.embargo.isActive).to.be.false;
@@ -96,6 +98,7 @@ describe("VolatileStatus", function()
             volatile.clear();
             expect(newVolatile).to.not.equal(volatile);
             // passed
+            expect(newVolatile.aquaRing).to.be.true;
             expect(newVolatile.boosts).to.not.equal(volatile.boosts);
             expect(newVolatile.boosts.atk).to.equal(1);
             expect(newVolatile.confusion.isActive).to.be.true;

@@ -15,6 +15,9 @@ export class VolatileStatus
 
     // passed when copying
 
+    /* Aqua Ring move status. */
+    public aquaRing!: boolean;
+
     /** Stat boost stages. */
     public get boosts(): {[N in BoostName]: number}
     {
@@ -212,6 +215,7 @@ export class VolatileStatus
      */
     public clear(): void
     {
+        this.aquaRing = false;
         this._boosts =
         {
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
@@ -287,6 +291,7 @@ export class VolatileStatus
     public shallowClone(): VolatileStatus
     {
         const v = new VolatileStatus();
+        v.aquaRing = this.aquaRing;
         v._boosts = this._boosts;
         this.confusion.copyTo(v.confusion);
         this.embargo.copyTo(v.embargo);
@@ -305,6 +310,7 @@ export class VolatileStatus
     public toString(): string
     {
         return `[${([] as string[]).concat(
+            this.aquaRing ? ["aqua ring"] : [],
             (Object.keys(this._boosts) as BoostName[])
                 .filter(key => this._boosts[key] !== 0)
                 .map(key => `${key}: ${plus(this._boosts[key])}`),

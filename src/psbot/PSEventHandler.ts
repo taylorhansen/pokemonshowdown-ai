@@ -83,6 +83,9 @@ export class PSEventHandler
 
             switch (ev)
             {
+                case "Aqua Ring":
+                    active.volatile.aquaRing = true;
+                    break;
                 case "Bide":
                     active.volatile.bide.start();
                     break;
