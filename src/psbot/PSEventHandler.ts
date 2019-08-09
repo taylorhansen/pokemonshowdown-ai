@@ -100,6 +100,30 @@ export class PSEventHandler
                     active.disableMove(moveId);
                     break;
                 }
+                case "Ingrain":
+                    active.volatile.ingrain = true;
+                    break;
+                case "Leech Seed":
+                    active.volatile.leechSeed = true;
+                    break;
+                case "Magnet Rise":
+                    active.volatile.magnetRise.start();
+                    break;
+                case "Embargo":
+                    active.volatile.embargo.start();
+                    break;
+                case "Substitute":
+                    active.volatile.substitute = true;
+                    break;
+                case "Slow Start":
+                    active.volatile.slowStart.start();
+                    break;
+                case "Taunt":
+                    active.volatile.taunt.start();
+                    break;
+                case "Torment":
+                    active.volatile.torment = true;
+                    break;
                 case "typeadd":
                     // set added type
                     active.addType(event.otherArgs[0].toLowerCase() as Type);
@@ -128,27 +152,6 @@ export class PSEventHandler
                     active.changeType(types as [Type, Type]);
                     break;
                 }
-                case "Ingrain":
-                    active.volatile.ingrain = true;
-                    break;
-                case "Magnet Rise":
-                    active.volatile.magnetRise.start();
-                    break;
-                case "Embargo":
-                    active.volatile.embargo.start();
-                    break;
-                case "Substitute":
-                    active.volatile.substitute = true;
-                    break;
-                case "Slow Start":
-                    active.volatile.slowStart.start();
-                    break;
-                case "Taunt":
-                    active.volatile.taunt.start();
-                    break;
-                case "Torment":
-                    active.volatile.torment = true;
-                    break;
                 case "Uproar":
                     if (event.otherArgs[0] === "[upkeep]")
                     {

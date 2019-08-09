@@ -25,12 +25,19 @@ export class VolatileStatus
     }
     private _boosts!: {[N in BoostName]: number};
 
+    /** Confusion status. */
     public readonly confusion = new TempStatus("confused", 3);
+
+    /** Embargo move status. */
     public readonly embargo = new TempStatus("embargo", 3);
 
     /** Ingrain move status. */
     public ingrain!: boolean;
 
+    /** Leech Seed move status. */
+    public leechSeed!: boolean;
+
+    /** Magnet Rise move status. */
     public readonly magnetRise = new TempStatus("magnet rise", 3);
 
     /** Substitute move status. */
@@ -223,6 +230,7 @@ export class VolatileStatus
         this.confusion.end();
         this.embargo.end();
         this.ingrain = false;
+        this.leechSeed = false;
         this.magnetRise.end();
         this.substitute = false;
 
@@ -296,6 +304,7 @@ export class VolatileStatus
         this.confusion.copyTo(v.confusion);
         this.embargo.copyTo(v.embargo);
         v.ingrain = this.ingrain;
+        v.leechSeed = this.leechSeed;
         this.magnetRise.copyTo(v.magnetRise);
         v.substitute = this.substitute;
         if (this.isAbilitySuppressed()) v.suppressAbility();
@@ -317,6 +326,7 @@ export class VolatileStatus
             this.confusion.isActive ? [this.confusion.toString()] : [],
             this.embargo.isActive ? [this.embargo.toString()] : [],
             this.ingrain ? ["ingrain"] : [],
+            this.leechSeed ? ["leech seed"] : [],
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
             this.substitute ? ["has substitute"] : [],
             // override ability/species/etc are handled by Pokemon#toString()

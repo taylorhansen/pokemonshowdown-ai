@@ -19,6 +19,7 @@ describe("VolatileStatus", function()
         volatile.confusion.start();
         volatile.embargo.start();
         volatile.ingrain = true;
+        volatile.leechSeed = true;
         volatile.magnetRise.start();
         volatile.substitute = true;
         volatile.overrideAbility = "truant";
@@ -54,6 +55,7 @@ describe("VolatileStatus", function()
             expect(volatile.confusion.isActive).to.be.false;
             expect(volatile.embargo.isActive).to.be.false;
             expect(volatile.ingrain).to.be.false;
+            expect(volatile.leechSeed).to.be.false;
             expect(volatile.magnetRise.isActive).to.be.false;
             expect(volatile.substitute).to.be.false;
             expect(volatile.overrideAbility).to.be.empty;
@@ -106,6 +108,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.embargo.isActive).to.be.true;
             expect(newVolatile.embargo.turns).to.equal(1);
             expect(newVolatile.ingrain).to.be.true;
+            expect(newVolatile.leechSeed).to.be.true;
             expect(newVolatile.magnetRise.isActive).to.be.true;
             expect(newVolatile.magnetRise.turns).to.equal(1);
             expect(newVolatile.substitute).to.be.true;

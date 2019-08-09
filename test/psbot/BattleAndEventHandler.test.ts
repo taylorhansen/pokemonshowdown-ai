@@ -743,6 +743,7 @@ describe("Battle and EventProcessor", function()
             testBoolean("Bide", v => v.bide.isActive);
             testBoolean("Embargo", v => v.embargo.isActive);
             testBoolean("Ingrain", v => v.ingrain, ["-start"]);
+            testBoolean("move: Leech Seed", v => v.leechSeed, ["-start"]);
             testBoolean("Magnet Rise", v => v.magnetRise.isActive);
             testBoolean("Substitute", v => v.substitute);
             testBoolean("Slow Start", v => v.slowStart.isActive);
