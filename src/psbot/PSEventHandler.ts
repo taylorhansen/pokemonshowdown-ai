@@ -198,12 +198,13 @@ export class PSEventHandler
             if (ev === "Bide") v.bide.end();
             else if (ev === "confusion") v.confusion.end();
             else if (ev === "Disable") v.enableMoves();
+            else if (ev === "Embargo") v.embargo.end();
             else if (ev === "Ingrain") v.ingrain = false;
             else if (ev === "Magnet Rise") v.magnetRise.end();
-            else if (ev === "Embargo") v.embargo.end();
-            else if (ev === "Taunt") v.taunt.end();
             else if (ev === "Substitute") v.substitute = false;
             else if (ev === "Slow Start") v.slowStart.end();
+            else if (ev === "Taunt") v.taunt.end();
+            else if (ev === "Uproar") v.uproar.end();
             else if (isFutureMove(id)) team.status.futureMoves[id].end();
             else this.logger.debug(`Ignoring end '${event.volatile}'`);
         })

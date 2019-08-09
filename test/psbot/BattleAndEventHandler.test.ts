@@ -590,14 +590,27 @@ describe("Battle and EventProcessor", function()
 
         describe("activate/end/start", function()
         {
-            /** Used in below `test()` function. */
-            interface EventType
+            interface EventTypeBase
             {
                 /** Type of event to execute. */
                 type: "-start" | "-activate" | "-end";
                 /** Postcondition for the VolatileStatus. */
                 post: (v: VolatileStatus) => void;
             }
+
+            interface EventTypeStart extends EventTypeBase
+            {
+                type: "-start";
+                otherArgs: string[];
+            }
+
+            interface EventTypeOther extends EventTypeBase
+            {
+                type: "-activate" | "-end";
+            }
+
+            /** Used in below `test()` function. */
+            type EventType = EventTypeStart | EventTypeOther;
 
             /**
              * Creates a test case for a VolatileStatus field related to
@@ -626,7 +639,7 @@ describe("Battle and EventProcessor", function()
                             event =
                             {
                                 type: "-start", id: us1, volatile: status,
-                                otherArgs: []
+                                otherArgs: eventType.otherArgs
                             };
                         }
                         else
@@ -655,6 +668,7 @@ describe("Battle and EventProcessor", function()
             [
                 {
                     type: "-start",
+                    otherArgs: [],
                     post(v)
                     {
                         expect(v.confusion.isActive).to.be.true;
@@ -680,6 +694,28 @@ describe("Battle and EventProcessor", function()
                 }
             ]);
 
+            test("Uproar", v => expect(v.bide.isActive).to.be.false,
+            [
+                {
+                    type: "-start",
+                    otherArgs: [],
+                    post: v => expect(v.uproar.isActive).to.be.true
+                },
+                {
+                    type: "-start",
+                    otherArgs: ["[upkeep]"],
+                    post(v)
+                    {
+                        expect(v.uproar.isActive).to.be.true;
+                        expect(v.uproar.turns).to.equal(2);
+                    }
+                },
+                {
+                    type: "-end",
+                    post: v => expect(v.uproar.isActive).to.be.false
+                }
+            ]);
+
             /**
              * Tests a start/end event combo concerning a VolatileStatus field.
              * @param status Name of the status as it appears in the event.
@@ -697,18 +733,20 @@ describe("Battle and EventProcessor", function()
                     eventTypes.map(type =>
                     ({
                         type,
+                        otherArgs: [],
                         post: v => expect(get(v))
                             .to.be[type === "-start" ? "true" : "false"]
                     })));
             }
 
             testBoolean("Bide", v => v.bide.isActive);
+            testBoolean("Ingrain", v => v.ingrain, ["-start"]);
             testBoolean("Magnet Rise", v => v.magnetRise.isActive);
             testBoolean("Embargo", v => v.embargo.isActive);
-            testBoolean("move: Taunt", v => v.taunt.isActive);
-            testBoolean("Torment", v => v.torment, ["-start"]);
             testBoolean("Substitute", v => v.substitute);
             testBoolean("Slow Start", v => v.slowStart.isActive);
+            testBoolean("move: Taunt", v => v.taunt.isActive);
+            testBoolean("Torment", v => v.torment, ["-start"]);
 
             it("Should start/end future move", async function()
             {
