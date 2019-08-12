@@ -86,6 +86,12 @@ export class Team
         this._pokemon.fill(null, 0, size);
     }
 
+    /** Called at the beginning of every turn to update temp statuses. */
+    public preTurn(): void
+    {
+        for (const mon of this._pokemon) if (mon) mon.preTurn();
+    }
+
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {

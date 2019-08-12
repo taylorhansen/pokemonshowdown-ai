@@ -11,6 +11,13 @@ export class BattleState
     /** Global status conditions for the entire room. */
     public readonly status = new RoomStatus();
 
+    /** Called at the beginning of every turn to update temp statuses. */
+    public preTurn(): void
+    {
+        this.teams.us.preTurn();
+        this.teams.them.preTurn();
+    }
+
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {

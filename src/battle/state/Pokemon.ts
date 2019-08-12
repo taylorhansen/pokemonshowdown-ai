@@ -361,6 +361,12 @@ ability ${ability}`);
         this._lastItem.narrow("none");
     }
 
+    /** Called at the beginning of every turn to update temp statuses. */
+    public preTurn(): void
+    {
+        if (this._active) this._volatile.preTurn();
+    }
+
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {

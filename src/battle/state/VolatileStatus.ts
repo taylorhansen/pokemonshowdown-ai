@@ -108,7 +108,11 @@ export class VolatileStatus
         for (const disabled of this.disabledMoves) disabled.end();
     }
 
-    /** Index of the last used move, or -1 if none yet. */
+    /**
+     * Index of the last used move, or -1 if none yet. Resets at the beginning
+     * of each turn, so this field can be used to check if a pokemon has not
+     * yet used a move.
+     */
     public lastUsed!: number;
 
     /** Tracks locked moves, e.g. petaldance variants. */
@@ -259,6 +263,12 @@ export class VolatileStatus
         this._willTruant = false;
     }
 
+    /** Called at the beginning of every turn to update temp statuses. */
+    public preTurn(): void
+    {
+        this.lastUsed = -1;
+    }
+
     /**
      * Called at the end of the turn, after a Choice has been sent to the
      * server.
@@ -273,7 +283,17 @@ export class VolatileStatus
         this.slowStart.tick();
         this.charge.tick();
         for (const disabled of this.disabledMoves) disabled.tick();
-        this.lockedMove.tick();
+
+        if (this.lastUsed >= 0)
+        {
+            this.lockedMove.tick();
+            this.twoTurn.tick();
+        }
+        else
+        {
+            this.lockedMove.reset();
+            this.twoTurn.reset();
+        }
 
         // after roost is used, the user is no longer grounded at the end of
         //  the turn
@@ -283,8 +303,6 @@ export class VolatileStatus
         //  counter will reset
         if (!this.stalled) this._stallTurns = 0;
         this.stalled = false;
-
-        this.twoTurn.tick();
 
         if (this.overrideAbilityName === "truant")
         {
