@@ -6759,21 +6759,21 @@ const moves: {readonly [name: string]: MoveData} =
     {
         uid: 310, pp: 8, target: "allAdjacentFoes"
     },
-    feintattack:
+    faketears:
     {
         uid: 311, pp: 32, target: "normal"
     },
-    faketears:
-    {
-        uid: 312, pp: 32, target: "normal"
-    },
     falseswipe:
     {
-        uid: 313, pp: 64, target: "normal"
+        uid: 312, pp: 64, target: "normal"
     },
     featherdance:
     {
-        uid: 314, pp: 24, target: "normal"
+        uid: 313, pp: 24, target: "normal"
+    },
+    feintattack:
+    {
+        uid: 314, pp: 32, target: "normal"
     },
     firepunch:
     {
@@ -6975,17 +6975,17 @@ const moves: {readonly [name: string]: MoveData} =
     {
         uid: 364, pp: 64, target: "self"
     },
+    megahorn:
+    {
+        uid: 365, pp: 16, target: "normal"
+    },
     megakick:
     {
-        uid: 365, pp: 8, target: "normal"
+        uid: 366, pp: 8, target: "normal"
     },
     megapunch:
     {
-        uid: 366, pp: 32, target: "normal"
-    },
-    megahorn:
-    {
-        uid: 367, pp: 16, target: "normal"
+        uid: 367, pp: 32, target: "normal"
     },
     metalclaw:
     {
@@ -7003,17 +7003,17 @@ const moves: {readonly [name: string]: MoveData} =
     {
         uid: 371, pp: 8, target: "normal"
     },
-    mudslap:
+    mudbomb:
     {
         uid: 372, pp: 16, target: "normal"
     },
-    mudbomb:
-    {
-        uid: 373, pp: 16, target: "normal"
-    },
     mudshot:
     {
-        uid: 374, pp: 24, target: "normal"
+        uid: 373, pp: 24, target: "normal"
+    },
+    mudslap:
+    {
+        uid: 374, pp: 16, target: "normal"
     },
     nastyplot:
     {
@@ -7023,15 +7023,15 @@ const moves: {readonly [name: string]: MoveData} =
     {
         uid: 376, pp: 24, target: "normal"
     },
-    nightshade:
+    nightmare:
     {
         uid: 377, pp: 24, target: "normal"
     },
-    nightslash:
+    nightshade:
     {
         uid: 378, pp: 24, target: "normal"
     },
-    nightmare:
+    nightslash:
     {
         uid: 379, pp: 24, target: "normal"
     },
@@ -7343,21 +7343,21 @@ const moves: {readonly [name: string]: MoveData} =
     {
         uid: 456, pp: 16, target: "normal"
     },
+    waterfall:
+    {
+        uid: 457, pp: 24, target: "normal"
+    },
     watergun:
     {
-        uid: 457, pp: 40, target: "normal"
+        uid: 458, pp: 40, target: "normal"
     },
     waterpulse:
     {
-        uid: 458, pp: 32, target: "any"
+        uid: 459, pp: 32, target: "any"
     },
     waterspout:
     {
-        uid: 459, pp: 8, target: "allAdjacentFoes"
-    },
-    waterfall:
-    {
-        uid: 460, pp: 24, target: "normal"
+        uid: 460, pp: 8, target: "allAdjacentFoes"
     },
     wingattack:
     {

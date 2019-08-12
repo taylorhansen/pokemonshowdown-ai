@@ -40,24 +40,24 @@
   "author": "Taylor Hansen (CrazyGuy108)",
   "license": "MIT",
   "dependencies": {
-    "@tensorflow/tfjs-data": "^1.2.2",
-    "@tensorflow/tfjs-node": "^1.2.3",
+    "@tensorflow/tfjs-data": "^1.2.7",
+    "@tensorflow/tfjs-node": "^1.2.7",
     "node-fetch": "^2.6.0",
     "websocket": "^1.0.29"
   },
   "devDependencies": {
-    "@types/chai": "^4.1.7",
+    "@types/chai": "^4.2.0",
     "@types/mocha": "^5.2.7",
-    "@types/node-fetch": "^2.3.7",
+    "@types/node-fetch": "^2.5.0",
     "@types/progress": "^2.0.3",
     "@types/websocket": "0.0.40",
     "chai": "^4.1.2",
-    "mocha": "^6.1.4",
+    "mocha": "^6.2.0",
     "nyc": "^14.1.1",
     "progress": "^2.0.3",
-    "source-map-support": "^0.5.12",
+    "source-map-support": "^0.5.13",
     "ts-node": "^8.3.0",
     "tslint": "^5.18.0",
-    "typescript": "^3.5.2"
+    "typescript": "^3.5.3"
   }
 }

@@ -25,7 +25,7 @@ import { Writable } from "stream";
 import s = require("../../Pokemon-Showdown/.sim-dist/battle-stream");
 import { sizeBattleState } from "../../src/ai/encodeBattleState";
 import { Network, toColumn } from "../../src/ai/Network";
-import { Choice, intToChoice } from "../../src/battle/agent/Choice";
+import { intToChoice } from "../../src/battle/agent/Choice";
 import { evaluateFolder, latestModelFolder, selfPlayFolder } from
     "../../src/config";
 import { Logger } from "../../src/Logger";
@@ -154,7 +154,7 @@ async function play(options: GameOptions): Promise<GameResult>
         if (id === "p1")
         {
             // only need one player to track these
-            listener.on("battleprogress", args => args.events.forEach(event =>
+            listener.on("battleprogress", msg => msg.events.forEach(event =>
             {
                 switch (event.type)
                 {
