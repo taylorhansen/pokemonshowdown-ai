@@ -333,7 +333,7 @@ export class VolatileStatus
             // override ability/species/etc are handled by Pokemon#toString()
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
-            this.disabledMoves.filter(d => !d.isActive).map(d => d.toString()),
+            this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),
             this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.mustRecharge ? ["must recharge"] : [],
