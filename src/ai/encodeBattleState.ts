@@ -142,10 +142,10 @@ const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
 
 /** Length of the return value of `encodeVolatileStatus()`. */
 export const sizeVolatileStatus =
-    /*boostable stats*/Object.keys(boostNames).length +
+    /*aqua ring*/1 + /*boostable stats*/Object.keys(boostNames).length +
     /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus + /*ingrain*/1 +
-    /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
-    /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
+    /*leech seed*/1 + /*magnet rise*/sizeTempStatus + /*substitute*/1 +
+    /*suppress ability*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*locked move variants*/numLockedMoves + /*must recharge*/1 +
     /*override ability*/dex.numAbilities + /*override species*/dex.numPokemon +
@@ -158,11 +158,13 @@ export const sizeVolatileStatus =
 export function encodeVolatileStatus(status: VolatileStatus): number[]
 {
     // passable
+    const aquaRing = status.aquaRing ? 1 : 0;
     const boosts = (Object.keys(status.boosts) as BoostName[])
         .map(key => status.boosts[key]);
     const confused = encodeTempStatus(status.confusion);
     const embargo = encodeTempStatus(status.embargo);
     const ingrain = status.ingrain ? 1 : 0;
+    const leechSeed = status.leechSeed ? 1 : 0;
     const magnetRise = encodeTempStatus(status.magnetRise);
     const substitute = status.substitute ? 1 : 0;
     const suppressed = status.isAbilitySuppressed() ? 1 : 0;
@@ -194,9 +196,10 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
-        ...boosts, ...confused, ...embargo, ingrain, ...magnetRise, substitute,
-        suppressed, ...bide, ...charge, ...disabled, ...lastUsed, ...lockedMove,
-        mustRecharge, ...overrideAbility, ...overrideSpecies,
+        aquaRing,
+        ...boosts, ...confused, ...embargo, ingrain, leechSeed, ...magnetRise,
+        substitute, suppressed, ...bide, ...charge, ...disabled, ...lastUsed,
+        ...lockedMove, mustRecharge, ...overrideAbility, ...overrideSpecies,
         ...overrideTypeData, roost, ...slowStart, stallFailRate, ...taunt,
         torment, ...twoTurn, unburden, ...uproar, willTruant
     ];

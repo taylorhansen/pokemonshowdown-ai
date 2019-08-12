@@ -160,6 +160,7 @@ export class VolatileStatus
     /** Roost move effect (single turn). */
     public roost!: boolean;
 
+    /** First 5 turns of Slow Start ability. */
     public readonly slowStart = new TempStatus("slow start", 5);
 
     /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
