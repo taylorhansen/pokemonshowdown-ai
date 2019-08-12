@@ -43,16 +43,19 @@ export class PossibilityClass<TData>
         this.narrowListeners.push(f);
     }
 
-    /** Removes a type from data possibility. */
-    public remove(name: string): void
+    /** Removes values from the data possibility. */
+    public remove(...values: string[]): void
     {
-        if (!this._possibleValues.delete(this.check(name))) return;
+        for (const value of values)
+        {
+            this._possibleValues.delete(this.check(value));
+        }
 
         const size = this._possibleValues.size;
         if (size === 1)
         {
             const value = this._possibleValues.values().next().value;
-            this._definiteValue = {name: value, data: this.map[name]};
+            this._definiteValue = {name: value, data: this.map[value]};
             this.narrowed();
         }
         else if (size < 1)
@@ -68,7 +71,7 @@ export class PossibilityClass<TData>
     }
 
     /** Removes currently set value names that are not in the given array. */
-    public narrow(...values: readonly string[]): void
+    public narrow(...values: string[]): void
     {
         values.forEach(x => this.check(x));
 
@@ -104,7 +107,7 @@ export class PossibilityClass<TData>
     {
         if (!this.map.hasOwnProperty(name))
         {
-            throw new Error("PossibilityClass has no value name " + name);
+            throw new Error(`PossibilityClass has no value name '${name}'`);
         }
         return name;
     }
