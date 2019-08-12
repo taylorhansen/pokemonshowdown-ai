@@ -115,8 +115,17 @@ export class VolatileStatus
      */
     public lastUsed!: number;
 
-    /** Tracks locked moves, e.g. petaldance variants. */
-    public readonly lockedMove = new VariableTempStatus(lockedMoves, 2);
+    /**
+     * Tracks locked moves, e.g. petaldance variants. Should be ticked after
+     * every successful move attempt.
+     *
+     * After the 2nd or 3rd move, the user will become confused, explicitly
+     * ending the status. However, if the user was already confused, the status
+     * can be implicitly ended, so this VariableTempStatus field is
+     * silent-endable.
+     */
+    public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
+        /*silent*/true);
 
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge!: boolean;
@@ -284,12 +293,8 @@ export class VolatileStatus
         this.charge.tick();
         for (const disabled of this.disabledMoves) disabled.tick();
 
-        if (this.lastUsed >= 0)
-        {
-            this.lockedMove.tick();
-            this.twoTurn.tick();
-        }
-        else
+        // move was not used
+        if (this.lastUsed < 0)
         {
             this.lockedMove.reset();
             this.twoTurn.reset();

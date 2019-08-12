@@ -272,43 +272,23 @@ describe("VolatileStatus", function()
 
     describe("#lockedMove", function()
     {
-        it("Should tick on #postTurn()", function()
+        it("Should not stop on #postTurn() if #lastUsed is set", function()
         {
-            // preparing the move
             volatile.preTurn();
             volatile.lastUsed = 0;
             volatile.lockedMove.start("outrage");
             volatile.postTurn();
 
             expect(volatile.lockedMove.isActive).to.be.true;
-            expect(volatile.lockedMove.turns).to.equal(1);
-
-            // continuing
-            volatile.preTurn();
-            volatile.lastUsed = 0;
-            volatile.postTurn();
-
-            expect(volatile.lockedMove.isActive).to.be.true;
-            expect(volatile.lockedMove.turns).to.equal(2);
         });
 
-        it("Should stop if #lastUsed not set", function()
+        it("Should stop on #postTurn() if #lastUsed is not set", function()
         {
-            // starting to move
             volatile.preTurn();
-            volatile.lastUsed = 0;
-            volatile.lockedMove.start("thrash");
-            volatile.postTurn();
-
-            expect(volatile.lockedMove.isActive).to.be.true;
-            expect(volatile.lockedMove.turns).to.equal(1);
-
-            // interrupted (lastUsed not set)
-            volatile.preTurn();
+            volatile.lockedMove.start("petaldance");
             volatile.postTurn();
 
             expect(volatile.lockedMove.isActive).to.be.false;
-            expect(volatile.lockedMove.turns).to.equal(0);
         });
     });
 
@@ -376,43 +356,23 @@ describe("VolatileStatus", function()
             expect(volatile.twoTurn).to.have.property("silent", true);
         });
 
-        it("Should tick on #postTurn()", function()
+        it("Should not stop on #postTurn() if #lastUsed is set", function()
         {
-            // preparing the move
             volatile.preTurn();
             volatile.lastUsed = 0;
             volatile.twoTurn.start("dig");
             volatile.postTurn();
 
             expect(volatile.twoTurn.isActive).to.be.true;
-            expect(volatile.twoTurn.turns).to.equal(1);
-
-            // finishing the move
-            volatile.preTurn();
-            volatile.lastUsed = 0;
-            volatile.postTurn();
-
-            expect(volatile.twoTurn.isActive).to.be.false;
-            expect(volatile.twoTurn.turns).to.equal(0);
         });
 
-        it("Should stop if #lastUsed not set", function()
+        it("Should stop on #postTurn() if #lastUsed is not set", function()
         {
-            // preparing the move
             volatile.preTurn();
-            volatile.lastUsed = 0;
             volatile.twoTurn.start("dig");
             volatile.postTurn();
 
-            expect(volatile.twoTurn.isActive).to.be.true;
-            expect(volatile.twoTurn.turns).to.equal(1);
-
-            // failed to finish the move
-            volatile.preTurn();
-            volatile.postTurn();
-
             expect(volatile.twoTurn.isActive).to.be.false;
-            expect(volatile.twoTurn.turns).to.equal(0);
         });
     });
 

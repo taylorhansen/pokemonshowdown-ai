@@ -234,16 +234,25 @@ ability ${ability}`);
 
         if (options.unsuccessful)
         {
-            this.volatile.lockedMove.reset();
+            this._volatile.lockedMove.reset();
             return;
         }
 
-        // apply move effects
+        // apply implicit effects
         const move = dex.moves[options.moveId];
         if (move.volatileEffect === "lockedmove")
         {
-            this.volatile.lockedMove.start(options.moveId as any);
+            if (this._volatile.lockedMove.isActive &&
+                options.moveId === this._volatile.lockedMove.type)
+            {
+                // if we're already in a locked move, no need to restart it
+                this._volatile.lockedMove.tick();
+            }
+            else this._volatile.lockedMove.start(options.moveId as any);
         }
+        else this._volatile.lockedMove.reset();
+
+        // apply implicit team effects
         if (this.team)
         {
             // wish can be used consecutively, but only the first time will

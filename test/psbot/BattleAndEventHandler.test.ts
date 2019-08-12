@@ -1874,7 +1874,9 @@ describe("Battle and EventProcessor", function()
                 const mon = battle.state.teams.us.active;
                 mon.moveset.reveal("splash");
 
-                let request: RequestMessage =
+                // after starting to prepare a two-turn move, the user becomes
+                //  trapped and locked into using the move
+                const request1: RequestMessage =
                 {
                     active:
                     [
@@ -1889,10 +1891,10 @@ describe("Battle and EventProcessor", function()
                             trapped: true
                         }
                     ],
-                    side: battle.lastRequest!.side,
-                    wait: true
+                    side: battle.lastRequest!.side
                 };
-                await battle.request(request);
+                await battle.request(request1);
+                // start preparing the two-turn move
                 await battle.progress(
                 {
                     events:
@@ -1902,53 +1904,55 @@ describe("Battle and EventProcessor", function()
                             targetId: them1
                             // note: server also sends |[still] term at eol,
                             //  which supresses animation and is technically
-                            //  supposed to hide targetId (applies to doubles)
+                            //  supposed to hide targetId (applies in doubles)
                         },
                         {
                             type: "-prepare", id: us1, moveName: "Solar Beam",
                             targetId: them1
                         },
-                        {type: "upkeep"}
+                        {type: "upkeep"}, {type: "turn", num: 2}
                     ]
                 });
+
                 expect(mon.volatile.twoTurn.type).to.equal("solarbeam");
 
-                // simulate intermediate choice by sending turn after
-                request = {...request, wait: false};
-                await battle.request(request);
-                await battle.progress({events: [{type: "turn", num: 2}]});
-                expect(mon.volatile.twoTurn.type).to.equal("solarbeam");
                 // the use of a two-turn move should restrict the client's
                 //  choices to only the move being prepared, which temporarily
                 //  takes the spot of the first move
                 expect(battle.lastChoices).to.have.members(["move 1"]);
                 expect(responses).to.have.lengthOf(1);
 
-                // interrupt the charged move somehow
-                request =
-                {
-                    ...request,
-                    active: [{moves:
-                    [
-                        {
-                            move: "Solar Beam", id: "solarbeam", pp: 15,
-                            maxpp: 16, disabled: false, target: "any"
-                        },
-                        {
-                            move: "Splash", id: "splash", pp: 64, maxpp: 64,
-                            disabled: false, target: "self"
-                        }
-                    ]}]
-                };
-                await battle.request(request);
+                // after being interrupted, the user can now act normally
+                const request2 = {...request1};
+                request2.active =
+                [
+                    {
+                        moves:
+                        [
+                            {
+                                ...request1.active![0].moves[0], pp: 15,
+                                maxpp: 16, target: "normal"
+                            },
+                            {
+                                move: "Splash", id: "splash", disabled: false,
+                                pp: 64, maxpp: 64, target: "self"
+                            }
+                        ],
+                        trapped: false
+                    }
+                ];
+                await battle.request(request2);
+
                 // absence of twoturn move indicates that the pokemon was
                 //  prevented from completing the move
                 await battle.progress({events: [{type: "turn", num: 3}]});
+
+                expect(mon.volatile.twoTurn.isActive).to.be.false;
+
                 // should now be able to choose other choices
                 expect(battle.lastChoices).to.have.members(
                     ["move 1", "move 2", "switch 2"]);
                 expect(responses).to.have.lengthOf(2);
-                expect(mon.volatile.twoTurn.isActive).to.be.false;
             });
 
             // TODO: shorted two-turn move (e.g. solarbeam with sun/powerherb)

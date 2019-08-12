@@ -581,6 +581,9 @@ export class PSEventHandler
      */
     public handleEvents(events: readonly AnyBattleEvent[]): void
     {
+        // starting a new turn
+        if (this.newTurn) this.state.preTurn();
+
         // this field should only stay true if one of these events contains a
         //  |turn| message
         this.newTurn = false;
