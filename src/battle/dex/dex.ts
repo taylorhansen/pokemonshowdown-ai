@@ -2,7 +2,7 @@
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import { Dex, MoveData, PokemonData } from "./dex-util";
+import { Dex, MoveData, NaturalGiftData, PokemonData } from "./dex-util";
 
 const pokemon: {readonly [species: string]: PokemonData} =
 {
@@ -7667,6 +7667,75 @@ const items: {readonly [name: string]: number} =
     wiseglasses: 212,
     zapplate: 213,
     zoomlens: 214
+};
+
+/** Set of all berry items. Maps name to Natural Gift move data. */
+export const berries: {readonly [name: string]: NaturalGiftData} =
+{
+    chopleberry: {basePower: 60, type: "fighting"},
+    custapberry: {basePower: 80, type: "ghost"},
+    jabocaberry: {basePower: 80, type: "dragon"},
+    rowapberry: {basePower: 80, type: "dark"},
+    aguavberry: {basePower: 60, type: "dragon"},
+    apicotberry: {basePower: 80, type: "ground"},
+    aspearberry: {basePower: 60, type: "ice"},
+    babiriberry: {basePower: 60, type: "steel"},
+    belueberry: {basePower: 80, type: "electric"},
+    blukberry: {basePower: 70, type: "fire"},
+    chartiberry: {basePower: 60, type: "rock"},
+    cheriberry: {basePower: 60, type: "fire"},
+    chestoberry: {basePower: 60, type: "water"},
+    chilanberry: {basePower: 60, type: "normal"},
+    cobaberry: {basePower: 60, type: "flying"},
+    colburberry: {basePower: 60, type: "dark"},
+    cornnberry: {basePower: 70, type: "bug"},
+    durinberry: {basePower: 80, type: "water"},
+    enigmaberry: {basePower: 80, type: "bug"},
+    figyberry: {basePower: 60, type: "bug"},
+    ganlonberry: {basePower: 80, type: "ice"},
+    grepaberry: {basePower: 70, type: "flying"},
+    habanberry: {basePower: 60, type: "dragon"},
+    hondewberry: {basePower: 70, type: "ground"},
+    iapapaberry: {basePower: 60, type: "dark"},
+    kasibberry: {basePower: 60, type: "ghost"},
+    kebiaberry: {basePower: 60, type: "poison"},
+    kelpsyberry: {basePower: 70, type: "fighting"},
+    lansatberry: {basePower: 80, type: "flying"},
+    leppaberry: {basePower: 60, type: "fighting"},
+    liechiberry: {basePower: 80, type: "grass"},
+    lumberry: {basePower: 60, type: "flying"},
+    magoberry: {basePower: 60, type: "ghost"},
+    magostberry: {basePower: 70, type: "rock"},
+    micleberry: {basePower: 80, type: "rock"},
+    nanabberry: {basePower: 70, type: "water"},
+    nomelberry: {basePower: 70, type: "dragon"},
+    occaberry: {basePower: 60, type: "fire"},
+    oranberry: {basePower: 60, type: "poison"},
+    pamtreberry: {basePower: 70, type: "steel"},
+    passhoberry: {basePower: 60, type: "water"},
+    payapaberry: {basePower: 60, type: "psychic"},
+    pechaberry: {basePower: 60, type: "electric"},
+    persimberry: {basePower: 60, type: "ground"},
+    petayaberry: {basePower: 80, type: "poison"},
+    pinapberry: {basePower: 70, type: "grass"},
+    pomegberry: {basePower: 70, type: "ice"},
+    qualotberry: {basePower: 70, type: "poison"},
+    rabutaberry: {basePower: 70, type: "ghost"},
+    rawstberry: {basePower: 60, type: "grass"},
+    razzberry: {basePower: 60, type: "steel"},
+    rindoberry: {basePower: 60, type: "grass"},
+    salacberry: {basePower: 80, type: "fighting"},
+    shucaberry: {basePower: 60, type: "ground"},
+    sitrusberry: {basePower: 60, type: "psychic"},
+    spelonberry: {basePower: 70, type: "dark"},
+    starfberry: {basePower: 80, type: "psychic"},
+    tamatoberry: {basePower: 70, type: "psychic"},
+    tangaberry: {basePower: 60, type: "bug"},
+    wacanberry: {basePower: 60, type: "electric"},
+    watmelberry: {basePower: 80, type: "fire"},
+    wepearberry: {basePower: 70, type: "electric"},
+    wikiberry: {basePower: 60, type: "rock"},
+    yacheberry: {basePower: 60, type: "ice"}
 };
 
 /** Contains all relevant Pokemon-related data. */

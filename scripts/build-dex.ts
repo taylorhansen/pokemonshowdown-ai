@@ -4,7 +4,7 @@
  */
 // @ts-ignore
 import { ModdedDex } from "../Pokemon-Showdown/.sim-dist/dex";
-import { Type } from "../src/battle/dex/dex-util";
+import { NaturalGiftData, Type } from "../src/battle/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
 
 const dex = new ModdedDex("gen4");
@@ -65,7 +65,7 @@ console.log(`\
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import { Dex, MoveData, PokemonData } from "./dex-util";
+import { Dex, MoveData, NaturalGiftData, PokemonData } from "./dex-util";
 `);
 
 // counter for the unique identifier of a pokemon, move, etc.
@@ -277,6 +277,7 @@ specificMoves(twoTurnMoves, "twoTurn", "two-turn");
 
 // items
 const items = data.Items;
+const berries: {[name: string]: NaturalGiftData} = {};
 console.log(`const items: {readonly [name: string]: number} =
 {
     none: 0,`);
@@ -288,12 +289,30 @@ for (const itemName in items)
     // only gen4 and under items allowed
     if (item.gen > 4 || item.isNonstandard) continue;
 
+    /** Record Natural Gift data. */
+    if (item.isBerry) berries[item.id] = item.naturalGift;
+
     console.log(`    ${item.id}: ${uid++},`);
 }
 console.log("};\n");
 const numItems = uid;
 
-console.log(`/** Contains all relevant Pokemon-related data. */
+// berries
+console.log(`
+/** Set of all berry items. Maps name to Natural Gift move data. */
+export const berries: {readonly [name: string]: NaturalGiftData} =
+{`);
+for (const berryName in berries)
+{
+    if (!berries.hasOwnProperty(berryName)) continue;
+    const berry = berries[berryName];
+    console.log(`    ${berryName}: {basePower: ${berry.basePower}, \
+type: "${berry.type.toLowerCase()}"},`);
+}
+
+console.log(`};
+
+/** Contains all relevant Pokemon-related data. */
 export const dex: Dex =
 {
     pokemon, numPokemon: ${numPokemon}, abilities, \

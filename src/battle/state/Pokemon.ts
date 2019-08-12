@@ -1,4 +1,4 @@
-import { dex, twoTurnMoves } from "../dex/dex";
+import { berries, dex, twoTurnMoves } from "../dex/dex";
 import { PokemonData, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
@@ -163,15 +163,16 @@ ability ${ability}`);
     /**
      * Indicates that an item was just removed from this Pokemon.
      * @param consumed If the item was consumed (can be brought back using
-     * Recycle), set this to the item's name.
+     * Recycle), set this to the item's name, or true if the item's name is
+     * unknown.
      */
-    public removeItem(consumed?: string): void
+    public removeItem(consumed?: string | true): void
     {
         if (consumed)
         {
-            // move possibility object to last item slot
+            // move current item possibility object to the lastItem slot
             this._lastItem = this._item;
-            this._lastItem.narrow(consumed);
+            if (typeof consumed === "string") this._lastItem.narrow(consumed);
         }
 
         // this should reset the _item reference so there aren't any duplicates
@@ -215,6 +216,20 @@ ability ${ability}`);
         if (twoTurnMoves.hasOwnProperty(options.moveId))
         {
             this.volatile.twoTurn.reset();
+        }
+
+        // handle natural gift move
+        if (options.moveId === "naturalgift")
+        {
+            if (options.unsuccessful !== "failed")
+            {
+                // move succeeds if the user has a berry
+                // TODO: narrow further based on power/type?
+                this._item.narrow(...Object.keys(berries));
+                this.removeItem(/*consumed*/true);
+            }
+            // move fails if the user doesn't have a berry
+            else this._item.remove(...Object.keys(berries));
         }
 
         if (options.unsuccessful)

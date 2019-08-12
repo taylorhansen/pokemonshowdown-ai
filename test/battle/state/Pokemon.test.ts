@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import "mocha";
+import { berries } from "../../../src/battle/dex/dex";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
 import { Team } from "../../../src/battle/state/Team";
@@ -503,6 +504,36 @@ describe("Pokemon", function()
 
                     mon.useMove({moveId: "bounce", targets: [], nopp: true});
                     expect(mon.volatile.twoTurn.isActive).to.be.false;
+                });
+            });
+
+            describe("Natural Gift move", function()
+            {
+                it("Should infer berry if successful", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    const item = mon.item;
+                    mon.useMove({moveId: "naturalgift", targets: []});
+
+                    expect(mon.lastItem).to.equal(item,
+                        "Item was not consumed");
+                    expect(mon.lastItem.possibleValues)
+                        .to.have.keys(...Object.keys(berries));
+                });
+
+                it("Should infer no berry if failed", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    const item = mon.item;
+                    mon.useMove(
+                    {
+                        moveId: "naturalgift", targets: [],
+                        unsuccessful: "failed"
+                    });
+
+                    expect(mon.item).to.equal(item, "Item was consumed");
+                    expect(mon.item.possibleValues)
+                        .to.not.have.any.keys(...Object.keys(berries));
                 });
             });
 

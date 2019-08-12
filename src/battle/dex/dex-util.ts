@@ -23,6 +23,15 @@ export const numHPTypes = Object.keys(hpTypes).length;
 /** The different hidden power types a pokemon can have. */
 export type HPType = keyof typeof hpTypes;
 
+/** Data for the Natural Gift move. */
+export interface NaturalGiftData
+{
+    /** Move's base power. */
+    readonly basePower: number;
+    /** Move's type. */
+    readonly type: Type;
+}
+
 /** Hold the set of all major status names. Maps status name to a unique id. */
 export const majorStatuses =
 {
@@ -159,7 +168,7 @@ export interface Dex
     readonly abilities: {readonly [name: string]: number};
     /** Total number of abilities. */
     readonly numAbilities: number;
-    /** Maps a move id name to its id number. */
+    /** Maps a move id name to its Dex object. */
     readonly moves: {readonly [name: string]: MoveData};
     /** Total number of moves. */
     readonly numMoves: number;
