@@ -1375,6 +1375,27 @@ describe("Battle and EventProcessor", function()
             });
         });
 
+        describe("fieldend/fieldstart", function()
+        {
+            it("Should start/end gravity", async function()
+            {
+                const g = battle.state.status.gravity;
+                expect(g.isActive).to.be.false;
+
+                await battle.progress(
+                    {events: [{type: "-fieldstart", effect: "move: Gravity"}]});
+                expect(g.isActive).to.be.true;
+                expect(g.turns).to.equal(1);
+
+                await battle.progress({events: [{type: "turn", num: 3}]});
+                expect(g.turns).to.equal(2);
+
+                await battle.progress(
+                    {events: [{type: "-fieldend", effect: "move: Gravity"}]});
+                expect(g.isActive).to.be.false;
+            });
+        });
+
         describe("formechange", function()
         {
             it("Should temporarily change form", async function()
