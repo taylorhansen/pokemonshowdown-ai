@@ -4,6 +4,8 @@ import { Choice } from "../../src/battle/agent/Choice";
 import { types, WeatherType } from "../../src/battle/dex/dex-util";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
+import { RoomStatus } from "../../src/battle/state/RoomStatus";
+import { TempStatus } from "../../src/battle/state/TempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
 import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent, SetHPEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
@@ -1377,45 +1379,30 @@ describe("Battle and EventProcessor", function()
 
         describe("fieldend/fieldstart", function()
         {
-            it("Should start/end gravity", async function()
+            function testTempStatus(name: string,
+                fn: (rs: RoomStatus) => TempStatus): void
             {
-                const g = battle.state.status.gravity;
-                expect(g.isActive).to.be.false;
-
-                await battle.progress(
-                    {events: [{type: "-fieldstart", effect: "move: Gravity"}]});
-                expect(g.isActive).to.be.true;
-                expect(g.turns).to.equal(1);
-
-                await battle.progress({events: [{type: "turn", num: 3}]});
-                expect(g.turns).to.equal(2);
-
-                await battle.progress(
-                    {events: [{type: "-fieldend", effect: "move: Gravity"}]});
-                expect(g.isActive).to.be.false;
-            });
-
-            it("Should start/end trick room", async function()
-            {
-                const tr = battle.state.status.trickRoom;
-                expect(tr.isActive).to.be.false;
-
-                await battle.progress(
+                it(`Should start/end ${name}`, async function()
                 {
-                    events: [{type: "-fieldstart", effect: "move: Trick Room"}]
-                });
-                expect(tr.isActive).to.be.true;
-                expect(tr.turns).to.equal(1);
+                    const ts = fn(battle.state.status);
+                    expect(ts.isActive).to.be.false;
 
-                await battle.progress({events: [{type: "turn", num: 3}]});
-                expect(tr.turns).to.equal(2);
+                    await battle.progress(
+                        {events: [{type: "-fieldstart", effect: name}]});
+                    expect(ts.isActive).to.be.true;
+                    expect(ts.turns).to.equal(1);
 
-                await battle.progress(
-                {
-                    events: [{type: "-fieldend", effect: "move: Trick Room"}]
+                    await battle.progress({events: [{type: "turn", num: 3}]});
+                    expect(ts.turns).to.equal(2);
+
+                    await battle.progress(
+                        {events: [{type: "-fieldend", effect: name}]});
+                    expect(ts.isActive).to.be.false;
                 });
-                expect(tr.isActive).to.be.false;
-            });
+            }
+
+            testTempStatus("move: Gravity", rs => rs.gravity);
+            testTempStatus("move: Trick Room", rs => rs.trickRoom);
         });
 
         describe("formechange", function()
@@ -1686,45 +1673,6 @@ describe("Battle and EventProcessor", function()
 
             describe("lockedmove", function()
             {
-                it("Should activate lockedmove status and restrict choices",
-                async function()
-                {
-                    expect(battle.state.teams.us.active.volatile.lockedMove
-                        .isActive).to.be.false;
-                    await battle.request(
-                    {
-                        active:
-                        [
-                            {
-                                moves:
-                                [
-                                    {
-                                        move: "Outrage", id: "outrage",
-                                        disabled: false
-                                    }
-                                ],
-                                trapped: true
-                            }
-                        ],
-                        side: battle.lastRequest!.side
-                    });
-                    await battle.progress(
-                    {
-                        events:
-                        [
-                            {
-                                type: "move", id: us1, moveName: "Outrage",
-                                targetId: them1
-                            },
-                            {type: "upkeep"}, {type: "turn", num: 60}
-                        ]
-                    });
-                    expect(battle.state.teams.us.active.volatile.lockedMove
-                        .isActive).to.be.true;
-                    expect(battle.lastChoices).to.have.members(["move 1"]);
-                    expect(responses).to.have.lengthOf(1);
-                });
-
                 it("Should not consume pp", async function()
                 {
                     let move =
