@@ -100,11 +100,11 @@ export class PSEventHandler
                     active.disableMove(moveId);
                     break;
                 }
+                case "Focus Energy":
+                    active.volatile.focusEnergy = true;
+                    break;
                 case "Foresight":
                     active.volatile.identified = "foresight";
-                    break;
-                case "Miracle Eye":
-                    active.volatile.identified = "miracleeye";
                     break;
                 case "Ingrain":
                     active.volatile.ingrain = true;
@@ -114,6 +114,9 @@ export class PSEventHandler
                     break;
                 case "Magnet Rise":
                     active.volatile.magnetRise.start();
+                    break;
+                case "Miracle Eye":
+                    active.volatile.identified = "miracleeye";
                     break;
                 case "Embargo":
                     active.volatile.embargo.start();

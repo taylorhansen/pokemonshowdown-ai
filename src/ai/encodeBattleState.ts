@@ -143,9 +143,10 @@ const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
 /** Length of the return value of `encodeVolatileStatus()`. */
 export const sizeVolatileStatus =
     /*aqua ring*/1 + /*boostable stats*/Object.keys(boostNames).length +
-    /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus + /*ingrain*/1 +
-    /*leech seed*/1 + /*magnet rise*/sizeTempStatus + /*substitute*/1 +
-    /*suppress ability*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
+    /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus +
+    /*focus energy*/1 + /*ingrain*/1 + /*leech seed*/1 +
+    /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
+    /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*identified*/2 + /*locked move variants*/numLockedMoves +
     /*must recharge*/1 + /*override ability*/dex.numAbilities +
@@ -164,6 +165,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         .map(key => status.boosts[key]);
     const confused = encodeTempStatus(status.confusion);
     const embargo = encodeTempStatus(status.embargo);
+    const focusEnergy = status.focusEnergy ? 1 : 0;
     const ingrain = status.ingrain ? 1 : 0;
     const leechSeed = status.leechSeed ? 1 : 0;
     const magnetRise = encodeTempStatus(status.magnetRise);
@@ -199,9 +201,9 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
-        aquaRing, ...boosts, ...confused, ...embargo, ingrain, leechSeed,
-        ...magnetRise, substitute, suppressed, ...bide, ...charge, ...disabled,
-        ...identified, ...lastUsed, ...lockedMove, mustRecharge,
+        aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, ingrain,
+        leechSeed, ...magnetRise, substitute, suppressed, ...bide, ...charge,
+        ...disabled, ...identified, ...lastUsed, ...lockedMove, mustRecharge,
         ...overrideAbility, ...overrideSpecies, ...overrideTypeData, roost,
         ...slowStart, stallFailRate, ...taunt, torment, ...twoTurn, unburden,
         ...uproar, willTruant

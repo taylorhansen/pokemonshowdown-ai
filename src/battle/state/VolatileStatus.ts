@@ -31,6 +31,9 @@ export class VolatileStatus
     /** Embargo move status. */
     public readonly embargo = new TempStatus("embargo", 3);
 
+    /** Focus Energy move status. */
+    public focusEnergy!: boolean;
+
     /** Ingrain move status. */
     public ingrain!: boolean;
 
@@ -246,6 +249,7 @@ export class VolatileStatus
         };
         this.confusion.end();
         this.embargo.end();
+        this.focusEnergy = false;
         this.ingrain = false;
         this.leechSeed = false;
         this.magnetRise.end();
@@ -331,6 +335,7 @@ export class VolatileStatus
         v._boosts = this._boosts;
         this.confusion.copyTo(v.confusion);
         this.embargo.copyTo(v.embargo);
+        v.focusEnergy = this.focusEnergy;
         v.ingrain = this.ingrain;
         v.leechSeed = this.leechSeed;
         this.magnetRise.copyTo(v.magnetRise);
@@ -353,6 +358,7 @@ export class VolatileStatus
                 .map(key => `${key}: ${plus(this._boosts[key])}`),
             this.confusion.isActive ? [this.confusion.toString()] : [],
             this.embargo.isActive ? [this.embargo.toString()] : [],
+            this.focusEnergy ? ["focus energy"] : [],
             this.ingrain ? ["ingrain"] : [],
             this.leechSeed ? ["leech seed"] : [],
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],

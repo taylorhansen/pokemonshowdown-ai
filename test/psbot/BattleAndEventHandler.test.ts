@@ -742,6 +742,7 @@ describe("Battle and EventProcessor", function()
             testBoolean("Aqua Ring", v => v.aquaRing, ["-start"]);
             testBoolean("Bide", v => v.bide.isActive);
             testBoolean("Embargo", v => v.embargo.isActive);
+            testBoolean("move: Focus Energy", v => v.focusEnergy, ["-start"]);
             testBoolean("Foresight", v => v.identified === "foresight",
                 ["-start"]);
             testBoolean("Ingrain", v => v.ingrain, ["-start"]);

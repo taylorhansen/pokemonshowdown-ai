@@ -18,6 +18,7 @@ describe("VolatileStatus", function()
         volatile.boosts.atk = 1;
         volatile.confusion.start();
         volatile.embargo.start();
+        volatile.focusEnergy = true;
         volatile.ingrain = true;
         volatile.leechSeed = true;
         volatile.magnetRise.start();
@@ -55,6 +56,7 @@ describe("VolatileStatus", function()
             expect(volatile.boosts.atk).to.equal(0);
             expect(volatile.confusion.isActive).to.be.false;
             expect(volatile.embargo.isActive).to.be.false;
+            expect(volatile.focusEnergy).to.be.false;
             expect(volatile.ingrain).to.be.false;
             expect(volatile.leechSeed).to.be.false;
             expect(volatile.magnetRise.isActive).to.be.false;
@@ -109,6 +111,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.confusion.turns).to.equal(1);
             expect(newVolatile.embargo.isActive).to.be.true;
             expect(newVolatile.embargo.turns).to.equal(1);
+            expect(newVolatile.focusEnergy).to.be.true;
             expect(newVolatile.ingrain).to.be.true;
             expect(newVolatile.leechSeed).to.be.true;
             expect(newVolatile.magnetRise.isActive).to.be.true;
