@@ -11,6 +11,9 @@ export class ItemTempStatus<TStatusType extends string>
 {
     // all fields are initialized on #reset() in the constructor
 
+    /** Whether a status is active. */
+    public get isActive(): boolean { return this._type !== "none"; }
+
     /** Current weather type. */
     public get type(): TStatusType | "none"
     {

@@ -75,7 +75,9 @@ export class TeamStatus
                     .map(([id, counter]) => counter.toString()),
                 this.spikes ? [`spikes ${this.spikes}`] : [],
                 this.stealthRock ? [`stealth rock ${this.stealthRock}`] : [],
-                this.toxicSpikes ? [`toxic spikes ${this.toxicSpikes}`] : [])
+                this.toxicSpikes ? [`toxic spikes ${this.toxicSpikes}`] : [],
+                this.reflect.isActive ? [this.reflect.toString()] : [],
+                this.lightScreen.isActive ? [this.lightScreen.toString()] : [])
             .join(", ")}]`;
     }
 }

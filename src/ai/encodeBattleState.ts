@@ -386,7 +386,8 @@ export function encodePokemon(mon?: Pokemon | null): number[]
 
 /** Length of the return value of `encodeTeamStatus()`. */
 export const sizeTeamStatus = /*selfSwitch*/2 + /*wish*/1 +
-    /*future moves*/numFutureMoves + /*entry hazards*/3;
+    /*future moves*/numFutureMoves + /*entry hazards*/3 +
+    /*reflect/lightscreen*/4;
 
 /** Formats team status info into an array of numbers. */
 export function encodeTeamStatus(status: TeamStatus): number[]
@@ -400,7 +401,9 @@ export function encodeTeamStatus(status: TeamStatus): number[]
             .reduce((a, b) => a.concat(b), []),
         // divide hazard level by their max levels
         // TODO: factor out into constants somewhere
-        status.spikes / 3, status.stealthRock, status.toxicSpikes / 2
+        status.spikes / 3, status.stealthRock, status.toxicSpikes / 2,
+        ...encodeItemTempStatus(status.reflect),
+        ...encodeItemTempStatus(status.lightScreen)
     ];
 }
 
