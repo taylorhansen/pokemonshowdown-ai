@@ -419,7 +419,8 @@ export function encodeTeam(team: Team): number[]
 }
 
 /** Length of the return value of `encodeRoomStatus()`. */
-export const sizeRoomStatus = /*gravity*/1 +
+export const sizeRoomStatus = /*gravity*/sizeTempStatus +
+    /*trickRoom*/sizeTempStatus +
     /*weather*/(Object.keys(weatherItems).length + 1);
 
 /** Formats room status info into an array of numbers. */
@@ -427,6 +428,7 @@ export function encodeRoomStatus(status: RoomStatus): number[]
 {
     return [
         ...encodeTempStatus(status.gravity),
+        ...encodeTempStatus(status.trickRoom),
         ...encodeItemTempStatus(status.weather)
     ];
 }

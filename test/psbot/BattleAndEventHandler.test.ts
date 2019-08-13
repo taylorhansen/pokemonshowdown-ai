@@ -1394,6 +1394,28 @@ describe("Battle and EventProcessor", function()
                     {events: [{type: "-fieldend", effect: "move: Gravity"}]});
                 expect(g.isActive).to.be.false;
             });
+
+            it("Should start/end trick room", async function()
+            {
+                const tr = battle.state.status.trickRoom;
+                expect(tr.isActive).to.be.false;
+
+                await battle.progress(
+                {
+                    events: [{type: "-fieldstart", effect: "move: Trick Room"}]
+                });
+                expect(tr.isActive).to.be.true;
+                expect(tr.turns).to.equal(1);
+
+                await battle.progress({events: [{type: "turn", num: 3}]});
+                expect(tr.turns).to.equal(2);
+
+                await battle.progress(
+                {
+                    events: [{type: "-fieldend", effect: "move: Trick Room"}]
+                });
+                expect(tr.isActive).to.be.false;
+            });
         });
 
         describe("formechange", function()

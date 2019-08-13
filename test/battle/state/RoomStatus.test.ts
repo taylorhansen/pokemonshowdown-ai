@@ -21,4 +21,15 @@ describe("RoomStatus", function()
             expect(room.gravity.turns).to.equal(2);
         });
     });
+
+    describe("#trickRoom", function()
+    {
+        it("Should tick on #postTurn()", function()
+        {
+            room.trickRoom.start();
+            expect(room.trickRoom.turns).to.equal(1);
+            room.postTurn();
+            expect(room.trickRoom.turns).to.equal(2);
+        });
+    });
 });

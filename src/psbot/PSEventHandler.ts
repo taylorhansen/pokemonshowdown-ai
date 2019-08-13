@@ -5,8 +5,9 @@ import { Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
 import { SwitchInOptions, Team } from "../battle/state/Team";
 import { Logger } from "../Logger";
-import { AnyBattleEvent, DamageEvent, DragEvent, HealEvent, SideEndEvent,
-    SideStartEvent, SwitchEvent } from "./dispatcher/BattleEvent";
+import { AnyBattleEvent, DamageEvent, DragEvent, FieldEndEvent, FieldStartEvent,
+    HealEvent, SideEndEvent, SideStartEvent, SwitchEvent } from
+    "./dispatcher/BattleEvent";
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonDetails, PokemonID,
@@ -319,20 +320,8 @@ export class PSEventHandler
         })
         .on("drag", event => this.handleSwitch(event))
         .on("faint", event => { this.getActive(event.id.owner).faint(); })
-        .on("-fieldend", event =>
-        {
-            if (event.effect === "move: Gravity")
-            {
-                this.state.status.gravity.end();
-            }
-        })
-        .on("-fieldstart", event =>
-        {
-            if (event.effect === "move: Gravity")
-            {
-                this.state.status.gravity.start();
-            }
-        })
+        .on("-fieldend", event => this.handleFieldCondition(event))
+        .on("-fieldstart", event => this.handleFieldCondition(event))
         .on("-formechange", event =>
         {
             // TODO: set other details?
@@ -721,6 +710,28 @@ export class PSEventHandler
                     if (condition === "Reflect") ts.reflect.reset();
                     else ts.lightScreen.reset();
                 }
+                break;
+        }
+    }
+
+    /** Handles a field end/start event. */
+    private handleFieldCondition(event: FieldEndEvent | FieldStartEvent): void
+    {
+        switch (event.effect)
+        {
+            case "move: Gravity":
+                if (event.type === "-fieldstart")
+                {
+                    this.state.status.gravity.start();
+                }
+                else this.state.status.gravity.end();
+                break;
+            case "move: Trick Room":
+                if (event.type === "-fieldstart")
+                {
+                    this.state.status.trickRoom.start();
+                }
+                else this.state.status.trickRoom.end();
                 break;
         }
     }
