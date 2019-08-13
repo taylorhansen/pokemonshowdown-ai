@@ -108,6 +108,9 @@ export class VolatileStatus
         for (const disabled of this.disabledMoves) disabled.end();
     }
 
+    /** Foresight/Miracle Eye move status. */
+    public identified!: "foresight" | "miracleeye" | null;
+
     /**
      * Index of the last used move, or -1 if none yet. Resets at the beginning
      * of each turn, so this field can be used to check if a pokemon has not
@@ -251,6 +254,7 @@ export class VolatileStatus
         this.bide.end();
         this.charge.end();
         this.enableMoves();
+        this.identified = null;
         this.lastUsed = -1;
         this.lockedMove.reset();
         this.mustRecharge = false;
@@ -357,6 +361,7 @@ export class VolatileStatus
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
             this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),
+            this.identified ? [this.identified] : [],
             this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.mustRecharge ? ["must recharge"] : [],

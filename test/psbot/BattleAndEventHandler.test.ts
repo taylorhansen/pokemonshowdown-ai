@@ -742,9 +742,13 @@ describe("Battle and EventProcessor", function()
             testBoolean("Aqua Ring", v => v.aquaRing, ["-start"]);
             testBoolean("Bide", v => v.bide.isActive);
             testBoolean("Embargo", v => v.embargo.isActive);
+            testBoolean("Foresight", v => v.identified === "foresight",
+                ["-start"]);
             testBoolean("Ingrain", v => v.ingrain, ["-start"]);
             testBoolean("move: Leech Seed", v => v.leechSeed, ["-start"]);
             testBoolean("Magnet Rise", v => v.magnetRise.isActive);
+            testBoolean("Miracle Eye", v => v.identified === "miracleeye",
+                ["-start"]);
             testBoolean("Substitute", v => v.substitute);
             testBoolean("Slow Start", v => v.slowStart.isActive);
             testBoolean("move: Taunt", v => v.taunt.isActive);

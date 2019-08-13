@@ -147,8 +147,9 @@ export const sizeVolatileStatus =
     /*leech seed*/1 + /*magnet rise*/sizeTempStatus + /*substitute*/1 +
     /*suppress ability*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
-    /*locked move variants*/numLockedMoves + /*must recharge*/1 +
-    /*override ability*/dex.numAbilities + /*override species*/dex.numPokemon +
+    /*identified*/2 + /*locked move variants*/numLockedMoves +
+    /*must recharge*/1 + /*override ability*/dex.numAbilities +
+    /*override species*/dex.numPokemon +
     /*override types*/filteredTypes.length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
     /*taunt*/sizeTempStatus + /*torment*/1 + /*two-turn*/numTwoTurnMoves +
@@ -174,6 +175,8 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const charge = encodeTempStatus(status.charge);
     const disabled = status.disabledMoves.map(encodeTempStatus)
         .reduce((a, b) => a.concat(b));
+    const identified = ["foresight", "miracleeye"]
+        .map(v => status.identified === v ? 1 : 0);
     const lastUsed = oneHot(status.lastUsed, Moveset.maxSize);
     const lockedMove = encodeVariableTempStatus(status.lockedMove);
     const mustRecharge = status.mustRecharge ? 1 : 0;
@@ -196,12 +199,12 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
-        aquaRing,
-        ...boosts, ...confused, ...embargo, ingrain, leechSeed, ...magnetRise,
-        substitute, suppressed, ...bide, ...charge, ...disabled, ...lastUsed,
-        ...lockedMove, mustRecharge, ...overrideAbility, ...overrideSpecies,
-        ...overrideTypeData, roost, ...slowStart, stallFailRate, ...taunt,
-        torment, ...twoTurn, unburden, ...uproar, willTruant
+        aquaRing, ...boosts, ...confused, ...embargo, ingrain, leechSeed,
+        ...magnetRise, substitute, suppressed, ...bide, ...charge, ...disabled,
+        ...identified, ...lastUsed, ...lockedMove, mustRecharge,
+        ...overrideAbility, ...overrideSpecies, ...overrideTypeData, roost,
+        ...slowStart, stallFailRate, ...taunt, torment, ...twoTurn, unburden,
+        ...uproar, willTruant
     ];
 }
 

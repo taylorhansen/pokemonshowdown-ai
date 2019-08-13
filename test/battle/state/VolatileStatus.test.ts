@@ -26,6 +26,7 @@ describe("VolatileStatus", function()
         volatile.bide.start();
         volatile.charge.start();
         volatile.disabledMoves[0].start();
+        volatile.identified = "foresight";
         volatile.lastUsed = 1;
         volatile.lockedMove.start("outrage");
         volatile.mustRecharge = true;
@@ -63,6 +64,7 @@ describe("VolatileStatus", function()
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
+            expect(volatile.identified).to.be.null;
             expect(volatile.lastUsed).to.equal(-1);
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
@@ -118,6 +120,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.bide.isActive).to.be.false;
             expect(newVolatile.charge.isActive).to.be.false;
             expect(newVolatile.disabledMoves[0].isActive).to.be.false;
+            expect(newVolatile.identified).to.be.null;
             expect(newVolatile.lastUsed).to.equal(-1);
             expect(newVolatile.lockedMove.isActive).to.be.false;
             expect(newVolatile.mustRecharge).to.be.false;

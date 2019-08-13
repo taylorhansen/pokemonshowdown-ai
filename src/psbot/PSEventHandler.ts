@@ -100,6 +100,12 @@ export class PSEventHandler
                     active.disableMove(moveId);
                     break;
                 }
+                case "Foresight":
+                    active.volatile.identified = "foresight";
+                    break;
+                case "Miracle Eye":
+                    active.volatile.identified = "miracleeye";
+                    break;
                 case "Ingrain":
                     active.volatile.ingrain = true;
                     break;
