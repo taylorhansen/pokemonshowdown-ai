@@ -239,8 +239,9 @@ ability ${ability}`);
         }
 
         // apply implicit effects
+
         const move = dex.moves[options.moveId];
-        if (move.volatileEffect === "lockedmove")
+        if (move.selfVolatileEffect === "lockedmove")
         {
             if (this._volatile.lockedMove.isActive &&
                 options.moveId === this._volatile.lockedMove.type)
@@ -252,7 +253,10 @@ ability ${ability}`);
         }
         else this._volatile.lockedMove.reset();
 
+        if (move.volatileEffect === "minimize") this._volatile.minimize = true;
+
         // apply implicit team effects
+
         if (this.team)
         {
             // wish can be used consecutively, but only the first time will

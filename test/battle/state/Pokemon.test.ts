@@ -571,6 +571,31 @@ describe("Pokemon", function()
                 });
             });
 
+            describe("minimize", function()
+            {
+                it("Should activate Minimize if used successfully", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    expect(mon.volatile.minimize).to.be.false;
+
+                    mon.useMove({moveId: "minimize", targets: [mon]});
+                    expect(mon.volatile.minimize).to.be.true;
+                });
+
+                it("Should not activate Minimize if move failed", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    expect(mon.volatile.minimize).to.be.false;
+
+                    mon.useMove(
+                    {
+                        moveId: "minimize", targets: [mon],
+                        unsuccessful: "failed"
+                    });
+                    expect(mon.volatile.minimize).to.be.false;
+                });
+            });
+
             function testTeamStatus(name: string, moveId: string,
                 pred: (team: Team) => boolean): void
             {

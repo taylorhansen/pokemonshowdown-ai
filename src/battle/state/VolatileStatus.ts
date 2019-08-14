@@ -133,6 +133,9 @@ export class VolatileStatus
     public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
         /*silent*/true);
 
+    /** Whether the pokemon has used Minimize while out. */
+    public minimize!: boolean;
+
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge!: boolean;
 
@@ -261,6 +264,7 @@ export class VolatileStatus
         this.identified = null;
         this.lastUsed = -1;
         this.lockedMove.reset();
+        this.minimize = false;
         this.mustRecharge = false;
         this._overrideAbility = null;
         this.overrideAbilityName = "";
@@ -370,6 +374,7 @@ export class VolatileStatus
             this.identified ? [this.identified] : [],
             this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
+            this.minimize ? ["minimize"] : [],
             this.mustRecharge ? ["must recharge"] : [],
             this.roost ? ["roosting"] : [],
             this.slowStart.isActive ? [this.slowStart.toString()] : [],

@@ -148,7 +148,7 @@ export const sizeVolatileStatus =
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
     /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
-    /*identified*/2 + /*locked move variants*/numLockedMoves +
+    /*identified*/2 + /*locked move variants*/numLockedMoves + /*minimize*/1 +
     /*must recharge*/1 + /*override ability*/dex.numAbilities +
     /*override species*/dex.numPokemon +
     /*override types*/filteredTypes.length + /*roost*/1 +
@@ -181,6 +181,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         .map(v => status.identified === v ? 1 : 0);
     const lastUsed = oneHot(status.lastUsed, Moveset.maxSize);
     const lockedMove = encodeVariableTempStatus(status.lockedMove);
+    const minimize = status.minimize ? 1 : 0;
     const mustRecharge = status.mustRecharge ? 1 : 0;
     const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
     const overrideSpecies = oneHot(status.overrideSpeciesId, dex.numPokemon);
@@ -203,10 +204,10 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     return [
         aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, ingrain,
         leechSeed, ...magnetRise, substitute, suppressed, ...bide, ...charge,
-        ...disabled, ...identified, ...lastUsed, ...lockedMove, mustRecharge,
-        ...overrideAbility, ...overrideSpecies, ...overrideTypeData, roost,
-        ...slowStart, stallFailRate, ...taunt, torment, ...twoTurn, unburden,
-        ...uproar, willTruant
+        ...disabled, ...identified, ...lastUsed, ...lockedMove, minimize,
+        mustRecharge, ...overrideAbility, ...overrideSpecies,
+        ...overrideTypeData, roost, ...slowStart, stallFailRate, ...taunt,
+        torment, ...twoTurn, unburden, ...uproar, willTruant
     ];
 }
 

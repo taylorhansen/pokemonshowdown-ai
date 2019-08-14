@@ -30,6 +30,7 @@ describe("VolatileStatus", function()
         volatile.identified = "foresight";
         volatile.lastUsed = 1;
         volatile.lockedMove.start("outrage");
+        volatile.minimize = true;
         volatile.mustRecharge = true;
         volatile.overrideSpecies = "Magikarp";
         volatile.overrideTypes = ["???", "water"];
@@ -69,6 +70,7 @@ describe("VolatileStatus", function()
             expect(volatile.identified).to.be.null;
             expect(volatile.lastUsed).to.equal(-1);
             expect(volatile.lockedMove.isActive).to.be.false;
+            expect(volatile.minimize).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             expect(volatile.overrideSpecies).to.be.empty;
             expect(volatile.overrideSpeciesId).to.be.null;
@@ -126,6 +128,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.identified).to.be.null;
             expect(newVolatile.lastUsed).to.equal(-1);
             expect(newVolatile.lockedMove.isActive).to.be.false;
+            expect(newVolatile.minimize).to.be.false;
             expect(newVolatile.mustRecharge).to.be.false;
             expect(newVolatile.overrideSpecies).to.be.empty;
             expect(newVolatile.overrideSpeciesId).to.be.null;
