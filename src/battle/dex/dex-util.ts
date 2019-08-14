@@ -128,8 +128,10 @@ export interface MoveData
     readonly pp: number;
     /** Whether this move causes the user to switch. */
     readonly selfSwitch?: SelfSwitch;
-    /** Self-inflicted volatile status effect. */
+    /** Main volatile status effect that may affect the opponent. */
     readonly volatileEffect?: VolatileEffect;
+    /** Self-inflicted volatile status effect. */
+    readonly selfVolatileEffect?: SelfVolatileEffect;
     /** Team-inflicted status effect. */
     readonly sideCondition?: SideCondition;
 }
@@ -145,9 +147,19 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
  */
 export type SelfSwitch = boolean | "copyvolatile";
 
-/** Volatile status effects for moves. */
-export type VolatileEffect = "lockedmove" | "mustrecharge" | "rage" | "roost" |
-    "uproar";
+/** Volatile status effect for moves. */
+export type VolatileEffect = "aquaring" | "attract" | "bide" | "charge" |
+    "confusion" | "curse" | "defensecurl" | "destinybond" | "disable" |
+    "embargo" | "encore" | "endure" | "focusenergy" | "followme" | "foresight" |
+    "gastroacid" | "grudge" | "healblock" | "helpinghand" | "imprison" |
+    "ingrain" | "leechseed" | "magiccoat" | "magnetrise" | "minimize" |
+    "miracleeye" | "mudsport" | "nightmare" | "partiallytrapped" |
+    "powertrick" | "protect" | "snatch" | "stockpile" | "substitute" | "taunt" |
+    "telekinesis" | "torment" | "watersport" | "yawn";
+
+/** Self-affecting volatile status effects for moves. */
+export type SelfVolatileEffect = "lockedmove" | "mustrecharge" | "rage" |
+    "roost" | "uproar";
 
 /**
  * Team status effects. These are usually tracked over the course of multiple

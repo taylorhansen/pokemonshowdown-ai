@@ -5533,7 +5533,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     aquaring:
     {
-        uid: 4, pp: 32, target: "self"
+        uid: 4, pp: 32, target: "self", volatileEffect: "aquaring"
     },
     assist:
     {
@@ -5557,11 +5557,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     bide:
     {
-        uid: 10, pp: 16, target: "self"
+        uid: 10, pp: 16, target: "self", volatileEffect: "bide"
     },
     bind:
     {
-        uid: 11, pp: 32, target: "normal"
+        uid: 11, pp: 32, target: "normal", volatileEffect: "partiallytrapped"
     },
     block:
     {
@@ -5605,7 +5605,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     clamp:
     {
-        uid: 22, pp: 16, target: "normal"
+        uid: 22, pp: 16, target: "normal", volatileEffect: "partiallytrapped"
     },
     cometpunch:
     {
@@ -5645,7 +5645,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     curse:
     {
-        uid: 32, pp: 16, target: "normal"
+        uid: 32, pp: 16, target: "normal", volatileEffect: "curse"
     },
     defog:
     {
@@ -5653,7 +5653,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     detect:
     {
-        uid: 34, pp: 8, target: "self"
+        uid: 34, pp: 8, target: "self", volatileEffect: "protect"
     },
     dig:
     {
@@ -5661,7 +5661,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     disable:
     {
-        uid: 36, pp: 32, target: "normal"
+        uid: 36, pp: 32, target: "normal", volatileEffect: "disable"
     },
     dive:
     {
@@ -5701,11 +5701,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     embargo:
     {
-        uid: 46, pp: 24, target: "normal"
+        uid: 46, pp: 24, target: "normal", volatileEffect: "embargo"
     },
     encore:
     {
-        uid: 47, pp: 8, target: "normal"
+        uid: 47, pp: 8, target: "normal", volatileEffect: "encore"
     },
     endeavor:
     {
@@ -5713,7 +5713,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     endure:
     {
-        uid: 49, pp: 16, target: "self"
+        uid: 49, pp: 16, target: "self", volatileEffect: "endure"
     },
     explosion:
     {
@@ -5737,7 +5737,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     firespin:
     {
-        uid: 55, pp: 24, target: "normal"
+        uid: 55, pp: 24, target: "normal", volatileEffect: "partiallytrapped"
     },
     flail:
     {
@@ -5761,11 +5761,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     followme:
     {
-        uid: 61, pp: 32, target: "self"
+        uid: 61, pp: 32, target: "self", volatileEffect: "followme"
     },
     foresight:
     {
-        uid: 62, pp: 64, target: "normal"
+        uid: 62, pp: 64, target: "normal", volatileEffect: "foresight"
     },
     furyattack:
     {
@@ -5817,7 +5817,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     healblock:
     {
-        uid: 75, pp: 24, target: "allAdjacentFoes"
+        uid: 75, pp: 24, target: "allAdjacentFoes", volatileEffect: "healblock"
     },
     healingwish:
     {
@@ -5837,11 +5837,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     imprison:
     {
-        uid: 80, pp: 16, target: "self"
+        uid: 80, pp: 16, target: "self", volatileEffect: "imprison"
     },
     ingrain:
     {
-        uid: 81, pp: 32, target: "self"
+        uid: 81, pp: 32, target: "self", volatileEffect: "ingrain"
     },
     jumpkick:
     {
@@ -5877,15 +5877,15 @@ const moves: {readonly [name: string]: MoveData} =
     },
     magiccoat:
     {
-        uid: 90, pp: 24, target: "self"
+        uid: 90, pp: 24, target: "self", volatileEffect: "magiccoat"
     },
     magmastorm:
     {
-        uid: 91, pp: 8, target: "normal"
+        uid: 91, pp: 8, target: "normal", volatileEffect: "partiallytrapped"
     },
     magnetrise:
     {
-        uid: 92, pp: 16, target: "self"
+        uid: 92, pp: 16, target: "self", volatileEffect: "magnetrise"
     },
     magnitude:
     {
@@ -5929,11 +5929,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     minimize:
     {
-        uid: 103, pp: 32, target: "self"
+        uid: 103, pp: 32, target: "self", volatileEffect: "minimize"
     },
     miracleeye:
     {
-        uid: 104, pp: 64, target: "normal"
+        uid: 104, pp: 64, target: "normal", volatileEffect: "miracleeye"
     },
     mirrorcoat:
     {
@@ -5953,7 +5953,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     mudsport:
     {
-        uid: 109, pp: 24, target: "all"
+        uid: 109, pp: 24, target: "all", volatileEffect: "mudsport"
     },
     naturalgift:
     {
@@ -5965,11 +5965,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     odorsleuth:
     {
-        uid: 112, pp: 64, target: "normal"
+        uid: 112, pp: 64, target: "normal", volatileEffect: "foresight"
     },
     outrage:
     {
-        uid: 113, pp: 24, target: "randomNormal", volatileEffect: "lockedmove"
+        uid: 113, pp: 24, target: "randomNormal", selfVolatileEffect: "lockedmove"
     },
     payback:
     {
@@ -5977,7 +5977,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     petaldance:
     {
-        uid: 115, pp: 32, target: "randomNormal", volatileEffect: "lockedmove"
+        uid: 115, pp: 32, target: "randomNormal", selfVolatileEffect: "lockedmove"
     },
     pinmissile:
     {
@@ -5993,11 +5993,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     powertrick:
     {
-        uid: 119, pp: 16, target: "self"
+        uid: 119, pp: 16, target: "self", volatileEffect: "powertrick"
     },
     protect:
     {
-        uid: 120, pp: 16, target: "self"
+        uid: 120, pp: 16, target: "self", volatileEffect: "protect"
     },
     psychup:
     {
@@ -6053,11 +6053,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     roost:
     {
-        uid: 134, pp: 16, target: "self", volatileEffect: "roost"
+        uid: 134, pp: 16, target: "self", selfVolatileEffect: "roost"
     },
     sandtomb:
     {
-        uid: 135, pp: 24, target: "normal"
+        uid: 135, pp: 24, target: "normal", volatileEffect: "partiallytrapped"
     },
     sandstorm:
     {
@@ -6101,7 +6101,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     snatch:
     {
-        uid: 146, pp: 16, target: "self"
+        uid: 146, pp: 16, target: "self", volatileEffect: "snatch"
     },
     softboiled:
     {
@@ -6149,7 +6149,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     substitute:
     {
-        uid: 158, pp: 16, target: "self"
+        uid: 158, pp: 16, target: "self", volatileEffect: "substitute"
     },
     suckerpunch:
     {
@@ -6189,7 +6189,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     taunt:
     {
-        uid: 168, pp: 32, target: "normal"
+        uid: 168, pp: 32, target: "normal", volatileEffect: "taunt"
     },
     thief:
     {
@@ -6197,7 +6197,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     thrash:
     {
-        uid: 170, pp: 32, target: "randomNormal", volatileEffect: "lockedmove"
+        uid: 170, pp: 32, target: "randomNormal", selfVolatileEffect: "lockedmove"
     },
     thunder:
     {
@@ -6205,7 +6205,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     torment:
     {
-        uid: 172, pp: 24, target: "normal"
+        uid: 172, pp: 24, target: "normal", volatileEffect: "torment"
     },
     toxic:
     {
@@ -6241,7 +6241,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     uproar:
     {
-        uid: 181, pp: 16, target: "randomNormal", volatileEffect: "uproar"
+        uid: 181, pp: 16, target: "randomNormal", selfVolatileEffect: "uproar"
     },
     uturn:
     {
@@ -6257,11 +6257,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     watersport:
     {
-        uid: 185, pp: 24, target: "all"
+        uid: 185, pp: 24, target: "all", volatileEffect: "watersport"
     },
     whirlpool:
     {
-        uid: 186, pp: 24, target: "normal"
+        uid: 186, pp: 24, target: "normal", volatileEffect: "partiallytrapped"
     },
     whirlwind:
     {
@@ -6281,7 +6281,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     wrap:
     {
-        uid: 191, pp: 32, target: "normal"
+        uid: 191, pp: 32, target: "normal", volatileEffect: "partiallytrapped"
     },
     wringout:
     {
@@ -6301,7 +6301,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     attract:
     {
-        uid: 196, pp: 24, target: "normal"
+        uid: 196, pp: 24, target: "normal", volatileEffect: "attract"
     },
     aurasphere:
     {
@@ -6489,11 +6489,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     supersonic:
     {
-        uid: 243, pp: 32, target: "normal"
+        uid: 243, pp: 32, target: "normal", volatileEffect: "confusion"
     },
     sweetkiss:
     {
-        uid: 244, pp: 16, target: "normal"
+        uid: 244, pp: 16, target: "normal", volatileEffect: "confusion"
     },
     sweetscent:
     {
@@ -6525,11 +6525,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     destinybond:
     {
-        uid: 252, pp: 8, target: "self"
+        uid: 252, pp: 8, target: "self", volatileEffect: "destinybond"
     },
     gastroacid:
     {
-        uid: 253, pp: 16, target: "normal"
+        uid: 253, pp: 16, target: "normal", volatileEffect: "gastroacid"
     },
     iceball:
     {
@@ -6545,11 +6545,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     stockpile:
     {
-        uid: 257, pp: 32, target: "self"
+        uid: 257, pp: 32, target: "self", volatileEffect: "stockpile"
     },
     swagger:
     {
-        uid: 258, pp: 24, target: "normal"
+        uid: 258, pp: 24, target: "normal", volatileEffect: "confusion"
     },
     thunderwave:
     {
@@ -6613,7 +6613,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     blastburn:
     {
-        uid: 274, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 274, pp: 8, target: "normal", selfVolatileEffect: "mustrecharge"
     },
     blazekick:
     {
@@ -6649,7 +6649,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     charge:
     {
-        uid: 283, pp: 32, target: "self"
+        uid: 283, pp: 32, target: "self", volatileEffect: "charge"
     },
     chargebeam:
     {
@@ -6661,7 +6661,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     confuseray:
     {
-        uid: 286, pp: 16, target: "normal"
+        uid: 286, pp: 16, target: "normal", volatileEffect: "confusion"
     },
     confusion:
     {
@@ -6705,7 +6705,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     defensecurl:
     {
-        uid: 297, pp: 64, target: "self"
+        uid: 297, pp: 64, target: "self", volatileEffect: "defensecurl"
     },
     discharge:
     {
@@ -6797,7 +6797,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     flatter:
     {
-        uid: 320, pp: 24, target: "normal"
+        uid: 320, pp: 24, target: "normal", volatileEffect: "confusion"
     },
     focusblast:
     {
@@ -6805,7 +6805,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     focusenergy:
     {
-        uid: 322, pp: 48, target: "self"
+        uid: 322, pp: 48, target: "self", volatileEffect: "focusenergy"
     },
     forcepalm:
     {
@@ -6813,7 +6813,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     frenzyplant:
     {
-        uid: 324, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 324, pp: 8, target: "normal", selfVolatileEffect: "mustrecharge"
     },
     frustration:
     {
@@ -6821,7 +6821,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     gigaimpact:
     {
-        uid: 326, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 326, pp: 8, target: "normal", selfVolatileEffect: "mustrecharge"
     },
     grassknot:
     {
@@ -6829,7 +6829,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     grudge:
     {
-        uid: 328, pp: 8, target: "self"
+        uid: 328, pp: 8, target: "self", volatileEffect: "grudge"
     },
     guardswap:
     {
@@ -6861,7 +6861,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     helpinghand:
     {
-        uid: 336, pp: 32, target: "adjacentAlly"
+        uid: 336, pp: 32, target: "adjacentAlly", volatileEffect: "helpinghand"
     },
     hornattack:
     {
@@ -6877,11 +6877,11 @@ const moves: {readonly [name: string]: MoveData} =
     },
     hydrocannon:
     {
-        uid: 340, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 340, pp: 8, target: "normal", selfVolatileEffect: "mustrecharge"
     },
     hyperbeam:
     {
-        uid: 341, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 341, pp: 8, target: "normal", selfVolatileEffect: "mustrecharge"
     },
     hyperfang:
     {
@@ -6941,7 +6941,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     leechseed:
     {
-        uid: 356, pp: 16, target: "normal"
+        uid: 356, pp: 16, target: "normal", volatileEffect: "leechseed"
     },
     leer:
     {
@@ -7025,7 +7025,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     nightmare:
     {
-        uid: 377, pp: 24, target: "normal"
+        uid: 377, pp: 24, target: "normal", volatileEffect: "nightmare"
     },
     nightshade:
     {
@@ -7113,7 +7113,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     rage:
     {
-        uid: 399, pp: 32, target: "normal", volatileEffect: "rage"
+        uid: 399, pp: 32, target: "normal", selfVolatileEffect: "rage"
     },
     raindance:
     {
@@ -7137,7 +7137,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     roaroftime:
     {
-        uid: 405, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 405, pp: 8, target: "normal", selfVolatileEffect: "mustrecharge"
     },
     rockclimb:
     {
@@ -7161,7 +7161,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     rockwrecker:
     {
-        uid: 411, pp: 8, target: "normal", volatileEffect: "mustrecharge"
+        uid: 411, pp: 8, target: "normal", selfVolatileEffect: "mustrecharge"
     },
     rollingkick:
     {
@@ -7301,7 +7301,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     teeterdance:
     {
-        uid: 446, pp: 32, target: "allAdjacent"
+        uid: 446, pp: 32, target: "allAdjacent", volatileEffect: "confusion"
     },
     teleport:
     {
@@ -7373,7 +7373,7 @@ const moves: {readonly [name: string]: MoveData} =
     },
     yawn:
     {
-        uid: 464, pp: 16, target: "normal"
+        uid: 464, pp: 16, target: "normal", volatileEffect: "yawn"
     },
     zapcannon:
     {

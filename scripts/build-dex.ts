@@ -196,9 +196,12 @@ for (const moveName in moves)
         quote(move.selfSwitch) : !!move.selfSwitch;
 
     let volatileEffect: string | undefined;
+    if (move.volatileStatus) volatileEffect = move.volatileStatus;
+
+    let selfVolatileEffect: string | undefined;
     if (move.self && move.self.volatileStatus)
     {
-        volatileEffect = quote(move.self.volatileStatus);
+        selfVolatileEffect = move.self.volatileStatus;
         if (move.self.volatileStatus === "lockedmove")
         {
             lockedMoves[move.name] = lockedMoveUid++;
@@ -206,10 +209,7 @@ for (const moveName in moves)
     }
 
     let sideCondition: string | undefined;
-    if (move.sideCondition)
-    {
-        sideCondition = quote(move.sideCondition.toLowerCase());
-    }
+    if (move.sideCondition) sideCondition = move.sideCondition.toLowerCase();
 
     // two turn moves are also recorded in a different object
     if (move.flags.charge === 1) twoTurnMoves[move.name] = twoTurnUid++;
@@ -222,8 +222,9 @@ for (const moveName in moves)
     {
         uid: ${uid}, pp: ${pp}, target: ${target}\
 ${selfSwitch ? `, selfSwitch: ${selfSwitch}` : ""}\
-${volatileEffect ? `, volatileEffect: ${volatileEffect}` : ""}\
-${sideCondition ? `, sideCondition: ${sideCondition}` : ""}
+${volatileEffect ? `, volatileEffect: "${volatileEffect}"` : ""}\
+${selfVolatileEffect ? `, selfVolatileEffect: "${selfVolatileEffect}"` : ""}\
+${sideCondition ? `, sideCondition: "${sideCondition}"` : ""}
     },`);
     ++uid;
 }
