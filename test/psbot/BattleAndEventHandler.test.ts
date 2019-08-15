@@ -3,6 +3,7 @@ import "mocha";
 import { Choice } from "../../src/battle/agent/Choice";
 import { types, WeatherType } from "../../src/battle/dex/dex-util";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
+import { Pokemon } from "../../src/battle/state/Pokemon";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
 import { RoomStatus } from "../../src/battle/state/RoomStatus";
 import { TempStatus } from "../../src/battle/state/TempStatus";
@@ -596,8 +597,10 @@ describe("Battle and EventProcessor", function()
             {
                 /** Type of event to execute. */
                 type: "-start" | "-activate" | "-end";
-                /** Postcondition for the VolatileStatus. */
-                post: (v: VolatileStatus) => void;
+                /**
+                 * Postcondition for the VolatileStatus or its parent Pokemon.
+                 */
+                post: (v: VolatileStatus, p: Pokemon) => void;
             }
 
             interface EventTypeEnd extends EventTypeBase
@@ -618,11 +621,13 @@ describe("Battle and EventProcessor", function()
              * Creates a test case for a VolatileStatus field related to
              * -start/-activate/-end events.
              * @param status Name of the status as it appears in the event.
-             * @param pre Precondition/setup for the VolatileStatus.
+             * @param pre Precondition/setup for the VolatileStatus and/or its
+             * parent Pokemon.
              * @param eventTypes List of event types that will be executed in
              * order with their respective postconditions.
              */
-            function test(status: string, pre: (v: VolatileStatus) => void,
+            function test(status: string,
+                pre: (v: VolatileStatus, p: Pokemon) => void,
                 eventTypes: EventType[]): void
             {
                 const s = eventTypes.map(eventType => eventType.type.substr(1))
@@ -630,8 +635,8 @@ describe("Battle and EventProcessor", function()
 
                 it(`Should ${s} ${status}`, async function()
                 {
-                    const volatile = battle.state.teams.us.active.volatile;
-                    pre(volatile);
+                    const mon = battle.state.teams.us.active;
+                    pre(mon.volatile, mon);
 
                     for (const eventType of eventTypes)
                     {
@@ -650,7 +655,7 @@ describe("Battle and EventProcessor", function()
                         }
 
                         await battle.progress({events: [event]});
-                        eventType.post(volatile);
+                        eventType.post(mon.volatile, mon);
                     }
                 });
             }
@@ -691,6 +696,25 @@ describe("Battle and EventProcessor", function()
                     {
                         expect(v.confusion.isActive).to.be.false;
                         expect(v.confusion.turns).to.equal(0);
+                    }
+                }
+            ]);
+
+            test("move: Mimic", (_, p) =>
+            {
+                p.moveset.reveal("mimic");
+                expect(p.moveset.get("mimic")).to.not.be.null;
+                expect(p.moveset.get("tackle")).to.be.null;
+            },
+            [
+                {
+                    type: "-activate",
+                    otherArgs: ["Tackle"],
+                    post(_, p)
+                    {
+                        expect(p.moveset.get("mimic")).to.be.null;
+                        expect(p.moveset.get("tackle")).to.not.be.null;
+                        expect(p.moveset.get("tackle")!.pp).to.equal(5);
                     }
                 }
             ]);

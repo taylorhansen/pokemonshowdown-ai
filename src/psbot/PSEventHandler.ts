@@ -200,6 +200,11 @@ export class PSEventHandler
             {
                 this.getActive(event.id.owner).volatile.bide.tick();
             }
+            else if (ev === "move: Mimic")
+            {
+                this.getActive(event.id.owner).overrideMove("mimic",
+                    toIdName(event.otherArgs[0]));
+            }
             else this.logger.debug(`Ignoring activate '${event.volatile}'`);
         })
         .on("-end", event =>
