@@ -134,6 +134,16 @@ describe("Moveset", function()
             expect(moveset.get("splash")).to.be.null;
             expect(moveset.get("tackle")).to.not.be.null;
         });
+
+        it("Should throw if overriding unrevealed move", function()
+        {
+            const move = new Move();
+            move.init("tackle");
+            expect(() => moveset.override("splash", move)).to.throw(Error,
+                "Moveset does not contain 'splash'");
+            expect(moveset.get("splash")).to.be.null;
+            expect(moveset.get("tackle")).to.be.null;
+        });
     });
 
     describe("#clearOverrides()", function()

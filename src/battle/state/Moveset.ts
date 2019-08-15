@@ -135,11 +135,13 @@ export class Moveset
     /**
      * Overrides a move slot with another Move. Resets on `#clearOverrides()`.
      * @param id Name of the move to override.
-     * @param move New override move.
+     * @param move New override Move.
      */
     public override(id: string, move: Move): void
     {
-        this._moves[this.getIndex(id)] = move;
+        const i = this.getIndex(id);
+        if (i < 0) throw new Error(`Moveset does not contain '${id}'`);
+        this._moves[i] = move;
     }
 
     /** Clears override moves added by `#override()`. */
