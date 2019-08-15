@@ -2,6 +2,7 @@ import { berries, dex, twoTurnMoves } from "../dex/dex";
 import { PokemonData, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
+import { Move } from "./Move";
 import { Moveset } from "./Moveset";
 import { PossibilityClass } from "./PossibilityClass";
 import { Team } from "./Team";
@@ -277,6 +278,14 @@ ability ${ability}`);
     {
         this.volatile.disabledMoves[this.moveset.getOrRevealIndex(id)].start();
     }
+    /** Overrides a move slot via Mimic until switched out. */
+    public overrideMove(id: string, newId: string): void
+    {
+        const move = new Move();
+        move.name = newId;
+        move.pp = 5; // mimicked moves have 5 pp
+        this.moveset.override(id, move);
+    }
     public readonly moveset = new Moveset();
 
     /** Pokemon's gender. M=male, F=female, null=genderless. */
@@ -433,9 +442,11 @@ ability ${ability}`);
     public switchOut(): void
     {
         this._active = false;
-        this._volatile.clear();
+        // reset effects like mimic/transform
+        this.moveset.clearOverrides();
         // toxic counter resets on switch
         if (this.majorStatus.current === "tox") this.majorStatus.resetCounter();
+        this._volatile.clear();
     }
 
     /** Tells the pokemon that it has fainted. */

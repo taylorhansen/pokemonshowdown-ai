@@ -27,6 +27,8 @@ export class Moveset
     }
     private readonly _moves =
         new Array<Move | null | undefined>(Moveset.maxSize);
+    private readonly baseMoves =
+        new Array<Move | null | undefined>(Moveset.maxSize);
     /** Index of the first unknown move. Previous indexes should be defined. */
     private unrevealed = 0;
 
@@ -36,6 +38,7 @@ export class Moveset
         // TODO: possible corner case: infer pokemon sets with less than 4 moves
         size = Math.max(1, Math.min(size, Moveset.maxSize));
         this._moves.fill(null, 0, size);
+        this.baseMoves.fill(null, 0, size);
     }
 
     /**
@@ -98,6 +101,7 @@ export class Moveset
 
         const move = new Move();
         this._moves[this.unrevealed] = move;
+        this.baseMoves[this.unrevealed] = move;
         // TODO: should this chain be handled by PSEventHandler? format is
         //  specific only to showdown anyways
         if (id.startsWith("hiddenpower") && id.length > "hiddenpower".length)
@@ -128,12 +132,34 @@ export class Moveset
         return this.unrevealed++;
     }
 
+    /**
+     * Overrides a move slot with another Move. Resets on `#clearOverrides()`.
+     * @param id Name of the move to override.
+     * @param move New override move.
+     */
+    public override(id: string, move: Move): void
+    {
+        this._moves[this.getIndex(id)] = move;
+    }
+
+    /** Clears override moves added by `#override()`. */
+    public clearOverrides(): void
+    {
+        for (let i = 0; i < this.baseMoves.length; ++i)
+        {
+            this._moves[i] = this.baseMoves[i];
+        }
+    }
+
     // istanbul ignore next: only used for logging
     /** Encodes all moveset data into a string. */
     public toString(): string
     {
         return this._moves
-            .map(m => this.stringifyMove(m))
+            .map((m, i) => this.stringifyMove(m) +
+                // if overridden, include base move
+                (this.baseMoves[i] !== m ?
+                    ` (base: ${this.stringifyMove(this.baseMoves[i])})` : ""))
             .join(", ");
     }
 

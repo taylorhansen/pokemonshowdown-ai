@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import "mocha";
+import { Move } from "../../../src/battle/state/Move";
 import { Moveset } from "../../../src/battle/state/Moveset";
 
 describe("Moveset", function()
@@ -119,6 +120,33 @@ describe("Moveset", function()
             expect(moveset).to.have.property("happiness", 255);
             moveset.happiness = null;
             expect(moveset).to.have.property("happiness", null);
+        });
+    });
+
+    describe("#override()", function()
+    {
+        it("Should override move", function()
+        {
+            moveset.reveal("splash");
+            const move = new Move();
+            move.name = "tackle";
+            moveset.override("splash", move);
+            expect(moveset.get("splash")).to.be.null;
+            expect(moveset.get("tackle")).to.not.be.null;
+        });
+    });
+
+    describe("#clearOverrides()", function()
+    {
+        it("Should revert override move", function()
+        {
+            moveset.reveal("splash");
+            const move = new Move();
+            move.name = "tackle";
+            moveset.override("splash", move);
+            moveset.clearOverrides();
+            expect(moveset.get("tackle")).to.be.null;
+            expect(moveset.get("splash")).to.not.be.null;
         });
     });
 });

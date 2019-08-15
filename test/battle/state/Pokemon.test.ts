@@ -2,6 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { berries } from "../../../src/battle/dex/dex";
 import { BattleState } from "../../../src/battle/state/BattleState";
+import { Move } from "../../../src/battle/state/Move";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
 import { Team } from "../../../src/battle/state/Team";
 
@@ -30,14 +31,6 @@ describe("Pokemon", function()
             expect(mon.active).to.be.false;
         });
 
-        it("Should clear volatile when switched out", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.volatile.lockedMove.start("thrash");
-            mon.switchOut();
-            expect(mon.volatile.lockedMove.isActive).to.be.false;
-        });
-
         it("Should clear toxic turns when switched out", function()
         {
             const mon = new Pokemon("Magikarp", false);
@@ -57,6 +50,14 @@ describe("Pokemon", function()
             expect(mon.majorStatus.turns).to.equal(2);
             mon.switchOut();
             expect(mon.majorStatus.turns).to.equal(2);
+        });
+
+        it("Should clear volatile when switched out", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.volatile.lockedMove.start("thrash");
+            mon.switchOut();
+            expect(mon.volatile.lockedMove.isActive).to.be.false;
         });
     });
 
@@ -653,36 +654,31 @@ describe("Pokemon", function()
                 expect(mon.volatile.disabledMoves[0].isActive).to.be.true;
             });
         });
-    });
 
-    describe("#faint()", function()
-    {
-        it("Should be fainted initially", function()
+        describe("#overrideMove()", function()
         {
-            const mon = new Pokemon("Magikarp", false);
-            expect(mon.fainted).to.be.true;
-        });
+            it("Should add override move with 5 pp", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.moveset.reveal("splash");
+                mon.overrideMove("splash", "tackle");
 
-        it("Should not be fainted after restoring hp", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.hp.set(100, 100);
-            expect(mon.fainted).to.be.false;
-        });
+                expect(mon.moveset.get("splash")).to.be.null;
+                expect(mon.moveset.get("tackle")).to.not.be.null;
+                expect(mon.moveset.get("tackle")!.pp).to.equal(5);
+            });
 
-        it("Should be fainted after fainting", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.faint();
-            expect(mon.fainted).to.be.true;
-        });
-
-        it("Should set hp to 0 after fainting", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.faint();
-            expect(mon.hp.current).to.equal(0);
-            expect(mon.hp.max).to.equal(0);
+            it("Should clear on #switchOut()", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.moveset.reveal("splash");
+                const move = new Move();
+                move.name = "tackle";
+                mon.moveset.override("splash", move);
+                mon.switchOut();
+                expect(mon.moveset.get("tackle")).to.be.null;
+                expect(mon.moveset.get("splash")).to.not.be.null;
+            });
         });
     });
 
@@ -773,6 +769,37 @@ describe("Pokemon", function()
             mon.item.narrow("leftovers");
             mon.switchIn();
             checkGrounded(mon, true, false);
+        });
+    });
+
+    describe("#faint()", function()
+    {
+        it("Should be fainted initially", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            expect(mon.fainted).to.be.true;
+        });
+
+        it("Should not be fainted after restoring hp", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.hp.set(100, 100);
+            expect(mon.fainted).to.be.false;
+        });
+
+        it("Should be fainted after fainting", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.faint();
+            expect(mon.fainted).to.be.true;
+        });
+
+        it("Should set hp to 0 after fainting", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.faint();
+            expect(mon.hp.current).to.equal(0);
+            expect(mon.hp.max).to.equal(0);
         });
     });
 });
