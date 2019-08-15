@@ -185,7 +185,7 @@ export class PSEventHandler
                 }
             }
         })
-        .on("-activate", event =>
+        .on("-activate", (event, events, i) =>
         {
             const ev = event.volatile;
             if (ev === "confusion")
@@ -202,8 +202,29 @@ export class PSEventHandler
             }
             else if (ev === "move: Mimic")
             {
-                this.getActive(event.id.owner).overrideMove("mimic",
-                    toIdName(event.otherArgs[0]));
+                const active = this.getActive(event.id.owner);
+                const move = toIdName(event.otherArgs[0]);
+
+                const lastEvent = events[i - 1];
+                if (!lastEvent || lastEvent.type !== "move" ||
+                    JSON.stringify(lastEvent.id) !== JSON.stringify(event.id))
+                {
+                    throw new Error("Don't know how Mimic was caused");
+                }
+
+                if (lastEvent.moveName === "Mimic")
+                {
+                    active.overrideMove("mimic", move);
+                }
+                else if (lastEvent.moveName === "Sketch")
+                {
+                    active.replaceMove("sketch", move);
+                }
+                else
+                {
+                    throw new Error(
+                        `Unknown Mimic-like move '${lastEvent.moveName}'`);
+                }
             }
             else this.logger.debug(`Ignoring activate '${event.volatile}'`);
         })

@@ -595,6 +595,8 @@ describe("Battle and EventProcessor", function()
         {
             interface EventTypeBase
             {
+                /** Optional BattleEvents to run just before this event. */
+                preEvents?: AnyBattleEvent[];
                 /** Type of event to execute. */
                 type: "-start" | "-activate" | "-end";
                 /**
@@ -620,20 +622,21 @@ describe("Battle and EventProcessor", function()
             /**
              * Creates a test case for a VolatileStatus field related to
              * -start/-activate/-end events.
+             * @param display Display name of the status.
              * @param status Name of the status as it appears in the event.
              * @param pre Precondition/setup for the VolatileStatus and/or its
              * parent Pokemon.
              * @param eventTypes List of event types that will be executed in
              * order with their respective postconditions.
              */
-            function test(status: string,
+            function test(display: string, status: string,
                 pre: (v: VolatileStatus, p: Pokemon) => void,
                 eventTypes: EventType[]): void
             {
                 const s = eventTypes.map(eventType => eventType.type.substr(1))
                     .join("/");
 
-                it(`Should ${s} ${status}`, async function()
+                it(`Should ${s} ${display}`, async function()
                 {
                     const mon = battle.state.teams.us.active;
                     pre(mon.volatile, mon);
@@ -654,13 +657,15 @@ describe("Battle and EventProcessor", function()
                             };
                         }
 
-                        await battle.progress({events: [event]});
+                        const preEvents = eventType.preEvents || [];
+                        await battle.progress({events: [...preEvents, event]});
                         eventType.post(mon.volatile, mon);
                     }
                 });
             }
 
-            test("move: Charge", v => expect(v.charge.isActive).to.be.false,
+            test("Charge", "move: Charge",
+                v => expect(v.charge.isActive).to.be.false,
             [
                 {
                     type: "-activate",
@@ -669,7 +674,8 @@ describe("Battle and EventProcessor", function()
                 }
             ]);
 
-            test("confusion", v => expect(v.confusion.isActive).to.be.false,
+            test("confusion", "confusion",
+                v => expect(v.confusion.isActive).to.be.false,
             [
                 {
                     type: "-start",
@@ -700,7 +706,7 @@ describe("Battle and EventProcessor", function()
                 }
             ]);
 
-            test("move: Mimic", (_, p) =>
+            test("Mimic", "move: Mimic", (_, p) =>
             {
                 p.moveset.reveal("mimic");
                 expect(p.moveset.get("mimic")).to.not.be.null;
@@ -708,6 +714,13 @@ describe("Battle and EventProcessor", function()
             },
             [
                 {
+                    preEvents:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Mimic",
+                            targetId: them1
+                        }
+                    ],
                     type: "-activate",
                     otherArgs: ["Tackle"],
                     post(_, p)
@@ -719,7 +732,33 @@ describe("Battle and EventProcessor", function()
                 }
             ]);
 
-            test("Uproar", v => expect(v.bide.isActive).to.be.false,
+            test("Sketch", "move: Mimic", (_, p) =>
+            {
+                p.moveset.reveal("sketch");
+                expect(p.moveset.get("sketch")).to.not.be.null;
+                expect(p.moveset.get("tackle")).to.be.null;
+            },
+            [
+                {
+                    preEvents:
+                    [
+                        {
+                            type: "move", id: us1, moveName: "Sketch",
+                            targetId: them1
+                        }
+                    ],
+                    type: "-activate",
+                    otherArgs: ["Tackle"],
+                    post(_, p)
+                    {
+                        expect(p.moveset.get("sketch")).to.be.null;
+                        expect(p.moveset.get("tackle")).to.not.be.null;
+                        expect(p.moveset.get("tackle")!.pp).to.equal(35);
+                    }
+                }
+            ]);
+
+            test("Uproar", "Uproar", v => expect(v.bide.isActive).to.be.false,
             [
                 {
                     type: "-start",
@@ -743,6 +782,7 @@ describe("Battle and EventProcessor", function()
 
             /**
              * Tests a start/end event combo concerning a VolatileStatus field.
+             * @param display Display name of the event.
              * @param status Name of the status as it appears in the event.
              * @param get Getter for the corresponding VolatileStatus field.
              * Should return a boolean, which will be tested for true or false
@@ -750,11 +790,11 @@ describe("Battle and EventProcessor", function()
              * @param eventTypes Order of events to execute. Default -start then
              * -end.
              */
-            function testBoolean(status: string,
+            function testBoolean(display: string, status: string,
                 get: (v: VolatileStatus) => boolean,
                 eventTypes: ("-start" | "-end")[] = ["-start", "-end"]): void
             {
-                test(status, v => expect(get(v)).to.be.false,
+                test(display, status, v => expect(get(v)).to.be.false,
                     eventTypes.map(type =>
                     ({
                         type,
@@ -764,21 +804,24 @@ describe("Battle and EventProcessor", function()
                     })));
             }
 
-            testBoolean("Aqua Ring", v => v.aquaRing, ["-start"]);
-            testBoolean("Bide", v => v.bide.isActive);
-            testBoolean("Embargo", v => v.embargo.isActive);
-            testBoolean("move: Focus Energy", v => v.focusEnergy, ["-start"]);
-            testBoolean("Foresight", v => v.identified === "foresight",
-                ["-start"]);
-            testBoolean("Ingrain", v => v.ingrain, ["-start"]);
-            testBoolean("move: Leech Seed", v => v.leechSeed, ["-start"]);
-            testBoolean("Magnet Rise", v => v.magnetRise.isActive);
-            testBoolean("Miracle Eye", v => v.identified === "miracleeye",
-                ["-start"]);
-            testBoolean("Substitute", v => v.substitute);
-            testBoolean("Slow Start", v => v.slowStart.isActive);
-            testBoolean("move: Taunt", v => v.taunt.isActive);
-            testBoolean("Torment", v => v.torment, ["-start"]);
+            testBoolean("Aqua Ring", "Aqua Ring", v => v.aquaRing, ["-start"]);
+            testBoolean("Bide", "Bide", v => v.bide.isActive);
+            testBoolean("Embargo", "Embargo", v => v.embargo.isActive);
+            testBoolean("Focus Energy", "move: Focus Energy",
+                v => v.focusEnergy, ["-start"]);
+            testBoolean("Foresight", "Foresight",
+                v => v.identified === "foresight", ["-start"]);
+            testBoolean("Ingrain", "Ingrain", v => v.ingrain, ["-start"]);
+            testBoolean("Leech Seed", "move: Leech Seed",
+                v => v.leechSeed, ["-start"]);
+            testBoolean("Magnet Rise", "Magnet Rise",
+                v => v.magnetRise.isActive);
+            testBoolean("Miracle Eye", "Miracle Eye",
+                v => v.identified === "miracleeye", ["-start"]);
+            testBoolean("Substitute", "Substitute", v => v.substitute);
+            testBoolean("Slow Start", "Slow Start", v => v.slowStart.isActive);
+            testBoolean("Taunt", "move: Taunt", v => v.taunt.isActive);
+            testBoolean("Torment", "Torment", v => v.torment, ["-start"]);
 
             it("Should start/end future move", async function()
             {
