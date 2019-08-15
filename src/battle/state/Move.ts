@@ -4,23 +4,7 @@ import { dex } from "../dex/dex";
 export class Move
 {
     /** Move id name. */
-    public get name(): string
-    {
-        return this._name;
-    }
-    public set name(id: string)
-    {
-        if (!dex.moves.hasOwnProperty(id))
-        {
-            throw new Error(`Invalid move name '${id}'`);
-        }
-
-        this._name = id;
-        const data = dex.moves[id];
-        this._id = data.uid;
-        this._pp = data.pp;
-        this._maxpp = data.pp;
-    }
+    public get name(): string { return this._name; }
     private _name: string = "";
 
     /** Move id number. Defaults to null if `name` is not initialized. */
@@ -28,10 +12,7 @@ export class Move
     private _id: number | null = null;
 
     /** Amount of power points left on this move. */
-    public get pp(): number
-    {
-        return this._pp;
-    }
+    public get pp(): number { return this._pp; }
     public set pp(pp: number)
     {
         this._pp = Math.max(0, Math.min(pp, this._maxpp));
@@ -41,6 +22,29 @@ export class Move
     /** Max amount of power points this move can have. */
     public get maxpp(): number { return this._maxpp; }
     private _maxpp = 0;
+
+    /**
+     * Initializes Move id name and pp.
+     * @param name Name of the move.
+     * @param pp PP initializer. `"min"` for no pp ups, `"max"` for full pp ups,
+     * or a number for a custom value. Default `"max"`.
+     */
+    public init(name: string, pp: "min" | "max" | number = "max"): void
+    {
+        if (!dex.moves.hasOwnProperty(name))
+        {
+            throw new Error(`Invalid move name '${name}'`);
+        }
+
+        this._name = name;
+        const data = dex.moves[name];
+        this._id = data.uid;
+
+        if (pp === "min") pp = data.pp[0];
+        else if (pp === "max") pp = data.pp[1];
+        this._pp = pp;
+        this._maxpp = pp;
+    }
 
     // istanbul ignore next: only used for logging
     /**

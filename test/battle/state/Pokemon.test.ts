@@ -673,7 +673,7 @@ describe("Pokemon", function()
                 const mon = new Pokemon("Magikarp", false);
                 mon.moveset.reveal("splash");
                 const move = new Move();
-                move.name = "tackle";
+                move.init("tackle");
                 mon.moveset.override("splash", move);
                 mon.switchOut();
                 expect(mon.moveset.get("tackle")).to.be.null;

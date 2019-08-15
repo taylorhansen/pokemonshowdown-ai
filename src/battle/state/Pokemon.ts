@@ -282,7 +282,7 @@ ability ${ability}`);
     public overrideMove(id: string, newId: string): void
     {
         const move = new Move();
-        move.name = newId;
+        move.init(newId);
         move.pp = 5; // mimicked moves have 5 pp
         this.moveset.override(id, move);
     }

@@ -186,11 +186,8 @@ for (const moveName in moves)
     const target = quote(move.target);
 
     // factor pp boosts if the move supports it in game
-    let pp = move.pp;
-    if (!move.noPPBoosts)
-    {
-        pp = Math.floor(pp * 8 / 5);
-    }
+    const pp = [move.pp, move.pp];
+    if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
 
     const selfSwitch = typeof move.selfSwitch === "string" ?
         quote(move.selfSwitch) : !!move.selfSwitch;
@@ -220,7 +217,7 @@ for (const moveName in moves)
     console.log(`\
     ${move.id}:
     {
-        uid: ${uid}, pp: ${pp}, target: ${target}\
+        uid: ${uid}, pp: [${pp.join(", ")}], target: ${target}\
 ${selfSwitch ? `, selfSwitch: ${selfSwitch}` : ""}\
 ${volatileEffect ? `, volatileEffect: "${volatileEffect}"` : ""}\
 ${selfVolatileEffect ? `, selfVolatileEffect: "${selfVolatileEffect}"` : ""}\

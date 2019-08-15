@@ -128,7 +128,7 @@ export class Moveset
                 255 - (2.5 * parseInt(id.substr("frustration".length), 10));
             id = "frustration";
         }
-        move.name = id;
+        move.init(id);
         return this.unrevealed++;
     }
 

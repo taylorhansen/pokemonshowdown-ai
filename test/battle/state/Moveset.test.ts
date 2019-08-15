@@ -129,7 +129,7 @@ describe("Moveset", function()
         {
             moveset.reveal("splash");
             const move = new Move();
-            move.name = "tackle";
+            move.init("tackle");
             moveset.override("splash", move);
             expect(moveset.get("splash")).to.be.null;
             expect(moveset.get("tackle")).to.not.be.null;
@@ -142,7 +142,7 @@ describe("Moveset", function()
         {
             moveset.reveal("splash");
             const move = new Move();
-            move.name = "tackle";
+            move.init("tackle");
             moveset.override("splash", move);
             moveset.clearOverrides();
             expect(moveset.get("tackle")).to.be.null;

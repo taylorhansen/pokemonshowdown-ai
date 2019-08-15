@@ -124,8 +124,8 @@ export interface MoveData
     readonly uid: number;
     /** Target of the move. */
     readonly target: MoveTarget;
-    /** Base power points. */
-    readonly pp: number;
+    /** Base power point range. First is base, second is with pp ups. */
+    readonly pp: [number, number];
     /** Whether this move causes the user to switch. */
     readonly selfSwitch?: SelfSwitch;
     /** Main volatile status effect that may affect the opponent. */
