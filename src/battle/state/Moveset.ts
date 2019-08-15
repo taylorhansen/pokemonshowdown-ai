@@ -153,6 +153,19 @@ export class Moveset
         }
     }
 
+    /**
+     * Permanently replaces a move slot with another Move.
+     * @param id Name of the move to replace.
+     * @param move New replacement Move.
+     */
+    public replace(id: string, move: Move): void
+    {
+        const i = this.getIndex(id);
+        if (i < 0) throw new Error(`Moveset does not contain '${id}'`);
+        this._moves[i] = move;
+        this.baseMoves[i] = move;
+    }
+
     // istanbul ignore next: only used for logging
     /** Encodes all moveset data into a string. */
     public toString(): string

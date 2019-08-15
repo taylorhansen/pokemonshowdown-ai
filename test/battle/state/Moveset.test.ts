@@ -159,4 +159,27 @@ describe("Moveset", function()
             expect(moveset.get("splash")).to.not.be.null;
         });
     });
+
+    describe("#replace()", function()
+    {
+        it("Should replace move", function()
+        {
+            moveset.reveal("splash");
+            const move = new Move();
+            move.init("tackle");
+            moveset.replace("splash", move);
+            expect(moveset.get("splash")).to.be.null;
+            expect(moveset.get("tackle")).to.not.be.null;
+        });
+
+        it("Should throw if replacing unrevealed move", function()
+        {
+            const move = new Move();
+            move.init("tackle");
+            expect(() => moveset.replace("splash", move)).to.throw(Error,
+                "Moveset does not contain 'splash'");
+            expect(moveset.get("splash")).to.be.null;
+            expect(moveset.get("tackle")).to.be.null;
+        });
+    });
 });

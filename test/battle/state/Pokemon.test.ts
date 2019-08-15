@@ -680,6 +680,20 @@ describe("Pokemon", function()
                 expect(mon.moveset.get("splash")).to.not.be.null;
             });
         });
+
+        describe("#replaceMove()", function()
+        {
+            it("Should add replacement Move with minimum maxpp", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.moveset.reveal("splash");
+                mon.replaceMove("splash", "tackle");
+
+                expect(mon.moveset.get("splash")).to.be.null;
+                expect(mon.moveset.get("tackle")).to.not.be.null;
+                expect(mon.moveset.get("tackle")!.pp).to.equal(35);
+            });
+        });
     });
 
     describe("#isGrounded/#maybeGrounded", function()

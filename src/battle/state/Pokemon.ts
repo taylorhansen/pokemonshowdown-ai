@@ -286,6 +286,13 @@ ability ${ability}`);
         move.pp = 5; // mimicked moves have 5 pp
         this.moveset.override(id, move);
     }
+    /** Permanently replaces a move slot via Sketch. */
+    public replaceMove(id: string, newId: string): void
+    {
+        const move = new Move();
+        move.init(newId, "min"); // sketched moves have no pp ups applied
+        this.moveset.override(id, move);
+    }
     public readonly moveset = new Moveset();
 
     /** Pokemon's gender. M=male, F=female, null=genderless. */
