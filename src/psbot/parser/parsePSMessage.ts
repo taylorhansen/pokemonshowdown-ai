@@ -493,8 +493,26 @@ const eventAbility: Parser<AbilityEvent> = transform(
  * |-activate|<PokemonID>|<volatile status>
  */
 const eventActivate: Parser<ActivateEvent> = transform(
-    sequence(word("-activate"), pokemonId, anyWord),
-    ([type, id, volatile]) => ({type, id, volatile}));
+    sequence(word("-activate"), pokemonId, anyWord, eventActivateHelper),
+    ([type, id, volatile, otherArgs]) => ({type, id, volatile, otherArgs}));
+
+/**
+ * Parses the `otherArgs` part of an `|-activate|` or `|-start|` event
+ * without accidentally parsing a suffix.
+ */
+function eventActivateHelper(input: Input, info: Info): Result<string[]>
+{
+    const result: string[] = [];
+
+    while (!input.done && input.get() !== "\n")
+    {
+        const s = input.get();
+        if (!s.startsWith("[")) result.push(s);
+        input = input.next();
+    }
+
+    return {result, remaining: input};
+}
 
 /**
  * Parses a BoostEvent.
@@ -811,26 +829,8 @@ const eventSingleTurn: Parser<SingleTurnEvent> = transform(
  * [fatigue]
  */
 const eventStart: Parser<StartEvent> = transform(
-    sequence(word("-start"), pokemonId, anyWord, eventStartHelper),
+    sequence(word("-start"), pokemonId, anyWord, eventActivateHelper),
     ([type, id, volatile, otherArgs]) => ({type, id, volatile, otherArgs}));
-
-/**
- * Parses the `otherArgs` part of a `|start|` message without accidentally
- * parsing a suffix.
- */
-function eventStartHelper(input: Input, info: Info): Result<string[]>
-{
-    const result: string[] = [];
-
-    while (!input.done && input.get() !== "\n")
-    {
-        const s = input.get();
-        if (!s.startsWith("[")) result.push(s);
-        input = input.next();
-    }
-
-    return {result, remaining: input};
-}
 
 /**
  * Parses a StatusEvent.

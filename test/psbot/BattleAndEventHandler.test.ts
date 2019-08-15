@@ -600,19 +600,19 @@ describe("Battle and EventProcessor", function()
                 post: (v: VolatileStatus) => void;
             }
 
-            interface EventTypeStart extends EventTypeBase
+            interface EventTypeEnd extends EventTypeBase
             {
-                type: "-start";
-                otherArgs: string[];
+                type: "-end";
             }
 
             interface EventTypeOther extends EventTypeBase
             {
-                type: "-activate" | "-end";
+                type: "-activate" | "-start";
+                otherArgs: string[];
             }
 
             /** Used in below `test()` function. */
-            type EventType = EventTypeStart | EventTypeOther;
+            type EventType = EventTypeEnd | EventTypeOther;
 
             /**
              * Creates a test case for a VolatileStatus field related to
@@ -636,19 +636,16 @@ describe("Battle and EventProcessor", function()
                     for (const eventType of eventTypes)
                     {
                         let event: AnyBattleEvent;
-                        if (eventType.type === "-start")
+                        if (eventType.type === "-end")
                         {
-                            event =
-                            {
-                                type: "-start", id: us1, volatile: status,
-                                otherArgs: eventType.otherArgs
-                            };
+                            event = {type: "-end", id: us1, volatile: status};
                         }
                         else
                         {
                             event =
                             {
-                                type: eventType.type, id: us1, volatile: status
+                                type: eventType.type, id: us1, volatile: status,
+                                otherArgs: eventType.otherArgs
                             };
                         }
 
@@ -662,6 +659,7 @@ describe("Battle and EventProcessor", function()
             [
                 {
                     type: "-activate",
+                    otherArgs: [],
                     post: v => expect(v.charge.isActive).to.be.true
                 }
             ]);
@@ -679,6 +677,7 @@ describe("Battle and EventProcessor", function()
                 },
                 {
                     type: "-activate",
+                    otherArgs: [],
                     post(v)
                     {
                         expect(v.confusion.isActive).to.be.true;
@@ -1664,7 +1663,10 @@ describe("Battle and EventProcessor", function()
                 }
 
                 shouldCancelLockedMove("protected",
-                    {type: "-activate", id: them1, volatile: "move: Protect"});
+                {
+                    type: "-activate", id: them1, volatile: "move: Protect",
+                    otherArgs: []
+                });
                 shouldCancelLockedMove("immune", {type: "-immune", id: us1});
                 shouldCancelLockedMove("missed",
                     {type: "-miss", id: us1, targetId: them1}, /*miss*/true);
@@ -2147,7 +2149,10 @@ describe("Battle and EventProcessor", function()
                                 type: "move", id: us1, moveName: "Outrage",
                                 targetId: them1
                             },
-                            {type: "-activate", id: them1, volatile: "Protect"}
+                            {
+                                type: "-activate", id: them1,
+                                volatile: "Protect", otherArgs: []
+                            }
                         ]
                     });
                     expect(battle.state.teams.us.active.volatile.lockedMove
@@ -2177,7 +2182,10 @@ describe("Battle and EventProcessor", function()
                                 type: "move", id: us1, moveName: "Outrage",
                                 targetId: them1
                             },
-                            {type: "-activate", id: them1, volatile: "Protect"}
+                            {
+                                type: "-activate", id: them1,
+                                volatile: "Protect", otherArgs: []
+                            }
                         ]
                     });
                     expect(battle.state.teams.us.active.volatile.lockedMove

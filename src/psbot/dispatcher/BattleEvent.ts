@@ -123,6 +123,8 @@ export interface ActivateEvent extends BattleEventBase
     readonly id: PokemonID;
     /** Volatile status name. */
     readonly volatile: string;
+    /** Additional info if provided. */
+    readonly otherArgs: readonly string[];
 }
 
 /** Event where a stat is being boosted. */

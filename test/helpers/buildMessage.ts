@@ -86,8 +86,12 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             result = [event.type, stringifyID(event.id), event.ability];
             break;
         case "-activate":
-        case "-end":
-            result = [event.type, stringifyID(event.id), event.volatile];
+        case "-start":
+            result =
+            [
+                event.type, stringifyID(event.id), event.volatile,
+                ...event.otherArgs
+            ];
             break;
         case "-boost":
         case "-unboost":
@@ -144,6 +148,9 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 stringifyDetails(event.details), stringifyStatus(event.status)
             ];
             break;
+        case "-end":
+            result = [event.type, stringifyID(event.id), event.volatile];
+            break;
         case "-fieldstart":
         case "-fieldend":
             result = [event.type, event.effect];
@@ -189,13 +196,6 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             break;
         case "-singleturn":
             result = [event.type, stringifyID(event.id), event.status];
-            break;
-        case "-start":
-            result =
-            [
-                event.type, stringifyID(event.id), event.volatile,
-                ...event.otherArgs
-            ];
             break;
         case "-swapboost":
             result =

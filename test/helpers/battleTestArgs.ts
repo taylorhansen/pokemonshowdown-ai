@@ -53,7 +53,7 @@ export const battleEvent: AnyBattleEvent[] =
 [
     {type: "\n"},
     {type: "-ability", id: pokemonId[0], ability: "Pressure"},
-    {type: "-activate", id: pokemonId[1], volatile: "ingrain"},
+    {type: "-activate", id: pokemonId[1], volatile: "ingrain", otherArgs: []},
     {type: "-boost", id: pokemonId[1], stat: "atk", amount: 1, from: from[0]},
     {type: "cant", id: pokemonId[1], reason: "recharge"},
     {type: "cant", id: pokemonId[1], reason: "taunt", moveName: "Thunder Wave"},
