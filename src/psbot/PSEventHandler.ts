@@ -101,6 +101,9 @@ export class PSEventHandler
                     active.disableMove(moveId);
                     break;
                 }
+                case "Encore":
+                    active.volatile.encore.start();
+                    break;
                 case "Focus Energy":
                     active.volatile.focusEnergy = true;
                     break;
@@ -241,6 +244,7 @@ export class PSEventHandler
             else if (ev === "confusion") v.confusion.end();
             else if (ev === "Disable") v.enableMoves();
             else if (ev === "Embargo") v.embargo.end();
+            else if (ev === "Encore") v.encore.end();
             else if (ev === "Ingrain") v.ingrain = false;
             else if (ev === "Magnet Rise") v.magnetRise.end();
             else if (ev === "Substitute") v.substitute = false;

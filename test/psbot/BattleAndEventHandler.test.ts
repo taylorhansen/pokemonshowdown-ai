@@ -807,6 +807,7 @@ describe("Battle and EventProcessor", function()
             testBoolean("Aqua Ring", "Aqua Ring", v => v.aquaRing, ["-start"]);
             testBoolean("Bide", "Bide", v => v.bide.isActive);
             testBoolean("Embargo", "Embargo", v => v.embargo.isActive);
+            testBoolean("Encore", "Encore", v => v.encore.isActive);
             testBoolean("Focus Energy", "move: Focus Energy",
                 v => v.focusEnergy, ["-start"]);
             testBoolean("Foresight", "Foresight",

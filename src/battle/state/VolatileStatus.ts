@@ -111,6 +111,9 @@ export class VolatileStatus
         for (const disabled of this.disabledMoves) disabled.end();
     }
 
+    /** Encore move status. Encored move corresponds to `#lastUsed`. */
+    public readonly encore = new TempStatus("encore", 7);
+
     /** Foresight/Miracle Eye move status. */
     public identified!: "foresight" | "miracleeye" | null;
 
@@ -261,6 +264,7 @@ export class VolatileStatus
         this.bide.end();
         this.charge.end();
         this.enableMoves();
+        this.encore.end();
         this.identified = null;
         this.lastUsed = -1;
         this.lockedMove.reset();
@@ -371,6 +375,7 @@ export class VolatileStatus
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
             this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),
+            this.encore.isActive ? [this.encore.toString()] : [],
             this.identified ? [this.identified] : [],
             this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
