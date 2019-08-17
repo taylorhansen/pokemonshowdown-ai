@@ -1,10 +1,11 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
-import { PokemonData, Type } from "../dex/dex-util";
+import { PokemonData, StatName, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Move } from "./Move";
 import { Moveset } from "./Moveset";
 import { PossibilityClass } from "./PossibilityClass";
+import { StatRange } from "./StatRange";
 import { Team } from "./Team";
 import { VolatileStatus } from "./VolatileStatus";
 
@@ -41,6 +42,7 @@ export class Pokemon
     /** Species/form dex data. */
     public get species(): PokemonData
     {
+        if (!this._species) throw new Error("Species not initialized");
         return this._species;
     }
     /** Sets species data. */
@@ -54,8 +56,32 @@ export class Pokemon
         this._species = dex.pokemon[species];
         if (this._active) this._volatile.overrideSpecies = this._species.name;
         this.initBaseAbility();
+        this.initStats();
     }
-    private _species!: PokemonData;
+    private _species: PokemonData | null = null;
+
+    /** Stat table possibilities. */
+    public readonly stats: {readonly [T in StatName]: StatRange} =
+    {
+        hp: new StatRange(/*hp*/true), atk: new StatRange(),
+        def: new StatRange(), spa: new StatRange(), spd: new StatRange(),
+        spe: new StatRange()
+    };
+    /**
+     * Attempts to initialize stat ranges. Silently fails if species/level
+     * aren't initialized.
+     */
+    private initStats(): void
+    {
+        if (!this._species || !this._level) return;
+
+        for (const stat in this.stats)
+        {
+            if (!this.stats.hasOwnProperty(stat)) continue;
+            this.stats[stat as StatName].calc(
+                this._species.baseStats[stat as StatName], this._level);
+        }
+    }
 
     /** Current ability id name. Can temporarily change while active. */
     public get ability(): string
@@ -81,7 +107,7 @@ export class Pokemon
         {
             if (!this.canHaveAbility(ability))
             {
-                throw new Error(`Pokemon ${this._species} can't have base \
+                throw new Error(`Pokemon ${this.species.name} can't have base \
 ability ${ability}`);
             }
 
@@ -94,7 +120,7 @@ ability ${ability}`);
     /** Checks if this pokemon can have the given ability. */
     public canHaveAbility(ability: string): boolean
     {
-        return this._species.abilities.includes(ability) &&
+        return this.species.abilities.includes(ability) &&
             this._baseAbility.isSet(ability);
     }
     /** Base ability possibility tracker. */
@@ -128,7 +154,7 @@ ability ${ability}`);
             result = this.volatile.overrideTypes
                 .concat(this.volatile.addedType);
         }
-        else result = this._species.types;
+        else result = this.species.types;
 
         return result.filter(type => type !== "???");
     }
@@ -191,6 +217,7 @@ ability ${ability}`);
     public set level(level: number)
     {
         this._level = Math.max(1, Math.min(level, 100));
+        this.initStats();
     }
     private _level = 0;
 
@@ -416,8 +443,8 @@ ability ${ability}`);
     public switchIn(): void
     {
         this.setOverrideAbility();
-        this._volatile.overrideSpecies = this._species.name;
-        this._volatile.overrideTypes = this._species.types;
+        this._volatile.overrideSpecies = this.species.name;
+        this._volatile.overrideTypes = this.species.types;
         this._active = true;
     }
 
@@ -513,7 +540,7 @@ ${s}moveset: [${this.moveset.toString()}]`;
     /** Displays the species as well as whether it's overridden. */
     private stringifySpecies(): string
     {
-        const base = this._species.name;
+        const base = this.species.name;
         const over = this._active ? this._volatile.overrideSpecies : "";
 
         if (!over || over === base) return base;
@@ -526,9 +553,9 @@ ${s}moveset: [${this.moveset.toString()}]`;
     {
         const result: string[] = [];
 
-        for (let i = 0; i < this._species.types.length; ++i)
+        for (let i = 0; i < this.species.types.length; ++i)
         {
-            let type: string = this._species.types[i];
+            let type: string = this.species.types[i];
 
             // show overridden types in parentheses
             const override = this._volatile.overrideTypes[i];

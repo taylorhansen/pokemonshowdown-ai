@@ -3,11 +3,12 @@ import "mocha";
 import { isNumber } from "util";
 import { encodeBattleState, encodeHP, encodeItemTempStatus,
     encodeMajorStatusCounter, encodeMove, encodeMoveset, encodePokemon,
-    encodePossiblityClass, encodeRoomStatus, encodeTeam, encodeTeamStatus,
-    encodeTempStatus, encodeVolatileStatus, limitedStatusTurns, oneHot,
-    sizeActivePokemon, sizeBattleState, sizeMajorStatusCounter, sizeMove,
-    sizeMoveset, sizePokemon, sizeRoomStatus, sizeTeam, sizeTeamStatus,
-    sizeTempStatus, sizeVolatileStatus } from "../../src/ai/encodeBattleState";
+    encodePossiblityClass, encodeRoomStatus, encodeStatRange, encodeTeam,
+    encodeTeamStatus, encodeTempStatus, encodeVolatileStatus,
+    limitedStatusTurns, oneHot, sizeActivePokemon, sizeBattleState,
+    sizeMajorStatusCounter, sizeMove, sizeMoveset, sizePokemon, sizeRoomStatus,
+    sizeStatRange, sizeTeam, sizeTeamStatus, sizeTempStatus,
+    sizeVolatileStatus } from "../../src/ai/encodeBattleState";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
@@ -17,6 +18,7 @@ import { Moveset } from "../../src/battle/state/Moveset";
 import { Pokemon } from "../../src/battle/state/Pokemon";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
 import { RoomStatus } from "../../src/battle/state/RoomStatus";
+import { StatRange } from "../../src/battle/state/StatRange";
 import { Team } from "../../src/battle/state/Team";
 import { TeamStatus } from "../../src/battle/state/TeamStatus";
 import { TempStatus } from "../../src/battle/state/TempStatus";
@@ -214,6 +216,17 @@ describe("BattleState encoders", function()
             return hp;
         },
         values: [50, 100]
+    });
+
+    testEncoder("StatRange", encodeStatRange as (stat: StatRange) => number[],
+    {
+        init()
+        {
+            const stat = new StatRange(/*hp*/false);
+            stat.calc(100, 100);
+            return stat;
+        },
+        size: sizeStatRange
     });
 
     testEncoder("Pokemon", encodePokemon,

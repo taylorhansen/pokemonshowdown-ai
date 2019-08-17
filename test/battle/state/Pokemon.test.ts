@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { berries } from "../../../src/battle/dex/dex";
+import { StatExceptHP } from "../../../src/battle/dex/dex-util";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Move } from "../../../src/battle/state/Move";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
@@ -85,6 +86,31 @@ describe("Pokemon", function()
             const mon = new Pokemon("Magikarp", false);
             mon.setSpecies("Horsea");
             expect(mon.species.name).to.equal("Horsea");
+        });
+    });
+
+    describe("#stats", function()
+    {
+        it("Should initialize when species and level are initialized",
+        function()
+        {
+            const mon = new Pokemon("Mew", false); // has all base 100 stats
+            mon.level = 100;
+            for (const stat in mon.stats)
+            {
+                if (!mon.stats.hasOwnProperty(stat)) continue;
+
+                if (stat === "hp")
+                {
+                    expect(mon.stats[stat].min).to.equal(310);
+                    expect(mon.stats[stat].max).to.equal(404);
+                }
+                else
+                {
+                    expect(mon.stats[stat as StatExceptHP].min).to.equal(184);
+                    expect(mon.stats[stat as StatExceptHP].max).to.equal(328);
+                }
+            }
         });
     });
 

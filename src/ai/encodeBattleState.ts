@@ -1,7 +1,7 @@
 import { dex, numFutureMoves, numLockedMoves, numTwoTurnMoves } from
     "../battle/dex/dex";
-import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes, Type, types,
-    weatherItems } from "../battle/dex/dex-util";
+import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes, StatName,
+    Type, types, weatherItems } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { HP } from "../battle/state/HP";
 import { ItemTempStatus } from "../battle/state/ItemTempStatus";
@@ -11,6 +11,7 @@ import { Moveset } from "../battle/state/Moveset";
 import { Pokemon } from "../battle/state/Pokemon";
 import { PossibilityClass } from "../battle/state/PossibilityClass";
 import { RoomStatus } from "../battle/state/RoomStatus";
+import { StatRange } from "../battle/state/StatRange";
 import { Team } from "../battle/state/Team";
 import { TeamStatus } from "../battle/state/TeamStatus";
 import { TempStatus } from "../battle/state/TempStatus";
@@ -316,9 +317,47 @@ export function encodeHP(hp?: HP | null): number[]
     return [hp.current, hp.max];
 }
 
+/** Length of the return value of `encodeStatRange()`. */
+export const sizeStatRange = /*min*/1 + /*max*/1 + /*base*/1;
+
+/** Max possible normal stat. */
+const maxStat = StatRange.calcStat(/*hp*/false, 255, 100, 252, 31, 1.1);
+/** Max possible hp stat. */
+const maxStatHP = StatRange.calcStat(/*hp*/true, 255, 100, 252, 31, 1.1);
+
+/** Formats stat range info into an array of numbers. */
+export function encodeStatRange(stat: StatRange): number[];
+/**
+ * Formats stat range info into an array of numbers where the StatRange object
+ * is unknown.
+ * @param hp Whether this is an HP stat.
+ */
+export function encodeStatRange(stat: null, hp: boolean): number[];
+/**
+ * Formats stat range info into an array of numbers where the StatRange object
+ * is nonexistent.
+ */
+export function encodeStatRange(stat?: undefined): number[];
+export function encodeStatRange(stat?: StatRange | null, hp?: boolean): number[]
+{
+    const normal = hp || (stat && stat.hp) ? maxStatHP : maxStat;
+
+    // average max stat as a guess
+    if (stat === null) return [normal / 2, normal / 2, 127.5];
+    if (!stat) return [-1, -1, -1];
+
+    // normalize based on max possible stats
+    return [
+        (stat.min || normal / 2) / normal,
+        (stat.max || normal / 2) / maxStat,
+        (stat.base || 127.5) / 255
+    ];
+}
+
 /** Length of the return value of `encodePokemon()` when inactive. */
 export const sizePokemon = /*gender*/3 + dex.numPokemon + dex.numItems +
-    dex.numAbilities + /*level*/1 + sizeMoveset + sizeHP + /*grounded*/2 +
+    dex.numAbilities + /*stat ranges*/6 * sizeStatRange + /*level*/1 +
+    sizeMoveset + sizeHP + /*grounded*/2 +
     /*base type excluding ??? type*/Object.keys(types).length - 1 +
     /*majorStatus*/Object.keys(majorStatuses).length;
 
@@ -341,6 +380,11 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             ...Array.from(
                 {length: dex.numPokemon + dex.numItems + dex.numAbilities},
                 () => 0),
+            // stat range
+            ...Array(6)
+                .fill(encodeStatRange(null, /*hp*/true), 0, 1)
+                .fill(encodeStatRange(null, /*hp*/false), 1, 6)
+                .reduce((a, b) => a.concat(b)),
             // level
             0,
             ...encodeMoveset(null), ...encodeHP(null),
@@ -361,6 +405,9 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             ...Array.from(
                 {length: dex.numPokemon + dex.numItems + dex.numAbilities},
                 () => -1),
+            // stat range
+            ...Array.from({length: 6}, () => encodeStatRange())
+                .reduce((a, b) => a.concat(b)),
             // level
             -1,
             ...encodeMoveset(), ...encodeHP(),
@@ -371,13 +418,20 @@ export function encodePokemon(mon?: Pokemon | null): number[]
         ];
     }
 
+    const stats: number[] = [];
+    for (const stat in mon.stats)
+    {
+        if (!mon.stats.hasOwnProperty(stat)) continue;
+        stats.push(...encodeStatRange(mon.stats[stat as StatName]));
+    }
+
     return [
         mon.gender === "M" ? 1 : 0, mon.gender === "F" ? 1 : 0,
         mon.gender === null ? 1 : 0,
         ...oneHot(mon.species.uid, dex.numPokemon),
         ...encodePossiblityClass(mon.item, d => d, dex.numItems),
         ...encodePossiblityClass(mon.baseAbility, d => d, dex.numAbilities),
-        mon.level, ...encodeMoveset(mon.moveset), ...encodeHP(mon.hp),
+        ...stats, mon.level, ...encodeMoveset(mon.moveset), ...encodeHP(mon.hp),
         mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0,
         ...filteredTypes.map(type => mon.species.types.includes(type) ? 1 : 0),
         ...encodeMajorStatusCounter(mon.majorStatus),
