@@ -258,7 +258,7 @@ describe("BattleState encoders", function()
         {
             const team = new Team("us");
             team.size = 1;
-            team.switchIn("Magikarp", 100, "M", 100, 100);
+            team.switchIn("Magikarp", 100, "M", 200, 200);
             return team;
         },
         size: sizeTeam
@@ -276,9 +276,9 @@ describe("BattleState encoders", function()
         {
             const state = new BattleState();
             state.teams.us.size = 1;
-            state.teams.us.switchIn("Magikarp", 100, "M", 100, 100);
+            state.teams.us.switchIn("Magikarp", 100, "M", 200, 200);
             state.teams.them.size = 1;
-            state.teams.them.switchIn("Magikarp", 100, "M", 100, 100);
+            state.teams.them.switchIn("Magikarp", 100, "M", 200, 200);
             return state;
         },
         size: sizeBattleState

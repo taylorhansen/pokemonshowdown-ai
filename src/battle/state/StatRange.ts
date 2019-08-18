@@ -20,8 +20,34 @@ export class StatRange
      * @param hp Whether this is an HP stat. Stat calculations are different
      * for this stat.
      */
-    constructor(public readonly hp = false)
+    constructor(public readonly hp = false) { this.reset(); }
+
+    /** Resets everything. */
+    public reset(): void
     {
+        this._min = null;
+        this._max = null;
+        this._base = null;
+    }
+
+    /**
+     * Indicates that this stat value is known. Throws if not yet initialized.
+     */
+    public set(stat: number): void
+    {
+        if (!this._base) throw new Error("Base stat not yet initialized");
+        // istanbul ignore next: should never happen
+        if (!this._min || !this._max)
+        {
+            throw new Error("Stat ranges not yet calculated");
+        }
+        if (this._min > stat || stat > this._max)
+        {
+            throw new Error("Known stat value is out of range " +
+                `(${this._min}-${this._max} vs ${stat})`);
+        }
+        this._min = stat;
+        this._max = stat;
     }
 
     /**
@@ -57,5 +83,16 @@ export class StatRange
         else result =  Math.floor(x * level / 100 + 5);
 
         return hp ? result : Math.floor(result * nature);
+    }
+
+    // istanbul ignore next: only used in logging
+    /** Encodes all stat range data into a string. */
+    public toString(): string
+    {
+        let s: string;
+        if (!this._min || !this._max || !this._base) return "???";
+        else if (this._min === this._max) s = this._min.toString();
+        else s = `${this._min}-${this._max}`;
+        return `${s}(${this._base})`;
     }
 }

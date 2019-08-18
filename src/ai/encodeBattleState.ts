@@ -12,6 +12,7 @@ import { Pokemon } from "../battle/state/Pokemon";
 import { PossibilityClass } from "../battle/state/PossibilityClass";
 import { RoomStatus } from "../battle/state/RoomStatus";
 import { StatRange } from "../battle/state/StatRange";
+import { StatTable } from "../battle/state/StatTable";
 import { Team } from "../battle/state/Team";
 import { TeamStatus } from "../battle/state/TeamStatus";
 import { TempStatus } from "../battle/state/TempStatus";
@@ -137,6 +138,86 @@ export function encodeVariableTempStatus<TStatusType extends string>(
         .map(t => t === vts.type ? one : 0);
 }
 
+/** Length of the return value of `encodeStatRange()`. */
+export const sizeStatRange = /*min*/1 + /*max*/1 + /*base*/1;
+
+/** Max possible normal stat. */
+const maxStat = StatRange.calcStat(/*hp*/false, 255, 100, 252, 31, 1.1);
+/** Max possible hp stat. */
+const maxStatHP = StatRange.calcStat(/*hp*/true, 255, 100, 252, 31, 1.1);
+
+/** Formats stat range info into an array of numbers. */
+export function encodeStatRange(stat: StatRange): number[];
+/**
+ * Formats stat range info into an array of numbers where the StatRange object
+ * is unknown.
+ * @param hp Whether this is an HP stat.
+ */
+export function encodeStatRange(stat: null, hp: boolean): number[];
+/**
+ * Formats stat range info into an array of numbers where the StatRange object
+ * is nonexistent.
+ */
+export function encodeStatRange(stat?: undefined): number[];
+export function encodeStatRange(stat?: StatRange | null, hp?: boolean): number[]
+{
+    const normal = hp || (stat && stat.hp) ? maxStatHP : maxStat;
+
+    // average max stat as a guess
+    if (stat === null) return [normal / 2, normal / 2, 127.5];
+    if (!stat) return [-1, -1, -1];
+
+    // normalize based on max possible stats
+    return [
+        (stat.min || normal / 2) / normal,
+        (stat.max || normal / 2) / maxStat,
+        (stat.base || 127.5) / 255
+    ];
+}
+
+export const sizeStatTable = /*stat ranges*/6 * sizeStatRange + /*level*/1;
+
+/**
+ * Formats stat table info into an array of numbers. Null means unknown while
+ * undefined means nonexistent.
+ */
+export function encodeStatTable(stats?: StatTable | null): number[]
+{
+    if (stats === null)
+    {
+        // unknown
+        return [
+            // stat ranges
+            ...Array(6)
+                .fill(encodeStatRange(null, /*hp*/true), 0, 1)
+                .fill(encodeStatRange(null, /*hp*/false), 1, 6)
+                .reduce((a, b) => a.concat(b)),
+            // level
+            0
+        ];
+    }
+    if (!stats)
+    {
+        // nonexistent
+        return [
+            // stat ranges
+            ...Array(6)
+                .fill(encodeStatRange(), 0, 6)
+                .reduce((a, b) => a.concat(b)),
+            // level
+            -1
+        ];
+    }
+
+    return [
+        ...[stats.hp, stats.atk, stats.def, stats.spa, stats.spd, stats.spe]
+            .map(encodeStatRange).reduce((a, b) => a.concat(b)),
+        // normalize level using max level (100)
+        (stats.level || 0) / 100
+        // TODO: how to encode link reference?
+    ];
+}
+
 // TODO: guarantee order? move to dex-util once figured out
 /** Types without `???` type. */
 const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
@@ -151,7 +232,7 @@ export const sizeVolatileStatus =
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*identified*/2 + /*locked move variants*/numLockedMoves + /*minimize*/1 +
     /*must recharge*/1 + /*override ability*/dex.numAbilities +
-    /*override species*/dex.numPokemon +
+    /*override species*/dex.numPokemon + /*override stats*/sizeStatTable +
     /*override types*/filteredTypes.length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
     /*taunt*/sizeTempStatus + /*torment*/1 + /*two-turn*/numTwoTurnMoves +
@@ -185,7 +266,10 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const minimize = status.minimize ? 1 : 0;
     const mustRecharge = status.mustRecharge ? 1 : 0;
     const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
-    const overrideSpecies = oneHot(status.overrideSpeciesId, dex.numPokemon);
+    const overrideSpecies = oneHot(
+        status.overrideSpecies ? status.overrideSpecies.id : null,
+        dex.numPokemon);
+    const overrideStats = encodeStatTable(status.overrideStats);
     const overrideTypes = status.overrideTypes.concat(status.addedType);
     const overrideTypeData =
         filteredTypes.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
@@ -206,7 +290,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, ingrain,
         leechSeed, ...magnetRise, substitute, suppressed, ...bide, ...charge,
         ...disabled, ...identified, ...lastUsed, ...lockedMove, minimize,
-        mustRecharge, ...overrideAbility, ...overrideSpecies,
+        mustRecharge, ...overrideAbility, ...overrideSpecies, ...overrideStats,
         ...overrideTypeData, roost, ...slowStart, stallFailRate, ...taunt,
         torment, ...twoTurn, unburden, ...uproar, willTruant
     ];
@@ -317,47 +401,10 @@ export function encodeHP(hp?: HP | null): number[]
     return [hp.current, hp.max];
 }
 
-/** Length of the return value of `encodeStatRange()`. */
-export const sizeStatRange = /*min*/1 + /*max*/1 + /*base*/1;
-
-/** Max possible normal stat. */
-const maxStat = StatRange.calcStat(/*hp*/false, 255, 100, 252, 31, 1.1);
-/** Max possible hp stat. */
-const maxStatHP = StatRange.calcStat(/*hp*/true, 255, 100, 252, 31, 1.1);
-
-/** Formats stat range info into an array of numbers. */
-export function encodeStatRange(stat: StatRange): number[];
-/**
- * Formats stat range info into an array of numbers where the StatRange object
- * is unknown.
- * @param hp Whether this is an HP stat.
- */
-export function encodeStatRange(stat: null, hp: boolean): number[];
-/**
- * Formats stat range info into an array of numbers where the StatRange object
- * is nonexistent.
- */
-export function encodeStatRange(stat?: undefined): number[];
-export function encodeStatRange(stat?: StatRange | null, hp?: boolean): number[]
-{
-    const normal = hp || (stat && stat.hp) ? maxStatHP : maxStat;
-
-    // average max stat as a guess
-    if (stat === null) return [normal / 2, normal / 2, 127.5];
-    if (!stat) return [-1, -1, -1];
-
-    // normalize based on max possible stats
-    return [
-        (stat.min || normal / 2) / normal,
-        (stat.max || normal / 2) / maxStat,
-        (stat.base || 127.5) / 255
-    ];
-}
-
 /** Length of the return value of `encodePokemon()` when inactive. */
-export const sizePokemon = /*gender*/3 + dex.numPokemon + dex.numItems +
-    dex.numAbilities + /*stat ranges*/6 * sizeStatRange + /*level*/1 +
-    sizeMoveset + sizeHP + /*grounded*/2 +
+export const sizePokemon = /*gender*/3 + dex.numPokemon +
+    /*stats*/sizeStatTable + dex.numItems + dex.numAbilities + sizeMoveset +
+    sizeHP + /*grounded*/2 +
     /*base type excluding ??? type*/Object.keys(types).length - 1 +
     /*majorStatus*/Object.keys(majorStatuses).length;
 
@@ -380,14 +427,7 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             ...Array.from(
                 {length: dex.numPokemon + dex.numItems + dex.numAbilities},
                 () => 0),
-            // stat range
-            ...Array(6)
-                .fill(encodeStatRange(null, /*hp*/true), 0, 1)
-                .fill(encodeStatRange(null, /*hp*/false), 1, 6)
-                .reduce((a, b) => a.concat(b)),
-            // level
-            0,
-            ...encodeMoveset(null), ...encodeHP(null),
+            ...encodeStatTable(null), ...encodeMoveset(null), ...encodeHP(null),
             // grounded
             0.5, 0.5,
             // could be any of these types
@@ -405,12 +445,7 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             ...Array.from(
                 {length: dex.numPokemon + dex.numItems + dex.numAbilities},
                 () => -1),
-            // stat range
-            ...Array.from({length: 6}, () => encodeStatRange())
-                .reduce((a, b) => a.concat(b)),
-            // level
-            -1,
-            ...encodeMoveset(), ...encodeHP(),
+            ...encodeStatTable(), ...encodeMoveset(), ...encodeHP(),
             // grounded
             -1, -1,
             ...filteredTypes.map(() => -1),
@@ -418,20 +453,14 @@ export function encodePokemon(mon?: Pokemon | null): number[]
         ];
     }
 
-    const stats: number[] = [];
-    for (const stat in mon.stats)
-    {
-        if (!mon.stats.hasOwnProperty(stat)) continue;
-        stats.push(...encodeStatRange(mon.stats[stat as StatName]));
-    }
-
     return [
         mon.gender === "M" ? 1 : 0, mon.gender === "F" ? 1 : 0,
         mon.gender === null ? 1 : 0,
         ...oneHot(mon.species.uid, dex.numPokemon),
+        ...encodeStatTable(mon.stats),
         ...encodePossiblityClass(mon.item, d => d, dex.numItems),
         ...encodePossiblityClass(mon.baseAbility, d => d, dex.numAbilities),
-        ...stats, mon.level, ...encodeMoveset(mon.moveset), ...encodeHP(mon.hp),
+        ...encodeMoveset(mon.moveset), ...encodeHP(mon.hp),
         mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0,
         ...filteredTypes.map(type => mon.species.types.includes(type) ? 1 : 0),
         ...encodeMajorStatusCounter(mon.majorStatus),

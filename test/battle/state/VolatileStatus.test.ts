@@ -1,6 +1,8 @@
 import { expect } from "chai";
 import "mocha";
+import { dex } from "../../../src/battle/dex/dex";
 import { BoostName, boostNames } from "../../../src/battle/dex/dex-util";
+import { Pokemon } from "../../../src/battle/state/Pokemon";
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 
 describe("VolatileStatus", function()
@@ -33,7 +35,9 @@ describe("VolatileStatus", function()
         volatile.lockedMove.start("outrage");
         volatile.minimize = true;
         volatile.mustRecharge = true;
-        volatile.overrideSpecies = "Magikarp";
+        volatile.overrideSpecies = dex.pokemon.Magikarp;
+        volatile.overrideStats.linked = new Pokemon("Magikarp", false);
+        volatile.overrideStats.level = 100;
         volatile.overrideTypes = ["???", "water"];
         volatile.addedType = "ice";
         volatile.roost = true;
@@ -74,8 +78,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.minimize).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
-            expect(volatile.overrideSpecies).to.be.empty;
-            expect(volatile.overrideSpeciesId).to.be.null;
+            expect(volatile.overrideSpecies).to.be.null;
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
             expect(volatile.roost).to.be.false;
@@ -133,8 +136,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.lockedMove.isActive).to.be.false;
             expect(newVolatile.minimize).to.be.false;
             expect(newVolatile.mustRecharge).to.be.false;
-            expect(newVolatile.overrideSpecies).to.be.empty;
-            expect(newVolatile.overrideSpeciesId).to.be.null;
+            expect(newVolatile.overrideSpecies).to.be.null;
             expect(newVolatile.overrideTypes).to.have.members(["???", "???"]);
             expect(newVolatile.addedType).to.equal("???");
             expect(newVolatile.roost).to.be.false;
@@ -304,19 +306,21 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#overrideSpecies/#overrideSpeciesId", function()
+    describe("#overrideSpecies", function()
     {
         it("Should set override species", function()
         {
-            volatile.overrideSpecies = "Magikarp";
-            expect(volatile.overrideSpecies).to.equal("Magikarp");
-            expect(volatile.overrideSpeciesId).to.not.be.null;
+            volatile.overrideSpecies = dex.pokemon.Magikarp;
+            expect(volatile.overrideSpecies).to.not.be.null;
+            expect(volatile.overrideSpecies!.name).to.equal("Magikarp");
         });
 
-        it("Should throw if unknown species", function()
+        it("Should link to #overrideStats and #overrideTypes", function()
         {
-            expect(() => volatile.overrideSpecies = "not-a real_species")
-                .to.throw();
+            volatile.overrideSpecies = dex.pokemon.Magikarp;
+            expect(volatile.overrideStats.data).to.equal(dex.pokemon.Magikarp);
+            expect(volatile.overrideTypes)
+                .to.have.members(dex.pokemon.Magikarp.types);
         });
     });
 

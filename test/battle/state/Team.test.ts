@@ -58,7 +58,7 @@ describe("Team", function()
         it("Should not overflow team size", function()
         {
             team.size = 1;
-            expect(team.switchIn("Magikarp", 100, "M", 100, 100))
+            expect(team.switchIn("Magikarp", 100, "M", 200, 200))
                 .to.not.equal(null);
             expect(team.switchIn("Porygon", 100, "M", 100, 100)).to.equal(null);
         });
@@ -67,10 +67,10 @@ describe("Team", function()
         {
             team.size = 2;
             // switch in/out
-            const mon1 = team.switchIn("Magikarp", 100, "M", 100, 100)!;
-            const mon2 = team.switchIn("Porygon", 100, "M", 100, 100)!;
+            const mon1 = team.switchIn("Magikarp", 100, "M", 200, 200)!;
+            const mon2 = team.switchIn("Porygon", 100, "M", 300, 300)!;
             // switch back in
-            const mon3 = team.switchIn("Magikarp", 100, "M", 100, 100)!;
+            const mon3 = team.switchIn("Magikarp", 100, "M", 200, 200)!;
             expect(mon1).to.equal(mon3);
             expect(mon1.active).to.equal(true);
             expect(mon2.active).to.equal(false);
@@ -79,9 +79,9 @@ describe("Team", function()
         it("Should copy volatile", function()
         {
             team.size = 2;
-            const mon1 = team.switchIn("Magikarp", 100, "M", 100, 100)!;
+            const mon1 = team.switchIn("Magikarp", 100, "M", 200, 200)!;
             mon1.volatile.boosts.spa = 2;
-            const mon2 = team.switchIn("Porygon", 100, "M", 100, 100,
+            const mon2 = team.switchIn("Porygon", 100, "M", 300, 300,
                     {copyVolatile: true})!;
             expect(mon2.volatile.boosts.spa).to.equal(2);
         });
@@ -92,9 +92,9 @@ describe("Team", function()
         it("Should not overflow team size", function()
         {
             team.size = 1;
-            expect(team.reveal("Magikarp", 100, "M", 100, 100))
+            expect(team.reveal("Magikarp", 100, "M", 200, 200))
                 .to.not.equal(null);
-            expect(team.reveal("Porygon", 100, "M", 100, 100)).to.equal(null);
+            expect(team.reveal("Porygon", 100, "M", 300, 300)).to.equal(null);
         });
     });
 
@@ -103,9 +103,9 @@ describe("Team", function()
         it("Should cure all team pokemon", function()
         {
             team.size = 2;
-            const mon1 = team.reveal("Magikarp", 100, "M", 100, 100)!;
+            const mon1 = team.reveal("Magikarp", 100, "M", 200, 200)!;
             mon1.majorStatus.afflict("brn");
-            const mon2 = team.reveal("Porygon", 100, "M", 100, 100)!;
+            const mon2 = team.reveal("Porygon", 100, "M", 300, 300)!;
             mon2.majorStatus.afflict("frz");
             team.cure();
             expect(mon1.majorStatus.current).to.be.null;

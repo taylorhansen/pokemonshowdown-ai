@@ -50,7 +50,7 @@ describe("Battle and EventProcessor", function()
 
             expect(mon).to.exist;
             expect(mon.species.name).to.equal(details.species);
-            expect(mon.level).to.equal(details.level);
+            expect(mon.stats.level).to.equal(details.level);
             expect(mon.hp.current).to.equal(status.hp);
             expect(mon.hp.max).to.equal(status.hpMax);
             // TODO: handle case where there's no item? (have to change typings)
@@ -189,7 +189,10 @@ describe("Battle and EventProcessor", function()
                             details: testArgs.pokemonDetails[0],
                             condition: testArgs.pokemonStatus[0],
                             active: true,
-                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            stats:
+                            {
+                                atk: 256, def: 216, spa: 344, spd: 216, spe: 296
+                            },
                             moves: ["psychocut", "reflect"],
                             baseAbility: "pressure", item: "expertbelt",
                             pokeball: "pokeball"
@@ -249,9 +252,12 @@ describe("Battle and EventProcessor", function()
                                 species: "Horsea", level: 100, gender: "M",
                                 shiny: false
                             },
-                            condition: {hp: 10, hpMax: 10, condition: null},
+                            condition: {hp: 201, hpMax: 201, condition: null},
                             active: true,
-                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            stats:
+                            {
+                                atk: 116, def: 176, spa: 176, spd: 86, spe: 156
+                            },
                             baseAbility: "swiftswim",
                             moves: [],
                             item: "choiceband",
@@ -264,9 +270,12 @@ describe("Battle and EventProcessor", function()
                                 species: "Gyarados", level: 100, gender: "M",
                                 shiny: false
                             },
-                            condition: {hp: 1000, hpMax: 1000, condition: null},
+                            condition: {hp: 331, hpMax: 331, condition: null},
                             active: false,
-                            stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                            stats:
+                            {
+                                atk: 286, def: 194, spa: 156, spd: 236, spe: 198
+                            },
                             baseAbility: "intimidate",
                             moves: [],
                             item: "lifeorb",
@@ -288,7 +297,7 @@ describe("Battle and EventProcessor", function()
             battle.state.teams.us.active.switchIn();
             // setup opposing team
             expect(battle.state.teams.them.switchIn(
-                    "Seaking", 100, "M", 10, 10)).to.not.be.null;
+                    "Seaking", 100, "M", 100, 100)).to.not.be.null;
         });
 
         it("Should not choose action if requested to wait", async function()
@@ -521,8 +530,8 @@ describe("Battle and EventProcessor", function()
                             details:
                             {
                                 species: us2Mon.species.name,
-                                gender: us2Mon.gender!, level: us2Mon.level,
-                                shiny: false
+                                gender: us2Mon.gender!,
+                                level: us2Mon.stats.level!, shiny: false
                             },
                             status:
                             {
@@ -1478,8 +1487,9 @@ describe("Battle and EventProcessor", function()
             {
                 const active = battle.state.teams.us.active;
                 expect(active.species.name).to.equal("Horsea");
-                expect(active.volatile.overrideSpecies).to.equal("Horsea");
-                expect(active.volatile.overrideSpeciesId).to.not.be.null;
+                expect(active.volatile.overrideSpecies).to.not.be.null;
+                expect(active.volatile.overrideSpecies!.name)
+                    .to.equal("Horsea");
                 await battle.progress(
                 {
                     events:
@@ -1497,8 +1507,9 @@ describe("Battle and EventProcessor", function()
                     ]
                 });
                 expect(active.species.name).to.equal("Horsea");
-                expect(active.volatile.overrideSpecies).to.equal("Kingdra");
-                expect(active.volatile.overrideSpeciesId).to.not.be.null;
+                expect(active.volatile.overrideSpecies).to.not.be.null;
+                expect(active.volatile.overrideSpecies!.name)
+                    .to.equal("Kingdra");
             });
         });
 
@@ -2430,7 +2441,7 @@ describe("Battle and EventProcessor", function()
                     //  validate ability reavealing mechanics
                     battle.state.teams.us.size = 1;
                     const mon1 = battle.state.teams.us.switchIn("Gardevoir",
-                        100, "F", 100, 100)!;
+                        100, "F", 300, 300)!;
                     const mon2 = battle.state.teams.them.active;
 
                     expect(mon1.ability).to.be.empty;
@@ -2468,7 +2479,7 @@ describe("Battle and EventProcessor", function()
                     // reset team and introduce a pokemon with an unknown item
                     battle.state.teams.us.size = 1;
                     const mon = battle.state.teams.us.switchIn("Pikachu", 100,
-                        "M", 90, 100)!;
+                        "M", 90, 200)!;
                     expect(mon).to.not.be.null;
                     expect(mon.item.definiteValue).to.be.null;
 
@@ -2478,7 +2489,7 @@ describe("Battle and EventProcessor", function()
                         [
                             {
                                 type: "-damage", id: us1,
-                                status: {hp: 100, hpMax: 100, condition: null},
+                                status: {hp: 100, hpMax: 200, condition: null},
                                 from: {type: "item", item: "Leftovers"}
                             }
                         ]

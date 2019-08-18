@@ -1,6 +1,3 @@
-/** Names of certain stats. */
-export type StatName = "hp" | "atk" | "def" | "spa" | "spd" | "spe";
-
 /** Set of Type names. Each type has a 0-based unique index. */
 export const types =
 {
@@ -54,6 +51,12 @@ export const statsExceptHP =
     {atk: true, def: true, spa: true, spd: true, spe: true} as const;
 /** Names of pokemon stats except HP. */
 export type StatExceptHP = keyof typeof statsExceptHP;
+
+/** Holds the set of all stat names. */
+export const statNames =
+    {hp: true, ...statsExceptHP} as const;
+/** Names of pokemon stats. */
+export type StatName = keyof typeof statNames;
 
 /** Holds the set of all boostable stat names. */
 export const boostNames =

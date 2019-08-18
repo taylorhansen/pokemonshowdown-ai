@@ -5,7 +5,7 @@ import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Move } from "./Move";
 import { Moveset } from "./Moveset";
 import { PossibilityClass } from "./PossibilityClass";
-import { StatRange } from "./StatRange";
+import { StatTable } from "./StatTable";
 import { Team } from "./Team";
 import { VolatileStatus } from "./VolatileStatus";
 
@@ -33,10 +33,7 @@ export class Pokemon
     public readonly team?: Team;
 
     /** Whether this is the current active pokemon. */
-    public get active(): boolean
-    {
-        return this._active;
-    }
+    public get active(): boolean { return this._active; }
     private _active: boolean = false;
 
     /** Species/form dex data. */
@@ -45,6 +42,8 @@ export class Pokemon
         if (!this._species) throw new Error("Species not initialized");
         return this._species;
     }
+    /** Whether `#species` is initialized. */
+    public get hasSpecies(): boolean { return !!this._species; }
     /** Sets species data. */
     public setSpecies(species: string): void
     {
@@ -54,42 +53,23 @@ export class Pokemon
         }
 
         this._species = dex.pokemon[species];
-        if (this._active) this._volatile.overrideSpecies = this._species.name;
+        if (this._active) this._volatile.overrideSpecies = this._species;
         this.initBaseAbility();
-        this.initStats();
+        // no need to set linked since ctor already did that
+        this.stats.data = this.species;
     }
     private _species: PokemonData | null = null;
 
     /** Stat table possibilities. */
-    public readonly stats: {readonly [T in StatName]: StatRange} =
-    {
-        hp: new StatRange(/*hp*/true), atk: new StatRange(),
-        def: new StatRange(), spa: new StatRange(), spd: new StatRange(),
-        spe: new StatRange()
-    };
-    /**
-     * Attempts to initialize stat ranges. Silently fails if species/level
-     * aren't initialized.
-     */
-    private initStats(): void
-    {
-        if (!this._species || !this._level) return;
-
-        for (const stat in this.stats)
-        {
-            if (!this.stats.hasOwnProperty(stat)) continue;
-            this.stats[stat as StatName].calc(
-                this._species.baseStats[stat as StatName], this._level);
-        }
-    }
+    public readonly stats = new StatTable();
 
     /** Current ability id name. Can temporarily change while active. */
     public get ability(): string
     {
         // ability has been overridden
-        if (this.volatile.overrideAbility)
+        if (this._volatile.overrideAbility)
         {
-            return this.volatile.overrideAbility;
+            return this._volatile.overrideAbility;
         }
         // not overridden/initialized
         if (!this._baseAbility.definiteValue) return "";
@@ -115,7 +95,7 @@ ability ${ability}`);
         }
 
         // override current ability
-        this.volatile.overrideAbility = ability;
+        this._volatile.overrideAbility = ability;
     }
     /** Checks if this pokemon can have the given ability. */
     public canHaveAbility(ability: string): boolean
@@ -151,8 +131,8 @@ ability ${ability}`);
         let result: readonly Type[];
         if (this._active)
         {
-            result = this.volatile.overrideTypes
-                .concat(this.volatile.addedType);
+            result = this._volatile.overrideTypes
+                .concat(this._volatile.addedType);
         }
         else result = this.species.types;
 
@@ -161,14 +141,14 @@ ability ${ability}`);
     /** Temporarily changes primary and secondary types and resets third. */
     public changeType(newTypes: readonly [Type, Type]): void
     {
-        this.volatile.overrideTypes = newTypes;
+        this._volatile.overrideTypes = newTypes;
         // reset added type
         this.addType("???");
     }
     /** Changes temporary tertiary type. */
     public addType(newType: Type): void
     {
-        this.volatile.addedType = newType;
+        this._volatile.addedType = newType;
     }
 
     /**
@@ -185,7 +165,7 @@ ability ${ability}`);
         this._item.narrow(item);
 
         // (de)activate unburden ability if the pokemon has it
-        this.volatile.unburden = item === "none" && gained;
+        this._volatile.unburden = item === "none" && gained;
     }
     /**
      * Indicates that an item was just removed from this Pokemon.
@@ -212,15 +192,6 @@ ability ${ability}`);
     public get lastItem(): PossibilityClass<number> { return this._lastItem; }
     private _lastItem = new PossibilityClass(dex.items);
 
-    /** Pokemon's level from 1 to 100. */
-    public get level(): number { return this._level; }
-    public set level(level: number)
-    {
-        this._level = Math.max(1, Math.min(level, 100));
-        this.initStats();
-    }
-    private _level = 0;
-
     /** Indicates that a move has been used. */
     public useMove(options: Readonly<MoveOptions>): void
     {
@@ -243,7 +214,7 @@ ability ${ability}`);
         //  event is responsible for distinguishing that
         if (twoTurnMoves.hasOwnProperty(options.moveId))
         {
-            this.volatile.twoTurn.reset();
+            this._volatile.twoTurn.reset();
         }
 
         // handle natural gift move
@@ -303,7 +274,7 @@ ability ${ability}`);
      */
     public disableMove(id: string): void
     {
-        this.volatile.disabledMoves[this.moveset.getOrRevealIndex(id)].start();
+        this._volatile.disabledMoves[this.moveset.getOrRevealIndex(id)].start();
     }
     /** Overrides a move slot via Mimic until switched out. */
     public overrideMove(id: string, newId: string): void
@@ -326,10 +297,7 @@ ability ${ability}`);
     public gender?: string | null;
 
     /** Whether this pokemon is fainted. */
-    public get fainted(): boolean
-    {
-        return this.hp.current === 0;
-    }
+    public get fainted(): boolean { return this.hp.current === 0; }
     /** Info about the pokemon's hit points. */
     public readonly hp: HP;
 
@@ -337,10 +305,7 @@ ability ${ability}`);
     public readonly majorStatus = new MajorStatusCounter();
 
     /** Minor status conditions. Cleared on switch. */
-    public get volatile(): VolatileStatus
-    {
-        return this._volatile;
-    }
+    public get volatile(): VolatileStatus { return this._volatile; }
     /** Minor status conditions. Cleared on switch. */
     private _volatile = new VolatileStatus();
 
@@ -411,6 +376,7 @@ ability ${ability}`);
     constructor(species: string, hpPercent: boolean, team?: Team)
     {
         this.setSpecies(species);
+        this.stats.linked = this;
         this.hp = new HP(hpPercent);
         this.team = team;
         this._active = false;
@@ -443,7 +409,8 @@ ability ${ability}`);
     public switchIn(): void
     {
         this.setOverrideAbility();
-        this._volatile.overrideSpecies = this.species.name;
+        this._volatile.overrideSpecies = this.species;
+        this._volatile.overrideStats.linked = this;
         this._volatile.overrideTypes = this.species.types;
         this._active = true;
     }
@@ -523,8 +490,8 @@ ability ${ability}`);
     {
         const s = " ".repeat(indent);
         return `\
-${s}${this.stringifySpecies()} ${this.gender ? ` ${this.gender}` : ""} \
-L${this.level} ${this.hp.toString()}
+${s}${this.stringifySpecies()}${this.gender ? ` ${this.gender}` : ""}
+${s}stats: ${this.stringifyStats()}
 ${s}status: ${this.majorStatus.toString()}
 ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
@@ -540,11 +507,22 @@ ${s}moveset: [${this.moveset.toString()}]`;
     /** Displays the species as well as whether it's overridden. */
     private stringifySpecies(): string
     {
-        const base = this.species.name;
-        const over = this._active ? this._volatile.overrideSpecies : "";
+        const base = this.species;
+        const over = this._active ? this._volatile.overrideSpecies : null;
 
-        if (!over || over === base) return base;
-        else return `${over} (base: ${base})`;
+        if (!over || over === base) return base.name;
+        else return `${over.name} (base: ${base.name})`;
+    }
+
+    /** Displays stat data as well as whether it's overridden. */
+    private stringifyStats(): string
+    {
+        if (!this._active ||
+            (this.stats.linked === this && this.stats.data === this._species))
+        {
+            return this.stats.toString();
+        }
+        return `${this._volatile.overrideStats} (base: ${this.stats})`;
     }
 
     // istanbul ignore next: only used for logging

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { berries } from "../../../src/battle/dex/dex";
-import { StatExceptHP } from "../../../src/battle/dex/dex-util";
+import { berries, dex } from "../../../src/battle/dex/dex";
+import { StatExceptHP, statNames } from "../../../src/battle/dex/dex-util";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Move } from "../../../src/battle/state/Move";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
@@ -9,22 +9,41 @@ import { Team } from "../../../src/battle/state/Team";
 
 describe("Pokemon", function()
 {
-    describe("#active/#switchOut()/#switchIn()", function()
+    describe("#active", function()
     {
         it("Should be inactive initially", function()
         {
             const mon = new Pokemon("Magikarp", /*hpPercent*/false);
             expect(mon.active).to.be.false;
         });
+    });
 
-        it("Should be active if switched in", function()
+    describe("#switchIn()", function()
+    {
+        it("Should become active", function()
         {
             const mon = new Pokemon("Magikarp", false);
             mon.switchIn();
             expect(mon.active).to.be.true;
         });
 
-        it("Should be inactive if switched out", function()
+        it("Should set VolatileStatus overrides", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.ability = "swiftswim";
+            mon.stats.level = 100;
+            mon.switchIn();
+            expect(mon.volatile.overrideAbility).to.equal("swiftswim");
+            expect(mon.volatile.overrideSpecies).to.not.be.null;
+            expect(mon.volatile.overrideSpecies!.name).to.equal("Magikarp");
+            expect(mon.volatile.overrideTypes)
+                .to.have.members(["water", "???"]);
+        });
+    });
+
+    describe("#switchOut()", function()
+    {
+        it("Should become inactive", function()
         {
             const mon = new Pokemon("Magikarp", false);
             mon.switchIn();
@@ -32,7 +51,7 @@ describe("Pokemon", function()
             expect(mon.active).to.be.false;
         });
 
-        it("Should clear toxic turns when switched out", function()
+        it("Should clear toxic turns", function()
         {
             const mon = new Pokemon("Magikarp", false);
             mon.majorStatus.afflict("tox");
@@ -42,7 +61,7 @@ describe("Pokemon", function()
             expect(mon.majorStatus.turns).to.equal(1);
         });
 
-        it("Should not clear other major status turns when switched out",
+        it("Should not clear other major status turns",
         function()
         {
             const mon = new Pokemon("Magikarp", false);
@@ -53,7 +72,7 @@ describe("Pokemon", function()
             expect(mon.majorStatus.turns).to.equal(2);
         });
 
-        it("Should clear volatile when switched out", function()
+        it("Should clear volatile", function()
         {
             const mon = new Pokemon("Magikarp", false);
             mon.volatile.lockedMove.start("thrash");
@@ -95,8 +114,8 @@ describe("Pokemon", function()
         function()
         {
             const mon = new Pokemon("Mew", false); // has all base 100 stats
-            mon.level = 100;
-            for (const stat in mon.stats)
+            mon.stats.level = 100;
+            for (const stat in statNames)
             {
                 if (!mon.stats.hasOwnProperty(stat)) continue;
 
@@ -120,25 +139,23 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("Togepi", false);
             expect(mon.active).to.be.false;
-            expect(mon.volatile.overrideSpecies).to.be.empty;
-            expect(mon.volatile.overrideSpeciesId).to.be.null;
+            expect(mon.volatile.overrideSpecies).to.be.null;
         });
 
         it("Should set volatile ability after switchin", function()
         {
             const mon = new Pokemon("Togepi", false);
             mon.switchIn();
-            expect(mon.volatile.overrideSpecies).to.equal("Togepi");
-            expect(mon.volatile.overrideSpeciesId).to.not.be.null;
+            expect(mon.volatile.overrideSpecies).to.not.be.null;
+            expect(mon.volatile.overrideSpecies!.name).to.equal("Togepi");
         });
 
         it("Should set volatile species", function()
         {
             const mon = new Pokemon("Togepi", false);
             mon.switchIn();
-            mon.volatile.overrideSpecies = "Togetic";
-            expect(mon.volatile.overrideSpecies).to.equal("Togetic");
-            expect(mon.volatile.overrideSpeciesId).to.not.be.null;
+            mon.volatile.overrideSpecies = dex.pokemon.Togetic;
+            expect(mon.volatile.overrideSpecies!.name).to.equal("Togetic");
         });
 
         it("Should throw if invalid volatile species", function()
@@ -146,8 +163,8 @@ describe("Pokemon", function()
             const mon = new Pokemon("Magikarp", false);
             mon.switchIn();
             expect(() => mon.setSpecies("not a real_species")).to.throw();
-            expect(mon.volatile.overrideSpecies).to.equal("Magikarp");
-            expect(mon.volatile.overrideSpeciesId).to.not.be.null;
+            expect(mon.volatile.overrideSpecies).to.not.be.null;
+            expect(mon.volatile.overrideSpecies!.name).to.equal("Magikarp");
         });
     });
 
@@ -406,43 +423,6 @@ describe("Pokemon", function()
         });
     });
 
-    describe("#level", function()
-    {
-        it("Should be 0 initially", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            expect(mon.level).to.equal(0);
-        });
-
-        it("Should be 1 if set to 0", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.level = 0;
-            expect(mon.level).to.equal(1);
-        });
-
-        it("Should be 1 if set to a negative number", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.level = -1;
-            expect(mon.level).to.equal(1);
-        });
-
-        it("Should be 100 if set to a larger number", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.level = 101;
-            expect(mon.level).to.equal(100);
-        });
-
-        it("Should set level if between 1 and 100", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.level = 50;
-            expect(mon.level).to.equal(50);
-        });
-    });
-
     describe("#moveset methods", function()
     {
         describe("#useMove()", function()
@@ -632,8 +612,8 @@ describe("Pokemon", function()
                     {
                         const team = new Team("us");
                         team.size = 1;
-                        const mon = team.switchIn("Magikarp", 100, "M", 100,
-                            100)!;
+                        const mon = team.switchIn("Magikarp", 100, "M", 200,
+                            200)!;
                         mon.useMove(
                         {
                             moveId, targets: [mon],
@@ -756,7 +736,7 @@ describe("Pokemon", function()
             state.status.gravity.start();
 
             state.teams.us.size = 1;
-            const mon = state.teams.us.switchIn("Pidgey", 1, "M", 1, 1)!;
+            const mon = state.teams.us.switchIn("Pidgey", 1, "M", 11, 11)!;
             checkGrounded(mon, true, true);
         });
 

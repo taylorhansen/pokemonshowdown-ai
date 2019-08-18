@@ -35,9 +35,9 @@ export const pokemonDetails: PokemonDetails[] =
 /** Test PokemonStatuses. Matches corresponding pokemonId. */
 export const pokemonStatus: PokemonStatus[] =
 [
+    {hp: 353, hpMax: 353, condition: null},
     {hp: 100, hpMax: 100, condition: null},
-    {hp: 9001, hpMax: 9001, condition: null},
-    {hp: 0, hpMax: 0, condition: null}
+    {hp: 300, hpMax: 300, condition: null}
 ];
 
 /** Test From suffixes. */
@@ -206,14 +206,14 @@ export const request: RequestMessage[] =
                 {
                     ident: requestId[0], details: pokemonDetails[0],
                     condition: pokemonStatus[0], active: true,
-                    stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                    stats: {atk: 256, def: 216, spa: 344, spd: 216, spe: 296},
                     moves: ["psychocut"], baseAbility: "pressure",
                     item: "leftovers", pokeball: "masterball"
                 },
                 {
                     ident: requestId[2], details: pokemonDetails[2],
                     condition: pokemonStatus[2], active: false,
-                    stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                    stats: {atk: 156, def: 176, spa: 206, spd: 186, spe: 116},
                     moves: ["tackle"], baseAbility: "trace",
                     item: "choicescarf", pokeball: "greatball"
                 }
@@ -240,7 +240,7 @@ export const request: RequestMessage[] =
                 {
                     ident: requestId[1], details: pokemonDetails[1],
                     condition: pokemonStatus[1], active: true,
-                    stats: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1},
+                    stats: {atk: 30, def: 75, spa: 35, spd: 40, spe: 100},
                     moves: ["splash", "tackle"], baseAbility: "swiftswim",
                     item: "lifeorb", pokeball: "pokeball"
                 }

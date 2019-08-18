@@ -1,5 +1,6 @@
 import { dex, isFutureMove } from "../battle/dex/dex";
-import { BoostName, boostNames, Type } from "../battle/dex/dex-util";
+import { BoostName, boostNames, StatExceptHP, Type } from
+    "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
@@ -344,7 +345,7 @@ export class PSEventHandler
             active.setSpecies(event.details.species);
 
             // set other details just in case
-            active.level = event.details.level;
+            active.stats.level = event.details.level;
             active.gender = event.details.gender;
             active.hp.set(event.status.hp, event.status.hpMax);
         })
@@ -354,9 +355,13 @@ export class PSEventHandler
         .on("-fieldstart", event => this.handleFieldCondition(event))
         .on("-formechange", event =>
         {
+            if (!dex.pokemon.hasOwnProperty(event.details.species))
+            {
+                throw new Error(`Unknown species '${event.details.species}'`);
+            }
             // TODO: set other details?
             this.getActive(event.id.owner).volatile.overrideSpecies =
-                event.details.species;
+                dex.pokemon[event.details.species];
         })
         .on("-heal", event => this.handleDamage(event))
         .on("-invertboost", event =>
@@ -569,6 +574,14 @@ export class PSEventHandler
             //  set the teamsize
             const mon = team.reveal(details.species, details.level,
                     details.gender, status.hp, status.hpMax)!;
+            for (const stat in data.stats)
+            {
+                // istanbul ignore if
+                if (!data.stats.hasOwnProperty(stat)) continue;
+                mon.stats[stat as StatExceptHP]
+                    .set(data.stats[stat as StatExceptHP]);
+            }
+            mon.stats.hp.set(status.hpMax);
             mon.setItem(data.item);
             mon.ability = data.baseAbility;
             mon.majorStatus.assert(status.condition);

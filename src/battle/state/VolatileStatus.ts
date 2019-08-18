@@ -1,6 +1,7 @@
 import { dex, lockedMoves, twoTurnMoves } from "../dex/dex";
-import { BoostName, Type } from "../dex/dex-util";
+import { BoostName, PokemonData, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
+import { StatTable } from "./StatTable";
 import { TempStatus } from "./TempStatus";
 import { pluralTurns, plus } from "./utility";
 import { VariableTempStatus } from "./VariableTempStatus";
@@ -143,35 +144,22 @@ export class VolatileStatus
     public mustRecharge!: boolean;
 
     /** Temporary form change. */
-    public get overrideSpecies(): string { return this.overrideSpeciesName; }
-    public set overrideSpecies(species: string)
-    {
-        if (!species)
-        {
-            this._overrideSpecies = null;
-            this.overrideSpeciesName = "";
-            return;
-        }
-
-        if (!dex.pokemon.hasOwnProperty(species))
-        {
-            throw new Error(`Unknown species "${species}"`);
-        }
-        this._overrideSpecies = dex.pokemon[species].uid;
-        this.overrideSpeciesName = species;
-    }
-    /**
-     * Override species id number. Defaults to null if `overrideSpecies` is not
-     * initialized.
-     */
-    public get overrideSpeciesId(): number | null
+    public get overrideSpecies(): PokemonData | null
     {
         return this._overrideSpecies;
     }
-    /** ID number of species. */
-    private _overrideSpecies!: number | null;
-    /** Name of override species. */
-    private overrideSpeciesName!: string;
+    public set overrideSpecies(data: PokemonData | null)
+    {
+        this._overrideSpecies = data;
+        if (!data) return;
+        // link to other override fields
+        this.overrideStats.data = data;
+        this.overrideTypes = data.types;
+    }
+    private _overrideSpecies!: PokemonData | null;
+
+    /** Override stats connected to `#overrideSpecies`. */
+    public readonly overrideStats = new StatTable();
 
     /**
      * Temporarily overridden types. This should not be included in toString()
@@ -273,7 +261,7 @@ export class VolatileStatus
         this._overrideAbility = null;
         this.overrideAbilityName = "";
         this._overrideSpecies = null;
-        this.overrideSpeciesName = "";
+        this.overrideStats.reset();
         this.overrideTypes = ["???", "???"];
         this.addedType = "???";
         this.roost = false;

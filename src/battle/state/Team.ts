@@ -192,9 +192,10 @@ export class Team
         this._pokemon[this.unrevealed] = newMon;
 
         // initialize new pokemon
-        newMon.level = level;
+        newMon.stats.level = level;
         newMon.gender = gender;
         newMon.hp.set(hp, hpMax);
+        if (this.side === "us") newMon.stats.hp.set(hpMax);
 
         return this.unrevealed++;
     }
