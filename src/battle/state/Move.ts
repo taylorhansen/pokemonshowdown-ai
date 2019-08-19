@@ -24,12 +24,14 @@ export class Move
     private _maxpp = 0;
 
     /**
-     * Initializes Move id name and pp.
+     * Creates a Move object.
      * @param name Name of the move.
-     * @param pp PP initializer. `"min"` for no pp ups, `"max"` for full pp ups,
-     * or a number for a custom value. Default `"max"`.
+     * @param maxpp Max PP initializer. `"min"` for no pp ups, `"max"` for full
+     * pp ups, or a number for a custom value. Default `"max"`.
+     * @param pp Initial PP value. Set to maxpp by default.
      */
-    public init(name: string, pp: "min" | "max" | number = "max"): void
+    constructor(name: string, maxpp: "min" | "max" | number = "max",
+        pp?: number)
     {
         if (!dex.moves.hasOwnProperty(name))
         {
@@ -40,10 +42,11 @@ export class Move
         const data = dex.moves[name];
         this._id = data.uid;
 
-        if (pp === "min") pp = data.pp[0];
-        else if (pp === "max") pp = data.pp[1];
-        this._pp = pp;
-        this._maxpp = pp;
+        if (maxpp === "min") maxpp = data.pp[0];
+        else if (maxpp === "max") maxpp = data.pp[1];
+        else maxpp = Math.max(0, Math.min(maxpp, data.pp[1]));
+        this._maxpp = maxpp;
+        this.pp = pp === undefined ? maxpp : pp;
     }
 
     // istanbul ignore next: only used for logging

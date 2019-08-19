@@ -42,10 +42,11 @@ export class Moveset
      * Reveals a move to the client if not already known. Throws if moveset is
      * already full.
      * @param id ID name of the move.
+     * @param maxpp Max PP value of the move. Default maxed.
      */
-    public reveal(id: string): Move
+    public reveal(id: string, maxpp?: "min" | "max" | number): Move
     {
-        return this._moves[this.revealIndex(id)]!;
+        return this._moves[this.revealIndex(id, maxpp)]!;
     }
 
     /** Gets a move, calling `reveal()` if not initially found. */
@@ -73,8 +74,12 @@ export class Moveset
         return -1;
     }
 
-    /** Gets the index of a newly revealed move by name. Throws if full. */
-    private revealIndex(id: string): number
+    /**
+     * Gets the index of a newly revealed move by name. Throws if full.
+     * @param id ID name of the move.
+     * @param maxpp Max PP value of the move. Default maxed.
+     */
+    private revealIndex(id: string, maxpp?: "min" | "max" | number): number
     {
         // early return: already revealed
         const index = this.getIndex(id);
@@ -85,10 +90,9 @@ export class Moveset
             throw new Error("Moveset is already full");
         }
 
-        const move = new Move();
+        const move = new Move(id, maxpp);
         this._moves[this.unrevealed] = move;
         this.baseMoves[this.unrevealed] = move;
-        move.init(id);
         return this.unrevealed++;
     }
 
@@ -122,6 +126,7 @@ export class Moveset
     {
         const i = this.getIndex(id);
         if (i < 0) throw new Error(`Moveset does not contain '${id}'`);
+
         this._moves[i] = move;
         this.baseMoves[i] = move;
     }

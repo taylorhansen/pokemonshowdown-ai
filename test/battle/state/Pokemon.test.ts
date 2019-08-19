@@ -664,8 +664,7 @@ describe("Pokemon", function()
             {
                 const mon = new Pokemon("Magikarp", false);
                 mon.moveset.reveal("splash");
-                const move = new Move();
-                move.init("tackle");
+                const move = new Move("tackle");
                 mon.moveset.override("splash", move);
                 mon.switchOut();
                 expect(mon.moveset.get("tackle")).to.be.null;
@@ -680,6 +679,7 @@ describe("Pokemon", function()
                 const mon = new Pokemon("Magikarp", false);
                 mon.moveset.reveal("splash");
                 mon.replaceMove("splash", "tackle");
+                mon.switchOut();
 
                 expect(mon.moveset.get("splash")).to.be.null;
                 expect(mon.moveset.get("tackle")).to.not.be.null;

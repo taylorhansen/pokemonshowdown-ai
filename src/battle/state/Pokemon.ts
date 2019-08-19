@@ -275,18 +275,16 @@ ability ${ability}`);
     /** Overrides a move slot via Mimic until switched out. */
     public overrideMove(id: string, newId: string): void
     {
-        const move = new Move();
-        move.init(newId);
-        move.pp = 5; // mimicked moves have 5 pp
-        this.moveset.override(id, move);
+        // mimicked moves have 5 pp and maxed maxpp
+        this.moveset.override(id, new Move(newId, "max", 5));
     }
     /** Permanently replaces a move slot via Sketch. */
     public replaceMove(id: string, newId: string): void
     {
-        const move = new Move();
-        move.init(newId, "min"); // sketched moves have no pp ups applied
-        this.moveset.replace(id, move);
+        // sketched moves have no pp ups applied
+        this.moveset.replace(id, new Move(newId, "min"));
     }
+    /** Pokemon's moveset. */
     public readonly moveset = new Moveset();
 
     /** Pokemon's gender. M=male, F=female, null=genderless. */

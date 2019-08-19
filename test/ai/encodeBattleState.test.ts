@@ -191,7 +191,7 @@ describe("BattleState encoders", function()
 
     testEncoder("Move", encodeMove,
     {
-        init: () => new Move(),
+        init: () => new Move("tackle"),
         size: sizeMove
     });
 

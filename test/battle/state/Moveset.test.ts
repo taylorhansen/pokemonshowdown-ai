@@ -73,8 +73,7 @@ describe("Moveset", function()
         it("Should override move", function()
         {
             moveset.reveal("splash");
-            const move = new Move();
-            move.init("tackle");
+            const move = new Move("tackle");
             moveset.override("splash", move);
             expect(moveset.get("splash")).to.be.null;
             expect(moveset.get("tackle")).to.not.be.null;
@@ -82,8 +81,7 @@ describe("Moveset", function()
 
         it("Should throw if overriding unrevealed move", function()
         {
-            const move = new Move();
-            move.init("tackle");
+            const move = new Move("tackle");
             expect(() => moveset.override("splash", move)).to.throw(Error,
                 "Moveset does not contain 'splash'");
             expect(moveset.get("splash")).to.be.null;
@@ -96,8 +94,7 @@ describe("Moveset", function()
         it("Should revert override move", function()
         {
             moveset.reveal("splash");
-            const move = new Move();
-            move.init("tackle");
+            const move = new Move("tackle");
             moveset.override("splash", move);
             moveset.clearOverrides();
             expect(moveset.get("tackle")).to.be.null;
@@ -110,8 +107,7 @@ describe("Moveset", function()
         it("Should replace move", function()
         {
             moveset.reveal("splash");
-            const move = new Move();
-            move.init("tackle");
+            const move = new Move("tackle");
             moveset.replace("splash", move);
             expect(moveset.get("splash")).to.be.null;
             expect(moveset.get("tackle")).to.not.be.null;
@@ -119,8 +115,7 @@ describe("Moveset", function()
 
         it("Should throw if replacing unrevealed move", function()
         {
-            const move = new Move();
-            move.init("tackle");
+            const move = new Move("tackle");
             expect(() => moveset.replace("splash", move)).to.throw(Error,
                 "Moveset does not contain 'splash'");
             expect(moveset.get("splash")).to.be.null;
