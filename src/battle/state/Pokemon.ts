@@ -285,7 +285,7 @@ ability ${ability}`);
     {
         const move = new Move();
         move.init(newId, "min"); // sketched moves have no pp ups applied
-        this.moveset.override(id, move);
+        this.moveset.replace(id, move);
     }
     public readonly moveset = new Moveset();
 
