@@ -248,11 +248,11 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const confused = encodeTempStatus(status.confusion);
     const embargo = encodeTempStatus(status.embargo);
     const focusEnergy = status.focusEnergy ? 1 : 0;
+    const gastroAcid = status.gastroAcid ? 1 : 0;
     const ingrain = status.ingrain ? 1 : 0;
     const leechSeed = status.leechSeed ? 1 : 0;
     const magnetRise = encodeTempStatus(status.magnetRise);
     const substitute = status.substitute ? 1 : 0;
-    const suppressed = status.isAbilitySuppressed() ? 1 : 0;
 
     // non-passable
     const bide = encodeTempStatus(status.bide);
@@ -265,7 +265,8 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const lockedMove = encodeVariableTempStatus(status.lockedMove);
     const minimize = status.minimize ? 1 : 0;
     const mustRecharge = status.mustRecharge ? 1 : 0;
-    const overrideAbility = oneHot(status.overrideAbilityId, dex.numAbilities);
+    const overrideAbility = encodePossiblityClass(status.overrideAbility,
+        x => x, dex.numAbilities);
     const overrideSpecies = oneHot(
         status.overrideSpecies ? status.overrideSpecies.id : null,
         dex.numPokemon);
@@ -287,8 +288,8 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
-        aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, ingrain,
-        leechSeed, ...magnetRise, substitute, suppressed, ...bide, ...charge,
+        aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, gastroAcid,
+        ingrain, leechSeed, ...magnetRise, substitute, ...bide, ...charge,
         ...disabled, ...identified, ...lastUsed, ...lockedMove, minimize,
         mustRecharge, ...overrideAbility, ...overrideSpecies, ...overrideStats,
         ...overrideTypeData, roost, ...slowStart, stallFailRate, ...taunt,

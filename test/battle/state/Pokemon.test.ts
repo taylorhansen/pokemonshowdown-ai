@@ -33,7 +33,9 @@ describe("Pokemon", function()
             mon.ability = "swiftswim";
             mon.stats.level = 100;
             mon.switchIn();
-            expect(mon.volatile.overrideAbility).to.equal("swiftswim");
+            expect(mon.volatile.overrideAbility.definiteValue).to.not.be.null;
+            expect(mon.volatile.overrideAbility.definiteValue!.name)
+                .to.equal("swiftswim");
             expect(mon.volatile.overrideSpecies).to.not.be.null;
             expect(mon.volatile.overrideSpecies!.name).to.equal("Magikarp");
             expect(mon.volatile.overrideTypes)
@@ -142,20 +144,12 @@ describe("Pokemon", function()
             expect(mon.volatile.overrideSpecies).to.be.null;
         });
 
-        it("Should set volatile ability after switchin", function()
+        it("Should set override ability after switchin", function()
         {
             const mon = new Pokemon("Togepi", false);
             mon.switchIn();
             expect(mon.volatile.overrideSpecies).to.not.be.null;
             expect(mon.volatile.overrideSpecies!.name).to.equal("Togepi");
-        });
-
-        it("Should set volatile species", function()
-        {
-            const mon = new Pokemon("Togepi", false);
-            mon.switchIn();
-            mon.volatile.overrideSpecies = dex.pokemon.Togetic;
-            expect(mon.volatile.overrideSpecies!.name).to.equal("Togetic");
         });
 
         it("Should throw if invalid volatile species", function()
@@ -210,29 +204,47 @@ describe("Pokemon", function()
             expect(mon.baseAbility.definiteValue!.name).to.equal("swiftswim");
         });
 
-        it("Should set volatile ability", function()
+        it("Should set override ability", function()
         {
             const mon = new Pokemon("Togepi", false);
             mon.switchIn();
-            expect(mon.volatile.overrideAbility).to.be.empty;
+            expect(mon.volatile.overrideAbility.definiteValue).to.be.null;
+
+            // first call to ability setter will narrow base ability
             mon.ability = "hustle";
-            expect(mon.volatile.overrideAbility).to.equal("hustle");
-            mon.ability = "swiftswim";
+            expect(mon.volatile.overrideAbility.definiteValue).to.not.be.null;
+            expect(mon.volatile.overrideAbility.definiteValue!.name)
+                .to.equal("hustle");
             expect(mon.baseAbility.definiteValue).to.not.be.null;
             expect(mon.baseAbility.definiteValue!.name).to.equal("hustle");
-            expect(mon.volatile.overrideAbility).to.equal("swiftswim");
+
+            // subsequent calls only modify override ability
+            mon.ability = "swiftswim";
+            expect(mon.volatile.overrideAbility.definiteValue).to.not.be.null;
+            expect(mon.volatile.overrideAbility.definiteValue!.name)
+                .to.equal("swiftswim");
+            expect(mon.baseAbility.definiteValue).to.not.be.null;
+            expect(mon.baseAbility.definiteValue!.name).to.equal("hustle");
         });
 
-        it("Should set volatile ability if known", function()
+        it("Should set override ability on switchin", function()
         {
             const mon = new Pokemon("Togepi", false);
             mon.ability = "hustle";
             mon.switchIn();
-            expect(mon.volatile.overrideAbility).to.equal("hustle");
-            mon.ability = "swiftswim";
+
+            expect(mon.volatile.overrideAbility.definiteValue).to.not.be.null;
+            expect(mon.volatile.overrideAbility.definiteValue!.name)
+                .to.equal("hustle");
             expect(mon.baseAbility.definiteValue).to.not.be.null;
             expect(mon.baseAbility.definiteValue!.name).to.equal("hustle");
-            expect(mon.volatile.overrideAbility).to.equal("swiftswim");
+
+            mon.ability = "swiftswim";
+            expect(mon.volatile.overrideAbility.definiteValue).to.not.be.null;
+            expect(mon.volatile.overrideAbility.definiteValue!.name)
+                .to.equal("swiftswim");
+            expect(mon.baseAbility.definiteValue).to.not.be.null;
+            expect(mon.baseAbility.definiteValue!.name).to.equal("hustle");
         });
 
         it("Should re-set volatile ability if species is re-set", function()
@@ -241,10 +253,12 @@ describe("Pokemon", function()
             mon.ability = "hustle";
             mon.switchIn();
             mon.setSpecies("Magikarp");
-            expect(mon.volatile.overrideAbility).to.equal("swiftswim");
+            expect(mon.volatile.overrideAbility.definiteValue).to.not.be.null;
+            expect(mon.volatile.overrideAbility.definiteValue!.name)
+                .to.equal("swiftswim");
         });
 
-        it("Should clear volatile ability if species is re-set and new base " +
+        it("Should re-set volatile ability if species is re-set and new base " +
             "ability is unknown", function()
         {
             const mon = new Pokemon("Togepi", false);
@@ -252,44 +266,16 @@ describe("Pokemon", function()
             mon.switchIn();
             // usually a form change
             mon.setSpecies("Bronzong");
-            expect(mon.volatile.overrideAbility).to.be.empty;
+            expect(mon.volatile.overrideAbility.possibleValues)
+                .to.have.all.keys(...dex.pokemon.Bronzong.abilities);
         });
 
         it("Should reject unknown ability", function()
         {
             const mon = new Pokemon("Togepi", false);
-            expect(() => mon.ability = "not_a real-ability").to.throw();
+            expect(() => mon.ability = "not_a real-ability").to.throw(Error,
+                "Unknown ability 'not_a real-ability'");
             expect(mon.ability).to.be.empty;
-        });
-
-        describe("#volatile#suppressAbility() (baton passed)", function()
-        {
-            it("Should suppress new ability", function()
-            {
-                const mon1 = new Pokemon("Magikarp", false);
-                const mon2 = new Pokemon("Togepi", false);
-                mon1.volatile.suppressAbility();
-                mon1.copyVolatile(mon2);
-                mon1.switchOut();
-                mon2.switchIn();
-
-                expect(mon2.volatile.isAbilitySuppressed()).to.be.true;
-                expect(mon2.ability).to.equal("<suppressed>");
-            });
-
-            it("Should not suppress if multitype", function()
-            {
-                const mon1 = new Pokemon("Magikarp", false);
-                const mon2 = new Pokemon("Arceus", false);
-                // arceus can only have this ability
-                mon1.volatile.suppressAbility();
-                mon1.copyVolatile(mon2);
-                mon1.switchOut();
-                mon2.switchIn();
-
-                expect(mon2.volatile.isAbilitySuppressed()).to.be.false;
-                expect(mon2.ability).to.equal("multitype");
-            });
         });
     });
 
@@ -760,6 +746,27 @@ describe("Pokemon", function()
             mon.item.narrow("ironball");
             mon.volatile.embargo.start();
             checkGrounded(mon, false, false);
+        });
+
+        it("Should ignore iron ball if klutz", function()
+        {
+            const mon = new Pokemon("Pidgey", false); // flying type
+            mon.switchIn();
+            mon.ability = "keeneye"; // init base ability
+            mon.ability = "klutz"; // set override ability
+            mon.item.narrow("ironball");
+            checkGrounded(mon, false, false);
+        });
+
+        it("Should ignore klutz if gastro acid", function()
+        {
+            const mon = new Pokemon("Pidgey", false); // flying type
+            mon.switchIn();
+            mon.ability = "keeneye"; // init base ability
+            mon.ability = "klutz"; // set override ability
+            mon.item.narrow("ironball");
+            mon.volatile.gastroAcid = true;
+            checkGrounded(mon, true, true);
         });
 
         it("Should not be grounded if Magnet Rise", function()

@@ -74,7 +74,7 @@ export class PSEventHandler
         .on("-endability", event =>
         {
             // NOTE: may be replaced with "|-start|PokemonID|Gastro Acid" later
-            this.getActive(event.id.owner).volatile.suppressAbility();
+            this.getActive(event.id.owner).volatile.gastroAcid = true;
         })
         .on("-start", event =>
         {
@@ -360,8 +360,8 @@ export class PSEventHandler
                 throw new Error(`Unknown species '${event.details.species}'`);
             }
             // TODO: set other details?
-            this.getActive(event.id.owner).volatile.overrideSpecies =
-                dex.pokemon[event.details.species];
+            this.getActive(event.id.owner).volatile
+                .setOverrideSpecies(dex.pokemon[event.details.species]);
         })
         .on("-heal", event => this.handleDamage(event))
         .on("-invertboost", event =>

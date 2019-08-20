@@ -2463,7 +2463,9 @@ describe("Battle and EventProcessor", function()
                         ]
                     });
                     expect(mon1.ability).to.equal("swiftswim");
-                    expect(mon1.volatile.overrideAbility)
+                    expect(mon1.volatile.overrideAbility.definiteValue)
+                        .to.not.be.null;
+                    expect(mon1.volatile.overrideAbility.definiteValue!.name)
                         .to.equal("swiftswim");
                     expect(mon1.baseAbility.definiteValue).to.not.be.null;
                     expect(mon1.baseAbility.definiteValue!.name)

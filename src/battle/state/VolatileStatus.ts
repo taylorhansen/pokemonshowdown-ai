@@ -1,6 +1,7 @@
 import { dex, lockedMoves, twoTurnMoves } from "../dex/dex";
 import { BoostName, PokemonData, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
+import { PossibilityClass } from "./PossibilityClass";
 import { StatTable } from "./StatTable";
 import { TempStatus } from "./TempStatus";
 import { pluralTurns, plus } from "./utility";
@@ -35,6 +36,9 @@ export class VolatileStatus
     /** Focus Energy move status. */
     public focusEnergy!: boolean;
 
+    /** Gasto Acid move status (suppresses current ability). */
+    public gastroAcid!: boolean;
+
     /** Ingrain move status. */
     public ingrain!: boolean;
 
@@ -47,54 +51,7 @@ export class VolatileStatus
     /** Substitute move status. */
     public substitute!: boolean;
 
-    // should only pass #isAbilitySuppressed()
-    /** Whether the current ability is being suppressed. */
-    public isAbilitySuppressed(): boolean
-    {
-        return this.overrideAbilityName === "<suppressed>";
-    }
-    /** Suppresses override ability. */
-    public suppressAbility(): void
-    {
-        this._overrideAbility = null;
-        this.overrideAbilityName = "<suppressed>";
-    }
-
     // not passed when copying
-
-    /** Override ability while active. */
-    public get overrideAbility(): string { return this.overrideAbilityName; }
-    public set overrideAbility(ability: string)
-    {
-        // reset truant if it no longer applies
-        if (ability !== "truant") this._willTruant = false;
-
-        if (!ability)
-        {
-            this._overrideAbility = null;
-            this.overrideAbilityName = "";
-            return;
-        }
-
-        if (!dex.abilities.hasOwnProperty(ability))
-        {
-            throw new Error(`Unknown ability "${ability}"`);
-        }
-        this._overrideAbility = dex.abilities[ability];
-        this.overrideAbilityName = ability;
-    }
-    /**
-     * Override ability id number. Defaults to null if `overrideAbility` is not
-     * initialized.
-     */
-    public get overrideAbilityId(): number | null
-    {
-        return this._overrideAbility;
-    }
-    /** ID number of ability. */
-    private _overrideAbility!: number | null;
-    /** Name of override ability. */
-    private overrideAbilityName!: string;
 
     /** Bide move status. */
     public readonly bide = new TempStatus("bide", 1);
@@ -143,16 +100,59 @@ export class VolatileStatus
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge!: boolean;
 
+    /** Override ability while active. */
+    public get overrideAbility(): PossibilityClass<typeof dex.abilities[string]>
+    {
+        return this._overrideAbility;
+    }
+    /** Links override ability possibilities to a different PossibilityClass. */
+    public linkOverrideAbility(
+        ability: PossibilityClass<typeof dex.abilities[string]>): void
+    {
+        const last = this._overrideAbility;
+        this._overrideAbility = ability;
+        // don't try to call this twice on the same object
+        if (last !== ability) this.setNarrowHandlers();
+    }
+    /** Resets override ability reference to a new PossibilityClass. */
+    public resetOverrideAbility(): void
+    {
+        this._overrideAbility = new PossibilityClass(dex.abilities);
+        this.setNarrowHandlers();
+        // truant ability no longer applies
+        this._willTruant = false;
+    }
+    /** Sets ability narrow handlers for ability-specific statuses */
+    private setNarrowHandlers(): void
+    {
+        this._overrideAbility.onNarrow(pc =>
+        {
+            // reset truant if it no longer applies
+            if (pc.definiteValue!.name === "truant") this._willTruant = false;
+        });
+    }
+    private _overrideAbility!: PossibilityClass<typeof dex.abilities[string]>;
+
     /** Temporary form change. */
     public get overrideSpecies(): PokemonData | null
     {
         return this._overrideSpecies;
     }
-    public set overrideSpecies(data: PokemonData | null)
+    /**
+     * Initializes override species data.
+     * @param data Dex object for override species.
+     * @param setAbility Whether to re-set override ability possibility.
+     * Default true.
+     */
+    public setOverrideSpecies(data: PokemonData, setAbility = true): void
     {
         this._overrideSpecies = data;
-        if (!data) return;
         // link to other override fields
+        if (setAbility)
+        {
+            this.resetOverrideAbility();
+            this._overrideAbility.narrow(...data.abilities);
+        }
         this.overrideStats.data = data;
         this.overrideTypes = data.types;
     }
@@ -212,11 +212,13 @@ export class VolatileStatus
     /** Indicates that the Truant ability has activated. */
     public activateTruant(): void
     {
-        if (this.overrideAbilityName !== "truant")
+        if (!this._overrideAbility.definiteValue ||
+            this._overrideAbility.definiteValue.name !== "truant")
         {
             throw new Error("Expected ability to equal truant but found " +
-                (this.overrideAbilityName ?
-                    this.overrideAbilityName : "no ability"));
+                (this.overrideAbility.definiteValue ?
+                    this.overrideAbility.definiteValue.name
+                    : "unknown ability"));
         }
 
         // will invert to false on postTurn() so it's properly synced
@@ -244,6 +246,7 @@ export class VolatileStatus
         this.confusion.end();
         this.embargo.end();
         this.focusEnergy = false;
+        this.gastroAcid = false;
         this.ingrain = false;
         this.leechSeed = false;
         this.magnetRise.end();
@@ -258,8 +261,7 @@ export class VolatileStatus
         this.lockedMove.reset();
         this.minimize = false;
         this.mustRecharge = false;
-        this._overrideAbility = null;
-        this.overrideAbilityName = "";
+        this.resetOverrideAbility();
         this._overrideSpecies = null;
         this.overrideStats.reset();
         this.overrideTypes = ["???", "???"];
@@ -313,7 +315,9 @@ export class VolatileStatus
         if (!this.stalled) this._stallTurns = 0;
         this.stalled = false;
 
-        if (this.overrideAbilityName === "truant")
+        // toggle truant activation
+        if (this._overrideAbility.definiteValue &&
+            this._overrideAbility.definiteValue.name === "truant")
         {
             this._willTruant = !this._willTruant;
         }
@@ -332,11 +336,11 @@ export class VolatileStatus
         this.confusion.copyTo(v.confusion);
         this.embargo.copyTo(v.embargo);
         v.focusEnergy = this.focusEnergy;
+        v.gastroAcid = this.gastroAcid;
         v.ingrain = this.ingrain;
         v.leechSeed = this.leechSeed;
         this.magnetRise.copyTo(v.magnetRise);
         v.substitute = this.substitute;
-        if (this.isAbilitySuppressed()) v.suppressAbility();
         return v;
     }
 
@@ -355,6 +359,7 @@ export class VolatileStatus
             this.confusion.isActive ? [this.confusion.toString()] : [],
             this.embargo.isActive ? [this.embargo.toString()] : [],
             this.focusEnergy ? ["focus energy"] : [],
+            this.gastroAcid ? ["gastro acid"] : [],
             this.ingrain ? ["ingrain"] : [],
             this.leechSeed ? ["leech seed"] : [],
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],

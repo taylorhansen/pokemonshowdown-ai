@@ -21,11 +21,11 @@ describe("VolatileStatus", function()
         volatile.confusion.start();
         volatile.embargo.start();
         volatile.focusEnergy = true;
+        volatile.gastroAcid = true;
         volatile.ingrain = true;
         volatile.leechSeed = true;
         volatile.magnetRise.start();
         volatile.substitute = true;
-        volatile.overrideAbility = "truant";
         volatile.bide.start();
         volatile.charge.start();
         volatile.disabledMoves[0].start();
@@ -35,10 +35,9 @@ describe("VolatileStatus", function()
         volatile.lockedMove.start("outrage");
         volatile.minimize = true;
         volatile.mustRecharge = true;
-        volatile.overrideSpecies = dex.pokemon.Magikarp;
-        volatile.overrideStats.linked = new Pokemon("Magikarp", false);
+        volatile.setOverrideSpecies(dex.pokemon.Slaking); // has truant ability
+        volatile.overrideStats.linked = new Pokemon("Slaking", false);
         volatile.overrideStats.level = 100;
-        volatile.overrideTypes = ["???", "water"];
         volatile.addedType = "ice";
         volatile.roost = true;
         volatile.slowStart.start();
@@ -63,12 +62,11 @@ describe("VolatileStatus", function()
             expect(volatile.confusion.isActive).to.be.false;
             expect(volatile.embargo.isActive).to.be.false;
             expect(volatile.focusEnergy).to.be.false;
+            expect(volatile.gastroAcid).to.be.false;
             expect(volatile.ingrain).to.be.false;
             expect(volatile.leechSeed).to.be.false;
             expect(volatile.magnetRise.isActive).to.be.false;
             expect(volatile.substitute).to.be.false;
-            expect(volatile.overrideAbility).to.be.empty;
-            expect(volatile.overrideAbilityId).to.be.null;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
@@ -78,6 +76,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.minimize).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
+            expect(volatile.overrideAbility.definiteValue).to.be.null;
             expect(volatile.overrideSpecies).to.be.null;
             expect(volatile.overrideTypes).to.have.members(["???", "???"]);
             expect(volatile.addedType).to.equal("???");
@@ -90,14 +89,6 @@ describe("VolatileStatus", function()
             expect(volatile.unburden).to.be.false;
             expect(volatile.uproar.isActive).to.be.false;
             expect(volatile.willTruant).to.be.false;
-        });
-
-        it("Should clear suppressed ability", function()
-        {
-            volatile.suppressAbility();
-            volatile.clear();
-            expect(volatile.isAbilitySuppressed()).to.be.false;
-            expect(volatile.overrideAbility).to.be.empty;
         });
     });
 
@@ -119,14 +110,13 @@ describe("VolatileStatus", function()
             expect(newVolatile.embargo.isActive).to.be.true;
             expect(newVolatile.embargo.turns).to.equal(1);
             expect(newVolatile.focusEnergy).to.be.true;
+            expect(newVolatile.gastroAcid).to.be.true;
             expect(newVolatile.ingrain).to.be.true;
             expect(newVolatile.leechSeed).to.be.true;
             expect(newVolatile.magnetRise.isActive).to.be.true;
             expect(newVolatile.magnetRise.turns).to.equal(1);
             expect(newVolatile.substitute).to.be.true;
             // not passed
-            expect(newVolatile.overrideAbility).to.be.empty;
-            expect(newVolatile.overrideAbilityId).to.be.null;
             expect(newVolatile.bide.isActive).to.be.false;
             expect(newVolatile.charge.isActive).to.be.false;
             expect(newVolatile.disabledMoves[0].isActive).to.be.false;
@@ -136,6 +126,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.lockedMove.isActive).to.be.false;
             expect(newVolatile.minimize).to.be.false;
             expect(newVolatile.mustRecharge).to.be.false;
+            expect(newVolatile.overrideAbility.definiteValue).to.be.null;
             expect(newVolatile.overrideSpecies).to.be.null;
             expect(newVolatile.overrideTypes).to.have.members(["???", "???"]);
             expect(newVolatile.addedType).to.equal("???");
@@ -148,17 +139,6 @@ describe("VolatileStatus", function()
             expect(newVolatile.unburden).to.be.false;
             expect(newVolatile.uproar.isActive).to.be.false;
             expect(newVolatile.willTruant).to.be.false;
-        });
-
-        it("Should copy suppressed ability status", function()
-        {
-            volatile.suppressAbility();
-
-            const newVolatile = volatile.shallowClone();
-            volatile.clear();
-            expect(newVolatile.isAbilitySuppressed()).to.be.true;
-            expect(newVolatile.overrideAbility).to.equal("<suppressed>");
-            expect(newVolatile.overrideAbilityId).to.be.null;
         });
     });
 
@@ -193,30 +173,16 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#suppressAbility()", function()
+    describe("#overrideAbility", function()
     {
-        it("Should suppress ability", function()
+        it("Should reset #willTruant", function()
         {
-            volatile.suppressAbility();
-            expect(volatile.isAbilitySuppressed()).to.be.true;
-            expect(volatile.overrideAbility).to.equal("<suppressed>");
-            expect(volatile.overrideAbilityId).to.be.null;
-        });
-    });
-
-    describe("#overrideAbility/#overrideAbilityId", function()
-    {
-        it("Should set override ability", function()
-        {
-            volatile.overrideAbility = "swiftswim";
-            expect(volatile.overrideAbility).to.equal("swiftswim");
-            expect(volatile.overrideAbilityId).to.not.be.null;
-        });
-
-        it("Should throw if unknown ability", function()
-        {
-            expect(() => volatile.overrideAbility = "not-a real_ability")
-                .to.throw();
+            volatile.overrideAbility.narrow("truant");
+            volatile.activateTruant();
+            expect(volatile.willTruant).to.be.true;
+            volatile.resetOverrideAbility();
+            volatile.overrideAbility.narrow("swiftswim");
+            expect(volatile.willTruant).to.be.false;
         });
     });
 
@@ -306,21 +272,39 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#overrideSpecies", function()
+    describe("#setOverrideSpecies()", function()
     {
         it("Should set override species", function()
         {
-            volatile.overrideSpecies = dex.pokemon.Magikarp;
+            volatile.setOverrideSpecies(dex.pokemon.Magikarp);
             expect(volatile.overrideSpecies).to.not.be.null;
             expect(volatile.overrideSpecies!.name).to.equal("Magikarp");
         });
 
         it("Should link to #overrideStats and #overrideTypes", function()
         {
-            volatile.overrideSpecies = dex.pokemon.Magikarp;
+            volatile.setOverrideSpecies(dex.pokemon.Magikarp);
             expect(volatile.overrideStats.data).to.equal(dex.pokemon.Magikarp);
             expect(volatile.overrideTypes)
                 .to.have.members(dex.pokemon.Magikarp.types);
+        });
+
+        it("Should reset override ability if setAbility=true", function()
+        {
+            volatile.overrideAbility.narrow("keeneye");
+            volatile.setOverrideSpecies(dex.pokemon.Magikarp);
+            expect(volatile.overrideAbility.possibleValues)
+                .to.have.all.keys("swiftswim");
+        });
+
+        it("Should not reset override ability if setAbility=false", function()
+        {
+            volatile.overrideAbility.narrow("keeneye");
+            volatile.setOverrideSpecies(dex.pokemon.Magikarp, false);
+            expect(volatile.overrideAbility.possibleValues)
+                .to.have.all.keys("keeneye");
+            expect(volatile.overrideAbility.possibleValues)
+                .to.not.have.any.keys(...dex.pokemon.Magikarp.abilities);
         });
     });
 
@@ -396,7 +380,7 @@ describe("VolatileStatus", function()
     {
         it("Should set #willTruant if ability is truant", function()
         {
-            volatile.overrideAbility = "truant";
+            volatile.overrideAbility.narrow("truant");
             volatile.activateTruant();
             expect(volatile.willTruant).to.be.true;
         });
@@ -408,15 +392,15 @@ describe("VolatileStatus", function()
 
         it("Should reset if ability changed from truant", function()
         {
-            volatile.overrideAbility = "truant";
+            volatile.overrideAbility.narrow("truant");
             volatile.activateTruant();
-            volatile.overrideAbility = "swiftswim";
+            volatile.resetOverrideAbility();
             expect(volatile.willTruant).to.be.false;
         });
 
         it("Should toggle on #postTurn() if ability is truant", function()
         {
-            volatile.overrideAbility = "truant";
+            volatile.overrideAbility.narrow("truant");
             volatile.activateTruant();
             volatile.postTurn();
             expect(volatile.willTruant).to.be.false;
