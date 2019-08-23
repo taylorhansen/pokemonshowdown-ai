@@ -82,5 +82,17 @@ describe("PossibilityClass", function()
             });
             pc.narrow("a");
         });
+
+        it("Should immediately call if already narrowed", function(done)
+        {
+            pc.narrow("a");
+            pc.onNarrow(p =>
+            {
+                expect(pc).to.equal(p);
+                expect(p.definiteValue).to.not.be.null;
+                expect(p.definiteValue!.name).to.equal("a");
+                done();
+            });
+        });
     });
 });

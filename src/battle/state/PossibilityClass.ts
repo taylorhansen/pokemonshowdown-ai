@@ -37,10 +37,16 @@ export class PossibilityClass<TData>
         this._possibleValues = new Set(Object.keys(map));
     }
 
-    /** Adds a listener for when this object gets fully narrowed. */
+    /**
+     * Adds a listener for when this object gets fully narrowed. The provided
+     * function can be immediately called if this PossibilityClass is already
+     * narrowed.
+     */
     public onNarrow(f: (pc: this) => void): void
     {
-        this.narrowListeners.push(f);
+        // may already be narrowed
+        if (this._definiteValue) f(this);
+        else this.narrowListeners.push(f);
     }
 
     /** Removes values from the data possibility. */
