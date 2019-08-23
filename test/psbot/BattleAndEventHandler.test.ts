@@ -69,7 +69,7 @@ describe("Battle and EventProcessor", function()
                     const hpType = moveId.substr("hiddenpower".length)
                             .replace(/\d+/, "");
                     Object.keys(types).forEach(type =>
-                        expect(mon.moveset.hpType.isSet(type))
+                        expect(mon.hpType.isSet(type))
                             .to.be[type === hpType ? "true" : "false"]);
                     moveId = "hiddenpower";
                 }

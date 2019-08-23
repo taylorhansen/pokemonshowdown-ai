@@ -688,6 +688,39 @@ describe("Pokemon", function()
         });
     });
 
+    describe("#happiness", function()
+    {
+        it("Should be null initially", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            expect(mon).to.have.property("happiness", null);
+        });
+
+        it("Should cap at 255 max", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.happiness = 500;
+            expect(mon).to.have.property("happiness", 255);
+        });
+
+        it("Should cap at 0 min", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.happiness = -500;
+            expect(mon).to.have.property("happiness", 0);
+        });
+
+        // TODO: is this necessary?
+        it("Should be resettable", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.happiness = 255;
+            expect(mon).to.have.property("happiness", 255);
+            mon.happiness = null;
+            expect(mon).to.have.property("happiness", null);
+        });
+    });
+
     describe("#isGrounded/#maybeGrounded", function()
     {
         /**

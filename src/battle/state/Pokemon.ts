@@ -1,5 +1,5 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
-import { PokemonData, StatName, Type } from "../dex/dex-util";
+import { hpTypes, PokemonData, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Move } from "./Move";
@@ -292,6 +292,18 @@ ability ${ability}`);
     /** Pokemon's gender. M=male, F=female, null=genderless. */
     public gender?: string | null;
 
+    /** Hidden power type possibility tracker. */
+    public readonly hpType = new PossibilityClass(hpTypes);
+
+    /** Happiness value between 0 and 255, or null if unknown. */
+    public get happiness(): number | null { return this._happiness; }
+    public set happiness(value: number | null)
+    {
+        if (value === null) this._happiness = null;
+        else this._happiness = Math.max(0, Math.min(value, 255));
+    }
+    private _happiness: number | null = null;
+
     /** Whether this pokemon is fainted. */
     public get fainted(): boolean { return this.hp.current === 0; }
     /** Info about the pokemon's hit points. */
@@ -485,7 +497,9 @@ ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}types: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.stringifyItem()}
-${s}moveset: [${this.moveset.toString()}]`;
+${s}moveset: [${this.moveset.toString(this._happiness,
+    this.hpType.definiteValue ?
+        this.hpType.definiteValue.name : `possibly ${this.hpType}`)}]`;
     }
 
     // istanbul ignore next: only used for logging

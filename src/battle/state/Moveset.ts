@@ -1,24 +1,10 @@
-import { hpTypes } from "../dex/dex-util";
 import { Move } from "./Move";
-import { PossibilityClass } from "./PossibilityClass";
 
 /** Tracks the moves and hidden power type of a Pokemon. */
 export class Moveset
 {
     /** Maximum moveset size. */
     public static readonly maxSize = 4;
-
-    /** Hidden power type possibility tracker. */
-    public readonly hpType = new PossibilityClass(hpTypes);
-
-    /** Happiness value between 0 and 255, or null if unknown. */
-    public get happiness(): number | null { return this._happiness; }
-    public set happiness(value: number | null)
-    {
-        if (value === null) this._happiness = null;
-        else this._happiness = Math.max(0, Math.min(value, 255));
-    }
-    private _happiness: number | null = null;
 
     /** Contained moves. Null is unrevealed while undefined is nonexistent. */
     public get moves(): readonly (Move | null | undefined)[]
@@ -102,32 +88,6 @@ export class Moveset
         const move = new Move();
         this._moves[this.unrevealed] = move;
         this.baseMoves[this.unrevealed] = move;
-        // TODO: should this chain be handled by PSEventHandler? format is
-        //  specific only to showdown anyways
-        if (id.startsWith("hiddenpower") && id.length > "hiddenpower".length)
-        {
-            // set hidden power type
-            // format: hiddenpower<type><base power if gen2-5>
-            this.hpType.narrow(
-                id.substr("hiddenpower".length).replace(/\d+/, ""));
-            id = "hiddenpower";
-        }
-        else if (id.startsWith("return") && id.length > "return".length)
-        {
-            // calculate happiness value from base power
-            // use the public setter so it gets clamped
-            this.happiness = 2.5 * parseInt(id.substr("return".length), 10);
-            id = "return";
-        }
-        else if (id.startsWith("frustration") &&
-            id.length > "frustration".length)
-        {
-            // calculate happiness value from base power
-            // use the public setter so it gets clamped
-            this.happiness =
-                255 - (2.5 * parseInt(id.substr("frustration".length), 10));
-            id = "frustration";
-        }
         move.init(id);
         return this.unrevealed++;
     }
@@ -167,42 +127,44 @@ export class Moveset
     }
 
     // istanbul ignore next: only used for logging
-    /** Encodes all moveset data into a string. */
-    public toString(): string
+    /**
+     * Encodes all moveset data into a string.
+     * @param happiness Optional happiness value for calculating
+     * Return/Frustration power.
+     * @param hpType Optional Hidden Power type.
+     */
+    public toString(happiness: number | null = null, hpType?: string): string
     {
         return this._moves
             .map((m, i) => this.stringifyMove(m) +
                 // if overridden, include base move
                 (this.baseMoves[i] !== m ?
-                    ` (base: ${this.stringifyMove(this.baseMoves[i])})` : ""))
+                    ` (base: ${this.stringifyMove(this.baseMoves[i],
+                        happiness, hpType)})` : ""))
             .join(", ");
     }
 
     // istanbul ignore next: only used for logging
-    /** Stringifies a Move, inserting hidden power type if needed. */
-    private stringifyMove(move: Move | null | undefined): string
+    /** Stringifies a Move, inserting additional info if needed. */
+    private stringifyMove(move: Move | null | undefined,
+        happiness: number | null = null, hpType?: string): string
     {
         if (move === null) return "<unrevealed>";
         if (!move) return "<empty>";
 
-        let info = "";
-        if (move.name === "hiddenpower")
-        {
-            info = this.hpType.definiteValue ?
-                this.hpType.definiteValue.name
-                : `possibly ${this.hpType.toString()}`;
-        }
+        let info: string | undefined;
+        if (move.name === "hiddenpower") info = hpType;
         else if (move.name === "return")
         {
             // calculate power from happiness value
-            info = this._happiness !== null ?
-                Math.max(1, this._happiness / 2.5).toString() : "1-102";
+            info = happiness !== null ?
+                Math.max(1, happiness / 2.5).toString() : "1-102";
         }
         else if (move.name === "frustration")
         {
             // calculate power from happiness value
-            info = this._happiness !== null ?
-                Math.max(1, (255 - this._happiness) / 2.5).toString() : "1-102";
+            info = happiness !== null ?
+                Math.max(1, (255 - happiness) / 2.5).toString() : "1-102";
         }
 
         return move.toString(info);

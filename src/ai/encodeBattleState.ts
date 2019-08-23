@@ -349,8 +349,7 @@ export function encodeMove(move?: Move | null): number[]
 }
 
 /** Length of the return value of `encodeMoveset()`. */
-export const sizeMoveset = /*hiddenpower*/Object.keys(hpTypes).length +
-    /*happiness*/1 + Moveset.maxSize * sizeMove;
+export const sizeMoveset = Moveset.maxSize * sizeMove;
 
 /** Formats moveset info into an array of numbers. */
 export function encodeMoveset(moveset?: Moveset | null): number[]
@@ -358,32 +357,18 @@ export function encodeMoveset(moveset?: Moveset | null): number[]
     if (moveset === null)
     {
         // unknown
-        const hpTypeKeys = Object.keys(hpTypes);
         const move = encodeMove(null);
-        return [
-            ...hpTypeKeys.map(() => 1 / hpTypeKeys.length),
-            0.5, // happiness
-            ...([] as number[]).concat(
-                ...Array.from({length: Moveset.maxSize}, () => move))
-        ];
+        return ([] as number[]).concat(
+                ...Array.from({length: Moveset.maxSize}, () => move));
     }
     if (!moveset)
     {
         // nonexistent
         const move = encodeMove();
-        return [
-            ...Object.keys(hpTypes).map(() => -1),
-            -1, // happiness
-            ...([] as number[]).concat(
-                ...Array.from({length: Moveset.maxSize}, () => move))
-        ];
+        return ([] as number[]).concat(
+                ...Array.from({length: Moveset.maxSize}, () => move));
     }
-    return [
-        ...encodePossiblityClass(moveset.hpType, i => i, numHPTypes),
-        // interpolate happiness value
-        (moveset.happiness === null ? /*half*/127.5 : moveset.happiness) / 255,
-        ...([] as number[]).concat(...moveset.moves.map(encodeMove))
-    ];
+    return ([] as number[]).concat(...moveset.moves.map(encodeMove));
 }
 
 /** Length of the return value of `encodeHP()`. */
@@ -403,14 +388,16 @@ export function encodeHP(hp?: HP | null): number[]
 }
 
 /** Length of the return value of `encodePokemon()` when inactive. */
-export const sizePokemon = /*gender*/3 + dex.numPokemon +
-    /*stats*/sizeStatTable + dex.numItems + dex.numAbilities + sizeMoveset +
-    sizeHP + /*grounded*/2 +
+export const sizePokemon = dex.numPokemon + /*stats*/sizeStatTable +
+    dex.numItems + dex.numAbilities + sizeMoveset + /*gender*/3 + numHPTypes +
+    /*happiness*/1 + sizeHP + /*grounded*/2 +
     /*base type excluding ??? type*/Object.keys(types).length - 1 +
     /*majorStatus*/Object.keys(majorStatuses).length;
 
 /** Length of the return value of `encodePokemon()` when active. */
 export const sizeActivePokemon = sizePokemon + sizeVolatileStatus;
+
+const hpTypeKeys = Object.keys(hpTypes);
 
 /**
  * Formats pokemon info into an array of numbers. Null means unknown, while
@@ -422,15 +409,16 @@ export function encodePokemon(mon?: Pokemon | null): number[]
     {
         // unknown
         return [
-            // gender
-            1 / 3, 1 / 3, 1 / 3,
             // species, item, ability
             ...Array.from(
                 {length: dex.numPokemon + dex.numItems + dex.numAbilities},
                 () => 0),
-            ...encodeStatTable(null), ...encodeMoveset(null), ...encodeHP(null),
-            // grounded
-            0.5, 0.5,
+            ...encodeStatTable(null), ...encodeMoveset(null),
+            1 / 3, 1 / 3, 1 / 3, // gender
+            ...hpTypeKeys.map(() => 1 / hpTypeKeys.length), // hp type
+            127.5, // happiness
+            ...encodeHP(null),
+            0.5, 0.5, // grounded
             // could be any of these types
             ...filteredTypes.map(() => 1 / filteredTypes.length),
             ...encodeMajorStatusCounter(null)
@@ -440,13 +428,15 @@ export function encodePokemon(mon?: Pokemon | null): number[]
     {
         // nonexistent
         return [
-            // gender
-            -1, -1, -1,
             // species, item, ability
             ...Array.from(
                 {length: dex.numPokemon + dex.numItems + dex.numAbilities},
                 () => -1),
-            ...encodeStatTable(), ...encodeMoveset(), ...encodeHP(),
+            ...encodeStatTable(), ...encodeMoveset(),
+            -1, -1, -1, // gender
+            ...Array.from(hpTypeKeys, () => -1), // hp type
+            -1, // happiness
+            ...encodeHP(),
             // grounded
             -1, -1,
             ...filteredTypes.map(() => -1),
@@ -461,7 +451,11 @@ export function encodePokemon(mon?: Pokemon | null): number[]
         ...encodeStatTable(mon.stats),
         ...encodePossiblityClass(mon.item, d => d, dex.numItems),
         ...encodePossiblityClass(mon.baseAbility, d => d, dex.numAbilities),
-        ...encodeMoveset(mon.moveset), ...encodeHP(mon.hp),
+        ...encodeMoveset(mon.moveset),
+        ...encodePossiblityClass(mon.hpType, i => i, numHPTypes),
+        // normalize happiness value
+        (mon.happiness === null ? /*half*/127.5 : mon.happiness) / 255,
+        ...encodeHP(mon.hp),
         mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0,
         ...filteredTypes.map(type => mon.species.types.includes(type) ? 1 : 0),
         ...encodeMajorStatusCounter(mon.majorStatus),

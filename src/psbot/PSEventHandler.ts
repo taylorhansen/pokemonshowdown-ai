@@ -590,7 +590,37 @@ export class PSEventHandler
             if (data.active) mon.switchIn();
             else mon.switchOut();
 
-            for (const moveId of data.moves) mon.moveset.reveal(moveId);
+            for (let moveId of data.moves)
+            {
+                if (moveId.startsWith("hiddenpower") &&
+                    moveId.length > "hiddenpower".length)
+                {
+                    // set hidden power type
+                    // format: hiddenpower<type><base power if gen2-5>
+                    // TODO: also infer ivs based on type/power
+                    mon.hpType.narrow(
+                        moveId.substr("hiddenpower".length).replace(/\d+/, ""));
+                    moveId = "hiddenpower";
+                }
+                else if (moveId.startsWith("return") &&
+                    moveId.length > "return".length)
+                {
+                    // calculate happiness value from base power
+                    mon.happiness = 2.5 *
+                        parseInt(moveId.substr("return".length), 10);
+                    moveId = "return";
+                }
+                else if (moveId.startsWith("frustration") &&
+                    moveId.length > "frustration".length)
+                {
+                    // calculate happiness value from base power
+                    mon.happiness = 255 - 2.5 *
+                            parseInt(moveId.substr("frustration".length), 10);
+                    moveId = "frustration";
+                }
+
+                mon.moveset.reveal(moveId);
+            }
         }
     }
 
