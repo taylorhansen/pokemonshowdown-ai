@@ -1,11 +1,12 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
-import { hpTypes, PokemonData, Type } from "../dex/dex-util";
+import { hpTypes, StatName, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Move } from "./Move";
 import { Moveset } from "./Moveset";
+import { PokemonTraits } from "./PokemonTraits";
 import { PossibilityClass } from "./PossibilityClass";
-import { StatTable } from "./StatTable";
+import { StatRange } from "./StatRange";
 import { Team } from "./Team";
 import { VolatileStatus } from "./VolatileStatus";
 
@@ -36,117 +37,60 @@ export class Pokemon
     public get active(): boolean { return this._active; }
     private _active: boolean = false;
 
-    /** Species/form dex data. */
-    public get species(): PokemonData
+    /** Current pokemon traits. May be overridden by VolatileStatus. */
+    public get traits(): PokemonTraits
     {
-        if (!this._species) throw new Error("Species not initialized");
-        return this._species;
+        if (this._active) return this._volatile.overrideTraits;
+        return this.baseTraits;
     }
-    /** Whether `#species` is initialized. */
-    public get hasSpecies(): boolean { return !!this._species; }
-    /** Sets species data. */
-    public setSpecies(species: string): void
-    {
-        if (!dex.pokemon.hasOwnProperty(species))
-        {
-            throw new Error(`Unknown species '${species}'`);
-        }
+    /** Base pokemon traits. */
+    public readonly baseTraits = new PokemonTraits();
 
-        this._species = dex.pokemon[species];
-        if (this._active) this._volatile.setOverrideSpecies(this._species);
-        this.initBaseAbility();
-        // no need to re-link Pokemon reference the StatTable since ctor
-        //  already did that, only need to reset dex object
-        this.stats.data = this.species;
-    }
-    private _species: PokemonData | null = null;
-
-    /** Stat table possibilities. */
-    public readonly stats = new StatTable();
-
-    /** Current ability id name. Can temporarily change while active. */
+    /** Current ability for this Pokemon, or the empty string if unknown. */
     public get ability(): string
     {
-        // ability has been overridden
-        if (this._volatile.overrideAbility.definiteValue)
-        {
-            return this._volatile.overrideAbility.definiteValue.name;
-        }
-        // not overridden/initialized
-        if (!this._baseAbility.definiteValue) return "";
-        return this._baseAbility.definiteValue.name;
-    }
-    public set ability(ability: string)
-    {
-        if (!dex.abilities.hasOwnProperty(ability))
-        {
-            throw new Error(`Unknown ability '${ability}'`);
-        }
+        // not initialized
+        if (!this.traits.hasAbility) return "";
 
-        // reveal baseAbility
-        if (!this._baseAbility.definiteValue)
-        {
-            if (!this.canHaveAbility(ability))
-            {
-                throw new Error(`Pokemon ${this.species.name} can't have base \
-ability ${ability}`);
-            }
+        const ability = this.traits.ability;
+        // not fully narrowed
+        if (!ability.definiteValue) return "";
 
-            this._baseAbility.narrow(ability);
-        }
-        else
-        {
-            // override current ability
-            this._volatile.resetOverrideAbility();
-            this._volatile.overrideAbility.narrow(ability);
-        }
+        return ability.definiteValue.name;
     }
-    /** Checks if this pokemon can have the given ability. */
+    /** Checks whether the Pokemon can currently have the given ability. */
     public canHaveAbility(ability: string): boolean
     {
-        return this.species.abilities.includes(ability) &&
-            this._baseAbility.isSet(ability);
+        // not initialized
+        if (!this.traits.hasAbility) return false;
+        return this.traits.ability.isSet(ability);
     }
-    /** Base ability possibility tracker. */
-    public get baseAbility(): PossibilityClass<typeof dex.abilities[string]>
-    {
-        return this._baseAbility;
-    }
-    /** Sets base ability according to current pokemon data. */
-    private initBaseAbility(): void
-    {
-        this._baseAbility = new PossibilityClass(dex.abilities);
-        this._baseAbility.narrow(...this.species.abilities);
-        if (this._active) this._volatile.linkOverrideAbility(this._baseAbility);
-    }
-    private _baseAbility!: PossibilityClass<typeof dex.abilities[string]>;
 
-    /** The types of this pokemon. */
+    /** Current species for this Pokemon. or the empty string if unknown. */
+    public get species(): string
+    {
+        const traits = this.traits;
+        // not initialized
+        if (!traits.hasSpecies) return "";
+
+        const species = traits.species;
+        // not fully narrowed
+        if (!species.definiteValue) return "";
+        return species.definiteValue.name;
+    }
+
+    /** Current types for this Pokemon. */
     public get types(): readonly Type[]
     {
-        let result: readonly Type[];
-        if (this._active)
-        {
-            result = this._volatile.overrideTypes
-                .concat(this._volatile.addedType);
-        }
-        else result = this.species.types;
-
+        const result = [...this.traits.types];
+        if (this._active) result.push(this._volatile.addedType);
         return result.filter(type => type !== "???");
     }
-    /** Temporarily changes primary and secondary types and resets third. */
-    public changeType(newTypes: readonly [Type, Type]): void
-    {
-        this._volatile.overrideTypes = newTypes;
-        // reset added type
-        this.addType("???");
-    }
-    /** Changes temporary tertiary type. */
-    public addType(newType: Type): void
-    {
-        this._volatile.addedType = newType;
-    }
 
+    /** Current reference to held item possibilities. */
+    public get item(): PossibilityClass<number> { return this._item; }
+    /** Current reference to last consumed item possibilities. */
+    public get lastItem(): PossibilityClass<number> { return this._lastItem; }
     /**
      * Indicates that an item has been revealed or gained.
      * @param item Item id name.
@@ -180,13 +124,11 @@ ability ${ability}`);
         // this should reset the _item reference so there aren't any duplicates
         this.setItem("none", /*gained*/true);
     }
-    /** Current reference to held item possibilities. */
-    public get item(): PossibilityClass<number> { return this._item; }
     private _item = new PossibilityClass(dex.items);
-    /** Current reference to last consumed item possibilities. */
-    public get lastItem(): PossibilityClass<number> { return this._lastItem; }
     private _lastItem = new PossibilityClass(dex.items);
 
+    /** Pokemon's moveset. */
+    public readonly moveset = new Moveset();
     /** Indicates that a move has been used. */
     public useMove(options: Readonly<MoveOptions>): void
     {
@@ -283,8 +225,6 @@ ability ${ability}`);
         // sketched moves have no pp ups applied
         this.moveset.replace(id, new Move(newId, "min"));
     }
-    /** Pokemon's moveset. */
-    public readonly moveset = new Moveset();
 
     /** Pokemon's gender. M=male, F=female, null=genderless. */
     public gender?: string | null;
@@ -301,18 +241,13 @@ ability ${ability}`);
     }
     private _happiness: number | null = null;
 
-    /** Whether this pokemon is fainted. */
-    public get fainted(): boolean { return this.hp.current === 0; }
     /** Info about the pokemon's hit points. */
     public readonly hp: HP;
+    /** Whether this pokemon is fainted. */
+    public get fainted(): boolean { return this.hp.current === 0; }
 
     /** Major status turn counter manager. */
     public readonly majorStatus = new MajorStatusCounter();
-
-    /** Minor status conditions. Cleared on switch. */
-    public get volatile(): VolatileStatus { return this._volatile; }
-    /** Minor status conditions. Cleared on switch. */
-    private _volatile = new VolatileStatus();
 
     /**
      * Checks if the pokemon is definitely grounded, ignoring incomplete
@@ -366,9 +301,7 @@ ability ${ability}`);
 
         // klutz ability suppresses most items
         const ignoringItem = v.embargo.isActive ||
-            (!ignoringAbility &&
-                ((this._active && v.overrideAbility.isSet("klutz")) ||
-                (!this._active && this._baseAbility.isSet("klutz"))));
+            (!ignoringAbility && this.canHaveAbility("klutz"));
 
         // iron ball causes grounding
         if (this._item.isSet("ironball") && !ignoringItem) return true;
@@ -376,12 +309,15 @@ ability ${ability}`);
         // magnet rise lifts
         return !v.magnetRise.isActive &&
             // levitate lifts
-            (ignoringAbility ||
-                (!(this._active && v.overrideAbility.isSet("levitate")) &&
-                !(!this._active && this._baseAbility.isSet("levitate")))) &&
+            (ignoringAbility || !this.canHaveAbility("levitate")) &&
             // flying type lifts
             !this.types.includes("flying");
     }
+
+    /** Minor status conditions. Cleared on switch. */
+    public get volatile(): VolatileStatus { return this._volatile; }
+    /** Minor status conditions. Cleared on switch. */
+    private _volatile = new VolatileStatus();
 
     /**
      * Creates a Pokemon.
@@ -390,8 +326,8 @@ ability ${ability}`);
      */
     constructor(species: string, hpPercent: boolean, team?: Team)
     {
-        this.setSpecies(species);
-        this.stats.linked = this;
+        this.baseTraits.init();
+        this.baseTraits.species.narrow(species);
         this.hp = new HP(hpPercent);
         this.team = team;
         this._active = false;
@@ -423,11 +359,8 @@ ability ${ability}`);
     /** Tells the pokemon that it is currently being switched in. */
     public switchIn(): void
     {
-        this._volatile.linkOverrideAbility(this._baseAbility);
-        this._volatile.setOverrideSpecies(this.species, /*setAbility*/false);
-        this._volatile.overrideStats.linked = this;
-        this._volatile.overrideTypes = this.species.types;
         this._active = true;
+        this._volatile.overrideTraits.copy(this.baseTraits);
     }
 
     /**
@@ -468,9 +401,8 @@ ability ${ability}`);
         // shadow tag traps all pokemon who don't have it
         if (this.ability !== "shadowtag") abilities.push("shadowtag");
 
-        // since override ability is always known, and this method assumes that
-        //  the ability is unknown, the base ability must be the culprit
-        if (abilities.length > 0) by.baseAbility.narrow(...abilities);
+        // infer possible trapping abilities
+        if (abilities.length > 0) by.traits.ability.narrow(...abilities);
         else throw new Error("Can't figure out why we're trapped");
     }
 
@@ -503,70 +435,62 @@ ${s}moveset: [${this.moveset.toString(this._happiness,
     /** Displays the species as well as whether it's overridden. */
     private stringifySpecies(): string
     {
-        const base = this.species;
-        const over = this._active ? this._volatile.overrideSpecies : null;
+        // should never happen but just in case
+        const base = this.baseTraits.species;
+        if (!base.definiteValue) return "<unrevealed>";
 
-        if (!over || over === base) return base.name;
-        else return `${over.name} (base: ${base.name})`;
+        const over = this._active ?
+            this._volatile.overrideTraits.species : null;
+
+        if (!over || !over.definiteValue || over === base)
+        {
+            return base.definiteValue.name;
+        }
+        return `${over.definiteValue.name} (base: ${base.definiteValue.name})`;
     }
 
     // istanbul ignore next: only used for logging
     /** Displays stat data as well as whether it's overridden. */
     private stringifyStats(): string
     {
-        if (!this._active ||
-            (this.stats.linked === this && this.stats.data === this._species))
+        const base = this.baseTraits.stats;
+
+        if (!this._active || base === this._volatile.overrideTraits.stats)
         {
-            return this.stats.toString();
+            return base.toString();
         }
-        return `${this._volatile.overrideStats} (base: ${this.stats})`;
+        return `${this._volatile.overrideTraits.stats} (base: ${base})`;
     }
 
     // istanbul ignore next: only used for logging
     /** Displays type values. */
     private stringifyTypes(): string
     {
-        const result: string[] = [];
-
-        for (let i = 0; i < this.species.types.length; ++i)
+        const base = this.baseTraits.types;
+        if (!this._active || base === this._volatile.overrideTraits.types)
         {
-            let type: string = this.species.types[i];
-
-            // show overridden types in parentheses
-            const override = this._volatile.overrideTypes[i];
-            if (override !== "???" && override !== type)
-            {
-                if (type === "???") type = `(${override})`;
-                else type += ` (${override})`;
-            }
-
-            // skip completely blank types
-            if (type !== "???") result.push(type);
+            return `[${base.join(", ")}]`;
         }
-
-        // include third type in parentheses
-        if (this._volatile.addedType !== "???")
-        {
-            result.push(`(${this._volatile.addedType})`);
-        }
-
-        return `[${result.join(", ")}]`;
+        return `[${this._volatile.overrideTraits.types.join(", ")}] ` +
+            `(base: [${base.join(", ")}])`;
     }
 
     // istanbul ignore next: only used for logging
     /** Displays the possible/overridden/suppressed values of the ability. */
     private stringifyAbility(): string
     {
-        const base = (this._baseAbility.definiteValue ? "" : "possibly ") +
-            this._baseAbility.toString();
+        const base = this.baseTraits.ability;
+        const baseStr = `${base.definiteValue ? "" : "possibly "}${base}`;
 
-        if (this._baseAbility === this._volatile.overrideAbility) return base;
+        if (!this._active ||
+            base === this._volatile.overrideTraits.ability)
+        {
+            return baseStr;
+        }
 
-        const over = (this._volatile.overrideAbility.definiteValue ?
-                "" : "possibly ") +
-            this._volatile.overrideAbility.toString();
-
-        return `${over} (base: ${base})`;
+        const over = this._volatile.overrideTraits.ability;
+        const overStr = `${over.definiteValue ? "" : "possibly "}${over}`;
+        return `${overStr} (base: ${baseStr})`;
     }
 
     // istanbul ignore next: only used for logging

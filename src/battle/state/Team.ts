@@ -120,7 +120,8 @@ export class Team
         {
             const m = this._pokemon[i];
             // TODO: in gen5 check everything since it could be illusion
-            if (m && m.species.name === species)
+            if (m && m.traits.species.definiteValue &&
+                m.traits.species.definiteValue.name === species)
             {
                 index = i;
                 break;
@@ -192,10 +193,10 @@ export class Team
         this._pokemon[this.unrevealed] = newMon;
 
         // initialize new pokemon
-        newMon.stats.level = level;
+        newMon.traits.stats.level = level;
         newMon.gender = gender;
         newMon.hp.set(hp, hpMax);
-        if (this.side === "us") newMon.stats.hp.set(hpMax);
+        if (!newMon.hp.isPercent) newMon.traits.stats.hp.set(hpMax);
 
         return this.unrevealed++;
     }

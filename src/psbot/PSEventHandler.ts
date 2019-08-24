@@ -56,20 +56,22 @@ export class PSEventHandler
         .on("-ability", event =>
         {
             const active = this.getActive(event.id.owner);
+            const ability = toIdName(event.ability);
             if (event.from && event.from.type === "ability" &&
                 event.from.ability === "Trace" && event.of)
             {
                 // trace ability: event.ability contains the Traced ability,
                 //  event.of contains pokemon that was traced, event.id contains
                 //  the pokemon with Trace
-                // initialize baseAbility if not already
-                active.ability = "trace";
-                this.getActive(event.of.owner).ability =
-                    toIdName(event.ability);
+
+                // first indicate that trace was revealed, then override after
+                active.traits.ability.narrow("trace");
+                // infer opponent's ability due to trace effect
+                this.getActive(event.of.owner).traits.setAbility(ability);
             }
-            // now that trace has activated, it will be overridden by the
-            //  opponent's ability
-            active.ability = toIdName(event.ability);
+
+            // override current ability with the new one
+            active.traits.setAbility(ability);
         })
         .on("-endability", event =>
         {
@@ -140,30 +142,38 @@ export class PSEventHandler
                     break;
                 case "typeadd":
                     // set added type
-                    active.addType(event.otherArgs[0].toLowerCase() as Type);
+                    active.volatile.addedType =
+                        event.otherArgs[0].toLowerCase() as Type;
                     break;
                 case "typechange":
                 {
                     // set types
-                    let types: Type[];
+                    // format: Type1/Type2
+                    let types: [Type, Type];
 
                     if (event.otherArgs[0])
                     {
-                        types = event.otherArgs[0].split("/")
+                        const parsedTypes = event.otherArgs[0].split("/")
                             .map(type => type.toLowerCase()) as Type[];
 
                         // make sure length is 2
-                        if (types.length > 2)
+                        if (parsedTypes.length > 2)
                         {
-                            this.logger.error(
-                                `Too many types given (${types.join(", ")})`);
-                            types.splice(2);
+                            this.logger.error("Too many types given " +
+                                `(${parsedTypes.join(", ")})`);
+                            parsedTypes.splice(2);
                         }
-                        else if (types.length === 1) types.push("???");
+                        else if (parsedTypes.length === 1)
+                        {
+                            parsedTypes.push("???");
+                        }
+                        types = parsedTypes as [Type, Type];
                     }
                     else types = ["???", "???"];
 
-                    active.changeType(types as [Type, Type]);
+                    active.volatile.overrideTraits.types = types;
+                    // typechange resets third type
+                    active.volatile.addedType = "???";
                     break;
                 }
                 case "Uproar":
@@ -277,7 +287,7 @@ export class PSEventHandler
                 // can't move due to an ability
                 const ability = toIdName(
                     event.reason.substr("ability: ".length));
-                active.ability = ability;
+                active.traits.setAbility(ability);
 
                 if (ability === "truant")
                 {
@@ -333,7 +343,7 @@ export class PSEventHandler
             if (status.current === "slp" && status.turns === 1)
             {
                 // cured in 0 turns, must have early bird ability
-                active.ability = "earlybird";
+                active.traits.setAbility("earlybird");
             }
             status.cure();
         })
@@ -341,11 +351,17 @@ export class PSEventHandler
         .on("-damage", event => this.handleDamage(event))
         .on("detailschange", event =>
         {
+            // permanent form change
             const active = this.getActive(event.id.owner);
-            active.setSpecies(event.details.species);
+
+            // update both base and volatile
+            // TODO: test to see if override ability/etc are also reset or
+            //  should be
+            active.baseTraits.setSpecies(event.details.species);
+            active.volatile.overrideTraits.copy(active.baseTraits);
 
             // set other details just in case
-            active.stats.level = event.details.level;
+            active.traits.stats.level = event.details.level;
             active.gender = event.details.gender;
             active.hp.set(event.status.hp, event.status.hpMax);
         })
@@ -360,8 +376,8 @@ export class PSEventHandler
                 throw new Error(`Unknown species '${event.details.species}'`);
             }
             // TODO: set other details?
-            this.getActive(event.id.owner).volatile
-                .setOverrideSpecies(dex.pokemon[event.details.species]);
+            this.getActive(event.id.owner).volatile.overrideTraits
+                .setSpecies(event.details.species);
         })
         .on("-heal", event => this.handleDamage(event))
         .on("-invertboost", event =>
@@ -578,12 +594,12 @@ export class PSEventHandler
             {
                 // istanbul ignore if
                 if (!data.stats.hasOwnProperty(stat)) continue;
-                mon.stats[stat as StatExceptHP]
+                mon.traits.stats[stat as StatExceptHP]
                     .set(data.stats[stat as StatExceptHP]);
             }
-            mon.stats.hp.set(status.hpMax);
+            mon.traits.stats.hp.set(status.hpMax);
             mon.setItem(data.item);
-            mon.ability = data.baseAbility;
+            mon.traits.setAbility(data.baseAbility);
             mon.majorStatus.assert(status.condition);
 
             // set active status
@@ -710,11 +726,11 @@ export class PSEventHandler
         if (event.from)
         {
             const f = event.from;
-            if (f.type === "ability") mon.ability = toIdName(f.ability);
-            else if (f.type === "item")
+            if (f.type === "ability")
             {
-                mon.setItem(toIdName(f.item));
+                mon.traits.setAbility(toIdName(f.ability));
             }
+            else if (f.type === "item") mon.setItem(toIdName(f.item));
         }
     }
 

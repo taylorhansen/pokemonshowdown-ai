@@ -35,9 +35,9 @@ describe("VolatileStatus", function()
         volatile.lockedMove.start("outrage");
         volatile.minimize = true;
         volatile.mustRecharge = true;
-        volatile.setOverrideSpecies(dex.pokemon.Slaking); // has truant ability
-        volatile.overrideStats.linked = new Pokemon("Slaking", false);
-        volatile.overrideStats.level = 100;
+        volatile.overrideTraits.init();
+        volatile.overrideTraits.setSpecies("Slaking"); // has truant ability
+        volatile.overrideTraits.stats.level = 100;
         volatile.addedType = "ice";
         volatile.roost = true;
         volatile.slowStart.start();
@@ -76,9 +76,17 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.minimize).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
-            expect(volatile.overrideAbility.definiteValue).to.be.null;
-            expect(volatile.overrideSpecies).to.be.null;
-            expect(volatile.overrideTypes).to.have.members(["???", "???"]);
+            expect(volatile.overrideTraits.hasAbility).to.be.false;
+            expect(() => volatile.overrideTraits.ability).to.throw(Error,
+                "Ability not initialized");
+            expect(() => volatile.overrideTraits.data).to.throw(Error,
+                "Species not initialized or narrowed");
+            expect(() => volatile.overrideTraits.species).to.throw(Error,
+                "Species not initialized");
+            expect(() => volatile.overrideTraits.stats).to.throw(Error,
+                "Stat table not initialized");
+            expect(() => volatile.overrideTraits.types).to.throw(Error,
+                "Types not initialized");
             expect(volatile.addedType).to.equal("???");
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
@@ -126,9 +134,17 @@ describe("VolatileStatus", function()
             expect(newVolatile.lockedMove.isActive).to.be.false;
             expect(newVolatile.minimize).to.be.false;
             expect(newVolatile.mustRecharge).to.be.false;
-            expect(newVolatile.overrideAbility.definiteValue).to.be.null;
-            expect(newVolatile.overrideSpecies).to.be.null;
-            expect(newVolatile.overrideTypes).to.have.members(["???", "???"]);
+            expect(newVolatile.overrideTraits.hasAbility).to.be.false;
+            expect(() => newVolatile.overrideTraits.ability).to.throw(Error,
+                "Ability not initialized");
+            expect(() => newVolatile.overrideTraits.data).to.throw(Error,
+                "Species not initialized or narrowed");
+            expect(() => newVolatile.overrideTraits.species).to.throw(Error,
+                "Species not initialized");
+            expect(() => newVolatile.overrideTraits.stats).to.throw(Error,
+                "Stat table not initialized");
+            expect(() => newVolatile.overrideTraits.types).to.throw(Error,
+                "Types not initialized");
             expect(newVolatile.addedType).to.equal("???");
             expect(newVolatile.roost).to.be.false;
             expect(newVolatile.slowStart.isActive).to.be.false;
@@ -170,19 +186,6 @@ describe("VolatileStatus", function()
             volatile.magnetRise.start();
             volatile.postTurn();
             expect(volatile.magnetRise.turns).to.equal(2);
-        });
-    });
-
-    describe("#overrideAbility", function()
-    {
-        it("Should reset #willTruant", function()
-        {
-            volatile.overrideAbility.narrow("truant");
-            volatile.activateTruant();
-            expect(volatile.willTruant).to.be.true;
-            volatile.resetOverrideAbility();
-            volatile.overrideAbility.narrow("swiftswim");
-            expect(volatile.willTruant).to.be.false;
         });
     });
 
@@ -272,42 +275,6 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#setOverrideSpecies()", function()
-    {
-        it("Should set override species", function()
-        {
-            volatile.setOverrideSpecies(dex.pokemon.Magikarp);
-            expect(volatile.overrideSpecies).to.not.be.null;
-            expect(volatile.overrideSpecies!.name).to.equal("Magikarp");
-        });
-
-        it("Should link to #overrideStats and #overrideTypes", function()
-        {
-            volatile.setOverrideSpecies(dex.pokemon.Magikarp);
-            expect(volatile.overrideStats.data).to.equal(dex.pokemon.Magikarp);
-            expect(volatile.overrideTypes)
-                .to.have.members(dex.pokemon.Magikarp.types);
-        });
-
-        it("Should reset override ability if setAbility=true", function()
-        {
-            volatile.overrideAbility.narrow("keeneye");
-            volatile.setOverrideSpecies(dex.pokemon.Magikarp);
-            expect(volatile.overrideAbility.possibleValues)
-                .to.have.all.keys("swiftswim");
-        });
-
-        it("Should not reset override ability if setAbility=false", function()
-        {
-            volatile.overrideAbility.narrow("keeneye");
-            volatile.setOverrideSpecies(dex.pokemon.Magikarp, false);
-            expect(volatile.overrideAbility.possibleValues)
-                .to.have.all.keys("keeneye");
-            expect(volatile.overrideAbility.possibleValues)
-                .to.not.have.any.keys(...dex.pokemon.Magikarp.abilities);
-        });
-    });
-
     describe("#roost", function()
     {
         it("Should reset on #postTurn()", function()
@@ -380,27 +347,22 @@ describe("VolatileStatus", function()
     {
         it("Should set #willTruant if ability is truant", function()
         {
-            volatile.overrideAbility.narrow("truant");
+            volatile.overrideTraits.init();
+            volatile.overrideTraits.setAbility("truant");
             volatile.activateTruant();
             expect(volatile.willTruant).to.be.true;
         });
 
         it("Should fail if ability is not truant", function()
         {
-            expect(() => volatile.activateTruant()).to.throw();
-        });
-
-        it("Should reset if ability changed from truant", function()
-        {
-            volatile.overrideAbility.narrow("truant");
-            volatile.activateTruant();
-            volatile.resetOverrideAbility();
-            expect(volatile.willTruant).to.be.false;
+            expect(() => volatile.activateTruant()).to.throw(Error,
+                "Expected ability to equal truant but found unknown ability");
         });
 
         it("Should toggle on #postTurn() if ability is truant", function()
         {
-            volatile.overrideAbility.narrow("truant");
+            volatile.overrideTraits.init();
+            volatile.overrideTraits.setAbility("truant");
             volatile.activateTruant();
             volatile.postTurn();
             expect(volatile.willTruant).to.be.false;

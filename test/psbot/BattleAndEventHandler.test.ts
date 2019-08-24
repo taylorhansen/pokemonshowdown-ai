@@ -46,18 +46,19 @@ describe("Battle and EventProcessor", function()
             const details: PokemonDetails = data.details;
             const status: PokemonStatus = data.condition;
             const mon = team.pokemon.find(
-                p => !!p && p.species.name === details.species)!;
+                p => !!p && p.species === details.species)!;
 
             expect(mon).to.exist;
-            expect(mon.species.name).to.equal(details.species);
-            expect(mon.stats.level).to.equal(details.level);
+            expect(mon.species).to.equal(details.species);
+            expect(mon.traits.stats.level).to.equal(details.level);
             expect(mon.hp.current).to.equal(status.hp);
             expect(mon.hp.max).to.equal(status.hpMax);
             // TODO: handle case where there's no item? (have to change typings)
             expect(mon.item.definiteValue).to.not.be.null;
             expect(mon.item.definiteValue!.name).to.equal(data.item);
-            expect(mon.baseAbility.definiteValue).to.not.be.null;
-            expect(mon.baseAbility.definiteValue!.name)
+            expect(mon.traits.hasAbility).to.be.true;
+            expect(mon.traits.ability.definiteValue).to.not.be.null;
+            expect(mon.traits.ability.definiteValue!.name)
                 .to.equal(data.baseAbility);
             expect(mon.majorStatus.current).to.equal(status.condition);
             expect(mon.active).to.equal(data.active);
@@ -373,8 +374,8 @@ describe("Battle and EventProcessor", function()
                     side: battle.lastRequest!.side
                 });
                 // trapping ability should be revealed now
-                expect(trapper.baseAbility.definiteValue).to.not.be.null;
-                expect(trapper.baseAbility.definiteValue!.name)
+                expect(trapper.traits.ability.definiteValue).to.not.be.null;
+                expect(trapper.traits.ability.definiteValue!.name)
                     .to.equal("arenatrap");
 
                 // can only move
@@ -529,9 +530,8 @@ describe("Battle and EventProcessor", function()
                             type: "switch", id: us2,
                             details:
                             {
-                                species: us2Mon.species.name,
-                                gender: us2Mon.gender!,
-                                level: us2Mon.stats.level!, shiny: false
+                                species: us2Mon.species, gender: us2Mon.gender!,
+                                level: us2Mon.traits.stats.level!, shiny: false
                             },
                             status:
                             {
@@ -911,11 +911,9 @@ describe("Battle and EventProcessor", function()
                 {
                     const mon = battle.state.teams.us.active;
                     const volatile = mon.volatile;
-
-                    expect(volatile.overrideTypes).to.have.members(
-                        ["water", "???"]);
                     expect(volatile.addedType).to.equal("???");
                     expect(mon.types).to.have.members(["water"]);
+
                     await battle.progress(
                     {
                         events:
@@ -926,8 +924,6 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    expect(volatile.overrideTypes).to.have.members(
-                        ["water", "???"]);
                     expect(volatile.addedType).to.equal("fire");
                     expect(mon.types).to.have.members(["water", "fire"]);
                 });
@@ -939,11 +935,11 @@ describe("Battle and EventProcessor", function()
                 {
                     const mon = battle.state.teams.us.active;
                     const volatile = mon.volatile;
-
-                    volatile.overrideTypes = ["flying", "water"];
+                    mon.traits.types = ["flying", "water"];
                     volatile.addedType = "poison";
                     expect(mon.types).to.have.members(
                         ["flying", "water", "poison"]);
+
                     await battle.progress(
                     {
                         events:
@@ -954,7 +950,7 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    expect(volatile.overrideTypes).to.have.members(
+                    expect(mon.traits.types).to.have.members(
                         ["fire", "???"]);
                     expect(volatile.addedType).to.equal("???");
                     expect(mon.types).to.have.members(["fire"]);
@@ -964,11 +960,11 @@ describe("Battle and EventProcessor", function()
                 {
                     const mon = battle.state.teams.us.active;
                     const volatile = mon.volatile;
-
-                    volatile.overrideTypes = ["flying", "water"];
+                    mon.traits.types = ["flying", "water"];
                     volatile.addedType = "poison";
                     expect(mon.types).to.have.members(
                         ["flying", "water", "poison"]);
+
                     await battle.progress(
                     {
                         events:
@@ -979,7 +975,7 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    expect(volatile.overrideTypes).to.have.members(
+                    expect(mon.traits.types).to.have.members(
                         ["fire", "ground"]);
                     expect(volatile.addedType).to.equal("???");
                     expect(mon.types).to.have.members(["fire", "ground"]);
@@ -1000,8 +996,10 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    expect(volatile.overrideTypes).to.have.members(
+                    expect(mon.traits.types).to.have.members(
                         ["rock", "dragon"]);
+                    expect(volatile.addedType).to.equal("???");
+                    expect(mon.types).to.have.members(["rock", "dragon"]);
                 });
 
                 it("Should remove types if changed to nothing", async function()
@@ -1019,8 +1017,9 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
-                    expect(volatile.overrideTypes).to.have.members(
+                    expect(mon.traits.types).to.have.members(
                         ["???", "???"]);
+                    expect(volatile.addedType).to.equal("???");
                     expect(mon.types).to.be.empty;
                 });
             });
@@ -1201,27 +1200,23 @@ describe("Battle and EventProcessor", function()
             it("Should reveal ability", async function()
             {
                 const mon = battle.state.teams.them.active;
-                mon.ability = "swiftswim";
+
                 await battle.progress(
                 {
                     events: [{type: "cant", id: them1, reason: "ability: Damp"}]
                 });
                 expect(mon.ability).to.equal("damp");
-                expect(mon.baseAbility.definiteValue).to.not.be.null;
-                expect(mon.baseAbility.definiteValue!.name)
-                    .to.equal("swiftswim");
             });
 
             it("Should properly handle Truant ability", async function()
             {
                 const mon = battle.state.teams.us.active;
-                mon.ability = "truant";
+                mon.traits.setAbility("truant");
                 mon.volatile.mustRecharge = true;
                 expect(mon.volatile.willTruant).to.be.false;
 
                 // completed a turn without truant activating
-                await battle.progress(
-                    {events: [{type: "turn", num: 3}]});
+                await battle.progress({events: [{type: "turn", num: 3}]});
                 expect(responses).to.have.lengthOf(1);
                 expect(mon.volatile.willTruant).to.be.true;
 
@@ -1276,7 +1271,7 @@ describe("Battle and EventProcessor", function()
             it("Should tick sleep counter twice if earlybird", async function()
             {
                 const mon = battle.state.teams.us.active;
-                mon.ability = "earlybird";
+                mon.traits.setAbility("earlybird");
                 mon.majorStatus.afflict("slp");
 
                 await battle.progress(
@@ -1369,10 +1364,11 @@ describe("Battle and EventProcessor", function()
 
         describe("detailschange", function()
         {
-            it("Should change details", async function()
+            it("Should change base and override traits", async function()
             {
                 const active = battle.state.teams.us.active;
-                expect(active.species.name).to.equal("Horsea");
+                expect(active.species).to.equal("Horsea");
+
                 await battle.progress(
                 {
                     events:
@@ -1389,7 +1385,12 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                expect(active.species.name).to.equal("Kingdra");
+                expect(active.species).to.equal("Kingdra");
+                expect(active.baseTraits.species)
+                    .to.equal(active.volatile.overrideTraits.species);
+                expect(active.baseTraits.species.definiteValue).to.not.be.null;
+                expect(active.baseTraits.species.definiteValue!.name)
+                    .to.equal("Kingdra");
             });
         });
 
@@ -1486,10 +1487,11 @@ describe("Battle and EventProcessor", function()
             it("Should temporarily change form", async function()
             {
                 const active = battle.state.teams.us.active;
-                expect(active.species.name).to.equal("Horsea");
-                expect(active.volatile.overrideSpecies).to.not.be.null;
-                expect(active.volatile.overrideSpecies!.name)
+                expect(active.species).to.equal("Horsea");
+                expect(active.traits.species.definiteValue).to.not.be.null;
+                expect(active.traits.species.definiteValue!.name)
                     .to.equal("Horsea");
+
                 await battle.progress(
                 {
                     events:
@@ -1506,10 +1508,14 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                expect(active.species.name).to.equal("Horsea");
-                expect(active.volatile.overrideSpecies).to.not.be.null;
-                expect(active.volatile.overrideSpecies!.name)
+                expect(active.species).to.equal("Kingdra");
+                expect(active.traits.species.definiteValue).to.not.be.null;
+                expect(active.traits.species.definiteValue!.name)
                     .to.equal("Kingdra");
+                // base traits shouldn't be changed
+                expect(active.baseTraits.species.definiteValue).to.not.be.null;
+                expect(active.baseTraits.species.definiteValue!.name)
+                    .to.equal("Horsea");
             });
         });
 
@@ -2435,7 +2441,7 @@ describe("Battle and EventProcessor", function()
                     expect(mon.ability).to.equal("intimidate");
                 });
 
-                it("Should handle Trace correctly", async function()
+                it("Should handle Trace ability", async function()
                 {
                     // reset team so we can switchin something else and fully
                     //  validate ability reavealing mechanics
@@ -2462,14 +2468,17 @@ describe("Battle and EventProcessor", function()
                             }
                         ]
                     });
+                    // mon1 should have the new traced ability
                     expect(mon1.ability).to.equal("swiftswim");
-                    expect(mon1.volatile.overrideAbility.definiteValue)
-                        .to.not.be.null;
-                    expect(mon1.volatile.overrideAbility.definiteValue!.name)
+                    expect(mon1.traits.ability.definiteValue).to.not.be.null;
+                    expect(mon1.traits.ability.definiteValue!.name)
                         .to.equal("swiftswim");
-                    expect(mon1.baseAbility.definiteValue).to.not.be.null;
-                    expect(mon1.baseAbility.definiteValue!.name)
+                    // base traits for mon1 should not change
+                    expect(mon1.baseTraits.ability.definiteValue)
+                        .to.not.be.null;
+                    expect(mon1.baseTraits.ability.definiteValue!.name)
                         .to.equal("trace");
+                    // mon2 should have its current ability inferred
                     expect(mon2.ability).to.equal("swiftswim");
                 });
             });

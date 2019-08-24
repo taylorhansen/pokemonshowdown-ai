@@ -1,6 +1,7 @@
 import { dex, lockedMoves, twoTurnMoves } from "../dex/dex";
 import { BoostName, PokemonData, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
+import { PokemonTraits } from "./PokemonTraits";
 import { PossibilityClass } from "./PossibilityClass";
 import { StatTable } from "./StatTable";
 import { TempStatus } from "./TempStatus";
@@ -100,73 +101,9 @@ export class VolatileStatus
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge!: boolean;
 
-    /** Override ability while active. */
-    public get overrideAbility(): PossibilityClass<typeof dex.abilities[string]>
-    {
-        return this._overrideAbility;
-    }
-    /** Links override ability possibilities to a different PossibilityClass. */
-    public linkOverrideAbility(
-        ability: PossibilityClass<typeof dex.abilities[string]>): void
-    {
-        const last = this._overrideAbility;
-        this._overrideAbility = ability;
-        // don't try to call this twice on the same object
-        if (last !== ability) this.setNarrowHandlers();
-    }
-    /** Resets override ability reference to a new PossibilityClass. */
-    public resetOverrideAbility(): void
-    {
-        this._overrideAbility = new PossibilityClass(dex.abilities);
-        this.setNarrowHandlers();
-        // truant ability no longer applies
-        this._willTruant = false;
-    }
-    /** Sets ability narrow handlers for ability-specific statuses */
-    private setNarrowHandlers(): void
-    {
-        this._overrideAbility.onNarrow(pc =>
-        {
-            // reset truant if it no longer applies
-            if (pc.definiteValue!.name === "truant") this._willTruant = false;
-        });
-    }
-    private _overrideAbility!: PossibilityClass<typeof dex.abilities[string]>;
+    /** Override pokemon traits. Applies until switched out. */
+    public readonly overrideTraits = new PokemonTraits();
 
-    /** Temporary form change. */
-    public get overrideSpecies(): PokemonData | null
-    {
-        return this._overrideSpecies;
-    }
-    /**
-     * Initializes override species data.
-     * @param data Dex object for override species.
-     * @param setAbility Whether to re-set override ability possibility.
-     * Default true.
-     */
-    public setOverrideSpecies(data: PokemonData, setAbility = true): void
-    {
-        this._overrideSpecies = data;
-        // link to other override fields
-        if (setAbility)
-        {
-            this.resetOverrideAbility();
-            this._overrideAbility.narrow(...data.abilities);
-        }
-        this.overrideStats.data = data;
-        this.overrideTypes = data.types;
-    }
-    private _overrideSpecies!: PokemonData | null;
-
-    /** Override stats connected to `#overrideSpecies`. */
-    public readonly overrideStats = new StatTable();
-
-    /**
-     * Temporarily overridden types. This should not be included in toString()
-     * since the parent Pokemon object should handle that. Should not be
-     * accessed other than by the parent Pokemon object.
-     */
-    public overrideTypes!: readonly [Type, Type];
     /** Temporary third type. */
     public addedType!: Type;
 
@@ -212,13 +149,15 @@ export class VolatileStatus
     /** Indicates that the Truant ability has activated. */
     public activateTruant(): void
     {
-        if (!this._overrideAbility.definiteValue ||
-            this._overrideAbility.definiteValue.name !== "truant")
+        if (!this.overrideTraits.hasAbility ||
+            !this.overrideTraits.ability.definiteValue ||
+            this.overrideTraits.ability.definiteValue.name !== "truant")
         {
             throw new Error("Expected ability to equal truant but found " +
-                (this.overrideAbility.definiteValue ?
-                    this.overrideAbility.definiteValue.name
-                    : "unknown ability"));
+                (this.overrideTraits.hasAbility &&
+                    this.overrideTraits.ability.definiteValue ?
+                        this.overrideTraits.ability.definiteValue.name
+                        : "unknown ability"));
         }
 
         // will invert to false on postTurn() so it's properly synced
@@ -227,10 +166,7 @@ export class VolatileStatus
     private _willTruant!: boolean;
 
     /** Creates a VolatileStatus object. */
-    constructor()
-    {
-        this.clear();
-    }
+    constructor() { this.clear(); }
 
     /**
      * Clears all volatile status conditions. This does not affect shallow
@@ -261,10 +197,7 @@ export class VolatileStatus
         this.lockedMove.reset();
         this.minimize = false;
         this.mustRecharge = false;
-        this.resetOverrideAbility();
-        this._overrideSpecies = null;
-        this.overrideStats.reset();
-        this.overrideTypes = ["???", "???"];
+        this.overrideTraits.reset();
         this.addedType = "???";
         this.roost = false;
         this.slowStart.end();
@@ -316,8 +249,9 @@ export class VolatileStatus
         this.stalled = false;
 
         // toggle truant activation
-        if (this._overrideAbility.definiteValue &&
-            this._overrideAbility.definiteValue.name === "truant")
+        if (this.overrideTraits.hasAbility &&
+            this.overrideTraits.ability.definiteValue &&
+            this.overrideTraits.ability.definiteValue.name === "truant")
         {
             this._willTruant = !this._willTruant;
         }
@@ -364,7 +298,6 @@ export class VolatileStatus
             this.leechSeed ? ["leech seed"] : [],
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
             this.substitute ? ["has substitute"] : [],
-            // override ability/species/etc are handled by Pokemon#toString()
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
             this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),
@@ -374,6 +307,7 @@ export class VolatileStatus
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.minimize ? ["minimize"] : [],
             this.mustRecharge ? ["must recharge"] : [],
+            // override traits are handled by Pokemon#toString()
             this.roost ? ["roosting"] : [],
             this.slowStart.isActive ? [this.slowStart.toString()] : [],
             this._stallTurns ?

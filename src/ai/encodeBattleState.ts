@@ -9,6 +9,7 @@ import { MajorStatusCounter } from "../battle/state/MajorStatusCounter";
 import { Move } from "../battle/state/Move";
 import { Moveset } from "../battle/state/Moveset";
 import { Pokemon } from "../battle/state/Pokemon";
+import { PokemonTraits } from "../battle/state/PokemonTraits";
 import { PossibilityClass } from "../battle/state/PossibilityClass";
 import { RoomStatus } from "../battle/state/RoomStatus";
 import { StatRange } from "../battle/state/StatRange";
@@ -214,13 +215,61 @@ export function encodeStatTable(stats?: StatTable | null): number[]
             .map(encodeStatRange).reduce((a, b) => a.concat(b)),
         // normalize level using max level (100)
         (stats.level || 0) / 100
-        // TODO: how to encode link reference?
     ];
 }
 
 // TODO: guarantee order? move to dex-util once figured out
 /** Types without `???` type. */
 const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
+
+/** Length of the return value of `encodePokemonTraits()`. */
+export const sizePokemonTraits = /*ability*/dex.numAbilities +
+    /*species*/dex.numPokemon + /*stats*/sizeStatTable +
+    /*types*/filteredTypes.length;
+
+/**
+ * Formats trait info into an array of numbers. Null means unknown while
+ * undefined means nonexistent.
+ */
+export function encodePokemonTraits(traits?: null): number[];
+/**
+ * Formats trait info into an array of numbers.
+ * @param traits Traits object.
+ * @param addedType Optional third type.
+ */
+export function encodePokemonTraits(traits: PokemonTraits, addedType?: Type):
+    number[];
+export function encodePokemonTraits(traits?: PokemonTraits | null,
+    addedType?: Type): number[]
+{
+    if (traits === null)
+    {
+        // unknown
+        return [
+            ...Array.from({length: dex.numAbilities + dex.numPokemon}, () => 0),
+            ...encodeStatTable(null),
+            // could be any one or two of these types (avg 1 and 2)
+            ...filteredTypes.map(() => 1.5 / filteredTypes.length)
+        ];
+    }
+    if (!traits)
+    {
+        // nonexistent
+        return [
+            ...Array.from({length: dex.numAbilities + dex.numPokemon},
+                () => -1),
+            ...encodeStatTable(), ...filteredTypes.map(() => -1)
+        ];
+    }
+
+    return [
+        ...encodePossiblityClass(traits.ability, d => d, dex.numAbilities),
+        ...oneHot(traits.data.uid, dex.numPokemon),
+        ...encodeStatTable(traits.stats),
+        ...filteredTypes.map(type =>
+            traits.types.includes(type) || type === addedType ? 1 : 0)
+    ];
+}
 
 /** Length of the return value of `encodeVolatileStatus()`. */
 export const sizeVolatileStatus =
@@ -231,9 +280,7 @@ export const sizeVolatileStatus =
     /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*identified*/2 + /*locked move variants*/numLockedMoves + /*minimize*/1 +
-    /*must recharge*/1 + /*override ability*/dex.numAbilities +
-    /*override species*/dex.numPokemon + /*override stats*/sizeStatTable +
-    /*override types*/filteredTypes.length + /*roost*/1 +
+    /*must recharge*/1 + /*override traits*/sizePokemonTraits + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
     /*taunt*/sizeTempStatus + /*torment*/1 + /*two-turn*/numTwoTurnMoves +
     /*unburden*/1 + /*uproar*/sizeTempStatus + /*will truant*/1;
@@ -265,15 +312,8 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const lockedMove = encodeVariableTempStatus(status.lockedMove);
     const minimize = status.minimize ? 1 : 0;
     const mustRecharge = status.mustRecharge ? 1 : 0;
-    const overrideAbility = encodePossiblityClass(status.overrideAbility,
-        x => x, dex.numAbilities);
-    const overrideSpecies = oneHot(
-        status.overrideSpecies ? status.overrideSpecies.id : null,
-        dex.numPokemon);
-    const overrideStats = encodeStatTable(status.overrideStats);
-    const overrideTypes = status.overrideTypes.concat(status.addedType);
-    const overrideTypeData =
-        filteredTypes.map(typeName => overrideTypes.includes(typeName) ? 1 : 0);
+    const overrideTraits = encodePokemonTraits(status.overrideTraits,
+        status.addedType);
     const roost = status.roost ? 1 : 0;
     const slowStart = encodeTempStatus(status.slowStart);
     // success rate halves each time a stalling move is used, capped at 12.5% in
@@ -291,9 +331,8 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, gastroAcid,
         ingrain, leechSeed, ...magnetRise, substitute, ...bide, ...charge,
         ...disabled, ...identified, ...lastUsed, ...lockedMove, minimize,
-        mustRecharge, ...overrideAbility, ...overrideSpecies, ...overrideStats,
-        ...overrideTypeData, roost, ...slowStart, stallFailRate, ...taunt,
-        torment, ...twoTurn, unburden, ...uproar, willTruant
+        mustRecharge, ...overrideTraits, roost, ...slowStart, stallFailRate,
+        ...taunt, torment, ...twoTurn, unburden, ...uproar, willTruant
     ];
 }
 
@@ -388,15 +427,15 @@ export function encodeHP(hp?: HP | null): number[]
 }
 
 /** Length of the return value of `encodePokemon()` when inactive. */
-export const sizePokemon = dex.numPokemon + /*stats*/sizeStatTable +
-    dex.numItems + dex.numAbilities + sizeMoveset + /*gender*/3 + numHPTypes +
-    /*happiness*/1 + sizeHP + /*grounded*/2 +
-    /*base type excluding ??? type*/Object.keys(types).length - 1 +
-    /*majorStatus*/Object.keys(majorStatuses).length;
+export const sizePokemon = /*traits*/sizePokemonTraits +
+    /*current+last item*/2 * dex.numItems + sizeMoveset + /*gender*/3 +
+    numHPTypes + /*happiness*/1 + sizeHP + sizeMajorStatusCounter +
+    /*grounded*/2;
 
 /** Length of the return value of `encodePokemon()` when active. */
 export const sizeActivePokemon = sizePokemon + sizeVolatileStatus;
 
+// TODO: guarantee order?
 const hpTypeKeys = Object.keys(hpTypes);
 
 /**
@@ -409,55 +448,43 @@ export function encodePokemon(mon?: Pokemon | null): number[]
     {
         // unknown
         return [
-            // species, item, ability
-            ...Array.from(
-                {length: dex.numPokemon + dex.numItems + dex.numAbilities},
-                () => 0),
-            ...encodeStatTable(null), ...encodeMoveset(null),
+            ...encodePokemonTraits(null),
+            ...Array.from({length: 2 * dex.numItems}, () => 0), // item
+            ...encodeMoveset(null),
             1 / 3, 1 / 3, 1 / 3, // gender
             ...hpTypeKeys.map(() => 1 / hpTypeKeys.length), // hp type
             127.5, // happiness
-            ...encodeHP(null),
-            0.5, 0.5, // grounded
-            // could be any of these types
-            ...filteredTypes.map(() => 1 / filteredTypes.length),
-            ...encodeMajorStatusCounter(null)
+            ...encodeHP(null), ...encodeMajorStatusCounter(null),
+            0.5, 0.5 // grounded
         ];
     }
     if (!mon)
     {
         // nonexistent
         return [
-            // species, item, ability
-            ...Array.from(
-                {length: dex.numPokemon + dex.numItems + dex.numAbilities},
-                () => -1),
-            ...encodeStatTable(), ...encodeMoveset(),
+            ...encodePokemonTraits(),
+            ...Array.from({length: 2 * dex.numItems}, () => -1), // item
+            ...encodeMoveset(),
             -1, -1, -1, // gender
             ...Array.from(hpTypeKeys, () => -1), // hp type
             -1, // happiness
-            ...encodeHP(),
-            // grounded
-            -1, -1,
-            ...filteredTypes.map(() => -1),
-            ...encodeMajorStatusCounter()
+            ...encodeHP(), ...encodeMajorStatusCounter(),
+            -1, -1 // grounded
         ];
     }
 
     return [
         mon.gender === "M" ? 1 : 0, mon.gender === "F" ? 1 : 0,
         mon.gender === null ? 1 : 0,
-        ...oneHot(mon.species.uid, dex.numPokemon),
-        ...encodeStatTable(mon.stats),
+        ...encodePokemonTraits(mon.baseTraits),
         ...encodePossiblityClass(mon.item, d => d, dex.numItems),
-        ...encodePossiblityClass(mon.baseAbility, d => d, dex.numAbilities),
+        ...encodePossiblityClass(mon.lastItem, d => d, dex.numItems),
         ...encodeMoveset(mon.moveset),
         ...encodePossiblityClass(mon.hpType, i => i, numHPTypes),
         // normalize happiness value
         (mon.happiness === null ? /*half*/127.5 : mon.happiness) / 255,
         ...encodeHP(mon.hp),
         mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0,
-        ...filteredTypes.map(type => mon.species.types.includes(type) ? 1 : 0),
         ...encodeMajorStatusCounter(mon.majorStatus),
         ...(mon.active ? encodeVolatileStatus(mon.volatile) : [])
     ];

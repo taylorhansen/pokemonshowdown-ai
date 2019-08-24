@@ -3,12 +3,15 @@ import "mocha";
 import { isNumber } from "util";
 import { encodeBattleState, encodeHP, encodeItemTempStatus,
     encodeMajorStatusCounter, encodeMove, encodeMoveset, encodePokemon,
-    encodePossiblityClass, encodeRoomStatus, encodeStatRange, encodeTeam,
-    encodeTeamStatus, encodeTempStatus, encodeVolatileStatus,
+    encodePokemonTraits, encodePossiblityClass, encodeRoomStatus,
+    encodeStatRange, encodeStatTable, encodeTeam, encodeTeamStatus,
+    encodeTempStatus, encodeVariableTempStatus, encodeVolatileStatus,
     limitedStatusTurns, oneHot, sizeActivePokemon, sizeBattleState,
-    sizeMajorStatusCounter, sizeMove, sizeMoveset, sizePokemon, sizeRoomStatus,
-    sizeStatRange, sizeTeam, sizeTeamStatus, sizeTempStatus,
-    sizeVolatileStatus } from "../../src/ai/encodeBattleState";
+    sizeMajorStatusCounter, sizeMove, sizeMoveset, sizePokemon,
+    sizePokemonTraits, sizeRoomStatus, sizeStatRange, sizeStatTable, sizeTeam,
+    sizeTeamStatus, sizeTempStatus, sizeVolatileStatus } from
+    "../../src/ai/encodeBattleState";
+import { dex } from "../../src/battle/dex/dex";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
@@ -16,12 +19,15 @@ import { MajorStatusCounter } from "../../src/battle/state/MajorStatusCounter";
 import { Move } from "../../src/battle/state/Move";
 import { Moveset } from "../../src/battle/state/Moveset";
 import { Pokemon } from "../../src/battle/state/Pokemon";
+import { PokemonTraits } from "../../src/battle/state/PokemonTraits";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
 import { RoomStatus } from "../../src/battle/state/RoomStatus";
 import { StatRange } from "../../src/battle/state/StatRange";
+import { StatTable } from "../../src/battle/state/StatTable";
 import { Team } from "../../src/battle/state/Team";
 import { TeamStatus } from "../../src/battle/state/TeamStatus";
 import { TempStatus } from "../../src/battle/state/TempStatus";
+import { VariableTempStatus } from "../../src/battle/state/VariableTempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
 
 describe("BattleState encoders", function()
@@ -177,9 +183,58 @@ describe("BattleState encoders", function()
         size: 2
     });
 
+    testEncoder("VariableTempStatus", encodeVariableTempStatus,
+    {
+        init: () => new VariableTempStatus({x: 1, y: 2}, 5),
+        size: 2
+    });
+
+    testEncoder("StatRange", encodeStatRange as (stat: StatRange) => number[],
+    {
+        init()
+        {
+            const stat = new StatRange(/*hp*/false);
+            stat.calc(100, 100);
+            return stat;
+        },
+        size: sizeStatRange
+    });
+
+    testEncoder("StatTable", encodeStatTable,
+    {
+        init()
+        {
+            const stats = new StatTable();
+            stats.data = dex.pokemon.Magikarp;
+            stats.level = 100;
+            return stats;
+        },
+        size: sizeStatTable
+    });
+
+    testEncoder("PokemonTraits", encodePokemonTraits,
+    {
+        init()
+        {
+            const traits = new PokemonTraits();
+            traits.init();
+            traits.setSpecies("Magikarp");
+            traits.stats.level = 100;
+            return traits;
+        },
+        size: sizePokemonTraits
+    });
+
     testEncoder("VolatileStatus", encodeVolatileStatus,
     {
-        init: () => new VolatileStatus(),
+        init()
+        {
+            const v = new VolatileStatus();
+            v.overrideTraits.init();
+            v.overrideTraits.setSpecies("Magikarp");
+            v.overrideTraits.stats.level = 100;
+            return v;
+        },
         size: sizeVolatileStatus
     });
 
@@ -216,17 +271,6 @@ describe("BattleState encoders", function()
             return hp;
         },
         values: [50, 100]
-    });
-
-    testEncoder("StatRange", encodeStatRange as (stat: StatRange) => number[],
-    {
-        init()
-        {
-            const stat = new StatRange(/*hp*/false);
-            stat.calc(100, 100);
-            return stat;
-        },
-        size: sizeStatRange
     });
 
     testEncoder("Pokemon", encodePokemon,

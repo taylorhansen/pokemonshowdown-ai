@@ -3,15 +3,15 @@ export class StatRange
 {
     /** Minimum possible stat value. */
     public get min(): number | null { return this._min; }
-    private _min: number | null = null;
+    private _min!: number | null;
 
     /** Maximum possible stat value. */
     public get max(): number | null { return this._max; }
-    private _max: number | null = null;
+    private _max!: number | null;
 
     /** Base stat value used to calculate `#min` and `#max`. */
     public get base(): number | null { return this._base; }
-    private _base: number | null = null;
+    private _base!: number | null;
 
     // TODO: nature, ev, and iv possibilities
 

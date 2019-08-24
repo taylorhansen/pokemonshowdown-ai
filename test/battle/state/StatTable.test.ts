@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { dex } from "../../../src/battle/dex/dex";
-import { Pokemon } from "../../../src/battle/state/Pokemon";
+import { StatExceptHP, statNames } from "../../../src/battle/dex/dex-util";
 import { StatTable } from "../../../src/battle/state/StatTable";
 
 describe("StatTable", function()
@@ -11,6 +11,28 @@ describe("StatTable", function()
     beforeEach("Initialize StatTable", function()
     {
         stats = new StatTable();
+    });
+
+    it("Should initialize StatRanges when species and level are initialized",
+    function()
+    {
+        stats.data = dex.pokemon.Mew; // all base 100 stats
+        stats.level = 100;
+        for (const stat in statNames)
+        {
+            if (!statNames.hasOwnProperty(stat)) continue;
+
+            if (stat === "hp")
+            {
+                expect(stats[stat].min).to.equal(310);
+                expect(stats[stat].max).to.equal(404);
+            }
+            else
+            {
+                expect(stats[stat as StatExceptHP].min).to.equal(184);
+                expect(stats[stat as StatExceptHP].max).to.equal(328);
+            }
+        }
     });
 
     describe("#level", function()
@@ -42,26 +64,6 @@ describe("StatTable", function()
         {
             stats.level = 50;
             expect(stats.level).to.equal(50);
-        });
-    });
-
-    describe("#linked", function()
-    {
-        it("Should set #linked and #data", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            stats.linked = mon;
-            expect(stats.linked).to.equal(mon);
-            expect(stats.data).to.equal(mon.species);
-            expect(stats.level).to.be.null;
-        });
-
-        it("Should do nothing if set to null", function()
-        {
-            stats.linked = null;
-            expect(stats.linked).to.be.null;
-            expect(stats.data).to.be.null;
-            expect(stats.level).to.be.null;
         });
     });
 
