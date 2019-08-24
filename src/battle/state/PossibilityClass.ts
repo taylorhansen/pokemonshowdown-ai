@@ -30,11 +30,20 @@ export class PossibilityClass<TData>
      * Creates a PossibilityClass.
      * @param map Base dictionary object. Should not change during the lifetime
      * of this object.
+     * @param values Optional values to immediately narrow to. Defaults to all
+     * possible values
      */
-    constructor(map: {readonly [name: string]: TData})
+    constructor(map: {readonly [name: string]: TData}, ...values: string[])
     {
         this.map = map;
-        this._possibleValues = new Set(Object.keys(map));
+
+        if (values.length <= 0)
+        {
+            this._possibleValues = new Set(Object.keys(map));
+        }
+        else this._possibleValues = new Set(values.map(v => this.check(v)));
+
+        this.checkNarrowed();
     }
 
     /**
@@ -57,17 +66,7 @@ export class PossibilityClass<TData>
             this._possibleValues.delete(this.check(value));
         }
 
-        const size = this._possibleValues.size;
-        if (size === 1)
-        {
-            const value = this._possibleValues.values().next().value;
-            this._definiteValue = {name: value, data: this.map[value]};
-            this.narrowed();
-        }
-        else if (size < 1)
-        {
-            throw new Error("All possibilities have been ruled out");
-        }
+        this.checkNarrowed();
     }
 
     /** Checks if a value is in the data possibility. */
@@ -86,26 +85,7 @@ export class PossibilityClass<TData>
             .filter(x => values.includes(x));
         this._possibleValues = new Set(newValues);
 
-        if (newValues.length === 1)
-        {
-            // new definite value
-            const name = newValues[0];
-            this._definiteValue = {name, data: this.map[name]};
-            this.narrowed();
-        }
-        else if (newValues.length < 1)
-        {
-            throw new Error("All possibilities have been ruled out");
-        }
-    }
-
-    /**
-     * Returns a comma-separated list of each possible value.
-     * @override
-     */
-    public toString(): string
-    {
-        return [...this._possibleValues].join(", ");
+        this.checkNarrowed();
     }
 
     /** Checks that a given name is part of this object's map. */
@@ -118,6 +98,36 @@ export class PossibilityClass<TData>
         return name;
     }
 
+    /**
+     * Handles setting `#definiteValue` and calling narrow listeners whenever
+     * the base `#possibleValues` set changes.
+     */
+    private checkNarrowed(): void
+    {
+        const size = this._possibleValues.size;
+        if (size === 1)
+        {
+            const value = this._possibleValues.values().next().value;
+            this._definiteValue = {name: value, data: this.map[value]};
+            this.narrowed();
+        }
+        else if (size < 1)
+        {
+            throw new Error("All possibilities have been ruled out");
+        }
+        else this._definiteValue = null;
+    }
+
     /** Calls all `#onNarrow()` listeners. */
     private narrowed(): void { for (const f of this.narrowListeners) f(this); }
+
+    // istanbul ignore next: only used for logging
+    /**
+     * Returns a comma-separated list of each possible value.
+     * @override
+     */
+    public toString(): string
+    {
+        return [...this._possibleValues].join(", ");
+    }
 }

@@ -156,9 +156,8 @@ ability ${ability}`);
     public setItem(item: string, gained = false): void
     {
         // override any possibilities of other items
-        if (gained) this._item = new PossibilityClass(dex.items);
-
-        this._item.narrow(item);
+        if (gained) this._item = new PossibilityClass(dex.items, item);
+        else this._item.narrow(item);
 
         // (de)activate unburden ability if the pokemon has it
         this._volatile.unburden = item === "none" && gained;

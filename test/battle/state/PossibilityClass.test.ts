@@ -5,22 +5,27 @@ import { PossibilityClass } from "../../../src/battle/state/PossibilityClass";
 describe("PossibilityClass", function()
 {
     const map = {a: 0, b: 1, c: 2};
-    let pc: PossibilityClass<number>;
 
-    beforeEach("Initialize PossibilityClass", function()
+    describe("ctor", function()
     {
-        pc = new PossibilityClass(map);
-    });
+        it("Should initially include all keys", function()
+        {
+            const pc = new PossibilityClass(map);
+            expect(pc.possibleValues).to.have.keys("a", "b", "c");
+        });
 
-    it("Should initially include all keys", function()
-    {
-        expect(pc.possibleValues).to.have.keys("a", "b", "c");
+        it("Should narrow to provided keys", function()
+        {
+            const pc = new PossibilityClass(map, "a", "b");
+            expect(pc.possibleValues).to.have.keys("a", "b");
+        });
     });
 
     describe("#remove()", function()
     {
         it("Should rule out one type if removed", function()
         {
+            const pc = new PossibilityClass(map);
             pc.remove("a");
             expect(pc.isSet("a")).to.be.false;
             expect(pc.possibleValues).to.have.keys("b", "c");
@@ -28,6 +33,7 @@ describe("PossibilityClass", function()
 
         it("Should rule out multiple types", function()
         {
+            const pc = new PossibilityClass(map);
             pc.remove("a", "b");
             expect(pc.isSet("a")).to.be.false;
             expect(pc.isSet("b")).to.be.false;
@@ -38,12 +44,14 @@ describe("PossibilityClass", function()
 
         it("Should throw if unknown type is given", function()
         {
+            const pc = new PossibilityClass(map);
             expect(() => pc.remove("d")).to.throw(Error,
                 "PossibilityClass has no value name 'd'");
         });
 
         it("Should throw if overnarrowed", function()
         {
+            const pc = new PossibilityClass(map);
             expect(() => pc.remove("a", "b", "c")).to.throw(Error,
                 "All possibilities have been ruled out");
         });
@@ -53,6 +61,7 @@ describe("PossibilityClass", function()
     {
         it("Should narrow values", function()
         {
+            const pc = new PossibilityClass(map);
             pc.narrow("a");
 
             expect(pc.isSet("a")).to.be.true;
@@ -63,6 +72,7 @@ describe("PossibilityClass", function()
 
         it("Should throw if overnarrowed", function()
         {
+            const pc = new PossibilityClass(map);
             pc.narrow("c");
             expect(() => pc.narrow("a")).to.throw(Error,
                 "All possibilities have been ruled out");
@@ -73,6 +83,7 @@ describe("PossibilityClass", function()
     {
         it("Should set listener", function(done)
         {
+            const pc = new PossibilityClass(map);
             pc.onNarrow(p =>
             {
                 expect(pc).to.equal(p);
@@ -85,6 +96,7 @@ describe("PossibilityClass", function()
 
         it("Should immediately call if already narrowed", function(done)
         {
+            const pc = new PossibilityClass(map);
             pc.narrow("a");
             pc.onNarrow(p =>
             {
