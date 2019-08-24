@@ -1,9 +1,7 @@
-import { dex, lockedMoves, twoTurnMoves } from "../dex/dex";
-import { BoostName, PokemonData, Type } from "../dex/dex-util";
+import { lockedMoves, twoTurnMoves } from "../dex/dex";
+import { BoostName, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
 import { PokemonTraits } from "./PokemonTraits";
-import { PossibilityClass } from "./PossibilityClass";
-import { StatTable } from "./StatTable";
 import { TempStatus } from "./TempStatus";
 import { pluralTurns, plus } from "./utility";
 import { VariableTempStatus } from "./VariableTempStatus";

@@ -1,7 +1,7 @@
 import { dex, numFutureMoves, numLockedMoves, numTwoTurnMoves } from
     "../battle/dex/dex";
-import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes, StatName,
-    Type, types, weatherItems } from "../battle/dex/dex-util";
+import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes, Type, types,
+    weatherItems } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { HP } from "../battle/state/HP";
 import { ItemTempStatus } from "../battle/state/ItemTempStatus";

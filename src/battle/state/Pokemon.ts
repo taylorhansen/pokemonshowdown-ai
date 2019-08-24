@@ -1,12 +1,11 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
-import { hpTypes, StatName, Type } from "../dex/dex-util";
+import { hpTypes, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Move } from "./Move";
 import { Moveset } from "./Moveset";
 import { PokemonTraits } from "./PokemonTraits";
 import { PossibilityClass } from "./PossibilityClass";
-import { StatRange } from "./StatRange";
 import { Team } from "./Team";
 import { VolatileStatus } from "./VolatileStatus";
 
