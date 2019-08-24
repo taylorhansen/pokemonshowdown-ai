@@ -1,10 +1,13 @@
 import { dex } from "../dex/dex";
-import { PokemonData, StatName, statNames, Type } from "../dex/dex-util";
+import { PokemonData, Type } from "../dex/dex-util";
 import { PossibilityClass } from "./PossibilityClass";
-import { StatRange } from "./StatRange";
 import { StatTable } from "./StatTable";
 
-/** Tracks the overridable traits of a Pokemon. */
+/**
+ * Tracks the overridable traits of a Pokemon. Typically contains fields that
+ * would warrant having two nearly identical fields on Pokemon and
+ * VolatileStatus.
+ */
 export class PokemonTraits
 {
     /** Current ability possibility. */
