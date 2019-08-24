@@ -19,8 +19,10 @@ export class StatTable
     public set level(level: number | null)
     {
         if (level === null) return;
+        const recalc = level !== this._level;
+
         this._level = Math.max(1, Math.min(level, 100));
-        this.initStats();
+        if (recalc) this.initStats();
     }
     private _level!: number | null;
 
@@ -43,8 +45,10 @@ export class StatTable
     public get data(): PokemonData | null { return this._data; }
     public set data(data: PokemonData | null)
     {
+        const recalc = data !== this._data;
+
         this._data = data;
-        this.initStats();
+        if (recalc) this.initStats();
     }
     private _data!: PokemonData | null;
 
