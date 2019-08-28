@@ -75,8 +75,12 @@ export class PSEventHandler
         })
         .on("-endability", event =>
         {
+            const active = this.getActive(event.id.owner);
+            // infer what the ability was previously
+            active.traits.setAbility(toIdName(event.ability));
+
             // NOTE: may be replaced with "|-start|PokemonID|Gastro Acid" later
-            this.getActive(event.id.owner).volatile.gastroAcid = true;
+            active.volatile.gastroAcid = true;
         })
         .on("-start", event =>
         {

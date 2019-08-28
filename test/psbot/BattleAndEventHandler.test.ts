@@ -600,6 +600,24 @@ describe("Battle and EventProcessor", function()
             });
         });
 
+        describe("endability", function()
+        {
+            it("Should infer ability and set Gastro Acid", async function()
+            {
+                const mon = battle.state.teams.them.active;
+                expect(mon.ability).to.equal("");
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {type: "-endability", id: them1, ability: "Swift Swim"}
+                    ]
+                });
+                expect(mon.ability).to.equal("swiftswim");
+                expect(mon.volatile.gastroAcid).to.be.true;
+            });
+        });
+
         describe("activate/end/start", function()
         {
             interface EventTypeBase
