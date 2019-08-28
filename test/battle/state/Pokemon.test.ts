@@ -16,6 +16,39 @@ describe("Pokemon", function()
         });
     });
 
+    describe("#formChange()", function()
+    {
+        describe("perm = false", function()
+        {
+            it("Should set override species", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.switchIn();
+                mon.formChange("Charmander");
+                expect(mon.species).to.equal("Charmander");
+                expect(mon.volatile.overrideTraits.species.possibleValues)
+                    .to.have.keys("Charmander");
+                expect(mon.baseTraits.species.possibleValues)
+                    .to.have.keys("Magikarp");
+            });
+        });
+
+        describe("perm = true", function()
+        {
+            it("Should set override and base species", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.switchIn();
+                mon.formChange("Charmander", true);
+                expect(mon.species).to.equal("Charmander");
+                expect(mon.volatile.overrideTraits.species.possibleValues)
+                    .to.have.keys("Charmander");
+                expect(mon.baseTraits.species.possibleValues)
+                    .to.have.keys("Charmander");
+            });
+        });
+    });
+
     describe("#switchIn()", function()
     {
         it("Should become active", function()

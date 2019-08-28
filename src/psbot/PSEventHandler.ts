@@ -347,12 +347,7 @@ export class PSEventHandler
         {
             // permanent form change
             const active = this.getActive(event.id.owner);
-
-            // update both base and volatile
-            // TODO: test to see if override ability/etc are also reset or
-            //  should be
-            active.baseTraits.setSpecies(event.details.species);
-            active.volatile.overrideTraits.copy(active.baseTraits);
+            active.formChange(event.details.species, /*perm*/true);
 
             // set other details just in case
             active.traits.stats.level = event.details.level;
@@ -370,8 +365,7 @@ export class PSEventHandler
                 throw new Error(`Unknown species '${event.details.species}'`);
             }
             // TODO: set other details?
-            this.getActive(event.id.owner).volatile.overrideTraits
-                .setSpecies(event.details.species);
+            this.getActive(event.id.owner).formChange(event.details.species);
         })
         .on("-heal", event => this.handleDamage(event))
         .on("-invertboost", event =>

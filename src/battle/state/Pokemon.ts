@@ -77,6 +77,20 @@ export class Pokemon
         if (!species.definiteValue) return "";
         return species.definiteValue.name;
     }
+    /**
+     * Does a form change for this Pokemon.
+     * @param species The species to change into.
+     * @param perm Whether this is permanent. Default false.
+     */
+    public formChange(species: string, perm = false): void
+    {
+        if (perm)
+        {
+            this.baseTraits.setSpecies(species);
+            this._volatile.overrideTraits.copy(this.baseTraits);
+        }
+        else this._volatile.overrideTraits.setSpecies(species);
+    }
 
     /** Current types for this Pokemon. */
     public get types(): readonly Type[]
