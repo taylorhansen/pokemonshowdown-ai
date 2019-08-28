@@ -25,6 +25,9 @@ export class Moveset
      */
     private linked: Moveset[] | null = null;
 
+    /** Parent Moveset. If not null, `#reveal()` will copy Move refs. */
+    private base: Moveset | null = null;
+
     /** Creates a Moveset of specified size. */
     constructor(size = Moveset.maxSize)
     {
@@ -38,19 +41,27 @@ export class Moveset
      * Copies a Moveset and starts its shared link, sort of like a subscriber in
      * a pub/sub pattern.
      * @param moveset Moveset to copy from.
+     * @param base Whether the provided Moveset is its base parent. If true, the
+     * given Moveset shouldn't be changed directly unless this Moveset
+     * `#link()`s to a different Moveset.
      */
-    public link(moveset: Moveset): void
+    public link(moveset: Moveset, base: boolean): void
     {
         // clear previous subscriptions if any
         this.isolate();
 
         for (let i = 0; i < Moveset.maxSize; ++i)
         {
-            this._moves[i] = moveset._moves[i];
+            const move = moveset._moves[i];
+            if (base || !move) this._moves[i] = move;
+            // deep copy
+            else this._moves[i] = new Move(move.name, move.maxpp, move.pp);
         }
         this.unrevealed = moveset.unrevealed;
 
-        if (moveset.linked)
+        // reveal() calls are propagated specially for base, fine for others
+        if (base) this.base = moveset;
+        else if (moveset.linked)
         {
             // add to target Moveset's linked array
             this.linked = moveset.linked;
@@ -63,11 +74,16 @@ export class Moveset
     /** Isolates this Moveset and removes its shared link to other Movesets. */
     public isolate(): void
     {
+        // preserve Move inference for other linked Movesets
+        if (this.linked && this.base) this.linked.push(this.base);
+
+        this.base = null;
+
+        // istanbul ignore if: can't test for this
         if (!this.linked) return;
         const i = this.linked.findIndex(m => m === this);
-        if (i < 0) return;
-
-        this.linked.splice(i);
+        // istanbul ignore else: can't reproduce
+        if (i >= 0) this.linked.splice(i, 1);
         this.linked = null;
     }
 
@@ -136,8 +152,15 @@ export class Moveset
             for (const moveset of this.linked)
             {
                 if (moveset === this) continue;
-                moveset.revealIndexImpl(id, maxpp);
+                else moveset.revealIndexImpl(id, maxpp);
             }
+        }
+
+        // propagate reveal call to parent Moveset
+        if (this.base)
+        {
+            // only copy reference
+            this.base._moves[this.base.unrevealed++] = this._moves[i];
         }
 
         return i;

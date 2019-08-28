@@ -372,7 +372,7 @@ export class Pokemon
     public switchIn(): void
     {
         this._active = true;
-        this._volatile.overrideMoveset.link(this.baseMoveset);
+        this._volatile.overrideMoveset.link(this.baseMoveset, /*base*/true);
         this._volatile.overrideTraits.copy(this.baseTraits);
     }
 
