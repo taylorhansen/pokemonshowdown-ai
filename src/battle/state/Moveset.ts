@@ -95,7 +95,9 @@ export class Moveset
     public get(id: string): Move | null
     {
         const index = this.getIndex(id);
-        return index >= 0 ? this._moves[index] || null : null;
+        return index >= 0 ?
+            this._moves[index] || /*istanbul ignore next: can't reproduce*/null
+            : null;
     }
 
     /**

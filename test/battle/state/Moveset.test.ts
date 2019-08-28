@@ -141,7 +141,14 @@ describe("Moveset", function()
             moveset.reveal("tackle");
             moveset.reveal("wish");
             moveset.reveal("metronome");
-            expect(() => moveset.reveal("return")).to.throw();
+            expect(() => moveset.reveal("return")).to.throw(Error,
+                "Moveset is already full");
+        });
+
+        it("Should not add duplicates", function()
+        {
+            const move = moveset.reveal("splash");
+            expect(moveset.reveal("splash")).to.equal(move);
         });
     });
 
