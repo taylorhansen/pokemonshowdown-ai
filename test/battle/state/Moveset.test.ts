@@ -68,37 +68,25 @@ describe("Moveset", function()
         });
     });
 
-    describe("#override()", function()
+    describe("#link()", function()
     {
-        it("Should override move", function()
+        it("Should copy moves", function()
         {
-            moveset.reveal("splash");
-            const move = new Move("tackle");
-            moveset.override("splash", move);
-            expect(moveset.get("splash")).to.be.null;
-            expect(moveset.get("tackle")).to.not.be.null;
+            const other = new Moveset();
+            other.reveal("splash");
+            moveset.link(other);
+            expect(moveset.get("splash")).to.equal(other.get("splash"))
+                .and.to.not.be.null;
+            expect(moveset.moves).to.not.equal(other.moves); // not by-ref copy
         });
 
-        it("Should throw if overriding unrevealed move", function()
+        it("Should propagate #reveal() calls", function()
         {
-            const move = new Move("tackle");
-            expect(() => moveset.override("splash", move)).to.throw(Error,
-                "Moveset does not contain 'splash'");
-            expect(moveset.get("splash")).to.be.null;
-            expect(moveset.get("tackle")).to.be.null;
-        });
-    });
-
-    describe("#clearOverrides()", function()
-    {
-        it("Should revert override move", function()
-        {
-            moveset.reveal("splash");
-            const move = new Move("tackle");
-            moveset.override("splash", move);
-            moveset.clearOverrides();
-            expect(moveset.get("tackle")).to.be.null;
+            const other = new Moveset();
+            moveset.link(other);
+            other.reveal("splash");
             expect(moveset.get("splash")).to.not.be.null;
+            expect(moveset.moves).to.not.equal(other.moves); // not by-ref copy
         });
     });
 

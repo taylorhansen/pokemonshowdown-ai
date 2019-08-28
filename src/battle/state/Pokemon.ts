@@ -126,8 +126,12 @@ export class Pokemon
     private _item = new PossibilityClass(dex.items);
     private _lastItem = new PossibilityClass(dex.items);
 
-    /** Pokemon's moveset. */
-    public readonly moveset = new Moveset();
+    /** Pokemon's current moveset. */
+    public get moveset(): Moveset
+    {
+        if (this._active) return this._volatile.overrideMoveset;
+        return this.baseMoveset;
+    }
     /** Indicates that a move has been used. */
     public useMove(options: Readonly<MoveOptions>): void
     {
@@ -213,17 +217,23 @@ export class Pokemon
         this._volatile.disabledMoves[this.moveset.getOrRevealIndex(id)].start();
     }
     /** Overrides a move slot via Mimic until switched out. */
-    public overrideMove(id: string, newId: string): void
+    public mimic(newId: string): void
     {
         // mimicked moves have 5 pp and maxed maxpp
-        this.moveset.override(id, new Move(newId, "max", 5));
+        this._volatile.overrideMoveset.replace("mimic",
+            new Move(newId, "max", 5));
     }
     /** Permanently replaces a move slot via Sketch. */
-    public replaceMove(id: string, newId: string): void
+    public sketch(newId: string): void
     {
         // sketched moves have no pp ups applied
-        this.moveset.replace(id, new Move(newId, "min"));
+        const move = new Move(newId, "min");
+        // TODO: if not transformed, don't modify base moveset
+        this.baseMoveset.replace("sketch", move);
+        this._volatile.overrideMoveset.replace("sketch", move);
     }
+    /** Pokemon's base moveset. */
+    public readonly baseMoveset = new Moveset();
 
     /** Pokemon's gender. M=male, F=female, null=genderless. */
     public gender?: string | null;
@@ -355,22 +365,24 @@ export class Pokemon
         mon._volatile = this._volatile.shallowClone();
     }
 
-    /** Tells the pokemon that it is currently being switched in. */
+    /**
+     * Tells the pokemon that it is currently being switched in. Sets up
+     * volatile trait and moveset overrides.
+     */
     public switchIn(): void
     {
         this._active = true;
+        this._volatile.overrideMoveset.link(this.baseMoveset);
         this._volatile.overrideTraits.copy(this.baseTraits);
     }
 
     /**
      * Tells the pokemon that it is currently being switched out. Clears
-     * volatile status.
+     * volatile statuses.
      */
     public switchOut(): void
     {
         this._active = false;
-        // reset effects like mimic/transform
-        this.moveset.clearOverrides();
         // toxic counter resets on switch
         if (this.majorStatus.current === "tox") this.majorStatus.resetCounter();
         this._volatile.clear();
@@ -425,7 +437,7 @@ ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}types: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.stringifyItem()}
-${s}moveset: [${this.moveset.toString(this._happiness,
+${s}moveset: [${this.moveset.toString(this.baseMoveset, this._happiness,
     this.hpType.definiteValue ?
         this.hpType.definiteValue.name : `possibly ${this.hpType}`)}]`;
     }

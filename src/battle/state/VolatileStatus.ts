@@ -99,6 +99,12 @@ export class VolatileStatus
     /** Whether this pokemon must recharge on the next turn. */
     public mustRecharge!: boolean;
 
+    /**
+     * Override moveset, typically linked to the parent Pokemon's
+     * `#baseMoveset`. Applies until switched out.
+     */
+    public readonly overrideMoveset = new Moveset();
+
     /** Override pokemon traits. Applies until switched out. */
     public readonly overrideTraits = new PokemonTraits();
 
@@ -195,6 +201,7 @@ export class VolatileStatus
         this.lockedMove.reset();
         this.minimize = false;
         this.mustRecharge = false;
+        this.overrideMoveset.isolate();
         this.overrideTraits.reset();
         this.addedType = "???";
         this.roost = false;

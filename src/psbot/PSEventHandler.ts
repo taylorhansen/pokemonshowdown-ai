@@ -226,14 +226,8 @@ export class PSEventHandler
                     throw new Error("Don't know how Mimic was caused");
                 }
 
-                if (lastEvent.moveName === "Mimic")
-                {
-                    active.overrideMove("mimic", move);
-                }
-                else if (lastEvent.moveName === "Sketch")
-                {
-                    active.replaceMove("sketch", move);
-                }
+                if (lastEvent.moveName === "Mimic") active.mimic(move);
+                else if (lastEvent.moveName === "Sketch") active.sketch(move);
                 else
                 {
                     throw new Error(

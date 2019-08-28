@@ -1,8 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import { berries, dex } from "../../../src/battle/dex/dex";
+import { berries } from "../../../src/battle/dex/dex";
 import { BattleState } from "../../../src/battle/state/BattleState";
-import { Move } from "../../../src/battle/state/Move";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
 import { Team } from "../../../src/battle/state/Team";
 
@@ -475,15 +474,16 @@ describe("Pokemon", function()
             });
         });
 
-        describe("#overrideMove()", function()
+        describe("#mimic()", function()
         {
             it("Should add override move with 5 pp", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.moveset.reveal("splash");
-                mon.overrideMove("splash", "tackle");
+                mon.switchIn();
+                mon.moveset.reveal("mimic");
 
-                expect(mon.moveset.get("splash")).to.be.null;
+                mon.mimic("tackle");
+                expect(mon.moveset.get("mimic")).to.be.null;
                 expect(mon.moveset.get("tackle")).to.not.be.null;
                 expect(mon.moveset.get("tackle")!.pp).to.equal(5);
             });
@@ -491,25 +491,27 @@ describe("Pokemon", function()
             it("Should clear on #switchOut()", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.moveset.reveal("splash");
-                const move = new Move("tackle");
-                mon.moveset.override("splash", move);
-                mon.switchOut();
+                mon.switchIn();
+                mon.moveset.reveal("mimic");
+
+                mon.mimic("tackle");
+                mon.switchOut(); // should revert
                 expect(mon.moveset.get("tackle")).to.be.null;
-                expect(mon.moveset.get("splash")).to.not.be.null;
+                expect(mon.moveset.get("mimic")).to.not.be.null;
             });
         });
 
-        describe("#replaceMove()", function()
+        describe("#sketch()", function()
         {
             it("Should add replacement Move with minimum maxpp", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.moveset.reveal("splash");
-                mon.replaceMove("splash", "tackle");
-                mon.switchOut();
+                mon.switchIn();
+                mon.moveset.reveal("sketch");
 
-                expect(mon.moveset.get("splash")).to.be.null;
+                mon.sketch("tackle");
+                mon.switchOut(); // should not matter
+                expect(mon.moveset.get("sketch")).to.be.null;
                 expect(mon.moveset.get("tackle")).to.not.be.null;
                 expect(mon.moveset.get("tackle")!.pp).to.equal(35);
             });

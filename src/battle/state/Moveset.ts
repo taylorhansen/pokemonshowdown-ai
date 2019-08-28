@@ -1,6 +1,9 @@
 import { Move } from "./Move";
 
-/** Tracks the moves and hidden power type of a Pokemon. */
+/**
+ * Tracks the moves of a Pokemon, using a variation of pub/sub to infer
+ * revealing Moves of linked Movesets.
+ */
 export class Moveset
 {
     /** Maximum moveset size. */
@@ -13,18 +16,59 @@ export class Moveset
     }
     private readonly _moves =
         new Array<Move | null | undefined>(Moveset.maxSize);
-    private readonly baseMoves =
-        new Array<Move | null | undefined>(Moveset.maxSize);
     /** Index of the first unknown move. Previous indexes should be defined. */
     private unrevealed = 0;
+
+    /**
+     * Shared array of linked Movesets to propagate `#reveal()` calls. Can be
+     * thought of as the message broker in a pub/sub pattern.
+     */
+    private linked: Moveset[] | null = null;
 
     /** Creates a Moveset of specified size. */
     constructor(size = Moveset.maxSize)
     {
         // TODO: possible corner case: infer pokemon sets with less than 4 moves
         size = Math.max(1, Math.min(size, Moveset.maxSize));
+        // the other values after size are padded with undefined/nonexistent
         this._moves.fill(null, 0, size);
-        this.baseMoves.fill(null, 0, size);
+    }
+
+    /**
+     * Copies a Moveset and starts its shared link, sort of like a subscriber in
+     * a pub/sub pattern.
+     * @param moveset Moveset to copy from.
+     */
+    public link(moveset: Moveset): void
+    {
+        // clear previous subscriptions if any
+        this.isolate();
+
+        for (let i = 0; i < Moveset.maxSize; ++i)
+        {
+            this._moves[i] = moveset._moves[i];
+        }
+        this.unrevealed = moveset.unrevealed;
+
+        if (moveset.linked)
+        {
+            // add to target Moveset's linked array
+            this.linked = moveset.linked;
+            this.linked.push(this);
+        }
+        // initialize linked array
+        else this.linked = moveset.linked = [moveset, this];
+    }
+
+    /** Isolates this Moveset and removes its shared link to other Movesets. */
+    public isolate(): void
+    {
+        if (!this.linked) return;
+        const i = this.linked.findIndex(m => m === this);
+        if (i < 0) return;
+
+        this.linked.splice(i);
+        this.linked = null;
     }
 
     /**
@@ -40,7 +84,8 @@ export class Moveset
 
     /**
      * Reveals a move to the client if not already known. Throws if moveset is
-     * already full.
+     * already full. Propagates to linked Movesets, sort of like a publisher in
+     * a pub/sub pattern.
      * @param id ID name of the move.
      * @param maxpp Max PP value of the move. Default maxed.
      */
@@ -49,13 +94,13 @@ export class Moveset
         return this._moves[this.revealIndex(id, maxpp)]!;
     }
 
-    /** Gets a move, calling `reveal()` if not initially found. */
+    /** Gets a move, calling `#reveal()` if not initially found. */
     public getOrReveal(id: string): Move
     {
         return this.get(id) || this.reveal(id);
     }
 
-    /** Gets the index of a move, calling `reveal()` if not initially found. */
+    /** Gets the index of a move, calling `#reveal()` if not initially found. */
     public getOrRevealIndex(id: string): number
     {
         let i = this.getIndex(id);
@@ -76,10 +121,33 @@ export class Moveset
 
     /**
      * Gets the index of a newly revealed move by name. Throws if full.
+     * Propagates to linked Movesets, sort of like a publisher in a pub/sub
+     * pattern.
      * @param id ID name of the move.
      * @param maxpp Max PP value of the move. Default maxed.
      */
     private revealIndex(id: string, maxpp?: "min" | "max" | number): number
+    {
+        const i = this.revealIndexImpl(id, maxpp);
+
+        // propagate reveal call to other linked Movesets
+        if (this.linked)
+        {
+            for (const moveset of this.linked)
+            {
+                if (moveset === this) continue;
+                moveset.revealIndexImpl(id, maxpp);
+            }
+        }
+
+        return i;
+    }
+
+    /**
+     * Factored out code of `#revealIndex()` so reveal propagation doesn't
+     * repeat itself.
+     */
+    private revealIndexImpl(id: string, maxpp?: "min" | "max" | number): number
     {
         // early return: already revealed
         const index = this.getIndex(id);
@@ -92,29 +160,7 @@ export class Moveset
 
         const move = new Move(id, maxpp);
         this._moves[this.unrevealed] = move;
-        this.baseMoves[this.unrevealed] = move;
         return this.unrevealed++;
-    }
-
-    /**
-     * Overrides a move slot with another Move. Resets on `#clearOverrides()`.
-     * @param id Name of the move to override.
-     * @param move New override Move.
-     */
-    public override(id: string, move: Move): void
-    {
-        const i = this.getIndex(id);
-        if (i < 0) throw new Error(`Moveset does not contain '${id}'`);
-        this._moves[i] = move;
-    }
-
-    /** Clears override moves added by `#override()`. */
-    public clearOverrides(): void
-    {
-        for (let i = 0; i < this.baseMoves.length; ++i)
-        {
-            this._moves[i] = this.baseMoves[i];
-        }
     }
 
     /**
@@ -128,24 +174,26 @@ export class Moveset
         if (i < 0) throw new Error(`Moveset does not contain '${id}'`);
 
         this._moves[i] = move;
-        this.baseMoves[i] = move;
     }
 
     // istanbul ignore next: only used for logging
     /**
      * Encodes all moveset data into a string.
+     * @param base Base moveset to contrast Moves with.
      * @param happiness Optional happiness value for calculating
      * Return/Frustration power.
      * @param hpType Optional Hidden Power type.
      */
-    public toString(happiness: number | null = null, hpType?: string): string
+    public toString(base?: Moveset, happiness: number | null = null,
+        hpType?: string): string
     {
+        // TODO (transform): include param for base hpType
         return this._moves
-            .map((m, i) => this.stringifyMove(m) +
+            .map((m, i) => this.stringifyMove(m, happiness, hpType) +
                 // if overridden, include base move
-                (this.baseMoves[i] !== m ?
-                    ` (base: ${this.stringifyMove(this.baseMoves[i],
-                        happiness, hpType)})` : ""))
+                (base && base !== this && base._moves[i] !== m ?
+                    ` (base: ${this.stringifyMove(base._moves[i], happiness,
+                        hpType)})` : ""))
             .join(", ");
     }
 

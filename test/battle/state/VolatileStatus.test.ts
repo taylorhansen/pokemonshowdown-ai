@@ -1,8 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { dex } from "../../../src/battle/dex/dex";
 import { BoostName, boostNames } from "../../../src/battle/dex/dex-util";
-import { Pokemon } from "../../../src/battle/state/Pokemon";
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 
 describe("VolatileStatus", function()
@@ -35,6 +33,7 @@ describe("VolatileStatus", function()
         volatile.lockedMove.start("outrage");
         volatile.minimize = true;
         volatile.mustRecharge = true;
+        // TODO: test private moveset link
         volatile.overrideTraits.init();
         volatile.overrideTraits.setSpecies("Slaking"); // has truant ability
         volatile.overrideTraits.stats.level = 100;
@@ -76,6 +75,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.minimize).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
+            // TODO: test private moveset link
             expect(volatile.overrideTraits.hasAbility).to.be.false;
             expect(() => volatile.overrideTraits.ability).to.throw(Error,
                 "Ability not initialized");
@@ -134,6 +134,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.lockedMove.isActive).to.be.false;
             expect(newVolatile.minimize).to.be.false;
             expect(newVolatile.mustRecharge).to.be.false;
+            // TODO: test private moveset link
             expect(newVolatile.overrideTraits.hasAbility).to.be.false;
             expect(() => newVolatile.overrideTraits.ability).to.throw(Error,
                 "Ability not initialized");
