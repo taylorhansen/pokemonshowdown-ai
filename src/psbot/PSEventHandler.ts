@@ -321,14 +321,8 @@ export class PSEventHandler
                     if (boosts[stat] > 0) boosts[stat] = 0;
                 })))
         .on("-copyboost", event =>
-        {
-            const source = this.getActive(event.source.owner).volatile.boosts;
-            const target = this.getActive(event.target.owner).volatile.boosts;
-            for (const stat of Object.keys(boostNames) as BoostName[])
-            {
-                source[stat] = target[stat];
-            }
-        })
+            this.getActive(event.source.owner).volatile.copyBoostsFrom(
+                this.getActive(event.target.owner).volatile))
         .on("-curestatus", event =>
         {
             const active = this.getActive(event.id.owner);

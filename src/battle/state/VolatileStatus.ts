@@ -1,5 +1,5 @@
 import { lockedMoves, twoTurnMoves } from "../dex/dex";
-import { BoostName, Type } from "../dex/dex-util";
+import { BoostName, boostNames, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
 import { PokemonTraits } from "./PokemonTraits";
 import { TempStatus } from "./TempStatus";
@@ -23,6 +23,18 @@ export class VolatileStatus
     public get boosts(): {[N in BoostName]: number}
     {
         return this._boosts;
+    }
+    /**
+     * Copies stat boosts from one VolatileStatus to this one.
+     * @param source Source status to get the boosts from.
+     */
+    public copyBoostsFrom(source: VolatileStatus): void
+    {
+        for (const boost in boostNames)
+        {
+            if (!boostNames.hasOwnProperty(boost)) continue;
+            this.boosts[boost as BoostName] = source.boosts[boost as BoostName];
+        }
     }
     private _boosts!: {[N in BoostName]: number};
 

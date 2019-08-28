@@ -170,6 +170,20 @@ describe("VolatileStatus", function()
         });
     });
 
+    describe("#copyBoostsFrom()", function()
+    {
+        it("Should deep copy boosts", function()
+        {
+            const other = new VolatileStatus();
+            other.boosts.evasion = 2;
+            volatile.copyBoostsFrom(other);
+            expect(volatile.boosts.evasion).to.equal(2);
+            expect(other.boosts.evasion).to.equal(2);
+            // not a by-ref copy
+            expect(volatile.boosts).to.not.equal(other.boosts);
+        });
+    });
+
     describe("#embargo", function()
     {
         it("Should tick embargo on #postTurn()", function()
