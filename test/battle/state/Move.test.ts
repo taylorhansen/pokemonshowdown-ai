@@ -36,14 +36,14 @@ describe("Move", function()
                 expect(move.maxpp).to.equal(64);
             });
 
-            it("Should handle custom value", function()
+            it("Should handle custom maxpp value", function()
             {
                 const move = new Move("splash", 5);
                 expect(move.pp).to.equal(5);
                 expect(move.maxpp).to.equal(5);
             });
 
-            it("Should cap custom value", function()
+            it("Should cap custom maxpp value", function()
             {
                 const move = new Move("splash", 100);
                 expect(move.pp).to.equal(64);
@@ -57,6 +57,13 @@ describe("Move", function()
             {
                 const move = new Move("splash", "max", 5);
                 expect(move.pp).to.equal(5);
+                expect(move.maxpp).to.equal(64);
+            });
+
+            it("Should cap custom pp value", function()
+            {
+                const move = new Move("splash", "max", 100);
+                expect(move.pp).to.equal(64);
                 expect(move.maxpp).to.equal(64);
             });
         });
