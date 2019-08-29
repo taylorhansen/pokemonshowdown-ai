@@ -1,4 +1,5 @@
-import { PokemonData, StatName, statNames } from "../dex/dex-util";
+import { hpTypes, PokemonData, StatName, statNames } from "../dex/dex-util";
+import { PossibilityClass } from "./PossibilityClass";
 import { StatRange } from "./StatRange";
 
 type StatRanges = {readonly [T in StatName]: StatRange};
@@ -37,6 +38,9 @@ export class StatTable implements StatRanges
         if (recalc) this.initStats();
     }
     private _data: PokemonData | null = null;
+
+    /** Hidden power type possibility tracker. */
+    public readonly hpType = new PossibilityClass(hpTypes);
 
     /** Attempts to calculate stats. Silently fails if incomplete info. */
     private initStats(): void

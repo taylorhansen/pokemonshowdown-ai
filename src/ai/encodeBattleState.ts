@@ -176,7 +176,9 @@ export function encodeStatRange(stat?: StatRange | null, hp?: boolean): number[]
     ];
 }
 
-export const sizeStatTable = /*stat ranges*/6 * sizeStatRange + /*level*/1;
+/** Length of the return value of `encodeStatTable()`. */
+export const sizeStatTable = /*stat ranges*/6 * sizeStatRange + /*level*/1 +
+    numHPTypes;
 
 /**
  * Formats stat table info into an array of numbers. Null means unknown while
@@ -193,8 +195,8 @@ export function encodeStatTable(stats?: StatTable | null): number[]
                 .fill(encodeStatRange(null, /*hp*/true), 0, 1)
                 .fill(encodeStatRange(null, /*hp*/false), 1, 6)
                 .reduce((a, b) => a.concat(b)),
-            // level
-            0
+            0, // level (TODO: guess)
+            ...hpTypeKeys.map(() => 1 / hpTypeKeys.length) // hp type
         ];
     }
     if (!stats)
@@ -205,16 +207,16 @@ export function encodeStatTable(stats?: StatTable | null): number[]
             ...Array(6)
                 .fill(encodeStatRange(), 0, 6)
                 .reduce((a, b) => a.concat(b)),
-            // level
-            -1
+            -1, // level
+            ...Array.from(hpTypeKeys, () => -1) // hp type
         ];
     }
 
     return [
         ...[stats.hp, stats.atk, stats.def, stats.spa, stats.spd, stats.spe]
             .map(encodeStatRange).reduce((a, b) => a.concat(b)),
-        // normalize level using max level (100)
-        (stats.level || 0) / 100
+        (stats.level || 0) / 100, // normalize level using max level (100)
+        ...encodePossiblityClass(stats.hpType, i => i, numHPTypes)
     ];
 }
 
@@ -429,8 +431,7 @@ export function encodeHP(hp?: HP | null): number[]
 /** Length of the return value of `encodePokemon()` when inactive. */
 export const sizePokemon = /*traits*/sizePokemonTraits +
     /*current+last item*/2 * dex.numItems + sizeMoveset + /*gender*/3 +
-    numHPTypes + /*happiness*/1 + sizeHP + sizeMajorStatusCounter +
-    /*grounded*/2;
+    /*happiness*/1 + sizeHP + sizeMajorStatusCounter + /*grounded*/2;
 
 /** Length of the return value of `encodePokemon()` when active. */
 export const sizeActivePokemon = sizePokemon + sizeVolatileStatus;
@@ -452,7 +453,6 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             ...Array.from({length: 2 * dex.numItems}, () => 0), // item
             ...encodeMoveset(null),
             1 / 3, 1 / 3, 1 / 3, // gender
-            ...hpTypeKeys.map(() => 1 / hpTypeKeys.length), // hp type
             127.5, // happiness
             ...encodeHP(null), ...encodeMajorStatusCounter(null),
             0.5, 0.5 // grounded
@@ -466,7 +466,6 @@ export function encodePokemon(mon?: Pokemon | null): number[]
             ...Array.from({length: 2 * dex.numItems}, () => -1), // item
             ...encodeMoveset(),
             -1, -1, -1, // gender
-            ...Array.from(hpTypeKeys, () => -1), // hp type
             -1, // happiness
             ...encodeHP(), ...encodeMajorStatusCounter(),
             -1, -1 // grounded
@@ -480,7 +479,6 @@ export function encodePokemon(mon?: Pokemon | null): number[]
         ...encodePossiblityClass(mon.item, d => d, dex.numItems),
         ...encodePossiblityClass(mon.lastItem, d => d, dex.numItems),
         ...encodeMoveset(mon.moveset),
-        ...encodePossiblityClass(mon.hpType, i => i, numHPTypes),
         // normalize happiness value
         (mon.happiness === null ? /*half*/127.5 : mon.happiness) / 255,
         ...encodeHP(mon.hp),

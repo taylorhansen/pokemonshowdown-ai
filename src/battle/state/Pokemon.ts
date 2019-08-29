@@ -1,5 +1,5 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
-import { hpTypes, Type } from "../dex/dex-util";
+import { HPType, hpTypes, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Move } from "./Move";
@@ -252,8 +252,12 @@ export class Pokemon
     /** Pokemon's gender. M=male, F=female, null=genderless. */
     public gender?: string | null;
 
-    /** Hidden power type possibility tracker. */
-    public readonly hpType = new PossibilityClass(hpTypes);
+    /** Current Hidden Power type possibility. */
+    public get hpType(): PossibilityClass<typeof hpTypes[HPType]>
+    {
+        // TODO: gen>=5: always use baseTraits
+        return this.traits.stats.hpType;
+    }
 
     /** Happiness value between 0 and 255, or null if unknown. */
     public get happiness(): number | null { return this._happiness; }
@@ -451,9 +455,7 @@ ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}types: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.stringifyItem()}
-${s}moveset: [${this.moveset.toString(this.baseMoveset, this._happiness,
-    this.hpType.definiteValue ?
-        this.hpType.definiteValue.name : `possibly ${this.hpType}`)}]`;
+${s}moveset: [${this.stringifyMoveset()}]`;
     }
 
     // istanbul ignore next: only used for logging
@@ -530,5 +532,30 @@ ${s}moveset: [${this.moveset.toString(this.baseMoveset, this._happiness,
 
         if (last === "none") return base;
         return `${base} (consumed: ${last})`;
+    }
+
+    /** Displays moveset data with possibly overridden HPType. */
+    private stringifyMoveset(): string
+    {
+        const baseHPType = this.baseTraits.stats.hpType;
+        const baseHPTypeStr = (baseHPType.definiteValue ? "" : "possibly ") +
+            baseHPType.toString();
+        let hpType: string;
+        if (this._active)
+        {
+            const overHPType = this._volatile.overrideTraits.stats.hpType;
+            if (baseHPType !== overHPType)
+            {
+                const overHPTypeStr =
+                    (baseHPType.definiteValue ? "" : "possibly ") +
+                    baseHPType.toString();
+                hpType = `${overHPTypeStr} (base: ${baseHPTypeStr})`;
+            }
+            else hpType = baseHPTypeStr;
+        }
+        else hpType = baseHPTypeStr;
+
+        return `[${this.moveset.toString(this.baseMoveset, this._happiness,
+            hpType)}]`;
     }
 }
