@@ -38,19 +38,6 @@ export class StatTable implements StatRanges
     }
     private _data: PokemonData | null = null;
 
-    /** Resets everything. */
-    public reset(): void
-    {
-        this.hp.reset();
-        this.atk.reset();
-        this.def.reset();
-        this.spa.reset();
-        this.spd.reset();
-        this.spe.reset();
-        this._level = null;
-        this._data = null;
-    }
-
     /** Attempts to calculate stats. Silently fails if incomplete info. */
     private initStats(): void
     {
