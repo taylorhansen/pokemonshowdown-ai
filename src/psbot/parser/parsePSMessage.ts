@@ -15,7 +15,7 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
-import { chain, many, maybe, sequence, transform } from "./combinators";
+import { chain, maybe, sequence, transform } from "./combinators";
 import { anyWord, boostName, dispatch, integer, json, majorStatus,
     parseBoostName, parseFromSuffix, parsePokemonDetails, parsePokemonID,
     parsePokemonStatus, playerId, playerIdWithName, pokemonDetails, pokemonId,
@@ -785,16 +785,11 @@ const eventSetBoost: Parser<SetBoostEvent> = transform(
  *
  * Format:
  * @example
- * |-sethp|<PokemonID 1>|<PokemonStatus 1>|<PokemonID 2>|<PokemonStatus 2>|...
+ * |-sethp|<PokemonID>|<PokemonStatus>
  */
 const eventSetHP: Parser<SetHPEvent> = transform(
-    sequence(
-        word("-sethp"),
-        many(
-            transform(
-                sequence(pokemonId, pokemonStatus),
-                ([id, status]) => ({id, status})))),
-    ([type, newHPs]) => ({type, newHPs}));
+    sequence(word("-sethp"), pokemonId, pokemonStatus),
+    ([type, id, status]) => ({type, id, status}));
 
 /**
  * Parses a SideEndEvent or SideStartEvent.

@@ -8,7 +8,7 @@ import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
 import { RoomStatus } from "../../src/battle/state/RoomStatus";
 import { TempStatus } from "../../src/battle/state/TempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
-import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent, SetHPEvent } from
+import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
@@ -2064,21 +2064,18 @@ describe("Battle and EventProcessor", function()
             it("Should set hp", async function()
             {
                 const hp1 = battle.state.teams.us.active.hp;
-                const hp2 = battle.state.teams.them.active.hp;
-                const event: SetHPEvent =
+                await battle.progress(
                 {
-                    type: "-sethp",
-                    newHPs:
+                    events:
                     [
-                        {id: us1, status: {hp: 1, hpMax: 10, condition: null}},
-                        {id: them1, status: {hp: 2, hpMax: 20, condition: null}}
+                        {
+                            type: "-sethp", id: us1,
+                            status: {hp: 1, hpMax: 10, condition: null}
+                        }
                     ]
-                };
-                await battle.progress({events: [event]});
+                });
                 expect(hp1.current).to.equal(1);
                 expect(hp1.max).to.equal(10);
-                expect(hp2.current).to.equal(2);
-                expect(hp2.max).to.equal(20);
             });
         });
 

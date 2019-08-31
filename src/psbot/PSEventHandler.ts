@@ -7,7 +7,7 @@ import { otherSide, Side } from "../battle/state/Side";
 import { SwitchInOptions, Team } from "../battle/state/Team";
 import { Logger } from "../Logger";
 import { AnyBattleEvent, DamageEvent, DragEvent, FieldEndEvent, FieldStartEvent,
-    HealEvent, SideEndEvent, SideStartEvent, SwitchEvent } from
+    HealEvent, SetHPEvent, SideEndEvent, SideStartEvent, SwitchEvent } from
     "./dispatcher/BattleEvent";
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
@@ -447,15 +447,7 @@ export class PSEventHandler
             this.getActive(event.id.owner).volatile.boosts[event.stat] =
                 event.amount;
         })
-        .on("-sethp", event =>
-        {
-            for (const pair of event.newHPs)
-            {
-                const active = this.getActive(pair.id.owner);
-                active.hp.set(pair.status.hp, pair.status.hpMax);
-                active.majorStatus.assert(pair.status.condition);
-            }
-        })
+        .on("-sethp", event => this.handleDamage(event))
         .on("-sideend", (event, events, i) =>
             this.handleSideCondition(event, events, i))
         .on("-sidestart", (event, events, i) =>
@@ -721,7 +713,7 @@ export class PSEventHandler
     }
 
     /** Handles a damage/heal event. */
-    private handleDamage(event: DamageEvent | HealEvent): void
+    private handleDamage(event: DamageEvent | HealEvent | SetHPEvent): void
     {
         const active = this.getActive(event.id.owner);
         active.hp.set(event.status.hp, event.status.hpMax);

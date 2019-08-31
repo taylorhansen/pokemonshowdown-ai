@@ -406,13 +406,14 @@ export interface SetBoostEvent extends BattleEventBase
     readonly amount: number;
 }
 
-/** Event where the HP of multiple pokemon is being modified at once. */
+/** Event where the HP of a pokemon is being modified. */
 export interface SetHPEvent extends BattleEventBase
 {
     readonly type: "-sethp";
-    /** PokemonIDs with their corresponding new statuses. */
-    readonly newHPs:
-        readonly {readonly id: PokemonID, readonly status: PokemonStatus}[];
+    /** ID of the Pokemon being set. */
+    readonly id: PokemonID;
+    /** New HP/status combo. */
+    readonly status: PokemonStatus;
 }
 
 /** Event where a side condition has ended. */

@@ -109,14 +109,7 @@ export const battleEvent: AnyBattleEvent[] =
     },
     {type: "-prepare", id: pokemonId[0], moveName: "Razor Wind"},
     {type: "-setboost", id: pokemonId[2], stat: "evasion", amount: 6},
-    {
-        type: "-sethp",
-        newHPs:
-        [
-            {id: pokemonId[0], status: pokemonStatus[0]},
-            {id: pokemonId[1], status: pokemonStatus[1]}
-        ]
-    },
+    {type: "-sethp", id: pokemonId[0], status: pokemonStatus[0]},
     {type: "-singleturn", id: pokemonId[2], status: "Protect"},
     {type: "-sideend", id: "p1", condition: "Spikes"},
     {type: "-sidestart", id: "p2", condition: "move: Stealth Rock"},

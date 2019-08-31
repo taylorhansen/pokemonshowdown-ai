@@ -134,6 +134,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             break;
         case "-damage":
         case "-heal":
+        case "-sethp":
             result =
             [
                 event.type, stringifyID(event.id), stringifyStatus(event.status)
@@ -178,15 +179,6 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             [
                 event.type, stringifyID(event.id), event.moveName,
                 ...(event.targetId ? [stringifyID(event.targetId)] : [])
-            ];
-            break;
-        case "-sethp":
-            result =
-            [
-                event.type,
-                ...event.newHPs.map(pair =>
-                        [stringifyID(pair.id), stringifyStatus(pair.status)])
-                    .reduce((a1, a2) => a1.concat(a2), [])
             ];
             break;
         case "-sideend":
