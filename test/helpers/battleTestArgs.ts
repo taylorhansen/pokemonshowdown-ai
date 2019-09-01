@@ -131,6 +131,7 @@ export const battleEvent: AnyBattleEvent[] =
         status: pokemonStatus[0]
     },
     {type: "tie"},
+    {type: "-transform", source: pokemonId[0], target: pokemonId[1]},
     {
         type: "-weather", weatherType: "Hail", upkeep: false,
         from: {type: "ability", ability: "Snow Warning"},
@@ -180,8 +181,8 @@ export const battleProgress: BattleProgressMessage[] =
                 {type: "turn", num: 100})
     },
     {
-        events: battleEvent.slice(29, 35)
-            .concat({type: "upkeep"}, ...battleEvent.slice(35, 53),
+        events: battleEvent.slice(29, 39)
+            .concat({type: "upkeep"}, ...battleEvent.slice(39, 54),
                 {type: "turn", num: 9})
     }
 ];

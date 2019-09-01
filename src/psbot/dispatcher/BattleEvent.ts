@@ -15,8 +15,8 @@ export const battleEventTypes =
     "-miss": true, move: true, "-mustrecharge": true, "-prepare": true,
     "-setboost": true, "-sethp": true, "-sideend": true, "-sidestart": true,
     "-singleturn": true, "-start": true, "-status": true, "-swapboost": true,
-    switch: true, tie: true, turn: true, "-unboost": true, upkeep: true,
-    "-weather": true, win: true
+    switch: true, tie: true, "-transform": true, turn: true, "-unboost": true,
+    upkeep: true, "-weather": true, win: true
 } as const;
 /** The types of BattleEvents that can exist. Used as event prefixes. */
 export type BattleEventType = keyof typeof battleEventTypes;
@@ -69,6 +69,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "-swapboost" ? SwapBoostEvent
     : T extends "switch" ? SwitchEvent
     : T extends "tie" ? TieEvent
+    : T extends "-transform" ? TransformEvent
     : T extends "turn" ? TurnEvent
     : T extends "-unboost" ? UnboostEvent
     : T extends "upkeep" ? UpkeepEvent
@@ -484,6 +485,16 @@ export interface SwapBoostEvent extends BattleEventBase
 export interface TieEvent extends BattleEventBase
 {
     readonly type: "tie";
+}
+
+/** Event where a pokemon transforms into another. */
+export interface TransformEvent extends BattleEventBase
+{
+    readonly type: "-transform";
+    /** Pokemon who is transforming. */
+    readonly source: PokemonID;
+    /** Pokemon that will be copied. */
+    readonly target: PokemonID;
 }
 
 /** Event indicating that a new turn has started. */

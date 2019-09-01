@@ -32,6 +32,8 @@ export class PSEventHandler
     protected readonly username: string;
     /** Logger object. */
     protected readonly logger: Logger;
+    /** Last |request| message that was processed. */
+    protected lastRequest?: RequestMessage;
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -75,6 +77,17 @@ export class PSEventHandler
         })
         .on("-endability", event =>
         {
+            // transform event was already taken care of, no need to handle
+            //  this message
+            // TODO: could this still be used to infer base ability?
+            // typically this is never revealed this way in actual cartridge
+            //  play, so best to leave it for now to preserve fairness
+            if (event.from && event.from.type === "move" &&
+                event.from.move === "Transform")
+            {
+                return;
+            }
+
             const active = this.getActive(event.id.owner);
             // infer what the ability was previously
             active.traits.setAbility(toIdName(event.ability));
@@ -475,6 +488,27 @@ export class PSEventHandler
         .on("switch", event => this.handleSwitch(event))
         .on("tie", () => { this._battling = false; })
         .on("win", () => { this._battling = false; })
+        .on("-transform", event =>
+        {
+            const source = this.getActive(event.source.owner);
+            const target = this.getActive(event.target.owner);
+
+            source.transform(target);
+
+            // use lastRequest to infer more details
+            if (!this.lastRequest || !this.lastRequest.active) return;
+            // transform reverts after fainting but not after being forced to
+            //  choose a switch-in without fainting
+            if (this.lastRequest.forceSwitch &&
+                this.lastRequest.side.pokemon[0].condition.hp === 0) return;
+            // if species don't match, must've been dragged out before we could
+            //  infer any other features
+            if (this.lastRequest.side.pokemon[0].details.species !==
+                source.species) return;
+
+            source.transformPost(this.lastRequest.active[0].moves,
+                this.lastRequest.side.pokemon[0].stats);
+        })
         .on("turn", () => { this.newTurn = true; })
         .on("-unboost", event =>
         {
@@ -552,6 +586,8 @@ export class PSEventHandler
     /** Processes a `request` message. */
     public handleRequest(args: RequestMessage): void
     {
+        this.lastRequest = args;
+
         // a request message is given at the start of the battle, before any
         //  battleinit stuff
         if (this._battling) return;

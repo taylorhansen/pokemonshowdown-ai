@@ -1,5 +1,5 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
-import { HPType, hpTypes, Type } from "../dex/dex-util";
+import { HPType, hpTypes, StatExceptHP, Type } from "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Move } from "./Move";
@@ -24,6 +24,17 @@ export interface MoveOptions
     unsuccessful?: "failed" | "evaded";
     /** Whether to not consume pp for this move. Default false. */
     nopp?: boolean;
+}
+
+/** Options for `Pokemon#transformPost()`. */
+export interface MoveData
+{
+    /** Move ID. */
+    id: string;
+    /** PP value. */
+    pp?: number;
+    /** Max PP value. */
+    maxpp?: number;
 }
 
 /** Holds all the possibly incomplete info about a pokemon. */
@@ -80,11 +91,12 @@ export class Pokemon
     /**
      * Does a form change for this Pokemon.
      * @param species The species to change into.
-     * @param perm Whether this is permanent. Default false.
+     * @param perm Whether this is permanent. Default false. Can be overridden
+     * to false by `VolatileStatus#transformed`.
      */
     public formChange(species: string, perm = false): void
     {
-        if (perm)
+        if (perm && !this._volatile.transformed)
         {
             this.baseTraits.setSpecies(species);
             this._volatile.overrideTraits.copy(this.baseTraits);
@@ -242,7 +254,11 @@ export class Pokemon
     {
         // sketched moves have no pp ups applied
         const move = new Move(newId, "min");
-        this.baseMoveset.replace("sketch", move);
+        // prevent sketch from permanently changing transform base
+        if (!this._volatile.transformed)
+        {
+            this.baseMoveset.replace("sketch", move);
+        }
         this._volatile.overrideMoveset.replace("sketch", move);
     }
     /** Pokemon's base moveset. */
@@ -432,6 +448,54 @@ export class Pokemon
         // infer possible trapping abilities
         if (abilities.length > 0) by.traits.ability.narrow(...abilities);
         else throw new Error("Can't figure out why we're trapped");
+    }
+
+    /**
+     * Transforms this Pokemon into another, copying known features.
+     * @param target Pokemon to transform into.
+     */
+    public transform(target: Pokemon): void
+    {
+        this._volatile.transformed = true;
+
+        // copy boosts
+        this._volatile.copyBoostsFrom(target._volatile);
+
+        // link moveset inference
+        this._volatile.overrideMoveset.link(target.moveset, "transform");
+
+        // copy/link current form, ability, types, stats, etc
+        this._volatile.overrideTraits.copy(target.traits);
+        this._volatile.addedType = target._volatile.addedType;
+    }
+
+    /**
+     * Reveals and infers more details due to Transform. These details are
+     * usually revealed at the end of the turn during move selection, but this
+     * method should only be called during the Transform move, or directly after
+     * calling `#transform()`.
+     * @param moves Revealed moveset.
+     * @param stats Revealed stats.
+     */
+    public transformPost(moves: readonly MoveData[],
+        stats: Readonly<Record<StatExceptHP, number>>): void
+    {
+        // infer moveset
+        for (const data of moves)
+        {
+            if (this.moveset.get(data.id)) continue;
+            const move = this.moveset.reveal(data.id, data.maxpp);
+            if (data.pp) move.pp = data.pp;
+        }
+
+        // infer stats
+        for (const stat in stats)
+        {
+            if (!stats.hasOwnProperty(stat)) continue;
+            // inferring a stat here will infer stats about the linked mon
+            this._volatile.overrideTraits.stats[stat as StatExceptHP].set(
+                stats[stat as StatExceptHP]);
+        }
     }
 
     // istanbul ignore next: only used for logging

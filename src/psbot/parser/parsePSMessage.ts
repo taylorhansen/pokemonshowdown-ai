@@ -10,8 +10,9 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
     ImmuneEvent, InvertBoostEvent, isBattleEventType, ItemEvent, MissEvent,
     MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent,
     SideEndEvent, SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent,
-    SwapBoostEvent, SwitchEvent, TieEvent, TurnEvent, UnboostEvent, UpkeepEvent,
-    WeatherEvent, WinEvent } from "../dispatcher/BattleEvent";
+    SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent, TurnEvent,
+    UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
+    "../dispatcher/BattleEvent";
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
@@ -451,6 +452,7 @@ function battleEventHelper(input: Input, info: Info):
         case "-status": return eventStatus(input, info);
         case "-swapboost": return eventSwapBoost(input, info);
         case "tie": return eventTie(input, info);
+        case "-transform": return eventTransform(input, info);
         case "turn": return eventTurn(input, info);
         case "-unboost": return eventUnboost(input, info);
         case "upkeep": return eventUpkeep(input, info);
@@ -915,6 +917,17 @@ const eventTurn: Parser<TurnEvent> =
  */
 const eventTie: Parser<TieEvent> =
     transform(word("tie"), () => ({type: "tie"}));
+
+/**
+ * Parses a TransformEvent.
+ *
+ * Format:
+ * @example
+ * |-transform|<source PokemonID>|<target PokemonID>
+ */
+const eventTransform: Parser<TransformEvent> = transform(
+    sequence(word("-transform"), pokemonId, pokemonId),
+    ([type, source, target]) => ({type, source, target}));
 
 /**
  * Parses a WeatherEvent.

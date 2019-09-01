@@ -150,6 +150,9 @@ export class VolatileStatus
     /** Torment move status. */
     public torment!: boolean;
 
+    /** Transform move status. */
+    public transformed!: boolean;
+
     /** Two-turn move currently being prepared. */
     public readonly twoTurn = new VariableTempStatus(twoTurnMoves, 1,
             /*silent*/true);
@@ -222,6 +225,7 @@ export class VolatileStatus
         this.stalled = false;
         this.taunt.end();
         this.torment = false;
+        this.transformed = false;
         this.twoTurn.reset();
         this.unburden = false;
         this.uproar.end();
@@ -331,6 +335,7 @@ export class VolatileStatus
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
             this.taunt.isActive ? [this.taunt.toString()] : [],
             this.torment ? ["torment"] : [],
+            this.transformed ? ["transformed"] : [],
             // toxic turns handled by Pokemon#toString()
             this.twoTurn.isActive ?
                 [`preparing ${this.twoTurn.toString()}`] : [],

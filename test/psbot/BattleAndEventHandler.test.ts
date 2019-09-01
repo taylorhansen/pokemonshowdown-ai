@@ -2416,6 +2416,64 @@ describe("Battle and EventProcessor", function()
             });
         });
 
+        describe("transform", function()
+        {
+            it("Should copy appropriate values", async function()
+            {
+                const source = battle.state.teams.us.active;
+                const target = battle.state.teams.them.active;
+
+                target.volatile.boosts.spd = 1;
+                target.moveset.reveal("splash");
+                const opposingStats = {atk: 5, def: 5, spa: 5, spd: 5, spe: 5};
+
+                await battle.request(
+                {
+                    active:
+                    [
+                        {
+                            moves:
+                            [
+                                {
+                                    id: "splash", move: "Splash", pp: 5,
+                                    maxpp: 64, disabled: false, target: "self"
+                                }
+                            ]
+                        }
+                    ],
+                    side:
+                    {
+                        pokemon:
+                        [
+                            {
+                                ...battle.lastRequest!.side.pokemon[0],
+                                stats: opposingStats, moves: ["splash"]
+                            }
+                        ]
+                    }
+                });
+                await battle.progress(
+                {
+                    events: [{type: "-transform", source: us1, target: them1}]
+                });
+
+                expect(source.volatile.boosts.spd).to.equal(1);
+                expect(source.moveset.get("splash")).to.not.be.null;
+                expect(source.hpType).to.equal(target.hpType);
+
+                expect(source.volatile.overrideTraits.ability)
+                    .to.equal(target.volatile.overrideTraits.ability);
+                expect(source.volatile.overrideTraits.data)
+                    .to.equal(target.volatile.overrideTraits.data);
+                expect(source.volatile.overrideTraits.species)
+                    .to.equal(target.volatile.overrideTraits.species);
+                expect(source.volatile.overrideTraits.stats)
+                    .to.equal(target.volatile.overrideTraits.stats);
+                expect(source.volatile.overrideTraits.types)
+                    .to.equal(target.volatile.overrideTraits.types);
+            });
+        });
+
         describe("suffixes", function()
         {
             it("Should reject suffix with no associated PokemonID",

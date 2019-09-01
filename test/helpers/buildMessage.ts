@@ -199,6 +199,12 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "turn":
             result = ["turn", event.num.toString()];
             break;
+        case "-transform":
+            result =
+            [
+                event.type, stringifyID(event.source), stringifyID(event.target)
+            ];
+            break;
         case "-weather":
             result = [event.type, event.weatherType];
             if (event.upkeep) result.push("[upkeep]");

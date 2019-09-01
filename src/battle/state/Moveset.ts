@@ -202,8 +202,7 @@ export class Moveset
             }
 
             // only copy reference
-            this.base._moves[this.base.unrevealed++] =
-                this._moves[this.unrevealed];
+            this.base._moves[this.base.unrevealed++] = move;
         }
 
         return this.unrevealed++;

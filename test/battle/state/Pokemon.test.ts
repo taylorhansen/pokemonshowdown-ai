@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { berries } from "../../../src/battle/dex/dex";
+import { berries, dex } from "../../../src/battle/dex/dex";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
 import { Team } from "../../../src/battle/state/Team";
@@ -45,6 +45,19 @@ describe("Pokemon", function()
                     .to.have.keys("Charmander");
                 expect(mon.baseTraits.species.possibleValues)
                     .to.have.keys("Charmander");
+            });
+
+            it("Should not set base species if transformed", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.switchIn();
+                mon.volatile.transformed = true;
+                mon.formChange("Charmander", true);
+                expect(mon.species).to.equal("Charmander");
+                expect(mon.volatile.overrideTraits.species.possibleValues)
+                    .to.have.keys("Charmander");
+                expect(mon.baseTraits.species.possibleValues)
+                    .to.have.keys("Magikarp");
             });
         });
     });
@@ -721,6 +734,122 @@ describe("Pokemon", function()
             mon.faint();
             expect(mon.hp.current).to.equal(0);
             expect(mon.hp.max).to.equal(0);
+        });
+    });
+
+    describe("#transform()", function()
+    {
+        it("Should copy known details", function()
+        {
+            const mon1 = new Pokemon("Magikarp", false);
+            mon1.switchIn();
+            mon1.hpType.narrow("fire");
+            expect(mon1.moveset.get("splash")).to.be.null;
+
+            const mon2 = new Pokemon("Bulbasaur", true);
+            mon2.switchIn();
+            mon2.volatile.boosts.atk = 2;
+            mon2.volatile.addedType = "bug";
+            mon2.moveset.reveal("splash");
+            mon2.hpType.narrow("ice");
+
+            mon1.transform(mon2);
+
+            expect(mon1.species).to.equal("Bulbasaur");
+            expect(mon1.volatile.transformed).to.be.true;
+            expect(mon1.volatile.boosts.atk).to.equal(2);
+            expect(mon1.volatile.addedType).to.equal("bug");
+            expect(mon1.ability).to.equal(mon2.ability);
+            expect(mon1.volatile.overrideTraits.data)
+                .to.equal(mon2.traits.data);
+            expect(mon1.volatile.overrideTraits.stats)
+                .to.equal(mon2.traits.stats);
+            expect(mon1.types).to.have.members(mon2.types);
+            expect(mon1.moveset.get("splash")).to.not.be.null;
+            expect(mon1.hpType).to.equal(mon2.hpType);
+
+            // should still keep base traits
+            expect(mon1.baseTraits.species.possibleValues)
+                .to.have.key("Magikarp");
+            expect(mon1.baseTraits.data).to.equal(dex.pokemon.Magikarp);
+            expect(mon1.baseTraits.ability.possibleValues)
+                .to.have.keys(dex.pokemon.Magikarp.abilities);
+            expect(mon1.baseTraits.stats.hpType.possibleValues)
+                .to.have.keys("fire");
+        });
+
+        it("Should link move inference", function()
+        {
+            const mon1 = new Pokemon("Magikarp", false);
+            mon1.switchIn();
+
+            const mon2 = new Pokemon("Bulbasaur", true);
+            mon2.switchIn();
+
+            mon1.transform(mon2);
+            mon1.moveset.reveal("splash");
+            mon2.moveset.reveal("tackle");
+
+            expect(mon1.moveset.get("tackle")).to.not.be.null;
+            expect(mon2.moveset.get("splash")).to.not.be.null;
+        });
+
+        it("Should link ability inference but not change", function()
+        {
+            const mon1 = new Pokemon("Magikarp", false);
+            mon1.switchIn();
+
+            const mon2 = new Pokemon("Bronzong", true);
+            mon2.switchIn();
+
+            mon1.transform(mon2);
+            mon2.traits.setAbility("heatproof");
+            mon2.traits.setAbility("pressure");
+
+            expect(mon1.ability).to.equal("heatproof");
+        });
+
+        it("Should link stat inference", function()
+        {
+            const mon1 = new Pokemon("Magikarp", false);
+            mon1.switchIn();
+
+            const mon2 = new Pokemon("Bronzong", true);
+            mon2.traits.stats.level = 100;
+            mon2.switchIn();
+
+            mon1.transform(mon2);
+            mon1.traits.stats.atk.set(200);
+            mon2.traits.stats.spe.set(100);
+
+            expect(mon1.traits.stats.spe.min).to.equal(100);
+            expect(mon1.traits.stats.spe.max).to.equal(100);
+            expect(mon2.traits.stats.atk.min).to.equal(200);
+            expect(mon2.traits.stats.atk.max).to.equal(200);
+        });
+    });
+
+    describe("transformPost()", function()
+    {
+        it("Should copy move and stat data", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.traits.stats.level = 100;
+            mon.switchIn();
+            mon.transformPost([{id: "splash", pp: 5, maxpp: 64}],
+                {atk: 100, def: 103, spa: 100, spd: 100, spe: 200});
+
+            expect(mon.moveset.get("splash")).to.not.be.null;
+            expect(mon.traits.stats.atk.min).to.equal(100);
+            expect(mon.traits.stats.atk.max).to.equal(100);
+            expect(mon.traits.stats.def.min).to.equal(103);
+            expect(mon.traits.stats.def.max).to.equal(103);
+            expect(mon.traits.stats.spa.min).to.equal(100);
+            expect(mon.traits.stats.spa.max).to.equal(100);
+            expect(mon.traits.stats.spd.min).to.equal(100);
+            expect(mon.traits.stats.spd.max).to.equal(100);
+            expect(mon.traits.stats.spe.min).to.equal(200);
+            expect(mon.traits.stats.spe.max).to.equal(200);
         });
     });
 });
