@@ -14,13 +14,13 @@ describe("Moveset", function()
 
     describe("#link()", function()
     {
-        describe("base = true", function()
+        describe("info = base", function()
         {
             it("Should copy moves", function()
             {
                 const other = new Moveset();
                 other.reveal("splash");
-                moveset.link(other, /*base*/true);
+                moveset.link(other, "base");
                 expect(moveset.get("splash")).to.equal(other.get("splash"))
                     .and.to.not.be.null;
                 // not by-ref array copy
@@ -31,7 +31,7 @@ describe("Moveset", function()
             function()
             {
                 const other = new Moveset();
-                moveset.link(other, /*base*/true);
+                moveset.link(other, "base");
                 moveset.reveal("splash");
                 expect(moveset.get("splash")).to.equal(other.get("splash"))
                     .and.to.not.be.null;
@@ -42,33 +42,33 @@ describe("Moveset", function()
             it("Should not notice base changes", function()
             {
                 const other = new Moveset();
-                moveset.link(other, /*base*/true);
+                moveset.link(other, "base");
                 other.reveal("splash");
                 expect(moveset.get("splash")).to.be.null;
             });
         });
 
-        describe("base = false", function()
+        describe("info = transform", function()
         {
             it("Should deep copy moves", function()
             {
                 const other = new Moveset();
                 other.reveal("splash");
-                moveset.link(other, /*base*/false);
-                expect(moveset.get("splash")).to.not.be.null;
+                moveset.link(other, "transform");
                 // not by-ref copy
-                expect(moveset.get("splash")).not.to.equal(other.get("splash"));
+                expect(moveset.get("splash")).to.have.property("pp", 5)
+                    .and.to.not.equal(other.get("splash"));
                 expect(moveset.moves).to.not.equal(other.moves);
             });
 
             it("Should propagate #reveal() calls", function()
             {
                 const other = new Moveset();
-                moveset.link(other, /*base*/false);
+                moveset.link(other, "transform");
                 other.reveal("splash");
-                expect(moveset.get("splash")).to.not.be.null;
                 // not by-ref copy
-                expect(moveset.get("splash")).not.to.equal(other.get("splash"));
+                expect(moveset.get("splash")).to.have.property("pp", 5)
+                    .and.to.not.equal(other.get("splash"));
                 expect(moveset.moves).to.not.equal(other.moves);
             });
 
@@ -77,8 +77,8 @@ describe("Moveset", function()
             {
                 const other1 = new Moveset();
                 const other2 = new Moveset();
-                other1.link(moveset, /*base*/false);
-                other2.link(moveset, /*base*/false);
+                other1.link(moveset, "transform");
+                other2.link(moveset, "transform");
                 other2.reveal("splash");
                 expect(moveset.get("splash")).to.not.be.null;
                 expect(other1.get("splash")).to.not.be.null;
@@ -93,8 +93,8 @@ describe("Moveset", function()
         {
             const other1 = new Moveset();
             const other2 = new Moveset();
-            other1.link(moveset, /*base*/false);
-            other2.link(moveset, /*base*/false);
+            other1.link(moveset, "transform");
+            other2.link(moveset, "transform");
             moveset.isolate();
             other2.reveal("splash");
             expect(moveset.get("splash")).to.be.null;
@@ -107,9 +107,9 @@ describe("Moveset", function()
             const base = new Moveset();
             const other1 = new Moveset();
             const other2 = new Moveset();
-            moveset.link(base, /*base*/true);
-            other1.link(moveset, /*base*/false);
-            other2.link(moveset, /*base*/false);
+            moveset.link(base, "base");
+            other1.link(moveset, "transform");
+            other2.link(moveset, "transform");
             moveset.isolate();
             other2.reveal("splash");
             expect(moveset.get("splash")).to.be.null;

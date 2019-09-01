@@ -242,7 +242,6 @@ export class Pokemon
     {
         // sketched moves have no pp ups applied
         const move = new Move(newId, "min");
-        // TODO: if not transformed, don't modify base moveset
         this.baseMoveset.replace("sketch", move);
         this._volatile.overrideMoveset.replace("sketch", move);
     }
@@ -390,7 +389,7 @@ export class Pokemon
     public switchIn(): void
     {
         this._active = true;
-        this._volatile.overrideMoveset.link(this.baseMoveset, /*base*/true);
+        this._volatile.overrideMoveset.link(this.baseMoveset, "base");
         this._volatile.overrideTraits.copy(this.baseTraits);
     }
 

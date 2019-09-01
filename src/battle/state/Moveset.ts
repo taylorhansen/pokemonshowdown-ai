@@ -41,11 +41,13 @@ export class Moveset
      * Copies a Moveset and starts its shared link, sort of like a subscriber in
      * a pub/sub pattern.
      * @param moveset Moveset to copy from.
-     * @param base Whether the provided Moveset is its base parent. If true, the
-     * given Moveset shouldn't be changed directly unless this Moveset
-     * `#link()`s to a different Moveset.
+     * @param info If `"base"`, the provided moveset is its base parent. Parent
+     * Movesets shouldn't be directly changed unless this Moveset `#link()`s to
+     * a different Moveset, since its moves are copied by reference. If
+     * `"transform"`, moves are deep copied and set to 5 pp as if the moves
+     * were gained via the Transform move.
      */
-    public link(moveset: Moveset, base: boolean): void
+    public link(moveset: Moveset, info: "base" | "transform"): void
     {
         // clear previous subscriptions if any
         this.isolate();
@@ -53,14 +55,14 @@ export class Moveset
         for (let i = 0; i < Moveset.maxSize; ++i)
         {
             const move = moveset._moves[i];
-            if (base || !move) this._moves[i] = move;
-            // deep copy
-            else this._moves[i] = new Move(move.name, move.maxpp, move.pp);
+            if (info === "base" || !move) this._moves[i] = move;
+            // transform: deep copy but set pp (gen>=5: and maxpp) to 5
+            else this._moves[i] = new Move(move.name, move.maxpp, 5);
         }
         this.unrevealed = moveset.unrevealed;
 
         // reveal() calls are propagated specially for base, fine for others
-        if (base) this.base = moveset;
+        if (info === "base") this.base = moveset;
         else if (moveset.linked)
         {
             // add to target Moveset's linked array
@@ -154,7 +156,8 @@ export class Moveset
             for (const moveset of this.linked)
             {
                 if (moveset === this) continue;
-                else moveset.revealIndexImpl(id, maxpp);
+                // transform links: pp (gen>=5: and maxpp) set to 5
+                else moveset.revealIndexImpl(id, maxpp, 5);
             }
         }
 
@@ -172,7 +175,8 @@ export class Moveset
      * Factored out code of `#revealIndex()` so reveal propagation doesn't
      * repeat itself.
      */
-    private revealIndexImpl(id: string, maxpp?: "min" | "max" | number): number
+    private revealIndexImpl(id: string, maxpp?: "min" | "max" | number,
+        pp?: number): number
     {
         // early return: already revealed
         const index = this.getIndex(id);
@@ -183,7 +187,7 @@ export class Moveset
             throw new Error("Moveset is already full");
         }
 
-        const move = new Move(id, maxpp);
+        const move = new Move(id, maxpp, pp);
         this._moves[this.unrevealed] = move;
         return this.unrevealed++;
     }
@@ -212,7 +216,6 @@ export class Moveset
     public toString(base?: Moveset, happiness: number | null = null,
         hpType?: string): string
     {
-        // TODO (transform): include param for base hpType
         return this._moves
             .map((m, i) => this.stringifyMove(m, happiness, hpType) +
                 // if overridden, include base move
