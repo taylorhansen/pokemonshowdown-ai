@@ -284,8 +284,9 @@ export const sizeVolatileStatus =
     /*identified*/2 + /*locked move variants*/numLockedMoves + /*minimize*/1 +
     /*must recharge*/1 + /*override traits*/sizePokemonTraits + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
-    /*taunt*/sizeTempStatus + /*torment*/1 + /*two-turn*/numTwoTurnMoves +
-    /*unburden*/1 + /*uproar*/sizeTempStatus + /*will truant*/1;
+    /*taunt*/sizeTempStatus + /*torment*/1 + /*transformed*/1 +
+    /*two-turn*/numTwoTurnMoves + /*unburden*/1 + /*uproar*/sizeTempStatus +
+    /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
 export function encodeVolatileStatus(status: VolatileStatus): number[]
@@ -324,6 +325,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const taunt = encodeTempStatus(status.taunt);
     const torment = status.torment ? 1 : 0;
     // toxic handled by encodePokemon()
+    const transformed = status.transformed ? 1 : 0;
     const twoTurn = encodeVariableTempStatus(status.twoTurn);
     const unburden = status.unburden ? 1 : 0;
     const uproar = encodeTempStatus(status.uproar);
@@ -334,7 +336,8 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
         ingrain, leechSeed, ...magnetRise, substitute, ...bide, ...charge,
         ...disabled, ...identified, ...lastUsed, ...lockedMove, minimize,
         mustRecharge, ...overrideTraits, roost, ...slowStart, stallFailRate,
-        ...taunt, torment, ...twoTurn, unburden, ...uproar, willTruant
+        ...taunt, torment, transformed, ...twoTurn, unburden, ...uproar,
+        willTruant
     ];
 }
 
