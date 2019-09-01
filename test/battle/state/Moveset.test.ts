@@ -55,21 +55,32 @@ describe("Moveset", function()
                 const other = new Moveset();
                 other.reveal("splash");
                 moveset.link(other, "transform");
-                // not by-ref copy
-                expect(moveset.get("splash")).to.have.property("pp", 5)
-                    .and.to.not.equal(other.get("splash"));
-                expect(moveset.moves).to.not.equal(other.moves);
+
+                // target moveset should have full pp
+                expect(moveset.get("splash")).to.have.property("pp", 5);
+                expect(other.get("splash")).to.have.property("pp", 64);
             });
 
-            it("Should propagate #reveal() calls", function()
+            it("Should propagate #reveal() calls from target", function()
             {
                 const other = new Moveset();
                 moveset.link(other, "transform");
                 other.reveal("splash");
-                // not by-ref copy
-                expect(moveset.get("splash")).to.have.property("pp", 5)
-                    .and.to.not.equal(other.get("splash"));
-                expect(moveset.moves).to.not.equal(other.moves);
+
+                // target moveset should have full pp
+                expect(moveset.get("splash")).to.have.property("pp", 5);
+                expect(other.get("splash")).to.have.property("pp", 64);
+            });
+
+            it("Should propagate #reveal() calls from user", function()
+            {
+                const other = new Moveset();
+                moveset.link(other, "transform");
+                moveset.reveal("splash");
+
+                // target moveset should have full pp
+                expect(moveset.get("splash")).to.have.property("pp", 5);
+                expect(other.get("splash")).to.have.property("pp", 64);
             });
 
             it("Should propagate #reveal() calls for multiple Movesets",
@@ -80,9 +91,11 @@ describe("Moveset", function()
                 other1.link(moveset, "transform");
                 other2.link(moveset, "transform");
                 other2.reveal("splash");
-                expect(moveset.get("splash")).to.not.be.null;
-                expect(other1.get("splash")).to.not.be.null;
-                expect(other2.get("splash")).to.not.be.null;
+
+                // target moveset should have full pp
+                expect(moveset.get("splash")).to.have.property("pp", 64);
+                expect(other1.get("splash")).to.have.property("pp", 5);
+                expect(other2.get("splash")).to.have.property("pp", 5);
             });
         });
     });

@@ -21,7 +21,8 @@ export class Moveset
 
     /**
      * Shared array of linked Movesets to propagate `#reveal()` calls. Can be
-     * thought of as the message broker in a pub/sub pattern.
+     * thought of as the message broker in a pub/sub pattern. Index 0 refers to
+     * the base of the link (aka target of Transform).
      */
     private linked: Moveset[] | null = null;
 
@@ -148,7 +149,11 @@ export class Moveset
      */
     private revealIndex(id: string, maxpp?: "min" | "max" | number): number
     {
-        const i = this.revealIndexImpl(id, maxpp);
+        // transform links: pp (gen>=5: and maxpp) set to 5
+        // only for the transform target (index 0) will this not apply
+        let pp: number | undefined;
+        if (this.linked && this.linked[0] !== this) pp = 5;
+        const i = this.revealIndexImpl(id, maxpp, pp);
 
         // propagate reveal call to other linked Movesets
         if (this.linked)
@@ -157,7 +162,10 @@ export class Moveset
             {
                 if (moveset === this) continue;
                 // transform links: pp (gen>=5: and maxpp) set to 5
-                else moveset.revealIndexImpl(id, maxpp, 5);
+                // only for the transform target (index 0) will this not apply
+                pp = (this.linked && this.linked[0] !== moveset) ?
+                    5 : undefined;
+                moveset.revealIndexImpl(id, maxpp, pp);
             }
         }
 
