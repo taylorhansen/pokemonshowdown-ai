@@ -397,7 +397,7 @@ async function train(cycles: number, games: number, maxTurns: number)
         logger.debug("Creating default model");
 
         toTrain = createModel();
-        await toTrain.save(`file://${latestModelFolder}`);
+        await toTrain.save(modelUrl);
     }
     compileModel(toTrain);
 
