@@ -226,7 +226,7 @@ const messageUpdateChallenges: MessageParser = chain(
  */
 const messageUpdateUser: MessageParser = chain(
     // TODO: include avatar id
-    sequence(word("updateuser"), anyWord, integer),
+    sequence(word("updateuser"), transform(anyWord, w => w.trim()), integer),
     ([_, username, named]) =>
         dispatch("updateuser", {username, isGuest: !named}));
 
