@@ -46,6 +46,15 @@ describe("Moveset", function()
                 other.reveal("splash");
                 expect(moveset.get("splash")).to.be.null;
             });
+
+            it("Should throw if base changed after reveal", function()
+            {
+                const other = new Moveset();
+                moveset.link(other, "base");
+                other.reveal("splash");
+                expect(() => moveset.reveal("tackle")).to.throw(Error,
+                    "Base Moveset expected to not change");
+            });
         });
 
         describe("info = transform", function()
@@ -96,6 +105,20 @@ describe("Moveset", function()
                 expect(moveset.get("splash")).to.have.property("pp", 64);
                 expect(other1.get("splash")).to.have.property("pp", 5);
                 expect(other2.get("splash")).to.have.property("pp", 5);
+            });
+
+            it("Should propagate to target's base Moveset from a linked " +
+                "Moveset", function()
+            {
+                const base = new Moveset();
+                const other = new Moveset();
+                moveset.link(base, "base");
+                other.link(moveset, "transform");
+                other.reveal("splash");
+
+                expect(moveset.get("splash")).to.equal(base.get("splash"))
+                    .and.to.have.property("pp", 64);
+                expect(other.get("splash")).to.have.property("pp", 5);
             });
         });
     });

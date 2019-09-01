@@ -169,13 +169,6 @@ export class Moveset
             }
         }
 
-        // propagate reveal call to parent Moveset
-        if (this.base)
-        {
-            // only copy reference
-            this.base._moves[this.base.unrevealed++] = this._moves[i];
-        }
-
         return i;
     }
 
@@ -197,6 +190,22 @@ export class Moveset
 
         const move = new Move(id, maxpp, pp);
         this._moves[this.unrevealed] = move;
+
+        // propagate reveal call to parent Moveset
+        if (this.base)
+        {
+            // parent should not have changed since initial link() call outside
+            //  of this code segment
+            if (this.base.unrevealed !== this.unrevealed)
+            {
+                throw new Error("Base Moveset expected to not change");
+            }
+
+            // only copy reference
+            this.base._moves[this.base.unrevealed++] =
+                this._moves[this.unrevealed];
+        }
+
         return this.unrevealed++;
     }
 
