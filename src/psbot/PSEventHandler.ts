@@ -107,6 +107,9 @@ export class PSEventHandler
                 case "Aqua Ring":
                     active.volatile.aquaRing = true;
                     break;
+                case "Attract":
+                    active.volatile.attracted = true;
+                    break;
                 case "Bide":
                     active.volatile.bide.start();
                     break;
@@ -262,7 +265,8 @@ export class PSEventHandler
             if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
             const id = toIdName(ev);
 
-            if (ev === "Bide") v.bide.end();
+            if (ev === "Attract") v.attracted = false;
+            else if (ev === "Bide") v.bide.end();
             else if (ev === "confusion") v.confusion.end();
             else if (ev === "Disable") v.enableMoves();
             else if (ev === "Embargo") v.embargo.end();

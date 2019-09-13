@@ -279,7 +279,7 @@ export const sizeVolatileStatus =
     /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus +
     /*focus energy*/1 + /*ingrain*/1 + /*leech seed*/1 +
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
-    /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
+    /*attract*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*identified*/2 + /*locked move variants*/numLockedMoves + /*minimize*/1 +
     /*must recharge*/1 + /*override traits*/sizePokemonTraits + /*roost*/1 +
@@ -305,6 +305,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const substitute = status.substitute ? 1 : 0;
 
     // non-passable
+    const attracted = status.attracted ? 1 : 0;
     const bide = encodeTempStatus(status.bide);
     const charge = encodeTempStatus(status.charge);
     const disabled = status.disabledMoves.map(encodeTempStatus)
@@ -333,11 +334,11 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
 
     return [
         aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, gastroAcid,
-        ingrain, leechSeed, ...magnetRise, substitute, ...bide, ...charge,
-        ...disabled, ...identified, ...lastUsed, ...lockedMove, minimize,
-        mustRecharge, ...overrideTraits, roost, ...slowStart, stallFailRate,
-        ...taunt, torment, transformed, ...twoTurn, unburden, ...uproar,
-        willTruant
+        ingrain, leechSeed, ...magnetRise, substitute, attracted, ...bide,
+        ...charge, ...disabled, ...identified, ...lastUsed, ...lockedMove,
+        minimize, mustRecharge, ...overrideTraits, roost, ...slowStart,
+        stallFailRate, ...taunt, torment, transformed, ...twoTurn, unburden,
+        ...uproar, willTruant
     ];
 }
 

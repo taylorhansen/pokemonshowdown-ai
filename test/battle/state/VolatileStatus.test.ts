@@ -24,6 +24,7 @@ describe("VolatileStatus", function()
         volatile.leechSeed = true;
         volatile.magnetRise.start();
         volatile.substitute = true;
+        volatile.attracted = true;
         volatile.bide.start();
         volatile.charge.start();
         volatile.disabledMoves[0].start();
@@ -66,6 +67,7 @@ describe("VolatileStatus", function()
             expect(volatile.leechSeed).to.be.false;
             expect(volatile.magnetRise.isActive).to.be.false;
             expect(volatile.substitute).to.be.false;
+            expect(volatile.attracted).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
@@ -125,6 +127,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.magnetRise.turns).to.equal(1);
             expect(newVolatile.substitute).to.be.true;
             // not passed
+            expect(newVolatile.attracted).to.be.false;
             expect(newVolatile.bide.isActive).to.be.false;
             expect(newVolatile.charge.isActive).to.be.false;
             expect(newVolatile.disabledMoves[0].isActive).to.be.false;

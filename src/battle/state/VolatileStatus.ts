@@ -64,6 +64,9 @@ export class VolatileStatus
 
     // not passed when copying
 
+    /** Attract move status. */
+    public attracted!: boolean;
+
     /** Bide move status. */
     public readonly bide = new TempStatus("bide", 1);
 
@@ -207,6 +210,7 @@ export class VolatileStatus
         this.magnetRise.end();
         this.substitute = false;
 
+        this.attracted = false;
         this.bide.end();
         this.charge.end();
         this.enableMoves();
@@ -319,6 +323,7 @@ export class VolatileStatus
             this.leechSeed ? ["leech seed"] : [],
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
             this.substitute ? ["has substitute"] : [],
+            this.attracted ? ["attracted"] : [],
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
             this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),

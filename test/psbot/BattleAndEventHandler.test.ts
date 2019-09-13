@@ -785,7 +785,7 @@ describe("Battle and EventProcessor", function()
                 }
             ]);
 
-            test("Uproar", "Uproar", v => expect(v.bide.isActive).to.be.false,
+            test("Uproar", "Uproar", v => expect(v.uproar.isActive).to.be.false,
             [
                 {
                     type: "-start",
@@ -832,6 +832,7 @@ describe("Battle and EventProcessor", function()
             }
 
             testBoolean("Aqua Ring", "Aqua Ring", v => v.aquaRing, ["-start"]);
+            testBoolean("Attract", "Attract", v => v.attracted);
             testBoolean("Bide", "Bide", v => v.bide.isActive);
             testBoolean("Embargo", "Embargo", v => v.embargo.isActive);
             testBoolean("Encore", "Encore", v => v.encore.isActive);
