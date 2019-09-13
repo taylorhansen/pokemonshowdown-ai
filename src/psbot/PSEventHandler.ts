@@ -779,18 +779,6 @@ export class PSEventHandler
         }
         switch (condition)
         {
-            case "Spikes":
-                if (event.type === "-sidestart") ++ts.spikes;
-                else ts.spikes = 0;
-                break;
-            case "Stealth Rock":
-                if (event.type === "-sidestart") ++ts.stealthRock;
-                else ts.stealthRock = 0;
-                break;
-            case "Toxic Spikes":
-                if (event.type === "-sidestart") ++ts.toxicSpikes;
-                else ts.toxicSpikes = 0;
-                break;
             case "Reflect":
             case "Light Screen":
                 if (event.type === "-sidestart")
@@ -817,6 +805,21 @@ export class PSEventHandler
                     if (condition === "Reflect") ts.reflect.reset();
                     else ts.lightScreen.reset();
                 }
+                break;
+            case "Spikes":
+                if (event.type === "-sidestart") ++ts.spikes;
+                else ts.spikes = 0;
+                break;
+            case "Stealth Rock":
+                if (event.type === "-sidestart") ++ts.stealthRock;
+                else ts.stealthRock = 0;
+                break;
+            case "Tailwind":
+                if (event.type === "-sidestart") ts.tailwind.start();
+                else ts.tailwind.end();
+            case "Toxic Spikes":
+                if (event.type === "-sidestart") ++ts.toxicSpikes;
+                else ts.toxicSpikes = 0;
                 break;
         }
     }

@@ -2094,37 +2094,6 @@ describe("Battle and EventProcessor", function()
                 return words.join("");
             }
 
-            for (const condition of
-                    ["Spikes", "move: Stealth Rock", "move: Toxic Spikes"])
-            {
-                // get VolatileStatus corresponding field name
-                let field: "spikes" | "stealthRock" | "toxicSpikes";
-                if (condition.startsWith("move: "))
-                {
-                    field = condition.substr("move: ".length) as any;
-                }
-                else field = condition as any;
-                field = camelCase(field) as any;
-
-                it(`Should start/end ${condition}`, async function()
-                {
-                    const ts = battle.state.teams.us.status;
-                    expect(ts[field]).to.equal(0);
-
-                    await battle.progress(
-                        {events: [{type: "-sidestart", id: "p1", condition}]});
-                    expect(ts[field]).to.equal(1);
-
-                    await battle.progress(
-                        {events: [{type: "-sidestart", id: "p1", condition}]});
-                    expect(ts[field]).to.equal(2);
-
-                    await battle.progress(
-                        {events: [{type: "-sideend", id: "p1", condition}]});
-                    expect(ts[field]).to.equal(0);
-                });
-            }
-
             for (const status of ["Reflect", "Light Screen"] as const)
             {
                 const field: "reflect" | "lightScreen" =
@@ -2196,6 +2165,66 @@ describe("Battle and EventProcessor", function()
                     expect(ts[field].duration).to.be.null;
                 });
             }
+
+            for (const condition of
+                    ["Spikes", "move: Stealth Rock", "move: Toxic Spikes"])
+            {
+                // get VolatileStatus corresponding field name
+                let field: "spikes" | "stealthRock" | "toxicSpikes";
+                if (condition.startsWith("move: "))
+                {
+                    field = condition.substr("move: ".length) as any;
+                }
+                else field = condition as any;
+                field = camelCase(field) as any;
+
+                it(`Should start/end ${condition}`, async function()
+                {
+                    const ts = battle.state.teams.us.status;
+                    expect(ts[field]).to.equal(0);
+
+                    await battle.progress(
+                        {events: [{type: "-sidestart", id: "p1", condition}]});
+                    expect(ts[field]).to.equal(1);
+
+                    await battle.progress(
+                        {events: [{type: "-sidestart", id: "p1", condition}]});
+                    expect(ts[field]).to.equal(2);
+
+                    await battle.progress(
+                        {events: [{type: "-sideend", id: "p1", condition}]});
+                    expect(ts[field]).to.equal(0);
+                });
+            }
+
+            it("Should start/end Tailwind", async function()
+            {
+                const ts = battle.state.teams.us.status;
+                expect(ts.tailwind.isActive).to.be.false;
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {type: "-sidestart", id: "p1", condition: "Tailwind"}
+                    ]
+                });
+                expect(ts.tailwind.isActive).to.be.true;
+
+                // go thru 2 turns of the status
+                ts.tailwind.tick();
+                ts.tailwind.tick();
+                expect(ts.tailwind.isActive).to.be.true;
+
+                // the 3rd turn will end the status
+                await battle.progress(
+                {
+                    events:
+                    [
+                        {type: "-sideend", id: "p1", condition: "Tailwind"}
+                    ]
+                });
+                expect(ts.tailwind.isActive).to.be.false;
+            });
         });
 
         describe("singleturn", function()

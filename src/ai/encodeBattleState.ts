@@ -493,25 +493,26 @@ export function encodePokemon(mon?: Pokemon | null): number[]
 }
 
 /** Length of the return value of `encodeTeamStatus()`. */
-export const sizeTeamStatus = /*selfSwitch*/2 + /*wish*/1 +
-    /*future moves*/numFutureMoves + /*entry hazards*/3 +
-    /*reflect/lightscreen*/4;
+export const sizeTeamStatus = /*future moves*/numFutureMoves +
+    /*selfSwitch*/2 + /*entry hazards*/3 + /*tailwind*/sizeTempStatus +
+    /*lightscreen/reflect*/4 + /*wish*/sizeTempStatus;
 
 /** Formats team status info into an array of numbers. */
 export function encodeTeamStatus(status: TeamStatus): number[]
 {
     return [
-        status.selfSwitch ? 1 : 0, status.selfSwitch === "copyvolatile" ? 1 : 0,
-        ...encodeTempStatus(status.wish),
         // TODO: guarantee order of future move turn values
         ...Object.values(status.futureMoves)
             .map(encodeTempStatus)
             .reduce((a, b) => a.concat(b), []),
+        ...encodeItemTempStatus(status.lightScreen),
+        ...encodeItemTempStatus(status.reflect),
+        status.selfSwitch ? 1 : 0, status.selfSwitch === "copyvolatile" ? 1 : 0,
         // divide hazard level by their max levels
         // TODO: factor out into constants somewhere
         status.spikes / 3, status.stealthRock, status.toxicSpikes / 2,
-        ...encodeItemTempStatus(status.reflect),
-        ...encodeItemTempStatus(status.lightScreen)
+        ...encodeTempStatus(status.tailwind),
+        ...encodeTempStatus(status.wish)
     ];
 }
 
