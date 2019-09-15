@@ -280,7 +280,7 @@ export const sizeVolatileStatus =
     /*focus energy*/1 + /*ingrain*/1 + /*leech seed*/1 +
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
     /*attract*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
-    /*defense curl*/1 +
+    /*defense curl*/1 + /*destiny bond*/1 +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*identified*/2 + /*locked move variants*/numLockedMoves + /*minimize*/1 +
     /*must recharge*/1 + /*override traits*/sizePokemonTraits +
@@ -311,6 +311,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const bide = encodeTempStatus(status.bide);
     const charge = encodeTempStatus(status.charge);
     const defenseCurl = status.defenseCurl ? 1 : 0;
+    const destinyBond = status.destinyBond ? 1 : 0;
     const disabled = status.disabledMoves.map(encodeTempStatus)
         .reduce((a, b) => a.concat(b));
     const identified = ["foresight", "miracleeye"]
@@ -339,8 +340,8 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     return [
         aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, gastroAcid,
         ingrain, leechSeed, ...magnetRise, substitute, attracted, ...bide,
-        ...charge, defenseCurl, ...disabled, ...identified, ...lastUsed,
-        ...lockedMove, minimize, mustRecharge, ...overrideTraits,
+        ...charge, defenseCurl, destinyBond, ...disabled, ...identified,
+        ...lastUsed, ...lockedMove, minimize, mustRecharge, ...overrideTraits,
         ...rollout, roost, ...slowStart, stallFailRate, ...taunt, torment,
         transformed, ...twoTurn, unburden, ...uproar, willTruant
     ];

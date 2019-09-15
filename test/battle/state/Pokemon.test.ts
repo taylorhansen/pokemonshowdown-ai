@@ -429,6 +429,18 @@ describe("Pokemon", function()
                 }
             });
 
+            describe("destinybond", function()
+            {
+                it("Should reset #volatile#destinyBond", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.volatile.destinyBond = true;
+
+                    mon.useMove({moveId: "splash", targets: [mon]});
+                    expect(mon.volatile.destinyBond).to.be.false;
+                });
+            });
+
             describe("defensecurl", function()
             {
                 it("Should set #volatile#defenseCurl if successful", function()
@@ -439,7 +451,7 @@ describe("Pokemon", function()
                     expect(mon.volatile.defenseCurl).to.be.true;
                 });
 
-                it("Should set #volatile#defenseCurl if unsuccessful",
+                it("Should not set #volatile#defenseCurl if unsuccessful",
                 function()
                 {
                     const mon = new Pokemon("Magikarp", false);

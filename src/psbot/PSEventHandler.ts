@@ -318,6 +318,9 @@ export class PSEventHandler
                 //  been revealed before
                 active.moveset.reveal(toIdName(event.moveName));
             }
+
+            // reset single-move statuses since this counts as an action
+            active.volatile.resetSingleMove();
         })
         .on("-clearallboost", () =>
             (Object.keys(boostNames) as BoostName[]).forEach(stat =>
@@ -469,6 +472,11 @@ export class PSEventHandler
             this.handleSideCondition(event, events, i))
         .on("-sidestart", (event, events, i) =>
             this.handleSideCondition(event, events, i))
+        .on("-singlemove", event =>
+        {
+            const v = this.getActive(event.id.owner).volatile;
+            if (event.move === "Destiny Bond") v.destinyBond = true;
+        })
         .on("-singleturn", event =>
         {
             const v = this.getActive(event.id.owner).volatile;

@@ -206,6 +206,9 @@ export class Pokemon
         }
         else this._volatile.rollout.reset();
 
+        // reset single move statuses, waiting for an explicit event
+        this._volatile.resetSingleMove();
+
         if (options.unsuccessful)
         {
             this._volatile.lockedMove.reset();

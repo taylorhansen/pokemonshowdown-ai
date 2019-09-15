@@ -28,6 +28,7 @@ describe("VolatileStatus", function()
         volatile.bide.start();
         volatile.charge.start();
         volatile.defenseCurl = true;
+        volatile.destinyBond = true;
         volatile.disabledMoves[0].start();
         volatile.encore.start();
         volatile.identified = "foresight";
@@ -73,6 +74,7 @@ describe("VolatileStatus", function()
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.defenseCurl).to.be.false;
+            expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
             expect(volatile.encore.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
@@ -135,6 +137,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.bide.isActive).to.be.false;
             expect(newVolatile.charge.isActive).to.be.false;
             expect(newVolatile.defenseCurl).to.be.false;
+            expect(newVolatile.destinyBond).to.be.false;
             expect(newVolatile.disabledMoves[0].isActive).to.be.false;
             expect(newVolatile.encore.isActive).to.be.false;
             expect(newVolatile.identified).to.be.null;

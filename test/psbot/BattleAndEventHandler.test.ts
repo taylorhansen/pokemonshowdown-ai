@@ -1298,6 +1298,17 @@ describe("Battle and EventProcessor", function()
 
                 expect(mon.majorStatus.turns).to.equal(3);
             });
+
+            it("Should reset single-move statuses", async function()
+            {
+                const mon = battle.state.teams.us.active;
+                mon.volatile.destinyBond = true;
+
+                await battle.progress(
+                    {events: [{type: "cant", id: us1, reason: "par"}]});
+
+                expect(mon.volatile.destinyBond).to.be.false;
+            });
         });
 
         describe("curestatus", function()
@@ -2224,6 +2235,23 @@ describe("Battle and EventProcessor", function()
                     ]
                 });
                 expect(ts.tailwind.isActive).to.be.false;
+            });
+        });
+
+        describe("singlemove", function()
+        {
+            it("Should activate Destiny Bond", async function()
+            {
+                const volatile = battle.state.teams.us.active.volatile;
+                expect(volatile.destinyBond).to.be.false;
+
+                await battle.progress(
+                {
+                    events: [
+                        {type: "-singlemove", id: us1, move: "Destiny Bond"}
+                    ]
+                });
+                expect(volatile.destinyBond).to.be.true;
             });
         });
 

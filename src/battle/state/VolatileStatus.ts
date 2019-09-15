@@ -76,6 +76,9 @@ export class VolatileStatus
     /** Defense curl move status. */
     public defenseCurl!: boolean;
 
+    /** Destiny Bond move status. */
+    public destinyBond!: boolean;
+
     /** List of disabled move statuses. */
     public readonly disabledMoves: readonly TempStatus[] =
         Array.from({length: Moveset.maxSize},
@@ -221,6 +224,7 @@ export class VolatileStatus
         this.bide.end();
         this.charge.end();
         this.defenseCurl = false;
+        this.destinyBond = false;
         this.enableMoves();
         this.encore.end();
         this.identified = null;
@@ -243,6 +247,13 @@ export class VolatileStatus
         this.unburden = false;
         this.uproar.end();
         this._willTruant = false;
+    }
+
+    /** Resets single-move statuses like Destiny Bond. */
+    public resetSingleMove()
+    {
+        this.destinyBond = false;
+        // TODO: rage, grudge
     }
 
     /** Called at the beginning of every turn to update temp statuses. */
@@ -336,6 +347,7 @@ export class VolatileStatus
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
             this.defenseCurl ? ["defense curl"] : [],
+            this.destinyBond ? ["destiny bond"] : [],
             this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),
             this.encore.isActive ? [this.encore.toString()] : [],
             this.identified ? [this.identified] : [],
@@ -344,6 +356,7 @@ export class VolatileStatus
             this.minimize ? ["minimize"] : [],
             this.mustRecharge ? ["must recharge"] : [],
             // override traits are handled by Pokemon#toString()
+            this.rollout.isActive ? [this.rollout.toString()] : [],
             this.roost ? ["roosting"] : [],
             this.slowStart.isActive ? [this.slowStart.toString()] : [],
             this._stallTurns ?
