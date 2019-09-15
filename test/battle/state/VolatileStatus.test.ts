@@ -27,6 +27,7 @@ describe("VolatileStatus", function()
         volatile.attracted = true;
         volatile.bide.start();
         volatile.charge.start();
+        volatile.defenseCurl = true;
         volatile.disabledMoves[0].start();
         volatile.encore.start();
         volatile.identified = "foresight";
@@ -39,6 +40,7 @@ describe("VolatileStatus", function()
         volatile.overrideTraits.setSpecies("Slaking"); // has truant ability
         volatile.overrideTraits.stats.level = 100;
         volatile.addedType = "ice";
+        volatile.rollout.start("iceball");
         volatile.roost = true;
         volatile.slowStart.start();
         volatile.stall(true);
@@ -70,6 +72,7 @@ describe("VolatileStatus", function()
             expect(volatile.attracted).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
+            expect(volatile.defenseCurl).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
             expect(volatile.encore.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
@@ -90,6 +93,7 @@ describe("VolatileStatus", function()
             expect(() => volatile.overrideTraits.types).to.throw(Error,
                 "Types not initialized");
             expect(volatile.addedType).to.equal("???");
+            expect(volatile.rollout.isActive).to.be.false;
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
@@ -130,6 +134,7 @@ describe("VolatileStatus", function()
             expect(newVolatile.attracted).to.be.false;
             expect(newVolatile.bide.isActive).to.be.false;
             expect(newVolatile.charge.isActive).to.be.false;
+            expect(newVolatile.defenseCurl).to.be.false;
             expect(newVolatile.disabledMoves[0].isActive).to.be.false;
             expect(newVolatile.encore.isActive).to.be.false;
             expect(newVolatile.identified).to.be.null;
@@ -150,6 +155,7 @@ describe("VolatileStatus", function()
             expect(() => newVolatile.overrideTraits.types).to.throw(Error,
                 "Types not initialized");
             expect(newVolatile.addedType).to.equal("???");
+            expect(newVolatile.rollout.isActive).to.be.false;
             expect(newVolatile.roost).to.be.false;
             expect(newVolatile.slowStart.isActive).to.be.false;
             expect(newVolatile.stallTurns).to.equal(0);

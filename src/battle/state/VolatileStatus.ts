@@ -1,5 +1,5 @@
 import { lockedMoves, twoTurnMoves } from "../dex/dex";
-import { BoostName, boostNames, Type } from "../dex/dex-util";
+import { BoostName, boostNames, rolloutMoves, Type } from "../dex/dex-util";
 import { Moveset } from "./Moveset";
 import { PokemonTraits } from "./PokemonTraits";
 import { TempStatus } from "./TempStatus";
@@ -73,6 +73,9 @@ export class VolatileStatus
     /** Charge move status. */
     public readonly charge = new TempStatus("charging", 2, /*silent*/true);
 
+    /** Defense curl move status. */
+    public defenseCurl!: boolean;
+
     /** List of disabled move statuses. */
     public readonly disabledMoves: readonly TempStatus[] =
         Array.from({length: Moveset.maxSize},
@@ -125,6 +128,10 @@ export class VolatileStatus
 
     /** Temporary third type. */
     public addedType!: Type;
+
+    /** Rollout-like move status. */
+    public readonly rollout = new VariableTempStatus(rolloutMoves, 4,
+        /*silent*/true);
 
     /** Roost move effect (single turn). */
     public roost!: boolean;
@@ -213,6 +220,7 @@ export class VolatileStatus
         this.attracted = false;
         this.bide.end();
         this.charge.end();
+        this.defenseCurl = false;
         this.enableMoves();
         this.encore.end();
         this.identified = null;
@@ -223,6 +231,7 @@ export class VolatileStatus
         this.overrideMoveset.isolate();
         this.overrideTraits.reset();
         this.addedType = "???";
+        this.rollout.reset();
         this.roost = false;
         this.slowStart.end();
         this._stallTurns = 0;
@@ -326,6 +335,7 @@ export class VolatileStatus
             this.attracted ? ["attracted"] : [],
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
+            this.defenseCurl ? ["defense curl"] : [],
             this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),
             this.encore.isActive ? [this.encore.toString()] : [],
             this.identified ? [this.identified] : [],

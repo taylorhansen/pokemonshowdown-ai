@@ -1,5 +1,6 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
-import { HPType, hpTypes, StatExceptHP, Type } from "../dex/dex-util";
+import { HPType, hpTypes, rolloutMoves, StatExceptHP, Type } from
+    "../dex/dex-util";
 import { HP } from "./HP";
 import { MajorStatusCounter } from "./MajorStatusCounter";
 import { Move } from "./Move";
@@ -197,6 +198,14 @@ export class Pokemon
             else this._item.remove(...Object.keys(berries));
         }
 
+        // apply rollout status
+        if (rolloutMoves.hasOwnProperty(options.moveId) &&
+            !options.unsuccessful)
+        {
+            this._volatile.rollout.start(options.moveId as any);
+        }
+        else this._volatile.rollout.reset();
+
         if (options.unsuccessful)
         {
             this._volatile.lockedMove.reset();
@@ -204,6 +213,8 @@ export class Pokemon
         }
 
         // apply implicit effects
+
+        if (options.moveId === "defensecurl") this._volatile.defenseCurl = true;
 
         const move = dex.moves[options.moveId];
         if (move.selfVolatileEffect === "lockedmove")

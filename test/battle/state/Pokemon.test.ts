@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { berries, dex } from "../../../src/battle/dex/dex";
+import { rolloutMoves } from "../../../src/battle/dex/dex-util";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
 import { Team } from "../../../src/battle/state/Team";
@@ -400,6 +401,55 @@ describe("Pokemon", function()
                     expect(mon.item).to.equal(item, "Item was consumed");
                     expect(mon.item.possibleValues)
                         .to.not.have.any.keys(...Object.keys(berries));
+                });
+            });
+
+            describe("rollout-like moves", function()
+            {
+                for (const moveId of
+                    Object.keys(rolloutMoves) as (keyof typeof rolloutMoves)[])
+                {
+                    it(`Should set ${moveId} if successful`, function()
+                    {
+                        const mon = new Pokemon("Magikarp", false);
+                        expect(mon.volatile.rollout.isActive).to.be.false;
+                        mon.useMove({moveId, targets: []});
+                        expect(mon.volatile.rollout.isActive).to.be.true;
+                        expect(mon.volatile.rollout.type).to.equal(moveId);
+                    });
+
+                    it(`Should not set ${moveId} if unsuccessful`, function()
+                    {
+                        const mon = new Pokemon("Magikarp", false);
+                        expect(mon.volatile.rollout.isActive).to.be.false;
+                        mon.useMove(
+                            {moveId, targets: [], unsuccessful: "evaded"});
+                        expect(mon.volatile.rollout.isActive).to.be.false;
+                    });
+                }
+            });
+
+            describe("defensecurl", function()
+            {
+                it("Should set #volatile#defenseCurl if successful", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    expect(mon.volatile.defenseCurl).to.be.false;
+                    mon.useMove({moveId: "defensecurl", targets: [mon]});
+                    expect(mon.volatile.defenseCurl).to.be.true;
+                });
+
+                it("Should set #volatile#defenseCurl if unsuccessful",
+                function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    expect(mon.volatile.defenseCurl).to.be.false;
+                    mon.useMove(
+                    {
+                        moveId: "defensecurl", targets: [mon],
+                        unsuccessful: "failed"
+                    });
+                    expect(mon.volatile.defenseCurl).to.be.false;
                 });
             });
 

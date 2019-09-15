@@ -91,6 +91,9 @@ export function isWeatherType(type: any): type is WeatherType
     return weatherItems.hasOwnProperty(type);
 }
 
+/** Moves similar to Rollout. */
+export const rolloutMoves = {rollout: true, iceball: true} as const;
+
 /** Format of each pokemon entry in the Dex. */
 export interface PokemonData
 {
