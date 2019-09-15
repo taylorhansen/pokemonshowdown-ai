@@ -23,13 +23,15 @@ describe("VariableTempStatus", function()
         check("none", false, 0);
     });
 
+    function setupImpl(silent = false)
+    {
+        vts = new VariableTempStatus(map, 4, silent);
+    }
+
     function setup(silent = false)
     {
         beforeEach("Initialize VariableTempStatus with silent=${silent}",
-        function()
-        {
-            vts = new VariableTempStatus(map, 4, silent);
-        });
+            setupImpl.bind(undefined, silent));
     }
 
     describe("#reset()", function()
@@ -58,6 +60,13 @@ describe("VariableTempStatus", function()
 
     describe("#tick()", function()
     {
+        it("Should not tick if not active", function()
+        {
+            setupImpl();
+            vts.tick();
+            check("none", false, 0);
+        });
+
         function shouldIncTurns()
         {
             it("Should increment turns", function()
