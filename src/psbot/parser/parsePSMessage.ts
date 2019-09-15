@@ -9,9 +9,9 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
     FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent, HealEvent,
     ImmuneEvent, InvertBoostEvent, isBattleEventType, ItemEvent, MissEvent,
     MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent, SetHPEvent,
-    SideEndEvent, SideStartEvent, SingleTurnEvent, StartEvent, StatusEvent,
-    SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent, TurnEvent,
-    UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
+    SideEndEvent, SideStartEvent, SingleMoveEvent, SingleTurnEvent, StartEvent,
+    StatusEvent, SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent,
+    TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
     "../dispatcher/BattleEvent";
 import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
 import { MessageListener } from "../dispatcher/MessageListener";
@@ -447,6 +447,7 @@ function battleEventHelper(input: Input, info: Info):
         case "-setboost": return eventSetBoost(input, info);
         case "-sethp": return eventSetHP(input, info);
         case "-sideend": case "-sidestart": return eventSide(input, info);
+        case "-singlemove": return eventSingleMove(input, info);
         case "-singleturn": return eventSingleTurn(input, info);
         case "-start": return eventStart(input, info);
         case "-status": return eventStatus(input, info);
@@ -803,6 +804,17 @@ const eventSetHP: Parser<SetHPEvent> = transform(
 const eventSide: Parser<SideEndEvent | SideStartEvent> = transform(
     sequence(word("-sideend", "-sidestart"), playerIdWithName, anyWord),
     ([type, {id}, condition]) => ({type, id, condition}));
+
+/**
+ * Parses a SingleMoveEvent.
+ *
+ * Format:
+ * @example
+ * |-singlemove|<PokemonID>|<move name>
+ */
+const eventSingleMove: Parser<SingleMoveEvent> = transform(
+    sequence(word("-singlemove"), pokemonId, anyWord),
+    ([type, id, move]) => ({type, id, move}));
 
 /**
  * Parses a SingleTurnEvent.

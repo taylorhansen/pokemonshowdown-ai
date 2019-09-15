@@ -186,6 +186,9 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
             // username not actually known as info is lost
             result = [event.type, `${event.id}: <user>`, event.condition];
             break;
+        case "-singlemove":
+            result = [event.type, stringifyID(event.id), event.move];
+            break;
         case "-singleturn":
             result = [event.type, stringifyID(event.id), event.status];
             break;

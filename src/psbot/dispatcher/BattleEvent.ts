@@ -14,9 +14,9 @@ export const battleEventTypes =
     "-heal": true, "-immune": true, "-invertboost": true, "-item": true,
     "-miss": true, move: true, "-mustrecharge": true, "-prepare": true,
     "-setboost": true, "-sethp": true, "-sideend": true, "-sidestart": true,
-    "-singleturn": true, "-start": true, "-status": true, "-swapboost": true,
-    switch: true, tie: true, "-transform": true, turn: true, "-unboost": true,
-    upkeep: true, "-weather": true, win: true
+    "-singlemove": true, "-singleturn": true, "-start": true, "-status": true,
+    "-swapboost": true, switch: true, tie: true, "-transform": true, turn: true,
+    "-unboost": true, upkeep: true, "-weather": true, win: true
 } as const;
 /** The types of BattleEvents that can exist. Used as event prefixes. */
 export type BattleEventType = keyof typeof battleEventTypes;
@@ -63,6 +63,7 @@ export type BattleEvent<T extends BattleEventType> =
     : T extends "-sethp" ? SetHPEvent
     : T extends "-sideend" ? SideEndEvent
     : T extends "-sidestart" ? SideStartEvent
+    : T extends "-singlemove" ? SingleMoveEvent
     : T extends "-singleturn" ? SingleTurnEvent
     : T extends "-start" ? StartEvent
     : T extends "-status" ? StatusEvent
@@ -435,6 +436,16 @@ export interface SideStartEvent extends BattleEventBase
     readonly id: PlayerID;
     /** Name of the side condition. */
     readonly condition: string;
+}
+
+/** Event where a move status is applied until another move is attempted. */
+export interface SingleMoveEvent extends BattleEventBase
+{
+    readonly type: "-singlemove";
+    /** ID of the pokemon getting the status. */
+    readonly id: PokemonID;
+    /** Name of the move status. */
+    readonly move: string;
 }
 
 /** Event where a status is temporarily added for a single turn. */

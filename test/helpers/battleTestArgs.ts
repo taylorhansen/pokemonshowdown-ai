@@ -110,6 +110,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-prepare", id: pokemonId[0], moveName: "Razor Wind"},
     {type: "-setboost", id: pokemonId[2], stat: "evasion", amount: 6},
     {type: "-sethp", id: pokemonId[0], status: pokemonStatus[0]},
+    {type: "-singlemove", id: pokemonId[1], move: "Destiny Bond"},
     {type: "-singleturn", id: pokemonId[2], status: "Protect"},
     {type: "-sideend", id: "p1", condition: "Spikes"},
     {type: "-sidestart", id: "p2", condition: "move: Stealth Rock"},
@@ -182,7 +183,7 @@ export const battleProgress: BattleProgressMessage[] =
     },
     {
         events: battleEvent.slice(29, 39)
-            .concat({type: "upkeep"}, ...battleEvent.slice(39, 54),
+            .concat({type: "upkeep"}, ...battleEvent.slice(39, 55),
                 {type: "turn", num: 9})
     }
 ];
