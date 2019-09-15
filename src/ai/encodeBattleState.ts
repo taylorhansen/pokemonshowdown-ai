@@ -1,7 +1,7 @@
 import { dex, numFutureMoves, numLockedMoves, numTwoTurnMoves } from
     "../battle/dex/dex";
-import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes, Type, types,
-    weatherItems } from "../battle/dex/dex-util";
+import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes,
+    rolloutMoves, Type, types, weatherItems } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { HP } from "../battle/state/HP";
 import { ItemTempStatus } from "../battle/state/ItemTempStatus";
@@ -280,9 +280,11 @@ export const sizeVolatileStatus =
     /*focus energy*/1 + /*ingrain*/1 + /*leech seed*/1 +
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
     /*attract*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
+    /*defense curl*/1 +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*identified*/2 + /*locked move variants*/numLockedMoves + /*minimize*/1 +
-    /*must recharge*/1 + /*override traits*/sizePokemonTraits + /*roost*/1 +
+    /*must recharge*/1 + /*override traits*/sizePokemonTraits +
+    /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
     /*taunt*/sizeTempStatus + /*torment*/1 + /*transformed*/1 +
     /*two-turn*/numTwoTurnMoves + /*unburden*/1 + /*uproar*/sizeTempStatus +
@@ -308,6 +310,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const attracted = status.attracted ? 1 : 0;
     const bide = encodeTempStatus(status.bide);
     const charge = encodeTempStatus(status.charge);
+    const defenseCurl = status.defenseCurl ? 1 : 0;
     const disabled = status.disabledMoves.map(encodeTempStatus)
         .reduce((a, b) => a.concat(b));
     const identified = ["foresight", "miracleeye"]
@@ -318,6 +321,7 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const mustRecharge = status.mustRecharge ? 1 : 0;
     const overrideTraits = encodePokemonTraits(status.overrideTraits,
         status.addedType);
+    const rollout = encodeVariableTempStatus(status.rollout);
     const roost = status.roost ? 1 : 0;
     const slowStart = encodeTempStatus(status.slowStart);
     // success rate halves each time a stalling move is used, capped at 12.5% in
@@ -335,10 +339,10 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     return [
         aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, gastroAcid,
         ingrain, leechSeed, ...magnetRise, substitute, attracted, ...bide,
-        ...charge, ...disabled, ...identified, ...lastUsed, ...lockedMove,
-        minimize, mustRecharge, ...overrideTraits, roost, ...slowStart,
-        stallFailRate, ...taunt, torment, transformed, ...twoTurn, unburden,
-        ...uproar, willTruant
+        ...charge, defenseCurl, ...disabled, ...identified, ...lastUsed,
+        ...lockedMove, minimize, mustRecharge, ...overrideTraits,
+        ...rollout, roost, ...slowStart, stallFailRate, ...taunt, torment,
+        transformed, ...twoTurn, unburden, ...uproar, willTruant
     ];
 }
 
