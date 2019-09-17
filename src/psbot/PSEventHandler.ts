@@ -476,6 +476,7 @@ export class PSEventHandler
         {
             const v = this.getActive(event.id.owner).volatile;
             if (event.move === "Destiny Bond") v.destinyBond = true;
+            else if (event.move === "Grudge") v.grudge = true;
         })
         .on("-singleturn", event =>
         {

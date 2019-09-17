@@ -2240,19 +2240,21 @@ describe("Battle and EventProcessor", function()
 
         describe("singlemove", function()
         {
-            it("Should activate Destiny Bond", async function()
+            function shouldActivate(move: string, field: keyof VolatileStatus)
             {
-                const volatile = battle.state.teams.us.active.volatile;
-                expect(volatile.destinyBond).to.be.false;
-
-                await battle.progress(
+                it(`Should activate ${move}`, async function()
                 {
-                    events: [
-                        {type: "-singlemove", id: us1, move: "Destiny Bond"}
-                    ]
+                    const volatile = battle.state.teams.us.active.volatile;
+                    expect(volatile[field]).to.be.false;
+
+                    await battle.progress(
+                        {events: [{type: "-singlemove", id: us1, move}]});
+                    expect(volatile[field]).to.be.true;
                 });
-                expect(volatile.destinyBond).to.be.true;
-            });
+            }
+
+            shouldActivate("Destiny Bond", "destinyBond");
+            shouldActivate("Grudge", "grudge");
         });
 
         describe("singleturn", function()
