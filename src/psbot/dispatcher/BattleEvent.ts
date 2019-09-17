@@ -2,24 +2,63 @@
 import { BoostName, MajorStatus, WeatherType } from "../../battle/dex/dex-util";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
+// TODO: make this type map not redundant with above map
 /** The types of BattleEvents that can exist. Used as event prefixes. */
-export const battleEventTypes =
+const battleEventTypes =
 {
-    "\n": true, "-ability": true, "-activate": true, "-boost": true, cant: true,
-    "-clearallboost": true, "-clearboost": true, "-clearnegativeboost": true,
-    "-clearpositiveboost": true, "-copyboost": true, "-curestatus": true,
-    "-cureteam": true, "-damage": true, detailschange: true, drag: true,
-    "-end": true, "-endability": true, "-enditem": true, "-fail": true,
-    faint: true, "-fieldend": true, "-fieldstart": true, "-formechange": true,
-    "-heal": true, "-immune": true, "-invertboost": true, "-item": true,
-    "-miss": true, move: true, "-mustrecharge": true, "-prepare": true,
-    "-setboost": true, "-sethp": true, "-sideend": true, "-sidestart": true,
-    "-singlemove": true, "-singleturn": true, "-start": true, "-status": true,
-    "-swapboost": true, switch: true, tie: true, "-transform": true, turn: true,
-    "-unboost": true, upkeep: true, "-weather": true, win: true
+    "\n": {} as EmptyEvent,
+    "-ability": {} as AbilityEvent,
+    "-activate": {} as ActivateEvent,
+    "-boost": {} as BoostEvent,
+    cant: {} as CantEvent,
+    "-clearallboost": {} as ClearAllBoostEvent,
+    "-clearboost": {} as ClearBoostEvent,
+    "-clearnegativeboost": {} as ClearNegativeBoostEvent,
+    "-clearpositiveboost": {} as ClearPositiveBoostEvent,
+    "-copyboost": {} as CopyBoostEvent,
+    "-curestatus": {} as CureStatusEvent,
+    "-cureteam": {} as CureTeamEvent,
+    "-damage": {} as DamageEvent,
+    detailschange: {} as DetailsChangeEvent,
+    drag: {} as DragEvent,
+    "-end": {} as EndEvent,
+    "-endability": {} as EndAbilityEvent,
+    "-enditem": {} as EndItemEvent,
+    "-fail": {} as FailEvent,
+    faint: {} as FaintEvent,
+    "-fieldend": {} as FieldEndEvent,
+    "-fieldstart": {} as FieldStartEvent,
+    "-formechange": {} as FormeChangeEvent,
+    "-heal": {} as HealEvent,
+    "-immune": {} as ImmuneEvent,
+    "-invertboost": {} as InvertBoostEvent,
+    "-item": {} as ItemEvent,
+    "-miss": {} as MissEvent,
+    move: {} as MoveEvent,
+    "-mustrecharge": {} as MustRechargeEvent,
+    "-prepare": {} as PrepareEvent,
+    "-setboost": {} as SetBoostEvent,
+    "-sethp": {} as SetHPEvent,
+    "-sideend": {} as SideEndEvent,
+    "-sidestart": {} as SideStartEvent,
+    "-singlemove": {} as SingleMoveEvent,
+    "-singleturn": {} as SingleTurnEvent,
+    "-start": {} as StartEvent,
+    "-status": {} as StatusEvent,
+    "-swapboost": {} as SwapBoostEvent,
+    switch: {} as SwitchEvent,
+    tie: {} as TieEvent,
+    "-transform": {} as TransformEvent,
+    turn: {} as TurnEvent,
+    "-unboost": {} as UnboostEvent,
+    upkeep: {} as UpkeepEvent,
+    "-weather": {} as WeatherEvent,
+    win: {} as WinEvent
 } as const;
+
 /** The types of BattleEvents that can exist. Used as event prefixes. */
 export type BattleEventType = keyof typeof battleEventTypes;
+
 /** Checks if a string is a BattleEventType. Usable as a type guard. */
 export function isBattleEventType(value: any): value is BattleEventType
 {
@@ -27,56 +66,7 @@ export function isBattleEventType(value: any): value is BattleEventType
 }
 
 /** Maps BattleEventType to a BattleEvent interface type. */
-export type BattleEvent<T extends BattleEventType> =
-    T extends "\n" ? EmptyEvent
-    : T extends "-ability" ? AbilityEvent
-    : T extends "-activate" ? ActivateEvent
-    : T extends "-boost" ? BoostEvent
-    : T extends "cant" ? CantEvent
-    : T extends "-clearallboost" ? ClearAllBoostEvent
-    : T extends "-clearboost" ? ClearBoostEvent
-    : T extends "-clearnegativeboost" ? ClearNegativeBoostEvent
-    : T extends "-clearpositiveboost" ? ClearPositiveBoostEvent
-    : T extends "-copyboost" ? CopyBoostEvent
-    : T extends "-curestatus" ? CureStatusEvent
-    : T extends "-cureteam" ? CureTeamEvent
-    : T extends "-damage" ? DamageEvent
-    : T extends "detailschange" ? DetailsChangeEvent
-    : T extends "drag" ? DragEvent
-    : T extends "-end" ? EndEvent
-    : T extends "-endability" ? EndAbilityEvent
-    : T extends "-enditem" ? EndItemEvent
-    : T extends "-fail" ? FailEvent
-    : T extends "faint" ? FaintEvent
-    : T extends "-fieldend" ? FieldEndEvent
-    : T extends "-fieldstart" ? FieldStartEvent
-    : T extends "-formechange" ? FormeChangeEvent
-    : T extends "-heal" ? HealEvent
-    : T extends "-immune" ? ImmuneEvent
-    : T extends "-invertboost" ? InvertBoostEvent
-    : T extends "-item" ? ItemEvent
-    : T extends "-miss" ? MissEvent
-    : T extends "move" ? MoveEvent
-    : T extends "-mustrecharge" ? MustRechargeEvent
-    : T extends "-prepare" ? PrepareEvent
-    : T extends "-setboost" ? SetBoostEvent
-    : T extends "-sethp" ? SetHPEvent
-    : T extends "-sideend" ? SideEndEvent
-    : T extends "-sidestart" ? SideStartEvent
-    : T extends "-singlemove" ? SingleMoveEvent
-    : T extends "-singleturn" ? SingleTurnEvent
-    : T extends "-start" ? StartEvent
-    : T extends "-status" ? StatusEvent
-    : T extends "-swapboost" ? SwapBoostEvent
-    : T extends "switch" ? SwitchEvent
-    : T extends "tie" ? TieEvent
-    : T extends "-transform" ? TransformEvent
-    : T extends "turn" ? TurnEvent
-    : T extends "-unboost" ? UnboostEvent
-    : T extends "upkeep" ? UpkeepEvent
-    : T extends "-weather" ? WeatherEvent
-    : T extends "win" ? WinEvent
-    : never;
+export type BattleEvent<T extends BattleEventType> = typeof battleEventTypes[T];
 
 /** Stands for any type of event that can happen during a battle. */
 export type AnyBattleEvent = BattleEvent<BattleEventType>;
