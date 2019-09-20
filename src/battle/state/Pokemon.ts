@@ -41,17 +41,13 @@ export interface MoveData
 /** Holds all the possibly incomplete info about a pokemon. */
 export class Pokemon
 {
-    /** Reference to the parent Team. */
-    public readonly team?: Team;
-
     /** Whether this is the current active pokemon. */
-    public get active(): boolean { return this._active; }
-    private _active: boolean = false;
+    public get active(): boolean { return !!this._volatile; }
 
     /** Current pokemon traits. May be overridden by VolatileStatus. */
     public get traits(): PokemonTraits
     {
-        if (this._active) return this._volatile.overrideTraits;
+        if (this._volatile) return this._volatile.overrideTraits;
         return this.baseTraits;
     }
     /** Base pokemon traits. */
@@ -97,19 +93,19 @@ export class Pokemon
      */
     public formChange(species: string, perm = false): void
     {
-        if (perm && !this._volatile.transformed)
+        if (perm && !this.volatile.transformed)
         {
             this.baseTraits.setSpecies(species);
-            this._volatile.overrideTraits.copy(this.baseTraits);
+            this.volatile.overrideTraits.copy(this.baseTraits);
         }
-        else this._volatile.overrideTraits.setSpecies(species);
+        else this.volatile.overrideTraits.setSpecies(species);
     }
 
     /** Current types for this Pokemon. */
     public get types(): readonly Type[]
     {
         const result = [...this.traits.types];
-        if (this._active) result.push(this._volatile.addedType);
+        if (this._volatile) result.push(this._volatile.addedType);
         return result.filter(type => type !== "???");
     }
 
@@ -130,7 +126,7 @@ export class Pokemon
         else this._item.narrow(item);
 
         // (de)activate unburden ability if the pokemon has it
-        this._volatile.unburden = item === "none" && gained;
+        if (this._volatile) this._volatile.unburden = item === "none" && gained;
     }
     /**
      * Indicates that an item was just removed from this Pokemon.
@@ -156,7 +152,7 @@ export class Pokemon
     /** Pokemon's current moveset. */
     public get moveset(): Moveset
     {
-        if (this._active) return this._volatile.overrideMoveset;
+        if (this._volatile) return this._volatile.overrideMoveset;
         return this.baseMoveset;
     }
     /** Indicates that a move has been used. */
@@ -174,14 +170,14 @@ export class Pokemon
             : options.targets.filter(
                 m => m !== this && m.ability === "pressure").length + 1;
 
-        this._volatile.lastUsed = this.moveset.getOrRevealIndex(options.moveId);
+        this.volatile.lastUsed = this.moveset.getOrRevealIndex(options.moveId);
 
         // release two-turn move
         // while this could be the event that prepares the move, a separate
         //  event is responsible for distinguishing that
         if (twoTurnMoves.hasOwnProperty(options.moveId))
         {
-            this._volatile.twoTurn.reset();
+            this.volatile.twoTurn.reset();
         }
 
         // handle natural gift move
@@ -202,37 +198,37 @@ export class Pokemon
         if (rolloutMoves.hasOwnProperty(options.moveId) &&
             !options.unsuccessful)
         {
-            this._volatile.rollout.start(options.moveId as any);
+            this.volatile.rollout.start(options.moveId as any);
         }
-        else this._volatile.rollout.reset();
+        else this.volatile.rollout.reset();
 
         // reset single move statuses, waiting for an explicit event
-        this._volatile.resetSingleMove();
+        this.volatile.resetSingleMove();
 
         if (options.unsuccessful)
         {
-            this._volatile.lockedMove.reset();
+            this.volatile.lockedMove.reset();
             return;
         }
 
         // apply implicit effects
 
-        if (options.moveId === "defensecurl") this._volatile.defenseCurl = true;
+        if (options.moveId === "defensecurl") this.volatile.defenseCurl = true;
 
         const move = dex.moves[options.moveId];
         if (move.selfVolatileEffect === "lockedmove")
         {
-            if (this._volatile.lockedMove.isActive &&
-                options.moveId === this._volatile.lockedMove.type)
+            if (this.volatile.lockedMove.isActive &&
+                options.moveId === this.volatile.lockedMove.type)
             {
                 // if we're already in a locked move, no need to restart it
-                this._volatile.lockedMove.tick();
+                this.volatile.lockedMove.tick();
             }
-            else this._volatile.lockedMove.start(options.moveId as any);
+            else this.volatile.lockedMove.start(options.moveId as any);
         }
-        else this._volatile.lockedMove.reset();
+        else this.volatile.lockedMove.reset();
 
-        if (move.volatileEffect === "minimize") this._volatile.minimize = true;
+        if (move.volatileEffect === "minimize") this.volatile.minimize = true;
 
         // apply implicit team effects
 
@@ -254,13 +250,13 @@ export class Pokemon
      */
     public disableMove(id: string): void
     {
-        this._volatile.disabledMoves[this.moveset.getOrRevealIndex(id)].start();
+        this.volatile.disabledMoves[this.moveset.getOrRevealIndex(id)].start();
     }
     /** Overrides a move slot via Mimic until switched out. */
     public mimic(newId: string): void
     {
         // mimicked moves have 5 pp and maxed maxpp
-        this._volatile.overrideMoveset.replace("mimic",
+        this.volatile.overrideMoveset.replace("mimic",
             new Move(newId, "max", 5));
     }
     /** Permanently replaces a move slot via Sketch. */
@@ -269,11 +265,11 @@ export class Pokemon
         // sketched moves have no pp ups applied
         const move = new Move(newId, "min");
         // prevent sketch from permanently changing transform base
-        if (!this._volatile.transformed)
+        if (!this.volatile.transformed)
         {
             this.baseMoveset.replace("sketch", move);
         }
-        this._volatile.overrideMoveset.replace("sketch", move);
+        this.volatile.overrideMoveset.replace("sketch", move);
     }
     /** Pokemon's base moveset. */
     public readonly baseMoveset = new Moveset();
@@ -318,22 +314,22 @@ export class Pokemon
         }
 
         const v = this._volatile;
-        if (v.ingrain) return true;
+        if (v && v.ingrain) return true;
 
         // gastro acid status suppresses most abilities
-        const ignoringAbility = this._active && this._volatile.gastroAcid;
+        const ignoringAbility = v && v.gastroAcid;
         const ability = ignoringAbility ? "" : this.ability;
 
         // klutz ability suppresses most items
-        const ignoringItem = v.embargo.isActive || ability === "klutz";
-        const item = ignoringItem || !this._item.definiteValue ?
+        const ignoringItem = (v && v.embargo.isActive) || ability === "klutz";
+        const item = (ignoringItem || !this._item.definiteValue) ?
             "" : this._item.definiteValue.name;
 
         // iron ball causes grounding
         if (item === "ironball") return true;
 
         // magnet rise and levitate lift
-        return !v.magnetRise.isActive && ability !== "levitate" &&
+        return (!v || !v.magnetRise.isActive) && ability !== "levitate" &&
             // flying type lifts
             !this.types.includes("flying");
     }
@@ -350,20 +346,20 @@ export class Pokemon
         }
 
         const v = this._volatile;
-        if (v.ingrain) return true;
+        if (v && v.ingrain) return true;
 
         // gastro acid status suppresses most abilities
-        const ignoringAbility = this._active && this._volatile.gastroAcid;
+        const ignoringAbility = v && v.gastroAcid;
 
         // klutz ability suppresses most items
-        const ignoringItem = v.embargo.isActive ||
+        const ignoringItem = (v && v.embargo.isActive) ||
             (!ignoringAbility && this.canHaveAbility("klutz"));
 
         // iron ball causes grounding
         if (this._item.isSet("ironball") && !ignoringItem) return true;
 
         // magnet rise lifts
-        return !v.magnetRise.isActive &&
+        return (!v || !v.magnetRise.isActive) &&
             // levitate lifts
             (ignoringAbility || !this.canHaveAbility("levitate")) &&
             // flying type lifts
@@ -371,68 +367,79 @@ export class Pokemon
     }
 
     /** Minor status conditions. Cleared on switch. */
-    public get volatile(): VolatileStatus { return this._volatile; }
+    public get volatile(): VolatileStatus
+    {
+        if (this._volatile) return this._volatile;
+        throw new Error("This Pokemon is currently inactive.");
+    }
     /** Minor status conditions. Cleared on switch. */
-    private _volatile = new VolatileStatus();
+    private _volatile: VolatileStatus | null = null;
 
     /**
      * Creates a Pokemon.
      * @param hpPercent Whether to report HP as a percentage.
      * @param team Reference to the parent Team.
      */
-    constructor(species: string, hpPercent: boolean, team?: Team)
+    constructor(species: string, hpPercent: boolean,
+        public readonly team?: Team)
     {
         this.baseTraits.init();
         this.baseTraits.species.narrow(species);
         this.hp = new HP(hpPercent);
-        this.team = team;
-        this._active = false;
         this._lastItem.narrow("none");
     }
 
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void
     {
-        if (this._active) this._volatile.preTurn();
+        if (this.active) this.volatile.preTurn();
     }
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
         // sleep counter handled by in-game events
-        if (this._active) this._volatile.postTurn();
+        if (this.active) this.volatile.postTurn();
     }
 
     /**
-     * Copies volatile status state to another pokemon.
-     * @param mon Pokemon that will receive the volatile status.
+     * Switches this Pokemon in as if it replaces the given Pokemon.
+     * @param mon Pokemon to replace with. If falsy, the Pokemon is switching
+     * into an empty slot.
+     * @param copy Whether to copy volatile statuses via Baton Pass. Default
+     * false.
      */
-    public copyVolatile(mon: Pokemon): void
+    public switchInto(mon?: Pokemon | null, copy = false): void
     {
-        mon._volatile = this._volatile.shallowClone();
-    }
+        if (!mon || !mon._volatile)
+        {
+            // create our own volatile status object
+            this._volatile = new VolatileStatus();
+        }
+        else
+        {
+            // transfer volatile status object
+            this._volatile = mon._volatile;
+            mon._volatile = null;
+        }
 
-    /**
-     * Tells the pokemon that it is currently being switched in. Sets up
-     * volatile trait and moveset overrides.
-     */
-    public switchIn(): void
-    {
-        this._active = true;
+        // switch out provided mon
+
+        // toxic counter resets on switch
+        if (mon && mon.majorStatus.current === "tox")
+        {
+            mon.majorStatus.resetCounter();
+        }
+
+        // switch in new mon
+
+        // handle baton pass
+        if (copy) this._volatile.clearUnpassable();
+        else this._volatile.clear();
+
+        // make sure volatile has updated info about this pokemon
         this._volatile.overrideMoveset.link(this.baseMoveset, "base");
         this._volatile.overrideTraits.copy(this.baseTraits);
-    }
-
-    /**
-     * Tells the pokemon that it is currently being switched out. Clears
-     * volatile statuses.
-     */
-    public switchOut(): void
-    {
-        this._active = false;
-        // toxic counter resets on switch
-        if (this.majorStatus.current === "tox") this.majorStatus.resetCounter();
-        this._volatile.clear();
     }
 
     /** Tells the pokemon that it has fainted. */
@@ -470,17 +477,17 @@ export class Pokemon
      */
     public transform(target: Pokemon): void
     {
-        this._volatile.transformed = true;
+        this.volatile.transformed = true;
 
         // copy boosts
-        this._volatile.copyBoostsFrom(target._volatile);
+        this.volatile.copyBoostsFrom(target.volatile);
 
         // link moveset inference
-        this._volatile.overrideMoveset.link(target.moveset, "transform");
+        this.volatile.overrideMoveset.link(target.moveset, "transform");
 
         // copy/link current form, ability, types, stats, etc
-        this._volatile.overrideTraits.copy(target.traits);
-        this._volatile.addedType = target._volatile.addedType;
+        this.volatile.overrideTraits.copy(target.traits);
+        this.volatile.addedType = target.volatile.addedType;
     }
 
     /**
@@ -507,7 +514,7 @@ export class Pokemon
         {
             if (!stats.hasOwnProperty(stat)) continue;
             // inferring a stat here will infer stats about the linked mon
-            this._volatile.overrideTraits.stats[stat as StatExceptHP].set(
+            this.volatile.overrideTraits.stats[stat as StatExceptHP].set(
                 stats[stat as StatExceptHP]);
         }
     }
@@ -526,7 +533,7 @@ ${s}${this.stringifySpecies()}${this.gender ? ` ${this.gender}` : ""}
 ${s}stats: ${this.stringifyStats()}
 ${s}status: ${this.majorStatus.toString()}
 ${s}active: ${this.active}\
-${this.active ? `\n${s}volatile: ${this._volatile.toString()}` : ""}
+${this.active ? `\n${s}volatile: ${this.volatile.toString()}` : ""}
 ${s}grounded: \
 ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}types: ${this.stringifyTypes()}
@@ -543,7 +550,7 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
         const base = this.baseTraits.species;
         if (!base.definiteValue) return "<unrevealed>";
 
-        const over = this._active ?
+        const over = this._volatile ?
             this._volatile.overrideTraits.species : null;
 
         if (!over || !over.definiteValue || over === base)
@@ -559,7 +566,7 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
     {
         const base = this.baseTraits.stats;
 
-        if (!this._active || base === this._volatile.overrideTraits.stats)
+        if (!this._volatile || base === this._volatile.overrideTraits.stats)
         {
             return base.toString();
         }
@@ -571,7 +578,7 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
     private stringifyTypes(): string
     {
         const base = this.baseTraits.types;
-        if (!this._active || base === this._volatile.overrideTraits.types)
+        if (!this._volatile || base === this._volatile.overrideTraits.types)
         {
             return `[${base.join(", ")}]`;
         }
@@ -586,8 +593,7 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
         const base = this.baseTraits.ability;
         const baseStr = `${base.definiteValue ? "" : "possibly "}${base}`;
 
-        if (!this._active ||
-            base === this._volatile.overrideTraits.ability)
+        if (!this._volatile || base === this._volatile.overrideTraits.ability)
         {
             return baseStr;
         }
@@ -618,7 +624,7 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
         const baseHPTypeStr = (baseHPType.definiteValue ? "" : "possibly ") +
             baseHPType.toString();
         let hpType: string;
-        if (this._active)
+        if (this._volatile)
         {
             const overHPType = this._volatile.overrideTraits.stats.hpType;
             if (baseHPType !== overHPType)

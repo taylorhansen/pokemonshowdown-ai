@@ -32,6 +32,7 @@ export class VolatileStatus
     {
         for (const boost in boostNames)
         {
+            // istanbul ignore if
             if (!boostNames.hasOwnProperty(boost)) continue;
             this.boosts[boost as BoostName] = source.boosts[boost as BoostName];
         }
@@ -223,6 +224,12 @@ export class VolatileStatus
         this.magnetRise.end();
         this.substitute = false;
 
+        this.clearUnpassable();
+    }
+
+    /** Clears statuses that can't be Baton Passed. */
+    public clearUnpassable(): void
+    {
         this.attracted = false;
         this.bide.end();
         this.charge.end();
@@ -306,26 +313,6 @@ export class VolatileStatus
             this._willTruant = !this._willTruant;
         }
         else this._willTruant = false;
-    }
-
-    /**
-     * Creates a shallow clone of this VolatileStatus.
-     * @returns A shallow clone of this object.
-     */
-    public shallowClone(): VolatileStatus
-    {
-        const v = new VolatileStatus();
-        v.aquaRing = this.aquaRing;
-        v._boosts = this._boosts;
-        this.confusion.copyTo(v.confusion);
-        this.embargo.copyTo(v.embargo);
-        v.focusEnergy = this.focusEnergy;
-        v.gastroAcid = this.gastroAcid;
-        v.ingrain = this.ingrain;
-        v.leechSeed = this.leechSeed;
-        this.magnetRise.copyTo(v.magnetRise);
-        v.substitute = this.substitute;
-        return v;
     }
 
     // istanbul ignore next: only used in logging

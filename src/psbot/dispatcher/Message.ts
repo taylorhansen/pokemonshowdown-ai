@@ -160,8 +160,12 @@ export interface RequestPokemon
     readonly details: PokemonDetails;
     /** Parsed PokemonStatus. */
     readonly condition: PokemonStatus;
-    /** True if this pokemon is active. */
-    readonly active: boolean;
+    /**
+     * True if this pokemon is active. This declaration is only here for
+     * completeness and should not be directly accessed. Explicit SwitchEvents
+     * are better at that.
+     */
+    readonly active?: boolean;
     /** Pokemon's stats. */
     readonly stats: Readonly<Record<StatExceptHP, number>>;
     /** List of move id names. */

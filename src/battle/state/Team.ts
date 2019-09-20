@@ -141,14 +141,9 @@ export class Team
         if (!mon) throw new Error(`Uninitialized pokemon slot ${index}`);
 
         // switch active status
-        if (options.copyVolatile)
-        {
-            this.active.copyVolatile(mon);
-        }
-        this.active.switchOut();
-        mon.switchIn();
+        mon.switchInto(this._pokemon[0], options.copyVolatile);
 
-        // swap active with new pokemon
+        // swap active slot with new pokemon
         [this._pokemon[0], this._pokemon[index]] =
             [this._pokemon[index], this._pokemon[0]];
         return this.active;

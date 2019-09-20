@@ -629,10 +629,6 @@ export class PSEventHandler
             mon.traits.setAbility(data.baseAbility);
             mon.majorStatus.assert(status.condition);
 
-            // set active status
-            if (data.active) mon.switchIn();
-            else mon.switchOut();
-
             for (let moveId of data.moves)
             {
                 if (moveId.startsWith("hiddenpower") &&

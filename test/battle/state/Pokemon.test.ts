@@ -8,6 +8,13 @@ import { Team } from "../../../src/battle/state/Team";
 
 describe("Pokemon", function()
 {
+    function switchOut(mon: Pokemon)
+    {
+        // create a dummy Pokemon that will replace the given one
+        const other = new Pokemon("Magikarp", false);
+        other.switchInto(mon);
+    }
+
     describe("#active", function()
     {
         it("Should be inactive initially", function()
@@ -24,7 +31,7 @@ describe("Pokemon", function()
             it("Should set override species", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.switchIn();
+                mon.switchInto();
                 mon.formChange("Charmander");
                 expect(mon.species).to.equal("Charmander");
                 expect(mon.volatile.overrideTraits.species.possibleValues)
@@ -39,7 +46,7 @@ describe("Pokemon", function()
             it("Should set override and base species", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.switchIn();
+                mon.switchInto();
                 mon.formChange("Charmander", true);
                 expect(mon.species).to.equal("Charmander");
                 expect(mon.volatile.overrideTraits.species.possibleValues)
@@ -51,7 +58,7 @@ describe("Pokemon", function()
             it("Should not set base species if transformed", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.switchIn();
+                mon.switchInto();
                 mon.volatile.transformed = true;
                 mon.formChange("Charmander", true);
                 expect(mon.species).to.equal("Charmander");
@@ -60,72 +67,6 @@ describe("Pokemon", function()
                 expect(mon.baseTraits.species.possibleValues)
                     .to.have.keys("Magikarp");
             });
-        });
-    });
-
-    describe("#switchIn()", function()
-    {
-        it("Should become active", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.switchIn();
-            expect(mon.active).to.be.true;
-        });
-
-        it("Should set VolatileStatus#overrideTraits", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.switchIn();
-            expect(mon.baseTraits.ability)
-                .to.equal(mon.volatile.overrideTraits.ability);
-            expect(mon.baseTraits.data)
-                .to.equal(mon.volatile.overrideTraits.data);
-            expect(mon.baseTraits.species)
-                .to.equal(mon.volatile.overrideTraits.species);
-            expect(mon.baseTraits.stats)
-                .to.equal(mon.volatile.overrideTraits.stats);
-            expect(mon.baseTraits.types)
-                .to.equal(mon.volatile.overrideTraits.types);
-        });
-    });
-
-    describe("#switchOut()", function()
-    {
-        it("Should become inactive", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.switchIn();
-            mon.switchOut();
-            expect(mon.active).to.be.false;
-        });
-
-        it("Should clear toxic turns", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.majorStatus.afflict("tox");
-            mon.majorStatus.tick();
-            expect(mon.majorStatus.turns).to.equal(2);
-            mon.switchOut();
-            expect(mon.majorStatus.turns).to.equal(1);
-        });
-
-        it("Should not clear other major status turns",
-        function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.majorStatus.afflict("slp");
-            mon.majorStatus.tick();
-            expect(mon.majorStatus.turns).to.equal(2);
-            mon.switchOut();
-            expect(mon.majorStatus.turns).to.equal(2);
-        });
-
-        it("Should clear volatile", function()
-        {
-            const mon = new Pokemon("Magikarp", false);
-            mon.volatile.lockedMove.start("thrash");
-            mon.switchOut();
-            expect(mon.volatile.lockedMove.isActive).to.be.false;
         });
     });
 
@@ -156,7 +97,7 @@ describe("Pokemon", function()
         it("Should include VolatileStatus#addedType", function()
         {
             const mon = new Pokemon("Kingdra", false);
-            mon.switchIn();
+            mon.switchInto();
             mon.volatile.addedType = "grass";
             expect(mon.types).to.have.members(["water", "dragon", "grass"]);
         });
@@ -197,7 +138,7 @@ describe("Pokemon", function()
                 const mon = new Pokemon("Magikarp", true);
                 mon.setItem("lifeorb");
 
-                mon.switchIn();
+                mon.switchInto();
                 expect(mon.volatile.unburden).to.be.false;
             });
 
@@ -206,14 +147,14 @@ describe("Pokemon", function()
                 const mon = new Pokemon("Magikarp", true);
                 mon.setItem("none");
 
-                mon.switchIn();
+                mon.switchInto();
                 expect(mon.volatile.unburden).to.be.false;
             });
 
             it("Should set unburden if item was just removed", function()
             {
                 const mon = new Pokemon("Magikarp", true);
-                mon.switchIn();
+                mon.switchInto();
 
                 mon.setItem("none", /*gained*/true);
                 expect(mon.volatile.unburden).to.be.true;
@@ -244,7 +185,7 @@ describe("Pokemon", function()
             it("Should set unburden if item was just removed", function()
             {
                 const mon = new Pokemon("Magikarp", true);
-                mon.switchIn();
+                mon.switchInto();
 
                 mon.removeItem();
                 expect(mon.volatile.unburden).to.be.true;
@@ -256,7 +197,7 @@ describe("Pokemon", function()
             it("Should not set lastItem if no consumed parameter", function()
             {
                 const mon = new Pokemon("Magikarp", true);
-                mon.switchIn();
+                mon.switchInto();
                 mon.setItem("leftovers");
 
                 mon.removeItem();
@@ -269,7 +210,7 @@ describe("Pokemon", function()
             {
                 const mon = new Pokemon("Magikarp", true);
                 const item = mon.item;
-                mon.switchIn();
+                mon.switchInto();
                 mon.setItem("leftovers");
                 expect(mon.lastItem.definiteValue).to.not.be.null;
                 expect(mon.lastItem.definiteValue!.name).to.equal("none");
@@ -290,6 +231,7 @@ describe("Pokemon", function()
             it("Should use and reveal move", function()
             {
                 const mon = new Pokemon("Magikarp", false);
+                mon.switchInto();
                 expect(mon.moveset.get("splash")).to.be.null;
                 mon.useMove({moveId: "splash", targets: [mon]});
                 expect(mon.moveset.get("splash")!.pp).to.equal(63);
@@ -298,6 +240,7 @@ describe("Pokemon", function()
             it("Should not reveal struggle as a move slot", function()
             {
                 const mon = new Pokemon("Magikarp", false);
+                mon.switchInto();
                 mon.useMove({moveId: "struggle", targets: [mon]});
                 expect(mon.moveset.get("struggle")).to.be.null;
             });
@@ -309,6 +252,7 @@ describe("Pokemon", function()
                 beforeEach("Setup pressure mon", function()
                 {
                     target = new Pokemon("Zapdos", /*hpPercent*/true);
+                    target.switchInto();
                     target.traits.setAbility("pressure");
                 });
 
@@ -322,6 +266,7 @@ describe("Pokemon", function()
                 it("Should use double pp if targeted", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.useMove({moveId: "tackle", targets: [target]});
                     expect(mon.moveset.get("tackle")!.pp).to.equal(54);
                 });
@@ -329,6 +274,7 @@ describe("Pokemon", function()
                 it("Should not use double pp if not targeted", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.useMove({moveId: "tackle", targets: [mon]});
                     expect(mon.moveset.get("tackle")!.pp).to.equal(55);
                 });
@@ -336,6 +282,7 @@ describe("Pokemon", function()
                 it("Should not use double pp if mold breaker", function()
                 {
                     const mon = new Pokemon("Rampardos", false);
+                    mon.switchInto();
                     mon.traits.setAbility("moldbreaker");
                     mon.useMove({moveId: "tackle", targets: [target]});
                     expect(mon.moveset.get("tackle")!.pp).to.equal(55);
@@ -347,6 +294,7 @@ describe("Pokemon", function()
                 it("Should set last used", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.useMove({moveId: "splash", targets: [mon]});
                     expect(mon.volatile.lastUsed).to.equal(0);
                 });
@@ -354,6 +302,7 @@ describe("Pokemon", function()
                 it("Should set last used again", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.useMove({moveId: "splash", targets: [mon]});
                     mon.useMove({moveId: "tackle", targets: []});
                     expect(mon.volatile.lastUsed).to.equal(1);
@@ -365,6 +314,7 @@ describe("Pokemon", function()
                 it("Should reset two-turn status", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.useMove({moveId: "bounce", targets: []});
                     mon.volatile.twoTurn.start("bounce");
                     mon.postTurn();
@@ -379,6 +329,7 @@ describe("Pokemon", function()
                 it("Should infer berry if successful", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     const item = mon.item;
                     mon.useMove({moveId: "naturalgift", targets: []});
 
@@ -391,6 +342,7 @@ describe("Pokemon", function()
                 it("Should infer no berry if failed", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     const item = mon.item;
                     mon.useMove(
                     {
@@ -412,6 +364,7 @@ describe("Pokemon", function()
                     it(`Should set ${moveId} if successful`, function()
                     {
                         const mon = new Pokemon("Magikarp", false);
+                        mon.switchInto();
                         expect(mon.volatile.rollout.isActive).to.be.false;
                         mon.useMove({moveId, targets: []});
                         expect(mon.volatile.rollout.isActive).to.be.true;
@@ -421,6 +374,7 @@ describe("Pokemon", function()
                     it(`Should not set ${moveId} if unsuccessful`, function()
                     {
                         const mon = new Pokemon("Magikarp", false);
+                        mon.switchInto();
                         expect(mon.volatile.rollout.isActive).to.be.false;
                         mon.useMove(
                             {moveId, targets: [], unsuccessful: "evaded"});
@@ -434,6 +388,7 @@ describe("Pokemon", function()
                 it("Should reset #volatile#destinyBond", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.volatile.destinyBond = true;
 
                     mon.useMove({moveId: "splash", targets: [mon]});
@@ -446,6 +401,7 @@ describe("Pokemon", function()
                 it("Should set #volatile#defenseCurl if successful", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     expect(mon.volatile.defenseCurl).to.be.false;
                     mon.useMove({moveId: "defensecurl", targets: [mon]});
                     expect(mon.volatile.defenseCurl).to.be.true;
@@ -455,6 +411,7 @@ describe("Pokemon", function()
                 function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     expect(mon.volatile.defenseCurl).to.be.false;
                     mon.useMove(
                     {
@@ -470,6 +427,7 @@ describe("Pokemon", function()
                 it("Should lock move", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.useMove({moveId: "petaldance", targets: [mon]});
                     expect(mon.volatile.lockedMove.isActive).to.be.true;
                 });
@@ -477,6 +435,7 @@ describe("Pokemon", function()
                 it("Should not lock move if failed", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.volatile.lockedMove.start("petaldance");
                     mon.useMove(
                     {
@@ -489,6 +448,7 @@ describe("Pokemon", function()
                 it("Should not lock move if evaded", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     mon.volatile.lockedMove.start("petaldance");
                     mon.useMove(
                     {
@@ -504,6 +464,7 @@ describe("Pokemon", function()
                 it("Should activate Minimize if used successfully", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     expect(mon.volatile.minimize).to.be.false;
 
                     mon.useMove({moveId: "minimize", targets: [mon]});
@@ -513,6 +474,7 @@ describe("Pokemon", function()
                 it("Should not activate Minimize if move failed", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
                     expect(mon.volatile.minimize).to.be.false;
 
                     mon.useMove(
@@ -565,6 +527,7 @@ describe("Pokemon", function()
             it("Should disable move", function()
             {
                 const mon = new Pokemon("Magikarp", false);
+                mon.switchInto();
                 mon.moveset.reveal("splash");
                 expect(mon.volatile.disabledMoves[0].isActive).to.be.false;
                 mon.disableMove("splash");
@@ -575,6 +538,7 @@ describe("Pokemon", function()
             it("Should reveal disabled move", function()
             {
                 const mon = new Pokemon("Magikarp", false);
+                mon.switchInto();
                 expect(mon.moveset.get("splash")).to.be.null;
                 mon.disableMove("splash");
                 expect(mon.moveset.get("splash")).to.not.be.null;
@@ -587,7 +551,7 @@ describe("Pokemon", function()
             it("Should add override move with 5 pp", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.switchIn();
+                mon.switchInto();
                 mon.moveset.reveal("mimic");
 
                 mon.mimic("tackle");
@@ -596,14 +560,15 @@ describe("Pokemon", function()
                 expect(mon.moveset.get("tackle")!.pp).to.equal(5);
             });
 
-            it("Should clear on #switchOut()", function()
+            it("Should clear on switch out", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.switchIn();
+                mon.switchInto();
                 mon.moveset.reveal("mimic");
 
                 mon.mimic("tackle");
-                mon.switchOut(); // should revert
+                // switch-out should revert
+                switchOut(mon);
                 expect(mon.moveset.get("tackle")).to.be.null;
                 expect(mon.moveset.get("mimic")).to.not.be.null;
             });
@@ -614,11 +579,12 @@ describe("Pokemon", function()
             it("Should add replacement Move with minimum maxpp", function()
             {
                 const mon = new Pokemon("Magikarp", false);
-                mon.switchIn();
+                mon.switchInto();
                 mon.moveset.reveal("sketch");
 
                 mon.sketch("tackle");
-                mon.switchOut(); // should not matter
+                // switch-out should not matter
+                switchOut(mon);
                 expect(mon.moveset.get("sketch")).to.be.null;
                 expect(mon.moveset.get("tackle")).to.not.be.null;
                 expect(mon.moveset.get("tackle")!.pp).to.equal(35);
@@ -700,6 +666,7 @@ describe("Pokemon", function()
         it("Should be grounded if Ingrain", function()
         {
             const mon = new Pokemon("Pidgey", false);
+            mon.switchInto();
             mon.volatile.ingrain = true;
             checkGrounded(mon, true, true);
         });
@@ -714,6 +681,7 @@ describe("Pokemon", function()
         it("Should ignore iron ball if Embargo", function()
         {
             const mon = new Pokemon("Pidgey", false);
+            mon.switchInto();
             mon.item.narrow("ironball");
             mon.volatile.embargo.start();
             checkGrounded(mon, false, false);
@@ -722,7 +690,7 @@ describe("Pokemon", function()
         it("Should ignore iron ball if klutz", function()
         {
             const mon = new Pokemon("Pidgey", false); // flying type
-            mon.switchIn();
+            mon.switchInto();
             mon.traits.setAbility("klutz");
             mon.item.narrow("ironball");
             checkGrounded(mon, false, false);
@@ -731,7 +699,7 @@ describe("Pokemon", function()
         it("Should ignore klutz if gastro acid", function()
         {
             const mon = new Pokemon("Pidgey", false); // flying type
-            mon.switchIn();
+            mon.switchInto();
             mon.traits.setAbility("klutz");
             mon.item.narrow("ironball");
             mon.volatile.gastroAcid = true;
@@ -741,6 +709,7 @@ describe("Pokemon", function()
         it("Should not be grounded if Magnet Rise", function()
         {
             const mon = new Pokemon("Magikarp", false);
+            mon.switchInto();
             // remove iron ball possibility
             mon.item.narrow("leftovers");
             mon.volatile.magnetRise.start();
@@ -763,8 +732,105 @@ describe("Pokemon", function()
             const mon = new Pokemon("Bronzong", false);
             // remove iron ball possibility
             mon.item.narrow("leftovers");
-            mon.switchIn();
+            mon.switchInto();
             checkGrounded(mon, true, false);
+        });
+    });
+
+    // TODO
+    describe("#preTurn()", function() {});
+    describe("#postTurn()", function() {});
+
+    describe("#switchInto()", function()
+    {
+        it("Should become active", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            expect(() => mon.volatile).to.throw(Error,
+                "This Pokemon is currently inactive.");
+            mon.switchInto();
+            expect(mon.active).to.be.true;
+        });
+
+        it("Should transfer VolatileStatus reference", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.switchInto();
+            const v = mon.volatile;
+
+            const other = new Pokemon("Magikarp", false);
+            other.switchInto(mon);
+            expect(v).to.equal(other.volatile);
+        });
+
+        it("Should set VolatileStatus#overrideTraits", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.switchInto();
+            expect(mon.baseTraits.ability)
+                .to.equal(mon.volatile.overrideTraits.ability);
+            expect(mon.baseTraits.data)
+                .to.equal(mon.volatile.overrideTraits.data);
+            expect(mon.baseTraits.species)
+                .to.equal(mon.volatile.overrideTraits.species);
+            expect(mon.baseTraits.stats)
+                .to.equal(mon.volatile.overrideTraits.stats);
+            expect(mon.baseTraits.types)
+                .to.equal(mon.volatile.overrideTraits.types);
+        });
+
+        it("Should become inactive if another switches into it", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.switchInto();
+            switchOut(mon);
+            expect(mon.active).to.be.false;
+        });
+
+        it("Should clear toxic turns when switching out", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.majorStatus.afflict("tox");
+            mon.majorStatus.tick();
+            expect(mon.majorStatus.turns).to.equal(2);
+            switchOut(mon);
+            expect(mon.majorStatus.turns).to.equal(1);
+        });
+
+        it("Should not clear other major status turns when switching out",
+        function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.majorStatus.afflict("slp");
+            mon.majorStatus.tick();
+            expect(mon.majorStatus.turns).to.equal(2);
+            switchOut(mon);
+            expect(mon.majorStatus.turns).to.equal(2);
+        });
+
+        it("Should clear volatile when switching out and back in", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.switchInto();
+            mon.volatile.lockedMove.start("thrash");
+
+            switchOut(mon);
+            mon.switchInto();
+            expect(mon.volatile.lockedMove.isActive).to.be.false;
+        });
+
+        describe("copy = true", function()
+        {
+            it("Should copy passable statuses", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.switchInto();
+                mon.volatile.boosts.atk = 1;
+
+                const other = new Pokemon("Magikarp", false);
+                other.switchInto(mon, /*copy*/true);
+                expect(other.volatile.boosts.atk).to.equal(1);
+            });
         });
     });
 
@@ -799,17 +865,20 @@ describe("Pokemon", function()
         });
     });
 
+    // TODO
+    describe("#trapped()", function() {});
+
     describe("#transform()", function()
     {
         it("Should copy known details", function()
         {
             const mon1 = new Pokemon("Magikarp", false);
-            mon1.switchIn();
+            mon1.switchInto();
             mon1.hpType.narrow("fire");
             expect(mon1.moveset.get("splash")).to.be.null;
 
             const mon2 = new Pokemon("Bulbasaur", true);
-            mon2.switchIn();
+            mon2.switchInto();
             mon2.volatile.boosts.atk = 2;
             mon2.volatile.addedType = "bug";
             mon2.moveset.reveal("splash");
@@ -843,10 +912,10 @@ describe("Pokemon", function()
         it("Should link move inference", function()
         {
             const mon1 = new Pokemon("Magikarp", false);
-            mon1.switchIn();
+            mon1.switchInto();
 
             const mon2 = new Pokemon("Bulbasaur", true);
-            mon2.switchIn();
+            mon2.switchInto();
 
             mon1.transform(mon2);
             mon1.moveset.reveal("splash");
@@ -859,10 +928,10 @@ describe("Pokemon", function()
         it("Should link ability inference but not change", function()
         {
             const mon1 = new Pokemon("Magikarp", false);
-            mon1.switchIn();
+            mon1.switchInto();
 
             const mon2 = new Pokemon("Bronzong", true);
-            mon2.switchIn();
+            mon2.switchInto();
 
             mon1.transform(mon2);
             mon2.traits.setAbility("heatproof");
@@ -874,11 +943,11 @@ describe("Pokemon", function()
         it("Should link stat inference", function()
         {
             const mon1 = new Pokemon("Magikarp", false);
-            mon1.switchIn();
+            mon1.switchInto();
 
             const mon2 = new Pokemon("Bronzong", true);
             mon2.traits.stats.level = 100;
-            mon2.switchIn();
+            mon2.switchInto();
 
             mon1.transform(mon2);
             mon1.traits.stats.atk.set(200);
@@ -897,7 +966,7 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("Magikarp", false);
             mon.traits.stats.level = 100;
-            mon.switchIn();
+            mon.switchInto();
             mon.transformPost([{id: "splash", pp: 5, maxpp: 64}],
                 {atk: 100, def: 103, spa: 100, spd: 100, spe: 200});
 

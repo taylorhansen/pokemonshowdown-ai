@@ -61,7 +61,8 @@ describe("Battle and EventProcessor", function()
             expect(mon.traits.ability.definiteValue!.name)
                 .to.equal(data.baseAbility);
             expect(mon.majorStatus.current).to.equal(status.condition);
-            expect(mon.active).to.equal(data.active);
+            // explicit SwitchEvents are better at handling this
+            // expect(mon.active).to.equal(data.active);
 
             for (let moveId of data.moves)
             {
@@ -104,6 +105,9 @@ describe("Battle and EventProcessor", function()
             {
                 await battle.request(args);
                 checkRequestSide(args);
+                // explicit events are better at telling who's active, so
+                //  request msgs aren't required to tell that
+                battle.state.teams.us.active.switchInto();
                 checkRequestActive(args);
             });
         }
@@ -295,7 +299,7 @@ describe("Battle and EventProcessor", function()
             responses = [];
 
             // setup our team
-            battle.state.teams.us.active.switchIn();
+            battle.state.teams.us.active.switchInto();
             // setup opposing team
             expect(battle.state.teams.them.switchIn(
                     "Seaking", 100, "M", 100, 100)).to.not.be.null;

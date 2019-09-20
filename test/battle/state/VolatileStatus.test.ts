@@ -108,66 +108,63 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#shallowClone()", function()
+    describe("#clearUnpassable()", function()
     {
-        it("Should copy only passable statuses", function()
+        it("Should keep only passable statuses", function()
         {
             setEverything();
+            volatile.clearUnpassable();
 
-            const newVolatile = volatile.shallowClone();
-            volatile.clear();
-            expect(newVolatile).to.not.equal(volatile);
             // passed
-            expect(newVolatile.aquaRing).to.be.true;
-            expect(newVolatile.boosts).to.not.equal(volatile.boosts);
-            expect(newVolatile.boosts.atk).to.equal(1);
-            expect(newVolatile.confusion.isActive).to.be.true;
-            expect(newVolatile.confusion.turns).to.equal(1);
-            expect(newVolatile.embargo.isActive).to.be.true;
-            expect(newVolatile.embargo.turns).to.equal(1);
-            expect(newVolatile.focusEnergy).to.be.true;
-            expect(newVolatile.gastroAcid).to.be.true;
-            expect(newVolatile.ingrain).to.be.true;
-            expect(newVolatile.leechSeed).to.be.true;
-            expect(newVolatile.magnetRise.isActive).to.be.true;
-            expect(newVolatile.magnetRise.turns).to.equal(1);
-            expect(newVolatile.substitute).to.be.true;
+            expect(volatile.aquaRing).to.be.true;
+            expect(volatile.boosts.atk).to.equal(1);
+            expect(volatile.confusion.isActive).to.be.true;
+            expect(volatile.confusion.turns).to.equal(1);
+            expect(volatile.embargo.isActive).to.be.true;
+            expect(volatile.embargo.turns).to.equal(1);
+            expect(volatile.focusEnergy).to.be.true;
+            expect(volatile.gastroAcid).to.be.true;
+            expect(volatile.ingrain).to.be.true;
+            expect(volatile.leechSeed).to.be.true;
+            expect(volatile.magnetRise.isActive).to.be.true;
+            expect(volatile.magnetRise.turns).to.equal(1);
+            expect(volatile.substitute).to.be.true;
             // not passed
-            expect(newVolatile.attracted).to.be.false;
-            expect(newVolatile.bide.isActive).to.be.false;
-            expect(newVolatile.charge.isActive).to.be.false;
-            expect(newVolatile.defenseCurl).to.be.false;
-            expect(newVolatile.destinyBond).to.be.false;
-            expect(newVolatile.disabledMoves[0].isActive).to.be.false;
-            expect(newVolatile.encore.isActive).to.be.false;
-            expect(newVolatile.identified).to.be.null;
-            expect(newVolatile.lastUsed).to.equal(-1);
-            expect(newVolatile.lockedMove.isActive).to.be.false;
-            expect(newVolatile.minimize).to.be.false;
-            expect(newVolatile.mustRecharge).to.be.false;
+            expect(volatile.attracted).to.be.false;
+            expect(volatile.bide.isActive).to.be.false;
+            expect(volatile.charge.isActive).to.be.false;
+            expect(volatile.defenseCurl).to.be.false;
+            expect(volatile.destinyBond).to.be.false;
+            expect(volatile.disabledMoves[0].isActive).to.be.false;
+            expect(volatile.encore.isActive).to.be.false;
+            expect(volatile.identified).to.be.null;
+            expect(volatile.lastUsed).to.equal(-1);
+            expect(volatile.lockedMove.isActive).to.be.false;
+            expect(volatile.minimize).to.be.false;
+            expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link
-            expect(newVolatile.overrideTraits.hasAbility).to.be.false;
-            expect(() => newVolatile.overrideTraits.ability).to.throw(Error,
+            expect(volatile.overrideTraits.hasAbility).to.be.false;
+            expect(() => volatile.overrideTraits.ability).to.throw(Error,
                 "Ability not initialized");
-            expect(() => newVolatile.overrideTraits.data).to.throw(Error,
+            expect(() => volatile.overrideTraits.data).to.throw(Error,
                 "Species not initialized or narrowed");
-            expect(() => newVolatile.overrideTraits.species).to.throw(Error,
+            expect(() => volatile.overrideTraits.species).to.throw(Error,
                 "Species not initialized");
-            expect(() => newVolatile.overrideTraits.stats).to.throw(Error,
+            expect(() => volatile.overrideTraits.stats).to.throw(Error,
                 "Stat table not initialized");
-            expect(() => newVolatile.overrideTraits.types).to.throw(Error,
+            expect(() => volatile.overrideTraits.types).to.throw(Error,
                 "Types not initialized");
-            expect(newVolatile.addedType).to.equal("???");
-            expect(newVolatile.rollout.isActive).to.be.false;
-            expect(newVolatile.roost).to.be.false;
-            expect(newVolatile.slowStart.isActive).to.be.false;
-            expect(newVolatile.stallTurns).to.equal(0);
-            expect(newVolatile.taunt.isActive).to.be.false;
-            expect(newVolatile.torment).to.be.false;
-            expect(newVolatile.twoTurn.isActive).to.be.false;
-            expect(newVolatile.unburden).to.be.false;
-            expect(newVolatile.uproar.isActive).to.be.false;
-            expect(newVolatile.willTruant).to.be.false;
+            expect(volatile.addedType).to.equal("???");
+            expect(volatile.rollout.isActive).to.be.false;
+            expect(volatile.roost).to.be.false;
+            expect(volatile.slowStart.isActive).to.be.false;
+            expect(volatile.stallTurns).to.equal(0);
+            expect(volatile.taunt.isActive).to.be.false;
+            expect(volatile.torment).to.be.false;
+            expect(volatile.twoTurn.isActive).to.be.false;
+            expect(volatile.unburden).to.be.false;
+            expect(volatile.uproar.isActive).to.be.false;
+            expect(volatile.willTruant).to.be.false;
         });
     });
 

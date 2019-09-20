@@ -284,7 +284,7 @@ describe("BattleState encoders", function()
         init()
         {
             const mon = new Pokemon("Magikarp", /*hpPercent*/false);
-            mon.switchIn();
+            mon.switchInto();
             return mon;
         },
         size: sizeActivePokemon
