@@ -656,7 +656,7 @@ describe("Battle and EventProcessor", function()
              * @param display Display name of the status.
              * @param status Name of the status as it appears in the event.
              * @param pre Precondition/setup for the VolatileStatus and/or its
-             * parent Pokemon.
+             * parent Pokemon. Uses the `us` Side.
              * @param eventTypes List of event types that will be executed in
              * order with their respective postconditions.
              */
@@ -785,6 +785,29 @@ describe("Battle and EventProcessor", function()
                         expect(p.moveset.get("sketch")).to.be.null;
                         expect(p.moveset.get("tackle")).to.not.be.null;
                         expect(p.moveset.get("tackle")!.pp).to.equal(35);
+                    }
+                }
+            ]);
+
+            test("trapped", "trapped", v =>
+            {
+                const v2 = battle.state.teams.them.active.volatile;
+                expect(v.trapped).to.be.null;
+                expect(v.trapping).to.be.null;
+                expect(v2.trapped).to.be.null;
+                expect(v2.trapping).to.be.null;
+            },
+            [
+                {
+                    type: "-activate",
+                    otherArgs: ["trapped"],
+                    post(v)
+                    {
+                        const v2 = battle.state.teams.them.active.volatile;
+                        expect(v.trapped).to.equal(v2);
+                        expect(v.trapping).to.be.null;
+                        expect(v2.trapped).to.be.null;
+                        expect(v2.trapping).to.equal(v);
                     }
                 }
             ]);

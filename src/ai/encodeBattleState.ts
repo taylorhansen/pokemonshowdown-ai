@@ -277,10 +277,10 @@ export function encodePokemonTraits(traits?: PokemonTraits | null,
 export const sizeVolatileStatus =
     /*aqua ring*/1 + /*boostable stats*/Object.keys(boostNames).length +
     /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus +
-    /*focus energy*/1 + /*ingrain*/1 + /*leech seed*/1 +
-    /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*suppress ability*/1 +
-    /*attract*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
-    /*defense curl*/1 + /*destiny bond*/1 +
+    /*focus energy*/1 + /*gastro acid*/1 + /*ingrain*/1 + /*leech seed*/1 +
+    /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*trapped*/1 +
+    /*trapping*/1 + /*attract*/1 + /*bide*/sizeTempStatus +
+    /*charge*/sizeTempStatus + /*defense curl*/1 + /*destiny bond*/1 +
     /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
     /*grudge*/1 + /*identified*/2 + /*locked move variants*/numLockedMoves +
     /*minimize*/1 + /*must recharge*/1 + /*override traits*/sizePokemonTraits +
@@ -305,6 +305,9 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
     const leechSeed = status.leechSeed ? 1 : 0;
     const magnetRise = encodeTempStatus(status.magnetRise);
     const substitute = status.substitute ? 1 : 0;
+    // TODO: be more specific with trapping info
+    const trapped = status.trapped ? 1 : 0;
+    const trapping = status.trapping ? 1 : 0;
 
     // non-passable
     const attracted = status.attracted ? 1 : 0;
@@ -340,11 +343,13 @@ export function encodeVolatileStatus(status: VolatileStatus): number[]
 
     return [
         aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, gastroAcid,
-        ingrain, leechSeed, ...magnetRise, substitute, attracted, ...bide,
-        ...charge, defenseCurl, destinyBond, ...disabled, grudge, ...identified,
-        ...lastUsed, ...lockedMove, minimize, mustRecharge, ...overrideTraits,
-        ...rollout, roost, ...slowStart, stallFailRate, ...taunt, torment,
-        transformed, ...twoTurn, unburden, ...uproar, willTruant
+        ingrain, leechSeed, ...magnetRise, substitute, trapped, trapping,
+
+        attracted, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
+        grudge, ...identified, ...lastUsed, ...lockedMove, minimize,
+        mustRecharge, ...overrideTraits, ...rollout, roost, ...slowStart,
+        stallFailRate, ...taunt, torment, transformed, ...twoTurn, unburden,
+        ...uproar, willTruant
     ];
 }
 

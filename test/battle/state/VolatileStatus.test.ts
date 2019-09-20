@@ -24,6 +24,9 @@ describe("VolatileStatus", function()
         volatile.leechSeed = true;
         volatile.magnetRise.start();
         volatile.substitute = true;
+        volatile.trap(new VolatileStatus());
+        (new VolatileStatus()).trap(volatile);
+
         volatile.attracted = true;
         volatile.bide.start();
         volatile.charge.start();
@@ -70,6 +73,9 @@ describe("VolatileStatus", function()
             expect(volatile.leechSeed).to.be.false;
             expect(volatile.magnetRise.isActive).to.be.false;
             expect(volatile.substitute).to.be.false;
+            expect(volatile.trapped).to.be.null;
+            expect(volatile.trapping).to.be.null;
+
             expect(volatile.attracted).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
@@ -129,6 +135,9 @@ describe("VolatileStatus", function()
             expect(volatile.magnetRise.isActive).to.be.true;
             expect(volatile.magnetRise.turns).to.equal(1);
             expect(volatile.substitute).to.be.true;
+            expect(volatile.trapped).to.not.be.null;
+            expect(volatile.trapping).to.not.be.null;
+
             // not passed
             expect(volatile.attracted).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
@@ -210,6 +219,19 @@ describe("VolatileStatus", function()
             volatile.magnetRise.start();
             volatile.postTurn();
             expect(volatile.magnetRise.turns).to.equal(2);
+        });
+    });
+
+    describe("#trapped/#trapping/#trap()", function()
+    {
+        it("Should set trap fields", function()
+        {
+            const other = new VolatileStatus();
+            volatile.trap(other);
+            expect(volatile.trapped).to.be.null;
+            expect(volatile.trapping).to.equal(other);
+            expect(other.trapping).to.be.null;
+            expect(other.trapped).to.equal(volatile);
         });
     });
 

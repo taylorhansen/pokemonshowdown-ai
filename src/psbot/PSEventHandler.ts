@@ -254,6 +254,13 @@ export class PSEventHandler
                         `Unknown Mimic-like move '${lastEvent.moveName}'`);
                 }
             }
+            else if (ev === "trapped")
+            {
+                const trapped = this.getActive(event.id.owner).volatile;
+                const trapping = this.getActive(otherPlayerID(event.id.owner))
+                    .volatile;
+                trapping.trap(trapped);
+            }
             else this.logger.debug(`Ignoring activate '${event.volatile}'`);
         })
         .on("-end", event =>

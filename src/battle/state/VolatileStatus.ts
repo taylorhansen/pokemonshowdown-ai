@@ -63,6 +63,21 @@ export class VolatileStatus
     /** Substitute move status. */
     public substitute!: boolean;
 
+    /** Who is trapping us. */
+    public get trapped(): VolatileStatus | null { return this._trapped; }
+    private _trapped!: VolatileStatus | null;
+    /** Who we're trapping. */
+    public get trapping(): VolatileStatus | null { return this._trapping; }
+    private _trapping!: VolatileStatus | null;
+    /**
+     * Indicates that the provided pokemon slot is being trapping by this one.
+     */
+    public trap(target: VolatileStatus): void
+    {
+        this._trapping = target;
+        target._trapped = this;
+    }
+
     // not passed when copying
 
     /** Attract move status. */
@@ -223,6 +238,8 @@ export class VolatileStatus
         this.leechSeed = false;
         this.magnetRise.end();
         this.substitute = false;
+        this._trapped = null;
+        this._trapping = null;
 
         this.clearUnpassable();
     }
@@ -335,6 +352,9 @@ export class VolatileStatus
             this.leechSeed ? ["leech seed"] : [],
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
             this.substitute ? ["has substitute"] : [],
+            // TODO: be more specific with trapping info
+            this._trapped ? ["trapped"] : [],
+            this._trapping ? ["trapping"] : [],
             this.attracted ? ["attracted"] : [],
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
