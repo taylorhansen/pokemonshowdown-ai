@@ -1,5 +1,4 @@
-import { AnyBattleEvent, From } from
-    "../../src/psbot/dispatcher/BattleEvent";
+import { AnyBattleEvent } from "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
 import { PokemonDetails, PokemonID, PokemonStatus } from
@@ -218,7 +217,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         default:
             throw new Error(`Can't stringify event: ${JSON.stringify(event)}`);
     }
-    if (event.from) result.push(stringifyFromSuffix(event.from));
+    if (event.from) result.push(`[from] ${event.from}`);
     if (event.of) result.push(`[of] ${stringifyID(event.of)}`);
     if (event.fatigue) result.push("[fatigue]");
     if (event.eat) result.push("[eat]");
@@ -263,19 +262,4 @@ export function stringifyStatus(status: PokemonStatus): string
     }
     return `${status.hp}/${status.hpMax}\
 ${status.condition ? ` ${status.condition}` : ""}`;
-}
-
-/** Stringifies a From suffix. */
-export function stringifyFromSuffix(from: From): string
-{
-    switch (from.type)
-    {
-        case "ability": return `[from] ability: ${from.ability}`;
-        case "item": return `[from] item: ${from.item}`;
-        case "lockedmove": return "[from]lockedmove";
-        case "move": return `[from] move: ${from.move}`;
-        case "psn": return "[from] psn";
-        case "stealeat": return "[from] stealeat";
-        default: throw new Error(`Unhandled From suffix type ${from!.type}`);
-    }
 }

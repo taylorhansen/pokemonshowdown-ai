@@ -18,10 +18,9 @@ import { MessageListener } from "../dispatcher/MessageListener";
 import { PlayerID } from "../helpers";
 import { chain, maybe, sequence, transform } from "./combinators";
 import { anyWord, boostName, dispatch, integer, json, majorStatus,
-    parseBoostName, parseFromSuffix, parsePokemonDetails, parsePokemonID,
-    parsePokemonStatus, playerId, playerIdWithName, pokemonDetails, pokemonId,
-    pokemonStatus, restOfLine, skipLine, weatherTypeOrNone, word } from
-    "./helpers";
+    parseBoostName, parsePokemonDetails, parsePokemonID, parsePokemonStatus,
+    playerId, playerIdWithName, pokemonDetails, pokemonId, pokemonStatus,
+    restOfLine, skipLine, weatherTypeOrNone, word } from "./helpers";
 import { iter } from "./Iter";
 import { Info, Input, Parser, Result } from "./types";
 
@@ -380,22 +379,21 @@ function battleEvent(input: Input, info: Info): Result<AnyBattleEvent | null>
     {
         const s = input.get();
         const matches = s.match(
-            // matches "[x]", "[x]y", and "[x] y", where the named group
-            //  "prefix" matches to "x" and "value" matches to "y" or undefined
-            /^\[(?<prefix>\w+)\]\s?(?<value>.*)/);
+            // matches "[x]" and "[x]y", where the named group "prefix" matches
+            //  to "x" and "value" matches to "y" or the empty string
+            /^\[(?<prefix>\w+)\](?<value>.*)/);
         if (matches && matches.groups)
         {
             const prefix = matches.groups.prefix;
-            const value = matches.groups.value;
+            const value = matches.groups.value.trim();
             if (prefix === "of")
             {
                 event = {...event, of: parsePokemonID(value)};
             }
             else if (prefix === "from")
             {
-                const from = parseFromSuffix(value);
-                // istanbul ignore else: trivial
-                if (from) event = {...event, from};
+                // istanbul ignore else: not useful to test
+                if (value) event = {...event, from: value};
             }
             else if (prefix === "fatigue") event = {...event, fatigue: true};
             else if (prefix === "eat") event = {...event, eat: true};

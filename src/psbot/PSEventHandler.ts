@@ -59,8 +59,7 @@ export class PSEventHandler
         {
             const active = this.getActive(event.id.owner);
             const ability = toIdName(event.ability);
-            if (event.from && event.from.type === "ability" &&
-                event.from.ability === "Trace" && event.of)
+            if (event.from === "ability: Trace" && event.of)
             {
                 // trace ability: event.ability contains the Traced ability,
                 //  event.of contains pokemon that was traced, event.id contains
@@ -82,11 +81,7 @@ export class PSEventHandler
             // TODO: could this still be used to infer base ability?
             // typically this is never revealed this way in actual cartridge
             //  play, so best to leave it for now to preserve fairness
-            if (event.from && event.from.type === "move" &&
-                event.from.move === "Transform")
-            {
-                return;
-            }
+            if (event.from === "move: Transform") return;
 
             const active = this.getActive(event.id.owner);
             // infer what the ability was previously
@@ -116,14 +111,13 @@ export class PSEventHandler
                 case "confusion":
                     // start confusion status
                     active.volatile.confusion.start();
+                    // stopped using multi-turn locked move due to fatigue
+                    if (event.fatigue) active.volatile.lockedMove.reset();
                     break;
                 case "Disable":
-                {
-                    // disable a move
-                    const moveId = toIdName(event.otherArgs[0]);
-                    active.disableMove(moveId);
+                    // disable the given move
+                    active.disableMove(toIdName(event.otherArgs[0]));
                     break;
-                }
                 case "Encore":
                     active.volatile.encore.start();
                     break;
@@ -403,26 +397,32 @@ export class PSEventHandler
         })
         .on("-item", event =>
         {
+            const transferMoves =
+            [
+                "move: Thief", "move: Covet", "move: Trick", "move: Switcheroo",
+                "move: Recycle"
+            ];
+
             const mon = this.getActive(event.id.owner);
             mon.setItem(toIdName(event.item),
-                // see if the item was just gained
-                !!event.from && event.from.type === "move" &&
-                ["Thief", "Covet", "Trick", "Switcheroo", "Recycle"]
-                    .includes(event.from.move));
+                // item can be gained via a transfer move
+                /*gained*/!!event.from && transferMoves.includes(event.from));
         })
         .on("-enditem", event =>
         {
+            const removalMoves =
+            [
+                "move: Thief", "move: Covet", "move: Trick", "move: Switcheroo",
+                "move: Recycle", "move: Knock Off"
+            ];
+
             const mon = this.getActive(event.id.owner);
 
-            // handle causes
+            // handle case where an item-removal move was used against us,
+            //  which removes but doesn't consume our item
             let consumed: string | undefined;
-            if (!event.from || event.from.type !== "move" ||
-                // knockoff and transfer moves don't consume items but rather
-                //  disable or remove them
-                !["Knock Off", "Thief", "Covet", "Trick", "Switcheroo"]
-                    .includes(event.from.move))
+            if (!event.from || !removalMoves.includes(event.from))
             {
-                // other causes are exempt
                 consumed = toIdName(event.item);
             }
 
@@ -454,7 +454,7 @@ export class PSEventHandler
             }
 
             // don't consume pp if locked into using the move
-            const nopp = event.from && event.from.type === "lockedmove";
+            const nopp = event.from === "lockedmove";
 
             mon.useMove({moveId, targets, unsuccessful, nopp});
         })
@@ -558,12 +558,12 @@ export class PSEventHandler
                 }
             }
             // find out what caused the weather to change
-            else if (event.from && event.from.type === "ability" &&
+            else if (event.from && event.from.startsWith("ability: ") &&
                 event.of)
             {
                 // gen<=4: ability-caused weather is infinite
-                weather.start(this.getActive(event.of.owner),
-                    event.weatherType, /*infinite*/true);
+                weather.start(this.getActive(event.of.owner), event.weatherType,
+                    /*infinite*/true);
             }
             else
             {
@@ -720,47 +720,41 @@ export class PSEventHandler
         if (this.newTurn) this.state.postTurn();
     }
 
+    /** Handles the `[of]` and `[from]` suffixes of an event. */
     private handleSuffixes(event: AnyBattleEvent): void
     {
+        // can't do anything without a [from] suffix
+        const f = event.from;
+        if (!f) return;
+
         // these corner cases should already be handled
-        if (event.type === "-ability" && event.from &&
-            event.from.type === "ability" &&
-            event.from.ability === "Trace" && event.of)
+        if (event.type === "-ability" && event.from === "ability: Trace")
         {
             return;
         }
-        if (event.from && event.from.type === "lockedmove") return;
+        if (event.from === "lockedmove") return;
 
+        // look for a PokemonID using the `of` or `id` fields
+        // this will be used for handling the `from` field
         let id: PokemonID | undefined;
         if (event.of) id = event.of;
-        // TODO: find a better way to handle suffixes that reveal info
-        // if no [of] suffix, try find a PokemonID from the event
-        else if ((event as any).id &&
-            ["p1", "p2"].includes((event as any).id.owner))
+        else if ((event as any).id && isPlayerID((event as any).id.owner))
         {
             id = (event as any).id;
         }
-        if (!id)
-        {
-            if (event.fatigue || event.from)
-            {
-                throw new Error("No PokemonID given to handle suffixes with");
-            }
-            return;
-        }
+
+        if (!id) throw new Error("No PokemonID given to handle suffixes with");
         const mon = this.getActive(id.owner);
 
-        // stopped using multi-turn locked move due to fatigue
-        if (event.fatigue) mon.volatile.lockedMove.reset();
-        // something happened because of an item or ability
-        if (event.from)
+        // TODO: should all use cases be handled in separate event handlers?
+        // if so, this method might not need to exist
+        if (f.startsWith("ability: "))
         {
-            const f = event.from;
-            if (f.type === "ability")
-            {
-                mon.traits.setAbility(toIdName(f.ability));
-            }
-            else if (f.type === "item") mon.setItem(toIdName(f.item));
+            mon.traits.setAbility(toIdName(f.substr("ability: ".length)));
+        }
+        else if (f.startsWith("item: "))
+        {
+            mon.setItem(toIdName(f.substr("item: ".length)));
         }
     }
 
@@ -771,8 +765,7 @@ export class PSEventHandler
         active.hp.set(event.status.hp, event.status.hpMax);
 
         // increment toxic turns if taking damage from it
-        if (event.from && event.from.type === "psn" &&
-            active.majorStatus.current === "tox")
+        if (event.from === "psn" && active.majorStatus.current === "tox")
         {
             active.majorStatus.tick();
         }

@@ -1,5 +1,5 @@
 /** @file Contains test arguments for battle messages. */
-import { AnyBattleEvent, From, TurnEvent } from
+import { AnyBattleEvent, TurnEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
@@ -40,21 +40,20 @@ export const pokemonStatus: PokemonStatus[] =
     {hp: 300, hpMax: 300, condition: null}
 ];
 
-/** Test From suffixes. */
-export const from: From[] =
-[
-    {type: "ability", ability: "Wonder Guard"},
-    {type: "item", item: "Leftovers"}, {type: "lockedmove"}, {type: "stealeat"},
-    {type: "move", move: "Trick"}
-];
-
 /** Test BattleEvents except turn/upkeep. */
 export const battleEvent: AnyBattleEvent[] =
 [
     {type: "\n"},
     {type: "-ability", id: pokemonId[0], ability: "Pressure"},
     {type: "-activate", id: pokemonId[1], volatile: "ingrain", otherArgs: []},
-    {type: "-boost", id: pokemonId[1], stat: "atk", amount: 1, from: from[0]},
+    {
+        type: "-activate", id: pokemonId[0], volatile: "confustion",
+        otherArgs: [], fatigue: true
+    },
+    {
+        type: "-boost", id: pokemonId[1], stat: "atk", amount: -1,
+        from: "ability: Intimidate", of: pokemonId[0]
+    },
     {type: "cant", id: pokemonId[1], reason: "recharge"},
     {type: "cant", id: pokemonId[1], reason: "taunt", moveName: "Thunder Wave"},
     {type: "-clearallboost"},
@@ -64,10 +63,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-copyboost", source: pokemonId[2], target: pokemonId[0]},
     {type: "-curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "-cureteam", id: pokemonId[2]},
-    {
-        type: "-damage", id: pokemonId[1], status: pokemonStatus[1],
-        from: from[1]
-    },
+    {type: "-damage", id: pokemonId[1], status: pokemonStatus[1]},
     {
         type: "detailschange", id: pokemonId[0], details: pokemonDetails[0],
         status: pokemonStatus[0]
@@ -79,7 +75,10 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-end", id: pokemonId[2], volatile: "confusion"},
     {type: "-endability", id: pokemonId[1], ability: "Swift Swim"},
     {type: "-enditem", id: pokemonId[0], item: "Lum Berry", eat: true},
-    {type: "-enditem", id: pokemonId[2], item: "Sitrus Berry", from: from[3]},
+    {
+        type: "-enditem", id: pokemonId[2], item: "Sitrus Berry",
+        from: "stealeat"
+    },
     {type: "-fail", id: pokemonId[1]},
     {type: "faint", id: pokemonId[2]},
     {type: "-fieldend", effect: "move: Gravity"},
@@ -88,10 +87,13 @@ export const battleEvent: AnyBattleEvent[] =
         type: "-formechange", id: pokemonId[0], details: pokemonDetails[0],
         status: pokemonStatus[0]
     },
-    {type: "-heal", id: pokemonId[1], status: pokemonStatus[1]},
+    {
+        type: "-heal", id: pokemonId[1], status: pokemonStatus[1],
+        from: "item: Leftovers"
+    },
     {type: "-immune", id: pokemonId[0]},
     {type: "-invertboost", id: pokemonId[2]},
-    {type: "-item", id: pokemonId[2], item: "Leftovers", from: from[4]},
+    {type: "-item", id: pokemonId[2], item: "Leftovers", from: "move: Trick"},
     {type: "-miss", id: pokemonId[2], targetId: pokemonId[0]},
     {
         type: "move", id: pokemonId[0], moveName: "Splash",
@@ -100,7 +102,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "move", id: pokemonId[1], moveName: "Splash", miss: true},
     {
         type: "move", id: pokemonId[1], moveName: "Splash",
-        targetId: pokemonId[0], from: from[2]
+        targetId: pokemonId[0], from: "lockedmove"
     },
     {type: "-mustrecharge", id: pokemonId[2]},
     {
@@ -120,7 +122,7 @@ export const battleEvent: AnyBattleEvent[] =
     },
     {
         type: "-start", id: pokemonId[1], volatile: "Disable",
-        otherArgs: ["Splash"], from: from[2]
+        otherArgs: ["Splash"]
     },
     {type: "-status", id: pokemonId[0], majorStatus: "slp"},
     {
@@ -135,7 +137,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-transform", source: pokemonId[0], target: pokemonId[1]},
     {
         type: "-weather", weatherType: "Hail", upkeep: false,
-        from: {type: "ability", ability: "Snow Warning"},
+        from: "ability: Snow Warning",
         of: {owner: "p2", position: "a", nickname: "Abomasnow"}
     },
     {type: "-unboost", id: pokemonId[2], stat: "evasion", amount: 2},

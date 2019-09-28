@@ -1411,7 +1411,7 @@ describe("Battle and EventProcessor", function()
                         {
                             type: "-damage", id: us1,
                             status: {hp: 1, hpMax: 10, condition: "tox"},
-                            from: {type: "psn"}
+                            from: "psn"
                         }
                     ]
                 });
@@ -1599,7 +1599,7 @@ describe("Battle and EventProcessor", function()
 
                         let ev: ItemEvent =
                                 {type: "-item", id: them1, item: "Life Orb"};
-                        if (move) ev = {...ev, from: {type: "move", move}};
+                        if (move) ev = {...ev, from: `move: ${move}`};
 
                         const item = mon.item;
 
@@ -1662,15 +1662,12 @@ describe("Battle and EventProcessor", function()
                             if (suffix === "eat") event = {...event, eat: true};
                             else if (suffix === "stealeat")
                             {
-                                event = {...event, from: {type: "stealeat"}};
+                                event = {...event, from: "stealeat"};
                             }
                             else if (suffix && suffix.move)
                             {
                                 event =
-                                {
-                                    ...event,
-                                    from: {type: "move", move: suffix.move}
-                                };
+                                    {...event, from: `move: ${suffix.move}`};
                             }
                             await battle.progress({events: [event]});
 
@@ -1742,7 +1739,7 @@ describe("Battle and EventProcessor", function()
                                 {type: "-enditem", id: them1, item: "Mail"},
                                 {
                                     type: "-item", id: them1, item: "Life Orb",
-                                    from: {type: "move", move: "Covet"}
+                                    from: "move: Covet"
                                 }
                             ]
                         });
@@ -1829,7 +1826,7 @@ describe("Battle and EventProcessor", function()
                         [
                             {
                                 type: "move", id: us1, moveName: "Splash",
-                                targetId: us1, from: {type: "lockedmove"}
+                                targetId: us1, from: "lockedmove"
                             }
                         ]
                     });
@@ -1990,7 +1987,7 @@ describe("Battle and EventProcessor", function()
                     [
                         {
                             type: "move", id: us1, moveName: "Solar Beam",
-                            targetId: them1, from: {type: "lockedmove"}
+                            targetId: them1, from: "lockedmove"
                         },
                         {type: "upkeep"}
                     ]
@@ -2425,8 +2422,7 @@ describe("Battle and EventProcessor", function()
                     [
                         {
                             type: "-weather", weatherType: "RainDance",
-                            upkeep: false,
-                            from: {type: "ability", ability: "Drizzle"}, of: us1
+                            upkeep: false, from: "ability: Drizzle", of: us1
                         }
                     ]
                 });
@@ -2570,7 +2566,7 @@ describe("Battle and EventProcessor", function()
                 try
                 {
                     await battle.progress(
-                        {events: [{type: "tie", fatigue: true}]});
+                        {events: [{type: "tie", from: "item: Life Orb"}]});
                 }
                 catch (e) { thrown = true; }
                 expect(thrown).to.be.true;
@@ -2592,8 +2588,7 @@ describe("Battle and EventProcessor", function()
                         [
                             {
                                 type: "-boost", id: us1, stat: "atk",
-                                amount: -1,
-                                from: {type: "ability", ability: "Intimidate"},
+                                amount: -1, from: `ability: Intimidate`,
                                 of: them2
                             }
                         ]
@@ -2623,8 +2618,7 @@ describe("Battle and EventProcessor", function()
                                     owner: "p1", position: "a",
                                     nickname: "Gardevoir"
                                 },
-                                from: {type: "ability", ability: "Trace"},
-                                of: them1
+                                from: "ability: Trace", of: them1
                             }
                         ]
                     });
@@ -2661,7 +2655,7 @@ describe("Battle and EventProcessor", function()
                             {
                                 type: "-damage", id: us1,
                                 status: {hp: 100, hpMax: 200, condition: null},
-                                from: {type: "item", item: "Leftovers"}
+                                from: "item: Leftovers"
                             }
                         ]
                     });

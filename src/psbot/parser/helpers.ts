@@ -1,7 +1,6 @@
 /** @file Provides helper parsers/functions for the main parser. */
 import { BoostName, isBoostName, isMajorStatus, isWeatherType, MajorStatus,
     WeatherType } from "../../battle/dex/dex-util";
-import { From } from "../dispatcher/BattleEvent";
 import { Message, MessageType } from "../dispatcher/Message";
 import { isPlayerID, PlayerID, PokemonDetails, PokemonID, PokemonStatus } from
     "../helpers";
@@ -269,30 +268,4 @@ export function parseWeatherTypeOrNone(type: string): WeatherType | "none"
         throw new Error(`Invalid weather type '${type}'`);
     }
     return type;
-}
-
-/**
- * Parses a From suffix, e.g. `[from] ability: Trace`, where `[from]` is
- * assumed to be trimmed out first.
- * @param value Value of the suffix, e.g. `ability: Trace`.
- * @returns A From object, or null if invalid/unsupported.
- */
-export function parseFromSuffix(value: string): From | null
-{
-    if (value.startsWith("ability: "))
-    {
-        return {type: "ability", ability: value.substr("ability: ".length)};
-    }
-    if (value.startsWith("item: "))
-    {
-        return {type: "item", item: value.substr("item: ".length)};
-    }
-    if (value === "lockedmove") return {type: "lockedmove"};
-    if (value.startsWith("move: "))
-    {
-        return {type: "move", move: value.substr("move: ".length)};
-    }
-    if (value === "psn") return {type: "psn"};
-    if (value === "stealeat") return {type: "stealeat"};
-    return null;
 }

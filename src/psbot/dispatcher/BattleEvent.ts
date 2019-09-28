@@ -76,8 +76,8 @@ interface BattleEventBase
 {
     /** Type of event this is. */
     readonly type: string;
-    /** Optional From suffix object. */
-    readonly from?: From;
+    /** Optional `[from] x` suffix. */
+    readonly from?: string;
     /** Additional PokemonID for context. */
     readonly of?: PokemonID;
     /**
@@ -540,59 +540,4 @@ export interface WinEvent extends BattleEventBase
     readonly type: "win";
     /** Username of the winner. */
     readonly winner: string;
-}
-
-// from suffix types
-
-/** Optional event suffixes. */
-export type From = FromAbility | FromItem | FromLockedMove | FromMove |
-    FromPsn | FromStealEat;
-
-/** Base class for From suffixes. */
-interface FromBase
-{
-    /** Which type of cause this is. */
-    readonly type: string;
-}
-
-/** Caused from an ability being activated. */
-export interface FromAbility extends FromBase
-{
-    readonly type: "ability";
-    /** Name of the ability being activated. */
-    readonly ability: string;
-}
-
-/** Caused from a held item. */
-export interface FromItem extends FromBase
-{
-    readonly type: "item";
-    /** Item name. */
-    readonly item: string;
-}
-
-/** Caused from being locked into using the last move. */
-export interface FromLockedMove extends FromBase
-{
-    readonly type: "lockedmove";
-}
-
-/** Caused from a pokemon's move. */
-export interface FromMove extends FromBase
-{
-    readonly type: "move";
-    /** Move name. */
-    readonly move: string;
-}
-
-/** Caused from being poisoned. */
-export interface FromPsn extends FromBase
-{
-    readonly type: "psn";
-}
-
-/** Caused from a berry being stolen and consumed */
-export interface FromStealEat extends FromBase
-{
-    readonly type: "stealeat";
 }
