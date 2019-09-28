@@ -1,6 +1,6 @@
 import { dex, isFutureMove } from "../battle/dex/dex";
-import { BoostName, boostNames, StatExceptHP, Type } from
-    "../battle/dex/dex-util";
+import { BoostName, boostNames, itemRemovalMoves, itemTransferMoves,
+    StatExceptHP, Type } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
@@ -397,31 +397,22 @@ export class PSEventHandler
         })
         .on("-item", event =>
         {
-            const transferMoves =
-            [
-                "move: Thief", "move: Covet", "move: Trick", "move: Switcheroo",
-                "move: Recycle"
-            ];
-
             const mon = this.getActive(event.id.owner);
             mon.setItem(toIdName(event.item),
                 // item can be gained via a transfer move
-                /*gained*/!!event.from && transferMoves.includes(event.from));
+                /*gained*/!!event.from && event.from.startsWith("move: ") &&
+                    itemTransferMoves.includes(
+                        event.from.substr("move: ".length)));
         })
         .on("-enditem", event =>
         {
-            const removalMoves =
-            [
-                "move: Thief", "move: Covet", "move: Trick", "move: Switcheroo",
-                "move: Recycle", "move: Knock Off"
-            ];
-
             const mon = this.getActive(event.id.owner);
 
             // handle case where an item-removal move was used against us,
             //  which removes but doesn't consume our item
             let consumed: string | undefined;
-            if (!event.from || !removalMoves.includes(event.from))
+            if (!event.from || !event.from.startsWith("move: ") ||
+                !itemRemovalMoves.includes(event.from.substr("move: ".length)))
             {
                 consumed = toIdName(event.item);
             }

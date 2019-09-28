@@ -29,6 +29,14 @@ export interface NaturalGiftData
     readonly type: Type;
 }
 
+/** List of moves that transfer items to the user. */
+export const itemTransferMoves: readonly string[] =
+    ["Thief", "Covet", "Trick", "Switcheroo", "Recycle"];
+
+/** List of moves that remove an item from its target. */
+export const itemRemovalMoves: readonly string[] =
+    [...itemTransferMoves, "Knock Off"];
+
 /** Hold the set of all major status names. Maps status name to a unique id. */
 export const majorStatuses =
 {
