@@ -1751,7 +1751,6 @@ describe("Battle and EventProcessor", function()
 
         describe("move", function()
         {
-
             it("Should reveal move", async function()
             {
                 const mon = battle.state.teams.us.active;
@@ -1810,6 +1809,33 @@ describe("Battle and EventProcessor", function()
                 shouldCancelLockedMove("missed",
                     {type: "-miss", id: us1, targetId: them1}, /*miss*/true);
                 shouldCancelLockedMove("failed", {type: "-fail", id: us1});
+            });
+
+            describe("called", function()
+            {
+                it("Should not reveal called move", async function()
+                {
+                    const moves = battle.state.teams.us.active.moveset;
+                    expect(moves.get("metronome")).to.be.null;
+                    expect(moves.get("splash")).to.be.null;
+
+                    await battle.progress(
+                    {
+                        events:
+                        [
+                            // metronome picks a move at random
+                            {type: "move", id: us1, moveName: "Metronome"},
+                            // splash is called by the above move and is not
+                            //  guaranteed to be a part of the moveset
+                            {
+                                type: "move", id: us1, moveName: "Splash",
+                                from: "Metronome"
+                            }
+                        ]
+                    });
+                    expect(moves.get("metronome")).to.not.be.null;
+                    expect(moves.get("splash")).to.be.null;
+                });
             });
 
             describe("lockedmove", function()

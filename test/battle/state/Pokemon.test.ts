@@ -245,6 +245,18 @@ describe("Pokemon", function()
                 expect(mon.moveset.get("struggle")).to.be.null;
             });
 
+            describe("reveal = false", function()
+            {
+                it("Should not reveal move", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
+                    mon.useMove(
+                        {moveId: "splash", targets: [mon], reveal: false});
+                    expect(mon.moveset.get("splash")).to.be.null;
+                });
+            });
+
             describe("pressure ability handling", function()
             {
                 let target: Pokemon;
@@ -319,7 +331,8 @@ describe("Pokemon", function()
                     mon.volatile.twoTurn.start("bounce");
                     mon.postTurn();
 
-                    mon.useMove({moveId: "bounce", targets: [], nopp: true});
+                    mon.useMove(
+                        {moveId: "bounce", targets: [], reveal: "nopp"});
                     expect(mon.volatile.twoTurn.isActive).to.be.false;
                 });
             });

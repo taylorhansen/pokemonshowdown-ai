@@ -23,8 +23,11 @@ export interface MoveOptions
      * an immunity, protect, miss, etc. (`"evaded"`).
      */
     unsuccessful?: "failed" | "evaded";
-    /** Whether to not consume pp for this move. Default false. */
-    nopp?: boolean;
+    /**
+     * Whether to add the move to the user's Moveset. If `"nopp"`, the move will
+     * be added but will not have pp deducted from it. Default true.
+     */
+    reveal?: boolean | "nopp";
 }
 
 /** Options for `Pokemon#transformPost()`. */
@@ -161,20 +164,25 @@ export class Pokemon
         // struggle doesn't occupy a moveslot
         if (options.moveId === "struggle") return;
 
-        this.moveset.getOrReveal(options.moveId).pp -=
-            options.nopp ? 0
-            // mold breaker cancels pressure
-            : this.ability === "moldbreaker" ? 1
-            // consume 1 pp + 1 more for each target with pressure ability
-            // TODO: in gen>=5, don't count allies
-            : options.targets.filter(
-                m => m !== this && m.ability === "pressure").length + 1;
+        // reveal option can be either unspecified (assume true) or truthy
+        if (options.reveal === undefined || options.reveal)
+        {
+            this.moveset.getOrReveal(options.moveId).pp -=
+                options.reveal === "nopp" ? 0
+                // mold breaker cancels pressure
+                : this.ability === "moldbreaker" ? 1
+                // consume 1 pp + 1 more for each target with pressure ability
+                // TODO: in gen>=5, don't count allies
+                : options.targets.filter(
+                    m => m !== this && m.ability === "pressure").length + 1;
 
-        this.volatile.lastUsed = this.moveset.getOrRevealIndex(options.moveId);
+            this.volatile.lastUsed =
+                this.moveset.getOrRevealIndex(options.moveId);
+        }
 
         // release two-turn move
-        // while this could be the event that prepares the move, a separate
-        //  event is responsible for distinguishing that
+        // while this could be the turn that charges the move, a separate event
+        //  is responsible for distinguishing that
         if (twoTurnMoves.hasOwnProperty(options.moveId))
         {
             this.volatile.twoTurn.reset();

@@ -1,8 +1,8 @@
 import { dex, isFutureMove } from "../battle/dex/dex";
-import { BoostName, boostNames, itemRemovalMoves, itemTransferMoves,
-    StatExceptHP, Type } from "../battle/dex/dex-util";
+import { BoostName, boostNames, callingMoves, itemRemovalMoves,
+    itemTransferMoves, StatExceptHP, Type } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
-import { Pokemon } from "../battle/state/Pokemon";
+import { MoveOptions, Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
 import { SwitchInOptions, Team } from "../battle/state/Team";
 import { Logger } from "../Logger";
@@ -423,10 +423,11 @@ export class PSEventHandler
         {
             const moveId = toIdName(event.moveName);
             const mon = this.getActive(event.id.owner);
-            const targets = this.getTargets(moveId, mon);
 
-            let unsuccessful: "failed" | "evaded" | undefined;
-            if (event.miss) unsuccessful = "evaded";
+            const options: MoveOptions =
+                {moveId, targets: this.getTargets(moveId, mon)};
+
+            if (event.miss) options.unsuccessful = "evaded";
 
             // look ahead at minor events to see if the move failed
             while (events[++i] && events[i].type.startsWith("-"))
@@ -438,16 +439,21 @@ export class PSEventHandler
                     ["-immune", "-miss"].includes(e.type))
                 {
                     // opponent successfully evaded an attack
-                    unsuccessful = "evaded";
+                    options.unsuccessful = "evaded";
                 }
                 // move failed on its own
-                else if (e.type === "-fail") unsuccessful = "failed";
+                else if (e.type === "-fail") options.unsuccessful = "failed";
             }
 
+            // don't add to moveset if this is called using another move
+            if (event.from && callingMoves.includes(event.from))
+            {
+                options.reveal = false;
+            }
             // don't consume pp if locked into using the move
-            const nopp = event.from === "lockedmove";
+            else if (event.from === "lockedmove") options.reveal = "nopp";
 
-            mon.useMove({moveId, targets, unsuccessful, nopp});
+            mon.useMove(options);
         })
         .on("-mustrecharge", event =>
         {

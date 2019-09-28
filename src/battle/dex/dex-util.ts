@@ -29,6 +29,13 @@ export interface NaturalGiftData
     readonly type: Type;
 }
 
+/** List of moves that can call other moves. */
+export const callingMoves: readonly string[] =
+[
+    "Assist", "Copycat", "Magic Coat", "Metronome", "Mirror Move",
+    "Me First", "Nature Power", "Sleep Talk"
+];
+
 /** List of moves that transfer items to the user. */
 export const itemTransferMoves: readonly string[] =
     ["Thief", "Covet", "Trick", "Switcheroo", "Recycle"];
