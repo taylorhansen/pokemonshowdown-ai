@@ -1,6 +1,7 @@
 import { dex, isFutureMove } from "../battle/dex/dex";
-import { BoostName, boostNames, callingMoves, itemRemovalMoves,
-    itemTransferMoves, StatExceptHP, Type } from "../battle/dex/dex-util";
+import { BoostName, boostNames, itemRemovalMoves,
+    itemTransferMoves, nonSelfMoveCallers, selfMoveCallers, StatExceptHP, Type }
+    from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { MoveOptions, Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
@@ -445,14 +446,25 @@ export class PSEventHandler
                 else if (e.type === "-fail") options.unsuccessful = "failed";
             }
 
-            // don't add to moveset if this is called using another move
-            if (event.from && callingMoves.includes(event.from))
+            // handle event suffixes
+            if (event.from)
             {
-                options.reveal = false;
+                // don't add to moveset if this is called using another move
+                if (nonSelfMoveCallers.includes(event.from))
+                {
+                    options.reveal = false;
+                }
+                // don't consume pp if locked into using the move
+                else if (event.from === "lockedmove" ||
+                    // also reveal but don't consume pp for moves called by
+                    //  effects that call one of the user's moves (eg sleeptalk)
+                    selfMoveCallers.includes(event.from))
+                {
+                    options.reveal = "nopp";
+                }
             }
-            // don't consume pp if locked into using the move
-            else if (event.from === "lockedmove") options.reveal = "nopp";
 
+            // indicate that the pokemon has used this move
             mon.useMove(options);
         })
         .on("-mustrecharge", event =>

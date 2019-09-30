@@ -29,12 +29,19 @@ export interface NaturalGiftData
     readonly type: Type;
 }
 
-/** List of moves that can call other moves. */
-export const callingMoves: readonly string[] =
+/** Effects and moves that can call moves from the user's moveset. */
+export const selfMoveCallers: readonly string[] = ["Sleep Talk"];
+
+/** Effects and moves that can call moves that aren't in the user's moveset. */
+export const nonSelfMoveCallers: readonly string[] =
 [
-    "Assist", "Copycat", "Magic Coat", "Metronome", "Mirror Move",
-    "Me First", "Nature Power", "Sleep Talk"
+    "Assist", "Copycat", "Magic Coat", "Metronome", "Mirror Move", "Me First",
+    "Nature Power"
 ];
+
+/** Effects and moves that can call other moves. */
+export const moveCallers: readonly string[] =
+    [...selfMoveCallers, ...nonSelfMoveCallers];
 
 /** List of moves that transfer items to the user. */
 export const itemTransferMoves: readonly string[] =

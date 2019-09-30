@@ -1813,29 +1813,54 @@ describe("Battle and EventProcessor", function()
 
             describe("called", function()
             {
-                it("Should not reveal called move", async function()
+                /**
+                 * Tests the effects of a move caller.
+                 * @param move Internal name of the move caller.
+                 * @param display Display name of the move caller.
+                 * @param reveal Whether the called move should be revealed as
+                 * part of the user's moveset.
+                 */
+                function testCalledMove(move: string, display: string,
+                    reveal: boolean)
                 {
-                    const moves = battle.state.teams.us.active.moveset;
-                    expect(moves.get("metronome")).to.be.null;
-                    expect(moves.get("splash")).to.be.null;
-
-                    await battle.progress(
+                    describe(display, function()
                     {
-                        events:
-                        [
-                            // metronome picks a move at random
-                            {type: "move", id: us1, moveName: "Metronome"},
-                            // splash is called by the above move and is not
-                            //  guaranteed to be a part of the moveset
+                        it(`Should${reveal ? "" : " not"} reveal called move` +
+                            (reveal ? " but not consume pp" : ""),
+                        async function()
+                        {
+                            const moves = battle.state.teams.us.active.moveset;
+                            expect(moves.get(move)).to.be.null;
+                            expect(moves.get("splash")).to.be.null;
+
+                            await battle.progress(
                             {
-                                type: "move", id: us1, moveName: "Splash",
-                                from: "Metronome"
+                                events:
+                                [
+                                    // emit the calling move
+                                    {type: "move", id: us1, moveName: display},
+                                    // splash is called by the above move
+                                    {
+                                        type: "move", id: us1,
+                                        moveName: "Splash", from: display
+                                    }
+                                ]
+                            });
+                            expect(moves.get(move)).to.not.be.null;
+                            if (reveal)
+                            {
+                                const m = moves.get("splash")!;
+                                expect(m).to.not.be.null;
+                                // called move should not have pp consumed
+                                expect(m.pp).to.equal(m.maxpp);
                             }
-                        ]
+                            else expect(moves.get("splash")).to.be.null;
+                        });
                     });
-                    expect(moves.get("metronome")).to.not.be.null;
-                    expect(moves.get("splash")).to.be.null;
-                });
+                }
+
+                testCalledMove("metronome", "Metronome", /*reveal*/false);
+                testCalledMove("sleeptalk", "Sleep Talk", true);
             });
 
             describe("lockedmove", function()
