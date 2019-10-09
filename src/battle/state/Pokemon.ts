@@ -122,14 +122,48 @@ export class Pokemon
      * @param gained Whether the item was just gained. If false or omitted, then
      * it's just now being revealed.
      */
-    public setItem(item: string, gained = false): void
+    public setItem(item: string, gained: boolean | "recycle" = false): void
     {
         // override any possibilities of other items
-        if (gained) this._item = new PossibilityClass(dex.items, item);
+        if (gained)
+        {
+            // item was gained via the recycle move
+            if (gained === "recycle")
+            {
+                // since recycle moves lastItem to item, we have to make sure
+                //  that the gained item matches the current lastItem (or is a
+                //  possibility)
+                // this saves an extra PossibilityClass allocation
+                if (this._lastItem.isSet(item))
+                {
+                    this._item = this._lastItem;
+                    this._item.narrow(item);
+                }
+                // error: recycled item mismatches tracked lastItem
+                else
+                {
+                    throw new Error(`Pokemon gained '${item}' via Recycle ` +
+                        "but last item was '" +
+                        (this._lastItem.definiteValue ?
+                            this._lastItem.definiteValue.name : "<unknown>") +
+                        "'");
+                }
+
+                // recycle also resets the lastItem field
+                this._lastItem = new PossibilityClass(dex.items, "none");
+            }
+            // if it was just gained through normal needs we don't need to do
+            //  anything else
+            else this._item = new PossibilityClass(dex.items, item);
+        }
+        // item is not gained but is just now being revealed
         else this._item.narrow(item);
 
         // (de)activate unburden ability if the pokemon has it
-        if (this._volatile) this._volatile.unburden = item === "none" && gained;
+        if (this._volatile)
+        {
+            this._volatile.unburden = item === "none" && !!gained;
+        }
     }
     /**
      * Indicates that an item was just removed from this Pokemon.
@@ -137,12 +171,16 @@ export class Pokemon
      * Recycle), set this to the item's name, or true if the item's name is
      * unknown.
      */
-    public removeItem(consumed?: string | true): void
+    public removeItem(consumed: boolean | string = false): void
     {
         if (consumed)
         {
             // move current item possibility object to the lastItem slot
             this._lastItem = this._item;
+            // if the current item didn't match the consumed param, this should
+            //  throw an overnarrowing error
+            // TODO: guard this or replace the overnarrowing exception message
+            //  in a parameter to be more useful
             if (typeof consumed === "string") this._lastItem.narrow(consumed);
         }
 
@@ -150,7 +188,7 @@ export class Pokemon
         this.setItem("none", /*gained*/true);
     }
     private _item = new PossibilityClass(dex.items);
-    private _lastItem = new PossibilityClass(dex.items);
+    private _lastItem = new PossibilityClass(dex.items, "none");
 
     /** Pokemon's current moveset. */
     public get moveset(): Moveset
@@ -394,7 +432,6 @@ export class Pokemon
         this.baseTraits.init();
         this.baseTraits.species.narrow(species);
         this.hp = new HP(hpPercent);
-        this._lastItem.narrow("none");
     }
 
     /** Called at the beginning of every turn to update temp statuses. */

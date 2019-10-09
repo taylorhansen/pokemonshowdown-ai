@@ -1692,7 +1692,7 @@ describe("Battle and EventProcessor", function()
 
                     test("Should set lastItem normally", true);
                     test("Should set lastItem if eaten", true, "eat");
-                    test("Should set lastItem if eaten by opponent", true,
+                    test("Should not set lastItem if eaten by opponent", false,
                         "stealeat");
                     test("Should set lastItem if Flung", true, {move: "Fling"});
                     test("Should not set lastItem if Knocked Off", false,

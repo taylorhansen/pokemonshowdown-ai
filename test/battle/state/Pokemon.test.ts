@@ -131,6 +131,69 @@ describe("Pokemon", function()
             expect(mon.item.definiteValue!.name).to.equal("lifeorb");
         });
 
+        describe("recycle", function()
+        {
+            it("Should move #lastItem ref to #item and reset #lastItem",
+            function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+
+                // indicate that an item was consumed
+                mon.removeItem(/*consumed*/true);
+                const item = mon.item;
+                const lastItem = mon.lastItem;
+
+                // old item being brought back via recycle
+                mon.setItem("sitrusberry", /*gained*/"recycle");
+
+                // original #lastItem ref should be moved to #item
+                expect(mon.item).to.equal(lastItem,
+                    "#lastItem reference was not moved to #item");
+
+                // new #item ref should also be narrowed to the parameter
+                expect(mon.item.definiteValue).to.not.be.null;
+                expect(mon.item.definiteValue!.name).to.equal("sitrusberry");
+
+                // original #item ref should become garbage
+                expect(mon.item).to.not.equal(item,
+                    "#item still has its original reference");
+                expect(mon.lastItem).to.not.equal(item,
+                    "#lastItem was set to the original #item reference");
+
+                // original #lastItem ref should be replaced by a new obj
+                expect(mon.lastItem).to.not.equal(lastItem,
+                    "#lastItem was not reset");
+                expect(mon.lastItem.definiteValue).to.not.be.null;
+                expect(mon.lastItem.definiteValue!.name).to.equal("none");
+            });
+
+            it("Should throw if (unknown) recycled item mismatches", function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+
+                // consumed item is unknown but is definitely not lifeorb
+                mon.item.remove("lifeorb");
+                mon.removeItem(/*consumed*/true);
+
+                expect(() => mon.setItem("lifeorb", /*gained*/"recycle"))
+                    .to.throw(Error,
+                        "Pokemon gained 'lifeorb' via Recycle but last item " +
+                        "was '<unknown>'");
+            });
+
+            it("Should throw if recycled item mismatches", function()
+            {
+                const mon = new Pokemon("Magikarp", true);
+                // indicate that an item was consumed
+                mon.setItem("sitrusberry");
+                mon.removeItem("sitrusberry");
+                expect(() => mon.setItem("lifeorb", /*gained*/"recycle"))
+                    .to.throw(Error,
+                        "Pokemon gained 'lifeorb' via Recycle but last item " +
+                        "was 'sitrusberry'");
+            });
+        });
+
         describe("#volatile.unburden", function()
         {
             it("Should not set unburden normally", function()
@@ -199,10 +262,17 @@ describe("Pokemon", function()
                 const mon = new Pokemon("Magikarp", true);
                 mon.switchInto();
                 mon.setItem("leftovers");
+                const item = mon.item;
 
                 mon.removeItem();
+                // current item reference is gone
                 expect(mon.item.definiteValue).to.not.be.null;
                 expect(mon.item.definiteValue!.name).to.equal("none");
+
+                // old item reference is not moved to lastItem
+                expect(mon.lastItem).to.not.equal(item);
+                expect(mon.lastItem.definiteValue).to.not.be.null;
+                expect(mon.lastItem.definiteValue!.name).to.equal("none");
             });
 
             it("Should set lastItem if consumed parameter was provided",

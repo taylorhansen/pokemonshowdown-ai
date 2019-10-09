@@ -399,24 +399,34 @@ export class PSEventHandler
         .on("-item", event =>
         {
             const mon = this.getActive(event.id.owner);
-            mon.setItem(toIdName(event.item),
-                // item can be gained via a transfer move
-                /*gained*/!!event.from && event.from.startsWith("move: ") &&
-                    itemTransferMoves.includes(
-                        event.from.substr("move: ".length)));
+
+            // item can be gained via a transfer move or recycle
+            let gained: boolean | "recycle";
+            if (event.from && event.from.startsWith("move: "))
+            {
+                const move = event.from.substr("move: ".length);
+                if (move === "Recycle") gained = "recycle";
+                else gained = itemTransferMoves.includes(move);
+            }
+            else gained = false;
+
+            mon.setItem(toIdName(event.item), gained);
         })
         .on("-enditem", event =>
         {
             const mon = this.getActive(event.id.owner);
 
-            // handle case where an item-removal move was used against us,
-            //  which removes but doesn't consume our item
-            let consumed: string | undefined;
-            if (!event.from || !event.from.startsWith("move: ") ||
-                !itemRemovalMoves.includes(event.from.substr("move: ".length)))
+            // handle case where an item-removal or steal-eat move was used
+            //  against us, which removes but doesn't consume our item
+            let consumed: boolean | string;
+            if (event.from === "stealeat" ||
+                (event.from && event.from.startsWith("move: ") &&
+                    itemRemovalMoves.includes(
+                        event.from.substr("move: ".length))))
             {
-                consumed = toIdName(event.item);
+                consumed = false;
             }
+            else consumed = toIdName(event.item);
 
             mon.removeItem(consumed);
         })
