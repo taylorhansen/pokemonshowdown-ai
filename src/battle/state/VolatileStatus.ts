@@ -133,6 +133,9 @@ export class VolatileStatus
     public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
         /*silent*/true);
 
+    /** Whether the pokemon has used Magic Coat during this turn. */
+    public magicCoat!: boolean;
+
     /** Whether the pokemon has used Minimize while out. */
     public minimize!: boolean;
 
@@ -258,6 +261,7 @@ export class VolatileStatus
         this.identified = null;
         this.lastUsed = -1;
         this.lockedMove.reset();
+        this.magicCoat = false;
         this.minimize = false;
         this.mustRecharge = false;
         this.overrideMoveset.isolate();
@@ -313,6 +317,9 @@ export class VolatileStatus
             this.twoTurn.reset();
         }
 
+        // reset single-turn statuses
+        this.magicCoat = false;
+
         // after roost is used, the user is no longer grounded at the end of
         //  the turn
         this.roost = false;
@@ -366,6 +373,7 @@ export class VolatileStatus
             this.identified ? [this.identified] : [],
             this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
+            this.minimize ? ["magic coat"] : [],
             this.minimize ? ["minimize"] : [],
             this.mustRecharge ? ["must recharge"] : [],
             // override traits are handled by Pokemon#toString()

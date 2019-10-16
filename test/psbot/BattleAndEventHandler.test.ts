@@ -2427,6 +2427,33 @@ describe("Battle and EventProcessor", function()
                         .isActive).to.be.false;
                 });
             });
+
+            /**
+             * Tests a simple singeturn boolean status.
+             * @param name Name of the status in the test suite.
+             * @param status Display name within the message format.
+             * @param getter Getter for the VolatileStatus field in question.
+             */
+            function testSingleTurn(name: string, status: string,
+                getter: (v: VolatileStatus) => boolean)
+            {
+                describe(name, function()
+                {
+                    it("Should set in volatile", async function()
+                    {
+                        const v = battle.state.teams.us.active.volatile;
+                        expect(getter(v)).to.be.false;
+
+                        // see if the message causes the status to activate
+                        await battle.progress(
+                            {events: [{type: "-singleturn", id: us1, status}]});
+                        expect(getter(v)).to.be.true;
+                    });
+                });
+            }
+
+            testSingleTurn("roost", "move: Roost", v => v.roost);
+            testSingleTurn("magic coat", "move: Magic Coat", v => v.magicCoat);
         });
 
         describe("status", function()

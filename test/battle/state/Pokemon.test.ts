@@ -542,6 +542,19 @@ describe("Pokemon", function()
                 });
             });
 
+            describe("magiccoat", function()
+            {
+                it("Should activate Magic Coat", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
+                    expect(mon.volatile.magicCoat).to.be.false;
+
+                    mon.useMove({moveId: "magiccoat", targets: [mon]});
+                    expect(mon.volatile.magicCoat).to.be.true;
+                });
+            });
+
             describe("minimize", function()
             {
                 it("Should activate Minimize if used successfully", function()

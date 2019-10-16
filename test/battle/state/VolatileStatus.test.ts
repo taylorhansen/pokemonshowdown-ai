@@ -37,6 +37,7 @@ describe("VolatileStatus", function()
         volatile.identified = "foresight";
         volatile.lastUsed = 1;
         volatile.lockedMove.start("outrage");
+        volatile.magicCoat = true;
         volatile.minimize = true;
         volatile.mustRecharge = true;
         // TODO: test private moveset link
@@ -86,6 +87,7 @@ describe("VolatileStatus", function()
             expect(volatile.identified).to.be.null;
             expect(volatile.lastUsed).to.equal(-1);
             expect(volatile.lockedMove.isActive).to.be.false;
+            expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link
@@ -149,6 +151,7 @@ describe("VolatileStatus", function()
             expect(volatile.identified).to.be.null;
             expect(volatile.lastUsed).to.equal(-1);
             expect(volatile.lockedMove.isActive).to.be.false;
+            expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link
@@ -318,6 +321,16 @@ describe("VolatileStatus", function()
             volatile.postTurn();
 
             expect(volatile.lockedMove.isActive).to.be.false;
+        });
+    });
+
+    describe("#magicCoat", function()
+    {
+        it("Should reset on #postTurn()", function()
+        {
+            volatile.magicCoat = true;
+            volatile.postTurn();
+            expect(volatile.magicCoat).to.be.false;
         });
     });
 

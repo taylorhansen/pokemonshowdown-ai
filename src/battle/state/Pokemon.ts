@@ -274,7 +274,11 @@ export class Pokemon
         }
         else this.volatile.lockedMove.reset();
 
-        if (move.volatileEffect === "minimize") this.volatile.minimize = true;
+        if (move.volatileEffect === "magiccoat") this.volatile.magicCoat = true;
+        else if (move.volatileEffect === "minimize")
+        {
+            this.volatile.minimize = true;
+        }
 
         // apply implicit team effects
 

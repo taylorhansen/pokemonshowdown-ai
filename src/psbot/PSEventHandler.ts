@@ -509,6 +509,7 @@ export class PSEventHandler
             const v = this.getActive(event.id.owner).volatile;
             if (PSEventHandler.isStallSingleTurn(event.status)) v.stall(true);
             else if (event.status === "move: Roost") v.roost = true;
+            else if (event.status === "move: Magic Coat") v.magicCoat = true;
         })
         .on("-status", event =>
         {
