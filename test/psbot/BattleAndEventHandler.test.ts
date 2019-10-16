@@ -16,6 +16,8 @@ import { PokemonDetails, PokemonID, PokemonStatus } from
     "../../src/psbot/helpers";
 import * as testArgs from "../helpers/battleTestArgs";
 import { MockPSBattle } from "./MockPSBattle";
+import { Side, otherSide } from "../../src/battle/state/Side";
+import { Moveset } from "../../src/battle/state/Moveset";
 
 describe("Battle and EventProcessor", function()
 {
@@ -1817,11 +1819,11 @@ describe("Battle and EventProcessor", function()
                  * Tests the effects of a move caller.
                  * @param move Internal name of the move caller.
                  * @param display Display name of the move caller.
-                 * @param reveal Whether the called move should be revealed as
-                 * part of the user's moveset.
+                 * @param reveal If provided, the called move should be revealed
+                 * as the given Side's active pokemon's moveset.
                  */
                 function testCalledMove(move: string, display: string,
-                    reveal: boolean)
+                    reveal?: Side)
                 {
                     describe(display, function()
                     {
@@ -1829,9 +1831,16 @@ describe("Battle and EventProcessor", function()
                             (reveal ? " but not consume pp" : ""),
                         async function()
                         {
-                            const moves = battle.state.teams.us.active.moveset;
-                            expect(moves.get(move)).to.be.null;
-                            expect(moves.get("splash")).to.be.null;
+                            const moves: {[S in Side]: Moveset} =
+                            {
+                                us: battle.state.teams.us.active.moveset,
+                                them: battle.state.teams.them.active.moveset
+                            };
+
+                            if (reveal)
+                            {
+                                expect(moves[reveal].get("splash")).to.be.null;
+                            }
 
                             await battle.progress(
                             {
@@ -1846,21 +1855,31 @@ describe("Battle and EventProcessor", function()
                                     }
                                 ]
                             });
-                            expect(moves.get(move)).to.not.be.null;
+
                             if (reveal)
                             {
-                                const m = moves.get("splash")!;
+                                const m = moves[reveal].get("splash");
                                 expect(m).to.not.be.null;
                                 // called move should not have pp consumed
-                                expect(m.pp).to.equal(m.maxpp);
+                                expect(m!.pp).to.equal(m!.maxpp);
+
+                                // the other side shouldn't get the called move
+                                expect(moves[otherSide(reveal)].get("splash"))
+                                    .to.be.null;
                             }
-                            else expect(moves.get("splash")).to.be.null;
+                            else
+                            {
+                                // both sides shouldn't get the called move
+                                expect(moves.us.get("splash")).to.be.null;
+                                expect(moves.them.get("splash")).to.be.null;
+                            }
                         });
                     });
                 }
 
-                testCalledMove("metronome", "Metronome", /*reveal*/false);
-                testCalledMove("sleeptalk", "Sleep Talk", true);
+                testCalledMove("metronome", "Metronome");
+                testCalledMove("sleeptalk", "Sleep Talk", "us");
+                testCalledMove("mefirst", "Me First", "them");
             });
 
             describe("lockedmove", function()

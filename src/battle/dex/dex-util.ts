@@ -32,10 +32,17 @@ export interface NaturalGiftData
 /** Effects and moves that can call moves from the user's moveset. */
 export const selfMoveCallers: readonly string[] = ["Sleep Talk"];
 
+/**
+ * Effects and moves that can call moves from the target's moveset before
+ * they're revealed.
+ */
+export const targetMoveCallers: readonly string[] = ["Me First"];
+
 /** Effects and moves that can call moves that aren't in the user's moveset. */
 export const nonSelfMoveCallers: readonly string[] =
 [
-    "Assist", "Copycat", "Magic Coat", "Metronome", "Mirror Move", "Me First",
+    ...targetMoveCallers,
+    "Assist", "Copycat", "Magic Coat", "Metronome", "Mirror Move",
     "Nature Power"
 ];
 

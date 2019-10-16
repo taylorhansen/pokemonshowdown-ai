@@ -1,7 +1,8 @@
+import { isDeepStrictEqual } from "util";
 import { dex, isFutureMove } from "../battle/dex/dex";
 import { BoostName, boostNames, itemRemovalMoves,
-    itemTransferMoves, nonSelfMoveCallers, selfMoveCallers, StatExceptHP, Type }
-    from "../battle/dex/dex-util";
+    itemTransferMoves, nonSelfMoveCallers, selfMoveCallers, StatExceptHP,
+    targetMoveCallers, Type } from "../battle/dex/dex-util";
 import { BattleState } from "../battle/state/BattleState";
 import { MoveOptions, Pokemon } from "../battle/state/Pokemon";
 import { otherSide, Side } from "../battle/state/Side";
@@ -454,6 +455,21 @@ export class PSEventHandler
                 }
                 // move failed on its own
                 else if (e.type === "-fail") options.unsuccessful = "failed";
+            }
+
+            // at this point, events[i] may be the next event
+            // if the next event is the effect of a target move caller
+            //  (e.g. Me First), we can infer the target's move early
+            const nextEvent = events[i];
+            if (nextEvent && nextEvent.type === "move" &&
+                isDeepStrictEqual(event.id, nextEvent.id) &&
+                nextEvent.from && targetMoveCallers.includes(nextEvent.from))
+            {
+                const copiedMoveId = toIdName(nextEvent.moveName);
+                for (const target of options.targets)
+                {
+                    target.moveset.reveal(copiedMoveId);
+                }
             }
 
             // handle event suffixes
