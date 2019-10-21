@@ -208,6 +208,8 @@ for (const moveName in moves)
     let sideCondition: string | undefined;
     if (move.sideCondition) sideCondition = move.sideCondition.toLowerCase();
 
+    const mirror = move.flags.mirror === 1;
+
     // two turn moves are also recorded in a different object
     if (move.flags.charge === 1) twoTurnMoves[move.name] = twoTurnUid++;
 
@@ -215,14 +217,12 @@ for (const moveName in moves)
     if (move.isFutureMove) futureMoves[move.name] = futureUid++;
 
     console.log(`\
-    ${move.id}:
-    {
-        uid: ${uid}, pp: [${pp.join(", ")}], target: ${target}\
+    ${move.id}: {uid: ${uid}, pp: [${pp.join(", ")}], target: ${target}\
 ${selfSwitch ? `, selfSwitch: ${selfSwitch}` : ""}\
 ${volatileEffect ? `, volatileEffect: "${volatileEffect}"` : ""}\
 ${selfVolatileEffect ? `, selfVolatileEffect: "${selfVolatileEffect}"` : ""}\
-${sideCondition ? `, sideCondition: "${sideCondition}"` : ""}
-    },`);
+${sideCondition ? `, sideCondition: "${sideCondition}"` : ""}\
+, mirror: ${mirror}},`);
     ++uid;
 }
 console.log("};\n");

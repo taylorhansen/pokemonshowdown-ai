@@ -169,6 +169,8 @@ export interface MoveData
     readonly selfVolatileEffect?: SelfVolatileEffect;
     /** Team-inflicted status effect. */
     readonly sideCondition?: SideCondition;
+    /** Whether this move can be copied by Mirror Move. */
+    readonly mirror: boolean;
 }
 
 /** Types of targets for a move. */
