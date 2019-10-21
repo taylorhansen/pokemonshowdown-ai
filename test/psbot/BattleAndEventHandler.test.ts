@@ -3,9 +3,11 @@ import "mocha";
 import { Choice } from "../../src/battle/agent/Choice";
 import { types, WeatherType } from "../../src/battle/dex/dex-util";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
+import { Moveset } from "../../src/battle/state/Moveset";
 import { Pokemon } from "../../src/battle/state/Pokemon";
 import { PossibilityClass } from "../../src/battle/state/PossibilityClass";
 import { RoomStatus } from "../../src/battle/state/RoomStatus";
+import { otherSide, Side } from "../../src/battle/state/Side";
 import { TempStatus } from "../../src/battle/state/TempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
 import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent } from
@@ -16,8 +18,6 @@ import { PokemonDetails, PokemonID, PokemonStatus } from
     "../../src/psbot/helpers";
 import * as testArgs from "../helpers/battleTestArgs";
 import { MockPSBattle } from "./MockPSBattle";
-import { Side, otherSide } from "../../src/battle/state/Side";
-import { Moveset } from "../../src/battle/state/Moveset";
 
 describe("Battle and EventProcessor", function()
 {
