@@ -90,6 +90,8 @@ export type StatName = keyof typeof statNames;
 /** Holds the set of all boostable stat names. */
 export const boostNames =
     {...statsExceptHP, accuracy: true, evasion: true} as const;
+/** Array of all boost names. */
+export const boostKeys = Object.keys(boostNames) as BoostName[];
 /** Names of pokemon stats that can be boosted. */
 export type BoostName = keyof typeof boostNames;
 /**
