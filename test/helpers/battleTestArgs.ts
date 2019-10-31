@@ -65,12 +65,12 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-cureteam", id: pokemonId[2]},
     {type: "-damage", id: pokemonId[1], status: pokemonStatus[1]},
     {
-        type: "detailschange", id: pokemonId[0], details: pokemonDetails[0],
-        status: pokemonStatus[0]
+        type: "detailschange", id: pokemonId[0], ...pokemonDetails[0],
+        ...pokemonStatus[0]
     },
     {
-        type: "drag", id: pokemonId[1], details: pokemonDetails[1],
-        status: pokemonStatus[1]
+        type: "drag", id: pokemonId[1], ...pokemonDetails[1],
+        ...pokemonStatus[1]
     },
     {type: "-end", id: pokemonId[2], volatile: "confusion"},
     {type: "-endability", id: pokemonId[1], ability: "Swift Swim"},
@@ -84,8 +84,8 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-fieldend", effect: "move: Gravity"},
     {type: "-fieldstart", effect: "move: Gravity"},
     {
-        type: "-formechange", id: pokemonId[0], details: pokemonDetails[0],
-        status: pokemonStatus[0]
+        type: "-formechange", id: pokemonId[0], ...pokemonDetails[0],
+        ...pokemonStatus[0]
     },
     {
         type: "-heal", id: pokemonId[1], status: pokemonStatus[1],
@@ -130,8 +130,8 @@ export const battleEvent: AnyBattleEvent[] =
         stats: ["atk", "accuracy"]
     },
     {
-        type: "switch", id: pokemonId[0], details: pokemonDetails[0],
-        status: pokemonStatus[0]
+        type: "switch", id: pokemonId[0], ...pokemonDetails[0],
+        ...pokemonStatus[0]
     },
     {type: "tie"},
     {type: "-transform", source: pokemonId[0], target: pokemonId[1]},
@@ -201,15 +201,15 @@ export const request: RequestMessage[] =
             pokemon:
             [
                 {
-                    ident: requestId[0], details: pokemonDetails[0],
-                    condition: pokemonStatus[0], active: true,
+                    ...requestId[0], ...pokemonDetails[0], ...pokemonStatus[0],
+                    active: true,
                     stats: {atk: 256, def: 216, spa: 344, spd: 216, spe: 296},
                     moves: ["psychocut"], baseAbility: "pressure",
                     item: "leftovers", pokeball: "masterball"
                 },
                 {
-                    ident: requestId[2], details: pokemonDetails[2],
-                    condition: pokemonStatus[2], active: false,
+                    ...requestId[2], ...pokemonDetails[2], ...pokemonStatus[2],
+                    active: false,
                     stats: {atk: 156, def: 176, spa: 206, spd: 186, spe: 116},
                     moves: ["tackle"], baseAbility: "trace",
                     item: "choicescarf", pokeball: "greatball"
@@ -235,8 +235,8 @@ export const request: RequestMessage[] =
             pokemon:
             [
                 {
-                    ident: requestId[1], details: pokemonDetails[1],
-                    condition: pokemonStatus[1], active: true,
+                    ...requestId[1], ...pokemonDetails[1],
+                    ...pokemonStatus[1], active: true,
                     stats: {atk: 30, def: 75, spa: 35, spd: 40, spe: 100},
                     moves: ["splash", "tackle"], baseAbility: "swiftswim",
                     item: "lifeorb", pokeball: "pokeball"

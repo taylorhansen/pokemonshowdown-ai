@@ -182,7 +182,7 @@ export class PSBattle implements RoomHandler
             const mons = this.lastRequest.side.pokemon;
             for (let i = 0; i < mons.length; ++i)
             {
-                if (mons[i].condition.hp !== 0 && !mons[i].active)
+                if (mons[i].hp !== 0 && !mons[i].active)
                 {
                     choices.push(`switch ${i + 1}` as Choice);
                 }

@@ -13,8 +13,8 @@ import { AnyBattleEvent, DamageEvent, DragEvent, FieldEndEvent, FieldStartEvent,
     "./dispatcher/BattleEvent";
 import { BattleEventListener } from "./dispatcher/BattleEventListener";
 import { BattleInitMessage, RequestMessage } from "./dispatcher/Message";
-import { isPlayerID, otherPlayerID, PlayerID, PokemonDetails, PokemonID,
-    PokemonStatus, toIdName } from "./helpers";
+import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
+    "./helpers";
 
 /** Translates BattleEvents to BattleState mutations. */
 export class PSEventHandler
@@ -368,12 +368,12 @@ export class PSEventHandler
         {
             // permanent form change
             const active = this.getActive(event.id.owner);
-            active.formChange(event.details.species, /*perm*/true);
+            active.formChange(event.species, /*perm*/true);
 
             // set other details just in case
-            active.traits.stats.level = event.details.level;
-            active.gender = event.details.gender;
-            active.hp.set(event.status.hp, event.status.hpMax);
+            active.traits.stats.level = event.level;
+            active.gender = event.gender;
+            active.hp.set(event.hp, event.hpMax);
         })
         .on("drag", event => this.handleSwitch(event))
         .on("faint", event => { this.getActive(event.id.owner).faint(); })
@@ -381,12 +381,12 @@ export class PSEventHandler
         .on("-fieldstart", event => this.handleFieldCondition(event))
         .on("-formechange", event =>
         {
-            if (!dex.pokemon.hasOwnProperty(event.details.species))
+            if (!dex.pokemon.hasOwnProperty(event.species))
             {
-                throw new Error(`Unknown species '${event.details.species}'`);
+                throw new Error(`Unknown species '${event.species}'`);
             }
             // TODO: set other details?
-            this.getActive(event.id.owner).formChange(event.details.species);
+            this.getActive(event.id.owner).formChange(event.species);
         })
         .on("-heal", event => this.handleDamage(event))
         .on("-invertboost", event =>
@@ -556,10 +556,10 @@ export class PSEventHandler
             // transform reverts after fainting but not after being forced to
             //  choose a switch-in without fainting
             if (this.lastRequest.forceSwitch &&
-                this.lastRequest.side.pokemon[0].condition.hp === 0) return;
+                this.lastRequest.side.pokemon[0].hp === 0) return;
             // if species don't match, must've been dragged out before we could
             //  infer any other features
-            if (this.lastRequest.side.pokemon[0].details.species !==
+            if (this.lastRequest.side.pokemon[0].species !==
                 source.species) return;
 
             source.transformPost(this.lastRequest.active[0].moves,
@@ -653,13 +653,10 @@ export class PSEventHandler
         team.size = args.side.pokemon.length;
         for (const data of args.side.pokemon)
         {
-            const details: PokemonDetails = data.details;
-            const status: PokemonStatus = data.condition;
-
             // initial revealed pokemon can't be null, since we already
             //  set the teamsize
-            const mon = team.reveal(details.species, details.level,
-                    details.gender, status.hp, status.hpMax)!;
+            const mon = team.reveal(data.species, data.level, data.gender,
+                    data.hp, data.hpMax)!;
             for (const stat in data.stats)
             {
                 // istanbul ignore if
@@ -667,10 +664,10 @@ export class PSEventHandler
                 mon.traits.stats[stat as StatExceptHP]
                     .set(data.stats[stat as StatExceptHP]);
             }
-            mon.traits.stats.hp.set(status.hpMax);
+            mon.traits.stats.hp.set(data.hpMax);
             mon.setItem(data.item);
             mon.traits.setAbility(data.baseAbility);
-            mon.majorStatus.assert(status.condition);
+            mon.majorStatus.assert(data.condition);
 
             for (let moveId of data.moves)
             {
@@ -897,8 +894,8 @@ export class PSEventHandler
             {copyVolatile: team.status.selfSwitch === "copyvolatile"};
         team.status.selfSwitch = false;
 
-        team.switchIn(event.details.species, event.details.level,
-            event.details.gender, event.status.hp, event.status.hpMax, options);
+        team.switchIn(event.species, event.level, event.gender, event.hp,
+            event.hpMax, options);
     }
 
     /**

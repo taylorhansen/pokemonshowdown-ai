@@ -30,9 +30,9 @@ export function stringifyRequest(data: RequestMessage): string
     {
         // ident, details, and condition fields are the same
         //  as the data from a |switch| message
-        mon.ident = stringifyID(mon.ident);
-        mon.details = stringifyDetails(mon.details);
-        mon.condition = stringifyStatus(mon.condition);
+        mon.ident = stringifyID(mon);
+        mon.details = stringifyDetails(mon);
+        mon.condition = stringifyStatus(mon);
     }
     return JSON.stringify(obj);
 }
@@ -144,8 +144,8 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "switch":
             result =
             [
-                event.type, stringifyID(event.id),
-                stringifyDetails(event.details), stringifyStatus(event.status)
+                event.type, stringifyID(event.id), stringifyDetails(event),
+                stringifyStatus(event)
             ];
             break;
         case "-end":
@@ -158,8 +158,8 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "-formechange":
             result =
             [
-                event.type, stringifyID(event.id),
-                stringifyDetails(event.details), stringifyStatus(event.status)
+                event.type, stringifyID(event.id), stringifyDetails(event),
+                stringifyStatus(event)
             ];
             break;
         case "-item":

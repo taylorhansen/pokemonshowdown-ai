@@ -212,14 +212,11 @@ export interface DamageEvent extends BattleEventBase
 }
 
 /** Event where id, details, and status of a pokemon are revealed or changed. */
-interface AllDetailsEvent extends BattleEventBase
+interface AllDetailsEvent extends BattleEventBase, PokemonDetails,
+    PokemonStatus
 {
     /** ID of the pokemon being revealed or changed. */
     readonly id: PokemonID;
-    /** Some details on species, level, etc. */
-    readonly details: PokemonDetails;
-    /** HP and any status conditions. */
-    readonly status: PokemonStatus;
 }
 
 /** Event where a pokemon permanently changes form. */

@@ -14,8 +14,7 @@ import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent } from
     "../../src/psbot/dispatcher/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
     "../../src/psbot/dispatcher/Message";
-import { PokemonDetails, PokemonID, PokemonStatus } from
-    "../../src/psbot/helpers";
+import { PokemonID } from "../../src/psbot/helpers";
 import * as testArgs from "../helpers/battleTestArgs";
 import { MockPSBattle } from "./MockPSBattle";
 
@@ -45,16 +44,14 @@ describe("Battle and EventProcessor", function()
 
         for (const data of args.side.pokemon)
         {
-            const details: PokemonDetails = data.details;
-            const status: PokemonStatus = data.condition;
             const mon = team.pokemon.find(
-                p => !!p && p.species === details.species)!;
+                p => !!p && p.species === data.species)!;
 
             expect(mon).to.exist;
-            expect(mon.species).to.equal(details.species);
-            expect(mon.traits.stats.level).to.equal(details.level);
-            expect(mon.hp.current).to.equal(status.hp);
-            expect(mon.hp.max).to.equal(status.hpMax);
+            expect(mon.species).to.equal(data.species);
+            expect(mon.traits.stats.level).to.equal(data.level);
+            expect(mon.hp.current).to.equal(data.hp);
+            expect(mon.hp.max).to.equal(data.hpMax);
             // TODO: handle case where there's no item? (have to change typings)
             expect(mon.item.definiteValue).to.not.be.null;
             expect(mon.item.definiteValue!.name).to.equal(data.item);
@@ -62,7 +59,7 @@ describe("Battle and EventProcessor", function()
             expect(mon.traits.ability.definiteValue).to.not.be.null;
             expect(mon.traits.ability.definiteValue!.name)
                 .to.equal(data.baseAbility);
-            expect(mon.majorStatus.current).to.equal(status.condition);
+            expect(mon.majorStatus.current).to.equal(data.condition);
             // explicit SwitchEvents are better at handling this
             // expect(mon.active).to.equal(data.active);
 
@@ -152,13 +149,13 @@ describe("Battle and EventProcessor", function()
             [
                 {
                     type: "switch", id: testArgs.pokemonId[0],
-                    details: testArgs.pokemonDetails[0],
-                    status: testArgs.pokemonStatus[0]
+                    ...testArgs.pokemonDetails[0],
+                    ...testArgs.pokemonStatus[0]
                 },
                 {
                     type: "switch", id: testArgs.pokemonId[1],
-                    details: testArgs.pokemonDetails[1],
-                    status: testArgs.pokemonStatus[1]
+                    ...testArgs.pokemonDetails[1],
+                    ...testArgs.pokemonStatus[1]
                 }
             ]
         };
@@ -192,10 +189,9 @@ describe("Battle and EventProcessor", function()
                     pokemon:
                     [
                         {
-                            ident: testArgs.pokemonId[0],
-                            details: testArgs.pokemonDetails[0],
-                            condition: testArgs.pokemonStatus[0],
-                            active: true,
+                            ...testArgs.pokemonId[0],
+                            ...testArgs.pokemonDetails[0],
+                            ...testArgs.pokemonStatus[0], active: true,
                             stats:
                             {
                                 atk: 256, def: 216, spa: 344, spd: 216, spe: 296
@@ -215,13 +211,13 @@ describe("Battle and EventProcessor", function()
                 [
                     {
                         type: "switch", id: testArgs.pokemonId[0],
-                        details: testArgs.pokemonDetails[0],
-                        status: testArgs.pokemonStatus[0]
+                        ...testArgs.pokemonDetails[0],
+                        ...testArgs.pokemonStatus[0]
                     },
                     {
                         type: "switch", id: testArgs.pokemonId[1],
-                        details: testArgs.pokemonDetails[1],
-                        status: testArgs.pokemonStatus[1]
+                        ...testArgs.pokemonDetails[1],
+                        ...testArgs.pokemonStatus[1]
                     }
                 ]
             });
@@ -253,13 +249,8 @@ describe("Battle and EventProcessor", function()
                     pokemon:
                     [
                         {
-                            ident: us1,
-                            details:
-                            {
-                                species: "Horsea", level: 100, gender: "M",
-                                shiny: false
-                            },
-                            condition: {hp: 201, hpMax: 201, condition: null},
+                            ...us1, species: "Horsea", level: 100, gender: "M",
+                            shiny: false, hp: 201, hpMax: 201, condition: null,
                             active: true,
                             stats:
                             {
@@ -271,14 +262,9 @@ describe("Battle and EventProcessor", function()
                             pokeball: "pokeball"
                         },
                         {
-                            ident: us2,
-                            details:
-                            {
-                                species: "Gyarados", level: 100, gender: "M",
-                                shiny: false
-                            },
-                            condition: {hp: 331, hpMax: 331, condition: null},
-                            active: false,
+                            ...us2, species: "Gyarados", level: 100,
+                            gender: "M", shiny: false, hp: 331, hpMax: 331,
+                            condition: null, active: false,
                             stats:
                             {
                                 atk: 286, def: 194, spa: 156, spd: 236, spe: 198
@@ -533,17 +519,11 @@ describe("Battle and EventProcessor", function()
                     [
                         event1,
                         {
-                            type: "switch", id: us2,
-                            details:
-                            {
-                                species: us2Mon.species, gender: us2Mon.gender!,
-                                level: us2Mon.traits.stats.level!, shiny: false
-                            },
-                            status:
-                            {
-                                hp: us2Mon.hp.current, hpMax: us2Mon.hp.max,
-                                condition: us2Mon.majorStatus.current
-                            }
+                            type: "switch", id: us2, species: us2Mon.species,
+                            gender: us2Mon.gender!,
+                            level: us2Mon.traits.stats.level!, shiny: false,
+                            hp: us2Mon.hp.current, hpMax: us2Mon.hp.max,
+                            condition: us2Mon.majorStatus.current
                         },
                         {type: "upkeep"}, {type: "turn", num: 2}
                     ]
@@ -573,12 +553,9 @@ describe("Battle and EventProcessor", function()
                             {
                                 owner: "p2", position: "a", nickname: "Gyarados"
                             },
-                            details:
-                            {
-                                species: "Gyarados", gender: "F", level: 100,
-                                shiny: false
-                            },
-                            status: {hp: 100, hpMax: 100, condition: null}
+                            species: "Gyarados",
+                            gender: "F", level: 100, shiny: false, hp: 100,
+                            hpMax: 100, condition: null
                         },
                         {type: "upkeep"}, {type: "turn", num: 2}
                     ]
@@ -1433,14 +1410,9 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "detailschange",
-                            id: us1,
-                            details:
-                            {
-                                species: "Kingdra", level: 100, shiny: false,
-                                gender: "F"
-                            },
-                            status: {hp: 100, hpMax: 100, condition: null}
+                            type: "detailschange", id: us1, species: "Kingdra",
+                            level: 100, shiny: false, gender: "F", hp: 100,
+                            hpMax: 100, condition: null
                         }
                     ]
                 });
@@ -1556,14 +1528,9 @@ describe("Battle and EventProcessor", function()
                     events:
                     [
                         {
-                            type: "-formechange",
-                            id: us1,
-                            details:
-                            {
-                                species: "Kingdra", level: 100, shiny: false,
-                                gender: "F"
-                            },
-                            status: {hp: 100, hpMax: 100, condition: null}
+                            type: "-formechange", id: us1, species: "Kingdra",
+                            level: 100, shiny: false, gender: "F", hp: 100,
+                            hpMax: 100, condition: null
                         }
                     ]
                 });

@@ -152,14 +152,9 @@ export interface RequestSide
 }
 
 /** Basic pokemon info. */
-export interface RequestPokemon
+export interface RequestPokemon extends PokemonID, PokemonDetails,
+    PokemonStatus
 {
-    /** Parsed PokemonID. */
-    readonly ident: PokemonID;
-    /** Parsed PokemonDetails. */
-    readonly details: PokemonDetails;
-    /** Parsed PokemonStatus. */
-    readonly condition: PokemonStatus;
     /**
      * True if this pokemon is active. This declaration is only here for
      * completeness and should not be directly accessed. Explicit SwitchEvents

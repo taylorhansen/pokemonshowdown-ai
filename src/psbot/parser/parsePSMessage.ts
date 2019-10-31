@@ -196,9 +196,16 @@ const messageRequest: MessageParser = chain(
             {
                 // ident, details, and condition fields are the same format as
                 //  the data from a |switch| message
-                mon.ident = parsePokemonID(mon.ident, /*pos*/false);
-                mon.details = parsePokemonDetails(mon.details);
-                mon.condition = parsePokemonStatus(mon.condition);
+                Object.assign(mon, parsePokemonID(mon.ident, /*pos*/false),
+                    parsePokemonDetails(mon.details),
+                    parsePokemonStatus(mon.condition));
+
+                // remove the fields we just processed
+                delete mon.ident;
+                delete mon.details;
+                // since PokemonStatus has a "condition" field, we don't remove
+                //  that
+                // delete mon.condition;
             }
 
             return obj;
@@ -885,7 +892,7 @@ const eventAllDetails:
         sequence(
             word("switch", "drag", "detailschange", "-formechange"), pokemonId,
             pokemonDetails, pokemonStatus),
-        ([type, id, details, status]) => ({type, id, details, status}));
+        ([type, id, details, status]) => ({type, id, ...details, ...status}));
 
 /**
  * Parses an UnboostEvent.
