@@ -10,8 +10,8 @@ export interface BattleAgent
     /**
      * Decides which action should be taken.
      * @param state State to decide on.
-     * @param choices Available choices to choose from.
-     * @returns Each Choice sorted from most to least preferable.
+     * @param choices Available choices to choose from. This method will sort
+     * the choices array in-place from most to least preferable.
      */
-    decide(state: BattleState, choices: Choice[]): Promise<Choice[]>;
+    decide(state: BattleState, choices: Choice[]): Promise<void>;
 }

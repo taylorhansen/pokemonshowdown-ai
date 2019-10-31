@@ -6,8 +6,5 @@ import { BattleState } from "../../../src/battle/state/BattleState";
 export class MockBattleAgent implements BattleAgent
 {
     /** @override */
-    public decide(state: BattleState, choices: Choice[]): Promise<Choice[]>
-    {
-        return Promise.resolve(choices);
-    }
+    public async decide(state: BattleState, choices: Choice[]): Promise<void> {}
 }

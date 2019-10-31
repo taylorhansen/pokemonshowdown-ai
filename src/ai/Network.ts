@@ -36,8 +36,7 @@ export class Network implements BattleAgent
     }
 
     /** @override */
-    public async decide(state: BattleState, choices: Choice[]):
-        Promise<Choice[]>
+    public async decide(state: BattleState, choices: Choice[]): Promise<void>
     {
         if (choices.length === 0) throw new Error("No available choices");
 
@@ -50,11 +49,9 @@ export class Network implements BattleAgent
 
         // find the best choice that is a subset of our possible choices
         // include reward so we can use it for Q learning
-        const sortedChoices = choices.sort((a, b) =>
+        choices.sort((a, b) =>
                 // sort by rewards in descending order (highest comes first)
                 predictionData[choiceIds[b]] - predictionData[choiceIds[a]]);
-
-        return sortedChoices;
     }
 
     /**

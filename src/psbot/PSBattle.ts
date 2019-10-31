@@ -110,8 +110,7 @@ export class PSBattle implements RoomHandler
             else this.lastChoices.shift();
 
             // re-sort remaining choices based on new info
-            this.lastChoices = await this.agent.decide(this.state,
-                    this.lastChoices);
+            await this.agent.decide(this.state, this.lastChoices);
 
             this.sender(`|/choose ${this.lastChoices[0]}`);
         }
@@ -140,10 +139,11 @@ export class PSBattle implements RoomHandler
     /** Asks the BattleAgent what to do next and sends the response. */
     private async askAgent(): Promise<void>
     {
-        const choices = this.getChoices();
-        this.logger.debug(`Choices: [${choices.join(", ")}]`);
+        this.lastChoices = this.getChoices();
 
-        this.lastChoices = await this.agent.decide(this.state, choices);
+        this.logger.debug(`Choices: [${this.lastChoices.join(", ")}]`);
+        await this.agent.decide(this.state, this.lastChoices);
+
         this.sender(`|/choose ${this.lastChoices[0]}`);
     }
 
