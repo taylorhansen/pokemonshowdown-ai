@@ -1,10 +1,28 @@
-/** Represents a set of possible values. */
-export class PossibilityClass<TData>
+/** Readonly PossibilityClass representation. */
+export interface ReadonlyPossibilityClass<TData>
 {
     /** Maps value name to data. */
+    readonly map: {readonly [name: string]: TData};
+    /** The set of possible values this object can be. */
+    readonly possibleValues: ReadonlySet<string>;
+    /**
+     * Gets the class name and data if narrowed down sufficiently, otherwise
+     * null.
+     */
+    readonly definiteValue:
+        {readonly name: string, readonly data: TData} | null;
+
+    /** Checks if a value is in the data possibility. */
+    isSet(name: string): boolean;
+}
+
+/** Represents a set of possible values. */
+export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
+{
+    /** @override */
     public readonly map: {readonly [name: string]: TData};
 
-    /** The set of possible values this object can be. */
+    /** @override */
     public get possibleValues(): ReadonlySet<string>
     {
         return this._possibleValues;
@@ -46,6 +64,12 @@ export class PossibilityClass<TData>
         this.checkNarrowed();
     }
 
+    /** @override */
+    public isSet(name: string): boolean
+    {
+        return this._possibleValues.has(name);
+    }
+
     /**
      * Adds a listener for when this object gets fully narrowed. The provided
      * function can be immediately called if this PossibilityClass is already
@@ -67,12 +91,6 @@ export class PossibilityClass<TData>
         }
 
         this.checkNarrowed();
-    }
-
-    /** Checks if a value is in the data possibility. */
-    public isSet(name: string): boolean
-    {
-        return this._possibleValues.has(name);
     }
 
     /** Removes currently set value names that are not in the given array. */

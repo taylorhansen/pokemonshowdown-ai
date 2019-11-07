@@ -1,16 +1,30 @@
 import { dex } from "../dex/dex";
 import { PokemonData, Type } from "../dex/dex-util";
-import { PossibilityClass } from "./PossibilityClass";
-import { StatTable } from "./StatTable";
+import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
+import { ReadonlyStatTable, StatTable } from "./StatTable";
+
+export interface ReadonlyPokemonTraits
+{
+    /** Current ability possibility. */
+    readonly ability: ReadonlyPossibilityClass<typeof dex.abilities[string]>;
+    /** Current species data. */
+    readonly data: PokemonData;
+    /** Current species possibility. */
+    readonly species: PossibilityClass<typeof dex.pokemon[string]>;
+    /** Current stat range possibilities. */
+    readonly stats: ReadonlyStatTable;
+    /** Current primary and secondary types. */
+    readonly types: readonly [Type, Type];
+}
 
 /**
  * Tracks the overridable traits of a Pokemon. Typically contains fields that
  * would warrant having two nearly identical fields on Pokemon and
  * VolatileStatus.
  */
-export class PokemonTraits
+export class PokemonTraits implements ReadonlyPokemonTraits
 {
-    /** Current ability possibility. */
+    /** @override */
     public get ability(): PossibilityClass<typeof dex.abilities[string]>
     {
         if (!this._ability) throw new Error("Ability not initialized");
@@ -35,7 +49,7 @@ export class PokemonTraits
     }
     private _ability!: PossibilityClass<typeof dex.abilities[string]> | null;
 
-    /** Current species data. */
+    /** @override */
     public get data(): PokemonData
     {
         if (!this._data) throw new Error("Species not initialized or narrowed");
@@ -43,7 +57,7 @@ export class PokemonTraits
     }
     private _data!: PokemonData | null;
 
-    /** Current species possibility. */
+    /** @override */
     public get species(): PossibilityClass<typeof dex.pokemon[string]>
     {
         if (!this._species) throw new Error("Species not initialized");
@@ -73,7 +87,7 @@ export class PokemonTraits
     }
     private _species!: PossibilityClass<typeof dex.pokemon[string]> | null;
 
-    /** Current stat range possibilities. */
+    /** @override */
     public get stats(): StatTable
     {
         if (!this._stats) throw new Error("Stat table not initialized");
@@ -81,7 +95,7 @@ export class PokemonTraits
     }
     private _stats!: StatTable | null;
 
-    /** Current primary and secondary types. */
+    /** @override */
     public get types(): readonly [Type, Type]
     {
         if (!this._types) throw new Error("Types not initialized");

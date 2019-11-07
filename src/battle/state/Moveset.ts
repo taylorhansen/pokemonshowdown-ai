@@ -1,10 +1,22 @@
-import { Move } from "./Move";
+import { Move, ReadonlyMove } from "./Move";
+
+export interface ReadonlyMoveset
+{
+    /** Contained moves. Null is unrevealed while undefined is nonexistent. */
+    readonly moves: readonly (ReadonlyMove | null | undefined)[];
+    /**
+     * Gets the move by name.
+     * @param id ID name of the move.
+     * @returns The move that matches the ID name, or null if not found.
+     */
+    get(id: string): ReadonlyMove | null;
+}
 
 /**
  * Tracks the moves of a Pokemon, using a variation of pub/sub to infer
  * revealing Moves of linked Movesets.
  */
-export class Moveset
+export class Moveset implements ReadonlyMoveset
 {
     /** Maximum moveset size. */
     public static readonly maxSize = 4;
@@ -90,11 +102,7 @@ export class Moveset
         this.linked = null;
     }
 
-    /**
-     * Gets the move by name.
-     * @param id ID name of the move.
-     * @returns The move that matches the ID name, or null if not found.
-     */
+    /** @override */
     public get(id: string): Move | null
     {
         const index = this.getIndex(id);

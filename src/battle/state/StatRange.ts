@@ -1,5 +1,18 @@
+/** Readonly StatRange representation. */
+export interface ReadonlyStatRange
+{
+    /** Minimum possible stat value. */
+    readonly min: number | null;
+    /** Maximum possible stat value. */
+    readonly max: number | null;
+    /** Base stat value used to calculate `#min` and `#max`. */
+    readonly base: number | null;
+    /** Whether this is an HP stat, which alters how calculations are made. */
+    readonly hp: boolean;
+}
+
 /** Represents a range of stat values from a base stat. */
-export class StatRange
+export class StatRange implements ReadonlyStatRange
 {
     /** Minimum possible stat value. */
     public get min(): number | null { return this._min; }

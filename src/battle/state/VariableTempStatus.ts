@@ -1,34 +1,44 @@
 import { pluralTurns } from "./utility";
 
+/** Readonly VariableTempStatus representation. */
+export interface ReadonlyVariableTempStatus<TStatusType extends string>
+{
+    /** Whether this status is currently active and not `"none"`. */
+    readonly isActive: boolean;
+    /** Current status type. */
+    readonly type: TStatusType | "none";
+    /**
+     * Number of turns this status has been active. This is 0-based, so this
+     * will return 0 if the status was started this turn, and 1 after the end
+     * of this turn.
+     */
+    readonly turns: number;
+    /** Number of turns a status should last. */
+    readonly duration: number;
+    /** Stores all the `TStatusType` keys for iterating. */
+    readonly map: {readonly [T in TStatusType]: any};
+}
+
 /**
  * TempStatus whose duration depends on the type of status that's currently
  * active. Similar to a set of mutually exclusive TempStatuses.
  * @template TStatusType String union of status types that this object can
  * represent. This excludes the `"none"` type, which is automatically added.
  */
-export class VariableTempStatus<TStatusType extends string>
+export class VariableTempStatus<TStatusType extends string> implements
+    ReadonlyVariableTempStatus<TStatusType>
 {
     // all fields are initialized on #reset() in the constructor
 
-    /** Whether this status is currently active. */
+    /** @override */
     public get isActive(): boolean { return this._type !== "none"; }
 
-    /** Current status type. */
-    public get type(): TStatusType | "none"
-    {
-        return this._type;
-    }
+    /** @override */
+    public get type(): TStatusType | "none" { return this._type; }
     private _type!: TStatusType | "none";
 
-    /**
-     * Number of turns this status has been active. This is 0-based, so this
-     * will return 0 if the status was started this turn, and 1 after the end
-     * of this turn.
-     */
-    public get turns(): number
-    {
-        return this._turns;
-    }
+    /** @override */
+    public get turns(): number { return this._turns; }
     private _turns!: number;
 
     /**

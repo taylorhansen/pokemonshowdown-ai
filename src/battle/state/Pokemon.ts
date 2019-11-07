@@ -1,14 +1,15 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
 import { HPType, hpTypes, rolloutMoves, StatExceptHP, Type } from
     "../dex/dex-util";
-import { HP } from "./HP";
-import { MajorStatusCounter } from "./MajorStatusCounter";
+import { HP, ReadonlyHP } from "./HP";
+import { MajorStatusCounter, ReadonlyMajorStatusCounter } from
+    "./MajorStatusCounter";
 import { Move } from "./Move";
-import { Moveset } from "./Moveset";
-import { PokemonTraits } from "./PokemonTraits";
-import { PossibilityClass } from "./PossibilityClass";
+import { Moveset, ReadonlyMoveset } from "./Moveset";
+import { PokemonTraits, ReadonlyPokemonTraits } from "./PokemonTraits";
+import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
 import { Team } from "./Team";
-import { VolatileStatus } from "./VolatileStatus";
+import { ReadonlyVolatileStatus, VolatileStatus } from "./VolatileStatus";
 
 /** Options for `Pokemon#useMove()`. */
 export interface MoveOptions
@@ -16,7 +17,7 @@ export interface MoveOptions
     /** ID name of the move. */
     moveId: string;
     /** Targets of the move. */
-    targets: readonly Pokemon[];
+    targets: readonly ReadonlyPokemon[];
     /**
      * Optional. Indicates that the move was unsuccessful due to the move
      * failing on its own (`"failed"`), or that the opponent evaded it due to
@@ -41,22 +42,84 @@ export interface MoveData
     maxpp?: number;
 }
 
-/** Holds all the possibly incomplete info about a pokemon. */
-export class Pokemon
+/** Readonly Pokemon representation. */
+export interface ReadonlyPokemon
 {
     /** Whether this is the current active pokemon. */
-    public get active(): boolean { return !!this._volatile; }
+    readonly active: boolean;
 
     /** Current pokemon traits. May be overridden by VolatileStatus. */
+    readonly traits: ReadonlyPokemonTraits;
+    /** Base pokemon traits. */
+    readonly baseTraits: ReadonlyPokemonTraits;
+
+    /** Current ability for this Pokemon, or the empty string if unknown. */
+    readonly ability: string;
+
+    /** Current species for this Pokemon. or the empty string if unknown. */
+    readonly species: string;
+
+    /** Current types for this Pokemon. */
+    readonly types: readonly Type[];
+
+    /** Current reference to held item possibilities. */
+    readonly item: ReadonlyPossibilityClass<number>;
+    /** Current reference to last consumed item possibilities. */
+    readonly lastItem: ReadonlyPossibilityClass<number>;
+
+    /** Pokemon's current moveset. */
+    readonly moveset: ReadonlyMoveset;
+    /** Pokemon's base moveset. */
+    readonly baseMoveset: ReadonlyMoveset;
+
+    /** Pokemon's gender. M=male, F=female, null=genderless. */
+    readonly gender?: string | null;
+
+    /** Current Hidden Power type possibility. */
+    readonly hpType: PossibilityClass<typeof hpTypes[HPType]>;
+
+    /** Happiness value between 0 and 255, or null if unknown. */
+    readonly happiness: number | null;
+
+    /** Info about the pokemon's hit points. */
+    readonly hp: ReadonlyHP;
+    /** Whether this pokemon is fainted. */
+    readonly fainted: boolean;
+
+    /** Major status turn counter manager. */
+    readonly majorStatus: ReadonlyMajorStatusCounter;
+
+    /**
+     * Checks if the pokemon is definitely grounded, ignoring incomplete
+     * information.
+     */
+    readonly isGrounded: boolean;
+    /**
+     * Checks if the pokemon may be grounded, based on incomplete information.
+     * Unnarrowed ability and item classes are included here.
+     */
+    readonly maybeGrounded: boolean;
+
+    /** Minor status conditions. Cleared on switch. */
+    readonly volatile: ReadonlyVolatileStatus;
+}
+
+/** Holds all the possibly incomplete info about a pokemon. */
+export class Pokemon implements ReadonlyPokemon
+{
+    /** @override */
+    public get active(): boolean { return !!this._volatile; }
+
+    /** @override */
     public get traits(): PokemonTraits
     {
         if (this._volatile) return this._volatile.overrideTraits;
         return this.baseTraits;
     }
-    /** Base pokemon traits. */
+    /** @override */
     public readonly baseTraits = new PokemonTraits();
 
-    /** Current ability for this Pokemon, or the empty string if unknown. */
+    /** @override */
     public get ability(): string
     {
         // not initialized
@@ -76,7 +139,7 @@ export class Pokemon
         return this.traits.ability.isSet(ability);
     }
 
-    /** Current species for this Pokemon. or the empty string if unknown. */
+    /** @override */
     public get species(): string
     {
         const traits = this.traits;
@@ -104,7 +167,7 @@ export class Pokemon
         else this.volatile.overrideTraits.setSpecies(species);
     }
 
-    /** Current types for this Pokemon. */
+    /** @override */
     public get types(): readonly Type[]
     {
         const result = [...this.traits.types];
@@ -112,9 +175,9 @@ export class Pokemon
         return result.filter(type => type !== "???");
     }
 
-    /** Current reference to held item possibilities. */
+    /** @override */
     public get item(): PossibilityClass<number> { return this._item; }
-    /** Current reference to last consumed item possibilities. */
+    /** @override */
     public get lastItem(): PossibilityClass<number> { return this._lastItem; }
     /**
      * Indicates that an item has been revealed or gained.
@@ -190,7 +253,7 @@ export class Pokemon
     private _item = new PossibilityClass(dex.items);
     private _lastItem = new PossibilityClass(dex.items, "none");
 
-    /** Pokemon's current moveset. */
+    /** @override */
     public get moveset(): Moveset
     {
         if (this._volatile) return this._volatile.overrideMoveset;
@@ -321,20 +384,20 @@ export class Pokemon
         }
         this.volatile.overrideMoveset.replace("sketch", move);
     }
-    /** Pokemon's base moveset. */
+    /** @override */
     public readonly baseMoveset = new Moveset();
 
-    /** Pokemon's gender. M=male, F=female, null=genderless. */
+    /** @override */
     public gender?: string | null;
 
-    /** Current Hidden Power type possibility. */
+    /** @override */
     public get hpType(): PossibilityClass<typeof hpTypes[HPType]>
     {
         // TODO: gen>=5: always use baseTraits
         return this.traits.stats.hpType;
     }
 
-    /** Happiness value between 0 and 255, or null if unknown. */
+    /** @override */
     public get happiness(): number | null { return this._happiness; }
     public set happiness(value: number | null)
     {
@@ -343,18 +406,15 @@ export class Pokemon
     }
     private _happiness: number | null = null;
 
-    /** Info about the pokemon's hit points. */
+    /** @override */
     public readonly hp: HP;
-    /** Whether this pokemon is fainted. */
+    /** @override */
     public get fainted(): boolean { return this.hp.current === 0; }
 
-    /** Major status turn counter manager. */
+    /** @override */
     public readonly majorStatus = new MajorStatusCounter();
 
-    /**
-     * Checks if the pokemon is definitely grounded, ignoring incomplete
-     * information.
-     */
+    /** @override */
     public get isGrounded(): boolean
     {
         if (this.team && this.team.state &&
@@ -383,10 +443,7 @@ export class Pokemon
             // flying type lifts
             !this.types.includes("flying");
     }
-    /**
-     * Checks if the pokemon may be grounded, based on incomplete information.
-     * Unnarrowed ability and item classes are included here.
-     */
+    /** @override */
     public get maybeGrounded(): boolean
     {
         if (this.team && this.team.state &&
@@ -416,7 +473,7 @@ export class Pokemon
             !this.types.includes("flying");
     }
 
-    /** Minor status conditions. Cleared on switch. */
+    /** @override */
     public get volatile(): VolatileStatus
     {
         if (this._volatile) return this._volatile;

@@ -1,4 +1,4 @@
-import { BattleState } from "../state/BattleState";
+import { ReadonlyBattleState } from "../state/BattleState";
 import { Choice } from "./Choice";
 
 /**
@@ -9,9 +9,9 @@ export interface BattleAgent
 {
     /**
      * Decides which action should be taken.
-     * @param state State to decide on.
+     * @param state State data for decision making.
      * @param choices Available choices to choose from. This method will sort
      * the choices array in-place from most to least preferable.
      */
-    decide(state: BattleState, choices: Choice[]): Promise<void>;
+    decide(state: ReadonlyBattleState, choices: Choice[]): Promise<void>;
 }

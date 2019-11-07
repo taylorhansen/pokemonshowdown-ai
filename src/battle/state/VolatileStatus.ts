@@ -1,29 +1,132 @@
-import { lockedMoves, twoTurnMoves } from "../dex/dex";
+import { LockedMove, lockedMoves, TwoTurnMove, twoTurnMoves } from "../dex/dex";
 import { BoostName, boostNames, rolloutMoves, Type } from "../dex/dex-util";
-import { Moveset } from "./Moveset";
-import { PokemonTraits } from "./PokemonTraits";
-import { TempStatus } from "./TempStatus";
+import { Moveset, ReadonlyMoveset } from "./Moveset";
+import { PokemonTraits, ReadonlyPokemonTraits } from "./PokemonTraits";
+import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
 import { pluralTurns, plus } from "./utility";
-import { VariableTempStatus } from "./VariableTempStatus";
+import { ReadonlyVariableTempStatus, VariableTempStatus  } from
+    "./VariableTempStatus";
+
+/** Readonly VolatileStatus representation. */
+export interface ReadonlyVolatileStatus
+{
+    // passed when copying
+
+    /* Aqua Ring move status. */
+    readonly aquaRing: boolean;
+    /** Stat boost stages. */
+    readonly boosts: {readonly [N in BoostName]: number};
+    /** Confusion status. */
+    readonly confusion: ReadonlyTempStatus;
+    /** Embargo move status. */
+    readonly embargo: ReadonlyTempStatus;
+    /** Focus Energy move status. */
+    readonly focusEnergy: boolean;
+    /** Gasto Acid move status (suppresses current ability). */
+    readonly gastroAcid: boolean;
+    /** Ingrain move status. */
+    readonly ingrain: boolean;
+    /** Leech Seed move status. */
+    readonly leechSeed: boolean;
+    /** Magnet Rise move status. */
+    readonly magnetRise: ReadonlyTempStatus;
+    /** Substitute move status. */
+    readonly substitute: boolean;
+    /** Who is trapping us. */
+    readonly trapped: VolatileStatus | null;
+    /** Who we're trapping. */
+    readonly trapping: VolatileStatus | null;
+
+    // not passed when copying
+
+    /** Attract move status. */
+    readonly attracted: boolean;
+    /** Bide move status. */
+    readonly bide: ReadonlyTempStatus;
+    /** Charge move status. */
+    readonly charge: ReadonlyTempStatus;
+    /** Defense curl move status. */
+    readonly defenseCurl: boolean;
+    /** Destiny Bond move status. */
+    readonly destinyBond: boolean;
+    /** List of disabled move statuses. */
+    readonly disabledMoves: readonly TempStatus[];
+    /** Encore move status. Encored move corresponds to `#lastUsed`. */
+    readonly encore: ReadonlyTempStatus;
+    /** Grudge move status. */
+    readonly grudge: boolean;
+    /** Foresight/Miracle Eye move status. */
+    readonly identified: "foresight" | "miracleeye" | null;
+    /**
+     * Index of the last used move, or -1 if none yet. Resets at the beginning
+     * of each turn, so this field can be used to check if a pokemon has not
+     * yet used a move.
+     */
+    readonly lastUsed: number;
+    /**
+     * Tracks locked moves, e.g. petaldance variants. Should be ticked after
+     * every successful move attempt.
+     *
+     * After the 2nd or 3rd move, the user will become confused, explicitly
+     * ending the status. However, if the user was already confused, the status
+     * can be implicitly ended, so this VariableTempStatus field is
+     * silent-endable.
+     */
+    readonly lockedMove: ReadonlyVariableTempStatus<LockedMove>;
+    /** Whether the pokemon has used Magic Coat during this turn. */
+    readonly magicCoat: boolean;
+    /** Whether the pokemon has used Minimize while out. */
+    readonly minimize: boolean;
+    /** Whether this pokemon must recharge on the next turn. */
+    readonly mustRecharge: boolean;
+    /**
+     * Override moveset, typically linked to the parent Pokemon's
+     * `#baseMoveset`. Applies until switched out.
+     */
+    readonly overrideMoveset: ReadonlyMoveset;
+    /** Override pokemon traits. Applies until switched out. */
+    readonly overrideTraits: ReadonlyPokemonTraits;
+    /** Temporary third type. */
+    readonly addedType: Type;
+    /** Rollout-like move status. */
+    readonly rollout: ReadonlyVariableTempStatus<keyof typeof rolloutMoves>;
+    /** Roost move effect (single turn). */
+    readonly roost: boolean;
+    /** First 5 turns of Slow Start ability. */
+    readonly slowStart: ReadonlyTempStatus;
+    /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
+    readonly stallTurns: number;
+    /** Taunt move status. */
+    readonly taunt: ReadonlyTempStatus;
+    /** Torment move status. */
+    readonly torment: boolean;
+    /** Transform move status. */
+    readonly transformed: boolean;
+    /** Two-turn move currently being prepared. */
+    readonly twoTurn: ReadonlyVariableTempStatus<TwoTurnMove>;
+    /** Whether the Unburden ability would be active here. */
+    readonly unburden: boolean;
+    /** Uproar move status. */
+    readonly uproar: ReadonlyTempStatus;
+    /** Whether the Truant ability will activate next turn. */
+    readonly willTruant: boolean;
+}
 
 /**
  * Contains the minor or temporary status conditions of a pokemon that are
  * removed upon switch.
  */
-export class VolatileStatus
+export class VolatileStatus implements ReadonlyVolatileStatus
 {
     // all fields are initialized on #clear() which is called in the constructor
 
     // passed when copying
 
-    /* Aqua Ring move status. */
+    /** @override */
     public aquaRing!: boolean;
 
-    /** Stat boost stages. */
-    public get boosts(): {[N in BoostName]: number}
-    {
-        return this._boosts;
-    }
+    /** @override */
+    public get boosts(): {[N in BoostName]: number} { return this._boosts; }
     /**
      * Copies stat boosts from one VolatileStatus to this one.
      * @param source Source status to get the boosts from.
@@ -39,34 +142,34 @@ export class VolatileStatus
     }
     private _boosts!: {[N in BoostName]: number};
 
-    /** Confusion status. */
+    /** @override */
     public readonly confusion = new TempStatus("confused", 3);
 
-    /** Embargo move status. */
+    /** @override */
     public readonly embargo = new TempStatus("embargo", 3);
 
-    /** Focus Energy move status. */
+    /** @override */
     public focusEnergy!: boolean;
 
-    /** Gasto Acid move status (suppresses current ability). */
+    /** @override */
     public gastroAcid!: boolean;
 
-    /** Ingrain move status. */
+    /** @override */
     public ingrain!: boolean;
 
-    /** Leech Seed move status. */
+    /** @override */
     public leechSeed!: boolean;
 
-    /** Magnet Rise move status. */
+    /** @override */
     public readonly magnetRise = new TempStatus("magnet rise", 3);
 
-    /** Substitute move status. */
+    /** @override */
     public substitute!: boolean;
 
-    /** Who is trapping us. */
+    /** @override */
     public get trapped(): VolatileStatus | null { return this._trapped; }
     private _trapped!: VolatileStatus | null;
-    /** Who we're trapping. */
+    /** @override */
     public get trapping(): VolatileStatus | null { return this._trapping; }
     private _trapping!: VolatileStatus | null;
     /**
@@ -80,22 +183,22 @@ export class VolatileStatus
 
     // not passed when copying
 
-    /** Attract move status. */
+    /** @override */
     public attracted!: boolean;
 
-    /** Bide move status. */
+    /** @override */
     public readonly bide = new TempStatus("bide", 1);
 
-    /** Charge move status. */
+    /** @override */
     public readonly charge = new TempStatus("charging", 2, /*silent*/true);
 
-    /** Defense curl move status. */
+    /** @override */
     public defenseCurl!: boolean;
 
-    /** Destiny Bond move status. */
+    /** @override */
     public destinyBond!: boolean;
 
-    /** List of disabled move statuses. */
+    /** @override */
     public readonly disabledMoves: readonly TempStatus[] =
         Array.from({length: Moveset.maxSize},
             (_, i) => new TempStatus(`disabled move ${i + 1}`, 7));
@@ -105,66 +208,51 @@ export class VolatileStatus
         for (const disabled of this.disabledMoves) disabled.end();
     }
 
-    /** Encore move status. Encored move corresponds to `#lastUsed`. */
+    /** @override */
     public readonly encore = new TempStatus("encore", 7);
 
-    /** Grudge move status. */
+    /** @override */
     public grudge!: boolean;
 
-    /** Foresight/Miracle Eye move status. */
+    /** @override */
     public identified!: "foresight" | "miracleeye" | null;
 
-    /**
-     * Index of the last used move, or -1 if none yet. Resets at the beginning
-     * of each turn, so this field can be used to check if a pokemon has not
-     * yet used a move.
-     */
+    /** @override */
     public lastUsed!: number;
 
-    /**
-     * Tracks locked moves, e.g. petaldance variants. Should be ticked after
-     * every successful move attempt.
-     *
-     * After the 2nd or 3rd move, the user will become confused, explicitly
-     * ending the status. However, if the user was already confused, the status
-     * can be implicitly ended, so this VariableTempStatus field is
-     * silent-endable.
-     */
+    /** @override */
     public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
         /*silent*/true);
 
-    /** Whether the pokemon has used Magic Coat during this turn. */
+    /** @override */
     public magicCoat!: boolean;
 
-    /** Whether the pokemon has used Minimize while out. */
+    /** @override */
     public minimize!: boolean;
 
-    /** Whether this pokemon must recharge on the next turn. */
+    /** @override */
     public mustRecharge!: boolean;
 
-    /**
-     * Override moveset, typically linked to the parent Pokemon's
-     * `#baseMoveset`. Applies until switched out.
-     */
+    /** @override */
     public readonly overrideMoveset = new Moveset();
 
-    /** Override pokemon traits. Applies until switched out. */
+    /** @override */
     public readonly overrideTraits = new PokemonTraits();
 
-    /** Temporary third type. */
+    /** @override */
     public addedType!: Type;
 
-    /** Rollout-like move status. */
+    /** @override */
     public readonly rollout = new VariableTempStatus(rolloutMoves, 4,
         /*silent*/true);
 
-    /** Roost move effect (single turn). */
+    /** @override */
     public roost!: boolean;
 
-    /** First 5 turns of Slow Start ability. */
+    /** @override */
     public readonly slowStart = new TempStatus("slow start", 5);
 
-    /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
+    /** @override */
     public get stallTurns(): number { return this._stallTurns; }
     /**
      * Sets the stall flag. Should be called once per turn if it's on.
@@ -179,26 +267,26 @@ export class VolatileStatus
     /** Whether we have successfully stalled this turn. */
     private stalled!: boolean;
 
-    /** Taunt move status. */
+    /** @override */
     public readonly taunt = new TempStatus("taunt", 5);
 
-    /** Torment move status. */
+    /** @override */
     public torment!: boolean;
 
-    /** Transform move status. */
+    /** @override */
     public transformed!: boolean;
 
-    /** Two-turn move currently being prepared. */
+    /** @override */
     public readonly twoTurn = new VariableTempStatus(twoTurnMoves, 1,
             /*silent*/true);
 
-    /** Whether the Unburden ability would be active here. */
+    /** @override */
     public unburden!: boolean;
 
-    /** Uproar move status. */
+    /** @override */
     public readonly uproar = new TempStatus("uproar", 5);
 
-    /** Whether the Truant ability will activate next turn. */
+    /** @override */
     public get willTruant(): boolean { return this._willTruant; }
     /** Indicates that the Truant ability has activated. */
     public activateTruant(): void

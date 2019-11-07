@@ -1,41 +1,55 @@
 import { FutureMove, futureMoves } from "../dex/dex";
 import { SelfSwitch } from "../dex/dex-util";
-import { ItemTempStatus } from "./ItemTempStatus";
-import { TempStatus } from "./TempStatus";
+import { ItemTempStatus, ReadonlyItemTempStatus } from "./ItemTempStatus";
+import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
 
-/** Temporary status conditions for a certain team. */
-export class TeamStatus
+export interface ReadonlyTeamStatus
 {
     /** Turn counters for each type of future move. */
-    public readonly futureMoves: {readonly [id in FutureMove]: TempStatus};
-
+    readonly futureMoves: {readonly [id in FutureMove]: ReadonlyTempStatus};
     /** Light Screen status. */
-    public readonly lightScreen = new ItemTempStatus([5, 8],
-        {lightscreen: "lightclay"}, "lightscreen");
-
+    readonly lightScreen: ReadonlyItemTempStatus<"lightscreen">;
     /** Reflect status. */
-    public readonly reflect = new ItemTempStatus([5, 8], {reflect: "lightclay"},
-        "reflect");
-
+    readonly reflect: ReadonlyItemTempStatus<"reflect">;
     /**
      * Whether the team has to switch pokemon and how that switch will be
      * handled.
      */
-    public selfSwitch: SelfSwitch = false;
-
+    readonly selfSwitch: SelfSwitch;
     /** Spikes layers. Max 3. */
-    public spikes = 0;
-
+    readonly spikes: number;
     /** Stealth rock layers. Max 1. */
-    public stealthRock = 0;
-
+    readonly stealthRock: number;
     /** Tailwind move status. */
-    public readonly tailwind = new TempStatus("tailwind", 2);
-
+    readonly tailwind: ReadonlyTempStatus;
     /** Toxic Spikes layers. Max 2. */
-    public toxicSpikes = 0;
-
+    readonly toxicSpikes: number;
     /** Wish move status, always ends next turn. */
+    readonly wish: ReadonlyTempStatus;
+}
+
+/** Temporary status conditions for a certain team. */
+export class TeamStatus implements ReadonlyTeamStatus
+{
+    /** @override */
+    public readonly futureMoves: {readonly [id in FutureMove]: TempStatus};
+    /** @override */
+    public readonly lightScreen = new ItemTempStatus([5, 8],
+        {lightscreen: "lightclay"}, "lightscreen");
+    /** @override */
+    public readonly reflect = new ItemTempStatus([5, 8], {reflect: "lightclay"},
+        "reflect");
+    /** @override */
+    public selfSwitch: SelfSwitch = false;
+    /** @override */
+    public spikes = 0;
+    /** @override */
+    public stealthRock = 0;
+    /** @override */
+    public readonly tailwind = new TempStatus("tailwind", 2);
+    /** @override */
+    public toxicSpikes = 0;
+    /** @override */
     public readonly wish = new TempStatus("wishing", 2, /*silent*/true);
 
     /** Creates a TeamStatus. */

@@ -1,11 +1,24 @@
-import { hpTypes, PokemonData, StatName, statNames } from "../dex/dex-util";
-import { PossibilityClass } from "./PossibilityClass";
-import { StatRange } from "./StatRange";
+import { HPType, hpTypes, PokemonData, StatName, statNames } from
+    "../dex/dex-util";
+import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
+import { ReadonlyStatRange, StatRange } from "./StatRange";
 
+type ReadonlyStatRanges = {readonly [T in StatName]: ReadonlyStatRange};
 type StatRanges = {readonly [T in StatName]: StatRange};
 
+/** Readonly StatTable representation. */
+export interface ReadonlyStatTable extends ReadonlyStatRanges
+{
+    /** Pokemon's level from 1 to 100 used for stat calculations. */
+    readonly level: number | null;
+    /** Reference to the base species data. Setting this will re-calc stats. */
+    readonly data: PokemonData | null;
+    /** Hidden power type possibility tracker. */
+    readonly hpType: ReadonlyPossibilityClass<typeof hpTypes[HPType]>;
+}
+
 /** Tracks stat ranges and species/level for stat calculations. */
-export class StatTable implements StatRanges
+export class StatTable implements ReadonlyStatTable, StatRanges
 {
     public readonly hp = new StatRange(/*hp*/true);
     public readonly atk = new StatRange();
@@ -16,7 +29,7 @@ export class StatTable implements StatRanges
 
     // TODO: when doing damage calcs, only the base level should be considered
     // stat calcs use the current form's level
-    /** Pokemon's level from 1 to 100 used for stat calculations. */
+    /** @override */
     public get level(): number | null { return this._level; }
     public set level(level: number | null)
     {
@@ -28,7 +41,7 @@ export class StatTable implements StatRanges
     }
     private _level: number | null = null;
 
-    /** Reference to the base species data. Setting this will re-calc stats. */
+    /** @override */
     public get data(): PokemonData | null { return this._data; }
     public set data(data: PokemonData | null)
     {
@@ -39,7 +52,7 @@ export class StatTable implements StatRanges
     }
     private _data: PokemonData | null = null;
 
-    /** Hidden power type possibility tracker. */
+    /** @override */
     public readonly hpType = new PossibilityClass(hpTypes);
 
     /** Attempts to calculate stats. Silently fails if incomplete info. */

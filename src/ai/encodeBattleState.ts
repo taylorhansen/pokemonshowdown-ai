@@ -2,23 +2,23 @@ import { dex, numFutureMoves, numLockedMoves, numTwoTurnMoves } from
     "../battle/dex/dex";
 import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes,
     rolloutMoves, Type, types, weatherItems } from "../battle/dex/dex-util";
-import { BattleState } from "../battle/state/BattleState";
-import { HP } from "../battle/state/HP";
-import { ItemTempStatus } from "../battle/state/ItemTempStatus";
-import { MajorStatusCounter } from "../battle/state/MajorStatusCounter";
-import { Move } from "../battle/state/Move";
-import { Moveset } from "../battle/state/Moveset";
-import { Pokemon } from "../battle/state/Pokemon";
-import { PokemonTraits } from "../battle/state/PokemonTraits";
-import { PossibilityClass } from "../battle/state/PossibilityClass";
-import { RoomStatus } from "../battle/state/RoomStatus";
-import { StatRange } from "../battle/state/StatRange";
-import { StatTable } from "../battle/state/StatTable";
-import { Team } from "../battle/state/Team";
-import { TeamStatus } from "../battle/state/TeamStatus";
-import { TempStatus } from "../battle/state/TempStatus";
-import { VariableTempStatus } from "../battle/state/VariableTempStatus";
-import { VolatileStatus } from "../battle/state/VolatileStatus";
+import { ReadonlyBattleState } from "../battle/state/BattleState";
+import { ReadonlyHP } from "../battle/state/HP";
+import { ReadonlyItemTempStatus } from "../battle/state/ItemTempStatus";
+import { ReadonlyMajorStatusCounter } from "../battle/state/MajorStatusCounter";
+import { ReadonlyMove } from "../battle/state/Move";
+import { Moveset, ReadonlyMoveset } from "../battle/state/Moveset";
+import { ReadonlyPokemon } from "../battle/state/Pokemon";
+import { ReadonlyPokemonTraits } from "../battle/state/PokemonTraits";
+import { ReadonlyPossibilityClass } from "../battle/state/PossibilityClass";
+import { ReadonlyRoomStatus } from "../battle/state/RoomStatus";
+import { ReadonlyStatRange, StatRange } from "../battle/state/StatRange";
+import { ReadonlyStatTable } from "../battle/state/StatTable";
+import { ReadonlyTeam, Team } from "../battle/state/Team";
+import { ReadonlyTeamStatus } from "../battle/state/TeamStatus";
+import { ReadonlyTempStatus } from "../battle/state/TempStatus";
+import { ReadonlyVariableTempStatus } from "../battle/state/VariableTempStatus";
+import { ReadonlyVolatileStatus } from "../battle/state/VolatileStatus";
 
 /**
  * One-hot encodes a class of values.
@@ -60,8 +60,9 @@ export function limitedStatusTurns(turns: number, duration: number): number
  * @param length Total length of returned array. Should be the max value of one
  * plus the return value of `getId`.
  */
-export function encodePossiblityClass<TData>(pc: PossibilityClass<TData>,
-    getId: (data: TData) => number, length: number): number[]
+export function encodePossiblityClass<TData>(
+    pc: ReadonlyPossibilityClass<TData>, getId: (data: TData) => number,
+    length: number): number[]
 {
     const size = pc.possibleValues.size;
     const result = Array.from({length}, () => 0);
@@ -80,7 +81,7 @@ export function encodePossiblityClass<TData>(pc: PossibilityClass<TData>,
 export const sizeTempStatus = 1;
 
 /** Formats temporary status info into an array of numbers. */
-export function encodeTempStatus(ts: TempStatus): number[]
+export function encodeTempStatus(ts: ReadonlyTempStatus): number[]
 {
     return [limitedStatusTurns(ts.turns, ts.duration)];
 }
@@ -90,15 +91,12 @@ export function encodeTempStatus(ts: TempStatus): number[]
  * of different types that can occupy this object plus one.
  */
 export function encodeItemTempStatus<TStatusType extends string>(
-    its: ItemTempStatus<TStatusType>): number[]
+    its: ReadonlyItemTempStatus<TStatusType>): number[]
 {
     // modify one-hot value to interpolate status turns/duration
     let one: number;
-
-    // not applicable
-    if (its.type === "none") one = 0;
-    // infinite duration
-    else if (its.duration === null) one = 1;
+    if (its.type === "none") one = 0; // not applicable
+    else if (its.duration === null) one = 1; // infinite duration
     else if (its.duration === its.durations[0] && its.source &&
         !its.source.definiteValue)
     {
@@ -123,15 +121,11 @@ export function encodeItemTempStatus<TStatusType extends string>(
  * of different types that can occupy this object.
  */
 export function encodeVariableTempStatus<TStatusType extends string>(
-    vts: VariableTempStatus<TStatusType>): number[]
+    vts: ReadonlyVariableTempStatus<TStatusType>): number[]
 {
     // modify one-hot value to interpolate status turns/duration
     let one: number;
-
-    // not applicable
-    if (vts.type === "none") one = 0;
-    // infinite duration
-    else if (vts.duration === null) one = 1;
+    if (vts.type === "none") one = 0; // not applicable
     else one = limitedStatusTurns(vts.turns + 1, vts.duration);
 
     // TODO: guarantee order?
@@ -148,7 +142,7 @@ const maxStat = StatRange.calcStat(/*hp*/false, 255, 100, 252, 31, 1.1);
 const maxStatHP = StatRange.calcStat(/*hp*/true, 255, 100, 252, 31, 1.1);
 
 /** Formats stat range info into an array of numbers. */
-export function encodeStatRange(stat: StatRange): number[];
+export function encodeStatRange(stat: ReadonlyStatRange): number[];
 /**
  * Formats stat range info into an array of numbers where the StatRange object
  * is unknown.
@@ -160,7 +154,8 @@ export function encodeStatRange(stat: null, hp: boolean): number[];
  * is nonexistent.
  */
 export function encodeStatRange(stat?: undefined): number[];
-export function encodeStatRange(stat?: StatRange | null, hp?: boolean): number[]
+export function encodeStatRange(stat?: ReadonlyStatRange | null,
+    hp?: boolean): number[]
 {
     const normal = hp || (stat && stat.hp) ? maxStatHP : maxStat;
 
@@ -184,7 +179,7 @@ export const sizeStatTable = /*stat ranges*/6 * sizeStatRange + /*level*/1 +
  * Formats stat table info into an array of numbers. Null means unknown while
  * undefined means nonexistent.
  */
-export function encodeStatTable(stats?: StatTable | null): number[]
+export function encodeStatTable(stats?: ReadonlyStatTable | null): number[]
 {
     if (stats === null)
     {
@@ -239,9 +234,9 @@ export function encodePokemonTraits(traits?: null): number[];
  * @param traits Traits object.
  * @param addedType Optional third type.
  */
-export function encodePokemonTraits(traits: PokemonTraits, addedType?: Type):
-    number[];
-export function encodePokemonTraits(traits?: PokemonTraits | null,
+export function encodePokemonTraits(traits: ReadonlyPokemonTraits,
+    addedType?: Type): number[];
+export function encodePokemonTraits(traits?: ReadonlyPokemonTraits | null,
     addedType?: Type): number[]
 {
     if (traits === null)
@@ -291,7 +286,7 @@ export const sizeVolatileStatus =
     /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
-export function encodeVolatileStatus(status: VolatileStatus): number[]
+export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
 {
     // passable
     const aquaRing = status.aquaRing ? 1 : 0;
@@ -360,8 +355,8 @@ export const sizeMajorStatusCounter = Object.keys(majorStatuses).length;
  * Formats major status info into an array of numbers. Null means unknown, while
  * undefined means nonexistent.
  */
-export function encodeMajorStatusCounter(status?: MajorStatusCounter | null):
-    number[]
+export function encodeMajorStatusCounter(
+    status?: ReadonlyMajorStatusCounter | null): number[]
 {
     if (!status)
     {
@@ -388,7 +383,7 @@ export const sizeMove = dex.numMoves + /*pp and maxpp*/2;
  * Formats move info into an array of numbers. Null means unknown, while
  * undefined means nonexistent.
  */
-export function encodeMove(move?: Move | null): number[]
+export function encodeMove(move?: ReadonlyMove | null): number[]
 {
     if (move === null)
     {
@@ -408,7 +403,7 @@ export function encodeMove(move?: Move | null): number[]
 export const sizeMoveset = Moveset.maxSize * sizeMove;
 
 /** Formats moveset info into an array of numbers. */
-export function encodeMoveset(moveset?: Moveset | null): number[]
+export function encodeMoveset(moveset?: ReadonlyMoveset | null): number[]
 {
     if (moveset === null)
     {
@@ -434,7 +429,7 @@ export const sizeHP = 2;
  * Formats hp info into an array of numbers. Null means unknown, while undefined
  * means nonexistent.
  */
-export function encodeHP(hp?: HP | null): number[]
+export function encodeHP(hp?: ReadonlyHP | null): number[]
 {
     if (hp === null) return [100, 100];
     if (!hp) return [-1, -1];
@@ -458,7 +453,7 @@ const hpTypeKeys = Object.keys(hpTypes);
  * Formats pokemon info into an array of numbers. Null means unknown, while
  * undefined means nonexistent.
  */
-export function encodePokemon(mon?: Pokemon | null): number[]
+export function encodePokemon(mon?: ReadonlyPokemon | null): number[]
 {
     if (mon === null)
     {
@@ -509,7 +504,7 @@ export const sizeTeamStatus = /*future moves*/numFutureMoves +
     /*lightscreen/reflect*/4 + /*wish*/sizeTempStatus;
 
 /** Formats team status info into an array of numbers. */
-export function encodeTeamStatus(status: TeamStatus): number[]
+export function encodeTeamStatus(status: ReadonlyTeamStatus): number[]
 {
     return [
         // TODO: guarantee order of future move turn values
@@ -532,7 +527,7 @@ export const sizeTeam = sizeActivePokemon + (Team.maxSize - 1) * sizePokemon +
     sizeTeamStatus;
 
 /** Formats team info into an array of numbers. */
-export function encodeTeam(team: Team): number[]
+export function encodeTeam(team: ReadonlyTeam): number[]
 {
     return ([] as number[]).concat(...team.pokemon.map(encodePokemon),
         encodeTeamStatus(team.status));
@@ -544,7 +539,7 @@ export const sizeRoomStatus = /*gravity*/sizeTempStatus +
     /*weather*/(Object.keys(weatherItems).length + 1);
 
 /** Formats room status info into an array of numbers. */
-export function encodeRoomStatus(status: RoomStatus): number[]
+export function encodeRoomStatus(status: ReadonlyRoomStatus): number[]
 {
     return [
         ...encodeTempStatus(status.gravity),
@@ -553,15 +548,15 @@ export function encodeRoomStatus(status: RoomStatus): number[]
     ];
 }
 
-/** Length of the return value of `encodeBattleState()`. */
+/** Length of the return value of `encodeReadonlyBattleState()`. */
 export const sizeBattleState = sizeRoomStatus + 2 * sizeTeam;
 
 /**
  * Formats all battle info into an array of numbers suitable for a neural
- * network managed by a `Network` object. As the `BattleState` changes, the
+ * network managed by a `Network` object. As the battle state changes, the
  * length of this array should always be of length `sizeBattleState`.
  */
-export function encodeBattleState(state: BattleState): number[]
+export function encodeBattleState(state: ReadonlyBattleState): number[]
 {
     return [
         ...encodeRoomStatus(state.status), ...encodeTeam(state.teams.us),

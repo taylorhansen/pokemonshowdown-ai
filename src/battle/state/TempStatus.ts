@@ -1,14 +1,27 @@
 import { pluralTurns } from "./utility";
 
-/** Counts turns for a temporary status condition. */
-export class TempStatus
+/** Readonly TempStatus representation. */
+export interface ReadonlyTempStatus
 {
+    /** Name of the status. */
+    readonly name: string;
     /** Whether the status is currently active. */
-    public get isActive(): boolean { return this._turns > 0; }
+    readonly isActive: boolean;
     /**
      * The amount of turns this status has been active, including the current
      * turn.
      */
+    readonly turns: number;
+    /** Amount of turns this status will last. */
+    readonly duration: number;
+}
+
+/** Counts turns for a temporary status condition. */
+export class TempStatus implements ReadonlyTempStatus
+{
+    /** @override */
+    public get isActive(): boolean { return this._turns > 0; }
+    /** @override */
     public get turns(): number { return this._turns; }
     private _turns = 0;
 
@@ -70,7 +83,6 @@ export class TempStatus
     /**
      * Copies turn data over to another TempStatus object, as long as the names
      * and durations match.
-     * @override
      */
     public copyTo(ts: this): void
     {

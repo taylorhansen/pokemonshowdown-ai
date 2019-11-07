@@ -1,51 +1,60 @@
 import { Pokemon } from "./Pokemon";
-import { PossibilityClass } from "./PossibilityClass";
+import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
 import { pluralTurns } from "./utility";
+
+/** Readonly ItemTempStatus representation. */
+export interface ReadonlyItemTempStatus<TStatusType extends string>
+{
+    /** Whether a status is active. */
+    readonly isActive: boolean;
+    /** Current weather type. */
+    readonly type: TStatusType | "none";
+    /** The weather-causer's item if there is one. */
+    readonly source: ReadonlyPossibilityClass<number> | null;
+    /**
+     * Number of turns this status has been active. This is 0-based, so this
+     * will return 0 if the weather was started this turn, and 1 after the end
+     * of this turn.
+     */
+    readonly turns: number;
+    /**
+     * The amount of `#tick()` calls this status will last. Null means infinite.
+     */
+    readonly duration: number | null;
+    /** Normal (index 0) and extended (index 1) turn durations. */
+    readonly durations: readonly [number, number];
+    /** Dictionary from which to lookup the extension item for each status. */
+    readonly items: {readonly [T in TStatusType]: string};
+}
 
 /**
  * TempStatus whose duration can be extended by a held item.
  * @template TStatusType String union of status types that this object can
  * represent. This excludes the `"none"` type, which is automatically added.
  */
-export class ItemTempStatus<TStatusType extends string>
+export class ItemTempStatus<TStatusType extends string> implements
+    ReadonlyItemTempStatus<TStatusType>
 {
     // all fields are initialized on #reset() in the constructor
 
-    /** Whether a status is active. */
+    /** @override */
     public get isActive(): boolean { return this._type !== "none"; }
-
-    /** Current weather type. */
-    public get type(): TStatusType | "none"
-    {
-        return this._type;
-    }
+    /** @override */
+    public get type(): TStatusType | "none" { return this._type; }
     private _type!: TStatusType | "none";
-
-    /** The weather-causer's item if there is one. */
+    /** @override */
     public get source(): PossibilityClass<number> | null
     {
         return this._source;
     }
     private _source!: PossibilityClass<number> | null;
 
-    /**
-     * Number of turns this status has been active. This is 0-based, so this
-     * will return 0 if the weather was started this turn, and 1 after the end
-     * of this turn.
-     */
-    public get turns(): number
-    {
-        return this._turns;
-    }
+    /** @override */
+    public get turns(): number { return this._turns; }
     private _turns!: number;
 
-    /**
-     * The amount of `#tick()` calls this status will last. Null means infinite.
-     */
-    public get duration(): number | null
-    {
-        return this._duration;
-    }
+    /** @override */
+    public get duration(): number | null { return this._duration; }
     private _duration!: number | null;
 
     /**

@@ -1,17 +1,26 @@
-import { weatherItems } from "../dex/dex-util";
-import { ItemTempStatus } from "./ItemTempStatus";
-import { TempStatus } from "./TempStatus";
+import { weatherItems, WeatherType } from "../dex/dex-util";
+import { ItemTempStatus, ReadonlyItemTempStatus } from "./ItemTempStatus";
+import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
 
-/** Temporary status conditions for the entire field. */
-export class RoomStatus
+/** Readonly RoomStatus representation. */
+export interface ReadonlyRoomStatus
 {
     /** Gravity field effect. */
-    public readonly gravity = new TempStatus("gravity", 5);
-
+    readonly gravity: ReadonlyTempStatus;
     /** Trick Room status. */
-    public readonly trickRoom = new TempStatus("trick room", 5);
-
+    readonly trickRoom: ReadonlyTempStatus;
     /** Weather effect (usually temporary). */
+    readonly weather: ReadonlyItemTempStatus<WeatherType>;
+}
+
+/** Temporary status conditions for the entire field. */
+export class RoomStatus implements ReadonlyRoomStatus
+{
+    /** @override */
+    public readonly gravity = new TempStatus("gravity", 5);
+    /** @override */
+    public readonly trickRoom = new TempStatus("trick room", 5);
+    /** @override */
     public readonly weather = new ItemTempStatus([5, 8], weatherItems);
 
     /** Called at the end of every turn to update temp statuses. */

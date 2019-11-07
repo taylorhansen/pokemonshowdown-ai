@@ -1,18 +1,29 @@
-/** Hit points info. */
-export class HP
+/** Readonly HP representation. */
+export interface ReadonlyHP
 {
     /** Current HP. */
-    public get current(): number { return this._current; }
-    private _current: number;
-
+    readonly current: number;
     /** Maximum HP. */
-    public get max(): number { return this._max; }
-    private _max: number;
-
+    readonly max: number;
     /**
      * Whether this is represented as a percentage. If true, `max` is `100` and
      * `current` is the percentage.
      */
+    readonly isPercent: boolean;
+}
+
+/** Hit points info. */
+export class HP implements ReadonlyHP
+{
+    /** @override */
+    public get current(): number { return this._current; }
+    private _current: number;
+
+    /** @override */
+    public get max(): number { return this._max; }
+    private _max: number;
+
+    /** @override */
     public readonly isPercent: boolean;
 
     /**

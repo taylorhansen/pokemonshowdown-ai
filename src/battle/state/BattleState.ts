@@ -1,14 +1,23 @@
-import { RoomStatus } from "./RoomStatus";
+import { ReadonlyRoomStatus, RoomStatus } from "./RoomStatus";
 import { Side } from "./Side";
-import { Team } from "./Team";
+import { ReadonlyTeam, Team } from "./Team";
 
-/** Holds all the data about a particular battle. */
-export class BattleState
+/** Readonly BattleState representation. */
+export interface ReadonlyBattleState
 {
     /** Team data. */
+    readonly teams: {readonly [S in Side]: ReadonlyTeam};
+    /** Global status conditions for the entire room. */
+    readonly status: ReadonlyRoomStatus;
+}
+
+/** Holds all the data about a particular battle. */
+export class BattleState implements ReadonlyBattleState
+{
+    /** @override */
     public readonly teams: {readonly [S in Side]: Team} =
         {us: new Team("us", this), them: new Team("them", this)};
-    /** Global status conditions for the entire room. */
+    /** @override */
     public readonly status = new RoomStatus();
 
     /** Called at the beginning of every turn to update temp statuses. */

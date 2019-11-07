@@ -1,17 +1,30 @@
 import { dex } from "../dex/dex";
 
-/** Information about a certain move. */
-export class Move
+/** Readonly Move representation. */
+export interface ReadonlyMove
 {
     /** Move id name. */
+    readonly name: string;
+    /** Move id number. Defaults to null if `name` is not initialized. */
+    readonly id: number | null;
+    /** Amount of power points left on this move. */
+    readonly pp: number;
+    /** Max amount of power points this move can have. */
+    readonly maxpp: number;
+}
+
+/** Information about a certain move. */
+export class Move implements ReadonlyMove
+{
+    /** @override */
     public get name(): string { return this._name; }
     private _name: string = "";
 
-    /** Move id number. Defaults to null if `name` is not initialized. */
+    /** @override */
     public get id(): number | null { return this._id; }
     private _id: number | null = null;
 
-    /** Amount of power points left on this move. */
+    /** @override */
     public get pp(): number { return this._pp; }
     public set pp(pp: number)
     {
@@ -19,7 +32,7 @@ export class Move
     }
     private _pp = 0;
 
-    /** Max amount of power points this move can have. */
+    /** @override */
     public get maxpp(): number { return this._maxpp; }
     private _maxpp = 0;
 

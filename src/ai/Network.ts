@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs-node";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice, choiceIds, intToChoice } from "../battle/agent/Choice";
-import { BattleState } from "../battle/state/BattleState";
+import { ReadonlyBattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
 import { encodeBattleState, sizeBattleState } from "./encodeBattleState";
 
@@ -36,7 +36,8 @@ export class Network implements BattleAgent
     }
 
     /** @override */
-    public async decide(state: BattleState, choices: Choice[]): Promise<void>
+    public async decide(state: ReadonlyBattleState, choices: Choice[]):
+        Promise<void>
     {
         if (choices.length === 0) throw new Error("No available choices");
 
@@ -148,7 +149,7 @@ export class Network implements BattleAgent
     }
 
     /** Gets the neural network input from the BattleState. */
-    private getStateData(state: BattleState): number[]
+    private getStateData(state: ReadonlyBattleState): number[]
     {
         const data = encodeBattleState(state);
         if (data.length > sizeBattleState)

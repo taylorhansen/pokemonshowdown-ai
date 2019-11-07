@@ -1,18 +1,29 @@
 import { MajorStatus } from "../dex/dex-util";
 import { pluralTurns } from "./utility";
 
-/** Mutually-exclusive-turn-counter manager for major status conditions. */
-export class MajorStatusCounter
+/** Readonly MajorStatusCounter representation. */
+export interface ReadonlyMajorStatusCounter
 {
     /** Current MajorStatus, or null if none. */
+    readonly current: MajorStatus | null;
+    /** Amount of turns this status has been active (if applicable). */
+    readonly turns: number;
+    /** Max amount of turns this status can be active, or null if unknown. */
+    readonly duration: number | null;
+}
+
+/** Mutually-exclusive-turn-counter manager for major status conditions. */
+export class MajorStatusCounter implements ReadonlyMajorStatusCounter
+{
+    /** @override */
     public get current(): MajorStatus | null { return this._current; }
     private _current: MajorStatus | null = null;
 
-    /** Amount of turns this status has been active (if applicable). */
+    /** @override */
     public get turns(): number { return this._turns; }
     private _turns: number = 0;
 
-    /** Max amount of turns this status can be active, or null if unknown. */
+    /** @override */
     public get duration(): number | null { return this._duration; }
     private _duration: number | null = null;
 

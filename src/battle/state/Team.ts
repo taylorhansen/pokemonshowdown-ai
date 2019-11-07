@@ -1,7 +1,7 @@
-import { BattleState } from "./BattleState";
-import { Pokemon } from "./Pokemon";
+import { BattleState, ReadonlyBattleState } from "./BattleState";
+import { Pokemon, ReadonlyPokemon } from "./Pokemon";
 import { Side } from "./Side";
-import { TeamStatus } from "./TeamStatus";
+import { ReadonlyTeamStatus, TeamStatus } from "./TeamStatus";
 
 /** Options for switchin methods. */
 export interface SwitchInOptions
@@ -10,32 +10,49 @@ export interface SwitchInOptions
     readonly copyVolatile?: boolean;
 }
 
+/** Readonly Team representation. */
+export interface ReadonlyTeam
+{
+    /** Reference to the parent BattleState. */
+    readonly state?: ReadonlyBattleState;
+    /** Which Side this Team is on. */
+    readonly side: Side;
+    /** Current active pokemon. */
+    readonly active: ReadonlyPokemon;
+    /**
+     * Size of the team. This should be set before the battle officially starts,
+     * or the entire list of pokemon will be cleared.
+     */
+    readonly size: number;
+    /**
+     * The pokemon that compose this team. First one is always active. Null
+     * means unrevealed while undefined means nonexistent.
+     */
+    readonly pokemon: readonly (ReadonlyPokemon | null | undefined)[];
+    /** Team-related status conditions. */
+    readonly status: ReadonlyTeamStatus;
+}
+
 /** Team state. */
-export class Team
+export class Team implements ReadonlyTeam
 {
     /** Maximum team size. */
     public static readonly maxSize = 6;
 
-    /** Reference to the parent BattleState. */
+    /** @override */
     public readonly state?: BattleState;
-    /** Which Side this Team is on. */
+    /** @override */
     public readonly side: Side;
 
-    /** Gets the active pokemon. */
-    public get active(): Pokemon
-    {
-        // as long as at least one pokemon was revealed, this will be valid
-        return this._pokemon[0]!;
-    }
+    // as long as at least one pokemon was revealed, this will be valid
+    /** @override */
+    public get active(): Pokemon { return this._pokemon[0]!; }
 
     /**
      * Size of the team. This should be set before the battle officially starts,
      * or the entire list of pokemon will be cleared.
      */
-    public get size(): number
-    {
-        return this._size;
-    }
+    public get size(): number { return this._size; }
     public set size(size: number)
     {
         this._size = Math.max(1, Math.min(size, Team.maxSize));
@@ -47,10 +64,7 @@ export class Team
         this.unrevealed = 0;
     }
 
-    /**
-     * The pokemon that compose this team. First one is always active. Null
-     * means unrevealed while undefined means nonexistent.
-     */
+    /** @override */
     public get pokemon(): readonly (Pokemon | null | undefined)[]
     {
         return this._pokemon;
@@ -60,7 +74,7 @@ export class Team
     /** Team size for this battle. */
     private _size = 0;
 
-    /** Team-related status conditions. */
+    /** @override */
     public readonly status: TeamStatus = new TeamStatus();
 
     /**

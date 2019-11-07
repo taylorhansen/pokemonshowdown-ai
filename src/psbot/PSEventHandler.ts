@@ -435,9 +435,9 @@ export class PSEventHandler
         {
             const moveId = toIdName(event.moveName);
             const mon = this.getActive(event.id.owner);
+            const targets = this.getTargets(moveId, mon);
 
-            const options: MoveOptions =
-                {moveId, targets: this.getTargets(moveId, mon)};
+            const options: MoveOptions = {moveId, targets};
 
             if (event.miss) options.unsuccessful = "evaded";
 
@@ -466,7 +466,7 @@ export class PSEventHandler
                 nextEvent.from && targetMoveCallers.includes(nextEvent.from))
             {
                 const copiedMoveId = toIdName(nextEvent.moveName);
-                for (const target of options.targets)
+                for (const target of targets)
                 {
                     target.moveset.reveal(copiedMoveId);
                 }
