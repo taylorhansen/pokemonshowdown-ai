@@ -1,24 +1,12 @@
 /** @file Provides helper parsers/functions for the main parser. */
 import { BoostName, isBoostName, isMajorStatus, isWeatherType, MajorStatus,
     WeatherType } from "../../battle/dex/dex-util";
-import { Message, MessageType } from "../dispatcher/Message";
 import { isPlayerID, PlayerID, PokemonDetails, PokemonID, PokemonStatus } from
     "../helpers";
 import { transform } from "./combinators";
 import { Info, Input, Parser, Result } from "./types";
 
 // helper parsers
-
-/** Creates a no-op parser that dispatches a listener callback. */
-export function dispatch<T extends MessageType>(type: T, msg: Message<T>):
-    Parser<Promise<void>>
-{
-    return function(input, info)
-    {
-        const result = info.listener.dispatch(type as any, msg, info.room);
-        return {result, remaining: input};
-    };
-}
 
 /** Parser that consumes any word. */
 export function anyWord(input: Input, info: Info): Result<string>

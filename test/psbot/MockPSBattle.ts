@@ -1,7 +1,7 @@
 import { Choice } from "../../src/battle/agent/Choice";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { Logger } from "../../src/Logger";
-import { RequestMessage } from "../../src/psbot/dispatcher/Message";
+import { RequestMessage } from "../../src/psbot/parser/Message";
 import { PSBattle } from "../../src/psbot/PSBattle";
 import { Sender } from "../../src/psbot/PSBot";
 import { MockBattleAgent } from "../battle/agent/MockBattleAgent";

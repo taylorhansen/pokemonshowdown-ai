@@ -1,7 +1,7 @@
 import fetch, { RequestInit } from "node-fetch";
 import { client as WSClient } from "websocket";
 import { Logger } from "../Logger";
-import { MessageListener } from "./dispatcher/MessageListener";
+import { AnyMessage } from "./parser/Message";
 import { parsePSMessage } from "./parser/parsePSMessage";
 import { RoomHandler } from "./RoomHandler";
 
@@ -33,8 +33,6 @@ export class PSBot
 {
     /** Websocket client. Used for connecting to the server. */
     private readonly client = new WSClient();
-    /** Listens to server messages. */
-    private readonly listener = new MessageListener();
     /** Tracks current room handlers. */
     private readonly rooms: {[room: string]: RoomHandler} = {};
     /** Dictionary of accepted formats for battle challenges. */
@@ -46,7 +44,7 @@ export class PSBot
     /** Sends a response to the server. */
     private sender: Sender =
         () => { throw new Error("Sender not initialized"); }
-    /** Function to call to resolve the `connect()` promise. */
+    /** Function to call to resolve the `#connect()` Promise. */
     private connected: (err?: Error) => void = () => {};
 
     /**
@@ -56,7 +54,6 @@ export class PSBot
     constructor(private readonly logger = Logger.stderr)
     {
         this.initClient();
-        this.initListeners();
     }
 
     /**
@@ -195,8 +192,9 @@ export class PSBot
                 if (data.type === "utf8" && data.utf8Data)
                 {
                     this.logger.debug(`Received:\n${data.utf8Data}`);
-                    return parsePSMessage(data.utf8Data, this.listener,
+                    const {room, messages} = parsePSMessage(data.utf8Data,
                         this.logger.prefix("Parser: "));
+                    return this.handleMessages(room, messages);
                 }
             });
 
@@ -209,16 +207,31 @@ export class PSBot
         });
     }
 
-    /** Initializes the parser's message listeners. */
-    private initListeners(): void
+    /** Handles parsed Messages received from the PS serer. */
+    private async handleMessages(room: string, messages: AnyMessage[]):
+        Promise<void>
     {
-        // call challstr callback
-        this.listener.on("challstr", msg => this.challstr(msg.challstr));
+        for (const msg of messages) await this.handleMessage(room, msg);
+    }
 
-        this.listener.on("init", (msg, room) =>
+    /** Handles a parsed Message received from the PS serer. */
+    private async handleMessage(room: string, msg: AnyMessage):
+        Promise<void>
+    {
+        switch (msg.type)
         {
-            if (!this.rooms.hasOwnProperty(room) && msg.type === "battle")
+            case "challstr":
+                return this.challstr(msg.challstr);
+            case "init":
             {
+                // room already initialized
+                if (this.rooms.hasOwnProperty(room) ||
+                    // or we don't need to bother with a non-battle room
+                    msg.roomType !== "battle")
+                {
+                    break;
+                }
+
                 // joining a new battle
                 // room names follow the format battle-<format>-<id>
                 const format = room.split("-")[1];
@@ -240,66 +253,53 @@ export class PSBot
                     this.logger.error(`Unsupported format ${format}`);
                     this.addResponses(room, "|/leave");
                 }
-            }
-        });
 
-        this.listener.on("updatechallenges", msg =>
-        {
-            for (const user in msg.challengesFrom)
-            {
-                if (msg.challengesFrom.hasOwnProperty(user))
+                break;
+            }
+            case "updatechallenges":
+                for (const user in msg.challengesFrom)
                 {
+                    // istanbul ignore next: trivial for object key iteration
+                    if (!msg.challengesFrom.hasOwnProperty(user)) continue;
+
                     if (this.formats.hasOwnProperty(msg.challengesFrom[user]))
                     {
                         this.addResponses("", `|/accept ${user}`);
                     }
                     else this.addResponses("", `|/reject ${user}`);
                 }
-            }
-        });
+                break;
+            case "updateuser":
+                this.username = msg.username;
+                break;
+            case "deinit":
+                // cleanup after leaving a room
+                delete this.rooms[room];
+                break;
 
-        this.listener.on("updateuser", m => { this.username = m.username; });
-
-        // once a battle is over we can respectfully leave
-        this.listener.on("battleprogress", (msg, room) =>
-            msg.events.some(e => ["tie", "win"].includes(e.type)) ?
-                this.addResponses(room, "|gg", "|/leave") : undefined);
-
-        // cleanup after leaving a room
-        this.listener.on("deinit", (m, room) => { delete this.rooms[room]; });
-
-        // delegate battle-related messages to their appropriate PSBattle
-        this.listener.on("battleinit", (msg, room) =>
-        {
-            if (this.rooms.hasOwnProperty(room))
-            {
+            // delegate battle-related messages to their appropriate PSBattle
+            case "battleinit":
+                if (!this.rooms.hasOwnProperty(room)) break;
                 return this.rooms[room].init(msg);
-            }
-        });
-
-        this.listener.on("battleprogress", (msg, room) =>
-        {
-            if (this.rooms.hasOwnProperty(room))
-            {
+            case "battleprogress":
+                if (!this.rooms.hasOwnProperty(room)) break;
+                // leave respectfully if the battle ended
+                // TODO: make this into a registered callback
+                for (const event of msg.events)
+                {
+                    if (event.type === "tie" || event.type === "win")
+                    {
+                        this.addResponses(room, "|gg", "|/leave");
+                    }
+                }
                 return this.rooms[room].progress(msg);
-            }
-        });
-
-        this.listener.on("request", (msg, room) =>
-        {
-            if (this.rooms.hasOwnProperty(room))
-            {
+            case "request":
+                if (!this.rooms.hasOwnProperty(room)) break;
                 return this.rooms[room].request(msg);
-            }
-        });
-
-        this.listener.on("error", (msg, room) =>
-        {
-            if (this.rooms.hasOwnProperty(room))
-            {
+            case "error":
+                if (!this.rooms.hasOwnProperty(room)) break;
                 return this.rooms[room].error(msg);
-            }
-        });
+        }
     }
 
     /**

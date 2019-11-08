@@ -29,7 +29,6 @@ import { intToChoice } from "../../src/battle/agent/Choice";
 import { evaluateFolder, latestModelFolder, selfPlayFolder } from
     "../../src/config";
 import { Logger } from "../../src/Logger";
-import { MessageListener } from "../../src/psbot/dispatcher/MessageListener";
 import { PlayerID } from "../../src/psbot/helpers";
 import { parsePSMessage } from "../../src/psbot/parser/parsePSMessage";
 import { Experience } from "./Experience";
@@ -149,35 +148,23 @@ async function play(options: GameOptions): Promise<GameResult>
             innerLog.prefix("PSBattle: "));
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
-        // setup listeners
-        const listener = new MessageListener();
+        // only need one player to track these
         if (id === "p1")
         {
-            // only need one player to track these
-            listener.on("battleprogress", msg => msg.events.forEach(event =>
+
+            battle.eventHandler.onTurn(function(num: number)
             {
-                switch (event.type)
-                {
-                    case "turn":
-                        if (event.num >= options.maxTurns) done = true;
-                        break;
-                    case "win":
-                        // since the usernames passed into the Network
-                        //  constructors are the same was their PlayerID, we can
-                        //  safely typecast the username
-                        winner = event.winner as PlayerID;
-                        // fallthrough
-                    case "tie":
-                        done = true;
-                        break;
-                }
-            }));
+                if (num >= options.maxTurns) done = true;
+            });
+            battle.eventHandler.onGameOver(function(w?: string)
+            {
+                // since the usernames passed into the Network
+                //  constructors are the same was their PlayerID, we can
+                //  safely typecast the username
+                winner = w as PlayerID;
+                done = true;
+            });
         }
-        // basic functionality
-        listener.on("battleinit", msg => battle.init(msg));
-        listener.on("battleprogress", msg => battle.progress(msg));
-        listener.on("request", msg => battle.request(msg));
-        listener.on("error", msg => battle.error(msg));
 
         // start parser event loop
         const stream = streams[id];
@@ -188,7 +175,22 @@ async function play(options: GameOptions): Promise<GameResult>
             while (!done && (output = await stream.read()))
             {
                 innerLog.debug(`received:\n${output}`);
-                try { await parsePSMessage(output, listener, parserLog); }
+                try
+                {
+                    const {messages} = parsePSMessage(output, parserLog);
+                    for (const msg of messages)
+                    {
+                        switch (msg.type)
+                        {
+                            case "battleinit": await battle.init(msg); break;
+                            case "battleprogress":
+                                await battle.progress(msg);
+                                break;
+                            case "request": await battle.request(msg); break;
+                            case "error": await battle.error(msg); break;
+                        }
+                    }
+                }
                 catch (e) { innerLog.error(`${e}\n${(e as Error).stack}`); }
             }
 

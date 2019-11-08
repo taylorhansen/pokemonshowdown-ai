@@ -1,6 +1,5 @@
 /** @file Provides type definitions for the parser. */
 import { Logger } from "../../Logger";
-import { MessageListener } from "../dispatcher/MessageListener";
 import { Iter } from "./Iter";
 
 /**
@@ -23,8 +22,6 @@ export interface Info
 {
     /** The room that the message came from. */
     readonly room: string;
-    /** Holds all the callbacks. */
-    readonly listener: MessageListener;
     /** Logs messages to the user. */
     readonly logger: Logger;
 }

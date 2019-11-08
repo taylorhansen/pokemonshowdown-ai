@@ -2,7 +2,6 @@
 import { BoostName, MajorStatus, WeatherType } from "../../battle/dex/dex-util";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
-// TODO: make this type map not redundant with above map
 /** The types of BattleEvents that can exist. Used as event prefixes. */
 const battleEventTypes =
 {
@@ -72,10 +71,10 @@ export type BattleEvent<T extends BattleEventType> = typeof battleEventTypes[T];
 export type AnyBattleEvent = BattleEvent<BattleEventType>;
 
 /** Base class for BattleEvents. */
-interface BattleEventBase
+interface BattleEventBase<T extends BattleEventType>
 {
     /** Type of event this is. */
-    readonly type: string;
+    readonly type: T;
     /** Optional `[from] x` suffix. */
     readonly from?: string;
     /** Additional PokemonID for context. */
@@ -92,15 +91,11 @@ interface BattleEventBase
 }
 
 /** Event that wraps the main events, separating them from upkeep events. */
-export interface EmptyEvent extends BattleEventBase
-{
-    readonly type: "\n";
-}
+export interface EmptyEvent extends BattleEventBase<"\n"> {}
 
 /** Event where a pokemon's ability is revealed and activated. */
-export interface AbilityEvent extends BattleEventBase
+export interface AbilityEvent extends BattleEventBase<"-ability">
 {
-    readonly type: "-ability";
     /** ID of the pokemon. */
     readonly id: PokemonID;
     /** Ability being activated. */
@@ -108,7 +103,7 @@ export interface AbilityEvent extends BattleEventBase
 }
 
 /** Event where a volatile status is mentioned. */
-export interface ActivateEvent extends BattleEventBase
+export interface ActivateEvent extends BattleEventBase<"-activate">
 {
     readonly type: "-activate";
     /** ID of the pokemon whose status is being activated. */
@@ -120,9 +115,8 @@ export interface ActivateEvent extends BattleEventBase
 }
 
 /** Event where a stat is being boosted. */
-export interface BoostEvent extends BattleEventBase
+export interface BoostEvent extends BattleEventBase<"-boost">
 {
-    readonly type: "-boost";
     /** ID of the pokemon being boosted. */
     readonly id: PokemonID;
     /** Name of stat being boosted. */
@@ -132,9 +126,8 @@ export interface BoostEvent extends BattleEventBase
 }
 
 /** Event where an action is prevented from being completed. */
-export interface CantEvent extends BattleEventBase
+export interface CantEvent extends BattleEventBase<"cant">
 {
-    readonly type: "cant";
     /** ID of the pokemon. */
     readonly id: PokemonID;
     /** Why the action couldn't be completed. */
@@ -144,39 +137,34 @@ export interface CantEvent extends BattleEventBase
 }
 
 /** Event where all stat boosts are being cleared. */
-export interface ClearAllBoostEvent extends BattleEventBase
-{
-    readonly type: "-clearallboost";
-}
+export interface ClearAllBoostEvent extends BattleEventBase<"-clearallboost"> {}
 
 /** Event where a pokemon's stat boosts are being cleared. */
-export interface ClearBoostEvent extends BattleEventBase
+export interface ClearBoostEvent extends BattleEventBase<"-clearboost">
 {
-    readonly type: "-clearboost";
     /** ID of the pokemon whose boosts are being cleared. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's negative boosts are being cleared. */
-export interface ClearNegativeBoostEvent extends BattleEventBase
+export interface ClearNegativeBoostEvent extends
+    BattleEventBase<"-clearnegativeboost">
 {
-    readonly type: "-clearnegativeboost";
     /** ID of the pokemon whose negative boosts are being cleared. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's positive boosts are being cleared. */
-export interface ClearPositiveBoostEvent extends BattleEventBase
+export interface ClearPositiveBoostEvent extends
+    BattleEventBase<"-clearpositiveboost">
 {
-    readonly type: "-clearpositiveboost";
     /** ID of the pokemon whose positive boosts are being cleared. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's boosts are being copied onto another pokemon. */
-export interface CopyBoostEvent extends BattleEventBase
+export interface CopyBoostEvent extends BattleEventBase<"-copyboost">
 {
-    readonly type: "-copyboost";
     /** ID of the pokemon copying the boosts. */
     readonly source: PokemonID;
     /** ID of the pokemon whose boosts are being copied. */
@@ -184,9 +172,8 @@ export interface CopyBoostEvent extends BattleEventBase
 }
 
 /** Event where a pokemon's major status is cured. */
-export interface CureStatusEvent extends BattleEventBase
+export interface CureStatusEvent extends BattleEventBase<"-curestatus">
 {
-    readonly type: "-curestatus";
     /** ID of the pokemon being cured. */
     readonly id: PokemonID;
     /** Status condition the pokemon is being cured of. */
@@ -194,17 +181,15 @@ export interface CureStatusEvent extends BattleEventBase
 }
 
 /** Event where all of a team's pokemon are cured of major statuses. */
-export interface CureTeamEvent extends BattleEventBase
+export interface CureTeamEvent extends BattleEventBase<"-cureteam">
 {
-    readonly type: "-cureteam";
     /** ID of the pokemon whose team is being cured of a major status. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon is damaged. */
-export interface DamageEvent extends BattleEventBase
+export interface DamageEvent extends BattleEventBase<"-damage">
 {
-    readonly type: "-damage";
     /** ID of the pokemon being damaged. */
     readonly id: PokemonID;
     /** New hp/status. */
@@ -212,41 +197,28 @@ export interface DamageEvent extends BattleEventBase
 }
 
 /** Event where id, details, and status of a pokemon are revealed or changed. */
-interface AllDetailsEvent extends BattleEventBase, PokemonDetails,
-    PokemonStatus
+interface AllDetailsEvent<T extends BattleEventType> extends BattleEventBase<T>,
+    PokemonDetails, PokemonStatus
 {
     /** ID of the pokemon being revealed or changed. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon permanently changes form. */
-export interface DetailsChangeEvent extends AllDetailsEvent
-{
-    readonly type: "detailschange";
-}
+export interface DetailsChangeEvent extends AllDetailsEvent<"detailschange"> {}
 
 /** Event where a pokemon was switched in unintentionally. */
-export interface DragEvent extends AllDetailsEvent
-{
-    readonly type: "drag";
-}
+export interface DragEvent extends AllDetailsEvent<"drag"> {}
 
 /** Event where a pokemon temporarily changes form. */
-export interface FormeChangeEvent extends AllDetailsEvent
-{
-    readonly type: "-formechange";
-}
+export interface FormeChangeEvent extends AllDetailsEvent<"-formechange"> {}
 
 /** Event where a pokemon was switched in. */
-export interface SwitchEvent extends AllDetailsEvent
-{
-    readonly type: "switch";
-}
+export interface SwitchEvent extends AllDetailsEvent<"switch"> {}
 
 /** Event addon where a volatile status has ended. */
-export interface EndEvent extends BattleEventBase
+export interface EndEvent extends BattleEventBase<"-end">
 {
-    readonly type: "-end";
     /** ID of the pokemon ending a volatile status. */
     readonly id: PokemonID;
     /** Volatile status name to be removed. */
@@ -254,9 +226,8 @@ export interface EndEvent extends BattleEventBase
 }
 
 /** Event where a pokemon's ability is temporarily removed. */
-export interface EndAbilityEvent extends BattleEventBase
+export interface EndAbilityEvent extends BattleEventBase<"-endability">
 {
-    readonly type: "-endability";
     /** ID of the pokemon. */
     readonly id: PokemonID;
     /** Ability being removed. */
@@ -264,9 +235,8 @@ export interface EndAbilityEvent extends BattleEventBase
 }
 
 /** Event where a pokemon's item is being removed or consumed. */
-export interface EndItemEvent extends BattleEventBase
+export interface EndItemEvent extends BattleEventBase<"-enditem">
 {
-    readonly type: "-enditem";
     /** ID of the pokemon whose item is being removed. */
     readonly id: PokemonID;
     /** Name of the item. */
@@ -274,41 +244,36 @@ export interface EndItemEvent extends BattleEventBase
 }
 
 /** Event where a pokemon has failed at a certain action. */
-export interface FailEvent extends BattleEventBase
+export interface FailEvent extends BattleEventBase<"-fail">
 {
-    readonly type: "-fail";
     /** ID of the pokemon. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon has fainted. */
-export interface FaintEvent extends BattleEventBase
+export interface FaintEvent extends BattleEventBase<"faint">
 {
-    readonly type: "faint";
     /** ID of the pokemon that has fainted. */
     readonly id: PokemonID;
 }
 
 /** Event where a field effect has ended. */
-export interface FieldEndEvent extends BattleEventBase
+export interface FieldEndEvent extends BattleEventBase<"-fieldend">
 {
-    readonly type: "-fieldend";
     /** Name of the field effect. */
     readonly effect: string;
 }
 
 /** Event where a field effect has started. */
-export interface FieldStartEvent extends BattleEventBase
+export interface FieldStartEvent extends BattleEventBase<"-fieldstart">
 {
-    readonly type: "-fieldstart";
     /** Name of the field effect. */
     readonly effect: string;
 }
 
 /** Event where a pokemon is healed. */
-export interface HealEvent extends BattleEventBase
+export interface HealEvent extends BattleEventBase<"-heal">
 {
-    readonly type: "-heal";
     /** ID of the pokemon being healed. */
     readonly id: PokemonID;
     /** New hp/status. */
@@ -316,25 +281,22 @@ export interface HealEvent extends BattleEventBase
 }
 
 /** Event where a pokemon's immunity was mentioned. */
-export interface ImmuneEvent extends BattleEventBase
+export interface ImmuneEvent extends BattleEventBase<"-immune">
 {
-    readonly type: "-immune";
     /** ID of the pokemon who was immune to the last action. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's boosts are being inverted. */
-export interface InvertBoostEvent extends BattleEventBase
+export interface InvertBoostEvent extends BattleEventBase<"-invertboost">
 {
-    readonly type: "-invertboost";
     /** ID of the pokemon whose boosts are being inverted. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's item is being revealed and/or activated. */
-export interface ItemEvent extends BattleEventBase
+export interface ItemEvent extends BattleEventBase<"-item">
 {
-    readonly type: "-item";
     /** ID of the pokemon whose item is activating. */
     readonly id: PokemonID;
     /** Name of the item. */
@@ -342,9 +304,8 @@ export interface ItemEvent extends BattleEventBase
 }
 
 /** Event where a move missed one of its targets. */
-export interface MissEvent extends BattleEventBase
+export interface MissEvent extends BattleEventBase<"-miss">
 {
-    readonly type: "-miss";
     /** ID of the pokemon who used the move. */
     readonly id: PokemonID;
     /** ID of the target pokemon. */
@@ -352,9 +313,8 @@ export interface MissEvent extends BattleEventBase
 }
 
 /** Event where a move was used. */
-export interface MoveEvent extends BattleEventBase
+export interface MoveEvent extends BattleEventBase<"move">
 {
-    readonly type: "move";
     /** ID of the pokemon who used the move. */
     readonly id: PokemonID;
     /** Display name of the move being used. */
@@ -364,17 +324,15 @@ export interface MoveEvent extends BattleEventBase
 }
 
 /** Event where a pokemon must recharge on the next turn. */
-export interface MustRechargeEvent extends BattleEventBase
+export interface MustRechargeEvent extends BattleEventBase<"-mustrecharge">
 {
-    readonly type: "-mustrecharge";
     /** ID of the pokemon that needs to recharge. */
     readonly id: PokemonID;
 }
 
 /** Event where a move is being prepared, and will fire next turn. */
-export interface PrepareEvent extends BattleEventBase
+export interface PrepareEvent extends BattleEventBase<"-prepare">
 {
-    readonly type: "-prepare";
     /** ID of the pokemon preparing the move. */
     readonly id: PokemonID;
     /** Display name of the move being prepared. */
@@ -384,9 +342,8 @@ export interface PrepareEvent extends BattleEventBase
 }
 
 /** Event where a pokemon's stat boost is being set. */
-export interface SetBoostEvent extends BattleEventBase
+export interface SetBoostEvent extends BattleEventBase<"-setboost">
 {
-    readonly type: "-setboost";
     /** ID of the pokemon whose boost is being set. */
     readonly id: PokemonID;
     /** Stat boost being set. */
@@ -396,9 +353,8 @@ export interface SetBoostEvent extends BattleEventBase
 }
 
 /** Event where the HP of a pokemon is being modified. */
-export interface SetHPEvent extends BattleEventBase
+export interface SetHPEvent extends BattleEventBase<"-sethp">
 {
-    readonly type: "-sethp";
     /** ID of the Pokemon being set. */
     readonly id: PokemonID;
     /** New HP/status combo. */
@@ -406,9 +362,8 @@ export interface SetHPEvent extends BattleEventBase
 }
 
 /** Event where a side condition has ended. */
-export interface SideEndEvent extends BattleEventBase
+export interface SideEndEvent extends BattleEventBase<"-sideend">
 {
-    readonly type: "-sideend";
     /** ID of the player whose side is affected. */
     readonly id: PlayerID;
     /** Name of the side condition. */
@@ -416,7 +371,7 @@ export interface SideEndEvent extends BattleEventBase
 }
 
 /** Event where a side condition has started. */
-export interface SideStartEvent extends BattleEventBase
+export interface SideStartEvent extends BattleEventBase<"-sidestart">
 {
     readonly type: "-sidestart";
     /** ID of the player whose side is affected. */
@@ -426,7 +381,7 @@ export interface SideStartEvent extends BattleEventBase
 }
 
 /** Event where a move status is applied until another move is attempted. */
-export interface SingleMoveEvent extends BattleEventBase
+export interface SingleMoveEvent extends BattleEventBase<"-singlemove">
 {
     readonly type: "-singlemove";
     /** ID of the pokemon getting the status. */
@@ -436,9 +391,8 @@ export interface SingleMoveEvent extends BattleEventBase
 }
 
 /** Event where a status is temporarily added for a single turn. */
-export interface SingleTurnEvent extends BattleEventBase
+export interface SingleTurnEvent extends BattleEventBase<"-singleturn">
 {
-    readonly type: "-singleturn";
     /** ID of the pokemon getting the status. */
     readonly id: PokemonID;
     /** Name of the temporary status. */
@@ -446,9 +400,8 @@ export interface SingleTurnEvent extends BattleEventBase
 }
 
 /** Event where a volatile status condition has started. */
-export interface StartEvent extends BattleEventBase
+export interface StartEvent extends BattleEventBase<"-start">
 {
-    readonly type: "-start";
     /** ID of the pokemon starting a volatile status. */
     readonly id: PokemonID;
     /** Type of volatile status condition. */
@@ -458,9 +411,8 @@ export interface StartEvent extends BattleEventBase
 }
 
 /** Event where a pokemon is afflicted with a status. */
-export interface StatusEvent extends BattleEventBase
+export interface StatusEvent extends BattleEventBase<"-status">
 {
-    readonly type: "-status";
     /** ID of the pokemon being afflicted with a status condition. */
     readonly id: PokemonID;
     /** Status condition being afflicted. */
@@ -468,9 +420,8 @@ export interface StatusEvent extends BattleEventBase
 }
 
 /** Event where a pokemon's boosts are being swapped with another's. */
-export interface SwapBoostEvent extends BattleEventBase
+export interface SwapBoostEvent extends BattleEventBase<"-swapboost">
 {
-    readonly type: "-swapboost";
     /** Pokemon whose stats are being swapped. */
     readonly source: PokemonID;
     /** Other swap target. */
@@ -480,15 +431,11 @@ export interface SwapBoostEvent extends BattleEventBase
 }
 
 /** Event indicating that the game has ended in a tie. */
-export interface TieEvent extends BattleEventBase
-{
-    readonly type: "tie";
-}
+export interface TieEvent extends BattleEventBase<"tie"> {}
 
 /** Event where a pokemon transforms into another. */
-export interface TransformEvent extends BattleEventBase
+export interface TransformEvent extends BattleEventBase<"-transform">
 {
-    readonly type: "-transform";
     /** Pokemon who is transforming. */
     readonly source: PokemonID;
     /** Pokemon that will be copied. */
@@ -496,17 +443,15 @@ export interface TransformEvent extends BattleEventBase
 }
 
 /** Event indicating that a new turn has started. */
-export interface TurnEvent extends BattleEventBase
+export interface TurnEvent extends BattleEventBase<"turn">
 {
-    readonly type: "turn";
     /** New turn number. */
     readonly num: number;
 }
 
 /** Event where a stat is being unboosted. */
-export interface UnboostEvent extends BattleEventBase
+export interface UnboostEvent extends BattleEventBase<"-unboost">
 {
-    readonly type: "-unboost";
     /** ID of the pokemon being unboosted. */
     readonly id: PokemonID;
     /** Name of stat being unboosted. */
@@ -516,15 +461,11 @@ export interface UnboostEvent extends BattleEventBase
 }
 
 /** Event indicating that the main BattleEvents are over. */
-export interface UpkeepEvent extends BattleEventBase
-{
-    readonly type: "upkeep";
-}
+export interface UpkeepEvent extends BattleEventBase<"upkeep"> {}
 
 /** Event where the weather is being changed or maintained. */
-export interface WeatherEvent extends BattleEventBase
+export interface WeatherEvent extends BattleEventBase<"-weather">
 {
-    readonly type: "-weather";
     /** Type of weather, or `"none"` if being reset. */
     readonly weatherType: WeatherType | "none";
     /** Whether this is an upkeep message. */
@@ -532,9 +473,8 @@ export interface WeatherEvent extends BattleEventBase
 }
 
 /** Event indicating that the game has ended with a winner. */
-export interface WinEvent extends BattleEventBase
+export interface WinEvent extends BattleEventBase<"win">
 {
-    readonly type: "win";
     /** Username of the winner. */
     readonly winner: string;
 }

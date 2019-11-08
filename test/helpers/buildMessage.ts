@@ -1,8 +1,8 @@
-import { AnyBattleEvent } from "../../src/psbot/dispatcher/BattleEvent";
-import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
-    "../../src/psbot/dispatcher/Message";
 import { PokemonDetails, PokemonID, PokemonStatus } from
     "../../src/psbot/helpers";
+import { AnyBattleEvent } from "../../src/psbot/parser/BattleEvent";
+import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
+    "../../src/psbot/parser/Message";
 
 /**
  * Creates an unparsed server message.

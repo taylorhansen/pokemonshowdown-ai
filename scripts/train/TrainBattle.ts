@@ -1,7 +1,6 @@
 import { Choice } from "../../src/battle/agent/Choice";
 import { Logger } from "../../src/Logger";
-import { ErrorMessage, RequestMessage } from
-    "../../src/psbot/dispatcher/Message";
+import { ErrorMessage, RequestMessage } from "../../src/psbot/parser/Message";
 import { PSBattle } from "../../src/psbot/PSBattle";
 import { Sender } from "../../src/psbot/PSBot";
 import { Experience } from "./Experience";
@@ -25,7 +24,7 @@ export class TrainBattle extends PSBattle
     /** @override */
     protected readonly agent!: TrainNetwork;
     /** @override */
-    protected readonly eventHandler!: TrainEventHandler;
+    public readonly eventHandler!: TrainEventHandler;
 
     /** Last choice that was handled by the environment. */
     private lastChoice?: Choice;

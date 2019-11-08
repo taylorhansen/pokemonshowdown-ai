@@ -1,6 +1,7 @@
 /** @file Exposes the `parsePSMessage` function. */
 import { BoostName, boostNames } from "../../battle/dex/dex-util";
 import { Logger } from "../../Logger";
+import { PlayerID } from "../helpers";
 import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
     BoostEvent, CantEvent, ClearAllBoostEvent, ClearBoostEvent,
     ClearNegativeBoostEvent, ClearPositiveBoostEvent, CopyBoostEvent,
@@ -12,29 +13,30 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BattleEventType,
     SideEndEvent, SideStartEvent, SingleMoveEvent, SingleTurnEvent, StartEvent,
     StatusEvent, SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent,
     TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
-    "../dispatcher/BattleEvent";
-import { BattleInitMessage, MajorPrefix } from "../dispatcher/Message";
-import { MessageListener } from "../dispatcher/MessageListener";
-import { PlayerID } from "../helpers";
-import { chain, maybe, sequence, transform } from "./combinators";
-import { anyWord, boostName, dispatch, integer, json, majorStatus,
-    parseBoostName, parsePokemonDetails, parsePokemonID, parsePokemonStatus,
-    playerId, playerIdWithName, pokemonDetails, pokemonId, pokemonStatus,
-    restOfLine, skipLine, weatherTypeOrNone, word } from "./helpers";
+    "./BattleEvent";
+import { maybe, sequence, transform } from "./combinators";
+import { anyWord, boostName, integer, json, majorStatus, parseBoostName,
+    parsePokemonDetails, parsePokemonID, parsePokemonStatus, playerId,
+    playerIdWithName, pokemonDetails, pokemonId, pokemonStatus, restOfLine,
+    skipLine, weatherTypeOrNone, word } from "./helpers";
 import { iter } from "./Iter";
+import { AnyMessage, BattleInitMessage, BattleProgressMessage, ChallStrMessage,
+    DeInitMessage, ErrorMessage, InitMessage, MajorPrefix, RequestMessage,
+    UpdateChallengesMessage, UpdateUserMessage } from "./Message";
 import { Info, Input, Parser, Result } from "./types";
 
 /**
  * Parses a message from a PokemonShowdown server.
  * @param data Message(s) to be parsed.
- * @param listener What to do for each message type.
- * @param logger Logs messages to the user.
+ * @param logger Logs messages to the user. Default stderr.
+ * @returns The room that the messages were sent from, as well as the parsed
+ * Messages.
  */
-export function parsePSMessage(data: string, listener: MessageListener,
-    logger = Logger.stderr): Promise<void>
+export function parsePSMessage(data: string, logger = Logger.stderr):
+    {room: string, messages: AnyMessage[]}
 {
     const {room, pos} = parseRoom(data);
-    const info: Info = {room, listener, logger};
+    const info: Info = {room, logger};
 
     // remove room line
     if (pos > 0) data = data.substr(pos);
@@ -47,7 +49,7 @@ export function parsePSMessage(data: string, listener: MessageListener,
 
     const input = iter(words);
 
-    return messages(input, info);
+    return {room, messages: messages(input, info)};
 }
 
 /**
@@ -71,9 +73,9 @@ function parseRoom(data: string): {room: string, pos: number}
 }
 
 /** Parses messages until the input is consumed. */
-async function messages(input: Input, info: Info): Promise<void>
+function messages(input: Input, info: Info): AnyMessage[]
 {
-    const promises: Promise<void>[] = [];
+    const result: AnyMessage[] = [];
     while (!input.done)
     {
         // the parser doesn't have to consume the whole line since the rest of
@@ -81,19 +83,22 @@ async function messages(input: Input, info: Info): Promise<void>
         try
         {
             const r = message(input, info);
-            promises.push(r.result);
+            if (r.result) result.push(r.result);
             input = r.remaining;
         }
         catch (e) { info.logger.error(e); }
-
         // skip until next line (after the newline)
         input = skipLine(input, info).remaining.next();
     }
-    await Promise.all(promises);
+    return result;
 }
 
-/** Parses a Message. */
-function message(input: Input, info: Info): Result<Promise<void>>
+/**
+ * Parses a Message. Note that message parsers can parse one or multiple lines,
+ * and the remaining Input returned in the Result must end on or before the last
+ * parsed line's newline character.
+ */
+function message(input: Input, info: Info): Result<AnyMessage | null>
 {
     const prefix = input.get() as MajorPrefix | "player" | BattleEventType;
 
@@ -114,17 +119,11 @@ function message(input: Input, info: Info): Result<Promise<void>>
             }
 
             // silently ignore this message line
-            return {result: Promise.resolve(), remaining: input};
+            return {result: null, remaining: input};
     }
 }
 
 // message parsers
-
-/**
- * MessageParsers can parse one or multiple lines, and must end on or before the
- * last parsed line's newline character.
- */
-type MessageParser = Parser<Promise<void>>;
 
 /**
  * Parses a `challstr` message.
@@ -133,9 +132,9 @@ type MessageParser = Parser<Promise<void>>;
  * @example
  * |challstr|<challstr>
  */
-const messageChallstr: MessageParser = chain(
+const messageChallstr: Parser<ChallStrMessage> = transform(
     sequence(word("challstr"), restOfLine),
-    ([_, challstr]) => dispatch("challstr", {challstr}));
+    ([_, challstr]) => ({type: "challstr", challstr}));
 
 /**
  * Parses an `error` message.
@@ -144,9 +143,9 @@ const messageChallstr: MessageParser = chain(
  * @example
  * |error|[reason] <description>
  */
-const messageError: MessageParser = chain(
+const messageError: Parser<ErrorMessage> = transform(
     sequence(word("error"), restOfLine),
-    ([_, reason]) => dispatch("error", {reason}));
+    ([_, reason]) => ({type: "error", reason}));
 
 /**
  * Parses a `deinit` message.
@@ -155,8 +154,8 @@ const messageError: MessageParser = chain(
  * @example
  * |deinit
  */
-const messageDeInit: MessageParser =
-    chain(word("deinit"), () => dispatch("deinit", {}));
+const messageDeInit: Parser<DeInitMessage> =
+    transform(word("deinit"), () => ({type: "deinit"}));
 
 /**
  * Parses an `init` message.
@@ -165,7 +164,7 @@ const messageDeInit: MessageParser =
  * @example
  * |init|<chat or battle>
  */
-const messageInit: MessageParser = chain(
+const messageInit: Parser<InitMessage> = transform(
     sequence(
         word("init"),
         transform(anyWord, type =>
@@ -176,7 +175,7 @@ const messageInit: MessageParser = chain(
             }
             return type;
         })),
-    ([_, type]) => dispatch("init", {type}));
+    ([_, roomType]) => ({type: "init", roomType}));
 
 /**
  * Parses a `request` message. The JSON data in the RequestArgs need to have
@@ -186,7 +185,7 @@ const messageInit: MessageParser = chain(
  * @example
  * |request|<unparsed RequestArgs json>
  */
-const messageRequest: MessageParser = chain(
+const messageRequest: Parser<RequestMessage> = transform(
     sequence(
         word("request"),
         transform(json, function(obj)
@@ -210,7 +209,7 @@ const messageRequest: MessageParser = chain(
 
             return obj;
         })),
-    ([_, msg]) => dispatch("request", msg));
+    ([_, msg]) => ({type: "request", ...msg}));
 
 /**
  * Parses an `updatechallenges` message.
@@ -219,9 +218,9 @@ const messageRequest: MessageParser = chain(
  * @example
  * |updatechallenges|<UpdateChallengesArgs json>
  */
-const messageUpdateChallenges: MessageParser = chain(
+const messageUpdateChallenges: Parser<UpdateChallengesMessage> = transform(
     sequence(word("updatechallenges"), json),
-    ([_, msg]) => dispatch("updatechallenges", msg));
+    ([_, msg]) => ({type: "updatechallenges", ...msg}));
 
 /**
  * Parses an `updateuser` message.
@@ -230,14 +229,14 @@ const messageUpdateChallenges: MessageParser = chain(
  * @example
  * |updateuser|<our username>|<0 if guest, 1 otherwise>|<avatarId>
  */
-const messageUpdateUser: MessageParser = chain(
+const messageUpdateUser: Parser<UpdateUserMessage> = transform(
     // TODO: include avatar id
     sequence(word("updateuser"), transform(anyWord, w => w.trim()), integer),
-    ([_, username, named]) =>
-        dispatch("updateuser", {username, isGuest: !named}));
+    ([_, username, name]) => ({type: "updateuser", username, isGuest: !name}));
 
 /**
- * Parses a `battleinit` multiline message.
+ * Parses a `battleinit` multiline message. Can be silently ignored if invalid,
+ * since usually the first one to attempt parsing is invalid.
  *
  * Format:
  * @example
@@ -251,8 +250,11 @@ const messageUpdateUser: MessageParser = chain(
  * <initial BattleEvents>
  * |turn|1
  */
-function messageBattleInit(input: Input, info: Info): Result<Promise<void>>
+function messageBattleInit(input: Input, info: Info):
+    Result<BattleInitMessage | null>
 {
+    // just going to partially implement this procedurally instead of trying to
+    //  extend this makeshift parser combinator library
     let id: PlayerID | undefined;
     let username: string | undefined;
     let teamSizes: {[P in PlayerID]: number} | undefined;
@@ -324,10 +326,15 @@ function messageBattleInit(input: Input, info: Info): Result<Promise<void>>
         // a single initial |player| message was probably sent, since that
         //  usually happens before the full one
         info.logger.debug("Ignoring invalid battleinit message");
-        return {result: Promise.resolve(), remaining: input };
+        return {result: null, remaining: input };
     }
-    return dispatch("battleinit",
-        {id, username, teamSizes, gameType, gen, events})(input, info);
+    return {
+        result:
+        {
+            type: "battleinit", id, username, teamSizes, gameType, gen, events
+        },
+        remaining: input
+    };
 }
 
 const messageBattleInitPlayer = transform(
@@ -345,8 +352,8 @@ const messageBattleInitGen = transform(sequence(word("gen"), integer),
         ([_, gen]) => gen);
 
 /** Parses a `battleprogress` multiline message */
-const messageBattleProgress: MessageParser = chain(battleEvents,
-        events => dispatch("battleprogress", {events}));
+const messageBattleProgress: Parser<BattleProgressMessage> =
+    transform(battleEvents, events => ({type: "battleprogress", events}));
 
 /** Parses any number of BattleEvents. */
 function battleEvents(input: Input, info: Info): Result<AnyBattleEvent[]>

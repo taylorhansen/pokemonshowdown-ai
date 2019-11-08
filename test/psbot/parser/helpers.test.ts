@@ -1,36 +1,15 @@
 import { expect } from "chai";
 import "mocha";
 import { Logger } from "../../../src/Logger";
-import { MessageListener } from "../../../src/psbot/dispatcher/MessageListener";
-import { anyWord, boostName, dispatch, integer, majorStatus, playerId,
-    playerIdWithName, pokemonDetails, pokemonId, pokemonStatus, restOfLine,
-    skipLine, weatherTypeOrNone, word } from
-    "../../../src/psbot/parser/helpers";
+import { anyWord, boostName, integer, majorStatus, playerId, playerIdWithName,
+    pokemonDetails, pokemonId, pokemonStatus, restOfLine, skipLine,
+    weatherTypeOrNone, word } from "../../../src/psbot/parser/helpers";
 import { iter } from "../../../src/psbot/parser/Iter";
 import { Info, Parser } from "../../../src/psbot/parser/types";
 
 describe("Parser Helpers", function()
 {
-    let info: Info;
-
-    beforeEach("Initialize Info", function()
-    {
-        info = {room: "", listener: new MessageListener(), logger: Logger.null};
-    });
-
-    describe("dispatch()", function()
-    {
-        it("Should consume nothing and dispatch listener", async function()
-        {
-            const parser = dispatch("deinit", {});
-            let x = false;
-            info.listener.on("deinit", () => { x = true; });
-            const r = parser(iter([]), info);
-            expect(r.remaining.done).to.be.true;
-            await r.result;
-            expect(x).to.be.true;
-        });
-    });
+    const info: Info = {room: "", logger: Logger.null};
 
     describe("anyWord", function()
     {

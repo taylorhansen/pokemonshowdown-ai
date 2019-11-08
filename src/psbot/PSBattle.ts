@@ -4,7 +4,7 @@ import { Choice } from "../battle/agent/Choice";
 import { BattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
 import { BattleInitMessage, BattleProgressMessage, ErrorMessage,
-    RequestMessage } from "./dispatcher/Message";
+    RequestMessage } from "./parser/Message";
 import { Sender } from "./PSBot";
 import { PSEventHandler } from "./PSEventHandler";
 import { RoomHandler } from "./RoomHandler";
@@ -16,8 +16,10 @@ export class PSBattle implements RoomHandler
     protected readonly state: BattleState;
     /** Manages the BattleState by processing events. */
     protected readonly eventHandler: PSEventHandler;
+    // TODO: remove these Omits, for now they're only here so that
+    //  BattleAndEventHandler.test.ts errors don't have to be combed through
     /** Last |request| message that was processed. */
-    protected lastRequest?: RequestMessage;
+    protected lastRequest?: Omit<RequestMessage, "type">;
     /** Available choices from the last decision. */
     protected lastChoices: Choice[] = [];
 
@@ -51,7 +53,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public init(msg: BattleInitMessage): Promise<void>
+    public init(msg: Omit<BattleInitMessage, "type">): Promise<void>
     {
         this.logger.debug(`battleinit:\n${
             inspect(msg, {colors: false, depth: null})}`);
@@ -63,7 +65,8 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async progress(msg: BattleProgressMessage): Promise<void>
+    public async progress(msg: Omit<BattleProgressMessage, "type">):
+        Promise<void>
     {
         this.logger.debug(`battleprogress:\n${
             inspect(msg, {colors: false, depth: null})}`);
@@ -83,7 +86,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async request(msg: RequestMessage): Promise<void>
+    public async request(msg: Omit<RequestMessage, "type">): Promise<void>
     {
         this.logger.debug(`request:\n${
             inspect(msg, {colors: false, depth: null})}`);
@@ -120,7 +123,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async error(msg: ErrorMessage): Promise<void>
+    public async error(msg: Omit<ErrorMessage, "type">): Promise<void>
     {
         if (msg.reason.startsWith("[Unavailable choice]"))
         {

@@ -1,10 +1,10 @@
 /** @file Contains test arguments for battle messages. */
-import { AnyBattleEvent, TurnEvent } from
-    "../../src/psbot/dispatcher/BattleEvent";
-import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
-    "../../src/psbot/dispatcher/Message";
 import { PokemonDetails, PokemonID, PokemonStatus } from
     "../../src/psbot/helpers";
+import { AnyBattleEvent, TurnEvent } from
+    "../../src/psbot/parser/BattleEvent";
+import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
+    "../../src/psbot/parser/Message";
 
 export const username: string[] = ["user1", "user2"];
 
@@ -155,18 +155,18 @@ const startTurn: TurnEvent = {type: "turn", num: 1};
 export const battleInit: BattleInitMessage[] =
 [
     {
-        id: "p1", username: username[0], gameType: "singles", gen: 4,
-        teamSizes: {p1: 6, p2: 6},
+        type: "battleinit", id: "p1", username: username[0],
+        gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
         events: battleEvent.slice(0, 6).concat(startTurn)
     },
     {
-        id: "p1", username: username[0], gameType: "singles", gen: 4,
-        teamSizes: {p1: 6, p2: 6},
+        type: "battleinit", id: "p1", username: username[0],
+        gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
         events: battleEvent.slice(6, 10).concat(startTurn)
     },
     {
-        id: "p2", username: username[1], gameType: "singles", gen: 4,
-        teamSizes: {p1: 6, p2: 6},
+        type: "battleinit", id: "p2", username: username[1],
+        gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
         events: battleEvent.slice(10, 14).concat(startTurn)
     }
 ];
@@ -175,15 +175,18 @@ export const battleInit: BattleInitMessage[] =
 export const battleProgress: BattleProgressMessage[] =
 [
     {
+        type: "battleprogress",
         events: battleEvent.slice(14, 21)
             .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
+        type: "battleprogress",
         events: battleEvent.slice(21, 26)
             .concat({type: "upkeep"}, ...battleEvent.slice(26, 29),
                 {type: "turn", num: 100})
     },
     {
+        type: "battleprogress",
         events: battleEvent.slice(29, 39)
             .concat({type: "upkeep"}, ...battleEvent.slice(39, 55),
                 {type: "turn", num: 9})
@@ -196,6 +199,7 @@ export const battleProgress: BattleProgressMessage[] =
 export const request: RequestMessage[] =
 [
     {
+        type: "request",
         side:
         {
             pokemon:
@@ -218,6 +222,7 @@ export const request: RequestMessage[] =
         }
     },
     {
+        type: "request",
         active:
         [
             {

@@ -10,11 +10,11 @@ import { RoomStatus } from "../../src/battle/state/RoomStatus";
 import { otherSide, Side } from "../../src/battle/state/Side";
 import { TempStatus } from "../../src/battle/state/TempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
-import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent } from
-    "../../src/psbot/dispatcher/BattleEvent";
-import { BattleInitMessage, RequestMessage } from
-    "../../src/psbot/dispatcher/Message";
 import { PokemonID } from "../../src/psbot/helpers";
+import { AnyBattleEvent, EndItemEvent, ItemEvent, MoveEvent } from
+    "../../src/psbot/parser/BattleEvent";
+import { BattleInitMessage, RequestMessage } from
+    "../../src/psbot/parser/Message";
 import * as testArgs from "../helpers/battleTestArgs";
 import { MockPSBattle } from "./MockPSBattle";
 
@@ -37,7 +37,7 @@ describe("Battle and EventProcessor", function()
      * Checks the `side` property of a RequestMessage object.
      * @param args Args object.
      */
-    function checkRequestSide(args: RequestMessage): void
+    function checkRequestSide(args: Omit<RequestMessage, "type">): void
     {
         const team = battle.state.teams.us;
         expect(team.size).to.equal(args.side.pokemon.length);
@@ -86,7 +86,7 @@ describe("Battle and EventProcessor", function()
      * Checks the `active` property of a RequestMessage object.
      * @param args Args object.
      */
-    function checkRequestActive(args: RequestMessage): void
+    function checkRequestActive(args: Omit<RequestMessage, "type">): void
     {
         if (!args.active) return;
         for (let i = 0; i < args.active[0].moves.length; ++i)
@@ -114,11 +114,11 @@ describe("Battle and EventProcessor", function()
 
     describe("#request()/#battleinit()", function()
     {
-        function testBattleInit(args: BattleInitMessage): void
+        function testBattleInit(args: Omit<BattleInitMessage, "type">): void
         {
             // testArgs: even/0 indexes are p1, odd are p2
             const i = args.id === "p1" ? 0 : 1;
-            const req: RequestMessage =
+            const req: Omit<RequestMessage, "type"> =
             {
                 side: {pokemon: [testArgs.request[i].side.pokemon[0]]}
             };
@@ -141,7 +141,7 @@ describe("Battle and EventProcessor", function()
             });
         }
 
-        let a: BattleInitMessage =
+        let a: Omit<BattleInitMessage, "type"> =
         {
             id: "p1", username: testArgs.username[0], teamSizes: {p1: 3, p2: 3},
             gameType: "singles", gen: 4,
@@ -1950,7 +1950,7 @@ describe("Battle and EventProcessor", function()
                 const mon = battle.state.teams.us.active;
                 mon.moveset.reveal("splash");
 
-                let request: RequestMessage =
+                let request: Omit<RequestMessage, "type"> =
                 {
                     active:
                     [
@@ -2050,7 +2050,7 @@ describe("Battle and EventProcessor", function()
 
                 // after starting to prepare a two-turn move, the user becomes
                 //  trapped and locked into using the move
-                const request1: RequestMessage =
+                const request1: Omit<RequestMessage, "type"> =
                 {
                     active:
                     [

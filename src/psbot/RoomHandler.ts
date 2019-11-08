@@ -1,18 +1,18 @@
 import { BattleInitMessage, BattleProgressMessage, ErrorMessage,
-    RequestMessage } from "./dispatcher/Message";
+    RequestMessage } from "./parser/Message";
 
 /** Handles messages that come from a battle room. */
 export interface RoomHandler
 {
     /** Handles initial BattleEvents. */
-    init(msg: BattleInitMessage): Promise<void>;
+    init(msg: Omit<BattleInitMessage, "type">): Promise<void>;
 
     /** Handles a group of parsed BattleEvents. */
-    progress(msg: BattleProgressMessage): Promise<void>;
+    progress(msg: Omit<BattleProgressMessage, "type">): Promise<void>;
 
     /** Handles a request for a battle choice. */
-    request(msg: RequestMessage): Promise<void>;
+    request(msg: Omit<RequestMessage, "type">): Promise<void>;
 
     /** Handles an error message from the server. */
-    error(msg: ErrorMessage): Promise<void>;
+    error(msg: Omit<ErrorMessage, "type">): Promise<void>;
 }

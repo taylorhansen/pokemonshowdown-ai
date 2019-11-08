@@ -41,8 +41,18 @@ export type Message<T extends MessageType> =
     : T extends "updateuser" ? UpdateUserMessage
     : never;
 
+/** Stands for any type of Message that the PS server can send. */
+export type AnyMessage = Message<MessageType>;
+
+/** Base class for Messages. */
+interface MessageBase<T extends MessageType>
+{
+    /** The type of Message this is. */
+    readonly type: T;
+}
+
 /** Message for initializing a battle. Includes initial BattleEvents. */
-export interface BattleInitMessage
+export interface BattleInitMessage extends MessageBase<"battleinit">
 {
     /** PlayerID of a player. */
     readonly id: PlayerID;
@@ -59,36 +69,34 @@ export interface BattleInitMessage
 }
 
 /** Message for handling parsed BattleEvents. */
-export interface BattleProgressMessage
+export interface BattleProgressMessage extends MessageBase<"battleprogress">
 {
     /** Sequence of events in the battle in the order they were parsed. */
     readonly events: readonly AnyBattleEvent[];
 }
 
 /** Message that provides the challenge string to verify login info. */
-export interface ChallStrMessage
+export interface ChallStrMessage extends MessageBase<"challstr">
 {
     /** String used to verify account login. */
     readonly challstr: string;
 }
 
 /** Message that indicates the leaving of a room. */
-export interface DeInitMessage
-{
-}
+export interface DeInitMessage extends MessageBase<"deinit"> {}
 
 /** Message for providing errors from the server. */
-export interface ErrorMessage
+export interface ErrorMessage extends MessageBase<"error">
 {
     /** Why the requested action failed. */
     readonly reason: string;
 }
 
 /** Message that indicates the joining of a room. */
-export interface InitMessage
+export interface InitMessage extends MessageBase<"init">
 {
     /** Type of room we're joining. */
-    readonly type: RoomType;
+    readonly roomType: RoomType;
 }
 
 /**
@@ -96,7 +104,7 @@ export interface InitMessage
  * Provides info on the client's team and possible choices. Some properties in
  * the parsed JSON have to be specially parsed in order to get the full context.
  */
-export interface RequestMessage
+export interface RequestMessage extends MessageBase<"request">
 {
     /**
      * Whether the opponent is the only one making a decision, meaning the
@@ -174,7 +182,7 @@ export interface RequestPokemon extends PokemonID, PokemonDetails,
 }
 
 /** Message that indicates a change in ingoing/outgoing challenges. */
-export interface UpdateChallengesMessage
+export interface UpdateChallengesMessage extends MessageBase<"updatechallenges">
 {
     /**
      * Maps users challenging the client to the battle format they're being
@@ -186,7 +194,7 @@ export interface UpdateChallengesMessage
 }
 
 /** Message that changes the client's username and guest status. */
-export interface UpdateUserMessage
+export interface UpdateUserMessage extends MessageBase<"updateuser">
 {
     /** New username. */
     readonly username: string;

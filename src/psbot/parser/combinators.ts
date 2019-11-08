@@ -1,5 +1,25 @@
 /** @file Basic hand-rolled type-safe parser combinator library. */
-import { Parser, Result } from "./types";
+import { Parser } from "./types";
+
+/**
+ * Creates a Parser that will backtrack and return `undefined` if the given
+ * parser throws.
+ */
+export function maybe<T>(p: Parser<T>): Parser<T | undefined>;
+/**
+ * Creates a Parser that will backtrack and return an alternate value if the
+ * given parser throws.
+ * @param alt Alternate value for when the parser fails.
+ */
+export function maybe<T, U>(p: Parser<T>, alt: U): Parser<T | U>;
+export function maybe(p: Parser<any>, alt?: any): Parser<any>
+{
+    return function(input, info)
+    {
+        try { return p(input, info); }
+        catch (e) { return {result: alt, remaining: input}; }
+    };
+}
 
 /**
  * Connects one parser to the next by leftover input.
@@ -47,88 +67,5 @@ export function transform<T, U>(p: Parser<T>, f: (t: T) => U): Parser<U>
     {
         const r = p(input, info);
         return {result: f(r.result), remaining: r.remaining};
-    };
-}
-
-/**
- * Works like `sequence()` but the result of the first parser is used to
- * generate the second one instead of being returned in the Result object.
- *
- * @example
- * // parses the same word twice
- * chain(anyWord, w => word(w));
- * // expects the word and int concatenated as the next word
- * chain(sequence(anyWord, integer), ([w, i]) => word(w + i));
- */
-export function chain<T, U>(p1: Parser<T>, f: (consumed: T) => Parser<U>):
-    Parser<U>
-{
-    return function(input, info): Result<U>
-    {
-        const r1 = p1(input, info);
-        return f(r1.result)(r1.remaining, info);
-    };
-}
-
-/**
- * Creates a Parser that will backtrack and return `undefined` if the given
- * parser throws.
- */
-export function maybe<T>(p: Parser<T>): Parser<T | undefined>;
-/**
- * Creates a Parser that will backtrack and return an alternate value if the
- * given parser throws.
- * @param alt Alternate value for when the parser fails.
- */
-export function maybe<T, U>(p: Parser<T>, alt: U): Parser<T | U>;
-export function maybe(p: Parser<any>, alt?: any): Parser<any>
-{
-    return function(input, info)
-    {
-        try { return p(input, info); }
-        catch (e) { return {result: alt, remaining: input}; }
-    };
-}
-
-/** Parses zero or more of a certain parser. Stops if the parser throws. */
-export function some<T>(p: Parser<T>): Parser<T[]>
-{
-    return function(input, info): Result<T[]>
-    {
-        const result: T[] = [];
-        while (!input.done)
-        {
-            try
-            {
-                const r = p(input, info);
-                result.push(r.result);
-                input = r.remaining;
-            }
-            catch (e) { break; }
-        }
-        return {result, remaining: input};
-    };
-}
-
-/** Parses one or more of a certain parser. Stops if the parser throws. */
-export function many<T>(p: Parser<T>): Parser<T[]>
-{
-    return function(input, info): Result<T[]>
-    {
-        let r: Result<T> = p(input, info);
-        const result: T[] = [r.result];
-        input = r.remaining;
-
-        while (!input.done)
-        {
-            try
-            {
-                r = p(input, info);
-                result.push(r.result);
-                input = r.remaining;
-            }
-            catch (e) { break; }
-        }
-        return {result, remaining: input};
     };
 }
