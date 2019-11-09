@@ -1,5 +1,6 @@
 /** @file Interfaces and helper functions for handling BattleEvents. */
 import { BoostName, MajorStatus, WeatherType } from "../../battle/dex/dex-util";
+import { DriverSwitchOptions } from "../../battle/driver/BattleDriver";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
 /** The types of BattleEvents that can exist. Used as event prefixes. */
@@ -198,7 +199,7 @@ export interface DamageEvent extends BattleEventBase<"-damage">
 
 /** Event where id, details, and status of a pokemon are revealed or changed. */
 interface AllDetailsEvent<T extends BattleEventType> extends BattleEventBase<T>,
-    PokemonDetails, PokemonStatus
+    DriverSwitchOptions, PokemonDetails, PokemonStatus
 {
     /** ID of the pokemon being revealed or changed. */
     readonly id: PokemonID;

@@ -1411,8 +1411,8 @@ describe("Battle and EventProcessor", function()
                     [
                         {
                             type: "detailschange", id: us1, species: "Kingdra",
-                            level: 100, shiny: false, gender: "F", hp: 100,
-                            hpMax: 100, condition: null
+                            level: 100, shiny: false, gender: "F", hp: 260,
+                            hpMax: 260, condition: null
                         }
                     ]
                 });
@@ -1529,8 +1529,8 @@ describe("Battle and EventProcessor", function()
                     [
                         {
                             type: "-formechange", id: us1, species: "Kingdra",
-                            level: 100, shiny: false, gender: "F", hp: 100,
-                            hpMax: 100, condition: null
+                            level: 100, shiny: false, gender: "F", hp: 260,
+                            hpMax: 260, condition: null
                         }
                     ]
                 });
@@ -2490,7 +2490,7 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                const mon = battle.eventHandler.getActive(us1.owner);
+                const mon = battle.eventHandler.getMon(us1.owner);
                 expect(mon.ability).to.equal("drizzle");
                 expect(weather.type).to.equal("RainDance");
                 // no need to track source item
@@ -2515,7 +2515,7 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                const mon = battle.eventHandler.getActive(them1.owner);
+                const mon = battle.eventHandler.getMon(them1.owner);
                 expect(weather.type).to.equal("SunnyDay");
                 // don't know opponent's item, so source reference is stored
                 expect(weather.source).to.equal(mon.item);
@@ -2525,7 +2525,7 @@ describe("Battle and EventProcessor", function()
 
             it("Should upkeep weather", async function()
             {
-                const mon = battle.eventHandler.getActive(us1.owner);
+                const mon = battle.eventHandler.getMon(us1.owner);
                 weather.start(mon, "Hail");
                 expect(weather.turns).to.equal(0);
                 await battle.progress(
@@ -2572,7 +2572,8 @@ describe("Battle and EventProcessor", function()
 
                 target.volatile.boosts.spd = 1;
                 target.moveset.reveal("splash");
-                const opposingStats = {atk: 5, def: 5, spa: 5, spd: 5, spe: 5};
+                const opposingStats =
+                    {atk: 170, def: 200, spa: 200, spd: 200, spe: 200};
 
                 await battle.request(
                 {

@@ -1,5 +1,5 @@
 import { LockedMove, lockedMoves, TwoTurnMove, twoTurnMoves } from "../dex/dex";
-import { BoostName, boostNames, rolloutMoves, Type } from "../dex/dex-util";
+import { BoostName, rolloutMoves, Type } from "../dex/dex-util";
 import { Moveset, ReadonlyMoveset } from "./Moveset";
 import { PokemonTraits, ReadonlyPokemonTraits } from "./PokemonTraits";
 import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
@@ -127,19 +127,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public get boosts(): {[N in BoostName]: number} { return this._boosts; }
-    /**
-     * Copies stat boosts from one VolatileStatus to this one.
-     * @param source Source status to get the boosts from.
-     */
-    public copyBoostsFrom(source: VolatileStatus): void
-    {
-        for (const boost in boostNames)
-        {
-            // istanbul ignore if
-            if (!boostNames.hasOwnProperty(boost)) continue;
-            this.boosts[boost as BoostName] = source.boosts[boost as BoostName];
-        }
-    }
     private _boosts!: {[N in BoostName]: number};
 
     /** @override */

@@ -5,15 +5,19 @@ import { RequestMessage } from "../../src/psbot/parser/Message";
 import { PSBattle } from "../../src/psbot/PSBattle";
 import { Sender } from "../../src/psbot/PSBot";
 import { MockBattleAgent } from "../battle/agent/MockBattleAgent";
+import { MockBattleDriver } from "./MockBattleDriver";
 import { MockPSEventHandler } from "./MockPSEventHandler";
 
 /** PSBattle subclass that exposes protected members. */
 export class MockPSBattle extends PSBattle
 {
+    /** Gets the exposed BattleState from the MockBattleDriver. */
+    public get state(): BattleState { return this.driver.state; }
+
     /** @override */
     public readonly eventHandler!: MockPSEventHandler;
     /** @override */
-    public readonly state!: BattleState;
+    public readonly driver!: MockBattleDriver;
     /** @override */
     public lastRequest?: RequestMessage;
     /** @override */
@@ -27,6 +31,6 @@ export class MockPSBattle extends PSBattle
     constructor(username: string, sender: Sender)
     {
         super(username, new MockBattleAgent(), sender, Logger.null,
-            MockPSEventHandler);
+            MockBattleDriver, MockPSEventHandler);
     }
 }

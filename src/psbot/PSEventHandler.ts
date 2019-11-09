@@ -1,12 +1,10 @@
 import { isDeepStrictEqual } from "util";
 import { dex, isFutureMove } from "../battle/dex/dex";
-import { BoostName, boostNames, itemRemovalMoves,
-    itemTransferMoves, nonSelfMoveCallers, selfMoveCallers, StatExceptHP,
-    targetMoveCallers, Type } from "../battle/dex/dex-util";
-import { BattleState } from "../battle/state/BattleState";
-import { MoveOptions, Pokemon } from "../battle/state/Pokemon";
+import { itemRemovalMoves, itemTransferMoves, nonSelfMoveCallers,
+    selfMoveCallers, targetMoveCallers, Type } from "../battle/dex/dex-util";
+import { BattleDriver, DriverMoveOptions, SingleMoveStatus, SingleTurnStatus }
+    from "../battle/driver/BattleDriver";
 import { otherSide, Side } from "../battle/state/Side";
-import { SwitchInOptions, Team } from "../battle/state/Team";
 import { Logger } from "../Logger";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
     "./helpers";
@@ -26,14 +24,11 @@ import { BattleInitMessage, RequestMessage } from "./parser/Message";
 export class PSEventHandler
 {
     /** Whether the battle is still going on. */
-    public get battling(): boolean
-    {
-        return this._battling;
-    }
+    public get battling(): boolean { return this._battling; }
     private _battling = false;
 
     /** Tracks the currently known state of the battle. */
-    protected readonly state: BattleState;
+    protected readonly driver: BattleDriver;
     /** Client's username. */
     protected readonly username: string;
     /** Logger object. */
@@ -51,13 +46,13 @@ export class PSEventHandler
     /**
      * Creates a PSEventHandler.
      * @param username Username of the client.
-     * @param state State object.
-     * @param logger Logger object. Default stdout.
+     * @param driver State driver object.
+     * @param logger Logger object.
      */
-    constructor(username: string, state: BattleState, logger: Logger)
+    constructor(username: string, driver: BattleDriver, logger: Logger)
     {
         this.username = username;
-        this.state = state;
+        this.driver = driver;
         this.logger = logger;
 
     }
@@ -74,12 +69,12 @@ export class PSEventHandler
             this.sides = {[id]: "us", [otherPlayerID(id)]: "them"} as any;
             // we already know our team's size from the initial request
             //  message but not the other team
-            this.state.teams.them.size = args.teamSizes[otherPlayerID(id)];
+            this.driver.initOtherTeamSize(args.teamSizes[otherPlayerID(id)]);
         }
         else
         {
             this.sides = {[id]: "them", [otherPlayerID(id)]: "us"} as any;
-            this.state.teams.them.size = args.teamSizes[id];
+            this.driver.initOtherTeamSize(args.teamSizes[id]);
         }
         this.handleEvents(args.events);
     }
@@ -91,7 +86,7 @@ export class PSEventHandler
     public handleEvents(events: readonly AnyBattleEvent[]): void
     {
         // starting a new turn
-        if (this.newTurn) this.state.preTurn();
+        if (this.newTurn) this.driver.preTurn();
 
         // this field should only stay true if one of these events contains a
         //  |turn| message
@@ -99,13 +94,11 @@ export class PSEventHandler
 
         for (let i = 0; i < events.length; ++i)
         {
-            const event = events[i];
-            this.handleEvent(event, events, i);
-
+            this.handleEvent(events[i], events, i);
         }
 
         // update per-turn statuses
-        if (this.newTurn) this.state.postTurn();
+        if (this.newTurn) this.driver.postTurn();
     }
 
     private handleEvent(event: AnyBattleEvent,
@@ -182,22 +175,19 @@ export class PSEventHandler
     protected handleAbility(event: AbilityEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const active = this.getActive(event.id.owner);
+        const monRef = this.getSide(event.id.owner);
         const ability = toIdName(event.ability);
+
+        let traced: Side | undefined;
         if (event.from === "ability: Trace" && event.of)
         {
             // trace ability: event.ability contains the Traced ability,
-            //  event.of contains pokemon that was traced, event.id contains the
-            //  pokemon with Trace
-
-            // first indicate that trace was revealed, then override after
-            active.traits.ability.narrow("trace");
-            // infer opponent's ability due to trace effect
-            this.getActive(event.of.owner).traits.setAbility(ability);
+            //  event.of contains pokemon that was traced, event.id contains
+            //  the pokemon using its Trace ability
+            traced = this.getSide(event.of.owner);
         }
 
-        // override current ability with the new one
-        active.traits.setAbility(ability);
+        this.driver.activateAbility(monRef, ability, traced);
     }
 
     /** @virtual */
@@ -211,293 +201,197 @@ export class PSEventHandler
         //  play, so best to leave it for now to preserve fairness
         if (event.from === "move: Transform") return;
 
-        const active = this.getActive(event.id.owner);
-        // infer what the ability was previously
-        active.traits.setAbility(toIdName(event.ability));
+        // NOTE: may be replaced with "|-start|<PokemonID>|Gastro Acid" later
 
-        // NOTE: may be replaced with "|-start|PokemonID|Gastro Acid" later
-        active.volatile.gastroAcid = true;
+        this.driver.gastroAcid(this.getSide(event.id.owner),
+            toIdName(event.ability));
     }
 
     /** @virtual */
     protected handleStart(event: StartEvent, events: readonly AnyBattleEvent[],
         i: number): void
     {
-        const active = this.getActive(event.id.owner);
-
-        let ev = event.volatile;
-        if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
-
-        switch (ev)
+        if (event.volatile === "typeadd")
         {
-            case "Aqua Ring": active.volatile.aquaRing = true; break;
-            case "Attract": active.volatile.attracted = true; break;
-            case "Bide": active.volatile.bide.start(); break;
-            case "confusion":
-                // start confusion status
-                active.volatile.confusion.start();
-                // stopped using multi-turn locked move due to fatigue
-                if (event.fatigue) active.volatile.lockedMove.reset();
-                break;
-            case "Disable":
-                // disable the given move
-                active.disableMove(toIdName(event.otherArgs[0]));
-                break;
-            case "Encore": active.volatile.encore.start(); break;
-            case "Focus Energy": active.volatile.focusEnergy = true; break;
-            case "Foresight": active.volatile.identified = "foresight"; break;
-            case "Ingrain": active.volatile.ingrain = true; break;
-            case "Leech Seed": active.volatile.leechSeed = true; break;
-            case "Magnet Rise": active.volatile.magnetRise.start(); break;
-            case "Miracle Eye":
-                active.volatile.identified = "miracleeye";
-                break;
-            case "Embargo": active.volatile.embargo.start(); break;
-            case "Substitute": active.volatile.substitute = true; break;
-            case "Slow Start": active.volatile.slowStart.start(); break;
-            case "Taunt": active.volatile.taunt.start(); break;
-            case "Torment": active.volatile.torment = true; break;
-            case "typeadd":
-                // set added type
-                active.volatile.addedType =
-                    event.otherArgs[0].toLowerCase() as Type;
-                break;
-            case "typechange":
-            {
-                // set types
-                // format: Type1/Type2
-                let types: [Type, Type];
-
-                if (event.otherArgs[0])
-                {
-                    const parsedTypes = event.otherArgs[0].split("/")
-                        .map(type => type.toLowerCase()) as Type[];
-
-                    // make sure length is 2
-                    if (parsedTypes.length > 2)
-                    {
-                        this.logger.error("Too many types given " +
-                            `(${parsedTypes.join(", ")})`);
-                        parsedTypes.splice(2);
-                    }
-                    else if (parsedTypes.length === 1) parsedTypes.push("???");
-                    types = parsedTypes as [Type, Type];
-                }
-                else types = ["???", "???"];
-
-                active.volatile.overrideTraits.types = types;
-                // typechange resets third type
-                active.volatile.addedType = "???";
-                break;
-            }
-            case "Uproar":
-                if (event.otherArgs[0] === "[upkeep]")
-                {
-                    active.volatile.uproar.tick();
-                }
-                else active.volatile.uproar.start();
-                break;
-            default:
-            {
-                const moveId = toIdName(ev);
-                // istanbul ignore else: not useful to test
-                if (isFutureMove(moveId))
-                {
-                    active.team!.status.futureMoves[moveId]
-                        .start(/*restart*/false);
-                }
-                else
-                {
-                    this.logger.debug(`Ignoring start '${event.volatile}'`);
-                }
-            }
+            // set added type
+           this. driver.setThirdType(this.getSide(event.id.owner),
+                event.otherArgs[0].toLowerCase() as Type);
         }
+        else if (event.volatile === "typechange")
+        {
+            // set types
+            // format: Type1/Type2
+            let types: [Type, Type];
+
+            if (event.otherArgs[0])
+            {
+                const parsedTypes = event.otherArgs[0].split("/")
+                    .map(type => type.toLowerCase()) as Type[];
+
+                // make sure length is 2
+                if (parsedTypes.length > 2)
+                {
+                    this.logger.error("Too many types given " +
+                        `(${parsedTypes.join(", ")})`);
+                    parsedTypes.splice(2);
+                }
+                else if (parsedTypes.length === 1)
+                {
+                    parsedTypes.push("???");
+                }
+                types = parsedTypes as [Type, Type];
+            }
+            else types = ["???", "???"];
+
+            this.driver.changeType(this.getSide(event.id.owner), types);
+        }
+        // trivial, handle using factored-out method
+        else this.handleTrivialStatus(event);
     }
 
     /** @virtual */
     protected handleActivate(event: ActivateEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const ev = event.volatile;
-        if (ev === "confusion")
+        const monRef = this.getSide(event.id.owner);
+        switch (event.volatile)
         {
-            this.getActive(event.id.owner).volatile.confusion.tick();
-        }
-        else if (ev === "move: Charge")
-        {
-            this.getActive(event.id.owner).volatile.charge.start();
-        }
-        else if (ev === "move: Bide")
-        {
-            this.getActive(event.id.owner).volatile.bide.tick();
-        }
-        else if (ev === "move: Mimic")
-        {
-            const active = this.getActive(event.id.owner);
-            const move = toIdName(event.otherArgs[0]);
-
-            const lastEvent = events[i - 1];
-            if (!lastEvent || lastEvent.type !== "move" ||
-                JSON.stringify(lastEvent.id) !== JSON.stringify(event.id))
+            case "move: Bide":
+                this.driver.updateStatusEffect(monRef, "bide");
+                break;
+            case "move: Charge":
+                this.driver.activateStatusEffect(monRef, "charge",
+                    /*start*/true);
+                break;
+            case "confusion":
+                this.driver.updateStatusEffect(monRef, "confusion");
+                break;
+            case "move: Mimic":
             {
-                throw new Error("Don't know how Mimic was caused");
-            }
+                const move = toIdName(event.otherArgs[0]);
 
-            if (lastEvent.moveName === "Mimic") active.mimic(move);
-            else if (lastEvent.moveName === "Sketch") active.sketch(move);
-            else
-            {
-                throw new Error(
-                    `Unknown Mimic-like move '${lastEvent.moveName}'`);
+                // use the last (move) event to see whether this is actually
+                //  Sketch or Mimic
+                const lastEvent = events[i - 1];
+                if (!lastEvent || lastEvent.type !== "move" ||
+                    JSON.stringify(lastEvent.id) !==
+                        JSON.stringify(event.id))
+                {
+                    throw new Error("Don't know how Mimic was caused");
+                }
+
+                if (lastEvent.moveName === "Mimic")
+                {
+                    this.driver.mimic(monRef, move);
+                }
+                else if (lastEvent.moveName === "Sketch")
+                {
+                    this.driver.sketch(monRef, move);
+                }
+                else
+                {
+                    throw new Error(
+                        `Unknown Mimic-like move '${lastEvent.moveName}'`);
+                }
+                break;
             }
+            case "trapped":
+                this.driver.trap(monRef, otherSide(monRef));
+                break;
+            default:
+                this.logger.debug(`Ignoring activate '${event.volatile}'`);
         }
-        else if (ev === "trapped")
-        {
-            const trapped = this.getActive(event.id.owner).volatile;
-            const trapping = this.getActive(otherPlayerID(event.id.owner))
-                .volatile;
-            trapping.trap(trapped);
-        }
-        else this.logger.debug(`Ignoring activate '${event.volatile}'`);
     }
 
     /** @virtual */
     protected handleEnd(event: EndEvent, events: readonly AnyBattleEvent[],
         i: number): void
     {
-        const team = this.getTeam(event.id.owner);
-        const v = team.active.volatile;
-
-        let ev = event.volatile;
-        if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
-        const id = toIdName(ev);
-
-        if (ev === "Attract") v.attracted = false;
-        else if (ev === "Bide") v.bide.end();
-        else if (ev === "confusion") v.confusion.end();
-        else if (ev === "Disable") v.enableMoves();
-        else if (ev === "Embargo") v.embargo.end();
-        else if (ev === "Encore") v.encore.end();
-        else if (ev === "Ingrain") v.ingrain = false;
-        else if (ev === "Magnet Rise") v.magnetRise.end();
-        else if (ev === "Substitute") v.substitute = false;
-        else if (ev === "Slow Start") v.slowStart.end();
-        else if (ev === "Taunt") v.taunt.end();
-        else if (ev === "Uproar") v.uproar.end();
-        else if (isFutureMove(id)) team.status.futureMoves[id].end();
-        else this.logger.debug(`Ignoring end '${event.volatile}'`);
+        this.handleTrivialStatus(event);
     }
 
     /** @virtual */
     protected handleBoost(event: BoostEvent, events: readonly AnyBattleEvent[],
         i: number): void
     {
-        this.getActive(event.id.owner).volatile.boosts[event.stat] +=
-            event.amount;
+        this.driver.boost(this.getSide(event.id.owner), event.stat,
+            event.amount);
     }
 
     /** @virtual */
     protected handleCant(event: CantEvent, events: readonly AnyBattleEvent[],
         i: number): void
     {
-        const active = this.getActive(event.id.owner);
+        const monRef = this.getSide(event.id.owner);
+
         if (event.reason === "recharge")
         {
-            // successfully completed its recharge turn
-            active.volatile.mustRecharge = false;
+            // the pokemon successfully completed its recharge turn
+            this.driver.inactive(monRef, "recharge");
         }
-        else if (event.reason === "slp")
-        {
-            active.majorStatus.assert("slp").tick(active.ability);
-        }
+        else if (event.reason === "slp") this.driver.inactive(monRef, "slp");
         else if (event.reason.startsWith("ability: "))
         {
             // can't move due to an ability
             const ability = toIdName(
                 event.reason.substr("ability: ".length));
-            active.traits.setAbility(ability);
+            this.driver.activateAbility(monRef, ability);
 
-            if (ability === "truant")
-            {
-                active.volatile.activateTruant();
-                // truant turn and recharge turn overlap
-                active.volatile.mustRecharge = false;
-            }
+            if (ability === "truant") this.driver.inactive(monRef, "truant");
         }
 
         if (event.moveName)
         {
             // prevented from using a move, which might not have
             //  been revealed before
-            active.moveset.reveal(toIdName(event.moveName));
+            this.driver.revealMove(monRef, toIdName(event.moveName));
         }
 
-        // reset single-move statuses since this counts as an action
-        active.volatile.resetSingleMove();
+        // now consumed the pokemon's action for this turn
+        this.driver.consumeAction(monRef);
     }
 
     /** @virtual */
     protected handleClearAllBoost(event: ClearAllBoostEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        for (const stat of Object.keys(boostNames) as BoostName[])
-        {
-            this.state.teams.us.active.volatile.boosts[stat] = 0;
-            this.state.teams.them.active.volatile.boosts[stat] = 0;
-        }
+        this.driver.clearAllBoosts();
     }
 
     /** @virtual */
     protected handleClearNegativeBoost(event: ClearNegativeBoostEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        for (const stat of Object.keys(boostNames) as BoostName[])
-        {
-            const boosts = this.getActive(event.id.owner).volatile.boosts;
-            if (boosts[stat] < 0) boosts[stat] = 0;
-        }
+        this.driver.clearNegativeBoosts(this.getSide(event.id.owner));
     }
 
     /** @virtual */
     protected handleClearPositiveBoost(event: ClearPositiveBoostEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        for (const stat of Object.keys(boostNames) as BoostName[])
-        {
-            const boosts = this.getActive(event.id.owner).volatile.boosts;
-            if (boosts[stat] > 0) boosts[stat] = 0;
-        }
+        this.driver.clearPositiveBoosts(this.getSide(event.id.owner));
     }
 
     /** @virtual */
     protected handleCopyBoost(event: CopyBoostEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        this.getActive(event.source.owner).volatile.copyBoostsFrom(
-            this.getActive(event.target.owner).volatile);
+        this.driver.copyBoosts(/*from*/this.getSide(event.target.owner),
+            /*to*/this.getSide(event.source.owner));
     }
 
     /** @virtual */
     protected handleCureStatus(event: CureStatusEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const active = this.getActive(event.id.owner);
-        const status = active.majorStatus;
-        status.assert(event.majorStatus);
-        if (status.current === "slp" && status.turns === 1)
-        {
-            // cured in 0 turns, must have early bird ability
-            // TODO: move this assertion to BattleState
-            active.traits.setAbility("earlybird");
-        }
-        status.cure();
+        this.driver.cureStatus(this.getSide(event.id.owner), event.majorStatus);
     }
 
     /** @virtual */
     protected handleCureTeam(event: CureTeamEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        this.getTeam(event.id.owner).cure();
+        this.driver.cureTeam(this.getSide(event.id.owner));
     }
 
     /**
@@ -507,28 +401,16 @@ export class PSEventHandler
     protected handleDamage(event: DamageEvent | HealEvent | SetHPEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const active = this.getActive(event.id.owner);
-        active.hp.set(event.status.hp, event.status.hpMax);
-
-        // increment toxic turns if taking damage from it
-        if (event.from === "psn" && active.majorStatus.current === "tox")
-        {
-            active.majorStatus.tick();
-        }
+        this.driver.takeDamage(this.getSide(event.id.owner),
+            [event.status.hp, event.status.hpMax], /*tox*/event.from === "psn");
     }
 
     /** @virtual */
     protected handleDetailsChange(event: DetailsChangeEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        // permanent form change
-        const active = this.getActive(event.id.owner);
-        active.formChange(event.species, /*perm*/true);
-
-        // set other details just in case
-        active.traits.stats.level = event.level;
-        active.gender = event.gender;
-        active.hp.set(event.hp, event.hpMax);
+        this.driver.formChange(this.getSide(event.id.owner), event,
+            /*perm*/true);
     }
 
     /**
@@ -538,22 +420,14 @@ export class PSEventHandler
     protected handleSwitch(event: DragEvent | SwitchEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const team = this.getTeam(event.id.owner);
-
-        // consume pending copyvolatile status flags
-        const options: SwitchInOptions =
-            {copyVolatile: team.status.selfSwitch === "copyvolatile"};
-        team.status.selfSwitch = false;
-
-        team.switchIn(event.species, event.level, event.gender, event.hp,
-            event.hpMax, options);
+        this.driver.switchIn(this.getSide(event.id.owner), event);
     }
 
     /** @virtual */
     protected handleFaint(event: FaintEvent, events: readonly AnyBattleEvent[],
         i: number): void
     {
-        this.getActive(event.id.owner).faint();
+        this.driver.faint(this.getSide(event.id.owner));
     }
 
     /**
@@ -566,18 +440,12 @@ export class PSEventHandler
         switch (event.effect)
         {
             case "move: Gravity":
-                if (event.type === "-fieldstart")
-                {
-                    this.state.status.gravity.start();
-                }
-                else this.state.status.gravity.end();
+                this.driver.activateFieldCondition("gravity",
+                    /*start*/event.type === "-fieldstart");
                 break;
             case "move: Trick Room":
-                if (event.type === "-fieldstart")
-                {
-                    this.state.status.trickRoom.start();
-                }
-                else this.state.status.trickRoom.end();
+                this.driver.activateFieldCondition("trickRoom",
+                    /*start*/event.type === "-fieldstart");
                 break;
         }
     }
@@ -586,30 +454,22 @@ export class PSEventHandler
     protected handleFormeChange(event: FormeChangeEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        if (!dex.pokemon.hasOwnProperty(event.species))
-        {
-            throw new Error(`Unknown species '${event.species}'`);
-        }
-        // TODO: set other details?
-        this.getActive(event.id.owner).formChange(event.species);
+        this.driver.formChange(this.getSide(event.id.owner), event,
+            /*perm*/false);
     }
 
     /** @virtual */
     protected handleInvertBoost(event: InvertBoostEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const boosts = this.getActive(event.id.owner).volatile.boosts;
-        for (const stat of Object.keys(boostNames) as BoostName[])
-        {
-            boosts[stat] = -boosts[stat];
-        }
+        this.driver.invertBoosts(this.getSide(event.id.owner));
     }
 
     /** @virtual */
     protected handleItem(event: ItemEvent, events: readonly AnyBattleEvent[],
         i: number): void
     {
-        const mon = this.getActive(event.id.owner);
+        const monRef = this.getSide(event.id.owner);
 
         // item can be gained via a transfer move or recycle
         let gained: boolean | "recycle";
@@ -621,14 +481,14 @@ export class PSEventHandler
         }
         else gained = false;
 
-        mon.setItem(toIdName(event.item), gained);
+        this.driver.revealItem(monRef, toIdName(event.item), gained);
     }
 
     /** @virtual */
     protected handleEndItem(event: EndItemEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const mon = this.getActive(event.id.owner);
+        const monRef = this.getSide(event.id.owner);
 
         // handle case where an item-removal or steal-eat move was used
         //  against us, which removes but doesn't consume our item
@@ -640,20 +500,22 @@ export class PSEventHandler
         {
             consumed = false;
         }
+        // in most other cases we can assume that the item can be brought
+        //  back using Recycle
         else consumed = toIdName(event.item);
 
-        mon.removeItem(consumed);
+        this.driver.removeItem(monRef, consumed);
     }
 
     /** @virtual */
     protected handleMove(event: MoveEvent, events: readonly AnyBattleEvent[],
         i: number): void
     {
+        const monRef = this.getSide(event.id.owner);
         const moveId = toIdName(event.moveName);
-        const mon = this.getActive(event.id.owner);
-        const targets = this.getTargets(moveId, mon);
+        const targets = this.getTargets(moveId, monRef);
 
-        const options: MoveOptions = {moveId, targets};
+        const options: DriverMoveOptions = {moveId, targets};
 
         if (event.miss) options.unsuccessful = "evaded";
 
@@ -684,7 +546,7 @@ export class PSEventHandler
             const copiedMoveId = toIdName(nextEvent.moveName);
             for (const target of targets)
             {
-                target.moveset.reveal(copiedMoveId);
+                this.driver.revealMove(target, copiedMoveId);
             }
         }
 
@@ -707,14 +569,14 @@ export class PSEventHandler
         }
 
         // indicate that the pokemon has used this move
-        mon.useMove(options);
+        this.driver.useMove(monRef, options);
     }
 
     /** @virtual */
     protected handleMustRecharge(event: MustRechargeEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-            this.getActive(event.id.owner).volatile.mustRecharge = true;
+        this.driver.mustRecharge(this.getSide(event.id.owner));
     }
 
     /** @virtual */
@@ -722,16 +584,16 @@ export class PSEventHandler
         events: readonly AnyBattleEvent[], i: number): void
     {
         // moveName should be one of the two-turn moves being prepared
-        this.getActive(event.id.owner).volatile.twoTurn.start(
-                toIdName(event.moveName) as any);
+        this.driver.prepareMove(this.getSide(event.id.owner),
+            toIdName(event.moveName) as any);
     }
 
     /** @virtual */
     protected handleSetBoost(event: SetBoostEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        this.getActive(event.id.owner).volatile.boosts[event.stat] =
-            event.amount;
+        this.driver.setBoost(this.getSide(event.id.owner), event.stat,
+            event.amount);
     }
 
     /**
@@ -741,7 +603,7 @@ export class PSEventHandler
     protected handleSideCondition(event: SideEndEvent | SideStartEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const ts = this.getTeam(event.id).status;
+        const teamRef = this.getSide(event.id);
 
         let condition = event.condition;
         if (condition.startsWith("move: "))
@@ -767,30 +629,35 @@ export class PSEventHandler
                             "caused since no move caused it");
                         break;
                     }
-                    const source = this.getActive(lastEvent.id.owner);
-                    if (condition === "Reflect") ts.reflect.start(source);
-                    else ts.lightScreen.start(source);
+
+                    const monRef = this.getSide(lastEvent.id.owner);
+
+                    this.driver.activateSideCondition(teamRef,
+                        condition === "Reflect" ? "reflect" : "lightScreen",
+                        /*start*/true, monRef);
                 }
                 else
                 {
-                    if (condition === "Reflect") ts.reflect.reset();
-                    else ts.lightScreen.reset();
+                    this.driver.activateSideCondition(teamRef,
+                        condition === "Reflect" ? "reflect" : "lightScreen",
+                        /*start*/false);
                 }
                 break;
             case "Spikes":
-                if (event.type === "-sidestart") ++ts.spikes;
-                else ts.spikes = 0;
+                this.driver.activateSideCondition(teamRef, "spikes",
+                    /*start*/event.type === "-sidestart");
                 break;
             case "Stealth Rock":
-                if (event.type === "-sidestart") ++ts.stealthRock;
-                else ts.stealthRock = 0;
+                this.driver.activateSideCondition(teamRef, "stealthRock",
+                    /*start*/event.type === "-sidestart");
                 break;
             case "Tailwind":
-                if (event.type === "-sidestart") ts.tailwind.start();
-                else ts.tailwind.end();
+                this.driver.activateSideCondition(teamRef, "tailwind",
+                    /*start*/event.type === "-sidestart");
+                break;
             case "Toxic Spikes":
-                if (event.type === "-sidestart") ++ts.toxicSpikes;
-                else ts.toxicSpikes = 0;
+                this.driver.activateSideCondition(teamRef, "toxicSpikes",
+                    /*start*/event.type === "-sidestart");
                 break;
         }
     }
@@ -799,39 +666,50 @@ export class PSEventHandler
     protected handleSingleMove(event: SingleMoveEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const v = this.getActive(event.id.owner).volatile;
-        if (event.move === "Destiny Bond") v.destinyBond = true;
-        else if (event.move === "Grudge") v.grudge = true;
+        let status: SingleMoveStatus | undefined;
+        if (event.move === "Destiny Bond") status = "destinyBond";
+        else if (event.move === "Grudge") status = "grudge";
+
+        if (status)
+        {
+            this.driver.setSingleMoveStatus(this.getSide(event.id.owner),
+                status);
+        }
     }
 
     /** @virtual */
     protected handleSingleTurn(event: SingleTurnEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const v = this.getActive(event.id.owner).volatile;
-        if (PSEventHandler.isStallSingleTurn(event.status)) v.stall(true);
-        else if (event.status === "move: Roost") v.roost = true;
-        else if (event.status === "move: Magic Coat") v.magicCoat = true;
+        let status: SingleTurnStatus | undefined;
+        if (PSEventHandler.isStallSingleTurn(event.status))
+        {
+            status = "stall";
+        }
+        else if (event.status === "move: Roost") status = "roost";
+        else if (event.status === "move: Magic Coat") status = "magicCoat";
+
+        if (status)
+        {
+            this.driver.setSingleTurnStatus(this.getSide(event.id.owner),
+                status);
+        }
     }
 
     /** @virtual */
     protected handleStatus(event: StatusEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        this.getActive(event.id.owner).majorStatus.afflict(
-                event.majorStatus);
+        this.driver.afflictStatus(this.getSide(event.id.owner),
+            event.majorStatus);
     }
 
     /** @virtual */
     protected handleSwapBoost(event: SwapBoostEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const source = this.getActive(event.source.owner).volatile.boosts;
-        const target = this.getActive(event.target.owner).volatile.boosts;
-        for (const stat of event.stats)
-        {
-            [source[stat], target[stat]] = [target[stat], source[stat]];
-        }
+        this.driver.swapBoosts(this.getSide(event.source.owner),
+            this.getSide(event.target.owner), event.stats);
     }
 
     /** @virtual */
@@ -845,10 +723,10 @@ export class PSEventHandler
     protected handleTransform(event: TransformEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const source = this.getActive(event.source.owner);
-        const target = this.getActive(event.target.owner);
+        const sourceRef = this.getSide(event.source.owner);
+        const targetRef = this.getSide(event.target.owner);
 
-        source.transform(target);
+        this.driver.transform(sourceRef, targetRef);
 
         // use lastRequest to infer more details
         if (!this.lastRequest || !this.lastRequest.active) return;
@@ -858,10 +736,11 @@ export class PSEventHandler
             this.lastRequest.side.pokemon[0].hp === 0) return;
         // if species don't match, must've been dragged out before we could
         //  infer any other features
-        if (this.lastRequest.side.pokemon[0].species !==
-            source.species) return;
+        // TODO: workaround not having access to state object
+        /*if (this.lastRequest.side.pokemon[0].details.species !==
+            source.species) return;*/
 
-        source.transformPost(this.lastRequest.active[0].moves,
+        this.driver.transformPost(sourceRef, this.lastRequest.active[0].moves,
             this.lastRequest.side.pokemon[0].stats);
     }
 
@@ -876,8 +755,8 @@ export class PSEventHandler
     protected handleUnboost(event: UnboostEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        this.getActive(event.id.owner).volatile.boosts[event.stat] -=
-            event.amount;
+        this.driver.unboost(this.getSide(event.id.owner),
+            event.stat, event.amount);
     }
 
     /** @virtual */
@@ -885,35 +764,24 @@ export class PSEventHandler
         events: readonly AnyBattleEvent[], i: number): void
     {
         // selfSwitch is the result of a move, which only occurs in the middle
-        //  of all the turn's main events (args.events) if the simulator
-        //  ignored the fact that a selfSwitch move was used, then it would
-        //  emit an upkeep event
-        this.state.teams.us.status.selfSwitch = false;
-        this.state.teams.them.status.selfSwitch = false;
+        //  of all the turn's main events (args.events)
+        // if the simulator ignored the fact that a selfSwitch move was used,
+        //  then it would emit an upkeep event
+        this.driver.clearSelfSwitch();
     }
 
     /** @virtual */
     protected handleWeather(event: WeatherEvent,
         events: readonly AnyBattleEvent[], i: number): void
     {
-        const weather = this.state.status.weather;
-        if (event.weatherType === "none") weather.reset();
-        else if (event.upkeep)
-        {
-            if (weather.type === event.weatherType) weather.tick();
-            else
-            {
-                this.logger.error(`Weather is '${weather.type}' but ` +
-                    `upkept weather is '${event.weatherType}'`);
-            }
-        }
+        if (event.weatherType === "none") this.driver.resetWeather();
+        else if (event.upkeep) this.driver.tickWeather(event.weatherType);
         // find out what caused the weather to change
         else if (event.from && event.from.startsWith("ability: ") &&
             event.of)
         {
-            // gen<=4: ability-caused weather is infinite
-            weather.start(this.getActive(event.of.owner), event.weatherType,
-                /*infinite*/true);
+            this.driver.setWeather(this.getSide(event.of.owner),
+                event.weatherType, "ability");
         }
         else
         {
@@ -929,8 +797,8 @@ export class PSEventHandler
             if (lastEvent.type === "move")
             {
                 // caused by a move
-                const source = this.getActive(lastEvent.id.owner);
-                weather.start(source, event.weatherType);
+                this.driver.setWeather(this.getSide(lastEvent.id.owner),
+                    event.weatherType, "move");
             }
             else if (lastEvent.type !== "switch")
             {
@@ -949,7 +817,7 @@ export class PSEventHandler
     /** Prints the state to the logger. */
     public printState(): void
     {
-        this.logger.debug(`State:\n${this.state.toString()}`);
+        this.logger.debug(`State:\n${this.driver.getStateString()}`);
     }
 
     /** Processes a `request` message. */
@@ -958,31 +826,14 @@ export class PSEventHandler
         this.lastRequest = args;
 
         // a request message is given at the start of the battle, before any
-        //  battleinit stuff
+        //  battleinit stuff, which is all we need to initialize our side of the
+        //  battle state
         if (this._battling) return;
 
         // first time: initialize client team data
-        const team = this.state.teams.us;
-        team.size = args.side.pokemon.length;
-        for (const data of args.side.pokemon)
-        {
-            // initial revealed pokemon can't be null, since we already
-            //  set the teamsize
-            const mon = team.reveal(data.species, data.level, data.gender,
-                    data.hp, data.hpMax)!;
-            for (const stat in data.stats)
-            {
-                // istanbul ignore if
-                if (!data.stats.hasOwnProperty(stat)) continue;
-                mon.traits.stats[stat as StatExceptHP]
-                    .set(data.stats[stat as StatExceptHP]);
-            }
-            mon.traits.stats.hp.set(data.hpMax);
-            mon.setItem(data.item);
-            mon.traits.setAbility(data.baseAbility);
-            mon.majorStatus.assert(data.condition);
-
-            for (let moveId of data.moves)
+        this.driver.init(args.side.pokemon,
+            // fix move encodings that can help infer other features
+            function moveCb(mon, moveId)
             {
                 if (moveId.startsWith("hiddenpower") &&
                     moveId.length > "hiddenpower".length)
@@ -992,28 +843,27 @@ export class PSEventHandler
                     // TODO: also infer ivs based on type/power
                     mon.hpType.narrow(
                         moveId.substr("hiddenpower".length).replace(/\d+/, ""));
-                    moveId = "hiddenpower";
+                    return "hiddenpower";
                 }
-                else if (moveId.startsWith("return") &&
+                if (moveId.startsWith("return") &&
                     moveId.length > "return".length)
                 {
                     // calculate happiness value from base power
                     mon.happiness = 2.5 *
                         parseInt(moveId.substr("return".length), 10);
-                    moveId = "return";
+                    return "return";
                 }
-                else if (moveId.startsWith("frustration") &&
+                if (moveId.startsWith("frustration") &&
                     moveId.length > "frustration".length)
                 {
                     // calculate happiness value from base power
                     mon.happiness = 255 - 2.5 *
                             parseInt(moveId.substr("frustration".length), 10);
-                    moveId = "frustration";
+                    return "frustration";
                 }
 
-                mon.moveset.reveal(moveId);
-            }
-        }
+                return moveId;
+            });
     }
 
     /** Handles the `[of]` and `[from]` suffixes of an event. */
@@ -1040,17 +890,116 @@ export class PSEventHandler
         }
 
         if (!id) throw new Error("No PokemonID given to handle suffixes with");
-        const mon = this.getActive(id.owner);
+        const monRef = this.getSide(id.owner);
 
         // TODO: should all use cases be handled in separate event handlers?
         // if so, this method might not need to exist
         if (f.startsWith("ability: "))
         {
-            mon.traits.setAbility(toIdName(f.substr("ability: ".length)));
+            this.driver.activateAbility(monRef,
+                toIdName(f.substr("ability: ".length)));
         }
         else if (f.startsWith("item: "))
         {
-            mon.setItem(toIdName(f.substr("item: ".length)));
+            this.driver.revealItem(monRef, toIdName(f.substr("item: ".length)));
+        }
+    }
+
+    /** Handles an end/start event. */
+    private handleTrivialStatus(event: EndEvent | StartEvent): void
+    {
+        const monRef = this.getSide(event.id.owner);
+        const start = event.type === "-start";
+
+        let ev = event.volatile;
+        if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
+
+        switch (ev)
+        {
+            case "Aqua Ring":
+                this.driver.activateStatusEffect(monRef, "aquaRing", start);
+                break;
+            case "Attract":
+                this.driver.activateStatusEffect(monRef, "attract", start);
+                break;
+            case "Bide":
+                this.driver.activateStatusEffect(monRef, "bide", start);
+                break;
+            case "confusion":
+                // start confusion status
+                this.driver.activateStatusEffect(monRef, "confusion", start);
+                // stopped using multi-turn locked move due to fatigue
+                if (event.fatigue) this.driver.fatigue(monRef);
+                break;
+            case "Disable":
+                if (event.type === "-start")
+                {
+                    // disable the given move
+                    this.driver.disableMove(monRef,
+                        toIdName(event.otherArgs[0]));
+                }
+                // re-enable the move
+                else this.driver.enableMoves(monRef);
+                break;
+            case "Encore":
+                this.driver.activateStatusEffect(monRef, "encore", start);
+                break;
+            case "Focus Energy":
+                this.driver.activateStatusEffect(monRef, "focusEnergy", start);
+                break;
+            case "Foresight":
+                this.driver.activateStatusEffect(monRef, "foresight", start);
+                break;
+            case "Ingrain":
+                this.driver.activateStatusEffect(monRef, "ingrain", start);
+                break;
+            case "Leech Seed":
+                this.driver.activateStatusEffect(monRef, "leechSeed", start);
+                break;
+            case "Magnet Rise":
+                this.driver.activateStatusEffect(monRef, "magnetRise", start);
+                break;
+            case "Miracle Eye":
+                this.driver.activateStatusEffect(monRef, "miracleEye", start);
+                break;
+            case "Embargo":
+                this.driver.activateStatusEffect(monRef, "embargo", start);
+                break;
+            case "Substitute":
+                this.driver.activateStatusEffect(monRef, "substitute", start);
+                break;
+            case "Slow Start":
+                this.driver.activateStatusEffect(monRef, "slowStart", start);
+                break;
+            case "Taunt":
+                this.driver.activateStatusEffect(monRef, "taunt", start);
+                break;
+            case "Torment":
+                this.driver.activateStatusEffect(monRef, "torment", start);
+                break;
+            case "Uproar":
+                if (event.type === "-start" &&
+                    event.otherArgs[0] === "[upkeep]")
+                {
+                    this.driver.updateStatusEffect(monRef, "uproar");
+                }
+                else this.driver.activateStatusEffect(monRef, "uproar", start);
+                break;
+            default:
+            {
+                const moveId = toIdName(ev);
+                // istanbul ignore else: not useful to test
+                if (isFutureMove(moveId))
+                {
+                    this.driver.activateFutureMove(monRef, moveId,
+                        /*start*/true);
+                }
+                else
+                {
+                    this.logger.debug(
+                        `Ignoring trivial status '${event.volatile}'`);
+                }
+            }
         }
     }
 
@@ -1065,12 +1014,14 @@ export class PSEventHandler
         return ["Protect", "move: Protect", "move: Endure"].includes(status);
     }
 
+    // TODO: move this to BattleDriver (static?) or dex?
     /**
      * Gets the active Pokemon targets of a move.
      * @param moveId Move that will be used.
-     * @param user Pokemon that used the move.
+     * @param user Reference to the Pokemon that's using the move.
+     * @returns A list of Pokemon references indicating the move's targets.
      */
-    protected getTargets(moveId: string, user: Pokemon): Pokemon[]
+    protected getTargets(moveId: string, user: Side): Side[]
     {
         const targetType = dex.moves[moveId].target;
         switch (targetType)
@@ -1081,45 +1032,13 @@ export class PSEventHandler
             case "adjacentAllyOrSelf": case "allySide":
             case "allyTeam": case "self":
                 return [user];
-            case "adjacentFoe": case "all": case "allAdjacent":
-            case "allAdjacentFoes": case "any": case "foeSide": case "normal":
-            case "randomNormal": case "scripted":
-                if (user.team)
-                {
-                    return [
-                        ...(targetType === "all" ? [user] : []),
-                        this.getActive(otherSide(user.team.side))
-                    ];
-                }
-                else throw new Error("Move user has no team");
             case "all":
-                if (user.team)
-                {
-                    return [user, this.getActive(otherSide(user.team.side))];
-                }
-                else throw new Error("Move user has no team");
+                return [user, otherSide(user)];
+            case "adjacentFoe": case "allAdjacent": case "allAdjacentFoes":
+            case "any": case "foeSide": case "normal": case "randomNormal":
+            case "scripted":
+                return [otherSide(user)];
         }
-    }
-
-    // istanbul ignore next: trivial
-    /**
-     * Gets the active pokemon.
-     * @param team Corresponding team. Can be a PlayerID or Side name.
-     */
-    protected getActive(team: PlayerID | Side): Pokemon
-    {
-        return this.getTeam(team).active;
-    }
-
-    // istanbul ignore next: trivial
-    /**
-     * Gets a team.
-     * @param team Corresponding team id. Can be a PlayerID or Side name.
-     */
-    protected getTeam(team: PlayerID | Side): Team
-    {
-        if (isPlayerID(team)) team = this.getSide(team);
-        return this.state.teams[team];
     }
 
     // istanbul ignore next: trivial

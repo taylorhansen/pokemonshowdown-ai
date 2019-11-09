@@ -1060,23 +1060,33 @@ describe("Pokemon", function()
     {
         it("Should copy move and stat data", function()
         {
-            const mon = new Pokemon("Magikarp", false);
-            mon.traits.stats.level = 100;
+            const mon = new Pokemon("Horsea", false);
             mon.switchInto();
+
+            const mon2 = new Pokemon("Magikarp", true);
+            mon2.traits.stats.level = 100;
+            mon2.switchInto();
+
+            mon.transform(mon2);
             mon.transformPost([{id: "splash", pp: 5, maxpp: 64}],
                 {atk: 100, def: 103, spa: 100, spd: 100, spe: 200});
 
-            expect(mon.moveset.get("splash")).to.not.be.null;
-            expect(mon.traits.stats.atk.min).to.equal(100);
-            expect(mon.traits.stats.atk.max).to.equal(100);
-            expect(mon.traits.stats.def.min).to.equal(103);
-            expect(mon.traits.stats.def.max).to.equal(103);
-            expect(mon.traits.stats.spa.min).to.equal(100);
-            expect(mon.traits.stats.spa.max).to.equal(100);
-            expect(mon.traits.stats.spd.min).to.equal(100);
-            expect(mon.traits.stats.spd.max).to.equal(100);
-            expect(mon.traits.stats.spe.min).to.equal(200);
-            expect(mon.traits.stats.spe.max).to.equal(200);
+            function check(m: Pokemon)
+            {
+                expect(m.moveset.get("splash")).to.not.be.null;
+                expect(m.traits.stats.atk.min).to.equal(100);
+                expect(m.traits.stats.atk.max).to.equal(100);
+                expect(m.traits.stats.def.min).to.equal(103);
+                expect(m.traits.stats.def.max).to.equal(103);
+                expect(m.traits.stats.spa.min).to.equal(100);
+                expect(m.traits.stats.spa.max).to.equal(100);
+                expect(m.traits.stats.spd.min).to.equal(100);
+                expect(m.traits.stats.spd.max).to.equal(100);
+                expect(m.traits.stats.spe.min).to.equal(200);
+                expect(m.traits.stats.spe.max).to.equal(200);
+            }
+            check(mon);
+            check(mon2);
         });
     });
 });

@@ -1,4 +1,4 @@
-import { BattleState } from "../../src/battle/state/BattleState";
+import { BattleDriver } from "../../src/battle/driver/BattleDriver";
 import { Logger } from "../../src/Logger";
 import { AnyBattleEvent, FaintEvent, TieEvent, TurnEvent, WinEvent } from
     "../../src/psbot/parser/BattleEvent";
@@ -15,13 +15,14 @@ enum Reward { faint = -10, turn = -0.1 }
 export class TrainEventHandler extends PSEventHandler
 {
     /** Tracks the current reward value. */
-    private reward = new RewardTracker();
+    private readonly reward = new RewardTracker();
+
     private turnCallback = function(num: number) {};
     private gameOverCallback = function(winner?: string) {};
 
-    constructor(username: string, state: BattleState, logger: Logger)
+    constructor(username: string, driver: BattleDriver, logger: Logger)
     {
-        super(username, state, logger);
+        super(username, driver, logger);
     }
 
     /** Sets the callback for when the current turn has ended. */

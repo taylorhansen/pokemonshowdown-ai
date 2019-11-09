@@ -1,7 +1,7 @@
 import { inspect } from "util";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice } from "../battle/agent/Choice";
-import { BattleState } from "../battle/state/BattleState";
+import { BattleDriver } from "../battle/driver/BattleDriver";
 import { Logger } from "../Logger";
 import { BattleInitMessage, BattleProgressMessage, ErrorMessage,
     RequestMessage } from "./parser/Message";
@@ -12,8 +12,8 @@ import { RoomHandler } from "./RoomHandler";
 /** Translates server messages to PSEventHandler calls. */
 export class PSBattle implements RoomHandler
 {
-    /** State object. */
-    protected readonly state: BattleState;
+    /** Battle state driver. */
+    protected readonly driver: BattleDriver;
     /** Manages the BattleState by processing events. */
     protected readonly eventHandler: PSEventHandler;
     // TODO: remove these Omits, for now they're only here so that
@@ -40,15 +40,16 @@ export class PSBattle implements RoomHandler
      * @param agent Makes the decisions for this battle.
      * @param sender Used to send messages to the server.
      * @param logger Logger object.
+     * @param driverCtor The type of BattleDriver to use.
      * @param eventHandlerCtor The type of PSEventHandler to use.
      */
     constructor(protected readonly username: string,
-        protected readonly agent: BattleAgent,
-        private readonly sender: Sender,
-        protected readonly logger: Logger, eventHandlerCtor = PSEventHandler)
+        protected readonly agent: BattleAgent, private readonly sender: Sender,
+        protected readonly logger: Logger, driverCtor = BattleDriver,
+        eventHandlerCtor = PSEventHandler)
     {
-        this.state = new BattleState();
-        this.eventHandler = new eventHandlerCtor(this.username, this.state,
+        this.driver = new driverCtor();
+        this.eventHandler = new eventHandlerCtor(this.username, this.driver,
                 logger.prefix("PSEventHandler: "));
     }
 
@@ -106,15 +107,13 @@ export class PSBattle implements RoomHandler
 
                 // since this was previously unknown, the opposing pokemon must
                 //  have a trapping ability
-                this.state.teams.us.active.trapped(
-                    this.state.teams.them.active);
+                this.driver.rejectSwitchTrapped("us", "them");
             }
             // don't know what happened so just eliminate the last choice
             else this.lastChoices.shift();
 
             // re-sort remaining choices based on new info
-            await this.agent.decide(this.state, this.lastChoices);
-
+            await this.agent.decide(this.driver.state, this.lastChoices);
             this.sender(`|/choose ${this.lastChoices[0]}`);
         }
 
@@ -143,10 +142,9 @@ export class PSBattle implements RoomHandler
     private async askAgent(): Promise<void>
     {
         this.lastChoices = this.getChoices();
-
         this.logger.debug(`Choices: [${this.lastChoices.join(", ")}]`);
-        await this.agent.decide(this.state, this.lastChoices);
 
+        await this.agent.decide(this.driver.state, this.lastChoices);
         this.sender(`|/choose ${this.lastChoices[0]}`);
     }
 

@@ -3,6 +3,7 @@
  * MessageHandler.
  */
 import { StatExceptHP } from "../../battle/dex/dex-util";
+import { DriverInitPokemon } from "../../battle/driver/BattleDriver";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus, RoomType } from
     "../helpers";
 import { AnyBattleEvent } from "./BattleEvent";
@@ -160,8 +161,8 @@ export interface RequestSide
 }
 
 /** Basic pokemon info. */
-export interface RequestPokemon extends PokemonID, PokemonDetails,
-    PokemonStatus
+export interface RequestPokemon extends DriverInitPokemon, PokemonID,
+    PokemonDetails, PokemonStatus
 {
     /**
      * True if this pokemon is active. This declaration is only here for

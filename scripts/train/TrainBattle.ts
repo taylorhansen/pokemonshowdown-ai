@@ -1,4 +1,5 @@
 import { Choice } from "../../src/battle/agent/Choice";
+import { BattleDriver } from "../../src/battle/driver/BattleDriver";
 import { Logger } from "../../src/Logger";
 import { ErrorMessage, RequestMessage } from "../../src/psbot/parser/Message";
 import { PSBattle } from "../../src/psbot/PSBattle";
@@ -37,7 +38,7 @@ export class TrainBattle extends PSBattle
     constructor(username: string, agent: TrainNetwork, sender: Sender,
         logger: Logger, eventHandlerCtor = TrainEventHandler)
     {
-        super(username, agent, sender, logger, eventHandlerCtor);
+        super(username, agent, sender, logger, BattleDriver, eventHandlerCtor);
     }
 
     /** @override */

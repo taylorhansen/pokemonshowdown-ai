@@ -1,5 +1,5 @@
 import { berries, dex, twoTurnMoves } from "../dex/dex";
-import { HPType, hpTypes, rolloutMoves, StatExceptHP, Type } from
+import { boostKeys, HPType, hpTypes, rolloutMoves, StatExceptHP, Type } from
     "../dex/dex-util";
 import { HP, ReadonlyHP } from "./HP";
 import { MajorStatusCounter, ReadonlyMajorStatusCounter } from
@@ -577,16 +577,16 @@ export class Pokemon implements ReadonlyPokemon
         else throw new Error("Can't figure out why we're trapped");
     }
 
-    /**
-     * Transforms this Pokemon into another, copying known features.
-     * @param target Pokemon to transform into.
-     */
+    /** Indicates that the pokemon has transformed into its target. */
     public transform(target: Pokemon): void
     {
         this.volatile.transformed = true;
 
         // copy boosts
-        this.volatile.copyBoostsFrom(target.volatile);
+        for (const stat of boostKeys)
+        {
+            this.volatile.boosts[stat] = target.volatile.boosts[stat];
+        }
 
         // link moveset inference
         this.volatile.overrideMoveset.link(target.moveset, "transform");
@@ -597,16 +597,17 @@ export class Pokemon implements ReadonlyPokemon
     }
 
     /**
-     * Reveals and infers more details due to Transform. These details are
-     * usually revealed at the end of the turn during move selection, but this
-     * method should only be called during the Transform move, or directly after
-     * calling `#transform()`.
-     * @param moves Revealed moveset.
-     * @param stats Revealed stats.
+     * Reveals and infers more details due to Transform. This pokemon should
+     * already have had `#transform()` called on it.
      */
     public transformPost(moves: readonly MoveData[],
         stats: Readonly<Record<StatExceptHP, number>>): void
     {
+        if (!this.volatile.transformed)
+        {
+            throw new Error("Pokemon isn't transformed");
+        }
+
         // infer moveset
         for (const data of moves)
         {
