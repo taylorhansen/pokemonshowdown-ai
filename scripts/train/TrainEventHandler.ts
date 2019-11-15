@@ -1,4 +1,3 @@
-import { BattleDriver } from "../../src/battle/driver/BattleDriver";
 import { Logger } from "../../src/Logger";
 import { AnyBattleEvent, FaintEvent, TieEvent, TurnEvent, WinEvent } from
     "../../src/psbot/parser/BattleEvent";
@@ -20,10 +19,7 @@ export class TrainEventHandler extends PSEventHandler
     private turnCallback = function(num: number) {};
     private gameOverCallback = function(winner?: string) {};
 
-    constructor(username: string, driver: BattleDriver, logger: Logger)
-    {
-        super(username, driver, logger);
-    }
+    constructor(username: string, logger: Logger) { super(username, logger); }
 
     /** Sets the callback for when the current turn has ended. */
     public onTurn(callback: (num: number) => void): void
@@ -39,32 +35,34 @@ export class TrainEventHandler extends PSEventHandler
 
     /** @override */
     protected handleFaint(event: FaintEvent, events: AnyBattleEvent[],
-        i: number): void
+        i: number)
     {
         this.reward.apply(this.getSide(event.id.owner), Reward.faint);
-        super.handleFaint(event, events, i);
+        return super.handleFaint(event, events, i);
     }
 
     /** @override */
     protected handleGameOver(event: TieEvent | WinEvent,
-        events: readonly AnyBattleEvent[], i: number): void
+        events: readonly AnyBattleEvent[], i: number)
     {
-        super.handleGameOver(event, events, i);
+        const result = super.handleGameOver(event, events, i);
         if (this.gameOverCallback)
         {
             let winner: string | undefined;
             if (event.type === "win") winner = event.winner;
             this.gameOverCallback(winner);
         }
+        return result;
     }
 
     /** @override */
     protected handleTurn(event: TurnEvent, events: readonly AnyBattleEvent[],
-        i: number): void
+        i: number)
     {
         this.reward.apply("us", Reward.turn);
-        super.handleTurn(event, events, i);
+        const result = super.handleTurn(event, events, i);
         if (this.turnCallback) this.turnCallback(event.num);
+        return result;
     }
 
     /** Gets the reward value then resets the counter. */

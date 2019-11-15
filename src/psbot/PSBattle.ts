@@ -49,8 +49,8 @@ export class PSBattle implements RoomHandler
         eventHandlerCtor = PSEventHandler)
     {
         this.driver = new driverCtor();
-        this.eventHandler = new eventHandlerCtor(this.username, this.driver,
-                logger.prefix("PSEventHandler: "));
+        this.eventHandler = new eventHandlerCtor(this.username,
+            logger.prefix("PSEventHandler: "));
     }
 
     /** @override */
@@ -59,8 +59,8 @@ export class PSBattle implements RoomHandler
         this.logger.debug(`battleinit:\n${
             inspect(msg, {colors: false, depth: null})}`);
 
-        this.eventHandler.initBattle(msg);
-        this.eventHandler.printState();
+        this.driver.handleEvents(this.eventHandler.initBattle(msg));
+        this.logger.debug(`State:\n${this.driver.getStateString()}`);
 
         return this.askAgent();
     }
@@ -72,8 +72,8 @@ export class PSBattle implements RoomHandler
         this.logger.debug(`battleprogress:\n${
             inspect(msg, {colors: false, depth: null})}`);
 
-        this.eventHandler.handleEvents(msg.events);
-        this.eventHandler.printState();
+        this.driver.handleEvents(this.eventHandler.handleEvents(msg.events));
+        this.logger.debug(`State:\n${this.driver.getStateString()}`);
 
         // possibly send a response
         if (this.shouldRespond()) return this.askAgent();
@@ -107,7 +107,8 @@ export class PSBattle implements RoomHandler
 
                 // since this was previously unknown, the opposing pokemon must
                 //  have a trapping ability
-                this.driver.rejectSwitchTrapped("us", "them");
+                this.driver.rejectSwitchTrapped(
+                    {type: "rejectSwitchTrapped", monRef: "us", by: "them"});
             }
             // don't know what happened so just eliminate the last choice
             else this.lastChoices.shift();
@@ -117,7 +118,7 @@ export class PSBattle implements RoomHandler
             this.sender(`|/choose ${this.lastChoices[0]}`);
         }
 
-        this.eventHandler.handleRequest(msg);
+        this.driver.handleEvents(this.eventHandler.handleRequest(msg));
         this.lastRequest = msg;
     }
 

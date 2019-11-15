@@ -1,87 +1,61 @@
-import { FutureMove, TwoTurnMove } from "../dex/dex";
-import { boostKeys, BoostName, MajorStatus, StatExceptHP, Type, WeatherType }
-    from "../dex/dex-util";
+import { boostKeys, StatExceptHP } from "../dex/dex-util";
 import { BattleState, ReadonlyBattleState } from "../state/BattleState";
-import { MoveData, MoveOptions, Pokemon } from "../state/Pokemon";
+import { Pokemon } from "../state/Pokemon";
 import { Side } from "../state/Side";
 import { SwitchInOptions, Team } from "../state/Team";
-
-export type StatusEffectType = "aquaRing" | "attract" | "bide" | "confusion" |
-    "charge" | "encore" | "focusEnergy" | "foresight" | "ingrain" |
-    "leechSeed" | "magnetRise" | "miracleEye" | "embargo" | "substitute" |
-    "slowStart" | "taunt" | "torment" | "uproar";
-
-export type UpdatableStatusEffectType = "confusion" | "bide" | "uproar";
-
-export type SideConditionType = "lightScreen" | "reflect" | "spikes" |
-    "stealthRock" | "tailwind" | "toxicSpikes";
-
-export type FieldConditionType = "gravity" | "trickRoom";
-
-export type SingleMoveStatus = "destinyBond" | "grudge";
-
-export type SingleTurnStatus = "stall" | "roost" | "magicCoat";
-
-/** Data for handling a switch-in. */
-export interface DriverSwitchOptions
-{
-    /** Pokemon's species. */
-    readonly species: string;
-    /** Level between 1 and 100. */
-    readonly level: number;
-    /** Pokemon's gender. Can be M, F, or null. */
-    readonly gender: string | null;
-    /** Pokemon's current HP. */
-    readonly hp: number;
-    /** Pokemon's max HP. */
-    readonly hpMax: number;
-}
-
-/** Data for initializing a pokemon. */
-export interface DriverInitPokemon extends DriverSwitchOptions
-{
-    /** Pokemon's stats. */
-    readonly stats: Readonly<Record<StatExceptHP, number>>;
-    /** List of move id names. */
-    readonly moves: readonly string[];
-    /** Base ability id name. */
-    readonly baseAbility: string;
-    /** Item id name. */
-    readonly item: string;
-}
+import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
+    ActivateSideCondition, ActivateStatusEffect, AfflictStatus, AnyDriverEvent,
+    Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
+    ClearSelfSwitch, CopyBoosts, CureStatus, CureTeam, DisableMove, DriverEvent,
+    DriverEventType, Faint, Fatigue, FormChange, GastroAcid, Inactive,
+    InitOtherTeamSize, InitTeam, InvertBoosts, Mimic, MustRecharge, PostTurn,
+    PrepareMove, PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem,
+    RevealItem, RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
+    SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage,
+    TickWeather, Transform, TransformPost, Trap, Unboost, UpdateStatusEffect,
+    UseMove } from "./DriverEvent";
 
 /**
- * Typing for `BattleDriver#useMove()`, changing the type of
- * `MoveOptions#targets` to an array of Pokemon references.
+ * Ensures that the BattleDriver implements handlers for each type of
+ * DriverEvent.
  */
-export type DriverMoveOptions =
-    Omit<MoveOptions, "targets"> & {targets: readonly Side[]};
+type DriverEventHandler =
+    {[T in DriverEventType]: (event: DriverEvent<T>) => void};
 
 /** Handles all frontend-interpreted state mutations and inferences. */
-export class BattleDriver
+export class BattleDriver implements DriverEventHandler
 {
     /** Internal battle state. */
     public get state(): ReadonlyBattleState { return this._state; }
     protected readonly _state = new BattleState();
 
+    /** Handles multiple DriverEvents. */
+    public handleEvents(events: readonly AnyDriverEvent[]): void
+    {
+        for (const event of events) this.handleEvent(event);
+    }
+
+    /** Handles a DriverEvent. */
+    public handleEvent<T extends DriverEventType>(event: DriverEvent<T>): void
+    {
+        (this[event.type] as (event: DriverEvent<T>) => void)(event);
+    }
+
     /**
-     * Initializes our team state.
-     * @param team Init data for the known pokemon on our side.
-     * @param moveCb Optional callback that pre-processes a move name that has
-     * certain properties encoded into it, e.g. Hidden Power type. Should return
-     * the intended move name.
+     * Handles an InitTeam event.
+     * @virtual
      */
-    public init(initMons: readonly DriverInitPokemon[],
-        moveCb?: (mon: Pokemon, moveId: string) => string): void
+    public initTeam(event: InitTeam): void
     {
         const team = this._state.teams.us;
-        team.size = initMons.length;
-        for (const data of initMons)
+        team.size = event.team.length;
+        for (const data of event.team)
         {
             // initial revealed pokemon can't be null, since we already
             //  set the teamsize
             const mon = team.reveal(data.species, data.level,
                     data.gender, data.hp, data.hpMax)!;
+            mon.traits.stats.hp.set(data.hpMax);
             for (const stat in data.stats)
             {
                 // istanbul ignore if
@@ -89,310 +63,346 @@ export class BattleDriver
                 mon.traits.stats[stat as StatExceptHP]
                     .set(data.stats[stat as StatExceptHP]);
             }
-            mon.traits.stats.hp.set(data.hpMax);
-            mon.setItem(data.item);
             mon.traits.setAbility(data.baseAbility);
+            mon.setItem(data.item);
+
+            if (data.hpType) mon.hpType.narrow(data.hpType);
+            if (data.happiness) mon.happiness = data.happiness;
 
             // initialize moveset
-            for (let moveId of data.moves)
-            {
-                if (moveCb) moveId = moveCb(mon, moveId);
-                mon.moveset.reveal(moveId);
-            }
+            for (const moveId of data.moves) mon.moveset.reveal(moveId);
         }
     }
 
-    /** Initializes the other team's size. */
-    public initOtherTeamSize(size: number): void
+    /**
+     * Initializes the opponent's team size.
+     * @virtual
+     */
+    public initOtherTeamSize(event: InitOtherTeamSize): void
     {
-        this._state.teams.them.size = size;
+        this._state.teams.them.size = event.size;
     }
 
     /**
-     * Should be called at the beginning of every turn to update temp statuses.
+     * Indicates that the turn is about to begin.
+     * @virtual
      */
-    public preTurn(): void
+    public preTurn(event: PreTurn): void
     {
         this._state.preTurn();
     }
 
-    /** Should be called at the end of every turn to update temp statuses. */
-    public postTurn(): void
+    /**
+     * Indicates that the turn is about to end.
+     * @virtual
+     */
+    public postTurn(event: PostTurn): void
     {
         this._state.postTurn();
     }
 
     /**
      * Reveals, changes, and/or activates a pokemon's ability.
-     * @param monRef The Pokemon being associated with this ability.
-     * @param ability Ability that the Pokemon is revealed to have.
-     * @param traced If the Pokemon is receiving the ability via Trace, this
-     * should specify the Pokemon being Traced.
+     * @virtual
      */
-    public activateAbility(monRef: Side, ability: string, traced?: Side): void
+    public activateAbility(event: ActivateAbility): void
     {
-        const mon = this.getMon(monRef);
-        if (traced)
+        const mon = this.getMon(event.monRef);
+        if (event.traced)
         {
             // infer trace user's base ability
             mon.traits.ability.narrow("trace");
             // infer opponent's ability due to trace effect
-            this.getMon(traced).traits.ability.narrow(ability);
+            this.getMon(event.traced).traits.ability.narrow(event.ability);
         }
 
         // override current ability with the new one
-        mon.traits.setAbility(ability);
+        mon.traits.setAbility(event.ability);
     }
 
     /**
      * Reveals and suppresses a pokemon's ability due to Gastro Acid.
-     * @param monRef Pokemon reference.
-     * @param ability Ability being suppressed.
+     * @virtual
      */
-    public gastroAcid(monRef: Side, ability: string): void
+    public gastroAcid(event: GastroAcid): void
     {
-        const mon = this.getMon(monRef);
+        const mon = this.getMon(event.monRef);
 
-        mon.traits.setAbility(ability);
+        mon.traits.setAbility(event.ability);
         mon.volatile.gastroAcid = true;
     }
 
     /**
      * Starts, sets, or ends a trivial status effect.
-     * @param monRef Pokemon reference.
-     * @param type Type of status in question.
-     * @param start Whether to start (true) or end (false) the status.
+     * @virtual
      */
-    public activateStatusEffect(monRef: Side, type: StatusEffectType,
-        start: boolean): void
+    public activateStatusEffect(event: ActivateStatusEffect): void
     {
-        const mon = this.getMon(monRef);
-        switch (type)
+        const mon = this.getMon(event.monRef);
+        switch (event.status)
         {
             case "aquaRing":
-                mon.volatile.aquaRing = start;
+                mon.volatile.aquaRing = event.start;
                 break;
             case "attract":
-                mon.volatile.attracted = start;
+                mon.volatile.attracted = event.start;
                 break;
             case "bide":
-                mon.volatile.bide[start ? "start" : "end"]();
+                mon.volatile.bide[event.start ? "start" : "end"]();
                 break;
             case "confusion":
-                mon.volatile.confusion[start ? "start" : "end"]();
+                mon.volatile.confusion[event.start ? "start" : "end"]();
                 break;
             case "charge":
-                mon.volatile.charge[start ? "start" : "end"]();
+                mon.volatile.charge[event.start ? "start" : "end"]();
                 break;
             case "encore":
-                mon.volatile.encore[start ? "start" : "end"]();
+                mon.volatile.encore[event.start ? "start" : "end"]();
                 break;
             case "focusEnergy":
-                mon.volatile.focusEnergy = start;
+                mon.volatile.focusEnergy = event.start;
                 break;
             case "foresight":
-                mon.volatile.identified = start ? "foresight" : null;
+                mon.volatile.identified = event.start ? "foresight" : null;
                 break;
             case "ingrain":
-                mon.volatile.ingrain = start;
+                mon.volatile.ingrain = event.start;
                 break;
             case "leechSeed":
-                mon.volatile.leechSeed = start;
+                mon.volatile.leechSeed = event. start;
                 break;
             case "magnetRise":
-                mon.volatile.magnetRise[start ? "start" : "end"]();
+                mon.volatile.magnetRise[event.start ? "start" : "end"]();
                 break;
             case "miracleEye":
-                mon.volatile.identified = start ? "miracleeye" : null;
+                mon.volatile.identified = event.start ? "miracleeye" : null;
                 break;
             case "embargo":
-                mon.volatile.embargo[start ? "start" : "end"]();
+                mon.volatile.embargo[event.start ? "start" : "end"]();
                 break;
             case "substitute":
-                mon.volatile.substitute = start;
+                mon.volatile.substitute = event.start;
                 break;
             case "slowStart":
-                mon.volatile.slowStart[start ? "start" : "end"]();
+                mon.volatile.slowStart[event.start ? "start" : "end"]();
                 break;
             case "taunt":
-                mon.volatile.taunt[start ? "start" : "end"]();
+                mon.volatile.taunt[event.start ? "start" : "end"]();
                 break;
             case "torment":
-                mon.volatile.torment = start;
+                mon.volatile.torment = event.start;
                 break;
             case "uproar":
-                mon.volatile.uproar[start ? "start" : "end"]();
+                mon.volatile.uproar[event.start ? "start" : "end"]();
                 break;
             default:
                 // istanbul ignore else: not useful to test
-                throw new Error(`Invalid status effect '${type}'`);
+                throw new Error(`Invalid status effect '${event.status}'`);
         }
     }
 
-    /** Temporarily disables the pokemon's move. */
-    public disableMove(monRef: Side, move: string): void
+    /**
+     * Temporarily disables the pokemon's move.
+     * @virtual
+     */
+    public disableMove(event: DisableMove): void
     {
-        this.getMon(monRef).disableMove(move);
+        this.getMon(event.monRef).disableMove(event.move);
     }
 
-    /** Re-enables the pokemon's disabled moves. */
-    public enableMoves(monRef: Side): void
+    /**
+     * Re-enables the pokemon's disabled moves.
+     * @virtual
+     */
+    public reenableMoves(event: ReenableMoves): void
     {
-        this.getMon(monRef).volatile.enableMoves();
+        this.getMon(event.monRef).volatile.enableMoves();
     }
 
-    /** Starts or ends a future move. */
-    public activateFutureMove(monRef: Side, move: FutureMove, start: boolean):
-        void
+    /**
+     * Prepares or releases a future move.
+     * @virtual
+     */
+    public activateFutureMove(event: ActivateFutureMove): void
     {
-        const futureMove = this.getMon(monRef).team!.status.futureMoves[move];
-        if (start) futureMove.start(/*restart*/false);
+        const futureMove = this.getMon(event.monRef).team!.status
+            .futureMoves[event.move];
+        if (event.start) futureMove.start(/*restart*/false);
         else futureMove.end();
     }
 
     /**
      * Indicates that a status effect is still going. Usually this is implied at
-     * the end of the turn unless the game usually sends an explicit message.
+     * the end of the turn unless the game usually sends an explicit message,
+     * which this DriverEvent covers.
+     * @virtual
      */
-    public updateStatusEffect(monRef: Side, type: UpdatableStatusEffectType):
-        void
+    public updateStatusEffect(event: UpdateStatusEffect): void
     {
-        const mon = this.getMon(monRef);
-        switch (type)
-        {
-            case "bide":
-                mon.volatile.bide.tick();
-                break;
-            case "confusion":
-                mon.volatile.confusion.tick();
-                break;
-            case "uproar":
-                mon.volatile.uproar.tick();
-                break;
-        }
+        this.getMon(event.monRef).volatile[event.status].tick();
     }
 
-    /** Indicates that the pokemon's locked move ended in fatigue. */
-    public fatigue(monRef: Side): void
+    /**
+     * Indicates that the pokemon's locked move ended in fatigue.
+     * @virtual
+     */
+    public fatigue(event: Fatigue): void
     {
-        this.getMon(monRef).volatile.lockedMove.reset();
+        this.getMon(event.monRef).volatile.lockedMove.reset();
     }
 
-    /** Sets the pokemon's temporary third type. */
-    public setThirdType(monRef: Side, type: Type): void
+    /**
+     * Sets the pokemon's temporary third type.
+     * @virtual
+     */
+    public setThirdType(event: SetThirdType): void
     {
-        this.getMon(monRef).volatile.addedType = type;
+        this.getMon(event.monRef).volatile.addedType = event.thirdType;
     }
 
-    /** Temporarily changes the pokemon's types. Also resets third type. */
-    public changeType(monRef: Side, types: readonly [Type, Type]): void
+    /**
+     * Temporarily changes the pokemon's types. Also resets third type.
+     * @virtual
+     */
+    public changeType(event: ChangeType): void
     {
-        const mon = this.getMon(monRef);
-        mon.volatile.overrideTraits.types = types;
+        const mon = this.getMon(event.monRef);
+        mon.volatile.overrideTraits.types = event.newTypes;
         mon.volatile.addedType = "???";
     }
 
-    /** Indicates that the pokemon is Mimicking a move. */
-    public mimic(monRef: Side, move: string): void
+    /**
+     * Indicates that the pokemon is Mimicking a move.
+     * @virtual
+     */
+    public mimic(event: Mimic): void
     {
-        this.getMon(monRef).mimic(move);
+        this.getMon(event.monRef).mimic(event.move);
     }
 
-    /** Indicates that the pokemon is Sketching a move. */
-    public sketch(monRef: Side, move: string): void
+    /**
+     * Indicates that the pokemon is Sketching a move.
+     * @virtual
+     */
+    public sketch(event: Sketch): void
     {
-        this.getMon(monRef).sketch(move);
+        this.getMon(event.monRef).sketch(event.move);
     }
 
-    /** Indicates that the pokemon is being trapped by another. */
-    public trap(monRef: Side, by: Side): void
+    /**
+     * Indicates that the pokemon is being trapped by another.
+     * @virtual
+     */
+    public trap(event: Trap): void
     {
-        this.getMon(by).volatile.trap(this.getMon(monRef).volatile);
+        this.getMon(event.by).volatile.trap(this.getMon(event.target).volatile);
     }
 
-    /** Temporarily boosts one of the pokemon's stats by the given amount. */
-    public boost(monRef: Side, stat: BoostName, amount: number): void
+    /**
+     * Temporarily boosts one of the pokemon's stats by the given amount of
+     * stages.
+     * @virtual
+     */
+    public boost(event: Boost): void
     {
-        this.getMon(monRef).volatile.boosts[stat] += amount;
+        this.getMon(event.monRef).volatile.boosts[event.stat] += event.amount;
     }
 
-    /** Temporarily unboosts one of the pokemon's stats by the given amount. */
-    public unboost(monRef: Side, stat: BoostName, amount: number): void
+    /**
+     * Temporarily unboosts one of the pokemon's stats by the given amount of
+     * stages.
+     * @virtual
+     */
+    public unboost(event: Unboost): void
     {
-        this.getMon(monRef).volatile.boosts[stat] -= amount;
+        this.getMon(event.monRef).volatile.boosts[event.stat] -= event.amount;
     }
 
-    /** Clears all temporary stat boosts from the field. */
-    public clearAllBoosts(): void
+    /**
+     * Clears all temporary stat boosts from the field.
+     * @virtual
+     */
+    public clearAllBoosts(event: ClearAllBoosts): void
     {
         const mons = this.getAllActive();
         for (const mon of mons)
         {
-            for (const stat of boostKeys)
-            {
-                mon.volatile.boosts[stat] = 0;
-            }
+            for (const stat of boostKeys) mon.volatile.boosts[stat] = 0;
         }
     }
 
-    /** Clears temporary negative stat boosts from the given pokemon. */
-    public clearNegativeBoosts(monRef: Side): void
+    /**
+     * Clears temporary negative stat boosts from the pokemon.
+     * @virtual
+     */
+    public clearNegativeBoosts(event: ClearNegativeBoosts): void
     {
-        const boosts = this.getMon(monRef).volatile.boosts;
-        for (const stat of boostKeys)
-        {
-            if (boosts[stat] < 0) boosts[stat] = 0;
-        }
+        const boosts = this.getMon(event.monRef).volatile.boosts;
+        for (const stat of boostKeys) if (boosts[stat] < 0) boosts[stat] = 0;
     }
 
-    /** Clears temporary positive stat boosts from the given pokemon. */
-    public clearPositiveBoosts(monRef: Side): void
+    /**
+     * Clears temporary positive stat boosts from the pokemon.
+     * @virtual
+     */
+    public clearPositiveBoosts(event: ClearPositiveBoosts): void
     {
-        const boosts = this.getMon(monRef).volatile.boosts;
-        for (const stat of boostKeys)
-        {
-            if (boosts[stat] > 0) boosts[stat] = 0;
-        }
+        const boosts = this.getMon(event.monRef).volatile.boosts;
+        for (const stat of boostKeys) if (boosts[stat] > 0) boosts[stat] = 0;
     }
 
-    /** Copies temporary stat boosts from `from` to `to`. */
-    public copyBoosts(from: Side, to: Side): void
+    /**
+     * Copies temporary stat boosts from one pokemon to the other.
+     * @virtual
+     */
+    public copyBoosts(event: CopyBoosts): void
     {
-        const fromBoosts = this.getMon(from).volatile.boosts;
-        const toBoosts = this.getMon(to).volatile.boosts;
-        for (const stat of boostKeys) toBoosts[stat] = fromBoosts[stat];
+        const from = this.getMon(event.from).volatile.boosts;
+        const to = this.getMon(event.to).volatile.boosts;
+        for (const stat of boostKeys) to[stat] = from[stat];
     }
 
-    /** Inverts the sign of the pokemon's temporary stat boosts. */
-    public invertBoosts(monRef: Side): void
+    /**
+     * Inverts all of the pokemon's temporary stat boosts.
+     * @virtual
+     */
+    public invertBoosts(event: InvertBoosts): void
     {
-        const boosts = this.getMon(monRef).volatile.boosts;
+        const boosts = this.getMon(event.monRef).volatile.boosts;
         for (const stat of boostKeys) boosts[stat] = -boosts[stat];
     }
 
-    /** Sets the pokemon's temporary stat boost to the given amount */
-    public setBoost(monRef: Side, stat: BoostName, amount: number): void
+    /**
+     * Sets the pokemon's temporary stat boost to a given amount
+     * @virtual
+     */
+    public setBoost(event: SetBoost): void
     {
-        this.getMon(monRef).volatile.boosts[stat] = amount;
+        this.getMon(event.monRef).volatile.boosts[event.stat] = event.amount;
     }
 
-    /** Swaps the given temporary stat boosts of two pokemon. */
-    public swapBoosts(monRef1: Side, monRef2: Side,
-        stats: readonly BoostName[]): void
+    /**
+     * Swaps the given temporary stat boosts of two pokemon.
+     * @virtual
+     */
+    public swapBoosts(event: SwapBoosts): void
     {
-        const v1 = this.getMon(monRef1).volatile.boosts;
-        const v2 = this.getMon(monRef2).volatile.boosts;
-        for (const stat of stats)
+        const v1 = this.getMon(event.monRef1).volatile.boosts;
+        const v2 = this.getMon(event.monRef2).volatile.boosts;
+        for (const stat of event.stats)
         {
             [v1[stat], v2[stat]] = [v2[stat], v1[stat]];
         }
     }
 
-    /** Indicates that the pokemon spent its turn being inactive. */
-    public inactive(monRef: Side, reason: "recharge" | "slp" | "truant"): void
+    /**
+     * Indicates that the pokemon spent its turn being inactive.
+     * @virtual
+     */
+    public inactive(event: Inactive): void
     {
-        const mon = this.getMon(monRef);
-        switch (reason)
+        const mon = this.getMon(event.monRef);
+        switch (event.reason)
         {
             case "truant":
                 mon.volatile.activateTruant();
@@ -404,198 +414,209 @@ export class BattleDriver
                 mon.majorStatus.assert("slp").tick(mon.ability);
                 break;
         }
-    }
 
-    /** Indicates that the pokemon consumed an action this turn. */
-    public consumeAction(monRef: Side): void
-    {
-        const mon = this.getMon(monRef);
+        // consumed an action this turn
         mon.volatile.resetSingleMove();
     }
 
-    /** Afflicts the pokemon with the given major status condition. */
-    public afflictStatus(monRef: Side, status: MajorStatus): void
+    /**
+     * Afflicts the pokemon with a major status condition.
+     * @virtual
+     */
+    public afflictStatus(event: AfflictStatus): void
     {
-        this.getMon(monRef).majorStatus.afflict(status);
+        this.getMon(event.monRef).majorStatus.afflict(event.status);
     }
 
     /** Cures the pokemon of the given major status. */
-    public cureStatus(monRef: Side, status: MajorStatus): void
+    public cureStatus(event: CureStatus): void
     {
-        const mon = this.getMon(monRef);
-        mon.majorStatus.assert(status);
-        if (status === "slp" && mon.majorStatus.turns === 1)
+        const mon = this.getMon(event.monRef);
+        mon.majorStatus.assert(event.status);
+        if (event.status === "slp" && mon.majorStatus.turns === 1)
         {
             // cured in 0 turns, must have early bird ability
+            // TODO: refactor this to be in Pokemon logic
             mon.traits.setAbility("earlybird");
         }
         mon.majorStatus.cure();
     }
 
-    /** Cures all pokemon of the given team of any major status conditions. */
-    public cureTeam(teamRef: Side): void
+    /**
+     * Cures all pokemon of a team of any major status conditions.
+     * @virtual
+     */
+    public cureTeam(event: CureTeam): void
     {
-        this.getTeam(teamRef).cure();
+        this.getTeam(event.teamRef).cure();
     }
 
-    /** Indicates that the pokemon changed its form. */
-    public formChange(monRef: Side, data: DriverSwitchOptions, perm: boolean):
-        void
+    /**
+     * Indicates that the pokemon changed its form.
+     * @virtual
+     */
+    public formChange(event: FormChange): void
     {
-        const mon = this.getMon(monRef);
-        mon.formChange(data.species, perm);
+        const mon = this.getMon(event.monRef);
+        mon.formChange(event.species, event.perm);
 
         // set other details just in case
-        mon.traits.stats.level = data.level;
-        mon.traits.stats.hp.set(data.hpMax);
+        mon.traits.stats.level = event.level;
+        mon.traits.stats.hp.set(event.hpMax);
         // TODO: should gender also be in the traits object?
-        mon.gender = data.gender;
-        mon.hp.set(data.hp, data.hpMax);
+        mon.gender = event.gender;
+        mon.hp.set(event.hp, event.hpMax);
     }
 
     /**
      * Indicates that a pokemon has transformed into its target.
-     * @param sourceRef Pokemon that is transforming.
-     * @param targetRef Pokemon to transform into.
+     * @virtual
      */
-    public transform(sourceRef: Side, targetRef: Side): void
+    public transform(event: Transform): void
     {
-        const source = this.getMon(sourceRef);
-        const target = this.getMon(targetRef);
-        source.transform(target);
+        this.getMon(event.source).transform(this.getMon(event.target));
     }
 
     /**
      * Reveals and infers more details due to Transform. The referenced pokemon
-     * should already have `BattleDriver#transform()` called on it.
+     * should already have been referenced in a recent Transform event.
+     * @virtual
      */
-    public transformPost(monRef: Side, moves: readonly MoveData[],
-        stats: Readonly<Record<StatExceptHP, number>>): void
+    public transformPost(event: TransformPost): void
     {
-        this.getMon(monRef).transformPost(moves, stats);
-    }
-
-    /** Indicates that the pokemon fainted. */
-    public faint(monRef: Side): void
-    {
-        this.getMon(monRef).faint();
+        this.getMon(event.monRef).transformPost(event.moves, event.stats);
     }
 
     /**
-     * Reveals that the pokemon is now holding an item.
-     * @param monRef Pokemon reference.
-     * @param item Item name.
-     * @param gained Whether the item was gained just now or being revealed. If
-     * `"recycle"`, the item was recovered via the Recycle move. Default false.
+     * Indicates that the pokemon fainted.
+     * @virtual
      */
-    public revealItem(monRef: Side, item: string,
-        gained: boolean | "recycle" = false): void
+    public faint(event: Faint): void { this.getMon(event.monRef).faint(); }
+
+    /**
+     * Reveals that the pokemon is now holding an item.
+     * @virtual
+     */
+    public revealItem(event: RevealItem): void
     {
-        this.getMon(monRef).setItem(item, gained);
+        this.getMon(event.monRef).setItem(event.item, event.gained);
     }
 
     /**
      * Indicates that an item was just removed from the pokemon.
-     * @param consumed If the item was consumed (i.e. it can be brought back
-     * using the Recycle move), set this to the item's name, or just true if the
-     * item's name is unknown, or false if the item wasn't consumed.
+     * @virtual
      */
-    public removeItem(monRef: Side, consumed: string | boolean): void
+    public removeItem(event: RemoveItem): void
     {
-        this.getMon(monRef).removeItem(consumed);
+        this.getMon(event.monRef).removeItem(event.consumed);
     }
 
-    /** Indicates that the pokemon used a move. */
-    public useMove(monRef: Side, options: Readonly<DriverMoveOptions>): void
+    /**
+     * Indicates that the pokemon used a move.
+     * @virtual
+     */
+    public useMove(event: UseMove): void
     {
-        const moveOptions: MoveOptions =
-        {
-            ...options,
-            targets: options.targets.map(targetRef => this.getMon(targetRef))
-        };
-
-        this.getMon(monRef).useMove(moveOptions);
+        this.getMon(event.monRef).useMove(
+            // extract move options from the event
+            (({moveId, targets, unsuccessful, reveal}) =>
+            ({
+                moveId, unsuccessful, reveal,
+                // transform reference names into object references
+                targets: targets.map(targetRef => this.getMon(targetRef))
+            }))(event));
     }
 
-    /** Indicates that the pokemon is in the first turn of a two-turn move. */
-    public prepareMove(monRef: Side, move: TwoTurnMove): void
+    /**
+     * Indicates that the pokemon starting to prepare a two-turn move.
+     * @virtual
+     */
+    public prepareMove(event: PrepareMove): void
     {
-        this.getMon(monRef).volatile.twoTurn.start(move);
+        this.getMon(event.monRef).volatile.twoTurn.start(event.move);
     }
 
-    /** Reveals that the pokemon knows the given move. */
-    public revealMove(monRef: Side, move: string): void
+    /**
+     * Reveals that the pokemon knows a move.
+     * @virtual
+     */
+    public revealMove(event: RevealMove): void
     {
-        this.getMon(monRef).moveset.reveal(move);
+        this.getMon(event.monRef).moveset.reveal(event.move);
     }
 
-    /** Indicates that the pokemon must recharge from the previous action. */
-    public mustRecharge(monRef: Side): void
+    /**
+     * Indicates that the pokemon must recharge from the previous action.
+     * @virtual
+     */
+    public mustRecharge(event: MustRecharge): void
     {
         // TODO: imply this in #useMove()
-        this.getMon(monRef).volatile.mustRecharge = true;
+        this.getMon(event.monRef).volatile.mustRecharge = true;
     }
 
-    /** Sets a single-move status for the pokemon. */
-    public setSingleMoveStatus(monRef: Side, status: SingleMoveStatus): void
+    /**
+     * Sets a single-move status for the pokemon.
+     * @virtual
+     */
+    public setSingleMoveStatus(event: SetSingleMoveStatus): void
     {
-        this.getMon(monRef).volatile[status] = true;
+        this.getMon(event.monRef).volatile[event.status] = true;
     }
 
-    /** Sets a single-turn status for the pokemon. */
-    public setSingleTurnStatus(monRef: Side, status: SingleTurnStatus): void
+    /**
+     * Sets a single-turn status for the pokemon.
+     * @virtual
+     */
+    public setSingleTurnStatus(event: SetSingleTurnStatus): void
     {
-        const v = this.getMon(monRef).volatile;
-        if (status === "stall") v.stall(true);
-        else v[status] = true;
+        const v = this.getMon(event.monRef).volatile;
+        if (event.status === "stall") v.stall(true);
+        else v[event.status] = true;
     }
 
     /**
      * Indicates that a pokemon took damage and its HP changed.
-     * @param monRef Pokemon reference.
-     * @param newHP HP/max pair.
-     * @param tox Whether the damage was due to poison or toxic. This is so the
-     * toxic counter can be updated properly. Default false.
+     * @virtual
      */
-    public takeDamage(monRef: Side, newHP: [number, number], tox = false): void
+    public takeDamage(event: TakeDamage): void
     {
-        const mon = this.getMon(monRef);
-        mon.hp.set(newHP[0], newHP[1]);
-        // TODO: handle this in postTurn() because sometimes tox damage isn't
+        const mon = this.getMon(event.monRef);
+        mon.hp.set(event.newHP[0], event.newHP[1]);
+        // TODO: move tick call to postTurn() because sometimes tox damage isn't
         //  taken but still builds up
-        if (tox && mon.majorStatus.current === "tox") mon.majorStatus.tick();
+        if (event.tox && mon.majorStatus.current === "tox")
+        {
+            mon.majorStatus.tick();
+        }
     }
 
     /**
      * Activates a team status condition.
-     * @param teamRef Team reference.
-     * @param condition Name of the condition.
-     * @param start Whether to start (`true`) or end (`false`) the condition.
-     * @param monRef Optional pokemon reference to the one who caused the
-     * condition to start/end.
+     * @virtual
      */
-    public activateSideCondition(teamRef: Side, condition: SideConditionType,
-        start: boolean, monRef?: Side): void
+    public activateSideCondition(event: ActivateSideCondition): void
     {
-        const ts = this.getTeam(teamRef).status;
-        switch (condition)
+        const ts = this.getTeam(event.teamRef).status;
+        switch (event.condition)
         {
             case "lightScreen":
             case "reflect":
-                if (start)
+                if (event.start)
                 {
-                    ts[condition].start(monRef ? this.getMon(monRef) : null);
+                    ts[event.condition].start(
+                        event.monRef ? this.getMon(event.monRef) : null);
                 }
-                else ts[condition].reset();
+                else ts[event.condition].reset();
                 break;
             case "spikes":
             case "stealthRock":
             case "toxicSpikes":
-                if (start) ++ts[condition];
-                else ts[condition] = 0;
+                if (event.start) ++ts[event.condition];
+                else ts[event.condition] = 0;
                 break;
             case "tailwind":
-                if (start) ts.tailwind.start();
+                if (event.start) ts.tailwind.start();
                 else ts.tailwind.end();
                 break;
         }
@@ -603,82 +624,82 @@ export class BattleDriver
 
     /**
      * Activates a field status condition.
-     * @param condition Name of the condition.
-     * @param start Whether to start (`true`) or end (`false`) the condition.
+     * @virtual
      */
-    public activateFieldCondition(condition: FieldConditionType,
-        start: boolean): void
+    public activateFieldCondition(event: ActivateFieldCondition): void
     {
-        this._state.status[condition][start ? "start" : "end"]();
+        this._state.status[event.condition][event.start ? "start" : "end"]();
     }
 
     /**
      * Indicates that a pokemon has switched in.
-     * @param monRef Pokemon slot reference.
-     * @param data Data for the newly-revealed pokemon.
+     * @virtual
      */
-    public switchIn(monRef: Side, data: DriverSwitchOptions): void
+    public switchIn(event: SwitchIn): void
     {
-        const team = this.getTeam(monRef);
+        const team = this.getTeam(event.monRef);
 
         // consume pending self-switch/copyvolatile flags
         const options: SwitchInOptions =
             {copyVolatile: team.status.selfSwitch === "copyvolatile"};
         team.status.selfSwitch = false;
 
-        team.switchIn(data.species, data.level, data.gender, data.hp,
-            data.hpMax, options);
+        team.switchIn(event.species, event.level, event.gender, event.hp,
+            event.hpMax, options);
     }
 
     /**
      * Indicates that the pokemon is being trapped by an unknown ability.
-     * @param monRef Pokemon reference.
-     * @param by Reference to the pokemon with the trapping ability.
+     * @virtual
      */
-    public rejectSwitchTrapped(monRef: Side, by: Side): void
+    public rejectSwitchTrapped(event: RejectSwitchTrapped): void
     {
-        this.getMon(monRef).trapped(this.getMon(by));
+        this.getMon(event.monRef).trapped(this.getMon(event.by));
     }
 
-    /** Clears self-switch flags for both teams. */
-    public clearSelfSwitch(): void
+    /**
+     * Clears self-switch flags for both teams.
+     * @virtual
+     */
+    public clearSelfSwitch(event: ClearSelfSwitch): void
     {
         this._state.teams.us.status.selfSwitch = false;
         this._state.teams.them.status.selfSwitch = false;
     }
 
-    /** Resets the weather back to none. */
-    public resetWeather(): void
-    {
-        this._state.status.weather.reset();
-    }
+    /**
+     * Resets the weather back to none.
+     * @virtual
+     */
+    public resetWeather(): void { this._state.status.weather.reset(); }
 
     /**
      * Sets the current weather.
-     * @param monRef Who caused the weather.
-     * @param type Type of weather.
-     * @param cause What action caused the weather.
+     * @virtual
      */
-    public setWeather(monRef: Side, type: WeatherType,
-        cause: "move" | "ability"): void
+    public setWeather(event: SetWeather): void
     {
-        this._state.status.weather.start(this.getMon(monRef), type,
+        this._state.status.weather.start(this.getMon(event.monRef),
             // gen<=4: ability-caused weather is infinite
-            /*infinite*/cause === "ability");
+            event.weatherType, /*infinite*/event.cause === "ability");
     }
 
-    /** Indicates that the given weather condition is still going. */
-    public tickWeather(type: WeatherType): void
+    /**
+     * Indicates that the current weather condition is still active.
+     * @virtual
+     */
+    public tickWeather(event: TickWeather): void
     {
         const weather = this._state.status.weather;
-        if (weather.type === type) weather.tick();
+        if (weather.type === event.weatherType) weather.tick();
         else
         {
             throw new Error(`Weather is '${weather.type}' but upkept ` +
-                `weather is '${type}'`);
+                `weather is '${event.weatherType}'`);
         }
     }
 
+    // TODO: make this not the case
     // istanbul ignore next: unstable, hard to verify
     /** Stringifies the BattleState. */
     public getStateString(): string

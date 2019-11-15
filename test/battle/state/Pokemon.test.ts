@@ -233,7 +233,7 @@ describe("Pokemon", function()
             const item = mon.item;
             item.narrow("focussash");
 
-            mon.removeItem();
+            mon.removeItem(/*consumed*/false);
             // old item reference stays the same
             expect(item.definiteValue).to.not.be.null;
             expect(item.definiteValue!.name).to.equal("focussash");
@@ -250,7 +250,7 @@ describe("Pokemon", function()
                 const mon = new Pokemon("Magikarp", true);
                 mon.switchInto();
 
-                mon.removeItem();
+                mon.removeItem(/*consumed*/false);
                 expect(mon.volatile.unburden).to.be.true;
             });
         });
@@ -264,7 +264,7 @@ describe("Pokemon", function()
                 mon.setItem("leftovers");
                 const item = mon.item;
 
-                mon.removeItem();
+                mon.removeItem(/*consumed*/false);
                 // current item reference is gone
                 expect(mon.item.definiteValue).to.not.be.null;
                 expect(mon.item.definiteValue!.name).to.equal("none");

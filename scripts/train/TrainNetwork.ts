@@ -40,10 +40,7 @@ export class TrainNetwork extends Network
     protected async getPrediction(stateData: number[]): Promise<number[]>
     {
         // store buffer of state data
-        if (this.updateLast)
-        {
-            this.lastStateData = this.stateData;
-        }
+        if (this.updateLast) this.lastStateData = this.stateData;
         // consume updateLast flag
         else this.updateLast = true;
         this.stateData = stateData;

@@ -1,6 +1,6 @@
 /** @file Interfaces and helper functions for handling BattleEvents. */
 import { BoostName, MajorStatus, WeatherType } from "../../battle/dex/dex-util";
-import { DriverSwitchOptions } from "../../battle/driver/BattleDriver";
+import { DriverSwitchOptions } from "../../battle/driver/DriverEvent";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
 /** The types of BattleEvents that can exist. Used as event prefixes. */

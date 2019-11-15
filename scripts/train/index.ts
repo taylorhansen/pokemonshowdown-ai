@@ -151,7 +151,6 @@ async function play(options: GameOptions): Promise<GameResult>
         // only need one player to track these
         if (id === "p1")
         {
-
             battle.eventHandler.onTurn(function(num: number)
             {
                 if (num >= options.maxTurns) done = true;

@@ -2,8 +2,7 @@
  * @file Interfaces and helper functions for dealing with the arguments of a
  * MessageHandler.
  */
-import { StatExceptHP } from "../../battle/dex/dex-util";
-import { DriverInitPokemon } from "../../battle/driver/BattleDriver";
+import { DriverInitPokemon } from "../../battle/driver/DriverEvent";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus, RoomType } from
     "../helpers";
 import { AnyBattleEvent } from "./BattleEvent";
@@ -170,14 +169,6 @@ export interface RequestPokemon extends DriverInitPokemon, PokemonID,
      * are better at that.
      */
     readonly active?: boolean;
-    /** Pokemon's stats. */
-    readonly stats: Readonly<Record<StatExceptHP, number>>;
-    /** List of move id names. */
-    readonly moves: readonly string[];
-    /** Base ability id name. */
-    readonly baseAbility: string;
-    /** Item id name. */
-    readonly item: string;
     /** Pokeball id name. */
     readonly pokeball: string;
 }

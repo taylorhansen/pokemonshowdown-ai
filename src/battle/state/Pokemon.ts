@@ -182,8 +182,8 @@ export class Pokemon implements ReadonlyPokemon
     /**
      * Indicates that an item has been revealed or gained.
      * @param item Item id name.
-     * @param gained Whether the item was just gained. If false or omitted, then
-     * it's just now being revealed.
+     * @param gained Whether the item was gained just now or being revealed. If
+     * `"recycle"`, the item was recovered via the Recycle move. Default false.
      */
     public setItem(item: string, gained: boolean | "recycle" = false): void
     {
@@ -230,11 +230,11 @@ export class Pokemon implements ReadonlyPokemon
     }
     /**
      * Indicates that an item was just removed from this Pokemon.
-     * @param consumed If the item was consumed (can be brought back using
-     * Recycle), set this to the item's name, or true if the item's name is
-     * unknown.
+     * @param consumed False if the item was removed or transferred. If the item
+     * was consumed (i.e., it can be brought back using the Recycle move), this
+     * is set to the item's name, or just true if the item's name is unknown.
      */
-    public removeItem(consumed: boolean | string = false): void
+    public removeItem(consumed: string | boolean): void
     {
         if (consumed)
         {

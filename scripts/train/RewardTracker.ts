@@ -4,10 +4,7 @@ import { Side } from "../../src/battle/state/Side";
 export class RewardTracker
 {
     /** Accumulated reward so far. */
-    public get value(): number
-    {
-        return this._reward;
-    }
+    public get value(): number { return this._reward; }
     private _reward = 0;
 
     /**

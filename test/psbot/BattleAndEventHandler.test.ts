@@ -18,7 +18,7 @@ import { BattleInitMessage, RequestMessage } from
 import * as testArgs from "../helpers/battleTestArgs";
 import { MockPSBattle } from "./MockPSBattle";
 
-describe("Battle and EventProcessor", function()
+describe("PSBattle and PSEventHandler", function()
 {
     let responses: Choice[];
     let battle: MockPSBattle;
@@ -2490,7 +2490,7 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                const mon = battle.eventHandler.getMon(us1.owner);
+                const mon = battle.getMon(us1.owner);
                 expect(mon.ability).to.equal("drizzle");
                 expect(weather.type).to.equal("RainDance");
                 // no need to track source item
@@ -2515,7 +2515,7 @@ describe("Battle and EventProcessor", function()
                         }
                     ]
                 });
-                const mon = battle.eventHandler.getMon(them1.owner);
+                const mon = battle.getMon(them1.owner);
                 expect(weather.type).to.equal("SunnyDay");
                 // don't know opponent's item, so source reference is stored
                 expect(weather.source).to.equal(mon.item);
@@ -2525,7 +2525,7 @@ describe("Battle and EventProcessor", function()
 
             it("Should upkeep weather", async function()
             {
-                const mon = battle.eventHandler.getMon(us1.owner);
+                const mon = battle.getMon(us1.owner);
                 weather.start(mon, "Hail");
                 expect(weather.turns).to.equal(0);
                 await battle.progress(

@@ -1,6 +1,10 @@
 import { Choice } from "../../src/battle/agent/Choice";
 import { BattleState } from "../../src/battle/state/BattleState";
+import { Pokemon } from "../../src/battle/state/Pokemon";
+import { Side } from "../../src/battle/state/Side";
+import { Team } from "../../src/battle/state/Team";
 import { Logger } from "../../src/Logger";
+import { isPlayerID, PlayerID } from "../../src/psbot/helpers";
 import { RequestMessage } from "../../src/psbot/parser/Message";
 import { PSBattle } from "../../src/psbot/PSBattle";
 import { Sender } from "../../src/psbot/PSBot";
@@ -33,4 +37,21 @@ export class MockPSBattle extends PSBattle
         super(username, new MockBattleAgent(), sender, Logger.null,
             MockBattleDriver, MockPSEventHandler);
     }
+
+    /** Gets the active Pokemon. */
+    public getMon(team: PlayerID | Side): Pokemon
+    {
+        if (isPlayerID(team)) team = this.getSide(team);
+        return this.driver.getMon(team);
+    }
+
+    /** Gets the referenced Team. */
+    public getTeam(team: PlayerID | Side): Team
+    {
+        if (isPlayerID(team)) team = this.getSide(team);
+        return this.driver.getTeam(team);
+    }
+
+    /** Gets the player's Side. */
+    public getSide(id: PlayerID): Side { return this.eventHandler.getSide(id); }
 }
