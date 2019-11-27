@@ -507,6 +507,13 @@ describe("Pokemon", function()
 
             describe("lockedmove", function()
             {
+                it("Should not initially be active", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
+                    expect(mon.volatile.lockedMove.isActive).to.be.false;
+                });
+
                 it("Should lock move", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
