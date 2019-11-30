@@ -40,7 +40,7 @@ export interface ReadonlyVolatileStatus
     // not passed when copying
 
     /** Attract move status. */
-    readonly attracted: boolean;
+    readonly attract: boolean;
     /** Bide move status. */
     readonly bide: ReadonlyTempStatus;
     /** Charge move status. */
@@ -56,7 +56,7 @@ export interface ReadonlyVolatileStatus
     /** Grudge move status. */
     readonly grudge: boolean;
     /** Foresight/Miracle Eye move status. */
-    readonly identified: "foresight" | "miracleeye" | null;
+    readonly identified: "foresight" | "miracleEye" | null;
     /**
      * Index of the last used move, or -1 if none yet. Resets at the beginning
      * of each turn, so this field can be used to check if a pokemon has not
@@ -171,7 +171,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     // not passed when copying
 
     /** @override */
-    public attracted!: boolean;
+    public attract!: boolean;
 
     /** @override */
     public readonly bide = new TempStatus("bide", 1);
@@ -202,7 +202,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public grudge!: boolean;
 
     /** @override */
-    public identified!: "foresight" | "miracleeye" | null;
+    public identified!: "foresight" | "miracleEye" | null;
 
     /** @override */
     public lastUsed!: number;
@@ -325,7 +325,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** Clears statuses that can't be Baton Passed. */
     public clearUnpassable(): void
     {
-        this.attracted = false;
+        this.attract = false;
         this.bide.end();
         this.charge.end();
         this.defenseCurl = false;
@@ -437,7 +437,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             // TODO: be more specific with trapping info
             this._trapped ? ["trapped"] : [],
             this._trapping ? ["trapping"] : [],
-            this.attracted ? ["attracted"] : [],
+            this.attract ? ["attracted"] : [],
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
             this.defenseCurl ? ["defense curl"] : [],

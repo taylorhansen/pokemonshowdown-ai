@@ -305,7 +305,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const trapping = status.trapping ? 1 : 0;
 
     // non-passable
-    const attracted = status.attracted ? 1 : 0;
+    const attract = status.attract ? 1 : 0;
     const bide = encodeTempStatus(status.bide);
     const charge = encodeTempStatus(status.charge);
     const defenseCurl = status.defenseCurl ? 1 : 0;
@@ -340,7 +340,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
         aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, gastroAcid,
         ingrain, leechSeed, ...magnetRise, substitute, trapped, trapping,
 
-        attracted, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
+        attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
         grudge, ...identified, ...lastUsed, ...lockedMove, minimize,
         mustRecharge, ...overrideTraits, ...rollout, roost, ...slowStart,
         stallFailRate, ...taunt, torment, transformed, ...twoTurn, unburden,

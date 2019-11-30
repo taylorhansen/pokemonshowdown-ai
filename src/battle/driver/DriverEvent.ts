@@ -166,11 +166,14 @@ export interface ActivateStatusEffect extends
     readonly start: boolean;
 }
 
-/** Typing for `ActivateStatusEffect#status`. */
-export type StatusEffectType = "aquaRing" | "attract" | "bide" | "confusion" |
-    "charge" | "encore" | "focusEnergy" | "foresight" | "ingrain" |
+/**
+ * Typing for `ActivateStatusEffect#status`. This includes all
+ * UpdatableStatusEffectTypes.
+ */
+export type StatusEffectType = UpdatableStatusEffectType | "aquaRing" |
+    "attract" | "charge" | "encore" | "focusEnergy" | "foresight" | "ingrain" |
     "leechSeed" | "magnetRise" | "miracleEye" | "embargo" | "substitute" |
-    "slowStart" | "taunt" | "torment" | "uproar";
+    "slowStart" | "taunt" | "torment";
 
 /** Temporarily disables the pokemon's move. */
 export interface DisableMove extends DriverEventBase<"disableMove">
@@ -214,7 +217,7 @@ export interface UpdateStatusEffect extends
     readonly status: UpdatableStatusEffectType;
 }
 
-/** Typing for `UpdateStatusEffect#status`. */
+/** Typing for `UpdateStatusEffect#status`. These are also StatusEffectTypes. */
 export type UpdatableStatusEffectType = "confusion" | "bide" | "uproar";
 
 /** Indicates that the pokemon's locked move ended due to fatigue. */

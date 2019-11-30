@@ -838,7 +838,7 @@ describe("PSBattle and PSEventHandler", function()
             }
 
             testBoolean("Aqua Ring", "Aqua Ring", v => v.aquaRing, ["-start"]);
-            testBoolean("Attract", "Attract", v => v.attracted);
+            testBoolean("Attract", "Attract", v => v.attract);
             testBoolean("Bide", "Bide", v => v.bide.isActive);
             testBoolean("Embargo", "Embargo", v => v.embargo.isActive);
             testBoolean("Encore", "Encore", v => v.encore.isActive);
@@ -852,7 +852,7 @@ describe("PSBattle and PSEventHandler", function()
             testBoolean("Magnet Rise", "Magnet Rise",
                 v => v.magnetRise.isActive);
             testBoolean("Miracle Eye", "Miracle Eye",
-                v => v.identified === "miracleeye", ["-start"]);
+                v => v.identified === "miracleEye", ["-start"]);
             testBoolean("Substitute", "Substitute", v => v.substitute);
             testBoolean("Slow Start", "Slow Start", v => v.slowStart.isActive);
             testBoolean("Taunt", "move: Taunt", v => v.taunt.isActive);

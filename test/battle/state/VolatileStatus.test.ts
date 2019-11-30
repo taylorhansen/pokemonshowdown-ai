@@ -27,7 +27,7 @@ describe("VolatileStatus", function()
         volatile.trap(new VolatileStatus());
         (new VolatileStatus()).trap(volatile);
 
-        volatile.attracted = true;
+        volatile.attract = true;
         volatile.bide.start();
         volatile.charge.start();
         volatile.defenseCurl = true;
@@ -77,7 +77,7 @@ describe("VolatileStatus", function()
             expect(volatile.trapped).to.be.null;
             expect(volatile.trapping).to.be.null;
 
-            expect(volatile.attracted).to.be.false;
+            expect(volatile.attract).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.defenseCurl).to.be.false;
@@ -141,7 +141,7 @@ describe("VolatileStatus", function()
             expect(volatile.trapping).to.not.be.null;
 
             // not passed
-            expect(volatile.attracted).to.be.false;
+            expect(volatile.attract).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.defenseCurl).to.be.false;

@@ -41,6 +41,8 @@ export class BattleDriver implements DriverEventHandler
         (this[event.type] as (event: DriverEvent<T>) => void)(event);
     }
 
+    // TODO: rearrange methods based on relevance to each other
+
     /**
      * Handles an InitTeam event.
      * @virtual
@@ -108,6 +110,8 @@ export class BattleDriver implements DriverEventHandler
     public activateAbility(event: ActivateAbility): void
     {
         const mon = this.getMon(event.monRef);
+        // TODO: move trace logic to outside - these events should reveal one
+        //  ability at a time
         if (event.traced)
         {
             // infer trace user's base ability
@@ -142,61 +146,30 @@ export class BattleDriver implements DriverEventHandler
         switch (event.status)
         {
             case "aquaRing":
-                mon.volatile.aquaRing = event.start;
-                break;
             case "attract":
-                mon.volatile.attracted = event.start;
+            case "focusEnergy":
+            case "ingrain":
+            case "leechSeed":
+            case "substitute":
+            case "torment":
+                mon.volatile[event.status] = event.start;
                 break;
             case "bide":
-                mon.volatile.bide[event.start ? "start" : "end"]();
-                break;
             case "confusion":
-                mon.volatile.confusion[event.start ? "start" : "end"]();
-                break;
             case "charge":
-                mon.volatile.charge[event.start ? "start" : "end"]();
-                break;
             case "encore":
-                mon.volatile.encore[event.start ? "start" : "end"]();
-                break;
-            case "focusEnergy":
-                mon.volatile.focusEnergy = event.start;
+            case "magnetRise":
+            case "embargo":
+            case "slowStart":
+            case "taunt":
+            case "uproar":
+                mon.volatile[event.status][event.start ? "start" : "end"]();
                 break;
             case "foresight":
-                mon.volatile.identified = event.start ? "foresight" : null;
-                break;
-            case "ingrain":
-                mon.volatile.ingrain = event.start;
-                break;
-            case "leechSeed":
-                mon.volatile.leechSeed = event. start;
-                break;
-            case "magnetRise":
-                mon.volatile.magnetRise[event.start ? "start" : "end"]();
-                break;
             case "miracleEye":
-                mon.volatile.identified = event.start ? "miracleeye" : null;
-                break;
-            case "embargo":
-                mon.volatile.embargo[event.start ? "start" : "end"]();
-                break;
-            case "substitute":
-                mon.volatile.substitute = event.start;
-                break;
-            case "slowStart":
-                mon.volatile.slowStart[event.start ? "start" : "end"]();
-                break;
-            case "taunt":
-                mon.volatile.taunt[event.start ? "start" : "end"]();
-                break;
-            case "torment":
-                mon.volatile.torment = event.start;
-                break;
-            case "uproar":
-                mon.volatile.uproar[event.start ? "start" : "end"]();
+                mon.volatile.identified = event.start ? event.status : null;
                 break;
             default:
-                // istanbul ignore else: not useful to test
                 throw new Error(`Invalid status effect '${event.status}'`);
         }
     }
