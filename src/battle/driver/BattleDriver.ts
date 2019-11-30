@@ -10,10 +10,10 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     DriverEventType, Faint, Fatigue, FormChange, GastroAcid, Inactive,
     InitOtherTeamSize, InitTeam, InvertBoosts, Mimic, MustRecharge, PostTurn,
     PrepareMove, PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem,
-    RevealItem, RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
-    SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage,
-    TickWeather, Transform, TransformPost, Trap, Unboost, UpdateStatusEffect,
-    UseMove } from "./DriverEvent";
+    ResetWeather, RevealItem, RevealMove, SetBoost, SetSingleMoveStatus,
+    SetSingleTurnStatus, SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn,
+    TakeDamage, TickWeather, Transform, TransformPost, Trap, Unboost,
+    UpdateStatusEffect, UseMove } from "./DriverEvent";
 
 /**
  * Ensures that the BattleDriver implements handlers for each type of
@@ -671,7 +671,10 @@ export class BattleDriver implements DriverEventHandler
      * Resets the weather back to none.
      * @virtual
      */
-    public resetWeather(): void { this._state.status.weather.reset(); }
+    public resetWeather(event: ResetWeather): void
+    {
+        this._state.status.weather.reset();
+    }
 
     /**
      * Sets the current weather.
