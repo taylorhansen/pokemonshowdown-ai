@@ -281,6 +281,7 @@ export class BattleDriver implements DriverEventHandler
         this.getMon(event.monRef).volatile.boosts[event.stat] += event.amount;
     }
 
+    // TODO: doesn't need to exist since Boost supports negative numbers
     /**
      * Temporarily unboosts one of the pokemon's stats by the given amount of
      * stages.
