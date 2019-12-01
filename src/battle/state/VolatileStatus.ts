@@ -33,9 +33,9 @@ export interface ReadonlyVolatileStatus
     /** Substitute move status. */
     readonly substitute: boolean;
     /** Who is trapping us. */
-    readonly trapped: VolatileStatus | null;
+    readonly trapped: ReadonlyVolatileStatus | null;
     /** Who we're trapping. */
-    readonly trapping: VolatileStatus | null;
+    readonly trapping: ReadonlyVolatileStatus | null;
 
     // not passed when copying
 
