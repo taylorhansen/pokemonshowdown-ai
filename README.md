@@ -17,12 +17,15 @@ Before running the main client, create a `src/config.ts` file using [`src/config
 # download the repository
 git clone --recursive https://github.com/taylorhansen/pokemonshowdown-ai
 cd pokemonshowdown-ai
+npm install
 
 # compile everything
-npm install
 npm run build
 
-# connect to the server and accept challenges
+# train the neural network
+npm run train
+
+# connect to the server start accepting challenges
 npm start
 
 # lint and run tests
