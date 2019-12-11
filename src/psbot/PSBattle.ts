@@ -12,14 +12,14 @@ import { RoomHandler } from "./RoomHandler";
 /** Translates server messages to PSEventHandler calls. */
 export class PSBattle implements RoomHandler
 {
+    // TODO: move to battle/ and make it sim-agnostic? make it so less code has
+    //  to be written for multiple sims
     /** Battle state driver. */
     protected readonly driver: BattleDriver;
     /** Manages the BattleState by processing events. */
     protected readonly eventHandler: PSEventHandler;
-    // TODO: remove these Omits, for now they're only here so that
-    //  BattleAndEventHandler.test.ts errors don't have to be combed through
     /** Last |request| message that was processed. */
-    protected lastRequest?: Omit<RequestMessage, "type">;
+    protected lastRequest?: RequestMessage;
     /** Available choices from the last decision. */
     protected lastChoices: Choice[] = [];
 
@@ -54,7 +54,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public init(msg: Omit<BattleInitMessage, "type">): Promise<void>
+    public init(msg: BattleInitMessage): Promise<void>
     {
         this.logger.debug(`battleinit:\n${
             inspect(msg, {colors: false, depth: null})}`);
@@ -66,7 +66,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async progress(msg: Omit<BattleProgressMessage, "type">):
+    public async progress(msg: BattleProgressMessage):
         Promise<void>
     {
         this.logger.debug(`battleprogress:\n${
@@ -87,7 +87,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async request(msg: Omit<RequestMessage, "type">): Promise<void>
+    public async request(msg: RequestMessage): Promise<void>
     {
         this.logger.debug(`request:\n${
             inspect(msg, {colors: false, depth: null})}`);
@@ -123,7 +123,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async error(msg: Omit<ErrorMessage, "type">): Promise<void>
+    public async error(msg: ErrorMessage): Promise<void>
     {
         if (msg.reason.startsWith("[Unavailable choice]"))
         {

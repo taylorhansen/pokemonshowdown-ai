@@ -374,7 +374,6 @@ export interface SideEndEvent extends BattleEventBase<"-sideend">
 /** Event where a side condition has started. */
 export interface SideStartEvent extends BattleEventBase<"-sidestart">
 {
-    readonly type: "-sidestart";
     /** ID of the player whose side is affected. */
     readonly id: PlayerID;
     /** Name of the side condition. */
@@ -384,7 +383,6 @@ export interface SideStartEvent extends BattleEventBase<"-sidestart">
 /** Event where a move status is applied until another move is attempted. */
 export interface SingleMoveEvent extends BattleEventBase<"-singlemove">
 {
-    readonly type: "-singlemove";
     /** ID of the pokemon getting the status. */
     readonly id: PokemonID;
     /** Name of the move status. */

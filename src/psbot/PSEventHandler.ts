@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "util";
-import { dex, isFutureMove } from "../battle/dex/dex";
+import { dex, isFutureMove, TwoTurnMove } from "../battle/dex/dex";
 import { itemRemovalMoves, itemTransferMoves, nonSelfMoveCallers,
     selfMoveCallers, targetMoveCallers, Type } from "../battle/dex/dex-util";
 import { AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize, SingleMoveStatus,
@@ -32,13 +32,13 @@ export class PSEventHandler
     /** Logger object. */
     protected readonly logger: Logger;
     /** Last |request| message that was processed. */
-    protected lastRequest?: Omit<RequestMessage, "type">;
+    protected lastRequest?: RequestMessage;
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
      */
     private sides?: {readonly [ID in PlayerID]: Side};
-    /** Whether a turn message was encountered in the last handleEvents call. */
+    /** Whether a TurnEvent was encountered in the last handleEvents call. */
     private newTurn = false;
 
     /**
@@ -50,11 +50,67 @@ export class PSEventHandler
     {
         this.username = username;
         this.logger = logger;
+    }
 
+    /** Processes a `request` message. */
+    public handleRequest(args: RequestMessage): AnyDriverEvent[]
+    {
+        this.lastRequest = args;
+
+        // a request message is given at the start of the battle, before any
+        //  0ther, which is all we need to initialize our side of the battle
+        //  state before handling battleinit messages
+        if (this._battling) return [];
+
+        // first time: initialize client team data
+        // copy pokemon array so we can modify it
+        const team: DriverInitPokemon[] = [...args.side.pokemon];
+
+        // preprocess move names, which are encoded with additional features
+        for (let i = 0; i < team.length; ++i)
+        {
+            // copy pokemon obj and moves so we can modify them
+            const mon = {...team[i]};
+            team[i] = mon;
+
+            const moves = [...team[i].moves];
+            mon.moves = moves;
+
+            for (let j = 0; j < moves.length; ++j)
+            {
+                if (moves[j].startsWith("hiddenpower") &&
+                    moves[j].length > "hiddenpower".length)
+                {
+                    // set hidden power type
+                    // format: hiddenpower<type><base power if gen2-5>
+                    mon.hpType = moves[j].substr("hiddenpower".length)
+                        .replace(/\d+/, "") as Type;
+                    moves[j] = "hiddenpower";
+                }
+                else if (moves[j].startsWith("return") &&
+                    moves[j].length > "return".length)
+                {
+                    // calculate happiness value from base power
+                    mon.happiness = 2.5 *
+                        parseInt(moves[j].substr("return".length), 10);
+                    moves[j] = "return";
+                }
+                else if (moves[j].startsWith("frustration") &&
+                    moves[j].length > "frustration".length)
+                {
+                    // calculate happiness value from base power
+                    mon.happiness = 255 - 2.5 *
+                            parseInt(moves[j].substr("frustration".length), 10);
+                    moves[j] = "frustration";
+                }
+            }
+        }
+
+        return [{type: "initTeam", team}];
     }
 
     /** Initializes the battle conditions. */
-    public initBattle(args: Omit<BattleInitMessage, "type">): AnyDriverEvent[]
+    public initBattle(args: BattleInitMessage): AnyDriverEvent[]
     {
         this._battling = true;
 
@@ -102,6 +158,7 @@ export class PSEventHandler
 
         for (let i = 0; i < events.length; ++i)
         {
+            // TODO: suffixes should be handled directly after each event
             result.push(...this.handleEvent(events[i], events, i));
             result.push(...this.handleSuffixes(events[i]));
         }
@@ -181,16 +238,16 @@ export class PSEventHandler
         const monRef = this.getSide(event.id.owner);
         const ability = toIdName(event.ability);
 
-        let traced: Side | undefined;
         if (event.from === "ability: Trace" && event.of)
         {
             // trace ability: event.ability contains the Traced ability,
             //  event.of contains pokemon that was traced, event.id contains
             //  the pokemon using its Trace ability
-            traced = this.getSide(event.of.owner);
+            const traced = this.getSide(event.of.owner);
+            return [{type: "activateAbility", monRef, ability, traced}];
         }
 
-        return [{type: "activateAbility", monRef, ability, traced}];
+        return [{type: "activateAbility", monRef, ability}];
     }
 
     /** @virtual */
@@ -236,6 +293,7 @@ export class PSEventHandler
                 // make sure length is 2
                 if (parsedTypes.length > 2)
                 {
+                    // TODO: throw
                     this.logger.error("Too many types given " +
                         `(${parsedTypes.join(", ")})`);
                     parsedTypes.splice(2);
@@ -622,12 +680,12 @@ export class PSEventHandler
 
         // indicate that the pokemon has used this move
         result.push(
-            {
-                type: "useMove", monRef, moveId, targets,
-                // only add the keys if not undefined
-                ...(unsuccessful !== undefined && {unsuccessful}),
-                ...(reveal !== undefined && {reveal})
-            });
+        {
+            type: "useMove", monRef, moveId, targets,
+            // only add the keys if not undefined
+            ...(unsuccessful !== undefined && {unsuccessful}),
+            ...(reveal !== undefined && {reveal})
+        });
         return result;
     }
 
@@ -643,7 +701,7 @@ export class PSEventHandler
         events: readonly AnyBattleEvent[], i: number): AnyDriverEvent[]
     {
         const monRef = this.getSide(event.id.owner);
-        const move = toIdName(event.moveName) as any;
+        const move = toIdName(event.moveName) as TwoTurnMove;
         return [{type: "prepareMove", monRef, move}];
     }
 
@@ -682,15 +740,13 @@ export class PSEventHandler
                     const lastEvent = events[i - 1];
                     if (!lastEvent)
                     {
-                        this.logger.error(`Don't know how ${condition} was ` +
+                        throw new Error(`Don't know how ${condition} was ` +
                             "caused since this is the first event");
-                        break;
                     }
                     if (lastEvent.type !== "move")
                     {
-                        this.logger.error(`Don't know how ${condition} was ` +
+                        throw new Error(`Don't know how ${condition} was ` +
                             "caused since no move caused it");
-                        break;
                     }
 
                     const monRef = this.getSide(lastEvent.id.owner);
@@ -817,6 +873,9 @@ export class PSEventHandler
         // if species don't match, must've been dragged out before we could
         //  infer any other features
         // TODO: workaround not having access to state object
+        // this could be done if a hook was added at the end of #handleEvents(),
+        //  which can be disabled if something happens that would force a
+        //  discarding of transformPost data
         /*if (this.lastRequest.side.pokemon[0].details.species !==
             source.species) return result;*/
 
@@ -908,66 +967,9 @@ export class PSEventHandler
                 throw new Error("Don't know how weather was caused " +
                     "since this isn't preceeded by a move or switch");
             }
-            throw new Error("Switched in but expected a weather ability to" +
+            throw new Error("Switched in but expected a weather ability to " +
                 "activate");
         }
-    }
-
-    /** Processes a `request` message. */
-    public handleRequest(args: Omit<RequestMessage, "type">): AnyDriverEvent[]
-    {
-        this.lastRequest = args;
-
-        // a request message is given at the start of the battle, before any
-        //  battleinit stuff, which is all we need to initialize our side of the
-        //  battle state
-        if (this._battling) return [];
-
-        // first time: initialize client team data
-        // copy pokemon array so we can modify it
-        const team: DriverInitPokemon[] = [...args.side.pokemon];
-
-        // preprocess move names, which are encoded with additional features
-        for (let i = 0; i < team.length; ++i)
-        {
-            // copy pokemon obj and moves so we can modify them
-            const mon = {...team[i]};
-            team[i] = mon;
-
-            const moves = [...team[i].moves];
-            mon.moves = moves;
-
-            for (let j = 0; j < moves.length; ++j)
-            {
-                if (moves[j].startsWith("hiddenpower") &&
-                    moves[j].length > "hiddenpower".length)
-                {
-                    // set hidden power type
-                    // format: hiddenpower<type><base power if gen2-5>
-                    mon.hpType = moves[j].substr("hiddenpower".length)
-                        .replace(/\d+/, "") as Type;
-                    moves[j] = "hiddenpower";
-                }
-                else if (moves[j].startsWith("return") &&
-                    moves[j].length > "return".length)
-                {
-                    // calculate happiness value from base power
-                    mon.happiness = 2.5 *
-                        parseInt(moves[j].substr("return".length), 10);
-                    moves[j] = "return";
-                }
-                else if (moves[j].startsWith("frustration") &&
-                    moves[j].length > "frustration".length)
-                {
-                    // calculate happiness value from base power
-                    mon.happiness = 255 - 2.5 *
-                            parseInt(moves[j].substr("frustration".length), 10);
-                    moves[j] = "frustration";
-                }
-            }
-        }
-
-        return [{type: "initTeam", team}];
     }
 
     /** Handles the `[of]` and `[from]` suffixes of an event. */

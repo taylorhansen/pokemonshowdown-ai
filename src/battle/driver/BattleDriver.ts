@@ -66,6 +66,8 @@ export class BattleDriver implements DriverEventHandler
                     .set(data.stats[stat as StatExceptHP]);
             }
             mon.traits.setAbility(data.baseAbility);
+            // TODO: handle case where there's no item? change typings or
+            //  default to "none"
             mon.setItem(data.item);
 
             if (data.hpType) mon.hpType.narrow(data.hpType);
@@ -614,6 +616,7 @@ export class BattleDriver implements DriverEventHandler
         const team = this.getTeam(event.monRef);
 
         // consume pending self-switch/copyvolatile flags
+        // TODO: move this logic into Team#switchIn()
         const options: SwitchInOptions =
             {copyVolatile: team.status.selfSwitch === "copyvolatile"};
         team.status.selfSwitch = false;
@@ -623,7 +626,8 @@ export class BattleDriver implements DriverEventHandler
     }
 
     /**
-     * Indicates that the pokemon is being trapped by an unknown ability.
+     * Indicates that the pokemon is being trapped by an unknown ability and
+     * tries to infer it.
      * @virtual
      */
     public rejectSwitchTrapped(event: RejectSwitchTrapped): void
