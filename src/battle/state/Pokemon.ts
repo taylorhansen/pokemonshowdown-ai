@@ -1,4 +1,4 @@
-import { berries, dex, twoTurnMoves } from "../dex/dex";
+import { berries, dex, isTwoTurnMove } from "../dex/dex";
 import { boostKeys, HPType, hpTypes, rolloutMoves, StatExceptHP, Type } from
     "../dex/dex-util";
 import { HP, ReadonlyHP } from "./HP";
@@ -29,6 +29,11 @@ export interface MoveOptions
      * be added but will not have pp deducted from it. Default true.
      */
     reveal?: boolean | "nopp";
+    /**
+     * If this is a two-turn move, set this to true if it's the first turn.
+     * False or undefined in all other cases.
+     */
+    prepare?: boolean;
 }
 
 /** Options for `Pokemon#transformPost()`. */
@@ -281,13 +286,12 @@ export class Pokemon implements ReadonlyPokemon
                 this.moveset.getOrRevealIndex(options.moveId);
         }
 
-        // release two-turn move
-        // while this could be the turn that charges the move, a separate event
-        //  is responsible for distinguishing that
-        if (twoTurnMoves.hasOwnProperty(options.moveId))
+        // charge or release two-turn move
+        if (isTwoTurnMove(options.moveId) && options.prepare)
         {
-            this.volatile.twoTurn.reset();
+            this.volatile.twoTurn.start(options.moveId);
         }
+        else this.volatile.twoTurn.reset();
 
         // handle natural gift move
         if (options.moveId === "naturalgift")

@@ -47,7 +47,6 @@ interface DriverEventMap
     revealItem: RevealItem;
     removeItem: RemoveItem;
     useMove: UseMove;
-    prepareMove: PrepareMove;
     revealMove: RevealMove;
     mustRecharge: MustRecharge;
     setSingleMoveStatus: SetSingleMoveStatus;
@@ -468,15 +467,6 @@ export interface UseMove extends DriverEventBase<"useMove">,
     readonly monRef: Side;
     /** Targets of the move. */
     readonly targets: readonly Side[];
-}
-
-/** Indicates that the pokemon starting to prepare a two-turn move. */
-export interface PrepareMove extends DriverEventBase<"prepareMove">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Move to prepare. */
-    readonly move: TwoTurnMove;
 }
 
 /** Reveals that the pokemon knows a move. */

@@ -393,12 +393,21 @@ describe("Pokemon", function()
 
             describe("two-turn", function()
             {
-                it("Should reset two-turn status", function()
+                it("Should start two-turn if prepare=true", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
                     mon.switchInto();
-                    mon.useMove({moveId: "bounce", targets: []});
-                    mon.volatile.twoTurn.start("bounce");
+                    mon.useMove({moveId: "bounce", targets: [], prepare: true});
+
+                    expect(mon.volatile.twoTurn.isActive).to.be.true;
+                    expect(mon.volatile.twoTurn.type).to.equal("bounce");
+                });
+
+                it("Should release two-turn move", function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
+                    mon.useMove({moveId: "bounce", targets: [], prepare: true});
                     mon.postTurn();
 
                     mon.useMove(

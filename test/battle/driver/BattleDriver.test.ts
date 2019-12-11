@@ -877,23 +877,6 @@ describe("BattleDriver", function()
             });
         });
 
-        describe("#prepareMove()", function()
-        {
-            it("Should start two-turn move", function()
-            {
-                const mon = driver.state.teams.them.active;
-                expect(mon.volatile.twoTurn.isActive).to.be.false;
-
-                driver.prepareMove(
-                    {type: "prepareMove", monRef: "them", move: "fly"});
-
-                expect(mon.volatile.twoTurn.isActive).to.be.true;
-                expect(mon.volatile.twoTurn.type).to.equal("fly");
-            });
-
-           // TODO: shorted two-turn move (e.g. solarbeam with sun/powerherb)
-        });
-
         describe("#revealMove()", function()
         {
             it("Should reveal move", function()

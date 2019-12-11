@@ -9,11 +9,11 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ClearSelfSwitch, CopyBoosts, CureStatus, CureTeam, DisableMove, DriverEvent,
     DriverEventType, Faint, Fatigue, FormChange, GastroAcid, Inactive,
     InitOtherTeamSize, InitTeam, InvertBoosts, Mimic, MustRecharge, PostTurn,
-    PrepareMove, PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem,
-    ResetWeather, RevealItem, RevealMove, SetBoost, SetSingleMoveStatus,
-    SetSingleTurnStatus, SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn,
-    TakeDamage, TickWeather, Transform, TransformPost, Trap, Unboost,
-    UpdateStatusEffect, UseMove } from "./DriverEvent";
+    PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem, ResetWeather,
+    RevealItem, RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
+    SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage,
+    TickWeather, Transform, TransformPost, Trap, Unboost, UpdateStatusEffect,
+    UseMove } from "./DriverEvent";
 
 /**
  * Ensures that the BattleDriver implements handlers for each type of
@@ -495,21 +495,12 @@ export class BattleDriver implements DriverEventHandler
     {
         this.getMon(event.monRef).useMove(
             // extract move options from the event
-            (({moveId, targets, unsuccessful, reveal}) =>
+            (({moveId, targets, unsuccessful, reveal, prepare}) =>
             ({
-                moveId, unsuccessful, reveal,
+                moveId, unsuccessful, reveal, prepare,
                 // transform reference names into object references
                 targets: targets.map(targetRef => this.getMon(targetRef))
             }))(event));
-    }
-
-    /**
-     * Indicates that the pokemon starting to prepare a two-turn move.
-     * @virtual
-     */
-    public prepareMove(event: PrepareMove): void
-    {
-        this.getMon(event.monRef).volatile.twoTurn.start(event.move);
     }
 
     /**

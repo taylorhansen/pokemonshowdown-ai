@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "util";
-import { dex, isFutureMove, TwoTurnMove } from "../battle/dex/dex";
+import { dex, isFutureMove } from "../battle/dex/dex";
 import { itemRemovalMoves, itemTransferMoves, nonSelfMoveCallers,
     selfMoveCallers, targetMoveCallers, Type } from "../battle/dex/dex-util";
 import { AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize, SingleMoveStatus,
@@ -13,11 +13,11 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     CopyBoostEvent, CureStatusEvent, CureTeamEvent, DamageEvent,
     DetailsChangeEvent, DragEvent, EndAbilityEvent, EndEvent, EndItemEvent,
     FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent, HealEvent,
-    InvertBoostEvent, ItemEvent, MoveEvent, MustRechargeEvent, PrepareEvent,
-    SetBoostEvent, SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent,
-    SingleTurnEvent, StartEvent, StatusEvent, SwapBoostEvent, SwitchEvent,
-    TieEvent, TransformEvent, TurnEvent, UnboostEvent, UpkeepEvent,
-    WeatherEvent, WinEvent } from "./parser/BattleEvent";
+    InvertBoostEvent, ItemEvent, MoveEvent, MustRechargeEvent, SetBoostEvent,
+    SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent, SingleTurnEvent,
+    StartEvent, StatusEvent, SwapBoostEvent, SwitchEvent, TieEvent,
+    TransformEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
+    WinEvent } from "./parser/BattleEvent";
 import { BattleInitMessage, RequestMessage } from "./parser/Message";
 
 /** Translates BattleEvents from the PS server into DriverEvents. */
@@ -212,7 +212,6 @@ export class PSEventHandler
             case "move": return this.handleMove(event, events, i);
             case "-mustrecharge":
                 return this.handleMustRecharge(event, events, i);
-            case "-prepare": return this.handlePrepare(event, events, i);
             case "-setboost": return this.handleSetBoost(event, events, i);
             case "-sideend": case "-sidestart":
                 return this.handleSideCondition(event, events, i);
@@ -625,6 +624,7 @@ export class PSEventHandler
 
         let unsuccessful: "failed" | "evaded"| undefined;
         let reveal: boolean | "nopp" | undefined;
+        let prepare: boolean | undefined;
 
         if (event.miss) unsuccessful = "evaded";
 
@@ -642,6 +642,7 @@ export class PSEventHandler
             }
             // move failed on its own
             else if (e.type === "-fail") unsuccessful = "failed";
+            else if (e.type === "-prepare") prepare = true;
         }
 
         // at this point, events[i] may be the next event
@@ -684,7 +685,8 @@ export class PSEventHandler
             type: "useMove", monRef, moveId, targets,
             // only add the keys if not undefined
             ...(unsuccessful !== undefined && {unsuccessful}),
-            ...(reveal !== undefined && {reveal})
+            ...(reveal !== undefined && {reveal}),
+            ...(prepare !== undefined && {prepare})
         });
         return result;
     }
@@ -694,15 +696,6 @@ export class PSEventHandler
         events: readonly AnyBattleEvent[], i: number): AnyDriverEvent[]
     {
         return [{type: "mustRecharge", monRef: this.getSide(event.id.owner)}];
-    }
-
-    /** @virtual */
-    protected handlePrepare(event: PrepareEvent,
-        events: readonly AnyBattleEvent[], i: number): AnyDriverEvent[]
-    {
-        const monRef = this.getSide(event.id.owner);
-        const move = toIdName(event.moveName) as TwoTurnMove;
-        return [{type: "prepareMove", monRef, move}];
     }
 
     /** @virtual */

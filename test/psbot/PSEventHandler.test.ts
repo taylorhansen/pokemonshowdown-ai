@@ -203,6 +203,11 @@ describe("PSEventHandler", function()
 
         test("Should emit nothing if no events", [], []);
 
+        describe("\\n", function()
+        {
+            test("Should emit nothing", [{type: "\n"}], []);
+        });
+
         describe("-ability", function()
         {
             test("Should emit activateAbility",
@@ -809,6 +814,17 @@ describe("PSEventHandler", function()
                 targets: ["us"], unsuccessful: "failed"
             }]);
 
+            test("Should emit useMove with prepare=true if -prepare event " +
+                "after",
+            [
+                {type: "move", id: us, moveName: "Fly", targetId: them},
+                {type: "-prepare", id: us, moveName: "Fly"}
+            ],
+            [{
+                type: "useMove", monRef: "us", moveId: "fly", targets: ["them"],
+                prepare: true
+            }]);
+
             for (const moveCaller of targetMoveCallers)
             {
                 test("Should also emit revealMove for opponent if used via " +
@@ -880,9 +896,8 @@ describe("PSEventHandler", function()
 
         describe("-prepare", function()
         {
-            test("Should emit prepareMove",
-                [{type: "-prepare", id: us, moveName: "Fly"}],
-                [{type: "prepareMove", monRef: "us", move: "fly"}]);
+            test("Should emit nothing",
+                [{type: "-prepare", id: us, moveName: "Fly"}], []);
         });
 
         describe("-setboost", function()
