@@ -1,4 +1,4 @@
-import { FutureMove, TwoTurnMove } from "../dex/dex";
+import { FutureMove } from "../dex/dex";
 import { BoostName, MajorStatus, StatExceptHP, Type, WeatherType } from
     "../dex/dex-util";
 import { MoveData, MoveOptions } from "../state/Pokemon";
