@@ -371,26 +371,6 @@ describe("Pokemon", function()
                 });
             });
 
-            describe("#volatile#lastUsed", function()
-            {
-                it("Should set last used", function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    mon.useMove({moveId: "splash", targets: [mon]});
-                    expect(mon.volatile.lastUsed).to.equal(0);
-                });
-
-                it("Should set last used again", function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    mon.useMove({moveId: "splash", targets: [mon]});
-                    mon.useMove({moveId: "tackle", targets: []});
-                    expect(mon.volatile.lastUsed).to.equal(1);
-                });
-            });
-
             describe("two-turn", function()
             {
                 it("Should start two-turn if prepare=true", function()
@@ -850,6 +830,7 @@ describe("Pokemon", function()
     });
 
     // TODO
+    describe("#inactive()", function() {});
     describe("#preTurn()", function() {});
     describe("#postTurn()", function() {});
 

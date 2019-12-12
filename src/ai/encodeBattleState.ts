@@ -276,7 +276,7 @@ export const sizeVolatileStatus =
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*trapped*/1 +
     /*trapping*/1 + /*attract*/1 + /*bide*/sizeTempStatus +
     /*charge*/sizeTempStatus + /*defense curl*/1 + /*destiny bond*/1 +
-    /*disabled moves + last used*/(Moveset.maxSize * (sizeTempStatus + 1)) +
+    /*disabled moves*/(Moveset.maxSize * sizeTempStatus) +
     /*grudge*/1 + /*identified*/2 + /*locked move variants*/numLockedMoves +
     /*minimize*/1 + /*must recharge*/1 + /*override traits*/sizePokemonTraits +
     /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
@@ -315,7 +315,6 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const grudge = status.grudge ? 1 : 0;
     const identified = ["foresight", "miracleeye"]
         .map(v => status.identified === v ? 1 : 0);
-    const lastUsed = oneHot(status.lastUsed, Moveset.maxSize);
     const lockedMove = encodeVariableTempStatus(status.lockedMove);
     const minimize = status.minimize ? 1 : 0;
     const mustRecharge = status.mustRecharge ? 1 : 0;
@@ -341,10 +340,10 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
         ingrain, leechSeed, ...magnetRise, substitute, trapped, trapping,
 
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
-        grudge, ...identified, ...lastUsed, ...lockedMove, minimize,
-        mustRecharge, ...overrideTraits, ...rollout, roost, ...slowStart,
-        stallFailRate, ...taunt, torment, transformed, ...twoTurn, unburden,
-        ...uproar, willTruant
+        grudge, ...identified, ...lockedMove, minimize, mustRecharge,
+        ...overrideTraits, ...rollout, roost, ...slowStart, stallFailRate,
+        ...taunt, torment, transformed, ...twoTurn, unburden, ...uproar,
+        willTruant
     ];
 }
 

@@ -58,12 +58,6 @@ export interface ReadonlyVolatileStatus
     /** Foresight/Miracle Eye move status. */
     readonly identified: "foresight" | "miracleEye" | null;
     /**
-     * Index of the last used move, or -1 if none yet. Resets at the beginning
-     * of each turn, so this field can be used to check if a pokemon has not
-     * yet used a move.
-     */
-    readonly lastUsed: number;
-    /**
      * Tracks locked moves, e.g. petaldance variants. Should be ticked after
      * every successful move attempt.
      *
@@ -205,9 +199,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public identified!: "foresight" | "miracleEye" | null;
 
     /** @override */
-    public lastUsed!: number;
-
-    /** @override */
     public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
         /*silent*/true);
 
@@ -334,7 +325,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.encore.end();
         this.grudge = false;
         this.identified = null;
-        this.lastUsed = -1;
         this.lockedMove.reset();
         this.magicCoat = false;
         this.minimize = false;
@@ -356,6 +346,22 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._willTruant = false;
     }
 
+    /** Indicates that the pokemon spent its turn being inactive. */
+    public inactive()
+    {
+        this.resetSingleMove();
+
+        // move-locking statuses cancel when the intended move was prevented
+        //  from being attempted
+        this.bide.end();
+        this.lockedMove.reset();
+        this.twoTurn.reset();
+        // uproar doesn't end if prevented from using subsequent moves
+
+        this._stallTurns = 0;
+        this.stalled = false;
+    }
+
     /** Resets single-move statuses like Destiny Bond. */
     public resetSingleMove()
     {
@@ -367,7 +373,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void
     {
-        this.lastUsed = -1;
+        // TODO: what to do?
     }
 
     /**
@@ -385,13 +391,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.charge.tick();
         for (const disabled of this.disabledMoves) disabled.tick();
 
-        // move was not used
-        if (this.lastUsed < 0)
-        {
-            this.lockedMove.reset();
-            this.twoTurn.reset();
-        }
-
         // reset single-turn statuses
         this.magicCoat = false;
 
@@ -401,6 +400,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
         // stalling moves must be used successfully every turn or the turn
         //  counter will reset
+        // TODO: reset as soon as the pokemon consumes its action without
+        //  stalling instead of checking at the end of the turn
         if (!this.stalled) this._stallTurns = 0;
         this.stalled = false;
 
@@ -446,7 +447,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.encore.isActive ? [this.encore.toString()] : [],
             this.grudge ? ["grudge"] : [],
             this.identified ? [this.identified] : [],
-            this.lastUsed >= 0 ? [`last used move ${this.lastUsed + 1}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.minimize ? ["magic coat"] : [],
             this.minimize ? ["minimize"] : [],

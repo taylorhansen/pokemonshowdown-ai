@@ -392,7 +392,7 @@ export class BattleDriver implements DriverEventHandler
         }
 
         // consumed an action this turn
-        mon.volatile.resetSingleMove();
+        mon.inactive();
     }
 
     /**

@@ -35,7 +35,6 @@ describe("VolatileStatus", function()
         volatile.disabledMoves[0].start();
         volatile.encore.start();
         volatile.identified = "foresight";
-        volatile.lastUsed = 1;
         volatile.lockedMove.start("outrage");
         volatile.magicCoat = true;
         volatile.minimize = true;
@@ -85,7 +84,6 @@ describe("VolatileStatus", function()
             expect(volatile.disabledMoves[0].isActive).to.be.false;
             expect(volatile.encore.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
-            expect(volatile.lastUsed).to.equal(-1);
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
@@ -149,7 +147,6 @@ describe("VolatileStatus", function()
             expect(volatile.disabledMoves[0].isActive).to.be.false;
             expect(volatile.encore.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
-            expect(volatile.lastUsed).to.equal(-1);
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
@@ -278,38 +275,6 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#lastUsed", function()
-    {
-        it("Should be reset on #preTurn()", function()
-        {
-            volatile.lastUsed = 0;
-            volatile.preTurn();
-            expect(volatile.lastUsed).to.equal(-1);
-        });
-    });
-
-    describe("#lockedMove", function()
-    {
-        it("Should not stop on #postTurn() if #lastUsed is set", function()
-        {
-            volatile.preTurn();
-            volatile.lastUsed = 0;
-            volatile.lockedMove.start("outrage");
-            volatile.postTurn();
-
-            expect(volatile.lockedMove.isActive).to.be.true;
-        });
-
-        it("Should stop on #postTurn() if #lastUsed is not set", function()
-        {
-            volatile.preTurn();
-            volatile.lockedMove.start("petaldance");
-            volatile.postTurn();
-
-            expect(volatile.lockedMove.isActive).to.be.false;
-        });
-    });
-
     describe("#magicCoat", function()
     {
         it("Should reset on #postTurn()", function()
@@ -361,33 +326,6 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#twoTurn", function()
-    {
-        it("Should have silent=true", function()
-        {
-            expect(volatile.twoTurn).to.have.property("silent", true);
-        });
-
-        it("Should not stop on #postTurn() if #lastUsed is set", function()
-        {
-            volatile.preTurn();
-            volatile.lastUsed = 0;
-            volatile.twoTurn.start("dig");
-            volatile.postTurn();
-
-            expect(volatile.twoTurn.isActive).to.be.true;
-        });
-
-        it("Should stop on #postTurn() if #lastUsed is not set", function()
-        {
-            volatile.preTurn();
-            volatile.twoTurn.start("dig");
-            volatile.postTurn();
-
-            expect(volatile.twoTurn.isActive).to.be.false;
-        });
-    });
-
     describe("#willTruant/#activateTruant()", function()
     {
         it("Should set #willTruant if ability is truant", function()
@@ -420,6 +358,28 @@ describe("VolatileStatus", function()
         {
             volatile.postTurn();
             expect(volatile.willTruant).to.be.false;
+        });
+    });
+
+    describe("#inactive()", function()
+    {
+        it("Should reset active move locks/statuses", function()
+        {
+            volatile.destinyBond = true;
+            volatile.grudge = true;
+            volatile.bide.start();
+            volatile.lockedMove.start("thrash");
+            volatile.twoTurn.start("razorwind");
+            volatile.stall(true);
+
+            volatile.inactive();
+
+            expect(volatile.destinyBond).to.be.false;
+            expect(volatile.grudge).to.be.false;
+            expect(volatile.bide.isActive).to.be.false;
+            expect(volatile.lockedMove.isActive).to.be.false;
+            expect(volatile.twoTurn.isActive).to.be.false;
+            expect(volatile.stallTurns).to.equal(0);
         });
     });
 });

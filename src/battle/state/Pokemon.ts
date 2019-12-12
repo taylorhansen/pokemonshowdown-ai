@@ -281,9 +281,6 @@ export class Pokemon implements ReadonlyPokemon
                 // TODO: in gen>=5, don't count allies
                 : options.targets.filter(
                     m => m !== this && m.ability === "pressure").length + 1;
-
-            this.volatile.lastUsed =
-                this.moveset.getOrRevealIndex(options.moveId);
         }
 
         // charge or release two-turn move
@@ -497,6 +494,12 @@ export class Pokemon implements ReadonlyPokemon
         this.baseTraits.init();
         this.baseTraits.species.narrow(species);
         this.hp = new HP(hpPercent);
+    }
+
+    /** Indicates that the pokemon spent its turn being inactive. */
+    public inactive(): void
+    {
+        this.volatile.inactive();
     }
 
     /** Called at the beginning of every turn to update temp statuses. */
