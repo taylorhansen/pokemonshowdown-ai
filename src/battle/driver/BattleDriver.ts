@@ -149,6 +149,7 @@ export class BattleDriver implements DriverEventHandler
         {
             case "aquaRing":
             case "attract":
+            case "curse":
             case "focusEnergy":
             case "ingrain":
             case "leechSeed":

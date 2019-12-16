@@ -271,7 +271,7 @@ export function encodePokemonTraits(traits?: ReadonlyPokemonTraits | null,
 /** Length of the return value of `encodeVolatileStatus()`. */
 export const sizeVolatileStatus =
     /*aqua ring*/1 + /*boostable stats*/Object.keys(boostNames).length +
-    /*confusion*/sizeTempStatus + /*embargo*/sizeTempStatus +
+    /*confusion*/sizeTempStatus + /*curse*/1 + /*embargo*/sizeTempStatus +
     /*focus energy*/1 + /*gastro acid*/1 + /*ingrain*/1 + /*leech seed*/1 +
     /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*trapped*/1 +
     /*trapping*/1 + /*attract*/1 + /*bide*/sizeTempStatus +
@@ -293,6 +293,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const boosts = (Object.keys(status.boosts) as BoostName[])
         .map(key => status.boosts[key]);
     const confused = encodeTempStatus(status.confusion);
+    const curse = status.curse ? 1 : 0;
     const embargo = encodeTempStatus(status.embargo);
     const focusEnergy = status.focusEnergy ? 1 : 0;
     const gastroAcid = status.gastroAcid ? 1 : 0;
@@ -336,8 +337,9 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
-        aquaRing, ...boosts, ...confused, ...embargo, focusEnergy, gastroAcid,
-        ingrain, leechSeed, ...magnetRise, substitute, trapped, trapping,
+        aquaRing, ...boosts, ...confused, curse, ...embargo, focusEnergy,
+        gastroAcid, ingrain, leechSeed, ...magnetRise, substitute, trapped,
+        trapping,
 
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
         grudge, ...identified, ...lockedMove, minimize, mustRecharge,

@@ -355,6 +355,8 @@ describe("PSEventHandler", function()
                 ]);
             });
 
+            describeTrivialStatus("Curse", "curse");
+
             describe("Disable", function()
             {
                 test("Should emit disableMove on -start",

@@ -235,6 +235,7 @@ describe("BattleDriver", function()
             test("Bide", "bide", v => v.bide.isActive);
             test("confusion", "confusion", v => v.confusion.isActive);
             test("Charge", "charge", v => v.charge.isActive);
+            test("Curse", "curse", v => v.curse);
             test("Encore", "encore", v => v.encore.isActive);
             test("Focus Energy", "focusEnergy", v => v.focusEnergy);
             test("Foresight", "foresight", v => v.identified === "foresight");

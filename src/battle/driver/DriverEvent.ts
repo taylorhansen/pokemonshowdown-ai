@@ -170,9 +170,9 @@ export interface ActivateStatusEffect extends
  * UpdatableStatusEffectTypes.
  */
 export type StatusEffectType = UpdatableStatusEffectType | "aquaRing" |
-    "attract" | "charge" | "encore" | "focusEnergy" | "foresight" | "ingrain" |
-    "leechSeed" | "magnetRise" | "miracleEye" | "embargo" | "substitute" |
-    "slowStart" | "taunt" | "torment";
+    "attract" | "charge" | "curse" | "encore" | "focusEnergy" | "foresight" |
+    "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" | "embargo" |
+    "substitute" | "slowStart" | "taunt" | "torment";
 
 /** Temporarily disables the pokemon's move. */
 export interface DisableMove extends DriverEventBase<"disableMove">

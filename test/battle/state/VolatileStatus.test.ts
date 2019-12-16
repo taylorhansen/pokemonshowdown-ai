@@ -17,6 +17,7 @@ describe("VolatileStatus", function()
         volatile.aquaRing = true;
         volatile.boosts.atk = 1;
         volatile.confusion.start();
+        volatile.curse = true;
         volatile.embargo.start();
         volatile.focusEnergy = true;
         volatile.gastroAcid = true;
@@ -66,6 +67,7 @@ describe("VolatileStatus", function()
             expect(volatile.aquaRing).to.be.false;
             expect(volatile.boosts.atk).to.equal(0);
             expect(volatile.confusion.isActive).to.be.false;
+            expect(volatile.curse).to.be.false;
             expect(volatile.embargo.isActive).to.be.false;
             expect(volatile.focusEnergy).to.be.false;
             expect(volatile.gastroAcid).to.be.false;
@@ -126,6 +128,7 @@ describe("VolatileStatus", function()
             expect(volatile.boosts.atk).to.equal(1);
             expect(volatile.confusion.isActive).to.be.true;
             expect(volatile.confusion.turns).to.equal(1);
+            expect(volatile.curse).to.be.true;
             expect(volatile.embargo.isActive).to.be.true;
             expect(volatile.embargo.turns).to.equal(1);
             expect(volatile.focusEnergy).to.be.true;

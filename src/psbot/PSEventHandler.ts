@@ -1034,6 +1034,7 @@ export class PSEventHandler
                     ...(event.fatigue ?
                         [{type: "fatigue", monRef} as const] : [])
                 ];
+            case "Curse": status = "curse"; break;
             case "Disable":
                 if (event.type === "-end")
                 {

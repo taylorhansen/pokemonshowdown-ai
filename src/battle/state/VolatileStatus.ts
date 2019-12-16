@@ -18,6 +18,8 @@ export interface ReadonlyVolatileStatus
     readonly boosts: {readonly [N in BoostName]: number};
     /** Confusion status. */
     readonly confusion: ReadonlyTempStatus;
+    /** Curse status. */
+    readonly curse: boolean;
     /** Embargo move status. */
     readonly embargo: ReadonlyTempStatus;
     /** Focus Energy move status. */
@@ -125,6 +127,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public readonly confusion = new TempStatus("confused", 3);
+
+    /** @override */
+    public curse!: boolean;
 
     /** @override */
     public readonly embargo = new TempStatus("embargo", 3);
@@ -300,6 +305,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             atk: 0, def: 0, spa: 0, spd: 0, spe: 0, accuracy: 0, evasion: 0
         };
         this.confusion.end();
+        this.curse = false;
         this.embargo.end();
         this.focusEnergy = false;
         this.gastroAcid = false;
@@ -428,6 +434,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
                 .filter(key => this._boosts[key] !== 0)
                 .map(key => `${key}: ${plus(this._boosts[key])}`),
             this.confusion.isActive ? [this.confusion.toString()] : [],
+            this.curse ? ["cursed"] : [],
             this.embargo.isActive ? [this.embargo.toString()] : [],
             this.focusEnergy ? ["focus energy"] : [],
             this.gastroAcid ? ["gastro acid"] : [],
