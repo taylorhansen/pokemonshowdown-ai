@@ -300,7 +300,8 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const ingrain = status.ingrain ? 1 : 0;
     const leechSeed = status.leechSeed ? 1 : 0;
     const magnetRise = encodeTempStatus(status.magnetRise);
-    const perish = limitedStatusTurns(status.perish, 3);
+    const perish = status.perish <= 0 ?
+        0 : limitedStatusTurns(status.perish, 3);
     const substitute = status.substitute ? 1 : 0;
     // TODO: be more specific with trapping info
     const trapped = status.trapped ? 1 : 0;
