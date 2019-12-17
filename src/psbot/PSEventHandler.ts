@@ -308,6 +308,13 @@ export class PSEventHandler
             const monRef = this.getSide(event.id.owner);
             return [{type: "changeType", monRef, newTypes}];
         }
+        if (event.volatile.startsWith("perish"))
+        {
+            // update perish song counter
+            const monRef = this.getSide(event.id.owner);
+            const turns = parseInt(event.volatile.substr("perish".length), 10);
+            return [{type: "perish", monRef, turns}];
+        }
         // trivial, handle using factored-out method
         return this.handleTrivialStatus(event);
     }

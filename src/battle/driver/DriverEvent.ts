@@ -17,6 +17,7 @@ interface DriverEventMap
     activateAbility: ActivateAbility;
     gastroAcid: GastroAcid;
     activateStatusEffect: ActivateStatusEffect;
+    perish: Perish;
     disableMove: DisableMove;
     reenableMoves: ReenableMoves;
     activateFutureMove: ActivateFutureMove;
@@ -170,9 +171,18 @@ export interface ActivateStatusEffect extends
  * UpdatableStatusEffectTypes.
  */
 export type StatusEffectType = UpdatableStatusEffectType | "aquaRing" |
-    "attract" | "charge" | "curse" | "encore" | "focusEnergy" | "foresight" |
-    "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" | "embargo" |
+    "attract" | "charge" | "curse" | "embargo" | "encore" | "focusEnergy" |
+    "foresight" | "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" |
     "substitute" | "slowStart" | "taunt" | "torment";
+
+/** Updates the Perish Song counter. */
+export interface Perish extends DriverEventBase<"perish">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Number of turns left. */
+    readonly turns: number;
+}
 
 /** Temporarily disables the pokemon's move. */
 export interface DisableMove extends DriverEventBase<"disableMove">

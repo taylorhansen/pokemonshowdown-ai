@@ -8,12 +8,12 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
     ClearSelfSwitch, CopyBoosts, CureStatus, CureTeam, DisableMove, DriverEvent,
     DriverEventType, Faint, Fatigue, FormChange, GastroAcid, Inactive,
-    InitOtherTeamSize, InitTeam, InvertBoosts, Mimic, MustRecharge, PostTurn,
-    PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem, ResetWeather,
-    RevealItem, RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
-    SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage,
-    TickWeather, Transform, TransformPost, Trap, Unboost, UpdateStatusEffect,
-    UseMove } from "./DriverEvent";
+    InitOtherTeamSize, InitTeam, InvertBoosts, Mimic, MustRecharge, Perish,
+    PostTurn, PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem,
+    ResetWeather, RevealItem, RevealMove, SetBoost, SetSingleMoveStatus,
+    SetSingleTurnStatus, SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn,
+    TakeDamage, TickWeather, Transform, TransformPost, Trap, Unboost,
+    UpdateStatusEffect, UseMove } from "./DriverEvent";
 
 /**
  * Ensures that the BattleDriver implements handlers for each type of
@@ -175,6 +175,15 @@ export class BattleDriver implements DriverEventHandler
             default:
                 throw new Error(`Invalid status effect '${event.status}'`);
         }
+    }
+
+    /**
+     * Updates the Perish Song counter.
+     * @virtual
+     */
+    public perish(event: Perish): void
+    {
+        this.getMon(event.monRef).volatile.perish = event.turns;
     }
 
     /**

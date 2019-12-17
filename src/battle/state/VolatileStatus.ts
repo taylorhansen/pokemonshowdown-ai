@@ -32,6 +32,11 @@ export interface ReadonlyVolatileStatus
     readonly leechSeed: boolean;
     /** Magnet Rise move status. */
     readonly magnetRise: ReadonlyTempStatus;
+    /**
+     * Number of turns left until Perish Song activates (max 3), or 0 if
+     * inactive.
+     */
+    readonly perish: number;
     /** Substitute move status. */
     readonly substitute: boolean;
     /** Who is trapping us. */
@@ -148,6 +153,14 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public readonly magnetRise = new TempStatus("magnet rise", 3);
+
+    /** @override */
+    public get perish(): number { return this._perish; }
+    public set perish(turns: number)
+    {
+        this._perish = Math.max(0, Math.min(turns, 3));
+    }
+    private _perish!: number;
 
     /** @override */
     public substitute!: boolean;
@@ -312,6 +325,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.ingrain = false;
         this.leechSeed = false;
         this.magnetRise.end();
+        this._perish = 0;
         this.substitute = false;
         this._trapped = null;
         this._trapping = null;
@@ -441,6 +455,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.ingrain ? ["ingrain"] : [],
             this.leechSeed ? ["leech seed"] : [],
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
+            this._perish > 0 ? [`perish in ${pluralTurns(this._perish)}`] : [],
             this.substitute ? ["has substitute"] : [],
             // TODO: be more specific with trapping info
             this._trapped ? ["trapped"] : [],

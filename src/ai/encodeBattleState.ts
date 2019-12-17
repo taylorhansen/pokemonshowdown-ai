@@ -273,8 +273,8 @@ export const sizeVolatileStatus =
     /*aqua ring*/1 + /*boostable stats*/Object.keys(boostNames).length +
     /*confusion*/sizeTempStatus + /*curse*/1 + /*embargo*/sizeTempStatus +
     /*focus energy*/1 + /*gastro acid*/1 + /*ingrain*/1 + /*leech seed*/1 +
-    /*magnet rise*/sizeTempStatus + /*substitute*/1 + /*trapped*/1 +
-    /*trapping*/1 + /*attract*/1 + /*bide*/sizeTempStatus +
+    /*magnet rise*/sizeTempStatus + /*perish*/1 + /*substitute*/1 +
+    /*trapped*/1 + /*trapping*/1 + /*attract*/1 + /*bide*/sizeTempStatus +
     /*charge*/sizeTempStatus + /*defense curl*/1 + /*destiny bond*/1 +
     /*disabled moves*/(Moveset.maxSize * sizeTempStatus) +
     /*grudge*/1 + /*identified*/2 + /*locked move variants*/numLockedMoves +
@@ -300,6 +300,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const ingrain = status.ingrain ? 1 : 0;
     const leechSeed = status.leechSeed ? 1 : 0;
     const magnetRise = encodeTempStatus(status.magnetRise);
+    const perish = limitedStatusTurns(status.perish, 3);
     const substitute = status.substitute ? 1 : 0;
     // TODO: be more specific with trapping info
     const trapped = status.trapped ? 1 : 0;
@@ -338,8 +339,8 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
 
     return [
         aquaRing, ...boosts, ...confused, curse, ...embargo, focusEnergy,
-        gastroAcid, ingrain, leechSeed, ...magnetRise, substitute, trapped,
-        trapping,
+        gastroAcid, ingrain, leechSeed, ...magnetRise, perish, substitute,
+        trapped, trapping,
 
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
         grudge, ...identified, ...lockedMove, minimize, mustRecharge,

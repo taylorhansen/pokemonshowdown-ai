@@ -291,6 +291,15 @@ describe("PSEventHandler", function()
                     newTypes: ["ghost", "dragon"]
                 }]);
             });
+
+            describe("perish", function()
+            {
+                test("Should emit perish",
+                [{
+                    type: "-start", id: us, volatile: "perish1", otherArgs: []
+                }],
+                    [{type: "perish", monRef: "us", turns: 1}]);
+            });
         });
 
         describe("-end", function()
