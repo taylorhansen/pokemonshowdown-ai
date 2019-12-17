@@ -268,13 +268,17 @@ describe("BattleDriver", function()
             });
         });
 
-        describe("#perish()", function()
+        describe("#countStatusEffect()", function()
         {
             it("Should update perish count", function()
             {
                 const v = driver.state.teams.us.active.volatile;
                 expect(v.perish).to.equal(0);
-                driver.perish({type: "perish", monRef: "us", turns: 2});
+                driver.countStatusEffect(
+                {
+                    type: "countStatusEffect", monRef: "us", status: "perish",
+                    turns: 2
+                });
                 expect(v.perish).to.equal(2);
             });
         });

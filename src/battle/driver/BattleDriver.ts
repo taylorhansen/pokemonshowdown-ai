@@ -6,14 +6,14 @@ import { SwitchInOptions, Team } from "../state/Team";
 import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ActivateSideCondition, ActivateStatusEffect, AfflictStatus, AnyDriverEvent,
     Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
-    ClearSelfSwitch, CopyBoosts, CureStatus, CureTeam, DisableMove, DriverEvent,
-    DriverEventType, Faint, Fatigue, FormChange, GastroAcid, Inactive,
-    InitOtherTeamSize, InitTeam, InvertBoosts, Mimic, MustRecharge, Perish,
-    PostTurn, PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem,
-    ResetWeather, RevealItem, RevealMove, SetBoost, SetSingleMoveStatus,
-    SetSingleTurnStatus, SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn,
-    TakeDamage, TickWeather, Transform, TransformPost, Trap, Unboost,
-    UpdateStatusEffect, UseMove } from "./DriverEvent";
+    ClearSelfSwitch, CopyBoosts, CountStatusEffect, CureStatus, CureTeam,
+    DisableMove, DriverEvent, DriverEventType, Faint, Fatigue, FormChange,
+    GastroAcid, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts, Mimic,
+    MustRecharge, PostTurn, PreTurn, ReenableMoves, RejectSwitchTrapped,
+    RemoveItem, ResetWeather, RevealItem, RevealMove, SetBoost,
+    SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType, SetWeather, Sketch,
+    SwapBoosts, SwitchIn, TakeDamage, TickWeather, Transform, TransformPost,
+    Trap, Unboost, UpdateStatusEffect, UseMove } from "./DriverEvent";
 
 /**
  * Ensures that the BattleDriver implements handlers for each type of
@@ -178,12 +178,12 @@ export class BattleDriver implements DriverEventHandler
     }
 
     /**
-     * Updates the Perish Song counter.
+     * Explicitly updates status counters.
      * @virtual
      */
-    public perish(event: Perish): void
+    public countStatusEffect(event: CountStatusEffect): void
     {
-        this.getMon(event.monRef).volatile.perish = event.turns;
+        this.getMon(event.monRef).volatile[event.status] = event.turns;
     }
 
     /**

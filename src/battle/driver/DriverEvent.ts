@@ -17,7 +17,7 @@ interface DriverEventMap
     activateAbility: ActivateAbility;
     gastroAcid: GastroAcid;
     activateStatusEffect: ActivateStatusEffect;
-    perish: Perish;
+    countStatusEffect: CountStatusEffect;
     disableMove: DisableMove;
     reenableMoves: ReenableMoves;
     activateFutureMove: ActivateFutureMove;
@@ -175,14 +175,19 @@ export type StatusEffectType = UpdatableStatusEffectType | "aquaRing" |
     "foresight" | "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" |
     "substitute" | "slowStart" | "taunt" | "torment";
 
-/** Updates the Perish Song counter. */
-export interface Perish extends DriverEventBase<"perish">
+/** Explicitly updates status counters. */
+export interface CountStatusEffect extends DriverEventBase<"countStatusEffect">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
+    /** Type of status. */
+    readonly status: CountableStatusType;
     /** Number of turns left. */
     readonly turns: number;
 }
+
+/** Typing for `CountStatusEffect#status`. */
+export type CountableStatusType = "perish";
 
 /** Temporarily disables the pokemon's move. */
 export interface DisableMove extends DriverEventBase<"disableMove">

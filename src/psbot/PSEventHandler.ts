@@ -312,8 +312,9 @@ export class PSEventHandler
         {
             // update perish song counter
             const monRef = this.getSide(event.id.owner);
+            const status = "perish";
             const turns = parseInt(event.volatile.substr("perish".length), 10);
-            return [{type: "perish", monRef, turns}];
+            return [{type: "countStatusEffect", monRef, status, turns}];
         }
         // trivial, handle using factored-out method
         return this.handleTrivialStatus(event);

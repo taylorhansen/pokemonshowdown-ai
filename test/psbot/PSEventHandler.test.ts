@@ -294,11 +294,14 @@ describe("PSEventHandler", function()
 
             describe("perish", function()
             {
-                test("Should emit perish",
+                test("Should emit countStatusEffect",
                 [{
                     type: "-start", id: us, volatile: "perish1", otherArgs: []
                 }],
-                    [{type: "perish", monRef: "us", turns: 1}]);
+                [{
+                    type: "countStatusEffect", monRef: "us", status: "perish",
+                    turns: 1
+                }]);
             });
         });
 
