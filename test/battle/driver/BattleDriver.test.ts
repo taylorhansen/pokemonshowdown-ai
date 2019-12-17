@@ -3,9 +3,9 @@ import "mocha";
 import { StatExceptHP, statsExceptHP, Type } from
     "../../../src/battle/dex/dex-util";
 import { BattleDriver } from "../../../src/battle/driver/BattleDriver";
-import { FieldConditionType, InitOtherTeamSize, InitTeam, SingleMoveStatus,
-    SingleTurnStatus, StatusEffectType, SwitchIn, UpdatableStatusEffectType }
-    from "../../../src/battle/driver/DriverEvent";
+import { CountableStatusType, FieldConditionType, InitOtherTeamSize, InitTeam,
+    SingleMoveStatus, SingleTurnStatus, StatusEffectType, SwitchIn,
+    UpdatableStatusEffectType } from "../../../src/battle/driver/DriverEvent";
 import { ReadonlyTeam } from "../../../src/battle/state/Team";
 import { ReadonlyVolatileStatus } from
     "../../../src/battle/state/VolatileStatus";
@@ -270,17 +270,23 @@ describe("BattleDriver", function()
 
         describe("#countStatusEffect()", function()
         {
-            it("Should update perish count", function()
+            function test(name: string, status: CountableStatusType): void
             {
-                const v = driver.state.teams.us.active.volatile;
-                expect(v.perish).to.equal(0);
-                driver.countStatusEffect(
+                it(`Should update ${name} count`, function()
                 {
-                    type: "countStatusEffect", monRef: "us", status: "perish",
-                    turns: 2
+                    const v = driver.state.teams.us.active.volatile;
+                    expect(v[status]).to.equal(0);
+                    driver.countStatusEffect(
+                    {
+                        type: "countStatusEffect", monRef: "us", status,
+                        turns: 2
+                    });
+                    expect(v[status]).to.equal(2);
                 });
-                expect(v.perish).to.equal(2);
-            });
+            }
+
+            test("Perish Song", "perish");
+            test("Stockpile", "stockpile");
         });
 
         describe("#disableMove()", function()

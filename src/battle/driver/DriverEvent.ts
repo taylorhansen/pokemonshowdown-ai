@@ -187,7 +187,7 @@ export interface CountStatusEffect extends DriverEventBase<"countStatusEffect">
 }
 
 /** Typing for `CountStatusEffect#status`. */
-export type CountableStatusType = "perish";
+export type CountableStatusType = "perish" | "stockpile";
 
 /** Temporarily disables the pokemon's move. */
 export interface DisableMove extends DriverEventBase<"disableMove">

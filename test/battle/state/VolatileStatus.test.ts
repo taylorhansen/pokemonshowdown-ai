@@ -50,6 +50,7 @@ describe("VolatileStatus", function()
         volatile.roost = true;
         volatile.slowStart.start();
         volatile.stall(true);
+        volatile.stockpile = 2;
         volatile.taunt.start();
         volatile.torment = true;
         volatile.twoTurn.start("solarbeam");
@@ -109,6 +110,7 @@ describe("VolatileStatus", function()
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
+            expect(volatile.stockpile).to.equal(0);
             expect(volatile.taunt.isActive).to.be.false;
             expect(volatile.torment).to.be.false;
             expect(volatile.twoTurn.isActive).to.be.false;
@@ -174,6 +176,7 @@ describe("VolatileStatus", function()
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
+            expect(volatile.stockpile).to.equal(0);
             expect(volatile.taunt.isActive).to.be.false;
             expect(volatile.torment).to.be.false;
             expect(volatile.twoTurn.isActive).to.be.false;

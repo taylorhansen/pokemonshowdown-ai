@@ -2,8 +2,8 @@ import { expect } from "chai";
 import "mocha";
 import { itemRemovalMoves, nonSelfMoveCallers, selfMoveCallers,
     targetMoveCallers } from "../../src/battle/dex/dex-util";
-import { AnyDriverEvent, DriverInitPokemon, StatusEffectType } from
-    "../../src/battle/driver/DriverEvent";
+import { AnyDriverEvent, CountableStatusType, DriverInitPokemon,
+    StatusEffectType } from "../../src/battle/driver/DriverEvent";
 import { Logger } from "../../src/Logger";
 import { PokemonID, toIdName } from "../../src/psbot/helpers";
 import { AnyBattleEvent, BattleEventType } from
@@ -292,23 +292,38 @@ describe("PSEventHandler", function()
                 }]);
             });
 
-            describe("perish", function()
+            function testCountableStatus(status: CountableStatusType)
             {
-                test("Should emit countStatusEffect",
-                [{
-                    type: "-start", id: us, volatile: "perish1", otherArgs: []
-                }],
-                [{
-                    type: "countStatusEffect", monRef: "us", status: "perish",
-                    turns: 1
-                }]);
-            });
+                describe(status, function()
+                {
+                    test("Should emit countStatusEffect",
+                    [{
+                        type: "-start", id: us, volatile: status + "1",
+                        otherArgs: []
+                    }],
+                    [{
+                        type: "countStatusEffect", monRef: "us", status,
+                        turns: 1
+                    }]);
+                });
+            }
+
+            testCountableStatus("perish");
+            testCountableStatus("stockpile");
         });
 
         describe("-end", function()
         {
-            // should be fully handled by trivial status tests, but leaving this
-            //  here in case the -end handler gets added to
+            describe("Stockpile", function()
+            {
+                test("Should emit countStatusEffect",
+                    [{type: "-end", id: us, volatile: "Stockpile"}],
+                [{
+                    type: "countStatusEffect", monRef: "us",
+                    status: "stockpile",
+                    turns: 0
+                }]);
+            });
         });
 
         describe("-start/-end trivial statuses", function()

@@ -97,6 +97,8 @@ export interface ReadonlyVolatileStatus
     readonly slowStart: ReadonlyTempStatus;
     /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
     readonly stallTurns: number;
+    /** Number of Stockpile uses. */
+    readonly stockpile: number;
     /** Taunt move status. */
     readonly taunt: ReadonlyTempStatus;
     /** Torment move status. */
@@ -263,6 +265,13 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** Whether we have successfully stalled this turn. */
     private stalled!: boolean;
 
+    public get stockpile(): number { return this._stockpile; }
+    public set stockpile(uses: number)
+    {
+        this._stockpile = Math.max(0, Math.min(uses, 3));
+    }
+    private _stockpile!: number;
+
     /** @override */
     public readonly taunt = new TempStatus("taunt", 5);
 
@@ -357,6 +366,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.slowStart.end();
         this._stallTurns = 0;
         this.stalled = false;
+        this._stockpile = 0;
         this.taunt.end();
         this.torment = false;
         this.transformed = false;
@@ -479,6 +489,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.slowStart.isActive ? [this.slowStart.toString()] : [],
             this._stallTurns ?
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
+            this._stockpile > 0 ? [`stockpile ${this._stockpile}`] : [],
             this.taunt.isActive ? [this.taunt.toString()] : [],
             this.torment ? ["torment"] : [],
             this.transformed ? ["transformed"] : [],

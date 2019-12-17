@@ -280,7 +280,7 @@ export const sizeVolatileStatus =
     /*grudge*/1 + /*identified*/2 + /*locked move variants*/numLockedMoves +
     /*minimize*/1 + /*must recharge*/1 + /*override traits*/sizePokemonTraits +
     /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
-    /*slow start*/sizeTempStatus + /*stall fail rate*/1 +
+    /*slow start*/sizeTempStatus + /*stall fail rate*/1 + /*stockpile*/1 +
     /*taunt*/sizeTempStatus + /*torment*/1 + /*transformed*/1 +
     /*two-turn*/numTwoTurnMoves + /*unburden*/1 + /*uproar*/sizeTempStatus +
     /*will truant*/1;
@@ -329,6 +329,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     // success rate halves each time a stalling move is used, capped at 12.5% in
     //  gen4
     const stallFailRate = Math.min(0.875, 1 - Math.pow(2, -status.stallTurns));
+    const stockpile = status.stockpile / 3;
     const taunt = encodeTempStatus(status.taunt);
     const torment = status.torment ? 1 : 0;
     // toxic handled by encodePokemon()
@@ -346,8 +347,8 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
         grudge, ...identified, ...lockedMove, minimize, mustRecharge,
         ...overrideTraits, ...rollout, roost, ...slowStart, stallFailRate,
-        ...taunt, torment, transformed, ...twoTurn, unburden, ...uproar,
-        willTruant
+        stockpile, ...taunt, torment, transformed, ...twoTurn, unburden,
+        ...uproar, willTruant
     ];
 }
 

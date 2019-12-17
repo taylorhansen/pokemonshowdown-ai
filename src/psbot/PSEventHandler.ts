@@ -308,12 +308,14 @@ export class PSEventHandler
             const monRef = this.getSide(event.id.owner);
             return [{type: "changeType", monRef, newTypes}];
         }
-        if (event.volatile.startsWith("perish"))
+        if (event.volatile.startsWith("perish") ||
+            event.volatile.startsWith("stockpile"))
         {
-            // update perish song counter
+            // update countable status effects
             const monRef = this.getSide(event.id.owner);
-            const status = "perish";
-            const turns = parseInt(event.volatile.substr("perish".length), 10);
+            const status =
+                event.volatile.startsWith("perish") ? "perish" : "stockpile";
+            const turns = parseInt(event.volatile.substr(status.length), 10);
             return [{type: "countStatusEffect", monRef, status, turns}];
         }
         // trivial, handle using factored-out method
@@ -380,6 +382,14 @@ export class PSEventHandler
     protected handleEnd(event: EndEvent, events: readonly AnyBattleEvent[],
         i: number): AnyDriverEvent[]
     {
+        if (event.volatile === "Stockpile")
+        {
+            // end stockpile stacks
+            return [{
+                type: "countStatusEffect", monRef: this.getSide(event.id.owner),
+                status: "stockpile", turns: 0
+            }];
+        }
         return this.handleTrivialStatus(event);
     }
 
