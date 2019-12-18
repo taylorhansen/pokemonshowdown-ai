@@ -173,7 +173,8 @@ export interface ActivateStatusEffect extends
 export type StatusEffectType = UpdatableStatusEffectType | "aquaRing" |
     "attract" | "charge" | "curse" | "embargo" | "encore" | "focusEnergy" |
     "foresight" | "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" |
-    "nightmare" | "substitute" | "slowStart" | "taunt" | "torment";
+    "nightmare" | "powerTrick" | "substitute" | "slowStart" | "taunt" |
+    "torment";
 
 /** Explicitly updates status counters. */
 export interface CountStatusEffect extends DriverEventBase<"countStatusEffect">

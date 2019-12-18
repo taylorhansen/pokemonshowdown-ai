@@ -1075,6 +1075,7 @@ export class PSEventHandler
             case "Magnet Rise": status = "magnetRise"; break;
             case "Miracle Eye": status = "miracleEye"; break;
             case "Nightmare": status = "nightmare"; break;
+            case "Power Trick": status = "powerTrick"; break;
             case "Substitute": status = "substitute"; break;
             case "Slow Start": status = "slowStart"; break;
             case "Taunt": status = "taunt"; break;

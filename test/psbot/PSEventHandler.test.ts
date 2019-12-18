@@ -409,6 +409,7 @@ describe("PSEventHandler", function()
             describeTrivialStatus("Magnet Rise", "magnetRise");
             describeTrivialStatus("Miracle Eye", "miracleEye");
             describeTrivialStatus("Nightmare", "nightmare");
+            describeTrivialStatus("Power Trick", "powerTrick");
             describeTrivialStatus("Substitute", "substitute");
             describeTrivialStatus("Slow Start", "slowStart");
             describeTrivialStatus("Taunt", "taunt");

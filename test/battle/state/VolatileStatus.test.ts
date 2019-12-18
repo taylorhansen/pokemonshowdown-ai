@@ -26,6 +26,7 @@ describe("VolatileStatus", function()
         volatile.magnetRise.start();
         volatile.nightmare = true;
         volatile.perish = 3;
+        volatile.powerTrick = true;
         volatile.substitute = true;
         volatile.trap(new VolatileStatus());
         (new VolatileStatus()).trap(volatile);
@@ -79,6 +80,7 @@ describe("VolatileStatus", function()
             expect(volatile.magnetRise.isActive).to.be.false;
             expect(volatile.nightmare).to.be.false;
             expect(volatile.perish).to.equal(0);
+            expect(volatile.powerTrick).to.be.false;
             expect(volatile.substitute).to.be.false;
             expect(volatile.trapped).to.be.null;
             expect(volatile.trapping).to.be.null;
@@ -146,6 +148,7 @@ describe("VolatileStatus", function()
             expect(volatile.magnetRise.turns).to.equal(1);
             expect(volatile.nightmare).to.be.true;
             expect(volatile.perish).to.equal(3);
+            expect(volatile.powerTrick).to.be.true;
             expect(volatile.substitute).to.be.true;
             expect(volatile.trapped).to.not.be.null;
             expect(volatile.trapping).to.not.be.null;

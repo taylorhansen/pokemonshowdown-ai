@@ -39,6 +39,8 @@ export interface ReadonlyVolatileStatus
      * inactive.
      */
     readonly perish: number;
+    /** Power Trick move status. */
+    readonly powerTrick: boolean;
     /** Substitute move status. */
     readonly substitute: boolean;
     /** Who is trapping us. */
@@ -170,6 +172,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._perish = Math.max(0, Math.min(turns, 3));
     }
     private _perish!: number;
+
+    /** @override */
+    public powerTrick!: boolean;
 
     /** @override */
     public substitute!: boolean;
@@ -345,6 +350,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.magnetRise.end();
         this.nightmare = false;
         this._perish = 0;
+        this.powerTrick = false;
         this.substitute = false;
         this._trapped = null;
         this._trapping = null;
@@ -476,6 +482,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
             this.nightmare ? ["nightmare"] : [],
             this._perish > 0 ? [`perish in ${pluralTurns(this._perish)}`] : [],
+            this.powerTrick ? ["power trick"] : [],
             this.substitute ? ["has substitute"] : [],
             // TODO: be more specific with trapping info
             this._trapped ? ["trapped"] : [],

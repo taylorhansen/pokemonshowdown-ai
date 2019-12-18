@@ -246,6 +246,7 @@ describe("BattleDriver", function()
             test("Miracle Eye", "miracleEye",
                 v => v.identified === "miracleEye");
             test("Nightmare", "nightmare", v => v.nightmare);
+            test("Power Trick", "powerTrick", v => v.powerTrick);
             test("Substitute", "substitute", v => v.substitute);
             test("Slow Start", "slowStart", v => v.slowStart.isActive);
             test("Taunt", "taunt", v => v.taunt.isActive);
