@@ -61,7 +61,7 @@ export interface ReadonlyVolatileStatus
     /** Destiny Bond move status. */
     readonly destinyBond: boolean;
     /** List of disabled move statuses. */
-    readonly disabledMoves: readonly TempStatus[];
+    readonly disabledMoves: readonly ReadonlyTempStatus[];
     /** Encore move status. Encored move corresponds to `#lastUsed`. */
     readonly encore: ReadonlyTempStatus;
     /** Grudge move status. */
