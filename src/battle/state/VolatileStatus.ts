@@ -416,7 +416,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.embargo.tick();
         this.magnetRise.tick();
         this.taunt.tick();
-        // toxic counter handled by in-game events
         this.slowStart.tick();
         this.charge.tick();
         for (const disabled of this.disabledMoves) disabled.tick();
@@ -493,7 +492,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.taunt.isActive ? [this.taunt.toString()] : [],
             this.torment ? ["torment"] : [],
             this.transformed ? ["transformed"] : [],
-            // toxic turns handled by Pokemon#toString()
             this.twoTurn.isActive ?
                 [`preparing ${this.twoTurn.toString()}`] : [],
             this.uproar.isActive ? [this.uproar.toString()] : [],

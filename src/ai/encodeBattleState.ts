@@ -332,7 +332,6 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const stockpile = status.stockpile / 3;
     const taunt = encodeTempStatus(status.taunt);
     const torment = status.torment ? 1 : 0;
-    // toxic handled by encodePokemon()
     const transformed = status.transformed ? 1 : 0;
     const twoTurn = encodeVariableTempStatus(status.twoTurn);
     const unburden = status.unburden ? 1 : 0;
@@ -376,8 +375,8 @@ export function encodeMajorStatusCounter(
         // chance of staying asleep
         : status.current === "slp" ?
             limitedStatusTurns(status.turns, status.duration!)
-            // irrelevant
-            : 1);
+        // irrelevant
+        : 1);
 }
 
 /** Length of the return value of `encodeMove()`. */
