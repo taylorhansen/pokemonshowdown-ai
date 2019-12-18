@@ -84,6 +84,8 @@ export interface ReadonlyVolatileStatus
     readonly magicCoat: boolean;
     /** Whether the pokemon has used Minimize while out. */
     readonly minimize: boolean;
+    /** Mud Sport move status. */
+    readonly mudSport: boolean;
     /** Whether this pokemon must recharge on the next turn. */
     readonly mustRecharge: boolean;
     /**
@@ -246,6 +248,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public minimize!: boolean;
 
     /** @override */
+    public mudSport!: boolean;
+
+    /** @override */
     public mustRecharge!: boolean;
 
     /** @override */
@@ -379,6 +384,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.lockedMove.reset();
         this.magicCoat = false;
         this.minimize = false;
+        this.mudSport = false;
         this.mustRecharge = false;
         this.overrideMoveset.isolate();
         this.overrideTraits.reset();
@@ -506,6 +512,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.minimize ? ["magic coat"] : [],
             this.minimize ? ["minimize"] : [],
+            this.mudSport ? ["mud sport"] : [],
             this.mustRecharge ? ["must recharge"] : [],
             // override traits are handled by Pokemon#toString()
             this.rollout.isActive ? [this.rollout.toString()] : [],

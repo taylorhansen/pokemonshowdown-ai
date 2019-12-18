@@ -153,6 +153,7 @@ export class BattleDriver implements DriverEventHandler
             case "focusEnergy":
             case "ingrain":
             case "leechSeed":
+            case "mudSport":
             case "nightmare":
             case "powerTrick":
             case "substitute":

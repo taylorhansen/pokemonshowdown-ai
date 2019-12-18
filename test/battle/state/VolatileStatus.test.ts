@@ -44,6 +44,7 @@ describe("VolatileStatus", function()
         volatile.lockedMove.start("outrage");
         volatile.magicCoat = true;
         volatile.minimize = true;
+        volatile.mudSport = true;
         volatile.mustRecharge = true;
         // TODO: test private moveset link
         volatile.overrideTraits.init();
@@ -100,6 +101,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
+            expect(volatile.mudSport).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link
             expect(volatile.overrideTraits.hasAbility).to.be.false;
@@ -171,6 +173,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
+            expect(volatile.mudSport).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link
             expect(volatile.overrideTraits.hasAbility).to.be.false;

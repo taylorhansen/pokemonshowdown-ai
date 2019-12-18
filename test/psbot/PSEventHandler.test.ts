@@ -409,6 +409,7 @@ describe("PSEventHandler", function()
             describeTrivialStatus("Leech Seed", "leechSeed");
             describeTrivialStatus("Magnet Rise", "magnetRise");
             describeTrivialStatus("Miracle Eye", "miracleEye");
+            describeTrivialStatus("move: Mud Sport", "mudSport");
             describeTrivialStatus("Nightmare", "nightmare");
             describeTrivialStatus("Power Trick", "powerTrick");
             describeTrivialStatus("Substitute", "substitute");

@@ -1075,6 +1075,7 @@ export class PSEventHandler
             case "Leech Seed": status = "leechSeed"; break;
             case "Magnet Rise": status = "magnetRise"; break;
             case "Miracle Eye": status = "miracleEye"; break;
+            case "Mud Sport": status = "mudSport"; break;
             case "Nightmare": status = "nightmare"; break;
             case "Power Trick": status = "powerTrick"; break;
             case "Substitute": status = "substitute"; break;

@@ -246,6 +246,7 @@ describe("BattleDriver", function()
             test("Magnete Rise", "magnetRise", v => v.magnetRise.isActive);
             test("Miracle Eye", "miracleEye",
                 v => v.identified === "miracleEye");
+            test("Mud Sport", "mudSport", v => v.mudSport);
             test("Nightmare", "nightmare", v => v.nightmare);
             test("Power Trick", "powerTrick", v => v.powerTrick);
             test("Substitute", "substitute", v => v.substitute);
