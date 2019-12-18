@@ -1066,6 +1066,7 @@ export class PSEventHandler
                         move: toIdName(event.otherArgs[0])
                     }
                 ];
+            case "Embargo": status = "embargo"; break;
             case "Encore": status = "encore"; break;
             case "Focus Energy": status = "focusEnergy"; break;
             case "Foresight": status = "foresight"; break;
@@ -1073,7 +1074,7 @@ export class PSEventHandler
             case "Leech Seed": status = "leechSeed"; break;
             case "Magnet Rise": status = "magnetRise"; break;
             case "Miracle Eye": status = "miracleEye"; break;
-            case "Embargo": status = "embargo"; break;
+            case "Nightmare": status = "nightmare"; break;
             case "Substitute": status = "substitute"; break;
             case "Slow Start": status = "slowStart"; break;
             case "Taunt": status = "taunt"; break;

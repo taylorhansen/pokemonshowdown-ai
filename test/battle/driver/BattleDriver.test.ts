@@ -236,6 +236,7 @@ describe("BattleDriver", function()
             test("confusion", "confusion", v => v.confusion.isActive);
             test("Charge", "charge", v => v.charge.isActive);
             test("Curse", "curse", v => v.curse);
+            test("Embargo", "embargo", v => v.embargo.isActive);
             test("Encore", "encore", v => v.encore.isActive);
             test("Focus Energy", "focusEnergy", v => v.focusEnergy);
             test("Foresight", "foresight", v => v.identified === "foresight");
@@ -244,7 +245,7 @@ describe("BattleDriver", function()
             test("Magnete Rise", "magnetRise", v => v.magnetRise.isActive);
             test("Miracle Eye", "miracleEye",
                 v => v.identified === "miracleEye");
-            test("Embargo", "embargo", v => v.embargo.isActive);
+            test("Nightmare", "nightmare", v => v.nightmare);
             test("Substitute", "substitute", v => v.substitute);
             test("Slow Start", "slowStart", v => v.slowStart.isActive);
             test("Taunt", "taunt", v => v.taunt.isActive);

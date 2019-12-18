@@ -273,10 +273,10 @@ export const sizeVolatileStatus =
     /*aqua ring*/1 + /*boostable stats*/Object.keys(boostNames).length +
     /*confusion*/sizeTempStatus + /*curse*/1 + /*embargo*/sizeTempStatus +
     /*focus energy*/1 + /*gastro acid*/1 + /*ingrain*/1 + /*leech seed*/1 +
-    /*magnet rise*/sizeTempStatus + /*perish*/1 + /*substitute*/1 +
-    /*trapped*/1 + /*trapping*/1 + /*attract*/1 + /*bide*/sizeTempStatus +
-    /*charge*/sizeTempStatus + /*defense curl*/1 + /*destiny bond*/1 +
-    /*disabled moves*/(Moveset.maxSize * sizeTempStatus) +
+    /*magnet rise*/sizeTempStatus + /*nightmare*/1 + /*perish*/1 +
+    /*substitute*/1 + /*trapped*/1 + /*trapping*/1 + /*attract*/1 +
+    /*bide*/sizeTempStatus + /*charge*/sizeTempStatus + /*defense curl*/1 +
+    /*destiny bond*/1 + /*disabled moves*/(Moveset.maxSize * sizeTempStatus) +
     /*grudge*/1 + /*identified*/2 + /*locked move variants*/numLockedMoves +
     /*minimize*/1 + /*must recharge*/1 + /*override traits*/sizePokemonTraits +
     /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
@@ -300,6 +300,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const ingrain = status.ingrain ? 1 : 0;
     const leechSeed = status.leechSeed ? 1 : 0;
     const magnetRise = encodeTempStatus(status.magnetRise);
+    const nightmare = status.nightmare ? 1 : 0;
     const perish = status.perish <= 0 ?
         0 : limitedStatusTurns(status.perish, 3);
     const substitute = status.substitute ? 1 : 0;
@@ -340,8 +341,8 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
 
     return [
         aquaRing, ...boosts, ...confused, curse, ...embargo, focusEnergy,
-        gastroAcid, ingrain, leechSeed, ...magnetRise, perish, substitute,
-        trapped, trapping,
+        gastroAcid, ingrain, leechSeed, ...magnetRise, nightmare, perish,
+        substitute, trapped, trapping,
 
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
         grudge, ...identified, ...lockedMove, minimize, mustRecharge,

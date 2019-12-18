@@ -153,6 +153,7 @@ export class BattleDriver implements DriverEventHandler
             case "focusEnergy":
             case "ingrain":
             case "leechSeed":
+            case "nightmare":
             case "substitute":
             case "torment":
                 mon.volatile[event.status] = event.start;

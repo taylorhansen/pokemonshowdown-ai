@@ -717,6 +717,19 @@ describe("Pokemon", function()
         });
     });
 
+    describe("#majorStatus", function()
+    {
+        it("Should cure nightmare if woken up", function()
+        {
+            const mon = new Pokemon("Magikarp", false);
+            mon.switchInto();
+            mon.majorStatus.afflict("slp");
+            mon.volatile.nightmare = true;
+            mon.majorStatus.cure();
+            expect(mon.volatile.nightmare).to.be.false;
+        });
+    });
+
     describe("#isGrounded/#maybeGrounded", function()
     {
         /**
@@ -923,6 +936,31 @@ describe("Pokemon", function()
                 const other = new Pokemon("Magikarp", false);
                 other.switchInto(mon, /*copy*/true);
                 expect(other.volatile.boosts.atk).to.equal(1);
+            });
+
+            it("Should reset nightmare if recipient is not asleep", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.switchInto();
+                mon.majorStatus.afflict("slp");
+                mon.volatile.nightmare = true;
+
+                const other = new Pokemon("Magikarp", false);
+                other.switchInto(mon, /*copy*/true);
+                expect(other.volatile.nightmare).to.be.false;
+            });
+
+            it("Should copy nightmare if recipient is asleep", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.switchInto();
+                mon.majorStatus.afflict("slp");
+                mon.volatile.nightmare = true;
+
+                const other = new Pokemon("Magikarp", false);
+                other.majorStatus.afflict("slp");
+                other.switchInto(mon, /*copy*/true);
+                expect(other.volatile.nightmare).to.be.true;
             });
         });
     });

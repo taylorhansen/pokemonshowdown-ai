@@ -423,6 +423,8 @@ export class Pokemon implements ReadonlyPokemon
             this.traits.setAbility("earlybird");
         }
         */
+        // if the pokemon was asleep before, nightmare should be cured now
+        if (this._volatile) this._volatile.nightmare = false;
     });
 
     /** @override */
@@ -557,7 +559,15 @@ export class Pokemon implements ReadonlyPokemon
         // switch in new mon
 
         // handle baton pass
-        if (copy) this._volatile.clearUnpassable();
+        if (copy)
+        {
+            this._volatile.clearUnpassable();
+            // nightmare status should persist if the recipient is asleep
+            if (this.majorStatus.current !== "slp")
+            {
+                this._volatile.nightmare = false;
+            }
+        }
         else this._volatile.clear();
 
         // make sure volatile has updated info about this pokemon

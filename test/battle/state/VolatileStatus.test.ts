@@ -24,6 +24,7 @@ describe("VolatileStatus", function()
         volatile.ingrain = true;
         volatile.leechSeed = true;
         volatile.magnetRise.start();
+        volatile.nightmare = true;
         volatile.perish = 3;
         volatile.substitute = true;
         volatile.trap(new VolatileStatus());
@@ -76,6 +77,7 @@ describe("VolatileStatus", function()
             expect(volatile.ingrain).to.be.false;
             expect(volatile.leechSeed).to.be.false;
             expect(volatile.magnetRise.isActive).to.be.false;
+            expect(volatile.nightmare).to.be.false;
             expect(volatile.perish).to.equal(0);
             expect(volatile.substitute).to.be.false;
             expect(volatile.trapped).to.be.null;
@@ -141,6 +143,7 @@ describe("VolatileStatus", function()
             expect(volatile.leechSeed).to.be.true;
             expect(volatile.magnetRise.isActive).to.be.true;
             expect(volatile.magnetRise.turns).to.equal(1);
+            expect(volatile.nightmare).to.be.true;
             expect(volatile.perish).to.equal(3);
             expect(volatile.substitute).to.be.true;
             expect(volatile.trapped).to.not.be.null;

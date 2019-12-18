@@ -400,6 +400,7 @@ describe("PSEventHandler", function()
                     [{type: "reenableMoves", monRef: "us"}]);
             });
 
+            describeTrivialStatus("Embargo", "embargo");
             describeTrivialStatus("Encore", "encore");
             describeTrivialStatus("Focus Energy", "focusEnergy");
             describeTrivialStatus("Foresight", "foresight");
@@ -407,7 +408,7 @@ describe("PSEventHandler", function()
             describeTrivialStatus("Leech Seed", "leechSeed");
             describeTrivialStatus("Magnet Rise", "magnetRise");
             describeTrivialStatus("Miracle Eye", "miracleEye");
-            describeTrivialStatus("Embargo", "embargo");
+            describeTrivialStatus("Nightmare", "nightmare");
             describeTrivialStatus("Substitute", "substitute");
             describeTrivialStatus("Slow Start", "slowStart");
             describeTrivialStatus("Taunt", "taunt");
