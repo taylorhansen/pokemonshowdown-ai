@@ -413,7 +413,17 @@ export class Pokemon implements ReadonlyPokemon
     public get fainted(): boolean { return this.hp.current === 0; }
 
     /** @override */
-    public readonly majorStatus = new MajorStatusCounter();
+    public readonly majorStatus = new MajorStatusCounter().onCure(() =>
+    {
+        // TODO: don't confuse this with other methods of curing slp in 1 turn
+        /*
+        if (this.majorStatus.current === "slp" && this.majorStatus.turns === 1)
+        {
+            // cured in 0 turns, must have early bird ability
+            this.traits.setAbility("earlybird");
+        }
+        */
+    });
 
     /** @override */
     public get isGrounded(): boolean

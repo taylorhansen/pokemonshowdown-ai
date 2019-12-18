@@ -137,6 +137,20 @@ describe("MajorStatusCounter", function()
         });
     });
 
+    describe("#onCure()", function()
+    {
+        it("Should register callback", function(done)
+        {
+            ms.afflict("brn");
+            ms.onCure(() =>
+            {
+                expect(ms.current).to.equal("brn");
+                done();
+            });
+            ms.cure();
+        });
+    });
+
     describe("#toString()", function()
     {
         it("Should be 'none' if no status", function()

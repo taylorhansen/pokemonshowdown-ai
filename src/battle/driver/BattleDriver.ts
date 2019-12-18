@@ -417,15 +417,7 @@ export class BattleDriver implements DriverEventHandler
     /** Cures the pokemon of the given major status. */
     public cureStatus(event: CureStatus): void
     {
-        const mon = this.getMon(event.monRef);
-        mon.majorStatus.assert(event.status);
-        if (event.status === "slp" && mon.majorStatus.turns === 1)
-        {
-            // cured in 0 turns, must have early bird ability
-            // TODO: refactor this to be in Pokemon logic
-            mon.traits.setAbility("earlybird");
-        }
-        mon.majorStatus.cure();
+        this.getMon(event.monRef).majorStatus.assert(event.status).cure();
     }
 
     /**

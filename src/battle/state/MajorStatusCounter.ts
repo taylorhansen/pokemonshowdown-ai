@@ -27,6 +27,9 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
     public get duration(): number | null { return this._duration; }
     private _duration: number | null = null;
 
+    /** Callback for when a status is cured. */
+    private cureCallback?: () => void;
+
     /**
      * Afflicts a new major status.
      * @param status Status to afflict.
@@ -85,9 +88,20 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
     /** Cures this status. */
     public cure(): void
     {
+        if (this.cureCallback) this.cureCallback();
         this._current = null;
         this._turns = 0;
         this._duration = null;
+    }
+
+    /**
+     * Registers the callback for when `#cure()` is called. The function will be
+     * called right before the method executes.
+     */
+    public onCure(cb: () => void): this
+    {
+        this.cureCallback = cb;
+        return this;
     }
 
     /** Stringifies this MajorStatus, with turn info if applicable. */
