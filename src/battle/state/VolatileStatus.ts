@@ -97,6 +97,8 @@ export interface ReadonlyVolatileStatus
     readonly roost: boolean;
     /** First 5 turns of Slow Start ability. */
     readonly slowStart: ReadonlyTempStatus;
+    /** Whether we have successfully stalled this turn and the effect is up. */
+    readonly stalling: boolean;
     /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
     readonly stallTurns: number;
     /** Number of Stockpile uses. */
@@ -256,6 +258,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public readonly slowStart = new TempStatus("slow start", 5);
 
     /** @override */
+    public get stalling(): boolean { return this._stalled; }
+    /** @override */
     public get stallTurns(): number { return this._stallTurns; }
     /**
      * Sets the stall flag. Should be called once per turn if it's on.
@@ -263,12 +267,11 @@ export class VolatileStatus implements ReadonlyVolatileStatus
      */
     public stall(flag: boolean): void
     {
+        this._stalled = flag;
         this._stallTurns = flag ? this._stallTurns + 1 : 0;
-        this.stalled = flag;
     }
+    private _stalled!: boolean;
     private _stallTurns!: number;
-    /** Whether we have successfully stalled this turn. */
-    private stalled!: boolean;
 
     /** @override */
     public get stockpile(): number { return this._stockpile; }
@@ -372,7 +375,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.roost = false;
         this.slowStart.end();
         this._stallTurns = 0;
-        this.stalled = false;
+        this._stalled = false;
         this._stockpile = 0;
         this.taunt.end();
         this.torment = false;
@@ -396,7 +399,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         // uproar doesn't end if prevented from using subsequent moves
 
         this._stallTurns = 0;
-        this.stalled = false;
+        this._stalled = false;
     }
 
     /** Resets single-move statuses like Destiny Bond. */
@@ -438,8 +441,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         //  counter will reset
         // TODO: reset as soon as the pokemon consumes its action without
         //  stalling instead of checking at the end of the turn
-        if (!this.stalled) this._stallTurns = 0;
-        this.stalled = false;
+        if (!this._stalled) this._stallTurns = 0;
+        this._stalled = false;
 
         // toggle truant activation
         if (this.overrideTraits.hasAbility &&

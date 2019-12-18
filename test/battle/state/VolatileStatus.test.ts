@@ -111,6 +111,7 @@ describe("VolatileStatus", function()
             expect(volatile.rollout.isActive).to.be.false;
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
+            expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.stockpile).to.equal(0);
             expect(volatile.taunt.isActive).to.be.false;
@@ -178,6 +179,7 @@ describe("VolatileStatus", function()
             expect(volatile.rollout.isActive).to.be.false;
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
+            expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.stockpile).to.equal(0);
             expect(volatile.taunt.isActive).to.be.false;
@@ -307,25 +309,35 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#stallTurns/#stall()", function()
+    describe("#stalling/#stallTurns/#stall()", function()
     {
-        it("Should increment/reset stallTurns", function()
+        it("Should increment/reset #stallTurns", function()
         {
             expect(volatile.stallTurns).to.equal(0);
+
             volatile.stall(true);
+            expect(volatile.stalling).to.be.true;
             expect(volatile.stallTurns).to.equal(1);
+
             volatile.stall(true);
+            expect(volatile.stalling).to.be.true;
             expect(volatile.stallTurns).to.equal(2);
+
             volatile.stall(false);
+            expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
         });
 
-        it("Should reset stallTurns on #postTurn() if no stall happened this " +
-            "turn", function()
+        it("Should reset #stallTurns on #postTurn() if no stall happened " +
+            "this turn", function()
         {
             volatile.stall(true);
+            expect(volatile.stalling).to.be.true;
             volatile.postTurn();
+            expect(volatile.stalling).to.be.false;
+            expect(volatile.stallTurns).to.equal(1);
             volatile.postTurn();
+            expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
         });
 
@@ -334,6 +346,7 @@ describe("VolatileStatus", function()
         {
             volatile.stall(true);
             volatile.postTurn();
+            expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(1);
         });
     });
@@ -391,6 +404,7 @@ describe("VolatileStatus", function()
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.twoTurn.isActive).to.be.false;
+            expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
         });
     });
