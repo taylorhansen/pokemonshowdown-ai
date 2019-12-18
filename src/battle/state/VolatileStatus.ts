@@ -268,7 +268,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public readonly slowStart = new TempStatus("slow start", 5);
 
     /** @override */
-    public get stalling(): boolean { return this._stalled; }
+    public get stalling(): boolean { return this._stalling; }
     /** @override */
     public get stallTurns(): number { return this._stallTurns; }
     /**
@@ -277,10 +277,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus
      */
     public stall(flag: boolean): void
     {
-        this._stalled = flag;
+        this._stalling = flag;
         this._stallTurns = flag ? this._stallTurns + 1 : 0;
     }
-    private _stalled!: boolean;
+    private _stalling!: boolean;
     private _stallTurns!: number;
 
     /** @override */
@@ -386,8 +386,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.rollout.reset();
         this.roost = false;
         this.slowStart.end();
+        this._stalling = false;
         this._stallTurns = 0;
-        this._stalled = false;
         this._stockpile = 0;
         this.taunt.end();
         this.torment = false;
@@ -410,8 +410,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.twoTurn.reset();
         // uproar doesn't end if prevented from using subsequent moves
 
+        this._stalling = false;
         this._stallTurns = 0;
-        this._stalled = false;
     }
 
     /** Resets single-move statuses like Destiny Bond. */
@@ -453,8 +453,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         //  counter will reset
         // TODO: reset as soon as the pokemon consumes its action without
         //  stalling instead of checking at the end of the turn
-        if (!this._stalled) this._stallTurns = 0;
-        this._stalled = false;
+        if (!this._stalling) this._stallTurns = 0;
+        this._stalling = false;
 
         // toggle truant activation
         if (this.overrideTraits.hasAbility &&
