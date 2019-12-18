@@ -1071,6 +1071,7 @@ export class PSEventHandler
             case "Focus Energy": status = "focusEnergy"; break;
             case "Foresight": status = "foresight"; break;
             case "Ingrain": status = "ingrain"; break;
+            case "Heal Block": status = "healBlock"; break;
             case "Leech Seed": status = "leechSeed"; break;
             case "Magnet Rise": status = "magnetRise"; break;
             case "Miracle Eye": status = "miracleEye"; break;

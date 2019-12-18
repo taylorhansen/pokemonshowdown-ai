@@ -38,6 +38,8 @@ describe("VolatileStatus", function()
         volatile.destinyBond = true;
         volatile.disabledMoves[0].start();
         volatile.encore.start();
+        volatile.grudge = true;
+        volatile.healBlock.start();
         volatile.identified = "foresight";
         volatile.lockedMove.start("outrage");
         volatile.magicCoat = true;
@@ -92,6 +94,8 @@ describe("VolatileStatus", function()
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
             expect(volatile.encore.isActive).to.be.false;
+            expect(volatile.grudge).to.be.false;
+            expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
@@ -161,6 +165,8 @@ describe("VolatileStatus", function()
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabledMoves[0].isActive).to.be.false;
             expect(volatile.encore.isActive).to.be.false;
+            expect(volatile.grudge).to.be.false;
+            expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;

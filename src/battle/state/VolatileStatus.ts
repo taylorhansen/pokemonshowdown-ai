@@ -66,6 +66,8 @@ export interface ReadonlyVolatileStatus
     readonly encore: ReadonlyTempStatus;
     /** Grudge move status. */
     readonly grudge: boolean;
+    /** Heal Block move status. */
+    readonly healBlock: ReadonlyTempStatus;
     /** Foresight/Miracle Eye move status. */
     readonly identified: "foresight" | "miracleEye" | null;
     /**
@@ -228,6 +230,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public grudge!: boolean;
 
     /** @override */
+    public healBlock = new TempStatus("heal block", 5);
+
+    /** @override */
     public identified!: "foresight" | "miracleEye" | null;
 
     /** @override */
@@ -369,6 +374,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.enableMoves();
         this.encore.end();
         this.grudge = false;
+        this.healBlock.end();
         this.identified = null;
         this.lockedMove.reset();
         this.magicCoat = false;
@@ -495,6 +501,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),
             this.encore.isActive ? [this.encore.toString()] : [],
             this.grudge ? ["grudge"] : [],
+            this.healBlock.isActive ? [this.healBlock.toString()] : [],
             this.identified ? [this.identified] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.minimize ? ["magic coat"] : [],

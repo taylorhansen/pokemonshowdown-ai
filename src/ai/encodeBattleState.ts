@@ -274,11 +274,12 @@ export const sizeVolatileStatus =
     /*confusion*/sizeTempStatus + /*curse*/1 + /*embargo*/sizeTempStatus +
     /*focus energy*/1 + /*gastro acid*/1 + /*ingrain*/1 + /*leech seed*/1 +
     /*magnet rise*/sizeTempStatus + /*nightmare*/1 + /*perish*/1 +
-    /*powerTrick*/1 + /*substitute*/1 + /*trapped*/1 + /*trapping*/1 +
+    /*power trick*/1 + /*substitute*/1 + /*trapped*/1 + /*trapping*/1 +
     /*attract*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*defense curl*/1 + /*destiny bond*/1 +
     /*disabled moves*/(Moveset.maxSize * sizeTempStatus) + /*grudge*/1 +
-    /*identified*/2 + /*locked move variants*/numLockedMoves + /*minimize*/1 +
+    /*heal block*/sizeTempStatus + /*identified*/2 +
+    /*locked move variants*/numLockedMoves + /*minimize*/1 +
     /*must recharge*/1 + /*override traits*/sizePokemonTraits +
     /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 + /*stockpile*/1 +
@@ -321,6 +322,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const grudge = status.grudge ? 1 : 0;
     const identified = ["foresight", "miracleeye"]
         .map(v => status.identified === v ? 1 : 0);
+    const healBlock = encodeTempStatus(status.healBlock);
     const lockedMove = encodeVariableTempStatus(status.lockedMove);
     const minimize = status.minimize ? 1 : 0;
     const mustRecharge = status.mustRecharge ? 1 : 0;
@@ -347,10 +349,10 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
         powerTrick, substitute, trapped, trapping,
 
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
-        grudge, ...identified, ...lockedMove, minimize, mustRecharge,
-        ...overrideTraits, ...rollout, roost, ...slowStart, stallFailRate,
-        stockpile, ...taunt, torment, transformed, ...twoTurn, unburden,
-        ...uproar, willTruant
+        grudge, ...identified, ...healBlock, ...lockedMove, minimize,
+        mustRecharge, ...overrideTraits, ...rollout, roost, ...slowStart,
+        stallFailRate, stockpile, ...taunt, torment, transformed, ...twoTurn,
+        unburden, ...uproar, willTruant
     ];
 }
 

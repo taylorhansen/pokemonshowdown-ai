@@ -165,6 +165,7 @@ export class BattleDriver implements DriverEventHandler
             case "encore":
             case "magnetRise":
             case "embargo":
+            case "healBlock":
             case "slowStart":
             case "taunt":
             case "uproar":

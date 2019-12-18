@@ -405,6 +405,7 @@ describe("PSEventHandler", function()
             describeTrivialStatus("Focus Energy", "focusEnergy");
             describeTrivialStatus("Foresight", "foresight");
             describeTrivialStatus("Ingrain", "ingrain");
+            describeTrivialStatus("move: Heal Block", "healBlock");
             describeTrivialStatus("Leech Seed", "leechSeed");
             describeTrivialStatus("Magnet Rise", "magnetRise");
             describeTrivialStatus("Miracle Eye", "miracleEye");

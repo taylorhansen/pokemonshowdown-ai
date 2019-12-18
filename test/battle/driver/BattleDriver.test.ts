@@ -240,6 +240,7 @@ describe("BattleDriver", function()
             test("Encore", "encore", v => v.encore.isActive);
             test("Focus Energy", "focusEnergy", v => v.focusEnergy);
             test("Foresight", "foresight", v => v.identified === "foresight");
+            test("Heal Block", "healBlock", v => v.healBlock.isActive);
             test("Ingrain", "ingrain", v => v.ingrain);
             test("Leech Seed", "leechSeed", v => v.leechSeed);
             test("Magnete Rise", "magnetRise", v => v.magnetRise.isActive);
