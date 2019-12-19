@@ -345,6 +345,8 @@ export class PSEventHandler
                         status: event.volatile
                     }
                 ];
+            case "move: Feint":
+                return [{type: "feint", monRef}];
             case "move: Mimic":
             {
                 const move = toIdName(event.otherArgs[0]);

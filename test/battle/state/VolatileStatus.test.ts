@@ -435,4 +435,16 @@ describe("VolatileStatus", function()
             expect(volatile.grudge).to.be.false;
         });
     });
+
+    describe("#feint()", function()
+    {
+        it("Should reset #stalling but not #stallTurns", function()
+        {
+            volatile.stall(true);
+
+            volatile.feint();
+            expect(volatile.stalling).to.be.false;
+            expect(volatile.stallTurns).to.equal(1);
+        });
+    });
 });

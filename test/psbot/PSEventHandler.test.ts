@@ -494,6 +494,16 @@ describe("PSEventHandler", function()
                 }]);
             });
 
+            describe("feint", function()
+            {
+                test("Should emit feint",
+                [{
+                    type: "-activate", id: us, volatile: "move: Feint",
+                    otherArgs: []
+                }],
+                    [{type: "feint", monRef: "us"}]);
+            });
+
             describe("mimic", function()
             {
                 for (const type of ["sketch", "mimic"] as const)

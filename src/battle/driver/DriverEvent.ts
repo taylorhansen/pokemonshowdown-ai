@@ -21,6 +21,7 @@ interface DriverEventMap
     disableMove: DisableMove;
     reenableMoves: ReenableMoves;
     activateFutureMove: ActivateFutureMove;
+    feint: Feint;
     updateStatusEffect: UpdateStatusEffect;
     fatigue: Fatigue;
     setThirdType: SetThirdType;
@@ -216,6 +217,13 @@ export interface ActivateFutureMove extends
     readonly move: FutureMove;
     /** Whether the move is being prepared (true) or released (false). */
     readonly start: boolean;
+}
+
+/** Indicates that the pokemon's stalling move was broken by Feint. */
+export interface Feint extends DriverEventBase<"feint">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
 }
 
 /**

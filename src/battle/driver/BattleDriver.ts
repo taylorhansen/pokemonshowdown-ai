@@ -7,9 +7,9 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ActivateSideCondition, ActivateStatusEffect, AfflictStatus, AnyDriverEvent,
     Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
     ClearSelfSwitch, CopyBoosts, CountStatusEffect, CureStatus, CureTeam,
-    DisableMove, DriverEvent, DriverEventType, Faint, Fatigue, FormChange,
-    GastroAcid, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts, Mimic,
-    MustRecharge, PostTurn, PreTurn, ReenableMoves, RejectSwitchTrapped,
+    DisableMove, DriverEvent, DriverEventType, Faint, Fatigue, Feint,
+    FormChange, GastroAcid, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts,
+    Mimic, MustRecharge, PostTurn, PreTurn, ReenableMoves, RejectSwitchTrapped,
     RemoveItem, ResetWeather, RevealItem, RevealMove, SetBoost,
     SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType, SetWeather, Sketch,
     SwapBoosts, SwitchIn, TakeDamage, TickWeather, Transform, TransformPost,
@@ -218,6 +218,15 @@ export class BattleDriver implements DriverEventHandler
             .futureMoves[event.move];
         if (event.start) futureMove.start(/*restart*/false);
         else futureMove.end();
+    }
+
+    /**
+     * Indicates that the pokemon's stalling move was broken by Feint.
+     * @virtual
+     */
+    public feint(event: Feint): void
+    {
+        this.getMon(event.monRef).volatile.feint();
     }
 
     /**

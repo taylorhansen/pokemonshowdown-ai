@@ -352,6 +352,28 @@ describe("BattleDriver", function()
             });
         });
 
+        describe("#feint()", function()
+        {
+            it("Should break stall", function()
+            {
+                const v = driver.state.teams.us.active.volatile;
+                expect(v.stalling).to.be.false;
+                expect(v.stallTurns).to.equal(0);
+
+                driver.useMove(
+                {
+                    type: "useMove", monRef: "us", moveId: "protect",
+                    targets: ["us"]
+                });
+                expect(v.stalling).to.be.true;
+                expect(v.stallTurns).to.equal(1);
+
+                driver.feint({type: "feint", monRef: "us"});
+                expect(v.stalling).to.be.false;
+                expect(v.stallTurns).to.equal(1);
+            });
+        });
+
         describe("#updateStatusEffect()", function()
         {
             function test(name: string, status: UpdatableStatusEffectType)

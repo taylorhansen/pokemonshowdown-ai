@@ -428,6 +428,15 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         // TODO: rage
     }
 
+    /**
+     * Breaks currently active stalling move effects mid-turn without updating
+     * the fail rate for the next use.
+     */
+    public feint(): void
+    {
+        this._stalling = false;
+    }
+
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void
     {
