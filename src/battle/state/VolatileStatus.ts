@@ -405,7 +405,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     }
 
     /** Indicates that the pokemon spent its turn being inactive. */
-    public inactive()
+    public inactive(): void
     {
         this.resetSingleMove();
 
@@ -421,7 +421,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     }
 
     /** Resets single-move statuses like Destiny Bond. */
-    public resetSingleMove()
+    public resetSingleMove(): void
     {
         this.destinyBond = false;
         this.grudge = false;

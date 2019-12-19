@@ -422,4 +422,17 @@ describe("VolatileStatus", function()
             expect(volatile.stallTurns).to.equal(0);
         });
     });
+
+    describe("#resetSingleMove()", function()
+    {
+        it("Should reset single-move statuses", function()
+        {
+            volatile.destinyBond = true;
+            volatile.grudge = true;
+
+            volatile.resetSingleMove();
+            expect(volatile.destinyBond).to.be.false;
+            expect(volatile.grudge).to.be.false;
+        });
+    });
 });
