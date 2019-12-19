@@ -831,8 +831,7 @@ export class PSEventHandler
         events: readonly AnyBattleEvent[], i: number): AnyDriverEvent[]
     {
         let status: SingleTurnStatus | undefined;
-        if (PSEventHandler.isStallSingleTurn(event.status)) status = "stall";
-        else if (event.status === "move: Roost") status = "roost";
+        if (event.status === "move: Roost") status = "roost";
         else if (event.status === "move: Magic Coat") status = "magicCoat";
 
         if (!status) return [];

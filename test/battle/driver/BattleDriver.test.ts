@@ -941,8 +941,6 @@ describe("BattleDriver", function()
         {
             function test(name: string, status: SingleTurnStatus)
             {
-                if (status === "stall") return;
-
                 it(`Should set ${name}`, function()
                 {
                     const mon = driver.state.teams.us.active;
@@ -957,19 +955,6 @@ describe("BattleDriver", function()
 
             test("Magic Coat", "magicCoat");
             test("Roost", "roost");
-
-            it("Should set stall", function()
-            {
-                const mon = driver.state.teams.us.active;
-                expect(mon.volatile.stallTurns).to.equal(0);
-
-                driver.setSingleTurnStatus(
-                {
-                    type: "setSingleTurnStatus", monRef: "us", status: "stall"
-                });
-
-                expect(mon.volatile.stallTurns).to.equal(1);
-            });
         });
 
         describe("#takeDamage()", function()

@@ -270,6 +270,8 @@ export class Pokemon implements ReadonlyPokemon
         // struggle doesn't occupy a moveslot
         if (options.moveId === "struggle") return;
 
+        const moveData = dex.moves[options.moveId];
+
         // reveal option can be either unspecified (assume true) or truthy
         if (options.reveal === undefined || options.reveal)
         {
@@ -318,15 +320,13 @@ export class Pokemon implements ReadonlyPokemon
         if (options.unsuccessful)
         {
             this.volatile.lockedMove.reset();
+            this.volatile.stall(false);
             return;
         }
 
         // apply implicit effects
 
-        if (options.moveId === "defensecurl") this.volatile.defenseCurl = true;
-
-        const move = dex.moves[options.moveId];
-        if (move.selfVolatileEffect === "lockedmove")
+        if (moveData.selfVolatileEffect === "lockedmove")
         {
             if (this.volatile.lockedMove.isActive &&
                 options.moveId === this.volatile.lockedMove.type)
@@ -338,10 +338,22 @@ export class Pokemon implements ReadonlyPokemon
         }
         else this.volatile.lockedMove.reset();
 
-        if (move.volatileEffect === "magiccoat") this.volatile.magicCoat = true;
-        else if (move.volatileEffect === "minimize")
+        if (moveData.volatileEffect === "endure" ||
+            moveData.volatileEffect === "protect")
+        {
+            this.volatile.stall(true);
+        }
+        if (moveData.volatileEffect === "magiccoat")
+        {
+            this.volatile.magicCoat = true;
+        }
+        else if (moveData.volatileEffect === "minimize")
         {
             this.volatile.minimize = true;
+        }
+        else if (moveData.volatileEffect === "defensecurl")
+        {
+            this.volatile.defenseCurl = true;
         }
 
         // apply implicit team effects
@@ -355,7 +367,7 @@ export class Pokemon implements ReadonlyPokemon
                 this.team.status.wish.start(/*restart*/false);
             }
 
-            this.team.status.selfSwitch = move.selfSwitch || false;
+            this.team.status.selfSwitch = moveData.selfSwitch || false;
         }
     }
     /**
@@ -523,7 +535,6 @@ export class Pokemon implements ReadonlyPokemon
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
-        // sleep counter handled by in-game events
         if (this.active) this.volatile.postTurn();
     }
 

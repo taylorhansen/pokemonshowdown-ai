@@ -340,14 +340,16 @@ describe("VolatileStatus", function()
             expect(volatile.stallTurns).to.equal(0);
         });
 
-        it("Should reset #stallTurns on #postTurn() if no stall happened " +
-            "this turn", function()
+        it("Should reset #stallTurns on #postTurn() if inactive this turn",
+        function()
         {
             volatile.stall(true);
             expect(volatile.stalling).to.be.true;
             volatile.postTurn();
             expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(1);
+
+            volatile.inactive();
             volatile.postTurn();
             expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);

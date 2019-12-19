@@ -1055,9 +1055,6 @@ describe("PSEventHandler", function()
 
             const testCases =
             [
-                {name: "Protect", status: "stall"},
-                {name: "move: Protect", status: "stall"},
-                {name: "move: Endure", status: "stall"},
                 {name: "move: Roost", status: "roost"},
                 {name: "move: Magic Coat", status: "magicCoat"}
             ] as const;

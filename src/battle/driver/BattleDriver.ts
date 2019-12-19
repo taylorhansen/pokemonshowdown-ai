@@ -543,9 +543,7 @@ export class BattleDriver implements DriverEventHandler
      */
     public setSingleTurnStatus(event: SetSingleTurnStatus): void
     {
-        const v = this.getMon(event.monRef).volatile;
-        if (event.status === "stall") v.stall(true);
-        else v[event.status] = true;
+        this.getMon(event.monRef).volatile[event.status] = true;
     }
 
     /**

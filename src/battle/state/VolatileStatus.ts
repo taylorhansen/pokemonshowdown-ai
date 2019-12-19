@@ -434,10 +434,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         // TODO: what to do?
     }
 
-    /**
-     * Called at the end of the turn, after a Choice has been sent to the
-     * server.
-     */
+    /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
         // confusion counter handled by in-game events
@@ -450,16 +447,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
         // reset single-turn statuses
         this.magicCoat = false;
-
-        // after roost is used, the user is no longer grounded at the end of
-        //  the turn
         this.roost = false;
-
-        // stalling moves must be used successfully every turn or the turn
-        //  counter will reset
-        // TODO: reset as soon as the pokemon consumes its action without
-        //  stalling instead of checking at the end of the turn
-        if (!this._stalling) this._stallTurns = 0;
         this._stalling = false;
 
         // toggle truant activation

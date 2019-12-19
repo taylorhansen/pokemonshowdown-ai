@@ -5,6 +5,7 @@ import { rolloutMoves } from "../../../src/battle/dex/dex-util";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
 import { Team } from "../../../src/battle/state/Team";
+import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 
 describe("Pokemon", function()
 {
@@ -455,44 +456,61 @@ describe("Pokemon", function()
                 }
             });
 
-            describe("destinybond", function()
+            describe("single-move", function()
             {
-                it("Should reset #volatile#destinyBond", function()
+                it("Should reset single-move statuses", function()
                 {
                     const mon = new Pokemon("Magikarp", false);
                     mon.switchInto();
                     mon.volatile.destinyBond = true;
+                    mon.volatile.grudge = true;
 
                     mon.useMove({moveId: "splash", targets: [mon]});
                     expect(mon.volatile.destinyBond).to.be.false;
+                    expect(mon.volatile.grudge).to.be.false;
                 });
             });
 
-            describe("defensecurl", function()
+            function shouldActivate(name: string, moveId: string,
+                getter: (v: VolatileStatus) => boolean,
+                setter?: (v: VolatileStatus) => void): void
             {
-                it("Should set #volatile#defenseCurl if successful", function()
+                it(`Should activate ${name}`, function()
                 {
                     const mon = new Pokemon("Magikarp", false);
                     mon.switchInto();
-                    expect(mon.volatile.defenseCurl).to.be.false;
-                    mon.useMove({moveId: "defensecurl", targets: [mon]});
-                    expect(mon.volatile.defenseCurl).to.be.true;
-                });
-
-                it("Should not set #volatile#defenseCurl if unsuccessful",
-                function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    expect(mon.volatile.defenseCurl).to.be.false;
-                    mon.useMove(
+                    if (setter)
                     {
-                        moveId: "defensecurl", targets: [mon],
-                        unsuccessful: "failed"
-                    });
-                    expect(mon.volatile.defenseCurl).to.be.false;
+                        setter(mon.volatile);
+                        expect(getter(mon.volatile)).to.be.true;
+                    }
+                    else expect(getter(mon.volatile)).to.be.false;
+
+                    mon.useMove({moveId, targets: [mon]});
+                    expect(getter(mon.volatile)).to.be.true;
                 });
-            });
+            }
+
+            function shouldNotActivate(name: string, moveId: string,
+                getter: (v: VolatileStatus) => boolean,
+                setter?: (v: VolatileStatus) => void): void
+            {
+                it(`Should not activate ${name} if unsuccessful`, function()
+                {
+                    const mon = new Pokemon("Magikarp", false);
+                    mon.switchInto();
+                    if (setter)
+                    {
+                        setter(mon.volatile);
+                        expect(getter(mon.volatile)).to.be.true;
+                    }
+                    else expect(getter(mon.volatile)).to.be.false;
+
+                    mon.useMove(
+                        {moveId, targets: [mon], unsuccessful: "failed"});
+                    expect(getter(mon.volatile)).to.be.false;
+                });
+            }
 
             describe("lockedmove", function()
             {
@@ -503,79 +521,43 @@ describe("Pokemon", function()
                     expect(mon.volatile.lockedMove.isActive).to.be.false;
                 });
 
-                it("Should lock move", function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    mon.useMove({moveId: "petaldance", targets: [mon]});
-                    expect(mon.volatile.lockedMove.isActive).to.be.true;
-                });
+                shouldActivate("lockedmove", "petaldance",
+                    v => v.lockedMove.isActive);
 
-                it("Should not lock move if failed", function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    mon.volatile.lockedMove.start("petaldance");
-                    mon.useMove(
-                    {
-                        moveId: "petaldance", targets: [mon],
-                        unsuccessful: "failed"
-                    });
-                    expect(mon.volatile.lockedMove.isActive).to.be.false;
-                });
+                shouldNotActivate("lockedmove", "petaldance",
+                    v => v.lockedMove.isActive,
+                    v => v.lockedMove.start("petaldance"));
+            });
 
-                it("Should not lock move if evaded", function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    mon.volatile.lockedMove.start("petaldance");
-                    mon.useMove(
-                    {
-                        moveId: "petaldance", targets: [mon],
-                        unsuccessful: "evaded"
-                    });
-                    expect(mon.volatile.lockedMove.isActive).to.be.false;
-                });
+            describe("stalling", function()
+            {
+                shouldActivate("Endure", "endure", v => v.stalling);
+                shouldNotActivate("Endure", "endure", v => v.stalling,
+                    v => v.stall(true));
+
+                shouldActivate("Protect", "protect", v => v.stalling);
+                shouldNotActivate("Protect", "protect", v => v.stalling,
+                    v => v.stall(true));
             });
 
             describe("magiccoat", function()
             {
-                it("Should activate Magic Coat", function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    expect(mon.volatile.magicCoat).to.be.false;
-
-                    mon.useMove({moveId: "magiccoat", targets: [mon]});
-                    expect(mon.volatile.magicCoat).to.be.true;
-                });
+                shouldActivate("Magic Coat", "magiccoat", v => v.magicCoat);
+                shouldNotActivate("Magic Coat", "magiccoat", v => v.magicCoat);
             });
 
             describe("minimize", function()
             {
-                it("Should activate Minimize if used successfully", function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    expect(mon.volatile.minimize).to.be.false;
+                shouldActivate("Minimize", "minimize", v => v.minimize);
+                shouldNotActivate("Minimize", "minimize", v => v.minimize);
+            });
 
-                    mon.useMove({moveId: "minimize", targets: [mon]});
-                    expect(mon.volatile.minimize).to.be.true;
-                });
-
-                it("Should not activate Minimize if move failed", function()
-                {
-                    const mon = new Pokemon("Magikarp", false);
-                    mon.switchInto();
-                    expect(mon.volatile.minimize).to.be.false;
-
-                    mon.useMove(
-                    {
-                        moveId: "minimize", targets: [mon],
-                        unsuccessful: "failed"
-                    });
-                    expect(mon.volatile.minimize).to.be.false;
-                });
+            describe("defensecurl", function()
+            {
+                shouldActivate("Defense Curl", "defensecurl",
+                    v => v.defenseCurl);
+                shouldNotActivate("Defense Curl", "defensecurl",
+                    v => v.defenseCurl);
             });
 
             function testTeamStatus(name: string, moveId: string,
