@@ -540,7 +540,7 @@ export interface SetSingleMoveStatus extends
 }
 
 /** Typing for `SetSingleMoveStatus#status`. */
-export type SingleMoveStatus = "destinyBond" | "grudge";
+export type SingleMoveStatus = "destinyBond" | "grudge" | "rage";
 
 /** Sets a single-turn status for the pokemon. */
 export interface SetSingleTurnStatus extends

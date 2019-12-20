@@ -97,6 +97,8 @@ export interface ReadonlyVolatileStatus
     readonly overrideTraits: ReadonlyPokemonTraits;
     /** Temporary third type. */
     readonly addedType: Type;
+    /** Rage move status. */
+    readonly rage: boolean;
     /** Rollout-like move status. */
     readonly rollout: ReadonlyVariableTempStatus<keyof typeof rolloutMoves>;
     /** Roost move effect (single turn). */
@@ -263,6 +265,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public addedType!: Type;
 
     /** @override */
+    public rage!: boolean;
+
+    /** @override */
     public readonly rollout = new VariableTempStatus(rolloutMoves, 4,
         /*silent*/true);
 
@@ -389,6 +394,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.overrideMoveset.isolate();
         this.overrideTraits.reset();
         this.addedType = "???";
+        this.rage = false;
         this.rollout.reset();
         this.roost = false;
         this.slowStart.end();
@@ -425,7 +431,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     {
         this.destinyBond = false;
         this.grudge = false;
-        // TODO: rage
+        this.rage = false;
     }
 
     /**
@@ -512,6 +518,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.mudSport ? ["mud sport"] : [],
             this.mustRecharge ? ["must recharge"] : [],
             // override traits are handled by Pokemon#toString()
+            this.rage ? ["rage"] : [],
             this.rollout.isActive ? [this.rollout.toString()] : [],
             this.roost ? ["roosting"] : [],
             this.slowStart.isActive ? [this.slowStart.toString()] : [],

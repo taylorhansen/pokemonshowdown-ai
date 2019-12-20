@@ -280,7 +280,7 @@ export const sizeVolatileStatus =
     /*disabled moves*/(Moveset.maxSize * sizeTempStatus) + /*grudge*/1 +
     /*heal block*/sizeTempStatus + /*identified*/2 +
     /*locked move variants*/numLockedMoves + /*minimize*/1 + /*mud sport*/1 +
-    /*must recharge*/1 + /*override traits*/sizePokemonTraits +
+    /*must recharge*/1 + /*override traits*/sizePokemonTraits + /*rage*/1 +
     /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*stall fail rate*/1 + /*stockpile*/1 +
     /*taunt*/sizeTempStatus + /*torment*/1 + /*transformed*/1 +
@@ -329,6 +329,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const mustRecharge = status.mustRecharge ? 1 : 0;
     const overrideTraits = encodePokemonTraits(status.overrideTraits,
         status.addedType);
+    const rage = status.rage ? 1 : 0;
     const rollout = encodeVariableTempStatus(status.rollout);
     const roost = status.roost ? 1 : 0;
     const slowStart = encodeTempStatus(status.slowStart);
@@ -351,7 +352,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
 
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
         grudge, ...identified, ...healBlock, ...lockedMove, minimize, mudSport,
-        mustRecharge, ...overrideTraits, ...rollout, roost, ...slowStart,
+        mustRecharge, ...overrideTraits, rage, ...rollout, roost, ...slowStart,
         stallFailRate, stockpile, ...taunt, torment, transformed, ...twoTurn,
         unburden, ...uproar, willTruant
     ];

@@ -851,8 +851,8 @@ export class PSEventHandler
         let status: SingleMoveStatus | undefined;
         if (event.move === "Destiny Bond") status = "destinyBond";
         else if (event.move === "Grudge") status = "grudge";
-
-        if (!status) return [];
+        else if (event.move === "Rage") status = "rage";
+        else return [];
 
         const monRef = this.getSide(event.id.owner);
         return [{type: "setSingleMoveStatus", monRef, status}];

@@ -51,6 +51,7 @@ describe("VolatileStatus", function()
         volatile.overrideTraits.setSpecies("Slaking"); // has truant ability
         volatile.overrideTraits.stats.level = 100;
         volatile.addedType = "ice";
+        volatile.rage = true;
         volatile.rollout.start("iceball");
         volatile.roost = true;
         volatile.slowStart.start();
@@ -116,6 +117,7 @@ describe("VolatileStatus", function()
             expect(() => volatile.overrideTraits.types).to.throw(Error,
                 "Types not initialized");
             expect(volatile.addedType).to.equal("???");
+            expect(volatile.rage).to.be.false;
             expect(volatile.rollout.isActive).to.be.false;
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
@@ -188,6 +190,7 @@ describe("VolatileStatus", function()
             expect(() => volatile.overrideTraits.types).to.throw(Error,
                 "Types not initialized");
             expect(volatile.addedType).to.equal("???");
+            expect(volatile.rage).to.be.false;
             expect(volatile.rollout.isActive).to.be.false;
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
@@ -429,10 +432,12 @@ describe("VolatileStatus", function()
         {
             volatile.destinyBond = true;
             volatile.grudge = true;
+            volatile.rage = true;
 
             volatile.resetSingleMove();
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.grudge).to.be.false;
+            expect(volatile.rage).to.be.false;
         });
     });
 

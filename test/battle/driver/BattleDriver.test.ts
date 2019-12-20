@@ -1031,6 +1031,7 @@ describe("BattleDriver", function()
 
             test("Destiny Bond", "destinyBond");
             test("Grudge", "grudge");
+            test("Rage", "rage");
         });
 
         describe("#setSingleTurnStatus()", function()

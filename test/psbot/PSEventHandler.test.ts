@@ -1110,7 +1110,8 @@ describe("PSEventHandler", function()
             const testCases =
             [
                 {move: "Destiny Bond", status: "destinyBond"},
-                {move: "Grudge", status: "grudge"}
+                {move: "Grudge", status: "grudge"},
+                {move: "Rage", status: "rage"}
             ] as const;
 
             for (const {move, status} of testCases)
