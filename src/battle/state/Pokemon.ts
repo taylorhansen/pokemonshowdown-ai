@@ -360,10 +360,14 @@ export class Pokemon implements ReadonlyPokemon
 
         if (this.team)
         {
-            // wish can be used consecutively, but only the first time will
-            //  count
-            if (options.moveId === "wish")
+            if (options.moveId === "healingwish")
             {
+                this.team.status.healingWish = true;
+            }
+            else if (options.moveId === "wish")
+            {
+                // wish can be used consecutively, but only the first time will
+                //  count
                 this.team.status.wish.start(/*restart*/false);
             }
 

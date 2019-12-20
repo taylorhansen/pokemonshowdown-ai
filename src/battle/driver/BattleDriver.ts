@@ -580,6 +580,7 @@ export class BattleDriver implements DriverEventHandler
         const ts = this.getTeam(event.teamRef).status;
         switch (event.condition)
         {
+            case "healingWish": ts.healingWish = event.start; break;
             case "lightScreen":
             case "reflect":
                 if (event.start)

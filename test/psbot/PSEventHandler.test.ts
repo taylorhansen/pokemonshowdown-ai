@@ -667,6 +667,24 @@ describe("PSEventHandler", function()
                     type: "takeDamage", monRef: "us", newHP: [1, 100],
                     tox: true
                 }]);
+
+                test("Should emit takeDamage and activateSideCondition from " +
+                    "Healing Wish",
+                [{
+                    type, id: us,
+                    status: {hp: 100, hpMax: 100, condition: null},
+                    from: "move: Healing Wish"
+                }],
+                [
+                    {
+                        type: "takeDamage", monRef: "us", newHP: [100, 100],
+                        tox: false
+                    },
+                    {
+                        type: "activateSideCondition", teamRef: "us",
+                        condition: "healingWish", start: false
+                    }
+                ]);
             });
         }
 

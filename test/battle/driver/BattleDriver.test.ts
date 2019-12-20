@@ -4,9 +4,11 @@ import { StatExceptHP, statsExceptHP, Type } from
     "../../../src/battle/dex/dex-util";
 import { BattleDriver } from "../../../src/battle/driver/BattleDriver";
 import { CountableStatusType, FieldConditionType, InitOtherTeamSize, InitTeam,
-    SingleMoveStatus, SingleTurnStatus, StatusEffectType, SwitchIn,
-    UpdatableStatusEffectType } from "../../../src/battle/driver/DriverEvent";
+    SideConditionType, SingleMoveStatus, SingleTurnStatus, StatusEffectType,
+    SwitchIn, UpdatableStatusEffectType } from
+    "../../../src/battle/driver/DriverEvent";
 import { ReadonlyTeam } from "../../../src/battle/state/Team";
+import { ReadonlyTeamStatus } from "../../../src/battle/state/TeamStatus";
 import { ReadonlyVolatileStatus } from
     "../../../src/battle/state/VolatileStatus";
 
@@ -1087,12 +1089,13 @@ describe("BattleDriver", function()
             testHazard("Stealth Rock", "stealthRock");
             testHazard("Toxic Spikes", "toxicSpikes");
 
-            function testStatus(name: string, condition: "tailwind")
+            function testStatus(name: string, condition: SideConditionType,
+                getter: (ts: ReadonlyTeamStatus) => boolean)
             {
                 it(`Should activate ${name}`, function()
                 {
-                    const team = driver.state.teams.us;
-                    expect(team.status[condition].isActive).to.be.false;
+                    const ts = driver.state.teams.us.status;
+                    expect(getter(ts)).to.be.false;
 
                     // start the condition
                     driver.activateSideCondition(
@@ -1101,7 +1104,7 @@ describe("BattleDriver", function()
                         start: true
                     });
 
-                    expect(team.status[condition].isActive).to.be.true;
+                    expect(getter(ts)).to.be.true;
 
                     // end the condition
                     driver.activateSideCondition(
@@ -1110,11 +1113,12 @@ describe("BattleDriver", function()
                         start: false
                     });
 
-                    expect(team.status[condition].isActive).to.be.false;
+                    expect(getter(ts)).to.be.false;
                 });
             }
 
-            testStatus("Tailwind", "tailwind");
+            testStatus("Healing Wish", "healingWish", ts => ts.healingWish);
+            testStatus("Tailwind", "tailwind", ts => ts.tailwind.isActive);
         });
 
         describe("#activateFieldCondition()", function()

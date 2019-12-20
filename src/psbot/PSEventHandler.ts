@@ -503,7 +503,15 @@ export class PSEventHandler
     {
         const monRef = this.getSide(event.id.owner);
         const newHP = [event.status.hp, event.status.hpMax] as const;
-        return [{type: "takeDamage", monRef, newHP, tox: event.from === "psn"}];
+        return [
+            {type: "takeDamage", monRef, newHP, tox: event.from === "psn"},
+            // process healing wish move
+            ...(event.from === "move: Healing Wish" &&
+            [{
+                type: "activateSideCondition", teamRef: monRef,
+                condition: "healingWish", start: false
+            } as const] || [])
+        ];
     }
 
     /** @virtual */

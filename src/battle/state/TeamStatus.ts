@@ -7,6 +7,8 @@ export interface ReadonlyTeamStatus
 {
     /** Turn counters for each type of future move. */
     readonly futureMoves: {readonly [id in FutureMove]: ReadonlyTempStatus};
+    /** Healing Wish status. */
+    readonly healingWish: boolean;
     /** Light Screen status. */
     readonly lightScreen: ReadonlyItemTempStatus<"lightscreen">;
     /** Reflect status. */
@@ -33,6 +35,8 @@ export class TeamStatus implements ReadonlyTeamStatus
 {
     /** @override */
     public readonly futureMoves: {readonly [id in FutureMove]: TempStatus};
+    /** @override */
+    public healingWish = false;
     /** @override */
     public readonly lightScreen = new ItemTempStatus([5, 8],
         {lightscreen: "lightclay"}, "lightscreen");
@@ -91,6 +95,7 @@ export class TeamStatus implements ReadonlyTeamStatus
                 Object.entries(this.futureMoves)
                     .filter(([id, counter]) => counter.isActive)
                     .map(([id, counter]) => counter.toString()),
+                this.healingWish ? ["healing wish"] : [],
                 this.lightScreen.isActive ? [this.lightScreen.toString()] : [],
                 this.reflect.isActive ? [this.reflect.toString()] : [],
                 this.selfSwitch ? [`selfSwitch: ${this.selfSwitch}`] : [],

@@ -509,8 +509,9 @@ export function encodePokemon(mon?: ReadonlyPokemon | null): number[]
 
 /** Length of the return value of `encodeTeamStatus()`. */
 export const sizeTeamStatus = /*future moves*/numFutureMoves +
-    /*selfSwitch*/2 + /*entry hazards*/3 + /*tailwind*/sizeTempStatus +
-    /*lightscreen/reflect*/4 + /*wish*/sizeTempStatus;
+    /*healing wish*/1 + /*selfSwitch*/2 + /*entry hazards*/3 +
+    /*tailwind*/sizeTempStatus + /*lightscreen/reflect*/4 +
+    /*wish*/sizeTempStatus;
 
 /** Formats team status info into an array of numbers. */
 export function encodeTeamStatus(status: ReadonlyTeamStatus): number[]
@@ -520,6 +521,7 @@ export function encodeTeamStatus(status: ReadonlyTeamStatus): number[]
         ...Object.values(status.futureMoves)
             .map(encodeTempStatus)
             .reduce((a, b) => a.concat(b), []),
+        status.healingWish ? 1 : 0,
         ...encodeItemTempStatus(status.lightScreen),
         ...encodeItemTempStatus(status.reflect),
         status.selfSwitch ? 1 : 0, status.selfSwitch === "copyvolatile" ? 1 : 0,

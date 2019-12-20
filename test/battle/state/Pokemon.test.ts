@@ -579,20 +579,22 @@ describe("Pokemon", function()
                         return team;
                     }
 
-                    it(`Should set ${name}`, function()
+                    it(`Should activate ${name}`, function()
                     {
                         expect(pred(setup(false))).to.be.true;
                     });
 
-                    it(`Should not set ${name} if failed=true`, function()
+                    it(`Should not activate ${name} if failed=true`, function()
                     {
                         expect(pred(setup(true))).to.be.false;
                     });
                 });
             }
 
-            testTeamStatus("wish", "wish", team => team.status.wish.isActive);
-            testTeamStatus("selfSwitch", "uturn",
+            testTeamStatus("Healing Wish", "healingwish",
+                team => team.status.healingWish);
+            testTeamStatus("Wish", "wish", team => team.status.wish.isActive);
+            testTeamStatus("self-switch", "uturn",
                 team => !!team.status.selfSwitch);
         });
 
