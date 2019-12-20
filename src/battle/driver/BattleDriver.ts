@@ -9,11 +9,12 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ClearSelfSwitch, CopyBoosts, CountStatusEffect, CureStatus, CureTeam,
     DisableMove, DriverEvent, DriverEventType, Faint, Fatigue, Feint,
     FormChange, GastroAcid, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts,
-    Mimic, MustRecharge, PostTurn, PreTurn, ReenableMoves, RejectSwitchTrapped,
-    RemoveItem, ResetWeather, RevealItem, RevealMove, SetBoost,
-    SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType, SetWeather, Sketch,
-    SwapBoosts, SwitchIn, TakeDamage, TickWeather, Transform, TransformPost,
-    Trap, Unboost, UpdateStatusEffect, UseMove } from "./DriverEvent";
+    Mimic, ModifyPP, MustRecharge, PostTurn, PreTurn, ReenableMoves,
+    RejectSwitchTrapped, RemoveItem, ResetWeather, RevealItem, RevealMove,
+    SetBoost, SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType,
+    SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage, TickWeather,
+    Transform, TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove } from
+    "./DriverEvent";
 
 /**
  * Ensures that the BattleDriver implements handlers for each type of
@@ -525,6 +526,18 @@ export class BattleDriver implements DriverEventHandler
     public revealMove(event: RevealMove): void
     {
         this.getMon(event.monRef).moveset.reveal(event.move);
+    }
+
+    /**
+     * Reveals a move and modifies its PP value.
+     * @virtual
+     */
+    public modifyPP(event: ModifyPP): void
+    {
+        const move = this.getMon(event.monRef).moveset.getOrReveal(event.move);
+        if (event.amount === "deplete") move.pp = 0;
+        else if (event.amount === "restore") move.pp = move.maxpp;
+        else move.pp += event.amount;
     }
 
     /**

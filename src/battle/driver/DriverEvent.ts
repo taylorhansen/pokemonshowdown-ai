@@ -50,6 +50,7 @@ interface DriverEventMap
     removeItem: RemoveItem;
     useMove: UseMove;
     revealMove: RevealMove;
+    modifyPP: ModifyPP;
     mustRecharge: MustRecharge;
     setSingleMoveStatus: SetSingleMoveStatus;
     setSingleTurnStatus: SetSingleTurnStatus;
@@ -500,6 +501,20 @@ export interface RevealMove extends DriverEventBase<"revealMove">
     readonly monRef: Side;
     /** Move name. */
     readonly move: string;
+}
+
+/** Reveals a move and modifies its PP value. */
+export interface ModifyPP extends DriverEventBase<"modifyPP">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Move name. */
+    readonly move: string;
+    /**
+     * Amount of PP to add, or `deplete` to fully deplete PP, or `restore` to
+     * fully restore PP.
+     */
+    readonly amount: number | "deplete" | "restore";
 }
 
 /** Indicates that the pokemon must recharge from the previous action. */

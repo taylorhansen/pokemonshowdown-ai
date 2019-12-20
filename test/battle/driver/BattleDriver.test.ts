@@ -941,6 +941,75 @@ describe("BattleDriver", function()
             });
         });
 
+        describe("#modifyPP()", function()
+        {
+            it("Should modify pp amount of move", function()
+            {
+                const moveset = driver.state.teams.them.active.moveset;
+                driver.modifyPP(
+                {
+                    type: "modifyPP", monRef: "them", move: "splash", amount: -4
+                });
+
+                const move = moveset.get("splash");
+                expect(move).to.not.be.null;
+
+                expect(move!.pp).to.equal(60);
+                expect(move!.maxpp).to.equal(64);
+
+                driver.modifyPP(
+                {
+                    type: "modifyPP", monRef: "them", move: "splash", amount: 3
+                });
+                expect(move!.pp).to.equal(63);
+                expect(move!.maxpp).to.equal(64);
+            });
+
+            describe("amount=deplete", function()
+            {
+                it("Should fully deplete pp", function()
+                {
+                    const moveset = driver.state.teams.them.active.moveset;
+                    driver.modifyPP(
+                    {
+                        type: "modifyPP", monRef: "them", move: "splash",
+                        amount: "deplete"
+                    });
+
+                    const move = moveset.get("splash");
+                    expect(move).to.not.be.null;
+                    expect(move!.pp).to.equal(0);
+                    expect(move!.maxpp).to.equal(64);
+                });
+            });
+
+            describe("amount=restore", function()
+            {
+                it("Should restore depleted pp", function()
+                {
+                    const moveset = driver.state.teams.them.active.moveset;
+
+                    // deplete some pp
+                    driver.modifyPP(
+                    {
+                        type: "modifyPP", monRef: "them", move: "splash",
+                        amount: -4
+                    });
+                    // restore it back
+                    driver.modifyPP(
+                    {
+                        type: "modifyPP", monRef: "them", move: "splash",
+                        amount: "restore"
+                    });
+
+                    const move = moveset.get("splash");
+                    expect(move).to.not.be.null;
+                    expect(move!.pp).to.equal(64);
+                    expect(move!.maxpp).to.equal(64);
+                });
+            });
+        });
+
         describe("#setSingleMoveStatus()", function()
         {
             function test(name: string, status: SingleMoveStatus)
