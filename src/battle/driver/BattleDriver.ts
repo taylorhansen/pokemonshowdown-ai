@@ -616,6 +616,7 @@ export class BattleDriver implements DriverEventHandler
                 else ts[event.condition].reset();
                 break;
             case "luckyChant":
+            case "mist":
             case "tailwind":
                 if (event.start) ts[event.condition].start();
                 else ts[event.condition].end();

@@ -511,8 +511,8 @@ export function encodePokemon(mon?: ReadonlyPokemon | null): number[]
 /** Length of the return value of `encodeTeamStatus()`. */
 export const sizeTeamStatus = /*future moves*/numFutureMoves +
     /*healing wish*/1 + /*light screen*/2 + /*lucky chant*/sizeTempStatus +
-    /*lunar dance*/1 + /*reflect*/2 + /*selfSwitch*/2 + /*entry hazards*/3 +
-    /*tailwind*/sizeTempStatus + /*wish*/sizeTempStatus;
+    /*lunar dance*/1 + /*mist*/sizeTempStatus + /*reflect*/2 + /*selfSwitch*/2 +
+    /*entry hazards*/3 + /*tailwind*/sizeTempStatus + /*wish*/sizeTempStatus;
 
 /** Formats team status info into an array of numbers. */
 export function encodeTeamStatus(status: ReadonlyTeamStatus): number[]
@@ -526,6 +526,7 @@ export function encodeTeamStatus(status: ReadonlyTeamStatus): number[]
         ...encodeItemTempStatus(status.lightScreen),
         ...encodeTempStatus(status.luckyChant),
         status.lunarDance ? 1 : 0,
+        ...encodeTempStatus(status.mist),
         ...encodeItemTempStatus(status.reflect),
         status.selfSwitch ? 1 : 0, status.selfSwitch === "copyvolatile" ? 1 : 0,
         // divide hazard level by their max levels

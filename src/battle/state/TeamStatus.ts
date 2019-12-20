@@ -15,6 +15,8 @@ export interface ReadonlyTeamStatus
     readonly luckyChant: ReadonlyTempStatus;
     /** Lunar Dance status. */
     readonly lunarDance: boolean;
+    /** Mist status. */
+    readonly mist: ReadonlyTempStatus;
     /** Reflect status. */
     readonly reflect: ReadonlyItemTempStatus<"reflect">;
     /**
@@ -48,6 +50,8 @@ export class TeamStatus implements ReadonlyTeamStatus
     public readonly luckyChant = new TempStatus("lucky chant", 5);
     /** @override */
     public lunarDance = false;
+    /** @override */
+    public readonly mist = new TempStatus("mist", 5);
     /** @override */
     public readonly reflect = new ItemTempStatus([5, 8], {reflect: "lightclay"},
         "reflect");
@@ -88,6 +92,7 @@ export class TeamStatus implements ReadonlyTeamStatus
 
         this.lightScreen.tick();
         this.luckyChant.tick();
+        this.mist.tick();
         this.reflect.tick();
         this.tailwind.tick(); // will end explicitly before the third tick
         this.wish.tick();
@@ -108,6 +113,7 @@ export class TeamStatus implements ReadonlyTeamStatus
                 this.lightScreen.isActive ? [this.lightScreen.toString()] : [],
                 this.luckyChant.isActive ? [this.luckyChant.toString()] : [],
                 this.lunarDance ? ["lunar dance"] : [],
+                this.mist.isActive ? [this.mist.toString()] : [],
                 this.reflect.isActive ? [this.reflect.toString()] : [],
                 this.selfSwitch ? [`selfSwitch: ${this.selfSwitch}`] : [],
                 this.spikes ? [`spikes ${this.spikes}`] : [],

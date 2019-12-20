@@ -1191,6 +1191,9 @@ describe("BattleDriver", function()
             }
 
             testStatus("Healing Wish", "healingWish", ts => ts.healingWish);
+            testStatus("Lucky Chant", "luckyChant",
+                ts => ts.luckyChant.isActive);
+            testStatus("Mist", "mist", ts => ts.mist.isActive);
             testStatus("Tailwind", "tailwind", ts => ts.tailwind.isActive);
         });
 

@@ -801,6 +801,7 @@ export class PSEventHandler
                 }
                 break;
             case "Lucky Chant": condition = "luckyChant"; break;
+            case "Mist": condition = "mist"; break;
             case "Spikes": condition = "spikes"; break;
             case "Stealth Rock": condition = "stealthRock"; break;
             case "Tailwind": condition = "tailwind"; break;

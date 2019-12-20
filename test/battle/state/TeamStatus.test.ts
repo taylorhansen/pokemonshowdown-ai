@@ -61,7 +61,7 @@ describe("TeamStatus", function()
 
         for (const type of ["lightScreen", "reflect"] as const)
         {
-            it("Should tick reflect/lightscreen turns", function()
+            it(`Should tick ${type} turns`, function()
             {
                 status[type].start(/*source*/null);
                 expect(status[type].turns).to.equal(0);
@@ -71,7 +71,7 @@ describe("TeamStatus", function()
             });
         }
 
-        for (const type of ["luckyChant", "tailwind"] as const)
+        for (const type of ["luckyChant", "mist", "tailwind"] as const)
         {
             it(`Should tick ${type} turns`, function()
             {
