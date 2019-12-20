@@ -456,7 +456,7 @@ describe("PSEventHandler", function()
                 [{type: "-activate", id: us, volatile: "x", otherArgs: []}],
                 []);
 
-            describe("bide", function()
+            describe("Bide", function()
             {
                 test("Should emit updateStatusEffect",
                 [{
@@ -468,7 +468,7 @@ describe("PSEventHandler", function()
                 }]);
             });
 
-            describe("charge", function()
+            describe("Charge", function()
             {
                 test("Should emit activateStatusEffect",
                 [{
@@ -494,7 +494,7 @@ describe("PSEventHandler", function()
                 }]);
             });
 
-            describe("feint", function()
+            describe("Feint", function()
             {
                 test("Should emit feint",
                 [{
@@ -504,7 +504,20 @@ describe("PSEventHandler", function()
                     [{type: "feint", monRef: "us"}]);
             });
 
-            describe("mimic", function()
+            describe("Grudge", function()
+            {
+                test("Should emit ModifyPP",
+                [{
+                    type: "-activate", id: us, volatile: "move: Grudge",
+                    otherArgs: ["Tackle"]
+                }],
+                [{
+                    type: "modifyPP", monRef: "us", move: "tackle",
+                    amount: "deplete"
+                }]);
+            });
+
+            describe("Mimic", function()
             {
                 for (const type of ["sketch", "mimic"] as const)
                 {

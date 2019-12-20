@@ -347,6 +347,11 @@ export class PSEventHandler
                 ];
             case "move: Feint":
                 return [{type: "feint", monRef}];
+            case "move: Grudge":
+                return [{
+                    type: "modifyPP", monRef,
+                    move: toIdName(event.otherArgs[0]), amount: "deplete"
+                }];
             case "move: Mimic":
             {
                 const move = toIdName(event.otherArgs[0]);
