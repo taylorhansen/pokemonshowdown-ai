@@ -2,8 +2,9 @@ import { isDeepStrictEqual } from "util";
 import { dex, isFutureMove } from "../battle/dex/dex";
 import { itemRemovalMoves, itemTransferMoves, nonSelfMoveCallers,
     selfMoveCallers, targetMoveCallers, Type } from "../battle/dex/dex-util";
-import { AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize, SingleMoveStatus,
-    SingleTurnStatus, StatusEffectType } from "../battle/driver/DriverEvent";
+import { AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize,
+    SideConditionType, SingleMoveStatus, SingleTurnStatus, StatusEffectType }
+    from "../battle/driver/DriverEvent";
 import { otherSide, Side } from "../battle/state/Side";
 import { Logger } from "../Logger";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
@@ -768,80 +769,49 @@ export class PSEventHandler
         events: readonly AnyBattleEvent[], i: number): AnyDriverEvent[]
     {
         const teamRef = this.getSide(event.id);
+        let condition: SideConditionType;
+        let monRef: Side | undefined;
 
-        let condition = event.condition;
-        if (condition.startsWith("move: "))
+        let psCondition = event.condition;
+        if (psCondition.startsWith("move: "))
         {
-            condition = condition.substr("move: ".length);
+            psCondition = psCondition.substr("move: ".length);
         }
-        switch (condition)
+        switch (psCondition)
         {
-            case "Reflect":
             case "Light Screen":
+            case "Reflect":
+                condition = psCondition === "Reflect" ?
+                        "reflect" : "lightScreen";
                 if (event.type === "-sidestart")
                 {
+                    // find the cause of the status
                     const lastEvent = events[i - 1];
                     if (!lastEvent)
                     {
-                        throw new Error(`Don't know how ${condition} was ` +
+                        throw new Error(`Don't know how ${psCondition} was ` +
                             "caused since this is the first event");
                     }
                     if (lastEvent.type !== "move")
                     {
-                        throw new Error(`Don't know how ${condition} was ` +
+                        throw new Error(`Don't know how ${psCondition} was ` +
                             "caused since no move caused it");
                     }
-
-                    const monRef = this.getSide(lastEvent.id.owner);
-                    return [
-                        {
-                            type: "activateSideCondition", teamRef, start: true,
-                            monRef,
-                            condition: condition === "Reflect" ?
-                                "reflect" : "lightScreen"
-                        }
-                    ];
+                    monRef = this.getSide(lastEvent.id.owner);
                 }
-                return [
-                    {
-                        type: "activateSideCondition", teamRef, start: false,
-                        condition: condition === "Reflect" ?
-                            "reflect" : "lightScreen"
-                    }
-                ];
-            case "Spikes":
-                return [
-                    {
-                        type: "activateSideCondition", teamRef,
-                        condition: "spikes", start: event.type === "-sidestart"
-                    }
-                ];
-            case "Stealth Rock":
-                return [
-                    {
-                        type: "activateSideCondition", teamRef,
-                        condition: "stealthRock",
-                        start: event.type === "-sidestart"
-                    }
-                ];
-            case "Tailwind":
-                return [
-                    {
-                        type: "activateSideCondition", teamRef,
-                        condition: "tailwind",
-                        start: event.type === "-sidestart"
-                    }
-                ];
-            case "Toxic Spikes":
-                return [
-                    {
-                        type: "activateSideCondition", teamRef,
-                        condition: "toxicSpikes",
-                        start: event.type === "-sidestart"
-                    }
-                ];
+                break;
+            case "Lucky Chant": condition = "luckyChant"; break;
+            case "Spikes": condition = "spikes"; break;
+            case "Stealth Rock": condition = "stealthRock"; break;
+            case "Tailwind": condition = "tailwind"; break;
+            case "Toxic Spikes": condition = "toxicSpikes"; break;
+            default: return [];
         }
-        return [];
+
+        return [{
+            type: "activateSideCondition", teamRef, condition,
+            start: event.type === "-sidestart", ...(monRef && {monRef})
+        }];
     }
 
     /** @virtual */

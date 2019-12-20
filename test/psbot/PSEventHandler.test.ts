@@ -3,7 +3,8 @@ import "mocha";
 import { itemRemovalMoves, nonSelfMoveCallers, selfMoveCallers,
     targetMoveCallers } from "../../src/battle/dex/dex-util";
 import { AnyDriverEvent, CountableStatusType, DriverInitPokemon,
-    StatusEffectType } from "../../src/battle/driver/DriverEvent";
+    SideConditionType, StatusEffectType} from
+    "../../src/battle/driver/DriverEvent";
 import { Logger } from "../../src/Logger";
 import { PokemonID, toIdName } from "../../src/psbot/helpers";
 import { AnyBattleEvent, BattleEventType } from
@@ -1026,14 +1027,18 @@ describe("PSEventHandler", function()
                     {name: "Light Screen", condition: "lightScreen"}
                 ] as const;
 
-                const testCases =
+                const testCases: readonly
+                {
+                    readonly name: string, readonly condition: SideConditionType
+                }[] =
                 [
+                    {name: "move: Lucky Chant", condition: "luckyChant"},
                     {name: "Spikes", condition: "spikes"},
                     {name: "Stealth Rock", condition: "stealthRock"},
                     {name: "move: Tailwind", condition: "tailwind"},
                     {name: "Toxic Spikes", condition: "toxicSpikes"},
                     ...screensCases
-                ] as const;
+                ];
 
                 for (const {name, condition} of testCases)
                 {

@@ -11,6 +11,8 @@ export interface ReadonlyTeamStatus
     readonly healingWish: boolean;
     /** Light Screen status. */
     readonly lightScreen: ReadonlyItemTempStatus<"lightscreen">;
+    /** Lucky Chant status. */
+    readonly luckyChant: ReadonlyTempStatus;
     /** Lunar Dance status. */
     readonly lunarDance: boolean;
     /** Reflect status. */
@@ -42,6 +44,8 @@ export class TeamStatus implements ReadonlyTeamStatus
     /** @override */
     public readonly lightScreen = new ItemTempStatus([5, 8],
         {lightscreen: "lightclay"}, "lightscreen");
+    /** @override */
+    public readonly luckyChant = new TempStatus("lucky chant", 5);
     /** @override */
     public lunarDance = false;
     /** @override */
@@ -83,6 +87,7 @@ export class TeamStatus implements ReadonlyTeamStatus
         }
 
         this.lightScreen.tick();
+        this.luckyChant.tick();
         this.reflect.tick();
         this.tailwind.tick(); // will end explicitly before the third tick
         this.wish.tick();
@@ -101,6 +106,7 @@ export class TeamStatus implements ReadonlyTeamStatus
                     .map(([id, counter]) => counter.toString()),
                 this.healingWish ? ["healing wish"] : [],
                 this.lightScreen.isActive ? [this.lightScreen.toString()] : [],
+                this.luckyChant.isActive ? [this.luckyChant.toString()] : [],
                 this.lunarDance ? ["lunar dance"] : [],
                 this.reflect.isActive ? [this.reflect.toString()] : [],
                 this.selfSwitch ? [`selfSwitch: ${this.selfSwitch}`] : [],

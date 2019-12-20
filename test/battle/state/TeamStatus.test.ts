@@ -59,16 +59,28 @@ describe("TeamStatus", function()
             expect(status.futureMoves.futuresight.turns).to.equal(0);
         });
 
-        it("Should tick reflect/lightscreen turns", function()
+        for (const type of ["lightScreen", "reflect"] as const)
         {
-            status.reflect.start(/*source*/ null);
-            status.lightScreen.start(null);
+            it("Should tick reflect/lightscreen turns", function()
+            {
+                status[type].start(/*source*/null);
+                expect(status[type].turns).to.equal(0);
 
-            expect(status.reflect.turns).to.equal(0);
-            expect(status.lightScreen.turns).to.equal(0);
-            status.postTurn();
-            expect(status.reflect.turns).to.equal(1);
-            expect(status.lightScreen.turns).to.equal(1);
-        });
+                status.postTurn();
+                expect(status[type].turns).to.equal(1);
+            });
+        }
+
+        for (const type of ["luckyChant", "tailwind"] as const)
+        {
+            it(`Should tick ${type} turns`, function()
+            {
+                status[type].start();
+                expect(status[type].turns).to.equal(1);
+
+                status.postTurn();
+                expect(status[type].turns).to.equal(2);
+            });
+        }
     });
 });

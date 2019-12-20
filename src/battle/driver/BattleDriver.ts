@@ -602,7 +602,10 @@ export class BattleDriver implements DriverEventHandler
         const ts = this.getTeam(event.teamRef).status;
         switch (event.condition)
         {
-            case "healingWish": ts.healingWish = event.start; break;
+            case "healingWish":
+            case "lunarDance":
+                ts[event.condition] = event.start;
+                break;
             case "lightScreen":
             case "reflect":
                 if (event.start)
@@ -612,16 +615,16 @@ export class BattleDriver implements DriverEventHandler
                 }
                 else ts[event.condition].reset();
                 break;
-            case "lunarDance": ts.lunarDance = event.start; break;
+            case "luckyChant":
+            case "tailwind":
+                if (event.start) ts[event.condition].start();
+                else ts[event.condition].end();
+                break;
             case "spikes":
             case "stealthRock":
             case "toxicSpikes":
                 if (event.start) ++ts[event.condition];
                 else ts[event.condition] = 0;
-                break;
-            case "tailwind":
-                if (event.start) ts.tailwind.start();
-                else ts.tailwind.end();
                 break;
         }
     }
