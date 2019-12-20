@@ -377,6 +377,12 @@ export class PSEventHandler
                 throw new Error(
                     `Unknown Mimic-like move '${lastEvent.moveName}'`);
             }
+            case "move: Spite":
+                return [{
+                    type: "modifyPP", monRef,
+                    move: toIdName(event.otherArgs[0]),
+                    amount: -parseInt(event.otherArgs[1], 10)
+                }];
             case "trapped":
                 return [{type: "trap", target: monRef, by: otherSide(monRef)}];
             default:

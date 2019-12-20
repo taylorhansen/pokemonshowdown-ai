@@ -564,6 +564,19 @@ describe("PSEventHandler", function()
                 });
             });
 
+            describe("Spite", function()
+            {
+                test("Should emit ModifyPP",
+                [{
+                    type: "-activate", id: us, volatile: "move: Spite",
+                    otherArgs: ["Splash", "4"]
+                }],
+                [{
+                    type: "modifyPP", monRef: "us", move: "splash",
+                    amount: -4
+                }]);
+            });
+
             describe("trapped", function()
             {
                 test("Should emit trap",
