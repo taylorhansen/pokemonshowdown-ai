@@ -593,6 +593,8 @@ describe("Pokemon", function()
 
             testTeamStatus("Healing Wish", "healingwish",
                 team => team.status.healingWish);
+            testTeamStatus("Lunar Dance", "lunardance",
+                team => team.status.lunarDance);
             testTeamStatus("Wish", "wish", team => team.status.wish.isActive);
             testTeamStatus("self-switch", "uturn",
                 team => !!team.status.selfSwitch);

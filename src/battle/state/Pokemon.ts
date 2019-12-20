@@ -364,6 +364,10 @@ export class Pokemon implements ReadonlyPokemon
             {
                 this.team.status.healingWish = true;
             }
+            else if (options.moveId === "lunardance")
+            {
+                this.team.status.lunarDance = true;
+            }
             else if (options.moveId === "wish")
             {
                 // wish can be used consecutively, but only the first time will

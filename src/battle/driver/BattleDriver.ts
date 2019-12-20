@@ -10,11 +10,11 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     DisableMove, DriverEvent, DriverEventType, Faint, Fatigue, Feint,
     FormChange, GastroAcid, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts,
     Mimic, ModifyPP, MustRecharge, PostTurn, PreTurn, ReenableMoves,
-    RejectSwitchTrapped, RemoveItem, ResetWeather, RevealItem, RevealMove,
-    SetBoost, SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType,
-    SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage, TickWeather,
-    Transform, TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove } from
-    "./DriverEvent";
+    RejectSwitchTrapped, RemoveItem, ResetWeather, RestoreMoves, RevealItem,
+    RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
+    SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage,
+    TickWeather, Transform, TransformPost, Trap, Unboost, UpdateStatusEffect,
+    UseMove } from "./DriverEvent";
 
 /**
  * Ensures that the BattleDriver implements handlers for each type of
@@ -536,8 +536,17 @@ export class BattleDriver implements DriverEventHandler
     {
         const move = this.getMon(event.monRef).moveset.getOrReveal(event.move);
         if (event.amount === "deplete") move.pp = 0;
-        else if (event.amount === "restore") move.pp = move.maxpp;
         else move.pp += event.amount;
+    }
+
+    /**
+     * Restores the PP of each of the pokemon's moves.
+     * @virtual
+     */
+    public restoreMoves(event: RestoreMoves): void
+    {
+        const moveset = this.getMon(event.monRef).moveset;
+        for (const move of moveset.moves) if (move) move.pp = move.maxpp;
     }
 
     /**
@@ -603,6 +612,7 @@ export class BattleDriver implements DriverEventHandler
                 }
                 else ts[event.condition].reset();
                 break;
+            case "lunarDance": ts.lunarDance = event.start; break;
             case "spikes":
             case "stealthRock":
             case "toxicSpikes":

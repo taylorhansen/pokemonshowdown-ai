@@ -982,31 +982,34 @@ describe("BattleDriver", function()
                     expect(move!.maxpp).to.equal(64);
                 });
             });
+        });
 
-            describe("amount=restore", function()
+        describe("#restoreMoves()", function()
+        {
+            it("Should restore all move's PP", function()
             {
-                it("Should restore depleted pp", function()
-                {
-                    const moveset = driver.state.teams.them.active.moveset;
-
-                    // deplete some pp
-                    driver.modifyPP(
+                const moveset = driver.state.teams.them.active.moveset;
+                driver.handleEvents(
+                [
                     {
                         type: "modifyPP", monRef: "them", move: "splash",
                         amount: -4
-                    });
-                    // restore it back
-                    driver.modifyPP(
+                    },
                     {
-                        type: "modifyPP", monRef: "them", move: "splash",
-                        amount: "restore"
-                    });
+                        type: "modifyPP", monRef: "them", move: "tackle",
+                        amount: "deplete"
+                    }
+                ]);
 
-                    const move = moveset.get("splash");
-                    expect(move).to.not.be.null;
-                    expect(move!.pp).to.equal(64);
-                    expect(move!.maxpp).to.equal(64);
-                });
+                driver.restoreMoves({type: "restoreMoves", monRef: "them"});
+
+                const splash = moveset.get("splash");
+                expect(splash).to.not.be.null;
+                expect(splash!.pp).to.equal(splash!.maxpp);
+
+                const tackle = moveset.get("tackle");
+                expect(tackle).to.not.be.null;
+                expect(tackle!.pp).to.equal(tackle!.maxpp);
             });
         });
 

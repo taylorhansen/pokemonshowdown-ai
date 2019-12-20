@@ -51,6 +51,7 @@ interface DriverEventMap
     useMove: UseMove;
     revealMove: RevealMove;
     modifyPP: ModifyPP;
+    restoreMoves: RestoreMoves;
     mustRecharge: MustRecharge;
     setSingleMoveStatus: SetSingleMoveStatus;
     setSingleTurnStatus: SetSingleTurnStatus;
@@ -510,11 +511,15 @@ export interface ModifyPP extends DriverEventBase<"modifyPP">
     readonly monRef: Side;
     /** Move name. */
     readonly move: string;
-    /**
-     * Amount of PP to add, or `deplete` to fully deplete PP, or `restore` to
-     * fully restore PP.
-     */
-    readonly amount: number | "deplete" | "restore";
+    /** Amount of PP to add, or `deplete` to fully deplete the move. */
+    readonly amount: number | "deplete";
+}
+
+/** Restores the PP of each of the pokemon's moves. */
+export interface RestoreMoves extends DriverEventBase<"restoreMoves">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
 }
 
 /** Indicates that the pokemon must recharge from the previous action. */
@@ -579,8 +584,8 @@ export interface ActivateSideCondition extends
 }
 
 /** Typing for `ActivateSideCondition#condition`. */
-export type SideConditionType = "healingWish" | "lightScreen" | "reflect" |
-    "spikes" | "stealthRock" | "tailwind" | "toxicSpikes";
+export type SideConditionType = "healingWish" | "lightScreen" | "lunarDance" |
+    "reflect" | "spikes" | "stealthRock" | "tailwind" | "toxicSpikes";
 
 /** Activates a field status condition. */
 export interface ActivateFieldCondition extends

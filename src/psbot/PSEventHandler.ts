@@ -516,12 +516,23 @@ export class PSEventHandler
         const newHP = [event.status.hp, event.status.hpMax] as const;
         return [
             {type: "takeDamage", monRef, newHP, tox: event.from === "psn"},
+
             // process healing wish move
-            ...(event.from === "move: Healing Wish" &&
+            ...(event.from !== "move: Healing Wish" && [] ||
             [{
                 type: "activateSideCondition", teamRef: monRef,
                 condition: "healingWish", start: false
-            } as const] || [])
+            }] as const),
+
+            // process lunar dance move
+            ...(event.from !== "move: Lunar Dance" && [] ||
+            [
+                {type: "restoreMoves", monRef},
+                {
+                    type: "activateSideCondition", teamRef: monRef,
+                    condition: "lunarDance", start: false
+                }
+            ] as const)
         ];
     }
 

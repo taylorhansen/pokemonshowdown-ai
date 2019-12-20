@@ -711,6 +711,25 @@ describe("PSEventHandler", function()
                         condition: "healingWish", start: false
                     }
                 ]);
+
+                test("Should emit takeDamage, restoreMoves and " +
+                    "activateSideCondition from Lunar Dance",
+                [{
+                    type, id: us,
+                    status: {hp: 100, hpMax: 100, condition: null},
+                    from: "move: Lunar Dance"
+                }],
+                [
+                    {
+                        type: "takeDamage", monRef: "us", newHP: [100, 100],
+                        tox: false
+                    },
+                    {type: "restoreMoves", monRef: "us"},
+                    {
+                        type: "activateSideCondition", teamRef: "us",
+                        condition: "lunarDance", start: false
+                    }
+                ]);
             });
         }
 
