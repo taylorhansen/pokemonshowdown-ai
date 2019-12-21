@@ -1136,7 +1136,8 @@ describe("PSEventHandler", function()
             const testCases =
             [
                 {name: "move: Roost", status: "roost"},
-                {name: "move: Magic Coat", status: "magicCoat"}
+                {name: "move: Magic Coat", status: "magicCoat"},
+                {name: "Snatch", status: "snatch"}
             ] as const;
 
             for (const {name, status} of testCases)

@@ -55,6 +55,7 @@ describe("VolatileStatus", function()
         volatile.rollout.start("iceball");
         volatile.roost = true;
         volatile.slowStart.start();
+        volatile.snatch = true;
         volatile.stall(true);
         volatile.stockpile = 2;
         volatile.taunt.start();
@@ -121,6 +122,7 @@ describe("VolatileStatus", function()
             expect(volatile.rollout.isActive).to.be.false;
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
+            expect(volatile.snatch).to.be.false;
             expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.stockpile).to.equal(0);
@@ -194,6 +196,7 @@ describe("VolatileStatus", function()
             expect(volatile.rollout.isActive).to.be.false;
             expect(volatile.roost).to.be.false;
             expect(volatile.slowStart.isActive).to.be.false;
+            expect(volatile.snatch).to.be.false;
             expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);
             expect(volatile.stockpile).to.equal(0);
@@ -304,25 +307,18 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#magicCoat", function()
+    for (const type of ["magicCoat", "roost", "snatch"] as const)
     {
-        it("Should reset on #postTurn()", function()
+        describe(`#${type}`, function()
         {
-            volatile.magicCoat = true;
-            volatile.postTurn();
-            expect(volatile.magicCoat).to.be.false;
+            it("Should reset on #postTurn()", function()
+            {
+                volatile[type] = true;
+                volatile.postTurn();
+                expect(volatile[type]).to.be.false;
+            });
         });
-    });
-
-    describe("#roost", function()
-    {
-        it("Should reset on #postTurn()", function()
-        {
-            volatile.roost = true;
-            volatile.postTurn();
-            expect(volatile.roost).to.be.false;
-        });
-    });
+    }
 
     describe("#stalling/#stallTurns/#stall()", function()
     {

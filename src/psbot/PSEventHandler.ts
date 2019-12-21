@@ -838,6 +838,7 @@ export class PSEventHandler
         let status: SingleTurnStatus | undefined;
         if (event.status === "move: Roost") status = "roost";
         else if (event.status === "move: Magic Coat") status = "magicCoat";
+        else if (event.status === "Snatch") status = "snatch";
 
         if (!status) return [];
 

@@ -1052,6 +1052,7 @@ describe("BattleDriver", function()
 
             test("Magic Coat", "magicCoat");
             test("Roost", "roost");
+            test("Snatch", "snatch");
         });
 
         describe("#takeDamage()", function()

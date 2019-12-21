@@ -41,8 +41,8 @@ export const targetMoveCallers: readonly string[] = ["mefirst"];
 /** Effects and moves that can call moves that aren't in the user's moveset. */
 export const nonSelfMoveCallers: readonly string[] =
 [
-    ...targetMoveCallers,
-    "assist", "copycat", "magiccoat", "metronome", "mirrormove", "naturepower"
+    ...targetMoveCallers, "assist", "copycat", "magiccoat", "metronome",
+    "mirrormove", "naturepower", "snatch"
 ];
 
 /** Effects and moves that can call other moves. */

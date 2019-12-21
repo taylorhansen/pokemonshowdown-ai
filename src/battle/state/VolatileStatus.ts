@@ -105,6 +105,8 @@ export interface ReadonlyVolatileStatus
     readonly roost: boolean;
     /** First 5 turns of Slow Start ability. */
     readonly slowStart: ReadonlyTempStatus;
+    /** Snatch move status. */
+    readonly snatch: boolean;
     /** Whether we have successfully stalled this turn and the effect is up. */
     readonly stalling: boolean;
     /** Number of turns this pokemon has used a stalling move, e.g. Protect. */
@@ -278,6 +280,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public readonly slowStart = new TempStatus("slow start", 5);
 
     /** @override */
+    public snatch!: boolean;
+
+    /** @override */
     public get stalling(): boolean { return this._stalling; }
     /** @override */
     public get stallTurns(): number { return this._stallTurns; }
@@ -398,6 +403,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.rollout.reset();
         this.roost = false;
         this.slowStart.end();
+        this.snatch = false;
         this._stalling = false;
         this._stallTurns = 0;
         this._stockpile = 0;
@@ -463,6 +469,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         // reset single-turn statuses
         this.magicCoat = false;
         this.roost = false;
+        this.snatch = false;
         this._stalling = false;
 
         // toggle truant activation
@@ -522,6 +529,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.rollout.isActive ? [this.rollout.toString()] : [],
             this.roost ? ["roosting"] : [],
             this.slowStart.isActive ? [this.slowStart.toString()] : [],
+            this.snatch ? ["snatching"] : [],
             this._stallTurns ?
                 [pluralTurns("stalled", this._stallTurns - 1)] : [],
             this._stockpile > 0 ? [`stockpile ${this._stockpile}`] : [],
