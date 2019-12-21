@@ -30,20 +30,19 @@ export interface NaturalGiftData
 }
 
 /** Effects and moves that can call moves from the user's moveset. */
-export const selfMoveCallers: readonly string[] = ["Sleep Talk"];
+export const selfMoveCallers: readonly string[] = ["sleeptalk"];
 
 /**
  * Effects and moves that can call moves from the target's moveset before
  * they're revealed.
  */
-export const targetMoveCallers: readonly string[] = ["Me First"];
+export const targetMoveCallers: readonly string[] = ["mefirst"];
 
 /** Effects and moves that can call moves that aren't in the user's moveset. */
 export const nonSelfMoveCallers: readonly string[] =
 [
     ...targetMoveCallers,
-    "Assist", "Copycat", "Magic Coat", "Metronome", "Mirror Move",
-    "Nature Power"
+    "assist", "copycat", "magiccoat", "metronome", "mirrormove", "naturepower"
 ];
 
 /** Effects and moves that can call other moves. */
@@ -52,11 +51,11 @@ export const moveCallers: readonly string[] =
 
 /** List of moves that transfer items to the user. */
 export const itemTransferMoves: readonly string[] =
-    ["Thief", "Covet", "Trick", "Switcheroo", "Recycle"];
+    ["thief", "covet", "trick", "switcheroo", "recycle"];
 
 /** List of moves that remove an item from its target. */
 export const itemRemovalMoves: readonly string[] =
-    [...itemTransferMoves, "Knock Off"];
+    [...itemTransferMoves, "knockoff"];
 
 /** Hold the set of all major status names. Maps status name to a unique id. */
 export const majorStatuses =

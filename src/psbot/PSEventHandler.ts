@@ -631,8 +631,8 @@ export class PSEventHandler
         let gained: boolean | "recycle";
         if (event.from && event.from.startsWith("move: "))
         {
-            const move = event.from.substr("move: ".length);
-            if (move === "Recycle") gained = "recycle";
+            const move = toIdName(event.from.substr("move: ".length));
+            if (move === "recycle") gained = "recycle";
             else gained = itemTransferMoves.includes(move);
         }
         else gained = false;
@@ -652,7 +652,7 @@ export class PSEventHandler
         if (event.from === "stealeat" ||
             (event.from && event.from.startsWith("move: ") &&
                 itemRemovalMoves.includes(
-                    event.from.substr("move: ".length))))
+                    toIdName(event.from.substr("move: ".length)))))
         {
             consumed = false;
         }
@@ -702,7 +702,8 @@ export class PSEventHandler
         const nextEvent = events[i];
         if (nextEvent && nextEvent.type === "move" &&
             isDeepStrictEqual(event.id, nextEvent.id) &&
-            nextEvent.from && targetMoveCallers.includes(nextEvent.from))
+            nextEvent.from &&
+            targetMoveCallers.includes(toIdName(nextEvent.from)))
         {
             const copiedMoveId = toIdName(nextEvent.moveName);
             for (const target of targets)
@@ -715,16 +716,17 @@ export class PSEventHandler
         // handle event suffixes
         if (event.from)
         {
+            const idName = toIdName(event.from);
             // don't add to moveset if this is called using another move
-            if (nonSelfMoveCallers.includes(event.from))
+            if (nonSelfMoveCallers.includes(idName))
             {
                 reveal = false;
             }
             // don't consume pp if locked into using the move
-            else if (event.from === "lockedmove" ||
+            else if (idName === "lockedmove" ||
                 // also reveal but don't consume pp for moves called by
                 //  effects that call one of the user's moves (eg sleeptalk)
-                selfMoveCallers.includes(event.from))
+                selfMoveCallers.includes(idName))
             {
                 reveal = "nopp";
             }
