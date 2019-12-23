@@ -172,6 +172,7 @@ export class BattleDriver implements DriverEventHandler
             case "slowStart":
             case "taunt":
             case "uproar":
+            case "yawn":
                 mon.volatile[event.status][event.start ? "start" : "end"]();
                 break;
             case "foresight":

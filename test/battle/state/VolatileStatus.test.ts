@@ -65,6 +65,7 @@ describe("VolatileStatus", function()
         volatile.uproar.start();
         volatile.waterSport = true;
         volatile.activateTruant();
+        volatile.yawn.start();
     }
 
     describe("#clear()", function()
@@ -134,6 +135,7 @@ describe("VolatileStatus", function()
             expect(volatile.uproar.isActive).to.be.false;
             expect(volatile.waterSport).to.be.false;
             expect(volatile.willTruant).to.be.false;
+            expect(volatile.yawn.isActive).to.be.false;
         });
     });
 
@@ -209,6 +211,7 @@ describe("VolatileStatus", function()
             expect(volatile.uproar.isActive).to.be.false;
             expect(volatile.waterSport).to.be.false;
             expect(volatile.willTruant).to.be.false;
+            expect(volatile.yawn.isActive).to.be.false;
         });
     });
 

@@ -1097,6 +1097,7 @@ export class PSEventHandler
                 }
                 status = "uproar"; break;
             case "Water Sport": status = "waterSport"; break;
+            case "Yawn": status = "yawn"; break;
             default:
             {
                 const move = toIdName(ev);

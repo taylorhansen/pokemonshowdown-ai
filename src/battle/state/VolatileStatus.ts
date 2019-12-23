@@ -129,6 +129,8 @@ export interface ReadonlyVolatileStatus
     readonly waterSport: boolean;
     /** Whether the Truant ability will activate next turn. */
     readonly willTruant: boolean;
+    /** Yawn move status. */
+    readonly yawn: ReadonlyTempStatus;
 }
 
 /**
@@ -351,6 +353,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     }
     private _willTruant!: boolean;
 
+    /** @override */
+    public readonly yawn = new TempStatus("yawn", 2, /*silent*/true);
+
     /** Creates a VolatileStatus object. */
     constructor() { this.clear(); }
 
@@ -420,6 +425,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.uproar.end();
         this.waterSport = false;
         this._willTruant = false;
+        this.yawn.end();
     }
 
     /** Indicates that the pokemon spent its turn being inactive. */
@@ -464,13 +470,15 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
-        // confusion counter handled by in-game events
+        // implicitly update turn-based temp statuses
+        // this excludes statuses that are explicitly mentioned when updated
         this.embargo.tick();
         this.magnetRise.tick();
         this.taunt.tick();
         this.slowStart.tick();
         this.charge.tick();
         for (const disabled of this.disabledMoves) disabled.tick();
+        this.yawn.tick();
 
         // reset single-turn statuses
         this.magicCoat = false;
@@ -546,7 +554,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
                 [`preparing ${this.twoTurn.toString()}`] : [],
             this.uproar.isActive ? [this.uproar.toString()] : [],
             this.waterSport ? ["water sport"] : [],
-            this._willTruant ? ["truant next turn"] : [])
+            this._willTruant ? ["truant next turn"] : [],
+            this.yawn.isActive ? [this.yawn.toString()] : [])
         .join(", ")}]`;
     }
 }

@@ -177,7 +177,7 @@ export type StatusEffectType = UpdatableStatusEffectType | "aquaRing" |
     "attract" | "charge" | "curse" | "embargo" | "encore" | "focusEnergy" |
     "foresight" | "healBlock" | "ingrain" | "leechSeed" | "magnetRise" |
     "miracleEye" | "mudSport" | "nightmare" | "powerTrick" | "substitute" |
-    "slowStart" | "taunt" | "torment" | "waterSport";
+    "slowStart" | "taunt" | "torment" | "waterSport" | "yawn";
 
 /** Explicitly updates status counters. */
 export interface CountStatusEffect extends DriverEventBase<"countStatusEffect">

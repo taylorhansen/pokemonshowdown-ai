@@ -434,6 +434,7 @@ describe("PSEventHandler", function()
             });
 
             describeTrivialStatus("move: Water Sport", "waterSport");
+            describeTrivialStatus("move: Yawn", "yawn");
 
             describe("future move", function()
             {
