@@ -63,6 +63,7 @@ describe("VolatileStatus", function()
         volatile.twoTurn.start("solarbeam");
         volatile.unburden = true;
         volatile.uproar.start();
+        volatile.waterSport = true;
         volatile.activateTruant();
     }
 
@@ -131,6 +132,7 @@ describe("VolatileStatus", function()
             expect(volatile.twoTurn.isActive).to.be.false;
             expect(volatile.unburden).to.be.false;
             expect(volatile.uproar.isActive).to.be.false;
+            expect(volatile.waterSport).to.be.false;
             expect(volatile.willTruant).to.be.false;
         });
     });
@@ -205,6 +207,7 @@ describe("VolatileStatus", function()
             expect(volatile.twoTurn.isActive).to.be.false;
             expect(volatile.unburden).to.be.false;
             expect(volatile.uproar.isActive).to.be.false;
+            expect(volatile.waterSport).to.be.false;
             expect(volatile.willTruant).to.be.false;
         });
     });

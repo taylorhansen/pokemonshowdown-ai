@@ -433,6 +433,8 @@ describe("PSEventHandler", function()
                 }]);
             });
 
+            describeTrivialStatus("move: Water Sport", "waterSport");
+
             describe("future move", function()
             {
                 for (const start of [true, false])

@@ -285,7 +285,7 @@ export const sizeVolatileStatus =
     /*slow start*/sizeTempStatus + /*snatch*/1 + /*stall fail rate*/1 +
     /*stockpile*/1 + /*taunt*/sizeTempStatus + /*torment*/1 + /*transformed*/1 +
     /*two-turn*/numTwoTurnMoves + /*unburden*/1 + /*uproar*/sizeTempStatus +
-    /*will truant*/1;
+    /*water sport*/1 + /*will truant*/1;
 
 /** Formats volatile status info into an array of numbers. */
 export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
@@ -344,6 +344,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const twoTurn = encodeVariableTempStatus(status.twoTurn);
     const unburden = status.unburden ? 1 : 0;
     const uproar = encodeTempStatus(status.uproar);
+    const waterSport = status.waterSport ? 1 : 0;
     const willTruant = status.willTruant ? 1 : 0;
 
     return [
@@ -355,7 +356,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
         grudge, ...identified, ...healBlock, ...lockedMove, minimize, mudSport,
         mustRecharge, ...overrideTraits, rage, ...rollout, roost, ...slowStart,
         snatch, stallFailRate, stockpile, ...taunt, torment, transformed,
-        ...twoTurn, unburden, ...uproar, willTruant
+        ...twoTurn, unburden, ...uproar, waterSport, willTruant
     ];
 }
 

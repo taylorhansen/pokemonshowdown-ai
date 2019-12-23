@@ -159,6 +159,7 @@ export class BattleDriver implements DriverEventHandler
             case "powerTrick":
             case "substitute":
             case "torment":
+            case "waterSport":
                 mon.volatile[event.status] = event.start;
                 break;
             case "bide":

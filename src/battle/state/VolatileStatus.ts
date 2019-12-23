@@ -125,6 +125,8 @@ export interface ReadonlyVolatileStatus
     readonly unburden: boolean;
     /** Uproar move status. */
     readonly uproar: ReadonlyTempStatus;
+    /** Water Sport move status. */
+    readonly waterSport: boolean;
     /** Whether the Truant ability will activate next turn. */
     readonly willTruant: boolean;
 }
@@ -326,6 +328,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public readonly uproar = new TempStatus("uproar", 5);
 
     /** @override */
+    public waterSport!: boolean;
+
+    /** @override */
     public get willTruant(): boolean { return this._willTruant; }
     /** Indicates that the Truant ability has activated. */
     public activateTruant(): void
@@ -413,6 +418,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.twoTurn.reset();
         this.unburden = false;
         this.uproar.end();
+        this.waterSport = false;
         this._willTruant = false;
     }
 
@@ -539,6 +545,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.twoTurn.isActive ?
                 [`preparing ${this.twoTurn.toString()}`] : [],
             this.uproar.isActive ? [this.uproar.toString()] : [],
+            this.waterSport ? ["water sport"] : [],
             this._willTruant ? ["truant next turn"] : [])
         .join(", ")}]`;
     }

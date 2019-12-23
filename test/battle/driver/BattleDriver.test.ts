@@ -256,6 +256,7 @@ describe("BattleDriver", function()
             test("Taunt", "taunt", v => v.taunt.isActive);
             test("Torment", "torment", v => v.torment);
             test("Uproar", "uproar", v => v.uproar.isActive);
+            test("Water Sport", "waterSport", v => v.waterSport);
 
             it("Should throw if invalid status", function()
             {
