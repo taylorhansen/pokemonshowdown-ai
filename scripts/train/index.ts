@@ -356,17 +356,14 @@ async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
 /** Creates a model for training. */
 function createModel(): tf.LayersModel
 {
-    // setup all the layers
-    const outNeurons = intToChoice.length;
-
     const model = tf.sequential();
-
     model.add(tf.layers.dense(
-    {
-        inputShape: [sizeBattleState], units: 10, activation: "tanh"
-    }));
-    model.add(tf.layers.dense({units: outNeurons, activation: "linear"}));
-
+        {inputShape: [sizeBattleState], units: 20000, activation: "elu"}));
+    model.add(tf.layers.dropout({rate: 0.3}));
+    model.add(tf.layers.dense({units: 1000, activation: "elu"}));
+    model.add(tf.layers.dropout({rate: 0.3}));
+    model.add(tf.layers.dense(
+        {units: intToChoice.length, activation: "linear"}));
     return model;
 }
 
