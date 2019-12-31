@@ -1378,6 +1378,16 @@ describe("PSEventHandler", function()
                     type: "revealItem", monRef: "them", item: "leftovers",
                     gained: false
                 }]);
+
+                test("Should not emit revealItem if berry",
+                [{
+                    type: "-heal", id: us, from: "item: Sitrus Berry",
+                    status: {hp: 50, hpMax: 100, condition: null}
+                }],
+                [{
+                    type: "takeDamage", monRef: "us", newHP: [50, 100],
+                    tox: false
+                }]);
             });
         });
     });
