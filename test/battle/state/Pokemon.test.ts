@@ -558,8 +558,11 @@ describe("Pokemon", function()
                     {
                         const team = new Team("us");
                         team.size = 1;
-                        const mon = team.switchIn("Magikarp", 100, "M", 200,
-                            200)!;
+                        const mon = team.switchIn(
+                        {
+                            species: "Magikarp", level: 100, gender: "M",
+                            hp: 200, hpMax: 200
+                        })!;
                         mon.useMove(
                         {
                             moveId, targets: [mon],
@@ -739,7 +742,8 @@ describe("Pokemon", function()
             state.status.gravity.start();
 
             state.teams.us.size = 1;
-            const mon = state.teams.us.switchIn("Pidgey", 1, "M", 11, 11)!;
+            const mon = state.teams.us.switchIn(
+                {species: "Pidgey", level: 1, gender: "M", hp: 11, hpMax: 11})!;
             checkGrounded(mon, true, true);
         });
 

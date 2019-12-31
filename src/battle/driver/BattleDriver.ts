@@ -2,7 +2,7 @@ import { boostKeys, StatExceptHP } from "../dex/dex-util";
 import { BattleState, ReadonlyBattleState } from "../state/BattleState";
 import { Pokemon } from "../state/Pokemon";
 import { Side } from "../state/Side";
-import { SwitchInOptions, Team } from "../state/Team";
+import { Team } from "../state/Team";
 import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ActivateSideCondition, ActivateStatusEffect, AfflictStatus, AnyDriverEvent,
     Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
@@ -56,8 +56,7 @@ export class BattleDriver implements DriverEventHandler
         {
             // initial revealed pokemon can't be null, since we already
             //  set the teamsize
-            const mon = team.reveal(data.species, data.level,
-                    data.gender, data.hp, data.hpMax)!;
+            const mon = team.reveal(data)!;
             mon.traits.stats.hp.set(data.hpMax);
             for (const stat in data.stats)
             {
@@ -647,16 +646,7 @@ export class BattleDriver implements DriverEventHandler
      */
     public switchIn(event: SwitchIn): void
     {
-        const team = this.getTeam(event.monRef);
-
-        // consume pending self-switch/copyvolatile flags
-        // TODO: move this logic into Team#switchIn()
-        const options: SwitchInOptions =
-            {copyVolatile: team.status.selfSwitch === "copyvolatile"};
-        team.status.selfSwitch = false;
-
-        team.switchIn(event.species, event.level, event.gender, event.hp,
-            event.hpMax, options);
+        this.getTeam(event.monRef).switchIn(event);
     }
 
     /**

@@ -12,6 +12,7 @@ import { encodeBattleState, encodeHP, encodeItemTempStatus,
     sizeTeamStatus, sizeTempStatus, sizeVolatileStatus } from
     "../../src/ai/encodeBattleState";
 import { dex } from "../../src/battle/dex/dex";
+import { DriverSwitchOptions } from "../../src/battle/driver/DriverEvent";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
@@ -29,6 +30,9 @@ import { TeamStatus } from "../../src/battle/state/TeamStatus";
 import { TempStatus } from "../../src/battle/state/TempStatus";
 import { VariableTempStatus } from "../../src/battle/state/VariableTempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
+
+const switchInOptions: DriverSwitchOptions =
+    {species: "Magikarp", level: 100, gender: "M", hp: 200, hpMax: 200};
 
 describe("BattleState encoders", function()
 {
@@ -302,7 +306,7 @@ describe("BattleState encoders", function()
         {
             const team = new Team("us");
             team.size = 1;
-            team.switchIn("Magikarp", 100, "M", 200, 200);
+            team.switchIn(switchInOptions);
             return team;
         },
         size: sizeTeam
@@ -320,9 +324,9 @@ describe("BattleState encoders", function()
         {
             const state = new BattleState();
             state.teams.us.size = 1;
-            state.teams.us.switchIn("Magikarp", 100, "M", 200, 200);
+            state.teams.us.switchIn(switchInOptions);
             state.teams.them.size = 1;
-            state.teams.them.switchIn("Magikarp", 100, "M", 200, 200);
+            state.teams.them.switchIn(switchInOptions);
             return state;
         },
         size: sizeBattleState

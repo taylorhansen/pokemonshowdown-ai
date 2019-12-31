@@ -1,14 +1,8 @@
+import { DriverSwitchOptions } from "../driver/DriverEvent";
 import { BattleState, ReadonlyBattleState } from "./BattleState";
 import { Pokemon, ReadonlyPokemon } from "./Pokemon";
 import { Side } from "./Side";
 import { ReadonlyTeamStatus, TeamStatus } from "./TeamStatus";
-
-/** Options for switchin methods. */
-export interface SwitchInOptions
-{
-    /** Whether volatile status should be copied onto the replacing pokemon. */
-    readonly copyVolatile?: boolean;
-}
 
 /** Readonly Team representation. */
 export interface ReadonlyTeam
@@ -116,16 +110,9 @@ export class Team implements ReadonlyTeam
     /**
      * Indicates that a new pokemon has been switched in and will replace the
      * current active pokemon.
-     * @param species Species name.
-     * @param level Pokemon's level.
-     * @param gender Pokemon's gender.
-     * @param hp Current HP.
-     * @param hpMax Maximum HP.
-     * @param options Circumstances of switchin.
      * @returns The new active pokemon, or null if invalid.
      */
-    public switchIn(species: string, level: number, gender: string | null,
-        hp: number, hpMax: number, options: SwitchInOptions = {}):
+    public switchIn(options: DriverSwitchOptions):
         Pokemon | null
     {
         // see if we already know this pokemon
@@ -134,7 +121,7 @@ export class Team implements ReadonlyTeam
         {
             const m = this._pokemon[i];
             // TODO: in gen5 check everything since it could be illusion
-            if (m && m.traits.species.definiteValue === species)
+            if (m && m.traits.species.definiteValue === options.species)
             {
                 index = i;
                 break;
@@ -144,7 +131,7 @@ export class Team implements ReadonlyTeam
         if (index < 0)
         {
             // revealing a new pokemon
-            index = this.revealIndex(species, level, gender, hp, hpMax);
+            index = this.revealIndex(options);
         }
 
         // trying to access an invalid pokemon
@@ -154,7 +141,10 @@ export class Team implements ReadonlyTeam
         if (!mon) throw new Error(`Uninitialized pokemon slot ${index}`);
 
         // switch active status
-        mon.switchInto(this._pokemon[0], options.copyVolatile);
+        mon.switchInto(this._pokemon[0],
+            /*copy*/this.status.selfSwitch === "copyvolatile");
+        // consume pending self-switch/copyvolatile flag
+        this.status.selfSwitch = false;
 
         // swap active slot with new pokemon
         [this._pokemon[0], this._pokemon[index]] =
@@ -164,34 +154,23 @@ export class Team implements ReadonlyTeam
 
     /**
      * Indicates that a new pokemon has been revealed.
-     * @param species Species name.
-     * @param level Pokemon's level.
-     * @param gender Pokemon's gender.
-     * @param hp Current HP.
-     * @param hpMax Maximum HP.
      * @returns The new pokemon, or null if the operation would overflow the
      * current team size.
      */
-    public reveal(species: string, level: number, gender: string | null,
-        hp: number, hpMax: number): Pokemon | null
+    public reveal(options: DriverSwitchOptions): Pokemon | null
     {
-        const index = this.revealIndex(species, level, gender, hp, hpMax);
+        const index = this.revealIndex(options);
         if (index < 0) return null;
         return this._pokemon[index] || null;
     }
 
     /**
      * Indicates that a new pokemon has been revealed.
-     * @param species Species name.
-     * @param level Pokemon's level.
-     * @param gender Pokemon's gender.
-     * @param hp Current HP.
-     * @param hpMax Maximum HP.
      * @returns The index of the new pokemon, or -1 if the operation would
      * overflow the current team size.
      */
-    private revealIndex(species: string, level: number, gender: string | null,
-        hp: number, hpMax: number): number
+    private revealIndex({species, level, gender, hp, hpMax}:
+        DriverSwitchOptions): number
     {
         // team already full
         if (this.unrevealed === this._size) return -1;
