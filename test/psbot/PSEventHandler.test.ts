@@ -395,9 +395,7 @@ describe("PSEventHandler", function()
                     [{type: "disableMove", monRef: "us", move: "tackle"}]);
 
                 test("Should emit reenableMoves on -end",
-                [{
-                    type: "-end", id: us, volatile: "Disable", otherArgs: []
-                }],
+                    [{type: "-end", id: us, volatile: "Disable"}],
                     [{type: "reenableMoves", monRef: "us"}]);
             });
 
