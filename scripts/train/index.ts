@@ -36,12 +36,27 @@ import { TrainBattle } from "./TrainBattle";
 import { TrainNetwork } from "./TrainNetwork";
 
 /** Checks if given path is an existing directory. */
-async function isDir(url: string): Promise<boolean>
+async function isDir(url: fs.PathLike): Promise<boolean>
 {
     let stat: fs.Stats;
     try { stat = await fs.promises.stat(url); }
     catch (e) { return false; }
     return stat.isDirectory();
+}
+
+/** Async recursive mkdir, similar to `mkdir -p`. */
+function mkdirRecursive(path: fs.PathLike): Promise<void>
+{
+    return new Promise((res, rej) =>
+    {
+        fs.mkdir(path, {recursive: true}, err => err ? rej(err) : res());
+    });
+}
+
+/** Ensures that a folder exists, creating intermediate folders if needed. */
+async function ensureDir(path: fs.PathLike): Promise<void>
+{
+    if (!await isDir(path)) return mkdirRecursive(path);
 }
 
 /** Current progress bar. */
@@ -111,10 +126,7 @@ async function play(options: GameOptions): Promise<GameResult>
     let file: fs.WriteStream | null;
     if (options.logPath)
     {
-        const dir = dirname(options.logPath);
-
-        if (!await isDir(dir)) await fs.promises.mkdir(dir);
-
+        await ensureDir(dirname(options.logPath));
         file = fs.createWriteStream(options.logPath);
     }
     else file = null;
@@ -384,7 +396,7 @@ async function train(cycles: number, games: number, maxTurns: number)
 {
     const logger = new Logger(logStream, logStream, /*prefix*/"Train: ");
 
-    const modelUrl = `file://${latestModelFolder}/`;
+    const modelUrl = `file://${latestModelFolder}`;
     const modelJsonUrl = `file://${join(latestModelFolder, "model.json")}`;
 
     let toTrain: tf.LayersModel;
@@ -395,6 +407,7 @@ async function train(cycles: number, games: number, maxTurns: number)
         logger.debug("Creating default model");
 
         toTrain = createModel();
+        await ensureDir(latestModelFolder);
         await toTrain.save(modelUrl);
     }
     compileModel(toTrain);
