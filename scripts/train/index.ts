@@ -22,7 +22,7 @@ import { dirname, join } from "path";
 import ProgressBar from "progress";
 import { Writable } from "stream";
 // @ts-ignore
-import s = require("../../Pokemon-Showdown/.sim-dist/battle-stream");
+import s = require("../../pokemon-showdown/.sim-dist/battle-stream");
 import { sizeBattleState } from "../../src/ai/encodeBattleState";
 import { Network, toColumn } from "../../src/ai/Network";
 import { intToChoice } from "../../src/battle/agent/Choice";
