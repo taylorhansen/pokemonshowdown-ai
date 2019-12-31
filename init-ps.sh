@@ -1,12 +1,12 @@
 #!/usr/bin/env sh
-# clones the Pokemon-Showdown github repository
+# clones the pokemon-showdown github repository
 
-ps_dir=./Pokemon-Showdown/
+ps_dir=./pokemon-showdown/
 if [ ! -d $ps_dir ]
 then
     echo "Submodule not detected!"
     echo "Updating"
-    git submodule init Pokemon-Showdown
+    git submodule init pokemon-showdown
     git submodule update
 fi
 cd $ps_dir

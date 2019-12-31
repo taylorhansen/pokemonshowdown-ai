@@ -3,7 +3,7 @@
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
 // @ts-ignore
-import { ModdedDex } from "../Pokemon-Showdown/.sim-dist/dex";
+import { ModdedDex } from "../pokemon-showdown/.sim-dist/dex";
 import { NaturalGiftData, Type } from "../src/battle/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
 
