@@ -18,12 +18,12 @@ const dex = new ModdedDex("gen4");
  */
 function isNonGen4(name: string): boolean
 {
-    // banlist: megas, primal, alola/totem, arceus fairy, pikachu alt forms,
-    //  letsgo pikachu/eevee starters
+    // banlist: megas, primal, alola/totem, arceus fairy, galar, LGPE starters
     // except yanmega, which isn't actually a mega evolution
-    if (name === "yanmega") return false;
-    return /(mega[xy]?|primal|alola|totem|arceusfairy|^(pikachu|eevee).+)$/
-        .test(name);
+    return name !== "yanmega" &&
+        (name === "arceusfairy" ||
+            /(mega[xy]?|primal|alola|totem|galar|gmax|^(pikachu|eevee).+)$/
+                .test(name));
 }
 
 /**
@@ -134,8 +134,6 @@ for (const name in pokedex)
         baseForm: ${quote(mon.baseForme)},`);
     if (mon.forme) console.log(`\
         form: ${quote(mon.forme)},`);
-    if (mon.formeLetter) console.log(`\
-        formLetter: ${quote(mon.formeLetter)},`);
     if (otherForms) console.log(`\
         otherForms: [${otherForms.map(quote).join(", ")}],`);
     // tslint:enable:curly

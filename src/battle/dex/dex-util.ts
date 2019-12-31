@@ -139,8 +139,6 @@ export interface PokemonData
     readonly baseForm?: string;
     /** Alternate form name. */
     readonly form?: string;
-    /** Letter of the alternate form. */
-    readonly formLetter?: string;
     /** Alternate forms of this pokemon. */
     readonly otherForms?: readonly string[];
     /** Id names of the abilities this species can have. */
