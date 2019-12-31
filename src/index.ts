@@ -1,8 +1,8 @@
 // istanbul ignore file
 import { join } from "path";
 import { Network } from "./ai/Network";
-import { latestModelFolder, loginServer, password, playServer, username } from
-    "./config";
+import { avatar, latestModelFolder, loginServer, password, playServer,
+    username } from "./config";
 import { Logger } from "./Logger";
 import { PSBattle } from "./psbot/PSBattle";
 import { PSBot } from "./psbot/PSBot";
@@ -19,7 +19,7 @@ import { PSBot } from "./psbot/PSBot";
     catch (e) { console.log("connection error: " + e); }
 
     // update avatar
-    bot.setAvatar(50);
+    if (avatar !== null) bot.setAvatar(avatar);
 
     // load neural network from disk
     const network = await Network.loadNetwork(

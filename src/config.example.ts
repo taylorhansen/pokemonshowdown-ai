@@ -32,7 +32,5 @@ export const loginServer =
  * server, use `ws://sim.smogon.com:8000/...` or `wss://sim.smogon.com/...`
  */
 export const playServer = "ws://localhost:8000/showdown/websocket";
-/** Server id used for login. */
-export const serverid = "showdown";
-/** Account avatar id. */
+/** Account avatar id. Set to null to not set it on login. */
 export const avatar = 1;
