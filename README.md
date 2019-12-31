@@ -19,13 +19,17 @@ git clone --recursive https://github.com/taylorhansen/pokemonshowdown-ai
 cd pokemonshowdown-ai
 npm install
 
-# compile everything
+# compile submodules
+./init-ps.sh
+
+# compile codebase
 npm run build
 
-# train the neural network
+# train a neural network
+# can also cancel out once the test battles start to leave a randomized network on disk
 npm run train
 
-# connect to the server start accepting challenges
+# connect to the server specified in config.ts start accepting challenges
 npm start
 
 # lint and run tests

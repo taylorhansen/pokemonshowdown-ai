@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# clones the pokemon-showdown github repository
+# initializes and compiles the pokemon-showdown submodule
 
 ps_dir=./pokemon-showdown/
 if [ ! -d $ps_dir ]
