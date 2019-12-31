@@ -338,14 +338,12 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public activateTruant(): void
     {
         if (!this.overrideTraits.hasAbility ||
-            !this.overrideTraits.ability.definiteValue ||
-            this.overrideTraits.ability.definiteValue.name !== "truant")
+            this.overrideTraits.ability.definiteValue !== "truant")
         {
             throw new Error("Expected ability to equal truant but found " +
                 (this.overrideTraits.hasAbility &&
-                    this.overrideTraits.ability.definiteValue ?
-                        this.overrideTraits.ability.definiteValue.name
-                        : "unknown ability"));
+                    this.overrideTraits.ability.definiteValue ||
+                    "unknown ability"));
         }
 
         // will invert to false on postTurn() so it's properly synced
@@ -488,8 +486,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
         // toggle truant activation
         if (this.overrideTraits.hasAbility &&
-            this.overrideTraits.ability.definiteValue &&
-            this.overrideTraits.ability.definiteValue.name === "truant")
+            this.overrideTraits.ability.definiteValue === "truant")
         {
             this._willTruant = !this._willTruant;
         }

@@ -113,7 +113,7 @@ export class PokemonTraits implements ReadonlyPokemonTraits
         //  this would be invalid
         if (pc !== this._species) return;
 
-        const data = pc.definiteValue!.data;
+        const data = pc.map[pc.definiteValue!];
         this._data = data;
 
         // narrow ability possibilities if not already set to something else

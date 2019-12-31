@@ -127,19 +127,14 @@ export class Pokemon implements ReadonlyPokemon
     /** @override */
     public get ability(): string
     {
-        // not initialized
         if (!this.traits.hasAbility) return "";
 
         const ability = this.traits.ability;
-        // not fully narrowed
-        if (!ability.definiteValue) return "";
-
-        return ability.definiteValue.name;
+        return ability.definiteValue || "";
     }
     /** Checks whether the Pokemon can currently have the given ability. */
     public canHaveAbility(ability: string): boolean
     {
-        // not initialized
         if (!this.traits.hasAbility) return false;
         return this.traits.ability.isSet(ability);
     }
@@ -148,13 +143,10 @@ export class Pokemon implements ReadonlyPokemon
     public get species(): string
     {
         const traits = this.traits;
-        // not initialized
         if (!traits.hasSpecies) return "";
 
         const species = traits.species;
-        // not fully narrowed
-        if (!species.definiteValue) return "";
-        return species.definiteValue.name;
+        return species.definiteValue || "";
     }
     /**
      * Does a form change for this Pokemon.
@@ -212,9 +204,7 @@ export class Pokemon implements ReadonlyPokemon
                 {
                     throw new Error(`Pokemon gained '${item}' via Recycle ` +
                         "but last item was '" +
-                        (this._lastItem.definiteValue ?
-                            this._lastItem.definiteValue.name : "<unknown>") +
-                        "'");
+                        (this._lastItem.definiteValue || "<unknown>") + "'");
                 }
 
                 // recycle also resets the lastItem field
@@ -466,7 +456,7 @@ export class Pokemon implements ReadonlyPokemon
         // klutz ability suppresses most items
         const ignoringItem = (v && v.embargo.isActive) || ability === "klutz";
         const item = (ignoringItem || !this._item.definiteValue) ?
-            "" : this._item.definiteValue.name;
+            "" : this._item.definiteValue;
 
         // iron ball causes grounding
         if (item === "ironball") return true;
@@ -708,9 +698,9 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
 
         if (!over || !over.definiteValue || over === base)
         {
-            return base.definiteValue.name;
+            return base.definiteValue;
         }
-        return `${over.definiteValue.name} (base: ${base.definiteValue.name})`;
+        return `${over.definiteValue} (base: ${base.definiteValue})`;
     }
 
     // istanbul ignore next: only used for logging
@@ -761,10 +751,10 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
     private stringifyItem(): string
     {
         const baseVal = this._item.definiteValue;
-        const base = baseVal ? baseVal.name : "<unrevealed>";
+        const base = baseVal ? baseVal : "<unrevealed>";
 
         const lastVal = this._lastItem.definiteValue;
-        const last = lastVal ? lastVal.name : "<unknown>";
+        const last = lastVal ? lastVal : "<unknown>";
 
         if (last === "none") return base;
         return `${base} (consumed: ${last})`;

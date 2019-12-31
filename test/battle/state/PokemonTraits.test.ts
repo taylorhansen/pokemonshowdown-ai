@@ -37,9 +37,7 @@ describe("PokemonTraits", function()
 
                 traits.setAbility("swiftswim");
                 expect(ability).to.equal(traits.ability); // should not reassign
-                expect(traits.ability.definiteValue).to.not.be.null;
-                expect(traits.ability.definiteValue!.name)
-                    .to.equal("swiftswim");
+                expect(traits.ability.definiteValue).to.equal("swiftswim");
             });
 
             it("Should reset ability", function()
@@ -50,9 +48,7 @@ describe("PokemonTraits", function()
 
                 traits.setAbility("swiftswim");
                 expect(ability).to.not.equal(traits.ability); // should reassign
-                expect(traits.ability.definiteValue).to.not.be.null;
-                expect(traits.ability.definiteValue!.name)
-                    .to.equal("swiftswim");
+                expect(traits.ability.definiteValue).to.equal("swiftswim");
             });
         });
     });
@@ -76,8 +72,7 @@ describe("PokemonTraits", function()
 
                 traits.setSpecies("Magikarp");
                 expect(species).to.equal(traits.species); // should not reassign
-                expect(traits.species.definiteValue).to.not.be.null;
-                expect(traits.species.definiteValue!.name).to.equal("Magikarp");
+                expect(traits.species.definiteValue).to.equal("Magikarp");
             });
 
             it("Should reset species", function()
@@ -88,8 +83,7 @@ describe("PokemonTraits", function()
 
                 traits.setSpecies("Magikarp");
                 expect(species).to.not.equal(traits.species); // should reassign
-                expect(traits.species.definiteValue).to.not.be.null;
-                expect(traits.species.definiteValue!.name).to.equal("Magikarp");
+                expect(traits.species.definiteValue).to.equal("Magikarp");
             });
         });
 

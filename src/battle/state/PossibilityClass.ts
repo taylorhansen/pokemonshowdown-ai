@@ -5,12 +5,8 @@ export interface ReadonlyPossibilityClass<TData>
     readonly map: {readonly [name: string]: TData};
     /** The set of possible values this object can be. */
     readonly possibleValues: ReadonlySet<string>;
-    /**
-     * Gets the class name and data if narrowed down sufficiently, otherwise
-     * null.
-     */
-    readonly definiteValue:
-        {readonly name: string, readonly data: TData} | null;
+    /** Gets the class name if narrowed down sufficiently, otherwise null. */
+    readonly definiteValue: string | null;
 
     /** Checks if a value is in the data possibility. */
     isSet(name: string): boolean;
@@ -33,13 +29,8 @@ export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
      * Gets the class name and data if narrowed down sufficiently, otherwise
      * null.
      */
-    public get definiteValue():
-        {readonly name: string, readonly data: TData} | null
-    {
-        return this._definiteValue;
-    }
-    private _definiteValue:
-        {readonly name: string, readonly data: TData} | null = null;
+    public get definiteValue(): string | null { return this._definiteValue; }
+    private _definiteValue: string | null = null;
 
     /** Listeners for when fully narrowed. */
     private narrowListeners: ((pc: this) => void)[] = [];
@@ -125,8 +116,7 @@ export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
         const size = this._possibleValues.size;
         if (size === 1)
         {
-            const value = this._possibleValues.values().next().value;
-            this._definiteValue = {name: value, data: this.map[value]};
+            this._definiteValue = this._possibleValues.values().next().value;
             this.narrowed();
         }
         else if (size < 1)

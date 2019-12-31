@@ -38,8 +38,7 @@ describe("PossibilityClass", function()
             expect(pc.isSet("a")).to.be.false;
             expect(pc.isSet("b")).to.be.false;
             expect(pc.possibleValues).to.have.keys("c");
-            expect(pc.definiteValue).to.not.be.null;
-            expect(pc.definiteValue!.name).to.equal("c");
+            expect(pc.definiteValue).to.equal("c");
         });
 
         it("Should throw if unknown type is given", function()
@@ -65,8 +64,7 @@ describe("PossibilityClass", function()
             pc.narrow("a");
 
             expect(pc.isSet("a")).to.be.true;
-            expect(pc.definiteValue).to.not.be.null;
-            expect(pc.definiteValue!.name).to.equal("a");
+            expect(pc.definiteValue).to.equal("a");
             expect(pc.possibleValues).to.have.keys("a");
         });
 
@@ -87,8 +85,7 @@ describe("PossibilityClass", function()
             pc.onNarrow(p =>
             {
                 expect(pc).to.equal(p);
-                expect(p.definiteValue).to.not.be.null;
-                expect(p.definiteValue!.name).to.equal("a");
+                expect(p.definiteValue).to.equal("a");
                 done();
             });
             pc.narrow("a");
@@ -101,8 +98,7 @@ describe("PossibilityClass", function()
             pc.onNarrow(p =>
             {
                 expect(pc).to.equal(p);
-                expect(p.definiteValue).to.not.be.null;
-                expect(p.definiteValue!.name).to.equal("a");
+                expect(p.definiteValue).to.equal("a");
                 done();
             });
         });

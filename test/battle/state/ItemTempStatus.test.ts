@@ -194,8 +194,7 @@ describe("ItemTempStatus", function()
             while (i < its.durations[0]);
 
             // at this point, the status has been kept past its normal duration
-            expect(source.item.definiteValue).to.not.be.null;
-            expect(source.item.definiteValue!.name).to.equal(its.items.b);
+            expect(source.item.definiteValue).to.equal(its.items.b);
             expect(its.type).to.equal("b");
             expect(its.source).to.equal(source.item);
             expect(its.duration).to.equal(its.durations[1]);

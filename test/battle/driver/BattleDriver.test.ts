@@ -65,10 +65,8 @@ describe("BattleDriver", function()
 
                 expect(mon.species).to.equal(data.species);
                 expect(mon.traits.stats.level).to.equal(data.level);
-                expect(mon.item.definiteValue).to.not.be.null;
-                expect(mon.item.definiteValue!.name).to.equal(data.item);
-                expect(mon.traits.ability.definiteValue).to.not.be.null;
-                expect(mon.traits.ability.definiteValue!.name)
+                expect(mon.item.definiteValue).to.equal(data.item);
+                expect(mon.traits.ability.definiteValue)
                     .to.equal(data.baseAbility);
 
                 // check stats
@@ -99,9 +97,7 @@ describe("BattleDriver", function()
 
                 if (data.hpType)
                 {
-                    expect(mon.hpType.definiteValue).to.not.be.null;
-                    expect(mon.hpType.definiteValue!.name)
-                        .to.equal(data.hpType);
+                    expect(mon.hpType.definiteValue).to.equal(data.hpType);
                 }
                 else expect(mon.hpType.definiteValue).to.be.null;
 
@@ -892,8 +888,7 @@ describe("BattleDriver", function()
                     gained: false
                 });
 
-                expect(mon.item.definiteValue).to.not.be.null;
-                expect(mon.item.definiteValue!.name).to.equal("leftovers");
+                expect(mon.item.definiteValue).to.equal("leftovers");
             });
         });
 
@@ -907,8 +902,7 @@ describe("BattleDriver", function()
                 driver.removeItem(
                     {type: "removeItem", monRef: "them", consumed: false});
 
-                expect(mon.item.definiteValue).to.not.be.null;
-                expect(mon.item.definiteValue!.name).to.equal("none");
+                expect(mon.item.definiteValue).to.equal("none");
             });
         });
 

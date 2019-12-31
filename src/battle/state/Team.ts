@@ -134,8 +134,7 @@ export class Team implements ReadonlyTeam
         {
             const m = this._pokemon[i];
             // TODO: in gen5 check everything since it could be illusion
-            if (m && m.traits.species.definiteValue &&
-                m.traits.species.definiteValue.name === species)
+            if (m && m.traits.species.definiteValue === species)
             {
                 index = i;
                 break;

@@ -150,7 +150,7 @@ export class ItemTempStatus<TStatusType extends string> implements
             throw new Error("Item was assumed to be narrowed");
         }
         // item wasn't narrowed to current status' extension item
-        if (item.definiteValue.name !== this.items[this._type]) return;
+        if (item.definiteValue !== this.items[this._type]) return;
 
         // source has extension item, set to extended duration
         this._duration = this.durations[1];

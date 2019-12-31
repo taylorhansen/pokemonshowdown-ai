@@ -112,8 +112,7 @@ describe("Pokemon", function()
             expect(mon.item.definiteValue).to.be.null;
 
             mon.setItem("lifeorb");
-            expect(mon.item.definiteValue).to.not.be.null;
-            expect(mon.item.definiteValue!.name).to.equal("lifeorb");
+            expect(mon.item.definiteValue).to.equal("lifeorb");
         });
 
         it("Should re-narrow item if gained", function()
@@ -124,12 +123,10 @@ describe("Pokemon", function()
 
             mon.setItem("lifeorb", /*gained*/true);
             // old item reference stays the same
-            expect(item.definiteValue).to.not.be.null;
-            expect(item.definiteValue!.name).to.equal("leftovers");
+            expect(item.definiteValue).to.equal("leftovers");
             // new item reference gets created
             expect(mon.item).to.not.equal(item);
-            expect(mon.item.definiteValue).to.not.be.null;
-            expect(mon.item.definiteValue!.name).to.equal("lifeorb");
+            expect(mon.item.definiteValue).to.equal("lifeorb");
         });
 
         describe("recycle", function()
@@ -152,8 +149,7 @@ describe("Pokemon", function()
                     "#lastItem reference was not moved to #item");
 
                 // new #item ref should also be narrowed to the parameter
-                expect(mon.item.definiteValue).to.not.be.null;
-                expect(mon.item.definiteValue!.name).to.equal("sitrusberry");
+                expect(mon.item.definiteValue).to.equal("sitrusberry");
 
                 // original #item ref should become garbage
                 expect(mon.item).to.not.equal(item,
@@ -164,8 +160,7 @@ describe("Pokemon", function()
                 // original #lastItem ref should be replaced by a new obj
                 expect(mon.lastItem).to.not.equal(lastItem,
                     "#lastItem was not reset");
-                expect(mon.lastItem.definiteValue).to.not.be.null;
-                expect(mon.lastItem.definiteValue!.name).to.equal("none");
+                expect(mon.lastItem.definiteValue).to.equal("none");
             });
 
             it("Should throw if (unknown) recycled item mismatches", function()
@@ -236,12 +231,10 @@ describe("Pokemon", function()
 
             mon.removeItem(/*consumed*/false);
             // old item reference stays the same
-            expect(item.definiteValue).to.not.be.null;
-            expect(item.definiteValue!.name).to.equal("focussash");
+            expect(item.definiteValue).to.equal("focussash");
             // new item reference gets created
             expect(mon.item).to.not.equal(item);
-            expect(mon.item.definiteValue).to.not.be.null;
-            expect(mon.item.definiteValue!.name).to.equal("none");
+            expect(mon.item.definiteValue).to.equal("none");
         });
 
         describe("#volatile.unburden", function()
@@ -267,13 +260,11 @@ describe("Pokemon", function()
 
                 mon.removeItem(/*consumed*/false);
                 // current item reference is gone
-                expect(mon.item.definiteValue).to.not.be.null;
-                expect(mon.item.definiteValue!.name).to.equal("none");
+                expect(mon.item.definiteValue).to.equal("none");
 
                 // old item reference is not moved to lastItem
                 expect(mon.lastItem).to.not.equal(item);
-                expect(mon.lastItem.definiteValue).to.not.be.null;
-                expect(mon.lastItem.definiteValue!.name).to.equal("none");
+                expect(mon.lastItem.definiteValue).to.equal("none");
             });
 
             it("Should set lastItem if consumed parameter was provided",
@@ -283,14 +274,12 @@ describe("Pokemon", function()
                 const item = mon.item;
                 mon.switchInto();
                 mon.setItem("leftovers");
-                expect(mon.lastItem.definiteValue).to.not.be.null;
-                expect(mon.lastItem.definiteValue!.name).to.equal("none");
+                expect(mon.lastItem.definiteValue).to.equal("none");
 
                 mon.removeItem("leftovers");
                 // current held item possibility gets reassigned to lastItem
                 expect(mon.lastItem).to.equal(item);
-                expect(mon.lastItem.definiteValue).to.not.be.null;
-                expect(mon.lastItem.definiteValue!.name).to.equal("leftovers");
+                expect(mon.lastItem.definiteValue).to.equal("leftovers");
             });
         });
     });
