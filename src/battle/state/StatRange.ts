@@ -89,6 +89,9 @@ export class StatRange implements ReadonlyStatRange
     public static calcStat(hp: boolean, base: number, level: number,
         evs: number, ivs: number, nature: 0.9 | 1 | 1.1): number
     {
+        // early return: shedinja always has 1 hp
+        if (hp && base === 1) return 1;
+
         const x = Math.floor(2 * base + ivs + Math.floor(evs / 4));
 
         let result: number;

@@ -105,5 +105,13 @@ describe("StatRange", function()
             expect(stat.min).to.equal(310);
             expect(stat.max).to.equal(404);
         });
+
+        it("Should be 1 if base hp is 1", function()
+        {
+            const stat = new StatRange(/*hp*/true);
+            stat.calc(1, 100);
+            expect(stat.min).to.equal(1);
+            expect(stat.max).to.equal(1);
+        });
     });
 });
