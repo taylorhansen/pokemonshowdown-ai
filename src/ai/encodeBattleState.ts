@@ -293,7 +293,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     // passable
     const aquaRing = status.aquaRing ? 1 : 0;
     const boosts = (Object.keys(status.boosts) as BoostName[])
-        .map(key => status.boosts[key]);
+        .map(key => status.boosts[key] / 6);
     const confused = encodeTempStatus(status.confusion);
     const curse = status.curse ? 1 : 0;
     const embargo = encodeTempStatus(status.embargo);
