@@ -29,7 +29,7 @@ npm run build
 # can also cancel out once the test battles start to leave a randomized network on disk
 npm run train
 
-# connect to the server specified in config.ts start accepting challenges
+# connect to the server specified in config.ts and start accepting challenges
 npm start
 
 # lint and run tests
