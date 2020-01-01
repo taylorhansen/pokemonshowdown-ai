@@ -1,5 +1,5 @@
-import { Network } from "../../src/ai/Network";
-import { Choice, choiceIds } from "../../src/battle/agent/Choice";
+import { Network } from "../../../src/ai/Network";
+import { Choice, choiceIds } from "../../../src/battle/agent/Choice";
 import { Experience } from "./Experience";
 
 /** Modified `Network` for reinforcement learning. */

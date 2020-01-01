@@ -1,7 +1,7 @@
-import { Logger } from "../../src/Logger";
+import { Logger } from "../../../src/Logger";
 import { AnyBattleEvent, FaintEvent, TieEvent, TurnEvent, WinEvent } from
-    "../../src/psbot/parser/BattleEvent";
-import { PSEventHandler } from "../../src/psbot/PSEventHandler";
+    "../../../src/psbot/parser/BattleEvent";
+import { PSEventHandler } from "../../../src/psbot/PSEventHandler";
 import { RewardTracker } from "./RewardTracker";
 
 /** Holds the reward values for different events. */
@@ -11,7 +11,7 @@ enum Reward { faint = -10, turn = -0.1 }
  * Event handler for a PokemonShowdown sim, modified for reinforcement
  * learning.
  */
-export class TrainEventHandler extends PSEventHandler
+export class TrainPSEventHandler extends PSEventHandler
 {
     /** Tracks the current reward value. */
     private readonly reward = new RewardTracker();

@@ -1,19 +1,20 @@
-import { Choice } from "../../src/battle/agent/Choice";
-import { BattleDriver } from "../../src/battle/driver/BattleDriver";
-import { Logger } from "../../src/Logger";
-import { ErrorMessage, RequestMessage } from "../../src/psbot/parser/Message";
-import { PSBattle } from "../../src/psbot/PSBattle";
-import { Sender } from "../../src/psbot/PSBot";
+import { Choice } from "../../../src/battle/agent/Choice";
+import { BattleDriver } from "../../../src/battle/driver/BattleDriver";
+import { Logger } from "../../../src/Logger";
+import { ErrorMessage, RequestMessage } from
+    "../../../src/psbot/parser/Message";
+import { PSBattle } from "../../../src/psbot/PSBattle";
+import { Sender } from "../../../src/psbot/PSBot";
 import { Experience } from "./Experience";
-import { TrainEventHandler } from "./TrainEventHandler";
 import { TrainNetwork } from "./TrainNetwork";
+import { TrainPSEventHandler } from "./TrainPSEventHandler";
 
 /**
  * Battle handler for a PokemonShowdown sim, modified for reinforcement
  * learning. This PSBattle subclass keeps an array of Experience objects made
  * after every decision to be used for learning later.
  */
-export class TrainBattle extends PSBattle
+export class TrainPSBattle extends PSBattle
 {
     /** Buffer of Experience objects. */
     public get experiences(): readonly Experience[]
@@ -25,7 +26,7 @@ export class TrainBattle extends PSBattle
     /** @override */
     protected readonly agent!: TrainNetwork;
     /** @override */
-    public readonly eventHandler!: TrainEventHandler;
+    public readonly eventHandler!: TrainPSEventHandler;
 
     /** Last choice that was handled by the environment. */
     private lastChoice?: Choice;
@@ -36,7 +37,7 @@ export class TrainBattle extends PSBattle
     private nextChoice?: Choice;
 
     constructor(username: string, agent: TrainNetwork, sender: Sender,
-        logger: Logger, eventHandlerCtor = TrainEventHandler)
+        logger: Logger, eventHandlerCtor = TrainPSEventHandler)
     {
         super(username, agent, sender, logger, BattleDriver, eventHandlerCtor);
     }
