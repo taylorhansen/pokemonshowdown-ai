@@ -172,7 +172,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public leechSeed!: boolean;
 
     /** @override */
-    public readonly magnetRise = new TempStatus("magnet rise", 3);
+    public readonly magnetRise = new TempStatus("magnet rise", 5);
 
     /** @override */
     public nightmare!: boolean;
