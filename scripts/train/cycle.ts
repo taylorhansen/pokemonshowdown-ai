@@ -24,6 +24,6 @@ export async function cycle(toTrain: tf.LayersModel, model: tf.LayersModel,
 {
     const experiences = await selfPlay(toTrain, games, maxTurns, selfPlayPath,
         logger);
-    await learn(toTrain, experiences, /*gamma*/0.8, /*epochs*/3);
+    await learn(toTrain, experiences, /*gamma*/0.8, /*epochs*/3, logger);
     return evaluate(toTrain, model, games, maxTurns, evaluatePath, logger);
 }
