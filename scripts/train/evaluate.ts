@@ -45,18 +45,25 @@ export async function evaluate(trained: tf.LayersModel, old: tf.LayersModel,
         else innerLog.debug("Tie");
         bar.tick();
     }
-    bar.terminate();
 
     logger.debug(`Wins: p1=${wins.p1}, p2=${wins.p2}`);
+    let result: tf.LayersModel;
     if (wins.p1 > wins.p2)
     {
         logger.debug("New model (p1) wins, replace old model");
-        return trained;
+        result = trained;
     }
     else if (wins.p1 < wins.p2)
     {
         logger.debug("Old model (p2) wins, not replaced");
+        result = old;
     }
-    else logger.debug("Tie, old model not replaced");
-    return old;
+    else
+    {
+        logger.debug("Tie, old model not replaced");
+        result = old;
+    }
+
+    bar.terminate();
+    return result;
 }
