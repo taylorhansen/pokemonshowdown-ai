@@ -12,17 +12,18 @@ import { compileModel, createModel } from "./model";
  * @param cycles Amount of cycles to train for.
  * @param games Amount of games per cycle for training and evaluation.
  * @param maxTurns Max amount of turns before a game is considered a tie.
- * @param modelsPath Path to the folder to store neural networks in.
+ * @param modelPath Path to the folder to store the neural network in.
  * @param selfPlayPath Path to the folder to store self-play logs in.
  * @param evaluatePath Path to the folder to store evaluation logs in.
  */
 export async function train(cycles: number, games: number, maxTurns: number,
-    modelsPath: string, selfPlayPath: string, evaluatePath: string):
+    modelPath: string, selfPlayPath: string, evaluatePath: string):
     Promise<void>
 {
     const logger = Logger.stderr.prefix("Train: ");
 
-    const modelJsonUrl = `file://${join(modelsPath, "model.json")}`;
+    const modelUrl = `file://${modelPath}`;
+    const modelJsonUrl = `file://${join(modelPath, "model.json")}`;
 
     let toTrain: tf.LayersModel;
     try { toTrain = await Network.loadModel(modelJsonUrl); }
@@ -32,8 +33,8 @@ export async function train(cycles: number, games: number, maxTurns: number,
         logger.debug("Creating default model");
 
         toTrain = createModel();
-        await ensureDir(modelsPath);
-        await toTrain.save(modelsPath);
+        await ensureDir(modelPath);
+        await toTrain.save(modelUrl);
     }
     compileModel(toTrain);
 
@@ -52,7 +53,7 @@ export async function train(cycles: number, games: number, maxTurns: number,
         if (bestModel === toTrain)
         {
             logger.debug("Saving model");
-            await bestModel.save(modelsPath);
+            await bestModel.save(modelUrl);
             // update adversary model
             // in the last cycle we don't need to do this though
             if (i + 1 < cycles)
