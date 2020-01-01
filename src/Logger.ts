@@ -1,3 +1,4 @@
+import ProgressBar from "progress";
 import { Writable } from "stream";
 
 /** Writes debug/error messages to a stream. */
@@ -46,6 +47,7 @@ export class Logger
             this._prefix + prefix, this._postfix);
     }
 
+    // TODO: remove unused method postfix
     /** Creates a new Logger with a postfix appended to the current one. */
     public postfix(postfix: string): Logger
     {
@@ -65,6 +67,51 @@ export class Logger
     {
         return new Logger(this.debugStream, stream, this._prefix,
             this._postfix);
+    }
+
+    /**
+     * Creates a new Logger that uses `ProgressBar#interrupt()` to prevent
+     * interference with it in place of the usual `#debug()` behavior.
+     */
+    public progressDebug(bar: ProgressBar): Logger
+    {
+        if (!this.debugStream) return this;
+        return this.pipeDebug(this.getLogStream(bar));
+    }
+
+    /**
+     * Creates a new Logger that uses `ProgressBar#interrupt()` to prevent
+     * interference with it in place of the usual `#error()` behavior.
+     */
+    public progressError(bar: ProgressBar): Logger
+    {
+        if (!this.errorStream) return this;
+        return this.pipeDebug(this.getLogStream(bar));
+    }
+
+    /**
+     * Creates a Writable that uses `ProgressBar#interrupt()` in place of the
+     * usual `#write()` behavior.
+     */
+    private getLogStream(bar: ProgressBar): Writable
+    {
+        // TODO: replace Writable with just a function since the only method
+        //  that the Logger actually uses is write()
+        const logStream = new Writable();
+        type CB = (error: Error | null | undefined) => void;
+        // overwrite the write method in order to insert bar functionality
+        logStream.write = function(chunk: any, enc?: string | CB, cb?: CB)
+        {
+            // remove last newline, since ProgressBar#interrupt() adds it
+            if (typeof chunk === "string" && chunk.endsWith("\n"))
+            {
+                chunk = chunk.substr(0, chunk.length - 1);
+            }
+            bar.interrupt(chunk);
+            if (cb) cb(null);
+            return true;
+        };
+        return logStream;
     }
 
     /** Writes a normal debug message. */
