@@ -9,6 +9,4 @@ export interface Experience
     reward: number;
     /** Next state after taking the action. */
     nextState: number[];
-    /** ID of the best action that will be taken in the next state. */
-    nextAction: number;
 }

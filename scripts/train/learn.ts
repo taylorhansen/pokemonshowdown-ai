@@ -56,7 +56,7 @@ export async function learn(model: tf.LayersModel,
                     toColumn(experience.nextState)) as tf.Tensor2D).data();
             targetData[experience.action] = experience.reward +
                 // choose future reward given the best action (i.e. max reward)
-                gamma * futureReward[experience.nextAction];
+                gamma * Math.max(...futureReward);
             const ys = toColumn(targetData);
 
             return {value: {xs, ys}, done: false};

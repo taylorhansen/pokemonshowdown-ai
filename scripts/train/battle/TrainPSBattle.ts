@@ -28,13 +28,8 @@ export class TrainPSBattle extends PSBattle
     /** @override */
     public readonly eventHandler!: TrainPSEventHandler;
 
-    /** Last choice that was handled by the environment. */
-    private lastChoice?: Choice;
-    /**
-     * Next choice that was accepted and is about to be handled by the
-     * environment.
-     */
-    private nextChoice?: Choice;
+    /** Last action that was handled by the environment. */
+    private action?: Choice;
 
     constructor(username: string, agent: TrainNetwork, sender: Sender,
         logger: Logger, eventHandlerCtor = TrainPSEventHandler)
@@ -49,14 +44,10 @@ export class TrainPSBattle extends PSBattle
         //  battleprogress message and that it was accepted
         if (!this.unavailableChoice && this.shouldRespond())
         {
-            this.lastChoice = this.nextChoice;
-            this.nextChoice = this.lastChoices[0];
-            if (this.lastChoice && this.nextChoice)
-            {
-                // build Experience replay buffer
-                this._experiences.push(this.agent.getExperience(this.lastChoice,
-                        this.eventHandler.getReward(), this.nextChoice));
-            }
+            this.action = this.lastChoices[0];
+            // build Experience buffer
+            this._experiences.push(this.agent.getExperience(this.action,
+                    this.eventHandler.getReward()));
         }
 
         return super.request(msg);

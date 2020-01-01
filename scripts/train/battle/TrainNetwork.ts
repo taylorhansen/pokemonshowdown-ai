@@ -21,8 +21,7 @@ export class TrainNetwork extends Network
      * @param reward Reward gained from last the action.
      * @param nextAction Best action to take in the next state.
      */
-    public getExperience(action: Choice, reward: number, nextAction: Choice):
-        Experience
+    public getExperience(action: Choice, reward: number): Experience
     {
         if (!this.lastStateData || !this.stateData)
         {
@@ -32,12 +31,12 @@ export class TrainNetwork extends Network
 
         return {
             state: this.lastStateData, action: choiceIds[action], reward,
-            nextState: this.stateData, nextAction: choiceIds[nextAction]
+            nextState: this.stateData
         };
     }
 
     /** @override */
-    protected async getPrediction(stateData: number[]): Promise<number[]>
+    protected getPrediction(stateData: number[]): Promise<number[]>
     {
         // store buffer of state data
         if (this.updateLast) this.lastStateData = this.stateData;
