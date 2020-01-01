@@ -69,10 +69,12 @@ export async function play(options: GameOptions): Promise<GameResult>
 
     for (const id of ["p1", "p2"] as PlayerID[])
     {
-        const innerLog = logger.pipeDebug(file).prefix(`Play(${id}): `);
+        const innerLog =
+            (file ? logger.pipeDebug(msg => file?.write(msg)) : logger)
+            .addPrefix(`Play(${id}): `);
 
         const agent = new TrainNetwork(options[id],
-            innerLog.prefix("Network: "));
+            innerLog.addPrefix("Network: "));
 
         // sends player choices to the battle stream
         function sender(...args: string[]): void
@@ -91,7 +93,7 @@ export async function play(options: GameOptions): Promise<GameResult>
         }
 
         const battle = new TrainPSBattle(id, agent, sender,
-            innerLog.prefix("PSBattle: "));
+            innerLog.addPrefix("PSBattle: "));
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
         // only need one player to track these
@@ -113,7 +115,7 @@ export async function play(options: GameOptions): Promise<GameResult>
 
         // start parser event loop
         const stream = streams[id];
-        const parserLog = innerLog.prefix("Parser: ");
+        const parserLog = innerLog.addPrefix("Parser: ");
         eventLoops.push(async function()
         {
             let output: string;

@@ -20,7 +20,7 @@ export async function train(cycles: number, games: number, maxTurns: number,
     modelPath: string, selfPlayPath: string, evaluatePath: string):
     Promise<void>
 {
-    const logger = Logger.stderr.prefix("Train: ");
+    const logger = Logger.stderr.addPrefix("Train: ");
 
     const modelUrl = `file://${modelPath}`;
     const modelJsonUrl = `file://${join(modelPath, "model.json")}`;
@@ -47,7 +47,7 @@ export async function train(cycles: number, games: number, maxTurns: number,
 
         const bestModel = await cycle(toTrain, model, games, maxTurns,
             selfPlayPath, evaluatePath,
-            logger.prefix(`Cycle(${i + 1}/${cycles}): `));
+            logger.addPrefix(`Cycle(${i + 1}/${cycles}): `));
 
         // the model that's better will be used to complete the next cycle
         if (bestModel === toTrain)

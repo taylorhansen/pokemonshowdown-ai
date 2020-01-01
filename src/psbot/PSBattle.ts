@@ -50,7 +50,7 @@ export class PSBattle implements RoomHandler
     {
         this.driver = new driverCtor();
         this.eventHandler = new eventHandlerCtor(this.username,
-            logger.prefix("PSEventHandler: "));
+            logger.addPrefix("PSEventHandler: "));
     }
 
     /** @override */

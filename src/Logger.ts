@@ -1,132 +1,69 @@
-import ProgressBar from "progress";
-import { Writable } from "stream";
+/** Function type used by the Logger. */
+export type LogFunc = (msg: string) => void;
 
-/** Writes debug/error messages to a stream. */
+/** Prints debug/error messages with hierarchical prefix capabilities. */
 export class Logger
 {
     /** Default logger. */
     public static readonly default = new Logger();
     /** Default stdout logger. */
-    public static readonly stdout = new Logger(process.stdout, process.stdout);
+    public static readonly stdout = new Logger(undefined,
+        msg => process.stdout.write(msg));
     /** Default stderr logger. */
-    public static readonly stderr = new Logger(process.stderr, process.stderr);
+    public static readonly stderr = new Logger(
+        msg => process.stdout.write(msg));
     /** Logger that doesn't write to anything. */
-    public static readonly null = new Logger(null, null);
-
-    /** Stream to write debug messages to. */
-    public readonly debugStream: Writable | null;
-    /** Stream to write error messages to. */
-    public readonly errorStream: Writable | null;
-
-    /** Prefix added to the beginning of each message. */
-    private readonly _prefix: string;
-    /** Postfix added to the end of each message. */
-    private readonly _postfix: string;
+    public static readonly null = new Logger(() => {}, () => {});
 
     /**
      * Creates a Logger object.
-     * @param debugStream Stream to write debug messages to.
-     * @param errorStream Stream to write error messages to.
+     * @param debugStream Function for printing debug messages.
+     * @param errorStream Function for printing error messages.
      * @param prefix Prefix added to each string.
-     * @param newline Whether to add a newline to the end of messages.
+     * @param postfix Postfix added to each string.
      */
-    constructor(debugStream: Writable | null = process.stdout,
-        errorStream: Writable | null = process.stderr, prefix = "",
-        postfix = "\n")
+    constructor(
+        public readonly debugLog: LogFunc = msg => process.stdout.write(msg),
+        public readonly errorLog: LogFunc = msg => process.stderr.write(msg),
+        public readonly prefix = "", public readonly postfix = "\n")
     {
-        this.debugStream = debugStream;
-        this.errorStream = errorStream;
-        this._prefix = prefix;
-        this._postfix = postfix;
     }
 
     /** Creates a new Logger with a prefix appended to the current one. */
-    public prefix(prefix: string): Logger
+    public addPrefix(prefix: string): Logger
     {
-        return new Logger(this.debugStream, this.errorStream,
-            this._prefix + prefix, this._postfix);
+        return new Logger(this.debugLog, this.errorLog,
+            this.prefix + prefix, this.postfix);
     }
 
-    // TODO: remove unused method postfix
-    /** Creates a new Logger with a postfix appended to the current one. */
-    public postfix(postfix: string): Logger
+    /** Creates a new Logger with a postfix prepended to the current one. */
+    public addPostfix(postfix: string): Logger
     {
-        return new Logger(this.debugStream, this.errorStream,
-            this._prefix, this._postfix + postfix);
+        return new Logger(this.debugLog, this.errorLog,
+            this.prefix, postfix + this.postfix);
     }
 
-    /** Creates a new Logger with a different debug stream. */
-    public pipeDebug(stream: Writable | null): Logger
+    /** Creates a new Logger with a different debug printer. */
+    public pipeDebug(debugLog: LogFunc): Logger
     {
-        return new Logger(stream, this.errorStream, this._prefix,
-            this._postfix);
+        return new Logger(debugLog, this.errorLog, this.prefix, this.postfix);
     }
 
-    /** Creates a new Logger with a different error stream. */
-    public pipeError(stream: Writable | null): Logger
+    /** Creates a new Logger with a different error printer. */
+    public pipeError(errorLog: LogFunc): Logger
     {
-        return new Logger(this.debugStream, stream, this._prefix,
-            this._postfix);
-    }
-
-    /**
-     * Creates a new Logger that uses `ProgressBar#interrupt()` to prevent
-     * interference with it in place of the usual `#debug()` behavior.
-     */
-    public progressDebug(bar: ProgressBar): Logger
-    {
-        if (!this.debugStream) return this;
-        return this.pipeDebug(this.getLogStream(bar));
-    }
-
-    /**
-     * Creates a new Logger that uses `ProgressBar#interrupt()` to prevent
-     * interference with it in place of the usual `#error()` behavior.
-     */
-    public progressError(bar: ProgressBar): Logger
-    {
-        if (!this.errorStream) return this;
-        return this.pipeDebug(this.getLogStream(bar));
-    }
-
-    /**
-     * Creates a Writable that uses `ProgressBar#interrupt()` in place of the
-     * usual `#write()` behavior.
-     */
-    private getLogStream(bar: ProgressBar): Writable
-    {
-        // TODO: replace Writable with just a function since the only method
-        //  that the Logger actually uses is write()
-        const logStream = new Writable();
-        type CB = (error: Error | null | undefined) => void;
-        // overwrite the write method in order to insert bar functionality
-        logStream.write = function(chunk: any, enc?: string | CB, cb?: CB)
-        {
-            // remove last newline, since ProgressBar#interrupt() adds it
-            if (typeof chunk === "string" && chunk.endsWith("\n"))
-            {
-                chunk = chunk.substr(0, chunk.length - 1);
-            }
-            bar.interrupt(chunk);
-            if (cb) cb(null);
-            return true;
-        };
-        return logStream;
+        return new Logger(this.debugLog, errorLog, this.prefix, this.postfix);
     }
 
     /** Writes a normal debug message. */
     public debug(message: string): void
     {
-        if (!this.debugStream) return;
-        this.debugStream.write(
-            `${this._prefix}debug: ${message}${this._postfix}`);
+        this.debugLog(`${this.prefix}debug: ${message}${this.postfix}`);
     }
 
     /** Writes an error message. */
     public error(message: string): void
     {
-        if (!this.errorStream) return;
-        this.errorStream.write(
-            `${this._prefix}error: ${message}${this._postfix}`);
+        this.errorLog(`${this.prefix}error: ${message}${this.postfix}`);
     }
 }

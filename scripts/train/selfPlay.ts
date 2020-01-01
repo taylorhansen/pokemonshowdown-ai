@@ -23,11 +23,17 @@ export async function selfPlay(model: tf.LayersModel, games: number,
         {total: games, clear: true});
     bar.update(0);
 
-    logger = logger.progressDebug(bar).progressError(bar);
+    function bypassBar(msg: string): void
+    {
+        // remove last newline, since ProgressBar#interrupt() adds it
+        if (msg.endsWith("\n")) msg = msg.substr(0, msg.length - 1);
+        bar.interrupt(msg);
+    }
+    logger = logger.pipeDebug(bypassBar).pipeError(bypassBar);
 
     for (let i = 0; i < games; ++i)
     {
-        const innerLog = logger.prefix(`Game(${i + 1}/${games}): `);
+        const innerLog = logger.addPrefix(`Game(${i + 1}/${games}): `);
         innerLog.debug("Start");
 
         // start a game and extract experiences/winner

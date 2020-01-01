@@ -10,7 +10,7 @@ import { PSBot } from "./psbot/PSBot";
 (async function()
 {
     // create client object
-    const bot = new PSBot(Logger.stdout.prefix("PSBot: "));
+    const bot = new PSBot(Logger.stdout.addPrefix("PSBot: "));
 
     // configure client to login once connected
     if (username) bot.login({username, password, loginServer});
@@ -29,5 +29,5 @@ import { PSBot } from "./psbot/PSBot";
     bot.acceptChallenges("gen4randombattle",
         (room, user, sender) =>
             new PSBattle(user, network, sender,
-                Logger.stdout.prefix(`PSBattle(${room})`)));
+                Logger.stdout.addPrefix(`PSBattle(${room})`)));
 })();
