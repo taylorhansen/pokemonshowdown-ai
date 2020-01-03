@@ -672,7 +672,8 @@ export class Pokemon implements ReadonlyPokemon
     {
         const s = " ".repeat(indent);
         return `\
-${s}${this.stringifySpecies()}${this.gender ? ` ${this.gender}` : ""}
+${s}${this.stringifySpecies()}${this.gender ? ` ${this.gender}` : ""} \
+${this.hp.toString()}
 ${s}stats: ${this.stringifyStats()}
 ${s}status: ${this.majorStatus.toString()}
 ${s}active: ${this.active}\
