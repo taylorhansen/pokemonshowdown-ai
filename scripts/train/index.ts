@@ -49,6 +49,7 @@ import { train } from "./train";
         model, saveUrl: modelUrl,
         games: 5,
         gamma: 0.8,
+        explore: {start: 1, stop: 0.01, decay: 0.001},
         batchSize: 16, memorySize: 256,
         logPath
     });

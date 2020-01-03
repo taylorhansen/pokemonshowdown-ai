@@ -1,13 +1,15 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { Network, toColumn } from "../../src/ai/Network";
+import { toColumn } from "../../src/ai/Network";
 import { Choice, intToChoice } from "../../src/battle/agent/Choice";
 import { ReadonlyBattleState } from "../../src/battle/state/BattleState";
 import { Logger } from "../../src/Logger";
 import { startBattle } from "./battle";
 import { Experience } from "./Experience";
 import { ExperiencePSBattle } from "./ExperiencePSBattle";
+import { ExploreNetwork } from "./ExploreNetwork";
 import { layerMax } from "./layerMax";
 import { Memory } from "./Memory";
+import { shuffle } from "./shuffle";
 
 /** Options for `playRandomly()` */
 interface RandomPlayOptions
@@ -36,12 +38,7 @@ async function playRandomly(
     {async decide(state: ReadonlyBattleState, choices: Choice[]):
         Promise<void>
     {
-        // do a fisher-yates shuffle on the possible choices
-        for (let i = choices.length - 1; i > 0; --i)
-        {
-            const j = Math.floor(Math.random() * (i + 1));
-            [choices[i], choices[j]] = [choices[j], choices[i]];
-        }
+        shuffle(choices);
     }};
 
     // emit experience objs after each accepted response
@@ -184,6 +181,17 @@ async function learningStep({toTrain, model, expBatch, gamma}: LearnOptions):
     return loss;
 }
 
+/** Options for epsilon-greedy policy training. */
+export interface ExploreOptions
+{
+    /** Starting explore probability. Must be between `stop` and 1. */
+    readonly start: number;
+    /** Minimum explore probability. Must be between 0 and `start`. */
+    readonly stop: number;
+    /** Explore probability decay rate. Must be between 0 and 1. */
+    readonly decay: number;
+}
+
 /** Options for `doTrainingGame()`. */
 interface TrainingGameOptions
 {
@@ -197,6 +205,8 @@ interface TrainingGameOptions
     readonly batchSize: number;
     /** Discount factor for future reward values. */
     readonly gamma: number;
+    /** Settings for epsilon-greedy policy training. */
+    readonly explore: ExploreOptions;
     /** Logger object. */
     readonly logger: Logger;
     /** If provided, store debug logs in this folder. */
@@ -213,10 +223,12 @@ interface TrainingGameOptions
  * itself for one game, updating it after every decision.
  */
 async function doTrainingGame(
-    {toTrain, model, memory, batchSize, gamma, logger, logPath, filename}:
-        TrainingGameOptions): Promise<void>
+    {
+        toTrain, model, memory, batchSize, gamma, explore, logger, logPath,
+        filename
+    }: TrainingGameOptions): Promise<void>
 {
-    const agent = new Network(model);
+    const agent = new ExploreNetwork(model, explore);
 
     let batches = 0;
 
@@ -254,6 +266,8 @@ export interface TrainOptions
     readonly games: number;
     /** Discount factor for future rewards. */
     readonly gamma: number;
+    /** Settings for epsilon-greedy policy training. */
+    readonly explore: ExploreOptions;
     /** Experience batch size during training. */
     readonly batchSize: number;
     /**
@@ -267,7 +281,7 @@ export interface TrainOptions
 
 /** Trains a neural network over a number of self-play games. */
 export async function train(
-    {model, saveUrl, games, gamma, batchSize, memorySize, logPath}:
+    {model, saveUrl, games, gamma, explore, batchSize, memorySize, logPath}:
         TrainOptions): Promise<void>
 {
     const logger = Logger.stderr.addPrefix("Train: ");
@@ -295,7 +309,7 @@ export async function train(
         // subclass Network to do this
         await doTrainingGame(
         {
-            toTrain: trainWrapper, model, memory, batchSize, gamma,
+            toTrain: trainWrapper, model, memory, batchSize, gamma, explore,
             logger: innerLog,
             ...(logPath && {logPath, filename: `train-${i + 1}`})
         });
