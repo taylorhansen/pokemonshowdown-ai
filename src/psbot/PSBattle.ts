@@ -54,7 +54,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public init(msg: BattleInitMessage): Promise<void>
+    public async init(msg: BattleInitMessage): Promise<void>
     {
         this.logger.debug(`battleinit:\n${
             inspect(msg, {colors: false, depth: null})}`);
@@ -62,12 +62,11 @@ export class PSBattle implements RoomHandler
         this.driver.handleEvents(this.eventHandler.initBattle(msg));
         this.logger.debug(`State:\n${this.driver.getStateString()}`);
 
-        return this.askAgent();
+        if (this.shouldRespond()) return this.askAgent();
     }
 
     /** @override */
-    public async progress(msg: BattleProgressMessage):
-        Promise<void>
+    public async progress(msg: BattleProgressMessage): Promise<void>
     {
         this.logger.debug(`battleprogress:\n${
             inspect(msg, {colors: false, depth: null})}`);

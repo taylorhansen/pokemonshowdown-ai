@@ -14,8 +14,42 @@
  *    old one.
  * 5. Repeat steps 2-4 as desired.
  */
-import { evaluateFolder, latestModelFolder, selfPlayFolder } from
-    "../../src/config";
+import * as tf from "@tensorflow/tfjs-node";
+import { join } from "path";
+import { Network } from "../../src/ai/Network";
+import { latestModelFolder, logPath } from "../../src/config";
+import { Logger } from "../../src/Logger";
+import { ensureDir } from "./ensureDir";
+import { createModel } from "./model";
 import { train } from "./train";
 
-train(1, 5, 100, latestModelFolder, selfPlayFolder, evaluateFolder);
+(async function()
+{
+    const logger = Logger.stderr.addPrefix("Train: ");
+
+    // create or load neural network
+    let model: tf.LayersModel;
+    const modelUrl = `file://${latestModelFolder}`;
+    const modelJsonUrl = `file://${join(latestModelFolder, "model.json")}`;
+    logger.debug("Loading network");
+    try { model = await Network.loadModel(modelJsonUrl); }
+    catch (e)
+    {
+        logger.error(`Error opening model: ${e}`);
+        logger.debug("Creating default model");
+
+        model = createModel();
+        await ensureDir(latestModelFolder);
+        await model.save(modelUrl);
+    }
+
+    // train network
+    await train(
+    {
+        model, saveUrl: modelUrl,
+        games: 5,
+        gamma: 0.8,
+        batchSize: 16, memorySize: 256,
+        logPath
+    });
+})();

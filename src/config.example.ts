@@ -11,12 +11,8 @@ export const latestModelFolder = join(modelsFolder, "latest/");
 
 // sim logs from training
 
-/** Default path for training battle logs. */
-export const logsFolder = join(__dirname, "../logs/");
-/** Default path for self-play logs. */
-export const selfPlayFolder = join(logsFolder, "self-play/");
-/** Default path for evaluation logs. */
-export const evaluateFolder = join(logsFolder, "evaluate/");
+/** Path to the folder to store training battle logs in. */
+export const logPath = join(__dirname, "../logs/");
 
 // login info
 

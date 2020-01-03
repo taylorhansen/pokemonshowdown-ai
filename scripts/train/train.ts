@@ -1,74 +1,312 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { join } from "path";
-// @ts-ignore
-import { Network } from "../../src/ai/Network";
+import { Network, toColumn } from "../../src/ai/Network";
+import { Choice, intToChoice } from "../../src/battle/agent/Choice";
+import { ReadonlyBattleState } from "../../src/battle/state/BattleState";
 import { Logger } from "../../src/Logger";
-import { cycle } from "./cycle";
-import { ensureDir } from "./ensureDir";
-import { compileModel, createModel } from "./model";
+import { startBattle } from "./battle";
+import { Experience } from "./Experience";
+import { ExperiencePSBattle } from "./ExperiencePSBattle";
+import { layerMax } from "./layerMax";
+import { Memory } from "./Memory";
+
+/** Options for `playRandomly()` */
+interface RandomPlayOptions
+{
+    /** Memory object to populate. */
+    readonly memory: Memory;
+    /** Minimum number of Experience objects to generate. */
+    readonly minExp: number;
+    /** If provided, store debug logs in this folder. */
+    readonly logPath?: string;
+    /**
+     * If provided, use this as a filename prefix. Default `random`. Ignored if
+     * `logPath` is not provided.
+     */
+    readonly logFilePrefix?: string;
+}
 
 /**
- * Trains the latest network for a given number of cycles.
- * @param cycles Amount of cycles to train for.
- * @param games Amount of games per cycle for training and evaluation.
- * @param maxTurns Max amount of turns before a game is considered a tie.
- * @param modelPath Path to the folder to store the neural network in.
- * @param selfPlayPath Path to the folder to store self-play logs in.
- * @param evaluatePath Path to the folder to store evaluation logs in.
+ * Repeats playing games randomly until the desired number of Experience objects
+ * has been reached.
  */
-export async function train(cycles: number, games: number, maxTurns: number,
-    modelPath: string, selfPlayPath: string, evaluatePath: string):
-    Promise<void>
+async function playRandomly(
+    {memory, minExp, logPath, logFilePrefix}: RandomPlayOptions): Promise<void>
+{
+    const agentFactory = () =>
+    ({async decide(state: ReadonlyBattleState, choices: Choice[]):
+        Promise<void>
+    {
+        // do a fisher-yates shuffle on the possible choices
+        for (let i = choices.length - 1; i > 0; --i)
+        {
+            const j = Math.floor(Math.random() * (i + 1));
+            [choices[i], choices[j]] = [choices[j], choices[i]];
+        }
+    }});
+
+    // emit experience objs after each accepted response
+    const psBattleCtor = class extends ExperiencePSBattle
+    {
+        /** @override */
+        protected async emitExperience(exp: Experience): Promise<void>
+        {
+            memory.add(exp);
+            --minExp;
+        }
+    };
+
+    // keep playing games randomly until we have enough experience
+    let games = 1;
+    while (minExp > 0)
+    {
+        await startBattle(
+        {
+            p1: {agentFactory, psBattleCtor}, p2: {agentFactory, psBattleCtor},
+            // only provide logPath/filename if logPath is also specified
+            ...(logPath &&
+                {logPath, filename: `${logFilePrefix || "random"}-${games}`})
+        });
+        ++games;
+    }
+}
+
+/**
+ * Prepares the Q network for training by wrapping it in a new network. The new
+ * network takes an additional action id parameter (i.e. the id of a desired
+ * Choice) and uses it to mask out all Q values except for the one associated
+ * with that action. The resulting LayersModel will also be compiled and ready
+ * to be trained.
+ */
+function prepareQNetwork(model: tf.LayersModel): tf.LayersModel
+{
+    // add an input for the action id
+    const actionId = tf.layers.input(
+        {name: "train-wrapper/action-id", shape: [1]});
+
+    // convert the action id into a one-hot
+    const actionMask =
+        tf.layers.embedding(
+        {
+            name: "train-wrapper/action-mask", trainable: false,
+            inputDim: intToChoice.length, outputDim: intToChoice.length,
+            embeddingsInitializer: "identity"
+        })
+        .apply(actionId) as tf.SymbolicTensor;
+
+    // the previous layer has the shape [null, 1, 9]
+    // reshape it to be [null, 9] so we can use it as a mask next
+    const actionMaskReshaped = tf.layers.reshape(
+        {
+            name: "train-wrapper/action-mask-reshaped",
+            targetShape: [intToChoice.length]
+        }).apply(actionMask) as tf.SymbolicTensor;
+
+    // elementwise multiply the mask layer with the model's output
+    // thanks to the embed mask, only 1 q value will be contained in this
+    //  layer's output, with the rest being zeros
+    const maskedQValues = tf.layers.multiply(
+            {name: "train-wrapper/masked-q-values"})
+        .apply([actionMaskReshaped, model.outputs[0]]) as tf.SymbolicTensor;
+
+    // find the q value that wasn't masked out and return it
+    const output = layerMax({name: "train-wrapper/single-q-value"})
+        .apply(maskedQValues) as tf.SymbolicTensor;
+
+    const result = tf.model(
+    {
+        name: "train-wrapper",
+        inputs: [model.inputs[0], actionId], outputs: output
+    });
+    result.compile({loss: "meanSquaredError", optimizer: "adam"});
+    return result;
+}
+
+/** Options for `learningStep()` */
+interface LearnOptions
+{
+    /** Wrapper model to train. */
+    readonly toTrain: tf.LayersModel;
+    /** Original model that is contained by `toTrain`. */
+    readonly model: tf.LayersModel;
+    /** Experience object batch to learn from. */
+    readonly expBatch: readonly Experience[];
+    /** Discount factor for future reward values. */
+    readonly gamma: number;
+}
+
+/**
+ * Makes a single learning step with the Q network using the provided Experience
+ * objects.
+ * @returns The training loss from the learning step.
+ */
+async function learningStep({toTrain, model, expBatch, gamma}: LearnOptions):
+    Promise<number>
+{
+    if (expBatch.length <= 0)
+    {
+        throw new Error("No Experiences to train with");
+    }
+
+    const states: tf.Tensor[] = [];
+    const actions: tf.Tensor[] = [];
+    const targets: tf.Tensor[] = [];
+
+    for (const exp of expBatch)
+    {
+        states.push(tf.tensor1d(exp.state));
+        actions.push(tf.tensor1d([exp.action]));
+
+        // apply the bellman equation to calculate the target q value for a
+        //  given state and action
+        // this is equal to the immediate reward plus the max predicted reward
+        //  (in the neural network's current opinion) multiplied by the discount
+        //  factor
+        const maxQ = tf.tidy(() =>
+            tf.max(model.predict(toColumn(exp.nextState)) as tf.Tensor));
+        const maxQData = await maxQ.data();
+        const target = exp.reward + gamma * maxQData[0];
+        maxQ.dispose();
+
+        targets.push(tf.tensor1d([target]));
+    }
+
+    // the model is compiled to only track loss, with no other metrics, so
+    //  trainOnBatch() should only return a single number
+    const stateBatch = tf.stack(states);
+    const actionBatch = tf.stack(actions);
+    const targetBatch = tf.stack(targets);
+    tf.dispose([...states, ...actions, ...targets]);
+
+    const loss = await toTrain.trainOnBatch([stateBatch, actionBatch],
+        targetBatch) as unknown as number;
+
+    tf.dispose([stateBatch, actionBatch, targetBatch]);
+    return loss;
+}
+
+/** Options for `doTrainingGame()`. */
+interface TrainingGameOptions
+{
+    /** Wrapper model to train. */
+    readonly toTrain: tf.LayersModel;
+    /** Original model that is contained by `toTrain`. */
+    readonly model: tf.LayersModel;
+    /** Memory object to populate and sample from. */
+    readonly memory: Memory;
+    /** Experience batch size during training. */
+    readonly batchSize: number;
+    /** Discount factor for future reward values. */
+    readonly gamma: number;
+    /** Logger object. */
+    readonly logger: Logger;
+    /** If provided, store debug logs in this folder. */
+    readonly logPath?: string;
+    /**
+     * If provided, use this as a filename prefix. Default `train`. Ignored if
+     * `logPath` is not provided.
+     */
+    readonly filename?: string;
+}
+
+/**
+ * Completes a single training session by playing the neural network against
+ * itself for one game, updating it after every decision.
+ */
+async function doTrainingGame(
+    {toTrain, model, memory, batchSize, gamma, logger, logPath, filename}:
+        TrainingGameOptions): Promise<void>
+{
+    const agentFactory = (log: Logger) =>
+        new Network(model, log.addPrefix("Network: "));
+
+    let batches = 0;
+
+    // emit experience objs after each accepted response
+    const psBattleCtor = class extends ExperiencePSBattle
+    {
+        /** @override */
+        protected async emitExperience(exp: Experience): Promise<void>
+        {
+            memory.add(exp);
+            // initiate a learning step with a mini-batch
+            const loss = await learningStep(
+                {toTrain, model, expBatch: memory.sample(batchSize), gamma});
+            logger.debug(`Batch ${++batches} loss: ${loss}`);
+        }
+    };
+
+    await startBattle(
+    {
+        p1: {agentFactory, psBattleCtor}, p2: {agentFactory, psBattleCtor},
+        ...(logPath && {logPath, filename: filename || "train"})
+    });
+}
+
+/** Options for `train()`. */
+export interface TrainOptions
+{
+    /** Model to train. */
+    readonly model: tf.LayersModel;
+    /**
+     * If provided, save the neural network to this location after each game.
+     */
+    readonly saveUrl?: string;
+    /** Number of training games to play. */
+    readonly games: number;
+    /** Discount factor for future rewards. */
+    readonly gamma: number;
+    /** Experience batch size during training. */
+    readonly batchSize: number;
+    /**
+     * Experience buffer size. Mini batches of size `batchSize` are sampled from
+     * here. Must be greater than or equal to `batchSize`.
+     */
+    readonly memorySize: number;
+    /** Path to store game logs. Omit to not store logs. */
+    readonly logPath?: string;
+}
+
+/** Trains a neural network over a number of self-play games. */
+export async function train(
+    {model, saveUrl, games, gamma, batchSize, memorySize, logPath}:
+        TrainOptions): Promise<void>
 {
     const logger = Logger.stderr.addPrefix("Train: ");
+    const memory = new Memory(memorySize);
 
-    const modelUrl = `file://${modelPath}`;
-    const modelJsonUrl = `file://${join(modelPath, "model.json")}`;
+    // pretrain games
+    // populate memory buffer with some starting Experience objects by playing
+    //  completely randomly
+    logger.debug("Populating experience replay buffer");
+    await playRandomly(
+        {memory, minExp: batchSize, logPath, logFilePrefix: "pretrain"});
 
-    let toTrain: tf.LayersModel;
-    try { toTrain = await Network.loadModel(modelJsonUrl); }
-    catch (e)
+    // setup network for training
+    logger.debug("Preparing neural network for training");
+    const trainWrapper = prepareQNetwork(model);
+
+    // actual training games
+    logger.debug("Starting training games");
+    for (let i = 0; i < games; ++i)
     {
-        logger.error(`Error opening model: ${e}`);
-        logger.debug("Creating default model");
+        const innerLog = logger.addPrefix(`Game(${i + 1}/${games}): `);
+        innerLog.debug("Start");
 
-        toTrain = createModel();
-        await ensureDir(modelPath);
-        await toTrain.save(modelUrl);
-    }
-    compileModel(toTrain);
-
-    // this seems to be the only way to easily clone a tf.LayersModel
-    let model = await Network.loadModel(modelJsonUrl);
-
-    for (let i = 0; i < cycles; ++i)
-    {
-        logger.debug(`Starting training cycle ${i + 1}/${cycles}`);
-
-        const bestModel = await cycle(toTrain, model, games, maxTurns,
-            selfPlayPath, evaluatePath,
-            logger.addPrefix(`Cycle(${i + 1}/${cycles}): `));
-
-        // the model that's better will be used to complete the next cycle
-        if (bestModel === toTrain)
+        // TODO: epsilon-greedy
+        // subclass Network to do this
+        await doTrainingGame(
         {
-            logger.debug("Saving model");
-            await bestModel.save(modelUrl);
-            // update adversary model
-            // in the last cycle we don't need to do this though
-            if (i + 1 < cycles)
-            {
-                model.dispose();
-                model = await Network.loadModel(modelJsonUrl);
-            }
-            logger.debug("Done");
-        }
-        else
+            toTrain: trainWrapper, model, memory, batchSize, gamma,
+            logger: innerLog,
+            ...(logPath && {logPath, filename: `train-${i + 1}`})
+        });
+
+        innerLog.debug("Done");
+
+        if (saveUrl)
         {
-            // failed to learn, rollback to previous version
-            toTrain.dispose();
-            toTrain = await Network.loadModel(modelJsonUrl);
-            compileModel(toTrain);
+            logger.debug("Saving");
+            await model.save(saveUrl);
         }
     }
 }
