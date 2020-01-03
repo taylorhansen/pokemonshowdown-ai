@@ -6,7 +6,7 @@ import { Logger } from "../../src/Logger";
 import { startBattle } from "./battle";
 import { Experience } from "./Experience";
 import { ExperiencePSBattle } from "./ExperiencePSBattle";
-import { ExploreNetwork } from "./ExploreNetwork";
+import { ExploreNetwork, ExploreOptions } from "./ExploreNetwork";
 import { layerMax } from "./layerMax";
 import { Memory } from "./Memory";
 import { shuffle } from "./shuffle";
@@ -35,11 +35,12 @@ async function playRandomly(
     {memory, minExp, logPath, logFilePrefix}: RandomPlayOptions): Promise<void>
 {
     const agent =
-    {async decide(state: ReadonlyBattleState, choices: Choice[]):
-        Promise<void>
+    {async decide(state: ReadonlyBattleState, choices: Choice[]): Promise<void>
     {
         shuffle(choices);
     }};
+
+    let done = false;
 
     // emit experience objs after each accepted response
     const psBattleCtor = class extends ExperiencePSBattle
@@ -48,13 +49,13 @@ async function playRandomly(
         protected async emitExperience(exp: Experience): Promise<void>
         {
             memory.add(exp);
-            --minExp;
+            if (!done && --minExp <= 0) done = true;
         }
     };
 
     // keep playing games randomly until we have enough experience
     let games = 1;
-    while (minExp > 0)
+    while (!done)
     {
         await startBattle(
         {
@@ -161,8 +162,8 @@ async function learningStep({toTrain, model, expBatch, gamma}: LearnOptions):
         const maxQ = tf.tidy(() =>
             tf.max(model.predict(toColumn(exp.nextState)) as tf.Tensor));
         const maxQData = await maxQ.data();
-        const target = exp.reward + gamma * maxQData[0];
         maxQ.dispose();
+        const target = exp.reward + gamma * maxQData[0];
 
         targets.push(tf.tensor1d([target]));
     }
@@ -176,20 +177,9 @@ async function learningStep({toTrain, model, expBatch, gamma}: LearnOptions):
 
     const loss = await toTrain.trainOnBatch([stateBatch, actionBatch],
         targetBatch) as unknown as number;
-
     tf.dispose([stateBatch, actionBatch, targetBatch]);
-    return loss;
-}
 
-/** Options for epsilon-greedy policy training. */
-export interface ExploreOptions
-{
-    /** Starting explore probability. Must be between `stop` and 1. */
-    readonly start: number;
-    /** Minimum explore probability. Must be between 0 and `start`. */
-    readonly stop: number;
-    /** Explore probability decay rate. Must be between 0 and 1. */
-    readonly decay: number;
+    return loss;
 }
 
 /** Options for `doTrainingGame()`. */

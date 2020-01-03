@@ -3,7 +3,17 @@ import { Network } from "../../src/ai/Network";
 import { Choice } from "../../src/battle/agent/Choice";
 import { ReadonlyBattleState } from "../../src/battle/state/BattleState";
 import { shuffle } from "./shuffle";
-import { ExploreOptions } from "./train";
+
+/** Options for epsilon-greedy policy training. */
+export interface ExploreOptions
+{
+    /** Starting explore probability. Must be between `stop` and 1. */
+    readonly start: number;
+    /** Minimum explore probability. Must be between 0 and `start`. */
+    readonly stop: number;
+    /** Explore probability decay rate. Must be between 0 and 1. */
+    readonly decay: number;
+}
 
 /**
  * Network with an epsilon-greedy policy over the usual behavior. The

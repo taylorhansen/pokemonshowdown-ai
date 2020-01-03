@@ -17,13 +17,13 @@ import { ensureDir } from "./ensureDir";
 export interface PlayerOptions
 {
     /** Battle decision-maker. */
-    agent: BattleAgent;
+    readonly agent: BattleAgent;
     /**
      * Override PSBattle if needed.  The subclass should not override
      * PSEventHandler, since `startBattle()` already does that, so attempts to
      * do so will be overridden.
      */
-    psBattleCtor?: typeof PSBattle;
+    readonly psBattleCtor?: typeof PSBattle;
 }
 
 type Players = {[P in PlayerID]: PlayerOptions};
@@ -35,11 +35,11 @@ export interface GameOptions extends Players
      * Maximum amount of turns until the game is considered a tie. Games can go
      * on forever if this is not set and both agents only decide to switch.
      */
-    maxTurns?: number;
+    readonly maxTurns?: number;
     /** Path to the folder to store game logs in. Optional. */
-    logPath?: string;
+    readonly logPath?: string;
     /** Prefix for file names, or `battle` if omitted. */
-    filename?: string;
+    readonly filename?: string;
 }
 
 /** Completes a simulated battle. */
