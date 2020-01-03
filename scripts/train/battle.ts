@@ -16,8 +16,8 @@ import { ensureDir } from "./ensureDir";
 /** Player options for `startBattle()`. */
 export interface PlayerOptions
 {
-    /** Battle decision-maker. Factory includes a Logger in case it's needed. */
-    agentFactory: (logger: Logger) => BattleAgent;
+    /** Battle decision-maker. */
+    agent: BattleAgent;
     /**
      * Override PSBattle if needed.  The subclass should not override
      * PSEventHandler, since `startBattle()` already does that, so attempts to
@@ -94,10 +94,8 @@ export async function startBattle(options: GameOptions): Promise<void>
         const psBattleCtor = options[id].psBattleCtor ?? PSBattle;
 
         // setup one side of the battle
-        const battle = new psBattleCtor(id,
-            options[id].agentFactory(innerLog.addPrefix("BattleAgent: ")),
-            sender, innerLog.addPrefix("PSBattle: "), undefined,
-            eventHandlerCtor);
+        const battle = new psBattleCtor(id, options[id].agent, sender,
+            innerLog.addPrefix("PSBattle: "), undefined, eventHandlerCtor);
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
         // start event loop for this side of the battle

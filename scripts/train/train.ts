@@ -32,8 +32,8 @@ interface RandomPlayOptions
 async function playRandomly(
     {memory, minExp, logPath, logFilePrefix}: RandomPlayOptions): Promise<void>
 {
-    const agentFactory = () =>
-    ({async decide(state: ReadonlyBattleState, choices: Choice[]):
+    const agent =
+    {async decide(state: ReadonlyBattleState, choices: Choice[]):
         Promise<void>
     {
         // do a fisher-yates shuffle on the possible choices
@@ -42,7 +42,7 @@ async function playRandomly(
             const j = Math.floor(Math.random() * (i + 1));
             [choices[i], choices[j]] = [choices[j], choices[i]];
         }
-    }});
+    }};
 
     // emit experience objs after each accepted response
     const psBattleCtor = class extends ExperiencePSBattle
@@ -61,7 +61,7 @@ async function playRandomly(
     {
         await startBattle(
         {
-            p1: {agentFactory, psBattleCtor}, p2: {agentFactory, psBattleCtor},
+            p1: {agent, psBattleCtor}, p2: {agent, psBattleCtor},
             // only provide logPath/filename if logPath is also specified
             ...(logPath &&
                 {logPath, filename: `${logFilePrefix || "random"}-${games}`})
@@ -216,8 +216,7 @@ async function doTrainingGame(
     {toTrain, model, memory, batchSize, gamma, logger, logPath, filename}:
         TrainingGameOptions): Promise<void>
 {
-    const agentFactory = (log: Logger) =>
-        new Network(model, log.addPrefix("Network: "));
+    const agent = new Network(model);
 
     let batches = 0;
 
@@ -237,7 +236,7 @@ async function doTrainingGame(
 
     await startBattle(
     {
-        p1: {agentFactory, psBattleCtor}, p2: {agentFactory, psBattleCtor},
+        p1: {agent, psBattleCtor}, p2: {agent, psBattleCtor},
         ...(logPath && {logPath, filename: filename || "train"})
     });
 }
