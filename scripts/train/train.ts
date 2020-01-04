@@ -283,6 +283,7 @@ export async function train(
     logger.debug("Populating experience replay buffer");
     await playRandomly(
         {memory, minExp: batchSize, logPath, logFilePrefix: "pretrain"});
+    logger.debug(`Added ${memory.size} Experience tuples`);
 
     // setup network for training
     logger.debug("Preparing neural network for training");

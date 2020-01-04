@@ -6,6 +6,8 @@ import { Experience } from "./Experience";
  */
 export class Memory
 {
+    /** Current size of the queue. */
+    public get size(): number { return this.currentSize; }
     /** Holds all the Experience objects. */
     private readonly buffer: Experience[];
     /** Number of elements that have been queued. Stops counting when full. */
