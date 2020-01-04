@@ -38,7 +38,7 @@ export class Memory
             // subsequent #add()'s will start to replace old elements
             this.nextIndex = 0;
         }
-        else ++this.currentSize;
+        else if (this.currentSize < this.buffer.length) ++this.currentSize;
     }
 
     /** Takes `n` random Experiences from the buffer. */
