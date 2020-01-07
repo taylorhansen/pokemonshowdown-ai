@@ -211,7 +211,7 @@ export type SideCondition = "auroraveil" | "healingwish" | "lightscreen" |
 export interface Dex
 {
     /** Contains info about each pokemon. */
-    readonly pokemon: {readonly [species: string]: PokemonData};
+    readonly pokemon: {readonly [name: string]: PokemonData};
     /** Total number of pokemon species. */
     readonly numPokemon: number;
     /** Maps ability id name to an id number. */
@@ -226,4 +226,6 @@ export interface Dex
     readonly items: {readonly [name: string]: number};
     /** Total number of items. */
     readonly numItems: number;
+    /** Contains berry data for Natural Gift. */
+    readonly berries: {readonly [name: string]: NaturalGiftData};
 }

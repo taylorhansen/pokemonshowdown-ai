@@ -5,7 +5,9 @@
 import { ModdedDex } from "../pokemon-showdown/sim/dex";
 import { Template } from "../pokemon-showdown/sim/dex-data";
 import "../pokemon-showdown/sim/global-types";
-import { NaturalGiftData, Type } from "../src/battle/dex/dex-util";
+import { MoveData, MoveTarget, NaturalGiftData, PokemonData, SelfSwitch,
+    SelfVolatileEffect, SideCondition, Type, VolatileEffect } from
+    "../src/battle/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
 
 // TODO: support other gens?
@@ -46,10 +48,11 @@ function quote(str: string): string
 }
 
 /**
- * Wraps a string in quotes if it is a valid identifier. An invalid identifier
- * has dashes, spaces, or quotes in it.
+ * Wraps a string in quotes if it is an invalid identifier, i.e. it has dashes,
+ * spaces, or quotes in it.
  * @param str String to quote.
- * @returns The string given back if valid, else the string wrapped in quotes.
+ * @returns The given string if it's a valid identifier, otherwise the string
+ * wrapped in quotes.
  */
 function maybeQuote(str: string): string
 {
@@ -71,6 +74,11 @@ function isGen4Move(move: any): boolean
 const dex = new ModdedDex("gen4");
 const data = dex.data;
 
+// counter for the unique identifier of a pokemon, move, etc.
+let uid = 0;
+
+// pokemon and abilities
+
 /**
  * Gets the complete movepool of a pokemon.
  * @param template Template object created by `dex.getTemplate()`.
@@ -89,19 +97,14 @@ function composeMovepool(template: Template, restrict = false): Set<string>
         {
             if (!learnset.hasOwnProperty(moveName)) continue;
 
-            let learnable = false;
-            for (const moveSource of learnset[moveName])
+            if (learnset[moveName].some(source =>
+                    // must be learnable in gen 4 or earlier
+                    parseInt(source.charAt(0), 10) <= 4 &&
+                    // include restricted moves unless told not to
+                    (!restrict || source.charAt(1) !== "R")))
             {
-                // must be learnable in gen 4 and earlier
-                if (parseInt(moveSource.charAt(0), 10) > 4) continue;
-                // disregard restricted moves when inheriting from base form
-                if (restrict && moveSource.charAt(1) === "R") continue;
-
-                learnable = true;
-                break;
+                result.add(moveName);
             }
-
-            if (learnable) result.add(moveName);
         }
     }
     else if (template.inheritsFrom)
@@ -130,7 +133,7 @@ function composeMovepool(template: Template, restrict = false): Set<string>
     }
     if (template.baseSpecies && template.baseSpecies !== template.species)
     {
-        result = new Set(
+        return new Set(
         [
             ...result,
             ...composeMovepool(dex.getTemplate(template.baseSpecies),
@@ -140,29 +143,16 @@ function composeMovepool(template: Template, restrict = false): Set<string>
     return result;
 }
 
-// import statement at the top of the file
-console.log(`\
-// istanbul ignore file
-/**
- * @file Generated file containing all the dex data taken from Pokemon Showdown.
- */
-import { Dex, MoveData, NaturalGiftData, PokemonData } from "./dex-util";
-`);
+const pokemon: {[species: string]: PokemonData} = {};
 
-// counter for the unique identifier of a pokemon, move, etc.
-let uid = 0;
-
-/** Contains ability ids. */
 const abilities: {[name: string]: number} = {};
 let numAbilities = 0;
 
-// pokemon
-const pokedex = data.Pokedex;
-console.log("const pokemon: {readonly [species: string]: PokemonData} =\n{");
-for (const name in pokedex)
+uid = 0;
+for (const name in data.Pokedex)
 {
-    if (!pokedex.hasOwnProperty(name)) continue;
-    const mon = pokedex[name];
+    if (!data.Pokedex.hasOwnProperty(name)) continue;
+    const mon = data.Pokedex[name];
     // only gen4 and under pokemon allowed
     if (mon.num < 1 || mon.num > 493 || isNonGen4(name) || mon.isNonstandard)
     {
@@ -187,12 +177,14 @@ for (const name in pokedex)
         }
     }
 
-    const types = mon.types as Type[];
-    if (types.length > 2)
+    let types: [Type, Type];
+    const typeArr = mon.types.map(s => s.toLowerCase()) as Type[];
+    if (typeArr.length > 2)
     {
         console.error("Error: Too many types for species " + name);
     }
-    else if (types.length === 1) types.push("???");
+    else if (typeArr.length === 1) typeArr.push("???");
+    types = typeArr as [Type, Type];
 
     // optionally fill in other forms if there are any from gen4
     let otherForms: string[] | undefined;
@@ -204,44 +196,21 @@ for (const name in pokedex)
 
     const movepool = composeMovepool(dex.getTemplate(mon.species));
 
-    console.log(`\
-    ${maybeQuote(mon.species)}:
+    pokemon[mon.species] =
     {
-        id: ${mon.num},
-        uid: ${uid},
-        name: ${quote(mon.species)},`);
-    // tslint:disable:curly
-    if (mon.baseSpecies) console.log(`\
-        baseSpecies: ${quote(mon.baseSpecies)},`);
-    if (mon.baseForme) console.log(`\
-        baseForm: ${quote(mon.baseForme)},`);
-    if (mon.forme) console.log(`\
-        form: ${quote(mon.forme)},`);
-    if (otherForms) console.log(`\
-        otherForms: [${otherForms.map(quote).join(", ")}],`);
-    // tslint:enable:curly
-    console.log(`\
-        abilities: [${baseAbilities.map(quote).join(", ")}],
-        types: [${types.map(t => quote(t.toLowerCase())).join(", ")}],
-        baseStats: {hp: ${stats.hp}, atk: ${stats.atk}, def: ${stats.def}, \
-spa: ${stats.spa}, spd: ${stats.spd}, spe: ${stats.spe}},
-        weightkg: ${mon.weightkg},
-        movepool: [${[...movepool].map(quote).join(", ")}]
-    },`);
+        id: mon.num, uid, name: mon.species, abilities: baseAbilities, types,
+        baseStats: stats, weightkg: mon.weightkg, movepool: [...movepool],
+        ...(mon.baseSpecies && {baseSpecies: mon.baseSpecies}),
+        ...(mon.baseForme && {baseForm: mon.baseForme}),
+        ...(mon.forme && {form: mon.forme}),
+        ...(otherForms && {otherForms})
+    };
     ++uid;
 }
 
 const numPokemon = uid;
 
-console.log(`};
-
-const abilities: {readonly [name: string]: number} =
-{
-${Object.keys(abilities).map(id => `    ${id}: ${abilities[id]},\n`).join("")}};
-`);
-
 // moves
-const moves = data.Movedex;
 
 const futureMoves: {[name: string]: number} = {};
 let futureUid = 0;
@@ -252,41 +221,46 @@ let lockedMoveUid = 0;
 const twoTurnMoves: {[name: string]: number} = {};
 let twoTurnUid = 0;
 
-console.log("const moves: {readonly [name: string]: MoveData} =\n{");
+const moves: {[name: string]: MoveData} = {};
 
 uid = 0;
-for (const moveName in moves)
+for (const moveName in data.Movedex)
 {
-    if (!moves.hasOwnProperty(moveName)) continue;
-    const move = moves[moveName];
+    if (!data.Movedex.hasOwnProperty(moveName)) continue;
+    const move = data.Movedex[moveName];
 
     // only gen4 and under moves allowed
     if (!isGen4Move(move)) continue;
 
-    const target = quote(move.target);
+    const target = move.target as MoveTarget;
 
     // factor pp boosts if the move supports it in game
-    const pp = [move.pp, move.pp];
+    const pp = [move.pp, move.pp] as [number, number];
     if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
 
-    const selfSwitch = typeof move.selfSwitch === "string" ?
-        quote(move.selfSwitch) : !!move.selfSwitch;
+    const selfSwitch = move.selfSwitch as SelfSwitch;
 
-    let volatileEffect: string | undefined;
-    if (move.volatileStatus) volatileEffect = move.volatileStatus;
+    let volatileEffect: VolatileEffect | undefined;
+    if (move.volatileStatus)
+    {
+        volatileEffect = move.volatileStatus as VolatileEffect;
+    }
 
-    let selfVolatileEffect: string | undefined;
+    let selfVolatileEffect: SelfVolatileEffect | undefined;
     if (move.self && move.self.volatileStatus)
     {
-        selfVolatileEffect = move.self.volatileStatus;
+        selfVolatileEffect = move.self.volatileStatus as SelfVolatileEffect;
         if (move.self.volatileStatus === "lockedmove")
         {
             lockedMoves[move.name] = lockedMoveUid++;
         }
     }
 
-    let sideCondition: string | undefined;
-    if (move.sideCondition) sideCondition = move.sideCondition.toLowerCase();
+    let sideCondition: SideCondition | undefined;
+    if (move.sideCondition)
+    {
+        sideCondition = toIdName(move.sideCondition) as SideCondition;
+    }
 
     const mirror = move.flags.mirror === 1;
 
@@ -296,17 +270,86 @@ for (const moveName in moves)
     // future moves are also recorded in a different object
     if (move.isFutureMove) futureMoves[move.name] = futureUid++;
 
-    console.log(`\
-    ${move.id}: {uid: ${uid}, pp: [${pp.join(", ")}], target: ${target}\
-${selfSwitch ? `, selfSwitch: ${selfSwitch}` : ""}\
-${volatileEffect ? `, volatileEffect: "${volatileEffect}"` : ""}\
-${selfVolatileEffect ? `, selfVolatileEffect: "${selfVolatileEffect}"` : ""}\
-${sideCondition ? `, sideCondition: "${sideCondition}"` : ""}\
-, mirror: ${mirror}},`);
+    moves[move.id] =
+    {
+        uid, pp, target, mirror,
+        ...(selfSwitch && {selfSwitch}),
+        ...(volatileEffect && {volatileEffect}),
+        ...(selfVolatileEffect && {selfVolatileEffect}),
+        ...(sideCondition && {sideCondition})
+    };
     ++uid;
 }
-console.log("};\n");
 const numMoves = uid;
+
+// items and berries
+const berries: {[name: string]: NaturalGiftData} = {};
+const items: {[name: string]: number} = {none: 0};
+
+uid = 1;
+for (const itemName in data.Items)
+{
+    if (!data.Items.hasOwnProperty(itemName)) continue;
+    const item = data.Items[itemName];
+    // only gen4 and under items allowed
+    if (item.gen > 4 || item.isNonstandard) continue;
+
+    if (item.isBerry && item.naturalGift)
+    {
+        berries[item.id] =
+        {
+            basePower: item.naturalGift.basePower,
+            type: item.naturalGift.type.toLowerCase() as Type
+        };
+    }
+
+    items[item.id] = uid++;
+}
+const numItems = uid;
+
+// print data
+
+/**
+ * Creates an export declaration for a dictionary.
+ * @param dict Dictionary to stringify.
+ * @param name Name of the dictionary.
+ * @param typeName Type name for the dictionary keys.
+ * @param comment Doc comment contents.
+ * @param converter Stringifier for dictionary keys.
+ * @param indent Number of indent spaces. Default 4.
+ */
+function stringifyDictDecl(dict: {readonly [name: string]: any},
+    name: string, typeName: string, comment: string,
+    converter: (value: any) => string, indent = 4): string
+{
+    let result = `/** ${comment} */
+export const ${name}: {readonly [name: string]: ${typeName}} =\n{`;
+    const s = " ".repeat(indent);
+
+    for (const key in dict)
+    {
+        if (!dict.hasOwnProperty(key)) continue;
+        result += `\n${s}${maybeQuote(key)}: ${converter(dict[key])},`;
+    }
+    return result + "\n};";
+}
+
+/**
+ * Stringifies a dictionary.
+ * @param dict Dictionary to stringify.
+ * @param converter Stringifier for dictionary values.
+ */
+function stringifyDict(dict: {readonly [name: string]: any},
+    converter: (value: any) => string): string
+{
+    const entries: string[] = [];
+    for (const key in dict)
+    {
+        if (!dict.hasOwnProperty(key)) continue;
+        entries.push(`${maybeQuote(key)}: ${converter(dict[key])}`);
+    }
+    return "{" + entries.join(", ") + "}";
+}
 
 /**
  * Creates a map and length number for types of moves.
@@ -315,26 +358,25 @@ const numMoves = uid;
  * @param display Name in the docs. Omit to assume `name` argument.
  */
 function specificMoves(obj: {[id: string]: number}, name: string,
-    display?: string)
+    display?: string, indent = 4): string
 {
+    const s = " ".repeat(indent);
     display = display || name;
 
     // build set of all moves of this specific type
-    console.log(`
-/** Set of all ${display} moves. Maps move name to its id within this object. */
-export const ${name}Moves =
-{`);
+    let result = `/** Set of all ${display} moves. Maps move name to its id ` +
+        `within this object. */\nexport const ${name}Moves =\n{`;
 
     for (const moveName in obj)
     {
         if (!obj.hasOwnProperty(moveName)) continue;
 
-        console.log(`    ${toIdName(moveName)}: ${obj[moveName]},`);
+        result += `\n${s}${toIdName(moveName)}: ${obj[moveName]},`;
     }
 
     const cap = name.slice(0, 1).toUpperCase() + name.slice(1);
 
-    console.log(`} as const;
+    return result + `\n} as const;
 
 /** Types of ${display} moves. */
 export type ${cap}Move = keyof typeof ${name}Moves;
@@ -346,54 +388,57 @@ export const num${cap}Moves = ${Object.keys(obj).length};
 export function is${cap}Move(value: any): value is ${cap}Move
 {
     return ${name}Moves.hasOwnProperty(value);
-}\n`);
+}`;
 }
 
-specificMoves(futureMoves, "future");
-specificMoves(lockedMoves, "locked");
-specificMoves(twoTurnMoves, "twoTurn", "two-turn");
+console.log(`\
+// istanbul ignore file
+/**
+ * @file Generated file containing all the dex data taken from Pokemon Showdown.
+ */
+import { MoveData, NaturalGiftData, PokemonData } from "./dex-util";
 
-// items
-const items = data.Items;
-const berries: {[name: string]: NaturalGiftData} = {};
-console.log(`const items: {readonly [name: string]: number} =
-{
-    none: 0,`);
-uid = 1;
-for (const itemName in items)
-{
-    if (!items.hasOwnProperty(itemName)) continue;
-    const item = items[itemName];
-    // only gen4 and under items allowed
-    if (item.gen > 4 || item.isNonstandard) continue;
+${stringifyDictDecl(pokemon, "pokemon", "PokemonData",
+    "Contains info about each pokemon.",
+    p => stringifyDict(p,
+        v =>
+            typeof v === "string" ? quote(v) :
+            Array.isArray(v) ? `[${v.map(quote).join(", ")}]` :
+            typeof v === "object" ? stringifyDict(v, vv => vv as string) :
+            v))}
 
-    /** Record Natural Gift data. */
-    if (item.isBerry) berries[item.id] = item.naturalGift as NaturalGiftData;
+/** Total number of pokemon species. */
+export const numPokemon = ${numPokemon};
 
-    console.log(`    ${item.id}: ${uid++},`);
-}
-console.log("};\n");
-const numItems = uid;
+${stringifyDictDecl(abilities, "abilities", "number",
+    "Maps ability id name to an id number.", a => a as string)}
 
-// berries
-console.log(`
-/** Set of all berry items. Maps name to Natural Gift move data. */
-export const berries: {readonly [name: string]: NaturalGiftData} =
-{`);
-for (const berryName in berries)
-{
-    if (!berries.hasOwnProperty(berryName)) continue;
-    const berry = berries[berryName];
-    console.log(`    ${berryName}: {basePower: ${berry.basePower}, \
-type: "${berry.type.toLowerCase()}"},`);
-}
+/** Total number of abilities. */
+export const numAbilities = ${numAbilities};
 
-console.log(`};
+${stringifyDictDecl(moves, "moves", "MoveData",
+    "Contains info about each move.",
+    m => stringifyDict(m,
+        v =>
+            typeof v === "string" ? quote(v) :
+            Array.isArray(v) ? `[${v.join(", ")}]` :
+            v))}
 
-/** Contains all relevant Pokemon-related data. */
-export const dex: Dex =
-{
-    pokemon, numPokemon: ${numPokemon}, abilities, \
-numAbilities: ${numAbilities}, moves,
-    numMoves: ${numMoves}, items, numItems: ${numItems}
-};`);
+/** Total number of moves. */
+export const numMoves = ${numMoves};
+
+${specificMoves(futureMoves, "future")}
+
+${specificMoves(lockedMoves, "locked")}
+
+${specificMoves(twoTurnMoves, "twoTurn", "two-turn")}
+
+${stringifyDictDecl(items, "items", "number",
+    "Maps item id name to its id number.", i => i as string)}
+
+/** Total number of items. */
+export const numItems = ${numItems};
+
+${stringifyDictDecl(berries, "berries", "NaturalGiftData",
+    "Contains info about each berry item.",
+    b => stringifyDict(b, v => typeof v === "string" ? quote(v) : v))}`);
