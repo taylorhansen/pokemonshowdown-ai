@@ -2,8 +2,9 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
-// @ts-ignore
-import { Dex } from "../pokemon-showdown/.sim-dist/dex";
+import { ModdedDex } from "../pokemon-showdown/sim/dex";
+import { Template } from "../pokemon-showdown/sim/dex-data";
+import "../pokemon-showdown/sim/global-types";
 import { NaturalGiftData, Type } from "../src/battle/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
 
@@ -67,7 +68,7 @@ function isGen4Move(move: any): boolean
     return true;
 }
 
-const dex = Dex.mod("gen4");
+const dex = new ModdedDex("gen4");
 const data = dex.data;
 
 /**
@@ -77,7 +78,7 @@ const data = dex.data;
  * upon form change.
  * @returns A Set of all the moves the pokemon can have.
  */
-function composeMovepool(template: any, restrict = false): Set<string>
+function composeMovepool(template: Template, restrict = false): Set<string>
 {
     let result = new Set<string>();
 
@@ -172,21 +173,21 @@ for (const name in pokedex)
 
     // get quoted base abilities
     const baseAbilities: string[] = [];
-    for (const index in mon.abilities)
+    for (const index of Object.keys(mon.abilities) as (keyof TemplateAbility)[])
     {
-        if (!mon.abilities.hasOwnProperty(index)) continue;
-
-        const idName = toIdName(mon.abilities[index]);
-        baseAbilities.push(quote(idName));
-        if (!abilities.hasOwnProperty(idName))
+        const abilityName = mon.abilities[index];
+        if (!abilityName) continue;
+        const abilityId = toIdName(abilityName);
+        baseAbilities.push(abilityId);
+        if (!abilities.hasOwnProperty(abilityId))
         {
             // post-increment so that id number is 0-based, since numAbilities
             //  starts at 0
-            abilities[idName] = numAbilities++;
+            abilities[abilityId] = numAbilities++;
         }
     }
 
-    const types: Type[] = mon.types;
+    const types = mon.types as Type[];
     if (types.length > 2)
     {
         console.error("Error: Too many types for species " + name);
@@ -220,7 +221,7 @@ for (const name in pokedex)
         otherForms: [${otherForms.map(quote).join(", ")}],`);
     // tslint:enable:curly
     console.log(`\
-        abilities: [${baseAbilities.join(", ")}],
+        abilities: [${baseAbilities.map(quote).join(", ")}],
         types: [${types.map(t => quote(t.toLowerCase())).join(", ")}],
         baseStats: {hp: ${stats.hp}, atk: ${stats.atk}, def: ${stats.def}, \
 spa: ${stats.spa}, spd: ${stats.spd}, spe: ${stats.spe}},
@@ -367,7 +368,7 @@ for (const itemName in items)
     if (item.gen > 4 || item.isNonstandard) continue;
 
     /** Record Natural Gift data. */
-    if (item.isBerry) berries[item.id] = item.naturalGift;
+    if (item.isBerry) berries[item.id] = item.naturalGift as NaturalGiftData;
 
     console.log(`    ${item.id}: ${uid++},`);
 }
