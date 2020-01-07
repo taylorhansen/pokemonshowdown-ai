@@ -296,8 +296,6 @@ export async function train(
         const innerLog = logger.addPrefix(`Game(${i + 1}/${games}): `);
         innerLog.debug("Start");
 
-        // TODO: epsilon-greedy
-        // subclass Network to do this
         await doTrainingGame(
         {
             toTrain: trainWrapper, model, memory, batchSize, gamma, explore,
