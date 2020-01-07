@@ -56,16 +56,14 @@ export function limitedStatusTurns(turns: number, duration: number): number
  * will have a length corresponding to the number of keys in the given object's
  * mapping.
  * @param pc PossibilityClass to encode.
- * @param getId Extracts a unique oneHot index from TData.
- * @param length Total length of returned array. Should be the max value of one
- * plus the return value of `getId`.
+ * @param getId Extracts a unique 0-based contiguous id from TData.
  */
 export function encodePossiblityClass<TData>(
-    pc: ReadonlyPossibilityClass<TData>, getId: (data: TData) => number,
-    length: number): number[]
+    pc: ReadonlyPossibilityClass<TData>, getId: (data: TData) => number):
+    number[]
 {
     const size = pc.possibleValues.size;
-    const result = Array.from({length}, () => 0);
+    const result = Array.from({length: Object.keys(pc.map).length}, () => 0);
     if (size > 0)
     {
         const sumReciprocal = 1 / size;
@@ -211,7 +209,7 @@ export function encodeStatTable(stats?: ReadonlyStatTable | null): number[]
         ...[stats.hp, stats.atk, stats.def, stats.spa, stats.spd, stats.spe]
             .map(encodeStatRange).reduce((a, b) => a.concat(b)),
         (stats.level || 0) / 100, // normalize level using max level (100)
-        ...encodePossiblityClass(stats.hpType, i => i, numHPTypes)
+        ...encodePossiblityClass(stats.hpType, i => i)
     ];
 }
 
@@ -260,7 +258,7 @@ export function encodePokemonTraits(traits?: ReadonlyPokemonTraits | null,
     }
 
     return [
-        ...encodePossiblityClass(traits.ability, d => d, dex.numAbilities),
+        ...encodePossiblityClass(traits.ability, d => d),
         ...oneHot(traits.data.uid, dex.numPokemon),
         ...encodeStatTable(traits.stats),
         ...filteredTypes.map(type =>
@@ -499,8 +497,8 @@ export function encodePokemon(mon?: ReadonlyPokemon | null): number[]
         mon.gender === "M" ? 1 : 0, mon.gender === "F" ? 1 : 0,
         mon.gender === null ? 1 : 0,
         ...encodePokemonTraits(mon.baseTraits),
-        ...encodePossiblityClass(mon.item, d => d, dex.numItems),
-        ...encodePossiblityClass(mon.lastItem, d => d, dex.numItems),
+        ...encodePossiblityClass(mon.item, d => d),
+        ...encodePossiblityClass(mon.lastItem, d => d),
         ...encodeMoveset(mon.moveset),
         // normalize happiness value
         (mon.happiness === null ? /*half*/127.5 : mon.happiness) / 255,

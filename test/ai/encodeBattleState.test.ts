@@ -149,7 +149,7 @@ describe("BattleState encoders", function()
 
     const map = {a: 0, b: 1, c: 2};
     testEncoder("PossibilityClass",
-        (pc: PossibilityClass<number>) => encodePossiblityClass(pc, x => x, 3),
+        (pc: PossibilityClass<number>) => encodePossiblityClass(pc, x => x),
     {
         init: () => new PossibilityClass(map),
         values: [1 / 3, 1 / 3, 1 / 3]
