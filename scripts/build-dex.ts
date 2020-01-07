@@ -3,11 +3,9 @@
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
 // @ts-ignore
-import { ModdedDex } from "../pokemon-showdown/.sim-dist/dex";
+import { Dex } from "../pokemon-showdown/.sim-dist/dex";
 import { NaturalGiftData, Type } from "../src/battle/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
-
-const dex = new ModdedDex("gen4");
 
 // TODO: support other gens?
 
@@ -57,7 +55,89 @@ function maybeQuote(str: string): string
     return /[- ']/.test(str) ? quote(str) : str;
 }
 
+/** Checks if a Movedex value is valid for gen4. */
+function isGen4Move(move: any): boolean
+{
+    // only gen4 and under moves allowed
+    if (move.num <= 0 || move.num >= 468 || move.isNonstandard) return false;
+
+    // hidden power moves can have any type, but only one move really exists
+    if (move.id === "hiddenpower" && move.type !== "Normal") return false;
+
+    return true;
+}
+
+const dex = Dex.mod("gen4");
 const data = dex.data;
+
+/**
+ * Gets the complete movepool of a pokemon.
+ * @param template Template object created by `dex.getTemplate()`.
+ * @param restrict Whether to exclude restricted moves that are replaced or lost
+ * upon form change.
+ * @returns A Set of all the moves the pokemon can have.
+ */
+function composeMovepool(template: any, restrict = false): Set<string>
+{
+    let result = new Set<string>();
+
+    const learnset = template.learnset;
+    if (learnset)
+    {
+        for (const moveName in learnset)
+        {
+            if (!learnset.hasOwnProperty(moveName)) continue;
+
+            let learnable = false;
+            for (const moveSource of learnset[moveName])
+            {
+                // must be learnable in gen 4 and earlier
+                if (parseInt(moveSource.charAt(0), 10) > 4) continue;
+                // disregard restricted moves when inheriting from base form
+                if (restrict && moveSource.charAt(1) === "R") continue;
+
+                learnable = true;
+                break;
+            }
+
+            if (learnable) result.add(moveName);
+        }
+    }
+    else if (template.inheritsFrom)
+    {
+        if (Array.isArray(template.inheritsFrom))
+        {
+            for (const inherit of template.inheritsFrom)
+            {
+                result = new Set(
+                 [
+                    ...result,
+                    ...composeMovepool(dex.getTemplate(inherit),
+                        /*restrict*/true)
+                ]);
+            }
+        }
+        else
+        {
+            result = new Set(
+            [
+                ...result,
+                ...composeMovepool(dex.getTemplate(template.inheritsFrom),
+                    /*restrict*/true)
+            ]);
+        }
+    }
+    if (template.baseSpecies && template.baseSpecies !== template.species)
+    {
+        result = new Set(
+        [
+            ...result,
+            ...composeMovepool(dex.getTemplate(template.baseSpecies),
+                /*restrict*/true)
+        ]);
+    }
+    return result;
+}
 
 // import statement at the top of the file
 console.log(`\
@@ -121,6 +201,8 @@ for (const name in pokedex)
         if (tmp.length > 0) otherForms = tmp;
     }
 
+    const movepool = composeMovepool(dex.getTemplate(mon.species));
+
     console.log(`\
     ${maybeQuote(mon.species)}:
     {
@@ -142,7 +224,8 @@ for (const name in pokedex)
         types: [${types.map(t => quote(t.toLowerCase())).join(", ")}],
         baseStats: {hp: ${stats.hp}, atk: ${stats.atk}, def: ${stats.def}, \
 spa: ${stats.spa}, spd: ${stats.spd}, spe: ${stats.spe}},
-        weightkg: ${mon.weightkg}
+        weightkg: ${mon.weightkg},
+        movepool: [${[...movepool].map(quote).join(", ")}]
     },`);
     ++uid;
 }
@@ -175,11 +258,9 @@ for (const moveName in moves)
 {
     if (!moves.hasOwnProperty(moveName)) continue;
     const move = moves[moveName];
-    // only gen4 and under moves allowed
-    if (move.num <= 0 || move.num >= 468 || move.isNonstandard) continue;
 
-    // hidden power moves can have any type, but only one move really exists
-    if (move.id === "hiddenpower" && move.type !== "Normal") continue;
+    // only gen4 and under moves allowed
+    if (!isGen4Move(move)) continue;
 
     const target = quote(move.target);
 

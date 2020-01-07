@@ -149,6 +149,8 @@ export interface PokemonData
     readonly baseStats: {readonly [S in StatName]: number};
     /** Pokemon's weight in kg. Affected by certain moves. */
     readonly weightkg: number;
+    /** All the possible moves this pokemon can have. */
+    readonly movepool: readonly string[];
 }
 
 /** Format for each move entry in the Dex. */
