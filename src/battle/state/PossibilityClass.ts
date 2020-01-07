@@ -76,10 +76,20 @@ export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
     /** Removes values from the data possibility. */
     public remove(...values: string[]): void
     {
+        // guard against overnarrowing
+        let amtToRemove = 0;
         for (const value of values)
         {
-            this._possibleValues.delete(this.check(value));
+            this.check(value);
+            if (this._possibleValues.has(value)) ++amtToRemove;
         }
+        if (amtToRemove >= this._possibleValues.size)
+        {
+            throw new Error(`Tried to remove ${amtToRemove} possibilities ` +
+                `when there were ${this._possibleValues.size} left`);
+        }
+
+        for (const value of values) this._possibleValues.delete(value);
 
         this.checkNarrowed();
     }
@@ -87,13 +97,21 @@ export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
     /** Removes currently set value names that are not in the given array. */
     public narrow(...values: string[]): void
     {
-        values.forEach(x => this.check(x));
+        for (const value of values) this.check(value);
 
         // intersect the current set with the given one
         const newValues = [...this._possibleValues]
             .filter(x => values.includes(x));
-        this._possibleValues = new Set(newValues);
 
+        // guard against overnarrowing
+        if (newValues.length < 1)
+        {
+            throw new Error(`Rejected narrow with [${values.join(", ")}] as ` +
+                "it would overnarrow " +
+                `{${[...this._possibleValues].join(", ")}}`);
+        }
+
+        this._possibleValues = new Set(newValues);
         this.checkNarrowed();
     }
 
@@ -121,7 +139,8 @@ export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
         }
         else if (size < 1)
         {
-            throw new Error("All possibilities have been ruled out");
+            throw new Error("All possibilities have been ruled out (should " +
+                "never happen)");
         }
         else this._definiteValue = null;
     }

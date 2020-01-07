@@ -163,16 +163,6 @@ describe("BattleState encoders", function()
             return pc;
         },
         values: [0, 1, 0]
-    },
-    {
-        name: "Overnarrowed",
-        init()
-        {
-            const pc = new PossibilityClass(map);
-            expect(() => pc.narrow()).to.throw();
-            return pc;
-        },
-        values: [0, 0, 0]
     });
 
     testEncoder("TempStatus", encodeTempStatus,

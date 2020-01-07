@@ -48,11 +48,12 @@ describe("PossibilityClass", function()
                 "PossibilityClass has no value name 'd'");
         });
 
-        it("Should throw if overnarrowed", function()
+        it("Should reject call if it would overnarrow", function()
         {
             const pc = new PossibilityClass(map);
             expect(() => pc.remove("a", "b", "c")).to.throw(Error,
-                "All possibilities have been ruled out");
+                "Tried to remove 3 possibilities when there were 3 left");
+            expect(pc.possibleValues).to.have.keys("a", "b", "c");
         });
     });
 
@@ -68,12 +69,13 @@ describe("PossibilityClass", function()
             expect(pc.possibleValues).to.have.keys("a");
         });
 
-        it("Should throw if overnarrowed", function()
+        it("Should reject call if it would overnarrow", function()
         {
             const pc = new PossibilityClass(map);
             pc.narrow("c");
-            expect(() => pc.narrow("a")).to.throw(Error,
-                "All possibilities have been ruled out");
+            expect(() => pc.narrow("a", "b")).to.throw(Error,
+                "Rejected narrow with [a, b] as it would overnarrow {c}");
+            expect(pc.possibleValues).to.have.keys("c");
         });
     });
 
@@ -104,7 +106,8 @@ describe("PossibilityClass", function()
             pc.narrow("a");
             pc.narrow("a");
             pc.remove("b");
-            expect(count).to.equal(1);
+            expect(count).to.equal(1, "Expected to be called once but got " +
+                `${count} times`);
         });
 
         it("Should immediately call if already narrowed", function(done)
