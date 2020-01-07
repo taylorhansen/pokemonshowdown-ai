@@ -91,6 +91,22 @@ describe("PossibilityClass", function()
             pc.narrow("a");
         });
 
+        it("Should not be called more than once", function()
+        {
+            const pc = new PossibilityClass(map);
+            let count = 0;
+            pc.onNarrow(p =>
+            {
+                expect(pc).to.equal(p);
+                expect(p.definiteValue).to.equal("a");
+                ++count;
+            });
+            pc.narrow("a");
+            pc.narrow("a");
+            pc.remove("b");
+            expect(count).to.equal(1);
+        });
+
         it("Should immediately call if already narrowed", function(done)
         {
             const pc = new PossibilityClass(map);

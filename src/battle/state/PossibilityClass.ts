@@ -33,7 +33,7 @@ export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
     private _definiteValue: string | null = null;
 
     /** Listeners for when fully narrowed. */
-    private narrowListeners: ((pc: this) => void)[] = [];
+    private readonly narrowListeners: ((pc: this) => void)[] = [];
 
     /**
      * Creates a PossibilityClass.
@@ -69,7 +69,7 @@ export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
     public onNarrow(f: (pc: this) => void): void
     {
         // may already be narrowed
-        if (this._definiteValue) f(this);
+        if (this._definiteValue !== null) f(this);
         else this.narrowListeners.push(f);
     }
 
@@ -127,7 +127,11 @@ export class PossibilityClass<TData> implements ReadonlyPossibilityClass<TData>
     }
 
     /** Calls all `#onNarrow()` listeners. */
-    private narrowed(): void { for (const f of this.narrowListeners) f(this); }
+    private narrowed(): void
+    {
+        for (const f of this.narrowListeners) f(this);
+        this.narrowListeners.length = 0;
+    }
 
     // istanbul ignore next: only used for logging
     /**
