@@ -77,6 +77,82 @@ const data = dex.data;
 // counter for the unique identifier of a pokemon, move, etc.
 let uid = 0;
 
+// moves
+
+const moves: {[name: string]: MoveData} = {};
+
+const futureMoves: {[name: string]: number} = {};
+let futureUid = 0;
+
+const lockedMoves: {[name: string]: number} = {};
+let lockedMoveUid = 0;
+
+const twoTurnMoves: {[name: string]: number} = {};
+let twoTurnUid = 0;
+
+const sketchableMoves: string[] = [];
+
+uid = 0;
+for (const moveName in data.Movedex)
+{
+    if (!data.Movedex.hasOwnProperty(moveName)) continue;
+    const move = data.Movedex[moveName];
+
+    // only gen4 and under moves allowed
+    if (!isGen4Move(move)) continue;
+
+    const target = move.target as MoveTarget;
+
+    // factor pp boosts if the move supports it in game
+    const pp = [move.pp, move.pp] as [number, number];
+    if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
+
+    const selfSwitch = move.selfSwitch as SelfSwitch;
+
+    let volatileEffect: VolatileEffect | undefined;
+    if (move.volatileStatus)
+    {
+        volatileEffect = move.volatileStatus as VolatileEffect;
+    }
+
+    let selfVolatileEffect: SelfVolatileEffect | undefined;
+    if (move.self && move.self.volatileStatus)
+    {
+        selfVolatileEffect = move.self.volatileStatus as SelfVolatileEffect;
+        if (move.self.volatileStatus === "lockedmove")
+        {
+            lockedMoves[move.name] = lockedMoveUid++;
+        }
+    }
+
+    let sideCondition: SideCondition | undefined;
+    if (move.sideCondition)
+    {
+        sideCondition = toIdName(move.sideCondition) as SideCondition;
+    }
+
+    const mirror = move.flags.mirror === 1;
+
+    // two turn moves are also recorded in a different object
+    if (move.flags.charge === 1) twoTurnMoves[move.name] = twoTurnUid++;
+
+    // future moves are also recorded in a different object
+    if (move.isFutureMove) futureMoves[move.name] = futureUid++;
+
+    if (!move.noSketch) sketchableMoves.push(move.id);
+
+    moves[move.id] =
+    {
+        uid, pp, target, mirror,
+        ...(selfSwitch && {selfSwitch}),
+        ...(volatileEffect && {volatileEffect}),
+        ...(selfVolatileEffect && {selfVolatileEffect}),
+        ...(sideCondition && {sideCondition})
+    };
+    ++uid;
+}
+const numMoves = uid;
+
 // pokemon and abilities
 
 /**
@@ -104,6 +180,12 @@ function composeMovepool(template: Template, restrict = false): Set<string>
                     (!restrict || source.charAt(1) !== "R")))
             {
                 result.add(moveName);
+                // if the movepool contains Sketch, all Sketchable moves have to
+                //  be included
+                if (moveName === "sketch")
+                {
+                    for (const sketch of sketchableMoves) result.add(sketch);
+                }
             }
         }
     }
@@ -210,81 +292,10 @@ for (const name in data.Pokedex)
 
 const numPokemon = uid;
 
-// moves
-
-const futureMoves: {[name: string]: number} = {};
-let futureUid = 0;
-
-const lockedMoves: {[name: string]: number} = {};
-let lockedMoveUid = 0;
-
-const twoTurnMoves: {[name: string]: number} = {};
-let twoTurnUid = 0;
-
-const moves: {[name: string]: MoveData} = {};
-
-uid = 0;
-for (const moveName in data.Movedex)
-{
-    if (!data.Movedex.hasOwnProperty(moveName)) continue;
-    const move = data.Movedex[moveName];
-
-    // only gen4 and under moves allowed
-    if (!isGen4Move(move)) continue;
-
-    const target = move.target as MoveTarget;
-
-    // factor pp boosts if the move supports it in game
-    const pp = [move.pp, move.pp] as [number, number];
-    if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
-
-    const selfSwitch = move.selfSwitch as SelfSwitch;
-
-    let volatileEffect: VolatileEffect | undefined;
-    if (move.volatileStatus)
-    {
-        volatileEffect = move.volatileStatus as VolatileEffect;
-    }
-
-    let selfVolatileEffect: SelfVolatileEffect | undefined;
-    if (move.self && move.self.volatileStatus)
-    {
-        selfVolatileEffect = move.self.volatileStatus as SelfVolatileEffect;
-        if (move.self.volatileStatus === "lockedmove")
-        {
-            lockedMoves[move.name] = lockedMoveUid++;
-        }
-    }
-
-    let sideCondition: SideCondition | undefined;
-    if (move.sideCondition)
-    {
-        sideCondition = toIdName(move.sideCondition) as SideCondition;
-    }
-
-    const mirror = move.flags.mirror === 1;
-
-    // two turn moves are also recorded in a different object
-    if (move.flags.charge === 1) twoTurnMoves[move.name] = twoTurnUid++;
-
-    // future moves are also recorded in a different object
-    if (move.isFutureMove) futureMoves[move.name] = futureUid++;
-
-    moves[move.id] =
-    {
-        uid, pp, target, mirror,
-        ...(selfSwitch && {selfSwitch}),
-        ...(volatileEffect && {volatileEffect}),
-        ...(selfVolatileEffect && {selfVolatileEffect}),
-        ...(sideCondition && {sideCondition})
-    };
-    ++uid;
-}
-const numMoves = uid;
-
 // items and berries
-const berries: {[name: string]: NaturalGiftData} = {};
+
 const items: {[name: string]: number} = {none: 0};
+const berries: {[name: string]: NaturalGiftData} = {};
 
 uid = 1;
 for (const itemName in data.Items)
