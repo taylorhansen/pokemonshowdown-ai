@@ -1,5 +1,4 @@
-import { dex, numFutureMoves, numLockedMoves, numTwoTurnMoves } from
-    "../battle/dex/dex";
+import * as dex from "../battle/dex/dex";
 import { BoostName, boostNames, hpTypes, majorStatuses, numHPTypes,
     rolloutMoves, Type, types, weatherItems } from "../battle/dex/dex-util";
 import { ReadonlyBattleState } from "../battle/state/BattleState";
@@ -277,12 +276,12 @@ export const sizeVolatileStatus =
     /*defense curl*/1 + /*destiny bond*/1 +
     /*disabled moves*/(Moveset.maxSize * sizeTempStatus) + /*grudge*/1 +
     /*heal block*/sizeTempStatus + /*identified*/2 +
-    /*locked move variants*/numLockedMoves + /*minimize*/1 + /*mud sport*/1 +
-    /*must recharge*/1 + /*override traits*/sizePokemonTraits + /*rage*/1 +
-    /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
+    /*locked move variants*/dex.numLockedMoves + /*minimize*/1 +
+    /*mud sport*/1 + /*must recharge*/1 + /*override traits*/sizePokemonTraits +
+    /*rage*/1 + /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
     /*slow start*/sizeTempStatus + /*snatch*/1 + /*stall fail rate*/1 +
     /*stockpile*/1 + /*taunt*/sizeTempStatus + /*torment*/1 + /*transformed*/1 +
-    /*two-turn*/numTwoTurnMoves + /*unburden*/1 + /*uproar*/sizeTempStatus +
+    /*two-turn*/dex.numTwoTurnMoves + /*unburden*/1 + /*uproar*/sizeTempStatus +
     /*water sport*/1 + /*will truant*/1 + /*yawn*/sizeTempStatus;
 
 /** Formats volatile status info into an array of numbers. */
@@ -510,7 +509,7 @@ export function encodePokemon(mon?: ReadonlyPokemon | null): number[]
 }
 
 /** Length of the return value of `encodeTeamStatus()`. */
-export const sizeTeamStatus = /*future moves*/numFutureMoves +
+export const sizeTeamStatus = /*future moves*/dex.numFutureMoves +
     /*healing wish*/1 + /*light screen*/2 + /*lucky chant*/sizeTempStatus +
     /*lunar dance*/1 + /*mist*/sizeTempStatus + /*reflect*/2 + /*selfSwitch*/2 +
     /*entry hazards*/3 + /*tailwind*/sizeTempStatus + /*wish*/sizeTempStatus;

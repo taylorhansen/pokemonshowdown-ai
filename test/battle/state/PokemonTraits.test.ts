@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { dex } from "../../../src/battle/dex/dex";
+import * as dex from "../../../src/battle/dex/dex";
 import { PokemonTraits } from "../../../src/battle/state/PokemonTraits";
 import { PossibilityClass } from "../../../src/battle/state/PossibilityClass";
 import { StatTable } from "../../../src/battle/state/StatTable";

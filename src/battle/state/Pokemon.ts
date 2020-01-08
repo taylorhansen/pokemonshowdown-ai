@@ -1,4 +1,4 @@
-import { berries, dex, isTwoTurnMove } from "../dex/dex";
+import * as dex from "../dex/dex";
 import { boostKeys, HPType, hpTypes, rolloutMoves, StatExceptHP, Type } from
     "../dex/dex-util";
 import { HP, ReadonlyHP } from "./HP";
@@ -276,7 +276,7 @@ export class Pokemon implements ReadonlyPokemon
         }
 
         // charge or release two-turn move
-        if (isTwoTurnMove(options.moveId) && options.prepare)
+        if (dex.isTwoTurnMove(options.moveId) && options.prepare)
         {
             this.volatile.twoTurn.start(options.moveId);
         }
@@ -289,11 +289,11 @@ export class Pokemon implements ReadonlyPokemon
             {
                 // move succeeds if the user has a berry
                 // TODO: narrow further based on power/type?
-                this._item.narrow(...Object.keys(berries));
+                this._item.narrow(...Object.keys(dex.berries));
                 this.removeItem(/*consumed*/true);
             }
             // move fails if the user doesn't have a berry
-            else this._item.remove(...Object.keys(berries));
+            else this._item.remove(...Object.keys(dex.berries));
         }
 
         // apply rollout status

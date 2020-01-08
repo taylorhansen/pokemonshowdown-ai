@@ -11,7 +11,7 @@ import { encodeBattleState, encodeHP, encodeItemTempStatus,
     sizePokemonTraits, sizeRoomStatus, sizeStatRange, sizeStatTable, sizeTeam,
     sizeTeamStatus, sizeTempStatus, sizeVolatileStatus } from
     "../../src/ai/encodeBattleState";
-import { dex } from "../../src/battle/dex/dex";
+import * as dex from "../../src/battle/dex/dex";
 import { DriverSwitchOptions } from "../../src/battle/driver/DriverEvent";
 import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";

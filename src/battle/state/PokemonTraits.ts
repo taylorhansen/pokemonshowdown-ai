@@ -1,4 +1,4 @@
-import { dex } from "../dex/dex";
+import * as dex from "../dex/dex";
 import { PokemonData, Type } from "../dex/dex-util";
 import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
 import { ReadonlyStatTable, StatTable } from "./StatTable";

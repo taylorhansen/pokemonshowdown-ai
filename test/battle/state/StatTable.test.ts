@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { dex } from "../../../src/battle/dex/dex";
+import * as dex from "../../../src/battle/dex/dex";
 import { StatExceptHP, statNames } from "../../../src/battle/dex/dex-util";
 import { StatTable } from "../../../src/battle/state/StatTable";
 

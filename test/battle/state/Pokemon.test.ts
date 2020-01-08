@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { berries, dex } from "../../../src/battle/dex/dex";
+import * as dex from "../../../src/battle/dex/dex";
 import { rolloutMoves } from "../../../src/battle/dex/dex-util";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
@@ -398,7 +398,7 @@ describe("Pokemon", function()
                     expect(mon.lastItem).to.equal(item,
                         "Item was not consumed");
                     expect(mon.lastItem.possibleValues)
-                        .to.have.keys(...Object.keys(berries));
+                        .to.have.keys(...Object.keys(dex.berries));
                 });
 
                 it("Should infer no berry if failed", function()
@@ -414,7 +414,7 @@ describe("Pokemon", function()
 
                     expect(mon.item).to.equal(item, "Item was consumed");
                     expect(mon.item.possibleValues)
-                        .to.not.have.any.keys(...Object.keys(berries));
+                        .to.not.have.any.keys(...Object.keys(dex.berries));
                 });
             });
 

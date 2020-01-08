@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "util";
-import { berries, dex, isFutureMove } from "../battle/dex/dex";
+import * as dex from "../battle/dex/dex";
 import { itemRemovalMoves, itemTransferMoves, nonSelfMoveCallers,
     selfMoveCallers, targetMoveCallers, Type } from "../battle/dex/dex-util";
 import { AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize,
@@ -1026,7 +1026,7 @@ export class PSEventHandler
             const item = toIdName(f.substr("item: ".length));
             // removeItem events are usually emitted when a berry's effects are
             //  used, so this helps us to not conflict with that
-            if (berries.hasOwnProperty(item)) return [];
+            if (dex.berries.hasOwnProperty(item)) return [];
             return [{type: "revealItem", monRef, item, gained: false}];
         }
         // nothing relevant to emit
@@ -1105,7 +1105,7 @@ export class PSEventHandler
             {
                 const move = toIdName(ev);
                 // istanbul ignore else: not useful to test
-                if (isFutureMove(move))
+                if (dex.isFutureMove(move))
                 {
                     return [
                         {type: "activateFutureMove", monRef, move, start}
