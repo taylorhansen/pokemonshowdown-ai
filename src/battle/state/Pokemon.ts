@@ -368,14 +368,8 @@ export class Pokemon implements ReadonlyPokemon
             this.team.status.selfSwitch = moveData.selfSwitch || false;
         }
     }
-    /**
-     * Applies the disabled volatile status to a move.
-     * @param id ID name of the move.
-     */
-    public disableMove(id: string): void
-    {
-        this.volatile.disabledMoves[this.moveset.getOrRevealIndex(id)].start();
-    }
+    /** Applies the Disable volatile status to a move. */
+    public disableMove(name: string): void { this.volatile.disableMove(name); }
     /** Overrides a move slot via Mimic until switched out. */
     public mimic(newId: string): void
     {

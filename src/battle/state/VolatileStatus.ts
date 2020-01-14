@@ -7,6 +7,22 @@ import { pluralTurns, plus } from "./utility";
 import { ReadonlyVariableTempStatus, VariableTempStatus  } from
     "./VariableTempStatus";
 
+/** Tracks Disable status for ReadonlyVolatileStatus. */
+export interface ReadonlyDisableData
+{
+    /** Name of the disabled move. */
+    readonly name: string;
+    /** Turn tracker for the Disable status. */
+    readonly ts: ReadonlyTempStatus;
+}
+
+/** Tracks Disable status for VolatileStatus. */
+export interface DisableData extends ReadonlyDisableData
+{
+    /** @override */
+    readonly ts: TempStatus;
+}
+
 /** Readonly VolatileStatus representation. */
 export interface ReadonlyVolatileStatus
 {
@@ -60,8 +76,8 @@ export interface ReadonlyVolatileStatus
     readonly defenseCurl: boolean;
     /** Destiny Bond move status. */
     readonly destinyBond: boolean;
-    /** List of disabled move statuses. */
-    readonly disabledMoves: readonly ReadonlyTempStatus[];
+    /** Currently disabled move. */
+    readonly disabled: ReadonlyDisableData | null;
     /** Encore move status. Encored move corresponds to `#lastUsed`. */
     readonly encore: ReadonlyTempStatus;
     /** Grudge move status. */
@@ -224,14 +240,17 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public destinyBond!: boolean;
 
     /** @override */
-    public readonly disabledMoves: readonly TempStatus[] =
-        Array.from({length: Moveset.maxSize},
-            (_, i) => new TempStatus(`disabled move ${i + 1}`, 7));
-    /** Removes disable status. */
-    public enableMoves(): void
+    public get disabled(): DisableData | null { return this._disabled; }
+    /** Starts the disabled status for the given move. */
+    public disableMove(name: string): void
     {
-        for (const disabled of this.disabledMoves) disabled.end();
+        const ts = new TempStatus(`disabled ${name}`, 7);
+        ts.start();
+        this._disabled = {name, ts};
     }
+    /** Removes disable status. */
+    public enableMoves(): void { this._disabled = null; }
+    private _disabled!: DisableData | null;
 
     /** @override */
     public readonly encore = new TempStatus("encore", 7);
@@ -475,7 +494,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.taunt.tick();
         this.slowStart.tick();
         this.charge.tick();
-        for (const disabled of this.disabledMoves) disabled.tick();
+        this._disabled?.ts.tick();
         this.yawn.tick();
 
         // reset single-turn statuses
@@ -525,7 +544,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.charge.isActive ? [this.charge.toString()] : [],
             this.defenseCurl ? ["defense curl"] : [],
             this.destinyBond ? ["destiny bond"] : [],
-            this.disabledMoves.filter(d => d.isActive).map(d => d.toString()),
+            this._disabled ? [this._disabled.ts.toString()] : [],
             this.encore.isActive ? [this.encore.toString()] : [],
             this.grudge ? ["grudge"] : [],
             this.healBlock.isActive ? [this.healBlock.toString()] : [],

@@ -301,8 +301,9 @@ describe("BattleDriver", function()
                     {type: "disableMove", monRef: "them", move: "tackle"});
 
                 const mon = driver.state.teams.them.active;
-                expect(mon.moveset.get("tackle")).to.not.be.null;
-                expect(mon.volatile.disabledMoves[0].isActive).to.be.true;
+                expect(mon.volatile.disabled).to.not.be.null;
+                expect(mon.volatile.disabled!.name).to.equal("tackle");
+                expect(mon.volatile.disabled!.ts.isActive).to.be.true;
             });
         });
 
@@ -315,7 +316,7 @@ describe("BattleDriver", function()
                 driver.reenableMoves({type: "reenableMoves", monRef: "them"});
 
                 const mon = driver.state.teams.them.active;
-                expect(mon.volatile.disabledMoves[0].isActive).to.be.false;
+                expect(mon.volatile.disabled).to.be.null;
             });
         });
 

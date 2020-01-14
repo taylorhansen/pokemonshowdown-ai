@@ -274,7 +274,7 @@ export const sizeVolatileStatus =
     /*power trick*/1 + /*substitute*/1 + /*trapped*/1 + /*trapping*/1 +
     /*attract*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*defense curl*/1 + /*destiny bond*/1 +
-    /*disabled moves*/(Moveset.maxSize * sizeTempStatus) + /*grudge*/1 +
+    /*disabled moves*/(dex.numMoves * sizeTempStatus) + /*grudge*/1 +
     /*heal block*/sizeTempStatus + /*identified*/2 +
     /*locked move variants*/dex.numLockedMoves + /*minimize*/1 +
     /*mud sport*/1 + /*must recharge*/1 + /*override traits*/sizePokemonTraits +
@@ -314,8 +314,13 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const charge = encodeTempStatus(status.charge);
     const defenseCurl = status.defenseCurl ? 1 : 0;
     const destinyBond = status.destinyBond ? 1 : 0;
-    const disabled = status.disabledMoves.map(encodeTempStatus)
-        .reduce((a, b) => a.concat(b));
+    let disabled: number[];
+    if (status.disabled)
+    {
+        disabled = oneHot(dex.moves[status.disabled.name].uid, dex.numMoves,
+            /*one*/encodeTempStatus(status.disabled.ts)[0]);
+    }
+    else disabled = Array.from({length: dex.numMoves}, () => 0);
     const grudge = status.grudge ? 1 : 0;
     const identified = ["foresight", "miracleeye"]
         .map(v => status.identified === v ? 1 : 0);

@@ -596,23 +596,13 @@ describe("Pokemon", function()
         {
             it("Should disable move", function()
             {
-                const mon = new Pokemon("Magikarp", false);
+                const mon = new Pokemon("Smeargle", false);
                 mon.switchInto();
-                mon.moveset.reveal("splash");
-                expect(mon.volatile.disabledMoves[0].isActive).to.be.false;
+                expect(mon.volatile.disabled).to.be.null;
                 mon.disableMove("splash");
-                expect(mon.volatile.disabledMoves[0].isActive).to.be.true;
-            });
-
-            // likely not actually possible but just in case
-            it("Should reveal disabled move", function()
-            {
-                const mon = new Pokemon("Magikarp", false);
-                mon.switchInto();
-                expect(mon.moveset.get("splash")).to.be.null;
-                mon.disableMove("splash");
-                expect(mon.moveset.get("splash")).to.not.be.null;
-                expect(mon.volatile.disabledMoves[0].isActive).to.be.true;
+                expect(mon.volatile.disabled).to.not.be.null;
+                expect(mon.volatile.disabled!.name).to.equal("splash");
+                expect(mon.volatile.disabled!.ts.isActive).to.be.true;
             });
         });
 

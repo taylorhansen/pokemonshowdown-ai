@@ -36,7 +36,7 @@ describe("VolatileStatus", function()
         volatile.charge.start();
         volatile.defenseCurl = true;
         volatile.destinyBond = true;
-        volatile.disabledMoves[0].start();
+        volatile.disableMove("tackle");
         volatile.encore.start();
         volatile.grudge = true;
         volatile.healBlock.start();
@@ -97,7 +97,7 @@ describe("VolatileStatus", function()
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.defenseCurl).to.be.false;
             expect(volatile.destinyBond).to.be.false;
-            expect(volatile.disabledMoves[0].isActive).to.be.false;
+            expect(volatile.disabled).to.be.null;
             expect(volatile.encore.isActive).to.be.false;
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
@@ -173,7 +173,7 @@ describe("VolatileStatus", function()
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.defenseCurl).to.be.false;
             expect(volatile.destinyBond).to.be.false;
-            expect(volatile.disabledMoves[0].isActive).to.be.false;
+            expect(volatile.disabled).to.be.null;
             expect(volatile.encore.isActive).to.be.false;
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
@@ -275,41 +275,40 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#disabledMoves/#enableMoves()", function()
+    describe("#disabled", function()
     {
         it("Should not be disabled initially", function()
         {
-            for (let i = 0; i < volatile.disabledMoves.length; ++i)
-            {
-                expect(volatile.disabledMoves[i].isActive).to.equal(false,
-                    `Move ${i + 1} was expected to not be disabled`);
-            }
-        });
-
-        it("Should end disabled status", function()
-        {
-            // disable moves
-            for (const d of volatile.disabledMoves) d.start();
-            for (let i = 0; i < volatile.disabledMoves.length; ++i)
-            {
-                expect(volatile.disabledMoves[i].isActive).to.equal(true,
-                    `Move ${i + 1} was expected to be disabled`);
-            }
-
-            // re-enable moves
-            volatile.enableMoves();
-            for (let i = 0; i < volatile.disabledMoves.length; ++i)
-            {
-                expect(volatile.disabledMoves[i].isActive).to.equal(false,
-                    `Move ${i + 1} was expected to not be disabled`);
-            }
+            expect(volatile.disabled).to.be.null;
         });
 
         it("Should tick on #postTurn()", function()
         {
-            volatile.disabledMoves[0].start();
+            volatile.disableMove("splash");
+            expect(volatile.disabled!.ts.turns).to.equal(1);
             volatile.postTurn();
-            expect(volatile.disabledMoves[0].turns).to.equal(2);
+            expect(volatile.disabled!.ts.turns).to.equal(2);
+        });
+    });
+
+    describe("#disableMove()", function()
+    {
+        it("Should disable move", function()
+        {
+            volatile.disableMove("splash");
+            expect(volatile.disabled).to.not.be.null;
+            expect(volatile.disabled!.name).to.equal("splash");
+            expect(volatile.disabled!.ts.isActive).to.be.true;
+        });
+    });
+
+    describe("#enableMoves()", function()
+    {
+        it("Should end disabled status", function()
+        {
+            volatile.disableMove("splash");
+            volatile.enableMoves();
+            expect(volatile.disabled).to.be.null;
         });
     });
 
