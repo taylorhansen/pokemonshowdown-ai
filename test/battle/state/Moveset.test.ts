@@ -1,15 +1,129 @@
 import { expect } from "chai";
 import "mocha";
+import * as dex from "../../../src/battle/dex/dex";
 import { Move } from "../../../src/battle/state/Move";
 import { Moveset } from "../../../src/battle/state/Moveset";
 
 describe("Moveset", function()
 {
-    let moveset: Moveset;
-
-    beforeEach("Initialize Moveset", function()
+    describe("constructor", function()
     {
-        moveset = new Moveset();
+        const fourMoves = ["splash", "tackle", "hyperbeam", "gigaimpact"];
+        const fiveMoves = [...fourMoves, "metronome"];
+
+        describe("no-args", function()
+        {
+            it("Should initialize default constraint and size", function()
+            {
+                const moveset = new Moveset();
+                expect(moveset.moves).to.be.empty;
+                expect(moveset.constraint)
+                    .to.have.all.keys(Object.keys(dex.moves));
+                expect(moveset.size).to.equal(Moveset.maxSize);
+            });
+        });
+
+        describe("movepool", function()
+        {
+
+            it("Should initialize constraint", function()
+            {
+                const moveset = new Moveset(fiveMoves);
+                expect(moveset.moves).to.be.empty;
+                expect(moveset.constraint).to.have.all.keys(fiveMoves);
+            });
+        });
+
+        describe("size", function()
+        {
+            it("Should initialize constraint and size", function()
+            {
+                const moveset = new Moveset(3);
+                expect(moveset.moves).to.be.empty;
+                expect(moveset.constraint)
+                    .to.have.all.keys(Object.keys(dex.moves));
+                expect(moveset.size).to.equal(3);
+            });
+        });
+
+        describe("movepool+size", function()
+        {
+            it("Should initialize constraint and size", function()
+            {
+                const moveset = new Moveset(fourMoves, 3);
+                expect(moveset.moves).to.be.empty;
+                expect(moveset.constraint).to.have.all.keys(fourMoves);
+                expect(moveset.size).to.equal(3);
+            });
+
+            it("Should initialize moves if movepool is smaller than max size",
+            function()
+            {
+                const moveset = new Moveset(fourMoves, 4);
+                expect(moveset.moves).to.have.all.keys(fourMoves);
+                expect(moveset.constraint).to.be.empty;
+            });
+        });
+    });
+
+    describe("#size", function()
+    {
+        it("Should set size", function()
+        {
+            const moveset = new Moveset(3);
+            expect(moveset.size).to.equal(3);
+
+            moveset.size = 2;
+            expect(moveset.size).to.equal(2);
+        });
+
+        it("Should throw if smaller than inferred moves", function()
+        {
+            const moveset = new Moveset(["splash", "tackle"]);
+            expect(() => moveset.size = 1).to.throw(Error,
+                "Requested Moveset size 1 is smaller than current size 2");
+        });
+
+        it("Should throw if larger than max size", function()
+        {
+            const moveset = new Moveset();
+            expect(() => moveset.size = Moveset.maxSize + 1).to.throw(Error,
+                `Requested Moveset size ${Moveset.maxSize + 1} is bigger ` +
+                `than maximum size ${Moveset.maxSize}`);
+        });
+
+        const twoMoves = ["splash", "tackle"];
+
+        it("Should consume constraint if sufficiently narrowed", function()
+        {
+            const moveset = new Moveset(twoMoves, 1);
+            expect(moveset.moves).to.be.empty;
+            expect(moveset.constraint).to.have.all.keys(twoMoves);
+
+            // expand moveset enough to fit the movepool
+            moveset.size = 2;
+            expect(moveset.moves).to.have.all.keys(twoMoves);
+            expect(moveset.constraint).to.be.empty;
+        });
+
+        it("Should propagate above inference to link/base", function()
+        {
+            const moveset = new Moveset();
+            const base = new Moveset(twoMoves, 1);
+            moveset.link(base, "base");
+
+            const transform = new Moveset();
+            transform.link(moveset, "transform");
+
+            // expand moveset enough to fit the movepool
+            transform.size = 2;
+            expect(moveset.moves).to.have.all.keys(twoMoves);
+            expect(moveset.constraint).to.be.empty;
+            expect(base.moves).to.have.all.keys(twoMoves);
+            expect(base.constraint).to.be.empty;
+            expect(transform.moves).to.have.all.keys(twoMoves);
+            expect(transform.constraint).to.be.empty;
+        });
     });
 
     describe("#link()", function()
@@ -18,40 +132,44 @@ describe("Moveset", function()
         {
             it("Should copy moves", function()
             {
-                const other = new Moveset();
-                other.reveal("splash");
-                moveset.link(other, "base");
-                expect(moveset.get("splash")).to.equal(other.get("splash"))
+                const moveset = new Moveset();
+                const base = new Moveset();
+                base.reveal("splash");
+                moveset.link(base, "base");
+                expect(moveset.get("splash")).to.equal(base.get("splash"))
                     .and.to.not.be.null;
                 // not by-ref array copy
-                expect(moveset.moves).to.not.equal(other.moves);
+                expect(moveset.moves).to.not.equal(base.moves);
             });
 
             it("Should propagate #reveal() calls from child to parent",
             function()
             {
-                const other = new Moveset();
-                moveset.link(other, "base");
+                const moveset = new Moveset();
+                const base = new Moveset();
+                moveset.link(base, "base");
                 moveset.reveal("splash");
-                expect(moveset.get("splash")).to.equal(other.get("splash"))
+                expect(moveset.get("splash")).to.equal(base.get("splash"))
                     .and.to.not.be.null;
                 // not by-ref array copy
-                expect(moveset.moves).to.not.equal(other.moves);
+                expect(moveset.moves).to.not.equal(base.moves);
             });
 
             it("Should not notice base changes", function()
             {
-                const other = new Moveset();
-                moveset.link(other, "base");
-                other.reveal("splash");
+                const moveset = new Moveset();
+                const base = new Moveset();
+                moveset.link(base, "base");
+                base.reveal("splash");
                 expect(moveset.get("splash")).to.be.null;
             });
 
             it("Should throw if base changed after reveal", function()
             {
-                const other = new Moveset();
-                moveset.link(other, "base");
-                other.reveal("splash");
+                const moveset = new Moveset();
+                const base = new Moveset();
+                moveset.link(base, "base");
+                base.reveal("splash");
                 expect(() => moveset.reveal("tackle")).to.throw(Error,
                     "Base Moveset expected to not change");
             });
@@ -61,64 +179,69 @@ describe("Moveset", function()
         {
             it("Should deep copy moves", function()
             {
-                const other = new Moveset();
-                other.reveal("splash");
-                moveset.link(other, "transform");
+                const moveset = new Moveset();
+                const transform = new Moveset();
+                transform.reveal("splash");
+                moveset.link(transform, "transform");
 
                 // target moveset should have full pp
                 expect(moveset.get("splash")).to.have.property("pp", 5);
-                expect(other.get("splash")).to.have.property("pp", 64);
+                expect(transform.get("splash")).to.have.property("pp", 64);
             });
 
             it("Should propagate #reveal() calls from target", function()
             {
-                const other = new Moveset();
-                moveset.link(other, "transform");
-                other.reveal("splash");
+                const moveset = new Moveset();
+                const transform = new Moveset();
+                moveset.link(transform, "transform");
+                transform.reveal("splash");
 
                 // target moveset should have full pp
                 expect(moveset.get("splash")).to.have.property("pp", 5);
-                expect(other.get("splash")).to.have.property("pp", 64);
+                expect(transform.get("splash")).to.have.property("pp", 64);
             });
 
             it("Should propagate #reveal() calls from user", function()
             {
-                const other = new Moveset();
-                moveset.link(other, "transform");
+                const moveset = new Moveset();
+                const transform = new Moveset();
+                moveset.link(transform, "transform");
                 moveset.reveal("splash");
 
                 // target moveset should have full pp
                 expect(moveset.get("splash")).to.have.property("pp", 5);
-                expect(other.get("splash")).to.have.property("pp", 64);
+                expect(transform.get("splash")).to.have.property("pp", 64);
             });
 
             it("Should propagate #reveal() calls for multiple Movesets",
             function()
             {
-                const other1 = new Moveset();
-                const other2 = new Moveset();
-                other1.link(moveset, "transform");
-                other2.link(moveset, "transform");
-                other2.reveal("splash");
+                const moveset = new Moveset();
+                const transform1 = new Moveset();
+                const transform2 = new Moveset();
+                transform1.link(moveset, "transform");
+                transform2.link(moveset, "transform");
+                transform2.reveal("splash");
 
                 // target moveset should have full pp
                 expect(moveset.get("splash")).to.have.property("pp", 64);
-                expect(other1.get("splash")).to.have.property("pp", 5);
-                expect(other2.get("splash")).to.have.property("pp", 5);
+                expect(transform1.get("splash")).to.have.property("pp", 5);
+                expect(transform2.get("splash")).to.have.property("pp", 5);
             });
 
             it("Should propagate to target's base Moveset from a linked " +
                 "Moveset", function()
             {
+                const moveset = new Moveset();
                 const base = new Moveset();
-                const other = new Moveset();
+                const transform = new Moveset();
                 moveset.link(base, "base");
-                other.link(moveset, "transform");
-                other.reveal("splash");
+                transform.link(moveset, "transform");
+                transform.reveal("splash");
 
                 expect(moveset.get("splash")).to.equal(base.get("splash"))
                     .and.to.have.property("pp", 64);
-                expect(other.get("splash")).to.have.property("pp", 5);
+                expect(transform.get("splash")).to.have.property("pp", 5);
             });
         });
     });
@@ -127,31 +250,33 @@ describe("Moveset", function()
     {
         it("Should unlink from other Movesets", function()
         {
-            const other1 = new Moveset();
-            const other2 = new Moveset();
-            other1.link(moveset, "transform");
-            other2.link(moveset, "transform");
+            const moveset = new Moveset();
+            const transform1 = new Moveset();
+            const transform2 = new Moveset();
+            transform1.link(moveset, "transform");
+            transform2.link(moveset, "transform");
             moveset.isolate();
-            other2.reveal("splash");
+            transform2.reveal("splash");
             expect(moveset.get("splash")).to.be.null;
-            expect(other1.get("splash")).to.not.be.null;
-            expect(other2.get("splash")).to.not.be.null;
+            expect(transform1.get("splash")).to.not.be.null;
+            expect(transform2.get("splash")).to.not.be.null;
         });
 
         it("Should link base", function()
         {
+            const moveset = new Moveset();
             const base = new Moveset();
-            const other1 = new Moveset();
-            const other2 = new Moveset();
+            const transform1 = new Moveset();
+            const transform2 = new Moveset();
             moveset.link(base, "base");
-            other1.link(moveset, "transform");
-            other2.link(moveset, "transform");
+            transform1.link(moveset, "transform");
+            transform2.link(moveset, "transform");
             moveset.isolate();
-            other2.reveal("splash");
+            transform2.reveal("splash");
             expect(moveset.get("splash")).to.be.null;
             expect(base.get("splash")).to.not.be.null;
-            expect(other1.get("splash")).to.not.be.null;
-            expect(other2.get("splash")).to.not.be.null;
+            expect(transform1.get("splash")).to.not.be.null;
+            expect(transform2.get("splash")).to.not.be.null;
         });
     });
 
@@ -159,11 +284,13 @@ describe("Moveset", function()
     {
         it("Should be null if not revealed", function()
         {
+            const moveset = new Moveset();
             expect(moveset.get("splash")).to.be.null;
         });
 
         it("Should not be null if revealed", function()
         {
+            const moveset = new Moveset();
             moveset.reveal("splash");
             expect(moveset.get("splash")).to.not.be.null;
         });
@@ -173,6 +300,7 @@ describe("Moveset", function()
     {
         it("Should throw if moveset is full", function()
         {
+            const moveset = new Moveset();
             moveset.reveal("splash");
             moveset.reveal("tackle");
             moveset.reveal("wish");
@@ -183,38 +311,9 @@ describe("Moveset", function()
 
         it("Should not add duplicates", function()
         {
+            const moveset = new Moveset();
             const move = moveset.reveal("splash");
             expect(moveset.reveal("splash")).to.equal(move);
-        });
-    });
-
-    describe("#getOrReveal()", function()
-    {
-        it("Should not be null if not revealed", function()
-        {
-            expect(moveset.getOrReveal("splash")).to.not.be.null;
-        });
-
-        it("Should not be null if revealed", function()
-        {
-            moveset.reveal("splash");
-            expect(moveset.get("splash")).to.not.be.null;
-        });
-    });
-
-    describe("#getOrRevealIndex()", function()
-    {
-        it("Should get index of already revealed move", function()
-        {
-            moveset.reveal("splash");
-            moveset.reveal("tackle");
-            expect(moveset.getOrRevealIndex("tackle")).to.equal(1);
-        });
-
-        it("Should reveal index of move", function()
-        {
-            moveset.reveal("splash");
-            expect(moveset.getOrRevealIndex("tackle")).to.equal(1);
         });
     });
 
@@ -222,6 +321,7 @@ describe("Moveset", function()
     {
         it("Should replace move", function()
         {
+            const moveset = new Moveset();
             moveset.reveal("splash");
             const move = new Move("tackle");
             moveset.replace("splash", move);
@@ -229,13 +329,40 @@ describe("Moveset", function()
             expect(moveset.get("tackle")).to.not.be.null;
         });
 
+        it("Should infer no move equal to the replacing mvoe", function()
+        {
+            const moveset = new Moveset();
+            expect(moveset.constraint).to.have.any.keys("tackle");
+
+            moveset.reveal("splash");
+            const move = new Move("tackle");
+            moveset.replace("splash", move);
+
+            expect(moveset.constraint).to.not.have.any.keys("tackle");
+            expect(moveset.get("splash")).to.be.null;
+            expect(moveset.get("tackle")).to.not.be.null;
+        });
+
         it("Should throw if replacing unrevealed move", function()
         {
+            const moveset = new Moveset();
             const move = new Move("tackle");
             expect(() => moveset.replace("splash", move)).to.throw(Error,
                 "Moveset does not contain 'splash'");
             expect(moveset.get("splash")).to.be.null;
             expect(moveset.get("tackle")).to.be.null;
+        });
+
+        it("Should throw if already know replacing move", function()
+        {
+            const moveset = new Moveset();
+            moveset.reveal("splash");
+            moveset.reveal("tackle");
+            const move = new Move("tackle");
+            expect(() => moveset.replace("splash", move)).to.throw(Error,
+                "Moveset cannot contain two 'tackle' moves");
+            expect(moveset.get("splash")).to.not.be.null;
+            expect(moveset.get("tackle")).to.not.be.null;
         });
     });
 });

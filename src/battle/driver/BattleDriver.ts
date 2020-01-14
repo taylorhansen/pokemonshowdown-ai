@@ -74,7 +74,8 @@ export class BattleDriver implements DriverEventHandler
             if (data.happiness) mon.happiness = data.happiness;
 
             // initialize moveset
-            for (const moveId of data.moves) mon.moveset.reveal(moveId);
+            mon.moveset.size = data.moves.length;
+            for (const move of data.moves) mon.moveset.reveal(move);
         }
     }
 
@@ -535,7 +536,7 @@ export class BattleDriver implements DriverEventHandler
      */
     public modifyPP(event: ModifyPP): void
     {
-        const move = this.getMon(event.monRef).moveset.getOrReveal(event.move);
+        const move = this.getMon(event.monRef).moveset.reveal(event.move);
         if (event.amount === "deplete") move.pp = 0;
         else move.pp += event.amount;
     }
@@ -547,7 +548,10 @@ export class BattleDriver implements DriverEventHandler
     public restoreMoves(event: RestoreMoves): void
     {
         const moveset = this.getMon(event.monRef).moveset;
-        for (const move of moveset.moves) if (move) move.pp = move.maxpp;
+        for (const move of moveset.moves.values())
+        {
+            if (move) move.pp = move.maxpp;
+        }
     }
 
     /**

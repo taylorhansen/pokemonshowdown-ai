@@ -265,7 +265,7 @@ export class Pokemon implements ReadonlyPokemon
         // reveal option can be either unspecified (assume true) or truthy
         if (options.reveal === undefined || options.reveal)
         {
-            this.moveset.getOrReveal(options.moveId).pp -=
+            this.moveset.reveal(options.moveId).pp -=
                 options.reveal === "nopp" ? 0
                 // mold breaker cancels pressure
                 : this.ability === "moldbreaker" ? 1
@@ -390,7 +390,7 @@ export class Pokemon implements ReadonlyPokemon
         this.volatile.overrideMoveset.replace("sketch", move);
     }
     /** @override */
-    public readonly baseMoveset = new Moveset();
+    public readonly baseMoveset: Moveset;
 
     /** @override */
     public gender?: string | null;
@@ -509,6 +509,7 @@ export class Pokemon implements ReadonlyPokemon
     {
         this.baseTraits.init();
         this.baseTraits.species.narrow(species);
+        this.baseMoveset = new Moveset(this.baseTraits.data.movepool);
         this.hp = new HP(hpPercent);
     }
 
@@ -755,28 +756,38 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
         return `${base} (consumed: ${last})`;
     }
 
-    /** Displays moveset data with possibly overridden HPType. */
+    /** Displays moveset data with happiness and possibly overridden HPType. */
     private stringifyMoveset(): string
     {
+        // stringify base hp type
         const baseHPType = this.baseTraits.stats.hpType;
         const baseHPTypeStr = (baseHPType.definiteValue ? "" : "possibly ") +
             baseHPType.toString();
-        let hpType: string;
-        if (this._volatile)
+
+        // stringify base moveset
+        let result =
+            `[${this.baseMoveset.toString(this._happiness, baseHPTypeStr)}]`;
+
+        if (this._volatile?.overrideMoveset)
         {
+            // stringify override hp type if applicable
             const overHPType = this._volatile.overrideTraits.stats.hpType;
+            let overHPTypeStr: string;
             if (baseHPType !== overHPType)
             {
-                const overHPTypeStr =
+                overHPTypeStr =
                     (baseHPType.definiteValue ? "" : "possibly ") +
                     baseHPType.toString();
-                hpType = `${overHPTypeStr} (base: ${baseHPTypeStr})`;
             }
-            else hpType = baseHPTypeStr;
-        }
-        else hpType = baseHPTypeStr;
+            else overHPTypeStr = baseHPTypeStr;
 
-        return `[${this.moveset.toString(this.baseMoveset, this._happiness,
-            hpType)}]`;
+            // insert override moveset
+            result = "[" +
+                this._volatile.overrideMoveset.toString(this._happiness,
+                    overHPTypeStr) +
+                `] (base: ${result}))`;
+        }
+
+        return result;
     }
 }

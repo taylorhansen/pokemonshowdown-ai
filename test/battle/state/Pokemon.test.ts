@@ -12,7 +12,7 @@ describe("Pokemon", function()
     function switchOut(mon: Pokemon)
     {
         // create a dummy Pokemon that will replace the given one
-        const other = new Pokemon("Magikarp", false);
+        const other = new Pokemon("Smeargle", false);
         other.switchInto(mon);
     }
 
@@ -20,7 +20,7 @@ describe("Pokemon", function()
     {
         it("Should be inactive initially", function()
         {
-            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
+            const mon = new Pokemon("Smeargle", /*hpPercent*/false);
             expect(mon.active).to.be.false;
         });
     });
@@ -290,7 +290,7 @@ describe("Pokemon", function()
         {
             it("Should use and reveal move", function()
             {
-                const mon = new Pokemon("Magikarp", false);
+                const mon = new Pokemon("Smeargle", false);
                 mon.switchInto();
                 expect(mon.moveset.get("splash")).to.be.null;
                 mon.useMove({moveId: "splash", targets: [mon]});
@@ -299,7 +299,7 @@ describe("Pokemon", function()
 
             it("Should not reveal struggle as a move slot", function()
             {
-                const mon = new Pokemon("Magikarp", false);
+                const mon = new Pokemon("Smeargle", false);
                 mon.switchInto();
                 mon.useMove({moveId: "struggle", targets: [mon]});
                 expect(mon.moveset.get("struggle")).to.be.null;
@@ -309,7 +309,7 @@ describe("Pokemon", function()
             {
                 it("Should not reveal move", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     mon.useMove(
                         {moveId: "splash", targets: [mon], reveal: false});
@@ -330,14 +330,14 @@ describe("Pokemon", function()
 
                 beforeEach("Reveal an attacking move", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     const move = mon.moveset.reveal("tackle");
                     expect(move.pp).to.equal(56);
                 });
 
                 it("Should use double pp if targeted", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     mon.useMove({moveId: "tackle", targets: [target]});
                     expect(mon.moveset.get("tackle")!.pp).to.equal(54);
@@ -345,7 +345,7 @@ describe("Pokemon", function()
 
                 it("Should not use double pp if not targeted", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     mon.useMove({moveId: "tackle", targets: [mon]});
                     expect(mon.moveset.get("tackle")!.pp).to.equal(55);
@@ -365,7 +365,7 @@ describe("Pokemon", function()
             {
                 it("Should start two-turn if prepare=true", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     mon.useMove({moveId: "bounce", targets: [], prepare: true});
 
@@ -375,7 +375,7 @@ describe("Pokemon", function()
 
                 it("Should release two-turn move", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     mon.useMove({moveId: "bounce", targets: [], prepare: true});
                     mon.postTurn();
@@ -390,7 +390,7 @@ describe("Pokemon", function()
             {
                 it("Should infer berry if successful", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     const item = mon.item;
                     mon.useMove({moveId: "naturalgift", targets: []});
@@ -403,7 +403,7 @@ describe("Pokemon", function()
 
                 it("Should infer no berry if failed", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     const item = mon.item;
                     mon.useMove(
@@ -425,7 +425,7 @@ describe("Pokemon", function()
                 {
                     it(`Should set ${moveId} if successful`, function()
                     {
-                        const mon = new Pokemon("Magikarp", false);
+                        const mon = new Pokemon("Smeargle", false);
                         mon.switchInto();
                         expect(mon.volatile.rollout.isActive).to.be.false;
                         mon.useMove({moveId, targets: []});
@@ -435,7 +435,7 @@ describe("Pokemon", function()
 
                     it(`Should not set ${moveId} if unsuccessful`, function()
                     {
-                        const mon = new Pokemon("Magikarp", false);
+                        const mon = new Pokemon("Smeargle", false);
                         mon.switchInto();
                         expect(mon.volatile.rollout.isActive).to.be.false;
                         mon.useMove(
@@ -449,7 +449,7 @@ describe("Pokemon", function()
             {
                 it("Should reset single-move statuses", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     mon.volatile.destinyBond = true;
                     mon.volatile.grudge = true;
@@ -466,7 +466,7 @@ describe("Pokemon", function()
             {
                 it(`Should activate ${name}`, function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     if (setter)
                     {
@@ -486,7 +486,7 @@ describe("Pokemon", function()
             {
                 it(`Should not activate ${name} if unsuccessful`, function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     if (setter)
                     {
@@ -505,7 +505,7 @@ describe("Pokemon", function()
             {
                 it("Should not initially be active", function()
                 {
-                    const mon = new Pokemon("Magikarp", false);
+                    const mon = new Pokemon("Smeargle", false);
                     mon.switchInto();
                     expect(mon.volatile.lockedMove.isActive).to.be.false;
                 });
@@ -560,8 +560,8 @@ describe("Pokemon", function()
                         team.size = 1;
                         const mon = team.switchIn(
                         {
-                            species: "Magikarp", level: 100, gender: "M",
-                            hp: 200, hpMax: 200
+                            species: "Smeargle", level: 50, gender: "M",
+                            hp: 115, hpMax: 115
                         })!;
                         mon.useMove(
                         {
@@ -610,7 +610,7 @@ describe("Pokemon", function()
         {
             it("Should add override move with 5 pp", function()
             {
-                const mon = new Pokemon("Magikarp", false);
+                const mon = new Pokemon("Smeargle", false);
                 mon.switchInto();
                 mon.moveset.reveal("mimic");
 
@@ -622,7 +622,7 @@ describe("Pokemon", function()
 
             it("Should clear on switch out", function()
             {
-                const mon = new Pokemon("Magikarp", false);
+                const mon = new Pokemon("Smeargle", false);
                 mon.switchInto();
                 mon.moveset.reveal("mimic");
 
@@ -638,7 +638,7 @@ describe("Pokemon", function()
         {
             it("Should add replacement Move with minimum maxpp", function()
             {
-                const mon = new Pokemon("Magikarp", false);
+                const mon = new Pokemon("Smeargle", false);
                 mon.switchInto();
                 mon.moveset.reveal("sketch");
 
@@ -972,7 +972,7 @@ describe("Pokemon", function()
     {
         it("Should copy known details", function()
         {
-            const mon1 = new Pokemon("Magikarp", false);
+            const mon1 = new Pokemon("Smeargle", false);
             mon1.switchInto();
             mon1.hpType.narrow("fire");
             expect(mon1.moveset.get("splash")).to.be.null;
@@ -1001,17 +1001,17 @@ describe("Pokemon", function()
 
             // should still keep base traits
             expect(mon1.baseTraits.species.possibleValues)
-                .to.have.key("Magikarp");
-            expect(mon1.baseTraits.data).to.equal(dex.pokemon.Magikarp);
+                .to.have.key("Smeargle");
+            expect(mon1.baseTraits.data).to.equal(dex.pokemon.Smeargle);
             expect(mon1.baseTraits.ability.possibleValues)
-                .to.have.keys(dex.pokemon.Magikarp.abilities);
+                .to.have.keys(dex.pokemon.Smeargle.abilities);
             expect(mon1.baseTraits.stats.hpType.possibleValues)
                 .to.have.keys("fire");
         });
 
         it("Should link move inference", function()
         {
-            const mon1 = new Pokemon("Magikarp", false);
+            const mon1 = new Pokemon("Smeargle", false);
             mon1.switchInto();
 
             const mon2 = new Pokemon("Bulbasaur", true);
@@ -1027,7 +1027,7 @@ describe("Pokemon", function()
 
         it("Should link ability inference but not change", function()
         {
-            const mon1 = new Pokemon("Magikarp", false);
+            const mon1 = new Pokemon("Smeargle", false);
             mon1.switchInto();
 
             const mon2 = new Pokemon("Bronzong", true);
@@ -1067,7 +1067,7 @@ describe("Pokemon", function()
             const mon = new Pokemon("Horsea", false);
             mon.switchInto();
 
-            const mon2 = new Pokemon("Magikarp", true);
+            const mon2 = new Pokemon("Smeargle", true);
             mon2.traits.stats.level = 100;
             mon2.switchInto();
 

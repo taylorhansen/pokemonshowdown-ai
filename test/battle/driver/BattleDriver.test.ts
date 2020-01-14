@@ -19,9 +19,9 @@ const initTeam: InitTeam =
     team:
     [
         {
-            species: "Magikarp", level: 50, gender: "F", hp: 100, hpMax: 100,
-            stats: {atk: 30, def: 75, spa: 35, spd: 40, spe: 100},
-            moves: ["splash", "tackle"], baseAbility: "swiftswim",
+            species: "Smeargle", level: 50, gender: "F", hp: 115, hpMax: 115,
+            stats: {atk: 25, def: 40, spa: 25, spd: 50, spe: 80},
+            moves: ["splash", "tackle"], baseAbility: "technician",
             item: "lifeorb"
         }
     ]
@@ -86,11 +86,12 @@ describe("BattleDriver", function()
                 }
 
                 // check moves
-                for (const moveName of data.moves)
+                expect(mon.moveset.moves).to.have.lengthOf(data.moves.length);
+                for (const name of data.moves)
                 {
-                    const move = mon.moveset.get(moveName)!;
+                    const move = mon.moveset.get(name);
                     expect(move).to.not.be.null;
-                    expect(move.name).to.equal(moveName);
+                    expect(move!.name).to.equal(name);
                 }
 
                 // check optional data
@@ -357,19 +358,20 @@ describe("BattleDriver", function()
         {
             it("Should break stall", function()
             {
-                const v = driver.state.teams.us.active.volatile;
+                const v = driver.state.teams.them.active.volatile;
                 expect(v.stalling).to.be.false;
                 expect(v.stallTurns).to.equal(0);
 
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "us", moveId: "protect",
-                    targets: ["us"]
+                    type: "useMove", monRef: "them", moveId: "protect",
+                    targets: ["them"]
                 });
                 expect(v.stalling).to.be.true;
                 expect(v.stallTurns).to.equal(1);
 
-                driver.feint({type: "feint", monRef: "us"});
+                // assume our side uses Feint
+                driver.feint({type: "feint", monRef: "them"});
                 expect(v.stalling).to.be.false;
                 expect(v.stallTurns).to.equal(1);
             });
@@ -409,19 +411,19 @@ describe("BattleDriver", function()
         {
             it("Should reset lockedMove status", function()
             {
-                const v = driver.state.teams.us.active.volatile;
+                const v = driver.state.teams.them.active.volatile;
                 expect(v.lockedMove.isActive).to.be.false;
 
                 // first start it
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "us", moveId: "outrage",
-                    targets: ["them"]
+                    type: "useMove", monRef: "them", moveId: "outrage",
+                    targets: ["us"]
                 });
                 expect(v.lockedMove.isActive).to.be.true;
 
                 // then end it due to fatigue
-                driver.fatigue({type: "fatigue", monRef: "us"});
+                driver.fatigue({type: "fatigue", monRef: "them"});
                 expect(v.lockedMove.isActive).to.be.false;
             });
         });
@@ -468,15 +470,15 @@ describe("BattleDriver", function()
             {
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "us", moveId: "mimic",
-                    targets: ["them"]
+                    type: "useMove", monRef: "them", moveId: "mimic",
+                    targets: ["us"]
                 });
-                driver.mimic({type: "mimic", monRef: "us", move: "doubleedge"});
+                driver.mimic({type: "mimic", monRef: "them", move: "splash"});
 
-                const mon = driver.state.teams.us.active;
-                expect(mon.moveset.get("doubleedge")).to.not.be.null;
+                const mon = driver.state.teams.them.active;
+                expect(mon.moveset.get("splash")).to.not.be.null;
                 expect(mon.moveset.get("mimic")).to.be.null;
-                expect(mon.baseMoveset.get("doubleedge")).to.be.null;
+                expect(mon.baseMoveset.get("splash")).to.be.null;
                 expect(mon.baseMoveset.get("mimic")).to.not.be.null;
             });
         });
@@ -487,15 +489,15 @@ describe("BattleDriver", function()
             {
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "us", moveId: "sketch",
-                    targets: ["them"]
+                    type: "useMove", monRef: "them", moveId: "sketch",
+                    targets: ["us"]
                 });
-                driver.sketch({type: "sketch", monRef: "us", move: "reversal"});
+                driver.sketch({type: "sketch", monRef: "them", move: "tackle"});
 
                 const mon = driver.state.teams.us.active;
-                expect(mon.moveset.get("reversal")).to.not.be.null;
+                expect(mon.moveset.get("tackle")).to.not.be.null;
                 expect(mon.moveset.get("sketch")).to.be.null;
-                expect(mon.baseMoveset.get("reversal")).to.not.be.null;
+                expect(mon.baseMoveset.get("tackle")).to.not.be.null;
                 expect(mon.baseMoveset.get("sketch")).to.be.null;
             });
         });
@@ -838,7 +840,7 @@ describe("BattleDriver", function()
             it("Should change form", function()
             {
                 const mon = driver.state.teams.us.active;
-                expect(mon.species).to.equal("Magikarp");
+                expect(mon.species).to.equal("Smeargle");
 
                 driver.formChange(
                 {
@@ -1057,11 +1059,11 @@ describe("BattleDriver", function()
             it("Should change hp", function()
             {
                 const mon = driver.state.teams.us.active;
-                expect(mon.hp.current).to.equal(100);
+                expect(mon.hp.current).to.equal(115);
 
                 driver.takeDamage(
                 {
-                    type: "takeDamage", monRef: "us", newHP: [50, 100],
+                    type: "takeDamage", monRef: "us", newHP: [50, 115],
                     tox: false
                 });
 
@@ -1256,18 +1258,13 @@ describe("BattleDriver", function()
                 // use a move that sets self-switch flag
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "us", moveId: "uturn",
-                    targets: ["them"]
-                });
-                driver.useMove(
-                {
                     type: "useMove", monRef: "them", moveId: "batonpass",
                     targets: ["them"]
                 });
+                expect(driver.state.teams.them.status.selfSwitch)
+                    .to.equal("copyvolatile");
 
                 driver.clearSelfSwitch({type: "clearSelfSwitch"});
-
-                expect(driver.state.teams.us.status.selfSwitch).to.be.false;
                 expect(driver.state.teams.them.status.selfSwitch).to.be.false;
             });
         });

@@ -1,15 +1,20 @@
+import * as dex from "../dex/dex";
 import { Move, ReadonlyMove } from "./Move";
 
 export interface ReadonlyMoveset
 {
-    /** Contained moves. Null is unrevealed while undefined is nonexistent. */
-    readonly moves: readonly (ReadonlyMove | null | undefined)[];
+    /** Contained moves, indexed by name. */
+    readonly moves: ReadonlyMap<string, ReadonlyMove>;
+    /** Constraint for inferring the remaining Moves. */
+    readonly constraint: ReadonlySet<string>;
+    /** Max amount of Move slots. */
+    readonly size: number;
     /**
-     * Gets the move by name.
-     * @param id ID name of the move.
-     * @returns The move that matches the ID name, or null if not found.
+     * Gets Move by name.
+     * @param name Name of the move.
+     * @returns The Move that matches the given name, or null if not found.
      */
-    get(id: string): ReadonlyMove | null;
+    get(name: string): ReadonlyMove | null;
 }
 
 /**
@@ -21,15 +26,32 @@ export class Moveset implements ReadonlyMoveset
     /** Maximum moveset size. */
     public static readonly maxSize = 4;
 
-    /** Contained moves. Null is unrevealed while undefined is nonexistent. */
-    public get moves(): readonly (Move | null | undefined)[]
+    /** @override */
+    public get moves(): ReadonlyMap<string, Move> { return this._moves; }
+    private _moves: Map<string, Move>;
+
+    /** @override */
+    public get constraint(): ReadonlySet<string> { return this._constraint; }
+    private _constraint: Set<string>;
+
+    /** @override */
+    public get size(): number { return this._size; }
+    public set size(value: number)
     {
-        return this._moves;
+        if (value < this._moves.size)
+        {
+            throw new Error(`Requested Moveset size ${value} is smaller than ` +
+                `current size ${this._moves.size}`);
+        }
+        if (value > Moveset.maxSize)
+        {
+            throw new Error(`Requested Moveset size ${value} is bigger than ` +
+                `maximum size ${Moveset.maxSize}`);
+        }
+        this._size = value;
+        this.checkConstraint();
     }
-    private readonly _moves =
-        new Array<Move | null | undefined>(Moveset.maxSize);
-    /** Index of the first unknown move. Previous indexes should be defined. */
-    private unrevealed = 0;
+    private _size: number;
 
     /**
      * Shared array of linked Movesets to propagate `#reveal()` calls. Can be
@@ -42,12 +64,38 @@ export class Moveset implements ReadonlyMoveset
     private base: Moveset | null = null;
 
     /** Creates a Moveset of specified size. */
-    constructor(size = Moveset.maxSize)
+    constructor(size?: number);
+    /** Creates a Moveset of specified movepool and size. */
+    // tslint:disable-next-line: unified-signatures
+    constructor(movepool: readonly string[], size?: number);
+    constructor(movepool?: readonly string[] | number, size?: number)
     {
-        // TODO: possible corner case: infer pokemon sets with less than 4 moves
-        size = Math.max(1, Math.min(size, Moveset.maxSize));
-        // the other values after size are padded with undefined/nonexistent
-        this._moves.fill(null, 0, size);
+        if (typeof movepool === "number") size = movepool;
+        // fill in default size
+        size = size ?? Moveset.maxSize;
+
+        this._size = Math.max(1, Math.min(size, Moveset.maxSize));
+
+        // fill in default movepool
+        if (typeof movepool === "number" || !movepool || movepool.length < 1)
+        {
+            movepool = Object.keys(dex.moves);
+        }
+
+        // movepool constructor
+        // edge case: infer movesets with very small movepools
+        if (movepool.length <= this._size)
+        {
+            this._moves =
+                new Map(movepool.map(name => [name, new Move(name)]));
+            this._constraint = new Set();
+        }
+        else
+        {
+            // initialize movepool constraint
+            this._moves = new Map();
+            this._constraint = new Set(movepool);
+        }
     }
 
     /**
@@ -65,20 +113,26 @@ export class Moveset implements ReadonlyMoveset
         // clear previous subscriptions if any
         this.isolate();
 
-        for (let i = 0; i < Moveset.maxSize; ++i)
+        // copy known moves
+        this._moves.clear();
+        for (const move of moveset._moves.values())
         {
-            const move = moveset._moves[i];
-            if (info === "base" || !move) this._moves[i] = move;
+            // base: copy moves by reference
+            if (info === "base") this._moves.set(move.name, move);
             // transform: deep copy but set pp (gen>=5: and maxpp) to 5
-            else this._moves[i] = new Move(move.name, move.maxpp, 5);
+            else this._moves.set(move.name, new Move(move.name, move.maxpp, 5));
         }
-        this.unrevealed = moveset.unrevealed;
 
-        // reveal() calls are propagated specially for base, fine for others
+        // copy unknown moves
+        this._constraint = moveset._constraint;
+        this._size = moveset.size;
+
+        // reveal() calls are propagated differently for base than others
         if (info === "base") this.base = moveset;
         else if (moveset.linked)
         {
             // add to target Moveset's linked array
+            // TODO: what if base is left in after isolate?
             this.linked = moveset.linked;
             this.linked.push(this);
         }
@@ -103,150 +157,166 @@ export class Moveset implements ReadonlyMoveset
     }
 
     /** @override */
-    public get(id: string): Move | null
+    public get(name: string): Move | null
     {
-        const index = this.getIndex(id);
-        return index >= 0 ?
-            this._moves[index] || /*istanbul ignore next: can't reproduce*/null
-            : null;
+        return this._moves.get(name) || null;
     }
 
     /**
-     * Reveals a move to the client if not already known. Throws if moveset is
-     * already full. Propagates to linked Movesets, sort of like a publisher in
-     * a pub/sub pattern.
-     * @param id ID name of the move.
+     * Reveals a move if not already known. Throws if moveset is already full.
+     * Propagates to linked Movesets.
+     * @param name Name of the move.
      * @param maxpp Max PP value of the move. Default maxed.
      */
-    public reveal(id: string, maxpp?: "min" | "max" | number): Move
+    public reveal(name: string, maxpp?: "min" | "max" | number): Move
     {
-        return this._moves[this.revealIndex(id, maxpp)]!;
-    }
-
-    /** Gets a move, calling `#reveal()` if not initially found. */
-    public getOrReveal(id: string): Move
-    {
-        return this.get(id) || this.reveal(id);
-    }
-
-    /** Gets the index of a move, calling `#reveal()` if not initially found. */
-    public getOrRevealIndex(id: string): number
-    {
-        let i = this.getIndex(id);
-        if (i < 0) i = this.revealIndex(id);
-        return i;
-    }
-
-    /** Gets the index of a move by name, or -1 if not found. */
-    private getIndex(name: string): number
-    {
-        for (let i = 0; i < this.unrevealed; ++i)
+        let result: Move | undefined;
+        for (const moveset of this.linked || [this])
         {
-            const move = this._moves[i];
-            if (move && move.name === name) return i;
-        }
-        return -1;
-    }
-
-    /**
-     * Gets the index of a newly revealed move by name. Throws if full.
-     * Propagates to linked Movesets, sort of like a publisher in a pub/sub
-     * pattern.
-     * @param id ID name of the move.
-     * @param maxpp Max PP value of the move. Default maxed.
-     */
-    private revealIndex(id: string, maxpp?: "min" | "max" | number): number
-    {
-        // transform links: pp (gen>=5: and maxpp) set to 5
-        // only for the transform target (index 0) will this not apply
-        let pp: number | undefined;
-        if (this.linked && this.linked[0] !== this) pp = 5;
-        const i = this.revealIndexImpl(id, maxpp, pp);
-
-        // propagate reveal call to other linked Movesets
-        if (this.linked)
-        {
-            for (const moveset of this.linked)
+            // TODO: do precondition checks at the beginning of the call
+            if (moveset._moves.size >= moveset._size)
             {
-                if (moveset === this) continue;
-                // transform links: pp (gen>=5: and maxpp) set to 5
-                // only for the transform target (index 0) will this not apply
-                pp = (this.linked && this.linked[0] !== moveset) ?
-                    5 : undefined;
-                moveset.revealIndexImpl(id, maxpp, pp);
+                throw new Error("Moveset is already full");
             }
+
+            let move = moveset._moves.get(name);
+            // reveal the move
+            if (!move)
+            {
+                // transform users: pp (gen>=5: and maxpp) set to 5
+                // only for the transform target (index 0) will this not apply
+                let pp: number | undefined;
+                if (this.linked && this.linked[0] !== moveset) pp = 5;
+
+                move = new Move(name, maxpp, pp);
+                moveset.revealImpl(move);
+            }
+
+            // record the result of the entire method call
+            if (moveset === this) result = move;
         }
 
-        return i;
+        this.addConstraint(name);
+
+        // istanbul ignore next: can't reproduce
+        if (!result) throw new Error("Moveset not linked to itself");
+        return result;
     }
 
-    /**
-     * Factored out code of `#revealIndex()` so reveal propagation doesn't
-     * repeat itself.
-     */
-    private revealIndexImpl(id: string, maxpp?: "min" | "max" | number,
-        pp?: number): number
+    /** Factored-out code of `#reveal()`. */
+    private revealImpl(move: Move): void
     {
-        // early return: already revealed
-        const index = this.getIndex(id);
-        if (index >= 0) return index;
-
-        if (this.unrevealed >= this._moves.length)
-        {
-            throw new Error("Moveset is already full");
-        }
-
-        const move = new Move(id, maxpp, pp);
-        this._moves[this.unrevealed] = move;
-
-        // propagate reveal call to parent Moveset
+        // propagate to base moveset first
         if (this.base)
         {
-            // parent should not have changed since initial link() call outside
-            //  of this code segment
-            if (this.base.unrevealed !== this.unrevealed)
+            if (this._moves.size !== this.base._moves.size)
             {
                 throw new Error("Base Moveset expected to not change");
             }
-
-            // only copy reference
-            this.base._moves[this.base.unrevealed++] = move;
+            this.base.revealImpl(move);
         }
 
-        return this.unrevealed++;
+        this._moves.set(move.name, move);
     }
 
     /**
      * Permanently replaces a move slot with another Move.
-     * @param id Name of the move to replace.
+     * @param name Name of the move to replace.
      * @param move New replacement Move.
      */
-    public replace(id: string, move: Move): void
+    public replace(name: string, move: Move): void
     {
-        const i = this.getIndex(id);
-        if (i < 0) throw new Error(`Moveset does not contain '${id}'`);
+        if (!this._moves.has(name))
+        {
+            throw new Error(`Moveset does not contain '${name}'`);
+        }
+        if (this._moves.has(move.name))
+        {
+            throw new Error(`Moveset cannot contain two '${move.name}' moves`);
+        }
 
-        this._moves[i] = move;
+        this._moves.delete(name);
+        this._moves.set(move.name, move);
+        // since the replace call succeeded, this must mean that this Moveset
+        //  does not have the move that is replacing the old one
+        this.addConstraint(move.name);
+    }
+
+    /**
+     * Adds a constraint to this Moveset that the remaining Moves do not match
+     * the given move name. Automatically propagates to base and linked
+     * Movesets.
+     */
+    private addConstraint(name: string): void
+    {
+        this._constraint.delete(name);
+        this.checkConstraint();
+    }
+
+    /**
+     * Checks if the shared `#constraint` set can be consumed, and does so if it
+     * can. Automatically propagates to base and linked Movesets.
+     */
+    private checkConstraint(): void
+    {
+        // see how many move slots are left to fill
+        const numUnknown = this._size - this._moves.size;
+
+        // constraints narrowed enough to infer the rest of the moveset
+        if (this._constraint.size <= numUnknown)
+        {
+            // consume each constraint
+            // propagate this inference to links/bases
+            for (const moveset of this.linked || [this])
+            {
+                // istanbul ignore next: can't reproduce
+                if (this._constraint !== moveset._constraint)
+                {
+                    throw new Error(
+                        "Linked moveset does not have the same constraints");
+                }
+
+                // transform users: pp (gen>=5: and maxpp) set to 5
+                // only for the transform target (index 0) will this not apply
+                let pp: number | undefined;
+                if (this.linked && this.linked[0] !== moveset) pp = 5;
+
+                for (const name of this._constraint)
+                {
+                    moveset.revealImpl(new Move(name, "max", pp));
+                }
+
+                moveset._size = moveset._moves.size;
+                if (moveset.base) moveset.base._size = moveset.base._moves.size;
+            }
+            this._constraint.clear();
+        }
     }
 
     // istanbul ignore next: only used for logging
     /**
      * Encodes all moveset data into a string.
-     * @param base Base moveset to contrast Moves with.
      * @param happiness Optional happiness value for calculating
      * Return/Frustration power.
      * @param hpType Optional Hidden Power type.
      */
-    public toString(base?: Moveset, happiness: number | null = null,
-        hpType?: string): string
+    public toString(happiness?: number | null, hpType?: string): string
     {
-        return this._moves
-            .map((m, i) => this.stringifyMove(m, happiness, hpType) +
-                // if overridden, include base move
-                (base && base !== this && base._moves[i] !== m ?
-                    ` (base: ${this.stringifyMove(base._moves[i], happiness,
-                        hpType)})` : ""))
-            .join(", ");
+        const result: string[] = [];
+
+        // fill in known moves
+        for (const move of this._moves.values())
+        {
+            result.push(this.stringifyMove(move, happiness, hpType));
+        }
+
+        // fill in unknown moves
+        for (let i = this._moves.size; i < this._size; ++i)
+        {
+            result.push("<unrevealed>");
+        }
+
+        return result.join(", ");
     }
 
     // istanbul ignore next: only used for logging

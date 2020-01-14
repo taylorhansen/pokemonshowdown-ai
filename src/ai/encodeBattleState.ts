@@ -394,23 +394,43 @@ export function encodeMajorStatusCounter(
 /** Length of the return value of `encodeMove()`. */
 export const sizeMove = dex.numMoves + /*pp and maxpp*/2;
 
+/** Formats move info into an array of numbers. Undefined means nonexistent. */
+export function encodeMove(move?: ReadonlyMove): number[];
 /**
- * Formats move info into an array of numbers. Null means unknown, while
- * undefined means nonexistent.
+ * Formats unknown move info into an array of numbers with a movepool
+ * constraint.
  */
-export function encodeMove(move?: ReadonlyMove | null): number[]
+export function encodeMove(move: null, constraint?: ReadonlySet<string>):
+    number[];
+export function encodeMove(move?: ReadonlyMove | null,
+    constraint?: ReadonlySet<string>): number[]
 {
     if (move === null)
     {
-        // move exists but hasn't been revealed yet
-        // TODO: use likelihood that a pokemon has a certain move/pp
-        const v = 1 / dex.numMoves;
-        return [...Array.from({length: dex.numMoves}, () => v), 32, 32];
+        // move may exist on an unrevealed pokemon
+        const result: number[] = [];
+        if (constraint)
+        {
+            // encode constraint data into unknown move
+            const v = 1 / constraint.size;
+            result.push(...Object.keys(dex.moves).map(
+                    m => constraint.has(m) ? v : 0));
+        }
+        else
+        {
+            // assume all moves are equally probable
+            const v = 1 / dex.numMoves;
+            result.push(...Array.from({length: dex.numMoves}, () => v));
+        }
+        // fill in unknown pp value
+        result.push(-1, -1);
+
+        return result;
     }
     // move doesn't exist
     if (!move) return [...Array.from({length: dex.numMoves}, () => 0), 0, 0];
 
-    // TODO: normalize pp/maxpp
+    // TODO: normalize pp/maxpp (ratio?)
     return [...oneHot(move.id, dex.numMoves), move.pp, move.maxpp];
 }
 
@@ -434,7 +454,41 @@ export function encodeMoveset(moveset?: ReadonlyMoveset | null): number[]
         return ([] as number[]).concat(
                 ...Array.from({length: Moveset.maxSize}, () => move));
     }
-    return ([] as number[]).concat(...moveset.moves.map(encodeMove));
+
+    // encode known moves
+    const knownMoves: number[] = [];
+    for (const move of moveset.moves.values())
+    {
+        knownMoves.push(...encodeMove(move));
+    }
+
+    // encode unknown moves
+    const unknownMoves: number[] = [];
+    if (moveset.moves.size < moveset.size)
+    {
+        // precalculate unknown move encoding
+        const unknownMove = encodeMove(null, moveset.constraint);
+
+        for (let i = moveset.moves.size; i < moveset.size; ++i)
+        {
+            unknownMoves.push(...unknownMove);
+        }
+    }
+
+    // encode empty moveslots
+    const emptyMoves: number[] = [];
+    if (moveset.size < Moveset.maxSize)
+    {
+        // precalculate empty move encoding
+        const emptyMove = encodeMove();
+
+        for (let i = moveset.size; i < Moveset.maxSize; ++i)
+        {
+            emptyMoves.push(...emptyMove);
+        }
+    }
+
+    return [...knownMoves, ...unknownMoves, ...emptyMoves];
 }
 
 /** Length of the return value of `encodeHP()`. */

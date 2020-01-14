@@ -17,7 +17,7 @@ import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
 import { MajorStatusCounter } from "../../src/battle/state/MajorStatusCounter";
-import { Move } from "../../src/battle/state/Move";
+import { Move, ReadonlyMove } from "../../src/battle/state/Move";
 import { Moveset } from "../../src/battle/state/Moveset";
 import { Pokemon } from "../../src/battle/state/Pokemon";
 import { PokemonTraits } from "../../src/battle/state/PokemonTraits";
@@ -238,7 +238,7 @@ describe("BattleState encoders", function()
         size: sizeMajorStatusCounter
     });
 
-    testEncoder("Move", encodeMove,
+    testEncoder("Move", encodeMove as (move: ReadonlyMove) => number[],
     {
         init: () => new Move("tackle"),
         size: sizeMove
