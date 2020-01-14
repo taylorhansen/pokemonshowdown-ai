@@ -49,6 +49,13 @@ describe("Move", function()
                 expect(move.pp).to.equal(64);
                 expect(move.maxpp).to.equal(64);
             });
+
+            it("Should set negative maxpp to 1", function()
+            {
+                const move = new Move("splash", -20);
+                expect(move.pp).to.equal(1);
+                expect(move.maxpp).to.equal(1);
+            });
         });
 
         describe("pp parameter", function()
