@@ -371,23 +371,16 @@ export class Pokemon implements ReadonlyPokemon
     /** Applies the Disable volatile status to a move. */
     public disableMove(name: string): void { this.volatile.disableMove(name); }
     /** Overrides a move slot via Mimic until switched out. */
-    public mimic(newId: string): void
+    public mimic(name: string): void
     {
         // mimicked moves have 5 pp and maxed maxpp
-        this.volatile.overrideMoveset.replace("mimic",
-            new Move(newId, "max", 5));
+        this.moveset.replace("mimic", new Move(name, "max", 5));
     }
     /** Permanently replaces a move slot via Sketch. */
-    public sketch(newId: string): void
+    public sketch(name: string): void
     {
         // sketched moves have no pp ups applied
-        const move = new Move(newId, "min");
-        // prevent sketch from permanently changing transform base
-        if (!this.volatile.transformed)
-        {
-            this.baseMoveset.replace("sketch", move);
-        }
-        this.volatile.overrideMoveset.replace("sketch", move);
+        this.moveset.replace("sketch", new Move(name, "min"), /*base*/true);
     }
     /** @override */
     public readonly baseMoveset: Moveset;

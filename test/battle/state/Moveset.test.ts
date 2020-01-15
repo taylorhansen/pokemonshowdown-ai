@@ -364,5 +364,30 @@ describe("Moveset", function()
             expect(moveset.get("splash")).to.not.be.null;
             expect(moveset.get("tackle")).to.not.be.null;
         });
+
+        it("Should not propagate to base", function()
+        {
+            const moveset = new Moveset();
+            const base = new Moveset();
+            moveset.link(base, "base");
+
+            moveset.reveal("tackle");
+            moveset.replace("tackle", new Move("splash"));
+            expect(moveset.get("splash")).to.not.be.null;
+            expect(base.get("splash")).to.be.null;
+        });
+
+        it("Should propagate to base if specified", function()
+        {
+            const moveset = new Moveset();
+            const base = new Moveset();
+            moveset.link(base, "base");
+
+            moveset.reveal("tackle");
+            moveset.replace("tackle", new Move("splash"), /*base*/true);
+            // copied by-ref
+            expect(moveset.get("splash")).to.equal(base.get("splash"))
+                .and.to.not.be.null;
+        });
     });
 });

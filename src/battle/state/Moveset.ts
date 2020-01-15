@@ -223,8 +223,18 @@ export class Moveset implements ReadonlyMoveset
      * Permanently replaces a move slot with another Move.
      * @param name Name of the move to replace.
      * @param move New replacement Move.
+     * @param base Whether to propagate this call to the base Moveset.
      */
-    public replace(name: string, move: Move): void
+    public replace(name: string, move: Move, base?: boolean): void
+    {
+        this.replaceImpl(name, move, base);
+        // since the replace call succeeded, this must mean that this Moveset
+        //  does not have the move that is replacing the old one
+        this.addConstraint(move.name);
+    }
+
+    /** Factored-out code for `#replace()`. */
+    private replaceImpl(name: string, move: Move, base?: boolean): void
     {
         if (!this._moves.has(name))
         {
@@ -235,11 +245,10 @@ export class Moveset implements ReadonlyMoveset
             throw new Error(`Moveset cannot contain two '${move.name}' moves`);
         }
 
+        if (base) this.base?.replaceImpl(name, move, true);
+
         this._moves.delete(name);
         this._moves.set(move.name, move);
-        // since the replace call succeeded, this must mean that this Moveset
-        //  does not have the move that is replacing the old one
-        this.addConstraint(move.name);
     }
 
     /**
