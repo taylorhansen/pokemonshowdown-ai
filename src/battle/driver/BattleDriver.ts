@@ -548,10 +548,7 @@ export class BattleDriver implements DriverEventHandler
     public restoreMoves(event: RestoreMoves): void
     {
         const moveset = this.getMon(event.monRef).moveset;
-        for (const move of moveset.moves.values())
-        {
-            if (move) move.pp = move.maxpp;
-        }
+        for (const move of moveset.moves.values()) move.pp = move.maxpp;
     }
 
     /**

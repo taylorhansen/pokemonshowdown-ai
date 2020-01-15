@@ -17,7 +17,7 @@ import { BattleState } from "../../src/battle/state/BattleState";
 import { HP } from "../../src/battle/state/HP";
 import { ItemTempStatus } from "../../src/battle/state/ItemTempStatus";
 import { MajorStatusCounter } from "../../src/battle/state/MajorStatusCounter";
-import { Move, ReadonlyMove } from "../../src/battle/state/Move";
+import { Move } from "../../src/battle/state/Move";
 import { Moveset } from "../../src/battle/state/Moveset";
 import { Pokemon } from "../../src/battle/state/Pokemon";
 import { PokemonTraits } from "../../src/battle/state/PokemonTraits";
@@ -30,6 +30,7 @@ import { TeamStatus } from "../../src/battle/state/TeamStatus";
 import { TempStatus } from "../../src/battle/state/TempStatus";
 import { VariableTempStatus } from "../../src/battle/state/VariableTempStatus";
 import { VolatileStatus } from "../../src/battle/state/VolatileStatus";
+import { setAllVolatiles } from "../battle/state/helpers";
 
 const switchInOptions: DriverSwitchOptions =
     {species: "Magikarp", level: 100, gender: "M", hp: 200, hpMax: 200};
@@ -83,6 +84,7 @@ describe("BattleState encoders", function()
     interface CaseArgsBase<TState>
     {
         name?: string;
+        encoder(state: TState): number[];
         init(): TState;
     }
 
@@ -100,9 +102,8 @@ describe("BattleState encoders", function()
 
     type CaseArgs<TState> = CaseArgsSize<TState> | CaseArgsValues<TState>;
 
-    function testEncoder<TState>(name: string,
-        encoder: (state: TState) => number[], ...cases: CaseArgs<TState>[]):
-        void
+    function testEncoder<TState, TStates extends TState[]>(name: string,
+        ...cases: {[T in keyof TStates]: CaseArgs<TStates[T]>}): void
     {
         describe(`encode${name}()`, function()
         {
@@ -124,7 +125,7 @@ describe("BattleState encoders", function()
                         const values = c.values;
                         it(`Should be [${values.join(", ")}]`, function()
                         {
-                            expect(encoder(state)).to.have.members(values);
+                            expect(c.encoder(state)).to.have.members(values);
                         });
                     }
                     else if (c.size)
@@ -133,7 +134,7 @@ describe("BattleState encoders", function()
                         it(`Should have length of ${size} and contain only ` +
                             "finite numbers", function()
                         {
-                            const data = encoder(state);
+                            const data = c.encoder(state);
                             expect(data).to.have.lengthOf(size);
                             for (const x of data)
                             {
@@ -149,13 +150,17 @@ describe("BattleState encoders", function()
 
     const map = {a: 0, b: 1, c: 2};
     testEncoder("PossibilityClass",
-        (pc: PossibilityClass<number>) => encodePossiblityClass(pc, x => x),
     {
+        name: "Unnarrowed",
+        encoder: (pc: PossibilityClass<number>) =>
+            encodePossiblityClass(pc, x => x),
         init: () => new PossibilityClass(map),
         values: [1 / 3, 1 / 3, 1 / 3]
     },
     {
         name: "Fully narrowed",
+        encoder: (pc: PossibilityClass<number>) =>
+            encodePossiblityClass(pc, x => x),
         init()
         {
             const pc = new PossibilityClass(map);
@@ -165,26 +170,71 @@ describe("BattleState encoders", function()
         values: [0, 1, 0]
     });
 
-    testEncoder("TempStatus", encodeTempStatus,
+    testEncoder("TempStatus",
     {
+        name: "Unset",
+        encoder: encodeTempStatus,
         init: () => new TempStatus("taunt", 5),
         size: sizeTempStatus
     });
 
-    testEncoder("ItemTempStatus", encodeItemTempStatus,
+    testEncoder("ItemTempStatus",
     {
-        init: () => new ItemTempStatus([5, 8], {reflect: "lightclay"}),
+        name: "Fully Initialized",
+        encoder: encodeItemTempStatus,
+        init()
+        {
+            const its = new ItemTempStatus([5, 8], {reflect: "lightclay"});
+            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
+            its.start(mon, "reflect");
+            return its;
+        },
         size: 2
+    },
+    {
+        name: "Fully Initialized + Extended",
+        encoder: encodeItemTempStatus,
+        init()
+        {
+            const its = new ItemTempStatus([5, 8], {reflect: "lightclay"});
+            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
+            mon.setItem("lightclay");
+            its.start(mon, "reflect");
+            return its;
+        },
+        size: 2
+    },
+    {
+        name: "Fully Initialized + Infinite",
+        encoder: encodeItemTempStatus,
+        init()
+        {
+            const its = new ItemTempStatus([5, 8], {reflect: "lightclay"});
+            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
+            its.start(mon, "reflect", /*infinite*/true);
+            return its;
+        },
+        size: 2
+    },
+    {
+        name: "Unset",
+        encoder: encodeItemTempStatus,
+        init: () => new ItemTempStatus([5, 8], {reflect: "lightclay"}),
+        values: [0, 0]
     });
 
-    testEncoder("VariableTempStatus", encodeVariableTempStatus,
+    testEncoder("VariableTempStatus",
     {
+        name: "Unset",
+        encoder: encodeVariableTempStatus,
         init: () => new VariableTempStatus({x: 1, y: 2}, 5),
         size: 2
     });
 
-    testEncoder("StatRange", encodeStatRange as (stat: StatRange) => number[],
+    testEncoder("StatRange",
     {
+        name: "Fully Initialized",
+        encoder: encodeStatRange,
         init()
         {
             const stat = new StatRange(/*hp*/false);
@@ -192,10 +242,53 @@ describe("BattleState encoders", function()
             return stat;
         },
         size: sizeStatRange
+    },
+    {
+        name: "Fully Initialized + HP",
+        encoder: encodeStatRange,
+        init()
+        {
+            const stat = new StatRange(/*hp*/true);
+            stat.calc(100, 100);
+            return stat;
+        },
+        size: sizeStatRange
+    },
+    {
+        name: "Uninitialized",
+        encoder: encodeStatRange,
+        init: () => new StatRange(/*hp*/false),
+        size: sizeStatRange
+    },
+    {
+        name: "Uninitialized + HP",
+        encoder: encodeStatRange,
+        init: () => new StatRange(/*hp*/true),
+        size: sizeStatRange
+    },
+    {
+        name: "Unrevealed",
+        encoder: () => encodeStatRange(null, /*hp*/false),
+        init: () => null,
+        size: sizeStatRange
+    },
+    {
+        name: "Unrevealed + HP",
+        encoder: () => encodeStatRange(null, /*hp*/true),
+        init: () => null,
+        size: sizeStatRange
+    },
+    {
+        name: "Nonexistent",
+        encoder: encodeStatRange,
+        init: () => undefined,
+        size: sizeStatRange
     });
 
-    testEncoder("StatTable", encodeStatTable,
+    testEncoder("StatTable",
     {
+        name: "Fully Initialized",
+        encoder: encodeStatTable,
         init()
         {
             const stats = new StatTable();
@@ -204,10 +297,24 @@ describe("BattleState encoders", function()
             return stats;
         },
         size: sizeStatTable
+    },
+    {
+        name: "Unrevealed",
+        encoder: encodeStatTable,
+        init: () => null,
+        size: sizeStatTable
+    },
+    {
+        name: "Nonexistent",
+        encoder: encodeStatTable,
+        init: () => undefined,
+        size: sizeStatTable
     });
 
-    testEncoder("PokemonTraits", encodePokemonTraits,
+    testEncoder("PokemonTraits",
     {
+        name: "Fully Initialized",
+        encoder: encodePokemonTraits,
         init()
         {
             const traits = new PokemonTraits();
@@ -217,10 +324,37 @@ describe("BattleState encoders", function()
             return traits;
         },
         size: sizePokemonTraits
+    },
+    {
+        name: "Added Type",
+        encoder: (traits: PokemonTraits) => encodePokemonTraits(traits, "fire"),
+        init()
+        {
+            const traits = new PokemonTraits();
+            traits.init();
+            traits.setSpecies("Magikarp");
+            traits.stats.level = 100;
+            return traits;
+        },
+        size: sizePokemonTraits
+    },
+    {
+        name: "Unrevealed",
+        encoder: encodePokemonTraits,
+        init: () => null,
+        size: sizePokemonTraits
+    },
+    {
+        name: "Nonexistent",
+        encoder: encodePokemonTraits,
+        init: () => undefined,
+        size: sizePokemonTraits
     });
 
-    testEncoder("VolatileStatus", encodeVolatileStatus,
+    testEncoder("VolatileStatus",
     {
+        name: "Fully Initialized",
+        encoder: encodeVolatileStatus,
         init()
         {
             const v = new VolatileStatus();
@@ -230,34 +364,106 @@ describe("BattleState encoders", function()
             return v;
         },
         size: sizeVolatileStatus
+    },
+    {
+        name: "Everything Set",
+        encoder: encodeVolatileStatus,
+        init()
+        {
+            const v = new VolatileStatus();
+            setAllVolatiles(v);
+            return v;
+        },
+        size: sizeVolatileStatus
     });
 
-    testEncoder("MajorStatusCounter", encodeMajorStatusCounter,
+    testEncoder("MajorStatusCounter",
     {
+        name: "Fully Initialized",
+        encoder: encodeMajorStatusCounter,
         init: () => new MajorStatusCounter(),
+        size: sizeMajorStatusCounter
+    },
+    {
+        name: "Unrevealed",
+        encoder: encodeMajorStatusCounter,
+        init: () => null,
+        size: sizeMajorStatusCounter
+    },
+    {
+        name: "Nonexistent",
+        encoder: encodeMajorStatusCounter,
+        init: () => undefined,
         size: sizeMajorStatusCounter
     });
 
-    testEncoder("Move", encodeMove as (move: ReadonlyMove) => number[],
+    testEncoder("Move",
     {
+        name: "Fully Initialized",
+        encoder: encodeMove,
         init: () => new Move("tackle"),
+        size: sizeMove
+    },
+    {
+        name: "Unrevealed",
+        encoder: encodeMove,
+        init: () => null,
+        size: sizeMove
+    },
+    {
+        name: "Unrevealed + Constraint",
+        encoder: (s: Set<string>) => encodeMove(null, s),
+        init: () => new Set(["splash", "tackle"]),
+        size: sizeMove
+    },
+    {
+        name: "Nonexistent",
+        encoder: encodeMove,
+        init: () => undefined,
         size: sizeMove
     });
 
-    testEncoder("Moveset", encodeMoveset,
+    testEncoder("Moveset",
     {
+        name: "Fully Initialized",
+        encoder: encodeMoveset,
+        init: () => new Moveset(["splash", "tackle", "hiddenpower", "return"]),
+        size: sizeMoveset
+    },
+    {
+        name: "Partially Initialized",
+        encoder: encodeMoveset,
+        init()
+        {
+            const moveset = new Moveset(["splash", "tackle", "metronome"], 2);
+            moveset.reveal("splash");
+            return moveset;
+        },
+        size: sizeMoveset
+    },
+    {
+        name: "Uninitialized",
+        encoder: encodeMoveset,
         init: () => new Moveset(),
+        size: sizeMoveset
+    },
+    {
+        name: "Unrevealed",
+        encoder: encodeMoveset,
+        init: () => null,
+        size: sizeMoveset
+    },
+    {
+        name: "Nonexistent",
+        encoder: encodeMoveset,
+        init: () => undefined,
         size: sizeMoveset
     });
 
-    testEncoder("HP", encodeHP,
+    testEncoder("HP",
     {
-        name: "Uninitialized",
-        init: () => new HP(/*isPercent*/false),
-        values: [0, 0]
-    },
-    {
-        name: "Initialized",
+        name: "Fully Initialized",
+        encoder: encodeHP,
         init()
         {
             const hp = new HP(/*isPercent*/false);
@@ -265,16 +471,30 @@ describe("BattleState encoders", function()
             return hp;
         },
         values: [50, 100]
-    });
-
-    testEncoder("Pokemon", encodePokemon,
-    {
-        name: "Inactive",
-        init: () => new Pokemon("Magikarp", /*hpPercent*/false),
-        size: sizePokemon
     },
     {
+        name: "Uninitialized",
+        encoder: encodeHP,
+        init: () => new HP(/*isPercent*/false),
+        values: [0, 0]
+    },
+    {
+        name: "Unrevealed",
+        encoder: encodeHP,
+        init: () => null,
+        values: [100, 100]
+    },
+    {
+        name: "Nonexistent",
+        encoder: encodeHP,
+        init: () => undefined,
+        values: [-1, -1]
+    });
+
+    testEncoder("Pokemon",
+    {
         name: "Active",
+        encoder: encodePokemon,
         init()
         {
             const mon = new Pokemon("Magikarp", /*hpPercent*/false);
@@ -282,16 +502,36 @@ describe("BattleState encoders", function()
             return mon;
         },
         size: sizeActivePokemon
+    },
+    {
+        name: "Inactive",
+        encoder: encodePokemon,
+        init: () => new Pokemon("Magikarp", /*hpPercent*/false),
+        size: sizePokemon
+    },
+    {
+        name: "Unrevealed",
+        encoder: encodePokemon,
+        init: () => null,
+        size: sizePokemon
+    },
+    {
+        name: "Nonexistent",
+        encoder: encodePokemon,
+        init: () => undefined,
+        size: sizePokemon
     });
 
-    testEncoder("TeamStatus", encodeTeamStatus,
+    testEncoder("TeamStatus",
     {
+        encoder: encodeTeamStatus,
         init: () => new TeamStatus(),
         size: sizeTeamStatus
     });
 
-    testEncoder("Team", encodeTeam,
+    testEncoder("Team",
     {
+        encoder: encodeTeam,
         init()
         {
             const team = new Team("us");
@@ -302,14 +542,16 @@ describe("BattleState encoders", function()
         size: sizeTeam
     });
 
-    testEncoder("RoomStatus", encodeRoomStatus,
+    testEncoder("RoomStatus",
     {
+        encoder: encodeRoomStatus,
         init: () => new RoomStatus(),
         size: sizeRoomStatus
     });
 
-    testEncoder("BattleState", encodeBattleState,
+    testEncoder("BattleState",
     {
+        encoder: encodeBattleState,
         init()
         {
             const state = new BattleState();

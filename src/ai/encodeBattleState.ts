@@ -92,16 +92,21 @@ export function encodeItemTempStatus<TStatusType extends string>(
 {
     // modify one-hot value to interpolate status turns/duration
     let one: number;
-    if (its.type === "none") one = 0; // not applicable
-    else if (its.duration === null) one = 1; // infinite duration
+    // not applicable
+    if (its.type === "none") one = 0;
+    // infinite duration
+    else if (its.duration === null) one = 1;
+    // currently assuming short duration but could have extension item
     else if (its.duration === its.durations[0] && its.source &&
-        !its.source.definiteValue)
+        !its.source.definiteValue &&
+        its.source.possibleValues.has(its.items[its.type]))
     {
-        // could have extension item so take average of both durations
+        // take average of both durations since either is likely
         // TODO: interpolate instead by likelihood that the source has the item
         one = limitedStatusTurns(its.turns + 1,
             (its.durations[0] + its.durations[1]) / 2);
     }
+    // extension item possibility (and therefore duration) is definitely known
     else one = limitedStatusTurns(its.turns + 1, its.duration);
 
     return [
@@ -133,10 +138,13 @@ export function encodeVariableTempStatus<TStatusType extends string>(
 /** Length of the return value of `encodeStatRange()`. */
 export const sizeStatRange = /*min*/1 + /*max*/1 + /*base*/1;
 
+/** Max possible base stat. */
+const maxBaseStat = 255;
 /** Max possible normal stat. */
-const maxStat = StatRange.calcStat(/*hp*/false, 255, 100, 252, 31, 1.1);
+const maxStat = StatRange.calcStat(/*hp*/false, maxBaseStat, 100, 252, 31, 1.1);
 /** Max possible hp stat. */
-const maxStatHP = StatRange.calcStat(/*hp*/true, 255, 100, 252, 31, 1.1);
+const maxStatHP = StatRange.calcStat(/*hp*/true, maxBaseStat, 100, 252, 31,
+    1.1);
 
 /** Formats stat range info into an array of numbers. */
 export function encodeStatRange(stat: ReadonlyStatRange): number[];
@@ -154,6 +162,7 @@ export function encodeStatRange(stat?: undefined): number[];
 export function encodeStatRange(stat?: ReadonlyStatRange | null,
     hp?: boolean): number[]
 {
+    // find highest stat value for this specific StatRange (hp or normal stat)
     const normal = hp || (stat && stat.hp) ? maxStatHP : maxStat;
 
     // average max stat as a guess
@@ -162,9 +171,9 @@ export function encodeStatRange(stat?: ReadonlyStatRange | null,
 
     // normalize based on max possible stats
     return [
-        (stat.min || normal / 2) / normal,
-        (stat.max || normal / 2) / maxStat,
-        (stat.base || 127.5) / 255
+        (stat.min ?? normal / 2) / normal,
+        (stat.max ?? normal / 2) / normal,
+        (stat.base ?? 127.5) / maxBaseStat
     ];
 }
 
