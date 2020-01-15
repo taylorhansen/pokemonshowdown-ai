@@ -331,9 +331,9 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     }
     else disabled = Array.from({length: dex.numMoves}, () => 0);
     const grudge = status.grudge ? 1 : 0;
-    const identified = ["foresight", "miracleeye"]
-        .map(v => status.identified === v ? 1 : 0);
     const healBlock = encodeTempStatus(status.healBlock);
+    const identified = ["foresight", "miracleEye"]
+        .map(v => status.identified === v ? 1 : 0);
     const lockedMove = encodeVariableTempStatus(status.lockedMove);
     const minimize = status.minimize ? 1 : 0;
     const mudSport = status.mudSport ? 1 : 0;
