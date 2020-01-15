@@ -54,11 +54,11 @@ export class Moveset implements ReadonlyMoveset
     private _size: number;
 
     /**
-     * Shared array of linked Movesets to propagate `#reveal()` calls. Can be
-     * thought of as the message broker in a pub/sub pattern. Index 0 refers to
-     * the base of the link (aka target of Transform).
+     * Shared set of Movesets for propagating `#reveal()` calls due to Transform
+     * inferences. Includes a boolean value to indicate whether the Moveset is a
+     * Transform user (true) or target (false).
      */
-    private linked: Moveset[] | null = null;
+    private linked: Map<Moveset, boolean> = new Map([[this, false]]);
 
     /** Parent Moveset. If not null, `#reveal()` will copy Move refs. */
     private base: Moveset | null = null;
@@ -113,47 +113,73 @@ export class Moveset implements ReadonlyMoveset
         // clear previous subscriptions if any
         this.isolate();
 
-        // copy known moves
-        this._moves.clear();
-        for (const move of moveset._moves.values())
+        // reveal() calls are propagated differently for base than others
+        if (info === "base")
         {
-            // base: copy moves by reference
-            if (info === "base") this._moves.set(move.name, move);
-            // transform: deep copy but set pp (gen>=5: and maxpp) to 5
-            else this._moves.set(move.name, new Move(move.name, move.maxpp, 5));
+            if (moveset.base)
+            {
+                throw new Error("Base Moveset can't also have a base Moveset");
+            }
+
+            const linkData = moveset.linked.get(moveset);
+            if (linkData === true)
+            {
+                throw new Error("Transform user can't be a base Moveset");
+            }
+            // should never happen
+            // istanbul ignore if: can't reproduce
+            if (linkData === undefined)
+            {
+                throw new Error("Base Moveset not linked to itself");
+            }
+
+            // copy moves by reference
+            // can't copy map reference since the two can diverge
+            // changes to Moves are automatically propagated to base set
+            this._moves = new Map(moveset._moves);
+
+            // reclaim linked map from base moveset
+            this.linked = moveset.linked;
+            moveset.isolate();
+            this.linked.set(this, false);
+
+            this.base = moveset;
+        }
+        else
+        {
+            // future inferences have to be manually propagated to all other
+            //  linked Movesets since pp values are different
+            // add to target Moveset's shared linked map
+            this.linked = moveset.linked;
+            this.linked.set(this, true);
+
+            // deep copy known moves due to transform (pp=5)
+            this._moves = new Map(
+                [...moveset._moves]
+                    .map(([name, m]) => [name, new Move(m.name, m.maxpp, 5)]));
         }
 
         // copy unknown moves
         this._constraint = moveset._constraint;
         this._size = moveset.size;
-
-        // reveal() calls are propagated differently for base than others
-        if (info === "base") this.base = moveset;
-        else if (moveset.linked)
-        {
-            // add to target Moveset's linked array
-            // TODO: what if base is left in after isolate?
-            this.linked = moveset.linked;
-            this.linked.push(this);
-        }
-        // initialize linked array
-        else this.linked = moveset.linked = [moveset, this];
     }
 
     /** Isolates this Moveset and removes its shared link to other Movesets. */
     public isolate(): void
     {
         // preserve Move inference for other linked Movesets
-        if (this.linked && this.base) this.linked.push(this.base);
+        if (this.base)
+        {
+            this.linked.set(this.base, false);
+            this.base = null;
+        }
 
-        this.base = null;
+        // copy constraint so it's not linked anymore
+        this._constraint = new Set(this._constraint);
 
-        // istanbul ignore if: can't test for this
-        if (!this.linked) return;
-        const i = this.linked.findIndex(m => m === this);
-        // istanbul ignore else: can't reproduce
-        if (i >= 0) this.linked.splice(i, 1);
-        this.linked = null;
+        // remove this moveset from the linked map
+        this.linked.delete(this);
+        this.linked = new Map([[this, false]]);
     }
 
     /** @override */
@@ -171,7 +197,7 @@ export class Moveset implements ReadonlyMoveset
     public reveal(name: string, maxpp?: "min" | "max" | number): Move
     {
         let result: Move | undefined;
-        for (const moveset of this.linked || [this])
+        for (const [moveset, transformed] of this.linked)
         {
             // TODO: do precondition checks at the beginning of the call
             if (moveset._moves.size >= moveset._size)
@@ -184,9 +210,7 @@ export class Moveset implements ReadonlyMoveset
             if (!move)
             {
                 // transform users: pp (gen>=5: and maxpp) set to 5
-                // only for the transform target (index 0) will this not apply
-                let pp: number | undefined;
-                if (this.linked && this.linked[0] !== moveset) pp = 5;
+                const pp = transformed ? 5 : undefined;
 
                 move = new Move(name, maxpp, pp);
                 moveset.revealImpl(move);
@@ -276,7 +300,7 @@ export class Moveset implements ReadonlyMoveset
         {
             // consume each constraint
             // propagate this inference to links/bases
-            for (const moveset of this.linked || [this])
+            for (const [moveset, transformed] of this.linked)
             {
                 // istanbul ignore next: can't reproduce
                 if (this._constraint !== moveset._constraint)
@@ -286,9 +310,7 @@ export class Moveset implements ReadonlyMoveset
                 }
 
                 // transform users: pp (gen>=5: and maxpp) set to 5
-                // only for the transform target (index 0) will this not apply
-                let pp: number | undefined;
-                if (this.linked && this.linked[0] !== moveset) pp = 5;
+                const pp = transformed ? 5 : undefined;
 
                 for (const name of this._constraint)
                 {

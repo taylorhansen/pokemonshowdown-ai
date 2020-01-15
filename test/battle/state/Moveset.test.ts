@@ -164,6 +164,27 @@ describe("Moveset", function()
                 expect(moveset.get("splash")).to.be.null;
             });
 
+            it("Should reclaim link if linked again after isolate", function()
+            {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                const transform = new Moveset();
+                moveset.link(base, "base");
+                transform.link(moveset, "transform");
+
+                moveset.isolate();
+                moveset.link(base, "base");
+                // to test this, see if changing the base moveset causes a
+                //  change in the transform user
+                // if the moveset didn't reclaim its link, the move would be
+                //  propagated normally
+                // technically modifying the base moveset is an error, but for
+                //  now it isn't being caught
+                base.reveal("tackle");
+                expect(moveset.get("tackle")).to.be.null;
+                expect(transform.get("tackle")).to.be.null;
+            });
+
             it("Should throw if base changed after reveal", function()
             {
                 const moveset = new Moveset();
@@ -172,6 +193,28 @@ describe("Moveset", function()
                 base.reveal("splash");
                 expect(() => moveset.reveal("tackle")).to.throw(Error,
                     "Base Moveset expected to not change");
+            });
+
+            it("Should throw if base Moveset already has a base", function()
+            {
+                const moveset = new Moveset();
+                const base1 = new Moveset();
+                const base2 = new Moveset();
+                base1.link(base2, "base");
+
+                expect(() => moveset.link(base1, "base")).to.throw(Error,
+                    "Base Moveset can't also have a base Moveset");
+            });
+
+            it("Should throw if base Moveset is a Transform user", function()
+            {
+                const moveset = new Moveset();
+                const base = new Moveset();
+                const transform = new Moveset();
+                base.link(transform, "transform");
+
+                expect(() => moveset.link(base, "base")).to.throw(Error,
+                    "Transform user can't be a base Moveset");
             });
         });
 
@@ -255,11 +298,14 @@ describe("Moveset", function()
             const transform2 = new Moveset();
             transform1.link(moveset, "transform");
             transform2.link(moveset, "transform");
+
             moveset.isolate();
             transform2.reveal("splash");
             expect(moveset.get("splash")).to.be.null;
             expect(transform1.get("splash")).to.not.be.null;
+            expect(transform1.get("splash")!.pp).to.equal(5);
             expect(transform2.get("splash")).to.not.be.null;
+            expect(transform2.get("splash")!.pp).to.equal(5);
         });
 
         it("Should link base", function()
@@ -271,12 +317,16 @@ describe("Moveset", function()
             moveset.link(base, "base");
             transform1.link(moveset, "transform");
             transform2.link(moveset, "transform");
+
             moveset.isolate();
             transform2.reveal("splash");
             expect(moveset.get("splash")).to.be.null;
             expect(base.get("splash")).to.not.be.null;
+            expect(base.get("splash")!.pp).to.equal(64);
             expect(transform1.get("splash")).to.not.be.null;
+            expect(transform1.get("splash")!.pp).to.equal(5);
             expect(transform2.get("splash")).to.not.be.null;
+            expect(transform2.get("splash")!.pp).to.equal(5);
         });
     });
 
