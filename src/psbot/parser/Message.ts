@@ -2,6 +2,7 @@
  * @file Interfaces and helper functions for dealing with the arguments of a
  * MessageHandler.
  */
+import { MoveTarget } from "../../battle/dex/dex-util";
 import { DriverInitPokemon } from "../../battle/driver/DriverEvent";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus, RoomType } from
     "../helpers";
@@ -147,7 +148,7 @@ export interface RequestMove
     /** Maximum amount of power points. */
     readonly maxpp?: number;
     /** Target of the move. */
-    readonly target?: string;
+    readonly target?: MoveTarget;
     /** Whether the move is currently disabled. */
     readonly disabled: boolean;
 }
