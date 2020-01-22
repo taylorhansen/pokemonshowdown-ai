@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import "mocha";
-import { PSBattle } from "../../src/psbot/PSBattle";
 import { BattleAgent } from "../../src/battle/agent/BattleAgent";
-import { Sender } from "../../src/psbot/PSBot";
 import { Logger } from "../../src/Logger";
 import { RequestMessage } from "../../src/psbot/parser/Message";
+import { PSBattle } from "../../src/psbot/PSBattle";
+import { Sender } from "../../src/psbot/PSBot";
 
 describe("PSBattle", function()
 {

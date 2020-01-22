@@ -881,26 +881,24 @@ export class PSEventHandler
         const result: AnyDriverEvent[] = [{type: "transform", source, target}];
 
         // use lastRequest to infer more details
-        if (!this.lastRequest || !this.lastRequest.active) return result;
-        // transform reverts after fainting but not after being forced to
-        //  choose a switch-in without fainting
-        if (this.lastRequest.forceSwitch &&
-            this.lastRequest.side.pokemon[0].hp === 0) return result;
-        // if species don't match, must've been dragged out before we could
-        //  infer any other features
-        // TODO: workaround not having access to state object
-        // this could be done if a hook was added at the end of #handleEvents(),
-        //  which can be disabled if something happens that would force a
-        //  discarding of transformPost data
-        /*if (this.lastRequest.side.pokemon[0].details.species !==
-            source.species) return result;*/
+        if (!this.lastRequest || !this.lastRequest.active ||
+            // transform reverts after fainting but not after being forced to
+            //  choose a switch-in without fainting
+            (this.lastRequest.forceSwitch &&
+                this.lastRequest.side.pokemon[0].hp === 0) ||
+            // must've been dragged out (e.g. by roar)
+            // TODO: if duplicate nicknames are allowed, figure out a better way
+            //  to check for this
+            this.lastRequest.side.pokemon[0].nickname !== event.source.nickname)
+        {
+            return result;
+        }
 
         result.push(
-            {
-                type: "transformPost", monRef: source,
-                moves: this.lastRequest.active[0].moves,
-                stats: this.lastRequest.side.pokemon[0].stats
-            });
+        {
+            type: "transformPost", monRef: source,
+            moves: this.lastRequest.active[0].moves
+        });
         return result;
     }
 

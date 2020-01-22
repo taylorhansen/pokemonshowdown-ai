@@ -1072,25 +1072,9 @@ describe("Pokemon", function()
             mon2.switchInto();
 
             mon.transform(mon2);
-            mon.transformPost([{id: "splash", pp: 5, maxpp: 64}],
-                {atk: 100, def: 103, spa: 100, spd: 100, spe: 200});
-
-            function check(m: Pokemon)
-            {
-                expect(m.moveset.get("splash")).to.not.be.null;
-                expect(m.traits.stats.atk.min).to.equal(100);
-                expect(m.traits.stats.atk.max).to.equal(100);
-                expect(m.traits.stats.def.min).to.equal(103);
-                expect(m.traits.stats.def.max).to.equal(103);
-                expect(m.traits.stats.spa.min).to.equal(100);
-                expect(m.traits.stats.spa.max).to.equal(100);
-                expect(m.traits.stats.spd.min).to.equal(100);
-                expect(m.traits.stats.spd.max).to.equal(100);
-                expect(m.traits.stats.spe.min).to.equal(200);
-                expect(m.traits.stats.spe.max).to.equal(200);
-            }
-            check(mon);
-            check(mon2);
+            mon.transformPost([{id: "splash", pp: 5, maxpp: 64}]);
+            expect(mon.moveset.get("splash")).to.not.be.null;
+            expect(mon2.moveset.get("splash")).to.not.be.null;
         });
     });
 });

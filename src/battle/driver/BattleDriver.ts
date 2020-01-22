@@ -478,7 +478,7 @@ export class BattleDriver implements DriverEventHandler
      */
     public transformPost(event: TransformPost): void
     {
-        this.getMon(event.monRef).transformPost(event.moves, event.stats);
+        this.getMon(event.monRef).transformPost(event.moves);
     }
 
     /**

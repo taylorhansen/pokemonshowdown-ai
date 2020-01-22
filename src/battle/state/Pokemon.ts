@@ -1,5 +1,5 @@
 import * as dex from "../dex/dex";
-import { boostKeys, HPType, hpTypes, rolloutMoves, StatExceptHP, Type } from
+import { boostKeys, HPType, hpTypes, rolloutMoves, Type } from
     "../dex/dex-util";
 import { HP, ReadonlyHP } from "./HP";
 import { MajorStatusCounter, ReadonlyMajorStatusCounter } from
@@ -624,8 +624,7 @@ export class Pokemon implements ReadonlyPokemon
      * Reveals and infers more details due to Transform. This pokemon should
      * already have had `#transform()` called on it.
      */
-    public transformPost(moves: readonly MoveData[],
-        stats: Readonly<Record<StatExceptHP, number>>): void
+    public transformPost(moves: readonly MoveData[]): void
     {
         if (!this.volatile.transformed)
         {
@@ -635,18 +634,8 @@ export class Pokemon implements ReadonlyPokemon
         // infer moveset
         for (const data of moves)
         {
-            if (this.moveset.get(data.id)) continue;
             const move = this.moveset.reveal(data.id, data.maxpp);
             if (data.pp) move.pp = data.pp;
-        }
-
-        // infer stats
-        for (const stat in stats)
-        {
-            if (!stats.hasOwnProperty(stat)) continue;
-            // inferring a stat here will infer stats about the linked mon
-            this.volatile.overrideTraits.stats[stat as StatExceptHP].set(
-                stats[stat as StatExceptHP]);
         }
     }
 

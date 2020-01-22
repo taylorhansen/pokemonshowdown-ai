@@ -447,8 +447,6 @@ export interface TransformPost extends DriverEventBase<"transformPost">
     readonly monRef: Side;
     /** Transformed pokemon's moves with pp values. */
     readonly moves: readonly MoveData[];
-    /** Transformed pokemon's stats. */
-    readonly stats: Readonly<Record<StatExceptHP, number>>;
 }
 
 /** Indicates that the pokemon fainted. */

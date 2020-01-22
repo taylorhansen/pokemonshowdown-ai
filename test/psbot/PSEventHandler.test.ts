@@ -1182,8 +1182,7 @@ describe("PSEventHandler", function()
                 {type: "transform", source: "us", target: "them"},
                 {
                     type: "transformPost", monRef: "us",
-                    moves: request.active![0].moves,
-                    stats: request.side.pokemon[0].stats
+                    moves: request.active![0].moves
                 }
             ]);
 
@@ -1199,8 +1198,7 @@ describe("PSEventHandler", function()
                         {type: "transform", source: "us", target: "them"},
                         {
                             type: "transformPost", monRef: "us",
-                            moves: request.active![0].moves,
-                            stats: request.side.pokemon[0].stats
+                            moves: request.active![0].moves
                         }
                     ]);
             });
