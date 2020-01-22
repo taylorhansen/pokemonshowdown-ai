@@ -404,26 +404,27 @@ export function encodeMajorStatusCounter(
 export const sizeMove = dex.numMoves + /*pp and maxpp*/2;
 
 /** Formats move info into an array of numbers. Undefined means nonexistent. */
-export function encodeMove(move?: ReadonlyMove): number[];
+export function encodeMove(move?: ReadonlyMove | null): number[];
 /**
  * Formats unknown move info into an array of numbers with a movepool
  * constraint.
+ * @param constraint Mapping of move name to number of mentions.
+ * @param total Total number of mentions, i.e. the sum of each entry.
  */
-export function encodeMove(move: null, constraint?: ReadonlySet<string>):
-    number[];
+export function encodeMove(move: null, constraint: {[name: string]: number},
+    total: number): number[];
 export function encodeMove(move?: ReadonlyMove | null,
-    constraint?: ReadonlySet<string>): number[]
+    constraint?: {[name: string]: number}, total?: number): number[]
 {
     if (move === null)
     {
         // move may exist on an unrevealed pokemon
         const result: number[] = [];
-        if (constraint)
+        if (constraint && total)
         {
             // encode constraint data into unknown move
-            const v = 1 / constraint.size;
             result.push(...Object.keys(dex.moves).map(
-                    m => constraint.has(m) ? v : 0));
+                    m => (constraint[m] ?? 0) / total));
         }
         else
         {
@@ -476,7 +477,18 @@ export function encodeMoveset(moveset?: ReadonlyMoveset | null): number[]
     if (moveset.moves.size < moveset.size)
     {
         // precalculate unknown move encoding
-        const unknownMove = encodeMove(null, moveset.constraint);
+        const constraint: {[name: string]: number} = {};
+        let total = moveset.constraint.size;
+        for (const name of moveset.constraint) constraint[name] = 1;
+        for (const moveSlotConstraint of moveset.moveSlotConstraints)
+        {
+            for (const name of moveSlotConstraint)
+            {
+                constraint[name] = (constraint[name] ?? 0) + 1;
+            }
+            total += moveSlotConstraint.size;
+        }
+        const unknownMove = encodeMove(null, constraint, total);
 
         for (let i = moveset.moves.size; i < moveset.size; ++i)
         {

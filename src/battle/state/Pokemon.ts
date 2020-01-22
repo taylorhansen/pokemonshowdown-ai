@@ -671,7 +671,7 @@ ${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}types: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.stringifyItem()}
-${s}moveset: [${this.stringifyMoveset()}]`;
+${this.stringifyMoveset(indent)}`;
     }
 
     // istanbul ignore next: only used for logging
@@ -749,36 +749,36 @@ ${s}moveset: [${this.stringifyMoveset()}]`;
         return `${base} (consumed: ${last})`;
     }
 
+    // istanbul ignore next: only used for logging
     /** Displays moveset data with happiness and possibly overridden HPType. */
-    private stringifyMoveset(): string
+    private stringifyMoveset(indent = 0): string
     {
-        // stringify base hp type
-        const baseHPType = this.baseTraits.stats.hpType;
-        const baseHPTypeStr = (baseHPType.definiteValue ? "" : "possibly ") +
-            baseHPType.toString();
+        const s = " ".repeat(indent);
 
-        // stringify base moveset
-        let result =
-            `[${this.baseMoveset.toString(this._happiness, baseHPTypeStr)}]`;
+        // stringify hp type
+        const hpType = this.baseTraits.stats.hpType;
+        const hpTypeStr = (hpType.definiteValue ? "" : "possibly ") +
+            hpType.toString();
 
-        if (this._volatile?.overrideMoveset)
+        // stringify moveset
+        let result = `${s}moveset:\n` +
+            this.moveset.toString(indent + 4, this._happiness, hpTypeStr);
+
+        if (this._volatile)
         {
-            // stringify override hp type if applicable
-            const overHPType = this._volatile.overrideTraits.stats.hpType;
-            let overHPTypeStr: string;
-            if (baseHPType !== overHPType)
-            {
-                overHPTypeStr =
-                    (baseHPType.definiteValue ? "" : "possibly ") +
-                    baseHPType.toString();
-            }
-            else overHPTypeStr = baseHPTypeStr;
+            // moveset property was actually override moveset
+            // need to also include base moveset
 
-            // insert override moveset
-            result = "[" +
-                this._volatile.overrideMoveset.toString(this._happiness,
-                    overHPTypeStr) +
-                `] (base: ${result}))`;
+            // stringify base hp type
+            const baseHPType = this.baseTraits.stats.hpType;
+            const baseHPTypeStr =
+                (baseHPType.definiteValue ? "" : "possibly ") +
+                baseHPType.toString();
+
+            // stringify base moveset
+            result += `\n${s}base moveset:\n` +
+                this.baseMoveset.toString(indent + 4, this._happiness,
+                    baseHPTypeStr);
         }
 
         return result;

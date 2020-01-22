@@ -6,10 +6,12 @@ import { Moveset } from "../../../src/battle/state/Moveset";
 
 describe("Moveset", function()
 {
+    const twoMoves = ["splash", "tackle"] as const;
+    const fourMoves = [...twoMoves, "hyperbeam", "gigaimpact"] as const;
+    const fiveMoves = [...fourMoves, "metronome"] as const;
+
     describe("constructor", function()
     {
-        const fourMoves = ["splash", "tackle", "hyperbeam", "gigaimpact"];
-        const fiveMoves = [...fourMoves, "metronome"];
 
         describe("no-args", function()
         {
@@ -92,8 +94,6 @@ describe("Moveset", function()
                 `than maximum size ${Moveset.maxSize}`);
         });
 
-        const twoMoves = ["splash", "tackle"];
-
         it("Should consume constraint if sufficiently narrowed", function()
         {
             const moveset = new Moveset(twoMoves, 1);
@@ -106,7 +106,7 @@ describe("Moveset", function()
             expect(moveset.constraint).to.be.empty;
         });
 
-        it("Should propagate above inference to link/base", function()
+        it("Should propagate size-based inference to link/base", function()
         {
             const moveset = new Moveset();
             const base = new Moveset(twoMoves, 1);
@@ -438,6 +438,101 @@ describe("Moveset", function()
             // copied by-ref
             expect(moveset.get("splash")).to.equal(base.get("splash"))
                 .and.to.not.be.null;
+        });
+    });
+
+    describe("#addMoveSlotConstraint()", function()
+    {
+        it("Should add move slot constraint", function()
+        {
+            const moveset = new Moveset();
+            moveset.addMoveSlotConstraint(fourMoves);
+            expect(moveset.moveSlotConstraints).to.have.lengthOf(1);
+            expect(moveset.moveSlotConstraints[0]).to.have.all.keys(fourMoves);
+        });
+
+        it("Should intersect with movepool constraint", function()
+        {
+            const moveset = new Moveset(fourMoves, 2);
+            moveset.addMoveSlotConstraint(fiveMoves);
+            expect(moveset.moveSlotConstraints).to.have.lengthOf(1);
+            expect(moveset.moveSlotConstraints[0]).to.have.all.keys(fourMoves);
+        });
+
+        it("Should reveal if intersection with movepool yields one move",
+        function()
+        {
+            const moveset = new Moveset(twoMoves, 1);
+            expect(moveset.get("tackle")).to.be.null;
+            moveset.addMoveSlotConstraint(["tackle", "takedown"]);
+            expect(moveset.get("tackle")).to.not.be.null;
+        });
+
+        it("Should throw if intersection with movepool is empty", function()
+        {
+            const moveset = new Moveset(twoMoves, 1);
+            expect(() => moveset.addMoveSlotConstraint(["takedown"]))
+                .to.throw(Error, "Move slot constraint [takedown] cannot " +
+                    "exist for this Moveset");
+        });
+
+        it("Should intersect all move slot constraints if one move left",
+        function()
+        {
+            const moveset = new Moveset(fourMoves, 2);
+            moveset.addMoveSlotConstraint(["tackle", "splash"]);
+            moveset.addMoveSlotConstraint(["tackle", "hyperbeam"]);
+
+            moveset.reveal("gigaimpact");
+            expect(moveset.get("gigaimpact")).to.not.be.null;
+            expect(moveset.get("tackle")).to.not.be.null;
+        });
+
+        it("Should throw if one move left and move slot constraints can't " +
+            "intersect", function()
+        {
+            const moveset = new Moveset(2);
+            moveset.addMoveSlotConstraint(["tackle", "splash"]);
+            moveset.addMoveSlotConstraint(["hyperbeam", "gigaimpact"]);
+
+            expect(() => moveset.reveal("takedown")).to.throw(Error,
+                "Move slot constraints can't intersect");
+        });
+
+        it("Should be removed if satisfied by #reveal()", function()
+        {
+            const moveset = new Moveset();
+            moveset.addMoveSlotConstraint(["tackle", "splash"]);
+            expect(moveset.moveSlotConstraints).to.have.lengthOf(1);
+            moveset.reveal("tackle");
+            expect(moveset.moveSlotConstraints).to.be.empty;
+        });
+
+        it("Should be removed if satisfied by #replace()", function()
+        {
+            const moveset = new Moveset();
+            moveset.reveal("takedown");
+            moveset.addMoveSlotConstraint(["tackle", "splash"]);
+            expect(moveset.moveSlotConstraints).to.have.lengthOf(1);
+            moveset.replace("takedown", new Move("splash"));
+            expect(moveset.moveSlotConstraints).to.be.empty;
+        });
+
+        it("Should not throw if already satisfied and Moveset is full",
+        function()
+        {
+            const moveset = new Moveset(fourMoves);
+            expect(() => moveset.addMoveSlotConstraint(["splash", "tackle"]))
+                .to.not.throw();
+        });
+
+        it("Should throw if not already satisfied and Moveset is full",
+        function()
+        {
+            const moveset = new Moveset(fourMoves);
+            expect(() => moveset.addMoveSlotConstraint(["metronome", "flash"]))
+                .to.throw(Error, "Move slot constraint [metronome, flash] " +
+                    "cannot exist for this Moveset");
         });
     });
 });

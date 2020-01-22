@@ -7,6 +7,8 @@ export interface ReadonlyMoveset
     readonly moves: ReadonlyMap<string, ReadonlyMove>;
     /** Constraint for inferring the remaining Moves. */
     readonly constraint: ReadonlySet<string>;
+    /** Constraints for inferring a single Move slot. */
+    readonly moveSlotConstraints: readonly ReadonlySet<string>[];
     /** Max amount of Move slots. */
     readonly size: number;
     /**
@@ -34,6 +36,14 @@ export class Moveset implements ReadonlyMoveset
     public get constraint(): ReadonlySet<string> { return this._constraint; }
     private _constraint: Set<string>;
 
+    // TODO: bind with size/constraint into one object?
+    /** @override */
+    public get moveSlotConstraints(): readonly ReadonlySet<string>[]
+    {
+        return this._moveSlotConstraints;
+    }
+    private _moveSlotConstraints: ReadonlySet<string>[] = [];
+
     /** @override */
     public get size(): number { return this._size; }
     public set size(value: number)
@@ -49,7 +59,7 @@ export class Moveset implements ReadonlyMoveset
                 `maximum size ${Moveset.maxSize}`);
         }
         this._size = value;
-        this.checkConstraint();
+        this.checkConstraints();
     }
     private _size: number;
 
@@ -161,6 +171,7 @@ export class Moveset implements ReadonlyMoveset
 
         // copy unknown moves
         this._constraint = moveset._constraint;
+        this._moveSlotConstraints = moveset._moveSlotConstraints;
         this._size = moveset.size;
     }
 
@@ -176,6 +187,7 @@ export class Moveset implements ReadonlyMoveset
 
         // copy constraint so it's not linked anymore
         this._constraint = new Set(this._constraint);
+        this._moveSlotConstraints = [...this._moveSlotConstraints];
 
         // remove this moveset from the linked map
         this.linked.delete(this);
@@ -196,40 +208,54 @@ export class Moveset implements ReadonlyMoveset
      */
     public reveal(name: string, maxpp?: "min" | "max" | number): Move
     {
-        let result: Move | undefined;
-        for (const [moveset, transformed] of this.linked)
+        // early return: already have the move
+        const m = this.get(name);
+        if (m) return m;
+
+        if (this._moves.size >= this._size)
         {
-            // TODO: do precondition checks at the beginning of the call
-            if (moveset._moves.size >= moveset._size)
-            {
-                throw new Error("Moveset is already full");
-            }
-
-            let move = moveset._moves.get(name);
-            // reveal the move
-            if (!move)
-            {
-                // transform users: pp (gen>=5: and maxpp) set to 5
-                const pp = transformed ? 5 : undefined;
-
-                move = new Move(name, maxpp, pp);
-                moveset.revealImpl(move);
-            }
-
-            // record the result of the entire method call
-            if (moveset === this) result = move;
+            throw new Error("Moveset is already full");
         }
 
-        this.addConstraint(name);
+        let result: Move | undefined;
+        this.propagateReveal(name, maxpp, (moveset, move) =>
+        {
+            if (moveset === this) result = move;
+        });
 
         // istanbul ignore next: can't reproduce
         if (!result) throw new Error("Moveset not linked to itself");
+
+        this.satisfyMoveSlotConstraint(name);
+        this.addConstraint(name);
         return result;
     }
 
-    /** Factored-out code of `#reveal()`. */
-    private revealImpl(move: Move): void
+    /** Factored-out code of `#reveal()` with a custom callback param. */
+    private propagateReveal(name: string, maxpp?: "min" | "max" | number,
+        callback: (moveset: Moveset, move: Move) => void = () => {}): void
     {
+        for (const [moveset, transformed] of this.linked)
+        {
+            // istanbul ignore next: can't reproduce
+            if (this._constraint !== moveset._constraint)
+            {
+                throw new Error(
+                    "Linked moveset does not have the same " +
+                    "constraints");
+            }
+            callback(moveset, moveset.revealImpl(name, maxpp, transformed));
+        }
+    }
+
+    /** Factored-out code of `#reveal()`. */
+    private revealImpl(name: string, maxpp?: "min" | "max" | number,
+        transformed?: boolean): Move
+    {
+        // transform users: pp (gen>=5: and maxpp) set to 5
+        const pp = transformed ? 5 : undefined;
+        const move = new Move(name, maxpp, pp);
+
         // propagate to base moveset first
         if (this.base)
         {
@@ -237,10 +263,11 @@ export class Moveset implements ReadonlyMoveset
             {
                 throw new Error("Base Moveset expected to not change");
             }
-            this.base.revealImpl(move);
+            this.base._moves.set(name, move);
         }
+        this._moves.set(name, move);
 
-        this._moves.set(move.name, move);
+        return move;
     }
 
     /**
@@ -254,6 +281,7 @@ export class Moveset implements ReadonlyMoveset
         this.replaceImpl(name, move, base);
         // since the replace call succeeded, this must mean that this Moveset
         //  does not have the move that is replacing the old one
+        this.satisfyMoveSlotConstraint(move.name);
         this.addConstraint(move.name);
     }
 
@@ -275,6 +303,41 @@ export class Moveset implements ReadonlyMoveset
         this._moves.set(move.name, move);
     }
 
+    /** Adds a constraint for a single Move slot. */
+    public addMoveSlotConstraint(moves: readonly string[]): void
+    {
+        // early return: already satisfied by a known move
+        if (moves.some(move => this._moves.has(move))) return;
+
+        // intersect with movepool constraint
+        const arr = moves.filter(move => this._constraint.has(move));
+
+        // over-constrained
+        if (arr.length === 0)
+        {
+            throw new Error(`Move slot constraint [${moves.join(", ")}] ` +
+                "cannot exist for this Moveset");
+        }
+        // constrained enough to instead reveal a move
+        if (arr.length === 1) this.reveal(arr[0]);
+        // add to shared move slot constraints list
+        else this._moveSlotConstraints.push(new Set(arr));
+    }
+
+    /**
+     * Removes move slot constraints that would be satisfied by the given move.
+     */
+    private satisfyMoveSlotConstraint(name: string): void
+    {
+        for (let i = 0; i < this._moveSlotConstraints.length; ++i)
+        {
+            if (this._moveSlotConstraints[i].has(name))
+            {
+                this._moveSlotConstraints.splice(i--, 1);
+            }
+        }
+    }
+
     /**
      * Adds a constraint to this Moveset that the remaining Moves do not match
      * the given move name. Automatically propagates to base and linked
@@ -283,71 +346,97 @@ export class Moveset implements ReadonlyMoveset
     private addConstraint(name: string): void
     {
         this._constraint.delete(name);
-        this.checkConstraint();
+        this.checkConstraints();
     }
 
     /**
      * Checks if the shared `#constraint` set can be consumed, and does so if it
      * can. Automatically propagates to base and linked Movesets.
      */
-    private checkConstraint(): void
+    private checkConstraints(): void
     {
         // see how many move slots are left to fill
         const numUnknown = this._size - this._moves.size;
 
-        // constraints narrowed enough to infer the rest of the moveset
-        if (this._constraint.size <= numUnknown)
+        // one move left, intersect all constraints
+        if (numUnknown === 1 && this._moveSlotConstraints.length > 0)
         {
-            // consume each constraint
-            // propagate this inference to links/bases
-            for (const [moveset, transformed] of this.linked)
+            const first = this._moveSlotConstraints[0];
+            const rest = this._moveSlotConstraints.slice(1);
+            const result = [...first].filter(n => rest.every(s => s.has(n)));
+
+            if (result.length <= 0)
             {
-                // istanbul ignore next: can't reproduce
-                if (this._constraint !== moveset._constraint)
-                {
-                    throw new Error(
-                        "Linked moveset does not have the same constraints");
-                }
+                throw new Error("Move slot constraints can't intersect");
+            }
 
-                // transform users: pp (gen>=5: and maxpp) set to 5
-                const pp = transformed ? 5 : undefined;
+            // assumed that slot constraints are already intersected with main
+            //  movepool constraint
+            this._constraint.clear();
+            for (const move of result) this._constraint.add(move);
+        }
 
-                for (const name of this._constraint)
-                {
-                    moveset.revealImpl(new Move(name, "max", pp));
-                }
+        // constraints narrowed enough to infer the rest of the moveset
+        if (this._constraint.size > numUnknown) return;
 
+        const constraintsArr = [...this._constraint];
+        for (let i = 0; i < constraintsArr.length; ++i)
+        {
+            const move = constraintsArr[i];
+            this.propagateReveal(move, "max", moveset =>
+            {
+                // update size for itself and base on the last iteration
+                if (i + 1 < constraintsArr.length) return;
                 moveset._size = moveset._moves.size;
                 if (moveset.base) moveset.base._size = moveset.base._moves.size;
-            }
-            this._constraint.clear();
+            });
         }
+        this._constraint.clear();
     }
 
     // istanbul ignore next: only used for logging
     /**
      * Encodes all moveset data into a string.
+     * @param indent Indentation level to use.
      * @param happiness Optional happiness value for calculating
      * Return/Frustration power.
      * @param hpType Optional Hidden Power type.
      */
-    public toString(happiness?: number | null, hpType?: string): string
+    public toString(indent = 0, happiness?: number | null,
+        hpType?: string): string
     {
-        const result: string[] = [];
-
-        // fill in known moves
+        // stringify move slots
+        const moves: string[] = [];
+        // known moves
         for (const move of this._moves.values())
         {
-            result.push(this.stringifyMove(move, happiness, hpType));
+            moves.push(this.stringifyMove(move, happiness, hpType));
         }
-
-        // fill in unknown moves
+        // unknown moves
         for (let i = this._moves.size; i < this._size; ++i)
         {
-            result.push("<unrevealed>");
+            moves.push("<unrevealed>");
         }
 
-        return result.join(", ");
+        const s = " ".repeat(indent);
+        let result = `${s}moves: ${moves.join(", ")}`;
+        if (this._moveSlotConstraints.length > 0)
+        {
+            // stringify move slot constraints
+            const ss = " ".repeat(indent + 4);
+            const slotConstraints = this._moveSlotConstraints.map(msc =>
+                    `${ss}[${[...msc].join(", ")}]`)
+                .join("\n");
+            result += `\n${s}slot constraints:\n${slotConstraints}`;
+        }
+        if (this._constraint.size > 0)
+        {
+            // stringify movepool constraint
+            result += `\n${s}remaining movepool: ` +
+                `[${[...this._constraint].join(", ")}]`;
+        }
+
+        return result;
     }
 
     // istanbul ignore next: only used for logging

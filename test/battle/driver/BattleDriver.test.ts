@@ -167,6 +167,8 @@ describe("BattleDriver", function()
         beforeEach("Init battle state", function()
         {
             driver.handleEvents([initTeam, initOtherTeamSize, ...switchIns]);
+            expect(driver.state.teams.us.active.active).to.be.true;
+            expect(driver.state.teams.them.active.active).to.be.true;
         });
 
         describe("#preTurn()", function() {}); // TODO

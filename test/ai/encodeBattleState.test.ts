@@ -412,8 +412,9 @@ describe("BattleState encoders", function()
     },
     {
         name: "Unrevealed + Constraint",
-        encoder: (s: Set<string>) => encodeMove(null, s),
-        init: () => new Set(["splash", "tackle"]),
+        encoder: ([constraint, total]: [{[name: string]: number}, number]) =>
+            encodeMove(null, constraint, total),
+        init: () => [{tackle: 2, splash: 1}, 3],
         size: sizeMove
     },
     {
@@ -435,8 +436,10 @@ describe("BattleState encoders", function()
         encoder: encodeMoveset,
         init()
         {
-            const moveset = new Moveset(["splash", "tackle", "metronome"], 2);
+            const moveset = new Moveset(
+                ["splash", "tackle", "metronome", "protect"], 3);
             moveset.reveal("splash");
+            moveset.addMoveSlotConstraint(["tackle", "metronome"]);
             return moveset;
         },
         size: sizeMoveset
