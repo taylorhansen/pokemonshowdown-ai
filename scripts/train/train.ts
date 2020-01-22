@@ -62,7 +62,8 @@ async function playRandomly(
             p1: {agent, psBattleCtor}, p2: {agent, psBattleCtor},
             // only provide logPath/filename if logPath is also specified
             ...(logPath &&
-                {logPath, filename: `${logFilePrefix || "random"}-${games}`})
+                {logPath, filename: `${logFilePrefix || "random"}-${games}`}),
+            logPrefix: "Pretrain: "
         });
         ++games;
     }
@@ -239,7 +240,8 @@ async function doTrainingGame(
     await startBattle(
     {
         p1: {agent, psBattleCtor}, p2: {agent, psBattleCtor},
-        ...(logPath && {logPath, filename: filename || "train"})
+        ...(logPath && {logPath, filename: filename || "train"}),
+        logPrefix: "Train: "
     });
 }
 

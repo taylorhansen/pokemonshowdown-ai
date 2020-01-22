@@ -40,6 +40,8 @@ export interface GameOptions extends Players
     readonly logPath?: string;
     /** Prefix for file names, or `battle` if omitted. */
     readonly filename?: string;
+    /** Prefix for logs. Default `Battle: `. */
+    readonly logPrefix?: string;
 }
 
 /** Completes a simulated battle. */
@@ -48,7 +50,8 @@ export async function startBattle(options: GameOptions): Promise<void>
     // setup logger
     let buffer = "";
     const logFunc: LogFunc = msg => buffer += msg;
-    const logger = new Logger(logFunc, logFunc, "Pretrain: ");
+    const logger = new Logger(logFunc, logFunc,
+        options.logPrefix ?? "Battle: ");
 
     // start simulating a battle
     const streams = s.getPlayerStreams(new s.BattleStream());
