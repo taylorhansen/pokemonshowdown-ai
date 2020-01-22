@@ -222,6 +222,15 @@ function composeMovepool(template: Template, restrict = false): Set<string>
                 /*restrict*/true)
         ]);
     }
+    if (template.prevo)
+    {
+        return new Set(
+        [
+            ...result,
+            ...composeMovepool(dex.getTemplate(template.prevo),
+                /*restrict*/true)
+        ]);
+    }
     return result;
 }
 
