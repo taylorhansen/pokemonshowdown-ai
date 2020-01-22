@@ -27,12 +27,12 @@ describe("Moveset", function()
 
         describe("movepool", function()
         {
-
             it("Should initialize constraint", function()
             {
                 const moveset = new Moveset(fiveMoves);
                 expect(moveset.moves).to.be.empty;
                 expect(moveset.constraint).to.have.all.keys(fiveMoves);
+                expect(moveset.size).to.equal(Moveset.maxSize);
             });
         });
 
@@ -61,9 +61,10 @@ describe("Moveset", function()
             it("Should initialize moves if movepool is smaller than max size",
             function()
             {
-                const moveset = new Moveset(fourMoves, 4);
-                expect(moveset.moves).to.have.all.keys(fourMoves);
+                const moveset = new Moveset(twoMoves);
+                expect(moveset.moves).to.have.all.keys(twoMoves);
                 expect(moveset.constraint).to.be.empty;
+                expect(moveset.size).to.equal(twoMoves.length);
             });
         });
     });

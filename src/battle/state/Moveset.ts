@@ -99,6 +99,7 @@ export class Moveset implements ReadonlyMoveset
             this._moves =
                 new Map(movepool.map(name => [name, new Move(name)]));
             this._constraint = new Set();
+            this._size = this._moves.size;
         }
         else
         {
