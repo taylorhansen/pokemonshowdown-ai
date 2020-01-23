@@ -175,9 +175,9 @@ export interface ActivateStatusEffect extends
  */
 export type StatusEffectType = UpdatableStatusEffectType | "aquaRing" |
     "attract" | "charge" | "curse" | "embargo" | "encore" | "focusEnergy" |
-    "foresight" | "healBlock" | "ingrain" | "leechSeed" | "magnetRise" |
-    "miracleEye" | "mudSport" | "nightmare" | "powerTrick" | "substitute" |
-    "slowStart" | "taunt" | "torment" | "waterSport" | "yawn";
+    "foresight" | "healBlock" | "imprison" | "ingrain" | "leechSeed" |
+    "magnetRise" | "miracleEye" | "mudSport" | "nightmare" | "powerTrick" |
+    "slowStart" | "substitute" | "taunt" | "torment" | "waterSport" | "yawn";
 
 /** Explicitly updates status counters. */
 export interface CountStatusEffect extends DriverEventBase<"countStatusEffect">
@@ -388,10 +388,12 @@ export interface Inactive extends DriverEventBase<"inactive">
     readonly monRef: Side;
     /** Reason that the pokemon was inactive. */
     readonly reason?: InactiveReason;
+    /** The move that the pokemon was prevented from using. */
+    readonly move?: string;
 }
 
 /** Typing for `Inactive#reason`. */
-export type InactiveReason = "recharge" | "slp" | "truant";
+export type InactiveReason = "imprison" | "recharge" | "slp" | "truant";
 
 /** Afflicts the pokemon with a major status condition. */
 export interface AfflictStatus extends DriverEventBase<"afflictStatus">

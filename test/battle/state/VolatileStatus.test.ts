@@ -52,6 +52,7 @@ describe("VolatileStatus", function()
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
+            expect(volatile.imprison).to.be.false;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
@@ -128,6 +129,7 @@ describe("VolatileStatus", function()
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
+            expect(volatile.imprison).to.be.false;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;

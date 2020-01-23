@@ -12,7 +12,6 @@ describe("Moveset", function()
 
     describe("constructor", function()
     {
-
         describe("no-args", function()
         {
             it("Should initialize default constraint and size", function()
@@ -439,6 +438,76 @@ describe("Moveset", function()
             // copied by-ref
             expect(moveset.get("splash")).to.equal(base.get("splash"))
                 .and.to.not.be.null;
+        });
+    });
+
+    describe("#inferDoesntHave()", function()
+    {
+        it("Should not add constraints one at a time", function()
+        {
+            const moveset = new Moveset(fiveMoves);
+
+            // two moves being removed from 5-move movepool
+            moveset.inferDoesntHave(twoMoves);
+            expect(moveset.size).to.equal(3);
+
+            const remaining = fiveMoves.filter(
+                n => !twoMoves.includes(n as any));
+            expect(moveset.moves).to.have.all.keys(remaining);
+        });
+
+        it("Should further constrain moves", function()
+        {
+            const moveset = new Moveset(
+                ["splash", "tackle", "gigaimpact", "hyperbeam", "metronome"],
+                2);
+
+            moveset.inferDoesntHave(["gigaimpact", "hyperbeam"]);
+            expect(moveset.constraint)
+                .to.have.keys("splash", "tackle", "metronome");
+        });
+
+        it("Should narrow move slot constraints", function()
+        {
+            const moveset = new Moveset(
+                ["splash", "tackle", "gigaimpact", "hyperbeam", "metronome"],
+                2);
+            moveset.addMoveSlotConstraint(["splash", "tackle", "gigaimpact"]);
+
+            moveset.inferDoesntHave(["splash", "hyperbeam"]);
+            expect(moveset.constraint)
+                .to.have.keys("tackle", "metronome", "gigaimpact");
+            expect(moveset.moveSlotConstraints).to.have.lengthOf(1);
+            expect(moveset.moveSlotConstraints[0])
+                .to.have.keys("tackle", "gigaimpact");
+        });
+
+        it("Should reveal if move slot constraints narrowed enough", function()
+        {
+            const moveset = new Moveset(
+                ["splash", "tackle", "gigaimpact", "hyperbeam", "metronome"],
+                2);
+            moveset.addMoveSlotConstraint(["splash", "tackle"]);
+
+            moveset.inferDoesntHave(["splash", "hyperbeam"]);
+            expect(moveset.get("tackle")).to.not.be.null;
+            expect(moveset.moveSlotConstraints).to.be.empty;
+            expect(moveset.constraint)
+                .to.have.keys("gigaimpact", "metronome");
+        });
+
+        it("Should throw if the call would over-narrow move slot constraint",
+        function()
+        {
+            const moveset = new Moveset(
+                ["splash", "tackle", "gigaimpact", "hyperbeam", "metronome"],
+                2);
+            moveset.addMoveSlotConstraint(["splash", "tackle"]);
+
+            expect(() => moveset.inferDoesntHave(["splash", "tackle"]))
+                .to.throw(Error, "Rejected Moveset#inferDoesntHave() with " +
+                "moves=[splash, tackle] since the Moveset's slot constraint " +
+                "[splash, tackle] would be invalidated");
         });
     });
 

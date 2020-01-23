@@ -86,6 +86,8 @@ export interface ReadonlyVolatileStatus
     readonly healBlock: ReadonlyTempStatus;
     /** Foresight/Miracle Eye move status. */
     readonly identified: "foresight" | "miracleEye" | null;
+    /** Imprison move status. */
+    readonly imprison: boolean;
     /**
      * Tracks locked moves, e.g. petaldance variants. Should be ticked after
      * every successful move attempt.
@@ -265,6 +267,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public identified!: "foresight" | "miracleEye" | null;
 
     /** @override */
+    public imprison!: boolean;
+
+    /** @override */
     public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
         /*silent*/true);
 
@@ -418,6 +423,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.grudge = false;
         this.healBlock.end();
         this.identified = null;
+        this.imprison = false;
         this.lockedMove.reset();
         this.magicCoat = false;
         this.minimize = false;
@@ -549,6 +555,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.grudge ? ["grudge"] : [],
             this.healBlock.isActive ? [this.healBlock.toString()] : [],
             this.identified ? [this.identified] : [],
+            this.imprison ? ["imprison"] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.minimize ? ["magic coat"] : [],
             this.minimize ? ["minimize"] : [],

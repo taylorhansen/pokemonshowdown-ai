@@ -403,16 +403,17 @@ describe("PSEventHandler", function()
             describeTrivialStatus("Encore", "encore");
             describeTrivialStatus("Focus Energy", "focusEnergy");
             describeTrivialStatus("Foresight", "foresight");
-            describeTrivialStatus("Ingrain", "ingrain");
             describeTrivialStatus("move: Heal Block", "healBlock");
+            describeTrivialStatus("move: Imprison", "imprison");
+            describeTrivialStatus("Ingrain", "ingrain");
             describeTrivialStatus("Leech Seed", "leechSeed");
             describeTrivialStatus("Magnet Rise", "magnetRise");
             describeTrivialStatus("Miracle Eye", "miracleEye");
             describeTrivialStatus("move: Mud Sport", "mudSport");
             describeTrivialStatus("Nightmare", "nightmare");
             describeTrivialStatus("Power Trick", "powerTrick");
-            describeTrivialStatus("Substitute", "substitute");
             describeTrivialStatus("Slow Start", "slowStart");
+            describeTrivialStatus("Substitute", "substitute");
             describeTrivialStatus("Taunt", "taunt");
             describeTrivialStatus("Torment", "torment");
 
@@ -603,6 +604,10 @@ describe("PSEventHandler", function()
                 [{type: "cant", id: us, reason: "some reason"}],
                 [{type: "inactive", monRef: "us"}]);
 
+            test("Should emit inactive from imprison",
+                [{type: "cant", id: us, reason: "imprison"}],
+                [{type: "inactive", monRef: "us", reason: "imprison"}]);
+
             test("Should emit inactive from recharge",
                 [{type: "cant", id: us, reason: "recharge"}],
                 [{type: "inactive", monRef: "us", reason: "recharge"}]);
@@ -625,12 +630,9 @@ describe("PSEventHandler", function()
                  {type: "inactive", monRef: "us", reason: "truant"}
             ]);
 
-            test("Should emit inactive and revealMove if provided",
+            test("Should emit inactive with move if provided",
                 [{type: "cant", id: us, moveName: "Splash", reason: "Taunt"}],
-            [
-                {type: "inactive", monRef: "us"},
-                {type: "revealMove", monRef: "us", move: "splash"}
-            ]);
+                [{type: "inactive", monRef: "us", move: "splash"}]);
         });
 
         describe("-clearallboost", function()

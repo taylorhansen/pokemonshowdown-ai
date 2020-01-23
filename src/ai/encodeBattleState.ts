@@ -284,7 +284,7 @@ export const sizeVolatileStatus =
     /*attract*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
     /*defense curl*/1 + /*destiny bond*/1 +
     /*disabled moves*/(dex.numMoves * sizeTempStatus) + /*grudge*/1 +
-    /*heal block*/sizeTempStatus + /*identified*/2 +
+    /*heal block*/sizeTempStatus + /*identified*/2 + /*imprison*/1 +
     /*locked move variants*/dex.numLockedMoves + /*minimize*/1 +
     /*mud sport*/1 + /*must recharge*/1 + /*override traits*/sizePokemonTraits +
     /*rage*/1 + /*rollout*/Object.keys(rolloutMoves).length + /*roost*/1 +
@@ -334,6 +334,7 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const healBlock = encodeTempStatus(status.healBlock);
     const identified = ["foresight", "miracleEye"]
         .map(v => status.identified === v ? 1 : 0);
+    const imprison = status.imprison ? 1 : 0;
     const lockedMove = encodeVariableTempStatus(status.lockedMove);
     const minimize = status.minimize ? 1 : 0;
     const mudSport = status.mudSport ? 1 : 0;
@@ -365,10 +366,11 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
         powerTrick, substitute, trapped, trapping,
 
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
-        grudge, ...identified, ...healBlock, ...lockedMove, minimize, mudSport,
-        mustRecharge, ...overrideTraits, rage, ...rollout, roost, ...slowStart,
-        snatch, stallFailRate, stockpile, ...taunt, torment, transformed,
-        ...twoTurn, unburden, ...uproar, waterSport, willTruant, ...yawn
+        grudge, ...identified, imprison, ...healBlock, ...lockedMove, minimize,
+        mudSport, mustRecharge, ...overrideTraits, rage, ...rollout, roost,
+        ...slowStart, snatch, stallFailRate, stockpile, ...taunt, torment,
+        transformed, ...twoTurn, unburden, ...uproar, waterSport, willTruant,
+        ...yawn
     ];
 }
 

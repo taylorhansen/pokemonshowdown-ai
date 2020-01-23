@@ -242,6 +242,7 @@ describe("BattleDriver", function()
             test("Focus Energy", "focusEnergy", v => v.focusEnergy);
             test("Foresight", "foresight", v => v.identified === "foresight");
             test("Heal Block", "healBlock", v => v.healBlock.isActive);
+            test("Imprison", "imprison", v => v.imprison);
             test("Ingrain", "ingrain", v => v.ingrain);
             test("Leech Seed", "leechSeed", v => v.leechSeed);
             test("Magnete Rise", "magnetRise", v => v.magnetRise.isActive);
@@ -694,6 +695,31 @@ describe("BattleDriver", function()
                 // reason shouldn't matter
                 driver.inactive({type: "inactive", monRef: "us"});
                 expect(mon.volatile.destinyBond).to.be.false;
+            });
+
+            it("Should reveal move if provided", function()
+            {
+                const mon = driver.state.teams.them.active;
+                expect(mon.moveset.get("splash")).to.be.null;
+                driver.inactive(
+                    {type: "inactive", monRef: "them", move: "splash"});
+                expect(mon.moveset.get("splash")).to.not.be.null;
+            });
+
+            it("Should reveal move for both sides if imprison", function()
+            {
+                const us = driver.state.teams.us.active;
+                const them = driver.state.teams.them.active;
+                expect(them.moveset.get("splash")).to.be.null;
+
+                driver.inactive(
+                {
+                    type: "inactive", monRef: "them", reason: "imprison",
+                    move: "splash"
+                });
+
+                expect(us.moveset.get("splash")).to.not.be.null;
+                expect(them.moveset.get("splash")).to.not.be.null;
             });
 
             it("Should consume recharge turn", function()

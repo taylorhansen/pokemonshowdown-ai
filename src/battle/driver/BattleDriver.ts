@@ -1,7 +1,7 @@
 import { boostKeys, StatExceptHP } from "../dex/dex-util";
 import { BattleState, ReadonlyBattleState } from "../state/BattleState";
 import { Pokemon } from "../state/Pokemon";
-import { Side } from "../state/Side";
+import { otherSide, Side } from "../state/Side";
 import { Team } from "../state/Team";
 import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ActivateSideCondition, ActivateStatusEffect, AfflictStatus, AnyDriverEvent,
@@ -152,6 +152,7 @@ export class BattleDriver implements DriverEventHandler
             case "attract":
             case "curse":
             case "focusEnergy":
+            case "imprison":
             case "ingrain":
             case "leechSeed":
             case "mudSport":
@@ -404,8 +405,19 @@ export class BattleDriver implements DriverEventHandler
     public inactive(event: Inactive): void
     {
         const mon = this.getMon(event.monRef);
+        if (event.move) mon.moveset.reveal(event.move);
+
         switch (event.reason)
         {
+            case "imprison":
+                // opponent's imprison caused the pokemon to be prevented from
+                //  moving, so the revealed move can be revealed for both sides
+                if (event.move)
+                {
+                    this.getMon(otherSide(event.monRef)).moveset
+                        .reveal(event.move);
+                }
+                break;
             case "truant":
                 mon.volatile.activateTruant();
                 // fallthrough: truant and recharge turns overlap

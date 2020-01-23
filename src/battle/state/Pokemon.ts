@@ -304,6 +304,51 @@ export class Pokemon implements ReadonlyPokemon
         }
         else this.volatile.rollout.reset();
 
+        // make inferences with whether imprison failed
+        if (moveData.volatileEffect === "imprison" && this.team &&
+            this.team.state)
+        {
+            // assume us is fully known, while them is unknown
+            const us = this.team.state.teams.us.active.moveset;
+            const usMoves = [...us.moves].map(([name]) => name);
+            const them = this.team.state.teams.them.active.moveset;
+
+            if (options.unsuccessful)
+            {
+                // imprison failed, which means both active pokemon don't have
+                //  each other's moves
+
+                // sanity check: opponent should not already have one of our
+                //  moves
+                const commonMoves = usMoves.filter(
+                    name => them.moves.has(name));
+                if (commonMoves.length > 0)
+                {
+                    throw new Error("Imprison failed but both Pokemon have " +
+                        `common moves: ${commonMoves.join(", ")}`);
+                }
+
+                // remove our moves from their move possibilities
+                them.inferDoesntHave(usMoves);
+            }
+            else
+            {
+                // imprison succeeded, which means both active pokemon have at
+                //  least one common move
+
+                // sanity check: opponent should have or be able to have at
+                //  least one of our moves
+                if (usMoves.every(name =>
+                    !them.moves.has(name) && !them.constraint.has(name)))
+                {
+                    throw new Error("Imprison succeeded but both Pokemon " +
+                        "cannot share any moves");
+                }
+
+                them.addMoveSlotConstraint(usMoves);
+            }
+        }
+
         // reset single move statuses, waiting for an explicit event
         this.volatile.resetSingleMove();
 

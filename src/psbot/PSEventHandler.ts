@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from "util";
 import * as dex from "../battle/dex/dex";
 import { itemRemovalMoves, itemTransferMoves, nonSelfMoveCallers,
     selfMoveCallers, targetMoveCallers, Type } from "../battle/dex/dex-util";
-import { AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize,
+import { AnyDriverEvent, DriverInitPokemon, Inactive, InitOtherTeamSize,
     SideConditionType, SingleMoveStatus, SingleTurnStatus, StatusEffectType }
     from "../battle/driver/DriverEvent";
 import { otherSide, Side } from "../battle/state/Side";
@@ -423,13 +423,14 @@ export class PSEventHandler
     protected handleCant(event: CantEvent, events: readonly AnyBattleEvent[],
         i: number): AnyDriverEvent[]
     {
-        const result: AnyDriverEvent[] = [];
+        const otherEvents: AnyDriverEvent[] = [];
         const monRef = this.getSide(event.id.owner);
 
-        if (event.reason === "recharge" || event.reason === "slp")
+        let inactive: Inactive;
+        if (event.reason === "imprison" || event.reason === "recharge" ||
+            event.reason === "slp")
         {
-            // the pokemon successfully completed its recharge or sleep turn
-            result.push({type: "inactive", monRef, reason: event.reason});
+            inactive = {type: "inactive", monRef, reason: event.reason};
         }
         else if (event.reason.startsWith("ability: "))
         {
@@ -437,26 +438,25 @@ export class PSEventHandler
             const ability = toIdName(
                 event.reason.substr("ability: ".length));
 
-            result.push(
-                {type: "activateAbility", monRef, ability},
-                // if truant, ability must be inferred before the event
-                {
-                    type: "inactive", monRef,
-                    // add in truant reason if applicable
-                    ...(ability === "truant" && {reason: "truant"})
-                });
+            otherEvents.push({type: "activateAbility", monRef, ability});
+            inactive =
+            {
+                type: "inactive", monRef,
+                // add in truant reason if applicable
+                ...(ability === "truant" && {reason: "truant"})
+            };
         }
-        else result.push({type: "inactive", monRef});
+        else inactive = {type: "inactive", monRef};
 
         if (event.moveName)
         {
             // prevented from using a move, which might not have
             //  been revealed before
             const move = toIdName(event.moveName);
-            result.push({type: "revealMove", monRef, move});
+            inactive = {...inactive, move};
         }
 
-        return result;
+        return [...otherEvents, inactive];
     }
 
     /** @virtual */
@@ -1076,16 +1076,17 @@ export class PSEventHandler
             case "Encore": status = "encore"; break;
             case "Focus Energy": status = "focusEnergy"; break;
             case "Foresight": status = "foresight"; break;
-            case "Ingrain": status = "ingrain"; break;
             case "Heal Block": status = "healBlock"; break;
+            case "Imprison": status = "imprison"; break;
+            case "Ingrain": status = "ingrain"; break;
             case "Leech Seed": status = "leechSeed"; break;
             case "Magnet Rise": status = "magnetRise"; break;
             case "Miracle Eye": status = "miracleEye"; break;
             case "Mud Sport": status = "mudSport"; break;
             case "Nightmare": status = "nightmare"; break;
             case "Power Trick": status = "powerTrick"; break;
-            case "Substitute": status = "substitute"; break;
             case "Slow Start": status = "slowStart"; break;
+            case "Substitute": status = "substitute"; break;
             case "Taunt": status = "taunt"; break;
             case "Torment": status = "torment"; break;
             case "Uproar":

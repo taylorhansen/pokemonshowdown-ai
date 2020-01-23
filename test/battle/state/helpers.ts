@@ -30,6 +30,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.grudge = true;
     volatile.healBlock.start();
     volatile.identified = "foresight";
+    volatile.imprison = true;
     volatile.lockedMove.start("outrage");
     volatile.magicCoat = true;
     volatile.minimize = true;

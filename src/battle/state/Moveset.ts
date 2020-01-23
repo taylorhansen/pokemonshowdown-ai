@@ -340,6 +340,42 @@ export class Moveset implements ReadonlyMoveset
     }
 
     /**
+     * Infers that the Moveset does not contain any of the given moves. If the
+     * movepool gets constrained enough due to this call, the rest of the
+     * Moveset will be inferred. Propagates to base and linked Movesets.
+     */
+    public inferDoesntHave(moves: readonly string[]): void
+    {
+        for (const move of moves) this._constraint.delete(move);
+
+        // update move constraints
+        const moveSet = new Set(moves);
+        const toReveal: string[] = [];
+        for (let i = 0; i < this._moveSlotConstraints.length; ++i)
+        {
+            const constraint = this._moveSlotConstraints[i];
+            const newConstraintArr = [...constraint]
+                .filter(move => !moveSet.has(move));
+            if (newConstraintArr.length <= 0)
+            {
+                throw new Error("Rejected Moveset#inferDoesntHave() with " +
+                    `moves=[${moves.join(", ")}] since the Moveset's slot ` +
+                    `constraint [${[...constraint].join(", ")}] would be ` +
+                    "invalidated");
+            }
+            // can infer a move now
+            if (newConstraintArr.length === 1)
+            {
+                toReveal.push(newConstraintArr[0]);
+            }
+            else this._moveSlotConstraints[i] = new Set(newConstraintArr);
+        }
+
+        if (toReveal.length > 0) for (const name of toReveal) this.reveal(name);
+        else this.checkConstraints();
+    }
+
+    /**
      * Adds a constraint to this Moveset that the remaining Moves do not match
      * the given move name. Automatically propagates to base and linked
      * Movesets.

@@ -2,6 +2,7 @@ import { inspect } from "util";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice } from "../battle/agent/Choice";
 import { BattleDriver } from "../battle/driver/BattleDriver";
+import { ReadonlyBattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
 import { BattleInitMessage, BattleProgressMessage, ErrorMessage,
     RequestMessage } from "./parser/Message";
@@ -14,6 +15,10 @@ export class PSBattle implements RoomHandler
 {
     // TODO: move to battle/ and make it sim-agnostic? make it so less code has
     //  to be written for multiple sims
+
+    /** Current battle state. */
+    public get state(): ReadonlyBattleState { return this.driver.state; }
+
     /** Battle state driver. */
     protected readonly driver: BattleDriver;
     /** Manages the BattleState by processing events. */
@@ -93,14 +98,15 @@ export class PSBattle implements RoomHandler
 
         if (this._unavailableChoice)
         {
-            // new info is being revealed
+            // new info may be revealed
             this._unavailableChoice = false;
 
+            let newInfo = false;
             if (this.lastRequest && this.lastRequest.active &&
                 !this.lastRequest.active[0].trapped && msg.active &&
                 msg.active[0].trapped)
             {
-                // active pokemon is now known to be trapped
+                // active pokemon is now known to be trapped and cannot switch
                 this.lastChoices = this.lastChoices
                     .filter(c => !c.startsWith("switch"));
 
@@ -108,12 +114,40 @@ export class PSBattle implements RoomHandler
                 //  have a trapping ability
                 this.driver.rejectSwitchTrapped(
                     {type: "rejectSwitchTrapped", monRef: "us", by: "them"});
+                newInfo = true;
             }
-            // don't know what happened so just eliminate the last choice
+            else if (this.lastChoices[0].startsWith("move ") && msg.active)
+            {
+                // parse move slot that was invoked
+                const i = parseInt(
+                    this.lastChoices[0].substr("move ".length), 10) - 1;
+
+                if (this.lastRequest && this.lastRequest.active &&
+                    !this.lastRequest.active[0].moves[i].disabled &&
+                    msg.active[0].moves[i].disabled &&
+                    this.driver.state.teams.them.active.volatile.imprison)
+                {
+                    // move is now known to be disabled via opponent's
+                    //  imprison since the opponent also knows the move
+                    this.lastChoices.shift();
+                    const move = msg.active[0].moves[i].id;
+                    // only really revealing new info if this wasn't known
+                    //  before
+                    newInfo = this.driver.state.teams.them.active.moveset
+                            .get(move) === null;
+                    this.driver.revealMove(
+                        {type: "revealMove", monRef: "them", move});
+                }
+            }
+
+            if (newInfo)
+            {
+                // re-sort remaining choices based on new info
+                await this.agent.decide(this.driver.state, this.lastChoices);
+            }
+            // can at least eliminate the last choice
             else this.lastChoices.shift();
 
-            // re-sort remaining choices based on new info
-            await this.agent.decide(this.driver.state, this.lastChoices);
             this.sender(`|/choose ${this.lastChoices[0]}`);
         }
 

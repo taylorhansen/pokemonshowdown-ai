@@ -445,6 +445,155 @@ describe("Pokemon", function()
                 }
             });
 
+            describe("imprison", function()
+            {
+                let state: BattleState;
+                let us: Pokemon;
+
+                beforeEach("Setup", function()
+                {
+                    state = new BattleState();
+                    state.teams.us.size = 1;
+                    state.teams.them.size = 1;
+
+                    // switch in a pokemon that can have imprison
+                    us = state.teams.us.switchIn(
+                    {
+                        species: "Vulpix", gender: "F", level: 100,
+                        hp: 200, hpMax: 200
+                    })!;
+                });
+
+                describe("failed", function()
+                {
+                    for (const id of ["us", "them"] as const)
+                    {
+                        it(`Should infer no common moves if ${id} failed`,
+                        function()
+                        {
+                            const moves =
+                            [
+                                id === "us" ? "imprison" : "protect", "ember",
+                                "tailwhip", "disable"
+                            ];
+                            for (const name of moves) us.moveset.reveal(name);
+
+                            // switch in a similar pokemon
+                            const them = state.teams.them.switchIn(
+                            {
+                                species: "Vulpix", gender: "M", level: 100,
+                                hp: 100, hpMax: 100
+                            })!;
+
+                            // opponent should be able to have our moveset
+                            expect(them.moveset.constraint)
+                                .to.include.all.keys(moves);
+
+                            // if imprison fails, then the opponent shouldn't be
+                            //  able to have any of our moves
+                            state.teams[id].active.useMove(
+                            {
+                                moveId: "imprison", unsuccessful: "failed",
+                                targets: [state.teams[id].active]
+                            });
+                            expect(them.moveset.constraint)
+                                .to.not.include.any.keys(moves);
+                        });
+                    }
+
+                    it("Should throw if shared moves", function()
+                    {
+                        const moves =
+                            ["imprison", "ember", "tailwhip", "disable"];
+                        for (const name of moves) us.moveset.reveal(name);
+
+                        // switch in a similar pokemon
+                        const them = state.teams.them.switchIn(
+                        {
+                            species: "Vulpix", gender: "M", level: 100,
+                            hp: 100, hpMax: 100
+                        })!;
+
+                        them.moveset.reveal("ember");
+                        expect(() => them.useMove(
+                        {
+                            moveId: "imprison", unsuccessful: "failed",
+                            targets: [them]
+                        })).to.throw(Error,
+                            "Imprison failed but both Pokemon have common " +
+                            "moves: imprison, ember");
+                    });
+                });
+
+                describe("succeeded", function()
+                {
+                    for (const id of ["us", "them"] as const)
+                    {
+                        it(`Should infer a common move if ${id} succeeded`,
+                        function()
+                        {
+                            const moves =
+                            [
+                                id === "us" ? "imprison" : "willowisp", "ember",
+                                "tailwhip", "disable"
+                            ];
+                            for (const name of moves) us.moveset.reveal(name);
+
+                            // switch in a similar pokemon
+                            const them = state.teams.them.switchIn(
+                            {
+                                species: "Vulpix", gender: "M", level: 100,
+                                hp: 100, hpMax: 100
+                            })!;
+
+                            // opponent should be able to have our moveset
+                            expect(them.moveset.constraint)
+                                .to.include.all.keys(moves);
+
+                            // if imprison succeeds, then the opponent
+                            //  should be able to have one of our moves
+                            state.teams[id].active.useMove(
+                            {
+                                moveId: "imprison",
+                                targets: [state.teams[id].active]
+                            });
+                            expect(them.moveset.moveSlotConstraints)
+                                .to.have.lengthOf(1);
+                            expect(them.moveset.moveSlotConstraints[0])
+                                .to.have.keys(moves);
+                        });
+                    }
+
+                    it("Should throw if no shared moves", function()
+                    {
+                        const moves =
+                            ["imprison", "ember", "tailwhip", "disable"];
+                        for (const name of moves) us.moveset.reveal(name);
+
+                        // switch in a different pokemon that can't have our
+                        //  moveset
+                        const them = state.teams.them.switchIn(
+                        {
+                            species: "Bulbasaur", gender: "M", level: 100,
+                            hp: 100, hpMax: 100
+                        })!;
+
+                        // opponent should not be able to have our moveset
+                        expect(them.moveset.constraint)
+                            .to.not.include.any.keys(moves);
+
+                        // if imprison succeeds, then the opponent
+                        //  should be able to have one of our moves
+                        expect(() => state.teams.us.active.useMove(
+                        {
+                            moveId: "imprison", targets: [state.teams.us.active]
+                        }))
+                            .to.throw(Error, "Imprison succeeded but both " +
+                                "Pokemon cannot share any moves");
+                    });
+                });
+            });
+
             describe("single-move", function()
             {
                 it("Should reset single-move statuses", function()

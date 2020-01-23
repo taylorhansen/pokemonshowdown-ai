@@ -50,12 +50,12 @@ describe("PSBattle", function()
                         moves:
                         [
                             {
-                                move: "Splash", id: "splash", pp: 64, maxpp: 64,
-                                target: "self", disabled: false
-                            },
-                            {
                                 move: "Tackle", id: "tackle", pp: 56, maxpp: 56,
                                 target: "adjacentFoe", disabled: false
+                            },
+                            {
+                                move: "Splash", id: "splash", pp: 64, maxpp: 64,
+                                target: "self", disabled: false
                             },
                             {
                                 move: "Bounce", id: "bounce", pp: 8, maxpp: 8,
@@ -75,7 +75,7 @@ describe("PSBattle", function()
                         shiny: true, gender: "M", level: 50, hp: 100,
                         hpMax: 100, condition: null, active: true,
                         stats: {atk: 30, def: 75, spa: 35, spd: 40, spe: 100},
-                        moves: ["splash", "tackle", "bounce", "flail"],
+                        moves: ["tackle", "splash", "bounce", "flail"],
                         baseAbility: "swiftswim", item: "lifeorb",
                         pokeball: "pokeball"
                     },
@@ -96,7 +96,7 @@ describe("PSBattle", function()
             await battle.request(request);
 
             // receive switchins
-            // opponent switches in a pokemon that can have shadowtag,
+            // opponent switches in a pokemon that can have shadowtag
             await battle.init(
             {
                 type: "battleinit", id: "p1", username, gameType: "singles",
@@ -142,6 +142,122 @@ describe("PSBattle", function()
             // make a move decision
             expect(sent).to.have.members(
                 ["|/choose switch 2", "|/choose move 2"]);
+        });
+    });
+
+    describe("imprison disabling", function()
+    {
+        it("Should handle unavailable choice", async function()
+        {
+            // receive request
+            const request: RequestMessage =
+            {
+                type: "request",
+                active:
+                [
+                    {
+                        moves:
+                        [
+                            {
+                                move: "Tackle", id: "tackle", pp: 56, maxpp: 56,
+                                target: "adjacentFoe", disabled: false
+                            },
+                            {
+                                move: "Splash", id: "splash", pp: 64, maxpp: 64,
+                                target: "self", disabled: false
+                            },
+                            {
+                                move: "Bounce", id: "bounce", pp: 8, maxpp: 8,
+                                target: "adjacentFoe", disabled: false
+                            },
+                            {
+                                move: "Flail", id: "Flail", pp: 24, maxpp: 24,
+                                target: "adjacentFoe", disabled: false
+                            }
+                        ]
+                    }
+                ],
+                side:
+                {
+                    pokemon:
+                    [{
+                        owner: "p1", nickname: "Magikarp", species: "Magikarp",
+                        shiny: true, gender: "M", level: 50, hp: 100,
+                        hpMax: 100, condition: null, active: true,
+                        stats: {atk: 30, def: 75, spa: 35, spd: 40, spe: 100},
+                        moves: ["tackle", "splash", "bounce", "flail"],
+                        baseAbility: "swiftswim", item: "lifeorb",
+                        pokeball: "pokeball"
+                    }]
+                }
+            };
+            await battle.request(request);
+
+            // receive switchins
+            // opponent switches in a pokemon that can have imprison and tackle
+            await battle.init(
+            {
+                type: "battleinit", id: "p1", username, gameType: "singles",
+                gen: 4, teamSizes: {p1: 2, p2: 1},
+                events:
+                [
+                    {
+                        type: "switch", id: {owner: "p1", nickname: "Magikarp"},
+                        species: "Magikarp", shiny: true, gender: "M",
+                        level: 50, hp: 100, hpMax: 100, condition: null
+                    },
+                    {
+                        type: "switch", id: {owner: "p2", nickname: "Vulpix"},
+                        species: "Vulpix", shiny: false, gender: "M", level: 50,
+                        hp: 100, hpMax: 100, condition: null
+                    },
+                    // set imprison status for opponent
+                    {
+                        type: "-start", id: {owner: "p2", nickname: "Vuplix"},
+                        volatile: "move: Imprison", otherArgs: []
+                    }
+                ]
+            });
+
+            // shouldn't reveal yet
+            expect(battle.state.teams.them.active.moveset.get("tackle"))
+                .to.be.null;
+
+            // client sends a move decision (tackle)
+            expect(sent).to.have.members(["|/choose move 1"]);
+
+            // unavailable choice
+            await battle.error(
+            {
+                type: "error",
+                reason: "[Unavailable choice] Can't move: Magikarp's Tackle " +
+                    "is disabled"
+            });
+
+            // new request with disabled=true for tackle
+            await battle.request(
+            {
+                ...request,
+                active:
+                [{
+                    ...request.active![0],
+                    moves:
+                    [
+                        {
+                            ...request.active![0].moves[0],
+                            disabled: true
+                        },
+                        ...request.active![0].moves.slice(1)
+                    ]
+                }]
+            });
+            // since opponent has imprison, the move should be inferred for it
+            expect(battle.state.teams.them.active.moveset.get("tackle"))
+                .to.not.be.null;
+
+            // make a move decision
+            expect(sent).to.have.members(
+                ["|/choose move 1", "|/choose move 2"]);
         });
     });
 });
