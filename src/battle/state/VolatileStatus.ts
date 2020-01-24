@@ -1,5 +1,5 @@
 import { LockedMove, lockedMoves, TwoTurnMove, twoTurnMoves } from "../dex/dex";
-import { BoostName, rolloutMoves, Type } from "../dex/dex-util";
+import { BoostName, MajorStatus, rolloutMoves, Type } from "../dex/dex-util";
 import { Moveset, ReadonlyMoveset } from "./Moveset";
 import { PokemonTraits, ReadonlyPokemonTraits } from "./PokemonTraits";
 import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
@@ -449,6 +449,16 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.waterSport = false;
         this._willTruant = false;
         this.yawn.end();
+    }
+
+    /**
+     * Applies some special effects that only happen when Baton Passing.
+     * @param majorStatus Major status of the recipient.
+     */
+    public batonPass(majorStatus?: MajorStatus): void
+    {
+        // nightmare status should persist if the recipient is asleep
+        if (majorStatus !== "slp") this.nightmare = false;
     }
 
     /** Indicates that the pokemon spent its turn being inactive. */

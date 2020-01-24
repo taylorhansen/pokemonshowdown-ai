@@ -198,6 +198,23 @@ describe("VolatileStatus", function()
         });
     });
 
+    describe("#nightmare", function()
+    {
+        it("Should not reset on #batonPass() if slp", function()
+        {
+            volatile.nightmare = true;
+            volatile.batonPass("slp");
+            expect(volatile.nightmare).to.be.true;
+        });
+
+        it("Should reset on #batonPass() if not slp", function()
+        {
+            volatile.nightmare = true;
+            volatile.batonPass("brn");
+            expect(volatile.nightmare).to.be.false;
+        });
+    });
+
     describe("#trapped/#trapping/#trap()", function()
     {
         it("Should set trap fields", function()

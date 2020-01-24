@@ -604,11 +604,7 @@ export class Pokemon implements ReadonlyPokemon
         if (copy)
         {
             this._volatile.clearUnpassable();
-            // nightmare status should persist if the recipient is asleep
-            if (this.majorStatus.current !== "slp")
-            {
-                this._volatile.nightmare = false;
-            }
+            this._volatile.batonPass(this.majorStatus.current ?? undefined);
         }
         else this._volatile.clear();
 
