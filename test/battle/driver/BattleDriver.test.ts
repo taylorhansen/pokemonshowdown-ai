@@ -467,6 +467,29 @@ describe("BattleDriver", function()
             });
         });
 
+        describe("#lockOn()", function()
+        {
+            it("Should set Lock-On status", function()
+            {
+                const us = driver.state.teams.us.active.volatile;
+                const them = driver.state.teams.them.active.volatile;
+                expect(us.lockedOnBy).to.be.null;
+                expect(us.lockOnTarget).to.be.null;
+                expect(us.lockOnTurns.isActive).to.be.false;
+                expect(them.lockedOnBy).to.be.null;
+                expect(them.lockOnTarget).to.be.null;
+                expect(them.lockOnTurns.isActive).to.be.false;
+
+                driver.lockOn({type: "lockOn", monRef: "us", target: "them"});
+                expect(us.lockedOnBy).to.be.null;
+                expect(us.lockOnTarget).to.equal(them);
+                expect(us.lockOnTurns.isActive).to.be.true;
+                expect(them.lockedOnBy).to.equal(us);
+                expect(them.lockOnTarget).to.be.null;
+                expect(them.lockOnTurns.isActive).to.be.false;
+            });
+        });
+
         describe("#mimic()", function()
         {
             it("Should Mimic move", function()

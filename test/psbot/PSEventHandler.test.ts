@@ -520,6 +520,23 @@ describe("PSEventHandler", function()
                 }]);
             });
 
+            describe("Lock-On/Mind Reader", function()
+            {
+                test("Should emit lockOn",
+                [{
+                    type: "-activate", id: us, volatile: "move: Lock-On",
+                    otherArgs: [], of: them
+                }],
+                    [{type: "lockOn", monRef: "us", target: "them"}]);
+
+                test("Should emit lockOn for Mind Reader as well",
+                [{
+                    type: "-activate", id: them, volatile: "move: Mind Reader",
+                    otherArgs: [], of: us
+                }],
+                    [{type: "lockOn", monRef: "them", target: "us"}]);
+            });
+
             describe("Mimic", function()
             {
                 for (const type of ["sketch", "mimic"] as const)

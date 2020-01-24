@@ -279,10 +279,10 @@ export const sizeVolatileStatus =
     /*aqua ring*/1 + /*boostable stats*/Object.keys(boostNames).length +
     /*confusion*/sizeTempStatus + /*curse*/1 + /*embargo*/sizeTempStatus +
     /*focus energy*/1 + /*gastro acid*/1 + /*ingrain*/1 + /*leech seed*/1 +
-    /*magnet rise*/sizeTempStatus + /*nightmare*/1 + /*perish*/1 +
-    /*power trick*/1 + /*substitute*/1 + /*trapped*/1 + /*trapping*/1 +
-    /*attract*/1 + /*bide*/sizeTempStatus + /*charge*/sizeTempStatus +
-    /*defense curl*/1 + /*destiny bond*/1 +
+    /*lockon*/2 * sizeTempStatus + /*magnet rise*/sizeTempStatus +
+    /*nightmare*/1 + /*perish*/1 + /*power trick*/1 + /*substitute*/1 +
+    /*trapped*/1 + /*trapping*/1 + /*attract*/1 + /*bide*/sizeTempStatus +
+    /*charge*/sizeTempStatus + /*defense curl*/1 + /*destiny bond*/1 +
     /*disabled moves*/(dex.numMoves * sizeTempStatus) + /*grudge*/1 +
     /*heal block*/sizeTempStatus + /*identified*/2 + /*imprison*/1 +
     /*locked move variants*/dex.numLockedMoves + /*minimize*/1 +
@@ -307,6 +307,9 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
     const gastroAcid = status.gastroAcid ? 1 : 0;
     const ingrain = status.ingrain ? 1 : 0;
     const leechSeed = status.leechSeed ? 1 : 0;
+    const lockedOnBy = status.lockedOnBy ?
+        encodeTempStatus(status.lockedOnBy.lockOnTurns) : [0];
+    const lockOn = encodeTempStatus(status.lockOnTurns);
     const magnetRise = encodeTempStatus(status.magnetRise);
     const nightmare = status.nightmare ? 1 : 0;
     const perish = status.perish <= 0 ?
@@ -362,8 +365,8 @@ export function encodeVolatileStatus(status: ReadonlyVolatileStatus): number[]
 
     return [
         aquaRing, ...boosts, ...confused, curse, ...embargo, focusEnergy,
-        gastroAcid, ingrain, leechSeed, ...magnetRise, nightmare, perish,
-        powerTrick, substitute, trapped, trapping,
+        gastroAcid, ingrain, leechSeed, ...lockedOnBy, ...lockOn, ...magnetRise,
+        nightmare, perish, powerTrick, substitute, trapped, trapping,
 
         attract, ...bide, ...charge, defenseCurl, destinyBond, ...disabled,
         grudge, ...identified, imprison, ...healBlock, ...lockedMove, minimize,

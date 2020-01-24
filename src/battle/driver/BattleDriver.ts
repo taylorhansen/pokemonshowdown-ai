@@ -9,7 +9,7 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ClearSelfSwitch, CopyBoosts, CountStatusEffect, CureStatus, CureTeam,
     DisableMove, DriverEvent, DriverEventType, Faint, Fatigue, Feint,
     FormChange, GastroAcid, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts,
-    Mimic, ModifyPP, MustRecharge, PostTurn, PreTurn, ReenableMoves,
+    LockOn, Mimic, ModifyPP, MustRecharge, PostTurn, PreTurn, ReenableMoves,
     RejectSwitchTrapped, RemoveItem, ResetWeather, RestoreMoves, RevealItem,
     RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
     SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage,
@@ -271,6 +271,16 @@ export class BattleDriver implements DriverEventHandler
         const mon = this.getMon(event.monRef);
         mon.volatile.overrideTraits.types = event.newTypes;
         mon.volatile.addedType = "???";
+    }
+
+    /**
+     * Indicates that the pokemon is taking aim due to Lock-On.
+     * @virtual
+     */
+    public lockOn(event: LockOn): void
+    {
+        this.getMon(event.monRef).volatile.lockOn(
+            this.getMon(event.target).volatile);
     }
 
     /**

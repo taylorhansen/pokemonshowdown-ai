@@ -1056,6 +1056,23 @@ describe("Pokemon", function()
                 expect(other.volatile.boosts.atk).to.equal(1);
             });
 
+            it("Should restart lockon", function()
+            {
+                const mon = new Pokemon("Magikarp", false);
+                mon.switchInto();
+                const target = new Pokemon("Gyarados", true);
+                target.switchInto();
+                mon.volatile.lockOn(target.volatile);
+                mon.postTurn();
+                expect(mon.volatile.lockOnTurns.isActive).to.be.true;
+                expect(mon.volatile.lockOnTurns.turns).to.equal(2);
+
+                const bench = new Pokemon("Seaking", false);
+                bench.switchInto(mon, /*copy*/true);
+                expect(bench.volatile.lockOnTurns.isActive).to.be.true;
+                expect(bench.volatile.lockOnTurns.turns).to.equal(1);
+            });
+
             it("Should reset nightmare if recipient is not asleep", function()
             {
                 const mon = new Pokemon("Magikarp", false);

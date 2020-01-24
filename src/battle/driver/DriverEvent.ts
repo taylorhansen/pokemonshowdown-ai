@@ -26,6 +26,7 @@ interface DriverEventMap
     fatigue: Fatigue;
     setThirdType: SetThirdType;
     changeType: ChangeType;
+    lockOn: LockOn;
     mimic: Mimic;
     sketch: Sketch;
     trap: Trap;
@@ -268,6 +269,15 @@ export interface ChangeType extends DriverEventBase<"changeType">
     readonly monRef: Side;
     /** Types to set. */
     readonly newTypes: readonly [Type, Type];
+}
+
+/** Indicates that the pokemon is taking aim due to Lock-On. */
+export interface LockOn extends DriverEventBase<"lockOn">
+{
+    /** User of Lock-On. */
+    readonly monRef: Side;
+    /** Target of the Lock-On move. */
+    readonly target: Side;
 }
 
 /** Indicates that the pokemon is Mimicking a move. */

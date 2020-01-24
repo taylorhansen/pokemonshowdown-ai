@@ -353,6 +353,13 @@ export class PSEventHandler
                     type: "modifyPP", monRef,
                     move: toIdName(event.otherArgs[0]), amount: "deplete"
                 }];
+            case "move: Lock-On":
+            case "move: Mind Reader":
+            {
+                const target = event.of ?
+                    this.getSide(event.of.owner) : otherSide(monRef);
+                return [{type: "lockOn", monRef, target}];
+            }
             case "move: Mimic":
             {
                 const move = toIdName(event.otherArgs[0]);

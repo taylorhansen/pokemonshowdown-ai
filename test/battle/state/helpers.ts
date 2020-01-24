@@ -12,6 +12,8 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.gastroAcid = true;
     volatile.ingrain = true;
     volatile.leechSeed = true;
+    volatile.lockOn(new VolatileStatus());
+    (new VolatileStatus()).lockOn(volatile);
     volatile.magnetRise.start();
     volatile.nightmare = true;
     volatile.perish = 3;

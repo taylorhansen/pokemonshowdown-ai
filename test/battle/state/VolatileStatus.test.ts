@@ -34,6 +34,9 @@ describe("VolatileStatus", function()
             expect(volatile.gastroAcid).to.be.false;
             expect(volatile.ingrain).to.be.false;
             expect(volatile.leechSeed).to.be.false;
+            expect(volatile.lockedOnBy).to.be.null;
+            expect(volatile.lockOnTarget).to.be.null;
+            expect(volatile.lockOnTurns.isActive).to.be.false;
             expect(volatile.magnetRise.isActive).to.be.false;
             expect(volatile.nightmare).to.be.false;
             expect(volatile.perish).to.equal(0);
@@ -109,6 +112,9 @@ describe("VolatileStatus", function()
             expect(volatile.gastroAcid).to.be.true;
             expect(volatile.ingrain).to.be.true;
             expect(volatile.leechSeed).to.be.true;
+            expect(volatile.lockedOnBy).to.not.be.null;
+            expect(volatile.lockOnTarget).to.not.be.null;
+            expect(volatile.lockOnTurns.isActive).to.be.true;
             expect(volatile.magnetRise.isActive).to.be.true;
             expect(volatile.magnetRise.turns).to.equal(1);
             expect(volatile.nightmare).to.be.true;
@@ -185,6 +191,89 @@ describe("VolatileStatus", function()
             volatile.embargo.start();
             volatile.postTurn();
             expect(volatile.embargo.turns).to.equal(2);
+        });
+    });
+
+    describe("#lockedOnBy/#lockOnTarget/#lockOn()", function()
+    {
+        it("Should lock on", function()
+        {
+            const target = new VolatileStatus();
+            volatile.lockOn(target);
+            expect(volatile.lockedOnBy).to.be.null;
+            expect(volatile.lockOnTarget).to.equal(target);
+            expect(volatile.lockOnTurns.isActive).to.be.true;
+            expect(target.lockedOnBy).to.equal(volatile);
+            expect(target.lockOnTarget).to.be.null;
+            expect(target.lockOnTurns.isActive).to.be.false;
+        });
+
+        it("Should restart on #batonPass()", function()
+        {
+            const target = new VolatileStatus();
+            volatile.lockOn(target);
+            volatile.postTurn();
+            expect(volatile.lockOnTurns.turns).to.equal(2);
+            volatile.batonPass();
+            expect(volatile.lockOnTurns.turns).to.equal(1);
+        });
+
+        it("Should tick on #postTurn()", function()
+        {
+            const target = new VolatileStatus();
+            volatile.lockOn(target);
+            expect(volatile.lockOnTurns.isActive).to.be.true;
+            expect(volatile.lockOnTurns.turns).to.equal(1);
+
+            volatile.postTurn();
+            expect(volatile.lockedOnBy).to.be.null;
+            expect(volatile.lockOnTarget).to.equal(target);
+            expect(volatile.lockOnTurns.isActive).to.be.true;
+            expect(volatile.lockOnTurns.turns).to.equal(2);
+            expect(target.lockedOnBy).to.equal(volatile);
+            expect(target.lockOnTarget).to.be.null;
+            expect(target.lockOnTurns.isActive).to.be.false;
+        });
+
+        it("Should end properly on the next #postTurn()", function()
+        {
+            const target = new VolatileStatus();
+            volatile.lockOn(target);
+
+            volatile.postTurn();
+            volatile.postTurn();
+            expect(volatile.lockedOnBy).to.be.null;
+            expect(volatile.lockOnTarget).to.be.null;
+            expect(volatile.lockOnTurns.isActive).to.be.false;
+            expect(target.lockedOnBy).to.be.null;
+            expect(target.lockOnTarget).to.be.null;
+            expect(target.lockOnTurns.isActive).to.be.false;
+        });
+
+        it("Should end on user #clear()", function()
+        {
+            const target = new VolatileStatus();
+            volatile.lockOn(target);
+            volatile.clear();
+            expect(volatile.lockedOnBy).to.be.null;
+            expect(volatile.lockOnTarget).to.be.null;
+            expect(volatile.lockOnTurns.isActive).to.be.false;
+            expect(target.lockedOnBy).to.be.null;
+            expect(target.lockOnTarget).to.be.null;
+            expect(target.lockOnTurns.isActive).to.be.false;
+        });
+
+        it("Should end on target #clear()", function()
+        {
+            const target = new VolatileStatus();
+            volatile.lockOn(target);
+            target.clear();
+            expect(volatile.lockedOnBy).to.be.null;
+            expect(volatile.lockOnTarget).to.be.null;
+            expect(volatile.lockOnTurns.isActive).to.be.false;
+            expect(target.lockedOnBy).to.be.null;
+            expect(target.lockOnTarget).to.be.null;
+            expect(target.lockOnTurns.isActive).to.be.false;
         });
     });
 

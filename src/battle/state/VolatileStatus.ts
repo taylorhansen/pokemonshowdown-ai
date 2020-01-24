@@ -46,6 +46,12 @@ export interface ReadonlyVolatileStatus
     readonly ingrain: boolean;
     /** Leech Seed move status. */
     readonly leechSeed: boolean;
+    /** Who is locked onto us. */
+    readonly lockedOnBy: VolatileStatus | null;
+    /** Who we are locking onto. */
+    readonly lockOnTarget: VolatileStatus | null;
+    /** Turn tracker for Lock-On target. */
+    readonly lockOnTurns: ReadonlyTempStatus;
     /** Magnet Rise move status. */
     readonly magnetRise: ReadonlyTempStatus;
     /** Nightmare move status. */
@@ -188,6 +194,30 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public leechSeed!: boolean;
+
+    /** @override */
+    public get lockedOnBy(): VolatileStatus | null { return this._lockedOnBy; }
+    private _lockedOnBy!: VolatileStatus | null;
+    /** @override */
+    public get lockOnTarget(): VolatileStatus | null
+    {
+        return this._lockOnTarget;
+    }
+    private _lockOnTarget!: VolatileStatus | null;
+    /** @override */
+    public get lockOnTurns(): ReadonlyTempStatus { return this._lockOnTurns; }
+    private readonly _lockOnTurns =
+        new TempStatus("lock on", 2, /*silent*/true);
+    /**
+     * Starts the Lock-On status.
+     * @param target Target of Lock-On.
+     */
+    public lockOn(target: VolatileStatus): void
+    {
+        this._lockOnTarget = target;
+        target._lockedOnBy = this;
+        this._lockOnTurns.start();
+    }
 
     /** @override */
     public readonly magnetRise = new TempStatus("magnet rise", 5);
@@ -399,11 +429,23 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.gastroAcid = false;
         this.ingrain = false;
         this.leechSeed = false;
+        // clear our lockon status
+        if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
+        this._lockOnTarget = null;
+        // clear opponent's lockon status
+        if (this._lockedOnBy)
+        {
+            this._lockedOnBy._lockOnTarget = null;
+            this._lockedOnBy._lockOnTurns.end();
+        }
+        this._lockedOnBy = null;
+        this._lockOnTurns.end();
         this.magnetRise.end();
         this.nightmare = false;
         this._perish = 0;
         this.powerTrick = false;
         this.substitute = false;
+        // TODO: clear references held by these references
         this._trapped = null;
         this._trapping = null;
 
@@ -457,6 +499,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
      */
     public batonPass(majorStatus?: MajorStatus): void
     {
+        // restart lockon so the recipient can use it
+        if (this._lockOnTurns.isActive) this._lockOnTurns.start();
         // nightmare status should persist if the recipient is asleep
         if (majorStatus !== "slp") this.nightmare = false;
     }
@@ -506,12 +550,20 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         // implicitly update turn-based temp statuses
         // this excludes statuses that are explicitly mentioned when updated
         this.embargo.tick();
+        this._lockOnTurns.tick();
         this.magnetRise.tick();
         this.taunt.tick();
         this.slowStart.tick();
         this.charge.tick();
         this._disabled?.ts.tick();
         this.yawn.tick();
+
+        // handle lockon ending
+        if (!this._lockOnTurns.isActive)
+        {
+            if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
+            this._lockOnTarget = null;
+        }
 
         // reset single-turn statuses
         this.magicCoat = false;
@@ -547,6 +599,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.gastroAcid ? ["gastro acid"] : [],
             this.ingrain ? ["ingrain"] : [],
             this.leechSeed ? ["leech seed"] : [],
+            this._lockOnTurns.isActive ? [this._lockOnTurns.toString()] : [],
+            this._lockedOnBy ? ["target of lockon"] : [],
             this.magnetRise.isActive ? [this.magnetRise.toString()] : [],
             this.nightmare ? ["nightmare"] : [],
             this._perish > 0 ? [`perish in ${pluralTurns(this._perish)}`] : [],
