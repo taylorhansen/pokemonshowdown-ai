@@ -306,14 +306,38 @@ describe("VolatileStatus", function()
 
     describe("#trapped/#trapping/#trap()", function()
     {
-        it("Should set trap fields", function()
+        it("Should trap", function()
         {
-            const other = new VolatileStatus();
-            volatile.trap(other);
+            const target = new VolatileStatus();
+            volatile.trap(target);
             expect(volatile.trapped).to.be.null;
-            expect(volatile.trapping).to.equal(other);
-            expect(other.trapping).to.be.null;
-            expect(other.trapped).to.equal(volatile);
+            expect(volatile.trapping).to.equal(target);
+            expect(target.trapping).to.be.null;
+            expect(target.trapped).to.equal(volatile);
+        });
+
+        it("Should clear for both on user #clear()", function()
+        {
+            const target = new VolatileStatus();
+            volatile.trap(target);
+
+            volatile.clear();
+            expect(volatile.trapped).to.be.null;
+            expect(volatile.trapping).to.be.null;
+            expect(target.trapping).to.be.null;
+            expect(target.trapped).to.be.null;
+        });
+
+        it("Should clear for both on target #clear()", function()
+        {
+            const target = new VolatileStatus();
+            volatile.trap(target);
+
+            target.clear();
+            expect(volatile.trapped).to.be.null;
+            expect(volatile.trapping).to.be.null;
+            expect(target.trapping).to.be.null;
+            expect(target.trapped).to.be.null;
         });
     });
 

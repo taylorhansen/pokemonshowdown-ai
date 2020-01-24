@@ -429,9 +429,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.gastroAcid = false;
         this.ingrain = false;
         this.leechSeed = false;
-        // clear our lockon status
-        if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
-        this._lockOnTarget = null;
         // clear opponent's lockon status
         if (this._lockedOnBy)
         {
@@ -439,14 +436,20 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this._lockedOnBy._lockOnTurns.end();
         }
         this._lockedOnBy = null;
+        // clear our lockon status
+        if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
+        this._lockOnTarget = null;
         this._lockOnTurns.end();
         this.magnetRise.end();
         this.nightmare = false;
         this._perish = 0;
         this.powerTrick = false;
         this.substitute = false;
-        // TODO: clear references held by these references
+        // clear opponent's trapping status
+        if (this._trapped) this._trapped._trapping = null;
         this._trapped = null;
+        // clear our trapping status
+        if (this._trapping) this._trapping._trapped = null;
         this._trapping = null;
 
         this.clearUnpassable();
