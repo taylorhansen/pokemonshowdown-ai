@@ -2,7 +2,7 @@
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import { MoveData, NaturalGiftData, PokemonData } from "./dex-util";
+import { MoveData, NaturalGiftData, PokemonData, Type } from "./dex-util";
 
 /** Contains info about each pokemon. */
 export const pokemon: {readonly [name: string]: PokemonData} =
@@ -1208,6 +1208,29 @@ export function isTwoTurnMove(value: any): value is TwoTurnMove
 {
     return twoTurnMoves.hasOwnProperty(value);
 }
+
+/** Maps move type to each move of that type. */
+export const typeToMoves: {readonly [T in Type]: string[]} =
+{
+    bug: ["bugbite", "furycutter", "healorder", "leechlife", "pinmissile", "spiderweb", "tailglow", "twineedle", "uturn", "bugbuzz", "stringshot", "signalbeam", "silverwind", "attackorder", "defendorder", "megahorn", "xscissor"],
+    dark: ["assurance", "beatup", "embargo", "fling", "knockoff", "memento", "payback", "pursuit", "snatch", "suckerpunch", "switcheroo", "taunt", "thief", "torment", "darkvoid", "feintattack", "punishment", "bite", "crunch", "darkpulse", "faketears", "flatter", "nastyplot", "nightslash"],
+    dragon: ["outrage", "twister", "dracometeor", "dragonpulse", "dragonrush", "dragonrage", "roaroftime", "spacialrend", "dragonbreath", "dragonclaw", "dragondance"],
+    fire: ["firefang", "firespin", "flareblitz", "magmastorm", "fireblast", "flamethrower", "heatwave", "overheat", "willowisp", "sacredfire", "blastburn", "blazekick", "ember", "eruption", "firepunch", "flamewheel", "lavaplume", "sunnyday"],
+    flying: ["bounce", "bravebird", "chatter", "defog", "fly", "gust", "mirrormove", "pluck", "roost", "tailwind", "aircutter", "airslash", "aeroblast", "aerialace", "drillpeck", "featherdance", "peck", "skyattack", "wingattack"],
+    ghost: ["spite", "lick", "shadowforce", "destinybond", "nightmare", "ominouswind", "astonish", "confuseray", "grudge", "nightshade", "shadowball", "shadowclaw", "shadowpunch", "shadowsneak"],
+    electric: ["magnetrise", "thunder", "volttackle", "thunderbolt", "thunderwave", "charge", "chargebeam", "discharge", "shockwave", "spark", "thunderfang", "thunderpunch", "thundershock", "zapcannon"],
+    fighting: ["armthrust", "brickbreak", "counter", "detect", "doublekick", "drainpunch", "focuspunch", "highjumpkick", "jumpkick", "revenge", "reversal", "skyuppercut", "submission", "triplekick", "wakeupslap", "aurasphere", "karatechop", "lowkick", "rollingkick", "bulkup", "closecombat", "crosschop", "dynamicpunch", "focusblast", "forcepalm", "hammerarm", "machpunch", "rocksmash", "seismictoss", "superpower", "vacuumwave", "vitalthrow"],
+    grass: ["absorb", "aromatherapy", "bulletseed", "cottonspore", "gigadrain", "ingrain", "megadrain", "petaldance", "solarbeam", "synthesis", "woodhammer", "worryseed", "energyball", "grasswhistle", "leafstorm", "sleeppowder", "spore", "stunspore", "vinewhip", "grassknot", "needlearm", "seedflare", "frenzyplant", "leafblade", "leechseed", "magicalleaf", "powerwhip", "razorleaf", "seedbomb"],
+    ground: ["bonerush", "bonemerang", "dig", "earthquake", "magnitude", "mudsport", "sandtomb", "spikes", "boneclub", "mudbomb", "earthpower", "fissure", "mudshot", "mudslap", "sandattack"],
+    ice: ["avalanche", "hail", "iciclespear", "blizzard", "icebeam", "iceball", "sheercold", "aurorabeam", "haze", "icefang", "icepunch", "iceshard", "icywind", "mist", "powdersnow"],
+    normal: ["acupressure", "assist", "barrage", "bide", "bind", "block", "camouflage", "cometpunch", "conversion", "conversion2", "copycat", "covet", "crushgrip", "disable", "doubleedge", "doublehit", "doubleslap", "encore", "endeavor", "endure", "explosion", "extremespeed", "fakeout", "feint", "flail", "followme", "foresight", "furyattack", "furyswipes", "glare", "growth", "healbell", "lastresort", "lockon", "luckychant", "meanlook", "mefirst", "metronome", "milkdrink", "mimic", "mindreader", "minimize", "moonlight", "morningsun", "naturalgift", "naturepower", "odorsleuth", "protect", "psychup", "rapidspin", "razorwind", "recover", "recycle", "roar", "scaryface", "secretpower", "selfdestruct", "sketch", "slackoff", "sleeptalk", "smellingsalts", "softboiled", "spikecannon", "spitup", "stomp", "struggle", "substitute", "swallow", "tackle", "takedown", "thrash", "transform", "uproar", "whirlwind", "wish", "wrap", "wringout", "attract", "bodyslam", "charm", "facade", "growl", "hiddenpower", "hypervoice", "perishsong", "screech", "sing", "skullbash", "snore", "supersonic", "sweetkiss", "sweetscent", "swordsdance", "weatherball", "stockpile", "swagger", "captivate", "constrict", "dizzypunch", "eggbomb", "flash", "frustration", "howl", "hyperfang", "judgment", "lovelykiss", "rage", "refresh", "return", "rockclimb", "sharpen", "sonicboom", "trumpcard", "batonpass", "bellydrum", "crushclaw", "cut", "defensecurl", "doubleteam", "falseswipe", "focusenergy", "gigaimpact", "guillotine", "harden", "headbutt", "helpinghand", "hornattack", "horndrill", "hyperbeam", "leer", "megakick", "megapunch", "painsplit", "payday", "pound", "present", "quickattack", "safeguard", "scratch", "slam", "slash", "smokescreen", "splash", "strength", "superfang", "swift", "tailwhip", "teeterdance", "tickle", "triattack", "visegrip", "yawn"],
+    poison: ["poisongas", "toxic", "toxicspikes", "acidarmor", "gunkshot", "poisonfang", "poisonpowder", "smog", "gastroacid", "acid", "crosspoison", "poisonjab", "poisonsting", "poisontail", "sludge", "sludgebomb"],
+    psychic: ["dreameater", "futuresight", "gravity", "healblock", "healingwish", "imprison", "lightscreen", "lunardance", "magiccoat", "miracleeye", "mirrorcoat", "powertrick", "psywave", "reflect", "roleplay", "skillswap", "trick", "trickroom", "barrier", "extrasensory", "psychoshift", "heartswap", "kinesis", "lusterpurge", "meditate", "mistball", "psychoboost", "teleport", "agility", "amnesia", "calmmind", "confusion", "cosmicpower", "guardswap", "hypnosis", "powerswap", "psybeam", "psychic", "psychocut", "rest", "zenheadbutt"],
+    rock: ["headsmash", "rockblast", "sandstorm", "stealthrock", "powergem", "rocktomb", "rollout", "ancientpower", "rockpolish", "rockslide", "rockthrow", "rockwrecker", "stoneedge"],
+    steel: ["doomdesire", "metalburst", "gyroball", "metalsound", "meteormash", "magnetbomb", "mirrorshot", "bulletpunch", "flashcannon", "irondefense", "ironhead", "irontail", "metalclaw", "steelwing"],
+    water: ["aquaring", "clamp", "crabhammer", "dive", "surf", "watersport", "whirlpool", "bubble", "hydropump", "muddywater", "aquajet", "aquatail", "brine", "bubblebeam", "hydrocannon", "octazooka", "raindance", "waterfall", "watergun", "waterpulse", "waterspout", "withdraw"],
+    "???": ["curse"]
+};
 
 /** Maps item id name to its id number. */
 export const items: {readonly [name: string]: number} =

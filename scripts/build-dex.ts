@@ -56,7 +56,7 @@ function quote(str: string): string
  */
 function maybeQuote(str: string): string
 {
-    return /[- ']/.test(str) ? quote(str) : str;
+    return /[- '?]/.test(str) ? quote(str) : str;
 }
 
 /** Checks if a Movedex value is valid for gen4. */
@@ -91,6 +91,13 @@ const twoTurnMoves: {[name: string]: number} = {};
 let twoTurnUid = 0;
 
 const sketchableMoves: string[] = [];
+
+const typeToMoves: {[T in Type]: string[]} =
+{
+    bug: [], dark: [], dragon: [], fire: [], flying: [], ghost: [],
+    electric: [], fighting: [], grass: [], ground: [], ice: [], normal: [],
+    poison: [], psychic: [], rock: [], steel: [], water: [], "???": []
+};
 
 uid = 0;
 for (const moveName in data.Movedex)
@@ -140,6 +147,8 @@ for (const moveName in data.Movedex)
     if (move.isFutureMove) futureMoves[move.name] = futureUid++;
 
     if (!move.noSketch) sketchableMoves.push(move.id);
+
+    typeToMoves[move.type.toLowerCase() as Type].push(move.id);
 
     moves[move.id] =
     {
@@ -333,7 +342,7 @@ const numItems = uid;
  * Creates an export declaration for a dictionary.
  * @param dict Dictionary to stringify.
  * @param name Name of the dictionary.
- * @param typeName Type name for the dictionary keys.
+ * @param typeName Type name for the dictionary.
  * @param comment Doc comment contents.
  * @param converter Stringifier for dictionary keys.
  * @param indent Number of indent spaces. Default 4.
@@ -343,7 +352,7 @@ function stringifyDictDecl(dict: {readonly [name: string]: any},
     converter: (value: any) => string, indent = 4): string
 {
     let result = `/** ${comment} */
-export const ${name}: {readonly [name: string]: ${typeName}} =\n{`;
+export const ${name}: ${typeName} =\n{`;
     const s = " ".repeat(indent);
 
     for (const key in dict)
@@ -416,9 +425,10 @@ console.log(`\
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import { MoveData, NaturalGiftData, PokemonData } from "./dex-util";
+import { MoveData, NaturalGiftData, PokemonData, Type } from "./dex-util";
 
-${stringifyDictDecl(pokemon, "pokemon", "PokemonData",
+${stringifyDictDecl(pokemon, "pokemon",
+    "{readonly [name: string]: PokemonData}",
     "Contains info about each pokemon.",
     p => stringifyDict(p,
         v =>
@@ -430,13 +440,13 @@ ${stringifyDictDecl(pokemon, "pokemon", "PokemonData",
 /** Total number of pokemon species. */
 export const numPokemon = ${numPokemon};
 
-${stringifyDictDecl(abilities, "abilities", "number",
+${stringifyDictDecl(abilities, "abilities", "{readonly [name: string]: number}",
     "Maps ability id name to an id number.", a => a as string)}
 
 /** Total number of abilities. */
 export const numAbilities = ${numAbilities};
 
-${stringifyDictDecl(moves, "moves", "MoveData",
+${stringifyDictDecl(moves, "moves", "{readonly [name: string]: MoveData}",
     "Contains info about each move.",
     m => stringifyDict(m,
         v =>
@@ -453,12 +463,18 @@ ${specificMoves(lockedMoves, "locked")}
 
 ${specificMoves(twoTurnMoves, "twoTurn", "two-turn")}
 
-${stringifyDictDecl(items, "items", "number",
+${stringifyDictDecl(typeToMoves, "typeToMoves",
+    "{readonly [T in Type]: string[]}",
+    "Maps move type to each move of that type.",
+    a => `[${a.map(quote).join(", ")}]`)}
+
+${stringifyDictDecl(items, "items", "{readonly [name: string]: number}",
     "Maps item id name to its id number.", i => i as string)}
 
 /** Total number of items. */
 export const numItems = ${numItems};
 
-${stringifyDictDecl(berries, "berries", "NaturalGiftData",
+${stringifyDictDecl(berries, "berries",
+    "{readonly [name: string]: NaturalGiftData}",
     "Contains info about each berry item.",
     b => stringifyDict(b, v => typeof v === "string" ? quote(v) : v))}`);
