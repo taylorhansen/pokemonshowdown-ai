@@ -47,6 +47,7 @@ export function oneHot(id: number | null, length: number, one = 1, zero = 0):
 export function limitedStatusTurns(turns: number, duration: number): number
 {
     // turns left excluding current turn / total expected duration
+    if (turns <= 0) return 0;
     return Math.max(0, (duration - turns + 1) / duration);
 }
 
@@ -139,12 +140,13 @@ export function encodeVariableTempStatus<TStatusType extends string>(
 export const sizeStatRange = /*min*/1 + /*max*/1 + /*base*/1;
 
 /** Max possible base stat. */
-const maxBaseStat = 255;
+export const maxBaseStat = 255;
 /** Max possible normal stat. */
-const maxStat = StatRange.calcStat(/*hp*/false, maxBaseStat, 100, 252, 31, 1.1);
+export const maxStat = StatRange.calcStat(/*hp*/false, maxBaseStat, 100, 252,
+    31, 1.1);
 /** Max possible hp stat. */
-const maxStatHP = StatRange.calcStat(/*hp*/true, maxBaseStat, 100, 252, 31,
-    1.1);
+export const maxStatHP = StatRange.calcStat(/*hp*/true, maxBaseStat, 100, 252,
+    31, 1);
 
 /** Formats stat range info into an array of numbers. */
 export function encodeStatRange(stat: ReadonlyStatRange): number[];
@@ -162,12 +164,12 @@ export function encodeStatRange(stat?: undefined): number[];
 export function encodeStatRange(stat?: ReadonlyStatRange | null,
     hp?: boolean): number[]
 {
+    // average max stat as a guess
+    if (stat === null) return [0.5, 0.5, 0.5];
+    if (!stat) return [-1, -1, -1];
+
     // find highest stat value for this specific StatRange (hp or normal stat)
     const normal = hp || (stat && stat.hp) ? maxStatHP : maxStat;
-
-    // average max stat as a guess
-    if (stat === null) return [normal / 2, normal / 2, 127.5];
-    if (!stat) return [-1, -1, -1];
 
     // normalize based on max possible stats
     return [
@@ -408,6 +410,9 @@ export function encodeMajorStatusCounter(
 /** Length of the return value of `encodeMove()`. */
 export const sizeMove = dex.numMoves + /*pp and maxpp*/2;
 
+/** Max PP of any move. */
+export const maxPossiblePP = 64;
+
 /** Formats move info into an array of numbers. Undefined means nonexistent. */
 export function encodeMove(move?: ReadonlyMove | null): number[];
 /**
@@ -425,7 +430,7 @@ export function encodeMove(move?: ReadonlyMove | null,
     {
         // move may exist on an unrevealed pokemon
         const result: number[] = [];
-        if (constraint && total)
+        if (constraint && total !== undefined)
         {
             // encode constraint data into unknown move
             result.push(...Object.keys(dex.moves).map(
@@ -445,8 +450,10 @@ export function encodeMove(move?: ReadonlyMove | null,
     // move doesn't exist
     if (!move) return [...Array.from({length: dex.numMoves}, () => 0), 0, 0];
 
-    // TODO: normalize pp/maxpp (ratio?)
-    return [...oneHot(move.id, dex.numMoves), move.pp, move.maxpp];
+    return [
+        ...oneHot(move.id, dex.numMoves), move.pp / move.maxpp,
+        move.maxpp / maxPossiblePP
+    ];
 }
 
 /** Length of the return value of `encodeMoveset()`. */
@@ -526,11 +533,17 @@ export const sizeHP = 2;
  */
 export function encodeHP(hp?: ReadonlyHP | null): number[]
 {
-    if (hp === null) return [100, 100];
+    // TODO: guess hp stat
+    if (hp === null) return [1, 0.5];
     if (!hp) return [-1, -1];
-    // TODO: scale down based on max possible hp
-    // also: how to handle hp.isPercent?
-    return [hp.current, hp.max];
+
+    const ratio = hp.max === 0 ? 0 : hp.current / hp.max;
+    if (hp.isPercent)
+    {
+        // TODO: guess hp stat
+        return [ratio, 0.5];
+    }
+    else return [ratio, hp.max / maxStatHP];
 }
 
 /** Length of the return value of `encodePokemon()` when inactive. */
@@ -558,7 +571,7 @@ export function encodePokemon(mon?: ReadonlyPokemon | null): number[]
             ...Array.from({length: 2 * dex.numItems}, () => 0), // item
             ...encodeMoveset(null),
             1 / 3, 1 / 3, 1 / 3, // gender
-            127.5, // happiness
+            0.5, // happiness
             ...encodeHP(null), ...encodeMajorStatusCounter(null),
             0.5, 0.5 // grounded
         ];
@@ -585,7 +598,7 @@ export function encodePokemon(mon?: ReadonlyPokemon | null): number[]
         ...encodePossiblityClass(mon.lastItem, d => d),
         ...encodeMoveset(mon.moveset),
         // normalize happiness value
-        (mon.happiness === null ? /*half*/127.5 : mon.happiness) / 255,
+        (mon.happiness ?? /*half*/127.5) / 255,
         ...encodeHP(mon.hp),
         mon.isGrounded ? 1 : 0, mon.maybeGrounded ? 1 : 0,
         ...encodeMajorStatusCounter(mon.majorStatus),

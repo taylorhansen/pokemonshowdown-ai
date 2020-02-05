@@ -6,11 +6,11 @@ import { encodeBattleState, encodeHP, encodeItemTempStatus,
     encodePokemonTraits, encodePossiblityClass, encodeRoomStatus,
     encodeStatRange, encodeStatTable, encodeTeam, encodeTeamStatus,
     encodeTempStatus, encodeVariableTempStatus, encodeVolatileStatus,
-    limitedStatusTurns, oneHot, sizeActivePokemon, sizeBattleState,
-    sizeMajorStatusCounter, sizeMove, sizeMoveset, sizePokemon,
-    sizePokemonTraits, sizeRoomStatus, sizeStatRange, sizeStatTable, sizeTeam,
-    sizeTeamStatus, sizeTempStatus, sizeVolatileStatus } from
-    "../../src/ai/encodeBattleState";
+    limitedStatusTurns, maxStatHP, oneHot, sizeActivePokemon,
+    sizeBattleState, sizeMajorStatusCounter, sizeMove, sizeMoveset,
+    sizePokemon, sizePokemonTraits, sizeRoomStatus, sizeStatRange,
+    sizeStatTable, sizeTeam, sizeTeamStatus, sizeTempStatus,
+    sizeVolatileStatus } from "../../src/ai/encodeBattleState";
 import * as dex from "../../src/battle/dex/dex";
 import { DriverSwitchOptions } from "../../src/battle/driver/DriverEvent";
 import { BattleState } from "../../src/battle/state/BattleState";
@@ -132,14 +132,25 @@ describe("BattleState encoders", function()
                     {
                         const size = c.size;
                         it(`Should have length of ${size} and contain only ` +
-                            "finite numbers", function()
+                            "numbers between -1 and 1", function()
                         {
                             const data = c.encoder(state);
                             expect(data).to.have.lengthOf(size);
-                            for (const x of data)
+                            for (let j = 0; j < data.length; ++j)
                             {
-                                expect(isNumber(x)).to.be.true;
-                                expect(isFinite(x)).to.be.true;
+                                const x = data[j];
+                                expect(isNumber(x),
+                                        `Value ${x} at index ${j} is not a ` +
+                                        "number")
+                                    .to.be.true;
+                                expect(isFinite(x),
+                                        `Value ${x} at index ${j} is not ` +
+                                        "finite")
+                                    .to.be.true;
+                                expect(x >= -1 && x <= 1,
+                                        `Value ${x} at index ${j} was out of ` +
+                                        "range")
+                                    .to.be.true;
                             }
                         });
                     }
@@ -258,31 +269,25 @@ describe("BattleState encoders", function()
         name: "Uninitialized",
         encoder: encodeStatRange,
         init: () => new StatRange(/*hp*/false),
-        size: sizeStatRange
+        values: [0.5, 0.5, 0.5]
     },
     {
         name: "Uninitialized + HP",
         encoder: encodeStatRange,
         init: () => new StatRange(/*hp*/true),
-        size: sizeStatRange
+        values: [0.5, 0.5, 0.5]
     },
     {
         name: "Unrevealed",
         encoder: () => encodeStatRange(null, /*hp*/false),
         init: () => null,
-        size: sizeStatRange
-    },
-    {
-        name: "Unrevealed + HP",
-        encoder: () => encodeStatRange(null, /*hp*/true),
-        init: () => null,
-        size: sizeStatRange
+        values: [0.5, 0.5, 0.5]
     },
     {
         name: "Nonexistent",
         encoder: encodeStatRange,
         init: () => undefined,
-        size: sizeStatRange
+        values: [-1, -1, -1]
     });
 
     testEncoder("StatTable",
@@ -473,7 +478,7 @@ describe("BattleState encoders", function()
             hp.set(50, 100);
             return hp;
         },
-        values: [50, 100]
+        values: [0.5, 100 / maxStatHP]
     },
     {
         name: "Uninitialized",
@@ -485,7 +490,7 @@ describe("BattleState encoders", function()
         name: "Unrevealed",
         encoder: encodeHP,
         init: () => null,
-        values: [100, 100]
+        values: [1, 0.5]
     },
     {
         name: "Nonexistent",
