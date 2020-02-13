@@ -395,6 +395,14 @@ export class Moveset implements ReadonlyMoveset
         // see how many move slots are left to fill
         const numUnknown = this._size - this._moves.size;
 
+        // no more moves can be inferred so clear all constraints
+        if (numUnknown <= 0)
+        {
+            this._moveSlotConstraints.length = 0;
+            this._constraint.clear();
+            return;
+        }
+
         // one move left, intersect all constraints
         if (numUnknown === 1 && this._moveSlotConstraints.length > 0)
         {
@@ -413,9 +421,9 @@ export class Moveset implements ReadonlyMoveset
             for (const move of result) this._constraint.add(move);
         }
 
-        // constraints narrowed enough to infer the rest of the moveset
         if (this._constraint.size > numUnknown) return;
 
+        // constraints narrowed enough to infer the rest of the moveset
         const constraintsArr = [...this._constraint];
         for (let i = 0; i < constraintsArr.length; ++i)
         {

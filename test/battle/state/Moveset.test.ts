@@ -365,6 +365,14 @@ describe("Moveset", function()
             const move = moveset.reveal("splash");
             expect(moveset.reveal("splash")).to.equal(move);
         });
+
+        it("Should clear constraint if full", function()
+        {
+            const moveset = new Moveset(["tackle", "splash"], 1);
+            expect(moveset.constraint).to.have.keys("tackle", "splash");
+            moveset.reveal("tackle");
+            expect(moveset.constraint).to.be.empty;
+        });
     });
 
     describe("#replace()", function()
