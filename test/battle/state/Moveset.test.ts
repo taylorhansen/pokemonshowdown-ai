@@ -356,7 +356,9 @@ describe("Moveset", function()
             moveset.reveal("wish");
             moveset.reveal("metronome");
             expect(() => moveset.reveal("return")).to.throw(Error,
-                "Moveset is already full");
+                "Rejected reveal() with name=return and maxpp=undefined: " +
+                "Moveset is already full " +
+                "(moves: splash, tackle, wish, metronome)");
         });
 
         it("Should not add duplicates", function()

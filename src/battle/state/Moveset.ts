@@ -215,7 +215,9 @@ export class Moveset implements ReadonlyMoveset
 
         if (this._moves.size >= this._size)
         {
-            throw new Error("Moveset is already full");
+            throw new Error(`Rejected reveal() with name=${name} and ` +
+                `maxpp=${maxpp}: Moveset is already full ` +
+                `(moves: ${[...this._moves.keys()].join(", ")})`);
         }
 
         let result: Move | undefined;
