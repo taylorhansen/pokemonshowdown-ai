@@ -34,8 +34,17 @@ describe("Parser Helpers", function()
         });
     });
 
-    function testSuccess<T>(name: string, parser: Parser<T>, input: string[],
-        value: T, remaining?: string): Mocha.Test
+    /**
+     * Tests a Parser success.
+     * @param name Name of the test.
+     * @param parser Parser to test.
+     * @param input Input for the Parser.
+     * @param value What the Parser should output.
+     * @param remaining Expected value for the next input word after parsing.
+     */
+    function testSuccess<TResult, TInput>(name: string,
+        parser: Parser<TResult, TInput>, input: TInput[], value: TResult,
+        remaining?: TInput): Mocha.Test
     {
         return it(name, function()
         {
@@ -50,8 +59,14 @@ describe("Parser Helpers", function()
         });
     }
 
-    function testFailure<T>(name: string, parser: Parser<T>, input: string[]):
-        Mocha.Test
+    /**
+     * Tests a Parser failure.
+     * @param name Name of the test.
+     * @param parser Parser to test.
+     * @param input Input that should make the parser throw an error.
+     */
+    function testFailure<TResult, TInput>(name: string,
+        parser: Parser<TResult, TInput>, input: TInput[]): Mocha.Test
     {
         return it(name, function()
         {

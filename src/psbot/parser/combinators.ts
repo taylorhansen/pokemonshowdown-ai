@@ -5,14 +5,16 @@ import { Parser } from "./types";
  * Creates a Parser that will backtrack and return `undefined` if the given
  * parser throws.
  */
-export function maybe<T>(p: Parser<T>): Parser<T | undefined>;
+export function maybe<TResult, TInput>(p: Parser<TResult, TInput>):
+    Parser<TResult | undefined, TInput>;
 /**
  * Creates a Parser that will backtrack and return an alternate value if the
  * given parser throws.
  * @param alt Alternate value for when the parser fails.
  */
-export function maybe<T, U>(p: Parser<T>, alt: U): Parser<T | U>;
-export function maybe(p: Parser<any>, alt?: any): Parser<any>
+export function maybe<TResult, TAlt, TInput>(p: Parser<TResult, TInput>,
+    alt: TAlt): Parser<TResult | TAlt, TInput>;
+export function maybe(p: Parser<any, any>, alt?: any): Parser<any, any>
 {
     return function(input, info)
     {
@@ -28,14 +30,21 @@ export function maybe(p: Parser<any>, alt?: any): Parser<any>
  * // parses a word then an integer, giving a result of [string, number]
  * sequence(anyWord, integer);
  */
-export function sequence(): Parser<[]>;
-export function sequence<T>(p1: Parser<T>): Parser<[T]>;
-export function sequence<T, U>(p1: Parser<T>, p2: Parser<U>): Parser<[T, U]>;
-export function sequence<T, U, V>(p1: Parser<T>, p2: Parser<U>, p3: Parser<V>):
-    Parser<[T, U, V]>;
-export function sequence<T, U, V, W>(p1: Parser<T>, p2: Parser<U>,
-    p3: Parser<V>, p4: Parser<W>): Parser<[T, U, V, W]>;
-export function sequence(...parsers: Parser<any>[]): Parser<any[]>
+export function sequence<TInput>(): Parser<[], TInput>;
+export function sequence<TResult, TInput>(p1: Parser<TResult, TInput>):
+    Parser<[TResult], TInput>;
+export function sequence<TResult1, TResult2, TInput>(
+    p1: Parser<TResult1, TInput>, p2: Parser<TResult2, TInput>):
+    Parser<[TResult1, TResult2], TInput>;
+export function sequence<TResult1, TResult2, TResult3, TInput>(
+    p1: Parser<TResult1, TInput>, p2: Parser<TResult2, TInput>,
+    p3: Parser<TResult3, TInput>):
+    Parser<[TResult1, TResult2, TResult3], TInput>;
+export function sequence<TResult1, TResult2, TResult3, TResult4, TInput>(
+    p1: Parser<TResult1, TInput>, p2: Parser<TResult2, TInput>,
+    p3: Parser<TResult3, TInput>, p4: Parser<TResult4, TInput>):
+    Parser<[TResult1, TResult2, TResult3, TResult4], TInput>;
+export function sequence(...parsers: Parser<any, any>[]): Parser<any[], any>
 {
     if (parsers.length <= 0) return input => ({result: [], remaining: input});
 
@@ -61,7 +70,9 @@ export function sequence(...parsers: Parser<any>[]): Parser<any[]>
  * // parses a word but returns a SomeObject rather than the word itself
  * transform(anyWord, w => new SomeObject(w));
  */
-export function transform<T, U>(p: Parser<T>, f: (t: T) => U): Parser<U>
+export function transform<TResult1, TResult2, TInput>(
+    p: Parser<TResult1, TInput>, f: (t: TResult1) => TResult2):
+    Parser<TResult2, TInput>
 {
     return function(input, info)
     {

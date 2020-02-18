@@ -16,7 +16,7 @@ export interface Iter<T>
  * @param arr Array of values to process.
  * @param i Starting index.
  */
-export function iter<T>(arr: T[], i = 0): Iter<T>
+export function iter<T>(arr: readonly T[], i = 0): Iter<T>
 {
     return {
         get() { return arr[i]; },

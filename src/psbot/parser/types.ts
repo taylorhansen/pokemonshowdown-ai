@@ -15,7 +15,8 @@ import { Iter } from "./Iter";
  * @param info Info for dispatching listeners.
  * @returns A Promise that resolves to a Result.
  */
-export type Parser<T> = (input: Input, info: Info) => Result<T>;
+export type Parser<TResult, TInput> = (input: Iter<TInput>, info: Info) =>
+    Result<TResult, TInput>;
 
 /** Info object passed to all Parsers. */
 export interface Info
@@ -26,18 +27,13 @@ export interface Info
     readonly logger: Logger;
 }
 
-/**
- * Parser result.
- *
- * For example, a `Result<number>` has a number `result` field and an `Input`
- * iterator of what's left.
- */
-export interface Result<T>
+/** Parser result. */
+export interface Result<TResult, TInput>
 {
     /** Section of input that was consumed and transformed. */
-    result: T;
+    result: TResult;
     /** Section of input that's remaining. */
-    remaining: Input;
+    remaining: Iter<TInput>;
 }
 
 /** Main parser input type. */

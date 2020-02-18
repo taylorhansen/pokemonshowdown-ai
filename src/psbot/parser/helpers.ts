@@ -9,7 +9,7 @@ import { Info, Input, Parser, Result } from "./types";
 // helper parsers
 
 /** Parser that consumes any word. */
-export function anyWord(input: Input, info: Info): Result<string>
+export function anyWord(input: Input, info: Info): Result<string, string>
 {
     const w = input.get();
     if (input.done || w === "\n") throw new Error("Expected word");
@@ -47,7 +47,7 @@ export const boostName = transform(anyWord, parseBoostName);
 export const weatherTypeOrNone = transform(anyWord, parseWeatherTypeOrNone);
 
 /** Advances input to the next newline. This is a no-op if already on one. */
-export function skipLine(input: Input, info: Info): Result<undefined>
+export function skipLine(input: Input, info: Info): Result<undefined, string>
 {
     while (!input.done && input.get() !== "\n") input = input.next();
 
@@ -58,7 +58,7 @@ export function skipLine(input: Input, info: Info): Result<undefined>
  * Parser that consumes the rest of the line as plain text. Leaves Input
  * iterator at next newline.
  */
-export function restOfLine(input: Input, info: Info): Result<string>
+export function restOfLine(input: Input, info: Info): Result<string, string>
 {
     let result = "";
     let w = input.get();
@@ -81,9 +81,9 @@ export function restOfLine(input: Input, info: Info): Result<string>
 }
 
 /** Creates a Parser that consumes a particular word. */
-export function word<T extends string>(...alts: T[]): Parser<T>
+export function word<T extends string>(...alts: T[]): Parser<T, string>
 {
-    return function(input, info): Result<T>
+    return function(input, info): Result<T, string>
     {
         const w = input.get() as T;
         if (!alts.includes(w))
