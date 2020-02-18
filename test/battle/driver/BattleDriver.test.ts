@@ -1,14 +1,20 @@
 import { expect } from "chai";
 import "mocha";
-import { StatExceptHP, statsExceptHP, Type } from
+import * as dex from "../../../src/battle/dex/dex";
+import { RolloutMove, rolloutMoves, selfMoveCallers, StatExceptHP,
+    statsExceptHP, targetMoveCallers, Type } from
     "../../../src/battle/dex/dex-util";
 import { BattleDriver } from "../../../src/battle/driver/BattleDriver";
 import { CountableStatusType, FieldConditionType, InitOtherTeamSize, InitTeam,
     SideConditionType, SingleMoveStatus, SingleTurnStatus, StatusEffectType,
     SwitchIn, UpdatableStatusEffectType } from
     "../../../src/battle/driver/DriverEvent";
+import { ReadonlyPokemon } from "../../../src/battle/state/Pokemon";
+import { Side } from "../../../src/battle/state/Side";
 import { ReadonlyTeam } from "../../../src/battle/state/Team";
 import { ReadonlyTeamStatus } from "../../../src/battle/state/TeamStatus";
+import { ReadonlyVariableTempStatus } from
+    "../../../src/battle/state/VariableTempStatus";
 import { ReadonlyVolatileStatus } from
     "../../../src/battle/state/VolatileStatus";
 
@@ -37,7 +43,7 @@ const switchIns: readonly SwitchIn[] =
     {type: "switchIn", monRef: "us", ...initTeam.team[0]},
     {
         type: "switchIn", monRef: "them",
-        species: "Seaking", level: 100, gender: "M", hp: 100, hpMax: 100
+        species: "Smeargle", level: 100, gender: "M", hp: 100, hpMax: 100
     }
 ];
 
@@ -365,10 +371,10 @@ describe("BattleDriver", function()
                 expect(v.stalling).to.be.false;
                 expect(v.stallTurns).to.equal(0);
 
-                driver.useMove(
+                driver.setSingleTurnStatus(
                 {
-                    type: "useMove", monRef: "them", moveId: "protect",
-                    targets: ["them"]
+                    type: "setSingleTurnStatus", monRef: "them",
+                    status: "stalling"
                 });
                 expect(v.stalling).to.be.true;
                 expect(v.stallTurns).to.equal(1);
@@ -420,7 +426,7 @@ describe("BattleDriver", function()
                 // first start it
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "them", moveId: "outrage",
+                    type: "useMove", monRef: "them", move: "outrage",
                     targets: ["us"]
                 });
                 expect(v.lockedMove.isActive).to.be.true;
@@ -496,7 +502,7 @@ describe("BattleDriver", function()
             {
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "them", moveId: "mimic",
+                    type: "useMove", monRef: "them", move: "mimic",
                     targets: ["us"]
                 });
                 driver.mimic({type: "mimic", monRef: "them", move: "splash"});
@@ -515,7 +521,7 @@ describe("BattleDriver", function()
             {
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "them", moveId: "sketch",
+                    type: "useMove", monRef: "them", move: "sketch",
                     targets: ["us"]
                 });
                 driver.sketch({type: "sketch", monRef: "them", move: "tackle"});
@@ -962,18 +968,625 @@ describe("BattleDriver", function()
 
         describe("#useMove()", function()
         {
-            it("Should use move", function()
+            it("Should use and reveal move", function()
             {
                 const mon = driver.state.teams.them.active;
                 expect(mon.moveset.get("tackle")).to.be.null;
 
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "them", moveId: "tackle",
-                    targets: ["them"]
+                    type: "useMove", monRef: "them", move: "tackle",
+                    targets: ["us"]
                 });
 
-                expect(mon.moveset.get("tackle")).to.not.be.null;
+                const move = mon.moveset.get("tackle");
+                expect(move).to.not.be.null;
+                expect(move!.pp).to.equal(55);
+            });
+
+            it("Should not reveal struggle as a move slot", function()
+            {
+                const mon = driver.state.teams.them.active;
+                driver.useMove(
+                {
+                    type: "useMove", monRef: "them", move: "struggle",
+                    targets: ["us"]
+                });
+                expect(mon.moveset.get("struggle")).to.be.null;
+            });
+
+            describe("Consequence tree parsing", function()
+            {
+                it(`Should reset outrage if missed due to ability immunity`,
+                function()
+                {
+                    const vts = driver.state.teams.them.active.volatile
+                        .lockedMove;
+                    expect(vts.isActive).to.be.false;
+
+                    // start the status
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "outrage",
+                        targets: ["us"]
+                    });
+                    expect(vts.isActive).to.be.true;
+                    expect(vts.type).to.equal("outrage");
+
+                    // have the move miss due to a nested immune event
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "outrage",
+                        targets: ["us"],
+                        consequences:
+                        [{
+                            type: "activateAbility", monRef: "us",
+                            ability: "wonderguard",
+                            consequences: [{type: "immune", monRef: "us"}]
+                        }]
+                    });
+                    expect(vts.isActive).to.be.false;
+                });
+            });
+
+            describe("Single-move statuses", function()
+            {
+                it("Should reset single-move statuses", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    driver.setSingleMoveStatus(
+                    {
+                        type: "setSingleMoveStatus", monRef: "them",
+                        status: "destinyBond"
+                    });
+                    expect(mon.volatile.destinyBond).to.be.true;
+
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "tackle",
+                        targets: ["us"]
+                    });
+                    expect(mon.volatile.destinyBond).to.be.false;
+                });
+            });
+
+            describe("Called moves", function()
+            {
+                describe("Target move-callers", function()
+                {
+                    for (const caller of targetMoveCallers)
+                    {
+                        it(`Should infer target's move when using ${caller}`,
+                        function()
+                        {
+                            // switch in a pokemon that has the move-caller
+                            driver.initTeam(
+                            {
+                                ...initTeam,
+                                team:
+                                [
+                                    {
+                                        ...initTeam.team[0],
+                                        moves: [caller]
+                                    },
+                                    ...initTeam.team.slice(1)
+                                ]
+                            });
+                            driver.switchIn(switchIns[0]);
+
+                            const us = driver.state.teams.us.active;
+                            const them = driver.state.teams.them.active;
+                            driver.useMove(
+                            {
+                                type: "useMove", monRef: "us", move: caller,
+                                targets: ["them"],
+                                consequences:
+                                [{
+                                    type: "useMove", monRef: "us",
+                                    move: "tackle", targets: ["them"]
+                                }]
+                            });
+                            expect(us.moveset.get("tackle")).to.be.null;
+                            expect(them.moveset.get("tackle")).to.not.be.null;
+                            // shouldn't consume pp for the called move
+                            expect(them.moveset.get("tackle")!.pp).to.equal(56);
+                        });
+                    }
+                });
+
+                describe("Self move-callers", function()
+                {
+                    for (const caller of selfMoveCallers)
+                    {
+                        it(`Should infer user's move when using ${caller}`,
+                        function()
+                        {
+                            const them = driver.state.teams.them.active;
+                            driver.useMove(
+                            {
+                                type: "useMove", monRef: "them", move: caller,
+                                targets: ["them"],
+                                consequences:
+                                [{
+                                    type: "useMove", monRef: "them",
+                                    move: "tackle", targets: ["us"]
+                                }]
+                            });
+                            expect(them.moveset.get("tackle")).to.not.be.null;
+                            // shouldn't consume pp for the called move
+                            expect(them.moveset.get("tackle")!.pp).to.equal(56);
+                        });
+                    }
+                });
+            });
+
+            describe("Imprison move", function()
+            {
+                let them: ReadonlyPokemon;
+                let ourMoves: readonly string[];
+
+                function setup(imprisonUser: Side, sameOpponent = true): void
+                {
+                    ourMoves =
+                    [
+                        imprisonUser === "us" ? "imprison" : "protect", "ember",
+                        "tailwhip", "disable"
+                    ];
+
+                    const imprisonInitTeam: InitTeam =
+                    {
+                        type: "initTeam",
+                        team:
+                        [{
+                            species: "Vulpix", level: 5, gender: "F", hp: 20,
+                            hpMax: 20,
+                            stats: {atk: 11, def: 10, spa: 9, spd: 13, spe: 13},
+                            moves: ourMoves, baseAbility: "flashfire",
+                            item: "none"
+                        }]
+                    };
+                    driver.initTeam(imprisonInitTeam);
+                    driver.switchIn(
+                    {
+                        type: "switchIn", monRef: "us",
+                        ...imprisonInitTeam.team[0]
+                    });
+
+                    driver.initOtherTeamSize(
+                        {type: "initOtherTeamSize", size: 1});
+                    // switch in a similar pokemon
+                    driver.switchIn(
+                    {
+                        type: "switchIn", monRef: "them",
+                        species: sameOpponent ? "Vulpix" : "Bulbasaur",
+                        level: 10, gender: "M", hp: 100, hpMax: 100
+                    });
+                    them = driver.state.teams.them.active;
+
+                    if (sameOpponent)
+                    {
+                        // opponent should be able to have our moveset
+                        expect(them.moveset.constraint)
+                            .to.include.all.keys(ourMoves);
+                    }
+                    else
+                    {
+                        // opponent should not be able to have our moveset
+                        expect(them.moveset.constraint)
+                            .to.not.include.any.keys(ourMoves);
+                    }
+                }
+
+                describe("Imprison failed", function()
+                {
+                    for (const id of ["us", "them"] as const)
+                    {
+                        it(`Should infer no common moves if ${id} failed`,
+                        function()
+                        {
+                            setup(id);
+
+                            // if imprison fails, then the opponent shouldn't be
+                            //  able to have any of our moves
+                            driver.useMove(
+                            {
+                                type: "useMove", monRef: id, move: "imprison",
+                                targets: [id],
+                                consequences: [{type: "fail", monRef: id}]
+                            });
+                            expect(them.moveset.constraint)
+                                .to.not.include.any.keys(ourMoves);
+                        });
+                    }
+
+                    it("Should throw if shared moves", function()
+                    {
+                        setup("us");
+
+                        expect(() => driver.useMove(
+                        {
+                            type: "useMove", monRef: "them", move: "imprison",
+                            targets: ["them"],
+                            consequences: [{type: "fail", monRef: "them"}]
+                        })).to.throw(Error,
+                            "Imprison failed but both Pokemon have common " +
+                            "moves: imprison");
+                    });
+                });
+
+                describe("Imprison succeeded", function()
+                {
+                    for (const id of ["us", "them"] as const)
+                    {
+                        it(`Should infer a common move if ${id} succeeded`,
+                        function()
+                        {
+                            setup(id);
+
+                            // if imprison succeeds, then the opponent
+                            //  should be able to have one of our moves
+                            driver.useMove(
+                            {
+                                type: "useMove", monRef: id, move: "imprison",
+                                targets: [id]
+                            });
+                            expect(them.moveset.moveSlotConstraints)
+                                .to.have.lengthOf(1);
+                            expect(them.moveset.moveSlotConstraints[0])
+                                .to.have.keys(ourMoves);
+                        });
+                    }
+
+                    it("Should throw if no shared moves", function()
+                    {
+                        setup("us", /*sameOpponent*/false);
+
+                        // if imprison succeeds, then the opponent
+                        //  should be able to have one of our moves
+                        expect(() => driver.useMove(
+                        {
+                            type: "useMove", monRef: "us", move: "imprison",
+                            targets: ["us"]
+                        }))
+                            .to.throw(Error, "Imprison succeeded but both " +
+                                "Pokemon cannot share any moves");
+                    });
+                });
+            });
+
+            describe("Natural Gift move", function()
+            {
+                it("Should infer berry if successful", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    const item = mon.item;
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "naturalgift",
+                        targets: ["us"]
+                    });
+
+                    expect(mon.lastItem).to.equal(item,
+                        "Item was not consumed");
+                    expect(mon.lastItem.possibleValues)
+                        .to.have.keys(...Object.keys(dex.berries));
+                });
+
+                it("Should infer no berry if failed", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    const item = mon.item;
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "naturalgift",
+                        targets: ["us"],
+                        consequences: [{type: "fail", monRef: "them"}]
+                    });
+
+                    expect(mon.item).to.equal(item, "Item was consumed");
+                    expect(mon.item.possibleValues)
+                        .to.not.have.any.keys(...Object.keys(dex.berries));
+                });
+            });
+
+            describe("Two-turn moves", function()
+            {
+                it("Should release two-turn move, consuming only 1 pp",
+                function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "dive",
+                        targets: ["us"],
+                        consequences:
+                        [{
+                            type: "prepareMove", monRef: "them", move: "dive"
+                        }]
+                    });
+                    driver.postTurn({type: "postTurn"});
+                    expect(mon.volatile.twoTurn.isActive).to.be.true;
+
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "dive",
+                        targets: ["us"]
+                    });
+                    expect(mon.volatile.twoTurn.isActive).to.be.false;
+                    expect(mon.moveset.get("dive")!.pp).to.equal(15);
+                });
+            });
+
+            describe("Stalling moves", function()
+            {
+                it("Should reset stall if failed", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    expect(mon.volatile.stalling).to.be.false;
+                    driver.setSingleTurnStatus(
+                    {
+                        type: "setSingleTurnStatus", monRef: "them",
+                        status: "stalling"
+                    });
+                    expect(mon.volatile.stalling).to.be.true;
+                    expect(mon.volatile.stallTurns).to.equal(1);
+
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "protect",
+                        targets: ["them"],
+                        consequences: [{type: "fail", monRef: "them"}]
+                    });
+                    expect(mon.volatile.stalling).to.be.false;
+                    expect(mon.volatile.stallTurns).to.equal(0);
+                });
+
+                it("Should not reset stall if called", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "endure",
+                        targets: ["them"],
+                        consequences:
+                        [
+                            // protect effect happens
+                            {
+                                type: "setSingleTurnStatus", monRef: "them",
+                                status: "stalling"
+                            },
+                            // some move gets called via some effect
+                            {
+                                type: "useMove", monRef: "them",
+                                move: "endure", targets: ["them"],
+                                consequences: [{type: "fail", monRef: "them"}]
+                            }
+                        ]
+                    });
+                    expect(mon.volatile.stalling).to.be.true;
+                    expect(mon.volatile.stallTurns).to.equal(1);
+                });
+            });
+
+            // implicit team/volatile effects
+
+            describe("Implicit effects", function()
+            {
+                function testTeamEffect(name: string, move: string,
+                    assertion:
+                        (team: ReadonlyTeam, shouldSet: boolean) => void): void
+                {
+                    describe(name, function()
+                    {
+                        it(`Should set if using ${move}`, function()
+                        {
+                            const team = driver.state.teams.them;
+                            driver.useMove(
+                            {
+                                type: "useMove", monRef: "them", move,
+                                targets: ["them"]
+                            });
+                            assertion(team, /*shouldSet*/true);
+                        });
+
+                        it(`Should not set if ${move} failed`, function()
+                        {
+                            const team = driver.state.teams.them;
+                            driver.useMove(
+                            {
+                                type: "useMove", monRef: "them", move,
+                                targets: ["them"],
+                                consequences: [{type: "fail", monRef: "them"}]
+                            });
+                            assertion(team, /*shouldSet*/false);
+                        });
+                    });
+                }
+
+                function testEffect(name: string, move: string,
+                    assertion:
+                        (mon: ReadonlyPokemon, shouldSet: boolean) => void):
+                    void
+                {
+                    testTeamEffect(name, move,
+                        (team, shouldSet) => assertion(team.active, shouldSet));
+                }
+
+                testEffect("Minimize", "minimize",
+                    (mon, shouldSet) =>
+                        expect(mon.volatile.minimize)
+                            .to.be[shouldSet ? "true" : "false"]);
+                testEffect("Defense Curl", "defensecurl",
+                    (mon, shouldSet) =>
+                        expect(mon.volatile.defenseCurl)
+                            .to.be[shouldSet ? "true" : "false"]);
+
+                testTeamEffect("Healing Wish", "healingwish",
+                    (team, shouldSet) =>
+                        expect(team.status.healingWish)
+                            .to.be[shouldSet ? "true" : "false"]);
+                testTeamEffect("Lunar Dance", "lunardance",
+                    (team, shouldSet) =>
+                        expect(team.status.lunarDance)
+                            .to.be[shouldSet ? "true" : "false"]);
+                testTeamEffect("Wish", "wish",
+                    (team, shouldSet) =>
+                        expect(team.status.wish.isActive)
+                            .to.be[shouldSet ? "true" : "false"]);
+
+                testTeamEffect("Self-switch", "uturn",
+                    (team, shouldSet) =>
+                        expect(team.status.selfSwitch)
+                            .to.be[shouldSet ? "true" : "false"]);
+                testTeamEffect("Baton Pass", "batonpass",
+                    (team, shouldSet) =>
+                        expect(team.status.selfSwitch)
+                            .to.equal(shouldSet ? "copyvolatile" : false));
+            });
+
+            function testLockingMoves<T extends string>(keys: readonly T[],
+                getter: (mon: ReadonlyPokemon) =>
+                    ReadonlyVariableTempStatus<T>): void
+            {
+                for (const move of keys)
+                {
+                    function init(): ReadonlyVariableTempStatus<T>
+                    {
+                        const vts = getter(driver.state.teams.them.active);
+                        expect(vts.isActive).to.be.false;
+                        driver.useMove(
+                        {
+                            type: "useMove", monRef: "them", move,
+                            targets: ["us"]
+                        });
+                        expect(vts.isActive).to.be.true;
+                        expect(vts.type).to.equal(move);
+                        return vts;
+                    }
+
+                    it(`Should set ${move} if successful`, init);
+
+                    it(`Should reset ${move} if missed`, function()
+                    {
+                        const vts = init();
+
+                        driver.useMove(
+                        {
+                            type: "useMove", monRef: "them", move,
+                            targets: ["us"],
+                            consequences:
+                                [{type: "miss", monRef: "them", target: "us"}]
+                        });
+                        expect(vts.isActive).to.be.false;
+                    });
+
+                    it(`Should reset ${move} if opponent protected`, function()
+                    {
+                        const vts = init();
+
+                        driver.useMove(
+                        {
+                            type: "useMove", monRef: "them", move,
+                            targets: ["us"],
+                            consequences: [{type: "stall", monRef: "us"}]
+                        });
+                        expect(vts.isActive).to.be.false;
+                    });
+
+                    it(`Should not reset ${move} if opponent endured`,
+                    function()
+                    {
+                        const vts = init();
+
+                        driver.useMove(
+                        {
+                            type: "useMove", monRef: "them", move,
+                            targets: ["us"],
+                            consequences:
+                                [{type: "stall", monRef: "us", endure: true}]
+                        });
+                        expect(vts.isActive).to.be.true;
+                    });
+                }
+            }
+
+            describe("Rollout-like moves", function()
+            {
+                testLockingMoves(Object.keys(rolloutMoves) as RolloutMove[],
+                    mon => mon.volatile.rollout);
+            });
+
+            describe("Locked moves", function()
+            {
+                testLockingMoves(Object.keys(dex.lockedMoves) as
+                        dex.LockedMove[],
+                    mon => mon.volatile.lockedMove);
+            });
+
+            describe("Pressure", function()
+            {
+                beforeEach("Setup pressure mon", function()
+                {
+                    driver.activateAbility(
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "pressure"
+                    });
+                });
+
+                it("Should use double pp if targeted", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "tackle",
+                        targets: ["us"]
+                    });
+                    expect(mon.moveset.get("tackle")!.pp).to.equal(54);
+                });
+
+                it("Should not use double pp if not targeted", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "splash",
+                        targets: ["them"]
+                    });
+                    expect(mon.moveset.get("splash")!.pp).to.equal(63);
+                });
+
+                it("Should not use double pp if self target", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    driver.activateAbility(
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "pressure"
+                    });
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "splash",
+                        targets: ["them"]
+                    });
+                    expect(mon.moveset.get("splash")!.pp).to.equal(63);
+                });
+
+                it("Should not use double pp if mold breaker", function()
+                {
+                    const mon = driver.state.teams.them.active;
+                    driver.activateAbility(
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "moldbreaker"
+                    });
+                    driver.useMove(
+                    {
+                        type: "useMove", monRef: "them", move: "tackle",
+                        targets: ["us"]
+                    });
+                    expect(mon.moveset.get("tackle")!.pp).to.equal(55);
+                });
             });
         });
 
@@ -988,6 +1601,24 @@ describe("BattleDriver", function()
                     {type: "revealMove", monRef: "them", move: "tackle"});
 
                 expect(mon.moveset.get("tackle")).to.not.be.null;
+            });
+        });
+
+        describe("#prepareMove()", function()
+        {
+            it("Should prepare two-turn move", function()
+            {
+                const mon = driver.state.teams.them.active;
+                driver.useMove(
+                {
+                    type: "useMove", monRef: "them", move: "dive",
+                    targets: ["us"],
+                    consequences:
+                        [{type: "prepareMove", monRef: "them", move: "dive"}]
+                });
+
+                expect(mon.volatile.twoTurn.isActive).to.be.true;
+                expect(mon.volatile.twoTurn.type).to.equal("dive");
             });
         });
 
@@ -1091,11 +1722,19 @@ describe("BattleDriver", function()
                 it(`Should set ${name}`, function()
                 {
                     const mon = driver.state.teams.us.active;
+                    if (status === "stalling")
+                    {
+                        expect(mon.volatile.stallTurns).to.equal(0);
+                    }
                     expect(mon.volatile[status]).to.be.false;
 
                     driver.setSingleTurnStatus(
                         {type: "setSingleTurnStatus", monRef: "us", status});
 
+                    if (status === "stalling")
+                    {
+                        expect(mon.volatile.stallTurns).to.equal(1);
+                    }
                     expect(mon.volatile[status]).to.be.true;
                 });
             }
@@ -1103,6 +1742,7 @@ describe("BattleDriver", function()
             test("Magic Coat", "magicCoat");
             test("Roost", "roost");
             test("Snatch", "snatch");
+            test("Stall", "stalling");
         });
 
         describe("#takeDamage()", function()
@@ -1151,17 +1791,22 @@ describe("BattleDriver", function()
                     expect(team.status[condition].isActive).to.be.false;
                 });
 
-                it(`Should activate ${name} with source pokemon`, function()
+                it(`Should activate ${name} with source if caused by move`,
+                function()
                 {
                     const team = driver.state.teams.them;
                     const mon = team.active;
                     expect(team.status[condition].isActive).to.be.false;
 
-                    // start the condition
+                    // start the condition via a move
                     driver.activateSideCondition(
                     {
                         type: "activateSideCondition", teamRef: "them",
-                        condition, start: true, monRef: "them"
+                        condition, start: true
+                    },
+                    /*cause*/{
+                        type: "useMove", monRef: "them",
+                        move: condition.toLowerCase(), targets: ["them"]
                     });
 
                     expect(team.status[condition].isActive).to.be.true;
@@ -1309,7 +1954,7 @@ describe("BattleDriver", function()
                 // use a move that sets self-switch flag
                 driver.useMove(
                 {
-                    type: "useMove", monRef: "them", moveId: "batonpass",
+                    type: "useMove", monRef: "them", move: "batonpass",
                     targets: ["them"]
                 });
                 expect(driver.state.teams.them.status.selfSwitch)
@@ -1325,12 +1970,8 @@ describe("BattleDriver", function()
             it("Should reset weather back to normal", function()
             {
                 // modify the weather
-                driver.setWeather(
-                {
-                    type: "setWeather", monRef: "us", weatherType: "Hail",
-                    cause: "move"
-                });
-
+                driver.setWeather({type: "setWeather", weatherType: "Hail"});
+                // set it back to normal
                 driver.resetWeather({type: "resetWeather"});
 
                 expect(driver.state.status.weather.type).to.equal("none");
@@ -1341,10 +1982,11 @@ describe("BattleDriver", function()
         {
             it("Should set weather by move", function()
             {
-                driver.setWeather(
+                driver.useMove(
                 {
-                    type: "setWeather", monRef: "us", weatherType: "Hail",
-                    cause: "move"
+                    type: "useMove", monRef: "them", move: "hail",
+                    targets: ["them", "us"],
+                    consequences: [{type: "setWeather", weatherType: "Hail"}]
                 });
 
                 expect(driver.state.status.weather.type).to.equal("Hail");
@@ -1353,10 +1995,11 @@ describe("BattleDriver", function()
 
             it("Should set weather by ability", function()
             {
-                driver.setWeather(
+                driver.activateAbility(
                 {
-                    type: "setWeather", monRef: "us", weatherType: "SunnyDay",
-                    cause: "ability"
+                    type: "activateAbility", monRef: "them", ability: "drought",
+                    consequences:
+                        [{type: "setWeather", weatherType: "SunnyDay"}]
                 });
 
                 expect(driver.state.status.weather.type).to.equal("SunnyDay");
@@ -1371,10 +2014,7 @@ describe("BattleDriver", function()
             {
                 // first set the weather
                 driver.setWeather(
-                {
-                    type: "setWeather", monRef: "us", weatherType: "Sandstorm",
-                    cause: "move"
-                });
+                    {type: "setWeather", weatherType: "Sandstorm"});
                 expect(driver.state.status.weather.turns).to.equal(0);
 
                 driver.tickWeather(
@@ -1386,17 +2026,12 @@ describe("BattleDriver", function()
             {
                 // first set the weather
                 driver.setWeather(
-                {
-                    type: "setWeather", monRef: "us", weatherType: "RainDance",
-                    cause: "move"
-                });
+                    {type: "setWeather", weatherType: "RainDance"});
                 expect(driver.state.status.weather.turns).to.equal(0);
 
-                expect(function()
-                {
-                    driver.tickWeather(
-                        {type: "tickWeather", weatherType: "Sandstorm"});
-                })
+                expect(() =>
+                        driver.tickWeather(
+                            {type: "tickWeather", weatherType: "Sandstorm"}))
                     .to.throw(Error,
                         "Weather is 'RainDance' but upkept weather is " +
                         "'Sandstorm'");

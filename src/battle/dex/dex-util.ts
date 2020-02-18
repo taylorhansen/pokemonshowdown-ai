@@ -123,6 +123,17 @@ export function isWeatherType(type: any): type is WeatherType
 
 /** Moves similar to Rollout. */
 export const rolloutMoves = {rollout: true, iceball: true} as const;
+/** Moves that are similar to Rollout. */
+export type RolloutMove = keyof typeof rolloutMoves;
+/**
+ * Checks if a value matches a Rollout-like move.
+ * @param type Value to be checked.
+ * @returns True if the name matches, false otherwise.
+ */
+export function isRolloutMove(type: any): type is RolloutMove
+{
+    return rolloutMoves.hasOwnProperty(type);
+}
 
 /** Format of each pokemon entry in the Dex. */
 export interface PokemonData

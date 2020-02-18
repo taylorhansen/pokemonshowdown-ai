@@ -7,6 +7,8 @@ export interface Iter<T>
     get(): T;
     /** Creates a new Iterator at the next position. */
     next(): Iter<T>;
+    /** Creates a new Iterator at the previous position. */
+    prev(): Iter<T>;
     /** Whether calls to `#get()` will return undefined. */
     readonly done: boolean;
 }
@@ -21,6 +23,7 @@ export function iter<T>(arr: readonly T[], i = 0): Iter<T>
     return {
         get() { return arr[i]; },
         next() { return iter(arr, i + 1); },
-        done: i >= arr.length
+        prev() { return iter(arr, i - 1); },
+        done: i >= arr.length || i < 0
     };
 }

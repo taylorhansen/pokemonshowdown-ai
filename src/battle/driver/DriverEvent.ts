@@ -1,7 +1,7 @@
-import { FutureMove } from "../dex/dex";
+import { FutureMove, TwoTurnMove } from "../dex/dex";
 import { BoostName, MajorStatus, StatExceptHP, Type, WeatherType } from
     "../dex/dex-util";
-import { MoveData, MoveOptions } from "../state/Pokemon";
+import { MoveData } from "../state/Pokemon";
 import { Side } from "../state/Side";
 
 /**
@@ -51,6 +51,11 @@ interface DriverEventMap
     removeItem: RemoveItem;
     useMove: UseMove;
     revealMove: RevealMove;
+    prepareMove: PrepareMove;
+    fail: Fail;
+    miss: Miss;
+    immune: Immune;
+    stall: Stall;
     modifyPP: ModifyPP;
     restoreMoves: RestoreMoves;
     mustRecharge: MustRecharge;
@@ -81,6 +86,8 @@ interface DriverEventBase<T extends DriverEventType>
 {
     /** The type of DriverEvent this is. */
     readonly type: T;
+    /** DriverEvents that were caused by this one. */
+    readonly consequences?: readonly AnyDriverEvent[];
 }
 
 /** Initializes the client's team. */
@@ -142,11 +149,6 @@ export interface ActivateAbility extends DriverEventBase<"activateAbility">
     readonly monRef: Side;
     /** Ability being activated or revealed. */
     readonly ability: string;
-    /**
-     * If the pokemon is receiving the ability via Trace, this should specify
-     * the pokemon being Traced.
-     */
-    readonly traced?: Side;
 }
 
 /** Reveals and suppresses a pokemon's ability due to Gastro Acid. */
@@ -495,12 +497,14 @@ export interface RemoveItem extends DriverEventBase<"removeItem">
     readonly consumed: string | boolean;
 }
 
-/** Indicates that the pokemon used a move. */
-export interface UseMove extends DriverEventBase<"useMove">,
-    Readonly<Omit<MoveOptions, "targets">>
+/** Indicates that the pokemon attempted to use a move. */
+export interface UseMove extends DriverEventBase<"useMove">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
+    /** Name of the move. */
+    readonly move: string;
+    // TODO: in doubles, target isn't always known
     /** Targets of the move. */
     readonly targets: readonly Side[];
 }
@@ -512,6 +516,50 @@ export interface RevealMove extends DriverEventBase<"revealMove">
     readonly monRef: Side;
     /** Move name. */
     readonly move: string;
+}
+
+/** Indicates that the pokemon is preparing a two-turn move. */
+export interface PrepareMove extends DriverEventBase<"prepareMove">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Move name. */
+    readonly move: TwoTurnMove;
+}
+
+/** Indicates that the pokemon failed at doing something. */
+export interface Fail extends DriverEventBase<"fail">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+}
+
+/** Indicates that the pokemon missed its target. */
+export interface Miss extends DriverEventBase<"miss">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Target that was missed. */
+    readonly target: Side;
+}
+
+/** Indicates that the pokemon was immune to an effect. */
+export interface Immune extends DriverEventBase<"immune">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+}
+
+/** Indicates that the pokemon successfully stalled an attack. */
+export interface Stall extends DriverEventBase<"stall">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /**
+     * Whether Endure was in effect, meaning the hit went through but the
+     * pokemon endured it.
+     */
+    readonly endure?: boolean;
 }
 
 /** Reveals a move and modifies its PP value. */
@@ -563,7 +611,7 @@ export interface SetSingleTurnStatus extends
 }
 
 /** Typing for `SetSingleTurnStatus#status`. */
-export type SingleTurnStatus = "magicCoat" | "roost" | "snatch";
+export type SingleTurnStatus = "magicCoat" | "roost" | "snatch" | "stalling";
 
 /** Indicates that a pokemon took damage (or was healed) and its HP changed. */
 export interface TakeDamage extends DriverEventBase<"takeDamage">
@@ -589,8 +637,6 @@ export interface ActivateSideCondition extends
     readonly condition: SideConditionType;
     /** Whether to start (`true`) or end (`false`) the condition. */
     readonly start: boolean;
-    /** Optional pokemon reference to the one who caused this event. */
-    readonly monRef?: Side;
 }
 
 /** Typing for `ActivateSideCondition#condition`. */
@@ -638,12 +684,8 @@ export interface ResetWeather extends DriverEventBase<"resetWeather"> {}
 /** Sets the current weather. */
 export interface SetWeather extends DriverEventBase<"setWeather">
 {
-    /** Who caused the weather. */
-    readonly monRef: Side;
     /** Type of weather. */
     readonly weatherType: WeatherType;
-    /** What action or trait caused the weather. */
-    readonly cause: "move" | "ability";
 }
 
 /** Indicates that the current weather condition is still active. */

@@ -1,4 +1,6 @@
-import { boostKeys, StatExceptHP } from "../dex/dex-util";
+import * as dex from "../dex/dex";
+import { boostKeys, isRolloutMove, selfMoveCallers, StatExceptHP,
+    targetMoveCallers } from "../dex/dex-util";
 import { BattleState, ReadonlyBattleState } from "../state/BattleState";
 import { Pokemon } from "../state/Pokemon";
 import { otherSide, Side } from "../state/Side";
@@ -7,21 +9,25 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ActivateSideCondition, ActivateStatusEffect, AfflictStatus, AnyDriverEvent,
     Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
     ClearSelfSwitch, CopyBoosts, CountStatusEffect, CureStatus, CureTeam,
-    DisableMove, DriverEvent, DriverEventType, Faint, Fatigue, Feint,
-    FormChange, GastroAcid, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts,
-    LockOn, Mimic, ModifyPP, MustRecharge, PostTurn, PreTurn, ReenableMoves,
-    RejectSwitchTrapped, RemoveItem, ResetWeather, RestoreMoves, RevealItem,
-    RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
-    SetThirdType, SetWeather, Sketch, SwapBoosts, SwitchIn, TakeDamage,
-    TickWeather, Transform, TransformPost, Trap, Unboost, UpdateStatusEffect,
-    UseMove } from "./DriverEvent";
+    DisableMove, DriverEvent, DriverEventType, Fail, Faint, Fatigue, Feint,
+    FormChange, GastroAcid, Immune, Inactive, InitOtherTeamSize, InitTeam,
+    InvertBoosts, LockOn, Mimic, Miss, ModifyPP, MustRecharge, PostTurn,
+    PrepareMove, PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem,
+    ResetWeather, RestoreMoves, RevealItem, RevealMove, SetBoost,
+    SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType, SetWeather, Sketch,
+    Stall, SwapBoosts, SwitchIn, TakeDamage, TickWeather, Transform,
+    TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove } from
+    "./DriverEvent";
 
 /**
  * Ensures that the BattleDriver implements handlers for each type of
  * DriverEvent.
  */
 type DriverEventHandler =
-    {[T in DriverEventType]: (event: DriverEvent<T>) => void};
+{
+    [T in DriverEventType]:
+        (event: DriverEvent<T>, cause?: AnyDriverEvent) => void
+};
 
 /** Handles all frontend-interpreted state mutations and inferences. */
 export class BattleDriver implements DriverEventHandler
@@ -31,15 +37,19 @@ export class BattleDriver implements DriverEventHandler
     protected readonly _state = new BattleState();
 
     /** Handles multiple DriverEvents. */
-    public handleEvents(events: readonly AnyDriverEvent[]): void
+    public handleEvents(events: readonly AnyDriverEvent[],
+        cause?: AnyDriverEvent): void
     {
-        for (const event of events) this.handleEvent(event);
+        for (const event of events) this.handleEvent(event, cause);
     }
 
     /** Handles a DriverEvent. */
-    public handleEvent<T extends DriverEventType>(event: DriverEvent<T>): void
+    public handleEvent<T extends DriverEventType>(event: DriverEvent<T>,
+        cause?: AnyDriverEvent): void
     {
-        (this[event.type] as (event: DriverEvent<T>) => void)(event);
+        (this[event.type] as
+            (event: DriverEvent<T>, cause?: AnyDriverEvent) => void)(
+                event, cause);
     }
 
     // TODO: rearrange methods based on relevance to each other
@@ -77,6 +87,7 @@ export class BattleDriver implements DriverEventHandler
             mon.moveset.size = data.moves.length;
             for (const move of data.moves) mon.moveset.reveal(move);
         }
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -86,6 +97,7 @@ export class BattleDriver implements DriverEventHandler
     public initOtherTeamSize(event: InitOtherTeamSize): void
     {
         this._state.teams.them.size = event.size;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -95,6 +107,7 @@ export class BattleDriver implements DriverEventHandler
     public preTurn(event: PreTurn): void
     {
         this._state.preTurn();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -104,6 +117,7 @@ export class BattleDriver implements DriverEventHandler
     public postTurn(event: PostTurn): void
     {
         this._state.postTurn();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -112,19 +126,9 @@ export class BattleDriver implements DriverEventHandler
      */
     public activateAbility(event: ActivateAbility): void
     {
-        const mon = this.getMon(event.monRef);
-        // TODO: move trace logic to outside - these events should reveal one
-        //  ability at a time
-        if (event.traced)
-        {
-            // infer trace user's base ability
-            mon.traits.ability.narrow("trace");
-            // infer opponent's ability due to trace effect
-            this.getMon(event.traced).traits.ability.narrow(event.ability);
-        }
-
         // override current ability with the new one
-        mon.traits.setAbility(event.ability);
+        this.getMon(event.monRef).traits.setAbility(event.ability);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -137,6 +141,8 @@ export class BattleDriver implements DriverEventHandler
 
         mon.traits.setAbility(event.ability);
         mon.volatile.gastroAcid = true;
+
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -183,6 +189,7 @@ export class BattleDriver implements DriverEventHandler
             default:
                 throw new Error(`Invalid status effect '${event.status}'`);
         }
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -192,6 +199,7 @@ export class BattleDriver implements DriverEventHandler
     public countStatusEffect(event: CountStatusEffect): void
     {
         this.getMon(event.monRef).volatile[event.status] = event.turns;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -200,7 +208,8 @@ export class BattleDriver implements DriverEventHandler
      */
     public disableMove(event: DisableMove): void
     {
-        this.getMon(event.monRef).disableMove(event.move);
+        this.getMon(event.monRef).volatile.disableMove(event.move);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -210,6 +219,7 @@ export class BattleDriver implements DriverEventHandler
     public reenableMoves(event: ReenableMoves): void
     {
         this.getMon(event.monRef).volatile.enableMoves();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -222,6 +232,8 @@ export class BattleDriver implements DriverEventHandler
             .futureMoves[event.move];
         if (event.start) futureMove.start(/*restart*/false);
         else futureMove.end();
+
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -231,6 +243,7 @@ export class BattleDriver implements DriverEventHandler
     public feint(event: Feint): void
     {
         this.getMon(event.monRef).volatile.feint();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -242,6 +255,7 @@ export class BattleDriver implements DriverEventHandler
     public updateStatusEffect(event: UpdateStatusEffect): void
     {
         this.getMon(event.monRef).volatile[event.status].tick();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -251,6 +265,7 @@ export class BattleDriver implements DriverEventHandler
     public fatigue(event: Fatigue): void
     {
         this.getMon(event.monRef).volatile.lockedMove.reset();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -260,6 +275,7 @@ export class BattleDriver implements DriverEventHandler
     public setThirdType(event: SetThirdType): void
     {
         this.getMon(event.monRef).volatile.addedType = event.thirdType;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -271,6 +287,7 @@ export class BattleDriver implements DriverEventHandler
         const mon = this.getMon(event.monRef);
         mon.volatile.overrideTraits.types = event.newTypes;
         mon.volatile.addedType = "???";
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -281,6 +298,7 @@ export class BattleDriver implements DriverEventHandler
     {
         this.getMon(event.monRef).volatile.lockOn(
             this.getMon(event.target).volatile);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -290,6 +308,7 @@ export class BattleDriver implements DriverEventHandler
     public mimic(event: Mimic): void
     {
         this.getMon(event.monRef).mimic(event.move);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -299,6 +318,7 @@ export class BattleDriver implements DriverEventHandler
     public sketch(event: Sketch): void
     {
         this.getMon(event.monRef).sketch(event.move);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -308,6 +328,7 @@ export class BattleDriver implements DriverEventHandler
     public trap(event: Trap): void
     {
         this.getMon(event.by).volatile.trap(this.getMon(event.target).volatile);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -318,6 +339,7 @@ export class BattleDriver implements DriverEventHandler
     public boost(event: Boost): void
     {
         this.getMon(event.monRef).volatile.boosts[event.stat] += event.amount;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     // TODO: doesn't need to exist since Boost supports negative numbers
@@ -329,6 +351,7 @@ export class BattleDriver implements DriverEventHandler
     public unboost(event: Unboost): void
     {
         this.getMon(event.monRef).volatile.boosts[event.stat] -= event.amount;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -342,6 +365,7 @@ export class BattleDriver implements DriverEventHandler
         {
             for (const stat of boostKeys) mon.volatile.boosts[stat] = 0;
         }
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -352,6 +376,7 @@ export class BattleDriver implements DriverEventHandler
     {
         const boosts = this.getMon(event.monRef).volatile.boosts;
         for (const stat of boostKeys) if (boosts[stat] < 0) boosts[stat] = 0;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -362,6 +387,7 @@ export class BattleDriver implements DriverEventHandler
     {
         const boosts = this.getMon(event.monRef).volatile.boosts;
         for (const stat of boostKeys) if (boosts[stat] > 0) boosts[stat] = 0;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -373,6 +399,7 @@ export class BattleDriver implements DriverEventHandler
         const from = this.getMon(event.from).volatile.boosts;
         const to = this.getMon(event.to).volatile.boosts;
         for (const stat of boostKeys) to[stat] = from[stat];
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -383,6 +410,7 @@ export class BattleDriver implements DriverEventHandler
     {
         const boosts = this.getMon(event.monRef).volatile.boosts;
         for (const stat of boostKeys) boosts[stat] = -boosts[stat];
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -392,6 +420,7 @@ export class BattleDriver implements DriverEventHandler
     public setBoost(event: SetBoost): void
     {
         this.getMon(event.monRef).volatile.boosts[event.stat] = event.amount;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -406,6 +435,7 @@ export class BattleDriver implements DriverEventHandler
         {
             [v1[stat], v2[stat]] = [v2[stat], v1[stat]];
         }
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -422,11 +452,9 @@ export class BattleDriver implements DriverEventHandler
             case "imprison":
                 // opponent's imprison caused the pokemon to be prevented from
                 //  moving, so the revealed move can be revealed for both sides
-                if (event.move)
-                {
-                    this.getMon(otherSide(event.monRef)).moveset
-                        .reveal(event.move);
-                }
+                if (!event.move) break;
+                this.getMon(otherSide(event.monRef)).moveset
+                    .reveal(event.move);
                 break;
             case "truant":
                 mon.volatile.activateTruant();
@@ -441,6 +469,8 @@ export class BattleDriver implements DriverEventHandler
 
         // consumed an action this turn
         mon.inactive();
+
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -450,12 +480,14 @@ export class BattleDriver implements DriverEventHandler
     public afflictStatus(event: AfflictStatus): void
     {
         this.getMon(event.monRef).majorStatus.afflict(event.status);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /** Cures the pokemon of the given major status. */
     public cureStatus(event: CureStatus): void
     {
         this.getMon(event.monRef).majorStatus.assert(event.status).cure();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -465,6 +497,7 @@ export class BattleDriver implements DriverEventHandler
     public cureTeam(event: CureTeam): void
     {
         this.getTeam(event.teamRef).cure();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -482,6 +515,8 @@ export class BattleDriver implements DriverEventHandler
         // TODO: should gender also be in the traits object?
         mon.gender = event.gender;
         mon.hp.set(event.hp, event.hpMax);
+
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -491,6 +526,7 @@ export class BattleDriver implements DriverEventHandler
     public transform(event: Transform): void
     {
         this.getMon(event.source).transform(this.getMon(event.target));
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -501,13 +537,18 @@ export class BattleDriver implements DriverEventHandler
     public transformPost(event: TransformPost): void
     {
         this.getMon(event.monRef).transformPost(event.moves);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
      * Indicates that the pokemon fainted.
      * @virtual
      */
-    public faint(event: Faint): void { this.getMon(event.monRef).faint(); }
+    public faint(event: Faint): void
+    {
+        this.getMon(event.monRef).faint();
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
 
     /**
      * Reveals that the pokemon is now holding an item.
@@ -516,6 +557,7 @@ export class BattleDriver implements DriverEventHandler
     public revealItem(event: RevealItem): void
     {
         this.getMon(event.monRef).setItem(event.item, event.gained);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -525,22 +567,281 @@ export class BattleDriver implements DriverEventHandler
     public removeItem(event: RemoveItem): void
     {
         this.getMon(event.monRef).removeItem(event.consumed);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
      * Indicates that the pokemon used a move.
      * @virtual
      */
-    public useMove(event: UseMove): void
+    public useMove(event: UseMove, cause?: AnyDriverEvent): void
     {
-        this.getMon(event.monRef).useMove(
-            // extract move options from the event
-            (({moveId, targets, unsuccessful, reveal, prepare}) =>
-            ({
-                moveId, unsuccessful, reveal, prepare,
-                // transform reference names into object references
-                targets: targets.map(targetRef => this.getMon(targetRef))
-            }))(event));
+        const team = this.getTeam(event.monRef);
+        const mon = this.getMon(event.monRef);
+
+        // handle move effects/inferences
+
+        const called = !!cause;
+        if (!called && event.move !== "struggle")
+        {
+            mon.moveset.reveal(event.move);
+        }
+        let nopp = false; // used at the end for pp dedution
+
+        // reset single move statuses, waiting for an explicit event after
+        //  handling this one
+        mon.volatile.resetSingleMove();
+
+        // lookahead to see what happened as a result of this move
+        let failed = false;
+        const missed: Side[] = [];
+        if (event.consequences)
+        {
+            this.recurseOverConsequences(event.consequences, consequence =>
+            {
+                switch (consequence.type)
+                {
+                    case "fail":
+                        if (event.monRef === consequence.monRef) failed = true;
+                        return true;
+                    case "miss":
+                        if (event.monRef === consequence.monRef)
+                        {
+                            missed.push(consequence.target);
+                        }
+                        return true;
+                    case "immune": missed.push(consequence.monRef); return true;
+                    case "stall":
+                        if (!consequence.endure)
+                        {
+                            missed.push(consequence.monRef);
+                        }
+                        return true;
+                    case "useMove":
+                        if (event.monRef !== consequence.monRef) return false;
+                        if (targetMoveCallers.includes(event.move))
+                        {
+                            // calling a move that is a part of the target's
+                            //  moveset
+                            const targets = event.targets.map(
+                                t => this.getMon(t));
+                            for (const target of targets)
+                            {
+                                target.moveset.reveal(consequence.move);
+                            }
+                        }
+                        else if (selfMoveCallers.includes(event.move))
+                        {
+                            // calling a move that is a part of the user's
+                            //  moveset
+                            mon.moveset.reveal(consequence.move);
+                        }
+                        // inactive/move/switch are major events that imply a
+                        //  different meaning to above handled events so don't
+                        //  recurse through those
+                        // fallthrough
+                    case "switchIn": case "inactive":
+                        return false;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        // handle implicit inferences
+
+        const moveData = dex.moves[event.move];
+
+        // make inferences with whether imprison failed
+        if (moveData.volatileEffect === "imprison")
+        {
+            // assume us is fully known, while them is unknown
+            const us = this._state.teams.us.active.moveset;
+            const usMoves = [...us.moves].map(([name]) => name);
+            const them = this._state.teams.them.active.moveset;
+
+            if (failed)
+            {
+                // imprison failed, which means both active pokemon don't have
+                //  each other's moves
+                // infer that the opponent cannot have any of our moves
+
+                // sanity check: opponent should not already have one of our
+                //  moves
+                const commonMoves = usMoves.filter(
+                    name => them.moves.has(name));
+                if (commonMoves.length > 0)
+                {
+                    throw new Error("Imprison failed but both Pokemon have " +
+                        `common moves: ${commonMoves.join(", ")}`);
+                }
+
+                // remove our moves from their move possibilities
+                them.inferDoesntHave(usMoves);
+            }
+            else
+            {
+                // imprison succeeded, which means both active pokemon have at
+                //  least one common move
+                // infer that one of our moves has to be contained by the
+                //  opponent's moveset
+
+                // sanity check: opponent should have or be able to have at
+                //  least one of our moves
+                if (usMoves.every(name =>
+                    !them.moves.has(name) && !them.constraint.has(name)))
+                {
+                    throw new Error("Imprison succeeded but both Pokemon " +
+                        "cannot share any moves");
+                }
+
+                them.addMoveSlotConstraint(usMoves);
+            }
+        }
+
+        // handle natural gift move
+        if (event.move === "naturalgift")
+        {
+            // naturalgift only succeeds if the user has a berry, and implicitly
+            //  consumes it
+            // TODO: narrow further based on perceived power and type
+            if (!failed)
+            {
+                mon.item.narrow(...Object.keys(dex.berries));
+                mon.removeItem(/*consumed*/true);
+            }
+            // fails if the user doesn't have a berry
+            else mon.item.remove(...Object.keys(dex.berries));
+        }
+
+        if (dex.isTwoTurnMove(event.move))
+        {
+            // could already be in the process of using a two-turn move, so make
+            //  sure pp is only deducted on the first turn
+            if (mon.volatile.twoTurn.type === event.move) nopp = true;
+            // otherwise, the prepareMove event should later start the status
+        }
+        // release two-turn move if it was prepared the previous turn
+        mon.volatile.twoTurn.reset();
+
+        // reset stall counter if the stalling move failed or a different move
+        //  was used
+        // if another move was called, this will not reset the stall counter
+        if (!called &&
+            (failed ||
+                (moveData.volatileEffect !== "endure" &&
+                    moveData.volatileEffect !== "protect")))
+        {
+            mon.volatile.stall(false);
+        }
+
+        if (!failed)
+        {
+            // handle implicit move effects
+
+            switch (moveData.volatileEffect)
+            {
+                case "minimize": mon.volatile.minimize = true; break;
+                case "defensecurl": mon.volatile.defenseCurl = true; break;
+            }
+
+            switch (event.move)
+            {
+                case "healingwish": team.status.healingWish = true; break;
+                case "lunardance": team.status.lunarDance = true; break;
+                // wish can be used consecutively, but only the first use counts
+                case "wish": team.status.wish.start(/*restart*/false); break;
+            }
+
+            team.status.selfSwitch = moveData.selfSwitch ?? false;
+        }
+
+        // below inferences don't happen when the move was called by another
+        //  move
+        if (!called)
+        {
+            // if not a complete miss, these locking moves will still execute
+            if (!failed && !event.targets.every(t => missed.includes(t)))
+            {
+                // apply rollout status
+                if (isRolloutMove(event.move))
+                {
+                    // could already be in the process of using rollout
+                    if (mon.volatile.rollout.type === event.move)
+                    {
+                        // only deduct pp on the first use
+                        mon.volatile.rollout.tick();
+                        nopp = true;
+                    }
+                    else mon.volatile.rollout.start(event.move);
+                }
+                else mon.volatile.rollout.reset();
+
+                // handle locked moves, e.g. outrage
+                if (dex.isLockedMove(event.move))
+                {
+                    // could already be in the process of the locked move
+                    if (mon.volatile.lockedMove.type === event.move)
+                    {
+                        mon.volatile.lockedMove.tick();
+                        // only deduct pp on the first use
+                        nopp = true;
+                    }
+                    else mon.volatile.lockedMove.start(event.move);
+                }
+                else mon.volatile.lockedMove.reset();
+            }
+            else
+            {
+                mon.volatile.rollout.reset();
+                mon.volatile.lockedMove.reset();
+            }
+
+            // reveal move and deduct pp
+            // TODO: infer no pp for available moves if struggle (ambiguous)
+            if (event.move !== "struggle")
+            {
+                const move = mon.moveset.get(event.move)!; // revealed earlier
+                const targets = event.targets.map(t => this.getMon(t));
+                if (!nopp)
+                {
+                    move.pp -= 1;
+                    // moldbreaker cancels pressure
+                    if (mon.ability !== "moldbreaker")
+                    {
+                        // consume an extra pp for each target with pressure
+                        for (const target of targets)
+                        {
+                            if (target !== mon && target.ability === "pressure")
+                            {
+                                move.pp -= 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Recursively visits a DriverEvent's consequence tree.
+     * @param events Events to visit.
+     * @param callback Callback to execute for each event. If the event returns
+     * `true`, it will recurse over that event's consequences tree if it exists,
+     * or skip over it if `false` is returned.
+     */
+    private recurseOverConsequences(events: readonly AnyDriverEvent[],
+        callback: (event: AnyDriverEvent) => boolean): void
+    {
+        for (const event of events)
+        {
+            if (callback(event) && event.consequences)
+            {
+                this.recurseOverConsequences(event.consequences, callback);
+            }
+        }
     }
 
     /**
@@ -550,6 +851,55 @@ export class BattleDriver implements DriverEventHandler
     public revealMove(event: RevealMove): void
     {
         this.getMon(event.monRef).moveset.reveal(event.move);
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the pokemon is preparing a two-turn move.
+     * @virtual
+     */
+    public prepareMove(event: PrepareMove): void
+    {
+        const mon = this.getMon(event.monRef);
+        mon.moveset.reveal(event.move);
+        mon.volatile.twoTurn.start(event.move);
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the pokemon failed at doing something.
+     * @virtual
+     */
+    public fail(event: Fail): void
+    {
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the pokemon missed its target.
+     * @virtual
+     */
+    public miss(event: Miss): void
+    {
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the pokemon was immune to an effect.
+     * @virtual
+     */
+    public immune(event: Immune): void
+    {
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the pokemon successfully stalled an attack.
+     * @virtual
+     */
+    public stall(event: Stall): void
+    {
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -561,6 +911,7 @@ export class BattleDriver implements DriverEventHandler
         const move = this.getMon(event.monRef).moveset.reveal(event.move);
         if (event.amount === "deplete") move.pp = 0;
         else move.pp += event.amount;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -571,6 +922,7 @@ export class BattleDriver implements DriverEventHandler
     {
         const moveset = this.getMon(event.monRef).moveset;
         for (const move of moveset.moves.values()) move.pp = move.maxpp;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -581,6 +933,7 @@ export class BattleDriver implements DriverEventHandler
     {
         // TODO: imply this in #useMove()
         this.getMon(event.monRef).volatile.mustRecharge = true;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -590,6 +943,7 @@ export class BattleDriver implements DriverEventHandler
     public setSingleMoveStatus(event: SetSingleMoveStatus): void
     {
         this.getMon(event.monRef).volatile[event.status] = true;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -598,7 +952,10 @@ export class BattleDriver implements DriverEventHandler
      */
     public setSingleTurnStatus(event: SetSingleTurnStatus): void
     {
-        this.getMon(event.monRef).volatile[event.status] = true;
+        const mon = this.getMon(event.monRef);
+        if (event.status === "stalling") mon.volatile.stall(true);
+        else mon.volatile[event.status] = true;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -615,13 +972,15 @@ export class BattleDriver implements DriverEventHandler
         {
             mon.majorStatus.tick();
         }
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
      * Activates a team status condition.
      * @virtual
      */
-    public activateSideCondition(event: ActivateSideCondition): void
+    public activateSideCondition(event: ActivateSideCondition,
+        cause?: AnyDriverEvent): void
     {
         const ts = this.getTeam(event.teamRef).status;
         switch (event.condition)
@@ -634,8 +993,24 @@ export class BattleDriver implements DriverEventHandler
             case "reflect":
                 if (event.start)
                 {
-                    ts[event.condition].start(
-                        event.monRef ? this.getMon(event.monRef) : null);
+                    // see if a useMove event caused it
+                    let source: Pokemon | null = null;
+                    // must also check if the move that was used can actually
+                    //  cause this effect
+                    const sideConditionMap =
+                        {lightscreen: "lightScreen", reflect: "reflect"} as
+                        {
+                            [name: string]: string | undefined,
+                            lightscreen: "lightScreen", reflect: "reflect"
+                        };
+                    if (cause?.type === "useMove" &&
+                        sideConditionMap[
+                                dex.moves[cause.move]?.sideCondition ?? ""] ===
+                            event.condition)
+                    {
+                        source = this.getMon(cause.monRef);
+                    }
+                    ts[event.condition].start(source);
                 }
                 else ts[event.condition].reset();
                 break;
@@ -652,6 +1027,7 @@ export class BattleDriver implements DriverEventHandler
                 else ts[event.condition] = 0;
                 break;
         }
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -661,6 +1037,7 @@ export class BattleDriver implements DriverEventHandler
     public activateFieldCondition(event: ActivateFieldCondition): void
     {
         this._state.status[event.condition][event.start ? "start" : "end"]();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -670,6 +1047,7 @@ export class BattleDriver implements DriverEventHandler
     public switchIn(event: SwitchIn): void
     {
         this.getTeam(event.monRef).switchIn(event);
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -680,6 +1058,7 @@ export class BattleDriver implements DriverEventHandler
     public rejectSwitchTrapped(event: RejectSwitchTrapped): void
     {
         this.getMon(event.monRef).trapped(this.getMon(event.by));
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -690,6 +1069,7 @@ export class BattleDriver implements DriverEventHandler
     {
         this._state.teams.us.status.selfSwitch = false;
         this._state.teams.them.status.selfSwitch = false;
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -699,17 +1079,30 @@ export class BattleDriver implements DriverEventHandler
     public resetWeather(event: ResetWeather): void
     {
         this._state.status.weather.reset();
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
      * Sets the current weather.
      * @virtual
      */
-    public setWeather(event: SetWeather): void
+    public setWeather(event: SetWeather, cause?: AnyDriverEvent): void
     {
-        this._state.status.weather.start(this.getMon(event.monRef),
-            // gen<=4: ability-caused weather is infinite
-            event.weatherType, /*infinite*/event.cause === "ability");
+        let source: Pokemon | null = null;
+        let infinite: boolean | undefined;
+        if (cause)
+        {
+            if (cause.type === "useMove") source = this.getMon(cause.monRef);
+            else if (cause.type === "activateAbility")
+            {
+                source = this.getMon(cause.monRef);
+                // gen<=4: ability-caused weather is infinite
+                infinite = true;
+            }
+        }
+        this._state.status.weather.start(source, event.weatherType, infinite);
+
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     /**
@@ -725,6 +1118,7 @@ export class BattleDriver implements DriverEventHandler
             throw new Error(`Weather is '${weather.type}' but upkept ` +
                 `weather is '${event.weatherType}'`);
         }
+        if (event.consequences) this.handleEvents(event.consequences, event);
     }
 
     // TODO: make this not the case

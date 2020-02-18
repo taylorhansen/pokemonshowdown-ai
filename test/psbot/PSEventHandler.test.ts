@@ -1,12 +1,11 @@
 import { expect } from "chai";
 import "mocha";
-import { itemRemovalMoves, nonSelfMoveCallers, selfMoveCallers,
-    targetMoveCallers } from "../../src/battle/dex/dex-util";
+import { itemRemovalMoves } from "../../src/battle/dex/dex-util";
 import { AnyDriverEvent, CountableStatusType, DriverInitPokemon,
     SideConditionType, StatusEffectType} from
     "../../src/battle/driver/DriverEvent";
 import { Logger } from "../../src/Logger";
-import { PokemonID, toIdName } from "../../src/psbot/helpers";
+import { PokemonID } from "../../src/psbot/helpers";
 import { AnyBattleEvent, BattleEventType } from
     "../../src/psbot/parser/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
@@ -221,8 +220,12 @@ describe("PSEventHandler", function()
                 from: "ability: Trace", of: them
             }],
             [{
-                type: "activateAbility", monRef: "us", ability: "blaze",
-                traced: "them"
+                type: "activateAbility", monRef: "us", ability: "trace",
+                consequences:
+                [
+                    {type: "activateAbility", monRef: "us", ability: "blaze"},
+                    {type: "activateAbility", monRef: "them", ability: "blaze"}
+                ]
             }]);
         });
 
@@ -374,13 +377,14 @@ describe("PSEventHandler", function()
                     type: "-start", id: us, volatile: "confusion",
                     otherArgs: [], fatigue: true
                 }],
-                [
-                    {
+                [{
+                    type: "fatigue", monRef: "us",
+                    consequences:
+                    [{
                         type: "activateStatusEffect", monRef: "us",
                         status: "confusion", start: true
-                    },
-                    {type: "fatigue", monRef: "us"}
-                ]);
+                    }]
+                    }]);
             });
 
             describeTrivialStatus("Curse", "curse");
@@ -552,13 +556,11 @@ describe("PSEventHandler", function()
                             volatile: "move: Mimic", otherArgs: ["Splash"]
                         }
                     ],
-                    [
-                        {
-                            type: "useMove", monRef: "us", moveId: type,
-                            targets: ["them"]
-                        },
-                        {type, monRef: "us", move: "splash"}
-                    ]);
+                    [{
+                        type: "useMove", monRef: "us", move: type,
+                        targets: ["them"],
+                        consequences: [{type, monRef: "us", move: "splash"}]
+                    }]);
                 }
 
                 it("Should throw if no previous MoveEvent", function()
@@ -595,6 +597,23 @@ describe("PSEventHandler", function()
                     type: "modifyPP", monRef: "us", move: "splash",
                     amount: -4
                 }]);
+            });
+
+            describe("stall", function()
+            {
+                test("Should emit stall",
+                [{
+                    type: "-activate", id: us, volatile: "move: Protect",
+                    otherArgs: []
+                }],
+                    [{type: "stall", monRef: "us"}]);
+
+                test("Should emit stall with endure",
+                [{
+                    type: "-activate", id: us, volatile: "move: Endure",
+                    otherArgs: []
+                }],
+                    [{type: "stall", monRef: "us", endure: true}]);
             });
 
             describe("trapped", function()
@@ -635,17 +654,21 @@ describe("PSEventHandler", function()
 
             test("Should emit inactive and activateAbility from ability",
                 [{type: "cant", id: us, reason: "ability: Swift Swim"}],
-             [
-                 {type: "activateAbility", monRef: "us", ability: "swiftswim"},
-                 {type: "inactive", monRef: "us"}
-            ]);
+            [{
+                type: "inactive", monRef: "us",
+                consequences:
+                [{
+                    type: "activateAbility", monRef: "us", ability: "swiftswim"
+                }]
+            }]);
 
             test("Should emit inactive and activateAbility from truant ability",
                 [{type: "cant", id: us, reason: "ability: Truant"}],
-             [
-                 {type: "activateAbility", monRef: "us", ability: "truant"},
-                 {type: "inactive", monRef: "us", reason: "truant"}
-            ]);
+            [{
+                type: "inactive", monRef: "us", reason: "truant",
+                consequences:
+                    [{type: "activateAbility", monRef: "us", ability: "truant"}]
+            }]);
 
             test("Should emit inactive with move if provided",
                 [{type: "cant", id: us, moveName: "Splash", reason: "Taunt"}],
@@ -722,16 +745,15 @@ describe("PSEventHandler", function()
                     status: {hp: 100, hpMax: 100, condition: null},
                     from: "move: Healing Wish"
                 }],
-                [
-                    {
+                [{
+                    type: "activateSideCondition", teamRef: "us",
+                    condition: "healingWish", start: false,
+                    consequences:
+                    [{
                         type: "takeDamage", monRef: "us", newHP: [100, 100],
                         tox: false
-                    },
-                    {
-                        type: "activateSideCondition", teamRef: "us",
-                        condition: "healingWish", start: false
-                    }
-                ]);
+                    }]
+                }]);
 
                 test("Should emit takeDamage, restoreMoves and " +
                     "activateSideCondition from Lunar Dance",
@@ -740,17 +762,18 @@ describe("PSEventHandler", function()
                     status: {hp: 100, hpMax: 100, condition: null},
                     from: "move: Lunar Dance"
                 }],
-                [
-                    {
-                        type: "takeDamage", monRef: "us", newHP: [100, 100],
-                        tox: false
-                    },
-                    {type: "restoreMoves", monRef: "us"},
-                    {
-                        type: "activateSideCondition", teamRef: "us",
-                        condition: "lunarDance", start: false
-                    }
-                ]);
+                [{
+                    type: "activateSideCondition", teamRef: "us",
+                    condition: "lunarDance", start: false,
+                    consequences:
+                    [
+                        {
+                            type: "takeDamage", monRef: "us", newHP: [100, 100],
+                            tox: false
+                        },
+                        {type: "restoreMoves", monRef: "us"}
+                    ]
+                }]);
             });
         }
 
@@ -886,132 +909,7 @@ describe("PSEventHandler", function()
             test("Should emit useMove",
                 [{type: "move", id: us, moveName: "Splash"}],
             [{
-                type: "useMove", monRef: "us", moveId: "splash", targets: ["us"]
-            }]);
-
-            test("Should emit useMove with evaded if miss",
-                [{type: "move", id: us, moveName: "Splash", miss: true}],
-            [{
-                type: "useMove", monRef: "us", moveId: "splash",
-                targets: ["us"], unsuccessful: "evaded"
-            }]);
-
-            for (const volatile of
-                ["Mat Block", "Protect", "move: Protect", "move: Endure"])
-            {
-                test(`Should emit useMove with evaded if '${volatile}' ` +
-                    "activated",
-                [
-                    {type: "move", id: us, moveName: "Tackle", targetId: them},
-                    {type: "-activate", id: them, volatile, otherArgs: []}
-                ],
-                [{
-                    type: "useMove", monRef: "us", moveId: "tackle",
-                    targets: ["them"], unsuccessful: "evaded"
-                }]);
-            }
-
-            test("Should emit useMove with evaded if -immune event after",
-            [
-                {type: "move", id: us, moveName: "Tackle", targetId: them},
-                {type: "-immune", id: them}
-            ],
-            [{
-                type: "useMove", monRef: "us", moveId: "tackle",
-                targets: ["them"], unsuccessful: "evaded"
-            }]);
-
-            test("Should emit useMove with evaded if -miss event after",
-            [
-                {type: "move", id: us, moveName: "Tackle", targetId: them},
-                {type: "-miss", id: us, targetId: them}
-            ],
-            [{
-                type: "useMove", monRef: "us", moveId: "tackle",
-                targets: ["them"], unsuccessful: "evaded"
-            }]);
-
-            test("Should emit useMove with failed if -fail event after",
-            [
-                {type: "move", id: us, moveName: "Splash"},
-                {type: "-fail", id: us}
-            ],
-            [{
-                type: "useMove", monRef: "us", moveId: "splash",
-                targets: ["us"], unsuccessful: "failed"
-            }]);
-
-            test("Should emit useMove with prepare=true if -prepare event " +
-                "after",
-            [
-                {type: "move", id: us, moveName: "Fly", targetId: them},
-                {type: "-prepare", id: us, moveName: "Fly"}
-            ],
-            [{
-                type: "useMove", monRef: "us", moveId: "fly", targets: ["them"],
-                prepare: true
-            }]);
-
-            for (const moveCaller of targetMoveCallers)
-            {
-                test("Should also emit revealMove for opponent if used via " +
-                    moveCaller,
-                [
-                    {
-                        type: "move", id: us, moveName: moveCaller,
-                        targetId: them
-                    },
-                    {
-                        type: "move", id: us, moveName: "Tackle",
-                        targetId: them, from: moveCaller
-                    }
-                ],
-                [
-                    {type: "revealMove", monRef: "them", move: "tackle"},
-                    {
-                        type: "useMove", monRef: "us",
-                        moveId: toIdName(moveCaller), targets: ["them"]
-                    },
-                    {
-                        type: "useMove", monRef: "us", moveId: "tackle",
-                        targets: ["them"], reveal: false
-                    }
-                ]);
-            }
-
-            for (const moveCaller of nonSelfMoveCallers)
-            {
-                test("Should emit useMove with reveal=false if used via " +
-                    moveCaller,
-                [{
-                    type: "move", id: us, moveName: "Tackle", from: moveCaller
-                }],
-                [{
-                    type: "useMove", monRef: "us", moveId: "tackle",
-                    targets: ["them"], reveal: false
-                }]);
-            }
-
-            for (const moveCaller of selfMoveCallers)
-            {
-                test("Should emit useMove with reveal=nopp if used via " +
-                    moveCaller,
-                [{
-                    type: "move", id: us, moveName: "Tackle", from: moveCaller
-                }],
-                [{
-                    type: "useMove", monRef: "us", moveId: "tackle",
-                    targets: ["them"], reveal: "nopp"
-                }]);
-            }
-
-            test("Should emit useMove with reveal=nopp if lockedmove",
-            [{
-                type: "move", id: us, moveName: "Tackle", from: "lockedmove"
-            }],
-            [{
-                type: "useMove", monRef: "us", moveId: "tackle",
-                targets: ["them"], reveal: "nopp"
+                type: "useMove", monRef: "us", move: "splash", targets: ["us"]
             }]);
         });
 
@@ -1023,8 +921,16 @@ describe("PSEventHandler", function()
 
         describe("-prepare", function()
         {
-            test("Should emit nothing",
-                [{type: "-prepare", id: us, moveName: "Fly"}], []);
+            test("Should emit prepareMove",
+                [{type: "-prepare", id: us, moveName: "Fly"}],
+                [{type: "prepareMove", monRef: "us", move: "fly"}]);
+
+            it("Should throw if not a two-turn move", function()
+            {
+                expect(() => handler.handleEvents(
+                        [{type: "-prepare", id: us, moveName: "Tackle"}]))
+                    .to.throw(Error, "'tackle' is not a two-turn move");
+            });
         });
 
         describe("-setboost", function()
@@ -1081,50 +987,6 @@ describe("PSEventHandler", function()
 
                 // following test cases are only for -sidestart
                 if (type === "-sideend") return;
-
-                for (const {name, condition} of screensCases)
-                {
-                    test(`Should emit activateSideCondition from ${name} if ` +
-                        "related move was used directly beforehand",
-                    [
-                        {type: "move", id: us, moveName: name},
-                        {type, id: us.owner, condition: name}
-                    ],
-                    [
-                        {
-                            type: "useMove", monRef: "us",
-                            moveId: toIdName(name), targets: ["us"]
-                        },
-                        {
-                            type: "activateSideCondition", teamRef: "us",
-                            condition, start: true, monRef: "us"
-                        }
-                    ]);
-
-                    it(`Should throw if no event before ${name}`, function()
-                    {
-                        expect(
-                                () => handler.handleEvents(
-                                    [{type, id: us.owner, condition: name}]))
-                            .to.throw(Error,
-                                `Don't know how ${name} was caused since ` +
-                                "this is the first event");
-                    });
-
-                    it(`Should throw if non-move event before ${name}`,
-                    function()
-                    {
-                        expect(
-                                () => handler.handleEvents(
-                                [
-                                    {type: "upkeep"},
-                                    {type, id: us.owner, condition: name}
-                                ]))
-                            .to.throw(Error,
-                                `Don't know how ${name} was caused since ` +
-                                "no move caused it");
-                    });
-                }
             });
         }
 
@@ -1197,13 +1059,14 @@ describe("PSEventHandler", function()
         {
             test("Should emit transform and transformPost",
                 [{type: "-transform", source: us, target: them}],
-            [
-                {type: "transform", source: "us", target: "them"},
-                {
+            [{
+                type: "transform", source: "us", target: "them",
+                consequences:
+                [{
                     type: "transformPost", monRef: "us",
                     moves: request.active![0].moves
-                }
-            ]);
+                }]
+            }]);
 
             it("Should emit transform and transformPost even if last request " +
                 "message indicates forceSwitch", function()
@@ -1213,13 +1076,14 @@ describe("PSEventHandler", function()
                 expect(handler.handleEvents(
                         [{type: "-transform", source: us, target: them}]))
                     .to.deep.equal(
-                    [
-                        {type: "transform", source: "us", target: "them"},
-                        {
+                    [{
+                        type: "transform", source: "us", target: "them",
+                        consequences:
+                        [{
                             type: "transformPost", monRef: "us",
                             moves: request.active![0].moves
-                        }
-                    ]);
+                        }]
+                    }]);
             });
 
             it("Should emit transform but not transformPost if last request " +
@@ -1275,83 +1139,15 @@ describe("PSEventHandler", function()
                 [{type: "-weather", weatherType: "RainDance", upkeep: true}],
                 [{type: "tickWeather", weatherType: "RainDance"}]);
 
-            test("Should emit setWeather with cause=ability if from ability",
+            test("Should emit setWeather if weatherType!=none",
             [{
                 type: "-weather", weatherType: "Hail", upkeep: false,
                 from: "ability: Snow Warning", of: us
             }],
-            [
-                {
-                    type: "setWeather", weatherType: "Hail", monRef: "us",
-                    cause: "ability"
-                },
-                {
-                    type: "activateAbility", monRef: "us",
-                    ability: "snowwarning"
-                }
-            ]);
-
-            test("Should emit setWeather with cause=move if move was used " +
-                "directly beforehand",
-            [
-                {type: "move", id: us, moveName: "Sandstorm"},
-                {type: "-weather", weatherType: "Sandstorm", upkeep: false}
-            ],
-            [
-                {
-                    type: "useMove", monRef: "us", moveId: "sandstorm",
-                    targets: ["us", "them"]
-                },
-                {
-                    type: "setWeather", weatherType: "Sandstorm", monRef: "us",
-                    cause: "move"
-                }
-            ]);
-
-            it("Should throw if no previous events for context", function()
-            {
-                expect(() => handler.handleEvents(
-                    [{
-                        type: "-weather", weatherType: "SunnyDay", upkeep: false
-                    }]))
-                    .to.throw(Error, "Don't know how weather was caused " +
-                        "since this is the first event");
-            });
-
-            it("Should throw if no previous move/switch event for context",
-            function()
-            {
-                expect(() => handler.handleEvents(
-                    [
-                        {type: "upkeep"},
-                        {
-                            type: "-weather", weatherType: "SunnyDay",
-                            upkeep: false
-                        }
-                    ]))
-                    .to.throw(Error, "Don't know how weather was caused " +
-                        "since this isn't preceeded by a move or switch");
-            });
-
-            it("Should throw if previous switch event but -weather event not " +
-                "attributed to it",
-            function()
-            {
-                expect(() => handler.handleEvents(
-                    [
-                        {
-                            type: "switch", id: them, species: "Magikarp",
-                            level: 100, gender: "F", hp: 100, hpMax: 100,
-                            shiny: false, condition: null
-                        },
-                        {
-                            type: "-weather", weatherType: "SunnyDay",
-                            upkeep: false
-                        }
-                    ]))
-                    .to.throw(Error, "Switched in but expected a weather " +
-                        "ability to activate");
-            });
+            [{
+                type: "activateAbility", monRef: "us", ability: "snowwarning",
+                consequences: [{type: "setWeather", weatherType: "Hail"}]
+            }]);
         });
 
         describe("win", function()
@@ -1379,7 +1175,8 @@ describe("PSEventHandler", function()
                 }],
                 [{
                     type: "activateAbility", monRef: "them",
-                    ability: "wonderguard"
+                    ability: "wonderguard",
+                    consequences: [{type: "immune", monRef: "us"}]
                 }]);
             });
 
@@ -1391,7 +1188,8 @@ describe("PSEventHandler", function()
                 }],
                 [{
                     type: "revealItem", monRef: "them", item: "leftovers",
-                    gained: false
+                    gained: false,
+                    consequences: [{type: "immune", monRef: "us"}]
                 }]);
 
                 test("Should not emit revealItem if berry",
