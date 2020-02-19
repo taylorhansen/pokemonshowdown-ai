@@ -794,14 +794,23 @@ describe("PSEventHandler", function()
         {
             describe(type, function()
             {
-                test("Should emit switchIn",
-                [{
-                    type, id: us, species: "Magikarp", level: 100, gender: "F",
-                    hp: 100, hpMax: 100, condition: "brn", shiny: true
-                }],
+                test("Should emit switchIn with consequences",
+                [
+                    {
+                        type, id: us, species: "Magikarp", level: 100,
+                        gender: "F", hp: 100, hpMax: 100, condition: "brn",
+                        shiny: true
+                    },
+                    {type: "-ability", id: us, ability: "Pressure"}
+                ],
                 [{
                     type: "switchIn", monRef: "us", species: "Magikarp",
-                    level: 100, gender: "F", hp: 100, hpMax: 100
+                    level: 100, gender: "F", hp: 100, hpMax: 100,
+                    consequences:
+                    [{
+                        type: "activateAbility", monRef: "us",
+                        ability: "pressure"
+                    }]
                 }]);
             });
         }

@@ -221,7 +221,8 @@ export class PSEventHandler
             // major events
             case "cant": return this.handleCant(event, it);
             case "move": return this.handleMove(event, it);
-            case "switch": return this.handleSwitch(event, it);
+            // while drag is a minor event, it's handled the same as switch
+            case "drag": case "switch": return this.handleSwitch(event, it);
 
             // minor events
             case "-ability": return this.handleAbility(event, it);
@@ -241,7 +242,6 @@ export class PSEventHandler
             case "-damage": case "-heal": case "-sethp":
                 return this.handleDamage(event, it);
             case "detailschange": return this.handleDetailsChange(event, it);
-            case "drag": return this.handleDrag(event, it);
             case "-fail": return this.handleFail(event, it);
             case "faint": return this.handleFaint(event, it);
             case "-fieldend": case "-fieldstart":
@@ -343,8 +343,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleSwitch(event: SwitchEvent, it: Iter<AnyBattleEvent>):
-        PSResult
+    protected handleSwitch(event: DragEvent | SwitchEvent,
+        it: Iter<AnyBattleEvent>): PSResult
     {
         const {result: consequences, remaining} = this.handleMinorEvents(it);
 
@@ -754,22 +754,6 @@ export class PSEventHandler
                 ({
                     type: "formChange", monRef: this.getSide(id.owner), species,
                     level, gender, hp, hpMax, perm: true
-                } as const))(event)
-            ],
-            remaining: it
-        };
-    }
-
-    /** @virtual */
-    protected handleDrag(event: DragEvent, it: Iter<AnyBattleEvent>): PSResult
-    {
-        return {
-            result:
-            [
-                (({id, species, level, gender, hp, hpMax}) =>
-                ({
-                    type: "switchIn", monRef: this.getSide(id.owner), species,
-                    level, gender, hp, hpMax
                 } as const))(event)
             ],
             remaining: it
