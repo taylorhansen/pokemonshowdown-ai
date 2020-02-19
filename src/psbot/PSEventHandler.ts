@@ -348,6 +348,54 @@ export class PSEventHandler
     {
         const {result: consequences, remaining} = this.handleMinorEvents(it);
 
+        // if an activateAbility is found, but an activateAbility with trace is
+        //  found after, reject the first event
+        // this is due to a weird behavior in PS with gen4 battles, not sure if
+        //  it's also the case on cartridge (if it is, file an issue on PS)
+        const abilityEvents: {i: number, event: ActivateAbility}[] = [];
+        for (let i = 0; i < consequences.length; ++i)
+        {
+            const consequence = consequences[i];
+            if (consequence.type !== "activateAbility") continue;
+
+            // trace ability being activated
+            if (consequence.ability === "trace")
+            {
+                // extract the traced ability from consequences
+                let tracedAbility: string | undefined;
+                if (consequence.consequences)
+                {
+                    const abilityEvent = consequence.consequences[0];
+                    if (abilityEvent.type === "activateAbility" &&
+                        abilityEvent.monRef === consequence.monRef)
+                    {
+                        tracedAbility = abilityEvent.ability;
+                    }
+                }
+
+                if (tracedAbility)
+                {
+                    // search past ability events for a match for the traced one
+                    for (let j = 0; j < abilityEvents.length; ++j)
+                    {
+                        const data = abilityEvents[j];
+                        const abilityEvent = abilityEvents[j].event;
+                        if (abilityEvent.monRef === consequence.monRef &&
+                            abilityEvent.ability === tracedAbility)
+                        {
+                            // reject the ability event
+                            abilityEvents.splice(j--, 1);
+                            consequences.splice(data.i, 1);
+                            // removing an element we already iterated over, so
+                            //  adjust i so we don't skip over the next element
+                            --i;
+                        }
+                    }
+                }
+            }
+            else abilityEvents.push({i, event: consequence});
+        }
+
         return {
             result:
             [

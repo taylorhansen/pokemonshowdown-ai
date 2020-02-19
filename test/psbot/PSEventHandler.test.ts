@@ -812,6 +812,40 @@ describe("PSEventHandler", function()
                         ability: "pressure"
                     }]
                 }]);
+
+                test("Should reject ability if traced after",
+                [
+                    {
+                        type, id: us, species: "Magikarp", level: 100,
+                        gender: "F", hp: 100, hpMax: 100, condition: "brn",
+                        shiny: true
+                    },
+                    {type: "-ability", id: us, ability: "Pressure"},
+                    {
+                        type: "-ability", id: us, ability: "Pressure",
+                        from: "ability: Trace", of: them
+                    }
+                ],
+                [{
+                    type: "switchIn", monRef: "us", species: "Magikarp",
+                    level: 100, gender: "F", hp: 100, hpMax: 100,
+                    consequences:
+                    [{
+                        type: "activateAbility", monRef: "us",
+                        ability: "trace",
+                        consequences:
+                        [
+                            {
+                                type: "activateAbility", monRef: "us",
+                                ability: "pressure"
+                            },
+                            {
+                                type: "activateAbility", monRef: "them",
+                                ability: "pressure"
+                            }
+                        ]
+                    }]
+                }]);
             });
         }
 
