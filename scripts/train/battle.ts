@@ -13,6 +13,16 @@ import { PSBattle } from "../../src/psbot/PSBattle";
 import { PSEventHandler, PSResult } from "../../src/psbot/PSEventHandler";
 import { ensureDir } from "./ensureDir";
 
+/** Writes a string into a file. */
+async function writeFile(filePath: string, buffer: string): Promise<void>
+{
+    await ensureDir(dirname(filePath));
+    const file = fs.createWriteStream(filePath);
+    await new Promise((res, rej) =>
+        file.write(buffer, err => err ? rej(err) : res()));
+    file.close();
+}
+
 /** Player options for `startBattle()`. */
 export interface PlayerOptions
 {
@@ -142,7 +152,20 @@ export async function startBattle(options: GameOptions): Promise<void>
                         }
                     }
                 }
-                catch (e) { innerLog.error(`${e}\n${(e as Error).stack}`); }
+                // should NEVER happen
+                catch (e)
+                {
+                    innerLog.error(`${e}\n${(e as Error).stack}`);
+
+                    let msg = "Fatal: startBattle() encountered an error.";
+                    if (options.logPath)
+                    {
+                        await writeFile(options.logPath, buffer);
+                        msg += ` Check ${options.logPath} for details.`;
+                    }
+                    else msg += ` Log buffer:\n${buffer}`;
+                    throw new Error(msg);
+                }
             }
             // signal to other event loop of game over
             done = true;
@@ -153,17 +176,5 @@ export async function startBattle(options: GameOptions): Promise<void>
     await Promise.all(eventLoops);
 
     // write logs to the log file
-    if (options.logPath)
-    {
-        await ensureDir(dirname(options.logPath));
-        const file = fs.createWriteStream(options.logPath);
-        return new Promise(function(res, rej)
-        {
-            file.write(buffer, function(err)
-            {
-                if (err) rej(err);
-                else res();
-            });
-        });
-    }
+    if (options.logPath) return writeFile(options.logPath, buffer);
 }

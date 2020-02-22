@@ -53,4 +53,5 @@ import { train } from "./train";
         logPath
     });
     model.dispose();
-})();
+})()
+    .catch(e => console.log(`\nTraining script threw an error: ${e}`));
