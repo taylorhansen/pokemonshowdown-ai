@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { toColumn } from "../../src/ai/Network";
+import { toColumn } from "../../src/ai/NetworkAgent";
 import { Choice, intToChoice } from "../../src/battle/agent/Choice";
 import { ReadonlyBattleState } from "../../src/battle/state/BattleState";
 import { Logger } from "../../src/Logger";

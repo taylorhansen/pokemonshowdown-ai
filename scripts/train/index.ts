@@ -1,7 +1,7 @@
 /** @file Sets up a training session for the neural network. */
 import * as tf from "@tensorflow/tfjs-node";
 import { join } from "path";
-import { Network } from "../../src/ai/Network";
+import { NetworkAgent } from "../../src/ai/NetworkAgent";
 import { latestModelFolder, logPath } from "../../src/config";
 import { Logger } from "../../src/Logger";
 import { ensureDir } from "./ensureDir";
@@ -17,7 +17,7 @@ import { train } from "./train";
     const modelUrl = `file://${latestModelFolder}`;
     const modelJsonUrl = `file://${join(latestModelFolder, "model.json")}`;
     logger.debug("Loading network");
-    try { model = await Network.loadModel(modelJsonUrl); }
+    try { model = await NetworkAgent.loadModel(modelJsonUrl); }
     catch (e)
     {
         logger.error(`Error opening model: ${e}`);

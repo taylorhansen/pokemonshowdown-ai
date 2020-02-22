@@ -16,7 +16,7 @@ export function toColumn(arr: number[] | Float32Array): tf.Tensor2D
 }
 
 /** Neural network interface. */
-export class Network implements BattleAgent
+export class NetworkAgent implements BattleAgent
 {
     /**
      * Creates a Network object.
@@ -24,7 +24,7 @@ export class Network implements BattleAgent
      */
     constructor(private readonly model: tf.LayersModel)
     {
-        Network.verifyModel(model);
+        NetworkAgent.verifyModel(model);
     }
 
     /** @override */
@@ -61,9 +61,9 @@ export class Network implements BattleAgent
      * @param url URL to the `model.json` created by `LayersModel#save()`, e.g.
      * `file://my-model/model.json`.
      */
-    public static async loadNetwork(url: string): Promise<Network>
+    public static async loadNetwork(url: string): Promise<NetworkAgent>
     {
-        return new Network(await Network.loadModel(url));
+        return new NetworkAgent(await NetworkAgent.loadModel(url));
     }
 
     /**
@@ -74,7 +74,7 @@ export class Network implements BattleAgent
     public static async loadModel(url: string): Promise<tf.LayersModel>
     {
         const model = await tf.loadLayersModel(url);
-        Network.verifyModel(model);
+        NetworkAgent.verifyModel(model);
         return model;
     }
 
@@ -90,7 +90,7 @@ export class Network implements BattleAgent
             throw new Error("Loaded LayersModel should have only one input " +
                 `layer but found ${model.input.length}`);
         }
-        if (!Network.isValidInputShape(model.input.shape))
+        if (!NetworkAgent.isValidInputShape(model.input.shape))
         {
             throw new Error("Loaded LayersModel has invalid input shape " +
                 `(${model.input.shape.join(", ")}). Try to create a new ` +
@@ -101,7 +101,7 @@ export class Network implements BattleAgent
             throw new Error("Loaded LayersModel should have only one output " +
                 `layer but found ${model.output.length}`);
         }
-        if (!Network.isValidOutputShape(model.output.shape))
+        if (!NetworkAgent.isValidOutputShape(model.output.shape))
         {
             throw new Error("Loaded LayersModel has invalid output shape " +
                 `(${model.output.shape.join(", ")}). Try to create a new ` +

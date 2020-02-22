@@ -1,6 +1,6 @@
 // istanbul ignore file
 import { join } from "path";
-import { Network } from "./ai/Network";
+import { NetworkAgent } from "./ai/NetworkAgent";
 import { avatar, latestModelFolder, loginServer, password, playServer,
     username } from "./config";
 import { Logger } from "./Logger";
@@ -22,7 +22,7 @@ import { PSBot } from "./psbot/PSBot";
     if (avatar !== null) bot.setAvatar(avatar);
 
     // load neural network from disk
-    const network = await Network.loadNetwork(
+    const network = await NetworkAgent.loadNetwork(
         `file://${join(latestModelFolder, "model.json")}`);
 
     // configure client to accept certain challenges

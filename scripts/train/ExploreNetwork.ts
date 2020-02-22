@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { Network } from "../../src/ai/Network";
+import { NetworkAgent } from "../../src/ai/NetworkAgent";
 import { Choice } from "../../src/battle/agent/Choice";
 import { ReadonlyBattleState } from "../../src/battle/state/BattleState";
 import { shuffle } from "./shuffle";
@@ -21,7 +21,7 @@ export interface ExploreOptions
  * the neural network (exploit) exponentially decays over subsequent `#decide()`
  * calls.
  */
-export class ExploreNetwork extends Network
+export class ExploreNetwork extends NetworkAgent
 {
     /** Current explore probability. */
     private exploreProb: number;
