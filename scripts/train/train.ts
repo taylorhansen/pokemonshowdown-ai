@@ -423,8 +423,8 @@ async function learn(
         const progress = new ProgressBar(
             `Batch :current/:total: eta=:etas :bar loss=:loss`,
             {
-                total: games.length, width: (process.stderr.columns ?? 80) / 3,
-                head: ">", clear: true
+                total: games.length, head: ">", clear: true,
+                width: Math.floor((process.stderr.columns ?? 80) / 3)
             });
         await callbacks.onEpochBegin(i);
 
@@ -538,8 +538,8 @@ export async function train(
     const games: Experience[][] = [];
     const progress = new ProgressBar(`eta=:etas :bar games=:current`,
         {
-            total: numGames, width: (process.stderr.columns ?? 80) / 3,
-            head: ">", clear: true
+            total: numGames, head: ">", clear: true,
+            width: Math.floor((process.stderr.columns ?? 80) / 2)
         });
     for (let i = 0; i < numGames; ++i)
     {
