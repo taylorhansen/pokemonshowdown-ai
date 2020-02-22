@@ -1,6 +1,4 @@
-import { encodeBattleState } from "../../src/ai/encodeBattleState";
-import { BattleAgent } from "../../src/battle/agent/BattleAgent";
-import { Choice, choiceIds } from "../../src/battle/agent/Choice";
+import { choiceIds } from "../../src/battle/agent/Choice";
 import { Logger } from "../../src/Logger";
 import { BattleInitMessage, BattleProgressMessage } from
     "../../src/psbot/parser/Message";
@@ -8,6 +6,7 @@ import { PSBattle } from "../../src/psbot/PSBattle";
 import { Sender } from "../../src/psbot/PSBot";
 import { PSEventHandler } from "../../src/psbot/PSEventHandler";
 import { Experience } from "./Experience";
+import { ExperienceNetwork } from "./ExperienceNetwork";
 import { RewardBattleDriver } from "./RewardBattleDriver";
 
 /**
@@ -18,15 +17,10 @@ export abstract class ExperiencePSBattle extends PSBattle
 {
     /** @override */
     protected readonly driver!: RewardBattleDriver;
+    /** @override */
+    protected readonly agent!: ExperienceNetwork;
 
-    /** Tensor data that generated `lastPrediction`. */
-    private lastStateData?: number[];
-    /** Last action that was handled by the environment. */
-    private lastAction?: Choice;
-    /** Tensor data that generated `prediction`. */
-    private stateData?: number[];
-
-    constructor(username: string, agent: BattleAgent, sender: Sender,
+    constructor(username: string, agent: ExperienceNetwork, sender: Sender,
         logger: Logger, driverCtor = RewardBattleDriver,
         eventHandlerCtor?: typeof PSEventHandler)
     {
@@ -41,11 +35,9 @@ export abstract class ExperiencePSBattle extends PSBattle
     {
         await super.init(msg);
 
-        if (this.shouldRespond())
-        {
-            // initialize first state vector
-            this.stateData = encodeBattleState(this.driver.state);
-        }
+        // the rewards from the init turn don't matter since it's not a result
+        //  of our actions
+        this.driver.consumeReward();
     }
 
     /** @override */
@@ -55,25 +47,36 @@ export abstract class ExperiencePSBattle extends PSBattle
         //  the changes that happened and emit an Experience object
         if (this.shouldRespond())
         {
-            // update experience fields
-            this.lastStateData = this.stateData;
-            this.lastAction = this.lastChoices[0];
+            const state = this.agent.lastState;
+            const logits = this.agent.lastLogits;
+            const value = this.agent.lastValue;
+            const action = choiceIds[this.lastChoices[0]];
             const reward = this.driver.consumeReward();
-            this.stateData = encodeBattleState(this.driver.state);
 
-            if (this.lastStateData)
+            if (state && logits && value)
             {
-                // TODO: also emit after the game ends, with a substantial
-                //  negative/positive reward depending on the winner
                 await this.emitExperience(
                 {
-                    state: this.lastStateData,
-                    action: choiceIds[this.lastAction],
-                    nextState: this.stateData, reward
+                    state, logits, value: await value.array(), action, reward
                 });
+
+                // indicate that these fields shouldn't be disposed
+                this.agent.lastState = null;
+                this.agent.lastLogits = null;
             }
         }
 
-        return super.progress(msg);
+        await super.progress(msg);
+
+        // once the game ends, make sure to dispose any leftover tensors from
+        //  the ExperienceNetwork
+        // TODO: emit a terminal experience after the game ends, with a large
+        //  reward depending on the winner
+        if (!this.eventHandler.battling)
+        {
+            this.agent.lastState?.dispose();
+            this.agent.lastLogits?.dispose();
+            this.agent.lastValue?.dispose();
+        }
     }
 }

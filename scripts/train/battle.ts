@@ -1,11 +1,11 @@
 import * as fs from "fs";
-import { join } from "path";
+import { dirname } from "path";
 // @ts-ignore
 import s = require("../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../src/battle/agent/BattleAgent";
 import { LogFunc, Logger } from "../../src/Logger";
 import { PlayerID } from "../../src/psbot/helpers";
-import { AnyBattleEvent, TieEvent, WinEvent } from
+import { AnyBattleEvent, TieEvent, TurnEvent, WinEvent } from
     "../../src/psbot/parser/BattleEvent";
 import { Iter } from "../../src/psbot/parser/Iter";
 import { parsePSMessage } from "../../src/psbot/parser/parsePSMessage";
@@ -19,9 +19,11 @@ export interface PlayerOptions
     /** Battle decision-maker. */
     readonly agent: BattleAgent;
     /**
-     * Override PSBattle if needed.  The subclass should not override
+     * Override PSBattle if needed. The subclass should not override
      * PSEventHandler, since `startBattle()` already does that, so attempts to
      * do so will be overridden.
+     *
+     * `username` parameter in constructor will always be the PlayerID.
      */
     readonly psBattleCtor?: typeof PSBattle;
 }
@@ -36,10 +38,8 @@ export interface GameOptions extends Players
      * on forever if this is not set and both agents only decide to switch.
      */
     readonly maxTurns?: number;
-    /** Path to the folder to store game logs in. Optional. */
+    /** Path to the file to store game logs in. Optional. */
     readonly logPath?: string;
-    /** Prefix for file names, or `battle` if omitted. */
-    readonly filename?: string;
     /** Prefix for logs. Default `Battle: `. */
     readonly logPrefix?: string;
 }
@@ -62,7 +62,7 @@ export async function startBattle(options: GameOptions): Promise<void>
 
     for (const id of ["p1", "p2"] as PlayerID[])
     {
-        const innerLog = logger.addPrefix(`Play(${id}): `);
+        const innerLog = logger.addPrefix(`${id}: `);
 
         // sends player choices to the battle stream
         function sender(...args: string[]): void
@@ -82,16 +82,33 @@ export async function startBattle(options: GameOptions): Promise<void>
 
         // additionally stop the battle once a game-over event is emitted
         // only one player needs to track this
-        const eventHandlerCtor = id === "p1" ? class extends PSEventHandler
+        let eventHandlerCtor = PSEventHandler;
+        if (id === "p1")
         {
-            /** @override */
-            protected handleGameOver(event: TieEvent | WinEvent,
-                it: Iter<AnyBattleEvent>): PSResult
+            let turns = 0;
+            eventHandlerCtor = class extends PSEventHandler
             {
-                done = true;
-                return super.handleGameOver(event, it);
-            }
-        } : PSEventHandler;
+                /** @override */
+                protected handleTurn(event: TurnEvent,
+                    it: Iter<AnyBattleEvent>): PSResult
+                {
+                    // also make sure the battle doesn't go too long
+                    if (options.maxTurns && ++turns >= options.maxTurns)
+                    {
+                        done = true;
+                    }
+                    return super.handleTurn(event, it);
+                }
+
+                /** @override */
+                protected handleGameOver(event: TieEvent | WinEvent,
+                    it: Iter<AnyBattleEvent>): PSResult
+                {
+                    done = true;
+                    return super.handleGameOver(event, it);
+                }
+            };
+        }
 
         const psBattleCtor = options[id].psBattleCtor ?? PSBattle;
 
@@ -138,9 +155,8 @@ export async function startBattle(options: GameOptions): Promise<void>
     // write logs to the log file
     if (options.logPath)
     {
-        await ensureDir(options.logPath);
-        const file = fs.createWriteStream(
-            join(options.logPath, options.filename || "game"));
+        await ensureDir(dirname(options.logPath));
+        const file = fs.createWriteStream(options.logPath);
         return new Promise(function(res, rej)
         {
             file.write(buffer, function(err)

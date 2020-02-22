@@ -20,8 +20,8 @@ export class NetworkAgent implements BattleAgent
      * `stochastic` - Choose the action semi-randomly based on a discrete
      * probability distribution derived from the decision data.
      */
-    constructor(private readonly model: tf.LayersModel,
-        private readonly policy: PolicyType)
+    constructor(public readonly model: tf.LayersModel,
+        public readonly policy: PolicyType)
     {
         NetworkAgent.verifyModel(model);
     }
@@ -32,16 +32,25 @@ export class NetworkAgent implements BattleAgent
     {
         if (choices.length === 0) throw new Error("No available choices");
 
-        const prediction = tf.tidy(() =>
-        {
-            const stateTensor = tf.tensor([encodeBattleState(state)]);
-            return (this.model.predict(stateTensor, {}) as tf.Tensor2D)
-                .squeeze().as1D();
-        });
-        const predictionData = await prediction.array();
-        prediction.dispose();
+        const logits = this.getLogits(encodeBattleState(state));
+        const logitsData = await logits.array();
+        logits.dispose();
+        await this.runPolicy(logitsData, choices);
+    }
 
-        await this.runPolicy(predictionData, choices);
+    /**
+     * Gets the prediction from the network.
+     * @virtual
+     */
+    protected getLogits(state: number[]): tf.Tensor1D
+    {
+        return tf.tidy(() =>
+        {
+            const stateTensor = tf.tensor2d([state]);
+            // TODO: log state-value
+            const [logits] = this.model.predict(stateTensor) as tf.Tensor[];
+            return tf.squeeze(logits).as1D();
+        });
     }
 
     /** Runs the policy to sort the Choices array. */
@@ -80,36 +89,48 @@ export class NetworkAgent implements BattleAgent
             throw new Error("Loaded LayersModel should have only one input " +
                 `layer but found ${model.input.length}`);
         }
-        if (!NetworkAgent.isValidInputShape(model.input.shape))
+        if (!NetworkAgent.isValidInput(model.input))
         {
             throw new Error("Loaded LayersModel has invalid input shape " +
                 `(${model.input.shape.join(", ")}). Try to create a new ` +
                 `model with an input shape of (, ${sizeBattleState})`);
         }
-        if (Array.isArray(model.output))
+        if (!Array.isArray(model.output) || model.output.length !== 2)
         {
-            throw new Error("Loaded LayersModel should have only one output " +
-                `layer but found ${model.output.length}`);
+            const length = Array.isArray(model.output) ?
+                model.output.length : 1;
+            throw new Error("Loaded LayersModel should have two output " +
+                `layers but found ${length}`);
         }
-        if (!NetworkAgent.isValidOutputShape(model.output.shape))
+        if (!NetworkAgent.isValidOutput(model.output))
         {
-            throw new Error("Loaded LayersModel has invalid output shape " +
-                `(${model.output.shape.join(", ")}). Try to create a new ` +
-                `model with an output shape of (, ${intToChoice.length})`);
+            const shapeStr =
+                `[${model.output.map(t => `(${t.shape.join(", ")})`)}]`;
+            throw new Error("Loaded LayersModel has invalid output shapes " +
+                `(${shapeStr}). Try to create a new model with the correct ` +
+                `shapes: [(, ${intToChoice.length}), (, 1)]`);
         }
     }
 
     /** Ensures that a network input shape is valid. */
-    private static isValidInputShape(shape: Readonly<tf.Shape>): boolean
+    private static isValidInput(input: tf.SymbolicTensor): boolean
     {
+        const shape = input.shape;
         return shape.length === 2 && shape[0] === null &&
             shape[1] === sizeBattleState;
     }
 
     /** Ensures that a network output shape is valid. */
-    private static isValidOutputShape(shape: Readonly<tf.Shape>): boolean
+    private static isValidOutput(output: tf.SymbolicTensor[]): boolean
     {
-        return shape.length === 2 && shape[0] === null &&
-            shape[1] === intToChoice.length;
+        if (output.length !== 2) return false;
+        const actionShape = output[0].shape;
+        const valueShape = output[1].shape;
+        // actionShape should be [null, intToChoice.length]
+        return actionShape.length === 2 && actionShape[0] === null &&
+            actionShape[1] === intToChoice.length &&
+            // valueShape should be [null, 1]
+            valueShape.length === 2 && valueShape[0] === null &&
+                valueShape[1] === 1;
     }
 }

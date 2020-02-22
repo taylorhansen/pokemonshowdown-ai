@@ -1,247 +1,504 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { Choice, intToChoice } from "../../src/battle/agent/Choice";
-import { ReadonlyBattleState } from "../../src/battle/state/BattleState";
+import { join } from "path";
+import ProgressBar from "progress";
+import { intToChoice } from "../../src/battle/agent/Choice";
 import { Logger } from "../../src/Logger";
+import { PlayerID } from "../../src/psbot/helpers";
 import { startBattle } from "./battle";
+import { ensureDir } from "./ensureDir";
 import { Experience } from "./Experience";
+import { ExperienceNetwork } from "./ExperienceNetwork";
 import { ExperiencePSBattle } from "./ExperiencePSBattle";
-import { ExploreNetwork, ExploreOptions } from "./ExploreNetwork";
-import { layerMax } from "./layerMax";
-import { Memory } from "./Memory";
-import { shuffle } from "./shuffle";
 
-/** Options for `playRandomly()` */
-interface RandomPlayOptions
+/** Base type for AdvantageConfigs. */
+interface AdvantageConfigBase<T extends string>
 {
-    /** Memory object to populate. */
-    readonly memory: Memory;
-    /** Minimum number of Experience objects to generate. */
-    readonly minExp: number;
-    /** If provided, store debug logs in this folder. */
-    readonly logPath?: string;
+    readonly type: T;
+    /** Discount factor for future rewards. */
+    readonly gamma: number;
     /**
-     * If provided, use this as a filename prefix. Default `random`. Ignored if
-     * `logPath` is not provided.
+     * Whether to standardize the advantage estimates (subtract by mean, divide
+     * by standard deviation). This generally leads to better stability during
+     * training by encouraging half of the performed actions and discouraging
+     * the other half.
      */
-    readonly logFilePrefix?: string;
+    readonly standardize?: boolean;
 }
 
 /**
- * Repeats playing games randomly until the desired number of Experience objects
- * has been reached.
+ * Estimate advantage using the REINFORCE algorithm, meaning only the discount
+ * reward sums are used.
  */
-async function playRandomly(
-    {memory, minExp, logPath, logFilePrefix}: RandomPlayOptions): Promise<void>
+interface ReinforceConfig extends AdvantageConfigBase<"reinforce"> {}
+
+/**
+ * Estimate advantage using the actor-critic model (advantage actor critic, or
+ * A2C), where the discount returns are subtracted by a baseline (i.e.
+ * state-value in this case) rather than standardizing them like in REINFORCE.
+ * This works under the definition of the Q-learning function
+ * `Q(s,a) = V(s) + A(s,a)`.
+ */
+interface A2CConfig extends AdvantageConfigBase<"a2c"> {}
+
+/**
+ * Generalized advantage estimation. Usually better at controlling bias and
+ * variance.
+ */
+interface GAEConfig extends AdvantageConfigBase<"generalized">
 {
-    const agent =
-    {async decide(state: ReadonlyBattleState, choices: Choice[]): Promise<void>
-    {
-        shuffle(choices);
-    }};
+    /** Controls bias-variance tradeoff. Must be between 0 and 1 inclusive. */
+    readonly lambda: number;
+}
 
-    let done = false;
+/** Args object for advantage estimator. */
+type AdvantageConfig = ReinforceConfig | A2CConfig | GAEConfig;
 
-    // emit experience objs after each accepted response
-    const psBattleCtor = class extends ExperiencePSBattle
+/** Base class for AlgorithmArgs. */
+interface AlgorithmArgsBase<T extends string>
+{
+    type: T;
+    /** Type of advantage estimator to use. */
+    readonly advantage: AdvantageConfig;
+    /**
+     * If provided, fit the value function separately and weigh it by the
+     * provided value with respect to the actual policy gradient loss.
+     */
+    readonly valueCoeff?: number;
+    /**
+     * If provided, subtract an entropy bonus from the loss, weighing it by the
+     * provided value with respect to the actual policy gradient loss. This
+     * generally makes the network favor situations that give it multiple
+     * favorable options to promote adaptability and unpredictability.
+     */
+    readonly entropyCoeff?: number;
+}
+
+/** Vanilla policy gradient algorithm. */
+interface PGArgs extends AlgorithmArgsBase<"pg"> {}
+
+/** Base interface for PPOVariantArgs. */
+interface PPOVariantBase<T extends string>
+{
+    /**
+     * Type of PPO variant to use.
+     * `clipped` - Clipped probability ratio.
+     * `klFixed` - Fixed coefficient for a KL-divergence penalty.
+     * `klAdaptive` - Adaptive coefficient for a KL-divergence penalty.
+     * @see https://arxiv.org/pdf/1707.06347.pdf
+     */
+    readonly variant: T;
+}
+
+/** PPO variant that uses ratio clipping instead of. */
+interface PPOVariantClipped extends PPOVariantBase<"clipped">
+{
+    /** Ratio clipping hyperparameter. */
+    readonly epsilon: number;
+}
+
+/** PPO variant that uses a fixed coefficient for a KL-divergence penalty. */
+interface PPOVariantKLFixed extends PPOVariantBase<"klFixed">
+{
+    /** Penalty coefficient. */
+    readonly beta: number;
+}
+
+/**
+ * PPO variant that uses an adaptive coefficient for a KL-divergence penalty.
+ */
+interface PPOVariantKLAdaptive extends PPOVariantBase<"klAdaptive">
+{
+    /**
+     * Target KL-divergence penalty. The penalty coefficient will adapt to
+     * produce this value after each learning step.
+     */
+    readonly klTarget: number;
+    /**
+     * Adaptive penalty coefficient. This will change for each learning step.
+     * Usually it's best to omit this argument (will assume 1 by default) since
+     * it usually adjusts to an optimal value quickly.
+     */
+    beta?: tf.Variable;
+}
+
+/** Additional parameters for selecting a variant of PPO. */
+type PPOVariantArgs = PPOVariantClipped | PPOVariantKLFixed |
+    PPOVariantKLAdaptive;
+
+/** Proximal policy optimization algorithm. */
+type PPOArgs = AlgorithmArgsBase<"ppo"> & PPOVariantArgs;
+
+/** Arguments for customizing the learning algorithm. */
+type AlgorithmArgs = PGArgs | PPOArgs;
+
+/**
+ * Calculates the KL divergence of two discrete probability distributions.
+ * @param logProbs1 Log-probabilities of the first distribution.
+ * @param logProbs2 Log-probabilities of the second distribution. Must be the
+ * same shape as `logProbs1`.
+ */
+function klDivergence(logProbs1: tf.Tensor, logProbs2: tf.Tensor): tf.Tensor
+{
+    return tf.tidy(() =>
+        tf.exp(logProbs1).mul(tf.sub(logProbs1, logProbs2)).sum(-1));
+}
+
+/** Parameters for policy gradient loss function. */
+interface LossArgs
+{
+    /** Model that will be trained. */
+    readonly model: tf.LayersModel;
+    /** States for each sample. */
+    readonly state: tf.Tensor;
+    /** Baseline log probabilities. */
+    readonly oldLogProbs: tf.Tensor;
+    /** Choice ids for each sample. Must be an int32 tensor. */
+    readonly action: tf.Tensor;
+    /** Discounted cumulatively-summed rewards for each sample. */
+    readonly returns: tf.Tensor;
+    /** Advantage estimates for each sample. */
+    readonly advantage: tf.Tensor;
+    /** Learning algorithm config. */
+    readonly algorithm: AlgorithmArgs;
+}
+
+/** Metrics data for the loss function. */
+type LossResult =
+{
+    /** Total mean loss for this batch. */
+    loss: tf.Scalar;
+    /** Policy gradient loss. */
+    pgLoss?: tf.Scalar;
+    /** State-value loss. */
+    vLoss?: tf.Scalar;
+    /** Entropy bonus. */
+    entropy?: tf.Scalar;
+    /** Average probability ratio. */
+    ratio?: tf.Scalar;
+    /** Average KL divergence from old policy. */
+    kl?: tf.Scalar;
+    /** Adaptive KL penalty coefficient after adjusting. */
+    beta?: tf.Scalar;
+};
+
+/** Policy gradient loss function. */
+function loss(
+    {model, state, oldLogProbs, action, returns, advantage, algorithm}:
+        LossArgs): LossResult
+{
+    return tf.tidy(function()
     {
-        /** @override */
-        protected async emitExperience(exp: Experience): Promise<void>
+        // get initial prediction
+        const [logits, stateValue] = model.predictOnBatch(state) as
+            tf.Tensor[];
+
+        // isolate the log probability for the action we took in each sample
+        const mask = tf.oneHot(action, intToChoice.length);
+        const logProbs = tf.logSoftmax(logits);
+        const logProbsMasked = tf.mul(mask, logProbs);
+        const logActProbs = tf.sum(logProbsMasked, 1);
+
+        // loss needs a placeholder value so the typings work out
+        const result: LossResult = {loss: tf.scalar(0)};
+
+        let pgObjs: tf.Tensor;
+        if (algorithm.type === "ppo")
         {
-            memory.add(exp);
-            if (!done && --minExp <= 0) done = true;
+            // mask baseline log-prob distribution
+            const oldLogActProbs = tf.sum(tf.mul(mask, oldLogProbs), 1);
+
+            // calc probability ratio and scale by advantage
+            const ratio = tf.exp(tf.sub(logActProbs, oldLogActProbs));
+            const rScaled = tf.mul(ratio, advantage);
+            result.ratio = tf.keep(tf.mean(ratio).asScalar());
+
+            switch (algorithm.variant)
+            {
+                case "clipped":
+                {
+                    const clippedRatio = tf.clipByValue(ratio,
+                        1 - algorithm.epsilon, 1 + algorithm.epsilon);
+                    const clippedRScaled = tf.mul(clippedRatio, advantage);
+                    pgObjs = tf.minimum(rScaled, clippedRScaled);
+                    break;
+                }
+                case "klFixed":
+                case "klAdaptive":
+                {
+                    const kl = tf.keep(
+                        tf.mean(klDivergence(oldLogProbs, logProbs))
+                            .asScalar());
+                    result.kl = kl;
+
+                    // initialize adaptive penalty coefficient
+                    let beta: number | tf.Variable;
+                    if (algorithm.variant === "klAdaptive")
+                    {
+                        if (!algorithm.beta)
+                        {
+                            algorithm.beta = tf.keep(
+                                tf.variable(tf.scalar(1),
+                                    /*trainable*/false, "kl-adaptive/beta"));
+                        }
+                        beta = algorithm.beta as tf.Variable;
+                    }
+                    else beta = algorithm.beta as number;
+
+                    const klPenalty = tf.mul(beta, kl);
+                    pgObjs = tf.sub(rScaled, klPenalty);
+
+                    if (algorithm.variant === "klFixed") break;
+
+                    // adapt penalty coefficient
+                    (beta as tf.Variable).assign(
+                        tf.where(
+                            tf.less(kl, algorithm.klTarget / 1.5),
+                            tf.div(beta, 2),
+                            tf.where(
+                                tf.greater(kl, algorithm.klTarget * 1.5),
+                                tf.mul(beta, 2),
+                                beta)));
+                    result.beta = tf.keep((beta as tf.Variable).asScalar());
+                }
+            }
         }
-    };
+        // vanilla policy gradient
+        else pgObjs = tf.mul(logActProbs, advantage);
 
-    // keep playing games randomly until we have enough experience
-    let games = 1;
-    while (!done)
-    {
-        await startBattle(
+        // calculate main policy gradient loss
+        const pgLoss = tf.keep(tf.neg(tf.mean(pgObjs)).asScalar());
+        tf.dispose(result.loss);
+        result.loss = result.pgLoss = pgLoss;
+
+        const losses: tf.Scalar[] = [pgLoss];
+
+        // calc state-value loss using mse
+        if (algorithm.valueCoeff)
         {
-            p1: {agent, psBattleCtor}, p2: {agent, psBattleCtor},
-            // only provide logPath/filename if logPath is also specified
-            ...(logPath &&
-                {logPath, filename: `${logFilePrefix || "random"}-${games}`}),
-            logPrefix: "Pretrain: "
-        });
-        ++games;
-    }
-}
+            result.vLoss = tf.keep(tf.losses.meanSquaredError(returns,
+                    tf.squeeze(stateValue)).asScalar());
+            losses.push(tf.mul(result.vLoss, algorithm.valueCoeff));
+        }
 
-/**
- * Prepares the Q network for training by wrapping it in a new network. The new
- * network takes an additional action id parameter (i.e. the id of a desired
- * Choice) and uses it to mask out all Q values except for the one associated
- * with that action. The resulting LayersModel will also be compiled and ready
- * to be trained.
- */
-function prepareQNetwork(model: tf.LayersModel): tf.LayersModel
-{
-    // add an input for the action id
-    const actionId = tf.layers.input(
-        {name: "train-wrapper/action-id", shape: [1]});
-
-    // convert the action id into a one-hot
-    const actionMask =
-        tf.layers.embedding(
+        // subtract an entropy bonus from the loss function in order to maximize
+        //  it along with minimizing the other loss functions
+        if (algorithm.entropyCoeff)
         {
-            name: "train-wrapper/action-mask", trainable: false,
-            inputDim: intToChoice.length, outputDim: intToChoice.length,
-            embeddingsInitializer: "identity"
-        })
-        .apply(actionId) as tf.SymbolicTensor;
+            const negEnt =
+                tf.sum(tf.mul(tf.exp(logProbs), logProbs)).asScalar();
+            result.entropy = tf.keep(tf.neg(negEnt));
+            losses.push(tf.mul(negEnt, algorithm.entropyCoeff));
+        }
 
-    // the previous layer has the shape [null, 1, 9]
-    // reshape it to be [null, 9] so we can use it as a mask next
-    const actionMaskReshaped = tf.layers.reshape(
-        {
-            name: "train-wrapper/action-mask-reshaped",
-            targetShape: [intToChoice.length]
-        }).apply(actionMask) as tf.SymbolicTensor;
+        // sum all the losses together
+        if (losses.length > 1) result.loss = tf.keep(tf.addN(losses));
 
-    // elementwise multiply the mask layer with the model's output
-    // thanks to the embed mask, only 1 q value will be contained in this
-    //  layer's output, with the rest being zeros
-    const maskedQValues = tf.layers.multiply(
-            {name: "train-wrapper/masked-q-values"})
-        .apply([actionMaskReshaped, model.outputs[0]]) as tf.SymbolicTensor;
-
-    // find the q value that wasn't masked out and return it
-    const output = layerMax({name: "train-wrapper/single-q-value"})
-        .apply(maskedQValues) as tf.SymbolicTensor;
-
-    const result = tf.model(
-    {
-        name: "train-wrapper",
-        inputs: [model.inputs[0], actionId], outputs: output
+        return result;
     });
-    result.compile({loss: "meanSquaredError", optimizer: "adam"});
-    return result;
 }
 
-/** Options for `learningStep()` */
-interface LearnOptions
+/** Parameters for `learn()`. */
+interface LearnArgs
 {
-    /** Wrapper model to train. */
-    readonly toTrain: tf.LayersModel;
-    /** Original model that is contained by `toTrain`. */
+    /** Model to train. */
     readonly model: tf.LayersModel;
-    /** Experience object batch to learn from. */
-    readonly expBatch: readonly Experience[];
-    /** Discount factor for future reward values. */
-    readonly gamma: number;
-}
-
-/**
- * Makes a single learning step with the Q network using the provided Experience
- * objects.
- * @returns The training loss from the learning step.
- */
-async function learningStep({toTrain, model, expBatch, gamma}: LearnOptions):
-    Promise<number>
-{
-    if (expBatch.length <= 0)
-    {
-        throw new Error("No Experiences to train with");
-    }
-
-    const states: tf.Tensor[] = [];
-    const actions: tf.Tensor[] = [];
-    const targets: tf.Tensor[] = [];
-
-    for (const exp of expBatch)
-    {
-        states.push(tf.tensor1d(exp.state));
-        actions.push(tf.tensor1d([exp.action]));
-
-        // apply the bellman equation to calculate the target q value for a
-        //  given state and action
-        // this is equal to the immediate reward plus the max predicted reward
-        //  (in the neural network's current opinion) multiplied by the discount
-        //  factor
-        const maxQ = tf.tidy(() =>
-            tf.max(model.predict(tf.tensor([exp.nextState])) as tf.Tensor));
-        const maxQData = await maxQ.data();
-        maxQ.dispose();
-        const target = exp.reward + gamma * maxQData[0];
-
-        targets.push(tf.tensor1d([target]));
-    }
-
-    // the model is compiled to only track loss, with no other metrics, so
-    //  trainOnBatch() should only return a single number
-    const stateBatch = tf.stack(states);
-    const actionBatch = tf.stack(actions);
-    const targetBatch = tf.stack(targets);
-    tf.dispose([...states, ...actions, ...targets]);
-
-    const loss = await toTrain.trainOnBatch([stateBatch, actionBatch],
-        targetBatch) as unknown as number;
-    tf.dispose([stateBatch, actionBatch, targetBatch]);
-
-    return loss;
-}
-
-/** Options for `doTrainingGame()`. */
-interface TrainingGameOptions
-{
-    /** Wrapper model to train. */
-    readonly toTrain: tf.LayersModel;
-    /** Original model that is contained by `toTrain`. */
-    readonly model: tf.LayersModel;
-    /** Memory object to populate and sample from. */
-    readonly memory: Memory;
-    /** Experience batch size during training. */
-    readonly batchSize: number;
-    /** Discount factor for future reward values. */
-    readonly gamma: number;
-    /** Settings for epsilon-greedy policy training. */
-    readonly explore: ExploreOptions;
+    /** Experiences from each game. */
+    readonly games: readonly (readonly Experience[])[];
+    /** Learning algorithm config. */
+    readonly algorithm: AlgorithmArgs;
+    /** Number of epochs to run training. */
+    readonly epochs: number;
+    /** Path to the folder to store TensorBoard logs in. Optional. */
+    readonly logPath?: string;
     /** Logger object. */
     readonly logger: Logger;
-    /** If provided, store debug logs in this folder. */
-    readonly logPath?: string;
-    /**
-     * If provided, use this as a filename prefix. Default `train`. Ignored if
-     * `logPath` is not provided.
-     */
-    readonly filename?: string;
 }
 
 /**
- * Completes a single training session by playing the neural network against
- * itself for one game, updating it after every decision.
+ * Trains the network over a number of epochs. Note that the tensors in the
+ * Experience objects will be disposed afterwards.
  */
-async function doTrainingGame(
-    {
-        toTrain, model, memory, batchSize, gamma, explore, logger, logPath,
-        filename
-    }: TrainingGameOptions): Promise<void>
+async function learn(
+    {model, games, algorithm, epochs, logPath, logger}: LearnArgs):
+    Promise<void>
 {
-    const agent = new ExploreNetwork(model, "deterministic", explore);
-
-    let batches = 0;
-
-    // emit experience objs after each accepted response
-    const psBattleCtor = class extends ExperiencePSBattle
+    // setup training callbacks for metrics logging
+    const callbacks = new tf.CallbackList();
+    if (logPath)
     {
-        /** @override */
-        protected async emitExperience(exp: Experience): Promise<void>
+        await ensureDir(logPath);
+        callbacks.append(tf.node.tensorBoard(logPath, {updateFreq: "batch"}));
+    }
+
+    // have to do this manually (instead of #compile()-ing the model and calling
+    //  #fit()) since the loss function changes based on the advantage values
+    // TODO: tune optimizer hyperparams
+    const optimizer = tf.train.adam();
+    const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
+
+    // prepare data for estimating the loss function
+    logger.debug("Preparing training data");
+    const states = new Array<tf.Tensor>(games.length);
+    const oldLogProbs = new Array<tf.Tensor>(games.length);
+    const actions = new Array<tf.Tensor>(games.length);
+    const returns = new Array<tf.Tensor>(games.length);
+    const advantages = new Array<tf.Tensor>(games.length);
+    for (let i = 0; i < games.length; ++i)
+    {
+        const game = games[i];
+
+        const stateTensors = new Array<tf.Tensor>(game.length);
+        const oldLogProbTensors = new Array<tf.Tensor>(game.length);
+        const actionBuffer = tf.buffer([game.length], "int32");
+        const returnsBuffer = tf.buffer([game.length]);
+        const advantageBuffer = tf.buffer([game.length]);
+
+        let lastRet = 0;
+        let lastAdv = 0;
+        for (let j = game.length - 1; j >= 0; --j)
         {
-            memory.add(exp);
-            // initiate a learning step with a mini-batch
-            const loss = await learningStep(
-                {toTrain, model, expBatch: memory.sample(batchSize), gamma});
-            logger.debug(`Batch ${++batches} loss: ${loss}`);
-        }
-    };
+            const exp = game[j];
 
-    await startBattle(
+            stateTensors[j] = exp.state;
+            oldLogProbTensors[j] = exp.logits.logSoftmax();
+            exp.logits.dispose();
+            actionBuffer.set(exp.action, j);
+
+            // calculate discounted summed rewards
+            lastRet = exp.reward + algorithm.advantage.gamma * lastRet;
+            returnsBuffer.set(lastRet, j);
+
+            // estimate advantage
+            switch (algorithm.advantage.type)
+            {
+                case "a2c":
+                    advantageBuffer.set(lastRet - exp.value, j);
+                    break;
+                case "generalized":
+                {
+                    // temporal difference residual
+                    const nextValue = game[j + 1]?.value ?? 0;
+                    const delta = exp.reward +
+                        algorithm.advantage.gamma * nextValue - exp.value;
+
+                    // exponentially-decayed sum of residual terms
+                    lastAdv = delta +
+                        algorithm.advantage.gamma *
+                            algorithm.advantage.lambda * lastAdv;
+                    advantageBuffer.set(lastAdv, j);
+                }
+                case "reinforce":
+                    advantageBuffer.set(lastRet, j);
+                    break;
+            }
+        }
+
+        states[i] = tf.stack(stateTensors);
+        tf.dispose(stateTensors);
+        oldLogProbs[i] = tf.stack(oldLogProbTensors);
+        tf.dispose(oldLogProbTensors);
+        actions[i] = actionBuffer.toTensor();
+        returns[i] = returnsBuffer.toTensor();
+        advantages[i] = tf.tidy(function()
+        {
+            let result = advantageBuffer.toTensor();
+
+            // optionally standardize advantage estimates
+            if (algorithm.advantage.standardize)
+            {
+                const {mean, variance} = tf.moments(result);
+                result = tf.divNoNan(tf.sub(result, mean), tf.sqrt(variance));
+            }
+
+            return result;
+        });
+    }
+
+    callbacks.setModel(model);
+    // TODO: set validation data
+    await callbacks.onTrainBegin();
+
+    for (let i = 0; i < epochs; ++i)
     {
-        p1: {agent, psBattleCtor}, p2: {agent, psBattleCtor},
-        ...(logPath && {logPath, filename: filename || "train"}),
-        logPrefix: "Train: "
-    });
+        const progress = new ProgressBar(
+            `Epoch :current/:total: eta=:etas :bar loss=:loss`,
+            {total: games.length, width: 48, head: ">", clear: true});
+        await callbacks.onEpochBegin(i);
+
+        const metricsPerBatch:
+            {[name: string]: tf.Scalar[], loss: tf.Scalar[]} = {loss: []};
+
+        // perform mini-batch optimization on each game, where the mini-batch
+        //  size is the length of the game
+        for (let j = 0; j < games.length; ++j)
+        {
+            const game = games[j];
+
+            await callbacks.onBatchBegin(j,
+                {batch: i, size: game.length});
+
+            const state = states[j];
+            const oldLogProb = oldLogProbs[j];
+            const action = actions[j];
+            const ret = returns[j];
+            const advantage = advantages[j];
+
+            // loss function that records the metrics data
+            function f()
+            {
+                const result = loss(
+                {
+                    model, state, oldLogProbs: oldLogProb, action,
+                    returns: ret, advantage, algorithm
+                });
+
+                for (const name in result)
+                {
+                    if (!result.hasOwnProperty(name)) continue;
+                    const metric = result[name as keyof LossResult];
+                    if (!metric) continue;
+
+                    if (!metricsPerBatch.hasOwnProperty(name))
+                    {
+                        metricsPerBatch[name] = [metric];
+                    }
+                    else metricsPerBatch[name].push(metric);
+                }
+                return result.loss;
+            }
+
+            // compute the gradients for this batch
+            // don't dispose() the cost tensor since it's being used in
+            //  metricsPerBatch as well
+            const cost = optimizer.minimize(f, /*returnCost*/true, variables)!;
+            progress.tick({loss: await cost.array()});
+
+            await callbacks.onBatchEnd(j);
+        }
+
+        // average all batch metrics
+        const epochMetrics: {[name: string]: tf.Scalar, loss: tf.Scalar} =
+            {} as any;
+        for (const name in metricsPerBatch)
+        {
+            if (!metricsPerBatch.hasOwnProperty(name)) continue;
+            epochMetrics[name] = tf.tidy(() =>
+                tf.mean(tf.stack(metricsPerBatch[name])).asScalar());
+        }
+
+        progress.terminate();
+        logger.debug(`Epoch ${i + 1}/${epochs}: Avg loss = ` +
+            await epochMetrics.loss.array());
+
+        await callbacks.onEpochEnd(i, epochMetrics);
+        tf.dispose([metricsPerBatch, epochMetrics]);
+    }
+    await callbacks.onTrainEnd();
+
+    optimizer.dispose();
+    tf.dispose([states, oldLogProbs, actions, returns, advantages]);
+
+    logger.debug("Done");
 }
 
 /** Options for `train()`. */
@@ -254,62 +511,73 @@ export interface TrainOptions
      */
     readonly saveUrl?: string;
     /** Number of training games to play. */
-    readonly games: number;
-    /** Discount factor for future rewards. */
-    readonly gamma: number;
-    /** Settings for epsilon-greedy policy training. */
-    readonly explore: ExploreOptions;
-    /** Experience batch size during training. */
-    readonly batchSize: number;
-    /**
-     * Experience buffer size. Mini batches of size `batchSize` are sampled from
-     * here. Must be greater than or equal to `batchSize`.
-     */
-    readonly memorySize: number;
+    readonly numGames: number;
+    /** Number of turns before a game is considered a tie. */
+    readonly maxTurns: number;
+    /** Learning algorithm config. */
+    readonly algorithm: AlgorithmArgs;
+    /** Number of epochs to run training. */
+    readonly epochs: number;
     /** Path to store game logs. Omit to not store logs. */
     readonly logPath?: string;
 }
 
 /** Trains a neural network over a number of self-play games. */
 export async function train(
-    {model, saveUrl, games, gamma, explore, batchSize, memorySize, logPath}:
+    {model, saveUrl, numGames, maxTurns, algorithm, epochs, logPath}:
         TrainOptions): Promise<void>
 {
     const logger = Logger.stderr.addPrefix("Train: ");
-    const memory = new Memory(memorySize);
 
-    // pretrain games
-    // populate memory buffer with some starting Experience objects by playing
-    //  completely randomly
-    logger.debug("Populating experience replay buffer");
-    await playRandomly(
-        {memory, minExp: batchSize, logPath, logFilePrefix: "pretrain"});
-    logger.debug(`Added ${memory.size} Experience tuples`);
-
-    // setup network for training
-    logger.debug("Preparing neural network for training");
-    const trainWrapper = prepareQNetwork(model);
-
-    // actual training games
-    logger.debug("Starting training games");
-    for (let i = 0; i < games; ++i)
+    // play some games semi-randomly, building batches of Experience for each
+    //  game
+    logger.debug("Collecting training data");
+    const games: Experience[][] = [];
+    const progress = new ProgressBar(`eta=:etas :bar games=:current`,
+        {total: numGames, width: 48, head: ">", clear: true});
+    for (let i = 0; i < numGames; ++i)
     {
-        const innerLog = logger.addPrefix(`Game(${i + 1}/${games}): `);
-        innerLog.debug("Start");
-
-        await doTrainingGame(
+        const splitExp: {[P in PlayerID]: Experience[]} = {p1: [], p2: []};
+        const net1 = new ExperienceNetwork(model, "stochastic");
+        const net2 = new ExperienceNetwork(model, "stochastic");
+        const psBattleCtor = class extends ExperiencePSBattle
         {
-            toTrain: trainWrapper, model, memory, batchSize, gamma, explore,
-            logger: innerLog,
-            ...(logPath && {logPath, filename: `train-${i + 1}`})
+            protected async emitExperience(exp: Experience): Promise<void>
+            {
+                splitExp[this.username as PlayerID].push(exp);
+            }
+        };
+        await startBattle(
+        {
+            p1: {agent: net1, psBattleCtor},
+            p2: {agent: net2, psBattleCtor}, maxTurns,
+            ...(logPath &&
+                {
+                    logPath: join(logPath, `self-play/train-${i + 1}`),
+                    logPrefix: "SelfPlay: "
+                })
         });
+        games.push(splitExp.p1, splitExp.p2);
+        progress.tick();
+    }
+    progress.terminate();
+    const totalExp = games.map(game => game.length).reduce((a, b) => a + b);
+    logger.debug(`Played ${numGames} games, with a total of ${totalExp} ` +
+        `experiences (avg ${totalExp / numGames} per game)`);
 
-        innerLog.debug("Done");
+    // train over the experience gained from each game
+    await learn(
+    {
+        model, games, algorithm, epochs,
+        ...(logPath && {logPath: join(logPath, "learn")}),
+        logger: logger.addPrefix("Learn: ")
+    });
 
-        if (saveUrl)
-        {
-            logger.debug("Saving");
-            await model.save(saveUrl);
-        }
+    // TODO: play eval games against random player, past self, and current self
+
+    if (saveUrl)
+    {
+        logger.debug("Saving");
+        await model.save(saveUrl);
     }
 }

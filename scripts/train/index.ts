@@ -26,8 +26,8 @@ import { train } from "./train";
     {
         logger.error(`Error opening model: ${e}`);
         logger.debug("Creating default model");
-        model?.dispose();
 
+        model?.dispose();
         model = createModel();
         logger.debug("Saving");
         await ensureDir(latestModelFolder);
@@ -38,10 +38,19 @@ import { train } from "./train";
     await train(
     {
         model, saveUrl: modelUrl,
-        games: 25,
-        gamma: 0.95,
-        explore: {start: 1, stop: 0.01, decay: 0.001},
-        batchSize: 64, memorySize: 1024,
+        numGames: 2, maxTurns: 100,
+        algorithm:
+        {
+            type: "ppo", variant: "clipped", epsilon: 0.2,
+            advantage:
+            {
+                type: "generalized", lambda: 0.95, gamma: 0.95,
+                standardize: true
+            },
+            valueCoeff: 0.6, entropyCoeff: 0.8
+        },
+        epochs: 3,
         logPath
     });
+    model.dispose();
 })();
