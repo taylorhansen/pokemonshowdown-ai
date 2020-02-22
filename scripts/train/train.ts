@@ -422,7 +422,10 @@ async function learn(
     {
         const progress = new ProgressBar(
             `Batch :current/:total: eta=:etas :bar loss=:loss`,
-            {total: games.length, width: 48, head: ">", clear: true});
+            {
+                total: games.length, width: (process.stderr.columns ?? 80) / 3,
+                head: ">", clear: true
+            });
         await callbacks.onEpochBegin(i);
 
         const metricsPerBatch:
@@ -534,7 +537,10 @@ export async function train(
     logger.debug("Collecting training data");
     const games: Experience[][] = [];
     const progress = new ProgressBar(`eta=:etas :bar games=:current`,
-        {total: numGames, width: 48, head: ">", clear: true});
+        {
+            total: numGames, width: (process.stderr.columns ?? 80) / 3,
+            head: ">", clear: true
+        });
     for (let i = 0; i < numGames; ++i)
     {
         const splitExp: {[P in PlayerID]: Experience[]} = {p1: [], p2: []};
