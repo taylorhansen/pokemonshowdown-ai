@@ -179,6 +179,7 @@ export class PSBattle implements RoomHandler
         this.logger.debug(`Choices: [${this.lastChoices.join(", ")}]`);
 
         await this.agent.decide(this.driver.state, this.lastChoices);
+        this.logger.debug(`Sorted choices: [${this.lastChoices.join(", ")}]`);
         this.sender(`|/choose ${this.lastChoices[0]}`);
     }
 

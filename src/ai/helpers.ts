@@ -7,12 +7,18 @@
 export function weightedShuffle<T>(weights: number[], arr: T[]): void
 {
     // perform a weighted shuffle of the choices, O(n^2*logn)
-    const cw = weights.map((w, i) => w + (weights[i - 1] ?? 0));
+    if (weights.length !== arr.length)
+    {
+        throw new Error(`Weights and shuffle array have mismatched lengths ` +
+            `(weights: ${weights.length}, arr: ${arr.length})`);
+    }
+
+    const cw = weights.map((sum => (value: number) => sum += value)(0));
     const copy = [...arr];
     for (let i = 0; i < arr.length; ++i)
     {
         // get a random number between 0 and the sum of all the weights
-        // on the first iteration, this is between 0 and 1
+        // on the first iteration, this is between 0 and 1 approx.
         const rand = Math.random() * cw[cw.length - 1];
         // choose the first cumulative weight that is greater than this
         //  number, using a binary search since a cumulative sum array is
