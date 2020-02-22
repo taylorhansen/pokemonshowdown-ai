@@ -421,7 +421,7 @@ async function learn(
     for (let i = 0; i < epochs; ++i)
     {
         const progress = new ProgressBar(
-            `Epoch :current/:total: eta=:etas :bar loss=:loss`,
+            `Batch :current/:total: eta=:etas :bar loss=:loss`,
             {total: games.length, width: 48, head: ">", clear: true});
         await callbacks.onEpochBegin(i);
 
