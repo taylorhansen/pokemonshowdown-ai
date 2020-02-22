@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { NetworkAgent } from "../../src/ai/NetworkAgent";
+import { NetworkAgent, PolicyType } from "../../src/ai/NetworkAgent";
 import { Choice } from "../../src/battle/agent/Choice";
 import { ReadonlyBattleState } from "../../src/battle/state/BattleState";
 import { shuffle } from "./shuffle";
@@ -33,11 +33,13 @@ export class ExploreNetwork extends NetworkAgent
     /**
      * Creates an ExploreNetwork.
      * @param model Neural network model for making decisions.
+     * @param policy Action selection method.
      * @param explore Options for epsilon-greedy policy.
      */
-    constructor(model: tf.LayersModel, options: ExploreOptions)
+    constructor(model: tf.LayersModel, policy: PolicyType,
+        options: ExploreOptions)
     {
-        super(model);
+        super(model, policy);
 
         let start = Math.min(1, options.start);
         let stop = Math.max(0, options.stop);

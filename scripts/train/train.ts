@@ -219,7 +219,7 @@ async function doTrainingGame(
         filename
     }: TrainingGameOptions): Promise<void>
 {
-    const agent = new ExploreNetwork(model, explore);
+    const agent = new ExploreNetwork(model, "deterministic", explore);
 
     let batches = 0;
 

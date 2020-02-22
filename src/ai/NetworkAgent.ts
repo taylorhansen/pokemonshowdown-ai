@@ -3,6 +3,10 @@ import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice, choiceIds, intToChoice } from "../battle/agent/Choice";
 import { ReadonlyBattleState } from "../battle/state/BattleState";
 import { encodeBattleState, sizeBattleState } from "./encodeBattleState";
+import { weightedShuffle } from "./helpers";
+
+/** NetworkAgent policy type. */
+export type PolicyType = "deterministic" | "stochastic";
 
 /**
  * Turns a tensor-like object into a column vector.
@@ -15,14 +19,20 @@ export function toColumn(arr: number[] | Float32Array): tf.Tensor2D
     return tf.tensor2d(arr, [1, arr.length], "float32");
 }
 
-/** Neural network interface. */
+/** BattleAgent that interfaces with a neural network. */
 export class NetworkAgent implements BattleAgent
 {
     /**
      * Creates a Network object.
-     * @param model Neural network model for making decisions.
+     * @param model Neural network for making decisions.
+     * @param policy Action selection method after getting decision data.
+     * `deterministic` - Choose the action deterministically with the highest
+     * probability.
+     * `stochastic` - Choose the action semi-randomly based on a discrete
+     * probability distribution derived from the decision data.
      */
-    constructor(private readonly model: tf.LayersModel)
+    constructor(private readonly model: tf.LayersModel,
+        private readonly policy: PolicyType)
     {
         NetworkAgent.verifyModel(model);
     }
@@ -36,15 +46,37 @@ export class NetworkAgent implements BattleAgent
         const prediction = tf.tidy(() =>
         {
             const stateTensor = toColumn(encodeBattleState(state));
-            return this.model.predict(stateTensor, {}) as tf.Tensor2D;
+            return (this.model.predict(stateTensor, {}) as tf.Tensor2D)
+                .squeeze().as1D();
         });
-        const predictionData = await prediction.data();
+        const predictionData = await prediction.array();
         prediction.dispose();
 
-        // find the best choice that is a subset of our possible choices
-        choices.sort((a, b) =>
-            // sort by rewards in descending order (highest comes first)
-            predictionData[choiceIds[b]] - predictionData[choiceIds[a]]);
+        await this.runPolicy(predictionData, choices);
+    }
+
+    /** Runs the policy to sort the Choices array. */
+    private async runPolicy(logits: readonly number[], choices: Choice[]):
+        Promise<void>
+    {
+        switch (this.policy)
+        {
+            case "deterministic":
+                choices.sort((a, b) =>
+                    logits[choiceIds[b]] - logits[choiceIds[a]]);
+                break;
+            case "stochastic":
+            {
+                const filteredLogits = choices.map(c => logits[choiceIds[c]]);
+                const weights = tf.tidy(() =>
+                    tf.softmax(filteredLogits).as1D());
+                weightedShuffle(await weights.array(), choices);
+                break;
+            }
+            default:
+                // istanbul ignore next: should never happen
+                throw new Error(`Unknown policy type ${this.policy}`);
+        }
     }
 
     /**
@@ -60,10 +92,12 @@ export class NetworkAgent implements BattleAgent
      * Loads a layers model from disk and uses it to initialize a Network agent.
      * @param url URL to the `model.json` created by `LayersModel#save()`, e.g.
      * `file://my-model/model.json`.
+     * @param policy Action selection method.
      */
-    public static async loadNetwork(url: string): Promise<NetworkAgent>
+    public static async loadNetwork(url: string, policy: PolicyType):
+        Promise<NetworkAgent>
     {
-        return new NetworkAgent(await NetworkAgent.loadModel(url));
+        return new NetworkAgent(await NetworkAgent.loadModel(url), policy);
     }
 
     /**

@@ -23,7 +23,7 @@ import { PSBot } from "./psbot/PSBot";
 
     // load neural network from disk
     const network = await NetworkAgent.loadNetwork(
-        `file://${join(latestModelFolder, "model.json")}`);
+        `file://${join(latestModelFolder, "model.json")}`, "deterministic");
 
     // configure client to accept certain challenges
     bot.acceptChallenges("gen4randombattle",
