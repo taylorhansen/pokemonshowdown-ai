@@ -31,5 +31,5 @@ import { PSBot } from "./psbot/PSBot";
     bot.acceptChallenges("gen4randombattle",
         (room, user, sender) =>
             new PSBattle(user, network, sender,
-                Logger.stdout.addPrefix(`PSBattle(${room})`)));
+                Logger.stdout.addPrefix(`PSBattle(${room}): `)));
 })();
