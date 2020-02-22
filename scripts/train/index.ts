@@ -13,17 +13,23 @@ import { train } from "./train";
     const logger = Logger.stderr.addPrefix("Train: ");
 
     // create or load neural network
-    let model: tf.LayersModel;
+    let model: tf.LayersModel | undefined;
     const modelUrl = `file://${latestModelFolder}`;
     const modelJsonUrl = `file://${join(latestModelFolder, "model.json")}`;
     logger.debug("Loading network");
-    try { model = await NetworkAgent.loadModel(modelJsonUrl); }
+    try
+    {
+        model = await tf.loadLayersModel(modelJsonUrl);
+        NetworkAgent.verifyModel(model);
+    }
     catch (e)
     {
         logger.error(`Error opening model: ${e}`);
         logger.debug("Creating default model");
+        model?.dispose();
 
         model = createModel();
+        logger.debug("Saving");
         await ensureDir(latestModelFolder);
         await model.save(modelUrl);
     }

@@ -1,5 +1,4 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { toColumn } from "../../src/ai/NetworkAgent";
 import { Choice, intToChoice } from "../../src/battle/agent/Choice";
 import { ReadonlyBattleState } from "../../src/battle/state/BattleState";
 import { Logger } from "../../src/Logger";
@@ -161,7 +160,7 @@ async function learningStep({toTrain, model, expBatch, gamma}: LearnOptions):
         //  (in the neural network's current opinion) multiplied by the discount
         //  factor
         const maxQ = tf.tidy(() =>
-            tf.max(model.predict(toColumn(exp.nextState)) as tf.Tensor));
+            tf.max(model.predict(tf.tensor([exp.nextState])) as tf.Tensor));
         const maxQData = await maxQ.data();
         maxQ.dispose();
         const target = exp.reward + gamma * maxQData[0];

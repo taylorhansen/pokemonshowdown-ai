@@ -8,22 +8,11 @@ import { weightedShuffle } from "./helpers";
 /** NetworkAgent policy type. */
 export type PolicyType = "deterministic" | "stochastic";
 
-/**
- * Turns a tensor-like object into a column vector.
- * @param arr Array to convert.
- * @returns A 2D Tensor representing the column vector.
- */
-export function toColumn(arr: number[] | Float32Array): tf.Tensor2D
-{
-    // TODO: shouldn't the parameters be readonly?
-    return tf.tensor2d(arr, [1, arr.length], "float32");
-}
-
 /** BattleAgent that interfaces with a neural network. */
 export class NetworkAgent implements BattleAgent
 {
     /**
-     * Creates a Network object.
+     * Creates a NetworkAgent.
      * @param model Neural network for making decisions.
      * @param policy Action selection method after getting decision data.
      * `deterministic` - Choose the action deterministically with the highest
@@ -45,7 +34,7 @@ export class NetworkAgent implements BattleAgent
 
         const prediction = tf.tidy(() =>
         {
-            const stateTensor = toColumn(encodeBattleState(state));
+            const stateTensor = tf.tensor([encodeBattleState(state)]);
             return (this.model.predict(stateTensor, {}) as tf.Tensor2D)
                 .squeeze().as1D();
         });
@@ -80,43 +69,10 @@ export class NetworkAgent implements BattleAgent
     }
 
     /**
-     * Saves neural network data to disk.
-     * @param url Base URL for model folder, e.g. `file://my-model`.
-     */
-    public async save(url: string): Promise<void>
-    {
-        await this.model.save(url);
-    }
-
-    /**
-     * Loads a layers model from disk and uses it to initialize a Network agent.
-     * @param url URL to the `model.json` created by `LayersModel#save()`, e.g.
-     * `file://my-model/model.json`.
-     * @param policy Action selection method.
-     */
-    public static async loadNetwork(url: string, policy: PolicyType):
-        Promise<NetworkAgent>
-    {
-        return new NetworkAgent(await NetworkAgent.loadModel(url), policy);
-    }
-
-    /**
-     * Loads a model from disk.
-     * @param url URL to the `model.json` created by `LayersModel#save()`, e.g.
-     * `file://my-model/model.json`.
-     */
-    public static async loadModel(url: string): Promise<tf.LayersModel>
-    {
-        const model = await tf.loadLayersModel(url);
-        NetworkAgent.verifyModel(model);
-        return model;
-    }
-
-    /**
      * Verifies a neural network model to make sure its input and output shapes
-     * are acceptable. Throws if invalid.
+     * are acceptable for constructing a NetworkAgent with. Throws if invalid.
      */
-    private static verifyModel(model: tf.LayersModel): void
+    public static verifyModel(model: tf.LayersModel): void
     {
         // loaded models must have the correct input/output shape
         if (Array.isArray(model.input))
