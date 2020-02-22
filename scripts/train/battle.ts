@@ -3,14 +3,14 @@ import { join } from "path";
 // @ts-ignore
 import s = require("../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../src/battle/agent/BattleAgent";
-import { AnyDriverEvent } from "../../src/battle/driver/DriverEvent";
 import { LogFunc, Logger } from "../../src/Logger";
 import { PlayerID } from "../../src/psbot/helpers";
 import { AnyBattleEvent, TieEvent, WinEvent } from
     "../../src/psbot/parser/BattleEvent";
+import { Iter } from "../../src/psbot/parser/Iter";
 import { parsePSMessage } from "../../src/psbot/parser/parsePSMessage";
 import { PSBattle } from "../../src/psbot/PSBattle";
-import { PSEventHandler } from "../../src/psbot/PSEventHandler";
+import { PSEventHandler, PSResult } from "../../src/psbot/PSEventHandler";
 import { ensureDir } from "./ensureDir";
 
 /** Player options for `startBattle()`. */
@@ -86,11 +86,10 @@ export async function startBattle(options: GameOptions): Promise<void>
         {
             /** @override */
             protected handleGameOver(event: TieEvent | WinEvent,
-                events: readonly AnyBattleEvent[], i: number):
-                AnyDriverEvent[]
+                it: Iter<AnyBattleEvent>): PSResult
             {
                 done = true;
-                return super.handleGameOver(event, events, i);
+                return super.handleGameOver(event, it);
             }
         } : PSEventHandler;
 

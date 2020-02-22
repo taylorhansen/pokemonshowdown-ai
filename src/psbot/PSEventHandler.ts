@@ -24,7 +24,7 @@ import { BattleInitMessage, RequestMessage } from "./parser/Message";
 import { Result } from "./parser/types";
 
 /** Result from parsing BattleEvents into DriverEvents. */
-type PSResult = Result<AnyDriverEvent[], AnyBattleEvent>;
+export type PSResult = Result<AnyDriverEvent[], AnyBattleEvent>;
 
 /** Translates BattleEvents from the PS server into DriverEvents. */
 export class PSEventHandler
