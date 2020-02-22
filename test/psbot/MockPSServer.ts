@@ -10,7 +10,7 @@ export class MockPSServer
     /** Whether this server is connected to a client. */
     public get isConnected(): boolean
     {
-        return !!this.connection && this.connection.connected;
+        return this.connection?.connected ?? false;
     }
 
     /** Query string from the last HTTP request. */
@@ -69,7 +69,6 @@ export class MockPSServer
                             break;
                         case "login":
                             if (this.username === this._lastQuery.name &&
-                                this.password &&
                                 this.password === this._lastQuery.pass)
                             {
                                 res.end(`]{"actionsuccess":true,` +
@@ -110,7 +109,7 @@ export class MockPSServer
     {
         return new Promise(res =>
         {
-            if (!this.connection || !this.connection.connected)
+            if (!this.connection?.connected)
             {
                 throw new Error("Not connected to client");
             }
@@ -121,11 +120,10 @@ export class MockPSServer
     /** Sends a message to the client. */
     public sendToClient(message: string): void
     {
-        if (!this.connection || !this.connection.connected)
+        if (!this.connection?.connected)
         {
             throw new Error("Not connected to client");
         }
-
         this.connection.sendUTF(message);
     }
 
