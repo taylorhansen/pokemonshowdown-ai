@@ -119,7 +119,7 @@ interface PPOVariantKLAdaptive extends PPOVariantBase<"klAdaptive">
      * Usually it's best to omit this argument (will assume 1 by default) since
      * it usually adjusts to an optimal value quickly.
      */
-    beta?: tf.Variable;
+    beta?: number;
 }
 
 /** Additional parameters for selecting a variant of PPO. */
@@ -231,35 +231,9 @@ function loss(
                             .asScalar());
                     result.kl = kl;
 
-                    // initialize adaptive penalty coefficient
-                    let beta: number | tf.Variable;
-                    if (algorithm.variant === "klAdaptive")
-                    {
-                        if (!algorithm.beta)
-                        {
-                            algorithm.beta = tf.keep(
-                                tf.variable(tf.scalar(1),
-                                    /*trainable*/false, "kl-adaptive/beta"));
-                        }
-                        beta = algorithm.beta as tf.Variable;
-                    }
-                    else beta = algorithm.beta as number;
-
+                    const beta = algorithm.beta ?? 1;
                     const klPenalty = tf.mul(beta, kl);
                     pgObjs = tf.sub(rScaled, klPenalty);
-
-                    if (algorithm.variant === "klFixed") break;
-
-                    // adapt penalty coefficient
-                    (beta as tf.Variable).assign(
-                        tf.where(
-                            tf.less(kl, algorithm.klTarget / 1.5),
-                            tf.div(beta, 2),
-                            tf.where(
-                                tf.greater(kl, algorithm.klTarget * 1.5),
-                                tf.mul(beta, 2),
-                                beta)));
-                    result.beta = tf.keep((beta as tf.Variable).asScalar());
                 }
             }
         }
@@ -454,6 +428,7 @@ async function learn(
                 {batch: batchId, size: states.length});
 
             // loss function that records the metrics data
+            let kl: tf.Scalar | undefined;
             function f()
             {
                 const result = tf.tidy(() => loss(
@@ -476,6 +451,9 @@ async function learn(
                         metricsPerBatch[name] = [metric];
                     }
                     else metricsPerBatch[name].push(metric);
+
+                    // record kl for adaptive penalty
+                    if (name === "kl") kl = metric;
                 }
                 return result.loss;
             }
@@ -485,6 +463,25 @@ async function learn(
             //  metricsPerBatch as well
             const cost = optimizer.minimize(f, /*returnCost*/true, variables)!;
             progress.tick({loss: await cost.array()});
+
+            if (algorithm.type === "ppo" &&
+                algorithm.variant === "klAdaptive" && kl)
+            {
+                const klValue = await kl.array();
+                if (algorithm.beta === undefined) algorithm.beta = 1;
+
+                // adapt penalty coefficient
+                const target = algorithm.klTarget;
+                if (klValue < target / 1.5) algorithm.beta /= 2;
+                else if (klValue > target * 1.5) algorithm.beta *= 2;
+
+                // record new coefficient value
+                if (!metricsPerBatch.hasOwnProperty("beta"))
+                {
+                    metricsPerBatch.beta = [tf.scalar(algorithm.beta)];
+                }
+                else metricsPerBatch.beta.push(tf.scalar(algorithm.beta));
+            }
 
             await callbacks.onBatchEnd(batchId);
         }
