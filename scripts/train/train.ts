@@ -9,6 +9,7 @@ import { ensureDir } from "./ensureDir";
 import { Experience } from "./Experience";
 import { ExperienceNetwork } from "./ExperienceNetwork";
 import { ExperiencePSBattle } from "./ExperiencePSBattle";
+import { shuffle } from "./helpers";
 
 /** Base type for AdvantageConfigs. */
 interface AdvantageConfigBase<T extends string>
@@ -308,10 +309,22 @@ interface LearnArgs
     readonly algorithm: AlgorithmArgs;
     /** Number of epochs to run training. */
     readonly epochs: number;
+    /** Mini-batch size. */
+    readonly batchSize: number;
     /** Path to the folder to store TensorBoard logs in. Optional. */
     readonly logPath?: string;
     /** Logger object. */
     readonly logger: Logger;
+}
+
+interface AugmentedExperience extends Omit<Experience, "logits" | "reward">
+{
+    /** Log-probabilities of selecting each action. */
+    logProbs: tf.Tensor;
+    /** Discounted future reward. */
+    returns: number;
+    /** Advantage estimate based on reward sum. */
+    advantage: number;
 }
 
 /**
@@ -319,7 +332,7 @@ interface LearnArgs
  * Experience objects will be disposed afterwards.
  */
 async function learn(
-    {model, games, algorithm, epochs, logPath, logger}: LearnArgs):
+    {model, games, algorithm, epochs, batchSize, logPath, logger}: LearnArgs):
     Promise<void>
 {
     // setup training callbacks for metrics logging
@@ -338,42 +351,25 @@ async function learn(
 
     // prepare data for estimating the loss function
     logger.debug("Preparing training data");
-    const states = new Array<tf.Tensor>(games.length);
-    const oldLogProbs = new Array<tf.Tensor>(games.length);
-    const actions = new Array<tf.Tensor>(games.length);
-    const returns = new Array<tf.Tensor>(games.length);
-    const advantages = new Array<tf.Tensor>(games.length);
-    for (let i = 0; i < games.length; ++i)
+
+    // compute returns/advantages for each exp then add them to exp tuples
+    const samples: AugmentedExperience[] = [];
+
+    for (const game of games)
     {
-        const game = games[i];
-
-        const stateTensors = new Array<tf.Tensor>(game.length);
-        const oldLogProbTensors = new Array<tf.Tensor>(game.length);
-        const actionBuffer = tf.buffer([game.length], "int32");
-        const returnsBuffer = tf.buffer([game.length]);
-        const advantageBuffer = tf.buffer([game.length]);
-
         let lastRet = 0;
         let lastAdv = 0;
         for (let j = game.length - 1; j >= 0; --j)
         {
             const exp = game[j];
 
-            stateTensors[j] = exp.state;
-            oldLogProbTensors[j] = exp.logits.logSoftmax();
-            exp.logits.dispose();
-            actionBuffer.set(exp.action, j);
-
             // calculate discounted summed rewards
             lastRet = exp.reward + algorithm.advantage.gamma * lastRet;
-            returnsBuffer.set(lastRet, j);
 
             // estimate advantage
             switch (algorithm.advantage.type)
             {
-                case "a2c":
-                    advantageBuffer.set(lastRet - exp.value, j);
-                    break;
+                case "a2c": lastAdv = lastRet - exp.value, j; break;
                 case "generalized":
                 {
                     // temporal difference residual
@@ -385,45 +381,46 @@ async function learn(
                     lastAdv = delta +
                         algorithm.advantage.gamma *
                             algorithm.advantage.lambda * lastAdv;
-                    advantageBuffer.set(lastAdv, j);
                 }
-                case "reinforce":
-                    advantageBuffer.set(lastRet, j);
-                    break;
+                case "reinforce": lastAdv = lastRet; break;
             }
+
+            samples.push(
+            {
+                state: exp.state, value: exp.value, action: exp.action,
+                logProbs: exp.logits.logSoftmax(),
+                returns: lastRet, advantage: lastAdv
+            });
+            exp.logits.dispose();
         }
 
-        states[i] = tf.stack(stateTensors);
-        tf.dispose(stateTensors);
-        oldLogProbs[i] = tf.stack(oldLogProbTensors);
-        tf.dispose(oldLogProbTensors);
-        actions[i] = actionBuffer.toTensor();
-        returns[i] = returnsBuffer.toTensor();
-        advantages[i] = tf.tidy(function()
+        if (algorithm.advantage.standardize)
         {
-            let result = advantageBuffer.toTensor();
-
-            // optionally standardize advantage estimates
-            if (algorithm.advantage.standardize)
+            let advantages = samples.map(sample => sample.advantage);
+            const standardized = tf.tidy(function()
             {
-                const {mean, variance} = tf.moments(result);
-                result = tf.divNoNan(tf.sub(result, mean), tf.sqrt(variance));
-            }
-
-            return result;
-        });
+                const advTensor = tf.tensor(advantages);
+                const {mean, variance} = tf.moments(advTensor);
+                return tf.sub(advTensor, mean)
+                    .divNoNan(variance.sqrt()).as1D();
+            });
+            advantages = await standardized.array();
+            standardized.dispose();
+        }
     }
 
+    shuffle(samples);
+
     callbacks.setModel(model);
-    // TODO: set validation data
     await callbacks.onTrainBegin();
 
+    const numBatches = Math.ceil(samples.length / batchSize);
     for (let i = 0; i < epochs; ++i)
     {
         const progress = new ProgressBar(
             `Batch :current/:total: eta=:etas :bar loss=:loss`,
             {
-                total: games.length, head: ">", clear: true,
+                total: numBatches, head: ">", clear: true,
                 width: Math.floor((process.stderr.columns ?? 80) / 3)
             });
         await callbacks.onEpochBegin(i);
@@ -431,29 +428,41 @@ async function learn(
         const metricsPerBatch:
             {[name: string]: tf.Scalar[], loss: tf.Scalar[]} = {loss: []};
 
-        // perform mini-batch optimization on each game, where the mini-batch
-        //  size is the length of the game
-        for (let j = 0; j < games.length; ++j)
+        let batchId = 0;
+        for (let j = 0; j < samples.length; ++j, ++batchId)
         {
-            const game = games[j];
+            // get experiences from the shuffled samples to get an unzipped
+            //  mini-batch
+            const states: tf.Tensor[] = [];
+            const oldLogProbs: tf.Tensor[] = [];
+            const actions: number[] = [];
+            const returns: number[] = [];
+            const advantages: number[] = [];
+            const k = j;
+            for (; j - k < batchSize && j < samples.length; ++j)
+            {
+                const sample = samples[j];
+                states.push(sample.state);
+                oldLogProbs.push(sample.logProbs);
+                actions.push(sample.action);
+                returns.push(sample.returns);
+                advantages.push(sample.advantage);
+            }
 
-            await callbacks.onBatchBegin(j,
-                {batch: i, size: game.length});
-
-            const state = states[j];
-            const oldLogProb = oldLogProbs[j];
-            const action = actions[j];
-            const ret = returns[j];
-            const advantage = advantages[j];
+            await callbacks.onBatchBegin(batchId,
+                {batch: batchId, size: states.length});
 
             // loss function that records the metrics data
             function f()
             {
-                const result = loss(
+                const result = tf.tidy(() => loss(
                 {
-                    model, state, oldLogProbs: oldLogProb, action,
-                    returns: ret, advantage, algorithm
-                });
+                    model, state: tf.stack(states),
+                    oldLogProbs: tf.stack(oldLogProbs),
+                    action: tf.tensor(actions, undefined, "int32"),
+                    returns: tf.tensor(returns),
+                    advantage: tf.tensor(advantages), algorithm
+                }));
 
                 for (const name in result)
                 {
@@ -476,7 +485,7 @@ async function learn(
             const cost = optimizer.minimize(f, /*returnCost*/true, variables)!;
             progress.tick({loss: await cost.array()});
 
-            await callbacks.onBatchEnd(j);
+            await callbacks.onBatchEnd(batchId);
         }
 
         // average all batch metrics
@@ -499,8 +508,7 @@ async function learn(
     await callbacks.onTrainEnd();
 
     optimizer.dispose();
-    tf.dispose([states, oldLogProbs, actions, returns, advantages]);
-
+    for (const sample of samples) tf.dispose([sample.state, sample.logProbs]);
     logger.debug("Done");
 }
 
@@ -521,13 +529,15 @@ export interface TrainOptions
     readonly algorithm: AlgorithmArgs;
     /** Number of epochs to run training. */
     readonly epochs: number;
+    /** Mini-batch size. */
+    readonly batchSize: number;
     /** Path to store game logs. Omit to not store logs. */
     readonly logPath?: string;
 }
 
 /** Trains a neural network over a number of self-play games. */
 export async function train(
-    {model, saveUrl, numGames, maxTurns, algorithm, epochs, logPath}:
+    {model, saveUrl, numGames, maxTurns, algorithm, epochs, batchSize, logPath}:
         TrainOptions): Promise<void>
 {
     const logger = Logger.stderr.addPrefix("Train: ");
@@ -574,7 +584,7 @@ export async function train(
     // train over the experience gained from each game
     await learn(
     {
-        model, games, algorithm, epochs,
+        model, games, algorithm, epochs, batchSize,
         ...(logPath && {logPath: join(logPath, "learn")}),
         logger: logger.addPrefix("Learn: ")
     });

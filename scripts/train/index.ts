@@ -49,7 +49,7 @@ import { train } from "./train";
             },
             valueCoeff: 0.6, entropyCoeff: 0.8
         },
-        epochs: 3,
+        epochs: 3, batchSize: 32,
         logPath
     });
     model.dispose();
