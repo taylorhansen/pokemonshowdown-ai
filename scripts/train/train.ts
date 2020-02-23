@@ -341,7 +341,7 @@ async function learn(
     if (logPath)
     {
         await ensureDir(logPath);
-        callbacks.append(tf.node.tensorBoard(logPath, {updateFreq: "batch"}));
+        callbacks.append(tf.node.tensorBoard(logPath));
     }
 
     // have to do this manually (instead of #compile()-ing the model and calling
