@@ -45,38 +45,40 @@ export abstract class ExperiencePSBattle extends PSBattle
     {
         // once we're about to make our next Choice, we can now look back on all
         //  the changes that happened and emit an Experience object
-        if (this.shouldRespond())
-        {
-            const state = this.agent.lastState;
-            const logits = this.agent.lastLogits;
-            const value = this.agent.lastValue;
-            const action = choiceIds[this.lastChoices[0]];
-            const reward = this.driver.consumeReward();
-
-            if (state && logits && value)
-            {
-                await this.emitExperience(
-                {
-                    state, logits, value: await value.array(), action, reward
-                });
-
-                // indicate that these fields shouldn't be disposed
-                this.agent.lastState = null;
-                this.agent.lastLogits = null;
-            }
-        }
+        if (this.shouldRespond()) await this.collectExperience();
 
         await super.progress(msg);
 
-        // once the game ends, make sure to dispose any leftover tensors from
-        //  the ExperienceNetwork
-        // TODO: emit a terminal experience after the game ends, with a large
-        //  reward depending on the winner
+        // once the game ends, make sure to emit a terminal Experience and
+        //  dispose any leftover tensors from the ExperienceNetwork
         if (!this.eventHandler.battling)
         {
-            this.agent.lastState?.dispose();
-            this.agent.lastLogits?.dispose();
-            this.agent.lastValue?.dispose();
+            await this.collectExperience();
+            this.agent.cleanup();
+        }
+    }
+
+    /**
+     * Emits an Experience object from collected rewards and prediction tensors.
+     */
+    private async collectExperience(): Promise<void>
+    {
+        const state = this.agent.lastState;
+        const logits = this.agent.lastLogits;
+        const value = this.agent.lastValue;
+        const action = choiceIds[this.lastChoices[0]];
+        const reward = this.driver.consumeReward();
+
+        if (state && logits && value)
+        {
+            // indicate that these fields shouldn't be disposed later
+            this.agent.lastState = null;
+            this.agent.lastLogits = null;
+
+            return this.emitExperience(
+            {
+                state, logits, value: await value.array(), action, reward
+            });
         }
     }
 }

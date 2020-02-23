@@ -17,6 +17,15 @@ export class ExperienceNetwork extends NetworkAgent
     /** State-value function that was estimated from the last `#decide()`. */
     public lastValue: tf.Scalar | null = null;
 
+    /** Disposes tensor fields that aren't set to null. */
+    public cleanup(): void
+    {
+        // make sure unconsumed fields get disposed
+        this.lastState?.dispose();
+        this.lastLogits?.dispose();
+        this.lastValue?.dispose();
+    }
+
     /** @override */
     protected getLogits(state: number[]): tf.Tensor1D
     {
@@ -28,11 +37,7 @@ export class ExperienceNetwork extends NetworkAgent
                     tf.Tensor[];
             const squeezedLogits = logits.squeeze().as1D();
 
-            // make sure unconsumed fields get disposed
-            this.lastState?.dispose();
-            this.lastLogits?.dispose();
-            this.lastValue?.dispose();
-
+            this.cleanup();
             this.lastState = tf.keep(stateTensor);
             this.lastLogits = tf.keep(squeezedLogits.clone());
             this.lastValue = tf.keep(value.squeeze().asScalar());
