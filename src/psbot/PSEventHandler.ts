@@ -1114,7 +1114,17 @@ export class PSEventHandler
         it: Iter<AnyBattleEvent>): PSResult
     {
         this._battling = false;
-        return {result: [], remaining: it};
+
+        let winner: Side | undefined;
+        if (event.type === "win")
+        {
+            winner = event.winner === this.username ? "us" : "them";
+        }
+
+        return {
+            result: [{type: "gameOver", ...(winner && {winner})}],
+            remaining: it
+        };
     }
 
     /** @virtual */

@@ -1094,8 +1094,13 @@ describe("PSEventHandler", function()
 
         describe("tie", function()
         {
-            test("Should set #battling to false", [{type: "tie"}], [],
-                () => expect(handler.battling).to.be.false);
+            afterEach("Should set #battling to false", function()
+            {
+                expect(handler.battling).to.be.false;
+            });
+
+            test("Should emit gameOver with no winner",
+                [{type: "tie"}], [{type: "gameOver"}]);
         });
 
         describe("-transform", function()
@@ -1195,8 +1200,18 @@ describe("PSEventHandler", function()
 
         describe("win", function()
         {
-            test("Should set #battling to false", [{type: "win", winner: "x"}],
-                [], () => expect(handler.battling).to.be.false);
+            afterEach("Should set #battling to false", function()
+            {
+                expect(handler.battling).to.be.false;
+            });
+
+            test("Should emit gameOver with winner=us if we won",
+                [{type: "win", winner: username}],
+                [{type: "gameOver", winner: "us"}]);
+
+            test("Should emit gameOver with winner=them if they won",
+                [{type: "win", winner: username + "1"}],
+                [{type: "gameOver", winner: "them"}]);
         });
 
         describe("BattleEvent suffixes", function()

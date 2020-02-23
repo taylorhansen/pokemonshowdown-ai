@@ -1,9 +1,9 @@
 import { BattleDriver } from "../../src/battle/driver/BattleDriver";
-import { Faint, PostTurn } from "../../src/battle/driver/DriverEvent";
+import { Faint, GameOver, PostTurn } from "../../src/battle/driver/DriverEvent";
 import { RewardTracker } from "./RewardTracker";
 
 /** Holds the reward values for different events. */
-export enum Reward { faint = -10, turn = -0.1 }
+export enum Reward { faint = -10, turn = -0.1, win = 100, tie = -50 }
 
 /** BattleDriver that keeps track of reward value */
 export class RewardBattleDriver extends BattleDriver
@@ -31,5 +31,12 @@ export class RewardBattleDriver extends BattleDriver
     {
         this.reward.apply(event.monRef, Reward.faint);
         super.faint(event);
+    }
+
+    /** @override */
+    public gameOver(event: GameOver): void
+    {
+        if (event.winner) this.reward.apply(event.winner, Reward.win);
+        else this.reward.apply("us", Reward.tie);
     }
 }

@@ -10,10 +10,10 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
     ClearSelfSwitch, CopyBoosts, CountStatusEffect, CureStatus, CureTeam,
     DisableMove, DriverEvent, DriverEventType, Fail, Faint, Fatigue, Feint,
-    FormChange, GastroAcid, Immune, Inactive, InitOtherTeamSize, InitTeam,
-    InvertBoosts, LockOn, Mimic, Miss, ModifyPP, MustRecharge, PostTurn,
-    PrepareMove, PreTurn, ReenableMoves, RejectSwitchTrapped, RemoveItem,
-    ResetWeather, RestoreMoves, RevealItem, RevealMove, SetBoost,
+    FormChange, GameOver, GastroAcid, Immune, Inactive, InitOtherTeamSize,
+    InitTeam, InvertBoosts, LockOn, Mimic, Miss, ModifyPP, MustRecharge,
+    PostTurn, PrepareMove, PreTurn, ReenableMoves, RejectSwitchTrapped,
+    RemoveItem, ResetWeather, RestoreMoves, RevealItem, RevealMove, SetBoost,
     SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType, SetWeather, Sketch,
     Stall, SwapBoosts, SwitchIn, TakeDamage, TickWeather, Transform,
     TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove } from
@@ -1118,6 +1118,15 @@ export class BattleDriver implements DriverEventHandler
             throw new Error(`Weather is '${weather.type}' but upkept ` +
                 `weather is '${event.weatherType}'`);
         }
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the game has ended.
+     * @virtual
+     */
+    public gameOver(event: GameOver): void
+    {
         if (event.consequences) this.handleEvents(event.consequences, event);
     }
 

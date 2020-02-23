@@ -2041,4 +2041,6 @@ describe("BattleDriver", function()
             });
         });
     });
+
+    describe("#gameOver()", function() {}); // TODO
 });

@@ -70,6 +70,7 @@ interface DriverEventMap
     resetWeather: ResetWeather;
     setWeather: SetWeather;
     tickWeather: TickWeather;
+    gameOver: GameOver;
 }
 
 /** The types of DriverEvents that can exist. */
@@ -693,4 +694,11 @@ export interface TickWeather extends DriverEventBase<"tickWeather">
 {
     /** Type of weather. */
     readonly weatherType: WeatherType;
+}
+
+/** Indicates that the game has ended. */
+export interface GameOver extends DriverEventBase<"gameOver">
+{
+    /** The side that won. Leave blank if tie. */
+    readonly winner?: Side;
 }
