@@ -54,4 +54,5 @@ import { train } from "./train";
     });
     model.dispose();
 })()
-    .catch(e => console.log(`\nTraining script threw an error: ${e}`));
+    .catch((e: Error) =>
+        console.log(`\nTraining script threw an error: ${e}\n` + e.stack));
