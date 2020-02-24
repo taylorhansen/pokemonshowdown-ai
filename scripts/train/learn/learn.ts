@@ -2,7 +2,7 @@ import * as tf from "@tensorflow/tfjs-node";
 import ProgressBar from "progress";
 import { intToChoice } from "../../../src/battle/agent/Choice";
 import { ensureDir } from "../ensureDir";
-import { klDivergence } from "../learn/helpers";
+import { klDivergence, shuffle } from "../learn/helpers";
 import { Logger } from "../../../src/Logger";
 import { AugmentedExperience } from "./AugmentedExperience";
 
@@ -261,7 +261,7 @@ export interface LearnArgs
     /** Model to train. */
     readonly model: tf.LayersModel;
     /** Processed Experience tuples to sample from. */
-    readonly samples: readonly AugmentedExperience[];
+    readonly samples: AugmentedExperience[];
     /** Learning algorithm config. */
     readonly algorithm: AlgorithmArgs;
     /** Number of epochs to run training. */
@@ -308,6 +308,9 @@ export async function learn(
                 width: Math.floor((process.stderr.columns ?? 80) / 3)
             });
         await callbacks.onEpochBegin(i);
+
+        // make sure our batches are randomly sampled
+        shuffle(samples);
 
         const metricsPerBatch:
             {[name: string]: tf.Scalar[], loss: tf.Scalar[]} = {loss: []};

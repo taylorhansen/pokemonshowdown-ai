@@ -2,7 +2,6 @@ import * as tf from "@tensorflow/tfjs-node";
 import { join } from "path";
 import { Logger } from "../../src/Logger";
 import { BattleSim } from "./sim/simulators";
-import { shuffle } from "./learn/helpers";
 import { AlgorithmArgs, learn } from "./learn/learn";
 import { rollout } from "./rollout";
 
@@ -51,8 +50,6 @@ export async function episode(
         logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath: join(logPath, "rollout")})
     });
-
-    shuffle(samples);
 
     // train over the experience gained from each game
     await learn(
