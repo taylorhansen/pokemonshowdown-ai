@@ -1,5 +1,6 @@
-import { BattleDriver } from "../../src/battle/driver/BattleDriver";
-import { Faint, GameOver, PostTurn } from "../../src/battle/driver/DriverEvent";
+import { BattleDriver } from "../../../../src/battle/driver/BattleDriver";
+import { Faint, GameOver, PostTurn } from
+    "../../../../src/battle/driver/DriverEvent";
 import { RewardTracker } from "./RewardTracker";
 
 /** Holds the reward values for different events. */

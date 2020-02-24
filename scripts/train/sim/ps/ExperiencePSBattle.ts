@@ -1,13 +1,13 @@
-import { choiceIds } from "../../src/battle/agent/Choice";
-import { Logger } from "../../src/Logger";
+import { choiceIds } from "../../../../src/battle/agent/Choice";
+import { Logger } from "../../../../src/Logger";
 import { BattleInitMessage, BattleProgressMessage } from
-    "../../src/psbot/parser/Message";
-import { PSBattle } from "../../src/psbot/PSBattle";
-import { Sender } from "../../src/psbot/PSBot";
-import { PSEventHandler } from "../../src/psbot/PSEventHandler";
-import { Experience } from "./Experience";
-import { ExperienceNetwork } from "./ExperienceNetwork";
-import { RewardBattleDriver } from "./RewardBattleDriver";
+    "../../../../src/psbot/parser/Message";
+import { PSBattle } from "../../../../src/psbot/PSBattle";
+import { Sender } from "../../../../src/psbot/PSBot";
+import { PSEventHandler } from "../../../../src/psbot/PSEventHandler";
+import { Experience } from "../helpers/Experience";
+import { ExperienceNetwork } from "../helpers/ExperienceNetwork";
+import { RewardBattleDriver } from "../helpers/RewardBattleDriver";
 
 /**
  * PSBattle that emits Experience objects. Must be subclassed to define where
@@ -45,6 +45,7 @@ export abstract class ExperiencePSBattle extends PSBattle
     {
         // once we're about to make our next Choice, we can now look back on all
         //  the changes that happened and emit an Experience object
+        // TODO: confirm that the rewards/actions are recorded properly
         if (this.shouldRespond()) await this.collectExperience();
 
         await super.progress(msg);

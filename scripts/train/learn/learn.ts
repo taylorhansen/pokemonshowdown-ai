@@ -1,15 +1,10 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { join } from "path";
 import ProgressBar from "progress";
-import { intToChoice } from "../../src/battle/agent/Choice";
-import { Logger } from "../../src/Logger";
-import { PlayerID } from "../../src/psbot/helpers";
-import { startBattle } from "./battle";
-import { ensureDir } from "./ensureDir";
-import { Experience } from "./Experience";
-import { ExperienceNetwork } from "./ExperienceNetwork";
-import { ExperiencePSBattle } from "./ExperiencePSBattle";
-import { shuffle } from "./helpers";
+import { intToChoice } from "../../../src/battle/agent/Choice";
+import { ensureDir } from "../ensureDir";
+import { klDivergence } from "../learn/helpers";
+import { Logger } from "../../../src/Logger";
+import { AugmentedExperience } from "./AugmentedExperience";
 
 /** Base type for AdvantageConfigs. */
 interface AdvantageConfigBase<T extends string>
@@ -30,7 +25,7 @@ interface AdvantageConfigBase<T extends string>
  * Estimate advantage using the REINFORCE algorithm, meaning only the discount
  * reward sums are used.
  */
-interface ReinforceConfig extends AdvantageConfigBase<"reinforce"> {}
+export interface ReinforceConfig extends AdvantageConfigBase<"reinforce"> {}
 
 /**
  * Estimate advantage using the actor-critic model (advantage actor critic, or
@@ -39,20 +34,20 @@ interface ReinforceConfig extends AdvantageConfigBase<"reinforce"> {}
  * This works under the definition of the Q-learning function
  * `Q(s,a) = V(s) + A(s,a)`.
  */
-interface A2CConfig extends AdvantageConfigBase<"a2c"> {}
+export interface A2CConfig extends AdvantageConfigBase<"a2c"> {}
 
 /**
  * Generalized advantage estimation. Usually better at controlling bias and
  * variance.
  */
-interface GAEConfig extends AdvantageConfigBase<"generalized">
+export interface GAEConfig extends AdvantageConfigBase<"generalized">
 {
     /** Controls bias-variance tradeoff. Must be between 0 and 1 inclusive. */
     readonly lambda: number;
 }
 
 /** Args object for advantage estimator. */
-type AdvantageConfig = ReinforceConfig | A2CConfig | GAEConfig;
+export type AdvantageConfig = ReinforceConfig | A2CConfig | GAEConfig;
 
 /** Base class for AlgorithmArgs. */
 interface AlgorithmArgsBase<T extends string>
@@ -75,7 +70,7 @@ interface AlgorithmArgsBase<T extends string>
 }
 
 /** Vanilla policy gradient algorithm. */
-interface PGArgs extends AlgorithmArgsBase<"pg"> {}
+export interface PGArgs extends AlgorithmArgsBase<"pg"> {}
 
 /** Base interface for PPOVariantArgs. */
 interface PPOVariantBase<T extends string>
@@ -127,22 +122,10 @@ type PPOVariantArgs = PPOVariantClipped | PPOVariantKLFixed |
     PPOVariantKLAdaptive;
 
 /** Proximal policy optimization algorithm. */
-type PPOArgs = AlgorithmArgsBase<"ppo"> & PPOVariantArgs;
+export type PPOArgs = AlgorithmArgsBase<"ppo"> & PPOVariantArgs;
 
 /** Arguments for customizing the learning algorithm. */
-type AlgorithmArgs = PGArgs | PPOArgs;
-
-/**
- * Calculates the KL divergence of two discrete probability distributions.
- * @param logProbs1 Log-probabilities of the first distribution.
- * @param logProbs2 Log-probabilities of the second distribution. Must be the
- * same shape as `logProbs1`.
- */
-function klDivergence(logProbs1: tf.Tensor, logProbs2: tf.Tensor): tf.Tensor
-{
-    return tf.tidy(() =>
-        tf.exp(logProbs1).mul(tf.sub(logProbs1, logProbs2)).sum(-1));
-}
+export type AlgorithmArgs = PGArgs | PPOArgs;
 
 /** Parameters for policy gradient loss function. */
 interface LossArgs
@@ -272,42 +255,30 @@ function loss(
     });
 }
 
-/** Processed Experience tuple suitable for learning. */
-interface AugmentedExperience extends Omit<Experience, "logits" | "reward">
-{
-    /** Log-probabilities of selecting each action. */
-    readonly logProbs: tf.Tensor;
-    /** Discounted future reward. */
-    readonly returns: number;
-    /** Advantage estimate based on reward sum. */
-    readonly advantage: number;
-}
-
-/** Parameters for `learn()`. */
-interface LearnArgs
+/** Args for `learn()`. */
+export interface LearnArgs
 {
     /** Model to train. */
     readonly model: tf.LayersModel;
-    /** Experiences from each game. */
-    readonly games: readonly (readonly Experience[])[];
+    /** Processed Experience tuples to sample from. */
+    readonly samples: readonly AugmentedExperience[];
     /** Learning algorithm config. */
     readonly algorithm: AlgorithmArgs;
     /** Number of epochs to run training. */
     readonly epochs: number;
     /** Mini-batch size. */
     readonly batchSize: number;
-    /** Path to the folder to store TensorBoard logs in. Optional. */
-    readonly logPath?: string;
     /** Logger object. */
     readonly logger: Logger;
+    /**
+     * Path to the folder to store TensorBoard logs in. Omit to not store logs.
+     */
+    readonly logPath?: string;
 }
 
-/**
- * Trains the network over a number of epochs. Note that the tensors in the
- * Experience objects will be disposed afterwards.
- */
-async function learn(
-    {model, games, algorithm, epochs, batchSize, logPath, logger}: LearnArgs):
+/** Trains the network over a number of epochs. */
+export async function learn(
+    {model, samples, algorithm, epochs, batchSize, logPath, logger}: LearnArgs):
     Promise<void>
 {
     // setup training callbacks for metrics logging
@@ -323,68 +294,6 @@ async function learn(
     // TODO: tune optimizer hyperparams
     const optimizer = tf.train.adam();
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
-
-    // prepare data for estimating the loss function
-    logger.debug("Preparing training data");
-
-    // compute returns/advantages for each exp then add them to exp tuples
-    const samples: AugmentedExperience[] = [];
-
-    for (const game of games)
-    {
-        let lastRet = 0;
-        let lastAdv = 0;
-        for (let j = game.length - 1; j >= 0; --j)
-        {
-            const exp = game[j];
-
-            // calculate discounted summed rewards
-            lastRet = exp.reward + algorithm.advantage.gamma * lastRet;
-
-            // estimate advantage
-            switch (algorithm.advantage.type)
-            {
-                case "a2c": lastAdv = lastRet - exp.value, j; break;
-                case "generalized":
-                {
-                    // temporal difference residual
-                    const nextValue = game[j + 1]?.value ?? 0;
-                    const delta = exp.reward +
-                        algorithm.advantage.gamma * nextValue - exp.value;
-
-                    // exponentially-decayed sum of residual terms
-                    lastAdv = delta +
-                        algorithm.advantage.gamma *
-                            algorithm.advantage.lambda * lastAdv;
-                }
-                case "reinforce": lastAdv = lastRet; break;
-            }
-
-            samples.push(
-            {
-                state: exp.state, value: exp.value, action: exp.action,
-                logProbs: exp.logits.logSoftmax(),
-                returns: lastRet, advantage: lastAdv
-            });
-            exp.logits.dispose();
-        }
-
-        if (algorithm.advantage.standardize)
-        {
-            let advantages = samples.map(sample => sample.advantage);
-            const standardized = tf.tidy(function()
-            {
-                const advTensor = tf.tensor(advantages);
-                const {mean, variance} = tf.moments(advTensor);
-                return tf.sub(advTensor, mean)
-                    .divNoNan(variance.sqrt()).as1D();
-            });
-            advantages = await standardized.array();
-            standardized.dispose();
-        }
-    }
-
-    shuffle(samples);
 
     callbacks.setModel(model);
     await callbacks.onTrainBegin();
@@ -423,6 +332,7 @@ async function learn(
                 returns.push(sample.returns);
                 advantages.push(sample.advantage);
             }
+            --j;
 
             await callbacks.onBatchBegin(batchId,
                 {batch: batchId, size: states.length});
@@ -508,90 +418,4 @@ async function learn(
     optimizer.dispose();
     for (const sample of samples) tf.dispose([sample.state, sample.logProbs]);
     logger.debug("Done");
-}
-
-/** Options for `train()`. */
-export interface TrainOptions
-{
-    /** Model to train. */
-    readonly model: tf.LayersModel;
-    /**
-     * If provided, save the neural network to this location after each game.
-     */
-    readonly saveUrl?: string;
-    /** Number of training games to play. */
-    readonly numGames: number;
-    /** Number of turns before a game is considered a tie. */
-    readonly maxTurns: number;
-    /** Learning algorithm config. */
-    readonly algorithm: AlgorithmArgs;
-    /** Number of epochs to run training. */
-    readonly epochs: number;
-    /** Mini-batch size. */
-    readonly batchSize: number;
-    /** Path to store game logs. Omit to not store logs. */
-    readonly logPath?: string;
-}
-
-/** Trains a neural network over a number of self-play games. */
-export async function train(
-    {model, saveUrl, numGames, maxTurns, algorithm, epochs, batchSize, logPath}:
-        TrainOptions): Promise<void>
-{
-    const logger = Logger.stderr.addPrefix("Train: ");
-
-    // play some games semi-randomly, building batches of Experience for each
-    //  game
-    logger.debug("Collecting training data");
-    const games: Experience[][] = [];
-    const progress = new ProgressBar(`eta=:etas :bar games=:current`,
-        {
-            total: numGames, head: ">", clear: true,
-            width: Math.floor((process.stderr.columns ?? 80) / 2)
-        });
-    for (let i = 0; i < numGames; ++i)
-    {
-        const splitExp: {[P in PlayerID]: Experience[]} = {p1: [], p2: []};
-        const net1 = new ExperienceNetwork(model, "stochastic");
-        const net2 = new ExperienceNetwork(model, "stochastic");
-        const psBattleCtor = class extends ExperiencePSBattle
-        {
-            protected async emitExperience(exp: Experience): Promise<void>
-            {
-                splitExp[this.username as PlayerID].push(exp);
-            }
-        };
-        await startBattle(
-        {
-            p1: {agent: net1, psBattleCtor},
-            p2: {agent: net2, psBattleCtor}, maxTurns,
-            ...(logPath &&
-                {
-                    logPath: join(logPath, `self-play/train-${i + 1}`),
-                    logPrefix: "SelfPlay: "
-                })
-        });
-        games.push(splitExp.p1, splitExp.p2);
-        progress.tick();
-    }
-    progress.terminate();
-    const totalExp = games.map(game => game.length).reduce((a, b) => a + b);
-    logger.debug(`Played ${numGames} games, with a total of ${totalExp} ` +
-        `experiences (avg ${totalExp / numGames} per game)`);
-
-    // train over the experience gained from each game
-    await learn(
-    {
-        model, games, algorithm, epochs, batchSize,
-        ...(logPath && {logPath: join(logPath, "learn")}),
-        logger: logger.addPrefix("Learn: ")
-    });
-
-    // TODO: play eval games against random player, past self, and current self
-
-    if (saveUrl)
-    {
-        logger.debug("Saving");
-        await model.save(saveUrl);
-    }
 }

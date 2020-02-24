@@ -5,8 +5,9 @@ import { NetworkAgent } from "../../src/ai/NetworkAgent";
 import { latestModelFolder, logPath } from "../../src/config";
 import { Logger } from "../../src/Logger";
 import { ensureDir } from "./ensureDir";
+import { episode } from "./episode";
 import { createModel } from "./model";
-import { train } from "./train";
+import { simulators } from "./sim/simulators";
 
 (async function()
 {
@@ -35,9 +36,10 @@ import { train } from "./train";
     }
 
     // train network
-    await train(
+    await episode(
     {
         model, saveUrl: modelUrl,
+        sim: simulators.ps,
         numGames: 2, maxTurns: 100,
         algorithm:
         {
@@ -50,9 +52,10 @@ import { train } from "./train";
             valueCoeff: 0.6, entropyCoeff: 0.8
         },
         epochs: 3, batchSize: 32,
-        logPath
+        logger: logger.addPrefix("Episode(1/1): "), logPath
     });
     model.dispose();
 })()
     .catch((e: Error) =>
-        console.log(`\nTraining script threw an error: ${e}\n` + e.stack));
+        console.log("\nTraining script threw an error: " +
+            (e.stack ?? e.toString())));

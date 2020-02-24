@@ -1,17 +1,17 @@
 import * as fs from "fs";
 import { dirname } from "path";
 // @ts-ignore
-import s = require("../../pokemon-showdown/.sim-dist/battle-stream");
-import { BattleAgent } from "../../src/battle/agent/BattleAgent";
-import { LogFunc, Logger } from "../../src/Logger";
-import { PlayerID } from "../../src/psbot/helpers";
+import s = require("../../../../pokemon-showdown/.sim-dist/battle-stream");
+import { BattleAgent } from "../../../../src/battle/agent/BattleAgent";
+import { LogFunc, Logger } from "../../../../src/Logger";
+import { PlayerID } from "../../../../src/psbot/helpers";
 import { AnyBattleEvent, TieEvent, TurnEvent, WinEvent } from
-    "../../src/psbot/parser/BattleEvent";
-import { Iter } from "../../src/psbot/parser/Iter";
-import { parsePSMessage } from "../../src/psbot/parser/parsePSMessage";
-import { PSBattle } from "../../src/psbot/PSBattle";
-import { PSEventHandler, PSResult } from "../../src/psbot/PSEventHandler";
-import { ensureDir } from "./ensureDir";
+    "../../../../src/psbot/parser/BattleEvent";
+import { Iter } from "../../../../src/psbot/parser/Iter";
+import { parsePSMessage } from "../../../../src/psbot/parser/parsePSMessage";
+import { PSBattle } from "../../../../src/psbot/PSBattle";
+import { PSEventHandler, PSResult } from "../../../../src/psbot/PSEventHandler";
+import { ensureDir } from "../../ensureDir";
 
 /** Writes a string into a file. */
 async function writeFile(filePath: string, buffer: string): Promise<void>
@@ -30,7 +30,7 @@ export interface PlayerOptions
     readonly agent: BattleAgent;
     /**
      * Override PSBattle if needed. The subclass should not override
-     * PSEventHandler, since `startBattle()` already does that, so attempts to
+     * PSEventHandler, since `startPSBattle()` already does that, so attempts to
      * do so will be overridden.
      *
      * `username` parameter in constructor will always be the PlayerID.
@@ -55,7 +55,7 @@ export interface GameOptions extends Players
 }
 
 /** Completes a simulated battle. */
-export async function startBattle(options: GameOptions): Promise<void>
+export async function startPSBattle(options: GameOptions): Promise<void>
 {
     // setup logger
     let buffer = "";

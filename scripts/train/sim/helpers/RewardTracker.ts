@@ -1,4 +1,4 @@
-import { Side } from "../../src/battle/state/Side";
+import { Side } from "../../../../src/battle/state/Side";
 
 /** Accumulates a reward value for reinforcement learning. */
 export class RewardTracker

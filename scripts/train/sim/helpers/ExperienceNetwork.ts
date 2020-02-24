@@ -1,6 +1,6 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { sizeBattleState } from "../../src/ai/encodeBattleState";
-import { NetworkAgent } from "../../src/ai/NetworkAgent";
+import { sizeBattleState } from "../../../../src/ai/encodeBattleState";
+import { NetworkAgent } from "../../../../src/ai/NetworkAgent";
 
 /** Network that logs its inputs and outputs. */
 export class ExperienceNetwork extends NetworkAgent
