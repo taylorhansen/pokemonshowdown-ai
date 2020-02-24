@@ -9,6 +9,9 @@ import { episode } from "./episode";
 import { createModel } from "./model";
 import { simulators } from "./sim/simulators";
 
+/** Number of training episodes to complete. */
+const episodes = 2;
+
 (async function()
 {
     const logger = Logger.stderr.addPrefix("Train: ");
@@ -36,24 +39,28 @@ import { simulators } from "./sim/simulators";
     }
 
     // train network
-    await episode(
+    for (let i = 0; i < episodes; ++i)
     {
-        model, saveUrl: modelUrl,
-        sim: simulators.ps,
-        numGames: 2, maxTurns: 100,
-        algorithm:
+        await episode(
         {
-            type: "ppo", variant: "clipped", epsilon: 0.2,
-            advantage:
+            model, saveUrl: modelUrl,
+            sim: simulators.ps,
+            numGames: 2, maxTurns: 100,
+            algorithm:
             {
-                type: "generalized", lambda: 0.95, gamma: 0.95,
-                standardize: true
+                type: "ppo", variant: "clipped", epsilon: 0.2,
+                advantage:
+                {
+                    type: "generalized", lambda: 0.95, gamma: 0.95,
+                    standardize: true
+                },
+                valueCoeff: 0.6, entropyCoeff: 0.8
             },
-            valueCoeff: 0.6, entropyCoeff: 0.8
-        },
-        epochs: 3, batchSize: 32,
-        logger: logger.addPrefix("Episode(1/1): "), logPath
-    });
+            epochs: 3, batchSize: 32,
+            logger: logger.addPrefix(`Episode(${i + 1}/${episodes}): `),
+            logPath: join(logPath, `episode-${i + 1}`)
+        });
+    }
     model.dispose();
 })()
     .catch((e: Error) =>

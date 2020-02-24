@@ -29,7 +29,7 @@ export interface EpisodeArgs
     readonly batchSize: number;
     /** Logger object. */
     readonly logger: Logger;
-    /** Path to store game logs. Omit to not store logs. */
+    /** Path to the folder to store episode logs in. Omit to not store logs. */
     readonly logPath?: string;
 }
 

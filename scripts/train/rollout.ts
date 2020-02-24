@@ -50,7 +50,7 @@ export async function rollout(
             const experiences = await sim(
             {
                 models: [model, model], emitExperience: true, maxTurns,
-                ...(logPath && {logPath: join(logPath, `game-${i}`)})
+                ...(logPath && {logPath: join(logPath, `game-${i + 1}`)})
             });
             samples.push(...(await Promise.all(experiences.map(game =>
                     augmentExperiences(game, advantage))))
