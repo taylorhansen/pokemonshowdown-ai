@@ -175,7 +175,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     private _boosts!: {[N in BoostName]: number};
 
     /** @override */
-    public readonly confusion = new TempStatus("confused", 3);
+    public readonly confusion = new TempStatus("confused", 4);
 
     /** @override */
     public curse!: boolean;
