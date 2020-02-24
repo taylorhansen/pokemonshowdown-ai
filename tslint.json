@@ -35,6 +35,6 @@
             "allow-leading-underscore"
         ]
     },
-    "linterOptions": {"exclude": ["./scripts/Pokemon-Showdown"]},
+    "linterOptions": {"exclude": ["./pokemon-showdown"]},
     "rulesDirectory": []
 }
