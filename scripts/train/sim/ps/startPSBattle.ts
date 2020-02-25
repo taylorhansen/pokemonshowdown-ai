@@ -60,8 +60,7 @@ export async function startPSBattle(options: GameOptions):
 {
     // setup logger
     let buffer = "";
-    const logFunc: LogFunc = options.logPath ?
-        (msg => buffer += msg) : function() {};
+    const logFunc: LogFunc = msg => buffer += msg;
     const logger = new Logger(logFunc, logFunc,
         options.logPrefix ?? "Battle: ");
 
