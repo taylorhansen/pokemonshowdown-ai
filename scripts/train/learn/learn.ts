@@ -420,5 +420,4 @@ export async function learn(
 
     optimizer.dispose();
     for (const sample of samples) tf.dispose([sample.state, sample.logProbs]);
-    logger.debug("Done");
 }

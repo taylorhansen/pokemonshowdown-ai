@@ -4,21 +4,19 @@ import { Logger } from "../../src/Logger";
 import { BattleSim } from "./sim/simulators";
 import { AlgorithmArgs, learn } from "./learn/learn";
 import { rollout } from "./rollout";
+import { Opponent, playGames } from "./playGames";
 
 /** Args for `episode()`. */
 export interface EpisodeArgs
 {
     /** Model to train. */
     readonly model: tf.LayersModel;
-    /**
-     * If provided, save the neural network to this location after this training
-     * episode.
-     */
-    readonly saveUrl?: string;
-    /** Simulator to use during training. */
+    /** Opponent data for training the model. */
+    readonly trainOpponents: readonly Opponent[];
+    /** Opponent data for evaluating the model. */
+    readonly evalOpponents: readonly Opponent[];
+    /** Simulator to use for each game. */
     readonly sim: BattleSim;
-    /** Number of training games to play. */
-    readonly numGames: number;
     /** Number of turns before a game is considered a tie. */
     readonly maxTurns: number;
     /** Learning algorithm config. */
@@ -36,8 +34,8 @@ export interface EpisodeArgs
 /** Runs a training episode. */
 export async function episode(
     {
-        model, saveUrl, sim, numGames, maxTurns, algorithm, epochs, batchSize,
-        logger, logPath
+        model, trainOpponents, evalOpponents, sim, maxTurns, algorithm, epochs,
+        batchSize, logger, logPath
     }: EpisodeArgs): Promise<void>
 {
     // play some games semi-randomly, building batches of Experience for each
@@ -46,24 +44,27 @@ export async function episode(
 
     const samples = await rollout(
     {
-        model, sim, numGames, maxTurns, advantage: algorithm.advantage,
+        model, sim, opponents: trainOpponents, maxTurns,
+        advantage: algorithm.advantage,
         logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath: join(logPath, "rollout")})
     });
 
     // train over the experience gained from each game
+    logger.debug("Training over experience");
     await learn(
     {
         model, samples, algorithm, epochs, batchSize,
-        ...(logPath && {logPath: join(logPath, "learn")}),
-        logger: logger.addPrefix("Learn: ")
+        logger: logger.addPrefix("Learn: "),
+        ...(logPath && {logPath: join(logPath, "learn")})
     });
 
-    // TODO: play eval games against random player, past self, and current self
-
-    if (saveUrl)
+    // evaluation games
+    logger.debug("Evaluating new network against benchmarks");
+    await playGames(
     {
-        logger.debug("Saving");
-        await model.save(saveUrl);
-    }
+        model, opponents: evalOpponents, sim, maxTurns,
+        logger: logger.addPrefix("Eval: "),
+        ...(logPath && {logPath: join(logPath, "eval")})
+    });
 }

@@ -54,12 +54,14 @@ export interface GameOptions extends Players
     readonly logPrefix?: string;
 }
 
-/** Completes a simulated battle. */
-export async function startPSBattle(options: GameOptions): Promise<void>
+/** Completes a simulated battle, returning the winner if any. */
+export async function startPSBattle(options: GameOptions):
+    Promise<PlayerID | undefined>
 {
     // setup logger
     let buffer = "";
-    const logFunc: LogFunc = msg => buffer += msg;
+    const logFunc: LogFunc = options.logPath ?
+        (msg => buffer += msg) : function() {};
     const logger = new Logger(logFunc, logFunc,
         options.logPrefix ?? "Battle: ");
 
@@ -70,6 +72,7 @@ export async function startPSBattle(options: GameOptions): Promise<void>
     const eventLoops: Promise<void>[] = [];
     let done = false;
 
+    let winner: PlayerID | undefined;
     for (const id of ["p1", "p2"] as PlayerID[])
     {
         const innerLog = logger.addPrefix(`${id}: `);
@@ -114,6 +117,7 @@ export async function startPSBattle(options: GameOptions): Promise<void>
                 protected handleGameOver(event: TieEvent | WinEvent,
                     it: Iter<AnyBattleEvent>): PSResult
                 {
+                    if (event.type === "win") winner = event.winner as PlayerID;
                     done = true;
                     return super.handleGameOver(event, it);
                 }
@@ -176,5 +180,7 @@ export async function startPSBattle(options: GameOptions): Promise<void>
     await Promise.all(eventLoops);
 
     // write logs to the log file
-    if (options.logPath) return writeFile(options.logPath, buffer);
+    if (options.logPath) await writeFile(options.logPath, buffer);
+
+    return winner;
 }
