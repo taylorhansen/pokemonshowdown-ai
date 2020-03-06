@@ -10,10 +10,10 @@ import { ExperienceNetwork } from "../helpers/ExperienceNetwork";
 import { RewardBattleDriver } from "../helpers/RewardBattleDriver";
 
 /**
- * PSBattle that emits Experience objects. Must be subclassed to define where
- * the emitted Experience objects go.
+ * PSBattle that emits Experience objects. Should be subclassed to define where
+ * the emitted Experience objects should go.
  */
-export abstract class ExperiencePSBattle extends PSBattle
+export class ExperiencePSBattle extends PSBattle
 {
     /** @override */
     protected readonly driver!: RewardBattleDriver;
@@ -27,8 +27,16 @@ export abstract class ExperiencePSBattle extends PSBattle
         super(username, agent, sender, logger, driverCtor, eventHandlerCtor);
     }
 
-    /** Hook for sending Experience objects. */
-    protected abstract emitExperience(exp: Experience): Promise<void>;
+    /**
+     * Hook for logging Experience objects. This method owns the given
+     * Experience, so it must be properly disposed once it's done being used.
+     * @virtual
+     */
+    protected async emitExperience(exp: Experience): Promise<void>
+    {
+        exp.state.dispose();
+        exp.logits.dispose();
+    }
 
     /** @override */
     public async init(msg: BattleInitMessage): Promise<void>
@@ -37,48 +45,43 @@ export abstract class ExperiencePSBattle extends PSBattle
 
         // the rewards from the init turn don't matter since it's not a result
         //  of our actions
+        // TODO: team preview?
         this.driver.consumeReward();
     }
 
     /** @override */
     public async progress(msg: BattleProgressMessage): Promise<void>
     {
-        // once we're about to make our next Choice, we can now look back on all
-        //  the changes that happened and emit an Experience object
-        // TODO: confirm that the rewards/actions are recorded properly
-        if (this.shouldRespond()) await this.collectExperience();
-
-        await super.progress(msg);
-
-        // once the game ends, make sure to emit a terminal Experience and
-        //  dispose any leftover tensors from the ExperienceNetwork
-        if (!this.eventHandler.battling)
+        // store the last prediction that was made, which will be handled by the
+        //  environment
+        const {lastState, lastLogits, lastValue} = this.agent;
+        let valueData: number | undefined;
+        if (this.shouldRespond() && lastState && lastLogits && lastValue)
         {
-            await this.collectExperience();
-            this.agent.cleanup();
-        }
-    }
-
-    /**
-     * Emits an Experience object from collected rewards and prediction tensors.
-     */
-    private async collectExperience(): Promise<void>
-    {
-        const state = this.agent.lastState;
-        const logits = this.agent.lastLogits;
-        const value = this.agent.lastValue;
-        const action = choiceIds[this.lastChoices[0]];
-        const reward = this.driver.consumeReward();
-
-        if (state && logits && value)
-        {
-            // indicate that these fields shouldn't be disposed later
+            // ExperienceNetwork tensor fields not set to null will be disposed
+            //  on the next response
             this.agent.lastState = null;
             this.agent.lastLogits = null;
+            valueData = await lastValue.array();
+        }
+        const lastAction = choiceIds[this.lastChoices[0]];
 
+        // handle the action and observe the reward from the state transition
+        await super.progress(msg);
+        const reward = this.driver.consumeReward();
+
+        // once the game ends, make sure to dispose any leftover tensors from
+        //  the ExperienceNetwork
+        if (!this.eventHandler.battling) this.agent.cleanup();
+
+        // after observing the reward, we can now emit an Experience
+        if (this.shouldRespond() && lastState && lastLogits &&
+            valueData !== undefined)
+        {
             return this.emitExperience(
             {
-                state, logits, value: await value.array(), action, reward
+                state: lastState, logits: lastLogits, value: valueData,
+                action: lastAction, reward
             });
         }
     }
