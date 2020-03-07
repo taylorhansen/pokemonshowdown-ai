@@ -2,10 +2,11 @@ import * as tf from "@tensorflow/tfjs-node";
 import { Experience } from "./helpers/Experience";
 import { startPSBattle } from "./ps/startPSBattle";
 import { PlayerID } from "../../../src/psbot/helpers";
-import { ExperienceNetwork } from "./helpers/ExperienceNetwork";
 import { ExperiencePSBattle } from "./ps/ExperiencePSBattle";
-import { NetworkAgent } from "../../../src/ai/NetworkAgent";
+import { networkAgent } from "../../../src/ai/networkAgent";
 import { PSBattle } from "../../../src/psbot/PSBattle";
+import { BattleAgent } from "../../../src/battle/agent/BattleAgent";
+import { experienceNetworkAgent } from "./helpers/experienceNetworkAgent";
 
 /** Arguments for BattleSim functions. */
 export interface SimArgs
@@ -40,20 +41,20 @@ export type BattleSim = (args: SimArgs) => Promise<SimResult>
 
 const simulatorsImpl =
 {
-    /** Pokemon Showdown simulator */
+    /** Pokemon Showdown simulator. */
     async ps({models, maxTurns, emitExperience, logPath}: SimArgs):
         Promise<SimResult>
     {
         let experiences: Experience[][];
 
-        let net1: NetworkAgent;
-        let net2: NetworkAgent;
+        let agent1: BattleAgent;
+        let agent2: BattleAgent;
         let psBattleCtor: typeof PSBattle;
-        if (emitExperience === true)
+        if (emitExperience)
         {
             const splitExp: {[P in PlayerID]: Experience[]} = {p1: [], p2: []};
-            net1 = new ExperienceNetwork(models[0], "stochastic");
-            net2 = new ExperienceNetwork(models[1], "stochastic");
+            agent1 = experienceNetworkAgent(models[0], "stochastic");
+            agent2 = experienceNetworkAgent(models[1], "stochastic");
             // tslint:disable-next-line: class-name
             psBattleCtor = class extends ExperiencePSBattle
             {
@@ -66,16 +67,16 @@ const simulatorsImpl =
         }
         else
         {
-            net1 = new NetworkAgent(models[0], "stochastic");
-            net2 = new NetworkAgent(models[1], "stochastic");
+            agent1 = networkAgent(models[0], "stochastic");
+            agent2 = networkAgent(models[1], "stochastic");
             psBattleCtor = PSBattle;
             experiences = [];
         }
 
         const winnerId = await startPSBattle(
         {
-            p1: {agent: net1, psBattleCtor},
-            p2: {agent: net2, psBattleCtor}, maxTurns, logPath
+            p1: {agent: agent1, psBattleCtor},
+            p2: {agent: agent2, psBattleCtor}, maxTurns, logPath
         });
 
         return {

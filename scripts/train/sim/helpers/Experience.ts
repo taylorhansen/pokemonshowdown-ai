@@ -4,9 +4,9 @@ import * as tf from "@tensorflow/tfjs-node";
 export interface Experience
 {
     /** State in which the action was taken. */
-    readonly state: tf.Tensor;
+    readonly state: tf.Tensor1D;
     /** Logits tensor mapping to action-probabilities. */
-    readonly logits: tf.Tensor;
+    readonly logits: tf.Tensor1D;
     /** State-value prediction. */
     readonly value: number;
     /** ID of the Choice that was taken. */

@@ -143,7 +143,7 @@ export class PSBattle implements RoomHandler
             if (newInfo)
             {
                 // re-sort remaining choices based on new info
-                await this.agent.decide(this.driver.state, this.lastChoices);
+                await this.agent(this.driver.state, this.lastChoices);
             }
             // can at least eliminate the last choice
             else this.lastChoices.shift();
@@ -178,7 +178,7 @@ export class PSBattle implements RoomHandler
         this.lastChoices = this.getChoices();
         this.logger.debug(`Choices: [${this.lastChoices.join(", ")}]`);
 
-        await this.agent.decide(this.driver.state, this.lastChoices);
+        await this.agent(this.driver.state, this.lastChoices);
         this.logger.debug(`Sorted choices: [${this.lastChoices.join(", ")}]`);
         this.sender(`|/choose ${this.lastChoices[0]}`);
     }

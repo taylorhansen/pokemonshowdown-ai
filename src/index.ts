@@ -1,7 +1,7 @@
 // istanbul ignore file
 import * as tf from "@tensorflow/tfjs-node";
 import { join } from "path";
-import { NetworkAgent } from "./ai/NetworkAgent";
+import { networkAgent } from "./ai/networkAgent";
 import { avatar, latestModelFolder, loginServer, password, playServer,
     username } from "./config";
 import { Logger } from "./Logger";
@@ -25,11 +25,11 @@ import { PSBot } from "./psbot/PSBot";
     // load neural network from disk
     const model = await tf.loadLayersModel(
         `file://${join(latestModelFolder, "model.json")}`);
-    const network = new NetworkAgent(model, "deterministic");
+    const agent = networkAgent(model, "deterministic");
 
     // configure client to accept certain challenges
     bot.acceptChallenges("gen4randombattle",
         (room, user, sender) =>
-            new PSBattle(user, network, sender,
+            new PSBattle(user, agent, sender,
                 Logger.stdout.addPrefix(`PSBattle(${room}): `)));
 })();

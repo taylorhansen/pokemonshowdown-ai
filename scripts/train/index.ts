@@ -1,7 +1,7 @@
 /** @file Sets up a training session for the neural network. */
 import * as tf from "@tensorflow/tfjs-node";
 import { join } from "path";
-import { NetworkAgent } from "../../src/ai/NetworkAgent";
+import { verifyModel } from "../../src/ai/networkAgent";
 import { latestModelFolder, logPath, modelsFolder } from "../../src/config";
 import { Logger } from "../../src/Logger";
 import { ensureDir } from "./ensureDir";
@@ -27,7 +27,7 @@ const numEvalGames = 3;
     {
         model = await tf.loadLayersModel(
             `file://${join(latestModelFolder, "model.json")}`);
-        NetworkAgent.verifyModel(model);
+        verifyModel(model);
     }
     catch (e)
     {
