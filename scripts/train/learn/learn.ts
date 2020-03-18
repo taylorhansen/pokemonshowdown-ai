@@ -234,7 +234,7 @@ function loss(
         if (algorithm.valueCoeff)
         {
             result.vLoss = tf.keep(tf.losses.meanSquaredError(returns,
-                    tf.squeeze(stateValue)).asScalar());
+                    stateValue.reshapeAs(returns)).asScalar());
             losses.push(tf.mul(result.vLoss, algorithm.valueCoeff));
         }
 
