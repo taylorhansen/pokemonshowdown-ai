@@ -9,11 +9,11 @@ import { Sender } from "../../src/psbot/PSBot";
 describe("PSBattle", function()
 {
     const username = "username";
-    const agent: BattleAgent = {async decide() {}};
 
     let sender: Sender;
     let sent: string[];
 
+    let agent: BattleAgent;
     let battle: PSBattle;
 
     beforeEach("Initialize sender", function()
@@ -24,6 +24,7 @@ describe("PSBattle", function()
 
     beforeEach("Initialize PSBattle", function()
     {
+        agent = async () => {};
         battle = new PSBattle(username, agent, sender, Logger.null);
     });
 
@@ -32,13 +33,14 @@ describe("PSBattle", function()
         it("Should handle unavailable choice", async function()
         {
             // configure agent to try and switch out each turn
-            agent.decide = async function(state, choices)
+            agent = async function(state, choices)
             {
                 // swap in a switch choice into the top slot
                 const i = choices.indexOf("switch 2");
                 if (i < 0) return;
                 [choices[0], choices[i]] = [choices[i], choices[0]];
             };
+            battle = new PSBattle(username, agent, sender, Logger.null);
 
             // receive request
             const request: RequestMessage =
