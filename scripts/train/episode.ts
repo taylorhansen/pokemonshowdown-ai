@@ -1,22 +1,27 @@
-import * as tf from "@tensorflow/tfjs-node";
 import { join } from "path";
+import ProgressBar from "progress";
 import { Logger } from "../../src/Logger";
-import { BattleSim } from "./sim/simulators";
-import { AlgorithmArgs, learn } from "./learn/learn";
-import { rollout } from "./rollout";
-import { Opponent, playGames } from "./playGames";
+import { SimName } from "./sim/simulators";
+import { AlgorithmArgs } from "./nn/learn/LearnArgs";
+import { Opponent, playGames } from "./play/playGames";
+import { GamePool } from "./play/GamePool";
+import { NetworkProcessor } from "./nn/worker/NetworkProcessor";
 
 /** Args for `episode()`. */
 export interface EpisodeArgs
 {
-    /** Model to train. */
-    readonly model: tf.LayersModel;
+    /** Thread pool for playing games in parallel. */
+    readonly pool: GamePool;
+    /** Used to request game worker ports from the neural networks. */
+    readonly processor: NetworkProcessor;
+    /** ID of the model to train. */
+    readonly model: number;
     /** Opponent data for training the model. */
     readonly trainOpponents: readonly Opponent[];
     /** Opponent data for evaluating the model. */
     readonly evalOpponents: readonly Opponent[];
-    /** Simulator to use for each game. */
-    readonly sim: BattleSim;
+    /** Name of the simulator to use for each game. */
+    readonly simName: SimName;
     /** Number of turns before a game is considered a tie. */
     readonly maxTurns: number;
     /** Learning algorithm config. */
@@ -34,37 +39,83 @@ export interface EpisodeArgs
 /** Runs a training episode. */
 export async function episode(
     {
-        model, trainOpponents, evalOpponents, sim, maxTurns, algorithm, epochs,
-        batchSize, logger, logPath
+        pool, processor, model, trainOpponents, evalOpponents, simName,
+        maxTurns, algorithm, epochs, batchSize, logger, logPath
     }: EpisodeArgs): Promise<void>
 {
     // play some games semi-randomly, building batches of Experience for each
     //  game
-    logger.debug("Collecting training data");
-
-    const samples = await rollout(
+    logger.debug("Collecting training data via policy rollout");
+    const samples = await playGames(
     {
-        model, sim, opponents: trainOpponents, maxTurns,
-        advantage: algorithm.advantage,
+        pool, processor, agentConfig: {model, exp: true},
+        opponents: trainOpponents, simName, maxTurns,
         logger: logger.addPrefix("Rollout: "),
-        ...(logPath && {logPath: join(logPath, "rollout")})
+        ...(logPath && {logPath: join(logPath, "rollout")}),
+        rollout: algorithm.advantage, ...(pool && {pool})
     });
+
+    // summary statement after rollout games
+    const numGames = trainOpponents.reduce((n, op) => n + op.numGames, 0);
+    logger.debug(`Played ${numGames} games total, yielding ${samples.length} ` +
+        `experiences (avg ${(samples.length / numGames).toFixed(2)} per game)`);
+
+    if (samples.length <= 0)
+    {
+        logger.error("No games to train over");
+        return;
+    }
 
     // train over the experience gained from each game
     logger.debug("Training over experience");
-    await learn(
+    let progress: ProgressBar | undefined;
+    let numBatches: number | undefined;
+    function startProgress()
     {
-        model, samples, algorithm, epochs, batchSize,
-        logger: logger.addPrefix("Learn: "),
-        ...(logPath && {logPath: join(logPath, "learn")})
-    });
+        if (!numBatches) throw new Error("numBatches not initialized");
+        progress = new ProgressBar(
+            `Batch :current/:total: eta=:etas :bar loss=:loss`,
+            {
+                total: numBatches, head: ">", clear: true,
+                width: Math.floor(
+                    (process.stderr.columns ?? 80) / 3)
+            });
+        progress.render({loss: "n/a"});
+    }
+    await processor.learn(model, samples,
+        {algorithm, epochs, batchSize, logPath},
+        function(data)
+        {
+            switch (data.type)
+            {
+                case "start":
+                    numBatches = data.numBatches;
+                    startProgress();
+                    break;
+
+                case "epoch":
+                    // ending summary statement for the current epoch
+                    progress?.terminate();
+                    logger.debug(`Epoch ${data.epoch}/${epochs}: Avg loss = ` +
+                        data.loss);
+
+                    // restart progress bar for the next epoch
+                    if (data.epoch < epochs) startProgress();
+                    break;
+                case "batch":
+                    progress?.tick(data);
+                    break;
+            }
+        });
+    progress?.terminate();
 
     // evaluation games
     logger.debug("Evaluating new network against benchmarks");
     await playGames(
     {
-        model, opponents: evalOpponents, sim, maxTurns,
+        pool, processor, agentConfig: {model, exp: false},
+        opponents: evalOpponents, simName, maxTurns,
         logger: logger.addPrefix("Eval: "),
-        ...(logPath && {logPath: join(logPath, "eval")})
+        ...(logPath && {logPath: join(logPath, "eval")}), ...(pool && {pool})
     });
 }

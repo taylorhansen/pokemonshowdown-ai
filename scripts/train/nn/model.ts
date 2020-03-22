@@ -1,6 +1,6 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { battleStateEncoder } from "../../src/ai/encoder/encoders";
-import { intToChoice } from "../../src/battle/agent/Choice";
+import { battleStateEncoder } from "../../../src/ai/encoder/encoders";
+import { intToChoice } from "../../../src/battle/agent/Choice";
 
 /** Creates a model for training. */
 export function createModel(): tf.LayersModel

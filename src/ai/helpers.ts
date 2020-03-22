@@ -1,3 +1,4 @@
+// TODO: is there a better algorithm that doesn't need a softmax precondition?
 /**
  * Randomly shuffles the given array according to their corresponding
  * probabilities.

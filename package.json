@@ -54,6 +54,7 @@
   "devDependencies": {
     "@types/chai": "^4.2.9",
     "@types/mocha": "^7.0.1",
+    "@types/node": "^13.7.6",
     "@types/node-fetch": "^2.5.4",
     "@types/progress": "^2.0.3",
     "@types/websocket": "^1.0.0",

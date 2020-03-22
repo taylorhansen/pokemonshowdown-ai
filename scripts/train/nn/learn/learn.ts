@@ -1,131 +1,11 @@
 import * as tf from "@tensorflow/tfjs-node";
-import ProgressBar from "progress";
-import { intToChoice } from "../../../src/battle/agent/Choice";
-import { ensureDir } from "../ensureDir";
-import { klDivergence, shuffle } from "../learn/helpers";
-import { Logger } from "../../../src/Logger";
+import { intToChoice } from "../../../../src/battle/agent/Choice";
+import { ensureDir } from "../../helpers/ensureDir";
 import { AugmentedExperience } from "./AugmentedExperience";
-
-/** Base type for AdvantageConfigs. */
-interface AdvantageConfigBase<T extends string>
-{
-    readonly type: T;
-    /** Discount factor for future rewards. */
-    readonly gamma: number;
-    /**
-     * Whether to standardize the advantage estimates (subtract by mean, divide
-     * by standard deviation). This generally leads to better stability during
-     * training by encouraging half of the performed actions and discouraging
-     * the other half.
-     */
-    readonly standardize?: boolean;
-}
-
-/**
- * Estimate advantage using the REINFORCE algorithm, meaning only the discount
- * reward sums are used.
- */
-export interface ReinforceConfig extends AdvantageConfigBase<"reinforce"> {}
-
-/**
- * Estimate advantage using the actor-critic model (advantage actor critic, or
- * A2C), where the discount returns are subtracted by a baseline (i.e.
- * state-value in this case) rather than standardizing them like in REINFORCE.
- * This works under the definition of the Q-learning function
- * `Q(s,a) = V(s) + A(s,a)`.
- */
-export interface A2CConfig extends AdvantageConfigBase<"a2c"> {}
-
-/**
- * Generalized advantage estimation. Usually better at controlling bias and
- * variance.
- */
-export interface GAEConfig extends AdvantageConfigBase<"generalized">
-{
-    /** Controls bias-variance tradeoff. Must be between 0 and 1 inclusive. */
-    readonly lambda: number;
-}
-
-/** Args object for advantage estimator. */
-export type AdvantageConfig = ReinforceConfig | A2CConfig | GAEConfig;
-
-/** Base class for AlgorithmArgs. */
-interface AlgorithmArgsBase<T extends string>
-{
-    type: T;
-    /** Type of advantage estimator to use. */
-    readonly advantage: AdvantageConfig;
-    /**
-     * If provided, fit the value function separately and weigh it by the
-     * provided value with respect to the actual policy gradient loss.
-     */
-    readonly valueCoeff?: number;
-    /**
-     * If provided, subtract an entropy bonus from the loss, weighing it by the
-     * provided value with respect to the actual policy gradient loss. This
-     * generally makes the network favor situations that give it multiple
-     * favorable options to promote adaptability and unpredictability.
-     */
-    readonly entropyCoeff?: number;
-}
-
-/** Vanilla policy gradient algorithm. */
-export interface PGArgs extends AlgorithmArgsBase<"pg"> {}
-
-/** Base interface for PPOVariantArgs. */
-interface PPOVariantBase<T extends string>
-{
-    /**
-     * Type of PPO variant to use.
-     * `clipped` - Clipped probability ratio.
-     * `klFixed` - Fixed coefficient for a KL-divergence penalty.
-     * `klAdaptive` - Adaptive coefficient for a KL-divergence penalty.
-     * @see https://arxiv.org/pdf/1707.06347.pdf
-     */
-    readonly variant: T;
-}
-
-/** PPO variant that uses ratio clipping instead of. */
-interface PPOVariantClipped extends PPOVariantBase<"clipped">
-{
-    /** Ratio clipping hyperparameter. */
-    readonly epsilon: number;
-}
-
-/** PPO variant that uses a fixed coefficient for a KL-divergence penalty. */
-interface PPOVariantKLFixed extends PPOVariantBase<"klFixed">
-{
-    /** Penalty coefficient. */
-    readonly beta: number;
-}
-
-/**
- * PPO variant that uses an adaptive coefficient for a KL-divergence penalty.
- */
-interface PPOVariantKLAdaptive extends PPOVariantBase<"klAdaptive">
-{
-    /**
-     * Target KL-divergence penalty. The penalty coefficient will adapt to
-     * produce this value after each learning step.
-     */
-    readonly klTarget: number;
-    /**
-     * Adaptive penalty coefficient. This will change for each learning step.
-     * Usually it's best to omit this argument (will assume 1 by default) since
-     * it usually adjusts to an optimal value quickly.
-     */
-    beta?: number;
-}
-
-/** Additional parameters for selecting a variant of PPO. */
-type PPOVariantArgs = PPOVariantClipped | PPOVariantKLFixed |
-    PPOVariantKLAdaptive;
-
-/** Proximal policy optimization algorithm. */
-export type PPOArgs = AlgorithmArgsBase<"ppo"> & PPOVariantArgs;
-
-/** Arguments for customizing the learning algorithm. */
-export type AlgorithmArgs = PGArgs | PPOArgs;
+import { klDivergence, shuffle } from "./helpers";
+import { AlgorithmArgs } from "./LearnArgs";
+import { NetworkProcessorLearnData } from
+    "../worker/helpers/NetworkProcessorRequest";
 
 /** Parameters for policy gradient loss function. */
 interface LossArgs
@@ -268,18 +148,18 @@ export interface LearnArgs
     readonly epochs: number;
     /** Mini-batch size. */
     readonly batchSize: number;
-    /** Logger object. */
-    readonly logger: Logger;
     /**
      * Path to the folder to store TensorBoard logs in. Omit to not store logs.
      */
     readonly logPath?: string;
+    /** Callback for tracking the training process. */
+    callback?(data: NetworkProcessorLearnData): void;
 }
 
 /** Trains the network over a number of epochs. */
 export async function learn(
-    {model, samples, algorithm, epochs, batchSize, logPath, logger}: LearnArgs):
-    Promise<void>
+    {model, samples, algorithm, epochs, batchSize, logPath, callback}:
+        LearnArgs): Promise<void>
 {
     // setup training callbacks for metrics logging
     const callbacks = new tf.CallbackList();
@@ -295,18 +175,16 @@ export async function learn(
     const optimizer = tf.train.adam();
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
 
+    if (callback)
+    {
+        callback(
+            {type: "start", numBatches: Math.ceil(samples.length / batchSize)});
+    }
     callbacks.setModel(model);
     await callbacks.onTrainBegin();
 
-    const numBatches = Math.ceil(samples.length / batchSize);
     for (let i = 0; i < epochs; ++i)
     {
-        const progress = new ProgressBar(
-            `Batch :current/:total: eta=:etas :bar loss=:loss`,
-            {
-                total: numBatches, head: ">", clear: true,
-                width: Math.floor((process.stderr.columns ?? 80) / 3)
-            });
         await callbacks.onEpochBegin(i);
 
         // make sure our batches are randomly sampled
@@ -320,8 +198,8 @@ export async function learn(
         {
             // get experiences from the shuffled samples to get an unzipped
             //  mini-batch
-            const states: tf.Tensor[] = [];
-            const oldLogProbs: tf.Tensor[] = [];
+            const states: Float32Array[] = [];
+            const oldLogProbs: Float32Array[] = [];
             const actions: number[] = [];
             const returns: number[] = [];
             const advantages: number[] = [];
@@ -375,7 +253,6 @@ export async function learn(
             // don't dispose() the cost tensor since it's being used in
             //  metricsPerBatch as well
             const cost = optimizer.minimize(f, /*returnCost*/true, variables)!;
-            progress.tick({loss: await cost.array()});
 
             if (algorithm.type === "ppo" &&
                 algorithm.variant === "klAdaptive" && kl)
@@ -396,6 +273,14 @@ export async function learn(
                 else metricsPerBatch.beta.push(tf.scalar(algorithm.beta));
             }
 
+            if (callback)
+            {
+                callback(
+                {
+                    type: "batch", epoch: i + 1, batch: batchId,
+                    loss: await cost.array()
+                });
+            }
             await callbacks.onBatchEnd(batchId);
         }
 
@@ -409,15 +294,18 @@ export async function learn(
                 tf.mean(tf.stack(metricsPerBatch[name])).asScalar());
         }
 
-        progress.terminate();
-        logger.debug(`Epoch ${i + 1}/${epochs}: Avg loss = ` +
-            await epochMetrics.loss.array());
-
+        if (callback)
+        {
+            callback(
+            {
+                type: "epoch", epoch: i + 1,
+                loss: await epochMetrics.loss.array()
+            });
+        }
         await callbacks.onEpochEnd(i, epochMetrics);
         tf.dispose([metricsPerBatch, epochMetrics]);
     }
     await callbacks.onTrainEnd();
 
     optimizer.dispose();
-    for (const sample of samples) tf.dispose([sample.state, sample.logProbs]);
 }

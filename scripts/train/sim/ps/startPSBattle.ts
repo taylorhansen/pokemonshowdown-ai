@@ -11,7 +11,7 @@ import { Iter } from "../../../../src/psbot/parser/Iter";
 import { parsePSMessage } from "../../../../src/psbot/parser/parsePSMessage";
 import { PSBattle } from "../../../../src/psbot/PSBattle";
 import { PSEventHandler, PSResult } from "../../../../src/psbot/PSEventHandler";
-import { ensureDir } from "../../ensureDir";
+import { ensureDir } from "../../helpers/ensureDir";
 
 /** Writes a string into a file. */
 async function writeFile(filePath: string, buffer: string): Promise<void>

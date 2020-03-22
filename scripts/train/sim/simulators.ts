@@ -1,28 +1,43 @@
-import * as tf from "@tensorflow/tfjs-node";
-import { Experience } from "./helpers/Experience";
-import { startPSBattle } from "./ps/startPSBattle";
 import { PlayerID } from "../../../src/psbot/helpers";
 import { ExperiencePSBattle } from "./ps/ExperiencePSBattle";
-import { networkAgent } from "../../../src/ai/networkAgent";
 import { PSBattle } from "../../../src/psbot/PSBattle";
 import { BattleAgent } from "../../../src/battle/agent/BattleAgent";
-import { experienceNetworkAgent } from "./helpers/experienceNetworkAgent";
+import { Experience, ExperienceAgent } from "./helpers/Experience";
+import { startPSBattle, PlayerOptions } from "./ps/startPSBattle";
+
+/** Base interface for SimArgsAgent. */
+interface SimArgsAgentBase<TAgent extends BattleAgent, TExp extends boolean>
+{
+    /** BattleAgent function. */
+    agent: TAgent;
+    /**
+     * Whether the BattleAgent emits ExperienceAgentData that should be used to
+     * generate Experience objects.
+     */
+    exp: TExp;
+}
+
+/**
+ * SimArgsAgent that doesn't emit ExperienceAgentData or wants that data to be
+ * ignored.
+ */
+export type SimArgsNoexpAgent = SimArgsAgentBase<BattleAgent, false>;
+/** SimArgsAgent that emits ExperienceAgentData. */
+export type SimArgsExpAgent = SimArgsAgentBase<ExperienceAgent, true>;
+
+/** Config for a BattleAgent. */
+export type SimArgsAgent = SimArgsNoexpAgent | SimArgsExpAgent;
 
 /** Arguments for BattleSim functions. */
 export interface SimArgs
 {
-    /** The two neural networks that will play against each other. */
-    readonly models: readonly [tf.LayersModel, tf.LayersModel];
+    /** The two agents that will play against each other. */
+    readonly agents: readonly [SimArgsAgent, SimArgsAgent];
     /**
      * Maximum amount of turns until the game is considered a tie. Games can go
      * on forever if this is not set and both agents only decide to switch.
      */
     readonly maxTurns?: number;
-    /**
-     * Whether to emit Experience objects collected from both sides. Default
-     * false.
-     */
-    readonly emitExperience?: boolean;
     /** Path to the file to store logs in. */
     readonly logPath?: string;
 }
@@ -42,50 +57,45 @@ export type BattleSim = (args: SimArgs) => Promise<SimResult>
 const simulatorsImpl =
 {
     /** Pokemon Showdown simulator. */
-    async ps({models, maxTurns, emitExperience, logPath}: SimArgs):
+    async ps({agents, maxTurns, logPath}: SimArgs):
         Promise<SimResult>
     {
-        let experiences: Experience[][];
-
-        let agent1: BattleAgent;
-        let agent2: BattleAgent;
-        let psBattleCtor: typeof PSBattle;
-        if (emitExperience)
+        // detect battle agents that want to generate Experience objects
+        const splitExp: {[P in PlayerID]: Experience[]} = {p1: [], p2: []};
+        let psBattleCtor: typeof PSBattle | undefined;
+        const [p1, p2] = agents.map(function(agentArgs)
         {
-            const splitExp: {[P in PlayerID]: Experience[]} = {p1: [], p2: []};
-            agent1 = experienceNetworkAgent(models[0], "stochastic");
-            agent2 = experienceNetworkAgent(models[1], "stochastic");
-            // tslint:disable-next-line: class-name
-            psBattleCtor = class extends ExperiencePSBattle
+            if (!agentArgs.exp) return agentArgs as PlayerOptions;
+
+            if (!psBattleCtor)
             {
-                protected async emitExperience(exp: Experience): Promise<void>
+                psBattleCtor = class extends ExperiencePSBattle
                 {
-                    splitExp[this.username as PlayerID].push(exp);
+                    protected async emitExperience(exp: Experience):
+                        Promise<void>
+                    {
+                        splitExp[this.username as PlayerID].push(exp);
+                    }
                 }
             }
-            experiences = [splitExp.p1, splitExp.p2];
-        }
-        else
-        {
-            agent1 = networkAgent(models[0], "stochastic");
-            agent2 = networkAgent(models[1], "stochastic");
-            psBattleCtor = PSBattle;
-            experiences = [];
-        }
-
-        const winnerId = await startPSBattle(
-        {
-            p1: {agent: agent1, psBattleCtor},
-            p2: {agent: agent2, psBattleCtor}, maxTurns, logPath
+            return {agent: agentArgs.agent, psBattleCtor} as PlayerOptions;
         });
 
+        // play the game
+        const winnerId = await startPSBattle({p1, p2, maxTurns, logPath});
+
+        // find generated experiences
+        const experiences: Experience[][] = [];
+        if (splitExp.p1.length > 0) experiences.push(splitExp.p1);
+        if (splitExp.p2.length > 0) experiences.push(splitExp.p2);
         return {
-            experiences,
-            ...(winnerId && {winner: winnerId === "p1" ? 0 : 1})
+            experiences, ...(winnerId && {winner: winnerId === "p1" ? 0 : 1})
         };
     }
 } as const;
 
+/** Name for each implemented simulator. */
+export type SimName = keyof typeof simulatorsImpl;
+
 /** Collection of currently implemented simulators. */
-export const simulators: {[N in keyof typeof simulatorsImpl]: BattleSim} =
-    simulatorsImpl;
+export const simulators: {[N in SimName]: BattleSim} = simulatorsImpl;

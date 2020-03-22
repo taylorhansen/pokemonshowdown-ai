@@ -1,7 +1,16 @@
-import * as tf from "@tensorflow/tfjs-node";
-import { Experience } from "../sim/helpers/Experience";
+import { Experience } from "../../sim/helpers/Experience";
 import { AugmentedExperience } from "./AugmentedExperience";
-import { AdvantageConfig } from "./learn";
+import { AdvantageConfig } from "./LearnArgs";
+
+/** Computes `log(softmax(logits))`. */
+function logSoftmax(logits: Float32Array): Float32Array
+{
+    const max = Math.max(...logits);
+    const shifted = logits.map(n => n - max);
+    const shiftedLogSumExp =
+        Math.log(shifted.map(Math.exp).reduce((a, b) => a + b));
+    return shifted.map(n => n - shiftedLogSumExp);
+}
 
 /**
  * Processes Experience tuples into a set of AugmentedExperiences.
@@ -9,8 +18,8 @@ import { AdvantageConfig } from "./learn";
  * will be moved to the AugmentedExperiences, while others will be disposed.
  * @param advantage Config for advantage estimation.
  */
-export async function augmentExperiences(game: readonly Experience[],
-    advantage: AdvantageConfig): Promise<AugmentedExperience[]>
+export function augmentExperiences(game: readonly Experience[],
+    advantage: AdvantageConfig): AugmentedExperience[]
 {
     // compute returns/advantages for each exp then add them to exp tuples
     const samples: AugmentedExperience[] = [];
@@ -44,25 +53,28 @@ export async function augmentExperiences(game: readonly Experience[],
         samples.push(
         {
             state: exp.state, value: exp.value, action: exp.action,
-            logProbs: exp.logits.logSoftmax(),
+            logProbs: logSoftmax(exp.logits),
             returns: lastRet, advantage: lastAdv
         });
-        exp.logits.dispose();
     }
 
     // optionally standardize the set of advantage values for this game
     if (advantage.standardize)
     {
-        let advantages = samples.map(sample => sample.advantage);
-        const standardized = tf.tidy(function()
+        let sum = 0;
+        let squaredSum = 0;
+        for (const sample of samples)
         {
-            const advTensor = tf.tensor(advantages);
-            const {mean, variance} = tf.moments(advTensor);
-            return tf.sub(advTensor, mean)
-                .divNoNan(variance.sqrt()).as1D();
-        });
-        advantages = await standardized.array();
-        standardized.dispose();
+            sum += sample.advantage;
+            squaredSum += sample.advantage * sample.advantage;
+        }
+        const mean = sum / samples.length;
+        const stdev = Math.sqrt(squaredSum / samples.length - (mean * mean));
+
+        for (const sample of samples)
+        {
+            sample.advantage = (sample.advantage - mean) / stdev;
+        }
     }
 
     return samples;

@@ -41,7 +41,7 @@ const sorters: {readonly [T in PolicyType]: Sorter} =
  */
 export function policyAgent(
     getLogits: (state: ReadonlyBattleState) =>
-        Float32Array | Promise<Float32Array>, type: PolicyType): BattleAgent
+            Float32Array | Promise<Float32Array>, type: PolicyType): BattleAgent
 {
     const sorter = sorters[type];
     return async function(state: ReadonlyBattleState, choices: Choice[]):

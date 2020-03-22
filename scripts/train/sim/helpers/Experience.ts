@@ -1,16 +1,27 @@
-import * as tf from "@tensorflow/tfjs-node";
+import { BattleAgent } from "../../../../src/battle/agent/BattleAgent";
 
-/** Preprocessed network decision evaluation data. */
-export interface Experience
+/** BattleAgent decision data. */
+export interface ExperienceAgentData
 {
     /** State in which the action was taken. */
-    readonly state: tf.Tensor1D;
-    /** Logits tensor mapping to action-probabilities. */
-    readonly logits: tf.Tensor1D;
+    state: Float32Array;
+    /** Logits data mapping to action-probabilities. */
+    logits: Float32Array;
     /** State-value prediction. */
-    readonly value: number;
+    value: number;
+}
+
+/** BattleAgent type that emits partial Experience objects. */
+export type ExperienceAgent = BattleAgent<ExperienceAgentData>;
+
+/**
+ * BattleAgent decision evaluation data. Can be processed in batches to
+ * effectively train a neural network.
+ */
+export interface Experience extends ExperienceAgentData
+{
     /** ID of the Choice that was taken. */
-    readonly action: number;
+    action: number;
     /** Reward gained from the action and state transition. */
-    readonly reward: number;
+    reward: number;
 }
