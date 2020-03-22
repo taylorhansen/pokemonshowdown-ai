@@ -1,4 +1,3 @@
-import * as tf from "@tensorflow/tfjs-node";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { ReadonlyBattleState } from "../battle/state/BattleState";
 import { Choice, choiceIds } from "../battle/agent/Choice";
@@ -10,9 +9,8 @@ import { weightedShuffle } from "./helpers";
  */
 export type PolicyType = "deterministic" | "stochastic";
 
-/** Function type for sorters. */
-type Sorter = (logits: readonly number[], choices: Choice[]) =>
-    void | Promise<void>;
+/** Function type for sorters. Both arrays must have the same length. */
+type Sorter = (logits: Float32Array, choices: Choice[]) => void;
 /** Choice sorters for each PolicyType. */
 const sorters: {readonly [T in PolicyType]: Sorter} =
 {
@@ -21,12 +19,14 @@ const sorters: {readonly [T in PolicyType]: Sorter} =
         choices.sort((a, b) =>
             logits[choiceIds[b]] - logits[choiceIds[a]]);
     },
-    async stochastic(logits, choices)
+    stochastic(logits, choices)
     {
         const filteredLogits = choices.map(c => logits[choiceIds[c]]);
-        const weights = tf.tidy(() =>
-            tf.softmax(filteredLogits).as1D());
-        weightedShuffle(await weights.array(), choices);
+        // apply softmax function to get a probability distribution
+        const expLogits = filteredLogits.map(Math.exp);
+        const sumExpLogits = expLogits.reduce((a, b) => a + b, 0);
+        const weights = expLogits.map(n => n / sumExpLogits);
+        weightedShuffle(weights, choices);
     }
 };
 
@@ -40,14 +40,14 @@ const sorters: {readonly [T in PolicyType]: Sorter} =
  * probability distribution derived from the decision data.
  */
 export function policyAgent(
-    getLogits: (state: ReadonlyBattleState) => number[] | Promise<number[]>,
-    type: PolicyType): BattleAgent
+    getLogits: (state: ReadonlyBattleState) =>
+        Float32Array | Promise<Float32Array>, type: PolicyType): BattleAgent
 {
     const sorter = sorters[type];
     return async function(state: ReadonlyBattleState, choices: Choice[]):
         Promise<void>
     {
         const logits = await getLogits(state);
-        await sorter(logits, choices);
+        sorter(logits, choices);
     };
 }

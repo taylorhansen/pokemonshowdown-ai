@@ -1,5 +1,5 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { sizeBattleState } from "../../src/ai/encodeBattleState";
+import { battleStateEncoder } from "../../src/ai/encoder/encoders";
 import { intToChoice } from "../../src/battle/agent/Choice";
 
 /** Creates a model for training. */
@@ -7,7 +7,7 @@ export function createModel(): tf.LayersModel
 {
     // initial layer
     const state = tf.layers.input(
-        {name: "network/state", shape: [sizeBattleState]});
+        {name: "network/state", shape: [battleStateEncoder.size]});
     const fc1 = tf.layers.dense(
     {
         name: "network/fc1", units: 1000, activation: "relu",

@@ -1,8 +1,8 @@
 import * as tf from "@tensorflow/tfjs-node";
-import { PolicyType, policyAgent } from "./policyAgent";
-import { encodeBattleState, sizeBattleState } from "./encodeBattleState";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { intToChoice } from "../battle/agent/Choice";
+import { battleStateEncoder, allocUnsafe } from "./encoder/encoders";
+import { PolicyType, policyAgent } from "./policyAgent";
 
 /** Contains the tensors used by the neural network. */
 export type NetworkData =
@@ -34,18 +34,20 @@ export function networkAgent(model: tf.LayersModel, policy: PolicyType,
     verifyModel(model);
     return policyAgent(async function(state)
         {
-            const stateTensor = tf.tensor2d([encodeBattleState(state)]);
-            const [logits, value] = tf.tidy(function()
+            const stateData = allocUnsafe(battleStateEncoder);
+            battleStateEncoder.encode(stateData, state);
+            const stateTensor = tf.tensor2d(stateData,
+                [1, battleStateEncoder.size]);
+
+            const [logitsTensor, valueTensor] = tf.tidy(function()
             {
                 const [actLogits, stateValue] =
                     model.predict(stateTensor) as tf.Tensor[];
-                return [
-                    tf.squeeze(actLogits).as1D(),
-                    tf.squeeze(stateValue).asScalar()
-                ];
+                return [actLogits.as1D(), stateValue.asScalar()];
             });
-            const logitsData = await logits.array();
-            logger({state: stateTensor, logits, value});
+            const logitsData = await logitsTensor.data() as Float32Array;
+            logger(
+                {state: stateTensor, logits: logitsTensor, value: valueTensor});
             return logitsData;
         },
         policy);
@@ -53,7 +55,7 @@ export function networkAgent(model: tf.LayersModel, policy: PolicyType,
 
 /**
  * Verifies a neural network model to make sure its input and output shapes
- * are acceptable for constructing a NetworkAgent with. Throws if invalid.
+ * are acceptable for constructing a `networkAgent()` with. Throws if invalid.
  */
 export function verifyModel(model: tf.LayersModel): void
 {
@@ -67,7 +69,7 @@ export function verifyModel(model: tf.LayersModel): void
     {
         throw new Error("Loaded LayersModel has invalid input shape " +
             `(${model.input.shape.join(", ")}). Try to create a new ` +
-            `model with an input shape of (, ${sizeBattleState})`);
+            `model with an input shape of (, ${battleStateEncoder.size})`);
     }
     if (!Array.isArray(model.output) || model.output.length !== 2)
     {
@@ -91,7 +93,7 @@ function isValidInput(input: tf.SymbolicTensor): boolean
 {
     const shape = input.shape;
     return shape.length === 2 && shape[0] === null &&
-        shape[1] === sizeBattleState;
+        shape[1] === battleStateEncoder.size;
 }
 
 /** Ensures that a network output shape is valid. */
