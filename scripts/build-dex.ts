@@ -3,7 +3,7 @@
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
 import { ModdedDex } from "../pokemon-showdown/sim/dex";
-import { Template } from "../pokemon-showdown/sim/dex-data";
+import { Species } from "../pokemon-showdown/sim/dex-data";
 import "../pokemon-showdown/sim/global-types";
 import { MoveData, MoveTarget, NaturalGiftData, PokemonData, SelfSwitch,
     SelfVolatileEffect, SideCondition, Type, VolatileEffect } from
@@ -11,6 +11,7 @@ import { MoveData, MoveTarget, NaturalGiftData, PokemonData, SelfSwitch,
 import { toIdName } from "../src/psbot/helpers";
 
 // TODO: support other gens?
+const dex = new ModdedDex("gen4").includeData();
 
 /**
  * Checks whether a pokemon id name is not from gen4.
@@ -60,19 +61,16 @@ function maybeQuote(str: string): string
 }
 
 /** Checks if a Movedex value is valid for gen4. */
-function isGen4Move(move: any): boolean
+function isGen4Move(move: Move): boolean
 {
     // only gen4 and under moves allowed
-    if (move.num <= 0 || move.num >= 468 || move.isNonstandard) return false;
+    if (move.gen > 4 || move.isNonstandard) return false;
 
     // hidden power moves can have any type, but only one move really exists
     if (move.id === "hiddenpower" && move.type !== "Normal") return false;
 
     return true;
 }
-
-const dex = new ModdedDex("gen4");
-const data = dex.data;
 
 // counter for the unique identifier of a pokemon, move, etc.
 let uid = 0;
@@ -100,10 +98,10 @@ const typeToMoves: {[T in Type]: string[]} =
 };
 
 uid = 0;
-for (const moveName in data.Movedex)
+for (const moveName in dex.data.Movedex)
 {
-    if (!data.Movedex.hasOwnProperty(moveName)) continue;
-    const move = data.Movedex[moveName];
+    if (!dex.data.Movedex.hasOwnProperty(moveName)) continue;
+    const move = dex.getMove(moveName);
 
     // only gen4 and under moves allowed
     if (!isGen4Move(move)) continue;
@@ -166,16 +164,16 @@ const numMoves = uid;
 
 /**
  * Gets the complete movepool of a pokemon.
- * @param template Template object created by `dex.getTemplate()`.
+ * @param species Species object created by `dex.getSpecies()`.
  * @param restrict Whether to exclude restricted moves that are replaced or lost
- * upon form change.
+ * upon form change, e.g. Rotom and Kyurem moves. Default false.
  * @returns A Set of all the moves the pokemon can have.
  */
-function composeMovepool(template: Template, restrict = false): Set<string>
+function composeMovepool(species: Species, restrict = false): Set<string>
 {
     let result = new Set<string>();
 
-    const learnset = template.learnset;
+    const learnset = dex.getLearnsetData(species.id).learnset;
     if (learnset)
     {
         for (const moveName in learnset)
@@ -198,45 +196,21 @@ function composeMovepool(template: Template, restrict = false): Set<string>
             }
         }
     }
-    else if (template.inheritsFrom)
+    if (species.changesFrom)
     {
-        if (Array.isArray(template.inheritsFrom))
-        {
-            for (const inherit of template.inheritsFrom)
-            {
-                result = new Set(
-                 [
-                    ...result,
-                    ...composeMovepool(dex.getTemplate(inherit),
-                        /*restrict*/true)
-                ]);
-            }
-        }
-        else
-        {
-            result = new Set(
-            [
-                ...result,
-                ...composeMovepool(dex.getTemplate(template.inheritsFrom),
-                    /*restrict*/true)
-            ]);
-        }
-    }
-    if (template.baseSpecies && template.baseSpecies !== template.species)
-    {
-        return new Set(
+        result = new Set(
         [
             ...result,
-            ...composeMovepool(dex.getTemplate(template.baseSpecies),
+            ...composeMovepool(dex.getSpecies(species.baseSpecies),
                 /*restrict*/true)
         ]);
     }
-    if (template.prevo)
+    if (species.prevo)
     {
-        return new Set(
+        result = new Set(
         [
             ...result,
-            ...composeMovepool(dex.getTemplate(template.prevo),
+            ...composeMovepool(dex.getSpecies(species.prevo),
                 /*restrict*/true)
         ]);
     }
@@ -249,10 +223,10 @@ const abilities: {[name: string]: number} = {};
 let numAbilities = 0;
 
 uid = 0;
-for (const name in data.Pokedex)
+for (const name in dex.data.Pokedex)
 {
-    if (!data.Pokedex.hasOwnProperty(name)) continue;
-    const mon = data.Pokedex[name];
+    if (!dex.data.Pokedex.hasOwnProperty(name)) continue;
+    const mon = dex.getSpecies(name);
     // only gen4 and under pokemon allowed
     if (mon.num < 1 || mon.num > 493 || isNonGen4(name) || mon.isNonstandard)
     {
@@ -263,7 +237,7 @@ for (const name in data.Pokedex)
 
     // get quoted base abilities
     const baseAbilities: string[] = [];
-    for (const index of Object.keys(mon.abilities) as (keyof TemplateAbility)[])
+    for (const index of Object.keys(mon.abilities) as (keyof SpeciesAbility)[])
     {
         const abilityName = mon.abilities[index];
         if (!abilityName) continue;
@@ -290,17 +264,17 @@ for (const name in data.Pokedex)
     let otherForms: string[] | undefined;
     if (mon.otherFormes)
     {
-        const tmp = mon.otherFormes.filter(isGen4);
+        const tmp = mon.otherFormes.filter(f => isGen4(toIdName(f)));
         if (tmp.length > 0) otherForms = tmp;
     }
 
-    const movepool = composeMovepool(dex.getTemplate(mon.species));
+    const movepool = composeMovepool(mon);
 
-    pokemon[mon.species] =
+    pokemon[mon.name] =
     {
-        id: mon.num, uid, name: mon.species, abilities: baseAbilities, types,
+        id: mon.num, uid, name: mon.name, abilities: baseAbilities, types,
         baseStats: stats, weightkg: mon.weightkg, movepool: [...movepool],
-        ...(mon.baseSpecies && {baseSpecies: mon.baseSpecies}),
+        ...(mon.baseSpecies !== mon.name && {baseSpecies: mon.baseSpecies}),
         ...(mon.baseForme && {baseForm: mon.baseForme}),
         ...(mon.forme && {form: mon.forme}),
         ...(otherForms && {otherForms})
@@ -316,10 +290,10 @@ const items: {[name: string]: number} = {none: 0};
 const berries: {[name: string]: NaturalGiftData} = {};
 
 uid = 1;
-for (const itemName in data.Items)
+for (const itemName in dex.data.Items)
 {
-    if (!data.Items.hasOwnProperty(itemName)) continue;
-    const item = data.Items[itemName];
+    if (!dex.data.Items.hasOwnProperty(itemName)) continue;
+    const item = dex.getItem(itemName);
     // only gen4 and under items allowed
     if (item.gen > 4 || item.isNonstandard) continue;
 
