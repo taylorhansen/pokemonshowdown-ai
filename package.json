@@ -7,10 +7,10 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "start": "node dist/index.js",
     "pretest": "tslint -c tslint.json -e src/battle/dex/dex.ts --project .",
+    "psbot": "node dist/psbot/index.js",
     "test": "nyc mocha",
-    "train": "ts-node scripts/train/index.ts"
+    "train": "node dist/train/index.ts"
   },
   "mocha": {
     "recursive": true,

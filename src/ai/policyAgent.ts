@@ -1,6 +1,6 @@
 import { BattleAgent } from "../battle/agent/BattleAgent";
-import { ReadonlyBattleState } from "../battle/state/BattleState";
 import { Choice, choiceIds } from "../battle/agent/Choice";
+import { ReadonlyBattleState } from "../battle/state/BattleState";
 import { weightedShuffle } from "./helpers";
 
 /**

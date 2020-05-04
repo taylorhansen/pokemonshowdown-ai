@@ -1,8 +1,8 @@
 import * as tf from "@tensorflow/tfjs-node";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { intToChoice } from "../battle/agent/Choice";
-import { battleStateEncoder, allocUnsafe } from "./encoder/encoders";
-import { PolicyType, policyAgent } from "./policyAgent";
+import { allocUnsafe, battleStateEncoder } from "./encoder/encoders";
+import { policyAgent, PolicyType } from "./policyAgent";
 
 /** Contains the tensors used by the neural network. */
 export type NetworkData =
