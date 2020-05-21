@@ -440,6 +440,7 @@ function battleEventHelper(input: Input, info: Info):
         case "-clearnegativeboost": return eventClearNegativeBoost(input, info);
         case "-clearpositiveboost": return eventClearPositiveBoost(input, info);
         case "-copyboost": return eventCopyBoost(input, info);
+        case "-crit": return eventCrit(input, info);
         case "-curestatus": return eventCureStatus(input, info);
         case "-cureteam": return eventCureTeam(input, info);
         case "-damage": case "-heal": case "-sethp":
@@ -616,6 +617,16 @@ const eventClearPositiveBoost: EventParser<"-clearpositiveboost"> = transform(
 const eventCopyBoost: EventParser<"-copyboost"> = transform(
     sequence(word("-copyboost"), pokemonId, pokemonId),
     ([type, source, target]) => ({type, source, target}));
+
+/**
+ * Parses a CritEvent.
+ *
+ * Format:
+ * @example
+ * |-crit|<PokemonID>
+ */
+const eventCrit: EventParser<"-crit"> =
+    transform(sequence(word("-crit"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses a CureStatusEvent.

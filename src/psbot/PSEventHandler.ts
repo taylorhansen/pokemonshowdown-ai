@@ -10,15 +10,15 @@ import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
     "./helpers";
 import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     ClearAllBoostEvent, ClearNegativeBoostEvent, ClearPositiveBoostEvent,
-    CopyBoostEvent, CureStatusEvent, CureTeamEvent, DamageEvent,
+    CopyBoostEvent, CritEvent, CureStatusEvent, CureTeamEvent, DamageEvent,
     DetailsChangeEvent, DragEvent, EndAbilityEvent, EndEvent, EndItemEvent,
     FailEvent, FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent,
-    HealEvent, ImmuneEvent, InvertBoostEvent, isMinorBattleEventType,
-    ItemEvent, MissEvent, MoveEvent, MustRechargeEvent, PrepareEvent,
-    SetBoostEvent, SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent,
-    SingleTurnEvent, StartEvent, StatusEvent, SwapBoostEvent, SwitchEvent,
-    TieEvent, TransformEvent, TurnEvent, UnboostEvent, UpkeepEvent,
-    WeatherEvent, WinEvent } from "./parser/BattleEvent";
+    HealEvent, ImmuneEvent, InvertBoostEvent, isMinorBattleEventType, ItemEvent,
+    MissEvent, MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent,
+    SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent, SingleTurnEvent,
+    StartEvent, StatusEvent, SwapBoostEvent, SwitchEvent, TieEvent,
+    TransformEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
+    WinEvent } from "./parser/BattleEvent";
 import { Iter, iter } from "./parser/Iter";
 import { BattleInitMessage, RequestMessage } from "./parser/Message";
 import { Result } from "./parser/types";
@@ -237,6 +237,7 @@ export class PSEventHandler
             case "-clearpositiveboost":
                 return this.handleClearPositiveBoost(event, it);
             case "-copyboost": return this.handleCopyBoost(event, it);
+            case "-crit": return this.handleCrit(event, it);
             case "-curestatus": return this.handleCureStatus(event, it);
             case "-cureteam": return this.handleCureTeam(event, it);
             case "-damage": case "-heal": case "-sethp":
@@ -727,6 +728,14 @@ export class PSEventHandler
         const from = this.getSide(event.target.owner);
         const to = this.getSide(event.source.owner);
         return {result: [{type: "copyBoosts", from, to}], remaining: it};
+    }
+
+    /** @virtual */
+    protected handleCrit(event: CritEvent, it: Iter<AnyBattleEvent>):
+        PSResult
+    {
+        const monRef = this.getSide(event.id.owner);
+        return {result: [{type: "crit", monRef}], remaining: it};
     }
 
     /** @virtual */

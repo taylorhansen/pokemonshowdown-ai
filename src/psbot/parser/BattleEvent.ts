@@ -44,6 +44,7 @@ const minorBattleEventTypes =
     "-clearnegativeboost": {} as ClearNegativeBoostEvent,
     "-clearpositiveboost": {} as ClearPositiveBoostEvent,
     "-copyboost": {} as CopyBoostEvent,
+    "-crit": {} as CritEvent,
     "-curestatus": {} as CureStatusEvent,
     "-cureteam": {} as CureTeamEvent,
     "-damage": {} as DamageEvent,
@@ -269,6 +270,13 @@ export interface CopyBoostEvent extends MinorBattleEventBase<"-copyboost">
     readonly source: PokemonID;
     /** ID of the pokemon whose boosts are being copied. */
     readonly target: PokemonID;
+}
+
+/** Event indicating a critical hit of a move on a pokemon. */
+export interface CritEvent extends MinorBattleEventBase<"-crit">
+{
+    /** ID of the pokemon taking the hit. */
+    readonly id: PokemonID;
 }
 
 /** Event where a pokemon's major status is cured. */

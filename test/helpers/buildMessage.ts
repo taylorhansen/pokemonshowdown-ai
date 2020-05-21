@@ -113,6 +113,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "-clearboost":
         case "-clearnegativeboost":
         case "-clearpositiveboost":
+        case "-crit":
         case "-cureteam":
         case "-fail":
         case "faint":

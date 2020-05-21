@@ -8,7 +8,7 @@ import { Team } from "../state/Team";
 import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     ActivateSideCondition, ActivateStatusEffect, AfflictStatus, AnyDriverEvent,
     Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
-    ClearSelfSwitch, CopyBoosts, CountStatusEffect, CureStatus, CureTeam,
+    ClearSelfSwitch, CopyBoosts, CountStatusEffect, Crit, CureStatus, CureTeam,
     DisableMove, DriverEvent, DriverEventType, Fail, Faint, Fatigue, Feint,
     FormChange, GameOver, GastroAcid, Immune, Inactive, InitOtherTeamSize,
     InitTeam, InvertBoosts, LockOn, Mimic, Miss, ModifyPP, MustRecharge,
@@ -863,6 +863,15 @@ export class BattleDriver implements DriverEventHandler
         const mon = this.getMon(event.monRef);
         mon.moveset.reveal(event.move);
         mon.volatile.twoTurn.start(event.move);
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates a critical hit of a move on the pokemon.
+     * @virtual
+     */
+    public crit(event: Crit): void
+    {
         if (event.consequences) this.handleEvents(event.consequences, event);
     }
 

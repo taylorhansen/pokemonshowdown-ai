@@ -52,6 +52,7 @@ interface DriverEventMap
     useMove: UseMove;
     revealMove: RevealMove;
     prepareMove: PrepareMove;
+    crit: Crit;
     fail: Fail;
     miss: Miss;
     immune: Immune;
@@ -526,6 +527,13 @@ export interface PrepareMove extends DriverEventBase<"prepareMove">
     readonly monRef: Side;
     /** Move name. */
     readonly move: TwoTurnMove;
+}
+
+/** Indicates a critical hit of a move on the pokemon. */
+export interface Crit extends DriverEventBase<"crit">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
 }
 
 /** Indicates that the pokemon failed at doing something. */

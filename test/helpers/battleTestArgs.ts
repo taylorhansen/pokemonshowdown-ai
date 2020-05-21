@@ -61,6 +61,7 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "-clearnegativeboost", id: pokemonId[0]},
     {type: "-clearpositiveboost", id: pokemonId[1]},
     {type: "-copyboost", source: pokemonId[2], target: pokemonId[0]},
+    {type: "-crit", id: pokemonId[0]},
     {type: "-curestatus", id: pokemonId[0], majorStatus: "psn"},
     {type: "-cureteam", id: pokemonId[2]},
     {type: "-damage", id: pokemonId[1], status: pokemonStatus[1]},
@@ -188,7 +189,7 @@ export const battleProgress: BattleProgressMessage[] =
     {
         type: "battleprogress",
         events: battleEvent.slice(29, 39)
-            .concat({type: "upkeep"}, ...battleEvent.slice(39, 55),
+            .concat({type: "upkeep"}, ...battleEvent.slice(39),
                 {type: "turn", num: 9})
     }
 ];

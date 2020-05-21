@@ -702,6 +702,12 @@ describe("PSEventHandler", function()
                 [{type: "copyBoosts", from: "us", to: "them"}]);
         });
 
+        describe("-crit", function()
+        {
+            test("Should emit crit",
+                [{type: "-crit", id: them}], [{type: "crit", monRef: "them"}]);
+        });
+
         describe("-curestatus", function()
         {
             test("Should emit cureStatus",
