@@ -899,6 +899,13 @@ describe("PSEventHandler", function()
             }]);
         });
 
+        describe("-hitcount", function()
+        {
+            test("Should emit hitCount",
+                [{type: "-hitcount", id: them, count: 5}],
+                [{type: "hitCount", monRef: "them", count: 5}]);
+        });
+
         describe("-invertboost", function()
         {
             test("Should emit invertBoosts", [{type: "-invertboost", id: us}],

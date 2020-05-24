@@ -59,6 +59,7 @@ const minorBattleEventTypes =
     "-fieldstart": {} as FieldStartEvent,
     "-formechange": {} as FormeChangeEvent,
     "-heal": {} as HealEvent,
+    "-hitcount": {} as HitCountEvent,
     "-immune": {} as ImmuneEvent,
     "-invertboost": {} as InvertBoostEvent,
     "-item": {} as ItemEvent,
@@ -379,6 +380,15 @@ export interface HealEvent extends MinorBattleEventBase<"-heal">
     readonly id: PokemonID;
     /** New hp/status. */
     readonly status: PokemonStatus;
+}
+
+/** Event specifying the total number of hits a move took. */
+export interface HitCountEvent extends MinorBattleEventBase<"-hitcount">
+{
+    /** ID of the pokemon being hit. */
+    readonly id: PokemonID;
+    /** Number of hits. */
+    readonly count: number;
 }
 
 /** Event where a pokemon's immunity was mentioned. */

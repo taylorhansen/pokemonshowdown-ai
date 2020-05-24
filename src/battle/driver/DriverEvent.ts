@@ -55,6 +55,7 @@ interface DriverEventMap
     crit: Crit;
     superEffective: SuperEffective;
     resisted: Resisted;
+    hitCount: HitCount;
     fail: Fail;
     miss: Miss;
     immune: Immune;
@@ -550,6 +551,15 @@ export interface Resisted extends DriverEventBase<"resisted">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
+}
+
+/** Indicates that the pokemon was hit by a move multiple times. */
+export interface HitCount extends DriverEventBase<"hitCount">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Number of hits. */
+    readonly count: number;
 }
 
 /** Indicates that the pokemon failed at doing something. */

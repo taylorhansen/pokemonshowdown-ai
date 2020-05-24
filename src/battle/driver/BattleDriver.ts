@@ -10,14 +10,14 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
     ClearSelfSwitch, CopyBoosts, CountStatusEffect, Crit, CureStatus, CureTeam,
     DisableMove, DriverEvent, DriverEventType, Fail, Faint, Fatigue, Feint,
-    FormChange, GameOver, GastroAcid, Immune, Inactive, InitOtherTeamSize,
-    InitTeam, InvertBoosts, LockOn, Mimic, Miss, ModifyPP, MustRecharge,
-    PostTurn, PrepareMove, PreTurn, ReenableMoves, RejectSwitchTrapped,
-    RemoveItem, ResetWeather, RestoreMoves, RevealItem, RevealMove, SetBoost,
-    SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType, SetWeather, Sketch,
-    Stall, SuperEffective, SwapBoosts, SwitchIn, TakeDamage, TickWeather,
-    Transform, TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove, Resisted } from
-    "./DriverEvent";
+    FormChange, GameOver, GastroAcid, HitCount, Immune, Inactive,
+    InitOtherTeamSize, InitTeam, InvertBoosts, LockOn, Mimic, Miss, ModifyPP,
+    MustRecharge, PostTurn, PrepareMove, PreTurn, ReenableMoves,
+    RejectSwitchTrapped, RemoveItem, ResetWeather, Resisted, RestoreMoves,
+    RevealItem, RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
+    SetThirdType, SetWeather, Sketch, Stall, SuperEffective, SwapBoosts,
+    SwitchIn, TakeDamage, TickWeather, Transform, TransformPost, Trap, Unboost,
+    UpdateStatusEffect, UseMove } from "./DriverEvent";
 
 /**
  * Ensures that the BattleDriver implements handlers for each type of
@@ -889,6 +889,15 @@ export class BattleDriver implements DriverEventHandler
      * @virtual
      */
     public resisted(event: Resisted): void
+    {
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the pokemon was hit by a move multiple times.
+     * @virtual
+     */
+    public hitCount(event: HitCount): void
     {
         if (event.consequences) this.handleEvents(event.consequences, event);
     }

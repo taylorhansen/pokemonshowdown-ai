@@ -165,6 +165,10 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
                 stringifyStatus(event)
             ];
             break;
+        case "-hitcount":
+            result =
+                [event.type, stringifyID(event.id), event.count.toString()];
+            break;
         case "-item":
         case "-enditem":
             result = [event.type, stringifyID(event.id), event.item];

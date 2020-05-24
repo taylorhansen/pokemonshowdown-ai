@@ -92,6 +92,7 @@ export const battleEvent: AnyBattleEvent[] =
         type: "-heal", id: pokemonId[1], status: pokemonStatus[1],
         from: "item: Leftovers"
     },
+    {type: "-hitcount", id: pokemonId[2], count: 3},
     {type: "-immune", id: pokemonId[0]},
     {type: "-invertboost", id: pokemonId[2]},
     {type: "-item", id: pokemonId[2], item: "Leftovers", from: "move: Trick"},

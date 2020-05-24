@@ -450,6 +450,7 @@ function battleEventHelper(input: Input, info: Info):
         case "-fail": return eventFail(input, info);
         case "faint": return eventFaint(input, info);
         case "-fieldstart": case "-fieldend": return eventField(input, info);
+        case "-hitcount": return eventHitCount(input, info);
         case "-immune": return eventImmune(input, info);
         case "-invertboost": return eventInvertBoost(input, info);
         case "-item": case "-enditem": return eventItem(input, info);
@@ -714,6 +715,17 @@ const eventFaint: EventParser<"faint"> =
 const eventField: EventParser<"-fieldend" | "-fieldstart"> = transform(
     sequence(word("-fieldend", "-fieldstart"), anyWord),
     ([type, effect]) => ({type, effect}));
+
+/**
+ * Parses a HitCountEvent.
+ *
+ * Format:
+ * @example
+ * |<-hitcount>|<PokemonID>|<# of hits>
+ */
+const eventHitCount: EventParser<"-hitcount"> = transform(
+    sequence(word("-hitcount"), pokemonId, integer),
+    ([type, id, count]) => ({type, id, count}));
 
 /**
  * Parses an ImmuneEvent.

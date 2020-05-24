@@ -13,12 +13,12 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     CopyBoostEvent, CritEvent, CureStatusEvent, CureTeamEvent, DamageEvent,
     DetailsChangeEvent, DragEvent, EndAbilityEvent, EndEvent, EndItemEvent,
     FailEvent, FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent,
-    HealEvent, ImmuneEvent, InvertBoostEvent, isMinorBattleEventType, ItemEvent,
-    MissEvent, MoveEvent, MustRechargeEvent, PrepareEvent, ResistedEvent,
-    SetBoostEvent, SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent,
-    SingleTurnEvent, StartEvent, StatusEvent, SuperEffectiveEvent,
-    SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent, TurnEvent,
-    UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
+    HealEvent, HitCountEvent, ImmuneEvent, InvertBoostEvent,
+    isMinorBattleEventType, ItemEvent, MissEvent, MoveEvent, MustRechargeEvent,
+    PrepareEvent, ResistedEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
+    SideStartEvent, SingleMoveEvent, SingleTurnEvent, StartEvent, StatusEvent,
+    SuperEffectiveEvent, SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent,
+    TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
     "./parser/BattleEvent";
 import { Iter, iter } from "./parser/Iter";
 import { BattleInitMessage, RequestMessage } from "./parser/Message";
@@ -249,6 +249,7 @@ export class PSEventHandler
             case "-fieldend": case "-fieldstart":
                 return this.handleFieldCondition(event, it);
             case "-formechange": return this.handleFormeChange(event, it);
+            case "-hitcount": return this.handleHitCount(event, it);
             case "-immune": return this.handleImmune(event, it);
             case "-invertboost": return this.handleInvertBoost(event, it);
             case "-item": return this.handleItem(event, it);
@@ -882,6 +883,17 @@ export class PSEventHandler
                     level, gender, hp, hpMax, perm: false
                 } as const))(event)
             ],
+            remaining: it
+        };
+    }
+
+    /** @virtual */
+    protected handleHitCount(event: HitCountEvent, it: Iter<AnyBattleEvent>):
+        PSResult
+    {
+        const monRef = this.getSide(event.id.owner);
+        return {
+            result: [{type: "hitCount", monRef, count: event.count}],
             remaining: it
         };
     }
