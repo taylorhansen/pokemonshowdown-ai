@@ -982,6 +982,13 @@ describe("PSEventHandler", function()
             });
         });
 
+        describe("-resisted", function()
+        {
+            test("Should emit resisted",
+                [{type: "-resisted", id: them}],
+                [{type: "resisted", monRef: "them"}]);
+        });
+
         describe("-setboost", function()
         {
             test("Should emit setBoost",

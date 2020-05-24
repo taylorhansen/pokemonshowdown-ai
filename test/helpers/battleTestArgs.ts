@@ -111,6 +111,7 @@ export const battleEvent: AnyBattleEvent[] =
         targetId: pokemonId[0]
     },
     {type: "-prepare", id: pokemonId[0], moveName: "Razor Wind"},
+    {type: "-resisted", id: pokemonId[1]},
     {type: "-setboost", id: pokemonId[2], stat: "evasion", amount: 6},
     {type: "-sethp", id: pokemonId[0], status: pokemonStatus[0]},
     {type: "-singlemove", id: pokemonId[1], move: "Destiny Bond"},

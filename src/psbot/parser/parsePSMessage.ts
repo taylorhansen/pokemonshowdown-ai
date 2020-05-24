@@ -457,6 +457,7 @@ function battleEventHelper(input: Input, info: Info):
         case "move": return eventMove(input, info);
         case "-mustrecharge": return eventMustRecharge(input, info);
         case "-prepare": return eventPrepare(input, info);
+        case "-resisted": return eventResisted(input, info);
         case "-setboost": return eventSetBoost(input, info);
         case "-sideend": case "-sidestart": return eventSide(input, info);
         case "-singlemove": return eventSingleMove(input, info);
@@ -793,6 +794,16 @@ const eventPrepare: EventParser<"-prepare"> = transform(
     sequence(word("-prepare"), pokemonId, anyWord, maybe(pokemonId)),
     ([type, id, moveName, targetId]) =>
         targetId ? {type, id, moveName, targetId} : {type, id, moveName});
+
+/**
+ * Parses a ResistedEvent.
+ *
+ * Format:
+ * @example
+ * |-resisted|<PokemonID>
+ */
+const eventResisted: EventParser<"-resisted"> = transform(
+    sequence(word("-resisted"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses a SetBoostEvent.

@@ -14,11 +14,12 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     DetailsChangeEvent, DragEvent, EndAbilityEvent, EndEvent, EndItemEvent,
     FailEvent, FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent,
     HealEvent, ImmuneEvent, InvertBoostEvent, isMinorBattleEventType, ItemEvent,
-    MissEvent, MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent,
-    SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent, SingleTurnEvent,
-    StartEvent, StatusEvent, SuperEffectiveEvent, SwapBoostEvent, SwitchEvent,
-    TieEvent, TransformEvent, TurnEvent, UnboostEvent, UpkeepEvent,
-    WeatherEvent, WinEvent } from "./parser/BattleEvent";
+    MissEvent, MoveEvent, MustRechargeEvent, PrepareEvent, ResistedEvent,
+    SetBoostEvent, SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent,
+    SingleTurnEvent, StartEvent, StatusEvent, SuperEffectiveEvent,
+    SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent, TurnEvent,
+    UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
+    "./parser/BattleEvent";
 import { Iter, iter } from "./parser/Iter";
 import { BattleInitMessage, RequestMessage } from "./parser/Message";
 import { Result } from "./parser/types";
@@ -255,6 +256,7 @@ export class PSEventHandler
             case "-miss": return this.handleMiss(event, it);
             case "-mustrecharge": return this.handleMustRecharge(event, it);
             case "-prepare": return this.handlePrepare(event, it);
+            case "-resisted": return this.handleResisted(event, it);
             case "-setboost": return this.handleSetBoost(event, it);
             case "-sideend": case "-sidestart":
                 return this.handleSideCondition(event, it);
@@ -993,6 +995,16 @@ export class PSEventHandler
             [{
                 type: "prepareMove", monRef: this.getSide(event.id.owner), move
             }],
+            remaining: it
+        };
+    }
+
+    /** @virtual */
+    protected handleResisted(event: ResistedEvent, it: Iter<AnyBattleEvent>):
+        PSResult
+    {
+        return {
+            result: [{type: "resisted", monRef: this.getSide(event.id.owner)}],
             remaining: it
         };
     }

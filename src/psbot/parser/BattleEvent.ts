@@ -65,6 +65,7 @@ const minorBattleEventTypes =
     "-miss": {} as MissEvent,
     "-mustrecharge": {} as MustRechargeEvent,
     "-prepare": {} as PrepareEvent,
+    "-resisted": {} as ResistedEvent,
     "-setboost": {} as SetBoostEvent,
     "-sethp": {} as SetHPEvent,
     "-sideend": {} as SideEndEvent,
@@ -428,6 +429,13 @@ export interface PrepareEvent extends MinorBattleEventBase<"-prepare">
     readonly moveName: string;
     /** ID of the target pokemon. */
     readonly targetId?: PokemonID;
+}
+
+/** Event where a pokemon was hit by a move it resists. */
+export interface ResistedEvent extends MinorBattleEventBase<"-resisted">
+{
+    /** ID of the pokemon being hit. */
+    readonly id: PokemonID;
 }
 
 /** Event where a pokemon's stat boost is being set. */

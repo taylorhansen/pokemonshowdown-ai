@@ -16,7 +16,7 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     RemoveItem, ResetWeather, RestoreMoves, RevealItem, RevealMove, SetBoost,
     SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType, SetWeather, Sketch,
     Stall, SuperEffective, SwapBoosts, SwitchIn, TakeDamage, TickWeather,
-    Transform, TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove } from
+    Transform, TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove, Resisted } from
     "./DriverEvent";
 
 /**
@@ -880,6 +880,15 @@ export class BattleDriver implements DriverEventHandler
      * @virtual
      */
     public superEffective(event: SuperEffective): void
+    {
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the pokemon was hit by a move it resists.
+     * @virtual
+     */
+    public resisted(event: Resisted): void
     {
         if (event.consequences) this.handleEvents(event.consequences, event);
     }
