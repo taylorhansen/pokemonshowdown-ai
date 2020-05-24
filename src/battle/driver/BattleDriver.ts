@@ -15,8 +15,8 @@ import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
     PostTurn, PrepareMove, PreTurn, ReenableMoves, RejectSwitchTrapped,
     RemoveItem, ResetWeather, RestoreMoves, RevealItem, RevealMove, SetBoost,
     SetSingleMoveStatus, SetSingleTurnStatus, SetThirdType, SetWeather, Sketch,
-    Stall, SwapBoosts, SwitchIn, TakeDamage, TickWeather, Transform,
-    TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove } from
+    Stall, SuperEffective, SwapBoosts, SwitchIn, TakeDamage, TickWeather,
+    Transform, TransformPost, Trap, Unboost, UpdateStatusEffect, UseMove } from
     "./DriverEvent";
 
 /**
@@ -871,6 +871,15 @@ export class BattleDriver implements DriverEventHandler
      * @virtual
      */
     public crit(event: Crit): void
+    {
+        if (event.consequences) this.handleEvents(event.consequences, event);
+    }
+
+    /**
+     * Indicates that the pokemon was hit by a move it is weak to.
+     * @virtual
+     */
+    public superEffective(event: SuperEffective): void
     {
         if (event.consequences) this.handleEvents(event.consequences, event);
     }

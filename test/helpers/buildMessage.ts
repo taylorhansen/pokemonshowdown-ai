@@ -120,6 +120,7 @@ export function composeBattleEvent(event: AnyBattleEvent): string[]
         case "-immune":
         case "-invertboost":
         case "-mustrecharge":
+        case "-supereffective":
             result = [event.type, stringifyID(event.id)];
             break;
         case "-copyboost":

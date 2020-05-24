@@ -73,6 +73,7 @@ const minorBattleEventTypes =
     "-singleturn": {} as SingleTurnEvent,
     "-start": {} as StartEvent,
     "-status": {} as StatusEvent,
+    "-supereffective": {} as SuperEffectiveEvent,
     "-swapboost": {} as SwapBoostEvent,
     tie: {} as TieEvent,
     "-transform": {} as TransformEvent,
@@ -503,6 +504,14 @@ export interface StatusEvent extends MinorBattleEventBase<"-status">
     readonly id: PokemonID;
     /** Status condition being afflicted. */
     readonly majorStatus: MajorStatus;
+}
+
+/** Event where a pokemon was hit by a move it was weak to. */
+export interface SuperEffectiveEvent extends
+    MinorBattleEventBase<"-supereffective">
+{
+    /** ID of the pokemon being hit. */
+    readonly id: PokemonID;
 }
 
 /** Event where a pokemon's boosts are being swapped with another's. */

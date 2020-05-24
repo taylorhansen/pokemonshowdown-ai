@@ -463,6 +463,7 @@ function battleEventHelper(input: Input, info: Info):
         case "-singleturn": return eventSingleTurn(input, info);
         case "-start": return eventStart(input, info);
         case "-status": return eventStatus(input, info);
+        case "-supereffective": return eventSuperEffective(input, info);
         case "-swapboost": return eventSwapBoost(input, info);
         case "tie": return eventTie(input, info);
         case "-transform": return eventTransform(input, info);
@@ -861,6 +862,16 @@ const eventStart: EventParser<"-start"> = transform(
 const eventStatus: EventParser<"-status"> = transform(
     sequence(word("-status"), pokemonId, majorStatus),
     ([type, id, status]) => ({type, id, majorStatus: status}));
+
+/**
+ * Parses a SuperEffectiveEvent.
+ *
+ * Format:
+ * @example
+ * |-supereffective|<PokemonID>
+ */
+const eventSuperEffective: EventParser<"-supereffective"> = transform(
+    sequence(word("-supereffective"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses a SwapBoostEvent.

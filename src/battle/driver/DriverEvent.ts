@@ -53,6 +53,7 @@ interface DriverEventMap
     revealMove: RevealMove;
     prepareMove: PrepareMove;
     crit: Crit;
+    superEffective: SuperEffective;
     fail: Fail;
     miss: Miss;
     immune: Immune;
@@ -531,6 +532,13 @@ export interface PrepareMove extends DriverEventBase<"prepareMove">
 
 /** Indicates a critical hit of a move on the pokemon. */
 export interface Crit extends DriverEventBase<"crit">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+}
+
+/** Indicates that the pokemon was hit by a move it is weak to. */
+export interface SuperEffective extends DriverEventBase<"superEffective">
 {
     /** Pokemon reference. */
     readonly monRef: Side;

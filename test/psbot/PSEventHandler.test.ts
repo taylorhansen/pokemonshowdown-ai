@@ -1086,6 +1086,13 @@ describe("PSEventHandler", function()
                 [{type: "afflictStatus", monRef: "us", status: "brn"}]);
         });
 
+        describe("-supereffective", function()
+        {
+            test("Should emit superEffective",
+                [{type: "-supereffective", id: them}],
+                [{type: "superEffective", monRef: "them"}]);
+        });
+
         describe("-swapboost", function()
         {
             test("Should emit swapBoosts",

@@ -126,6 +126,7 @@ export const battleEvent: AnyBattleEvent[] =
         otherArgs: ["Splash"]
     },
     {type: "-status", id: pokemonId[0], majorStatus: "slp"},
+    {type: "-supereffective", id: pokemonId[1]},
     {
         type: "-swapboost", source: pokemonId[2], target: pokemonId[1],
         stats: ["atk", "accuracy"]

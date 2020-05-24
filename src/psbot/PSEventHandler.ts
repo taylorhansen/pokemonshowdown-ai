@@ -16,9 +16,9 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     HealEvent, ImmuneEvent, InvertBoostEvent, isMinorBattleEventType, ItemEvent,
     MissEvent, MoveEvent, MustRechargeEvent, PrepareEvent, SetBoostEvent,
     SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent, SingleTurnEvent,
-    StartEvent, StatusEvent, SwapBoostEvent, SwitchEvent, TieEvent,
-    TransformEvent, TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent,
-    WinEvent } from "./parser/BattleEvent";
+    StartEvent, StatusEvent, SuperEffectiveEvent, SwapBoostEvent, SwitchEvent,
+    TieEvent, TransformEvent, TurnEvent, UnboostEvent, UpkeepEvent,
+    WeatherEvent, WinEvent } from "./parser/BattleEvent";
 import { Iter, iter } from "./parser/Iter";
 import { BattleInitMessage, RequestMessage } from "./parser/Message";
 import { Result } from "./parser/types";
@@ -261,6 +261,7 @@ export class PSEventHandler
             case "-singlemove": return this.handleSingleMove(event, it);
             case "-singleturn": return this.handleSingleTurn(event, it);
             case "-status": return this.handleStatus(event, it);
+            case "-supereffective": return this.handleSuperEffective(event, it);
             case "-swapboost": return this.handleSwapBoost(event, it);
             case "tie": case "win": return this.handleGameOver(event, it);
             case "-transform": return this.handleTransform(event, it);
@@ -1101,6 +1102,14 @@ export class PSEventHandler
             }],
             remaining: it
         };
+    }
+
+    /** @virtual */
+    protected handleSuperEffective(event: SuperEffectiveEvent,
+        it: Iter<AnyBattleEvent>): PSResult
+    {
+        const monRef = this.getSide(event.id.owner);
+        return {result: [{type: "superEffective", monRef}], remaining: it};
     }
 
     /** @virtual */
