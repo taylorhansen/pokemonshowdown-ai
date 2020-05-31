@@ -46,25 +46,24 @@
   "author": "Taylor Hansen (taylorhansen)",
   "license": "MIT",
   "dependencies": {
-    "@tensorflow/tfjs-data": "^1.7.4",
-    "@tensorflow/tfjs-node": "^1.7.4",
+    "@tensorflow/tfjs-node": "^2.0.0",
     "node-fetch": "^2.6.0",
     "websocket": "^1.0.31"
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",
     "@types/mocha": "^7.0.2",
-    "@types/node": "^13.13.4",
+    "@types/node": "^14.0.6",
     "@types/node-fetch": "^2.5.7",
     "@types/progress": "^2.0.3",
     "@types/websocket": "^1.0.0",
     "chai": "^4.1.2",
-    "mocha": "^7.1.2",
+    "mocha": "^7.2.0",
     "nyc": "^15.0.1",
     "progress": "^2.0.3",
     "source-map-support": "^0.5.19",
-    "ts-node": "^8.9.1",
+    "ts-node": "^8.10.2",
     "tslint": "^6.1.2",
-    "typescript": "^3.8.3"
+    "typescript": "^3.9.3"
   }
 }

@@ -52,7 +52,7 @@ export async function episode(
         opponents: trainOpponents, simName, maxTurns,
         logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath: join(logPath, "rollout")}),
-        rollout: algorithm.advantage, ...(pool && {pool})
+        rollout: algorithm.advantage
     });
 
     // summary statement after rollout games
@@ -116,6 +116,6 @@ export async function episode(
         pool, processor, agentConfig: {model, exp: false},
         opponents: evalOpponents, simName, maxTurns,
         logger: logger.addPrefix("Eval: "),
-        ...(logPath && {logPath: join(logPath, "eval")}), ...(pool && {pool})
+        ...(logPath && {logPath: join(logPath, "eval")})
     });
 }
