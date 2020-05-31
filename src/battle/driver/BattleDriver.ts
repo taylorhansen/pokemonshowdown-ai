@@ -82,10 +82,6 @@ export class BattleDriver implements DriverEventHandler
 
             if (data.hpType) mon.hpType.narrow(data.hpType);
             if (data.happiness) mon.happiness = data.happiness;
-
-            // initialize moveset
-            mon.moveset.size = data.moves.length;
-            for (const move of data.moves) mon.moveset.reveal(move);
         }
         if (event.consequences) this.handleEvents(event.consequences, event);
     }

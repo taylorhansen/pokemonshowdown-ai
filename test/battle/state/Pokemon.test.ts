@@ -283,6 +283,20 @@ describe("Pokemon", function()
 
     describe("#moveset methods", function()
     {
+        describe("constructor", function()
+        {
+            it("Should override movepool", function()
+            {
+                // if the moves argument wasn't provided, the moves would've
+                //  been inserted in the default movepool's order
+                const moves = [...dex.pokemon.Magikarp.movepool].reverse();
+                expect(moves).to.have.lengthOf(4);
+                const mon = new Pokemon("Magikarp", false, moves);
+                expect([...mon.moveset.moves].map(m => m[0]))
+                    .to.have.ordered.members(moves)
+            });
+        });
+
         describe("#mimic()", function()
         {
             it("Should add override move with 5 pp", function()

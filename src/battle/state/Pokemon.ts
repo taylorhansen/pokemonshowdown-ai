@@ -352,15 +352,18 @@ export class Pokemon implements ReadonlyPokemon
 
     /**
      * Creates a Pokemon.
+     * @param species Species name.
      * @param hpPercent Whether to report HP as a percentage.
-     * @param team Reference to the parent Team.
+     * @param moves Optional moveset to fill in.
+     * @param team Optional reference to the parent Team.
      */
-    constructor(species: string, hpPercent: boolean,
+    constructor(species: string, hpPercent: boolean, moves?: readonly string[],
         public readonly team?: Team)
     {
         this.baseTraits.init();
         this.baseTraits.species.narrow(species);
-        this.baseMoveset = new Moveset(this.baseTraits.data.movepool);
+        if (moves) this.baseMoveset = new Moveset(moves, moves.length);
+        else this.baseMoveset = new Moveset(this.baseTraits.data.movepool);
         this.hp = new HP(hpPercent);
     }
 

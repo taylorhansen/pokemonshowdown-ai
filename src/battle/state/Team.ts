@@ -27,6 +27,13 @@ export interface ReadonlyTeam
     readonly status: ReadonlyTeamStatus;
 }
 
+/** Options for `Team#reveal()`. */
+export interface TeamRevealOptions extends DriverSwitchOptions
+{
+    /** Moveset to fill in. */
+    readonly moves?: readonly string[];
+}
+
 /** Team state. */
 export class Team implements ReadonlyTeam
 {
@@ -157,7 +164,7 @@ export class Team implements ReadonlyTeam
      * @returns The new pokemon, or null if the operation would overflow the
      * current team size.
      */
-    public reveal(options: DriverSwitchOptions): Pokemon | null
+    public reveal(options: TeamRevealOptions): Pokemon | null
     {
         const index = this.revealIndex(options);
         if (index < 0) return null;
@@ -169,14 +176,14 @@ export class Team implements ReadonlyTeam
      * @returns The index of the new pokemon, or -1 if the operation would
      * overflow the current team size.
      */
-    private revealIndex({species, level, gender, hp, hpMax}:
-        DriverSwitchOptions): number
+    private revealIndex({species, level, gender, hp, hpMax, moves}:
+        TeamRevealOptions): number
     {
         // team already full
         if (this.unrevealed === this._size) return -1;
 
-        const newMon =
-            new Pokemon(species, /*hpPercent*/ this.side === "them", this);
+        const newMon = new Pokemon(species, /*hpPercent*/ this.side === "them",
+            moves, this);
         this._pokemon[this.unrevealed] = newMon;
 
         // initialize new pokemon
