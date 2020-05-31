@@ -1,8 +1,8 @@
 import { BattleAgent } from "../../battle/agent/BattleAgent";
+import { BattleDriver } from "../../battle/driver/BattleDriver";
 import { PlayerID } from "../../psbot/helpers";
-import { PSBattle } from "../../psbot/PSBattle";
 import { Experience, ExperienceAgent } from "./helpers/Experience";
-import { ExperiencePSBattle } from "./ps/ExperiencePSBattle";
+import { ExperienceBattleDriver } from "./helpers/ExperienceBattleDriver";
 import { PlayerOptions, startPSBattle } from "./ps/startPSBattle";
 
 /** Base interface for SimArgsAgent. */
@@ -62,23 +62,25 @@ const simulatorsImpl =
     {
         // detect battle agents that want to generate Experience objects
         const splitExp: {[P in PlayerID]: Experience[]} = {p1: [], p2: []};
-        let psBattleCtor: typeof PSBattle | undefined;
-        const [p1, p2] = agents.map(function(agentArgs)
+        let driverCtor: typeof BattleDriver | undefined;
+        const [p1, p2] = agents.map(function(agentArgs, i)
         {
             if (!agentArgs.exp) return agentArgs as PlayerOptions;
 
-            if (!psBattleCtor)
+            if (!driverCtor)
             {
-                psBattleCtor = class extends ExperiencePSBattle
+                driverCtor = class extends ExperienceBattleDriver
                 {
                     protected async emitExperience(exp: Experience):
                         Promise<void>
                     {
-                        splitExp[this.username as PlayerID].push(exp);
+                        splitExp[`p${i + 1}` as PlayerID].push(exp);
                     }
                 }
             }
-            return {agent: agentArgs.agent, psBattleCtor} as PlayerOptions;
+            // TODO: guarantee ExperienceAgent/ExperienceBattleDriver typing as
+            //  args for startPSBattle
+            return {agent: agentArgs.agent, driverCtor} as PlayerOptions;
         });
 
         // play the game

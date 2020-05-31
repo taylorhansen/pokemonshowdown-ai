@@ -10,22 +10,23 @@ describe("PSBattle", function()
 {
     const username = "username";
 
-    let sender: Sender;
+    const sender: Sender = function(msg)
+    {
+        sent.push(msg);
+    };
     let sent: string[];
 
+    // wrap battle agent so reassigning the agent variable will change the
+    //  underlying agent
+    const agentWrapper: BattleAgent = (state, choices) => agent(state, choices);
     let agent: BattleAgent;
     let battle: PSBattle;
 
-    beforeEach("Initialize sender", function()
-    {
-        sent = [];
-        sender = msg => sent.push(msg);
-    });
-
     beforeEach("Initialize PSBattle", function()
     {
-        agent = async () => {};
-        battle = new PSBattle(username, agent, sender, Logger.null);
+        sent = [];
+        agent = async function() {};
+        battle = new PSBattle(username, agentWrapper, sender, Logger.null);
     });
 
     describe("ability trapping", function()
@@ -40,46 +41,29 @@ describe("PSBattle", function()
                 if (i < 0) return;
                 [choices[0], choices[i]] = [choices[i], choices[0]];
             };
-            battle = new PSBattle(username, agent, sender, Logger.null);
 
             // receive request
             const request: RequestMessage =
             {
                 type: "request",
                 active:
-                [
-                    {
-                        moves:
-                        [
-                            {
-                                move: "Tackle", id: "tackle", pp: 56, maxpp: 56,
-                                target: "adjacentFoe", disabled: false
-                            },
-                            {
-                                move: "Splash", id: "splash", pp: 64, maxpp: 64,
-                                target: "self", disabled: false
-                            },
-                            {
-                                move: "Bounce", id: "bounce", pp: 8, maxpp: 8,
-                                target: "adjacentFoe", disabled: false
-                            },
-                            {
-                                move: "Flail", id: "Flail", pp: 24, maxpp: 24,
-                                target: "adjacentFoe", disabled: false
-                            }
-                        ]
-                    }
-                ],
+                [{
+                    moves:
+                    [{
+                        move: "Thunderbolt", id: "thunderbolt", pp: 24,
+                        maxpp: 24, target: "adjacentFoe", disabled: false
+                    }]
+                }],
                 side: {pokemon:
                 [
                     {
-                        owner: "p1", nickname: "Magikarp", species: "Magikarp",
-                        shiny: true, gender: "M", level: 50, hp: 100,
-                        hpMax: 100, condition: null, active: true,
-                        stats: {atk: 30, def: 75, spa: 35, spd: 40, spe: 100},
-                        moves: ["tackle", "splash", "bounce", "flail"],
-                        baseAbility: "swiftswim", item: "lifeorb",
-                        pokeball: "pokeball"
+                        owner: "p1", nickname: "Magnezone",
+                        species: "Magnezone", shiny: true, gender: null,
+                        level: 50, hp: 150, hpMax: 150, condition: null,
+                        active: true,
+                        stats: {atk: 67, def: 120, spa: 150, spd: 120, spe: 80},
+                        moves: ["thunderbolt"], baseAbility: "sturdy",
+                        item: "lifeorb", pokeball: "pokeball"
                     },
                     {
                         owner: "p1", nickname: "Mewtwo",
@@ -106,14 +90,15 @@ describe("PSBattle", function()
                 events:
                 [
                     {
-                        type: "switch", id: {owner: "p1", nickname: "Magikarp"},
-                        species: "Magikarp", shiny: true, gender: "M",
-                        level: 50, hp: 100, hpMax: 100, condition: null
+                        type: "switch",
+                        id: {owner: "p1", nickname: "Magnezone"},
+                        species: "Magnezone", shiny: true, gender: null,
+                        level: 50, hp: 150, hpMax: 150, condition: null
                     },
                     {
                         type: "switch",
-                        id: {owner: "p2", nickname: "Wobbuffet"},
-                        species: "Wobbuffet", shiny: false, gender: "M",
+                        id: {owner: "p2", nickname: "Magnezone"},
+                        species: "Magnezone", shiny: false, gender: null,
                         level: 50, hp: 100, hpMax: 100, condition: null
                     }
                 ]
@@ -143,7 +128,7 @@ describe("PSBattle", function()
 
             // make a move decision
             expect(sent).to.have.members(
-                ["|/choose switch 2", "|/choose move 2"]);
+                ["|/choose switch 2", "|/choose move 1"]);
         });
     });
 
@@ -209,13 +194,13 @@ describe("PSBattle", function()
                         level: 50, hp: 100, hpMax: 100, condition: null
                     },
                     {
-                        type: "switch", id: {owner: "p2", nickname: "Vulpix"},
-                        species: "Vulpix", shiny: false, gender: "M", level: 50,
-                        hp: 100, hpMax: 100, condition: null
+                        type: "switch", id: {owner: "p2", nickname: "Bronzor"},
+                        species: "Bronzor", shiny: false, gender: "M",
+                        level: 50, hp: 100, hpMax: 100, condition: null
                     },
                     // set imprison status for opponent
                     {
-                        type: "-start", id: {owner: "p2", nickname: "Vuplix"},
+                        type: "-start", id: {owner: "p2", nickname: "Bronzor"},
                         volatile: "move: Imprison", otherArgs: []
                     }
                 ]

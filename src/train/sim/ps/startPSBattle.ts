@@ -3,6 +3,7 @@ import { dirname } from "path";
 // @ts-ignore
 import s = require("../../../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
+import { BattleDriver } from "../../../battle/driver/BattleDriver";
 import { LogFunc, Logger } from "../../../Logger";
 import { PlayerID } from "../../../psbot/helpers";
 import { AnyBattleEvent, TieEvent, TurnEvent, WinEvent } from
@@ -36,6 +37,8 @@ export interface PlayerOptions
      * `username` parameter in constructor will always be the PlayerID.
      */
     readonly psBattleCtor?: typeof PSBattle;
+    /** Override BattleDriver if needed. */
+    readonly driverCtor?: typeof BattleDriver;
 }
 
 type Players = {[P in PlayerID]: PlayerOptions};
@@ -124,10 +127,11 @@ export async function startPSBattle(options: GameOptions):
         }
 
         const psBattleCtor = options[id].psBattleCtor ?? PSBattle;
+        const driverCtor = options[id].driverCtor ?? BattleDriver;
 
         // setup one side of the battle
         const battle = new psBattleCtor(id, options[id].agent, sender,
-            innerLog.addPrefix("PSBattle: "), undefined, eventHandlerCtor);
+            innerLog.addPrefix("PSBattle: "), driverCtor, eventHandlerCtor);
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
         // start event loop for this side of the battle

@@ -6,4 +6,5 @@ Subdirectories:
   It can also listen for changes in the battle state to use for its own analysis.
 * [`dex/`](dex/) Contains generated data for use in a battle.
 * [`driver/`](driver/) Is used as an interface between intepreted game events and actual battle state mutations and inferences.
+  This is the main entry point for tracking a battle.
 * [`state/`](state/) Has the data structure required for tracking all reasonably useful aspects of a battle.
