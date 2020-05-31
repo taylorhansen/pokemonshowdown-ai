@@ -3,14 +3,14 @@
   "version": "0.0.1",
   "description": "AI project for Pokemon Showdown",
   "private": true,
-  "main": "dist/index.js",
+  "main": "dist/psbot/index.js",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
     "pretest": "tslint -c tslint.json -e src/battle/dex/dex.ts --project .",
     "psbot": "node dist/psbot/index.js",
     "test": "nyc mocha",
-    "train": "node dist/train/index.ts"
+    "train": "node dist/train/index.js"
   },
   "mocha": {
     "recursive": true,
