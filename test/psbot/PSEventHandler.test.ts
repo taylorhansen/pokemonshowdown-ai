@@ -1023,6 +1023,7 @@ describe("PSEventHandler", function()
                 [
                     {name: "move: Lucky Chant", condition: "luckyChant"},
                     {name: "Mist", condition: "mist"},
+                    {name: "Safeguard", condition: "safeguard"},
                     {name: "Spikes", condition: "spikes"},
                     {name: "Stealth Rock", condition: "stealthRock"},
                     {name: "move: Tailwind", condition: "tailwind"},

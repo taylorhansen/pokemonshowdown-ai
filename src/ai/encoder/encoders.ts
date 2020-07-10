@@ -599,6 +599,7 @@ export const teamStatusEncoder: Encoder<ReadonlyTeamStatus> = concat(
     augment(ts => ts.lunarDance, booleanEncoder),
     augment(ts => ts.mist, tempStatusEncoder),
     augment(ts => ts.reflect, itemTempStatusEncoder(["reflect"])),
+    augment(ts => ts.safeguard, tempStatusEncoder),
     augment(ts => !!ts.selfSwitch, booleanEncoder),
     augment(ts => ts.selfSwitch === "copyvolatile", booleanEncoder),
     augment(ts => ts.spikes / 3, numberEncoder),

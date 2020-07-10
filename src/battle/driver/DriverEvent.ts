@@ -676,8 +676,8 @@ export interface ActivateSideCondition extends
 
 /** Typing for `ActivateSideCondition#condition`. */
 export type SideConditionType = "healingWish" | "lightScreen" | "luckyChant" |
-    "lunarDance" | "mist" | "reflect" | "spikes" | "stealthRock" | "tailwind" |
-    "toxicSpikes";
+    "lunarDance" | "mist" | "reflect" | "safeguard" | "spikes" | "stealthRock" |
+    "tailwind" | "toxicSpikes";
 
 /** Activates a field status condition. */
 export interface ActivateFieldCondition extends

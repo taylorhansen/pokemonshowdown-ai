@@ -1890,6 +1890,7 @@ describe("StateDriver", function()
             testStatus("Lucky Chant", "luckyChant",
                 ts => ts.luckyChant.isActive);
             testStatus("Mist", "mist", ts => ts.mist.isActive);
+            testStatus("Safeguard", "safeguard", ts => ts.safeguard.isActive);
             testStatus("Tailwind", "tailwind", ts => ts.tailwind.isActive);
         });
 

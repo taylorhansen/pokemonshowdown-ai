@@ -19,6 +19,8 @@ export interface ReadonlyTeamStatus
     readonly mist: ReadonlyTempStatus;
     /** Reflect status. */
     readonly reflect: ReadonlyItemTempStatus<"reflect">;
+    /** Safeguard status. */
+    readonly safeguard: ReadonlyTempStatus;
     /**
      * Whether the team has to switch pokemon and how that switch will be
      * handled.
@@ -55,6 +57,8 @@ export class TeamStatus implements ReadonlyTeamStatus
     /** @override */
     public readonly reflect = new ItemTempStatus([5, 8], {reflect: "lightclay"},
         "reflect");
+    /** @override */
+    public readonly safeguard = new TempStatus("safeguard", 5);
     /** @override */
     public selfSwitch: SelfSwitch = false;
     /** @override */
@@ -94,6 +98,7 @@ export class TeamStatus implements ReadonlyTeamStatus
         this.luckyChant.tick();
         this.mist.tick();
         this.reflect.tick();
+        this.safeguard.tick();
         this.tailwind.tick(); // will end explicitly before the third tick
         this.wish.tick();
     }
@@ -115,6 +120,7 @@ export class TeamStatus implements ReadonlyTeamStatus
                 this.lunarDance ? ["lunar dance"] : [],
                 this.mist.isActive ? [this.mist.toString()] : [],
                 this.reflect.isActive ? [this.reflect.toString()] : [],
+                this.safeguard.isActive ? [this.safeguard.toString()] : [],
                 this.selfSwitch ? [`selfSwitch: ${this.selfSwitch}`] : [],
                 this.spikes ? [`spikes ${this.spikes}`] : [],
                 this.stealthRock ? [`stealth rock ${this.stealthRock}`] : [],

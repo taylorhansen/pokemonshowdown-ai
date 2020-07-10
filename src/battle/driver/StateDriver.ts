@@ -1132,6 +1132,7 @@ export class StateDriver implements DriverEventHandler
                 break;
             case "luckyChant":
             case "mist":
+            case "safeguard":
             case "tailwind":
                 if (event.start) ts[event.condition].start();
                 else ts[event.condition].end();
