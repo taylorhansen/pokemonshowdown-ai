@@ -1,6 +1,6 @@
 import { deserialize } from "v8";
 import { MessagePort } from "worker_threads";
-import { encodeBattleState } from "../../../ai/encodeBattleState";
+import { alloc, battleStateEncoder } from "../../../ai/encoder/encoders";
 import { policyAgent, PolicyType } from "../../../ai/policyAgent";
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
 import { ExperienceAgentData } from "../../sim/helpers/Experience";
@@ -52,7 +52,12 @@ export class ModelPort extends
 
         const innerAgent = policyAgent(
             async state =>
-                (data = await this.predict(encodeBattleState(state))).logits,
+            {
+                const arr = alloc(battleStateEncoder);
+                battleStateEncoder.encode(arr, state);
+                data = await this.predict(arr);
+                return data?.logits;
+            },
             policy);
 
         return async (state, choices) =>

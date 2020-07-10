@@ -6,10 +6,12 @@ export interface Encoder<TState>
 {
     /**
      * Encoder function.
-     * @param arr Array to fill with the encoded data.
+     * @param arr Array to fill with the encoded data. Length should be at least
+     * `#size`.
      * @param args Data to encode.
      */
     readonly encode: (arr: Float32Array, args: TState) => void;
+    /** Minimum size of data required for `#encode()` array. */
     readonly size: number;
 }
 
