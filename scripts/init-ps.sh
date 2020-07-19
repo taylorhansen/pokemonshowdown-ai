@@ -2,14 +2,15 @@
 # initializes and compiles the pokemon-showdown submodule
 
 cd $(dirname $0)
+cd ..
 
-ps_dir=../pokemon-showdown/
+ps_dir=./pokemon-showdown/
+
+git submodule update --init --recursive
 if [ ! -d $ps_dir ]
 then
     echo "Submodule not detected!"
-    echo "Updating"
-    git submodule init pokemon-showdown
-    git submodule update
+    exit 1
 fi
 cd $ps_dir
 
@@ -19,5 +20,5 @@ echo "Installing default config"
 cp config/config-example.js config/config.js
 
 echo "Compiling"
-npm i
+npm install
 npm run build
