@@ -33,7 +33,9 @@ describe("BattleDriver", function()
         it("Should handle rejected switch", async function()
         {
             // setup user's team with one benched mon
-            driver.handleEvent(
+            // while BattleDriver#handle() can take more than 1 event, keeping
+            //  them separate for testing makes for better stack traces
+            driver.handle(
             {
                 type: "initTeam",
                 team:
@@ -45,6 +47,7 @@ describe("BattleDriver", function()
                         moves: ["thunderbolt"],
                         baseAbility: "sturdy", item: "none"
                     },
+                    // have a bench pokemon to switch in to
                     {
                         species: "Mewtwo", level: 100, gender: null, hp: 353,
                         hpMax: 353,
@@ -58,15 +61,15 @@ describe("BattleDriver", function()
                 ]
             });
             // setup game and opponent
-            driver.handleEvent({type: "initOtherTeamSize", size: 1});
-            driver.handleEvent(
+            driver.handle({type: "initOtherTeamSize", size: 1});
+            driver.handle(
             {
                 type: "switchIn", monRef: "us", species: "Magnezone", level: 50,
                 gender: null, hp: 150, hpMax: 150
             });
-            // can have magnetpull, which traps steel types
-            driver.handleEvent(
+            driver.handle(
             {
+                // opponent can have magnetpull, which traps steel types
                 type: "switchIn", monRef: "them", species: "Magnezone",
                 level: 50, gender: null, hp: 100, hpMax: 100
             });

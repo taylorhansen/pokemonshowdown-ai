@@ -1,4 +1,4 @@
-import { Faint, GameOver, PostTurn } from "../../../battle/driver/DriverEvent";
+import { AnyDriverEvent } from "../../../battle/driver/DriverEvent";
 import { StateDriver } from "../../../battle/driver/StateDriver";
 import { RewardTracker } from "./RewardTracker";
 
@@ -11,33 +11,34 @@ export class RewardStateDriver extends StateDriver
     /** Tracks our reward value. */
     private reward = new RewardTracker();
 
+    /** @override */
+    public handle(...events: AnyDriverEvent[]): void
+    {
+        for (const event of events)
+        {
+            switch (event.type)
+            {
+                // TODO: manage this with callbacks/DriverContext listener?
+                case "postTurn":
+                    this.reward.apply("us", Reward.turn);
+                    break;
+                case "faint":
+                    this.reward.apply(event.monRef, Reward.faint);
+                    break;
+                case "gameOver":
+                    if (!event.winner) this.reward.apply("us", Reward.tie);
+                    else this.reward.apply(event.winner, Reward.win);
+                    break;
+            }
+        }
+        super.handle(...events);
+    }
+
     /** Gets and resets the current reward value. */
     public consumeReward(): number
     {
         const r = this.reward.value;
         this.reward.reset();
         return r;
-    }
-
-    /** @override */
-    public postTurn(event: PostTurn): void
-    {
-        this.reward.apply("us", Reward.turn);
-        super.postTurn(event);
-    }
-
-    /** @override */
-    public faint(event: Faint): void
-    {
-        this.reward.apply(event.monRef, Reward.faint);
-        super.faint(event);
-    }
-
-    /** @override */
-    public gameOver(event: GameOver): void
-    {
-        if (event.winner) this.reward.apply(event.winner, Reward.win);
-        else this.reward.apply("us", Reward.tie);
-        super.gameOver(event);
     }
 }

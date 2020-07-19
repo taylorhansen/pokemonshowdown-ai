@@ -2,7 +2,7 @@ import { Logger } from "../../Logger";
 import { BattleAgent } from "../agent/BattleAgent";
 import { Choice } from "../agent/Choice";
 import { ReadonlyBattleState } from "../state/BattleState";
-import { DriverEvent, DriverEventType } from "./DriverEvent";
+import { AnyDriverEvent } from "./DriverEvent";
 import { StateDriver } from "./StateDriver";
 
 /** Function type for sending a Choice to the game. */
@@ -15,7 +15,8 @@ export class BattleDriver
     public get state(): ReadonlyBattleState { return this.stateDriver.state; }
 
     /** Manages BattleState inferences. */
-    protected readonly stateDriver = new StateDriver();
+    protected readonly stateDriver =
+        new StateDriver(this.logger.addPrefix("StateDriver: "));
 
     /** Whether the BattleDriver is halted and can't accept DriverEvents. */
     private halted = false;
@@ -30,15 +31,15 @@ export class BattleDriver
      * @param logger Logger object.
      */
     constructor(private readonly agent: BattleAgent,
-        private readonly sender: ChoiceSender, private readonly logger: Logger)
+        private readonly sender: ChoiceSender,
+        protected readonly logger: Logger)
     {
     }
 
-    /** Handles a DriverEvent. */
-    public handleEvent<T extends DriverEventType>(event: DriverEvent<T>): void
+    /** Handles a batch of DriverEvents. */
+    public handle(...events: AnyDriverEvent[]): void
     {
-        if (this.halted) throw new Error("Can't handle events while halted");
-        this.stateDriver.handleEvent(event);
+        this.stateDriver.handle(...events);
     }
 
     /**
@@ -51,6 +52,7 @@ export class BattleDriver
     {
         this.logger.debug(`State:\n${this.stateDriver.getStateString()}`);
         this.halted = true;
+        this.stateDriver.halt();
 
         if (command === "wait") return;
 
@@ -101,7 +103,10 @@ export class BattleDriver
                     "as 'disabled'");
             }
 
-            // parse move slot that was invoked
+            // TODO: handle all other move restrictions before testing for
+            //  imprison
+
+            /*// parse move slot that was invoked
             // TODO: guarantee that this is the same move
             const i = parseInt(lastChoice.substr("move ".length), 10) - 1;
             const moveName =
@@ -116,7 +121,7 @@ export class BattleDriver
                 them.moveset.constraint.has(moveName))
             {
                 // must be disabled due to opponent's imprison effect
-                this.stateDriver.revealMove(
+                this.stateDriver.handle(
                     {type: "revealMove", monRef: "them", move: moveName});
                 newInfo = true;
             }
@@ -124,7 +129,7 @@ export class BattleDriver
             {
                 throw new Error(`Can't figure out why move ${i + 1} ` +
                     `(${moveName}) was disabled`);
-            }
+            }*/
         }
         else if (reason === "trapped")
         {
@@ -139,7 +144,7 @@ export class BattleDriver
             this._choices = this._choices.filter(c => !c.startsWith("switch"));
 
             // try to infer a trapping ability
-            this.stateDriver.rejectSwitchTrapped(
+            this.stateDriver.handle(
                 {type: "rejectSwitchTrapped", monRef: "us", by: "them"});
             newInfo = true;
         }
@@ -158,5 +163,13 @@ export class BattleDriver
         }
 
         this.sender(this._choices[0]);
+    }
+
+    // TODO: make this not the case
+    // istanbul ignore next: unstable, hard to verify
+    /** Stringifies the BattleState. */
+    public getStateString(): string
+    {
+        return this.stateDriver.getStateString();
     }
 }

@@ -1,9 +1,9 @@
 import * as dex from "../battle/dex/dex";
-import { itemRemovalMoves, itemTransferMoves, moveCallers, Type } from
+import { itemRemovalMoves, itemTransferMoves, Type } from
     "../battle/dex/dex-util";
-import { ActivateAbility, AnyDriverEvent, DriverInitPokemon, Inactive,
-    InitOtherTeamSize, SideConditionType, SingleMoveStatus, SingleTurnStatus,
-    StatusEffectType, TakeDamage } from "../battle/driver/DriverEvent";
+import { ActivateAbility, AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize,
+    SideConditionType, SingleMoveStatus, SingleTurnStatus, StatusEffectType,
+    TakeDamage, TransformPost } from "../battle/driver/DriverEvent";
 import { otherSide, Side } from "../battle/state/Side";
 import { Logger } from "../Logger";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
@@ -13,12 +13,12 @@ import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
     CopyBoostEvent, CritEvent, CureStatusEvent, CureTeamEvent, DamageEvent,
     DetailsChangeEvent, DragEvent, EndAbilityEvent, EndEvent, EndItemEvent,
     FailEvent, FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent,
-    HealEvent, HitCountEvent, ImmuneEvent, InvertBoostEvent,
-    isMinorBattleEventType, ItemEvent, MissEvent, MoveEvent, MustRechargeEvent,
-    PrepareEvent, ResistedEvent, SetBoostEvent, SetHPEvent, SideEndEvent,
-    SideStartEvent, SingleMoveEvent, SingleTurnEvent, StartEvent, StatusEvent,
-    SuperEffectiveEvent, SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent,
-    TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
+    HealEvent, HitCountEvent, ImmuneEvent, InvertBoostEvent, ItemEvent,
+    MissEvent, MoveEvent, MustRechargeEvent, PrepareEvent, ResistedEvent,
+    SetBoostEvent, SetHPEvent, SideEndEvent, SideStartEvent, SingleMoveEvent,
+    SingleTurnEvent, StartEvent, StatusEvent, SuperEffectiveEvent,
+    SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent, TurnEvent,
+    UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
     "./parser/BattleEvent";
 import { Iter, iter } from "./parser/Iter";
 import { BattleInitMessage, RequestMessage } from "./parser/Message";
@@ -163,6 +163,7 @@ export class PSEventHandler
         //  |turn| message
         this.newTurn = false;
 
+        // TODO: remove now-unneeded Iter logic
         let it = iter(events);
         while (!it.done)
         {
@@ -172,6 +173,68 @@ export class PSEventHandler
                 this.handleEvent(battleEvent, it);
             result.push(...driverEvents);
             it = remaining;
+        }
+
+        // TODO: factor out into a separate method to allow multiple
+        //  handleEvents() calls but only one Trace check
+        // if an activateAbility is found, but an activateAbility with Trace is
+        //  found after, move the Trace events so they happen before the ability
+        //  (of course, make sure the abilities/monRefs match)
+        // this is due to a weird behavior in PS with gen4 battles, not sure if
+        //  it's also the case on cartridge
+        const abilityEvents: {i: number, event: ActivateAbility}[] = [];
+        for (let i = 0; i < result.length; ++i)
+        {
+            const event = result[i];
+            if (event.type !== "activateAbility") continue;
+            if (event.ability !== "trace")
+            {
+                // track the ability events that happen before the next trace
+                abilityEvents.push({i, event});
+                continue;
+            }
+            // see if trace was activated and caused an ability event
+            //  that copies the opponent's ability (while also revealing it)
+            // trace handling should emit
+            const nextEvent = result[i + 1];
+            if (!nextEvent || nextEvent.type !== "activateAbility" ||
+                nextEvent.monRef !== event.monRef)
+            {
+                continue;
+            }
+            const nextEvent2 = result[i + 2];
+            if (!nextEvent2 || nextEvent2.type !== "activateAbility" ||
+                nextEvent2.monRef === event.monRef ||
+                nextEvent2.ability !== nextEvent.ability)
+            {
+                continue;
+            }
+
+            const tracedAbility = nextEvent.ability;
+            // search past ability events for a match for the traced
+            //  mon
+            for (let j = 0; j < abilityEvents.length; ++j)
+            {
+                const data = abilityEvents[j];
+                const abilityEvent = abilityEvents[j].event;
+                if (abilityEvent.monRef !== event.monRef ||
+                    abilityEvent.ability !== tracedAbility)
+                {
+                    continue;
+                }
+
+                // move the ability event + nextEvent/nextEvent2
+                result.splice(data.i, 0, ...result.splice(i, 3));
+                // move i to the end of this section of events
+                // the 2 here accounts for nextEvent/nextEvent2
+                i += 2;
+
+                // all the other ability events that happened
+                //  before are guaranteed to not be related to
+                //  Trace
+                abilityEvents.splice(0, j + 1);
+                break;
+            }
         }
 
         // ending the current turn
@@ -193,24 +256,7 @@ export class PSEventHandler
         const suffixEvents = this.handleSuffixes(event);
         const {result: driverEvents, remaining} = this.delegateEvent(event, it);
 
-        if (suffixEvents.length === 1)
-        {
-            // suffixes from events can reveal how they were caused
-            // e.g. life orb recoil would emit a RevealItem event with a
-            //  TakeDamage event in its consequences field
-            return {
-                result:
-                [{
-                    ...suffixEvents[0],
-                    consequences:
-                    [
-                        ...(suffixEvents[0].consequences ?? []), ...driverEvents
-                    ]
-                }],
-                remaining
-            };
-        }
-        return {result: driverEvents, remaining};
+        return {result: [...suffixEvents, ...driverEvents], remaining};
     }
 
     /** Translates a BattleEvent without parsing suffixes. */
@@ -279,8 +325,6 @@ export class PSEventHandler
     /** @virtual */
     protected handleCant(event: CantEvent, it: Iter<AnyBattleEvent>): PSResult
     {
-        const {result: consequences, remaining} = this.handleMinorEvents(it);
-
         const monRef = this.getSide(event.id.owner);
         let move: string | undefined;
 
@@ -291,152 +335,62 @@ export class PSEventHandler
             move = toIdName(event.moveName);
         }
 
-        const addons: {move?: string, consequences?: AnyDriverEvent[]} =
-        {
-            ...(move && {move}),
-            ...(consequences.length > 0 ? {consequences} : {})
-        } as const;
-
-        let inactive: Inactive;
+        let result: AnyDriverEvent[];
         if (event.reason === "imprison" || event.reason === "recharge" ||
             event.reason === "slp")
         {
-            inactive =
-                {type: "inactive", monRef, reason: event.reason, ...addons};
+            result =
+            [{
+                type: "inactive", monRef, reason: event.reason,
+                ...(move && {move})
+            }];
         }
         else if (event.reason.startsWith("ability: "))
         {
             // can't move due to an ability
             const ability = toIdName(
                 event.reason.substr("ability: ".length));
-            inactive =
-            {
-                type: "inactive", monRef,
-                // add in truant reason if applicable
-                ...(ability === "truant" && {reason: "truant"}),
-                ...addons,
-                consequences:
-                [
-                    {type: "activateAbility", monRef, ability},
-                    ...(addons.consequences ?? [])
-                ]
-            };
+            result =
+            [
+                {
+                    type: "inactive", monRef,
+                    // add in truant reason if applicable
+                    ...(ability === "truant" && {reason: "truant"}),
+                    ...(move && {move})
+                },
+                {type: "activateAbility", monRef, ability}
+            ];
         }
-        else inactive = {type: "inactive", monRef, ...addons};
+        else result = [{type: "inactive", monRef, ...(move && {move})}];
 
-        return {result: [inactive], remaining};
+        return {result, remaining: it};
     }
 
     /** @virtual */
     protected handleMove(event: MoveEvent, it: Iter<AnyBattleEvent>): PSResult
     {
-        const {result: consequences, remaining} = this.handleMinorEvents(it);
-
         const monRef = this.getSide(event.id.owner);
         const move = toIdName(event.moveName);
-        const targets = this.getTargets(move, monRef);
 
         // indicate that the pokemon has used this move
-        return {
-            result:
-            [{
-                type: "useMove", monRef, move, targets,
-                ...(consequences.length > 0 ? {consequences} : {})
-            }],
-            remaining
-        };
+        return {result: [{type: "useMove", monRef, move}], remaining: it};
     }
 
     /** @virtual */
     protected handleSwitch(event: DragEvent | SwitchEvent,
         it: Iter<AnyBattleEvent>): PSResult
     {
-        const {result: consequences, remaining} = this.handleMinorEvents(it);
-
-        // if an activateAbility is found, but an activateAbility with trace is
-        //  found after, reject the first event
-        // this is due to a weird behavior in PS with gen4 battles, not sure if
-        //  it's also the case on cartridge (if it is, file an issue on PS)
-        const abilityEvents: {i: number, event: ActivateAbility}[] = [];
-        for (let i = 0; i < consequences.length; ++i)
-        {
-            const consequence = consequences[i];
-            if (consequence.type !== "activateAbility") continue;
-
-            // trace ability being activated
-            if (consequence.ability === "trace")
-            {
-                // extract the traced ability from consequences
-                let tracedAbility: string | undefined;
-                if (consequence.consequences)
-                {
-                    const abilityEvent = consequence.consequences[0];
-                    if (abilityEvent.type === "activateAbility" &&
-                        abilityEvent.monRef === consequence.monRef)
-                    {
-                        tracedAbility = abilityEvent.ability;
-                    }
-                }
-
-                if (tracedAbility)
-                {
-                    // search past ability events for a match for the traced one
-                    for (let j = 0; j < abilityEvents.length; ++j)
-                    {
-                        const data = abilityEvents[j];
-                        const abilityEvent = abilityEvents[j].event;
-                        if (abilityEvent.monRef === consequence.monRef &&
-                            abilityEvent.ability === tracedAbility)
-                        {
-                            // reject the ability event
-                            abilityEvents.splice(j--, 1);
-                            consequences.splice(data.i, 1);
-                            // removing an element we already iterated over, so
-                            //  adjust i so we don't skip over the next element
-                            --i;
-                        }
-                    }
-                }
-            }
-            else abilityEvents.push({i, event: consequence});
-        }
-
         return {
             result:
             [
                 (({id, species, level, gender, hp, hpMax}) =>
                 ({
                     type: "switchIn", monRef: this.getSide(id.owner), species,
-                    level, gender, hp, hpMax,
-                    ...(consequences.length > 0 ? {consequences} : {})
+                    level, gender, hp, hpMax
                 } as const))(event)
             ],
-            remaining
+            remaining: it
         };
-    }
-
-    /** Collects minor BattleEvent translations to attach to a major one. */
-    private handleMinorEvents(it: Iter<AnyBattleEvent>): PSResult
-    {
-        const result: AnyDriverEvent[] = [];
-        while (!it.done)
-        {
-            const event = it.get();
-            if (isMinorBattleEventType(event.type) ||
-                // called moves are also technically minor events since they're
-                //  not caused by turn order but by other move events
-                (event.type === "move" && event.from &&
-                moveCallers.includes(toIdName(event.from))))
-            {
-                it = it.next();
-                const {result: driverEvents, remaining} =
-                    this.handleEvent(event, it);
-                result.push(...driverEvents);
-                it = remaining;
-            }
-            else break;
-        }
-        return {result, remaining: it};
     }
 
     /** @virtual */
@@ -451,20 +405,17 @@ export class PSEventHandler
 
         return {
             result: event.from === "ability: Trace" && event.of ?
-                [{
+                [
                     // trace ability: event.ability contains the Traced ability,
                     //  event.of contains pokemon that was traced, event.id
                     //  contains the pokemon that's Tracing the ability
-                    type: "activateAbility", monRef, ability: "trace",
-                    consequences:
-                    [
-                        abilityEvent,
-                        {
-                            type: "activateAbility",
-                            monRef: this.getSide(event.of.owner), ability
-                        }
-                    ]
-                }]
+                    {type: "activateAbility", monRef, ability: "trace"},
+                    abilityEvent,
+                    {
+                        type: "activateAbility",
+                        monRef: this.getSide(event.of.owner), ability
+                    }
+                ]
                 : [abilityEvent],
             remaining: it
         };
@@ -781,11 +732,13 @@ export class PSEventHandler
         {
             return {
                 result:
-                [{
-                    type: "activateSideCondition", teamRef: monRef,
-                    condition: "healingWish", start: false,
-                    consequences: [damageEvent]
-                }],
+                [
+                    {
+                        type: "activateSideCondition", teamRef: monRef,
+                        condition: "healingWish", start: false
+                    },
+                    damageEvent
+                ],
                 remaining: it
             };
         }
@@ -793,11 +746,13 @@ export class PSEventHandler
         {
             return {
                 result:
-                [{
-                    type: "activateSideCondition", teamRef: monRef,
-                    condition: "lunarDance", start: false,
-                    consequences: [damageEvent, {type: "restoreMoves", monRef}]
-                }],
+                [
+                    {
+                        type: "activateSideCondition", teamRef: monRef,
+                        condition: "lunarDance", start: false
+                    },
+                    damageEvent, {type: "restoreMoves", monRef}
+                ],
                 remaining: it
             };
         }
@@ -1177,7 +1132,7 @@ export class PSEventHandler
         const source = this.getSide(event.source.owner);
         const target = this.getSide(event.target.owner);
 
-        let consequences: AnyDriverEvent[] | undefined;
+        let transformPost: TransformPost | undefined;
 
         // use lastRequest to infer more details
         if (this.lastRequest && this.lastRequest.active &&
@@ -1185,24 +1140,24 @@ export class PSEventHandler
             //  choose a switch-in without fainting
             (!this.lastRequest.forceSwitch ||
                 this.lastRequest.side.pokemon[0].hp > 0) &&
-            // could've been dragged out (e.g. by roar)
-            // TODO: if duplicate nicknames are allowed, figure out a better way
-            //  to check for this
+            // could've been dragged out immediately after transforming
+            // TODO: let BattleDriver decide this by just supplying it the
+            //  request moves for each halt
             this.lastRequest.side.pokemon[0].nickname === event.source.nickname)
         {
-            consequences =
-            [{
+            transformPost =
+            {
                 type: "transformPost", monRef: source,
                 moves: this.lastRequest.active[0].moves
-            }];
+            };
         }
 
         return {
             result:
-            [{
-                type: "transform", source, target,
-                ...(consequences && {consequences})
-            }],
+            [
+                {type: "transform", source, target},
+                ...(transformPost ? [transformPost] : [])
+            ],
             remaining: it
         };
     }
@@ -1327,9 +1282,7 @@ export class PSEventHandler
                 } as const;
                 if (event.fatigue)
                 {
-                    driverEvents = [{
-                        type: "fatigue", monRef, consequences: [confEvent]
-                    }];
+                    driverEvents = [{type: "fatigue", monRef}, confEvent];
                 }
                 else driverEvents = [confEvent];
                 break;
@@ -1407,33 +1360,6 @@ export class PSEventHandler
             }
         }
         return {result: driverEvents, remaining: it};
-    }
-
-    // TODO: move this to BattleDriver (static?) or dex?
-    /**
-     * Gets the active Pokemon targets of a move.
-     * @param moveId Move that will be used.
-     * @param user Reference to the Pokemon that's using the move.
-     * @returns A list of Pokemon references indicating the move's targets.
-     */
-    protected getTargets(moveId: string, user: Side): Side[]
-    {
-        const targetType = dex.moves[moveId].target;
-        switch (targetType)
-        {
-            case "adjacentAlly":
-                // TODO: support doubles/triples
-                return [];
-            case "adjacentAllyOrSelf": case "allySide":
-            case "allyTeam": case "self":
-                return [user];
-            case "all":
-                return [user, otherSide(user)];
-            case "adjacentFoe": case "allAdjacent": case "allAdjacentFoes":
-            case "any": case "foeSide": case "normal": case "randomNormal":
-            case "scripted":
-                return [otherSide(user)];
-        }
     }
 
     // istanbul ignore next: trivial

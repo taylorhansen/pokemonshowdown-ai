@@ -4,6 +4,8 @@ import { BoostName, MajorStatus, StatExceptHP, Type, WeatherType } from
 import { MoveData } from "../state/Pokemon";
 import { Side } from "../state/Side";
 
+// TODO: alphabetize DriverEvents
+
 /**
  * Defines the type maps for each DriverEvent. Key must match the DriverEvent's
  * `#type` field.
@@ -91,8 +93,6 @@ interface DriverEventBase<T extends DriverEventType>
 {
     /** The type of DriverEvent this is. */
     readonly type: T;
-    /** DriverEvents that were caused by this one. */
-    readonly consequences?: readonly AnyDriverEvent[];
 }
 
 /** Initializes the client's team. */
@@ -502,16 +502,13 @@ export interface RemoveItem extends DriverEventBase<"removeItem">
     readonly consumed: string | boolean;
 }
 
-/** Indicates that the pokemon attempted to use a move. */
+/** Indicates that the pokemon is attempting to use a move. */
 export interface UseMove extends DriverEventBase<"useMove">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Name of the move. */
     readonly move: string;
-    // TODO: in doubles, target isn't always known
-    /** Targets of the move. */
-    readonly targets: readonly Side[];
 }
 
 /** Reveals that the pokemon knows a move. */

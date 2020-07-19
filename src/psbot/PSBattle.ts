@@ -53,10 +53,9 @@ export class PSBattle implements RoomHandler
     {
         this.logger.debug(`battleinit:\n${
             inspect(msg, {colors: false, depth: null})}`);
-        for (const event of this.eventHandler.initBattle(msg))
-        {
-            this.driver.handleEvent(event);
-        }
+
+        this.driver.handle(...this.eventHandler.initBattle(msg));
+        this.logger.debug(`State:\n${this.driver.getStateString()}`);
 
         // possibly send a response
         return this.haltDriver();
@@ -71,10 +70,8 @@ export class PSBattle implements RoomHandler
         this.logger.debug(`battleprogress:\n${
             inspect(msg, {colors: false, depth: null})}`);
 
-        for (const event of this.eventHandler.handleEvents(msg.events))
-        {
-            this.driver.handleEvent(event);
-        }
+        this.driver.handle(...this.eventHandler.handleEvents(msg.events));
+        this.logger.debug(`State:\n${this.driver.getStateString()}`);
 
         // possibly send a response
         return this.haltDriver();
@@ -106,10 +103,7 @@ export class PSBattle implements RoomHandler
             this.unavailableChoice = null;
         }
 
-        for (const event of this.eventHandler.handleRequest(msg))
-        {
-            this.driver.handleEvent(event);
-        }
+        this.driver.handle(...this.eventHandler.handleRequest(msg));
         this.lastRequest = msg;
     }
 

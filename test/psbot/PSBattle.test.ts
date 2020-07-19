@@ -132,7 +132,8 @@ describe("PSBattle", function()
         });
     });
 
-    describe("imprison disabling", function()
+    // TODO: handle all other move restrictions before testing imprison
+    describe.skip("imprison disabling", function()
     {
         it("Should handle unavailable choice", async function()
         {

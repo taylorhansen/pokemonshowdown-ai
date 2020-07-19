@@ -219,14 +219,31 @@ describe("PSEventHandler", function()
                 type: "-ability", id: us, ability: "Blaze",
                 from: "ability: Trace", of: them
             }],
-            [{
-                type: "activateAbility", monRef: "us", ability: "trace",
-                consequences:
-                [
-                    {type: "activateAbility", monRef: "us", ability: "blaze"},
-                    {type: "activateAbility", monRef: "them", ability: "blaze"}
-                ]
-            }]);
+            [
+                {type: "activateAbility", monRef: "us", ability: "trace"},
+                {type: "activateAbility", monRef: "us", ability: "blaze"},
+                {type: "activateAbility", monRef: "them", ability: "blaze"}
+            ]);
+
+            test("Should handle traced ability activating before Trace",
+            [
+                {type: "-ability", id: us, ability: "Intimidate"},
+                {type: "-unboost", id: them, stat: "atk", amount: 1},
+                {
+                    type: "-ability", id: us, ability: "Intimidate",
+                    from: "ability: Trace", of: them
+                }
+            ],
+            [
+                {type: "activateAbility", monRef: "us", ability: "trace"},
+                {type: "activateAbility", monRef: "us", ability: "intimidate"},
+                {
+                    type: "activateAbility", monRef: "them",
+                    ability: "intimidate"
+                },
+                {type: "activateAbility", monRef: "us", ability: "intimidate"},
+                {type: "unboost", monRef: "them", stat: "atk", amount: 1}
+            ]);
         });
 
         describe("-endability", function()
@@ -377,14 +394,13 @@ describe("PSEventHandler", function()
                     type: "-start", id: us, volatile: "confusion",
                     otherArgs: [], fatigue: true
                 }],
-                [{
-                    type: "fatigue", monRef: "us",
-                    consequences:
-                    [{
+                [
+                    {type: "fatigue", monRef: "us"},
+                    {
                         type: "activateStatusEffect", monRef: "us",
                         status: "confusion", start: true
-                    }]
-                    }]);
+                    }
+                ]);
             });
 
             describeTrivialStatus("Curse", "curse");
@@ -556,11 +572,10 @@ describe("PSEventHandler", function()
                             volatile: "move: Mimic", otherArgs: ["Splash"]
                         }
                     ],
-                    [{
-                        type: "useMove", monRef: "us", move: type,
-                        targets: ["them"],
-                        consequences: [{type, monRef: "us", move: "splash"}]
-                    }]);
+                    [
+                        {type: "useMove", monRef: "us", move: type},
+                        {type, monRef: "us", move: "splash"}
+                    ]);
                 }
 
                 it("Should throw if no previous MoveEvent", function()
@@ -654,21 +669,17 @@ describe("PSEventHandler", function()
 
             test("Should emit inactive and activateAbility from ability",
                 [{type: "cant", id: us, reason: "ability: Swift Swim"}],
-            [{
-                type: "inactive", monRef: "us",
-                consequences:
-                [{
-                    type: "activateAbility", monRef: "us", ability: "swiftswim"
-                }]
-            }]);
+            [
+                {type: "inactive", monRef: "us"},
+                {type: "activateAbility", monRef: "us", ability: "swiftswim"}
+            ]);
 
             test("Should emit inactive and activateAbility from truant ability",
                 [{type: "cant", id: us, reason: "ability: Truant"}],
-            [{
-                type: "inactive", monRef: "us", reason: "truant",
-                consequences:
-                    [{type: "activateAbility", monRef: "us", ability: "truant"}]
-            }]);
+            [
+                {type: "inactive", monRef: "us", reason: "truant"},
+                {type: "activateAbility", monRef: "us", ability: "truant"}
+            ]);
 
             test("Should emit inactive with move if provided",
                 [{type: "cant", id: us, moveName: "Splash", reason: "Taunt"}],
@@ -751,15 +762,16 @@ describe("PSEventHandler", function()
                     status: {hp: 100, hpMax: 100, condition: null},
                     from: "move: Healing Wish"
                 }],
-                [{
-                    type: "activateSideCondition", teamRef: "us",
-                    condition: "healingWish", start: false,
-                    consequences:
-                    [{
+                [
+                    {
+                        type: "activateSideCondition", teamRef: "us",
+                        condition: "healingWish", start: false
+                    },
+                    {
                         type: "takeDamage", monRef: "us", newHP: [100, 100],
                         tox: false
-                    }]
-                }]);
+                    }
+                ]);
 
                 test("Should emit takeDamage, restoreMoves and " +
                     "activateSideCondition from Lunar Dance",
@@ -768,18 +780,17 @@ describe("PSEventHandler", function()
                     status: {hp: 100, hpMax: 100, condition: null},
                     from: "move: Lunar Dance"
                 }],
-                [{
-                    type: "activateSideCondition", teamRef: "us",
-                    condition: "lunarDance", start: false,
-                    consequences:
-                    [
-                        {
-                            type: "takeDamage", monRef: "us", newHP: [100, 100],
-                            tox: false
-                        },
-                        {type: "restoreMoves", monRef: "us"}
-                    ]
-                }]);
+                [
+                    {
+                        type: "activateSideCondition", teamRef: "us",
+                        condition: "lunarDance", start: false
+                    },
+                    {
+                        type: "takeDamage", monRef: "us", newHP: [100, 100],
+                        tox: false
+                    },
+                    {type: "restoreMoves", monRef: "us"}
+                ]);
             });
         }
 
@@ -809,49 +820,16 @@ describe("PSEventHandler", function()
                     },
                     {type: "-ability", id: us, ability: "Pressure"}
                 ],
-                [{
-                    type: "switchIn", monRef: "us", species: "Magikarp",
-                    level: 100, gender: "F", hp: 100, hpMax: 100,
-                    consequences:
-                    [{
-                        type: "activateAbility", monRef: "us",
-                        ability: "pressure"
-                    }]
-                }]);
-
-                test("Should reject ability if traced after",
                 [
                     {
-                        type, id: us, species: "Magikarp", level: 100,
-                        gender: "F", hp: 100, hpMax: 100, condition: "brn",
-                        shiny: true
+                        type: "switchIn", monRef: "us", species: "Magikarp",
+                        level: 100, gender: "F", hp: 100, hpMax: 100
                     },
-                    {type: "-ability", id: us, ability: "Pressure"},
                     {
-                        type: "-ability", id: us, ability: "Pressure",
-                        from: "ability: Trace", of: them
-                    }
-                ],
-                [{
-                    type: "switchIn", monRef: "us", species: "Magikarp",
-                    level: 100, gender: "F", hp: 100, hpMax: 100,
-                    consequences:
-                    [{
                         type: "activateAbility", monRef: "us",
-                        ability: "trace",
-                        consequences:
-                        [
-                            {
-                                type: "activateAbility", monRef: "us",
-                                ability: "pressure"
-                            },
-                            {
-                                type: "activateAbility", monRef: "them",
-                                ability: "pressure"
-                            }
-                        ]
-                    }]
-                }]);
+                        ability: "pressure"
+                    }
+                ]);
             });
         }
 
@@ -964,9 +942,7 @@ describe("PSEventHandler", function()
         {
             test("Should emit useMove",
                 [{type: "move", id: us, moveName: "Splash"}],
-            [{
-                type: "useMove", monRef: "us", move: "splash", targets: ["us"]
-            }]);
+                [{type: "useMove", monRef: "us", move: "splash"}]);
         });
 
         describe("-mustrecharge", function()
@@ -1135,14 +1111,13 @@ describe("PSEventHandler", function()
         {
             test("Should emit transform and transformPost",
                 [{type: "-transform", source: us, target: them}],
-            [{
-                type: "transform", source: "us", target: "them",
-                consequences:
-                [{
+            [
+                {type: "transform", source: "us", target: "them"},
+                {
                     type: "transformPost", monRef: "us",
                     moves: request.active![0].moves
-                }]
-            }]);
+                }
+            ]);
 
             it("Should emit transform and transformPost even if last request " +
                 "message indicates forceSwitch", function()
@@ -1152,14 +1127,13 @@ describe("PSEventHandler", function()
                 expect(handler.handleEvents(
                         [{type: "-transform", source: us, target: them}]))
                     .to.deep.equal(
-                    [{
-                        type: "transform", source: "us", target: "them",
-                        consequences:
-                        [{
+                    [
+                        {type: "transform", source: "us", target: "them"},
+                        {
                             type: "transformPost", monRef: "us",
                             moves: request.active![0].moves
-                        }]
-                    }]);
+                        }
+                    ]);
             });
 
             it("Should emit transform but not transformPost if last request " +
@@ -1220,10 +1194,10 @@ describe("PSEventHandler", function()
                 type: "-weather", weatherType: "Hail", upkeep: false,
                 from: "ability: Snow Warning", of: us
             }],
-            [{
-                type: "activateAbility", monRef: "us", ability: "snowwarning",
-                consequences: [{type: "setWeather", weatherType: "Hail"}]
-            }]);
+            [
+                {type: "activateAbility", monRef: "us", ability: "snowwarning"},
+                {type: "setWeather", weatherType: "Hail"}
+            ]);
         });
 
         describe("win", function()
@@ -1259,11 +1233,13 @@ describe("PSEventHandler", function()
                     type: "-immune", id: us, from: "ability: Wonder Guard",
                     of: them
                 }],
-                [{
-                    type: "activateAbility", monRef: "them",
-                    ability: "wonderguard",
-                    consequences: [{type: "immune", monRef: "us"}]
-                }]);
+                [
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "wonderguard"
+                    },
+                    {type: "immune", monRef: "us"}
+                ]);
             });
 
             describe("item", function()
@@ -1272,11 +1248,13 @@ describe("PSEventHandler", function()
                 [{
                     type: "-immune", id: us, from: "item: Leftovers", of: them
                 }],
-                [{
-                    type: "revealItem", monRef: "them", item: "leftovers",
-                    gained: false,
-                    consequences: [{type: "immune", monRef: "us"}]
-                }]);
+                [
+                    {
+                        type: "revealItem", monRef: "them", item: "leftovers",
+                        gained: false
+                    },
+                    {type: "immune", monRef: "us"}
+                ]);
 
                 test("Should not emit revealItem if berry",
                 [{
