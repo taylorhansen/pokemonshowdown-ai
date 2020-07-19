@@ -57,7 +57,7 @@ function quote(str: string): string
  */
 function maybeQuote(str: string): string
 {
-    return /[- '?]/.test(str) ? quote(str) : str;
+    return /[^a-zA-Z0-9]/.test(str) ? quote(str) : str;
 }
 
 /** Checks if a Movedex value is valid for gen4. */
