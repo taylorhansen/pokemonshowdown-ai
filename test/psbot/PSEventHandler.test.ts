@@ -616,19 +616,20 @@ describe("PSEventHandler", function()
 
             describe("stall", function()
             {
-                test("Should emit stall",
-                [{
-                    type: "-activate", id: us, volatile: "move: Protect",
-                    otherArgs: []
-                }],
-                    [{type: "stall", monRef: "us"}]);
+                function testStall(volatile: string, endure = false): void
+                {
+                    test(`Should emit stall ${endure ? "with endure " : ""}` +
+                            `from '${volatile}'`,
+                        [{type: "-activate", id: us, volatile, otherArgs: []}],
+                    [{
+                        type: "stall", monRef: "us", ...(endure && {endure})
+                    }]);
+                }
 
-                test("Should emit stall with endure",
-                [{
-                    type: "-activate", id: us, volatile: "move: Endure",
-                    otherArgs: []
-                }],
-                    [{type: "stall", monRef: "us", endure: true}]);
+                testStall("Protect");
+                testStall("move: Protect");
+                testStall("Endure", /*endure*/true);
+                testStall("move: Endure", /*endure*/true);
             });
 
             describe("trapped", function()

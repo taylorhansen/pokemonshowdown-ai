@@ -538,12 +538,13 @@ export class PSEventHandler
                     }],
                     remaining: it
                 };
+            case "Endure": case "Protect":
             case "move: Endure": case "move: Protect":
                 return {
                     result:
                     [{
                         type: "stall", monRef,
-                        ...(event.volatile === "move: Endure" && {endure: true})
+                        ...(event.volatile.endsWith("Endure") && {endure: true})
                     }],
                     remaining: it
                 };
