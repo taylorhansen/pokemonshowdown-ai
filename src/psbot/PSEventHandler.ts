@@ -1058,9 +1058,16 @@ export class PSEventHandler
         it: Iter<AnyBattleEvent>): PSResult
     {
         let status: SingleTurnStatus | undefined;
-        if (event.status === "move: Roost") status = "roost";
-        else if (event.status === "move: Magic Coat") status = "magicCoat";
-        else if (event.status === "Snatch") status = "snatch";
+
+        const eventStatus = event.status.startsWith("move: ") ?
+            event.status.substr("move: ".length) : event.status;
+        switch (eventStatus)
+        {
+            case "Magic Coat": status = "magicCoat"; break;
+            case "Roost": status = "roost"; break;
+            case "Snatch": status = "snatch"; break;
+            case "Endure": case "Protect": status = "stalling"; break;
+        }
 
         if (!status) return {result: [], remaining: it};
 

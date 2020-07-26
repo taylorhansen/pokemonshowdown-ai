@@ -1058,14 +1058,22 @@ describe("PSEventHandler", function()
 
             const testCases =
             [
+                {name: "Roost", status: "roost"},
                 {name: "move: Roost", status: "roost"},
+                {name: "Magic Coat", status: "magicCoat"},
                 {name: "move: Magic Coat", status: "magicCoat"},
-                {name: "Snatch", status: "snatch"}
+                {name: "Snatch", status: "snatch"},
+                {name: "move: Snatch", status: "snatch"},
+                {name: "Endure", status: "stalling"},
+                {name: "move: Endure", status: "stalling"},
+                {name: "Protect", status: "stalling"},
+                {name: "move: Protect", status: "stalling"}
             ] as const;
 
             for (const {name, status} of testCases)
             {
-                test(`Should emit setSingleTurnStatus for ${name}`,
+                test(`Should emit setSingleTurnStatus '${status}' for ` +
+                        `'${name}'`,
                     [{type: "-singleturn", id: us, status: name}],
                     [{type: "setSingleTurnStatus", monRef: "us", status}]);
             }
