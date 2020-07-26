@@ -255,17 +255,11 @@ export class MoveContext extends DriverContext
                 if (this.userRef !== event.monRef) return "expire";
                 this.handleImplicitEffects(/*failed*/true);
                 return "base";
-            case "miss":
-                if (this.userRef !== event.monRef) return "expire";
-                // generally a complete miss fails the move
-                // TODO: partial misses (requires doubles support)
-                this.handleImplicitEffects(/*failed*/true);
-                return this.addTarget(event.target);
             case "stall":
                 if (event.endure) return "base";
                 // fallthrough
             case "immune":
-                // very similar to miss
+            case "miss":
                 // generally a complete miss fails the move
                 // TODO: partial misses (requires doubles support)
                 this.handleImplicitEffects(/*failed*/true);

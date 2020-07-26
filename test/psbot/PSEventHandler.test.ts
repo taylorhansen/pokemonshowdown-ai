@@ -946,6 +946,12 @@ describe("PSEventHandler", function()
                 [{type: "useMove", monRef: "us", move: "splash"}]);
         });
 
+        describe("-miss", function()
+        {
+            test("Should emit miss", [{type: "-miss", id: us, targetId: them}],
+                [{type: "miss", monRef: "them"}]);
+        });
+
         describe("-mustrecharge", function()
         {
             test("Should emit mustRecharge", [{type: "-mustrecharge", id: us}],

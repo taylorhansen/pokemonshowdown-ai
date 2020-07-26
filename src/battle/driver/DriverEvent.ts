@@ -566,13 +566,11 @@ export interface Fail extends DriverEventBase<"fail">
     readonly monRef: Side;
 }
 
-/** Indicates that the pokemon missed its target. */
+/** Indicates that the pokemon avoided a move. */
 export interface Miss extends DriverEventBase<"miss">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
-    /** Target that was missed. */
-    readonly target: Side;
 }
 
 /** Indicates that the pokemon was immune to an effect. */

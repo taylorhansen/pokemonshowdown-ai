@@ -387,7 +387,7 @@ export class BaseContext extends DriverContext implements DriverEventHandler
         this.state.teams[event.monRef].active.mimic(event.move);
     }
 
-    /** Indicates that the pokemon missed its target. */
+    /** Indicates that the pokemon avoided a move. */
     public miss(event: Miss): void {}
 
     /** Reveals a move and modifies its PP value. */

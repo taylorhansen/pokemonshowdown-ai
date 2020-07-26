@@ -1357,8 +1357,7 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "them", move});
                     expect(vts.isActive).to.be.true;
 
-                    expect(ctx.handle(
-                            {type: "miss", monRef: "them", target: "us"}))
+                    expect(ctx.handle({type: "miss", monRef: "us"}))
                         .to.equal("base");
                     expect(vts.isActive).to.be.false;
                 });

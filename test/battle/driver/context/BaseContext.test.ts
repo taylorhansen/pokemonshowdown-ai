@@ -864,7 +864,7 @@ describe("BaseContext", function()
         {
             it("Should do nothing", function()
             {
-                handle({type: "miss", monRef: "them", target: "us"});
+                handle({type: "miss", monRef: "them"});
             });
         });
 

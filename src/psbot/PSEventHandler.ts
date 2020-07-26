@@ -928,10 +928,7 @@ export class PSEventHandler
     {
         return {
             result:
-            [{
-                type: "miss", monRef: this.getSide(event.id.owner),
-                target: this.getSide(event.targetId.owner)
-            }],
+                [{type: "miss", monRef: this.getSide(event.targetId.owner)}],
             remaining: it
         };
     }
