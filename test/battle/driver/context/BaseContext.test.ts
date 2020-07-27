@@ -1108,26 +1108,29 @@ describe("BaseContext", function()
                 it(`Should set ${name}`, function()
                 {
                     const v = initActive("us").volatile;
-                    if (status === "stalling")
+                    if (status === "endure" || status === "protect")
                     {
                         expect(v.stallTurns).to.equal(0);
+                        expect(v.stalling).to.be.false;
                     }
-                    expect(v[status]).to.be.false;
+                    else expect(v[status]).to.be.false;
 
                     handle({type: "setSingleTurnStatus", monRef: "us", status});
 
-                    if (status === "stalling")
+                    if (status === "endure" || status === "protect")
                     {
                         expect(v.stallTurns).to.equal(1);
+                        expect(v.stalling).to.be.true;
                     }
-                    expect(v[status]).to.be.true;
+                    else expect(v[status]).to.be.true;
                 });
             }
 
+            test("Endure", "endure");
             test("Magic Coat", "magicCoat");
+            test("Protect", "protect");
             test("Roost", "roost");
             test("Snatch", "snatch");
-            test("Stall", "stalling");
         });
 
         describe("setThirdType", function()

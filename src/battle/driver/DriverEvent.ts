@@ -641,7 +641,8 @@ export interface SetSingleTurnStatus extends
 }
 
 /** Typing for `SetSingleTurnStatus#status`. */
-export type SingleTurnStatus = "magicCoat" | "roost" | "snatch" | "stalling";
+export type SingleTurnStatus = "endure" | "magicCoat" | "protect" | "roost" |
+    "snatch";
 
 /** Indicates that a pokemon took damage (or was healed) and its HP changed. */
 export interface TakeDamage extends DriverEventBase<"takeDamage">

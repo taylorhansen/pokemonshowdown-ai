@@ -1085,12 +1085,12 @@ describe("MoveContext", function()
             });
         }
 
+        test("Endure", "endure", "endure", "VolatileEffect 'endure'");
         test("Magic Coat", "magiccoat", "magicCoat",
             "VolatileEffect 'magiccoat'");
+        test("Protect", "protect", "protect", "VolatileEffect 'protect'");
         test("Roost", "roost", "roost", "SelfVolatileEffect 'roost'");
         test("Snatch", "snatch", "snatch", "VolatileEffect 'snatch'");
-        test("Protect", "protect", "stalling", "VolatileEffect 'protect'");
-        test("Endure", "endure", "stalling", "VolatileEffect 'endure'");
     });
 
     describe("Ally moves", function()
@@ -1121,7 +1121,7 @@ describe("MoveContext", function()
                 expect(innerCtx.handle(
                     {
                         type: "setSingleTurnStatus", monRef: "them",
-                        status: "stalling"
+                        status: "protect"
                     }))
                     .to.equal("base");
                 v.stall(true); // mock BaseContext behavior
@@ -1152,7 +1152,7 @@ describe("MoveContext", function()
             expect(ctx.handle(
                 {
                     type: "setSingleTurnStatus", monRef: "them",
-                    status: "stalling"
+                    status: "protect"
                 }))
                 .to.equal("base");
             mon.volatile.stall(true); // mock BaseContext behavior
@@ -1172,7 +1172,7 @@ describe("MoveContext", function()
             expect(mon.volatile.stallTurns).to.equal(0);
         });
 
-        it("Should not reset if called", function()
+        it("Should not reset counter if called", function()
         {
             const mon = initActive("them");
             let ctx = initCtx(
@@ -1182,7 +1182,7 @@ describe("MoveContext", function()
             expect(ctx.handle(
                 {
                     type: "setSingleTurnStatus", monRef: "them",
-                    status: "stalling"
+                    status: "endure"
                 }))
                 .to.equal("base");
             mon.volatile.stall(true); // mock BaseContext behavior

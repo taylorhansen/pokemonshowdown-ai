@@ -1064,16 +1064,16 @@ describe("PSEventHandler", function()
 
             const testCases =
             [
-                {name: "Roost", status: "roost"},
-                {name: "move: Roost", status: "roost"},
+                {name: "Endure", status: "endure"},
+                {name: "move: Endure", status: "endure"},
                 {name: "Magic Coat", status: "magicCoat"},
                 {name: "move: Magic Coat", status: "magicCoat"},
+                {name: "Protect", status: "protect"},
+                {name: "move: Protect", status: "protect"},
+                {name: "Roost", status: "roost"},
+                {name: "move: Roost", status: "roost"},
                 {name: "Snatch", status: "snatch"},
-                {name: "move: Snatch", status: "snatch"},
-                {name: "Endure", status: "stalling"},
-                {name: "move: Endure", status: "stalling"},
-                {name: "Protect", status: "stalling"},
-                {name: "move: Protect", status: "stalling"}
+                {name: "move: Snatch", status: "snatch"}
             ] as const;
 
             for (const {name, status} of testCases)

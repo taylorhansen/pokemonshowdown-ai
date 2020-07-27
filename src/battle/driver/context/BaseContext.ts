@@ -493,7 +493,10 @@ export class BaseContext extends DriverContext implements DriverEventHandler
     public setSingleTurnStatus(event: SetSingleTurnStatus): void
     {
         const mon = this.state.teams[event.monRef].active;
-        if (event.status === "stalling") mon.volatile.stall(true);
+        if (event.status === "endure" || event.status === "protect")
+        {
+            mon.volatile.stall(true);
+        }
         else mon.volatile[event.status] = true;
     }
 

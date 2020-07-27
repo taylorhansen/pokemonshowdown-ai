@@ -1054,19 +1054,17 @@ export class PSEventHandler
     protected handleSingleTurn(event: SingleTurnEvent,
         it: Iter<AnyBattleEvent>): PSResult
     {
-        let status: SingleTurnStatus | undefined;
-
-        const eventStatus = event.status.startsWith("move: ") ?
-            event.status.substr("move: ".length) : event.status;
-        switch (eventStatus)
+        let status: SingleTurnStatus;
+        switch (event.status.startsWith("move: ") ?
+            event.status.substr("move: ".length) : event.status)
         {
+            case "Endure": status = "endure"; break;
             case "Magic Coat": status = "magicCoat"; break;
+            case "Protect": status = "protect"; break;
             case "Roost": status = "roost"; break;
             case "Snatch": status = "snatch"; break;
-            case "Endure": case "Protect": status = "stalling"; break;
+            default: return {result: [], remaining: it};
         }
-
-        if (!status) return {result: [], remaining: it};
 
         const monRef = this.getSide(event.id.owner);
         return {

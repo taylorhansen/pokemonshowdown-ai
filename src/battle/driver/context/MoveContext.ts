@@ -802,6 +802,10 @@ export class MoveContext extends DriverContext
     {
         switch (event.status)
         {
+            case "endure":
+                if (this.volatileEffect !== "endure") return "expire";
+                this.volatileEffect = null;
+                break;
             case "magicCoat":
                 if (this.volatileEffect !== "magiccoat") return "expire";
                 this.volatileEffect = null;
@@ -814,13 +818,8 @@ export class MoveContext extends DriverContext
                 if (this.volatileEffect !== "snatch") return "expire";
                 this.volatileEffect = null;
                 break;
-            // TODO: distinguish between endure/protect/etc
-            case "stalling":
-                if (this.volatileEffect !== "endure" &&
-                    this.volatileEffect !== "protect")
-                {
-                    return "expire";
-                }
+            case "protect":
+                if (this.volatileEffect !== "protect") return "expire";
                 this.volatileEffect = null;
                 break;
         }
