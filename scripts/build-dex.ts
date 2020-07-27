@@ -14,18 +14,21 @@ import { toIdName } from "../src/psbot/helpers";
 const dex = new ModdedDex("gen4").includeData();
 
 /**
+ * Pre-compiled regex for checking whether a pokemon id name is not supported by
+ * gen4 (e.g. megas, regional variants, etc). Actual pokedex differences,
+ * however, must be handled separately.
+ */
+const nonGen4Regex =
+    /(^(arceusfairy|((pikachu|eevee).+))$)|(((?<!yan)mega[xy]?)|primal|alola|totem|galar|gmax)$/;
+
+/**
  * Checks whether a pokemon id name is not from gen4.
  * @param name Pokemon name.
  * @returns True if the id is not from gen4 or below.
  */
 function isNonGen4(name: string): boolean
 {
-    // banlist: megas, primal, alola/totem, arceus fairy, galar, LGPE starters
-    // except yanmega, which isn't actually a mega evolution
-    return name !== "yanmega" &&
-        (name === "arceusfairy" ||
-            /(mega[xy]?|primal|alola|totem|galar|gmax|^(pikachu|eevee).+)$/
-                .test(name));
+    return nonGen4Regex.test(name);
 }
 
 /**
@@ -262,7 +265,7 @@ for (const name of Object.keys(dex.data.Pokedex).sort())
 
     const movepool = [...composeMovepool(mon)].sort();
 
-    pokemon[uid] =
+    const entry: [string, PokemonData] =
     [
         mon.name,
         {
@@ -274,7 +277,54 @@ for (const name of Object.keys(dex.data.Pokedex).sort())
             ...(otherForms && {otherForms})
         }
     ];
-    ++uid;
+    pokemon.push(entry);
+
+    if (mon.name === "Gastrodon")
+    {
+        // add missing gastrodon-east form
+        const {baseForm: _, ...data2} = entry[1]; // omit baseForm from data2
+        pokemon.push(
+        [
+            "Gastrodon-East",
+            {
+                ...data2, name: "Gastrodon-East", baseSpecies: "Gastrodon",
+                form: "East"
+            }
+        ]);
+
+        // add alt form to list
+        entry[1] = {...entry[1], otherForms: ["Gastrodon-East"]};
+    }
+    else if (mon.name === "Unown")
+    {
+        // add forms for all the other letters
+        const letters =
+        [
+            "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
+            "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?"
+        ];
+        const {baseForm: _, ...data2} = entry[1]; // omit baseForm from data2
+
+        for (const letter of letters)
+        {
+            pokemon.push(
+            [
+                `Unown-${letter}`,
+                {
+                    ...data2, name: `Unown-${letter}`, baseSpecies: "Unown",
+                    form: letter
+                }
+            ]);
+        }
+
+        // add alt forms to list
+        entry[1] =
+            {...entry[1], otherForms: letters.map(letter => `Unown-${letter}`)};
+    }
+
+    // make sure the next entry, cherrim-sunshine, receives the same uid since
+    //  the two forms are functionally identical
+    if (mon.name !== "Cherrim") ++uid;
 }
 
 // items and berries
@@ -433,7 +483,9 @@ console.log(`\
  */
 import { MoveData, NaturalGiftData, PokemonData, Type } from "./dex-util";
 
-/** Contains info about each pokemon. */
+/**
+ * Contains info about each pokemon, with alternate forms as separate entries.
+ */
 ${exportEntriesToDict(pokemon, "pokemon", "PokemonData",
     p => stringifyDict(p,
         v =>
