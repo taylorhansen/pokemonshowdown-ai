@@ -66,13 +66,9 @@ function maybeQuote(str: string): string
 /** Checks if a Movedex value is valid for gen4. */
 function isGen4Move(move: Move): boolean
 {
-    // only gen4 and under moves allowed
-    if (move.gen > 4 || move.isNonstandard) return false;
-
-    // hidden power moves can have any type, but only one move really exists
-    if (move.id === "hiddenpower" && move.type !== "Normal") return false;
-
-    return true;
+    return move.gen > 0 && move.gen <= 4 && !move.isNonstandard &&
+        // hidden power moves can have any type, but only one move really exists
+        (move.id !== "hiddenpower" || move.type === "Normal");
 }
 
 // counter for the unique identifier of a pokemon, move, etc.
@@ -96,13 +92,12 @@ const typeToMoves: {[T in Type]: string[]} =
 };
 
 uid = 0;
-for (const moveName of Object.keys(dex.data.Movedex).sort())
+for (const move of
+    Object.keys(dex.data.Movedex)
+        .map(n => dex.getMove(n))
+        .filter(isGen4Move)
+        .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
-    const move = dex.getMove(moveName);
-
-    // only gen4 and under moves allowed
-    if (!isGen4Move(move)) continue;
-
     const target = move.target as MoveTarget;
 
     // factor pp boosts if the move supports it in game
@@ -224,18 +219,14 @@ const pokemon: (readonly [string, PokemonData])[] = []
 const abilities = new Set<string>();
 
 uid = 0;
-for (const name of Object.keys(dex.data.Pokedex).sort())
+for (const mon of
+    Object.keys(dex.data.Pokedex)
+        .map(n => dex.getSpecies(n))
+        .filter(m => m.num >= 1 && m.num <= 493 && isGen4(m.id) &&
+            !m.isNonstandard)
+        .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
-    const mon = dex.getSpecies(name);
-    // only gen4 and under pokemon allowed
-    if (mon.num < 1 || mon.num > 493 || isNonGen4(name) || mon.isNonstandard)
-    {
-        continue;
-    }
-
-    const stats = mon.baseStats;
-
-    // get quoted base abilities
+    // don't sort base abilities, since the 3rd one is a hidden ability (gen5)
     const baseAbilities: string[] = [];
     for (const index of Object.keys(mon.abilities) as (keyof SpeciesAbility)[])
     {
@@ -246,6 +237,7 @@ for (const name of Object.keys(dex.data.Pokedex).sort())
         if (!abilities.has(abilityId)) abilities.add(abilityId);
     }
 
+    // don't sort types to keep primary/secondary type distinction
     let types: [Type, Type];
     const typeArr = mon.types.map(s => s.toLowerCase()) as Type[];
     if (typeArr.length > 2)
@@ -255,7 +247,9 @@ for (const name of Object.keys(dex.data.Pokedex).sort())
     else if (typeArr.length === 1) typeArr.push("???");
     types = typeArr as [Type, Type];
 
-    // optionally fill in other forms if there are any from gen4
+    const stats = mon.baseStats;
+
+    // include refs to other forms if there are any
     let otherForms: string[] | undefined;
     if (mon.otherFormes)
     {
