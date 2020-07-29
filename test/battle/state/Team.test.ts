@@ -4,9 +4,9 @@ import { DriverSwitchOptions } from "../../../src/battle/driver/DriverEvent";
 import { Team } from "../../../src/battle/state/Team";
 
 const options1: DriverSwitchOptions =
-    {species: "Magikarp", level: 100, gender: "M", hp: 200, hpMax: 200};
+    {species: "magikarp", level: 100, gender: "M", hp: 200, hpMax: 200};
 const options2: DriverSwitchOptions =
-    {species: "Porygon", level: 100, gender: null, hp: 300, hpMax: 300};
+    {species: "porygon", level: 100, gender: null, hp: 300, hpMax: 300};
 
 describe("Team", function()
 {

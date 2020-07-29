@@ -77,7 +77,7 @@ export class PSEventHandler
         for (let i = 0; i < team.length; ++i)
         {
             // copy pokemon obj and moves so we can modify them
-            const mon = {...team[i]};
+            const mon = {...team[i], species: toIdName(team[i].species)};
             team[i] = mon;
 
             const moves = [...team[i].moves];
@@ -385,8 +385,8 @@ export class PSEventHandler
             [
                 (({id, species, level, gender, hp, hpMax}) =>
                 ({
-                    type: "switchIn", monRef: this.getSide(id.owner), species,
-                    level, gender, hp, hpMax
+                    type: "switchIn", monRef: this.getSide(id.owner),
+                    species: toIdName(species), level, gender, hp, hpMax
                 } as const))(event)
             ],
             remaining: it

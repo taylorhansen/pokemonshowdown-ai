@@ -554,16 +554,16 @@ describe("BaseContext", function()
             it("Should change form", function()
             {
                 const mon = initActive("us", smeargle);
-                expect(mon.species).to.equal("Smeargle");
+                expect(mon.species).to.equal("smeargle");
 
                 handle(
                 {
-                    type: "formChange", monRef: "us", species: "Gyarados",
+                    type: "formChange", monRef: "us", species: "gyarados",
                     // TODO: (how) would hp/level change?
                     gender: "M", level: 100, hp: 300, hpMax: 300, perm: false
                 });
 
-                expect(mon.species).to.equal("Gyarados");
+                expect(mon.species).to.equal("gyarados");
             });
         });
 
@@ -710,7 +710,7 @@ describe("BaseContext", function()
                     team:
                     [
                         {
-                            species: "Smeargle", level: 50, gender: "F",
+                            species: "smeargle", level: 50, gender: "F",
                             hp: 115, hpMax: 115,
                             stats:
                             {
@@ -970,7 +970,7 @@ describe("BaseContext", function()
                 // bring in a pokemon that can have a trapping ability
                 const mon = initActive("them",
                 {
-                    species: "Dugtrio", level: 100, gender: "M", hp: 100,
+                    species: "dugtrio", level: 100, gender: "M", hp: 100,
                     hpMax: 100
                 });
                 expect(mon.ability).to.be.empty;

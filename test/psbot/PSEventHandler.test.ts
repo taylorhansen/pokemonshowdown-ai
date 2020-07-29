@@ -5,7 +5,7 @@ import { AnyDriverEvent, CountableStatusType, DriverInitPokemon,
     SideConditionType, StatusEffectType} from
     "../../src/battle/driver/DriverEvent";
 import { Logger } from "../../src/Logger";
-import { PokemonID } from "../../src/psbot/helpers";
+import { PokemonID, toIdName } from "../../src/psbot/helpers";
 import { AnyBattleEvent, BattleEventType } from
     "../../src/psbot/parser/BattleEvent";
 import { BattleInitMessage, RequestMessage } from
@@ -85,7 +85,11 @@ describe("PSEventHandler", function()
         it("Should emit initTeam", function()
         {
             expect(handler.handleRequest(request)).to.have.deep.members(
-                [{type: "initTeam", team: request.side.pokemon}]);
+            [{
+                type: "initTeam",
+                team: request.side.pokemon.map(
+                    m => ({...m, species: toIdName(m.species)}))
+            }]);
         });
 
         /**
@@ -126,6 +130,8 @@ describe("PSEventHandler", function()
                         [
                             {
                                 ...request.side.pokemon[0],
+                                species:
+                                    toIdName(request.side.pokemon[0].species),
                                 moves: [newMove], ...features
                             }
                         ]
@@ -823,7 +829,7 @@ describe("PSEventHandler", function()
                 ],
                 [
                     {
-                        type: "switchIn", monRef: "us", species: "Magikarp",
+                        type: "switchIn", monRef: "us", species: "magikarp",
                         level: 100, gender: "F", hp: 100, hpMax: 100
                     },
                     {

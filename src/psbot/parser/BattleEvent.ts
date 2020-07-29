@@ -148,11 +148,23 @@ interface BattleEventBase<T extends BattleEventType>
     readonly miss?: boolean;
 }
 
-/** Event data that contains  id, details, and status of a pokemon. */
+/**
+ * Event data that contains the id, details, and status of a pokemon.
+ *
+ * Note that when casting to DriverSwitchOptions, be sure to replace the
+ * `species` field with an id name (e.g. via `toIdName()`).
+ * @see DriverSwitchOptions
+ * @see toIdName
+ */
 interface AllDetails extends DriverSwitchOptions, PokemonDetails, PokemonStatus
 {
     /** ID of the pokemon being revealed or changed. */
     readonly id: PokemonID;
+    /**
+     * Species display name.
+     * @override
+     */
+    readonly species: string;
 }
 
 // MajorBattleEvent interfaces

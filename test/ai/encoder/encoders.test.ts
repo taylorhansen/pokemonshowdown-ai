@@ -7,7 +7,6 @@ import { limitedStatusTurns, oneHotEncoder, OneHotEncoderArgs } from
 import * as dex from "../../../src/battle/dex/dex";
 import { DriverSwitchOptions } from "../../../src/battle/driver/DriverEvent";
 import { BattleState } from "../../../src/battle/state/BattleState";
-import { setAllVolatiles } from "../../battle/state/helpers";
 import { HP } from "../../../src/battle/state/HP";
 import { ItemTempStatus } from "../../../src/battle/state/ItemTempStatus";
 import { MajorStatusCounter } from
@@ -26,9 +25,10 @@ import { TempStatus } from "../../../src/battle/state/TempStatus";
 import { VariableTempStatus } from
     "../../../src/battle/state/VariableTempStatus";
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
+import { setAllVolatiles } from "../../battle/state/helpers";
 
 const switchInOptions: DriverSwitchOptions =
-    {species: "Magikarp", level: 100, gender: "M", hp: 200, hpMax: 200};
+    {species: "magikarp", level: 100, gender: "M", hp: 200, hpMax: 200};
 
 describe("BattleState encoders", function()
 {
@@ -189,7 +189,7 @@ describe("BattleState encoders", function()
         init()
         {
             const its = new ItemTempStatus([5, 8], {reflect: "lightclay"});
-            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
+            const mon = new Pokemon("magikarp", /*hpPercent*/false);
             its.start(mon, "reflect");
             return its;
         }
@@ -200,7 +200,7 @@ describe("BattleState encoders", function()
         init()
         {
             const its = new ItemTempStatus([5, 8], {reflect: "lightclay"});
-            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
+            const mon = new Pokemon("magikarp", /*hpPercent*/false);
             mon.setItem("lightclay");
             its.start(mon, "reflect");
             return its;
@@ -212,7 +212,7 @@ describe("BattleState encoders", function()
         init()
         {
             const its = new ItemTempStatus([5, 8], {reflect: "lightclay"});
-            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
+            const mon = new Pokemon("magikarp", /*hpPercent*/false);
             its.start(mon, "reflect", /*infinite*/true);
             return its;
         }
@@ -284,7 +284,7 @@ describe("BattleState encoders", function()
         init()
         {
             const stats = new StatTable();
-            stats.data = dex.pokemon.Magikarp;
+            stats.data = dex.pokemon.magikarp;
             stats.level = 100;
             return stats;
         }
@@ -308,7 +308,7 @@ describe("BattleState encoders", function()
         {
             const traits = new PokemonTraits();
             traits.init();
-            traits.setSpecies("Magikarp");
+            traits.setSpecies("magikarp");
             traits.stats.level = 100;
             return {traits};
         }
@@ -320,7 +320,7 @@ describe("BattleState encoders", function()
         {
             const traits = new PokemonTraits();
             traits.init();
-            traits.setSpecies("Magikarp");
+            traits.setSpecies("magikarp");
             traits.stats.level = 100;
             return {traits, addedType: "fire"};
         }
@@ -344,7 +344,7 @@ describe("BattleState encoders", function()
         {
             const v = new VolatileStatus();
             v.overrideTraits.init();
-            v.overrideTraits.setSpecies("Magikarp");
+            v.overrideTraits.setSpecies("magikarp");
             v.overrideTraits.stats.level = 100;
             return v;
         }
@@ -473,7 +473,7 @@ describe("BattleState encoders", function()
         encoder: encoders.activePokemonEncoder,
         init()
         {
-            const mon = new Pokemon("Magikarp", /*hpPercent*/false);
+            const mon = new Pokemon("magikarp", /*hpPercent*/false);
             mon.switchInto();
             return mon;
         }
@@ -481,7 +481,7 @@ describe("BattleState encoders", function()
     {
         name: "Inactive",
         encoder: encoders.inactivePokemonEncoder,
-        init: () => new Pokemon("Magikarp", /*hpPercent*/false)
+        init: () => new Pokemon("magikarp", /*hpPercent*/false)
     },
     {
         name: "Unrevealed",

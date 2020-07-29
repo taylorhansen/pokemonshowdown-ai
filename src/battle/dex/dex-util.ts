@@ -145,6 +145,8 @@ export interface PokemonData
     readonly uid: number;
     /** Species name. */
     readonly name: string;
+    /** Display name. */
+    readonly display: string;
     /** Species this pokemon is derived from. */
     readonly baseSpecies?: string;
     /** Alternate form this pokemon is derived from. */
@@ -170,6 +172,10 @@ export interface MoveData
 {
     /** Unique identifier number. */
     readonly uid: number;
+    /** Species name. */
+    readonly name: string;
+    /** Display name. */
+    readonly display: string;
     /** Target of the move. */
     readonly target: MoveTarget;
     /** Base power point range. First is base, second is with pp ups. */

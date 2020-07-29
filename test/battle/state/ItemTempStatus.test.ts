@@ -17,7 +17,7 @@ describe("ItemTempStatus", function()
         expect(its.durations).to.equal(durations);
         expect(its.items).to.equal(items);
 
-        source = new Pokemon("Magikarp", /*hpPercent*/false);
+        source = new Pokemon("magikarp", /*hpPercent*/false);
     });
 
     it("Should initially be reset", function()
@@ -120,7 +120,7 @@ describe("ItemTempStatus", function()
             it("Should handle status being overridden by another Pokemon",
             function()
             {
-                const source2 = new Pokemon("Goldeen", /*hpPercent*/true);
+                const source2 = new Pokemon("goldeen", /*hpPercent*/true);
                 its.start(source, "a");
                 its.tick();
                 its.start(source2, "b");

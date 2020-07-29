@@ -16,7 +16,7 @@ describe("StatTable", function()
     it("Should initialize StatRanges when species and level are initialized",
     function()
     {
-        stats.data = dex.pokemon.Mew; // all base 100 stats
+        stats.data = dex.pokemon.mew; // all base 100 stats
         stats.level = 100;
         for (const stat in statNames)
         {
@@ -71,13 +71,13 @@ describe("StatTable", function()
     {
         it("Should set #data", function()
         {
-            stats.data = dex.pokemon.Magikarp;
-            expect(stats.data).to.equal(dex.pokemon.Magikarp);
+            stats.data = dex.pokemon.magikarp;
+            expect(stats.data).to.equal(dex.pokemon.magikarp);
         });
 
         it("Should set #data and calc stats if #level is also set", function()
         {
-            stats.data = dex.pokemon.Magikarp;
+            stats.data = dex.pokemon.magikarp;
             stats.level = 100;
             expect(stats.hp.base).to.not.be.null;
         });

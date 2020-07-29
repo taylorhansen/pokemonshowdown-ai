@@ -143,7 +143,7 @@ for (const move of
     [
         move.id,
         {
-            uid, pp, target, mirror,
+            uid, name: move.id, display: move.name, pp, target, mirror,
             ...(selfSwitch && {selfSwitch}),
             ...(volatileEffect && {volatileEffect}),
             ...(selfVolatileEffect && {selfVolatileEffect}),
@@ -253,21 +253,23 @@ for (const mon of
     let otherForms: string[] | undefined;
     if (mon.otherFormes)
     {
-        const tmp = mon.otherFormes.filter(f => isGen4(toIdName(f)));
-        if (tmp.length > 0) otherForms = tmp.sort();
+        const tmp = mon.otherFormes.map(toIdName).filter(f => isGen4(f));
+        if (tmp.length > 0) otherForms = tmp.map(toIdName).sort();
     }
 
     const movepool = [...composeMovepool(mon)].sort();
 
     const entry: [string, PokemonData] =
     [
-        mon.name,
+        mon.id,
         {
-            id: mon.num, uid, name: mon.name, abilities: baseAbilities, types,
-            baseStats: stats, weightkg: mon.weightkg, movepool,
-            ...(mon.baseSpecies !== mon.name && {baseSpecies: mon.baseSpecies}),
-            ...(mon.baseForme && {baseForm: mon.baseForme}),
-            ...(mon.forme && {form: mon.forme}),
+            id: mon.num, uid, name: mon.id, display: mon.name,
+            abilities: baseAbilities, types, baseStats: stats,
+            weightkg: mon.weightkg, movepool,
+            ...(mon.baseSpecies !== mon.name &&
+                {baseSpecies: toIdName(mon.baseSpecies)}),
+            ...(mon.baseForme && {baseForm: toIdName(mon.baseForme)}),
+            ...(mon.forme && {form: toIdName(mon.forme)}),
             ...(otherForms && {otherForms})
         }
     ];
@@ -279,41 +281,42 @@ for (const mon of
         const {baseForm: _, ...data2} = entry[1]; // omit baseForm from data2
         pokemon.push(
         [
-            "Gastrodon-East",
+            "gastrodoneast",
             {
-                ...data2, name: "Gastrodon-East", baseSpecies: "Gastrodon",
-                form: "East"
+                ...data2, name: "gastrodoneast", display: "Gastrodon-East",
+                baseSpecies: "gastrodon", form: "east"
             }
         ]);
 
         // add alt form to list
-        entry[1] = {...entry[1], otherForms: ["Gastrodon-East"]};
+        entry[1] = {...entry[1], otherForms: ["gastrodoneast"]};
     }
     else if (mon.name === "Unown")
     {
         // add forms for all the other letters
         const letters =
         [
-            "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
-            "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "?"
+            "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
+            "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "!", "?"
         ];
         const {baseForm: _, ...data2} = entry[1]; // omit baseForm from data2
 
         for (const letter of letters)
         {
+            const name = `unown${letter}`;
             pokemon.push(
             [
-                `Unown-${letter}`,
+                name,
                 {
-                    ...data2, name: `Unown-${letter}`, baseSpecies: "Unown",
-                    form: letter
+                    ...data2, name, display: `Unown-${letter.toUpperCase()}`,
+                    baseSpecies: "unown", form: letter
                 }
             ]);
         }
 
         // add alt forms to list
         entry[1] =
-            {...entry[1], otherForms: letters.map(letter => `Unown-${letter}`)};
+            {...entry[1], otherForms: letters.map(letter => `unown${letter}`)};
     }
 
     // make sure the next entry, cherrim-sunshine, receives the same uid since

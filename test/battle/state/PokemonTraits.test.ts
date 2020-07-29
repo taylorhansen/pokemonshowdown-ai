@@ -70,20 +70,20 @@ describe("PokemonTraits", function()
                 traits.init();
                 const species = traits.species;
 
-                traits.setSpecies("Magikarp");
+                traits.setSpecies("magikarp");
                 expect(species).to.equal(traits.species); // should not reassign
-                expect(traits.species.definiteValue).to.equal("Magikarp");
+                expect(traits.species.definiteValue).to.equal("magikarp");
             });
 
             it("Should reset species", function()
             {
                 traits.init();
                 const species = traits.species;
-                traits.species.remove("Magikarp");
+                traits.species.remove("magikarp");
 
-                traits.setSpecies("Magikarp");
+                traits.setSpecies("magikarp");
                 expect(species).to.not.equal(traits.species); // should reassign
-                expect(traits.species.definiteValue).to.equal("Magikarp");
+                expect(traits.species.definiteValue).to.equal("magikarp");
             });
         });
 
@@ -93,29 +93,29 @@ describe("PokemonTraits", function()
             function()
             {
                 traits.init();
-                traits.setSpecies("Magikarp");
-                expect(traits.data).to.equal(dex.pokemon.Magikarp);
-                expect(traits.stats.data).to.equal(dex.pokemon.Magikarp);
+                traits.setSpecies("magikarp");
+                expect(traits.data).to.equal(dex.pokemon.magikarp);
+                expect(traits.stats.data).to.equal(dex.pokemon.magikarp);
                 expect(traits.ability.possibleValues)
-                    .to.have.all.keys(...dex.pokemon.Magikarp.abilities);
+                    .to.have.all.keys(...dex.pokemon.magikarp.abilities);
                 expect(traits.types)
-                    .to.have.members(dex.pokemon.Magikarp.types);
+                    .to.have.members(dex.pokemon.magikarp.types);
             });
 
             it("Should overwrite current fields", function()
             {
                 traits.init();
-                traits.setSpecies("Togepi");
+                traits.setSpecies("togepi");
                 traits.setAbility("naturalcure");
                 traits.types = ["grass", "water"];
 
-                traits.setSpecies("Magikarp");
-                expect(traits.data).to.equal(dex.pokemon.Magikarp);
-                expect(traits.stats.data).to.equal(dex.pokemon.Magikarp);
+                traits.setSpecies("magikarp");
+                expect(traits.data).to.equal(dex.pokemon.magikarp);
+                expect(traits.stats.data).to.equal(dex.pokemon.magikarp);
                 expect(traits.ability.possibleValues)
-                    .to.have.all.keys(...dex.pokemon.Magikarp.abilities);
+                    .to.have.all.keys(...dex.pokemon.magikarp.abilities);
                 expect(traits.types)
-                    .to.have.members(dex.pokemon.Magikarp.types);
+                    .to.have.members(dex.pokemon.magikarp.types);
             });
 
             it("Should not do anything if old PossibilityClass is narrowed",
@@ -127,11 +127,11 @@ describe("PokemonTraits", function()
 
                 expect(traits.species).to.not.equal(species);
 
-                species.narrow("Magikarp");
+                species.narrow("magikarp");
                 // should still not be initialized
                 expect(() => traits.data).to.throw();
 
-                traits.species.narrow("Magikarp");
+                traits.species.narrow("magikarp");
                 // now this should be initialized
                 expect(() => traits.data).to.not.throw();
             });
@@ -143,7 +143,7 @@ describe("PokemonTraits", function()
         it("Should reset all fields", function()
         {
             traits.init();
-            traits.setSpecies("Magikarp");
+            traits.setSpecies("magikarp");
             traits.reset();
             expect(traits.hasAbility).to.be.false;
             expect(() => traits.ability).to.throw(Error,
@@ -165,7 +165,7 @@ describe("PokemonTraits", function()
         {
             const other = new PokemonTraits();
             other.init();
-            other.setSpecies("Magikarp");
+            other.setSpecies("magikarp");
 
             traits.copy(other);
             expect(traits.ability).to.equal(other.ability);
@@ -182,7 +182,7 @@ describe("PokemonTraits", function()
             traits.copy(other);
 
             // some fields are reset so make sure they still match after
-            other.setSpecies("Magikarp");
+            other.setSpecies("magikarp");
             expect(traits.ability).to.equal(other.ability);
             expect(traits.data).to.equal(other.data);
             expect(traits.species).to.equal(other.species);

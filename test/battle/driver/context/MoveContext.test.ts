@@ -856,7 +856,7 @@ describe("MoveContext", function()
         function setup(imprisonUser: Side, sameOpponent = true): void
         {
             us = initActive("us",
-                {species: "Vulpix", level: 5, gender: "F", hp: 20, hpMax: 20});
+                {species: "vulpix", level: 5, gender: "F", hp: 20, hpMax: 20});
             us.moveset.reveal(imprisonUser === "us" ? "imprison" : "protect");
             us.moveset.reveal("ember");
             us.moveset.reveal("tailwhip");
@@ -865,7 +865,7 @@ describe("MoveContext", function()
             // switch in a similar pokemon
             them = initActive("them",
             {
-                species: sameOpponent ? "Vulpix" : "Bulbasaur", level: 10,
+                species: sameOpponent ? "vulpix" : "bulbasaur", level: 10,
                 gender: "M", hp: 100, hpMax: 100
             });
 

@@ -41,7 +41,7 @@ describe("BattleDriver", function()
                 team:
                 [
                     {
-                        species: "Magnezone", level: 50, gender: null, hp: 150,
+                        species: "magnezone", level: 50, gender: null, hp: 150,
                         hpMax: 150,
                         stats: {atk: 67, def: 120, spa: 150, spd: 120, spe: 80},
                         moves: ["thunderbolt"],
@@ -49,7 +49,7 @@ describe("BattleDriver", function()
                     },
                     // have a bench pokemon to switch in to
                     {
-                        species: "Mewtwo", level: 100, gender: null, hp: 353,
+                        species: "mewtwo", level: 100, gender: null, hp: 353,
                         hpMax: 353,
                         stats:
                         {
@@ -64,13 +64,13 @@ describe("BattleDriver", function()
             driver.handle({type: "initOtherTeamSize", size: 1});
             driver.handle(
             {
-                type: "switchIn", monRef: "us", species: "Magnezone", level: 50,
+                type: "switchIn", monRef: "us", species: "magnezone", level: 50,
                 gender: null, hp: 150, hpMax: 150
             });
             driver.handle(
             {
                 // opponent can have magnetpull, which traps steel types
-                type: "switchIn", monRef: "them", species: "Magnezone",
+                type: "switchIn", monRef: "them", species: "magnezone",
                 level: 50, gender: null, hp: 100, hpMax: 100
             });
 

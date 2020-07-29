@@ -122,7 +122,7 @@ export interface DriverInitPokemon extends DriverSwitchOptions
 /** Data for handling a switch-in. */
 export interface DriverSwitchOptions
 {
-    /** Pokemon's species. */
+    /** Species id name. */
     readonly species: string;
     /** Level between 1 and 100. */
     readonly level: number;

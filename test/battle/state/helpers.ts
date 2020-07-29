@@ -40,7 +40,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.mustRecharge = true;
     // TODO: test private moveset link
     volatile.overrideTraits.init();
-    volatile.overrideTraits.setSpecies("Slaking"); // has truant ability
+    volatile.overrideTraits.setSpecies("slaking"); // has truant ability
     volatile.overrideTraits.stats.level = 100;
     volatile.addedType = "ice";
     volatile.rage = true;
