@@ -29,9 +29,11 @@ npm run build
 
 # train a neural network
 # can also ctrl-c out once the test battles start to leave an untrained network on disk
+# add "-- --gpu" to enable GPU acceleration
 npm run train
 
 # connect to the server specified in config.ts and start accepting challenges
+# add "-- --gpu" to enable GPU acceleration
 npm run psbot
 
 # lint and run tests
