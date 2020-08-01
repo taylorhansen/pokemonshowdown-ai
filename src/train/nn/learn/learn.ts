@@ -175,11 +175,8 @@ export async function learn(
     const optimizer = tf.train.adam();
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
 
-    if (callback)
-    {
-        callback(
-            {type: "start", numBatches: Math.ceil(samples.length / batchSize)});
-    }
+    callback?.(
+        {type: "start", numBatches: Math.ceil(samples.length / batchSize)});
     callbacks.setModel(model);
     await callbacks.onTrainBegin();
 
@@ -215,7 +212,7 @@ export async function learn(
             }
             --j;
 
-            await callbacks.onBatchBegin(batchId,
+            const batchBegin = callbacks.onBatchBegin(batchId,
                 {batch: batchId, size: states.length});
 
             // loss function that records the metrics data
@@ -273,15 +270,16 @@ export async function learn(
                 else metricsPerBatch.beta.push(tf.scalar(algorithm.beta));
             }
 
-            if (callback)
-            {
-                callback(
-                {
-                    type: "batch", epoch: i + 1, batch: batchId,
-                    loss: await cost.array()
-                });
-            }
-            await callbacks.onBatchEnd(batchId);
+            await Promise.all(
+            [
+                batchBegin.then(() => callbacks.onBatchEnd(batchId)),
+                ...(callback ?
+                    [cost.array().then(costData => callback(
+                        {
+                            type: "batch", epoch: i + 1, batch: batchId,
+                            loss: costData
+                        }))] : [])
+            ]);
         }
 
         // average all batch metrics
@@ -294,15 +292,16 @@ export async function learn(
                 tf.mean(tf.stack(metricsPerBatch[name])).asScalar());
         }
 
-        if (callback)
-        {
-            callback(
-            {
-                type: "epoch", epoch: i + 1,
-                loss: await epochMetrics.loss.array()
-            });
-        }
-        await callbacks.onEpochEnd(i, epochMetrics);
+        await Promise.all(
+        [
+            callbacks.onEpochEnd(i, epochMetrics),
+            ...(callback ?
+            [
+                epochMetrics.loss.array()
+                    .then(lossData =>
+                        callback({type: "epoch", epoch: i + 1, loss: lossData}))
+            ] : [])
+        ]);
         tf.dispose([metricsPerBatch, epochMetrics]);
     }
     await callbacks.onTrainEnd();
