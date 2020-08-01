@@ -55,11 +55,15 @@ class NetworkRegistry
 
         // warmup the model using dummy data
         // only useful with gpu backend
-        const dummyInput = tf.zeros([1, battleStateEncoder.size]);
-        const dummyResult = model.predict(dummyInput) as tf.Tensor[];
-        this.inUse = Promise.all(
-                dummyResult.map(r => r.data().then(() => r.dispose())))
-            .then(() => dummyInput.dispose());
+        if (workerData.gpu)
+        {
+            const dummyInput = tf.zeros([1, battleStateEncoder.size]);
+            const dummyResult = model.predict(dummyInput) as tf.Tensor[];
+            this.inUse = Promise.all(
+                    dummyResult.map(r => r.data().then(() => r.dispose())))
+                .then(() => dummyInput.dispose());
+        }
+        else this.inUse = Promise.resolve();
     }
 
     /** Waits until this registry is no longer being used. */
@@ -132,7 +136,7 @@ class NetworkRegistry
         {
             model: this.model, ...config,
             ...(callback && {callback}),
-            ...(trainCallback && {trainCallback}),
+            ...(trainCallback && {trainCallback})
         }));
     }
 
