@@ -82,8 +82,8 @@ export async function episode(
             });
         progress.render({loss: "n/a"});
     }
-    await processor.learn(model, samples,
-        {algorithm, epochs, batchSize, logPath},
+    await processor.learn(model,
+        {samples, algorithm, epochs, batchSize, logPath},
         function(data)
         {
             switch (data.type)

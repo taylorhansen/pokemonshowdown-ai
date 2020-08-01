@@ -1,4 +1,4 @@
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
 
 /** Does a Fisher-Yates shuffle on the given array. */
 export function shuffle<T>(arr: T[]): void

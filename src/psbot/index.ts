@@ -1,12 +1,16 @@
 // istanbul ignore file
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
 import { join } from "path";
 import { networkAgent } from "../ai/networkAgent";
 import { avatar, latestModelFolder, loginServer, password, playServer,
     username } from "../config";
 import { Logger } from "../Logger";
+import { importTfn } from "../tfn";
 import { PSBattle } from "./PSBattle";
 import { PSBot } from "./PSBot";
+
+// select native backend
+importTfn(/*gpu*/ process.argv[2] === "--gpu");
 
 (async function()
 {

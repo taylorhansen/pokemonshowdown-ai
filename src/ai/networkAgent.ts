@@ -1,4 +1,4 @@
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { intToChoice } from "../battle/agent/Choice";
 import { allocUnsafe, battleStateEncoder } from "./encoder/encoders";

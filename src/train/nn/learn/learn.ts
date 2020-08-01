@@ -1,6 +1,5 @@
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
 import { intToChoice } from "../../../battle/agent/Choice";
-import { ensureDir } from "../../helpers/ensureDir";
 import { NetworkProcessorLearnData } from
     "../worker/helpers/NetworkProcessorRequest";
 import { AugmentedExperience } from "./AugmentedExperience";
@@ -135,11 +134,9 @@ function loss(
     });
 }
 
-/** Args for `learn()`. */
-export interface LearnArgs
+/** Data to train on. */
+export interface LearnConfig
 {
-    /** Model to train. */
-    readonly model: tf.LayersModel;
     /** Processed Experience tuples to sample from. */
     readonly samples: AugmentedExperience[];
     /** Learning algorithm config. */
@@ -148,26 +145,27 @@ export interface LearnArgs
     readonly epochs: number;
     /** Mini-batch size. */
     readonly batchSize: number;
-    /**
-     * Path to the folder to store TensorBoard logs in. Omit to not store logs.
-     */
-    readonly logPath?: string;
+}
+
+/** Args for `learn()`. */
+export interface LearnArgs extends LearnConfig
+{
+    /** Model to train. */
+    readonly model: tf.LayersModel;
     /** Callback for tracking the training process. */
     callback?(data: NetworkProcessorLearnData): void;
+    /** Custom callbacks for training. */
+    trainCallback?: tf.CustomCallback;
 }
 
 /** Trains the network over a number of epochs. */
 export async function learn(
-    {model, samples, algorithm, epochs, batchSize, logPath, callback}:
+    {model, samples, algorithm, epochs, batchSize, callback, trainCallback}:
         LearnArgs): Promise<void>
 {
     // setup training callbacks for metrics logging
     const callbacks = new tf.CallbackList();
-    if (logPath)
-    {
-        await ensureDir(logPath);
-        callbacks.append(tf.node.tensorBoard(logPath));
-    }
+    if (trainCallback) callbacks.append(trainCallback);
 
     // have to do this manually (instead of #compile()-ing the model and calling
     //  #fit()) since the loss function changes based on the advantage values

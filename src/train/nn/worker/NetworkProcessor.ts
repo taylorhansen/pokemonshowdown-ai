@@ -1,7 +1,6 @@
 import { resolve } from "path";
 import { deserialize } from "v8";
 import { MessagePort, Worker } from "worker_threads";
-import { AugmentedExperience } from "../learn/AugmentedExperience";
 import { AsyncPort } from "./helpers/AsyncPort";
 import { NetworkProcessorLearnConfig, NetworkProcessorLearnData,
     NetworkProcessorLearnMessage, NetworkProcessorLoadMessage,
@@ -16,8 +15,14 @@ const workerScriptPath = resolve(__dirname, "helpers", "worker.js");
 export class NetworkProcessor extends
     AsyncPort<NetworkProcessorRequestMap, Worker>
 {
-    /** Creates a NetworkProcessor. */
-    constructor() { super(new Worker(workerScriptPath)); }
+    /**
+     * Creates a NetworkProcessor.
+     * @param gpu Whether to enable GPU support.
+     */
+    constructor(gpu = false)
+    {
+        super(new Worker(workerScriptPath, {workerData: {gpu}}));
+    }
 
     /** @override */
     public close(): void { this.port.terminate(); }
@@ -99,20 +104,18 @@ export class NetworkProcessor extends
     /**
      * Queues a learning episode.
      * @param uid ID of the network.
-     * @param samples Experience to learn from.
      * @param config Learning config.
      * @param callback Callback after each batch and epoch during the learning
      * step.
      */
-    public learn(uid: number, samples: AugmentedExperience[],
-        config: NetworkProcessorLearnConfig,
+    public learn(uid: number, config: NetworkProcessorLearnConfig,
         callback?: (data: NetworkProcessorLearnData) => void): Promise<void>
     {
         const msg: NetworkProcessorLearnMessage =
-            {type: "learn", rid: this.generateRID(), uid, samples, ...config};
+            {type: "learn", rid: this.generateRID(), uid, ...config};
 
         const transferList: ArrayBuffer[] = [];
-        for (const sample of samples)
+        for (const sample of config.samples)
         {
             transferList.push(sample.state.buffer, sample.logProbs.buffer);
         }

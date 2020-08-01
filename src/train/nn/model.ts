@@ -1,4 +1,4 @@
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
 import { battleStateEncoder } from "../../ai/encoder/encoders";
 import { intToChoice } from "../../battle/agent/Choice";
 

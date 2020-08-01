@@ -1,21 +1,28 @@
 /**
  * @file Dedicated worker for TensorFlow neural network operations during games.
  */
-import * as tf from "@tensorflow/tfjs-node";
+import * as tf from "@tensorflow/tfjs";
 import { serialize } from "v8";
-import { MessageChannel, MessagePort, parentPort } from "worker_threads";
+import { MessageChannel, MessagePort, parentPort, workerData } from
+    "worker_threads";
+import { battleStateEncoder } from "../../../../ai/encoder/encoders";
 import { verifyModel } from "../../../../ai/networkAgent";
 import { intToChoice } from "../../../../battle/agent/Choice";
-import { learn, LearnArgs } from "../../learn/learn";
+import { importTfn } from "../../../../tfn";
+import { ensureDir } from "../../../helpers/ensureDir";
+import { learn, LearnConfig } from "../../learn/learn";
 import { createModel } from "../../model";
 import { PredictMessage, PredictWorkerResult } from "../ModelPort";
 import { PortResultError } from "./AsyncPort";
-import { NetworkProcessorLearnResult, NetworkProcessorLoadResult,
-    NetworkProcessorMessage, NetworkProcessorSaveResult,
-    NetworkProcessorSubscribeResult, NetworkProcessorUnloadResult } from
-    "./NetworkProcessorRequest";
+import { NetworkProcessorLearnData, NetworkProcessorLearnResult,
+    NetworkProcessorLoadResult, NetworkProcessorMessage,
+    NetworkProcessorSaveResult, NetworkProcessorSubscribeResult,
+    NetworkProcessorUnloadResult } from "./NetworkProcessorRequest";
 
 if (!parentPort) throw new Error("No parent port!");
+
+// select native backend, defaulting to cpu if not told to use gpu
+const tfn = importTfn(!!workerData.gpu);
 
 /** Manages a neural network registry. */
 class NetworkRegistry
@@ -27,7 +34,7 @@ class NetworkRegistry
     /** Prediction request buffer. */
     private readonly predictBuffer: {msg: PredictMessage, port: MessagePort}[];
     /** Lock promise for managing the neural network resource. */
-    private inUse: Promise<void> = Promise.resolve();
+    private inUse: Promise<any>;
 
     /**
      * Creates a NetworkRegistry.
@@ -45,6 +52,14 @@ class NetworkRegistry
         this.model = model;
         this.ports = new Set();
         this.predictBuffer = [];
+
+        // warmup the model using dummy data
+        // only useful with gpu backend
+        const dummyInput = tf.zeros([1, battleStateEncoder.size]);
+        const dummyResult = model.predict(dummyInput) as tf.Tensor[];
+        this.inUse = Promise.all(
+                dummyResult.map(r => r.data().then(() => r.dispose())))
+            .then(() => dummyInput.dispose());
     }
 
     /** Waits until this registry is no longer being used. */
@@ -92,12 +107,33 @@ class NetworkRegistry
 
     /**
      * Queues a learning episode.
-     * @param args Learning config.
+     * @param config Learning config.
+     * @param callback Callback for tracking the training process.
+     * @param logPath Path to the folder to store TensorBoard logs in. Omit to
+     * not store logs.
      */
-    public learn(args: Omit<LearnArgs, "model">): Promise<void>
+    public learn(config: LearnConfig,
+        callback?: (data: NetworkProcessorLearnData) => void,
+        logPath?: string): Promise<void>
     {
-        return this.inUse = this.waitUntilFree()
-            .then(() => learn({model: this.model, ...args}));
+        let trainCallback: tf.CustomCallback | undefined;
+        this.inUse = Promise.all(
+        [
+            this.waitUntilFree(),
+            ...(logPath ?
+            [
+                ensureDir(logPath)
+                    .then(() =>
+                        void (trainCallback = tfn.node.tensorBoard(logPath)))
+            ] : [])
+        ]);
+
+        return this.inUse = this.waitUntilFree().then(() =>learn(
+        {
+            model: this.model, ...config,
+            ...(callback && {callback}),
+            ...(trainCallback && {trainCallback}),
+        }));
     }
 
     /** Once this registry is free, checks and flushes the predict buffer. */
@@ -188,7 +224,7 @@ parentPort.on("message", async function(msg: NetworkProcessorMessage)
             else promise = tf.loadLayersModel(msg.url).then(m => load(m, rid));
             break;
         case "save":
-            promise =  getRegistry(msg.uid).save(msg.url)
+            promise = getRegistry(msg.uid).save(msg.url)
             .then(function()
             {
                 const result: NetworkProcessorSaveResult =
@@ -215,16 +251,14 @@ parentPort.on("message", async function(msg: NetworkProcessorMessage)
             break;
         }
         case "learn":
-            promise = getRegistry(msg.uid).learn(
-            {
-                ...msg,
-                callback(data)
+            promise = getRegistry(msg.uid).learn(msg,
+                data =>
                 {
                     const result: NetworkProcessorLearnResult =
                         {type: "learn", rid, done: false, data};
                     parentPort!.postMessage(result);
-                }
-            })
+                },
+                msg.logPath)
             .then(function()
             {
                 // send a final message to end the stream of updates

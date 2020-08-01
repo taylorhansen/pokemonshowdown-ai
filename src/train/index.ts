@@ -17,7 +17,7 @@ const numEvalGames = 3;
 {
     const logger = Logger.stderr.addPrefix("Train: ");
 
-    const processor = new NetworkProcessor();
+    const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
 
     // create or load neural network
     let model: number;
@@ -27,7 +27,7 @@ const numEvalGames = 3;
     try { model = await processor.load(loadUrl); }
     catch (e)
     {
-        logger.error(`Error opening model: ${e}`);
+        logger.error(`Error opening model: ${e.stack ?? e}`);
         logger.debug("Creating default model");
         model = await processor.load();
 

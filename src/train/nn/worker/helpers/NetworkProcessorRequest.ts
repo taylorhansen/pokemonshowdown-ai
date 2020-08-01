@@ -3,8 +3,7 @@
  * thread and its dedicated TFJS worker.
  */
 import { MessagePort } from "worker_threads";
-import { AugmentedExperience } from "../../learn/AugmentedExperience";
-import { AlgorithmArgs } from "../../learn/LearnArgs";
+import { LearnConfig } from "../../learn/learn";
 import { PortMessageBase, PortResultBase } from "./AsyncPort";
 
 /** Mapped type for request types. */
@@ -86,25 +85,16 @@ export interface NetworkProcessorLearnMessage extends
 {
     /** ID of the neural network. */
     readonly uid: number;
-    /** Processed Experience tuples to sample from. */
-    readonly samples: AugmentedExperience[];
 }
 
 /** Config for the learning algorithm. */
-export interface NetworkProcessorLearnConfig
+export interface NetworkProcessorLearnConfig extends LearnConfig
 {
-    /** Learning algorithm config. */
-    readonly algorithm: Readonly<AlgorithmArgs>;
-    /** Number of epochs to run training. */
-    readonly epochs: number;
-    /** Mini-batch size. */
-    readonly batchSize: number;
     /**
      * Path to the folder to store TensorBoard logs in. Omit to not store logs.
      */
     readonly logPath?: string;
 }
-
 
 /** Types of messages that the NetworkProcessor can send. */
 export type NetworkProcessorMessage =
