@@ -74,10 +74,18 @@ export class BaseContext extends DriverContext implements DriverEventHandler
     /** Prepares or releases a future move. */
     public activateFutureMove(event: ActivateFutureMove): void
     {
-        const futureMove = this.state.teams[event.monRef].status
-            .futureMoves[event.move];
-        if (event.start) futureMove.start(/*restart*/false);
-        else futureMove.end();
+        if (event.start)
+        {
+            // starting a future move mentions the user
+            this.state.teams[event.monRef].status.futureMoves[event.move]
+                .start(/*restart*/false);
+        }
+        else
+        {
+            // ending a future move mentions the target before taking damage
+            this.state.teams[otherSide(event.monRef)].status
+                .futureMoves[event.move].end();
+        }
     }
 
     /** Activates a team status condition. */

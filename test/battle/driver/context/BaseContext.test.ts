@@ -112,7 +112,7 @@ describe("BaseContext", function()
             it("Should prepare and release future move", function()
             {
                 const ts = state.teams.us.status;
-                // prepare move
+                // prepare move, mentioning the user
                 handle(
                 {
                     type: "activateFutureMove", monRef: "us",
@@ -120,10 +120,10 @@ describe("BaseContext", function()
                 });
                 expect(ts.futureMoves.doomdesire.isActive).to.be.true;
 
-                // release the move
+                // release the move, mentioning the target
                 handle(
                 {
-                    type: "activateFutureMove", monRef: "us",
+                    type: "activateFutureMove", monRef: "them",
                     move: "doomdesire", start: false
                 });
                 expect(ts.futureMoves.futuresight.isActive).to.be.false;
