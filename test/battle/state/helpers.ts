@@ -9,7 +9,6 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.curse = true;
     volatile.embargo.start();
     volatile.focusEnergy = true;
-    volatile.gastroAcid = true;
     volatile.ingrain = true;
     volatile.leechSeed = true;
     volatile.lockOn(new VolatileStatus());
@@ -19,6 +18,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.perish = 3;
     volatile.powerTrick = true;
     volatile.substitute = true;
+    volatile.suppressAbility = true;
     volatile.trap(new VolatileStatus());
     (new VolatileStatus()).trap(volatile);
 

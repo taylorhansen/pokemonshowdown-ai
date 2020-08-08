@@ -43,26 +43,37 @@ describe("AbilityContext", function()
 
     describe("#handle()", function()
     {
-        describe("setWeather", function()
+        describe("activateFieldEffect", function()
         {
-            it("Should infer infinite duration if ability matches weather",
-            function()
+            describe("weather", function()
             {
-                initActive("them");
-                expect(initCtx("them", "drought")
-                        .handle({type: "setWeather", weatherType: "SunnyDay"}))
-                    .to.equal("stop");
-                expect(state.status.weather.type).to.equal("SunnyDay");
-                expect(state.status.weather.duration).to.be.null;
-            });
+                it("Should infer infinite duration if ability matches weather",
+                function()
+                {
+                    initActive("them");
+                    expect(initCtx("them", "drought")
+                            .handle(
+                            {
+                                type: "activateFieldEffect",
+                                effect: "SunnyDay", start: true
+                            }))
+                        .to.equal("stop");
+                    expect(state.status.weather.type).to.equal("SunnyDay");
+                    expect(state.status.weather.duration).to.be.null;
+                });
 
-            it("Should expire if mismatched ability", function()
-            {
-                initActive("them");
-                expect(initCtx("them", "snowwarning")
-                        .handle({type: "setWeather", weatherType: "SunnyDay"}))
-                    .to.equal("expire");
-                expect(state.status.weather.type).to.equal("none");
+                it("Should expire if mismatched ability", function()
+                {
+                    initActive("them");
+                    expect(initCtx("them", "snowwarning")
+                            .handle(
+                            {
+                                type: "activateFieldEffect",
+                                effect: "SunnyDay", start: true
+                            }))
+                        .to.equal("expire");
+                    expect(state.status.weather.type).to.equal("none");
+                });
             });
         });
     });

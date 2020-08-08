@@ -274,7 +274,6 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     augment(vs => vs.curse, booleanEncoder),
     augment(vs => vs.embargo, tempStatusEncoder),
     augment(vs => vs.focusEnergy, booleanEncoder),
-    augment(vs => vs.gastroAcid, booleanEncoder),
     augment(vs => vs.ingrain, booleanEncoder),
     augment(vs => vs.leechSeed, booleanEncoder),
     augment(vs => vs.lockedOnBy?.lockOnTurns,
@@ -286,6 +285,7 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
         numberEncoder),
     augment(vs => vs.powerTrick, booleanEncoder),
     augment(vs => vs.substitute, booleanEncoder),
+    augment(vs => vs.suppressAbility, booleanEncoder),
     augment(vs => !!vs.trapped, booleanEncoder),
     augment(vs => !!vs.trapping, booleanEncoder),
 

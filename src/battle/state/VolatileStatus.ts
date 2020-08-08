@@ -40,8 +40,6 @@ export interface ReadonlyVolatileStatus
     readonly embargo: ReadonlyTempStatus;
     /** Focus Energy move status. */
     readonly focusEnergy: boolean;
-    /** Gasto Acid move status (suppresses current ability). */
-    readonly gastroAcid: boolean;
     /** Ingrain move status. */
     readonly ingrain: boolean;
     /** Leech Seed move status. */
@@ -65,6 +63,8 @@ export interface ReadonlyVolatileStatus
     readonly powerTrick: boolean;
     /** Substitute move status. */
     readonly substitute: boolean;
+    /** Whether the current ability is being suppressed. */
+    readonly suppressAbility: boolean;
     /** Who is trapping us. */
     readonly trapped: ReadonlyVolatileStatus | null;
     /** Who we're trapping. */
@@ -187,9 +187,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public focusEnergy!: boolean;
 
     /** @override */
-    public gastroAcid!: boolean;
-
-    /** @override */
     public ingrain!: boolean;
 
     /** @override */
@@ -238,6 +235,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public substitute!: boolean;
+
+    /** @override */
+    public suppressAbility!: boolean;
 
     /** @override */
     public get trapped(): VolatileStatus | null { return this._trapped; }
@@ -426,7 +426,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.curse = false;
         this.embargo.end();
         this.focusEnergy = false;
-        this.gastroAcid = false;
         this.ingrain = false;
         this.leechSeed = false;
         // clear opponent's lockon status
@@ -445,6 +444,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._perish = 0;
         this.powerTrick = false;
         this.substitute = false;
+        this.suppressAbility = false;
         // clear opponent's trapping status
         if (this._trapped) this._trapped._trapping = null;
         this._trapped = null;
@@ -599,7 +599,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.curse ? ["cursed"] : [],
             this.embargo.isActive ? [this.embargo.toString()] : [],
             this.focusEnergy ? ["focus energy"] : [],
-            this.gastroAcid ? ["gastro acid"] : [],
             this.ingrain ? ["ingrain"] : [],
             this.leechSeed ? ["leech seed"] : [],
             this._lockOnTurns.isActive ? [this._lockOnTurns.toString()] : [],
@@ -609,6 +608,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this._perish > 0 ? [`perish in ${pluralTurns(this._perish)}`] : [],
             this.powerTrick ? ["power trick"] : [],
             this.substitute ? ["has substitute"] : [],
+            this.suppressAbility ? ["suppressed ability"] : [],
             // TODO: be more specific with trapping info
             this._trapped ? ["trapped"] : [],
             this._trapping ? ["trapping"] : [],

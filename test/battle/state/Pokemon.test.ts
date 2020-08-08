@@ -461,13 +461,13 @@ describe("Pokemon", function()
             checkGrounded(mon, false, false);
         });
 
-        it("Should ignore klutz if gastro acid", function()
+        it("Should ignore klutz if ability suppressed", function()
         {
             const mon = new Pokemon("pidgey", false); // flying type
             mon.switchInto();
             mon.traits.setAbility("klutz");
             mon.item.narrow("ironball");
-            mon.volatile.gastroAcid = true;
+            mon.volatile.suppressAbility = true;
             checkGrounded(mon, true, true);
         });
 

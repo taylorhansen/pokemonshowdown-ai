@@ -1,5 +1,5 @@
 import { Logger } from "../../../Logger";
-import { WeatherType } from "../../dex/dex-util";
+import { isWeatherType, WeatherType } from "../../dex/dex-util";
 import { BattleState } from "../../state/BattleState";
 import { Pokemon } from "../../state/Pokemon";
 import { ActivateAbility, AnyDriverEvent } from "../DriverEvent";
@@ -44,14 +44,15 @@ export class AbilityContext extends DriverContext
     {
         switch (event.type)
         {
-            case "setWeather":
+            case "activateFieldEffect":
                 // see if the weather can be caused by the current ability
-                if (AbilityContext.weatherAbilities[event.weatherType] ===
-                    this.abilityName)
+                if (isWeatherType(event.effect) &&
+                    AbilityContext.weatherAbilities[event.effect] ===
+                        this.abilityName)
                 {
                     // fill in infinite duration (gen3-4) and/or source
                     this.state.status.weather.start(this.mon,
-                        event.weatherType, /*infinite*/true);
+                        event.effect, /*infinite*/true);
                     return "stop";
                 }
                 // fallthrough

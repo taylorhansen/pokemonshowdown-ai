@@ -131,7 +131,7 @@ describe("StateDriver", function()
                 driver.handle(
                 {
                     type: "activateStatusEffect", monRef: "them",
-                    status: "imprison", start: true
+                    effect: "imprison", start: true
                 });
                 driver.handle(
                     {type: "revealMove", monRef: "them", move: "splash"});

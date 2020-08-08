@@ -104,6 +104,7 @@ export function isBoostName(stat: any): stat is BoostName
     return boostNames.hasOwnProperty(stat);
 }
 
+// TODO: make weather types lowercase, shorten
 /** Holds the set of all weather types, mapping to its extension item. */
 export const weatherItems =
 {

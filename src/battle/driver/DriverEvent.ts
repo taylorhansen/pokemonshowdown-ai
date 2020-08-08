@@ -11,12 +11,9 @@ import { Side } from "../state/Side";
 interface DriverEventMap
 {
     activateAbility: ActivateAbility;
-    activateFieldCondition: ActivateFieldCondition;
-    activateFutureMove: ActivateFutureMove;
-    activateSideCondition: ActivateSideCondition;
+    activateFieldEffect: ActivateFieldEffect;
     activateStatusEffect: ActivateStatusEffect;
-    afflictStatus: AfflictStatus;
-    boost: Boost;
+    activateTeamEffect: ActivateTeamEffect;
     changeType: ChangeType;
     clearAllBoosts: ClearAllBoosts;
     clearNegativeBoosts: ClearNegativeBoosts;
@@ -25,7 +22,6 @@ interface DriverEventMap
     copyBoosts: CopyBoosts;
     countStatusEffect: CountStatusEffect;
     crit: Crit;
-    cureStatus: CureStatus;
     cureTeam: CureTeam;
     disableMove: DisableMove;
     fail: Fail;
@@ -34,7 +30,6 @@ interface DriverEventMap
     feint: Feint;
     formChange: FormChange;
     gameOver: GameOver;
-    gastroAcid: GastroAcid;
     hitCount: HitCount;
     immune: Immune;
     inactive: Inactive;
@@ -47,7 +42,6 @@ interface DriverEventMap
     modifyPP: ModifyPP;
     mustRecharge: MustRecharge;
     postTurn: PostTurn;
-    prepareMove: PrepareMove;
     preTurn: PreTurn;
     reenableMoves: ReenableMoves;
     rejectSwitchTrapped: RejectSwitchTrapped;
@@ -57,22 +51,17 @@ interface DriverEventMap
     restoreMoves: RestoreMoves;
     revealItem: RevealItem;
     revealMove: RevealMove;
-    setBoost: SetBoost;
-    setSingleMoveStatus: SetSingleMoveStatus;
-    setSingleTurnStatus: SetSingleTurnStatus;
     setThirdType: SetThirdType;
-    setWeather: SetWeather;
     sketch: Sketch;
     stall: Stall;
     superEffective: SuperEffective;
     swapBoosts: SwapBoosts;
     switchIn: SwitchIn;
     takeDamage: TakeDamage;
-    tickWeather: TickWeather;
     transform: Transform;
     transformPost: TransformPost;
     trap: Trap;
-    unboost: Unboost;
+    updateFieldEffect: UpdateFieldEffect;
     updateStatusEffect: UpdateStatusEffect;
     useMove: UseMove;
 }
@@ -102,47 +91,18 @@ export interface ActivateAbility extends DriverEventBase<"activateAbility">
     readonly ability: string;
 }
 
-/** Activates a field status condition. */
-export interface ActivateFieldCondition extends
-    DriverEventBase<"activateFieldCondition">
+/** Activates a field-wide effect. */
+export interface ActivateFieldEffect extends
+    DriverEventBase<"activateFieldEffect">
 {
-    /** Name of the condition. */
-    readonly condition: FieldConditionType;
-    /** Whether to start (`true`) or end (`false`) the condition. */
+    /** Name of the effect. */
+    readonly effect: FieldEffectType;
+    /** Whether to start (`true`) or end (`false`) the effect. */
     readonly start: boolean;
 }
 
-/** Typing for `ActivateFieldCondition#condition`. */
-export type FieldConditionType = "gravity" | "trickRoom";
-
-/** Prepares or releases a future move. */
-export interface ActivateFutureMove extends
-    DriverEventBase<"activateFutureMove">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Move being disabled. */
-    readonly move: FutureMove;
-    /** Whether the move is being prepared (true) or released (false). */
-    readonly start: boolean;
-}
-
-/** Activates a team status condition. */
-export interface ActivateSideCondition extends
-    DriverEventBase<"activateSideCondition">
-{
-    /** Team reference. */
-    readonly teamRef: Side;
-    /** Name of the condition. */
-    readonly condition: SideConditionType;
-    /** Whether to start (`true`) or end (`false`) the condition. */
-    readonly start: boolean;
-}
-
-/** Typing for `ActivateSideCondition#condition`. */
-export type SideConditionType = "healingWish" | "lightScreen" | "luckyChant" |
-    "lunarDance" | "mist" | "reflect" | "safeguard" | "spikes" | "stealthRock" |
-    "tailwind" | "toxicSpikes";
+/** Typing for `ActivateFieldEffect#effect`. */
+export type FieldEffectType = WeatherType | "gravity" | "trickRoom";
 
 /** Starts, sets, or ends a trivial status effect. */
 export interface ActivateStatusEffect extends
@@ -150,43 +110,50 @@ export interface ActivateStatusEffect extends
 {
     /** Pokemon reference. */
     readonly monRef: Side;
-    /** Type of status in question. */
-    readonly status: StatusEffectType;
-    /** Whether to start (true) or end (false) the status. */
+    /** Name of the effect. */
+    readonly effect: StatusEffectType;
+    /**
+     * Whether to start (`true`) or end (`false`) the status.
+     *
+     * If `#status` is a future move, then `#monRef` refers to the user if
+     * `#start=true` as the move is being prepared, otherwise it refers to the
+     * target as the move is being released.
+     */
     readonly start: boolean;
 }
 
-/**
- * Typing for `ActivateStatusEffect#status`. This includes all
- * UpdatableStatusEffectTypes.
- */
-export type StatusEffectType = UpdatableStatusEffectType | "aquaRing" |
-    "attract" | "charge" | "curse" | "embargo" | "encore" | "focusEnergy" |
-    "foresight" | "healBlock" | "imprison" | "ingrain" | "leechSeed" |
-    "magnetRise" | "miracleEye" | "mudSport" | "nightmare" | "powerTrick" |
-    "slowStart" | "substitute" | "taunt" | "torment" | "waterSport" | "yawn";
+/** Typing for `ActivateStatusEffect#status`. */
+export type StatusEffectType = UpdatableStatusEffectType | MajorStatus |
+    FutureMove | TwoTurnMove | SingleMoveEffect | SingleTurnEffect |
+    "aquaRing" | "attract" | "charge" | "curse" | "embargo" | "encore" |
+    "focusEnergy" | "foresight" | "healBlock" | "imprison" | "ingrain" |
+    "leechSeed" | "magnetRise" | "miracleEye" | "mudSport" | "nightmare" |
+    "powerTrick" | "slowStart" | "substitute" | "suppressAbility" | "taunt" |
+    "torment" | "waterSport" | "yawn";
 
-/** Afflicts the pokemon with a major status condition. */
-export interface AfflictStatus extends DriverEventBase<"afflictStatus">
+/** Types of sinlge-move effects. */
+export type SingleMoveEffect = "destinyBond" | "grudge" | "rage";
+
+/** Types of sinlge-turn effects. */
+export type SingleTurnEffect = "endure" | "magicCoat" | "protect" | "roost" |
+    "snatch";
+
+/** Activates a team-wide effect. */
+export interface ActivateTeamEffect extends
+    DriverEventBase<"activateTeamEffect">
 {
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Status to afflict. */
-    readonly status: MajorStatus;
+    /** Team reference. */
+    readonly teamRef: Side;
+    /** Name of the status. */
+    readonly effect: TeamEffectType;
+    /** Whether to start (`true`) or end (`false`) the effect. */
+    readonly start: boolean;
 }
 
-/**
- * Temporarily boosts one of the pokemon's stats by the given amount of stages.
- */
-export interface Boost extends DriverEventBase<"boost">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Stat to boost. */
-    readonly stat: BoostName;
-    /** Amount to boost by. */
-    readonly amount: number;
-}
+/** Typing for `ActivateTeamEffect#effect. */
+export type TeamEffectType = "healingWish" | "lightScreen" | "luckyChant" |
+    "lunarDance" | "mist" | "reflect" | "safeguard" | "spikes" | "stealthRock" |
+    "tailwind" | "toxicSpikes";
 
 /** Temporarily changes the pokemon's types. Also resets third type. */
 export interface ChangeType extends DriverEventBase<"changeType">
@@ -228,34 +195,30 @@ export interface CopyBoosts extends DriverEventBase<"copyBoosts">
     readonly to: Side;
 }
 
-/** Explicitly updates status counters. */
+/** Explicitly updates effect counters. */
 export interface CountStatusEffect extends DriverEventBase<"countStatusEffect">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
-    /** Type of status. */
-    readonly status: CountableStatusType;
-    /** Number of turns left. */
-    readonly turns: number;
+    /** Type of effect. */
+    readonly effect: CountableStatusEffectType;
+    /** Number to set the effect counter to. */
+    readonly amount: number;
+    /**
+     * Whether to add `#amount` onto the effect counter rather than overwrite
+     * it. Default false.
+     */
+    readonly add?: boolean;
 }
 
-/** Typing for `CountStatusEffect#status`. */
-export type CountableStatusType = "perish" | "stockpile";
+/** Typing for `CountStatusEffect#effect`. */
+export type CountableStatusEffectType = BoostName | "perish" | "stockpile";
 
 /** Indicates a critical hit of a move on the pokemon. */
 export interface Crit extends DriverEventBase<"crit">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
-}
-
-/** Cures the pokemon of a major status condition. */
-export interface CureStatus extends DriverEventBase<"cureStatus">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Status to cure. */
-    readonly status: MajorStatus;
 }
 
 /** Cures all pokemon of a team of any major status conditions. */
@@ -317,15 +280,6 @@ export interface GameOver extends DriverEventBase<"gameOver">
 {
     /** The side that won. Leave blank if tie. */
     readonly winner?: Side;
-}
-
-/** Reveals and suppresses a pokemon's ability due to Gastro Acid. */
-export interface GastroAcid extends DriverEventBase<"gastroAcid">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Ability being suppressed due to the Gastro Acid effect. */
-    readonly ability: string;
 }
 
 /** Indicates that the pokemon was hit by a move multiple times. */
@@ -457,15 +411,6 @@ export interface MustRecharge extends DriverEventBase<"mustRecharge">
 /** Indicates that the turn is about to end. */
 export interface PostTurn extends DriverEventBase<"postTurn"> {}
 
-/** Indicates that the pokemon is preparing a two-turn move. */
-export interface PrepareMove extends DriverEventBase<"prepareMove">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Move name. */
-    readonly move: TwoTurnMove;
-}
-
 /** Indicates that the turn is about to begin. */
 export interface PreTurn extends DriverEventBase<"preTurn"> {}
 
@@ -539,44 +484,6 @@ export interface RevealMove extends DriverEventBase<"revealMove">
     readonly move: string;
 }
 
-/** Sets the pokemon's temporary stat boost to a given amount */
-export interface SetBoost extends DriverEventBase<"setBoost">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Stat to set the boost of. */
-    readonly stat: BoostName;
-    /** Stage to set the boost to. */
-    readonly amount: number;
-}
-
-/** Sets a single-move status for the pokemon. */
-export interface SetSingleMoveStatus extends
-    DriverEventBase<"setSingleMoveStatus">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Status to set. */
-    readonly status: SingleMoveStatus;
-}
-
-/** Typing for `SetSingleMoveStatus#status`. */
-export type SingleMoveStatus = "destinyBond" | "grudge" | "rage";
-
-/** Sets a single-turn status for the pokemon. */
-export interface SetSingleTurnStatus extends
-    DriverEventBase<"setSingleTurnStatus">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Status to set. */
-    readonly status: SingleTurnStatus;
-}
-
-/** Typing for `SetSingleTurnStatus#status`. */
-export type SingleTurnStatus = "endure" | "magicCoat" | "protect" | "roost" |
-    "snatch";
-
 /** Sets the pokemon's temporary third type. */
 export interface SetThirdType extends DriverEventBase<"setThirdType">
 {
@@ -584,13 +491,6 @@ export interface SetThirdType extends DriverEventBase<"setThirdType">
     readonly monRef: Side;
     /** Type to set. */
     readonly thirdType: Type;
-}
-
-/** Sets the current weather. */
-export interface SetWeather extends DriverEventBase<"setWeather">
-{
-    /** Type of weather. */
-    readonly weatherType: WeatherType;
 }
 
 /** Indicates that the pokemon is Sketching a move. */
@@ -654,13 +554,6 @@ export interface TakeDamage extends DriverEventBase<"takeDamage">
     readonly tox: boolean;
 }
 
-/** Indicates that the current weather condition is still active. */
-export interface TickWeather extends DriverEventBase<"tickWeather">
-{
-    /** Type of weather. */
-    readonly weatherType: WeatherType;
-}
-
 /** Indicates that a pokemon has transformed into its target. */
 export interface Transform extends DriverEventBase<"transform">
 {
@@ -691,19 +584,15 @@ export interface Trap extends DriverEventBase<"trap">
     readonly by: Side;
 }
 
-/**
- * Temporarily unboosts one of the pokemon's stats by the given amount of
- * stages.
- */
-export interface Unboost extends DriverEventBase<"unboost">
+/** Explicitly indicates that a field effect is still going. */
+export interface UpdateFieldEffect extends DriverEventBase<"updateFieldEffect">
 {
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Stat to boost. */
-    readonly stat: BoostName;
-    /** Amount to boost by. */
-    readonly amount: number;
+    /** Type of effect to update. */
+    readonly effect: UpdatableFieldEffectType;
 }
+
+/** Typing for `UpdateFieldEffect#effect`. These are also FieldEffectTypes. */
+export type UpdatableFieldEffectType = WeatherType;
 
 /**
  * Indicates that a status effect is still going. Usually this is implied at the
@@ -715,11 +604,11 @@ export interface UpdateStatusEffect extends
 {
     /** Pokemon reference. */
     readonly monRef: Side;
-    /** Type of status to update. */
-    readonly status: UpdatableStatusEffectType;
+    /** Type of effect to update. */
+    readonly effect: UpdatableStatusEffectType;
 }
 
-/** Typing for `UpdateStatusEffect#status`. These are also StatusEffectTypes. */
+/** Typing for `UpdateStatusEffect#effect`. These are also StatusEffectTypes. */
 export type UpdatableStatusEffectType = "confusion" | "bide" | "uproar";
 
 /** Indicates that the pokemon is attempting to use a move. */

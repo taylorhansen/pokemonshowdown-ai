@@ -1,19 +1,23 @@
 import { Logger } from "../../../Logger";
 import * as dex from "../../dex/dex";
-import { isRolloutMove, MoveData, otherMoveCallers, selfMoveCallers,
-    SelfSwitch, SelfVolatileEffect, SideCondition, targetMoveCallers,
-    VolatileEffect } from "../../dex/dex-util";
+import { isRolloutMove, isWeatherType, MajorStatus, MoveData, otherMoveCallers,
+    selfMoveCallers, SelfSwitch, SelfVolatileEffect, SideCondition,
+    targetMoveCallers, VolatileEffect } from "../../dex/dex-util";
 import { BattleState } from "../../state/BattleState";
 import { Move } from "../../state/Move";
 import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
-import { ActivateFieldCondition, ActivateSideCondition, ActivateStatusEffect,
-    AnyDriverEvent, FieldConditionType, SetSingleMoveStatus,
-    SetSingleTurnStatus, SetWeather, SideConditionType, StatusEffectType,
-    UseMove } from "../DriverEvent";
+import { ActivateFieldEffect, ActivateStatusEffect, ActivateTeamEffect,
+    AnyDriverEvent, FieldEffectType, StatusEffectType, TeamEffectType, UseMove }
+    from "../DriverEvent";
 import { AbilityContext } from "./AbilityContext";
 import { ContextResult, DriverContext } from "./DriverContext";
 import { SwitchContext } from "./SwitchContext";
+
+type StatusEffectMapKey =
+    Exclude<StatusEffectType,
+        MajorStatus | dex.FutureMove | dex.TwoTurnMove | "slowStart" |
+            "roost" | "rage" | "uproar">;
 
 // tslint:disable: no-trailing-whitespace (force newlines in doc)
 /**
@@ -34,12 +38,9 @@ export class MoveContext extends DriverContext
     // TODO: should these be the same strings?
     // could mention DriverEvents in dex data to make it clearer which types of
     //  events are expected
-    /**
-     * Maps SideConditionTypes from ActivateSideCondition events to
-     * SideCondition strings from dex-util.
-     */
-    private static readonly sideConditionMap:
-        {readonly [T in SideConditionType]: SideCondition} =
+    /** Maps TeamEFfectTypes to SideCondition strings from dex-util. */
+    private static readonly teamEffectMap:
+        {readonly [T in TeamEffectType]: SideCondition} =
     {
         healingWish: "healingwish", lightScreen: "lightscreen",
         luckyChant: "luckychant", lunarDance: "lunardance", mist: "mist",
@@ -53,8 +54,7 @@ export class MoveContext extends DriverContext
      * strings from dex-util.
      */
     private static readonly statusEffectMap:
-        {readonly [T in Exclude<StatusEffectType, "slowStart" | "uproar">]:
-            VolatileEffect} =
+        {readonly [T in StatusEffectMapKey]: VolatileEffect} =
     {
         aquaRing: "aquaring", attract: "attract", bide: "bide",
         charge: "charge", confusion: "confusion", curse: "curse",
@@ -62,8 +62,14 @@ export class MoveContext extends DriverContext
         foresight: "foresight", healBlock: "healblock", imprison: "imprison",
         ingrain: "ingrain", leechSeed: "leechseed", magnetRise: "magnetrise",
         miracleEye: "miracleeye", mudSport: "mudsport", nightmare: "nightmare",
-        powerTrick: "powertrick", substitute: "substitute", taunt: "taunt",
-        torment: "torment", waterSport: "watersport", yawn: "yawn"
+        powerTrick: "powertrick", substitute: "substitute",
+        suppressAbility: "gastroacid", taunt: "taunt", torment: "torment",
+        waterSport: "watersport", yawn: "yawn",
+        // singlemove
+        destinyBond: "destinybond", grudge: "grudge",
+        // singleturn
+        endure: "endure", magicCoat: "magiccoat", protect: "protect",
+        snatch: "snatch"
     };
 
     // event data
@@ -96,7 +102,7 @@ export class MoveContext extends DriverContext
     /** Self-switch flag. */
     private selfSwitch: SelfSwitch;
     /** Field effect flag. */
-    private fieldCondition: FieldConditionType | null;
+    private fieldEffect: FieldEffectType | null;
     /** Team effect flag. */
     private sideCondition: SideCondition | null;
     /** Volatile effect flag. */
@@ -170,9 +176,11 @@ export class MoveContext extends DriverContext
             : false;
         this.selfSwitch = this.moveData.selfSwitch ?? false;
         // TODO: make field condition part of dex data
-        this.fieldCondition =
+        const display = this.moveData.display.replace(" ", "");
+        this.fieldEffect =
             this.moveName === "gravity" ? "gravity"
             : this.moveName === "trickroom" ? "trickRoom"
+            : isWeatherType(display) ? display
             : null;
         // TODO: make side conditions part of dex data
         this.sideCondition = this.moveData.sideCondition ??
@@ -345,15 +353,12 @@ export class MoveContext extends DriverContext
                 return new AbilityContext(this.state, event,
                     this.logger.addPrefix(`Ability(${event.monRef}, ` +
                         `${event.ability}): `));
-            case "activateFieldCondition":
-                return this.activateFieldCondition(event);
-            case "activateSideCondition":
-                return this.activateSideCondition(event);
+            case "activateFieldEffect":
+                return this.activateFieldEffect(event);
             case "activateStatusEffect":
                 return this.activateStatusEffect(event);
-            case "setSingleMoveStatus": return this.setSingleMoveStatus(event);
-            case "setSingleTurnStatus": return this.setSingleTurnStatus(event);
-            case "setWeather": return this.setWeather(event);
+            case "activateTeamEffect":
+                return this.activateTeamEffect(event);
             case "clearSelfSwitch": case "gameOver": case "inactive":
             case "preTurn": case "postTurn":
                 return "expire";
@@ -389,10 +394,10 @@ export class MoveContext extends DriverContext
             throw new Error(`Expected CallEffect '${this.callEffect}' but it ` +
                 "didn't happen");
         }
-        if (this.fieldCondition)
+        if (this.fieldEffect)
         {
-            throw new Error("Expected FieldCondition " +
-                `'${this.fieldCondition}' but it didn't happen`);
+            throw new Error("Expected FieldEffect " +
+                `'${this.fieldEffect}' but it didn't happen`);
         }
         if (this.sideCondition)
         {
@@ -494,7 +499,7 @@ export class MoveContext extends DriverContext
 
             // clear pending flags
             this.callEffect = false;
-            this.fieldCondition = null;
+            this.fieldEffect = null;
             this.sideCondition = null;
             this.volatileEffect = null;
             this.selfVolatileEffect = null;
@@ -650,66 +655,24 @@ export class MoveContext extends DriverContext
     }
 
     /**
-     * Activates a field status condition. Consumes matching fieldCondition
-     * flags to make inferences.
+     * Activates a field-wide effect. Consumes matching fieldEffect flags to
+     * make inferences.
      * @returns Whether the parent DriverContexts should also handle this event.
      */
-    private activateFieldCondition(event: ActivateFieldCondition): ContextResult
+    private activateFieldEffect(event: ActivateFieldEffect): ContextResult
     {
         // is this event possible within the context of this move?
-        if (event.condition !== this.fieldCondition) return "expire";
-        // consume field condition flag
-        this.fieldCondition = null;
-        return "base";
-    }
+        if (event.effect !== this.fieldEffect) return "expire";
+        // consume field effect flag
+        this.fieldEffect = null;
 
-    /**
-     * Activates a team status condition. Consumes matching sideCondition flags
-     * to make inferences.
-     * @returns Whether the parent DriverContexts should also handle this event.
-     */
-    private activateSideCondition(event: ActivateSideCondition): ContextResult
-    {
-        switch (event.condition)
+        if (isWeatherType(event.effect))
         {
-            case "healingWish": case "lunarDance":
-                // no known move can explicitly cause a DriverEvent like this
-                // instead, the user of said move should faint
-                return "expire";
-            case "luckyChant": case "mist": case "safeguard": case "tailwind":
-                // no known move can explicitly end these SideConditions, only
-                //  when we're at the end of their durations
-                if (!event.start) return "expire";
-                if (this.checkSideCondition(event.condition)) return "expire";
-                this.sideCondition = null;
-                return "base";
-            case "spikes": case "stealthRock": case "toxicSpikes":
-                // can be cleared by a move, but aren't covered by a flag yet
-                //  (TODO)
-                if (!event.start) return "base";
-                if (this.checkSideCondition(event.condition)) return "expire";
-                this.sideCondition = null;
-                return "base";
-            case "lightScreen": case "reflect":
-                // can be cleared by a move, but aren't covered by a flag yet
-                //  (TODO)
-                if (!event.start) return "base";
-                if (this.checkSideCondition(event.condition)) return "expire";
-                this.sideCondition = null;
-                // fill in the user of the move (BaseContext just puts null)
-                this.state.teams[event.teamRef].status[event.condition]
-                    .start(this.user);
-                return "stop";
+            // fill in the user of the weather move (BaseContext just puts null)
+            this.state.status.weather.start(this.user, event.effect);
+            return "stop";
         }
-    }
-
-    /**
-     * @returns True if the given SideConditionType doesn't match the current
-     * pending flag, false otherwise.
-     */
-    private checkSideCondition(condition: SideConditionType): boolean
-    {
-        return MoveContext.sideConditionMap[condition] !== this.sideCondition;
+        return "base";
     }
 
     /**
@@ -719,40 +682,48 @@ export class MoveContext extends DriverContext
      */
     private activateStatusEffect(event: ActivateStatusEffect): ContextResult
     {
-        switch (event.status)
+        switch (event.effect)
         {
             case "aquaRing": case "attract": case "bide": case "charge":
             case "confusion": case "curse": case "embargo": case "encore":
             case "focusEnergy": case "foresight": case "healBlock":
             case "ingrain": case "magnetRise": case "miracleEye":
-            case "mudSport": case "nightmare": case "powerTrick": case "taunt":
-            case "torment": case "waterSport": case "yawn":
+            case "mudSport": case "nightmare": case "powerTrick":
+            case "suppressAbility": case "taunt": case "torment":
+            case "waterSport": case "yawn":
+            // singlemove
+            case "destinyBond": case "grudge":
+            // singleturn
+            case "endure": case "magicCoat": case "protect": case "snatch":
                 if (!event.start) return "expire";
-                if (this.checkStatusEffect(event.status)) return "expire";
+                if (this.checkStatusEffect(event.effect)) return "expire";
                 this.volatileEffect = null;
                 return this.addTarget(event.monRef);
             case "leechSeed": case "substitute":
                 // can be removed by a different move, but currently not tracked
                 //  yet (TODO)
                 if (!event.start) return "base";
-                if (this.checkStatusEffect(event.status)) return "expire";
+                if (this.checkStatusEffect(event.effect)) return "expire";
                 this.volatileEffect = null;
                 return this.addTarget(event.monRef);
             case "imprison":
                 if (!event.start) return "expire";
-                if (this.checkStatusEffect(event.status)) return "expire";
+                if (this.checkStatusEffect(event.effect)) return "expire";
                 if (this.userRef !== event.monRef) return "expire";
                 // verified that imprison was successful
                 this.volatileEffect = null;
                 this.addTarget(this.userRef);
                 this.imprison(/*failed*/false);
                 return "base";
+            case "rage": case "roost": case "uproar":
+                if (!event.start) return "expire";
+                if (this.selfVolatileEffect !== event.effect) return "expire";
+                this.selfVolatileEffect = null;
+                return "base";
             case "slowStart":
                 return "expire";
-            case "uproar":
-                if (!event.start) return "expire";
-                if (this.selfVolatileEffect !== "uproar") return "expire";
-                this.selfVolatileEffect = null;
+            default:
+                // TODO: track more move effects: major status, future move
                 return "base";
         }
     }
@@ -761,82 +732,57 @@ export class MoveContext extends DriverContext
      * @returns True if the given StatusEffectType doesn't match the
      * corresponding pending flag, false otherwise.
      */
-    private checkStatusEffect(status: Exclude<StatusEffectType, "uproar">):
-        boolean
+    private checkStatusEffect(status: StatusEffectMapKey): boolean
     {
-        return status === "slowStart" ||
-            MoveContext.statusEffectMap[status] !== this.volatileEffect;
+        return MoveContext.statusEffectMap[status] !== this.volatileEffect;
     }
 
     /**
-     * Sets a single-move status. Consumes matching volatileEffect and
-     * selfVolatileEffect flags to make inferences.
-     * @returns Whether the parent DriverContext should also handle this event.
+     * Activates a team-wide effect. Consumes matching sideCondition flags to
+     * make inferences.
+     * @returns Whether the parent DriverContexts should also handle this event.
      */
-    private setSingleMoveStatus(event: SetSingleMoveStatus): ContextResult
+    private activateTeamEffect(event: ActivateTeamEffect): ContextResult
     {
-        switch (event.status)
+        switch (event.effect)
         {
-            case "destinyBond":
-                if (this.volatileEffect !== "destinybond") return "expire";
-                this.volatileEffect = null;
-                break;
-            case "grudge":
-                if (this.volatileEffect !== "grudge") return "expire";
-                this.volatileEffect = null;
-                break;
-            case "rage":
-                if (this.selfVolatileEffect !== "rage") return "expire";
-                this.selfVolatileEffect = null;
-                break;
+            case "healingWish": case "lunarDance":
+                // no known move can explicitly cause a DriverEvent like this
+                // instead, the user of said move should faint
+                return "expire";
+            case "luckyChant": case "mist": case "safeguard": case "tailwind":
+                // no known move can explicitly end these SideConditions, only
+                //  when we're at the end of their durations
+                if (!event.start) return "expire";
+                if (this.checkSideCondition(event.effect)) return "expire";
+                this.sideCondition = null;
+                return "base";
+            case "spikes": case "stealthRock": case "toxicSpikes":
+                // can be cleared by a move, but aren't covered by a flag yet
+                //  (TODO)
+                if (!event.start) return "base";
+                if (this.checkSideCondition(event.effect)) return "expire";
+                this.sideCondition = null;
+                return "base";
+            case "lightScreen": case "reflect":
+                // can be cleared by a move, but aren't covered by a flag yet
+                //  (TODO)
+                if (!event.start) return "base";
+                if (this.checkSideCondition(event.effect)) return "expire";
+                this.sideCondition = null;
+                // fill in the user of the move (BaseContext just puts null)
+                this.state.teams[event.teamRef].status[event.effect]
+                    .start(this.user);
+                return "stop";
         }
-        return "base";
     }
 
     /**
-     * Sets a single-turn status. Consumes matching volatileEffect and
-     * selfVolatileEffect flags to make inferences.
-     * @returns Whether the parent DriverContext should also handle this event.
+     * @returns True if the given TeamEffectType doesn't match the current
+     * pending flag, false otherwise.
      */
-    private setSingleTurnStatus(event: SetSingleTurnStatus): ContextResult
+    private checkSideCondition(effect: TeamEffectType): boolean
     {
-        switch (event.status)
-        {
-            case "endure":
-                if (this.volatileEffect !== "endure") return "expire";
-                this.volatileEffect = null;
-                break;
-            case "magicCoat":
-                if (this.volatileEffect !== "magiccoat") return "expire";
-                this.volatileEffect = null;
-                break;
-            case "roost":
-                if (this.selfVolatileEffect !== "roost") return "expire";
-                this.selfVolatileEffect = null;
-                break;
-            case "snatch":
-                if (this.volatileEffect !== "snatch") return "expire";
-                this.volatileEffect = null;
-                break;
-            case "protect":
-                if (this.volatileEffect !== "protect") return "expire";
-                this.volatileEffect = null;
-                break;
-        }
-        return "base";
-    }
-
-    /**
-     * Sets the current weather.
-     * @returns Whether the parent DriverContext should also handle this event.
-     */
-    private setWeather(event: SetWeather): ContextResult
-    {
-        // make sure weather move matches
-        if (event.weatherType.toLowerCase() !== this.moveName) return "expire";
-
-        // fill in the user of the weather move (BaseContext just puts null)
-        this.state.status.weather.start(this.user, event.weatherType);
-        return "stop";
+        return MoveContext.teamEffectMap[effect] !== this.sideCondition;
     }
 }

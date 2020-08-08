@@ -2,8 +2,8 @@ import * as dex from "../battle/dex/dex";
 import { itemRemovalMoves, itemTransferMoves, Type } from
     "../battle/dex/dex-util";
 import { ActivateAbility, AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize,
-    SideConditionType, SingleMoveStatus, SingleTurnStatus, StatusEffectType,
-    TakeDamage, TransformPost } from "../battle/driver/DriverEvent";
+    SingleMoveEffect, SingleTurnEffect, StatusEffectType, TakeDamage,
+    TeamEffectType, TransformPost } from "../battle/driver/DriverEvent";
 import { otherSide, Side } from "../battle/state/Side";
 import { Logger } from "../Logger";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
@@ -293,7 +293,7 @@ export class PSEventHandler
             case "-fail": return this.handleFail(event, it);
             case "faint": return this.handleFaint(event, it);
             case "-fieldend": case "-fieldstart":
-                return this.handleFieldCondition(event, it);
+                return this.handleFieldEffect(event, it);
             case "-formechange": return this.handleFormeChange(event, it);
             case "-hitcount": return this.handleHitCount(event, it);
             case "-immune": return this.handleImmune(event, it);
@@ -439,7 +439,19 @@ export class PSEventHandler
 
         const monRef = this.getSide(event.id.owner);
         const ability = toIdName(event.ability);
-        return {result: [{type: "gastroAcid", monRef, ability}], remaining: it};
+        return {
+            result:
+            [
+                // TODO: does cartridge also reveal ability?
+                // when can this status be overwritten by an ability change?
+                {type: "activateAbility", monRef, ability},
+                {
+                    type: "activateStatusEffect", monRef,
+                    effect: "suppressAbility", start: true
+                }
+            ],
+            remaining: it
+        };
     }
 
     /** @virtual */
@@ -493,11 +505,11 @@ export class PSEventHandler
         {
             // update countable status effects
             const monRef = this.getSide(event.id.owner);
-            const status =
+            const effect =
                 event.volatile.startsWith("perish") ? "perish" : "stockpile";
-            const turns = parseInt(event.volatile.substr(status.length), 10);
+            const amount = parseInt(event.volatile.substr(effect.length), 10);
             return {
-                result: [{type: "countStatusEffect", monRef, status, turns}],
+                result: [{type: "countStatusEffect", monRef, effect, amount}],
                 remaining: it
             };
         }
@@ -516,7 +528,7 @@ export class PSEventHandler
                 return {
                     result:
                     [{
-                        type: "updateStatusEffect", monRef, status: "bide"
+                        type: "updateStatusEffect", monRef, effect: "bide"
                     }],
                     remaining: it
                 };
@@ -524,7 +536,7 @@ export class PSEventHandler
                 return {
                     result:
                     [{
-                        type: "activateStatusEffect", monRef, status: "charge",
+                        type: "activateStatusEffect", monRef, effect: "charge",
                         start: true
                     }],
                     remaining: it
@@ -534,7 +546,7 @@ export class PSEventHandler
                     result:
                     [{
                         type: "updateStatusEffect", monRef,
-                        status: event.volatile
+                        effect: event.volatile
                     }],
                     remaining: it
                 };
@@ -632,8 +644,8 @@ export class PSEventHandler
                 result:
                 [{
                     type: "countStatusEffect",
-                    monRef: this.getSide(event.id.owner), status: "stockpile",
-                    turns: 0
+                    monRef: this.getSide(event.id.owner), effect: "stockpile",
+                    amount: 0
                 }],
                 remaining: it
             };
@@ -647,8 +659,8 @@ export class PSEventHandler
         return {
             result:
             [{
-                type: "boost", monRef: this.getSide(event.id.owner),
-                stat: event.stat, amount: event.amount
+                type: "countStatusEffect", monRef: this.getSide(event.id.owner),
+                effect: event.stat, amount: event.amount, add: true
             }],
             remaining: it
         };
@@ -700,7 +712,11 @@ export class PSEventHandler
     {
         const monRef = this.getSide(event.id.owner);
         return {
-            result: [{type: "cureStatus", monRef, status: event.majorStatus}],
+            result:
+            [{
+                type: "activateStatusEffect", monRef, effect: event.majorStatus,
+                start: false
+            }],
             remaining: it
         };
     }
@@ -735,8 +751,8 @@ export class PSEventHandler
                 result:
                 [
                     {
-                        type: "activateSideCondition", teamRef: monRef,
-                        condition: "healingWish", start: false
+                        type: "activateTeamEffect", teamRef: monRef,
+                        effect: "healingWish", start: false
                     },
                     damageEvent
                 ],
@@ -749,8 +765,8 @@ export class PSEventHandler
                 result:
                 [
                     {
-                        type: "activateSideCondition", teamRef: monRef,
-                        condition: "lunarDance", start: false
+                        type: "activateTeamEffect", teamRef: monRef,
+                        effect: "lunarDance", start: false
                     },
                     damageEvent, {type: "restoreMoves", monRef}
                 ],
@@ -799,7 +815,7 @@ export class PSEventHandler
      * Handles a field end/start event.
      * @virtual
      */
-    protected handleFieldCondition(event: FieldEndEvent | FieldStartEvent,
+    protected handleFieldEffect(event: FieldEndEvent | FieldStartEvent,
         it: Iter<AnyBattleEvent>): PSResult
     {
         switch (event.effect)
@@ -808,7 +824,7 @@ export class PSEventHandler
                 return {
                     result:
                     [{
-                        type: "activateFieldCondition", condition: "gravity",
+                        type: "activateFieldEffect", effect: "gravity",
                         start: event.type === "-fieldstart"
                     }],
                     remaining: it
@@ -817,7 +833,7 @@ export class PSEventHandler
                 return {
                     result:
                     [{
-                        type: "activateFieldCondition", condition: "trickRoom",
+                        type: "activateFieldEffect", effect: "trickRoom",
                         start: event.type === "-fieldstart"
                     }],
                     remaining: it
@@ -958,7 +974,8 @@ export class PSEventHandler
         return {
             result:
             [{
-                type: "prepareMove", monRef: this.getSide(event.id.owner), move
+                type: "activateStatusEffect",
+                monRef: this.getSide(event.id.owner), effect: move, start: true
             }],
             remaining: it
         };
@@ -983,8 +1000,8 @@ export class PSEventHandler
             [
                 (({id, stat, amount}) =>
                 ({
-                    type: "setBoost", monRef: this.getSide(id.owner), stat,
-                    amount
+                    type: "countStatusEffect",
+                    monRef: this.getSide(id.owner), effect: stat, amount
                 } as const))(event)
             ],
             remaining: it
@@ -999,7 +1016,7 @@ export class PSEventHandler
         it: Iter<AnyBattleEvent>): PSResult
     {
         const teamRef = this.getSide(event.id);
-        let condition: SideConditionType;
+        let effect: TeamEffectType;
 
         let psCondition = event.condition;
         if (psCondition.startsWith("move: "))
@@ -1010,23 +1027,23 @@ export class PSEventHandler
         {
             case "Light Screen":
             case "Reflect":
-                condition = psCondition === "Reflect" ?
+                effect = psCondition === "Reflect" ?
                         "reflect" : "lightScreen";
                 break;
-            case "Lucky Chant": condition = "luckyChant"; break;
-            case "Mist": condition = "mist"; break;
-            case "Safeguard": condition = "safeguard"; break;
-            case "Spikes": condition = "spikes"; break;
-            case "Stealth Rock": condition = "stealthRock"; break;
-            case "Tailwind": condition = "tailwind"; break;
-            case "Toxic Spikes": condition = "toxicSpikes"; break;
+            case "Lucky Chant": effect = "luckyChant"; break;
+            case "Mist": effect = "mist"; break;
+            case "Safeguard": effect = "safeguard"; break;
+            case "Spikes": effect = "spikes"; break;
+            case "Stealth Rock": effect = "stealthRock"; break;
+            case "Tailwind": effect = "tailwind"; break;
+            case "Toxic Spikes": effect = "toxicSpikes"; break;
             default: return {result: [], remaining: it};
         }
 
         return {
             result:
             [{
-                type: "activateSideCondition", teamRef, condition,
+                type: "activateTeamEffect", teamRef, effect,
                 start: event.type === "-sidestart"
             }],
             remaining: it
@@ -1037,15 +1054,16 @@ export class PSEventHandler
     protected handleSingleMove(event: SingleMoveEvent,
         it: Iter<AnyBattleEvent>): PSResult
     {
-        let status: SingleMoveStatus | undefined;
-        if (event.move === "Destiny Bond") status = "destinyBond";
-        else if (event.move === "Grudge") status = "grudge";
-        else if (event.move === "Rage") status = "rage";
+        let effect: SingleMoveEffect | undefined;
+        if (event.move === "Destiny Bond") effect = "destinyBond";
+        else if (event.move === "Grudge") effect = "grudge";
+        else if (event.move === "Rage") effect = "rage";
         else return {result: [], remaining: it};
 
         const monRef = this.getSide(event.id.owner);
         return {
-            result: [{type: "setSingleMoveStatus", monRef, status}],
+            result:
+                [{type: "activateStatusEffect", monRef, effect, start: true}],
             remaining: it
         };
     }
@@ -1054,21 +1072,22 @@ export class PSEventHandler
     protected handleSingleTurn(event: SingleTurnEvent,
         it: Iter<AnyBattleEvent>): PSResult
     {
-        let status: SingleTurnStatus;
+        let effect: SingleTurnEffect;
         switch (event.status.startsWith("move: ") ?
             event.status.substr("move: ".length) : event.status)
         {
-            case "Endure": status = "endure"; break;
-            case "Magic Coat": status = "magicCoat"; break;
-            case "Protect": status = "protect"; break;
-            case "Roost": status = "roost"; break;
-            case "Snatch": status = "snatch"; break;
+            case "Endure": effect = "endure"; break;
+            case "Magic Coat": effect = "magicCoat"; break;
+            case "Protect": effect = "protect"; break;
+            case "Roost": effect = "roost"; break;
+            case "Snatch": effect = "snatch"; break;
             default: return {result: [], remaining: it};
         }
 
         const monRef = this.getSide(event.id.owner);
         return {
-            result: [{type: "setSingleTurnStatus", monRef, status}],
+            result:
+                [{type: "activateStatusEffect", monRef, effect, start: true}],
             remaining: it
         };
     }
@@ -1081,7 +1100,8 @@ export class PSEventHandler
         return {
             result:
             [{
-                type: "afflictStatus", monRef, status: event.majorStatus
+                type: "activateStatusEffect", monRef, effect: event.majorStatus,
+                start: true
             }],
             remaining: it
         };
@@ -1179,8 +1199,8 @@ export class PSEventHandler
         return {
             result:
             [{
-                type: "unboost", monRef: this.getSide(event.id.owner),
-                stat: event.stat, amount: event.amount
+                type: "countStatusEffect", monRef: this.getSide(event.id.owner),
+                effect: event.stat, amount: -event.amount, add: true
             }],
             remaining: it
         };
@@ -1206,9 +1226,16 @@ export class PSEventHandler
         if (event.weatherType === "none") events = [{type: "resetWeather"}];
         else if (event.upkeep)
         {
-            events = [{type: "tickWeather", weatherType: event.weatherType}];
+            events = [{type: "updateFieldEffect", effect: event.weatherType}];
         }
-        else events = [{type: "setWeather", weatherType: event.weatherType}];
+        else
+        {
+            events =
+            [{
+                type: "activateFieldEffect", effect: event.weatherType,
+                start: true
+            }];
+        }
 
         return {result: events, remaining: it};
     }
@@ -1265,7 +1292,7 @@ export class PSEventHandler
         const monRef = this.getSide(event.id.owner);
         const start = event.type === "-start";
 
-        let status: StatusEffectType | undefined;
+        let effect: StatusEffectType | undefined;
 
         let ev = event.volatile;
         if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
@@ -1273,15 +1300,15 @@ export class PSEventHandler
         let driverEvents: AnyDriverEvent[] | undefined;
         switch (ev)
         {
-            case "Aqua Ring": status = "aquaRing"; break;
-            case "Attract": status = "attract"; break;
-            case "Bide": status = "bide"; break;
+            case "Aqua Ring": effect = "aquaRing"; break;
+            case "Attract": effect = "attract"; break;
+            case "Bide": effect = "bide"; break;
             case "confusion":
             {
                 const confEvent =
                 {
                     type: "activateStatusEffect", monRef, start,
-                    status: "confusion"
+                    effect: "confusion"
                 } as const;
                 if (event.fatigue)
                 {
@@ -1290,7 +1317,7 @@ export class PSEventHandler
                 else driverEvents = [confEvent];
                 break;
             }
-            case "Curse": status = "curse"; break;
+            case "Curse": effect = "curse"; break;
             case "Disable":
                 if (event.type === "-start")
                 {
@@ -1304,47 +1331,41 @@ export class PSEventHandler
                 // re-enable disabled moves
                 else driverEvents = [{type: "reenableMoves", monRef}];
                 break;
-            case "Embargo": status = "embargo"; break;
-            case "Encore": status = "encore"; break;
-            case "Focus Energy": status = "focusEnergy"; break;
-            case "Foresight": status = "foresight"; break;
-            case "Heal Block": status = "healBlock"; break;
-            case "Imprison": status = "imprison"; break;
-            case "Ingrain": status = "ingrain"; break;
-            case "Leech Seed": status = "leechSeed"; break;
-            case "Magnet Rise": status = "magnetRise"; break;
-            case "Miracle Eye": status = "miracleEye"; break;
-            case "Mud Sport": status = "mudSport"; break;
-            case "Nightmare": status = "nightmare"; break;
-            case "Power Trick": status = "powerTrick"; break;
-            case "Slow Start": status = "slowStart"; break;
-            case "Substitute": status = "substitute"; break;
-            case "Taunt": status = "taunt"; break;
-            case "Torment": status = "torment"; break;
+            case "Embargo": effect = "embargo"; break;
+            case "Encore": effect = "encore"; break;
+            case "Focus Energy": effect = "focusEnergy"; break;
+            case "Foresight": effect = "foresight"; break;
+            case "Heal Block": effect = "healBlock"; break;
+            case "Imprison": effect = "imprison"; break;
+            case "Ingrain": effect = "ingrain"; break;
+            case "Leech Seed": effect = "leechSeed"; break;
+            case "Magnet Rise": effect = "magnetRise"; break;
+            case "Miracle Eye": effect = "miracleEye"; break;
+            case "Mud Sport": effect = "mudSport"; break;
+            case "Nightmare": effect = "nightmare"; break;
+            case "Power Trick": effect = "powerTrick"; break;
+            case "Slow Start": effect = "slowStart"; break;
+            case "Substitute": effect = "substitute"; break;
+            case "Taunt": effect = "taunt"; break;
+            case "Torment": effect = "torment"; break;
             case "Uproar":
                 if (event.type === "-start" &&
                     event.otherArgs[0] === "[upkeep]")
                 {
                     driverEvents =
                     [{
-                        type: "updateStatusEffect", monRef, status: "uproar"
+                        type: "updateStatusEffect", monRef, effect: "uproar"
                     }];
                 }
-                else status = "uproar";
+                else effect = "uproar";
                 break;
-            case "Water Sport": status = "waterSport"; break;
-            case "Yawn": status = "yawn"; break;
+            case "Water Sport": effect = "waterSport"; break;
+            case "Yawn": effect = "yawn"; break;
             default:
             {
                 const move = toIdName(ev);
                 // istanbul ignore else: not useful to test
-                if (dex.isFutureMove(move))
-                {
-                    driverEvents =
-                    [{
-                        type: "activateFutureMove", monRef, move, start
-                    }];
-                }
+                if (dex.isFutureMove(move)) effect = move;
                 else
                 {
                     this.logger.debug(
@@ -1355,11 +1376,11 @@ export class PSEventHandler
 
         if (!driverEvents)
         {
-            if (!status) driverEvents = [];
+            if (!effect) driverEvents = [];
             else
             {
                 driverEvents =
-                    [{type: "activateStatusEffect", monRef, status, start}];
+                    [{type: "activateStatusEffect", monRef, effect, start}];
             }
         }
         return {result: driverEvents, remaining: it};

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { StatExceptHP, statsExceptHP, Type } from
+import { isBoostName, isWeatherType, StatExceptHP, statsExceptHP, Type } from
     "../../../../src/battle/dex/dex-util";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
@@ -10,9 +10,9 @@ import { DriverContext } from
 import { MoveContext } from "../../../../src/battle/driver/context/MoveContext";
 import { SwitchContext } from
     "../../../../src/battle/driver/context/SwitchContext";
-import { AnyDriverEvent, CountableStatusType, DriverSwitchOptions,
-    FieldConditionType, InitTeam, SideConditionType, SingleMoveStatus,
-    SingleTurnStatus, StatusEffectType, UpdatableStatusEffectType } from
+import { AnyDriverEvent, CountableStatusEffectType, DriverSwitchOptions,
+    FieldEffectType, InitTeam, StatusEffectType, TeamEffectType,
+    UpdatableStatusEffectType } from
     "../../../../src/battle/driver/DriverEvent";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
@@ -77,158 +77,52 @@ describe("BaseContext", function()
             });
         });
 
-        describe("activateFieldCondition", function()
+        describe("activateFieldEffect", function()
         {
-            function test(name: string, condition: FieldConditionType)
+            function test(name: string, effect: FieldEffectType)
             {
+                if (isWeatherType(effect))
+                {
+                    throw new Error("Weather not supported here");
+                }
+
                 it(`Should activate ${name}`, function()
                 {
-                    expect(state.status[condition].isActive).to.be.false;
+                    expect(state.status[effect].isActive).to.be.false;
 
-                    // start the condition
-                    handle(
-                    {
-                        type: "activateFieldCondition", condition, start: true
-                    });
+                    // start the effect
+                    handle({type: "activateFieldEffect", effect, start: true});
+                    expect(state.status[effect].isActive).to.be.true;
 
-                    expect(state.status[condition].isActive).to.be.true;
-
-                    // end the condition
-                    handle(
-                    {
-                        type: "activateFieldCondition", condition, start: false
-                    });
-
-                    expect(state.status[condition].isActive).to.be.false;
+                    // end the effect
+                    handle({type: "activateFieldEffect", effect, start: false});
+                    expect(state.status[effect].isActive).to.be.false;
                 });
             }
 
             test("Gravity", "gravity");
             test("Trick Room", "trickRoom");
-        });
 
-        describe("activateFutureMove", function()
-        {
-            it("Should prepare and release future move", function()
+            describe("weather", function()
             {
-                const ts = state.teams.us.status;
-                // prepare move, mentioning the user
-                handle(
+                it("Should set weather", function()
                 {
-                    type: "activateFutureMove", monRef: "us",
-                    move: "doomdesire", start: true
-                });
-                expect(ts.futureMoves.doomdesire.isActive).to.be.true;
+                    handle(
+                    {
+                        type: "activateFieldEffect", effect: "Sandstorm",
+                        start: true
+                    });
 
-                // release the move, mentioning the target
-                handle(
-                {
-                    type: "activateFutureMove", monRef: "them",
-                    move: "doomdesire", start: false
+                    expect(state.status.weather.type).to.equal("Sandstorm");
+                    expect(state.status.weather.duration).to.not.be.null;
+                    expect(state.status.weather.source).to.be.null;
                 });
-                expect(ts.futureMoves.futuresight.isActive).to.be.false;
             });
-        });
-
-        describe("activateSideCondition", function()
-        {
-            function testItemCondition(name: string,
-                condition: "lightScreen" | "reflect")
-            {
-                it(`Should activate ${name}`, function()
-                {
-                    const team = state.teams.them;
-                    expect(team.status[condition].isActive).to.be.false;
-
-                    // start the condition
-                    handle(
-                    {
-                        type: "activateSideCondition", teamRef: "them",
-                        condition, start: true
-                    });
-                    expect(team.status[condition].isActive).to.be.true;
-                    expect(team.status[condition].source).to.be.null;
-
-                    // end the condition
-                    handle(
-                    {
-                        type: "activateSideCondition", teamRef: "them",
-                        condition, start: false
-                    });
-                    expect(team.status[condition].isActive).to.be.false;
-                });
-            }
-
-            testItemCondition("Light Screen", "lightScreen");
-            testItemCondition("Reflect", "reflect");
-
-            function testHazard(name: string,
-                condition: "spikes" | "stealthRock" | "toxicSpikes")
-            {
-                it(`Should activate ${name}`, function()
-                {
-                    const team = state.teams.us;
-                    expect(team.status[condition]).to.equal(0);
-
-                    // start the condition
-                    handle(
-                    {
-                        type: "activateSideCondition", teamRef: "us", condition,
-                        start: true
-                    });
-                    expect(team.status[condition]).to.equal(1);
-
-                    // end the condition
-                    handle(
-                    {
-                        type: "activateSideCondition", teamRef: "us", condition,
-                        start: false
-                    });
-                    expect(team.status[condition]).to.equal(0);
-                });
-            }
-
-            testHazard("Spikes", "spikes");
-            testHazard("Stealth Rock", "stealthRock");
-            testHazard("Toxic Spikes", "toxicSpikes");
-
-            function testStatus(name: string, condition: SideConditionType,
-                getter: (ts: ReadonlyTeamStatus) => boolean)
-            {
-                it(`Should activate ${name}`, function()
-                {
-                    const ts = state.teams.us.status;
-                    expect(getter(ts)).to.be.false;
-
-                    // start the condition
-                    handle(
-                    {
-                        type: "activateSideCondition", teamRef: "us", condition,
-                        start: true
-                    });
-                    expect(getter(ts)).to.be.true;
-
-                    // end the condition
-                    handle(
-                    {
-                        type: "activateSideCondition", teamRef: "us", condition,
-                        start: false
-                    });
-                    expect(getter(ts)).to.be.false;
-                });
-            }
-
-            testStatus("Healing Wish", "healingWish", ts => ts.healingWish);
-            testStatus("Lucky Chant", "luckyChant",
-                ts => ts.luckyChant.isActive);
-            testStatus("Mist", "mist", ts => ts.mist.isActive);
-            testStatus("Safeguard", "safeguard", ts => ts.safeguard.isActive);
-            testStatus("Tailwind", "tailwind", ts => ts.tailwind.isActive);
         });
 
         describe("activateStatusEffect", function()
         {
-            function test(name: string, status: StatusEffectType,
+            function test(name: string, effect: StatusEffectType,
                 getter: (v: ReadonlyVolatileStatus) => boolean)
             {
                 it(`Should activate ${name}`, function()
@@ -239,7 +133,7 @@ describe("BaseContext", function()
                     // start the status
                     handle(
                     {
-                        type: "activateStatusEffect", monRef: "us", status,
+                        type: "activateStatusEffect", monRef: "us", effect,
                         start: true
                     });
                     expect(getter(v)).to.be.true;
@@ -247,7 +141,7 @@ describe("BaseContext", function()
                     // end the status
                     handle(
                     {
-                        type: "activateStatusEffect", monRef: "us", status,
+                        type: "activateStatusEffect", monRef: "us", effect,
                         start: false
                     });
                     expect(getter(v)).to.be.false;
@@ -275,12 +169,25 @@ describe("BaseContext", function()
             test("Nightmare", "nightmare", v => v.nightmare);
             test("Power Trick", "powerTrick", v => v.powerTrick);
             test("Substitute", "substitute", v => v.substitute);
+            test("suppress ability", "suppressAbility", v => v.suppressAbility);
             test("Slow Start", "slowStart", v => v.slowStart.isActive);
             test("Taunt", "taunt", v => v.taunt.isActive);
             test("Torment", "torment", v => v.torment);
             test("Uproar", "uproar", v => v.uproar.isActive);
             test("Water Sport", "waterSport", v => v.waterSport);
             test("Yawn", "yawn", v => v.yawn.isActive);
+
+            // singlemove
+            test("Destiny Bond", "destinyBond", v => v.destinyBond);
+            test("Grudge", "grudge", v => v.grudge);
+            test("Rage", "rage", v => v.rage);
+
+            // singleturn
+            test("Endure", "endure", v => v.stallTurns > 0);
+            test("Magic Coat", "magicCoat", v => v.magicCoat);
+            test("Protect", "protect", v => v.stallTurns > 0);
+            test("Roost", "roost", v => v.roost);
+            test("Snatch", "snatch", v => v.snatch);
 
             it("Should throw if invalid status", function()
             {
@@ -292,40 +199,203 @@ describe("BaseContext", function()
                     handle(
                     {
                         type: "activateStatusEffect", monRef: "us",
-                        status: "invalid" as any, start: true
+                        effect: "invalid" as any, start: true
                     });
                 })
                     .to.throw(Error, "Invalid status effect 'invalid'");
             });
-        });
 
-        describe("afflictStatus", function()
-        {
-            it("Should afflict status", function()
+            describe("major status", function()
             {
-                const mon = initActive("us");
-                expect(mon.majorStatus.current).to.be.null;
-                handle({type: "afflictStatus", monRef: "us", status: "brn"});
-                expect(mon.majorStatus.current).to.equal("brn");
+                it("Should afflict major status", function()
+                {
+                    const mon = initActive("us");
+                    expect(mon.majorStatus.current).to.be.null;
+                    // start the status
+                    handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "brn", start: true
+                    });
+                    expect(mon.majorStatus.current).to.equal("brn");
+
+                    // end the status
+                    handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "brn", start: false
+                    });
+                    expect(mon.majorStatus.current).to.be.null;
+                });
+
+                it("Should throw if already afflicted", function()
+                {
+                    const mon = initActive("us");
+                    mon.majorStatus.afflict("tox");
+
+                    expect(() =>
+                        ctx.handle(
+                        {
+                            type: "activateStatusEffect", monRef: "us",
+                            effect: "psn", start: true
+                        }))
+                        .to.throw(Error,
+                            "MajorStatus 'tox' was expected to be 'null'");
+                    expect(mon.majorStatus.current).to.equal("tox");
+                });
+
+                it("Should throw if curing but mentioned an unrelated status",
+                function()
+                {
+                    const mon = initActive("us");
+                    mon.majorStatus.afflict("frz");
+
+                    expect(() =>
+                        ctx.handle(
+                        {
+                            type: "activateStatusEffect", monRef: "us",
+                            effect: "brn", start: false
+                        }))
+                        .to.throw(Error,
+                            "MajorStatus 'frz' was expected to be 'brn'");
+                    expect(mon.majorStatus.current).to.equal("frz");
+                });
+            });
+
+            describe("future move", function()
+            {
+                it("Should prepare and release future move", function()
+                {
+                    const ts = state.teams.us.status;
+                    // prepare the move, mentioning the user
+                    handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "doomdesire", start: true
+                    });
+                    expect(ts.futureMoves.doomdesire.isActive).to.be.true;
+
+                    // release the move, mentioning the target
+                    handle(
+                    {
+                        type: "activateStatusEffect", monRef: "them",
+                        effect: "doomdesire", start: false
+                    });
+                    expect(ts.futureMoves.futuresight.isActive).to.be.false;
+                });
+            });
+
+            describe("two-turn move", function()
+            {
+                it("Should prepare two-turn move", function()
+                {
+                    const vts = initActive("them").volatile.twoTurn;
+                    handle(
+                    {
+                        type: "activateStatusEffect", monRef: "them",
+                        effect: "dive", start: true
+                    });
+
+                    expect(vts.isActive).to.be.true;
+                    expect(vts.type).to.equal("dive");
+                });
             });
         });
 
-        describe("boost", function()
+        describe("activateTeamEffect", function()
         {
-            it("Should add stat boost", function()
+            function testItemEffect(name: string,
+                effect: "lightScreen" | "reflect")
             {
-                const boosts = initActive("us").volatile.boosts;
-                handle({type: "boost", monRef: "us", stat: "atk", amount: 2});
-                expect(boosts.atk).to.equal(2);
-            });
+                it(`Should activate ${name}`, function()
+                {
+                    const team = state.teams.them;
+                    expect(team.status[effect].isActive).to.be.false;
 
-            it("Should accumulate stat boost", function()
+                    // start the effect
+                    handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "them",
+                        effect, start: true
+                    });
+                    expect(team.status[effect].isActive).to.be.true;
+                    expect(team.status[effect].source).to.be.null;
+
+                    // end the effect
+                    handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "them",
+                        effect, start: false
+                    });
+                    expect(team.status[effect].isActive).to.be.false;
+                });
+            }
+
+            testItemEffect("Light Screen", "lightScreen");
+            testItemEffect("Reflect", "reflect");
+
+            function testHazard(name: string,
+                effect: "spikes" | "stealthRock" | "toxicSpikes")
             {
-                const boosts = initActive("us").volatile.boosts;
-                handle({type: "boost", monRef: "us", stat: "atk", amount: 2});
-                handle({type: "boost", monRef: "us", stat: "atk", amount: 3});
-                expect(boosts.atk).to.equal(5);
-            });
+                it(`Should activate ${name}`, function()
+                {
+                    const team = state.teams.us;
+                    expect(team.status[effect]).to.equal(0);
+
+                    // start the effect
+                    handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "us", effect,
+                        start: true
+                    });
+                    expect(team.status[effect]).to.equal(1);
+
+                    // end the effect
+                    handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "us", effect,
+                        start: false
+                    });
+                    expect(team.status[effect]).to.equal(0);
+                });
+            }
+
+            testHazard("Spikes", "spikes");
+            testHazard("Stealth Rock", "stealthRock");
+            testHazard("Toxic Spikes", "toxicSpikes");
+
+            function testEffect(name: string, effect: TeamEffectType,
+                getter: (ts: ReadonlyTeamStatus) => boolean)
+            {
+                it(`Should activate ${name}`, function()
+                {
+                    const ts = state.teams.us.status;
+                    expect(getter(ts)).to.be.false;
+
+                    // start the effect
+                    handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "us", effect,
+                        start: true
+                    });
+                    expect(getter(ts)).to.be.true;
+
+                    // end the effect
+                    handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "us", effect,
+                        start: false
+                    });
+                    expect(getter(ts)).to.be.false;
+                });
+            }
+
+            testEffect("Healing Wish", "healingWish", ts => ts.healingWish);
+            testEffect("Lucky Chant", "luckyChant",
+                ts => ts.luckyChant.isActive);
+            testEffect("Mist", "mist", ts => ts.mist.isActive);
+            testEffect("Safeguard", "safeguard", ts => ts.safeguard.isActive);
+            testEffect("Tailwind", "tailwind", ts => ts.tailwind.isActive);
         });
 
         describe("changeType", function()
@@ -422,21 +492,28 @@ describe("BaseContext", function()
 
         describe("countStatusEffect", function()
         {
-            function test(name: string, status: CountableStatusType): void
+            function test(name: string, effect: CountableStatusEffectType,
+                add = false): void
             {
                 it(`Should update ${name} count`, function()
                 {
                     const v = initActive("us").volatile;
-                    expect(v[status]).to.equal(0);
+                    if (isBoostName(effect)) v.boosts[effect] = 1;
+                    else v[effect] = 1;
                     handle(
                     {
-                        type: "countStatusEffect", monRef: "us", status,
-                        turns: 2
+                        type: "countStatusEffect", monRef: "us", effect,
+                        amount: 2, add
                     });
-                    expect(v[status]).to.equal(2);
+                    if (isBoostName(effect))
+                    {
+                        expect(v.boosts[effect]).to.equal(add ? 3 : 2);
+                    }
+                    else expect(v[effect]).to.equal(add ? 3 : 2);
                 });
             }
 
+            test("boost", "atk", /*add*/true)
             test("Perish Song", "perish");
             test("Stockpile", "stockpile");
         });
@@ -446,31 +523,6 @@ describe("BaseContext", function()
             it("Should do nothing", function()
             {
                 handle({type: "crit", monRef: "us"});
-            });
-        });
-
-        describe("cureStatus", function()
-        {
-            it("Should cure status", function()
-            {
-                const mon = initActive("us");
-                mon.majorStatus.afflict("par");
-                expect(mon.majorStatus.current).to.equal("par");
-                handle({type: "cureStatus", monRef: "us", status: "par"});
-                expect(mon.majorStatus.current).to.be.null;
-            });
-
-            it("Should throw if a different status was mentioned", function()
-            {
-                const mon = initActive("us");
-                mon.majorStatus.afflict("tox");
-
-                expect(() =>
-                    ctx.handle(
-                        {type: "cureStatus", monRef: "us", status: "psn"}))
-                    .to.throw(Error,
-                        "MajorStatus 'tox' was expected to be 'psn'");
-                expect(mon.majorStatus.current).to.equal("tox");
             });
         });
 
@@ -572,20 +624,6 @@ describe("BaseContext", function()
             it("Should do nothing", function()
             {
                 handle({type: "gameOver"});
-            });
-        });
-
-        describe("gastroAcid", function()
-        {
-            it("Should reveal and suppress ability", function()
-            {
-                const mon = initActive("them");
-                handle(
-                {
-                    type: "gastroAcid", monRef: "them", ability: "voltabsorb"
-                });
-                expect(mon.ability).to.equal("voltabsorb");
-                expect(mon.volatile.gastroAcid).to.be.true;
             });
         });
 
@@ -929,18 +967,6 @@ describe("BaseContext", function()
             });
         });
 
-        describe("prepareMove", function()
-        {
-            it("Should prepare two-turn move", function()
-            {
-                const vts = initActive("them").volatile.twoTurn;
-                handle({type: "prepareMove", monRef: "them", move: "dive"});
-
-                expect(vts.isActive).to.be.true;
-                expect(vts.type).to.equal("dive");
-            });
-        });
-
         describe("postTurn", function()
         {
             it("TODO", function()
@@ -1069,70 +1095,6 @@ describe("BaseContext", function()
             });
         });
 
-        describe("setBoost", function()
-        {
-            it("Should set boost", function()
-            {
-                const {boosts} = initActive("us").volatile;
-                expect(boosts.def).to.equal(0);
-                handle(
-                    {type: "setBoost", monRef: "us", stat: "def", amount: 6});
-
-                expect(boosts.def).to.equal(6);
-            });
-        });
-
-        describe("setSingleMoveStatus", function()
-        {
-            function test(name: string, status: SingleMoveStatus)
-            {
-                it(`Should set ${name}`, function()
-                {
-                    const v = initActive("us").volatile;
-                    expect(v[status]).to.be.false;
-
-                    handle({type: "setSingleMoveStatus", monRef: "us", status});
-                    expect(v[status]).to.be.true;
-                });
-            }
-
-            test("Destiny Bond", "destinyBond");
-            test("Grudge", "grudge");
-            test("Rage", "rage");
-        });
-
-        describe("setSingleTurnStatus", function()
-        {
-            function test(name: string, status: SingleTurnStatus)
-            {
-                it(`Should set ${name}`, function()
-                {
-                    const v = initActive("us").volatile;
-                    if (status === "endure" || status === "protect")
-                    {
-                        expect(v.stallTurns).to.equal(0);
-                        expect(v.stalling).to.be.false;
-                    }
-                    else expect(v[status]).to.be.false;
-
-                    handle({type: "setSingleTurnStatus", monRef: "us", status});
-
-                    if (status === "endure" || status === "protect")
-                    {
-                        expect(v.stallTurns).to.equal(1);
-                        expect(v.stalling).to.be.true;
-                    }
-                    else expect(v[status]).to.be.true;
-                });
-            }
-
-            test("Endure", "endure");
-            test("Magic Coat", "magicCoat");
-            test("Protect", "protect");
-            test("Roost", "roost");
-            test("Snatch", "snatch");
-        });
-
         describe("setThirdType", function()
         {
             it("Should set third type", function()
@@ -1140,18 +1102,6 @@ describe("BaseContext", function()
                 const v = initActive("us").volatile;
                 handle({type: "setThirdType", monRef: "us", thirdType: "bug"});
                 expect(v.addedType).to.equal("bug");
-            });
-        });
-
-        describe("setWeather", function()
-        {
-            it("Should set weather", function()
-            {
-                handle({type: "setWeather", weatherType: "Sandstorm"});
-
-                expect(state.status.weather.type).to.equal("Sandstorm");
-                expect(state.status.weather.duration).to.not.be.null;
-                expect(state.status.weather.source).to.be.null;
             });
         });
 
@@ -1232,35 +1182,6 @@ describe("BaseContext", function()
             });
         });
 
-        describe("tickWeather", function()
-        {
-            it("Should tick weather", function()
-            {
-                // first set the weather
-                handle({type: "setWeather", weatherType: "Sandstorm"});
-                expect(state.status.weather.turns).to.equal(0);
-
-                handle({type: "tickWeather", weatherType: "Sandstorm"});
-                expect(state.status.weather.turns).to.equal(1);
-            });
-
-            it("Should throw if a different weather is mentioned", function()
-            {
-                // first set the weather
-                handle({type: "setWeather", weatherType: "RainDance"});
-                expect(state.status.weather.turns).to.equal(0);
-
-                expect(() =>
-                        ctx.handle(
-                            {type: "tickWeather", weatherType: "Sandstorm"}))
-                    .to.throw(Error,
-                        "Weather is 'RainDance' but ticked weather is " +
-                        "'Sandstorm'");
-                expect(state.status.weather.type).to.equal("RainDance");
-                expect(state.status.weather.turns).to.equal(0);
-            });
-        });
-
         describe("transform", function()
         {
             it("Should transform pokemon", function()
@@ -1294,34 +1215,61 @@ describe("BaseContext", function()
             });
         });
 
-        describe("unboost", function()
+        describe("updateFieldEffect", function()
         {
-            it("Should subtract stat boost", function()
+            it("Should tick weather", function()
             {
-                const {boosts} = initActive("us").volatile;
-                handle({type: "unboost", monRef: "us", stat: "atk", amount: 2});
-                expect(boosts.atk).to.equal(-2);
+                // first set the weather
+                handle(
+                {
+                    type: "activateFieldEffect", effect: "Sandstorm",
+                    start: true
+                });
+                expect(state.status.weather.turns).to.equal(0);
+
+                handle({type: "updateFieldEffect", effect: "Sandstorm"});
+                expect(state.status.weather.turns).to.equal(1);
+            });
+
+            it("Should throw if a different weather is mentioned", function()
+            {
+                // first set the weather
+                handle(
+                {
+                    type: "activateFieldEffect", effect: "RainDance",
+                    start: true
+                });
+                expect(state.status.weather.turns).to.equal(0);
+
+                expect(() =>
+                        ctx.handle(
+                            {type: "updateFieldEffect", effect: "Sandstorm"}))
+                    .to.throw(Error,
+                        "Weather is 'RainDance' but ticked weather is " +
+                        "'Sandstorm'");
+                expect(state.status.weather.type).to.equal("RainDance");
+                expect(state.status.weather.turns).to.equal(0);
             });
         });
 
         describe("updateStatusEffect", function()
         {
-            function test(name: string, status: UpdatableStatusEffectType)
+            function test(name: string, effect: UpdatableStatusEffectType)
             {
                 it(`Should update ${name}`, function()
                 {
                     const v = initActive("us").volatile;
-                    expect(v[status].isActive).to.be.false;
+                    expect(v[effect].isActive).to.be.false;
 
-                    // first start the status
-                    v[status].start();
-                    expect(v[status].isActive).to.be.true;
-                    expect(v[status].turns).to.equal(1);
+                    // first start the effect
+                    v[effect].start();
+                    expect(v[effect].isActive).to.be.true;
+                    expect(v[effect].turns).to.equal(1);
 
                     // then update it
-                    handle({type: "updateStatusEffect", monRef: "us", status});
-                    expect(v[status].isActive).to.be.true;
-                    expect(v[status].turns).to.equal(2);
+                    handle({type: "updateStatusEffect", monRef: "us", effect});
+                    expect(v[effect].isActive).to.be.true;
+                    expect(v[effect].turns).to.equal(2);
                 });
             }
 

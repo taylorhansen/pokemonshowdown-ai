@@ -31,7 +31,6 @@ describe("VolatileStatus", function()
             expect(volatile.curse).to.be.false;
             expect(volatile.embargo.isActive).to.be.false;
             expect(volatile.focusEnergy).to.be.false;
-            expect(volatile.gastroAcid).to.be.false;
             expect(volatile.ingrain).to.be.false;
             expect(volatile.leechSeed).to.be.false;
             expect(volatile.lockedOnBy).to.be.null;
@@ -42,6 +41,7 @@ describe("VolatileStatus", function()
             expect(volatile.perish).to.equal(0);
             expect(volatile.powerTrick).to.be.false;
             expect(volatile.substitute).to.be.false;
+            expect(volatile.suppressAbility).to.be.false;
             expect(volatile.trapped).to.be.null;
             expect(volatile.trapping).to.be.null;
 
@@ -109,7 +109,6 @@ describe("VolatileStatus", function()
             expect(volatile.embargo.isActive).to.be.true;
             expect(volatile.embargo.turns).to.equal(1);
             expect(volatile.focusEnergy).to.be.true;
-            expect(volatile.gastroAcid).to.be.true;
             expect(volatile.ingrain).to.be.true;
             expect(volatile.leechSeed).to.be.true;
             expect(volatile.lockedOnBy).to.not.be.null;
@@ -121,6 +120,7 @@ describe("VolatileStatus", function()
             expect(volatile.perish).to.equal(3);
             expect(volatile.powerTrick).to.be.true;
             expect(volatile.substitute).to.be.true;
+            expect(volatile.suppressAbility).to.be.true;
             expect(volatile.trapped).to.not.be.null;
             expect(volatile.trapping).to.not.be.null;
 

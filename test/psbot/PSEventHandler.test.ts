@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import "mocha";
 import { itemRemovalMoves } from "../../src/battle/dex/dex-util";
-import { AnyDriverEvent, CountableStatusType, DriverInitPokemon,
-    SideConditionType, StatusEffectType} from
+import { AnyDriverEvent, CountableStatusEffectType, DriverInitPokemon,
+    StatusEffectType, TeamEffectType } from
     "../../src/battle/driver/DriverEvent";
 import { Logger } from "../../src/Logger";
 import { PokemonID, toIdName } from "../../src/psbot/helpers";
@@ -248,15 +248,24 @@ describe("PSEventHandler", function()
                     ability: "intimidate"
                 },
                 {type: "activateAbility", monRef: "us", ability: "intimidate"},
-                {type: "unboost", monRef: "them", stat: "atk", amount: 1}
+                {
+                    type: "countStatusEffect", monRef: "them", effect: "atk",
+                    amount: -1, add: true
+                }
             ]);
         });
 
         describe("-endability", function()
         {
-            test("Should emit gastroAcid",
+            test("Should emit activateAbility with activateStatusEffect",
                 [{type: "-endability", id: us, ability: "Swift Swim"}],
-                [{type: "gastroAcid", monRef: "us", ability: "swiftswim"}]);
+            [
+                {type: "activateAbility", monRef: "us", ability: "swiftswim"},
+                {
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "suppressAbility", start: true
+                }
+            ]);
 
             test("Should not emit if caused by Transform",
             [{
@@ -319,18 +328,18 @@ describe("PSEventHandler", function()
                 }]);
             });
 
-            function testCountableStatus(status: CountableStatusType)
+            function testCountableStatus(effect: CountableStatusEffectType)
             {
-                describe(status, function()
+                describe(effect, function()
                 {
                     test("Should emit countStatusEffect",
                     [{
-                        type: "-start", id: us, volatile: status + "1",
+                        type: "-start", id: us, volatile: effect + "1",
                         otherArgs: []
                     }],
                     [{
-                        type: "countStatusEffect", monRef: "us", status,
-                        turns: 1
+                        type: "countStatusEffect", monRef: "us", effect,
+                        amount: 1
                     }]);
                 });
             }
@@ -347,8 +356,7 @@ describe("PSEventHandler", function()
                     [{type: "-end", id: us, volatile: "Stockpile"}],
                 [{
                     type: "countStatusEffect", monRef: "us",
-                    status: "stockpile",
-                    turns: 0
+                    effect: "stockpile", amount: 0
                 }]);
             });
         });
@@ -364,7 +372,7 @@ describe("PSEventHandler", function()
                     []);
             }
 
-            function testTrivialStatus(name: string, status: StatusEffectType,
+            function testTrivialStatus(name: string, effect: StatusEffectType,
                 start: boolean): void
             {
                 const type: BattleEventType = start ? "-start" : "-end";
@@ -372,17 +380,17 @@ describe("PSEventHandler", function()
                 test(`Should emit activateStatusEffect on ${type}`,
                     [{type, id: us, volatile: name, otherArgs: []}],
                 [{
-                    type: "activateStatusEffect", monRef: "us", status, start
+                    type: "activateStatusEffect", monRef: "us", effect, start
                 }]);
             }
 
             function describeTrivialStatus(name: string,
-                status: StatusEffectType): void
+                effect: StatusEffectType): void
             {
                 describe(name, function()
                 {
-                    testTrivialStatus(name, status, /*start*/true);
-                    testTrivialStatus(name, status, /*start*/false);
+                    testTrivialStatus(name, effect, /*start*/true);
+                    testTrivialStatus(name, effect, /*start*/false);
                 });
             }
 
@@ -404,7 +412,7 @@ describe("PSEventHandler", function()
                     {type: "fatigue", monRef: "us"},
                     {
                         type: "activateStatusEffect", monRef: "us",
-                        status: "confusion", start: true
+                        effect: "confusion", start: true
                     }
                 ]);
             });
@@ -454,7 +462,7 @@ describe("PSEventHandler", function()
                     otherArgs: ["[upkeep]"]
                 }],
                 [{
-                    type: "updateStatusEffect", monRef: "us", status: "uproar"
+                    type: "updateStatusEffect", monRef: "us", effect: "uproar"
                 }]);
             });
 
@@ -466,13 +474,13 @@ describe("PSEventHandler", function()
                 for (const start of [true, false])
                 {
                     const type = start ? "-start" : "-end";
-                    test(`Should emit activateFutureMove on ${type}`,
+                    test(`Should emit activateStatusEffect for ${type}`,
                     [{
                         type, id: us, volatile: "Future Sight", otherArgs: []
                     }],
                     [{
-                        type: "activateFutureMove", monRef: "us",
-                        move: "futuresight", start
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "futuresight", start
                     }]);
 
                 }
@@ -493,7 +501,7 @@ describe("PSEventHandler", function()
                     otherArgs: []
                 }],
                 [{
-                    type: "updateStatusEffect", monRef: "us", status: "bide"
+                    type: "updateStatusEffect", monRef: "us", effect: "bide"
                 }]);
             });
 
@@ -506,7 +514,7 @@ describe("PSEventHandler", function()
                 }],
                 [{
                     type: "activateStatusEffect", monRef: "us",
-                    status: "charge", start: true
+                    effect: "charge", start: true
                 }]);
             });
 
@@ -519,7 +527,7 @@ describe("PSEventHandler", function()
                 }],
                 [{
                     type: "updateStatusEffect", monRef: "us",
-                    status: "confusion"
+                    effect: "confusion"
                 }]);
             });
 
@@ -651,9 +659,12 @@ describe("PSEventHandler", function()
 
         describe("-boost", function()
         {
-            test("Should emit boost",
+            test("Should emit countStatusEffect",
                 [{type: "-boost", id: us, stat: "atk", amount: 1}],
-                [{type: "boost", monRef: "us", stat: "atk", amount: 1}]);
+            [{
+                type: "countStatusEffect", monRef: "us", effect: "atk",
+                amount: 1, add: true
+            }]);
         });
 
         describe("cant", function()
@@ -728,9 +739,12 @@ describe("PSEventHandler", function()
 
         describe("-curestatus", function()
         {
-            test("Should emit cureStatus",
+            test("Should emit activateStatusEffect",
                 [{type: "-curestatus", id: us, majorStatus: "psn"}],
-                [{type: "cureStatus", monRef: "us", status: "psn"}]);
+            [{
+                type: "activateStatusEffect", monRef: "us", effect: "psn",
+                start: false
+            }]);
         });
 
         describe("-cureteam", function()
@@ -762,7 +776,7 @@ describe("PSEventHandler", function()
                     tox: true
                 }]);
 
-                test("Should emit takeDamage and activateSideCondition from " +
+                test("Should emit takeDamage and activateTeamEffect from " +
                     "Healing Wish",
                 [{
                     type, id: us,
@@ -771,8 +785,8 @@ describe("PSEventHandler", function()
                 }],
                 [
                     {
-                        type: "activateSideCondition", teamRef: "us",
-                        condition: "healingWish", start: false
+                        type: "activateTeamEffect", teamRef: "us",
+                        effect: "healingWish", start: false
                     },
                     {
                         type: "takeDamage", monRef: "us", newHP: [100, 100],
@@ -781,7 +795,7 @@ describe("PSEventHandler", function()
                 ]);
 
                 test("Should emit takeDamage, restoreMoves and " +
-                    "activateSideCondition from Lunar Dance",
+                    "activateTeamEffect from Lunar Dance",
                 [{
                     type, id: us,
                     status: {hp: 100, hpMax: 100, condition: null},
@@ -789,8 +803,8 @@ describe("PSEventHandler", function()
                 }],
                 [
                     {
-                        type: "activateSideCondition", teamRef: "us",
-                        condition: "lunarDance", start: false
+                        type: "activateTeamEffect", teamRef: "us",
+                        effect: "lunarDance", start: false
                     },
                     {
                         type: "takeDamage", monRef: "us", newHP: [100, 100],
@@ -855,16 +869,16 @@ describe("PSEventHandler", function()
 
                 const testCases =
                 [
-                    {effect: "move: Gravity", condition: "gravity"},
-                    {effect: "move: Trick Room", condition: "trickRoom"}
+                    {psEffect: "move: Gravity", effect: "gravity"},
+                    {psEffect: "move: Trick Room", effect: "trickRoom"}
                 ] as const;
 
-                for (const {effect, condition} of testCases)
+                for (const {psEffect, effect} of testCases)
                 {
-                    test(`Should emit activateFieldCondition from ${effect}`,
-                        [{type, effect}],
+                    test(`Should emit activateFieldEffect from '${psEffect}'`,
+                        [{type, effect: psEffect}],
                     [{
-                        type: "activateFieldCondition", condition,
+                        type: "activateFieldEffect", effect,
                         start: type === "-fieldstart"
                     }]);
                 }
@@ -966,9 +980,12 @@ describe("PSEventHandler", function()
 
         describe("-prepare", function()
         {
-            test("Should emit prepareMove",
+            test("Should emit activateStatusEffect",
                 [{type: "-prepare", id: us, moveName: "Fly"}],
-                [{type: "prepareMove", monRef: "us", move: "fly"}]);
+            [{
+                type: "activateStatusEffect", monRef: "us", effect: "fly",
+                start: true
+            }]);
 
             it("Should throw if not a two-turn move", function()
             {
@@ -987,9 +1004,12 @@ describe("PSEventHandler", function()
 
         describe("-setboost", function()
         {
-            test("Should emit setBoost",
+            test("Should emit countStatusEffect",
                 [{type: "-setboost", id: us, stat: "atk", amount: 1}],
-                [{type: "setBoost", monRef: "us", stat: "atk", amount: 1}]);
+            [{
+                type: "countStatusEffect", monRef: "us", effect: "atk",
+                amount: 1
+            }]);
         });
 
         for (const type of ["-sideend", "-sidestart"] as const)
@@ -1001,39 +1021,39 @@ describe("PSEventHandler", function()
 
                 const screensCases =
                 [
-                    {name: "Reflect", condition: "reflect"},
-                    {name: "Light Screen", condition: "lightScreen"}
+                    {name: "Reflect", effect: "reflect"},
+                    {name: "Light Screen", effect: "lightScreen"}
                 ] as const;
 
                 const testCases: readonly
                 {
-                    readonly name: string, readonly condition: SideConditionType
+                    readonly name: string, readonly effect: TeamEffectType
                 }[] =
                 [
-                    {name: "move: Lucky Chant", condition: "luckyChant"},
-                    {name: "Mist", condition: "mist"},
-                    {name: "Safeguard", condition: "safeguard"},
-                    {name: "Spikes", condition: "spikes"},
-                    {name: "Stealth Rock", condition: "stealthRock"},
-                    {name: "move: Tailwind", condition: "tailwind"},
-                    {name: "Toxic Spikes", condition: "toxicSpikes"},
+                    {name: "move: Lucky Chant", effect: "luckyChant"},
+                    {name: "Mist", effect: "mist"},
+                    {name: "Safeguard", effect: "safeguard"},
+                    {name: "Spikes", effect: "spikes"},
+                    {name: "Stealth Rock", effect: "stealthRock"},
+                    {name: "move: Tailwind", effect: "tailwind"},
+                    {name: "Toxic Spikes", effect: "toxicSpikes"},
                     ...screensCases
                 ];
 
-                for (const {name, condition} of testCases)
+                for (const {name, effect} of testCases)
                 {
                     // skip reflect/lightScreen for -sidestart events since
                     //  these need to know who caused it,
-                    if (screensCases.find(c => c.condition === condition) &&
+                    if (screensCases.find(c => c.effect === effect) &&
                         type === "-sidestart")
                     {
                         continue;
                     }
 
-                    test(`Should emit activateSideCondition from ${name}`,
+                    test(`Should emit activateTeamEffect from ${name}`,
                         [{type, id: us.owner, condition: name}],
                     [{
-                        type: "activateSideCondition", teamRef: "us", condition,
+                        type: "activateTeamEffect", teamRef: "us", effect,
                         start: type === "-sidestart"
                     }]);
                 }
@@ -1050,16 +1070,19 @@ describe("PSEventHandler", function()
 
             const testCases =
             [
-                {move: "Destiny Bond", status: "destinyBond"},
-                {move: "Grudge", status: "grudge"},
-                {move: "Rage", status: "rage"}
+                {move: "Destiny Bond", effect: "destinyBond"},
+                {move: "Grudge", effect: "grudge"},
+                {move: "Rage", effect: "rage"}
             ] as const;
 
-            for (const {move, status} of testCases)
+            for (const {move, effect} of testCases)
             {
-                test(`Should emit setSingleMoveStatus for ${move}`,
+                test(`Should emit activateStatusEffect for ${move}`,
                     [{type: "-singlemove", id: us, move}],
-                    [{type: "setSingleMoveStatus", monRef: "us", status}]);
+                [{
+                    type: "activateStatusEffect", monRef: "us", effect,
+                    start: true
+                }]);
             }
         });
 
@@ -1070,32 +1093,38 @@ describe("PSEventHandler", function()
 
             const testCases =
             [
-                {name: "Endure", status: "endure"},
-                {name: "move: Endure", status: "endure"},
-                {name: "Magic Coat", status: "magicCoat"},
-                {name: "move: Magic Coat", status: "magicCoat"},
-                {name: "Protect", status: "protect"},
-                {name: "move: Protect", status: "protect"},
-                {name: "Roost", status: "roost"},
-                {name: "move: Roost", status: "roost"},
-                {name: "Snatch", status: "snatch"},
-                {name: "move: Snatch", status: "snatch"}
+                {name: "Endure", effect: "endure"},
+                {name: "move: Endure", effect: "endure"},
+                {name: "Magic Coat", effect: "magicCoat"},
+                {name: "move: Magic Coat", effect: "magicCoat"},
+                {name: "Protect", effect: "protect"},
+                {name: "move: Protect", effect: "protect"},
+                {name: "Roost", effect: "roost"},
+                {name: "move: Roost", effect: "roost"},
+                {name: "Snatch", effect: "snatch"},
+                {name: "move: Snatch", effect: "snatch"}
             ] as const;
 
-            for (const {name, status} of testCases)
+            for (const {name, effect} of testCases)
             {
-                test(`Should emit setSingleTurnStatus '${status}' for ` +
+                test(`Should emit activateStatusEffect '${effect}' for ` +
                         `'${name}'`,
                     [{type: "-singleturn", id: us, status: name}],
-                    [{type: "setSingleTurnStatus", monRef: "us", status}]);
+                [{
+                    type: "activateStatusEffect", monRef: "us", effect,
+                    start: true
+                }]);
             }
         });
 
         describe("-status", function()
         {
-            test("Should emit afflictStatus",
+            test("Should emit activateStatusEffect",
                 [{type: "-status", id: us, majorStatus: "brn"}],
-                [{type: "afflictStatus", monRef: "us", status: "brn"}]);
+            [{
+                type: "activateStatusEffect", monRef: "us", effect: "brn",
+                start: true
+            }]);
         });
 
         describe("-supereffective", function()
@@ -1189,9 +1218,12 @@ describe("PSEventHandler", function()
 
         describe("-unboost", function()
         {
-            test("Should emit unboost",
+            test("Should emit countStatusEffect",
                 [{type: "-unboost", id: us, stat: "def", amount: 2}],
-                [{type: "unboost", monRef: "us", stat: "def", amount: 2}]);
+            [{
+                type: "countStatusEffect", monRef: "us", effect: "def",
+                amount: -2, add: true
+            }]);
         });
 
         describe("upkeep", function()
@@ -1206,18 +1238,20 @@ describe("PSEventHandler", function()
                 [{type: "-weather", weatherType: "none", upkeep: false}],
                 [{type: "resetWeather"}]);
 
-            test("Should emit tickWeather if upkeep=true",
+            test("Should emit updateFieldEffect if upkeep=true",
                 [{type: "-weather", weatherType: "RainDance", upkeep: true}],
-                [{type: "tickWeather", weatherType: "RainDance"}]);
+            [{
+                type: "updateFieldEffect", effect: "RainDance"
+            }]);
 
-            test("Should emit setWeather if weatherType!=none",
+            test("Should emit activateFieldEffect if weatherType!=none",
             [{
                 type: "-weather", weatherType: "Hail", upkeep: false,
                 from: "ability: Snow Warning", of: us
             }],
             [
                 {type: "activateAbility", monRef: "us", ability: "snowwarning"},
-                {type: "setWeather", weatherType: "Hail"}
+                {type: "activateFieldEffect", effect: "Hail", start: true}
             ]);
         });
 

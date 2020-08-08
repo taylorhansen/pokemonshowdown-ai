@@ -1,20 +1,21 @@
 import { Logger } from "../../../Logger";
-import { boostKeys, StatExceptHP } from "../../dex/dex-util";
+import { isFutureMove, isTwoTurnMove } from "../../dex/dex";
+import { boostKeys, isBoostName, isMajorStatus, isWeatherType, StatExceptHP }
+    from "../../dex/dex-util";
 import { BattleState } from "../../state/BattleState";
 import { otherSide, Side } from "../../state/Side";
-import { ActivateAbility, ActivateFieldCondition, ActivateFutureMove,
-    ActivateSideCondition, ActivateStatusEffect, AfflictStatus, AnyDriverEvent,
-    Boost, ChangeType, ClearAllBoosts, ClearNegativeBoosts, ClearPositiveBoosts,
-    ClearSelfSwitch, CopyBoosts, CountStatusEffect, Crit, CureStatus, CureTeam,
-    DisableMove, DriverEvent, DriverEventType, Fail, Faint, Fatigue, Feint,
-    FormChange, GameOver, GastroAcid, HitCount, Immune, Inactive,
-    InitOtherTeamSize, InitTeam, InvertBoosts, LockOn, Mimic, Miss, ModifyPP,
-    MustRecharge, PostTurn, PrepareMove, PreTurn, ReenableMoves,
-    RejectSwitchTrapped, RemoveItem, ResetWeather, Resisted, RestoreMoves,
-    RevealItem, RevealMove, SetBoost, SetSingleMoveStatus, SetSingleTurnStatus,
-    SetThirdType, SetWeather, Sketch, Stall, SuperEffective, SwapBoosts,
-    SwitchIn, TakeDamage, TickWeather, Transform, TransformPost, Trap, Unboost,
-    UpdateStatusEffect, UseMove } from "../DriverEvent";
+import { ActivateAbility, ActivateFieldEffect, ActivateStatusEffect,
+    ActivateTeamEffect, AnyDriverEvent, ChangeType, ClearAllBoosts,
+    ClearNegativeBoosts, ClearPositiveBoosts, ClearSelfSwitch, CopyBoosts,
+    CountStatusEffect, Crit, CureTeam, DisableMove, DriverEvent,
+    DriverEventType, Fail, Faint, Fatigue, Feint, FormChange, GameOver,
+    HitCount, Immune, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts,
+    LockOn, Mimic, Miss, ModifyPP, MustRecharge, PostTurn, PreTurn,
+    ReenableMoves, RejectSwitchTrapped, RemoveItem, ResetWeather, Resisted,
+    RestoreMoves, RevealItem, RevealMove, SetThirdType, Sketch, Stall,
+    SuperEffective, SwapBoosts, SwitchIn, TakeDamage, Transform, TransformPost,
+    Trap, UpdateFieldEffect, UpdateStatusEffect, UseMove } from
+    "../DriverEvent";
 import { AbilityContext } from "./AbilityContext";
 import { ContextResult, DriverContext } from "./DriverContext";
 import { MoveContext } from "./MoveContext";
@@ -65,118 +66,111 @@ export class BaseContext extends DriverContext implements DriverEventHandler
                 "): "));
     }
 
-    /** Activates a field status condition. */
-    public activateFieldCondition(event: ActivateFieldCondition): void
+    /** Activates a field-wide effect. */
+    public activateFieldEffect(event: ActivateFieldEffect): void
     {
-        this.state.status[event.condition][event.start ? "start" : "end"]();
-    }
-
-    /** Prepares or releases a future move. */
-    public activateFutureMove(event: ActivateFutureMove): void
-    {
-        if (event.start)
+        if (isWeatherType(event.effect))
         {
-            // starting a future move mentions the user
-            this.state.teams[event.monRef].status.futureMoves[event.move]
-                .start(/*restart*/false);
+            this.state.status.weather.start(null, event.effect);
         }
-        else
-        {
-            // ending a future move mentions the target before taking damage
-            this.state.teams[otherSide(event.monRef)].status
-                .futureMoves[event.move].end();
-        }
-    }
-
-    /** Activates a team status condition. */
-    public activateSideCondition(event: ActivateSideCondition): void
-    {
-        const ts = this.state.teams[event.teamRef].status;
-        switch (event.condition)
-        {
-            case "healingWish":
-            case "lunarDance":
-                ts[event.condition] = event.start;
-                break;
-            case "lightScreen":
-            case "reflect":
-                // start should normally be handled under a MoveContext
-                if (event.start) ts[event.condition].start(/*source*/null);
-                else ts[event.condition].reset();
-                break;
-            case "luckyChant":
-            case "mist":
-            case "safeguard":
-            case "tailwind":
-                if (event.start) ts[event.condition].start();
-                else ts[event.condition].end();
-                break;
-            case "spikes":
-            case "stealthRock":
-            case "toxicSpikes":
-                if (event.start) ++ts[event.condition];
-                else ts[event.condition] = 0;
-                break;
-        }
+        else this.state.status[event.effect][event.start ? "start" : "end"]();
     }
 
     /** Starts, sets, or ends a trivial status effect. */
     public activateStatusEffect(event: ActivateStatusEffect): void
     {
         const mon = this.state.teams[event.monRef].active;
-        switch (event.status)
+        switch (event.effect)
         {
-            case "aquaRing":
-            case "attract":
-            case "curse":
-            case "focusEnergy":
-            case "imprison":
-            case "ingrain":
-            case "leechSeed":
-            case "mudSport":
-            case "nightmare":
-            case "powerTrick":
-            case "substitute":
-            case "torment":
-            case "waterSport":
-                mon.volatile[event.status] = event.start;
+            case "aquaRing": case "attract": case "curse": case "focusEnergy":
+            case "imprison": case "ingrain": case "leechSeed": case "mudSport":
+            case "nightmare": case "powerTrick": case "substitute":
+            case "suppressAbility": case "torment": case "waterSport":
+            case "destinyBond": case "grudge": case "rage": // singlemove
+            case "magicCoat": case "roost": case "snatch": // singleturn
+                mon.volatile[event.effect] = event.start;
                 break;
-            case "bide":
-            case "confusion":
-            case "charge":
-            case "encore":
-            case "magnetRise":
-            case "embargo":
-            case "healBlock":
-            case "slowStart":
-            case "taunt":
-            case "uproar":
-            case "yawn":
-                mon.volatile[event.status][event.start ? "start" : "end"]();
+            case "bide": case "confusion": case "charge": case "encore":
+            case "magnetRise": case "embargo": case "healBlock":
+            case "slowStart": case "taunt": case "uproar": case "yawn":
+                mon.volatile[event.effect][event.start ? "start" : "end"]();
                 break;
-            case "foresight":
-            case "miracleEye":
-                mon.volatile.identified = event.start ? event.status : null;
+            case "endure": case "protect": // stall
+                mon.volatile.stall(event.start);
+                break;
+            case "foresight": case "miracleEye":
+                mon.volatile.identified = event.start ? event.effect : null;
                 break;
             default:
-                throw new Error(`Invalid status effect '${event.status}'`);
+                if (isMajorStatus(event.effect))
+                {
+                    if (event.start)
+                    {
+                        // afflict status (assert no current status)
+                        mon.majorStatus.assert(null).afflict(event.effect);
+                    }
+                    // cure status (assert mentioned status)
+                    else mon.majorStatus.assert(event.effect).cure();
+                }
+                else if (isFutureMove(event.effect))
+                {
+                    if (event.start)
+                    {
+                        // starting a future move mentions the user
+                        this.state.teams[event.monRef].status
+                            .futureMoves[event.effect].start(/*restart*/false);
+                    }
+                    else
+                    {
+                        // ending a future move mentions the target before
+                        //  taking damage
+                        this.state.teams[otherSide(event.monRef)].status
+                            .futureMoves[event.effect].end();
+                    }
+                }
+                else if (isTwoTurnMove(event.effect))
+                {
+                    mon.volatile.twoTurn.start(event.effect);
+                }
+                else
+                {
+                    throw new Error(
+                        `Invalid status effect '${event.effect}' with ` +
+                        `start=${event.start}`);
+                }
         }
     }
 
-    /** Afflicts the pokemon with a major status condition. */
-    public afflictStatus(event: AfflictStatus): void
+    /** Activates a team-wide effect. */
+    public activateTeamEffect(event: ActivateTeamEffect): void
     {
-        this.state.teams[event.monRef].active.majorStatus.afflict(event.status);
-    }
-
-    /**
-     * Temporarily boosts one of the pokemon's stats by the given amount of
-     * stages.
-     */
-    public boost(event: Boost): void
-    {
-        this.state.teams[event.monRef].active.volatile.boosts[event.stat] +=
-            event.amount;
+        const ts = this.state.teams[event.teamRef].status;
+        switch (event.effect)
+        {
+            case "healingWish":
+            case "lunarDance":
+                ts[event.effect] = event.start;
+                break;
+            case "lightScreen":
+            case "reflect":
+                // start should normally be handled under a MoveContext
+                if (event.start) ts[event.effect].start(/*source*/null);
+                else ts[event.effect].reset();
+                break;
+            case "luckyChant":
+            case "mist":
+            case "safeguard":
+            case "tailwind":
+                if (event.start) ts[event.effect].start();
+                else ts[event.effect].end();
+                break;
+            case "spikes":
+            case "stealthRock":
+            case "toxicSpikes":
+                if (event.start) ++ts[event.effect];
+                else ts[event.effect] = 0;
+                break;
+        }
     }
 
     /** Temporarily changes the pokemon's types. Also resets third type. */
@@ -233,19 +227,21 @@ export class BaseContext extends DriverContext implements DriverEventHandler
     /** Explicitly updates status counters. */
     public countStatusEffect(event: CountStatusEffect): void
     {
-        this.state.teams[event.monRef].active.volatile[event.status] =
-            event.turns;
+        const v = this.state.teams[event.monRef].active.volatile;
+        if (isBoostName(event.effect))
+        {
+            if (event.add) v.boosts[event.effect] += event.amount;
+            else v.boosts[event.effect] = event.amount;
+        }
+        else
+        {
+            if (event.add) v[event.effect] += event.amount;
+            else v[event.effect] = event.amount;
+        }
     }
 
     /** Indicates a critical hit of a move on a pokemon. */
     public crit(event: Crit): void {}
-
-    /** Cures the pokemon of the given major status. */
-    public cureStatus(event: CureStatus): void
-    {
-        this.state.teams[event.monRef].active.majorStatus.assert(event.status)
-            .cure();
-    }
 
     /** Cures all pokemon of a team of any major status conditions. */
     public cureTeam(event: CureTeam): void
@@ -296,14 +292,6 @@ export class BaseContext extends DriverContext implements DriverEventHandler
 
     /** Indicates that the game has ended. */
     public gameOver(event: GameOver): void {}
-
-    /** Reveals and suppresses a pokemon's ability due to Gastro Acid. */
-    public gastroAcid(event: GastroAcid): void
-    {
-        const mon = this.state.teams[event.monRef].active;
-        mon.traits.setAbility(event.ability);
-        mon.volatile.gastroAcid = true;
-    }
 
     /** Indicates that the pokemon was hit by a move multiple times. */
     public hitCount(event: HitCount): void {}
@@ -420,14 +408,6 @@ export class BaseContext extends DriverContext implements DriverEventHandler
         this.state.postTurn();
     }
 
-    /** Indicates that the pokemon is preparing a two-turn move. */
-    public prepareMove(event: PrepareMove): void
-    {
-        const mon = this.state.teams[event.monRef].active;
-        mon.moveset.reveal(event.move);
-        mon.volatile.twoTurn.start(event.move);
-    }
-
     /** Indicates that the turn is about to begin. */
     public preTurn(event: PreTurn): void
     {
@@ -484,41 +464,11 @@ export class BaseContext extends DriverContext implements DriverEventHandler
         this.state.teams[event.monRef].active.moveset.reveal(event.move);
     }
 
-    /** Sets the pokemon's temporary stat boost to a given amount */
-    public setBoost(event: SetBoost): void
-    {
-        this.state.teams[event.monRef].active.volatile.boosts[event.stat] =
-            event.amount;
-    }
-
-    /** Sets a single-move status for the pokemon. */
-    public setSingleMoveStatus(event: SetSingleMoveStatus): void
-    {
-        this.state.teams[event.monRef].active.volatile[event.status] = true;
-    }
-
-    /** Sets a single-turn status for the pokemon. */
-    public setSingleTurnStatus(event: SetSingleTurnStatus): void
-    {
-        const mon = this.state.teams[event.monRef].active;
-        if (event.status === "endure" || event.status === "protect")
-        {
-            mon.volatile.stall(true);
-        }
-        else mon.volatile[event.status] = true;
-    }
-
     /** Sets the pokemon's temporary third type. */
     public setThirdType(event: SetThirdType): void
     {
         this.state.teams[event.monRef].active.volatile.addedType =
             event.thirdType;
-    }
-
-    /** Sets the current weather. */
-    public setWeather(event: SetWeather): void
-    {
-        this.state.status.weather.start(null, event.weatherType);
     }
 
     /** Indicates that the pokemon is Sketching a move. */
@@ -565,18 +515,6 @@ export class BaseContext extends DriverContext implements DriverEventHandler
         }
     }
 
-    /** Indicates that the current weather condition is still active. */
-    public tickWeather(event: TickWeather): void
-    {
-        const weather = this.state.status.weather;
-        if (weather.type === event.weatherType) weather.tick();
-        else
-        {
-            throw new Error(`Weather is '${weather.type}' but ticked ` +
-                `weather is '${event.weatherType}'`);
-        }
-    }
-
     /** Indicates that a pokemon has transformed into its target. */
     public transform(event: Transform): void
     {
@@ -600,15 +538,17 @@ export class BaseContext extends DriverContext implements DriverEventHandler
             this.state.teams[event.target].active.volatile);
     }
 
-    // TODO: doesn't need to exist since Boost supports negative numbers
-    /**
-     * Temporarily unboosts one of the pokemon's stats by the given amount of
-     * stages.
-     */
-    public unboost(event: Unboost): void
+    /** Explicitly indicates that a field effect is still going. */
+    public updateFieldEffect(event: UpdateFieldEffect): void
     {
-        this.state.teams[event.monRef].active.volatile.boosts[event.stat] -=
-            event.amount;
+        // currently only applies to weather
+        const weather = this.state.status.weather;
+        if (weather.type === event.effect) weather.tick();
+        else
+        {
+            throw new Error(`Weather is '${weather.type}' but ticked ` +
+                `weather is '${event.effect}'`);
+        }
     }
 
     /**
@@ -618,7 +558,7 @@ export class BaseContext extends DriverContext implements DriverEventHandler
      */
     public updateStatusEffect(event: UpdateStatusEffect): void
     {
-        this.state.teams[event.monRef].active.volatile[event.status].tick();
+        this.state.teams[event.monRef].active.volatile[event.effect].tick();
     }
 
     /** Indicates that the pokemon used a move. */

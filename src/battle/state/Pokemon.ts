@@ -295,7 +295,7 @@ export class Pokemon implements ReadonlyPokemon
         if (v && v.ingrain) return true;
 
         // gastro acid status suppresses most abilities
-        const ignoringAbility = v && v.gastroAcid;
+        const ignoringAbility = v && v.suppressAbility;
         const ability = ignoringAbility ? "" : this.ability;
 
         // klutz ability suppresses most items
@@ -324,7 +324,7 @@ export class Pokemon implements ReadonlyPokemon
         if (v && v.ingrain) return true;
 
         // gastro acid status suppresses most abilities
-        const ignoringAbility = v && v.gastroAcid;
+        const ignoringAbility = v && v.suppressAbility;
 
         // klutz ability suppresses most items
         const ignoringItem = (v && v.embargo.isActive) ||
