@@ -65,6 +65,7 @@ const minorBattleEventTypes =
     "-item": {} as ItemEvent,
     "-miss": {} as MissEvent,
     "-mustrecharge": {} as MustRechargeEvent,
+    "-notarget": {} as NoTargetEvent,
     "-prepare": {} as PrepareEvent,
     "-resisted": {} as ResistedEvent,
     "-setboost": {} as SetBoostEvent,
@@ -439,6 +440,13 @@ export interface MissEvent extends MinorBattleEventBase<"-miss">
 export interface MustRechargeEvent extends MinorBattleEventBase<"-mustrecharge">
 {
     /** ID of the pokemon that needs to recharge. */
+    readonly id: PokemonID;
+}
+
+/** Event where a pokemon's move can't target anything. */
+export interface NoTargetEvent extends MinorBattleEventBase<"-notarget">
+{
+    /** ID of the pokemon attempting to use a move. */
     readonly id: PokemonID;
 }
 

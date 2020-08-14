@@ -978,6 +978,12 @@ describe("PSEventHandler", function()
                 [{type: "mustRecharge", monRef: "us"}]);
         });
 
+        describe("-notarget", function()
+        {
+            test("Should emit noTarget", [{type: "-notarget", id: them}],
+                [{type: "noTarget", monRef: "them"}]);
+        });
+
         describe("-prepare", function()
         {
             test("Should emit activateStatusEffect",

@@ -10,7 +10,7 @@ import { ActivateAbility, ActivateFieldEffect, ActivateStatusEffect,
     CountStatusEffect, Crit, CureTeam, DisableMove, DriverEvent,
     DriverEventType, Fail, Faint, Fatigue, Feint, FormChange, GameOver,
     HitCount, Immune, Inactive, InitOtherTeamSize, InitTeam, InvertBoosts,
-    LockOn, Mimic, Miss, ModifyPP, MustRecharge, PostTurn, PreTurn,
+    LockOn, Mimic, Miss, ModifyPP, MustRecharge, NoTarget, PostTurn, PreTurn,
     ReenableMoves, RejectSwitchTrapped, RemoveItem, ResetWeather, Resisted,
     RestoreMoves, RevealItem, RevealMove, SetThirdType, Sketch, Stall,
     SuperEffective, SwapBoosts, SwitchIn, TakeDamage, Transform, TransformPost,
@@ -398,6 +398,9 @@ export class BaseContext extends DriverContext implements DriverEventHandler
         // TODO: imply this in useMove event
         this.state.teams[event.monRef].active.volatile.mustRecharge = true;
     }
+
+    /** Indicates that the pokemon's move couldn't target anything. */
+    public noTarget(event: NoTarget): void {}
 
     /** Indicates that the turn is about to end. */
     public postTurn(event: PostTurn): void

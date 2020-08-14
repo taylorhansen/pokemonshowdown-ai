@@ -944,6 +944,14 @@ describe("BaseContext", function()
             });
         });
 
+        describe("noTarget", function()
+        {
+            it("Should do nothing", function()
+            {
+                handle({type: "noTarget", monRef: "them"});
+            });
+        });
+
         describe("preTurn", function()
         {
             it("TODO", function()

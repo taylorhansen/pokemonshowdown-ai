@@ -107,6 +107,7 @@ export const battleEvent: AnyBattleEvent[] =
         targetId: pokemonId[0], from: "lockedmove"
     },
     {type: "-mustrecharge", id: pokemonId[2]},
+    {type: "-notarget", id: pokemonId[0]},
     {
         type: "-prepare", id: pokemonId[1], moveName: "Solar Beam",
         targetId: pokemonId[0]

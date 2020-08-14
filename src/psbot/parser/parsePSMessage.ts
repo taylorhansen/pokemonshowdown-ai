@@ -457,6 +457,7 @@ function battleEventHelper(input: Input, info: Info):
         case "-miss": return eventMiss(input, info);
         case "move": return eventMove(input, info);
         case "-mustrecharge": return eventMustRecharge(input, info);
+        case "-notarget": return eventNoTarget(input, info);
         case "-prepare": return eventPrepare(input, info);
         case "-resisted": return eventResisted(input, info);
         case "-setboost": return eventSetBoost(input, info);
@@ -794,6 +795,16 @@ const eventMove: EventParser<"move"> = transform(
  */
 const eventMustRecharge: EventParser<"-mustrecharge"> = transform(
     sequence(word("-mustrecharge"), pokemonId), ([type, id]) => ({type, id}));
+
+/**
+ * Parses a NoTargetEvent.
+ *
+ * Format:
+ * @example
+ * |-notarget|<PokemonID>
+ */
+const eventNoTarget: EventParser<"-notarget"> = transform(
+    sequence(word("-notarget"), pokemonId), ([type, id]) => ({type, id}));
 
 /**
  * Parses a PrepareEvent.

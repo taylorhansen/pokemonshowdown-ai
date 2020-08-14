@@ -259,7 +259,7 @@ export class MoveContext extends DriverContext
         switch (event.type)
         {
             // handle move results/interruptions
-            case "fail":
+            case "fail": case "noTarget":
                 if (this.userRef !== event.monRef) return "expire";
                 this.handleImplicitEffects(/*failed*/true);
                 return "base";

@@ -41,6 +41,7 @@ interface DriverEventMap
     miss: Miss;
     modifyPP: ModifyPP;
     mustRecharge: MustRecharge;
+    noTarget: NoTarget;
     postTurn: PostTurn;
     preTurn: PreTurn;
     reenableMoves: ReenableMoves;
@@ -403,6 +404,13 @@ export interface ModifyPP extends DriverEventBase<"modifyPP">
 
 /** Indicates that the pokemon must recharge from the previous action. */
 export interface MustRecharge extends DriverEventBase<"mustRecharge">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+}
+
+/** Indicates that the pokemon's move couldn't target anything. */
+export interface NoTarget extends DriverEventBase<"noTarget">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
