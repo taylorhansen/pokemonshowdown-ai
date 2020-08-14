@@ -4,7 +4,7 @@ import { MajorStatus } from "../battle/dex/dex-util";
 /** Converts a display name into an id name. */
 export function toIdName(str: string): string
 {
-    return str.toLowerCase().replace(/[ -]/g, "");
+    return str.toLowerCase().replace(/[^a-z0-9!?]/, "");
 }
 
 /** Player ID in a battle. */
@@ -17,11 +17,7 @@ export type PlayerID = "p1" | "p2";
  */
 export function otherPlayerID(id: PlayerID): PlayerID
 {
-    if (id === "p1")
-    {
-        return "p2";
-    }
-    return "p1";
+    return id === "p1" ? "p2" : "p1";
 }
 
 /**

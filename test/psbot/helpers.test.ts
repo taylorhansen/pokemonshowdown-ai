@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { otherPlayerID } from "../../src/psbot/helpers";
+import { otherPlayerID, toIdName } from "../../src/psbot/helpers";
 
 /**
  * Describes a test case given to a function.
@@ -40,6 +40,22 @@ function testFunc<T, Args extends any[]>(name: string,
 
 describe("PSBot Helpers", function()
 {
+    testFunc("toIdName()", toIdName,
+    [
+        {
+            desc: "Should lowercase and remove spaces", expected: "lifeorb",
+            args: ["Life Orb"]
+        },
+        {
+            desc: "Should resolve Unown form name", expected: "unown?",
+            args: ["Unown-?"]
+        },
+        {
+            desc: "Should resolve 'Farfetch’d' apostrophe",
+            expected: "farfetchd", args: ["farfetch’d"]
+        }
+    ]);
+
     testFunc("otherPlayerID()", otherPlayerID,
     [
         {desc: "Should return p1 if given p2", expected: "p1", args: ["p2"]},
