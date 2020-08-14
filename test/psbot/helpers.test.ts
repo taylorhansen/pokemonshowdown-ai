@@ -47,10 +47,6 @@ describe("PSBot Helpers", function()
             args: ["Life Orb"]
         },
         {
-            desc: "Should resolve Unown form name", expected: "unown?",
-            args: ["Unown-?"]
-        },
-        {
             desc: "Should resolve 'Farfetch’d' apostrophe",
             expected: "farfetchd", args: ["farfetch’d"]
         },

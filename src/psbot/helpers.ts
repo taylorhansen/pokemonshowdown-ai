@@ -4,7 +4,7 @@ import { MajorStatus } from "../battle/dex/dex-util";
 /** Converts a display name into an id name. */
 export function toIdName(str: string): string
 {
-    return str.toLowerCase().replace(/[^a-z0-9!?]/g, "");
+    return str.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 /** Player ID in a battle. */

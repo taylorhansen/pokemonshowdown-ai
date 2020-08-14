@@ -296,27 +296,34 @@ for (const mon of
         // add forms for all the other letters
         const letters =
         [
-            "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",
-            "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "!", "?"
+            "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
+            "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+            "Exclamation", "Question"
         ];
         const {baseForm: _, ...data2} = entry[1]; // omit baseForm from data2
 
         for (const letter of letters)
         {
-            const name = `unown${letter}`;
+            const lower = letter.toLowerCase();
+            const name = `unown${lower}`;
             pokemon.push(
             [
                 name,
                 {
-                    ...data2, name, display: `Unown-${letter.toUpperCase()}`,
-                    baseSpecies: "unown", form: letter
+                    ...data2, name, display: `Unown-${letter}`,
+                    baseSpecies: "unown", form: lower
                 }
             ]);
         }
 
         // add alt forms to list
+        // TODO: if other forms are treated as separate species, should forms
+        //  even be mentioned?
         entry[1] =
-            {...entry[1], otherForms: letters.map(letter => `unown${letter}`)};
+        {
+            ...entry[1],
+            otherForms: letters.map(letter => `unown${letter.toLowerCase()}`)
+        };
     }
 
     // make sure the next entry, cherrim-sunshine, receives the same uid since
