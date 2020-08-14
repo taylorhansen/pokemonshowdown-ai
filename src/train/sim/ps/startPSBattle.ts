@@ -1,5 +1,6 @@
 import * as fs from "fs";
-import { dirname } from "path";
+import * as os from "os";
+import * as path from "path";
 // @ts-ignore
 import s = require("../../../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
@@ -13,16 +14,6 @@ import { parsePSMessage } from "../../../psbot/parser/parsePSMessage";
 import { PSBattle } from "../../../psbot/PSBattle";
 import { PSEventHandler, PSResult } from "../../../psbot/PSEventHandler";
 import { ensureDir } from "../../helpers/ensureDir";
-
-/** Writes a string into a file. */
-async function writeFile(filePath: string, buffer: string): Promise<void>
-{
-    await ensureDir(dirname(filePath));
-    const file = fs.createWriteStream(filePath);
-    await new Promise((res, rej) =>
-        file.write(buffer, err => err ? rej(err) : res()));
-    file.close();
-}
 
 /** Player options for `startBattle()`. */
 export interface PlayerOptions
@@ -61,9 +52,23 @@ export interface GameOptions extends Players
 export async function startPSBattle(options: GameOptions):
     Promise<PlayerID | undefined>
 {
+    // setup logfile
+    let logPath: string;
+    if (options.logPath)
+    {
+        await ensureDir(path.dirname(options.logPath));
+        logPath = options.logPath
+    }
+    else
+    {
+        // create a temporary file so logs can still be recovered
+        logPath = await fs.promises.mkdtemp(
+            path.join(os.tmpdir(), "psbattle-"));
+    }
+    const file = fs.createWriteStream(logPath);
+
     // setup logger
-    let buffer = "";
-    const logFunc: LogFunc = msg => buffer += msg;
+    const logFunc: LogFunc = msg => file.write(msg);
     const logger = new Logger(logFunc, logFunc,
         options.logPrefix ?? "Battle: ");
 
@@ -162,16 +167,9 @@ export async function startPSBattle(options: GameOptions):
                 // should NEVER happen
                 catch (e)
                 {
-                    innerLog.error(`${e}\n${(e as Error).stack}`);
-
-                    let msg = "Fatal: startBattle() encountered an error.";
-                    if (options.logPath)
-                    {
-                        await writeFile(options.logPath, buffer);
-                        msg += ` Check ${options.logPath} for details.`;
-                    }
-                    else msg += ` Log buffer:\n${buffer}`;
-                    throw new Error(msg);
+                    innerLog.error(e && e.stack || e);
+                    throw new Error("startPSBattle() encountered an error. " +
+                        `Check ${logPath} for details.`);
                 }
             }
             // signal to other event loop of game over
@@ -179,11 +177,9 @@ export async function startPSBattle(options: GameOptions):
         }());
     }
 
-    // wait for the game to finish
-    await Promise.all(eventLoops);
-
-    // write logs to the log file
-    if (options.logPath) await writeFile(options.logPath, buffer);
+    // wait for the game to finish before closing the logfile
+    await Promise.all(eventLoops)
+        .finally(() => new Promise(res => file.end(res)));
 
     return winner;
 }
