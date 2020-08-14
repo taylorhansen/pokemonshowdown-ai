@@ -75,6 +75,13 @@ class GamePort extends
     public generateRID(): number { return super.generateRID(); }
 }
 
+interface QueuedGame
+{
+    readonly args: GamePoolArgs;
+    res(result: GameResult): void;
+    rej(reason: Error): void;
+}
+
 /** Uses `worker_threads` pools to dispatch parallel games. */
 export class GamePool extends EventEmitter
 {
@@ -85,6 +92,8 @@ export class GamePool extends EventEmitter
     private readonly ports: Set<GamePort> = new Set();
     /** Total worker ports available. */
     private readonly freePorts: GamePort[] = [];
+    /** Queued game promises. */
+    private readonly queuedGames: QueuedGame[] = [];
 
     /**
      * Creates a GamePool.
@@ -102,18 +111,28 @@ export class GamePool extends EventEmitter
         }
 
         for (let i = 0; i < numThreads; ++i) this.addWorker();
+
+        this.on(GamePool.workerFreedEvent, () => this.unqueueGame());
     }
 
     /** Queues a game to be played. */
     public async addGame(args: GamePoolArgs): Promise<GameResult>
     {
-        // wait until we have a free worker
-        if (this.freePorts.length <= 0)
-        {
-            return new Promise((res, rej) =>
-                this.once(GamePool.workerFreedEvent,
-                    () => this.addGame(args).then(res).catch(rej)));
-        }
+        // queue game
+        const promise = new Promise<GameResult>((res, rej) =>
+            this.queuedGames.push({args, res, rej}));
+
+        // if free port available, unqueue a game (possibly this one)
+        if (this.freePorts.length > 0) await this.unqueueGame();
+
+        return promise;
+    }
+
+    /** Requests a queued game to be played. */
+    private async unqueueGame(): Promise<void>
+    {
+        if (this.queuedGames.length <= 0 || this.freePorts.length <= 0) return;
+        const {args, res, rej} = this.queuedGames.shift()!;
 
         // request neural network ports
         const agentsPromise = Promise.all(
@@ -126,7 +145,7 @@ export class GamePool extends EventEmitter
                     };
                 })) as Promise<[GameWorkerAgentConfig, GameWorkerAgentConfig]>;
 
-        // get the next free worker
+        // get the next free worker port
         const gamePort = this.freePorts.pop()!;
 
         // setup the game worker
@@ -138,19 +157,16 @@ export class GamePool extends EventEmitter
             ...(args.logPath && {logPath: args.logPath}),
             ...(args.rollout && {rollout: args.rollout})
         };
-        const result = await new Promise<GameResult>((res, rej) =>
-        {
-            gamePort.postMessage(msg, msg.agents.map(config => config.port),
-                workerResult =>
-                {
-                    if (workerResult.type !== "error") res(workerResult);
-                    else rej(deserialize(workerResult.errBuf));
-                });
-        });
+        gamePort.postMessage(msg, msg.agents.map(config => config.port),
+            workerResult =>
+            {
+                // downcast GameWorkerResult to GameResult
+                if (workerResult.type !== "error") res(workerResult);
+                else rej(deserialize(workerResult.errBuf));
+            });
 
         this.freePorts.push(gamePort);
         this.emit(GamePool.workerFreedEvent);
-        return result;
     }
 
     /**
