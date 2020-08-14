@@ -7,7 +7,7 @@ cd ..
 ps_dir=./pokemon-showdown/
 
 git submodule update --init --recursive
-if [ ! -d $ps_dir ]
+if [ ! -d $ps_dir -o ! "$(ls -A $ps_dir)" ]
 then
     echo "Submodule not detected!"
     exit 1

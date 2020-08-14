@@ -20,8 +20,6 @@ cd pokemonshowdown-ai
 npm install
 
 # compile submodules
-# note: if you forgot to clone with "--recursive", remove the empty pokemon-showdown/ submodule folder before continuing:
-# rm -rf pokemon-showdown
 scripts/init-ps.sh
 
 # compile codebase
