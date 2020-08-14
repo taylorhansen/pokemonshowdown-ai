@@ -9,9 +9,9 @@ import { GamePool } from "./play/GamePool";
 import { Opponent } from "./play/playGames";
 
 /** Number of training episodes to complete. */
-const numEpisodes = 2;
+const numEpisodes = 8;
 /** Max amount of evaluation games against one ancestor. */
-const numEvalGames = 3;
+const numEvalGames = 32;
 
 (async function()
 {
@@ -64,9 +64,9 @@ const numEvalGames = 3;
             pool, processor, model,
             trainOpponents:
             [{
-                name: "self", agentConfig: {model, exp: true}, numGames: 3
+                name: "self", agentConfig: {model, exp: true}, numGames: 32
             }],
-            evalOpponents, simName: "ps", maxTurns: 100,
+            evalOpponents, simName: "ps", maxTurns: 128,
             algorithm:
             {
                 type: "ppo", variant: "clipped", epsilon: 0.2,
@@ -75,9 +75,9 @@ const numEvalGames = 3;
                     type: "generalized", lambda: 0.95, gamma: 0.95,
                     standardize: true
                 },
-                valueCoeff: 0.6, entropyCoeff: 0.8
+                valueCoeff: 0.55, entropyCoeff: 0.9
             },
-            epochs: 3, batchSize: 32,
+            epochs: 16, batchSize: 32,
             logger: episodeLog, logPath: join(logPath, `episode-${i + 1}`)
         });
 
