@@ -104,11 +104,8 @@ export class BaseContext extends DriverContext implements DriverEventHandler
             default:
                 if (isMajorStatus(event.effect))
                 {
-                    if (event.start)
-                    {
-                        // afflict status (assert no current status)
-                        mon.majorStatus.assert(null).afflict(event.effect);
-                    }
+                    // afflict status
+                    if (event.start) mon.majorStatus.afflict(event.effect);
                     // cure status (assert mentioned status)
                     else mon.majorStatus.assert(event.effect).cure();
                 }

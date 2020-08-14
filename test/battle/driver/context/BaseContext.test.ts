@@ -210,38 +210,23 @@ describe("BaseContext", function()
                 it("Should afflict major status", function()
                 {
                     const mon = initActive("us");
-                    expect(mon.majorStatus.current).to.be.null;
+                    mon.majorStatus.afflict("brn"); // should make no difference
+
                     // start the status
                     handle(
                     {
                         type: "activateStatusEffect", monRef: "us",
-                        effect: "brn", start: true
+                        effect: "slp", start: true
                     });
-                    expect(mon.majorStatus.current).to.equal("brn");
+                    expect(mon.majorStatus.current).to.equal("slp");
 
                     // end the status
                     handle(
                     {
                         type: "activateStatusEffect", monRef: "us",
-                        effect: "brn", start: false
+                        effect: "slp", start: false
                     });
                     expect(mon.majorStatus.current).to.be.null;
-                });
-
-                it("Should throw if already afflicted", function()
-                {
-                    const mon = initActive("us");
-                    mon.majorStatus.afflict("tox");
-
-                    expect(() =>
-                        ctx.handle(
-                        {
-                            type: "activateStatusEffect", monRef: "us",
-                            effect: "psn", start: true
-                        }))
-                        .to.throw(Error,
-                            "MajorStatus 'tox' was expected to be 'null'");
-                    expect(mon.majorStatus.current).to.equal("tox");
                 });
 
                 it("Should throw if curing but mentioned an unrelated status",
