@@ -119,7 +119,7 @@ for (const move of
         // locking moves are also recorded in a different object
         if (move.self.volatileStatus === "lockedmove")
         {
-            lockedMoves.push(move.name);
+            lockedMoves.push(move.id);
         }
     }
 
@@ -132,8 +132,8 @@ for (const move of
     const mirror = move.flags.mirror === 1;
 
     // two turn/future moves are also recorded in a different object
-    if (move.flags.charge === 1) twoTurnMoves.push(move.name);
-    if (move.isFutureMove) futureMoves.push(move.name);
+    if (move.flags.charge === 1) twoTurnMoves.push(move.id);
+    if (move.isFutureMove) futureMoves.push(move.id);
 
     if (!move.noSketch) sketchableMoves.push(move.id);
 
@@ -253,8 +253,8 @@ for (const mon of
     let otherForms: string[] | undefined;
     if (mon.otherFormes)
     {
-        const tmp = mon.otherFormes.map(toIdName).filter(f => isGen4(f));
-        if (tmp.length > 0) otherForms = tmp.map(toIdName).sort();
+        const tmp = mon.otherFormes.map(toIdName).filter(isGen4);
+        if (tmp.length > 0) otherForms = tmp.sort();
     }
 
     const movepool = [...composeMovepool(mon)].sort();
@@ -455,7 +455,7 @@ function exportSpecificMoves(moveNames: readonly string[], name: string,
 
     // build set of all moves of this specific type
     return moveNames.reduce(
-            (prev, moveName, i) => prev + `\n${s}${toIdName(moveName)}: ${i},`,
+            (prev, moveName, i) => prev + `\n${s}${moveName}: ${i},`,
             `/** Set of all ${display} moves. Maps move name to its id ` +
                 `within this object. */\nexport const ${name}Moves =\n{`) +
         `\n} as const;

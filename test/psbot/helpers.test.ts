@@ -53,7 +53,11 @@ describe("PSBot Helpers", function()
         {
             desc: "Should resolve 'Farfetch’d' apostrophe",
             expected: "farfetchd", args: ["farfetch’d"]
-        }
+        },
+        {
+            desc: "Should filter multiple punctuation marks",
+            expected: "willowisp", args: ["Will-O-Wisp"]
+        },
     ]);
 
     testFunc("otherPlayerID()", otherPlayerID,
