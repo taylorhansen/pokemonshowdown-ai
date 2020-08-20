@@ -1,5 +1,5 @@
-import { MessagePort } from "worker_threads";
 import { deserialize } from "v8";
+import { MessagePort } from "worker_threads";
 
 /** Base type for AsyncPort request typings. */
 export type PortRequestMap<T extends string> =
