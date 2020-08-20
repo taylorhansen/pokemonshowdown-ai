@@ -56,9 +56,8 @@ export interface PSGameResult extends Omit<SimResult, "winner" | "experiences">
     winner?: PlayerID;
 }
 
-/** Completes a simulated battle, returning the winner if any. */
-export async function startPSBattle(options: GameOptions):
-    Promise<PSGameResult>
+/** Runs a simulated PS battle. */
+export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
 {
     // setup logfile
     let logPath: string;
