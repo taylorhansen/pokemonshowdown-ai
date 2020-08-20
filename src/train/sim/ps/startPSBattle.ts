@@ -1,6 +1,6 @@
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
+import * as tmp from "tmp-promise";
 // @ts-ignore
 import s = require("../../../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
@@ -69,10 +69,9 @@ export async function startPSBattle(options: GameOptions):
     }
     else
     {
-        // create a temporary file so logs can still be recovered
-        // TODO: use a tmp file package
-        logPath = await fs.promises.mkdtemp(
-            path.join(os.tmpdir(), "psbattle-"));
+        // create a temp file so logs can still be recovered
+        logPath = (await tmp.file(
+            {template: "psbattle-XXXXXX", keep: true})).path;
     }
     const file = fs.createWriteStream(logPath);
 
