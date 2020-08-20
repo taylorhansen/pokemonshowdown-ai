@@ -5,7 +5,6 @@ import { Logger } from "../Logger";
 import { episode } from "./episode";
 import { ensureDir } from "./helpers/ensureDir";
 import { NetworkProcessor } from "./nn/worker/NetworkProcessor";
-import { GamePool } from "./play/GamePool";
 import { Opponent } from "./play/playGames";
 
 /** Number of training episodes to complete. */
@@ -13,12 +12,14 @@ const numEpisodes = 8;
 /** Max amount of evaluation games against one ancestor. */
 const numEvalGames = 32;
 
+/** Main Logger object. */
+const logger = Logger.stderr.addPrefix("Train: ");
+
+/** Manages the worker thread for Tensorflow ops. */
+const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
+
 (async function()
 {
-    const logger = Logger.stderr.addPrefix("Train: ");
-
-    const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
-
     // create or load neural network
     let model: number;
     const latestModelUrl = `file://${latestModelFolder}`;
@@ -49,9 +50,6 @@ const numEvalGames = 32;
         numGames: numEvalGames
     }];
 
-    // used for parallel games
-    const pool = new GamePool();
-
     // train network
     for (let i = 0; i < numEpisodes; ++i)
     {
@@ -61,7 +59,7 @@ const numEvalGames = 32;
         // TODO: should opponents be stored as urls to conserve memory?
         await episode(
         {
-            pool, processor, model,
+            processor, model,
             trainOpponents:
             [{
                 name: "self", agentConfig: {model, exp: true}, numGames: 32
@@ -97,8 +95,6 @@ const numEvalGames = 32;
         });
     }
 
-    pool.close();
-
     logger.debug("Saving latest model");
     await processor.save(model, latestModelUrl);
 
@@ -110,8 +106,8 @@ const numEvalGames = 32;
         promises.push(processor.unload(opponent.agentConfig.model));
     }
     await Promise.all(promises);
-    processor.close();
 })()
     .catch((e: Error) =>
         console.log("\nTraining script threw an error: " +
-            (e.stack ?? e.toString())));
+            (e.stack ?? e.toString())))
+    .finally(() => processor.close());

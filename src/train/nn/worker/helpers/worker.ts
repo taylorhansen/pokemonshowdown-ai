@@ -13,7 +13,7 @@ import { ensureDir } from "../../../helpers/ensureDir";
 import { learn, LearnConfig } from "../../learn/learn";
 import { createModel } from "../../model";
 import { PredictMessage, PredictWorkerResult } from "../ModelPort";
-import { PortResultError } from "./AsyncPort";
+import { RawPortResultError } from "./AsyncPort";
 import { NetworkProcessorLearnData, NetworkProcessorLearnResult,
     NetworkProcessorLoadResult, NetworkProcessorMessage,
     NetworkProcessorSaveResult, NetworkProcessorSubscribeResult,
@@ -274,11 +274,11 @@ parentPort.on("message", async function(msg: NetworkProcessorMessage)
     }
 
     if (!promise) return;
-    promise = promise.catch(function (error: Error)
+    promise = promise.catch(function (err: Error)
     {
-        const errBuf = serialize(error);
-        const result: PortResultError =
-            {type: "error", rid, done: true, errBuf};
+        const errBuf = serialize(err);
+        const result: RawPortResultError =
+            {type: "error", rid, done: true, err: errBuf};
         parentPort!.postMessage(result, [errBuf.buffer]);
     });
 });

@@ -1,5 +1,4 @@
 import { resolve } from "path";
-import { deserialize } from "v8";
 import { MessagePort, Worker } from "worker_threads";
 import { AsyncPort } from "./helpers/AsyncPort";
 import { NetworkProcessorLearnConfig, NetworkProcessorLearnData,
@@ -25,7 +24,7 @@ export class NetworkProcessor extends
     }
 
     /** @override */
-    public close(): void { this.port.terminate(); }
+    public async close(): Promise<void> { await this.port.terminate(); }
 
     /**
      * Loads and registers a neural network.
@@ -38,11 +37,9 @@ export class NetworkProcessor extends
             {type: "load", rid: this.generateRID(), ...(url && {url})};
 
         return new Promise((res, rej) =>
-        {
             this.postMessage<"load">(msg, [],
                 result => result.type === "error" ?
-                    rej(deserialize(result.errBuf)) : res(result.uid));
-        });
+                    rej(result.err) : res(result.uid)));
     }
 
     /**
@@ -56,11 +53,8 @@ export class NetworkProcessor extends
             {type: "save", rid: this.generateRID(), uid, url};
 
         return new Promise((res, rej) =>
-        {
             this.postMessage<"save">(msg, [],
-                result => result.type === "error" ?
-                    rej(deserialize(result.errBuf)) : res());
-        });
+                result => result.type === "error" ? rej(result.err) : res()));
     }
 
     /**
@@ -74,11 +68,8 @@ export class NetworkProcessor extends
             {type: "unload", rid: this.generateRID(), uid};
 
         return new Promise((res, rej) =>
-        {
             this.postMessage<"unload">(msg, [],
-                result => result.type === "error" ?
-                    rej(deserialize(result.errBuf)) : res());
-        });
+                result => result.type === "error" ? rej(result.err) : res()));
     }
 
     /**
@@ -94,11 +85,9 @@ export class NetworkProcessor extends
             {type: "subscribe", rid: this.generateRID(), uid};
 
         return new Promise((res, rej) =>
-        {
             this.postMessage<"subscribe">(msg, [],
                 result => result.type === "error" ?
-                    rej(deserialize(result.errBuf)) : res(result.port));
-        });
+                        rej(result.err) : res(result.port)));
     }
 
     /**
@@ -121,16 +110,14 @@ export class NetworkProcessor extends
         }
 
         return new Promise((res, rej) =>
-        {
             this.postMessage<"learn">(msg, transferList, result =>
             {
-                if (result.type === "error") rej(deserialize(result.errBuf));
+                if (result.type === "error") rej(result.err);
                 else
                 {
                     if (callback && result.data) callback(result.data);
                     if (result.done) res();
                 }
-            });
-        });
+            }));
     }
 }

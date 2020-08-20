@@ -3,25 +3,25 @@ import { augmentExperiences } from "../../nn/learn/augmentExperiences";
 import { AdvantageConfig } from "../../nn/learn/LearnArgs";
 import { SimArgs, SimName, SimResult, simulators } from "../../sim/simulators";
 
-/** Result of a game after it has been completed and processed. */
-export interface GameResult extends Omit<SimResult, "experiences">
+/** Result of a game after it has been completed and processed by the worker. */
+export interface AugmentedSimResult extends Omit<SimResult, "experiences">
 {
     /** Processed Experience objects. */
     experiences: AugmentedExperience[];
 }
 
 /**
- * Plays a single game.
+ * Plays a single game and processes the results.
  * @param simName Name of the simulator to use.
  * @param args Arguments for the simulator.
  * @param rollout Config for processing Experiences if any BattleAgents are
  * configured to emit them. If omitted, the Experiences will be ignored.
  */
 export async function playGame(simName: SimName, args: SimArgs,
-    rollout?: AdvantageConfig): Promise<GameResult>
+    rollout?: AdvantageConfig): Promise<AugmentedSimResult>
 {
     const sim = simulators[simName];
-    const {experiences, winner} = await sim(args);
+    const {experiences, winner, err} = await sim(args);
 
     const aexps: AugmentedExperience[] = [];
     if (rollout)
@@ -33,5 +33,10 @@ export async function playGame(simName: SimName, args: SimArgs,
         }
     }
 
-    return {experiences: aexps, ...(winner === undefined ? {} : {winner})};
+    return {
+        experiences: aexps, ...(winner === undefined ? {} : {winner}),
+        // even if there's an error in the game, we should still try to salvage
+        //  the experiences we had before it occurred
+        ...(err && {err})
+    };
 }

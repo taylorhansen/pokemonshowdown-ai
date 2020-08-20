@@ -49,6 +49,11 @@ export interface SimResult
     experiences: Experience[][];
     /** Index of the winner from `SimArgs#models`. */
     winner?: 0 | 1;
+    /**
+     * If an exception was thrown during the game, store it here instead of
+     * propagating it through the pipeline.
+     */
+    err?: Error;
 }
 
 /** Abstract function type for simulating a battle. */
@@ -57,8 +62,7 @@ export type BattleSim = (args: SimArgs) => Promise<SimResult>
 const simulatorsImpl =
 {
     /** Pokemon Showdown simulator. */
-    async ps({agents, maxTurns, logPath}: SimArgs):
-        Promise<SimResult>
+    async ps({agents, maxTurns, logPath}: SimArgs): Promise<SimResult>
     {
         // detect battle agents that want to generate Experience objects
         const splitExp: {[P in PlayerID]: Experience[]} = {p1: [], p2: []};
@@ -84,14 +88,15 @@ const simulatorsImpl =
         });
 
         // play the game
-        const winnerId = await startPSBattle({p1, p2, maxTurns, logPath});
+        const {winner, err} = await startPSBattle({p1, p2, maxTurns, logPath});
 
         // find generated experiences
         const experiences: Experience[][] = [];
         if (splitExp.p1.length > 0) experiences.push(splitExp.p1);
         if (splitExp.p2.length > 0) experiences.push(splitExp.p2);
         return {
-            experiences, ...(winnerId && {winner: winnerId === "p1" ? 0 : 1})
+            experiences, ...(winner && {winner: winner === "p1" ? 0 : 1}),
+            ...(err && {err})
         };
     }
 } as const;

@@ -1,11 +1,15 @@
 import { join } from "path";
 import ProgressBar from "progress";
+import { pipeline, Readable, Writable } from "stream";
+import { promisify } from "util";
 import { LogFunc, Logger } from "../../Logger";
 import { AugmentedExperience } from "../nn/learn/AugmentedExperience";
 import { AdvantageConfig } from "../nn/learn/LearnArgs";
 import { NetworkProcessor } from "../nn/worker/NetworkProcessor";
 import { SimName } from "../sim/simulators";
-import { GamePool, GamePoolAgentConfig, GamePoolArgs } from "./GamePool";
+import { GamePool, GamePoolAgentConfig, GamePoolArgs } from
+    "./GamePool";
+import { AugmentedSimResult } from "./helpers/playGame";
 
 /** Opponent data for `playGames()`. */
 export interface Opponent
@@ -23,8 +27,6 @@ export interface Opponent
 /** Args for `playGames()`. */
 export interface PlayGamesArgs
 {
-    /** Thread pool for playing games in parallel. */
-    readonly pool: GamePool;
     /** Used to request game worker ports from the neural networks. */
     readonly processor: NetworkProcessor;
     /** Config for the BattleAgent that will participate in each game. */
@@ -53,8 +55,8 @@ export interface PlayGamesArgs
  */
 export async function playGames(
     {
-        pool, processor, agentConfig, opponents, simName, maxTurns, logger,
-        logPath, rollout
+        processor, agentConfig, opponents, simName, maxTurns, logger, logPath,
+        rollout
     }:
         PlayGamesArgs): Promise<AugmentedExperience[]>
 {
@@ -70,50 +72,55 @@ export async function playGames(
     const progressLog = new Logger(progressLogFunc, progressLogFunc,
         logger.prefix, "");
 
+    // iterator-like stream for piping GamePoolArgs to the GamePool stream
+    const poolArgs = Readable.from(function* generateArgs()
+    {
+        for (const opponent of opponents)
+        {
+            for (let i = 0; i < opponent.numGames; ++i)
+            {
+                const gameLogPath = logPath &&
+                    join(logPath, `${opponent.name}/game-${i + 1}`)
+                const args: GamePoolArgs =
+                {
+                    simName, maxTurns, logPath: gameLogPath, rollout,
+                    agents: [agentConfig, opponent.agentConfig], processor
+                }
+                yield args;
+            }
+        }
+    }(), {objectMode: true});
+
+    // stream for handling the GameResults
     const aexps: AugmentedExperience[] = [];
     let wins = 0;
     let losses = 0;
     let ties = 0;
-    const queuedGames: Promise<void>[] = [];
-    for (const opponent of opponents)
+    const processResults = new Writable(
     {
-        for (let i = 0; i < opponent.numGames; ++i)
+        objectMode: true, highWaterMark: 8, // backpressure to limit mem usage
+        write(result: AugmentedSimResult, encoding: BufferEncoding,
+            callback: (err?: Error | null) => void): void
         {
-            const gameLogPath = logPath &&
-                join(logPath, `${opponent.name}/game-${i + 1}`)
-            const args: GamePoolArgs =
+            aexps.push(...result.experiences);
+
+            if (result.err)
             {
-                simName, maxTurns, logPath: gameLogPath, rollout,
-                agents: [agentConfig, opponent.agentConfig], processor
+                progressLog.error("Game threw an error: " +
+                    (result.err.stack ?? result.err));
             }
 
-            const promise = pool.addGame(args)
-            .then(function(result)
-            {
-                if (result.winner === 0) ++wins;
-                else if (result.winner === 1) ++losses;
-                else ++ties;
+            if (result.winner === 0) ++wins;
+            else if (result.winner === 1) ++losses;
+            else ++ties;
 
-                aexps.push(...result.experiences);
-            })
-            .catch(function(e)
-            {
-                let msg: string;
-                if (e instanceof Error) msg = e.stack ?? e.toString();
-                else msg = e.toString();
-                progressLog.error(`Game threw an error: ${msg}`);
+            progress.tick({wlt: `${wins}-${losses}-${ties}`});
 
-                // count the errored game as a tie
-                ++ties;
-            })
-            .finally(() =>
-                progress.tick({wlt: `${wins}-${losses}-${ties}`}));
-
-            queuedGames.push(promise)
+            callback();
         }
-    }
+    });
 
-    if (queuedGames.length > 0) await Promise.all(queuedGames);
+    await promisify(pipeline)(poolArgs, new GamePool(), processResults);
 
     progress.terminate();
     // TODO: also display separate records for each opponent

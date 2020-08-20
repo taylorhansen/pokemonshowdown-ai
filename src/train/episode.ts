@@ -3,15 +3,12 @@ import ProgressBar from "progress";
 import { Logger } from "../Logger";
 import { AlgorithmArgs } from "./nn/learn/LearnArgs";
 import { NetworkProcessor } from "./nn/worker/NetworkProcessor";
-import { GamePool } from "./play/GamePool";
 import { Opponent, playGames } from "./play/playGames";
 import { SimName } from "./sim/simulators";
 
 /** Args for `episode()`. */
 export interface EpisodeArgs
 {
-    /** Thread pool for playing games in parallel. */
-    readonly pool: GamePool;
     /** Used to request game worker ports from the neural networks. */
     readonly processor: NetworkProcessor;
     /** ID of the model to train. */
@@ -39,8 +36,8 @@ export interface EpisodeArgs
 /** Runs a training episode. */
 export async function episode(
     {
-        pool, processor, model, trainOpponents, evalOpponents, simName,
-        maxTurns, algorithm, epochs, batchSize, logger, logPath
+        processor, model, trainOpponents, evalOpponents, simName, maxTurns,
+        algorithm, epochs, batchSize, logger, logPath
     }: EpisodeArgs): Promise<void>
 {
     // play some games semi-randomly, building batches of Experience for each
@@ -48,9 +45,8 @@ export async function episode(
     logger.debug("Collecting training data via policy rollout");
     const samples = await playGames(
     {
-        pool, processor, agentConfig: {model, exp: true},
-        opponents: trainOpponents, simName, maxTurns,
-        logger: logger.addPrefix("Rollout: "),
+        processor, agentConfig: {model, exp: true}, opponents: trainOpponents,
+        simName, maxTurns, logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath: join(logPath, "rollout")}),
         rollout: algorithm.advantage
     });
@@ -113,9 +109,8 @@ export async function episode(
     logger.debug("Evaluating new network against benchmarks");
     await playGames(
     {
-        pool, processor, agentConfig: {model, exp: false},
-        opponents: evalOpponents, simName, maxTurns,
-        logger: logger.addPrefix("Eval: "),
+        processor, agentConfig: {model, exp: false}, opponents: evalOpponents,
+        simName, maxTurns, logger: logger.addPrefix("Eval: "),
         ...(logPath && {logPath: join(logPath, "eval")})
     });
 }

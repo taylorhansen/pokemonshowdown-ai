@@ -1,6 +1,6 @@
 import { serialize } from "v8";
 import { parentPort } from "worker_threads";
-import { PortResultError } from "../../nn/worker/helpers/AsyncPort";
+import { RawPortResultError } from "../../nn/worker/helpers/AsyncPort";
 import { ModelPort } from "../../nn/worker/ModelPort";
 import { SimArgsAgent } from "../../sim/simulators";
 import { GameWorkerMessage, GameWorkerResult } from "./GameWorkerRequest";
@@ -8,31 +8,52 @@ import { playGame } from "./playGame";
 
 if (!parentPort) throw new Error("No parent port!");
 
-parentPort.on("message", function(msg: GameWorkerMessage)
+let lastPromise: Promise<void> = Promise.resolve();
+
+parentPort.on("message", (msg: GameWorkerMessage) =>
+    // force message processing to be sequential so we don't get overloaded
+    lastPromise = lastPromise
+        .then(() => processMessage(msg)
+            .catch(err =>
+            {
+                // transport error object to main thread for logging
+                const errBuf = serialize(err);
+                const result: RawPortResultError =
+                    {type: "error", rid: msg.rid, done: true, err: errBuf};
+                parentPort!.postMessage(result, [errBuf.buffer]);
+            })));
+
+async function processMessage(msg: GameWorkerMessage): Promise<void>
 {
     const modelPorts: [ModelPort, ModelPort] = [] as any;
-    const agents: [SimArgsAgent, SimArgsAgent] = [] as any;
-    for (const config of msg.agents)
-    {
-        const modelPort = new ModelPort(config.port);
-        modelPorts.push(modelPort);
-        agents.push({agent: modelPort.getAgent("stochastic"), exp: config.exp});
-    }
 
-    (async function()
+    try
     {
+        const agents: [SimArgsAgent, SimArgsAgent] = [] as any;
+        for (const config of msg.agents)
+        {
+            const modelPort = new ModelPort(config.port);
+            modelPorts.push(modelPort);
+            agents.push(
+                {agent: modelPort.getAgent("stochastic"), exp: config.exp});
+        }
+
         // simulate the game
         const gameResult = await playGame(msg.simName,
             {agents, maxTurns: msg.maxTurns, logPath: msg.logPath},
             msg.rollout);
 
-        for (const modelPort of modelPorts) modelPort.close();
+        const transferList: ArrayBuffer[] = [];
 
         const result: GameWorkerResult =
-            {type: "game", rid: msg.rid, done: true, ...gameResult}
+        {
+            type: "game", rid: msg.rid, done: true,
+            experiences: gameResult.experiences, winner: gameResult.winner,
+            ...(gameResult.err && {err: serialize(gameResult.err)})
+        };
+        if (result.err) transferList.push(result.err.buffer);
 
         // make sure the data in each AugmentedExperience is moved, not copied
-        const transferList: ArrayBuffer[] = [];
         for (const aexp of gameResult.experiences)
         {
             transferList.push(aexp.state.buffer, aexp.logProbs.buffer);
@@ -40,12 +61,8 @@ parentPort.on("message", function(msg: GameWorkerMessage)
 
         // send the result back to the main thread
         parentPort!.postMessage(result, transferList);
-    })()
-    .catch((err: Error) =>
-    {
-        const errBuf = serialize(err);
-        const result: PortResultError =
-            {type: "error", rid: msg.rid, done: true, errBuf};
-        parentPort!.postMessage(result, [errBuf.buffer]);
-    });
-});
+    }
+    catch (err) { throw err; } // rethrow to global catch handler
+    // make sure all ports are closed at the end
+    finally { await Promise.all(modelPorts.map(p => p.close())); }
+}

@@ -1,4 +1,3 @@
-import { deserialize } from "v8";
 import { MessagePort } from "worker_threads";
 import { alloc, battleStateEncoder } from "../../../ai/encoder/encoders";
 import { policyAgent, PolicyType } from "../../../ai/policyAgent";
@@ -39,7 +38,7 @@ export class ModelPort extends
         MessagePort>
 {
     /** @override */
-    public close(): void { this.port.close(); }
+    public async close(): Promise<void> { this.port.close(); }
 
     /**
      * Creates a BattleAgent from this port.
@@ -85,7 +84,7 @@ export class ModelPort extends
 
         return new Promise((res, rej) =>
             this.postMessage(msg, [msg.state.buffer],
-                result => result.type === "error" ?
-                    rej(deserialize(result.errBuf)) : res(result)));
+                result =>
+                    result.type === "error" ? rej(result.err) : res(result)));
     }
 }

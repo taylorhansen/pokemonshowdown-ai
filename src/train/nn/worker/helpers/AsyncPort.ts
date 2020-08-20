@@ -1,4 +1,5 @@
 import { MessagePort } from "worker_threads";
+import { deserialize } from "v8";
 
 /** Base type for AsyncPort request typings. */
 export type PortRequestMap<T extends string> =
@@ -35,8 +36,15 @@ export interface PortResultError extends PortResultBase<"error">
 {
     /** @override */
     done: true;
-    /** Buffer containing a serialized Error object. */
-    errBuf: Buffer;
+    /** The exception that was thrown by the port. */
+    err: Error;
+}
+
+/** Contains an unprocessed error encountered in a request. */
+export interface RawPortResultError extends Omit<PortResultError, "err">
+{
+    /** a Buffer containing the serialized Error object. */
+    err: Buffer;
 }
 
 /** Helper for extracting the message type from a PortRequestMap type. */
@@ -48,7 +56,18 @@ type TMessage<TMap extends PortRequestMap<string>,
  * includes an error type.
  */
 type TResult<TMap extends PortRequestMap<string>,
-    T extends keyof TMap = keyof TMap> = TMap[T]["result"] | PortResultError;
+        T extends keyof TMap = keyof TMap> =
+    TMap[T]["result"] | PortResultError;
+
+/**
+ * Unprocessed port result.
+ *
+ * Helper for extracting the result type from a PortRequestMap type. Also
+ * includes an error type.
+ */
+type TRawResult<TMap extends PortRequestMap<string>,
+        T extends keyof TMap = keyof TMap> =
+    TMap[T]["result"] | RawPortResultError;
 
 /**
  * Interface for objects that work like `worker_threads` ports. This works for
@@ -57,6 +76,7 @@ type TResult<TMap extends PortRequestMap<string>,
 export interface PortLike
 {
     on(event: "message", listener: (value: any) => void): this;
+    on(event: "error", listener: (err: Error) => void): this;
     postMessage(value: any, transferList?: object[]): void;
 }
 
@@ -85,22 +105,44 @@ export abstract class AsyncPort<TMap extends PortRequestMap<string>,
      */
     constructor(protected readonly port: TPort)
     {
-        port.on("message", (result: TResult<TMap>) =>
+        port.on("message", (result: TRawResult<TMap>) =>
         {
             // find a registered callback
             const callback = this.requests.get(result.rid);
             if (!callback) throw new Error(`Invalid rid ${result.rid}`);
 
-            callback(result);
+            // de-register
             if (result.done) this.requests.delete(result.rid);
+
+            // process raw port result
+            if (result.type === "error")
+            {
+                callback(
+                {
+                    ...result,
+                    // workers pass serialized Error objects
+                    err: deserialize((result as RawPortResultError).err)
+                });
+            }
+            else callback(result);
         })
+        .on("error", err =>
+        {
+            // make sure all pending callbacks get resolved
+            const requests = [...this.requests];
+            this.requests.clear();
+            for (const [rid, callback] of requests)
+            {
+                callback({type: "error", rid, done: true, err});
+            }
+        });
     }
 
     /**
      * Closes the port. This has to be called at the end or the process will
      * hang.
      */
-    public abstract close(): void;
+    public abstract close(): Promise<void>;
 
     /**
      * Sends and tracks a message through the port.

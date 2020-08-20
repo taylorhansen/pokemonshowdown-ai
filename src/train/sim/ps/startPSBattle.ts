@@ -14,6 +14,7 @@ import { parsePSMessage } from "../../../psbot/parser/parsePSMessage";
 import { PSBattle } from "../../../psbot/PSBattle";
 import { PSEventHandler, PSResult } from "../../../psbot/PSEventHandler";
 import { ensureDir } from "../../helpers/ensureDir";
+import { SimResult } from "../simulators";
 
 /** Player options for `startBattle()`. */
 export interface PlayerOptions
@@ -48,9 +49,16 @@ export interface GameOptions extends Players
     readonly logPrefix?: string;
 }
 
+/** Result from playing a PS game. */
+export interface PSGameResult extends Omit<SimResult, "winner" | "experiences">
+{
+    /** ID of the winner if it's not a tie. */
+    winner?: PlayerID;
+}
+
 /** Completes a simulated battle, returning the winner if any. */
 export async function startPSBattle(options: GameOptions):
-    Promise<PlayerID | undefined>
+    Promise<PSGameResult>
 {
     // setup logfile
     let logPath: string;
@@ -62,6 +70,7 @@ export async function startPSBattle(options: GameOptions):
     else
     {
         // create a temporary file so logs can still be recovered
+        // TODO: use a tmp file package
         logPath = await fs.promises.mkdtemp(
             path.join(os.tmpdir(), "psbattle-"));
     }
@@ -164,9 +173,10 @@ export async function startPSBattle(options: GameOptions):
                         }
                     }
                 }
-                // should NEVER happen
                 catch (e)
                 {
+                    // log game errors and leave a new exception specifying
+                    //  where to find it
                     innerLog.error(e && e.stack || e);
                     throw new Error("startPSBattle() encountered an error. " +
                         `Check ${logPath} for details.`);
@@ -177,9 +187,12 @@ export async function startPSBattle(options: GameOptions):
         }());
     }
 
-    // wait for the game to finish before closing the logfile
-    await Promise.all(eventLoops)
-        .finally(() => new Promise(res => file.end(res)));
+    // don't let game errors propagate, instead capture it for logging later
+    let err: Error | undefined;
+    try { await Promise.all(eventLoops); }
+    catch (e) { err = e; }
 
-    return winner;
+    await new Promise(res => file.end(res));
+
+    return {winner, ...(err && {err})};
 }

@@ -2,7 +2,10 @@ import { Experience } from "../../sim/helpers/Experience";
 import { AugmentedExperience } from "./AugmentedExperience";
 import { AdvantageConfig } from "./LearnArgs";
 
-/** Computes `log(softmax(logits))`. */
+/**
+ * Computes `log(softmax(logits))` but with an optimization to help preserve
+ * precision.
+ */
 function logSoftmax(logits: Float32Array): Float32Array
 {
     const max = Math.max(...logits);
@@ -13,9 +16,9 @@ function logSoftmax(logits: Float32Array): Float32Array
 }
 
 /**
- * Processes Experience tuples into a set of AugmentedExperiences.
- * @param games Game to read from. Some tensors contained by these Experiences
- * will be moved to the AugmentedExperiences, while others will be disposed.
+ * Processes a set of game Experience into a set of AugmentedExperiences
+ * suitable for learning.
+ * @param games Game to read from.
  * @param advantage Config for advantage estimation.
  */
 export function augmentExperiences(game: readonly Experience[],

@@ -1,7 +1,7 @@
 // tslint:disable: max-classes-per-file
-import { EventEmitter } from "events";
 import { cpus } from "os";
 import { resolve } from "path";
+import { Transform, TransformCallback } from "stream";
 import { deserialize } from "v8";
 import { MessagePort, Worker } from "worker_threads";
 import { AdvantageConfig } from "../nn/learn/LearnArgs";
@@ -10,7 +10,7 @@ import { NetworkProcessor } from "../nn/worker/NetworkProcessor";
 import { SimName } from "../sim/simulators";
 import { GameWorkerAgentConfig, GameWorkerMessage, GameWorkerResult } from
     "./helpers/GameWorkerRequest";
-import { GameResult } from "./helpers/playGame";
+import { AugmentedSimResult } from "./helpers/playGame";
 
 export interface GameConfig
 {
@@ -61,7 +61,7 @@ class GamePort extends
     public get worker(): Worker { return this.port; };
 
     /** @override */
-    public close(): void { this.worker.terminate(); }
+    public async close(): Promise<void> { await this.worker.terminate(); }
 
     /** @override */
     public postMessage(msg: GameWorkerMessage,
@@ -75,25 +75,16 @@ class GamePort extends
     public generateRID(): number { return super.generateRID(); }
 }
 
-interface QueuedGame
-{
-    readonly args: GamePoolArgs;
-    res(result: GameResult): void;
-    rej(reason: Error): void;
-}
-
-/** Uses `worker_threads` pools to dispatch parallel games. */
-export class GamePool extends EventEmitter
+/** Uses a `worker_threads` pool to dispatch parallel games. */
+export class GamePool extends Transform
 {
     /** Event for when a GameWorker is freed. */
     private static readonly workerFreedEvent = Symbol("workerFreedEvent");
 
     /** Complete worker port pool. */
-    private readonly ports: Set<GamePort> = new Set();
+    private readonly ports = new Set<GamePort>();
     /** Total worker ports available. */
     private readonly freePorts: GamePort[] = [];
-    /** Queued game promises. */
-    private readonly queuedGames: QueuedGame[] = [];
 
     /**
      * Creates a GamePool.
@@ -102,7 +93,7 @@ export class GamePool extends EventEmitter
      */
     constructor(public readonly numThreads = cpus().length)
     {
-        super();
+        super({objectMode: true, highWaterMark: numThreads});
 
         if (numThreads <= 0)
         {
@@ -111,42 +102,34 @@ export class GamePool extends EventEmitter
         }
 
         for (let i = 0; i < numThreads; ++i) this.addWorker();
-
-        this.on(GamePool.workerFreedEvent, () => this.unqueueGame());
     }
 
-    /** Queues a game to be played. */
-    public async addGame(args: GamePoolArgs): Promise<GameResult>
+    /** @override */
+    public async _transform(args: GamePoolArgs, encoding: BufferEncoding,
+        callback: TransformCallback): Promise<void>
     {
-        // queue game
-        const promise = new Promise<GameResult>((res, rej) =>
-            this.queuedGames.push({args, res, rej}));
+        if (this.freePorts.length <= 0)
+        {
+            this.once(GamePool.workerFreedEvent,
+                () => this._transform(args, encoding, callback));
+            return;
+        }
 
-        // if free port available, unqueue a game (possibly this one)
-        if (this.freePorts.length > 0) await this.unqueueGame();
+        // grab a free worker
+        const gamePort = this.freePorts.pop()!;
 
-        return promise;
-    }
-
-    /** Requests a queued game to be played. */
-    private async unqueueGame(): Promise<void>
-    {
-        if (this.queuedGames.length <= 0 || this.freePorts.length <= 0) return;
-        const {args, res, rej} = this.queuedGames.shift()!;
+        // get the next _transform input at earliest convenience
+        callback();
 
         // request neural network ports
         const agentsPromise = Promise.all(
             args.agents.map(
-                async function(config)
-                {
-                    return {
-                        port: await args.processor.subscribe(config.model),
-                        exp: config.exp
-                    };
-                })) as Promise<[GameWorkerAgentConfig, GameWorkerAgentConfig]>;
-
-        // get the next free worker port
-        const gamePort = this.freePorts.pop()!;
+                async config =>
+                ({
+                    port: await args.processor.subscribe(config.model),
+                    exp: config.exp
+                }))) as
+                    Promise<[GameWorkerAgentConfig, GameWorkerAgentConfig]>;
 
         // setup the game worker
         const msg: GameWorkerMessage =
@@ -160,22 +143,50 @@ export class GamePool extends EventEmitter
         gamePort.postMessage(msg, msg.agents.map(config => config.port),
             workerResult =>
             {
-                // downcast GameWorkerResult to GameResult
-                if (workerResult.type !== "error") res(workerResult);
-                else rej(deserialize(workerResult.errBuf));
-            });
+                let result: AugmentedSimResult;
+                if (workerResult.type !== "error")
+                {
+                    // convert back to an AugmentedSimResult by deserializing
+                    //  the error if needed
+                    result =
+                    {
+                        experiences: workerResult.experiences,
+                        winner: workerResult.winner,
+                        ...(workerResult.err &&
+                            {err: deserialize(workerResult.err)})
+                    };
+                }
+                else
+                {
+                    result =
+                    {
+                        experiences: [],
+                        err: workerResult.err instanceof Buffer ?
+                            deserialize(workerResult.err) : workerResult.err
+                    };
+                }
+                this.push(result);
 
-        this.freePorts.push(gamePort);
-        this.emit(GamePool.workerFreedEvent);
+                // port is now ready for the next game
+                this.freePorts.push(gamePort);
+                this.emit(GamePool.workerFreedEvent);
+            });
     }
 
-    /**
-     * Closes this GamePool. This has to be called at the end or the process
-     * will hang.
-     */
-    public close()
+    /** @override */
+    public _flush(callback: TransformCallback): void
     {
-        for (const gamePort of this.ports) gamePort.close();
+        if (this.freePorts.length < this.ports.size)
+        {
+            // wait for the last games to finish
+            this.once(GamePool.workerFreedEvent, () => this._flush(callback));
+            return;
+        }
+
+        // close all ports
+        const closePromises: Promise<void>[] = [];
+        for (const gamePort of this.ports) closePromises.push(gamePort.close());
+        Promise.all(closePromises).then(() => callback()).catch(callback);
     }
 
     /** Adds a new GameWorker to the pool. */
@@ -183,17 +194,15 @@ export class GamePool extends EventEmitter
     {
         const worker = new Worker(workerScriptPath);
         const port = new GamePort(worker);
-        worker.on("error", err => this.handleWorkerError(port, err));
+        worker.on("error", err => this.handleWorkerError(port));
 
         this.ports.add(port);
         this.freePorts.push(port);
     }
 
     /** Handles an error thrown or returned by a GamePort. */
-    private handleWorkerError(port: GamePort, err: Error): void
+    private handleWorkerError(port: GamePort): void
     {
-        this.emit("error", err);
-
         // remove this worker and create a new one to replace it
         this.ports.delete(port);
         port.worker.terminate();
