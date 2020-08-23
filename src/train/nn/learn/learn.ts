@@ -161,7 +161,7 @@ function createAExpDataset(aexpPath: string, batchSize: number, prefetch = 128):
         const aexpEvent = Symbol("kAExpEvent");
         const processAExp = new stream.Writable(
         {
-            objectMode: true,
+            objectMode: true, highWaterMark: prefetch,
             write(aexp: AugmentedExperience, encoding: BufferEncoding,
                 callback: (error?: Error | null) => void): void
             {
@@ -238,7 +238,6 @@ export async function learn(
     // TODO: tune optimizer hyperparams
     const optimizer = tf.train.adam();
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
-
 
     callback?.({type: "start", numBatches: Math.ceil(numAExps / batchSize)});
     callbacks.setModel(model);
