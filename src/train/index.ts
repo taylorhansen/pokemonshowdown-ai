@@ -11,7 +11,7 @@ import { Opponent } from "./play/playGames";
 setGracefulCleanup();
 
 /** Number of training episodes to complete. */
-const numEpisodes = 8;
+const numEpisodes = 4;
 /** Max amount of evaluation games against one ancestor. */
 const numEvalGames = 32;
 
@@ -65,7 +65,7 @@ const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
             processor, model,
             trainOpponents:
             [{
-                name: "self", agentConfig: {model, exp: true}, numGames: 32
+                name: "self", agentConfig: {model, exp: true}, numGames: 128
             }],
             evalOpponents, simName: "ps", maxTurns: 128,
             algorithm:
@@ -78,7 +78,7 @@ const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
                 },
                 valueCoeff: 0.55, entropyCoeff: 0.9
             },
-            epochs: 16, batchSize: 32,
+            epochs: 8, batchSize: 16,
             logger: episodeLog, logPath: join(logPath, `episode-${i + 1}`)
         });
 

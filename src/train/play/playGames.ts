@@ -100,6 +100,7 @@ export async function playGames(
     const processResults = new Transform(
     {
         objectMode: true,
+        readableHighWaterMark: 128, writableHighWaterMark: 2,
         transform(result: AugmentedSimResult, encoding: BufferEncoding,
             callback: TransformCallback): void
         {
@@ -128,7 +129,7 @@ export async function playGames(
         processResults,
         ...(expPath ?
         [
-            new AExpToTFRecord(/*maxExp*/ 8 * 128),
+            new AExpToTFRecord(/*maxExp*/ 64),
             fs.createWriteStream(expPath, {encoding: "binary"})
         ] : []));
 
