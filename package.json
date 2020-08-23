@@ -10,7 +10,7 @@
     "pretest": "tslint -c tslint.json -e src/battle/dex/dex.ts --project .",
     "psbot": "node dist/psbot/index.js",
     "test": "nyc mocha",
-    "train": "node --max-old-space-size=4096 dist/train/index.js"
+    "train": "node dist/train/index.js"
   },
   "mocha": {
     "recursive": true,
@@ -49,12 +49,15 @@
     "@tensorflow/tfjs": "^2.3.0",
     "@tensorflow/tfjs-node": "^2.3.0",
     "@tensorflow/tfjs-node-gpu": "^2.3.0",
+    "long": "^4.0.0",
     "node-fetch": "^2.6.0",
+    "tfrecord": "^0.2.0",
     "tmp-promise": "^3.0.2",
     "websocket": "^1.0.31"
   },
   "devDependencies": {
     "@types/chai": "^4.2.12",
+    "@types/long": "^4.0.1",
     "@types/mocha": "^8.0.2",
     "@types/node": "^14.0.27",
     "@types/node-fetch": "^2.5.7",

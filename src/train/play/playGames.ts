@@ -1,14 +1,14 @@
+import * as fs from "fs";
 import { join } from "path";
 import ProgressBar from "progress";
-import { pipeline, Readable, Writable } from "stream";
+import { pipeline, Readable, Transform, TransformCallback } from "stream";
 import { promisify } from "util";
 import { LogFunc, Logger } from "../../Logger";
-import { AugmentedExperience } from "../nn/learn/AugmentedExperience";
+import { AExpToTFRecord } from "../helpers/AExpToTFRecord";
 import { AdvantageConfig } from "../nn/learn/LearnArgs";
 import { NetworkProcessor } from "../nn/worker/NetworkProcessor";
 import { SimName } from "../sim/simulators";
-import { GamePool, GamePoolAgentConfig, GamePoolArgs } from
-    "./GamePool";
+import { GamePool, GamePoolAgentConfig, GamePoolArgs } from "./GamePool";
 import { AugmentedSimResult } from "./helpers/playGame";
 
 /** Opponent data for `playGames()`. */
@@ -41,24 +41,25 @@ export interface PlayGamesArgs
     readonly logger: Logger;
     /** Path to the folder to store game logs in. Omit to not store logs. */
     readonly logPath?: string;
-    /**
-     * Advantage estimation config. If defined, the returned GameResult object
-     * will contain AugmentedExperiences.
-     */
+    /** Advantage estimation config for AugmentedExperiences. */
     readonly rollout?: AdvantageConfig;
+    /**
+     * Path to the file to store AugmentedExperiences in, if any agent configs
+     * contain `exp=true`. If not specified, any experiences will be discarded.
+     */
+    readonly expPath?: string;
 }
 
 /**
  * Manages the playing of multiple games in parallel.
- * @returns If `rollout`, returns all the AugmentedExperiences gathered from
- * each game, else an empty array.
+ * @returns The number of AugmentedExperiences generated, if any.
  */
 export async function playGames(
     {
         processor, agentConfig, opponents, simName, maxTurns, logger, logPath,
-        rollout
+        rollout, expPath
     }:
-        PlayGamesArgs): Promise<AugmentedExperience[]>
+        PlayGamesArgs): Promise<number>
 {
     const totalGames = opponents.reduce((n, op) => n + op.numGames, 0);
     const progress =
@@ -92,17 +93,18 @@ export async function playGames(
     }(), {objectMode: true});
 
     // stream for handling the GameResults
-    const aexps: AugmentedExperience[] = [];
+    let numAExps = 0;
     let wins = 0;
     let losses = 0;
     let ties = 0;
-    const processResults = new Writable(
+    const processResults = new Transform(
     {
-        objectMode: true, highWaterMark: 8, // backpressure to limit mem usage
-        write(result: AugmentedSimResult, encoding: BufferEncoding,
-            callback: (err?: Error | null) => void): void
+        objectMode: true,
+        transform(result: AugmentedSimResult, encoding: BufferEncoding,
+            callback: TransformCallback): void
         {
-            aexps.push(...result.experiences);
+            for (const aexp of result.experiences) this.push(aexp);
+            numAExps += result.experiences.length;
 
             if (result.err)
             {
@@ -120,11 +122,19 @@ export async function playGames(
         }
     });
 
-    await promisify(pipeline)(poolArgs, new GamePool(), processResults);
+    await promisify(pipeline)(
+        poolArgs,
+        new GamePool(),
+        processResults,
+        ...(expPath ?
+        [
+            new AExpToTFRecord(/*maxExp*/ 8 * 128),
+            fs.createWriteStream(expPath, {encoding: "binary"})
+        ] : []));
 
     progress.terminate();
     // TODO: also display separate records for each opponent
     logger.debug(`Record: ${wins}-${losses}-${ties}`)
 
-    return aexps;
+    return numAExps;
 }

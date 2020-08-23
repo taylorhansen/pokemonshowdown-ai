@@ -103,14 +103,8 @@ export class NetworkProcessor extends
         const msg: NetworkProcessorLearnMessage =
             {type: "learn", rid: this.generateRID(), uid, ...config};
 
-        const transferList: ArrayBuffer[] = [];
-        for (const sample of config.samples)
-        {
-            transferList.push(sample.state.buffer, sample.logProbs.buffer);
-        }
-
         return new Promise((res, rej) =>
-            this.postMessage<"learn">(msg, transferList, result =>
+            this.postMessage<"learn">(msg, [], result =>
             {
                 if (result.type === "error") rej(result.err);
                 else

@@ -1,5 +1,6 @@
 import { join } from "path";
 import ProgressBar from "progress";
+import * as tmp from "tmp-promise";
 import { Logger } from "../Logger";
 import { AlgorithmArgs } from "./nn/learn/LearnArgs";
 import { NetworkProcessor } from "./nn/worker/NetworkProcessor";
@@ -43,22 +44,23 @@ export async function episode(
     // play some games semi-randomly, building batches of Experience for each
     //  game
     logger.debug("Collecting training data via policy rollout");
-    const samples = await playGames(
+    const expFile = await tmp.file({template: "psai-aexp-XXXXXX.tfrecord"})
+    const numAExps = await playGames(
     {
         processor, agentConfig: {model, exp: true}, opponents: trainOpponents,
         simName, maxTurns, logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath: join(logPath, "rollout")}),
-        rollout: algorithm.advantage
+        rollout: algorithm.advantage, expPath: expFile.path
     });
 
     // summary statement after rollout games
-    const numGames = trainOpponents.reduce((n, op) => n + op.numGames, 0);
-    logger.debug(`Played ${numGames} games total, yielding ${samples.length} ` +
-        `experiences (avg ${(samples.length / numGames).toFixed(2)} per game)`);
+    const numGames = trainOpponents.reduce((n, opp) => n + opp.numGames, 0);
+    logger.debug(`Played ${numGames} games total, yielding ${numAExps} ` +
+        `experiences (avg ${(numAExps / numGames).toFixed(2)} per game)`);
 
-    if (samples.length <= 0)
+    if (numAExps <= 0)
     {
-        logger.error("No games to train over");
+        logger.error("No experience to train over");
         return;
     }
 
@@ -79,7 +81,10 @@ export async function episode(
         progress.render({loss: "n/a"});
     }
     await processor.learn(model,
-        {samples, algorithm, epochs, batchSize, logPath},
+        {
+            aexpPath: expFile.path, numAExps, algorithm, epochs, batchSize,
+            logPath
+        },
         function(data)
         {
             switch (data.type)
@@ -104,13 +109,16 @@ export async function episode(
             }
         });
     progress?.terminate();
+    const cleanupPromise = expFile.cleanup();
 
     // evaluation games
     logger.debug("Evaluating new network against benchmarks");
-    await playGames(
+    const evalPromise = playGames(
     {
         processor, agentConfig: {model, exp: false}, opponents: evalOpponents,
         simName, maxTurns, logger: logger.addPrefix("Eval: "),
         ...(logPath && {logPath: join(logPath, "eval")})
     });
+
+    await Promise.all([cleanupPromise, evalPromise]);
 }

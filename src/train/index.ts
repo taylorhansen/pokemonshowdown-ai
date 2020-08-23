@@ -1,11 +1,14 @@
 /** @file Sets up a training session for the neural network. */
 import { join } from "path";
+import { setGracefulCleanup } from "tmp-promise";
 import { latestModelFolder, logPath, modelsFolder } from "../config";
 import { Logger } from "../Logger";
 import { episode } from "./episode";
 import { ensureDir } from "./helpers/ensureDir";
 import { NetworkProcessor } from "./nn/worker/NetworkProcessor";
 import { Opponent } from "./play/playGames";
+
+setGracefulCleanup();
 
 /** Number of training episodes to complete. */
 const numEpisodes = 8;
