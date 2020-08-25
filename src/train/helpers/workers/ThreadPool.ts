@@ -24,6 +24,8 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
     private readonly ports = new Set<TWorker>();
     /** Total worker ports available. */
     private readonly freePorts: TWorker[] = [];
+    /** Errored worker ports that have yet to be returned. */
+    private readonly erroredPorts = new Set<TWorker>();
 
     /**
      * Creates a ThreadPool.
@@ -53,7 +55,10 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
         this.initWorkers(workerData);
     }
 
-    /** Takes a worker port from the pool. */
+    /**
+     * Takes a worker port from the pool. After the port has been used,
+     * `#givePort()` must be called with the same port.
+     */
     public async takePort(): Promise<TWorker>
     {
         // wait until a port is open
@@ -71,22 +76,17 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
     {
         if (!this.ports.has(port))
         {
+            // errored port has been returned
+            if (this.erroredPorts.has(port))
+            {
+                this.erroredPorts.delete(port);
+                return;
+            }
             throw new Error("WorkerPort doesn't belong to this ThreadPool");
         }
 
         this.freePorts.push(port);
         this.emit(ThreadPool.workerFreedEvent);
-    }
-
-    /** Returns a Promise that resolves once all workers are free. */
-    public async freeAllPorts(): Promise<void>
-    {
-        // wait for the last games to finish
-        while (this.freePorts.length < this.ports.size)
-        {
-            await new Promise(res =>
-                this.once(ThreadPool.workerFreedEvent, res));
-        }
     }
 
     /**
@@ -99,10 +99,10 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
         for (let i = 0; i < this.numThreads; ++i)
         {
             closePromises.push(this.takePort()
-                .then(port =>
+                .then(async port =>
                 {
                     this.ports.delete(port);
-                    port.close();
+                    await port.close();
                 }));
         }
 
@@ -132,6 +132,7 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
             this.emit(ThreadPool.workerErrorEvent, err);
             // remove this worker and create a new one to replace it
             this.ports.delete(port);
+            this.erroredPorts.add(port);
             port.worker.terminate();
             this.addWorker(workerData);
         });
