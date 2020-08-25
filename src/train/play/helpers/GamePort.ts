@@ -38,7 +38,7 @@ export class GamePort extends WorkerPort<GameWorkerRequestMap>
                     {
                         result =
                         {
-                            experiences: workerResult.experiences,
+                            numAExps: workerResult.numAExps,
                             winner: workerResult.winner,
                             // GamePort doesn't automatically deserialize errors
                             //  outside of PortResultError
@@ -46,7 +46,7 @@ export class GamePort extends WorkerPort<GameWorkerRequestMap>
                                 {err: deserialize(workerResult.err)})
                         };
                     }
-                    else result = {experiences: [], err: workerResult.err};
+                    else result = {numAExps: 0, err: workerResult.err};
 
                     res(result);
                 }));

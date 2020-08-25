@@ -2,10 +2,9 @@ import { resolve } from "path";
 import { ThreadPool } from "../helpers/workers/ThreadPool";
 import { AdvantageConfig } from "../nn/learn/LearnArgs";
 import { NetworkProcessor } from "../nn/worker/NetworkProcessor";
-import { SimName } from "../sim/simulators";
+import { SimName, SimResult } from "../sim/simulators";
 import { GamePort } from "./helpers/GamePort";
 import { GameWorkerRequestMap } from "./helpers/GameWorkerRequest";
-import { AugmentedSimResult } from "./helpers/playGame";
 
 /** Config for starting a game. */
 export interface GameConfig
@@ -45,7 +44,11 @@ export interface GamePoolArgs extends GameConfig
 }
 
 /** GamePool stream output type. */
-export interface GamePoolResult extends AugmentedSimResult {}
+export interface GamePoolResult extends Omit<SimResult, "experiences">
+{
+    /** Number of AugmentedExperience objects saved, if enabled. Otherwise 0. */
+    numAExps: number;
+}
 
 /** Path to the GameWorker script. */
 const workerScriptPath = resolve(__dirname, "helpers", "worker.js");
@@ -55,12 +58,17 @@ export class GamePool extends ThreadPool<GamePort, GameWorkerRequestMap>
 {
     /**
      * Creates a GamePool.
+     * @param getExpPath Optional getter function for experience files. Called
+     * once per worker.
      * @param numThreads Number of workers to create. Defaults to the number of
      * CPUs on the current system.
      */
-    constructor(numThreads?: number)
+    constructor(getExpPath?: () => Promise<string>, numThreads?: number)
     {
-        super(workerScriptPath, GamePort, /*workerData*/ undefined, numThreads);
+        super(workerScriptPath, GamePort,
+            getExpPath ?
+                async () => ({expPath: await getExpPath()}) : undefined,
+            numThreads);
     }
 
     /**
@@ -83,7 +91,7 @@ export class GamePool extends ThreadPool<GamePort, GameWorkerRequestMap>
             .finally(() => this.givePort(port))
             .catch((err: Error) =>
             {
-                const result: GamePoolResult = {experiences: [], err};
+                const result: GamePoolResult = {numAExps: 0, err};
                 return result;
             });
     }

@@ -129,7 +129,9 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
         const port = new this.workerPortConstructor(worker);
         worker.on("error", err =>
         {
+            // broadcast error for logging if possible
             this.emit(ThreadPool.workerErrorEvent, err);
+
             // remove this worker and create a new one to replace it
             this.ports.delete(port);
             this.erroredPorts.add(port);

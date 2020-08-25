@@ -274,7 +274,7 @@ parentPort.on("message", async function(msg: NetworkProcessorMessage)
     }
 
     if (!promise) return;
-    promise = promise.catch(function (err: Error)
+    promise = promise.catch(function handleError(err: Error)
     {
         const errBuf = serialize(err);
         const result: RawPortResultError =

@@ -1,16 +1,16 @@
-import * as fs from "fs";
 import { join } from "path";
 import ProgressBar from "progress";
-import { pipeline, Readable, Transform, TransformCallback } from "stream";
-import { promisify } from "util";
+import * as stream from "stream";
+import * as util from "util";
 import { LogFunc, Logger } from "../../Logger";
-import { AExpToTFRecord } from "../helpers/AExpToTFRecord";
 import { AdvantageConfig } from "../nn/learn/LearnArgs";
 import { NetworkProcessor } from "../nn/worker/NetworkProcessor";
 import { SimName } from "../sim/simulators";
-import { GamePool, GamePoolAgentConfig, GamePoolArgs } from "./GamePool";
-import { AugmentedSimResult } from "./helpers/playGame";
+import { GamePool, GamePoolAgentConfig, GamePoolArgs, GamePoolResult } from
+    "./GamePool";
 import { GamePoolStream } from "./GamePoolStream";
+
+const pipeline = util.promisify(stream.pipeline);
 
 /** Opponent data for `playGames()`. */
 export interface Opponent
@@ -45,10 +45,11 @@ export interface PlayGamesArgs
     /** Advantage estimation config for AugmentedExperiences. */
     readonly rollout?: AdvantageConfig;
     /**
-     * Path to the file to store AugmentedExperiences in, if any agent configs
-     * contain `exp=true`. If not specified, any experiences will be discarded.
+     * Function that generates valid paths to files in which to store
+     * AugmentedExperiences as TFRecords (i.e., if any agent configs contain
+     * `exp=true`). If not specified, any experiences will be discarded.
      */
-    readonly expPath?: string;
+    getExpPath?(): Promise<string>;
 }
 
 /**
@@ -58,7 +59,7 @@ export interface PlayGamesArgs
 export async function playGames(
     {
         processor, agentConfig, opponents, simName, maxTurns, logger, logPath,
-        rollout, expPath
+        rollout, getExpPath
     }:
         PlayGamesArgs): Promise<number>
 {
@@ -75,7 +76,7 @@ export async function playGames(
         logger.prefix, "");
 
     // iterator-like stream for piping GamePoolArgs to the GamePool stream
-    const poolArgs = Readable.from(function* generateArgs()
+    const poolArgs = stream.Readable.from(function* generateArgs()
     {
         for (const opponent of opponents)
         {
@@ -93,20 +94,18 @@ export async function playGames(
         }
     }(), {objectMode: true});
 
-    // stream for handling the GameResults
+    // stream for summarizing the game results
     let numAExps = 0;
     let wins = 0;
     let losses = 0;
     let ties = 0;
-    const processResults = new Transform(
+    const processResults = new stream.Writable(
     {
         objectMode: true,
-        readableHighWaterMark: 128, writableHighWaterMark: 2,
-        transform(result: AugmentedSimResult, encoding: BufferEncoding,
-            callback: TransformCallback): void
+        write(result: GamePoolResult, encoding: BufferEncoding,
+            callback: (error?: Error | null) => void): void
         {
-            for (const aexp of result.experiences) this.push(aexp);
-            numAExps += result.experiences.length;
+            numAExps += result.numAExps;
 
             if (result.err)
             {
@@ -124,17 +123,12 @@ export async function playGames(
         }
     });
 
-    // TODO: move pool to index.ts for reusability
-    const pool = new GamePool();
-    await promisify(pipeline)(
+    // TODO: move pool to index.ts for reuse
+    const pool = new GamePool(getExpPath);
+    await pipeline(
         poolArgs,
         new GamePoolStream(pool),
-        processResults,
-        ...(expPath ?
-        [
-            new AExpToTFRecord(/*maxExp*/ 64),
-            fs.createWriteStream(expPath, {encoding: "binary"})
-        ] : []));
+        processResults);
     await pool.close();
 
     progress.terminate();

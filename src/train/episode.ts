@@ -44,13 +44,21 @@ export async function episode(
     // play some games semi-randomly, building batches of Experience for each
     //  game
     logger.debug("Collecting training data via policy rollout");
-    const expFile = await tmp.file({template: "psai-aexp-XXXXXX.tfrecord"})
+
+    const expFiles: tmp.FileResult[] = [];
+    async function getExpPath(): Promise<string>
+    {
+        const expFile = await tmp.file({template: "psai-aexp-XXXXXX.tfrecord"})
+        expFiles.push(expFile);
+        return expFile.path;
+    }
+
     const numAExps = await playGames(
     {
         processor, agentConfig: {model, exp: true}, opponents: trainOpponents,
         simName, maxTurns, logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath: join(logPath, "rollout")}),
-        rollout: algorithm.advantage, expPath: expFile.path
+        rollout: algorithm.advantage, getExpPath
     });
 
     // summary statement after rollout games
@@ -82,8 +90,8 @@ export async function episode(
     }
     await processor.learn(model,
         {
-            aexpPath: expFile.path, numAExps, algorithm, epochs, batchSize,
-            logPath
+            aexpPaths: expFiles.map(f => f.path), numAExps, algorithm, epochs,
+            batchSize, logPath
         },
         function(data)
         {
@@ -109,7 +117,7 @@ export async function episode(
             }
         });
     progress?.terminate();
-    const cleanupPromise = expFile.cleanup();
+    const cleanupPromise = expFiles.map(f => f.cleanup());
 
     // evaluation games
     logger.debug("Evaluating new network against benchmarks");

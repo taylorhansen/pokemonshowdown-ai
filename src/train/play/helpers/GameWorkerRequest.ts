@@ -2,8 +2,8 @@ import { MessagePort } from "worker_threads";
 import { WorkerCloseProtocol } from "../../helpers/workers/WorkerRequest";
 import { PortMessageBase, PortResultBase } from
     "../../nn/worker/helpers/AsyncPort";
+import { SimResult } from "../../sim/simulators";
 import { GameConfig } from "../GamePool";
-import { AugmentedSimResult } from "./playGame";
 
 /** Mapped type for request types. */
 export type GameWorkerRequestMap =
@@ -53,8 +53,10 @@ type GameWorkerResultBase<T extends GameWorkerRequestType> = PortResultBase<T>;
 
 /** Result of a game after it has been completed and processed by the worker. */
 export interface GameWorkerPlayResult extends GameWorkerResultBase<"play">,
-    Omit<AugmentedSimResult, "err">
+    Omit<SimResult, "experiences" | "err">
 {
+    /** Number of AugmentedExperience objects saved, if enabled. Otherwise 0. */
+    numAExps: number;
     /**
      * If an exception was thrown during the game, store it here for logging
      * instead of propagating it through the pipeline. The exception here is

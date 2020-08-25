@@ -17,10 +17,10 @@ export class GamePoolStream extends Transform
     {
         super({objectMode: true, highWaterMark: pool.numThreads});
 
-        // pass GamePool worker errors through the stream pipeline
+        // pass worker errors through the stream pipeline for logging later
         pool.on(ThreadPool.workerErrorEvent, err =>
         {
-            const result: GamePoolResult = {experiences: [], err};
+            const result: GamePoolResult = {numAExps: 0, err};
             this.push(result);
         });
     }

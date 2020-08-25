@@ -1,16 +1,12 @@
 import * as tf from "@tensorflow/tfjs";
-import * as fs from "fs";
-import * as stream from "stream";
-import * as util from "util";
+import * as os from "os";
 import { intToChoice } from "../../../battle/agent/Choice";
-import { TFRecordToAExp } from "../../helpers/TFRecordToAExp";
 import { NetworkProcessorLearnData } from
     "../worker/helpers/NetworkProcessorRequest";
 import { AugmentedExperience } from "./AugmentedExperience";
+import { AExpDecoderPool } from "./decoder/AExpDecoderPool";
 import { klDivergence } from "./helpers";
 import { AlgorithmArgs } from "./LearnArgs";
-
-const pipeline = util.promisify(stream.pipeline);
 
 /** Parameters for policy gradient loss function. */
 interface LossArgs
@@ -140,66 +136,56 @@ function loss(
     });
 }
 
-/** Batched AugmentedExperience stacked tensors. */
-type BatchedAExp = {[T in keyof AugmentedExperience]: tf.Tensor};
+/** AugmentedExperience tensors. */
+type TensorAExp =
+{
+    [T in keyof AugmentedExperience]:
+        AugmentedExperience[T] extends number ? tf.Scalar : tf.Tensor1D
+};
 
+/** Batched AugmentedExperience stacked tensors. */
+type BatchedAExp =
+{
+    [T in keyof AugmentedExperience]:
+        AugmentedExperience[T] extends number ? tf.Tensor1D : tf.Tensor2D
+};
 /**
- * Wraps a `.tfrecord` file and AugmentedExperience parser as a TensorFlow
- * Dataset.
- * @param aexpPath Path to the `.tfrecord` file holding the
+ * Wraps a set of `.tfrecord` files as a TensorFlow Dataset, parsing each file
+ * in parallel and shuffling according to the preftech buffer.
+ * @param aexpPaths Array of paths to the `.tfrecord` files holding the
  * AugmentedExperiences.
- * @param batchSize Batch size.
+ * @param batchSize AugmentedExperience batch size.
+ * @param numThreads Max number of files to read in parallel. Defaults to the
+ * number of CPUs on the current system.
  * @param prefetch Amount to buffer for prefetching/shuffling.
  * @returns A TensorFlow Dataset that contains batched AugmentedExperience
  * objects.
  */
-function createAExpDataset(aexpPath: string, batchSize: number, prefetch = 128):
+function createAExpDataset(aexpPaths: readonly string[],
+    batchSize: number, prefetch = 128, numThreads?: number):
     tf.data.Dataset<BatchedAExp>
 {
-    return tf.data.generator(async function*()
-    {
-        const aexpEvent = Symbol("kAExpEvent");
-        const processAExp = new stream.Writable(
-        {
-            objectMode: true, highWaterMark: prefetch,
-            write(aexp: AugmentedExperience, encoding: BufferEncoding,
-                callback: (error?: Error | null) => void): void
-            {
-                this.emit(aexpEvent, aexp);
-                callback();
-            }
-        });
+    const pool = new AExpDecoderPool(numThreads);
 
-        const pipelinePromise = pipeline(
-                fs.createReadStream(aexpPath),
-                new TFRecordToAExp(/*maxExp*/ prefetch),
-                processAExp)
-            .then(() => null);
-
-        let nextAExp: AugmentedExperience | null;
-        while (nextAExp = await Promise.race(
-        [
-            pipelinePromise,
-            new Promise<AugmentedExperience>(
-                res => processAExp.once(aexpEvent, res))
-        ]))
-        {
-            yield nextAExp;
-        }
-    // tensorflow supports async generators, but the typings don't
-    } as any)
+    return tf.data.generator<TensorAExp>(
+            // tensorflow supports async generators, but the typings don't
+            () => pool.decode(aexpPaths, prefetch) as any)
         .prefetch(prefetch)
         .shuffle(prefetch)
         // after the batch operation, each entry of a generated AExp will
         //  contain stacked tensors according to the batch size
-        .batch(batchSize) as tf.data.Dataset<BatchedAExp>;
+        .batch(batchSize)
+        // make sure action indexes are integers
+        .map(((batch: BatchedAExp) =>
+            ({...batch, action: batch.action.cast("int32")})) as any) as
+                tf.data.Dataset<BatchedAExp>;
 }
 
 /** Data to train on. */
 export interface LearnConfig
 {
     /** Path to the `.tfrecord` file storing the AugmentedExperiences. */
-    readonly aexpPath: string;
+    readonly aexpPaths: readonly string[];
     /** Total number of AugmentedExperiences. */
     readonly numAExps: number;
     /** Learning algorithm config. */
@@ -224,7 +210,7 @@ export interface LearnArgs extends LearnConfig
 /** Trains the network over a number of epochs. */
 export async function learn(
     {
-        model, aexpPath, numAExps, algorithm, epochs, batchSize, callback,
+        model, aexpPaths, numAExps, algorithm, epochs, batchSize, callback,
         trainCallback
     }:
         LearnArgs): Promise<void>
@@ -251,7 +237,9 @@ export async function learn(
             {[name: string]: tf.Scalar[], loss: tf.Scalar[]} = {loss: []};
         let batchId = 0;
 
-        await createAExpDataset(aexpPath, batchSize, /*prefetch*/ 16 * 128)
+        await createAExpDataset(aexpPaths, batchSize,
+                /*prefetch*/ 16 * 128,
+                /*numThreads*/ Math.ceil(os.cpus().length / 2))
             // setup dataset loop
             .mapAsync(async function(batch: BatchedAExp)
             {
@@ -264,9 +252,8 @@ export async function learn(
                     const result = tf.tidy(() => loss(
                     {
                         model, state: batch.state, oldLogProbs: batch.logProbs,
-                        action: batch.action.cast("int32"),
-                        returns: batch.returns, advantage: batch.advantage,
-                        algorithm
+                        action: batch.action, returns: batch.returns,
+                        advantage: batch.advantage, algorithm
                     }));
 
                     for (const name in result)
