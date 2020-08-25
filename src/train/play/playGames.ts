@@ -10,6 +10,7 @@ import { NetworkProcessor } from "../nn/worker/NetworkProcessor";
 import { SimName } from "../sim/simulators";
 import { GamePool, GamePoolAgentConfig, GamePoolArgs } from "./GamePool";
 import { AugmentedSimResult } from "./helpers/playGame";
+import { GamePoolStream } from "./GamePoolStream";
 
 /** Opponent data for `playGames()`. */
 export interface Opponent
@@ -123,15 +124,18 @@ export async function playGames(
         }
     });
 
+    // TODO: move pool to index.ts for reusability
+    const pool = new GamePool();
     await promisify(pipeline)(
         poolArgs,
-        new GamePool(),
+        new GamePoolStream(pool),
         processResults,
         ...(expPath ?
         [
             new AExpToTFRecord(/*maxExp*/ 64),
             fs.createWriteStream(expPath, {encoding: "binary"})
         ] : []));
+    await pool.close();
 
     progress.terminate();
     // TODO: also display separate records for each opponent

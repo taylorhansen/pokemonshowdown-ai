@@ -1,14 +1,11 @@
+import { EventEmitter } from "events";
 import { deserialize } from "v8";
 import { MessagePort } from "worker_threads";
 
 /** Base type for AsyncPort request typings. */
 export type PortRequestMap<T extends string> =
 {
-    [U in T]:
-    {
-        message: PortMessageBase<U>;
-        result: PortResultBase<U>;
-    }
+    [U in T]: {message: PortMessageBase<U>, result: PortResultBase<U>}
 };
 
 /** Base interface for Async port requests. */
@@ -73,10 +70,8 @@ type TRawResult<TMap extends PortRequestMap<string>,
  * Interface for objects that work like `worker_threads` ports. This works for
  * the MessagePort and Worker types from that module.
  */
-export interface PortLike
+export interface PortLike extends EventEmitter
 {
-    on(event: "message", listener: (value: any) => void): this;
-    on(event: "error", listener: (err: Error) => void): this;
     postMessage(value: any, transferList?: object[]): void;
 }
 
@@ -126,9 +121,12 @@ export abstract class AsyncPort<TMap extends PortRequestMap<string>,
             }
             else callback(result);
         })
-        .on("error", err =>
+        // prepend listener in case derived ports want to also terminate the
+        //  underlying port
+        // this is to make sure that all currently pending callbacks get
+        //  resolved
+        .prependListener("error", err =>
         {
-            // make sure all pending callbacks get resolved
             const requests = [...this.requests];
             this.requests.clear();
             for (const [rid, callback] of requests)

@@ -52,6 +52,7 @@
     "long": "^4.0.0",
     "node-fetch": "^2.6.0",
     "tfrecord": "^0.2.0",
+    "tiny-typed-emitter": "^2.0.2",
     "tmp-promise": "^3.0.2",
     "websocket": "^1.0.31"
   },

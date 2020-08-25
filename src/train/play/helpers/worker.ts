@@ -1,9 +1,10 @@
 import { serialize } from "v8";
 import { parentPort } from "worker_threads";
+import { WorkerClosed } from "../../helpers/workers/WorkerRequest";
 import { RawPortResultError } from "../../nn/worker/helpers/AsyncPort";
 import { ModelPort } from "../../nn/worker/ModelPort";
 import { SimArgsAgent } from "../../sim/simulators";
-import { GameWorkerMessage, GameWorkerResult } from "./GameWorkerRequest";
+import { GameWorkerMessage, GameWorkerPlayResult } from "./GameWorkerRequest";
 import { playGame } from "./playGame";
 
 if (!parentPort) throw new Error("No parent port!");
@@ -25,6 +26,13 @@ parentPort.on("message", (msg: GameWorkerMessage) =>
 
 async function processMessage(msg: GameWorkerMessage): Promise<void>
 {
+    if (msg.type === "close")
+    {
+        const result: WorkerClosed = {type: "close", rid: msg.rid, done: true};
+        parentPort!.postMessage(result);
+        return;
+    }
+
     const modelPorts: [ModelPort, ModelPort] = [] as any;
 
     try
@@ -45,9 +53,9 @@ async function processMessage(msg: GameWorkerMessage): Promise<void>
 
         const transferList: ArrayBuffer[] = [];
 
-        const result: GameWorkerResult =
+        const result: GameWorkerPlayResult =
         {
-            type: "game", rid: msg.rid, done: true,
+            type: "play", rid: msg.rid, done: true,
             experiences: gameResult.experiences, winner: gameResult.winner,
             ...(gameResult.err && {err: serialize(gameResult.err)})
         };
