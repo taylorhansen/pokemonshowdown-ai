@@ -66,19 +66,17 @@ class NetworkRegistry
         else this.inUse = Promise.resolve();
     }
 
-    /** Waits until this registry is no longer being used. */
-    public waitUntilFree(): Promise<void> { return this.inUse; }
-
     /** Saves the neural network to the given url. */
     public async save(url: string): Promise<void>
     {
+        await this.inUse;
         await this.model.save(url);
     }
 
     /** Deletes everything in this registry. */
     public async unload(): Promise<void>
     {
-        await this.waitUntilFree();
+        await this.inUse;
         for (const port of this.ports) port.close();
         this.model.dispose();
     }
@@ -123,7 +121,7 @@ class NetworkRegistry
         let trainCallback: tf.CustomCallback | undefined;
         this.inUse = Promise.all(
         [
-            this.waitUntilFree(),
+            this.inUse,
             ...(logPath ?
             [
                 ensureDir(logPath)
@@ -132,7 +130,7 @@ class NetworkRegistry
             ] : [])
         ]);
 
-        return this.inUse = this.waitUntilFree().then(() =>learn(
+        return this.inUse = this.inUse.then(() =>learn(
         {
             model: this.model, ...config,
             ...(callback && {callback}),
@@ -143,8 +141,7 @@ class NetworkRegistry
     /** Once this registry is free, checks and flushes the predict buffer. */
     private checkPredictBuffer(): void
     {
-        this.inUse = this.waitUntilFree()
-            .then(() => this.checkPredictBufferImpl());
+        this.inUse = this.inUse.then(() => this.checkPredictBufferImpl());
     }
 
     /** Flushes the predict buffer if sufficiently full. */
