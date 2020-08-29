@@ -653,15 +653,20 @@ export const battleStateEncoder: Encoder<ReadonlyBattleState> = concat(
 /**
  * Allocates a typed array suitable for the given Encoder. Its contents are
  * zeroed out.
+ * @param encoder Encoder to allocate for.
+ * @param shared Whether to use a SharedArrayBuffer for the array.
  */
-export function alloc(encoder: Encoder<any>): Float32Array
+export function alloc(encoder: Encoder<any>, shared = false): Float32Array
 {
-    return new Float32Array(encoder.size);
+    if (!shared) return new Float32Array(encoder.size);
+    return new Float32Array(
+        new SharedArrayBuffer(encoder.size * Float32Array.BYTES_PER_ELEMENT));
 }
 
 /**
  * Allocates a typed array suitable for the given Encoder. Its contents are not
  * zeroed out, and may contain sensitive data.
+ * @param encoder Encoder to allocate for.
  */
 export function allocUnsafe(encoder: Encoder<any>): Float32Array
 {

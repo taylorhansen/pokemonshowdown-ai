@@ -18,7 +18,7 @@ export interface PredictMessage extends PredictRequestBase
 
 /** Data returned by the network processor port. */
 export interface PredictWorkerResult extends PortResultBase<"predict">,
-    ExperienceAgentData
+    PredictResult
 {
     /**
      * Guaranteed one reply per message.
@@ -26,6 +26,9 @@ export interface PredictWorkerResult extends PortResultBase<"predict">,
      */
     done: true;
 }
+
+/** Result from a prediction. */
+export type PredictResult = Omit<ExperienceAgentData, "state">;
 
 /**
  * Abstracts the interface between a game worker and the master NetworkProcessor
@@ -52,10 +55,11 @@ export class ModelPort extends
         const innerAgent = policyAgent(
             async state =>
             {
-                const arr = alloc(battleStateEncoder);
+                const arr = alloc(battleStateEncoder, /*shared*/ true);
                 battleStateEncoder.encode(arr, state);
-                data = await this.predict(arr);
-                return data?.logits;
+                const result = await this.predict(arr, /*shared*/ true);
+                data = {...result, state: arr};
+                return result.logits;
             },
             policy);
 
@@ -76,14 +80,15 @@ export class ModelPort extends
     /**
      * Requests a prediction from the neural network.
      * @param state State data.
+     * @param shared Whether the array uses a SharedArrayBuffer.
      */
-    public predict(state: Float32Array): Promise<ExperienceAgentData>
+    public predict(state: Float32Array, shared = false): Promise<PredictResult>
     {
         const msg: PredictMessage =
             {type: "predict", rid: this.generateRID(), state};
 
         return new Promise((res, rej) =>
-            this.postMessage(msg, [msg.state.buffer],
+            this.postMessage(msg, shared ? [] : [msg.state.buffer],
                 result =>
                     result.type === "error" ? rej(result.err) : res(result)));
     }

@@ -154,15 +154,15 @@ class NetworkRegistry
         const batchSize = Math.floor(this.ports.size / 2);
         if (this.predictBuffer.length < batchSize) return;
 
-        const batchedStateData = this.predictBuffer.map(req => req.msg.state);
         const [batchedLogits, batchedValues] = tf.tidy(() =>
         {
-            const batchStates = tf.stack(batchedStateData);
+            const batchStates = tf.stack(
+                this.predictBuffer.map(req => req.msg.state));
             const [batchLogits, batchValues] =
-                this.model.predictOnBatch(batchStates) as tf.Tensor[]
+                this.model.predictOnBatch(batchStates) as tf.Tensor[];
             return [
                 batchLogits.as2D(this.predictBuffer.length, intToChoice.length)
-                    .unstack(),
+                    .unstack<tf.Tensor1D>(),
                 batchValues.as1D()
             ];
         });
@@ -180,12 +180,11 @@ class NetworkRegistry
         {
             const req = this.predictBuffer[i];
             const rid = req.msg.rid;
-            const state = batchedStateData[i];
             const logits = batchedLogitsData[i];
             const value = batchedValueData[i];
             const result: PredictWorkerResult =
-                {type: "predict", rid, done: true, state, logits, value};
-            req.port.postMessage(result, [state.buffer, logits.buffer]);
+                {type: "predict", rid, done: true, logits, value};
+            req.port.postMessage(result, [logits.buffer]);
         }
         this.predictBuffer.length = 0;
     }
