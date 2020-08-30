@@ -7,10 +7,9 @@ import { BattleAgent } from "../../../battle/agent/BattleAgent";
 import { BattleDriver } from "../../../battle/driver/BattleDriver";
 import { LogFunc, Logger } from "../../../Logger";
 import { PlayerID } from "../../../psbot/helpers";
-import { AnyBattleEvent, TieEvent, TurnEvent, WinEvent } from
-    "../../../psbot/parser/BattleEvent";
 import { Iter } from "../../../psbot/parser/Iter";
 import { parsePSMessage } from "../../../psbot/parser/parsePSMessage";
+import * as psevent from "../../../psbot/parser/PSBattleEvent";
 import { PSBattle } from "../../../psbot/PSBattle";
 import { PSEventHandler, PSResult } from "../../../psbot/PSEventHandler";
 import { ensureDir } from "../../helpers/ensureDir";
@@ -116,8 +115,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
             eventHandlerCtor = class extends PSEventHandler
             {
                 /** @override */
-                protected handleTurn(event: TurnEvent,
-                    it: Iter<AnyBattleEvent>): PSResult
+                protected handleTurn(event: psevent.Turn,
+                    it: Iter<psevent.Any>): PSResult
                 {
                     // also make sure the battle doesn't go too long
                     if (options.maxTurns && ++turns >= options.maxTurns)
@@ -128,8 +127,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 }
 
                 /** @override */
-                protected handleGameOver(event: TieEvent | WinEvent,
-                    it: Iter<AnyBattleEvent>): PSResult
+                protected handleGameOver(event: psevent.Tie | psevent.Win,
+                    it: Iter<psevent.Any>): PSResult
                 {
                     if (event.type === "win") winner = event.winner as PlayerID;
                     done = true;
@@ -162,8 +161,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                     {
                         switch (msg.type)
                         {
-                            case "battleinit": await battle.init(msg); break;
-                            case "battleprogress":
+                            case "battleInit": await battle.init(msg); break;
+                            case "battleProgress":
                                 await battle.progress(msg);
                                 break;
                             case "request": await battle.request(msg); break;

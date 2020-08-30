@@ -2,6 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { isBoostName, isWeatherType, StatExceptHP, statsExceptHP, Type } from
     "../../../../src/battle/dex/dex-util";
+import * as events from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
 import { BaseContext } from "../../../../src/battle/driver/context/BaseContext";
@@ -10,10 +11,6 @@ import { DriverContext } from
 import { MoveContext } from "../../../../src/battle/driver/context/MoveContext";
 import { SwitchContext } from
     "../../../../src/battle/driver/context/SwitchContext";
-import { AnyDriverEvent, CountableStatusEffectType, DriverSwitchOptions,
-    FieldEffectType, InitTeam, StatusEffectType, TeamEffectType,
-    UpdatableStatusEffectType } from
-    "../../../../src/battle/driver/DriverEvent";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
 import { Side } from "../../../../src/battle/state/Side";
@@ -39,8 +36,8 @@ describe("BaseContext", function()
         ctx = new BaseContext(state, Logger.null);
     });
 
-    function initTeam(teamRef: Side, options: readonly DriverSwitchOptions[]):
-        Pokemon[]
+    function initTeam(teamRef: Side,
+        options: readonly events.DriverSwitchOptions[]): Pokemon[]
     {
         const team = state.teams[teamRef];
         team.size = options.length;
@@ -52,7 +49,7 @@ describe("BaseContext", function()
         return initTeam(monRef, [options])[0];
     }
 
-    function handle(event: AnyDriverEvent,
+    function handle(event: events.Any,
         instance?: new(...args: any[]) => DriverContext): void
     {
         if (instance) expect(ctx.handle(event)).to.be.an.instanceOf(instance);
@@ -79,7 +76,7 @@ describe("BaseContext", function()
 
         describe("activateFieldEffect", function()
         {
-            function test(name: string, effect: FieldEffectType)
+            function test(name: string, effect: events.FieldEffectType)
             {
                 if (isWeatherType(effect))
                 {
@@ -122,7 +119,7 @@ describe("BaseContext", function()
 
         describe("activateStatusEffect", function()
         {
-            function test(name: string, effect: StatusEffectType,
+            function test(name: string, effect: events.StatusEffectType,
                 getter: (v: ReadonlyVolatileStatus) => boolean)
             {
                 it(`Should activate ${name}`, function()
@@ -349,7 +346,7 @@ describe("BaseContext", function()
             testHazard("Stealth Rock", "stealthRock");
             testHazard("Toxic Spikes", "toxicSpikes");
 
-            function testEffect(name: string, effect: TeamEffectType,
+            function testEffect(name: string, effect: events.TeamEffectType,
                 getter: (ts: ReadonlyTeamStatus) => boolean)
             {
                 it(`Should activate ${name}`, function()
@@ -477,8 +474,8 @@ describe("BaseContext", function()
 
         describe("countStatusEffect", function()
         {
-            function test(name: string, effect: CountableStatusEffectType,
-                add = false): void
+            function test(name: string,
+                effect: events.CountableStatusEffectType, add = false): void
             {
                 it(`Should update ${name} count`, function()
                 {
@@ -727,7 +724,7 @@ describe("BaseContext", function()
             describe("initTeam", function()
             {
                 /** Base InitTeam event for testing. */
-                const initTeamEvent: InitTeam =
+                const initTeamEvent: events.InitTeam =
                 {
                     type: "initTeam",
                     team:
@@ -744,8 +741,8 @@ describe("BaseContext", function()
                         }
                     ]
                 };
-                function checkInitTeam(team: ReadonlyTeam, event: InitTeam):
-                    void
+                function checkInitTeam(team: ReadonlyTeam,
+                    event: events.InitTeam): void
                 {
                     expect(team.size).to.equal(event.team.length);
 
@@ -813,7 +810,7 @@ describe("BaseContext", function()
 
                 it("Should init our team with hp type and happiness", function()
                 {
-                    const event: InitTeam =
+                    const event: events.InitTeam =
                     {
                         ...initTeamEvent,
                         team:
@@ -1247,7 +1244,8 @@ describe("BaseContext", function()
 
         describe("updateStatusEffect", function()
         {
-            function test(name: string, effect: UpdatableStatusEffectType)
+            function test(name: string,
+                effect: events.UpdatableStatusEffectType)
             {
                 it(`Should update ${name}`, function()
                 {

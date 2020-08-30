@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { DriverSwitchOptions } from "../../../src/battle/driver/DriverEvent";
+import { DriverSwitchOptions } from "../../../src/battle/driver/BattleEvent";
 import { Team } from "../../../src/battle/state/Team";
 
 const options1: DriverSwitchOptions =

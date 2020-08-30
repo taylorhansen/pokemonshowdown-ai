@@ -1,9 +1,9 @@
 import { Logger } from "../../Logger";
 import { Choice } from "../agent/Choice";
 import { BattleState, ReadonlyBattleState } from "../state/BattleState";
+import { Any } from "./BattleEvent";
 import { BaseContext } from "./context/BaseContext";
 import { DriverContext } from "./context/DriverContext";
-import { AnyDriverEvent } from "./DriverEvent";
 
 /** Handles all state mutations and inferences. */
 export class StateDriver
@@ -26,7 +26,7 @@ export class StateDriver
     constructor(private readonly logger: Logger) {}
 
     /** Handles a batch of DriverEvents. */
-    public handle(...events: AnyDriverEvent[]): void
+    public handle(...events: Any[]): void
     {
         for (const event of events) this.handleImpl(event);
     }
@@ -35,7 +35,7 @@ export class StateDriver
      * Handles a DriverEvent, propagating down the DriverContext chain as
      * necessary.
      */
-    private handleImpl(event: AnyDriverEvent): void
+    private handleImpl(event: Any): void
     {
         for (let i = this.contexts.length - 1; i >= 0; --i)
         {

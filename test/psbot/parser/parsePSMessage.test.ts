@@ -2,9 +2,8 @@ import { expect } from "chai";
 import "mocha";
 import { Logger } from "../../../src/Logger";
 import { RoomType } from "../../../src/psbot/helpers";
-import { AnyMessage, BattleInitMessage, BattleProgressMessage,
-    UpdateChallengesMessage } from "../../../src/psbot/parser/Message";
 import { parsePSMessage } from "../../../src/psbot/parser/parsePSMessage";
+import * as psmsg from "../../../src/psbot/parser/PSMessage";
 import * as testArgs from "../../helpers/battleTestArgs";
 import { buildMessage, composeBattleInit, composeBattleProgress,
     stringifyRequest } from "../../helpers/buildMessage";
@@ -64,7 +63,7 @@ describe("parsePSMessage()", function()
          * @param expected Message objects that the parser should return.
          * @param quiet Whether to suppress Logger. Default false.
          */
-        function shouldParse(words: string[][], expected: AnyMessage[],
+        function shouldParse(words: string[][], expected: psmsg.Any[],
             quiet?: boolean): void
         {
             const {messages: actual} = parseWords(words, quiet);
@@ -83,12 +82,12 @@ describe("parsePSMessage()", function()
             for (const msg of messages) expect(msg).to.be.null;
         }
 
-        describe("battleinit", function()
+        describe("battleInit", function()
         {
             for (let i = 0; i < testArgs.battleInit.length; ++i)
             {
                 const args = testArgs.battleInit[i];
-                it(`Should parse battleinit ${i}`, function()
+                it(`Should parse battleInit ${i}`, function()
                 {
                     shouldParse(composeBattleInit(args), [args]);
                 });
@@ -103,11 +102,11 @@ describe("parsePSMessage()", function()
                     ["gen", "4"], ["lol"]
                 ];
                 const {messages} = parseWords(words, /*quiet*/true);
-                expect(messages[0].type).to.equal("battleinit");
-                expect((messages[0] as BattleInitMessage).events).to.be.empty;
+                expect(messages[0].type).to.equal("battleInit");
+                expect((messages[0] as psmsg.BattleInit).events).to.be.empty;
             });
 
-            it("Should ignore invalid battleinit", function()
+            it("Should ignore invalid battleInit", function()
             {
                 const words =
                 [
@@ -120,12 +119,12 @@ describe("parsePSMessage()", function()
             });
         });
 
-        describe("battleprogress", function()
+        describe("battleProgress", function()
         {
             for (let i = 0; i < testArgs.battleProgress.length; ++i)
             {
                 const args = testArgs.battleProgress[i];
-                it(`Should parse battleprogress ${i}`, function()
+                it(`Should parse battleProgress ${i}`, function()
                 {
                     shouldParse(composeBattleProgress(args), [args]);
                 });
@@ -142,8 +141,8 @@ describe("parsePSMessage()", function()
             {
                 const words = [["move"]];
                 const {messages} = parseWords(words, /*quiet*/true);
-                expect(messages[0].type).to.equal("battleprogress");
-                expect((messages[0] as BattleProgressMessage).events.length)
+                expect(messages[0].type).to.equal("battleProgress");
+                expect((messages[0] as psmsg.BattleProgress).events.length)
                     .to.equal(0);
             });
         });
@@ -215,36 +214,36 @@ describe("parsePSMessage()", function()
             });
         });
 
-        describe("updatechallenges", function()
+        describe("updateChallenges", function()
         {
-            const expected: UpdateChallengesMessage =
+            const expected: psmsg.UpdateChallenges =
             {
-                type: "updatechallenges", challengesFrom: {somebody: "gen4ou"},
+                type: "updateChallenges", challengesFrom: {somebody: "gen4ou"},
                 challengeTo: null
             };
             const json = {...expected};
             delete json.type;
 
-            it("Should parse updatechallenges", function()
+            it("Should parse updateChallenges", function()
             {
                 shouldParse([["updatechallenges", JSON.stringify(json)]],
                     [expected]);
             });
 
-            it("Shouldn't parse updatechallenges without json", function()
+            it("Shouldn't parse updateChallenges without json", function()
             {
                 shouldntParse([["updatechallenges"]]);
             });
         });
 
-        describe("updateuser", function()
+        describe("updateUser", function()
         {
             const username = "somebody";
             const guest = 0;
             // required by the message type but not by message handler
             const avatar = 21;
 
-            it("Should parse updateuser", function()
+            it("Should parse updateUser", function()
             {
                 shouldParse(
                     [
@@ -253,15 +252,15 @@ describe("parsePSMessage()", function()
                             avatar.toString()
                         ]
                     ],
-                    [{type: "updateuser", username, isGuest: !guest}]);
+                    [{type: "updateUser", username, isGuest: !guest}]);
             });
 
-            it("Shouldn't parse updateuser if no args", function()
+            it("Shouldn't parse updateUser if no args", function()
             {
                 shouldntParse([["updateuser"]]);
             });
 
-            it("Shouldn't parse updateuser if no guest indicator", function()
+            it("Shouldn't parse updateUser if no guest indicator", function()
             {
                 shouldntParse([["updateuser", username]]);
             });

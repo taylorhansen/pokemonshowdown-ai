@@ -3,57 +3,64 @@
  * MessageHandler.
  */
 import { MoveTarget } from "../../battle/dex/dex-util";
-import { DriverInitPokemon } from "../../battle/driver/DriverEvent";
+import { DriverInitPokemon } from "../../battle/driver/BattleEvent";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus, RoomType } from
     "../helpers";
-import { AnyBattleEvent } from "./BattleEvent";
+import * as psevent from "./PSBattleEvent";
 
-/** Set of MajorPrefixes. */
-export const majorPrefixes =
+/** Set of Prefixes. */
+const prefixes =
 {
     challstr: true, deinit: true, error: true, init: true, request: true,
     updatechallenges: true, updateuser: true
 } as const;
 /** Message types that are parsed as a single standalone line. */
-export type MajorPrefix = keyof typeof majorPrefixes;
+export type Prefix = keyof typeof prefixes;
 /**
- * Checks if a value is a Majorprefix. Usable as a type guard.
+ * Checks if a value is a Prefix. Usable as a type guard.
  * @param value Value to check.
- * @returns Whether the value is a MajorPrefix.
+ * @returns Whether the value is a Prefix.
  */
-export function isMajorPrefix(value: any): value is MajorPrefix
+export function isPrefix(value: any): value is Prefix
 {
-    return majorPrefixes.hasOwnProperty(value);
+    return prefixes.hasOwnProperty(value);
 }
 
-/** Main message type produced by the MessageParser. */
-export type MessageType = "battleinit" | "battleprogress" | MajorPrefix;
+/**
+ * Defines the type maps for each Message. Key must match the Message's `#type`
+ * field.
+ */
+interface MessageMap
+{
+    battleInit: BattleInit;
+    battleProgress: BattleProgress;
+    challstr: ChallStr;
+    deinit: DeInit;
+    error: Error;
+    init: Init;
+    request: Request;
+    updateChallenges: UpdateChallenges;
+    updateUser: UpdateUser;
+}
 
-/** Argument object type for MessageHandlers. */
-export type Message<T extends MessageType> =
-    T extends "battleinit" ? BattleInitMessage
-    : T extends "battleprogress" ? BattleProgressMessage
-    : T extends "challstr" ? ChallStrMessage
-    : T extends "deinit" ? DeInitMessage
-    : T extends "error" ? ErrorMessage
-    : T extends "init" ? InitMessage
-    : T extends "request" ? RequestMessage
-    : T extends "updatechallenges" ? UpdateChallengesMessage
-    : T extends "updateuser" ? UpdateUserMessage
-    : never;
+/** Main message type produced by the parser. */
+export type Type = keyof MessageMap;
+
+/** Message type received from the PS server. */
+export type Message<T extends Type> = MessageMap[T];
 
 /** Stands for any type of Message that the PS server can send. */
-export type AnyMessage = Message<MessageType>;
+export type Any = Message<Type>;
 
 /** Base class for Messages. */
-interface MessageBase<T extends MessageType>
+interface MessageBase<T extends Type>
 {
     /** The type of Message this is. */
     readonly type: T;
 }
 
 /** Message for initializing a battle. Includes initial BattleEvents. */
-export interface BattleInitMessage extends MessageBase<"battleinit">
+export interface BattleInit extends MessageBase<"battleInit">
 {
     /** PlayerID of a player. */
     readonly id: PlayerID;
@@ -66,35 +73,35 @@ export interface BattleInitMessage extends MessageBase<"battleinit">
     /** Cartridge generation. */
     readonly gen: number;
     /** Initial events. */
-    readonly events: readonly AnyBattleEvent[];
+    readonly events: readonly psevent.Any[];
 }
 
 /** Message for handling parsed BattleEvents. */
-export interface BattleProgressMessage extends MessageBase<"battleprogress">
+export interface BattleProgress extends MessageBase<"battleProgress">
 {
     /** Sequence of events in the battle in the order they were parsed. */
-    readonly events: readonly AnyBattleEvent[];
+    readonly events: readonly psevent.Any[];
 }
 
 /** Message that provides the challenge string to verify login info. */
-export interface ChallStrMessage extends MessageBase<"challstr">
+export interface ChallStr extends MessageBase<"challstr">
 {
     /** String used to verify account login. */
     readonly challstr: string;
 }
 
 /** Message that indicates the leaving of a room. */
-export interface DeInitMessage extends MessageBase<"deinit"> {}
+export interface DeInit extends MessageBase<"deinit"> {}
 
 /** Message for providing errors from the server. */
-export interface ErrorMessage extends MessageBase<"error">
+export interface Error extends MessageBase<"error">
 {
     /** Why the requested action failed. */
     readonly reason: string;
 }
 
 /** Message that indicates the joining of a room. */
-export interface InitMessage extends MessageBase<"init">
+export interface Init extends MessageBase<"init">
 {
     /** Type of room we're joining. */
     readonly roomType: RoomType;
@@ -105,7 +112,7 @@ export interface InitMessage extends MessageBase<"init">
  * Provides info on the client's team and possible choices. Some properties in
  * the parsed JSON have to be specially parsed in order to get the full context.
  */
-export interface RequestMessage extends MessageBase<"request">
+export interface Request extends MessageBase<"request">
 {
     /**
      * Whether the opponent is the only one making a decision, meaning the
@@ -175,7 +182,7 @@ export interface RequestPokemon extends DriverInitPokemon, PokemonID,
 }
 
 /** Message that indicates a change in ingoing/outgoing challenges. */
-export interface UpdateChallengesMessage extends MessageBase<"updatechallenges">
+export interface UpdateChallenges extends MessageBase<"updateChallenges">
 {
     /**
      * Maps users challenging the client to the battle format they're being
@@ -187,7 +194,7 @@ export interface UpdateChallengesMessage extends MessageBase<"updatechallenges">
 }
 
 /** Message that changes the client's username and guest status. */
-export interface UpdateUserMessage extends MessageBase<"updateuser">
+export interface UpdateUser extends MessageBase<"updateUser">
 {
     /** New username. */
     readonly username: string;

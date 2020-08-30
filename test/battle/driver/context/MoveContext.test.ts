@@ -3,13 +3,13 @@ import "mocha";
 import * as dex from "../../../../src/battle/dex/dex";
 import { RolloutMove, rolloutMoves, selfMoveCallers, targetMoveCallers } from
     "../../../../src/battle/dex/dex-util";
+import { StatusEffectType, UseMove } from
+    "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
 import { MoveContext } from "../../../../src/battle/driver/context/MoveContext";
 import { SwitchContext } from
     "../../../../src/battle/driver/context/SwitchContext";
-import { StatusEffectType, UseMove } from
-    "../../../../src/battle/driver/DriverEvent";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon, ReadonlyPokemon } from "../../../../src/battle/state/Pokemon";
 import { otherSide, Side } from "../../../../src/battle/state/Side";

@@ -1,4 +1,4 @@
-import { AnyDriverEvent } from "../../../battle/driver/DriverEvent";
+import { Any } from "../../../battle/driver/BattleEvent";
 import { StateDriver } from "../../../battle/driver/StateDriver";
 import { RewardTracker } from "./RewardTracker";
 
@@ -12,7 +12,7 @@ export class RewardStateDriver extends StateDriver
     private reward = new RewardTracker();
 
     /** @override */
-    public handle(...events: AnyDriverEvent[]): void
+    public handle(...events: Any[]): void
     {
         for (const event of events)
         {

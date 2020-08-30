@@ -3,8 +3,7 @@ import { BattleAgent } from "../battle/agent/BattleAgent";
 import { BattleDriver } from "../battle/driver/BattleDriver";
 import { ReadonlyBattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
-import { BattleInitMessage, BattleProgressMessage, ErrorMessage,
-    RequestMessage } from "./parser/Message";
+import * as psmsg from "./parser/PSMessage";
 import { Sender } from "./PSBot";
 import { PSEventHandler } from "./PSEventHandler";
 import { RoomHandler } from "./RoomHandler";
@@ -20,7 +19,7 @@ export class PSBattle implements RoomHandler
     /** Manages the BattleState by processing events. */
     protected readonly eventHandler: PSEventHandler;
     /** Last |request| message that was processed. */
-    protected lastRequest?: RequestMessage;
+    protected lastRequest?: psmsg.Request;
 
     /**
      * If the last unhandled `|error|` message indicated an unavailable
@@ -49,7 +48,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async init(msg: BattleInitMessage): Promise<void>
+    public async init(msg: psmsg.BattleInit): Promise<void>
     {
         this.logger.debug(`battleinit:\n${
             inspect(msg, {colors: false, depth: null})}`);
@@ -62,7 +61,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async progress(msg: BattleProgressMessage): Promise<void>
+    public async progress(msg: psmsg.BattleProgress): Promise<void>
     {
         // indicate that the last choice was accepted
         this.driver.accept();
@@ -78,7 +77,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async request(msg: RequestMessage): Promise<void>
+    public async request(msg: psmsg.Request): Promise<void>
     {
         this.logger.debug(`request:\n${
             inspect(msg, {colors: false, depth: null})}`);
@@ -108,7 +107,7 @@ export class PSBattle implements RoomHandler
     }
 
     /** @override */
-    public async error(msg: ErrorMessage): Promise<void>
+    public async error(msg: psmsg.Error): Promise<void>
     {
         if (msg.reason.startsWith("[Unavailable choice] Can't "))
         {

@@ -53,7 +53,7 @@ describe("PSBot Helpers", function()
         {
             desc: "Should filter multiple punctuation marks",
             expected: "willowisp", args: ["Will-O-Wisp"]
-        },
+        }
     ]);
 
     testFunc("otherPlayerID()", otherPlayerID,

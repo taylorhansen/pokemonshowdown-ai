@@ -1,22 +1,18 @@
 import { expect } from "chai";
 import "mocha";
 import { itemRemovalMoves } from "../../src/battle/dex/dex-util";
-import { AnyDriverEvent, CountableStatusEffectType, DriverInitPokemon,
-    StatusEffectType, TeamEffectType } from
-    "../../src/battle/driver/DriverEvent";
+import * as events from "../../src/battle/driver/BattleEvent";
 import { Logger } from "../../src/Logger";
 import { PokemonID, toIdName } from "../../src/psbot/helpers";
-import { AnyBattleEvent, BattleEventType } from
-    "../../src/psbot/parser/BattleEvent";
-import { BattleInitMessage, RequestMessage } from
-    "../../src/psbot/parser/Message";
+import * as psevent from "../../src/psbot/parser/PSBattleEvent";
+import * as psmsg from "../../src/psbot/parser/PSMessage";
 import { PSEventHandler } from "../../src/psbot/PSEventHandler";
 
 /** Base username for testing. */
 const username = "username";
 
 /** Base RequestMessage for testing. */
-const request: RequestMessage =
+const request: psmsg.Request =
 {
     type: "request",
     active:
@@ -48,9 +44,9 @@ const request: RequestMessage =
 };
 
 /** Base BattleInitMessage for testing. */
-const battleInit: BattleInitMessage =
+const battleInit: psmsg.BattleInit =
 {
-    type: "battleinit", id: "p1", username,
+    type: "battleInit", id: "p1", username,
     teamSizes: {p1: 1, p2: 2}, gameType: "singles", gen: 4,
     events: []
 };
@@ -100,11 +96,11 @@ describe("PSEventHandler", function()
          * @param features Features that were stripped from the move.
          */
         function shouldInferFromMove(name: string, move: string,
-            newMove: string, features: Partial<DriverInitPokemon>): void
+            newMove: string, features: Partial<events.DriverInitPokemon>): void
         {
             it(`Should emit initTeam with ${name}`, function()
             {
-                const msg: RequestMessage =
+                const msg: psmsg.Request =
                 {
                     ...request,
                     side:
@@ -196,8 +192,8 @@ describe("PSEventHandler", function()
          * Order-sensitive.
          * @param post Any extra tests that should be done afterward.
          */
-        function test(name: string, psEvents: AnyBattleEvent[],
-            driverEvents: AnyDriverEvent[], post?: () => void): void
+        function test(name: string, psEvents: psevent.Any[],
+            driverEvents: events.Any[], post?: () => void): void
         {
             it(name, function()
             {
@@ -328,7 +324,8 @@ describe("PSEventHandler", function()
                 }]);
             });
 
-            function testCountableStatus(effect: CountableStatusEffectType)
+            function testCountableStatus(
+                effect: events.CountableStatusEffectType)
             {
                 describe(effect, function()
                 {
@@ -372,10 +369,10 @@ describe("PSEventHandler", function()
                     []);
             }
 
-            function testTrivialStatus(name: string, effect: StatusEffectType,
-                start: boolean): void
+            function testTrivialStatus(name: string,
+                effect: events.StatusEffectType, start: boolean): void
             {
-                const type: BattleEventType = start ? "-start" : "-end";
+                const type: psevent.Type = start ? "-start" : "-end";
 
                 test(`Should emit activateStatusEffect on ${type}`,
                     [{type, id: us, volatile: name, otherArgs: []}],
@@ -385,7 +382,7 @@ describe("PSEventHandler", function()
             }
 
             function describeTrivialStatus(name: string,
-                effect: StatusEffectType): void
+                effect: events.StatusEffectType): void
             {
                 describe(name, function()
                 {
@@ -1033,7 +1030,8 @@ describe("PSEventHandler", function()
 
                 const testCases: readonly
                 {
-                    readonly name: string, readonly effect: TeamEffectType
+                    readonly name: string,
+                    readonly effect: events.TeamEffectType
                 }[] =
                 [
                     {name: "move: Lucky Chant", effect: "luckyChant"},

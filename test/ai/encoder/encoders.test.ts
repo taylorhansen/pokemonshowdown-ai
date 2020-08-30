@@ -5,7 +5,7 @@ import * as encoders from "../../../src/ai/encoder/encoders";
 import { limitedStatusTurns, oneHotEncoder, OneHotEncoderArgs } from
     "../../../src/ai/encoder/helpers";
 import * as dex from "../../../src/battle/dex/dex";
-import { DriverSwitchOptions } from "../../../src/battle/driver/DriverEvent";
+import { DriverSwitchOptions } from "../../../src/battle/driver/BattleEvent";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { HP } from "../../../src/battle/state/HP";
 import { ItemTempStatus } from "../../../src/battle/state/ItemTempStatus";

@@ -2,16 +2,14 @@
 import { BoostName, boostNames } from "../../battle/dex/dex-util";
 import { Logger } from "../../Logger";
 import { PlayerID } from "../helpers";
-import { AnyBattleEvent, BattleEvent, BattleEventType, isBattleEventType } from
-    "./BattleEvent";
 import { maybe, sequence, transform } from "./combinators";
 import { anyWord, boostName, integer, json, majorStatus, parseBoostName,
     parsePokemonDetails, parsePokemonID, parsePokemonStatus, playerId,
     playerIdWithName, pokemonDetails, pokemonId, pokemonStatus, restOfLine,
     skipLine, weatherTypeOrNone, word } from "./helpers";
 import { iter } from "./Iter";
-import { AnyMessage, BattleInitMessage, MajorPrefix, Message, MessageType } from
-    "./Message";
+import * as psevent from "./PSBattleEvent";
+import * as psmsg from "./PSMessage";
 import { Info, Input, Parser, Result } from "./types";
 
 /**
@@ -22,7 +20,7 @@ import { Info, Input, Parser, Result } from "./types";
  * Messages.
  */
 export function parsePSMessage(data: string, logger = Logger.stderr):
-    {room: string, messages: AnyMessage[]}
+    {room: string, messages: psmsg.Any[]}
 {
     const {room, pos} = parseRoom(data);
     const info: Info = {room, logger};
@@ -62,9 +60,9 @@ function parseRoom(data: string): {room: string, pos: number}
 }
 
 /** Parses messages until the input is consumed. */
-function messages(input: Input, info: Info): AnyMessage[]
+function messages(input: Input, info: Info): psmsg.Any[]
 {
-    const result: AnyMessage[] = [];
+    const result: psmsg.Any[] = [];
     while (!input.done)
     {
         // the parser doesn't have to consume the whole line since the rest of
@@ -84,17 +82,18 @@ function messages(input: Input, info: Info): AnyMessage[]
 
 // message parsers
 
-type MessageParser<T extends MessageType> = Parser<Message<T>, string>;
-type MessageResult<T extends MessageType> = Result<Message<T> | null, string>;
+type MessageParser<T extends psmsg.Type> = Parser<psmsg.Message<T>, string>;
+type MessageResult<T extends psmsg.Type> =
+    Result<psmsg.Message<T> | null, string>;
 
 /**
  * Parses a Message. Note that message parsers can parse one or multiple lines,
  * and the remaining Input returned in the Result must end on or before the last
  * parsed line's newline character.
  */
-function message(input: Input, info: Info): MessageResult<MessageType>
+function message(input: Input, info: Info): MessageResult<psmsg.Type>
 {
-    const prefix = input.get() as MajorPrefix | "player" | BattleEventType;
+    const prefix = input.get() as psmsg.Prefix | "player" | psevent.Type;
 
     switch (prefix)
     {
@@ -107,7 +106,7 @@ function message(input: Input, info: Info): MessageResult<MessageType>
         case "updateuser": return messageUpdateUser(input, info);
         case "player": return messageBattleInit(input, info);
         default:
-            if (isBattleEventType(prefix))
+            if (psevent.isType(prefix))
             {
                 return messageBattleProgress(input, info);
             }
@@ -210,9 +209,9 @@ const messageRequest: MessageParser<"request"> = transform(
  * @example
  * |updatechallenges|<UpdateChallengesArgs json>
  */
-const messageUpdateChallenges: MessageParser<"updatechallenges"> = transform(
+const messageUpdateChallenges: MessageParser<"updateChallenges"> = transform(
     sequence(word("updatechallenges"), json),
-    ([_, msg]) => ({type: "updatechallenges", ...msg}));
+    ([_, msg]) => ({type: "updateChallenges", ...msg}));
 
 /**
  * Parses an `updateuser` message.
@@ -221,10 +220,10 @@ const messageUpdateChallenges: MessageParser<"updatechallenges"> = transform(
  * @example
  * |updateuser|<our username>|<0 if guest, 1 otherwise>|<avatarId>
  */
-const messageUpdateUser: MessageParser<"updateuser"> = transform(
+const messageUpdateUser: MessageParser<"updateUser"> = transform(
     // TODO: include avatar id
     sequence(word("updateuser"), transform(anyWord, w => w.trim()), integer),
-    ([_, username, name]) => ({type: "updateuser", username, isGuest: !name}));
+    ([_, username, name]) => ({type: "updateUser", username, isGuest: !name}));
 
 /**
  * Parses a `battleinit` multiline message. Can be silently ignored if invalid,
@@ -243,7 +242,7 @@ const messageUpdateUser: MessageParser<"updateuser"> = transform(
  * |turn|1
  */
 function messageBattleInit(input: Input, info: Info):
-    MessageResult<"battleinit">
+    MessageResult<"battleInit">
 {
     // just going to partially implement this procedurally instead of trying to
     //  extend this makeshift parser combinator library
@@ -252,7 +251,7 @@ function messageBattleInit(input: Input, info: Info):
     let teamSizes: {[P in PlayerID]: number} | undefined;
     let gameType: string | undefined;
     let gen: number | undefined;
-    const events: AnyBattleEvent[] = [];
+    const events: psevent.Any[] = [];
 
     while (!input.done)
     {
@@ -272,7 +271,7 @@ function messageBattleInit(input: Input, info: Info):
                 const r = messageBattleInitTeamSize(input, info);
                 if (!teamSizes)
                 {
-                    teamSizes = {} as BattleInitMessage["teamSizes"];
+                    teamSizes = {} as psmsg.BattleInit["teamSizes"];
                 }
                 teamSizes[r.result.id] = r.result.size;
 
@@ -297,7 +296,7 @@ function messageBattleInit(input: Input, info: Info):
             }
                 // TODO: team preview
             default:
-                if (isBattleEventType(prefix))
+                if (psevent.isType(prefix))
                 {
                     // start of initial events
                     const r = battleEvents(input, info);
@@ -323,7 +322,7 @@ function messageBattleInit(input: Input, info: Info):
     return {
         result:
         {
-            type: "battleinit", id, username, teamSizes, gameType, gen, events
+            type: "battleInit", id, username, teamSizes, gameType, gen, events
         },
         remaining: input
     };
@@ -344,20 +343,19 @@ const messageBattleInitGen = transform(sequence(word("gen"), integer),
         ([_, gen]) => gen);
 
 /** Parses a `battleprogress` multiline message */
-const messageBattleProgress: MessageParser<"battleprogress"> =
-    transform(battleEvents, events => ({type: "battleprogress", events}));
+const messageBattleProgress: MessageParser<"battleProgress"> =
+    transform(battleEvents, events => ({type: "battleProgress", events}));
 
 // battle event parsers
 
-type EventParser<T extends BattleEventType> = Parser<BattleEvent<T>, string>;
-type EventResult<T extends BattleEventType> =
-    Result<BattleEvent<T> | null, string>;
+type EventParser<T extends psevent.Type> = Parser<psevent.Event<T>, string>;
+type EventResult<T extends psevent.Type> =
+    Result<psevent.Event<T> | null, string>;
 
 /** Parses any number of BattleEvents. */
-function battleEvents(input: Input, info: Info):
-    Result<AnyBattleEvent[], string>
+function battleEvents(input: Input, info: Info): Result<psevent.Any[], string>
 {
-    const result: AnyBattleEvent[] = [];
+    const result: psevent.Any[] = [];
 
     while (!input.done)
     {
@@ -381,13 +379,13 @@ function battleEvents(input: Input, info: Info):
  * Parses a BattleEvent with optional suffixes. Throws if invalid. Result
  * contains null if the event type is unsupported.
  */
-function battleEvent(input: Input, info: Info): EventResult<BattleEventType>
+function battleEvent(input: Input, info: Info): EventResult<psevent.Type>
 {
     const r1 = battleEventHelper(input, info);
     if (!r1.result) return r1;
 
     // parse optional suffixes
-    let event: AnyBattleEvent = r1.result;
+    let event: psevent.Any = r1.result;
     while (!input.done && input.get() !== "\n")
     {
         const s = input.get();
@@ -423,10 +421,9 @@ function battleEvent(input: Input, info: Info): EventResult<BattleEventType>
  * Parses a BattleEvent. Throws if invalid. Can also return null in the result
  * if the failure is meant to be silent.
  */
-function battleEventHelper(input: Input, info: Info):
-    EventResult<BattleEventType>
+function battleEventHelper(input: Input, info: Info): EventResult<psevent.Type>
 {
-    switch (input.get() as BattleEventType)
+    switch (input.get() as psevent.Type)
     {
         case "\n": return eventEmpty(input, info);
         case "-ability": return eventAbility(input, info);

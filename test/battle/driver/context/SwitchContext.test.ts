@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import "mocha";
+import { DriverSwitchOptions } from "../../../../src/battle/driver/BattleEvent";
 import { SwitchContext } from
     "../../../../src/battle/driver/context/SwitchContext";
-import { DriverSwitchOptions } from "../../../../src/battle/driver/DriverEvent";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Side } from "../../../../src/battle/state/Side";
 import { Logger } from "../../../../src/Logger";

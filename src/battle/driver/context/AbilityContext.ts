@@ -2,7 +2,7 @@ import { Logger } from "../../../Logger";
 import { isWeatherType, WeatherType } from "../../dex/dex-util";
 import { BattleState } from "../../state/BattleState";
 import { Pokemon } from "../../state/Pokemon";
-import { ActivateAbility, AnyDriverEvent } from "../DriverEvent";
+import * as events from "../BattleEvent";
 import { ContextResult, DriverContext } from "./DriverContext";
 
 /** Handles events related to an ability. */
@@ -27,7 +27,8 @@ export class AbilityContext extends DriverContext
      * @param event Event that started this context.
      * @param logger Logger object.
      */
-    constructor(state: BattleState, event: ActivateAbility, logger: Logger)
+    constructor(state: BattleState, event: events.ActivateAbility,
+        logger: Logger)
     {
         super(state, logger);
 
@@ -40,7 +41,7 @@ export class AbilityContext extends DriverContext
     }
 
     /** @override */
-    public handle(event: AnyDriverEvent): ContextResult | DriverContext
+    public handle(event: events.Any): ContextResult | DriverContext
     {
         switch (event.type)
         {

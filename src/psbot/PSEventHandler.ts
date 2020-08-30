@@ -1,31 +1,18 @@
 import * as dex from "../battle/dex/dex";
 import { itemRemovalMoves, itemTransferMoves, Type } from
     "../battle/dex/dex-util";
-import { ActivateAbility, AnyDriverEvent, DriverInitPokemon, InitOtherTeamSize,
-    SingleMoveEffect, SingleTurnEffect, StatusEffectType, TakeDamage,
-    TeamEffectType, TransformPost } from "../battle/driver/DriverEvent";
+import * as events from "../battle/driver/BattleEvent";
 import { otherSide, Side } from "../battle/state/Side";
 import { Logger } from "../Logger";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
     "./helpers";
-import { AbilityEvent, ActivateEvent, AnyBattleEvent, BoostEvent, CantEvent,
-    ClearAllBoostEvent, ClearNegativeBoostEvent, ClearPositiveBoostEvent,
-    CopyBoostEvent, CritEvent, CureStatusEvent, CureTeamEvent, DamageEvent,
-    DetailsChangeEvent, DragEvent, EndAbilityEvent, EndEvent, EndItemEvent,
-    FailEvent, FaintEvent, FieldEndEvent, FieldStartEvent, FormeChangeEvent,
-    HealEvent, HitCountEvent, ImmuneEvent, InvertBoostEvent, ItemEvent,
-    MissEvent, MoveEvent, MustRechargeEvent, NoTargetEvent, PrepareEvent,
-    ResistedEvent, SetBoostEvent, SetHPEvent, SideEndEvent, SideStartEvent,
-    SingleMoveEvent, SingleTurnEvent, StartEvent, StatusEvent,
-    SuperEffectiveEvent, SwapBoostEvent, SwitchEvent, TieEvent, TransformEvent,
-    TurnEvent, UnboostEvent, UpkeepEvent, WeatherEvent, WinEvent } from
-    "./parser/BattleEvent";
 import { Iter, iter } from "./parser/Iter";
-import { BattleInitMessage, RequestMessage } from "./parser/Message";
+import * as psevent from "./parser/PSBattleEvent";
+import * as psmsg from "./parser/PSMessage";
 import { Result } from "./parser/types";
 
 /** Result from parsing BattleEvents into DriverEvents. */
-export type PSResult = Result<AnyDriverEvent[], AnyBattleEvent>;
+export type PSResult = Result<events.Any[], psevent.Any>;
 
 /** Translates BattleEvents from the PS server into DriverEvents. */
 export class PSEventHandler
@@ -39,7 +26,7 @@ export class PSEventHandler
     /** Logger object. */
     protected readonly logger: Logger;
     /** Last |request| message that was processed. */
-    protected lastRequest?: RequestMessage;
+    protected lastRequest?: psmsg.Request;
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -60,7 +47,7 @@ export class PSEventHandler
     }
 
     /** Processes a `request` message. */
-    public handleRequest(args: RequestMessage): AnyDriverEvent[]
+    public handleRequest(args: psmsg.Request): events.Any[]
     {
         this.lastRequest = args;
 
@@ -71,7 +58,7 @@ export class PSEventHandler
 
         // first time: initialize client team data
         // copy pokemon array so we can modify it
-        const team: DriverInitPokemon[] = [...args.side.pokemon];
+        const team: events.DriverInitPokemon[] = [...args.side.pokemon];
 
         // preprocess move names, which are encoded with additional features
         for (let i = 0; i < team.length; ++i)
@@ -117,11 +104,11 @@ export class PSEventHandler
     }
 
     /** Initializes the battle conditions. */
-    public initBattle(args: BattleInitMessage): AnyDriverEvent[]
+    public initBattle(args: psmsg.BattleInit): events.Any[]
     {
         this._battling = true;
 
-        let sizeEvent: InitOtherTeamSize;
+        let sizeEvent: events.InitOtherTeamSize;
 
         // map player id to which side they represent
         const id = args.id;
@@ -152,9 +139,9 @@ export class PSEventHandler
      * Translates PS server BattleEvents into DriverEvents to update the battle
      * state.
      */
-    public handleEvents(events: readonly AnyBattleEvent[]): AnyDriverEvent[]
+    public handleEvents(psEvents: readonly psevent.Any[]): events.Any[]
     {
-        const result: AnyDriverEvent[] = [];
+        const result: events.Any[] = [];
 
         // starting a new turn
         if (this.newTurn) result.push({type: "preTurn"});
@@ -164,7 +151,7 @@ export class PSEventHandler
         this.newTurn = false;
 
         // TODO: remove now-unneeded Iter logic
-        let it = iter(events);
+        let it = iter(psEvents);
         while (!it.done)
         {
             const battleEvent = it.get();
@@ -182,7 +169,7 @@ export class PSEventHandler
         //  (of course, make sure the abilities/monRefs match)
         // this is due to a weird behavior in PS with gen4 battles, not sure if
         //  it's also the case on cartridge
-        const abilityEvents: {i: number, event: ActivateAbility}[] = [];
+        const abilityEvents: {i: number, event: events.ActivateAbility}[] = [];
         for (let i = 0; i < result.length; ++i)
         {
             const event = result[i];
@@ -250,18 +237,16 @@ export class PSEventHandler
      * @param it Points to the next BattleEvent.
      * @returns The translated DriverEvent and the remaining input Iter.
      */
-    private handleEvent(event: AnyBattleEvent, it: Iter<AnyBattleEvent>):
-        PSResult
+    private handleEvent(event: psevent.Any, it: Iter<psevent.Any>): PSResult
     {
         const suffixEvents = this.handleSuffixes(event);
-        const {result: driverEvents, remaining} = this.delegateEvent(event, it);
+        const {result: battleEvents, remaining} = this.delegateEvent(event, it);
 
-        return {result: [...suffixEvents, ...driverEvents], remaining};
+        return {result: [...suffixEvents, ...battleEvents], remaining};
     }
 
     /** Translates a BattleEvent without parsing suffixes. */
-    private delegateEvent(event: AnyBattleEvent, it: Iter<AnyBattleEvent>):
-        PSResult
+    private delegateEvent(event: psevent.Any, it: Iter<psevent.Any>): PSResult
     {
         switch (event.type)
         {
@@ -324,7 +309,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleCant(event: CantEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleCant(event: psevent.Cant, it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         let move: string | undefined;
@@ -336,7 +321,7 @@ export class PSEventHandler
             move = toIdName(event.moveName);
         }
 
-        let result: AnyDriverEvent[];
+        let result: events.Any[];
         if (event.reason === "imprison" || event.reason === "recharge" ||
             event.reason === "slp")
         {
@@ -368,7 +353,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleMove(event: MoveEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleMove(event: psevent.Move, it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         const move = toIdName(event.moveName);
@@ -378,8 +363,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleSwitch(event: DragEvent | SwitchEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleSwitch(event: psevent.Drag | psevent.Switch,
+        it: Iter<psevent.Any>): PSResult
     {
         return {
             result:
@@ -395,13 +380,13 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleAbility(event: AbilityEvent, it: Iter<AnyBattleEvent>):
+    protected handleAbility(event: psevent.Ability, it: Iter<psevent.Any>):
         PSResult
     {
         const monRef = this.getSide(event.id.owner);
         const ability = toIdName(event.ability);
 
-        const abilityEvent: ActivateAbility =
+        const abilityEvent: events.ActivateAbility =
             {type: "activateAbility", monRef, ability};
 
         return {
@@ -423,8 +408,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleEndAbility(event: EndAbilityEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleEndAbility(event: psevent.EndAbility,
+        it: Iter<psevent.Any>): PSResult
     {
         // transform event was already taken care of, no need to handle
         //  this message
@@ -456,7 +441,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleStart(event: StartEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleStart(event: psevent.Start, it: Iter<psevent.Any>): PSResult
     {
         if (event.volatile === "typeadd")
         {
@@ -519,7 +504,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleActivate(event: ActivateEvent, it: Iter<AnyBattleEvent>):
+    protected handleActivate(event: psevent.Activate, it: Iter<psevent.Any>):
         PSResult
     {
         const monRef = this.getSide(event.id.owner);
@@ -636,7 +621,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleEnd(event: EndEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleEnd(event: psevent.End, it: Iter<psevent.Any>): PSResult
     {
         if (event.volatile === "Stockpile")
         {
@@ -655,7 +640,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleBoost(event: BoostEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleBoost(event: psevent.Boost, it: Iter<psevent.Any>): PSResult
     {
         return {
             result:
@@ -668,30 +653,30 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleClearAllBoost(event: ClearAllBoostEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleClearAllBoost(event: psevent.ClearAllBoost,
+        it: Iter<psevent.Any>): PSResult
     {
         return {result: [{type: "clearAllBoosts"}], remaining: it};
     }
 
     /** @virtual */
-    protected handleClearNegativeBoost(event: ClearNegativeBoostEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleClearNegativeBoost(event: psevent.ClearNegativeBoost,
+        it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         return {result: [{type: "clearNegativeBoosts", monRef}], remaining: it};
     }
 
     /** @virtual */
-    protected handleClearPositiveBoost(event: ClearPositiveBoostEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleClearPositiveBoost(event: psevent.ClearPositiveBoost,
+        it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         return {result: [{type: "clearPositiveBoosts", monRef}], remaining: it};
     }
 
     /** @virtual */
-    protected handleCopyBoost(event: CopyBoostEvent, it: Iter<AnyBattleEvent>):
+    protected handleCopyBoost(event: psevent.CopyBoost, it: Iter<psevent.Any>):
         PSResult
     {
         const from = this.getSide(event.target.owner);
@@ -700,7 +685,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleCrit(event: CritEvent, it: Iter<AnyBattleEvent>):
+    protected handleCrit(event: psevent.Crit, it: Iter<psevent.Any>):
         PSResult
     {
         const monRef = this.getSide(event.id.owner);
@@ -708,8 +693,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleCureStatus(event: CureStatusEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleCureStatus(event: psevent.CureStatus,
+        it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         return {
@@ -723,7 +708,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleCureTeam(event: CureTeamEvent, it: Iter<AnyBattleEvent>):
+    protected handleCureTeam(event: psevent.CureTeam, it: Iter<psevent.Any>):
         PSResult
     {
         return {
@@ -736,13 +721,13 @@ export class PSEventHandler
      * Handles a damage/heal/sethp event.
      * @virtual
      */
-    protected handleDamage(event: DamageEvent | HealEvent | SetHPEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleDamage(event: psevent.Damage | psevent.Heal | psevent.SetHP,
+        it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         const newHP = [event.status.hp, event.status.hpMax] as const;
 
-        const damageEvent: TakeDamage =
+        const damageEvent: events.TakeDamage =
             {type: "takeDamage", monRef, newHP, tox: event.from === "psn"};
 
         // TODO: wish
@@ -778,8 +763,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleDetailsChange(event: DetailsChangeEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleDetailsChange(event: psevent.DetailsChange,
+        it: Iter<psevent.Any>): PSResult
     {
         return {
             result:
@@ -795,7 +780,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleFail(event: FailEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleFail(event: psevent.Fail, it: Iter<psevent.Any>): PSResult
     {
         return {
             result: [{type: "fail", monRef: this.getSide(event.id.owner)}],
@@ -804,7 +789,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleFaint(event: FaintEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleFaint(event: psevent.Faint, it: Iter<psevent.Any>): PSResult
     {
         return {
             result: [{type: "faint", monRef: this.getSide(event.id.owner)}],
@@ -816,8 +801,8 @@ export class PSEventHandler
      * Handles a field end/start event.
      * @virtual
      */
-    protected handleFieldEffect(event: FieldEndEvent | FieldStartEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleFieldEffect(event: psevent.FieldEnd | psevent.FieldStart,
+        it: Iter<psevent.Any>): PSResult
     {
         switch (event.effect)
         {
@@ -844,8 +829,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleFormeChange(event: FormeChangeEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleFormeChange(event: psevent.FormeChange,
+        it: Iter<psevent.Any>): PSResult
     {
         return {
             result:
@@ -861,7 +846,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleHitCount(event: HitCountEvent, it: Iter<AnyBattleEvent>):
+    protected handleHitCount(event: psevent.HitCount, it: Iter<psevent.Any>):
         PSResult
     {
         const monRef = this.getSide(event.id.owner);
@@ -872,7 +857,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleImmune(event: ImmuneEvent, it: Iter<AnyBattleEvent>):
+    protected handleImmune(event: psevent.Immune, it: Iter<psevent.Any>):
         PSResult
     {
         return {
@@ -882,8 +867,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleInvertBoost(event: InvertBoostEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleInvertBoost(event: psevent.InvertBoost,
+        it: Iter<psevent.Any>): PSResult
     {
         return {
             result:
@@ -895,7 +880,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleItem(event: ItemEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleItem(event: psevent.Item, it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         const item = toIdName(event.item);
@@ -916,7 +901,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleEndItem(event: EndItemEvent, it: Iter<AnyBattleEvent>):
+    protected handleEndItem(event: psevent.EndItem, it: Iter<psevent.Any>):
         PSResult
     {
         const monRef = this.getSide(event.id.owner);
@@ -941,7 +926,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleMiss(event: MissEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleMiss(event: psevent.Miss, it: Iter<psevent.Any>): PSResult
     {
         return {
             result:
@@ -951,8 +936,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleMustRecharge(event: MustRechargeEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleMustRecharge(event: psevent.MustRecharge,
+        it: Iter<psevent.Any>): PSResult
     {
         return {
             result:
@@ -964,7 +949,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleNoTarget(event: NoTargetEvent, it: Iter<AnyBattleEvent>):
+    protected handleNoTarget(event: psevent.NoTarget, it: Iter<psevent.Any>):
         PSResult
     {
         return {
@@ -974,7 +959,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handlePrepare(event: PrepareEvent, it: Iter<AnyBattleEvent>):
+    protected handlePrepare(event: psevent.Prepare, it: Iter<psevent.Any>):
         PSResult
     {
         const move = toIdName(event.moveName);
@@ -993,7 +978,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleResisted(event: ResistedEvent, it: Iter<AnyBattleEvent>):
+    protected handleResisted(event: psevent.Resisted, it: Iter<psevent.Any>):
         PSResult
     {
         return {
@@ -1003,7 +988,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleSetBoost(event: SetBoostEvent, it: Iter<AnyBattleEvent>):
+    protected handleSetBoost(event: psevent.SetBoost, it: Iter<psevent.Any>):
         PSResult
     {
         return {
@@ -1023,11 +1008,11 @@ export class PSEventHandler
      * Handles a side end/start event.
      * @virtual
      */
-    protected handleSideCondition(event: SideEndEvent | SideStartEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleSideCondition(event: psevent.SideEnd | psevent.SideStart,
+        it: Iter<psevent.Any>): PSResult
     {
         const teamRef = this.getSide(event.id);
-        let effect: TeamEffectType;
+        let effect: events.TeamEffectType;
 
         let psCondition = event.condition;
         if (psCondition.startsWith("move: "))
@@ -1062,10 +1047,10 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleSingleMove(event: SingleMoveEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleSingleMove(event: psevent.SingleMove,
+        it: Iter<psevent.Any>): PSResult
     {
-        let effect: SingleMoveEffect | undefined;
+        let effect: events.SingleMoveEffect | undefined;
         if (event.move === "Destiny Bond") effect = "destinyBond";
         else if (event.move === "Grudge") effect = "grudge";
         else if (event.move === "Rage") effect = "rage";
@@ -1080,10 +1065,10 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleSingleTurn(event: SingleTurnEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleSingleTurn(event: psevent.SingleTurn,
+        it: Iter<psevent.Any>): PSResult
     {
-        let effect: SingleTurnEffect;
+        let effect: events.SingleTurnEffect;
         switch (event.status.startsWith("move: ") ?
             event.status.substr("move: ".length) : event.status)
         {
@@ -1104,7 +1089,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleStatus(event: StatusEvent, it: Iter<AnyBattleEvent>):
+    protected handleStatus(event: psevent.Status, it: Iter<psevent.Any>):
         PSResult
     {
         const monRef = this.getSide(event.id.owner);
@@ -1119,15 +1104,15 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleSuperEffective(event: SuperEffectiveEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleSuperEffective(event: psevent.SuperEffective,
+        it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         return {result: [{type: "superEffective", monRef}], remaining: it};
     }
 
     /** @virtual */
-    protected handleSwapBoost(event: SwapBoostEvent, it: Iter<AnyBattleEvent>):
+    protected handleSwapBoost(event: psevent.SwapBoost, it: Iter<psevent.Any>):
         PSResult
     {
         const monRef1 = this.getSide(event.source.owner);
@@ -1142,8 +1127,8 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleGameOver(event: TieEvent | WinEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    protected handleGameOver(event: psevent.Tie | psevent.Win,
+        it: Iter<psevent.Any>): PSResult
     {
         this._battling = false;
 
@@ -1160,13 +1145,13 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleTransform(event: TransformEvent, it: Iter<AnyBattleEvent>):
+    protected handleTransform(event: psevent.Transform, it: Iter<psevent.Any>):
         PSResult
     {
         const source = this.getSide(event.source.owner);
         const target = this.getSide(event.target.owner);
 
-        let transformPost: TransformPost | undefined;
+        let transformPost: events.TransformPost | undefined;
 
         // use lastRequest to infer more details
         if (this.lastRequest && this.lastRequest.active &&
@@ -1197,14 +1182,14 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleTurn(event: TurnEvent, it: Iter<AnyBattleEvent>): PSResult
+    protected handleTurn(event: psevent.Turn, it: Iter<psevent.Any>): PSResult
     {
         this.newTurn = true;
         return {result: [], remaining: it};
     }
 
     /** @virtual */
-    protected handleUnboost(event: UnboostEvent, it: Iter<AnyBattleEvent>):
+    protected handleUnboost(event: psevent.Unboost, it: Iter<psevent.Any>):
         PSResult
     {
         return {
@@ -1218,7 +1203,7 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleUpkeep(event: UpkeepEvent, it: Iter<AnyBattleEvent>):
+    protected handleUpkeep(event: psevent.Upkeep, it: Iter<psevent.Any>):
         PSResult
     {
         // selfSwitch is the result of a move, which only occurs in the middle
@@ -1229,30 +1214,30 @@ export class PSEventHandler
     }
 
     /** @virtual */
-    protected handleWeather(event: WeatherEvent, it: Iter<AnyBattleEvent>):
+    protected handleWeather(event: psevent.Weather, it: Iter<psevent.Any>):
         PSResult
     {
-        let events: AnyDriverEvent[];
+        let result: events.Any[];
 
-        if (event.weatherType === "none") events = [{type: "resetWeather"}];
+        if (event.weatherType === "none") result = [{type: "resetWeather"}];
         else if (event.upkeep)
         {
-            events = [{type: "updateFieldEffect", effect: event.weatherType}];
+            result = [{type: "updateFieldEffect", effect: event.weatherType}];
         }
         else
         {
-            events =
+            result =
             [{
                 type: "activateFieldEffect", effect: event.weatherType,
                 start: true
             }];
         }
 
-        return {result: events, remaining: it};
+        return {result, remaining: it};
     }
 
     /** Handles the `[of]` and `[from]` suffixes of an event. */
-    private handleSuffixes(event: AnyBattleEvent): [] | [AnyDriverEvent]
+    private handleSuffixes(event: psevent.Any): [] | [events.Any]
     {
         // can't do anything without a [from] suffix
         const f = event.from;
@@ -1297,18 +1282,18 @@ export class PSEventHandler
     }
 
     /** Handles the shared statuses in end/start events. */
-    private handleTrivialStatus(event: EndEvent | StartEvent,
-        it: Iter<AnyBattleEvent>): PSResult
+    private handleTrivialStatus(event: psevent.End | psevent.Start,
+        it: Iter<psevent.Any>): PSResult
     {
         const monRef = this.getSide(event.id.owner);
         const start = event.type === "-start";
 
-        let effect: StatusEffectType | undefined;
+        let effect: events.StatusEffectType | undefined;
 
         let ev = event.volatile;
         if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
 
-        let driverEvents: AnyDriverEvent[] | undefined;
+        let driverEvents: events.Any[] | undefined;
         switch (ev)
         {
             case "Aqua Ring": effect = "aquaRing"; break;

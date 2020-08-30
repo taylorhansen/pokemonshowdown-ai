@@ -1,14 +1,13 @@
-import { FutureMove, TwoTurnMove } from "../dex/dex";
-import { BoostName, MajorStatus, StatExceptHP, Type, WeatherType } from
-    "../dex/dex-util";
+import * as dex from "../dex/dex";
+import * as dexutil from "../dex/dex-util";
 import { MoveData } from "../state/Pokemon";
 import { Side } from "../state/Side";
 
 /**
- * Defines the type maps for each DriverEvent. Key must match the DriverEvent's
- * `#type` field.
+ * Defines the type maps for each Event. Key must match the Event's `#type`
+ * field.
  */
-interface DriverEventMap
+interface EventMap
 {
     activateAbility: ActivateAbility;
     activateFieldEffect: ActivateFieldEffect;
@@ -67,24 +66,24 @@ interface DriverEventMap
     useMove: UseMove;
 }
 
-/** The types of DriverEvents that can exist. */
-export type DriverEventType = keyof DriverEventMap;
+/** The types of Events that can exist. */
+export type Type = keyof EventMap;
 
-/** Maps DriverEventType to a DriverEvent interface type. */
-export type DriverEvent<T extends DriverEventType> = DriverEventMap[T];
+/** Maps Type to an Event interface type. */
+export type Event<T extends Type> = EventMap[T];
 
-/** Stands for any type of DriverEvent. */
-export type AnyDriverEvent = DriverEvent<DriverEventType>;
+/** Stands for any type of Event. */
+export type Any = Event<Type>;
 
-/** Base class for all DriverEvents. */
-interface DriverEventBase<T extends DriverEventType>
+/** Base class for all Events. */
+interface EventBase<T extends Type>
 {
-    /** The type of DriverEvent this is. */
+    /** The type of Event this is. */
     readonly type: T;
 }
 
 /** Reveals, changes, and/or activates a pokemon's ability. */
-export interface ActivateAbility extends DriverEventBase<"activateAbility">
+export interface ActivateAbility extends EventBase<"activateAbility">
 {
     /** Pokemon being associated with an ability. */
     readonly monRef: Side;
@@ -93,8 +92,7 @@ export interface ActivateAbility extends DriverEventBase<"activateAbility">
 }
 
 /** Activates a field-wide effect. */
-export interface ActivateFieldEffect extends
-    DriverEventBase<"activateFieldEffect">
+export interface ActivateFieldEffect extends EventBase<"activateFieldEffect">
 {
     /** Name of the effect. */
     readonly effect: FieldEffectType;
@@ -103,11 +101,10 @@ export interface ActivateFieldEffect extends
 }
 
 /** Typing for `ActivateFieldEffect#effect`. */
-export type FieldEffectType = WeatherType | "gravity" | "trickRoom";
+export type FieldEffectType = dexutil.WeatherType | "gravity" | "trickRoom";
 
 /** Starts, sets, or ends a trivial status effect. */
-export interface ActivateStatusEffect extends
-    DriverEventBase<"activateStatusEffect">
+export interface ActivateStatusEffect extends EventBase<"activateStatusEffect">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -124,8 +121,8 @@ export interface ActivateStatusEffect extends
 }
 
 /** Typing for `ActivateStatusEffect#status`. */
-export type StatusEffectType = UpdatableStatusEffectType | MajorStatus |
-    FutureMove | TwoTurnMove | SingleMoveEffect | SingleTurnEffect |
+export type StatusEffectType = UpdatableStatusEffectType | dexutil.MajorStatus |
+    dex.FutureMove | dex.TwoTurnMove | SingleMoveEffect | SingleTurnEffect |
     "aquaRing" | "attract" | "charge" | "curse" | "embargo" | "encore" |
     "focusEnergy" | "foresight" | "healBlock" | "imprison" | "ingrain" |
     "leechSeed" | "magnetRise" | "miracleEye" | "mudSport" | "nightmare" |
@@ -140,8 +137,7 @@ export type SingleTurnEffect = "endure" | "magicCoat" | "protect" | "roost" |
     "snatch";
 
 /** Activates a team-wide effect. */
-export interface ActivateTeamEffect extends
-    DriverEventBase<"activateTeamEffect">
+export interface ActivateTeamEffect extends EventBase<"activateTeamEffect">
 {
     /** Team reference. */
     readonly teamRef: Side;
@@ -157,38 +153,36 @@ export type TeamEffectType = "healingWish" | "lightScreen" | "luckyChant" |
     "tailwind" | "toxicSpikes";
 
 /** Temporarily changes the pokemon's types. Also resets third type. */
-export interface ChangeType extends DriverEventBase<"changeType">
+export interface ChangeType extends EventBase<"changeType">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Types to set. */
-    readonly newTypes: readonly [Type, Type];
+    readonly newTypes: readonly [dexutil.Type, dexutil.Type];
 }
 
 /** Clears all temporary stat boosts from the field. */
-export interface ClearAllBoosts extends DriverEventBase<"clearAllBoosts"> {}
+export interface ClearAllBoosts extends EventBase<"clearAllBoosts"> {}
 
 /** Clears temporary negative stat boosts from the pokemon. */
-export interface ClearNegativeBoosts extends
-    DriverEventBase<"clearNegativeBoosts">
+export interface ClearNegativeBoosts extends EventBase<"clearNegativeBoosts">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Clears temporary positive stat boosts from the pokemon. */
-export interface ClearPositiveBoosts extends
-    DriverEventBase<"clearPositiveBoosts">
+export interface ClearPositiveBoosts extends EventBase<"clearPositiveBoosts">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Clears self-switch flags for both teams. */
-export interface ClearSelfSwitch extends DriverEventBase<"clearSelfSwitch"> {}
+export interface ClearSelfSwitch extends EventBase<"clearSelfSwitch"> {}
 
 /** Copies temporary stat boosts from one pokemon to the other. */
-export interface CopyBoosts extends DriverEventBase<"copyBoosts">
+export interface CopyBoosts extends EventBase<"copyBoosts">
 {
     /** Pokemon to get the boosts from. */
     readonly from: Side;
@@ -197,7 +191,7 @@ export interface CopyBoosts extends DriverEventBase<"copyBoosts">
 }
 
 /** Explicitly updates effect counters. */
-export interface CountStatusEffect extends DriverEventBase<"countStatusEffect">
+export interface CountStatusEffect extends EventBase<"countStatusEffect">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -213,24 +207,25 @@ export interface CountStatusEffect extends DriverEventBase<"countStatusEffect">
 }
 
 /** Typing for `CountStatusEffect#effect`. */
-export type CountableStatusEffectType = BoostName | "perish" | "stockpile";
+export type CountableStatusEffectType = dexutil.BoostName | "perish" |
+    "stockpile";
 
 /** Indicates a critical hit of a move on the pokemon. */
-export interface Crit extends DriverEventBase<"crit">
+export interface Crit extends EventBase<"crit">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Cures all pokemon of a team of any major status conditions. */
-export interface CureTeam extends DriverEventBase<"cureTeam">
+export interface CureTeam extends EventBase<"cureTeam">
 {
     /** Team reference. */
     readonly teamRef: Side;
 }
 
 /** Temporarily disables the pokemon's move. */
-export interface DisableMove extends DriverEventBase<"disableMove">
+export interface DisableMove extends EventBase<"disableMove">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -239,36 +234,35 @@ export interface DisableMove extends DriverEventBase<"disableMove">
 }
 
 /** Indicates that the pokemon failed at doing something. */
-export interface Fail extends DriverEventBase<"fail">
+export interface Fail extends EventBase<"fail">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Indicates that the pokemon fainted. */
-export interface Faint extends DriverEventBase<"faint">
+export interface Faint extends EventBase<"faint">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Indicates that the pokemon's locked move ended due to fatigue. */
-export interface Fatigue extends DriverEventBase<"fatigue">
+export interface Fatigue extends EventBase<"fatigue">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Indicates that the pokemon's stalling move was broken by Feint. */
-export interface Feint extends DriverEventBase<"feint">
+export interface Feint extends EventBase<"feint">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Indicates that the pokemon changed its form. */
-export interface FormChange extends DriverEventBase<"formChange">,
-    DriverSwitchOptions
+export interface FormChange extends EventBase<"formChange">, DriverSwitchOptions
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -277,14 +271,14 @@ export interface FormChange extends DriverEventBase<"formChange">,
 }
 
 /** Indicates that the game has ended. */
-export interface GameOver extends DriverEventBase<"gameOver">
+export interface GameOver extends EventBase<"gameOver">
 {
     /** The side that won. Leave blank if tie. */
     readonly winner?: Side;
 }
 
 /** Indicates that the pokemon was hit by a move multiple times. */
-export interface HitCount extends DriverEventBase<"hitCount">
+export interface HitCount extends EventBase<"hitCount">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -293,14 +287,14 @@ export interface HitCount extends DriverEventBase<"hitCount">
 }
 
 /** Indicates that the pokemon was immune to an effect. */
-export interface Immune extends DriverEventBase<"immune">
+export interface Immune extends EventBase<"immune">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Indicates that the pokemon spent its turn being inactive. */
-export interface Inactive extends DriverEventBase<"inactive">
+export interface Inactive extends EventBase<"inactive">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -314,14 +308,14 @@ export interface Inactive extends DriverEventBase<"inactive">
 export type InactiveReason = "imprison" | "recharge" | "slp" | "truant";
 
 /** Initializes the opponent's team size. */
-export interface InitOtherTeamSize extends DriverEventBase<"initOtherTeamSize">
+export interface InitOtherTeamSize extends EventBase<"initOtherTeamSize">
 {
     /** Size to set the opponent's team to. */
     readonly size: number;
 }
 
 /** Initializes the client's team. */
-export interface InitTeam extends DriverEventBase<"initTeam">
+export interface InitTeam extends EventBase<"initTeam">
 {
     readonly team: readonly DriverInitPokemon[];
 }
@@ -330,16 +324,15 @@ export interface InitTeam extends DriverEventBase<"initTeam">
 export interface DriverInitPokemon extends DriverSwitchOptions
 {
     /** Pokemon's stats. HP is provided in a separate field. */
-    readonly stats: Readonly<Record<StatExceptHP, number>>;
+    readonly stats: Readonly<Record<dexutil.StatExceptHP, number>>;
     /** List of move id names. */
     readonly moves: readonly string[];
     /** Base ability id name. */
     readonly baseAbility: string;
     /** Item id name. */
     readonly item: string;
-
     /** Hidden Power type if applicable. */
-    readonly hpType?: Type;
+    readonly hpType?: dexutil.Type;
     /** Happiness value if applicable. */
     readonly happiness?: number;
 }
@@ -360,14 +353,14 @@ export interface DriverSwitchOptions
 }
 
 /** Inverts all of the pokemon's temporary stat boosts. */
-export interface InvertBoosts extends DriverEventBase<"invertBoosts">
+export interface InvertBoosts extends EventBase<"invertBoosts">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Indicates that the pokemon is taking aim due to Lock-On. */
-export interface LockOn extends DriverEventBase<"lockOn">
+export interface LockOn extends EventBase<"lockOn">
 {
     /** User of Lock-On. */
     readonly monRef: Side;
@@ -376,7 +369,7 @@ export interface LockOn extends DriverEventBase<"lockOn">
 }
 
 /** Indicates that the pokemon is Mimicking a move. */
-export interface Mimic extends DriverEventBase<"mimic">
+export interface Mimic extends EventBase<"mimic">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -385,14 +378,14 @@ export interface Mimic extends DriverEventBase<"mimic">
 }
 
 /** Indicates that the pokemon avoided a move. */
-export interface Miss extends DriverEventBase<"miss">
+export interface Miss extends EventBase<"miss">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Reveals a move and modifies its PP value. */
-export interface ModifyPP extends DriverEventBase<"modifyPP">
+export interface ModifyPP extends EventBase<"modifyPP">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -403,27 +396,27 @@ export interface ModifyPP extends DriverEventBase<"modifyPP">
 }
 
 /** Indicates that the pokemon must recharge from the previous action. */
-export interface MustRecharge extends DriverEventBase<"mustRecharge">
+export interface MustRecharge extends EventBase<"mustRecharge">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Indicates that the pokemon's move couldn't target anything. */
-export interface NoTarget extends DriverEventBase<"noTarget">
+export interface NoTarget extends EventBase<"noTarget">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Indicates that the turn is about to end. */
-export interface PostTurn extends DriverEventBase<"postTurn"> {}
+export interface PostTurn extends EventBase<"postTurn"> {}
 
 /** Indicates that the turn is about to begin. */
-export interface PreTurn extends DriverEventBase<"preTurn"> {}
+export interface PreTurn extends EventBase<"preTurn"> {}
 
 /** Re-enables the pokemon's disabled moves. */
-export interface ReenableMoves extends DriverEventBase<"reenableMoves">
+export interface ReenableMoves extends EventBase<"reenableMoves">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -431,7 +424,7 @@ export interface ReenableMoves extends DriverEventBase<"reenableMoves">
 
 /** Indicates that the pokemon is being trapped by an unknown ability. */
 export interface RejectSwitchTrapped extends
-    DriverEventBase<"rejectSwitchTrapped">
+    EventBase<"rejectSwitchTrapped">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -440,7 +433,7 @@ export interface RejectSwitchTrapped extends
 }
 
 /** Indicates that an item was just removed from the pokemon. */
-export interface RemoveItem extends DriverEventBase<"removeItem">
+export interface RemoveItem extends EventBase<"removeItem">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -453,24 +446,24 @@ export interface RemoveItem extends DriverEventBase<"removeItem">
 }
 
 /** Resets the weather back to none. */
-export interface ResetWeather extends DriverEventBase<"resetWeather"> {}
+export interface ResetWeather extends EventBase<"resetWeather"> {}
 
 /** Indicates that the pokemon was hit by a move it resists. */
-export interface Resisted extends DriverEventBase<"resisted">
+export interface Resisted extends EventBase<"resisted">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Restores the PP of each of the pokemon's moves. */
-export interface RestoreMoves extends DriverEventBase<"restoreMoves">
+export interface RestoreMoves extends EventBase<"restoreMoves">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Reveals that the pokemon is now holding an item. */
-export interface RevealItem extends DriverEventBase<"revealItem">
+export interface RevealItem extends EventBase<"revealItem">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -484,7 +477,7 @@ export interface RevealItem extends DriverEventBase<"revealItem">
 }
 
 /** Reveals that the pokemon knows a move. */
-export interface RevealMove extends DriverEventBase<"revealMove">
+export interface RevealMove extends EventBase<"revealMove">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -493,16 +486,16 @@ export interface RevealMove extends DriverEventBase<"revealMove">
 }
 
 /** Sets the pokemon's temporary third type. */
-export interface SetThirdType extends DriverEventBase<"setThirdType">
+export interface SetThirdType extends EventBase<"setThirdType">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Type to set. */
-    readonly thirdType: Type;
+    readonly thirdType: dexutil.Type;
 }
 
 /** Indicates that the pokemon is Sketching a move. */
-export interface Sketch extends DriverEventBase<"sketch">
+export interface Sketch extends EventBase<"sketch">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -511,7 +504,7 @@ export interface Sketch extends DriverEventBase<"sketch">
 }
 
 /** Indicates that the pokemon successfully stalled an attack. */
-export interface Stall extends DriverEventBase<"stall">
+export interface Stall extends EventBase<"stall">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -523,25 +516,25 @@ export interface Stall extends DriverEventBase<"stall">
 }
 
 /** Indicates that the pokemon was hit by a move it is weak to. */
-export interface SuperEffective extends DriverEventBase<"superEffective">
+export interface SuperEffective extends EventBase<"superEffective">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
 }
 
 /** Swaps the given temporary stat boosts of two pokemon. */
-export interface SwapBoosts extends DriverEventBase<"swapBoosts">
+export interface SwapBoosts extends EventBase<"swapBoosts">
 {
     /** First pokemon reference. */
     readonly monRef1: Side;
     /** Second pokemon reference. */
     readonly monRef2: Side;
     /** Stats to swap. */
-    readonly stats: readonly BoostName[];
+    readonly stats: readonly dexutil.BoostName[];
 }
 
 /** Indicates that a pokemon has switched in. */
-export interface SwitchIn extends DriverEventBase<"switchIn">,
+export interface SwitchIn extends EventBase<"switchIn">,
     DriverSwitchOptions
 {
     /** Pokemon reference. */
@@ -549,7 +542,7 @@ export interface SwitchIn extends DriverEventBase<"switchIn">,
 }
 
 /** Indicates that a pokemon took damage (or was healed) and its HP changed. */
-export interface TakeDamage extends DriverEventBase<"takeDamage">
+export interface TakeDamage extends EventBase<"takeDamage">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -563,7 +556,7 @@ export interface TakeDamage extends DriverEventBase<"takeDamage">
 }
 
 /** Indicates that a pokemon has transformed into its target. */
-export interface Transform extends DriverEventBase<"transform">
+export interface Transform extends EventBase<"transform">
 {
     /** Pokemon that is transforming. */
     readonly source: Side;
@@ -575,7 +568,7 @@ export interface Transform extends DriverEventBase<"transform">
  * Reveals and infers more details due to Transform. The referenced pokemon
  * should already have been referenced in a recent Transform event.
  */
-export interface TransformPost extends DriverEventBase<"transformPost">
+export interface TransformPost extends EventBase<"transformPost">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -584,7 +577,7 @@ export interface TransformPost extends DriverEventBase<"transformPost">
 }
 
 /** Indicates that the pokemon is being trapped by another. */
-export interface Trap extends DriverEventBase<"trap">
+export interface Trap extends EventBase<"trap">
 {
     /** Pokemon being trapped. */
     readonly target: Side;
@@ -593,22 +586,22 @@ export interface Trap extends DriverEventBase<"trap">
 }
 
 /** Explicitly indicates that a field effect is still going. */
-export interface UpdateFieldEffect extends DriverEventBase<"updateFieldEffect">
+export interface UpdateFieldEffect extends EventBase<"updateFieldEffect">
 {
     /** Type of effect to update. */
     readonly effect: UpdatableFieldEffectType;
 }
 
 /** Typing for `UpdateFieldEffect#effect`. These are also FieldEffectTypes. */
-export type UpdatableFieldEffectType = WeatherType;
+export type UpdatableFieldEffectType = dexutil.WeatherType;
 
 /**
  * Indicates that a status effect is still going. Usually this is implied at the
  * end of the turn unless the game usually sends an explicit message, which this
- * DriverEvent covers.
+ * Event covers.
  */
 export interface UpdateStatusEffect extends
-    DriverEventBase<"updateStatusEffect">
+    EventBase<"updateStatusEffect">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -620,7 +613,7 @@ export interface UpdateStatusEffect extends
 export type UpdatableStatusEffectType = "confusion" | "bide" | "uproar";
 
 /** Indicates that the pokemon is attempting to use a move. */
-export interface UseMove extends DriverEventBase<"useMove">
+export interface UseMove extends EventBase<"useMove">
 {
     /** Pokemon reference. */
     readonly monRef: Side;

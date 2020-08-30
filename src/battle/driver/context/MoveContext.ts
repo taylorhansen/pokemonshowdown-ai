@@ -1,22 +1,18 @@
 import { Logger } from "../../../Logger";
 import * as dex from "../../dex/dex";
-import { isRolloutMove, isWeatherType, MajorStatus, MoveData, otherMoveCallers,
-    selfMoveCallers, SelfSwitch, SelfVolatileEffect, SideCondition,
-    targetMoveCallers, VolatileEffect } from "../../dex/dex-util";
+import * as dexutil from "../../dex/dex-util";
 import { BattleState } from "../../state/BattleState";
 import { Move } from "../../state/Move";
 import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
-import { ActivateFieldEffect, ActivateStatusEffect, ActivateTeamEffect,
-    AnyDriverEvent, FieldEffectType, StatusEffectType, TeamEffectType, UseMove }
-    from "../DriverEvent";
+import * as events from "../BattleEvent";
 import { AbilityContext } from "./AbilityContext";
 import { ContextResult, DriverContext } from "./DriverContext";
 import { SwitchContext } from "./SwitchContext";
 
 type StatusEffectMapKey =
-    Exclude<StatusEffectType,
-        MajorStatus | dex.FutureMove | dex.TwoTurnMove | "slowStart" |
+    Exclude<events.StatusEffectType,
+        dexutil.MajorStatus | dex.FutureMove | dex.TwoTurnMove | "slowStart" |
             "roost" | "rage" | "uproar">;
 
 // tslint:disable: no-trailing-whitespace (force newlines in doc)
@@ -40,7 +36,7 @@ export class MoveContext extends DriverContext
     //  events are expected
     /** Maps TeamEFfectTypes to SideCondition strings from dex-util. */
     private static readonly teamEffectMap:
-        {readonly [T in TeamEffectType]: SideCondition} =
+        {readonly [T in events.TeamEffectType]: dexutil.SideCondition} =
     {
         healingWish: "healingwish", lightScreen: "lightscreen",
         luckyChant: "luckychant", lunarDance: "lunardance", mist: "mist",
@@ -54,7 +50,7 @@ export class MoveContext extends DriverContext
      * strings from dex-util.
      */
     private static readonly statusEffectMap:
-        {readonly [T in StatusEffectMapKey]: VolatileEffect} =
+        {readonly [T in StatusEffectMapKey]: dexutil.VolatileEffect} =
     {
         aquaRing: "aquaring", attract: "attract", bide: "bide",
         charge: "charge", confusion: "confusion", curse: "curse",
@@ -80,7 +76,7 @@ export class MoveContext extends DriverContext
     /** Name of the move. */
     private readonly moveName: string;
     /** Dex data for the move. */
-    private readonly moveData: MoveData;
+    private readonly moveData: dexutil.MoveData;
     /** Move object if this event is supposed to consume pp. */
     private readonly move?: Move;
     // TODO: expand for doubles/triples
@@ -100,15 +96,15 @@ export class MoveContext extends DriverContext
     /** Specifies how to expect a called move. */
     private callEffect: CallEffect;
     /** Self-switch flag. */
-    private selfSwitch: SelfSwitch;
+    private selfSwitch: dexutil.SelfSwitch;
     /** Field effect flag. */
-    private fieldEffect: FieldEffectType | null;
+    private fieldEffect: events.FieldEffectType | null;
     /** Team effect flag. */
-    private sideCondition: SideCondition | null;
+    private sideCondition: dexutil.SideCondition | null;
     /** Volatile effect flag. */
-    private volatileEffect: VolatileEffect | null;
+    private volatileEffect: dexutil.VolatileEffect | null;
     /** Self-volatile effect flag. */
-    private selfVolatileEffect: SelfVolatileEffect | null;
+    private selfVolatileEffect: dexutil.SelfVolatileEffect | null;
 
     // in-progress move result flags
     /**
@@ -125,7 +121,7 @@ export class MoveContext extends DriverContext
      * @param called Whether this move was called by another move. Default
      * false.
      */
-    constructor(state: BattleState, event: UseMove, logger: Logger,
+    constructor(state: BattleState, event: events.UseMove, logger: Logger,
         private readonly called = false)
     {
         super(state, logger);
@@ -170,9 +166,9 @@ export class MoveContext extends DriverContext
 
         // move expectation flags
         this.callEffect =
-            selfMoveCallers.includes(this.moveName) ? "self"
-            : targetMoveCallers.includes(this.moveName) ? "target"
-            : otherMoveCallers.includes(this.moveName) ? true
+            dexutil.selfMoveCallers.includes(this.moveName) ? "self"
+            : dexutil.targetMoveCallers.includes(this.moveName) ? "target"
+            : dexutil.otherMoveCallers.includes(this.moveName) ? true
             : false;
         this.selfSwitch = this.moveData.selfSwitch ?? false;
         // TODO: make field condition part of dex data
@@ -180,7 +176,7 @@ export class MoveContext extends DriverContext
         this.fieldEffect =
             this.moveName === "gravity" ? "gravity"
             : this.moveName === "trickroom" ? "trickRoom"
-            : isWeatherType(display) ? display
+            : dexutil.isWeatherType(display) ? display
             : null;
         // TODO: make side conditions part of dex data
         this.sideCondition = this.moveData.sideCondition ??
@@ -203,7 +199,7 @@ export class MoveContext extends DriverContext
         // TODO: support these
         // istanbul ignore next: can't reproduce
         if (this.sideCondition &&
-            (["auroraveil", "stickyweb"] as SideCondition[])
+            (["auroraveil", "stickyweb"] as dexutil.SideCondition[])
                 .includes(this.sideCondition))
         {
             throw new Error(
@@ -254,7 +250,7 @@ export class MoveContext extends DriverContext
     }
 
     /** @override */
-    public handle(event: AnyDriverEvent): ContextResult | DriverContext
+    public handle(event: events.Any): ContextResult | DriverContext
     {
         switch (event.type)
         {
@@ -565,7 +561,7 @@ export class MoveContext extends DriverContext
                 // already prevented from consuming pp in constructor
                 this.user.volatile.rollout.tick();
             }
-            else if (isRolloutMove(this.moveName))
+            else if (dexutil.isRolloutMove(this.moveName))
             {
                 this.user.volatile.rollout.start(this.moveName);
             }
@@ -659,14 +655,15 @@ export class MoveContext extends DriverContext
      * make inferences.
      * @returns Whether the parent DriverContexts should also handle this event.
      */
-    private activateFieldEffect(event: ActivateFieldEffect): ContextResult
+    private activateFieldEffect(event: events.ActivateFieldEffect):
+        ContextResult
     {
         // is this event possible within the context of this move?
         if (event.effect !== this.fieldEffect) return "expire";
         // consume field effect flag
         this.fieldEffect = null;
 
-        if (isWeatherType(event.effect))
+        if (dexutil.isWeatherType(event.effect))
         {
             // fill in the user of the weather move (BaseContext just puts null)
             this.state.status.weather.start(this.user, event.effect);
@@ -680,7 +677,8 @@ export class MoveContext extends DriverContext
      * and selfVolatileEffect flags to make inferences.
      * @returns Whether the parent DriverContexts should also handle this event.
      */
-    private activateStatusEffect(event: ActivateStatusEffect): ContextResult
+    private activateStatusEffect(event: events.ActivateStatusEffect):
+        ContextResult
     {
         switch (event.effect)
         {
@@ -742,7 +740,7 @@ export class MoveContext extends DriverContext
      * make inferences.
      * @returns Whether the parent DriverContexts should also handle this event.
      */
-    private activateTeamEffect(event: ActivateTeamEffect): ContextResult
+    private activateTeamEffect(event: events.ActivateTeamEffect): ContextResult
     {
         switch (event.effect)
         {
@@ -781,7 +779,7 @@ export class MoveContext extends DriverContext
      * @returns True if the given TeamEffectType doesn't match the current
      * pending flag, false otherwise.
      */
-    private checkSideCondition(effect: TeamEffectType): boolean
+    private checkSideCondition(effect: events.TeamEffectType): boolean
     {
         return MoveContext.teamEffectMap[effect] !== this.sideCondition;
     }

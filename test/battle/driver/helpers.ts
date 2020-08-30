@@ -1,4 +1,4 @@
-import { DriverSwitchOptions } from "../../../src/battle/driver/DriverEvent";
+import { DriverSwitchOptions } from "../../../src/battle/driver/BattleEvent";
 
 /**
  * Options for switching in a Ditto for testing. Low level allows for

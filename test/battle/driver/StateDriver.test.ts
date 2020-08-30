@@ -1,13 +1,12 @@
 import { expect } from "chai";
 import "mocha";
-import { InitOtherTeamSize, InitTeam, SwitchIn } from
-    "../../../src/battle/driver/DriverEvent";
+import * as events from "../../../src/battle/driver/BattleEvent";
 import { StateDriver } from "../../../src/battle/driver/StateDriver";
 import { Logger } from "../../../src/Logger";
 import { ditto, smeargle } from "./helpers";
 
 /** Base InitTeam event for testing. */
-const initTeam: InitTeam =
+const initTeam: events.InitTeam =
 {
     type: "initTeam",
     team:
@@ -25,11 +24,11 @@ const initTeam: InitTeam =
 };
 
 /** Base InitOtherTeamSize event for testing. */
-const initOtherTeamSize: InitOtherTeamSize =
+const initOtherTeamSize: events.InitOtherTeamSize =
     {type: "initOtherTeamSize", size: 2};
 
 /** Base SwitchIn events for testing. */
-const switchIns: readonly SwitchIn[] =
+const switchIns: readonly events.SwitchIn[] =
 [
     {type: "switchIn", monRef: "us", ...smeargle},
     {type: "switchIn", monRef: "them", ...smeargle}

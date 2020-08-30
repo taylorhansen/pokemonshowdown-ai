@@ -2,7 +2,7 @@ import { Logger } from "../../Logger";
 import { BattleAgent } from "../agent/BattleAgent";
 import { Choice } from "../agent/Choice";
 import { ReadonlyBattleState } from "../state/BattleState";
-import { AnyDriverEvent } from "./DriverEvent";
+import { Any } from "./BattleEvent";
 import { StateDriver } from "./StateDriver";
 
 /** Function type for sending a Choice to the game. */
@@ -37,7 +37,7 @@ export class BattleDriver
     }
 
     /** Handles a batch of DriverEvents. */
-    public handle(...events: AnyDriverEvent[]): void
+    public handle(...events: Any[]): void
     {
         this.stateDriver.handle(...events);
     }

@@ -1,8 +1,7 @@
 import { PokemonDetails, PokemonID, PokemonStatus } from
     "../../src/psbot/helpers";
-import { AnyBattleEvent } from "../../src/psbot/parser/BattleEvent";
-import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
-    "../../src/psbot/parser/Message";
+import * as psevent from "../../src/psbot/parser/PSBattleEvent";
+import * as psmsg from "../../src/psbot/parser/PSMessage";
 
 /**
  * Creates an unparsed server message.
@@ -20,7 +19,7 @@ export function buildMessage(words: string[][]): string
  * @param data Data to stringify.
  * @returns A re-parseable |request| JSON string.
  */
-export function stringifyRequest(data: RequestMessage): string
+export function stringifyRequest(data: psmsg.Request): string
 {
     // deep copy
     const obj: any = JSON.parse(JSON.stringify(data));
@@ -42,7 +41,7 @@ export function stringifyRequest(data: RequestMessage): string
  * @param args Arguments to be stringified.
  * @returns An unparsed BattleInitMessage.
  */
-export function composeBattleInit(args: BattleInitMessage): string[][]
+export function composeBattleInit(args: psmsg.BattleInit): string[][]
 {
     const result: string[][] =
     [
@@ -62,7 +61,7 @@ export function composeBattleInit(args: BattleInitMessage): string[][]
  * @param args Arguments to be stringified.
  * @returns An unparsed BattleProgressMessage.
  */
-export function composeBattleProgress(args: BattleProgressMessage): string[][]
+export function composeBattleProgress(args: psmsg.BattleProgress): string[][]
 {
     return args.events.map(composeBattleEvent);
 }
@@ -72,7 +71,7 @@ export function composeBattleProgress(args: BattleProgressMessage): string[][]
  * @param event Event to stringify.
  * @returns An unparsed BattleEvent.
  */
-export function composeBattleEvent(event: AnyBattleEvent): string[]
+export function composeBattleEvent(event: psevent.Any): string[]
 {
     let result: string[];
     switch (event.type)

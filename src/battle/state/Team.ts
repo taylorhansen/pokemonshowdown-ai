@@ -1,4 +1,4 @@
-import { DriverSwitchOptions } from "../driver/DriverEvent";
+import { DriverSwitchOptions } from "../driver/BattleEvent";
 import { BattleState, ReadonlyBattleState } from "./BattleState";
 import { Pokemon, ReadonlyPokemon } from "./Pokemon";
 import { Side } from "./Side";

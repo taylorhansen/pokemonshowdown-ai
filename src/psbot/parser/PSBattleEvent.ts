@@ -1,136 +1,87 @@
-/** @file Interfaces and helper functions for handling BattleEvents. */
+/** @file Interfaces and helper functions for handling Events. */
 import { BoostName, MajorStatus, WeatherType } from "../../battle/dex/dex-util";
-import { DriverSwitchOptions } from "../../battle/driver/DriverEvent";
+import { DriverSwitchOptions } from "../../battle/driver/BattleEvent";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
-/** The types of major BattleEvents that can exist. Used as event prefixes. */
-const majorBattleEventTypes =
+/**
+ * The types of minor Events that can exist. Used as event prefixes.
+ */
+const types =
 {
-    "\n": {} as EmptyEvent,
-    cant: {} as CantEvent,
-    move: {} as MoveEvent,
-    switch: {} as SwitchEvent
+    "\n": {} as Empty,
+    "-ability": {} as Ability,
+    "-activate": {} as Activate,
+    "-boost": {} as Boost,
+    cant: {} as Cant,
+    "-clearallboost": {} as ClearAllBoost,
+    "-clearboost": {} as ClearBoost,
+    "-clearnegativeboost": {} as ClearNegativeBoost,
+    "-clearpositiveboost": {} as ClearPositiveBoost,
+    "-copyboost": {} as CopyBoost,
+    "-crit": {} as Crit,
+    "-curestatus": {} as CureStatus,
+    "-cureteam": {} as CureTeam,
+    "-damage": {} as Damage,
+    detailschange: {} as DetailsChange,
+    drag: {} as Drag,
+    "-end": {} as End,
+    "-endability": {} as EndAbility,
+    "-enditem": {} as EndItem,
+    "-fail": {} as Fail,
+    faint: {} as Faint,
+    "-fieldend": {} as FieldEnd,
+    "-fieldstart": {} as FieldStart,
+    "-formechange": {} as FormeChange,
+    "-heal": {} as Heal,
+    "-hitcount": {} as HitCount,
+    "-immune": {} as Immune,
+    "-invertboost": {} as InvertBoost,
+    "-item": {} as Item,
+    "-miss": {} as Miss,
+    move: {} as Move,
+    "-mustrecharge": {} as MustRecharge,
+    "-notarget": {} as NoTarget,
+    "-prepare": {} as Prepare,
+    "-resisted": {} as Resisted,
+    "-setboost": {} as SetBoost,
+    "-sethp": {} as SetHP,
+    "-sideend": {} as SideEnd,
+    "-sidestart": {} as SideStart,
+    "-singlemove": {} as SingleMove,
+    "-singleturn": {} as SingleTurn,
+    "-start": {} as Start,
+    "-status": {} as Status,
+    "-supereffective": {} as SuperEffective,
+    "-swapboost": {} as SwapBoost,
+    switch: {} as Switch,
+    tie: {} as Tie,
+    "-transform": {} as Transform,
+    turn: {} as Turn,
+    "-unboost": {} as Unboost,
+    upkeep: {} as Upkeep,
+    "-weather": {} as Weather,
+    win: {} as Win
 } as const;
 
-/** The types of MajorBattleEvents that can exist. Used as event prefixes. */
-export type MajorBattleEventType = keyof typeof majorBattleEventTypes;
+/** The types of Events that can exist. Used as event prefixes. */
+export type Type = keyof typeof types;
 
-/** Checks if a string is a MajorBattleEventType. Usable as a type guard. */
-export function isMajorBattleEventType(value: any):
-    value is MajorBattleEventType
+/** Checks if a string is a Type. Usable as a type guard. */
+export function isType(value: any): value is Type
 {
-    return majorBattleEventTypes.hasOwnProperty(value);
+    return types.hasOwnProperty(value);
 }
 
-/**
- * Maps MajorBattleEventType to a MajorBattleEvent interface type. These
- * BattleEvents are direct results of a player's decisions in a battle. Other
- * MinorBattleEvents are caused by these events.
- */
-export type MajorBattleEvent<T extends MajorBattleEventType> =
-    typeof majorBattleEventTypes[T];
-
-/** Stands for any type of MajorBattleEvent that can happen during a battle. */
-export type AnyMajorBattleEvent = MajorBattleEvent<MajorBattleEventType>;
-
-/** The types of minor BattleEvents that can exist. Used as event prefixes. */
-const minorBattleEventTypes =
-{
-    "-ability": {} as AbilityEvent,
-    "-activate": {} as ActivateEvent,
-    "-boost": {} as BoostEvent,
-    "-clearallboost": {} as ClearAllBoostEvent,
-    "-clearboost": {} as ClearBoostEvent,
-    "-clearnegativeboost": {} as ClearNegativeBoostEvent,
-    "-clearpositiveboost": {} as ClearPositiveBoostEvent,
-    "-copyboost": {} as CopyBoostEvent,
-    "-crit": {} as CritEvent,
-    "-curestatus": {} as CureStatusEvent,
-    "-cureteam": {} as CureTeamEvent,
-    "-damage": {} as DamageEvent,
-    detailschange: {} as DetailsChangeEvent,
-    drag: {} as DragEvent,
-    "-end": {} as EndEvent,
-    "-endability": {} as EndAbilityEvent,
-    "-enditem": {} as EndItemEvent,
-    "-fail": {} as FailEvent,
-    faint: {} as FaintEvent,
-    "-fieldend": {} as FieldEndEvent,
-    "-fieldstart": {} as FieldStartEvent,
-    "-formechange": {} as FormeChangeEvent,
-    "-heal": {} as HealEvent,
-    "-hitcount": {} as HitCountEvent,
-    "-immune": {} as ImmuneEvent,
-    "-invertboost": {} as InvertBoostEvent,
-    "-item": {} as ItemEvent,
-    "-miss": {} as MissEvent,
-    "-mustrecharge": {} as MustRechargeEvent,
-    "-notarget": {} as NoTargetEvent,
-    "-prepare": {} as PrepareEvent,
-    "-resisted": {} as ResistedEvent,
-    "-setboost": {} as SetBoostEvent,
-    "-sethp": {} as SetHPEvent,
-    "-sideend": {} as SideEndEvent,
-    "-sidestart": {} as SideStartEvent,
-    "-singlemove": {} as SingleMoveEvent,
-    "-singleturn": {} as SingleTurnEvent,
-    "-start": {} as StartEvent,
-    "-status": {} as StatusEvent,
-    "-supereffective": {} as SuperEffectiveEvent,
-    "-swapboost": {} as SwapBoostEvent,
-    tie: {} as TieEvent,
-    "-transform": {} as TransformEvent,
-    turn: {} as TurnEvent,
-    "-unboost": {} as UnboostEvent,
-    upkeep: {} as UpkeepEvent,
-    "-weather": {} as WeatherEvent,
-    win: {} as WinEvent
-} as const;
-
-/** The types of MinorBattleEvents that can exist. Used as event prefixes. */
-export type MinorBattleEventType = keyof typeof minorBattleEventTypes;
-
-/** Checks if a string is a MinorBattleEventType. Usable as a type guard. */
-export function isMinorBattleEventType(value: any):
-    value is MinorBattleEventType
-{
-    return minorBattleEventTypes.hasOwnProperty(value);
-}
-
-/**
- * Maps MinorBattleEventType to a MinorBattleEvent interface type. These events
- * are typically caused by MajorBattleEvents or happen at the end of the turn.
- */
-export type MinorBattleEvent<T extends MinorBattleEventType> =
-    typeof minorBattleEventTypes[T];
-
-/** Stands for any type of MinorBattleEvent that can happen during a battle. */
-export type AnyMinorBattleEvent = MinorBattleEvent<MinorBattleEventType>;
-
-// general BattleEvent definitions
-
-/** The types of BattleEvents that can exist. Used as event prefixes. */
-export type BattleEventType = MajorBattleEventType | MinorBattleEventType;
-
-/** Checks if a string is a BattleEventType. Usable as a type guard. */
-export function isBattleEventType(value: any): value is BattleEventType
-{
-    return isMinorBattleEventType(value) || isMajorBattleEventType(value);
-}
-
-/** Maps BattleEventType to a BattleEvent interface type. */
-export type BattleEvent<T extends BattleEventType> =
-    T extends MajorBattleEventType ? MajorBattleEvent<T>
-    : T extends MinorBattleEventType ? MinorBattleEvent<T>
-    : never;
+/** Maps Type to a Event interface type. */
+export type Event<T extends Type> = typeof types[T];
 
 /** Stands for any type of event that can happen during a battle. */
-export type AnyBattleEvent = BattleEvent<BattleEventType>;
+export type Any = Event<Type>;
 
-// BattleEvent interfaces
+// Event interfaces
 
-/** Base class for BattleEvents. */
-interface BattleEventBase<T extends BattleEventType>
+/** Base class for Events. */
+interface EventBase<T extends Type>
 {
     /** Type of event this is. */
     readonly type: T;
@@ -168,60 +119,14 @@ interface AllDetails extends DriverSwitchOptions, PokemonDetails, PokemonStatus
     readonly species: string;
 }
 
-// MajorBattleEvent interfaces
-
-/** Base class for MajorBattleEvents. */
-interface MajorBattleEventBase<T extends MajorBattleEventType> extends
-    BattleEventBase<T>
-{
-    /** @override */
-    readonly type: T;
-}
-
 /**
  * Event that wraps pre- and post-turn minor events, separating them from the
  * main events.
  */
-export interface EmptyEvent extends MajorBattleEventBase<"\n"> {}
-
-/** Event where an action is prevented from being completed. */
-export interface CantEvent extends MajorBattleEventBase<"cant">
-{
-    /** ID of the pokemon. */
-    readonly id: PokemonID;
-    /** Why the action couldn't be completed. */
-    readonly reason: string;
-    /** The move that the pokemon wasn't able to use. */
-    readonly moveName?: string;
-}
-
-/** Event where a move was used. */
-export interface MoveEvent extends MajorBattleEventBase<"move">
-{
-    /** ID of the pokemon who used the move. */
-    readonly id: PokemonID;
-    /** Display name of the move being used. */
-    readonly moveName: string;
-    /** ID of the target pokemon. */
-    readonly targetId?: PokemonID;
-}
-
-/** Event where a pokemon was chosen to switch in. */
-export interface SwitchEvent extends AllDetails,
-    MajorBattleEventBase<"switch"> {}
-
-// MinorBattleEvent interfaces
-
-/** Base class for MinorBattleEvents. */
-interface MinorBattleEventBase<T extends MinorBattleEventType> extends
-    BattleEventBase<T>
-{
-    /** @override */
-    readonly type: T;
-}
+export interface Empty extends EventBase<"\n"> {}
 
 /** Event where a pokemon's ability is revealed and activated. */
-export interface AbilityEvent extends MinorBattleEventBase<"-ability">
+export interface Ability extends EventBase<"-ability">
 {
     /** ID of the pokemon. */
     readonly id: PokemonID;
@@ -230,7 +135,7 @@ export interface AbilityEvent extends MinorBattleEventBase<"-ability">
 }
 
 /** Event where a volatile status is mentioned. */
-export interface ActivateEvent extends MinorBattleEventBase<"-activate">
+export interface Activate extends EventBase<"-activate">
 {
     readonly type: "-activate";
     /** ID of the pokemon whose status is being activated. */
@@ -242,7 +147,7 @@ export interface ActivateEvent extends MinorBattleEventBase<"-activate">
 }
 
 /** Event where a stat is being boosted. */
-export interface BoostEvent extends MinorBattleEventBase<"-boost">
+export interface Boost extends EventBase<"-boost">
 {
     /** ID of the pokemon being boosted. */
     readonly id: PokemonID;
@@ -252,35 +157,46 @@ export interface BoostEvent extends MinorBattleEventBase<"-boost">
     readonly amount: number;
 }
 
+/** Event where an action is prevented from being completed. */
+export interface Cant extends EventBase<"cant">
+{
+    /** ID of the pokemon. */
+    readonly id: PokemonID;
+    /** Why the action couldn't be completed. */
+    readonly reason: string;
+    /** The move that the pokemon wasn't able to use. */
+    readonly moveName?: string;
+}
+
 /** Event where all stat boosts are being cleared. */
-export interface ClearAllBoostEvent extends
-    MinorBattleEventBase<"-clearallboost"> {}
+export interface ClearAllBoost extends
+    EventBase<"-clearallboost"> {}
 
 /** Event where a pokemon's stat boosts are being cleared. */
-export interface ClearBoostEvent extends MinorBattleEventBase<"-clearboost">
+export interface ClearBoost extends EventBase<"-clearboost">
 {
     /** ID of the pokemon whose boosts are being cleared. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's negative boosts are being cleared. */
-export interface ClearNegativeBoostEvent extends
-    MinorBattleEventBase<"-clearnegativeboost">
+export interface ClearNegativeBoost extends
+    EventBase<"-clearnegativeboost">
 {
     /** ID of the pokemon whose negative boosts are being cleared. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's positive boosts are being cleared. */
-export interface ClearPositiveBoostEvent extends
-    MinorBattleEventBase<"-clearpositiveboost">
+export interface ClearPositiveBoost extends
+    EventBase<"-clearpositiveboost">
 {
     /** ID of the pokemon whose positive boosts are being cleared. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's boosts are being copied onto another pokemon. */
-export interface CopyBoostEvent extends MinorBattleEventBase<"-copyboost">
+export interface CopyBoost extends EventBase<"-copyboost">
 {
     /** ID of the pokemon copying the boosts. */
     readonly source: PokemonID;
@@ -289,14 +205,14 @@ export interface CopyBoostEvent extends MinorBattleEventBase<"-copyboost">
 }
 
 /** Event indicating a critical hit of a move on a pokemon. */
-export interface CritEvent extends MinorBattleEventBase<"-crit">
+export interface Crit extends EventBase<"-crit">
 {
     /** ID of the pokemon taking the hit. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's major status is cured. */
-export interface CureStatusEvent extends MinorBattleEventBase<"-curestatus">
+export interface CureStatus extends EventBase<"-curestatus">
 {
     /** ID of the pokemon being cured. */
     readonly id: PokemonID;
@@ -305,14 +221,14 @@ export interface CureStatusEvent extends MinorBattleEventBase<"-curestatus">
 }
 
 /** Event where all of a team's pokemon are cured of major statuses. */
-export interface CureTeamEvent extends MinorBattleEventBase<"-cureteam">
+export interface CureTeam extends EventBase<"-cureteam">
 {
     /** ID of the pokemon whose team is being cured of a major status. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon is damaged. */
-export interface DamageEvent extends MinorBattleEventBase<"-damage">
+export interface Damage extends EventBase<"-damage">
 {
     /** ID of the pokemon being damaged. */
     readonly id: PokemonID;
@@ -321,14 +237,14 @@ export interface DamageEvent extends MinorBattleEventBase<"-damage">
 }
 
 /** Event where a pokemon permanently changes form. */
-export interface DetailsChangeEvent extends AllDetails,
-    MinorBattleEventBase<"detailschange"> {}
+export interface DetailsChange extends AllDetails,
+    EventBase<"detailschange"> {}
 
 /** Event where a pokemon was switched in unintentionally. */
-export interface DragEvent extends AllDetails, MinorBattleEventBase<"drag"> {}
+export interface Drag extends AllDetails, EventBase<"drag"> {}
 
 /** Event addon where a volatile status has ended. */
-export interface EndEvent extends MinorBattleEventBase<"-end">
+export interface End extends EventBase<"-end">
 {
     /** ID of the pokemon ending a volatile status. */
     readonly id: PokemonID;
@@ -337,7 +253,7 @@ export interface EndEvent extends MinorBattleEventBase<"-end">
 }
 
 /** Event where a pokemon's ability is temporarily removed. */
-export interface EndAbilityEvent extends MinorBattleEventBase<"-endability">
+export interface EndAbility extends EventBase<"-endability">
 {
     /** ID of the pokemon. */
     readonly id: PokemonID;
@@ -346,7 +262,7 @@ export interface EndAbilityEvent extends MinorBattleEventBase<"-endability">
 }
 
 /** Event where a pokemon's item is being removed or consumed. */
-export interface EndItemEvent extends MinorBattleEventBase<"-enditem">
+export interface EndItem extends EventBase<"-enditem">
 {
     /** ID of the pokemon whose item is being removed. */
     readonly id: PokemonID;
@@ -355,39 +271,39 @@ export interface EndItemEvent extends MinorBattleEventBase<"-enditem">
 }
 
 /** Event where a pokemon has failed at a certain action. */
-export interface FailEvent extends MinorBattleEventBase<"-fail">
+export interface Fail extends EventBase<"-fail">
 {
     /** ID of the pokemon. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon has fainted. */
-export interface FaintEvent extends MinorBattleEventBase<"faint">
+export interface Faint extends EventBase<"faint">
 {
     /** ID of the pokemon that has fainted. */
     readonly id: PokemonID;
 }
 
 /** Event where a field effect has ended. */
-export interface FieldEndEvent extends MinorBattleEventBase<"-fieldend">
+export interface FieldEnd extends EventBase<"-fieldend">
 {
     /** Name of the field effect. */
     readonly effect: string;
 }
 
 /** Event where a field effect has started. */
-export interface FieldStartEvent extends MinorBattleEventBase<"-fieldstart">
+export interface FieldStart extends EventBase<"-fieldstart">
 {
     /** Name of the field effect. */
     readonly effect: string;
 }
 
 /** Event where a pokemon temporarily changes form. */
-export interface FormeChangeEvent extends AllDetails,
-    MinorBattleEventBase<"-formechange"> {}
+export interface FormeChange extends AllDetails,
+    EventBase<"-formechange"> {}
 
 /** Event where a pokemon is healed. */
-export interface HealEvent extends MinorBattleEventBase<"-heal">
+export interface Heal extends EventBase<"-heal">
 {
     /** ID of the pokemon being healed. */
     readonly id: PokemonID;
@@ -396,7 +312,7 @@ export interface HealEvent extends MinorBattleEventBase<"-heal">
 }
 
 /** Event specifying the total number of hits a move took. */
-export interface HitCountEvent extends MinorBattleEventBase<"-hitcount">
+export interface HitCount extends EventBase<"-hitcount">
 {
     /** ID of the pokemon being hit. */
     readonly id: PokemonID;
@@ -405,21 +321,21 @@ export interface HitCountEvent extends MinorBattleEventBase<"-hitcount">
 }
 
 /** Event where a pokemon's immunity was mentioned. */
-export interface ImmuneEvent extends MinorBattleEventBase<"-immune">
+export interface Immune extends EventBase<"-immune">
 {
     /** ID of the pokemon who was immune to the last action. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's boosts are being inverted. */
-export interface InvertBoostEvent extends MinorBattleEventBase<"-invertboost">
+export interface InvertBoost extends EventBase<"-invertboost">
 {
     /** ID of the pokemon whose boosts are being inverted. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's item is being revealed and/or activated. */
-export interface ItemEvent extends MinorBattleEventBase<"-item">
+export interface Item extends EventBase<"-item">
 {
     /** ID of the pokemon whose item is activating. */
     readonly id: PokemonID;
@@ -428,7 +344,7 @@ export interface ItemEvent extends MinorBattleEventBase<"-item">
 }
 
 /** Event where a move missed one of its targets. */
-export interface MissEvent extends MinorBattleEventBase<"-miss">
+export interface Miss extends EventBase<"-miss">
 {
     /** ID of the pokemon who used the move. */
     readonly id: PokemonID;
@@ -436,22 +352,33 @@ export interface MissEvent extends MinorBattleEventBase<"-miss">
     readonly targetId: PokemonID;
 }
 
+/** Event where a move was used. */
+export interface Move extends EventBase<"move">
+{
+    /** ID of the pokemon who used the move. */
+    readonly id: PokemonID;
+    /** Display name of the move being used. */
+    readonly moveName: string;
+    /** ID of the target pokemon. */
+    readonly targetId?: PokemonID;
+}
+
 /** Event where a pokemon must recharge on the next turn. */
-export interface MustRechargeEvent extends MinorBattleEventBase<"-mustrecharge">
+export interface MustRecharge extends EventBase<"-mustrecharge">
 {
     /** ID of the pokemon that needs to recharge. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's move can't target anything. */
-export interface NoTargetEvent extends MinorBattleEventBase<"-notarget">
+export interface NoTarget extends EventBase<"-notarget">
 {
     /** ID of the pokemon attempting to use a move. */
     readonly id: PokemonID;
 }
 
 /** Event where a move is being prepared, and will fire next turn. */
-export interface PrepareEvent extends MinorBattleEventBase<"-prepare">
+export interface Prepare extends EventBase<"-prepare">
 {
     /** ID of the pokemon preparing the move. */
     readonly id: PokemonID;
@@ -462,14 +389,14 @@ export interface PrepareEvent extends MinorBattleEventBase<"-prepare">
 }
 
 /** Event where a pokemon was hit by a move it resists. */
-export interface ResistedEvent extends MinorBattleEventBase<"-resisted">
+export interface Resisted extends EventBase<"-resisted">
 {
     /** ID of the pokemon being hit. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's stat boost is being set. */
-export interface SetBoostEvent extends MinorBattleEventBase<"-setboost">
+export interface SetBoost extends EventBase<"-setboost">
 {
     /** ID of the pokemon whose boost is being set. */
     readonly id: PokemonID;
@@ -480,7 +407,7 @@ export interface SetBoostEvent extends MinorBattleEventBase<"-setboost">
 }
 
 /** Event where the HP of a pokemon is being modified. */
-export interface SetHPEvent extends MinorBattleEventBase<"-sethp">
+export interface SetHP extends EventBase<"-sethp">
 {
     /** ID of the Pokemon being set. */
     readonly id: PokemonID;
@@ -489,7 +416,7 @@ export interface SetHPEvent extends MinorBattleEventBase<"-sethp">
 }
 
 /** Event where a side condition has ended. */
-export interface SideEndEvent extends MinorBattleEventBase<"-sideend">
+export interface SideEnd extends EventBase<"-sideend">
 {
     /** ID of the player whose side is affected. */
     readonly id: PlayerID;
@@ -498,7 +425,7 @@ export interface SideEndEvent extends MinorBattleEventBase<"-sideend">
 }
 
 /** Event where a side condition has started. */
-export interface SideStartEvent extends MinorBattleEventBase<"-sidestart">
+export interface SideStart extends EventBase<"-sidestart">
 {
     /** ID of the player whose side is affected. */
     readonly id: PlayerID;
@@ -507,7 +434,7 @@ export interface SideStartEvent extends MinorBattleEventBase<"-sidestart">
 }
 
 /** Event where a move status is applied until another move is attempted. */
-export interface SingleMoveEvent extends MinorBattleEventBase<"-singlemove">
+export interface SingleMove extends EventBase<"-singlemove">
 {
     /** ID of the pokemon getting the status. */
     readonly id: PokemonID;
@@ -516,7 +443,7 @@ export interface SingleMoveEvent extends MinorBattleEventBase<"-singlemove">
 }
 
 /** Event where a status is temporarily added for a single turn. */
-export interface SingleTurnEvent extends MinorBattleEventBase<"-singleturn">
+export interface SingleTurn extends EventBase<"-singleturn">
 {
     /** ID of the pokemon getting the status. */
     readonly id: PokemonID;
@@ -525,7 +452,7 @@ export interface SingleTurnEvent extends MinorBattleEventBase<"-singleturn">
 }
 
 /** Event where a volatile status condition has started. */
-export interface StartEvent extends MinorBattleEventBase<"-start">
+export interface Start extends EventBase<"-start">
 {
     /** ID of the pokemon starting a volatile status. */
     readonly id: PokemonID;
@@ -536,7 +463,7 @@ export interface StartEvent extends MinorBattleEventBase<"-start">
 }
 
 /** Event where a pokemon is afflicted with a status. */
-export interface StatusEvent extends MinorBattleEventBase<"-status">
+export interface Status extends EventBase<"-status">
 {
     /** ID of the pokemon being afflicted with a status condition. */
     readonly id: PokemonID;
@@ -545,15 +472,15 @@ export interface StatusEvent extends MinorBattleEventBase<"-status">
 }
 
 /** Event where a pokemon was hit by a move it was weak to. */
-export interface SuperEffectiveEvent extends
-    MinorBattleEventBase<"-supereffective">
+export interface SuperEffective extends
+    EventBase<"-supereffective">
 {
     /** ID of the pokemon being hit. */
     readonly id: PokemonID;
 }
 
 /** Event where a pokemon's boosts are being swapped with another's. */
-export interface SwapBoostEvent extends MinorBattleEventBase<"-swapboost">
+export interface SwapBoost extends EventBase<"-swapboost">
 {
     /** Pokemon whose stats are being swapped. */
     readonly source: PokemonID;
@@ -563,11 +490,14 @@ export interface SwapBoostEvent extends MinorBattleEventBase<"-swapboost">
     readonly stats: readonly BoostName[];
 }
 
+/** Event where a pokemon was chosen to switch in. */
+export interface Switch extends AllDetails, EventBase<"switch"> {}
+
 /** Event indicating that the game has ended in a tie. */
-export interface TieEvent extends MinorBattleEventBase<"tie"> {}
+export interface Tie extends EventBase<"tie"> {}
 
 /** Event where a pokemon transforms into another. */
-export interface TransformEvent extends MinorBattleEventBase<"-transform">
+export interface Transform extends EventBase<"-transform">
 {
     /** Pokemon who is transforming. */
     readonly source: PokemonID;
@@ -576,14 +506,14 @@ export interface TransformEvent extends MinorBattleEventBase<"-transform">
 }
 
 /** Event indicating that a new turn has started. */
-export interface TurnEvent extends MinorBattleEventBase<"turn">
+export interface Turn extends EventBase<"turn">
 {
     /** New turn number. */
     readonly num: number;
 }
 
 /** Event where a stat is being unboosted. */
-export interface UnboostEvent extends MinorBattleEventBase<"-unboost">
+export interface Unboost extends EventBase<"-unboost">
 {
     /** ID of the pokemon being unboosted. */
     readonly id: PokemonID;
@@ -593,11 +523,11 @@ export interface UnboostEvent extends MinorBattleEventBase<"-unboost">
     readonly amount: number;
 }
 
-/** Event indicating that the main BattleEvents are over. */
-export interface UpkeepEvent extends MinorBattleEventBase<"upkeep"> {}
+/** Event indicating that the main Events are over. */
+export interface Upkeep extends EventBase<"upkeep"> {}
 
 /** Event where the weather is being changed or maintained. */
-export interface WeatherEvent extends MinorBattleEventBase<"-weather">
+export interface Weather extends EventBase<"-weather">
 {
     /** Type of weather, or `"none"` if being reset. */
     readonly weatherType: WeatherType | "none";
@@ -606,7 +536,7 @@ export interface WeatherEvent extends MinorBattleEventBase<"-weather">
 }
 
 /** Event indicating that the game has ended with a winner. */
-export interface WinEvent extends MinorBattleEventBase<"win">
+export interface Win extends EventBase<"win">
 {
     /** Username of the winner. */
     readonly winner: string;

@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { BattleAgent } from "../../src/battle/agent/BattleAgent";
 import { Logger } from "../../src/Logger";
-import { RequestMessage } from "../../src/psbot/parser/Message";
+import * as psmsg from "../../src/psbot/parser/PSMessage";
 import { PSBattle } from "../../src/psbot/PSBattle";
 import { Sender } from "../../src/psbot/PSBot";
 
@@ -43,7 +43,7 @@ describe("PSBattle", function()
             };
 
             // receive request
-            const request: RequestMessage =
+            const request: psmsg.Request =
             {
                 type: "request",
                 active:
@@ -85,7 +85,7 @@ describe("PSBattle", function()
             // opponent switches in a pokemon that can have shadowtag
             await battle.init(
             {
-                type: "battleinit", id: "p1", username, gameType: "singles",
+                type: "battleInit", id: "p1", username, gameType: "singles",
                 gen: 4, teamSizes: {p1: 2, p2: 1},
                 events:
                 [
@@ -138,7 +138,7 @@ describe("PSBattle", function()
         it("Should handle unavailable choice", async function()
         {
             // receive request
-            const request: RequestMessage =
+            const request: psmsg.Request =
             {
                 type: "request",
                 active:
@@ -185,7 +185,7 @@ describe("PSBattle", function()
             // opponent switches in a pokemon that can have imprison and tackle
             await battle.init(
             {
-                type: "battleinit", id: "p1", username, gameType: "singles",
+                type: "battleInit", id: "p1", username, gameType: "singles",
                 gen: 4, teamSizes: {p1: 2, p2: 1},
                 events:
                 [

@@ -1,10 +1,8 @@
 /** @file Contains test arguments for battle messages. */
 import { PokemonDetails, PokemonID, PokemonStatus } from
     "../../src/psbot/helpers";
-import { AnyBattleEvent, TurnEvent } from
-    "../../src/psbot/parser/BattleEvent";
-import { BattleInitMessage, BattleProgressMessage, RequestMessage } from
-    "../../src/psbot/parser/Message";
+import * as psevent from "../../src/psbot/parser/PSBattleEvent";
+import * as psmsg from "../../src/psbot/parser/PSMessage";
 
 export const username: string[] = ["user1", "user2"];
 
@@ -41,7 +39,7 @@ export const pokemonStatus: PokemonStatus[] =
 ];
 
 /** Test BattleEvents except turn/upkeep. */
-export const battleEvent: AnyBattleEvent[] =
+export const battleEvent: psevent.Any[] =
 [
     {type: "\n"},
     {type: "-ability", id: pokemonId[0], ability: "Pressure"},
@@ -151,47 +149,47 @@ export const battleEvent: AnyBattleEvent[] =
     {type: "win", winner: username[1]}
 ];
 
-const startTurn: TurnEvent = {type: "turn", num: 1};
+const startTurn: psevent.Turn = {type: "turn", num: 1};
 
 /**
  * Test BattleInitMessages. Even indexes belong to p1 while odd ones belong to
  * p2.
  */
-export const battleInit: BattleInitMessage[] =
+export const battleInit: psmsg.BattleInit[] =
 [
     {
-        type: "battleinit", id: "p1", username: username[0],
+        type: "battleInit", id: "p1", username: username[0],
         gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
         events: battleEvent.slice(0, 6).concat(startTurn)
     },
     {
-        type: "battleinit", id: "p1", username: username[0],
+        type: "battleInit", id: "p1", username: username[0],
         gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
         events: battleEvent.slice(6, 10).concat(startTurn)
     },
     {
-        type: "battleinit", id: "p2", username: username[1],
+        type: "battleInit", id: "p2", username: username[1],
         gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
         events: battleEvent.slice(10, 14).concat(startTurn)
     }
 ];
 
 /** Test BattleProgressMessages. */
-export const battleProgress: BattleProgressMessage[] =
+export const battleProgress: psmsg.BattleProgress[] =
 [
     {
-        type: "battleprogress",
+        type: "battleProgress",
         events: battleEvent.slice(14, 21)
             .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
-        type: "battleprogress",
+        type: "battleProgress",
         events: battleEvent.slice(21, 26)
             .concat({type: "upkeep"}, ...battleEvent.slice(26, 29),
                 {type: "turn", num: 100})
     },
     {
-        type: "battleprogress",
+        type: "battleProgress",
         events: battleEvent.slice(29, 39)
             .concat({type: "upkeep"}, ...battleEvent.slice(39),
                 {type: "turn", num: 9})
@@ -201,7 +199,7 @@ export const battleProgress: BattleProgressMessage[] =
 /**
  * Test RequestMessages. Even indexes belong to p1 while odd ones belong to p2.
  */
-export const request: RequestMessage[] =
+export const request: psmsg.Request[] =
 [
     {
         type: "request",

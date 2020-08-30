@@ -1,14 +1,14 @@
 import { Logger } from "../../../Logger";
 import { BattleState } from "../../state/BattleState";
-import { AnyDriverEvent } from "../DriverEvent";
+import { Any } from "../BattleEvent";
 
 // tslint:disable: no-trailing-whitespace (force newlines in doc)
 /**
  * Specifies what to do after the current DriverContext handles an event.  
- * `"base"` - Let the default context handle the event.  
- * `"stop"` - No further action.  
+ * `"base"` - Let the default context also handle the same event.  
+ * `"stop"` - Current DriverContext will proceed to the next event.  
  * `"expire"` - Expire the current DriverContext and let the next topmost
- * context handle the event.
+ * context handle the same event.
  */
 // tslint:enable: no-trailing-whitespace
 export type ContextResult = "base" | "stop" | "expire";
@@ -34,8 +34,7 @@ export abstract class DriverContext
      * DriverContext chain (also works like `"stop"`).
      * @see ContextResult
      */
-    public abstract handle(event: AnyDriverEvent):
-        ContextResult | DriverContext;
+    public abstract handle(event: Any): ContextResult | DriverContext;
 
     /**
      * Indicates that the current stream of DriverEvents has halted, awaiting a

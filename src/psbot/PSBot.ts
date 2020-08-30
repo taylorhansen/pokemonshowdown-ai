@@ -1,8 +1,8 @@
 import fetch, { RequestInit } from "node-fetch";
 import { client as WSClient } from "websocket";
 import { Logger } from "../Logger";
-import { AnyMessage } from "./parser/Message";
 import { parsePSMessage } from "./parser/parsePSMessage";
+import * as psmsg from "./parser/PSMessage";
 import { RoomHandler } from "./RoomHandler";
 
 /** Options for login. */
@@ -208,15 +208,14 @@ export class PSBot
     }
 
     /** Handles parsed Messages received from the PS serer. */
-    private async handleMessages(room: string, messages: AnyMessage[]):
+    private async handleMessages(room: string, messages: psmsg.Any[]):
         Promise<void>
     {
         for (const msg of messages) await this.handleMessage(room, msg);
     }
 
     /** Handles a parsed Message received from the PS serer. */
-    private async handleMessage(room: string, msg: AnyMessage):
-        Promise<void>
+    private async handleMessage(room: string, msg: psmsg.Any): Promise<void>
     {
         switch (msg.type)
         {
@@ -256,7 +255,7 @@ export class PSBot
 
                 break;
             }
-            case "updatechallenges":
+            case "updateChallenges":
                 for (const user in msg.challengesFrom)
                 {
                     // istanbul ignore next: trivial for object key iteration
@@ -269,7 +268,7 @@ export class PSBot
                     else this.addResponses("", `|/reject ${user}`);
                 }
                 break;
-            case "updateuser":
+            case "updateUser":
                 this.username = msg.username;
                 break;
             case "deinit":
@@ -278,10 +277,10 @@ export class PSBot
                 break;
 
             // delegate battle-related messages to their appropriate PSBattle
-            case "battleinit":
+            case "battleInit":
                 if (!this.rooms.hasOwnProperty(room)) break;
                 return this.rooms[room].init(msg);
-            case "battleprogress":
+            case "battleProgress":
                 if (!this.rooms.hasOwnProperty(room)) break;
                 // leave respectfully if the battle ended
                 // TODO: make this into a registered callback
