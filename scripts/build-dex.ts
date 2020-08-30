@@ -526,7 +526,7 @@ ${exportSpecificMoves(twoTurnMoves, "twoTurn", "two-turn")}
 
 /** Maps move type to each move of that type. */
 ${exportDict(typeToMoves, "typeToMoves",
-    "{readonly [T in Type]: string[]}",
+    "{readonly [T in Type]: readonly string[]}",
     a => `[${a.map(quote).join(", ")}]`)}
 
 /** Maps item id name to its id number. */

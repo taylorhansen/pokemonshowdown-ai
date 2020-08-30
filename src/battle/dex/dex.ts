@@ -1240,7 +1240,7 @@ export function isTwoTurnMove(value: any): value is TwoTurnMove
 }
 
 /** Maps move type to each move of that type. */
-export const typeToMoves: {readonly [T in Type]: string[]} =
+export const typeToMoves: {readonly [T in Type]: readonly string[]} =
 {
     "???": ["curse"],
     bug: ["attackorder", "bugbite", "bugbuzz", "defendorder", "furycutter", "healorder", "leechlife", "megahorn", "pinmissile", "signalbeam", "silverwind", "spiderweb", "stringshot", "tailglow", "twineedle", "uturn", "xscissor"],

@@ -560,10 +560,11 @@ describe("Moveset", function()
         function()
         {
             const moveset = new Moveset(fourMoves, 2);
+            moveset.reveal("gigaimpact");
+
             moveset.addMoveSlotConstraint(["tackle", "splash"]);
             moveset.addMoveSlotConstraint(["tackle", "hyperbeam"]);
 
-            moveset.reveal("gigaimpact");
             expect(moveset.get("gigaimpact")).to.not.be.null;
             expect(moveset.get("tackle")).to.not.be.null;
         });

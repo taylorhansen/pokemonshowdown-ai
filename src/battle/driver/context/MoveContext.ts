@@ -105,6 +105,8 @@ export class MoveContext extends DriverContext
     private volatileEffect: dexutil.VolatileEffect | null;
     /** Self-volatile effect flag. */
     private selfVolatileEffect: dexutil.SelfVolatileEffect | null;
+    /** Conversion effect flag. */
+    private conversion: boolean;
 
     // in-progress move result flags
     /**
@@ -183,6 +185,7 @@ export class MoveContext extends DriverContext
             (this.moveName === "healingwish" ? "healingwish" : null);
         this.volatileEffect = this.moveData.volatileEffect ?? null;
         this.selfVolatileEffect = this.moveData.selfVolatileEffect ?? null;
+        this.conversion = this.moveName === "conversion";
 
         // override for non-ghost type curse effect
         // TODO(gen6): handle interactions with protean
@@ -355,6 +358,15 @@ export class MoveContext extends DriverContext
                 return this.activateStatusEffect(event);
             case "activateTeamEffect":
                 return this.activateTeamEffect(event);
+            case "changeType":
+                if (this.conversion)
+                {
+                    // changes the user's type into that of a known move
+                    this.user.moveset.addMoveSlotConstraint(
+                        dex.typeToMoves[event.newTypes[0]]);
+                    this.conversion = false;
+                }
+                return "base";
             case "clearSelfSwitch": case "gameOver": case "inactive":
             case "preTurn": case "postTurn":
                 return "expire";
@@ -409,6 +421,10 @@ export class MoveContext extends DriverContext
         {
             throw new Error("Expected SelfVolatileEffect " +
                 `'${this.selfVolatileEffect}' but it didn't happen`);
+        }
+        if (this.conversion)
+        {
+            throw new Error("Expected Conversion effect but it didn't happen");
         }
     }
 
@@ -499,6 +515,7 @@ export class MoveContext extends DriverContext
             this.sideCondition = null;
             this.volatileEffect = null;
             this.selfVolatileEffect = null;
+            this.conversion = false;
 
             // clear continuous moves
             // TODO: can a called move lock the user?

@@ -639,6 +639,38 @@ describe("MoveContext", function()
             }
         });
 
+        describe("changeType", function()
+        {
+            it("Should infer move if conversion", function()
+            {
+                const mon = initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "them", move: "conversion"});
+
+                // changes into a water type, meaning the pokemon must have a
+                //  water type move
+                expect(ctx.handle(
+                    {
+                        type: "changeType", monRef: "them",
+                        newTypes: ["water", "???"]
+                    }))
+                    .to.equal("base");
+
+                // one move slot left to infer after conversion
+                mon.moveset.reveal("tackle");
+                mon.moveset.reveal("takedown");
+
+                // one of the moves can be either fire or water type
+                expect(mon.moveset.get("ember")).to.be.null;
+                expect(mon.moveset.get("watergun")).to.be.null;
+                mon.moveset.addMoveSlotConstraint(["ember", "watergun"]);
+                // should have now consumed the move slot constraint
+                expect(mon.moveset.moveSlotConstraints).to.be.empty;
+                expect(mon.moveset.get("ember")).to.be.null;
+                expect(mon.moveset.get("watergun")).to.not.be.null;
+            });
+        })
+
         describe("switchIn", function()
         {
             it("Should return SwitchContext if self-switch expected",

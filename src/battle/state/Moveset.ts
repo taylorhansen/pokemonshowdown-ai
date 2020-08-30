@@ -284,6 +284,8 @@ export class Moveset implements ReadonlyMoveset
         this.replaceImpl(name, move, base);
         // since the replace call succeeded, this must mean that this Moveset
         //  does not have the move that is replacing the old one
+        // TODO: is only addConstraint() needed here? removing move slot
+        //  constraints could discard useful information
         this.satisfyMoveSlotConstraint(move.name);
         this.addConstraint(move.name);
     }
@@ -324,7 +326,11 @@ export class Moveset implements ReadonlyMoveset
         // constrained enough to instead reveal a move
         if (arr.length === 1) this.reveal(arr[0]);
         // add to shared move slot constraints list
-        else this._moveSlotConstraints.push(new Set(arr));
+        else
+        {
+            this._moveSlotConstraints.push(new Set(arr));
+            this.checkConstraints();
+        }
     }
 
     /**
