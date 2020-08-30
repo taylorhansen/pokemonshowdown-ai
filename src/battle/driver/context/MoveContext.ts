@@ -32,7 +32,7 @@ type CallEffect = boolean | "self" | "target";
 export class MoveContext extends DriverContext
 {
     // TODO: should these be the same strings?
-    // could mention DriverEvents in dex data to make it clearer which types of
+    // could mention BattleEvents in dex data to make it clearer which types of
     //  events are expected
     /** Maps TeamEFfectTypes to SideCondition strings from dex-util. */
     private static readonly teamEffectMap:
@@ -429,7 +429,7 @@ export class MoveContext extends DriverContext
     }
 
     /**
-     * Indicates that the DriverEvents mentioned a target for the current move.
+     * Indicates that the BattleEvents mentioned a target for the current move.
      * @returns `expire` on error, `base` otherwise.
      */
     private addTarget(targetRef: Side): ContextResult
@@ -762,7 +762,7 @@ export class MoveContext extends DriverContext
         switch (event.effect)
         {
             case "healingWish": case "lunarDance":
-                // no known move can explicitly cause a DriverEvent like this
+                // no known move can explicitly cause a BattleEvent like this
                 // instead, the user of said move should faint
                 return "expire";
             case "luckyChant": case "mist": case "safeguard": case "tailwind":

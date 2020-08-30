@@ -12,16 +12,16 @@ import { SwitchContext } from "./SwitchContext";
 
 /**
  * Ensures that the BaseContext implements handlers for each type of
- * DriverEvent.
+ * BattleEvent.
  */
-type DriverEventHandler =
+type BattleEventHandler =
     {[T in events.Type]: (event: events.Event<T>) => void | DriverContext};
 
 /** Handles events normally. */
-export class BaseContext extends DriverContext implements DriverEventHandler
+export class BaseContext extends DriverContext implements BattleEventHandler
 {
     /**
-     * Constructs a base context for handling DriverEvents.
+     * Constructs a base context for handling BattleEvents.
      * @param state State object to mutate while handling events.
      * @param logger Logger object.
      */
@@ -543,7 +543,7 @@ export class BaseContext extends DriverContext implements DriverEventHandler
     /**
      * Indicates that a status effect is still going. Usually this is implied at
      * the end of the turn unless the game usually sends an explicit message,
-     * which this DriverEvent covers.
+     * which this BattleEvent covers.
      */
     public updateStatusEffect(event: events.UpdateStatusEffect): void
     {

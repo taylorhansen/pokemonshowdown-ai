@@ -25,14 +25,14 @@ export class StateDriver
      */
     constructor(private readonly logger: Logger) {}
 
-    /** Handles a batch of DriverEvents. */
+    /** Handles a batch of BattleEvents. */
     public handle(...events: Any[]): void
     {
         for (const event of events) this.handleImpl(event);
     }
 
     /**
-     * Handles a DriverEvent, propagating down the DriverContext chain as
+     * Handles a BattleEvent, propagating down the DriverContext chain as
      * necessary.
      */
     private handleImpl(event: Any): void
@@ -85,7 +85,7 @@ export class StateDriver
     }
 
     /**
-     * Indicates that the current stream of DriverEvents has halted, awaiting a
+     * Indicates that the current stream of BattleEvents has halted, awaiting a
      * decision from a user (i.e., whenever `BattleDriver#halt()` is called).
      * @virtual
      */

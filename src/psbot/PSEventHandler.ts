@@ -11,10 +11,10 @@ import * as psevent from "./parser/PSBattleEvent";
 import * as psmsg from "./parser/PSMessage";
 import { Result } from "./parser/types";
 
-/** Result from parsing BattleEvents into DriverEvents. */
+/** Result from parsing PSBattleEvents into BattleEvents. */
 export type PSResult = Result<events.Any[], psevent.Any>;
 
-/** Translates BattleEvents from the PS server into DriverEvents. */
+/** Translates PSBattleEvents from the PS server into BattleEvents. */
 export class PSEventHandler
 {
     /** Whether the battle is still going on. */
@@ -136,7 +136,7 @@ export class PSEventHandler
     }
 
     /**
-     * Translates PS server BattleEvents into DriverEvents to update the battle
+     * Translates PS server BattleEvents into BattleEvents to update the battle
      * state.
      */
     public handleEvents(psEvents: readonly psevent.Any[]): events.Any[]
@@ -231,11 +231,11 @@ export class PSEventHandler
     }
 
     /**
-     * Translates a PS server BattleEvent into DriverEvents to update the battle
+     * Translates a PS server BattleEvent into BattleEvents to update the battle
      * state. This method also handles suffixes.
      * @param event Event to translate.
      * @param it Points to the next BattleEvent.
-     * @returns The translated DriverEvent and the remaining input Iter.
+     * @returns The translated BattleEvent and the remaining input Iter.
      */
     private handleEvent(event: psevent.Any, it: Iter<psevent.Any>): PSResult
     {

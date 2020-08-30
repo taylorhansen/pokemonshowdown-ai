@@ -14,21 +14,21 @@ import { Any } from "../BattleEvent";
 export type ContextResult = "base" | "stop" | "expire";
 
 /**
- * Base class for sub-Driver contexts for parsing multiple DriverEvents
+ * Base class for sub-Driver contexts for parsing multiple BattleEvents
  * together.
  */
 export abstract class DriverContext
 {
     /**
      * Base DriverContext constructor.
-     * @param state State object to mutate while handling DriverEvents.
+     * @param state State object to mutate while handling BattleEvents.
      * @param logger Logger object.
      */
     constructor(protected readonly state: BattleState,
         protected readonly logger: Logger) {}
 
     /**
-     * Handles a DriverEvent.
+     * Handles a BattleEvent.
      * @returns A ContextResult string specifying what to do after handling the
      * event, or a new DriverContext object if it should be added to the
      * DriverContext chain (also works like `"stop"`).
@@ -37,7 +37,7 @@ export abstract class DriverContext
     public abstract handle(event: Any): ContextResult | DriverContext;
 
     /**
-     * Indicates that the current stream of DriverEvents has halted, awaiting a
+     * Indicates that the current stream of BattleEvents has halted, awaiting a
      * decision from a user (i.e., whenever `BattleDriver#halt()` is called).
      * @virtual
      */
