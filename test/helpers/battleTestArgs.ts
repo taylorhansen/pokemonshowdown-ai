@@ -39,7 +39,7 @@ export const pokemonStatus: PokemonStatus[] =
 ];
 
 /** Test BattleEvents except turn/upkeep. */
-export const battleEvent: psevent.Any[] =
+export const psEvents: psevent.Any[] =
 [
     {type: "\n"},
     {type: "-ability", id: pokemonId[0], ability: "Pressure"},
@@ -160,17 +160,17 @@ export const battleInit: psmsg.BattleInit[] =
     {
         type: "battleInit", id: "p1", username: username[0],
         gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(0, 6).concat(startTurn)
+        events: psEvents.slice(0, 6).concat(startTurn)
     },
     {
         type: "battleInit", id: "p1", username: username[0],
         gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(6, 10).concat(startTurn)
+        events: psEvents.slice(6, 10).concat(startTurn)
     },
     {
         type: "battleInit", id: "p2", username: username[1],
         gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
-        events: battleEvent.slice(10, 14).concat(startTurn)
+        events: psEvents.slice(10, 14).concat(startTurn)
     }
 ];
 
@@ -179,19 +179,19 @@ export const battleProgress: psmsg.BattleProgress[] =
 [
     {
         type: "battleProgress",
-        events: battleEvent.slice(14, 21)
+        events: psEvents.slice(14, 21)
             .concat({type: "upkeep"}, {type: "turn", num: 2})
     },
     {
         type: "battleProgress",
-        events: battleEvent.slice(21, 26)
-            .concat({type: "upkeep"}, ...battleEvent.slice(26, 29),
+        events: psEvents.slice(21, 26)
+            .concat({type: "upkeep"}, ...psEvents.slice(26, 29),
                 {type: "turn", num: 100})
     },
     {
         type: "battleProgress",
-        events: battleEvent.slice(29, 39)
-            .concat({type: "upkeep"}, ...battleEvent.slice(39),
+        events: psEvents.slice(29, 39)
+            .concat({type: "upkeep"}, ...psEvents.slice(39),
                 {type: "turn", num: 9})
     }
 ];

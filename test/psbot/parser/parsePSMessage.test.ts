@@ -5,7 +5,7 @@ import { RoomType } from "../../../src/psbot/helpers";
 import { parsePSMessage } from "../../../src/psbot/parser/parsePSMessage";
 import * as psmsg from "../../../src/psbot/parser/PSMessage";
 import * as testArgs from "../../helpers/battleTestArgs";
-import { buildMessage, composeBattleInit, composeBattleProgress,
+import { buildPSMessage, composeBattleInit, composeBattleProgress,
     stringifyRequest } from "../../helpers/buildMessage";
 
 describe("parsePSMessage()", function()
@@ -53,7 +53,7 @@ describe("parsePSMessage()", function()
          */
         function parseWords(words: string[][], quiet = false)
         {
-            return parsePSMessage(buildMessage(words),
+            return parsePSMessage(buildPSMessage(words),
                 quiet ? Logger.null : Logger.stderr);
         }
 

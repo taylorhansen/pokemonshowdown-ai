@@ -74,8 +74,8 @@ describe("PSEventHandler", function()
             //  here
             handler.initBattle(battleInit);
 
-            const driverEvents = handler.handleRequest(request);
-            expect(driverEvents).to.be.empty;
+            const battleEvents = handler.handleRequest(request);
+            expect(battleEvents).to.be.empty;
         });
 
         it("Should emit initTeam", function()
@@ -116,9 +116,9 @@ describe("PSEventHandler", function()
                     }
                 };
 
-                const driverEvents = handler.handleRequest(msg);
+                const battleEvents = handler.handleRequest(msg);
 
-                expect(driverEvents).to.have.deep.members(
+                expect(battleEvents).to.have.deep.members(
                 [
                     {
                         type: "initTeam",
@@ -153,9 +153,9 @@ describe("PSEventHandler", function()
 
             // request message is assumed to go before this event but not needed
             //  here
-            const driverEvents = handler.initBattle(battleInit);
+            const battleEvents = handler.initBattle(battleInit);
 
-            expect(driverEvents).to.have.deep.members(
+            expect(battleEvents).to.have.deep.members(
                 [{type: "initOtherTeamSize", size: 2}]);
             expect(handler.battling).to.be.true;
         });
@@ -166,10 +166,10 @@ describe("PSEventHandler", function()
 
             // request message is assumed to go before this event but not needed
             //  here
-            const driverEvents = handler.initBattle(
+            const battleEvents = handler.initBattle(
                 {...battleInit, username: username + "1"});
 
-            expect(driverEvents).to.have.deep.members(
+            expect(battleEvents).to.have.deep.members(
                 [{type: "initOtherTeamSize", size: 1}]);
             expect(handler.battling).to.be.true;
         });
@@ -184,21 +184,21 @@ describe("PSEventHandler", function()
         });
 
         /**
-         * Tests the PSEventHandler's translation of PS BattleEvents to
-         * DriverEvents.
+         * Tests the PSEventHandler's translation of PSBattleEvents to
+         * BattleEvents.
          * @param name Name of the test.
-         * @param psEvents PS BattleEvents.
-         * @param driverEvents DriverEvents that should be emitted.
+         * @param psEvents PSBattleEvents.
+         * @param battleEvents BattleEvents that should be emitted.
          * Order-sensitive.
          * @param post Any extra tests that should be done afterward.
          */
         function test(name: string, psEvents: psevent.Any[],
-            driverEvents: events.Any[], post?: () => void): void
+            battleEvents: events.Any[], post?: () => void): void
         {
             it(name, function()
             {
                 expect(handler.handleEvents(psEvents))
-                    .to.deep.equal(driverEvents);
+                    .to.deep.equal(battleEvents);
                 if (post) post();
             });
         }
@@ -1275,7 +1275,7 @@ describe("PSEventHandler", function()
                 [{type: "gameOver", winner: "them"}]);
         });
 
-        describe("BattleEvent suffixes", function()
+        describe("PSBattleEvent suffixes", function()
         {
             it("Should throw if no PokemonID mentioned", function()
             {

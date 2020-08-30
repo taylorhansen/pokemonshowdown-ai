@@ -4,11 +4,11 @@ import * as psevent from "../../src/psbot/parser/PSBattleEvent";
 import * as psmsg from "../../src/psbot/parser/PSMessage";
 
 /**
- * Creates an unparsed server message.
+ * Creates an unparsed PSMessage.
  * @param words String arguments for the message.
- * @returns An unparsed message.
+ * @returns An unparsed PSMessage.
  */
-export function buildMessage(words: string[][]): string
+export function buildPSMessage(words: string[][]): string
 {
     return words.map(line => line.length > 0 ? `|${line.join("|")}` : "")
         .join("\n");
@@ -51,7 +51,7 @@ export function composeBattleInit(args: psmsg.BattleInit): string[][]
         ["gametype", args.gameType],
         ["gen", args.gen.toString()],
         ...args.events
-            .map(composeBattleEvent)
+            .map(composePSBattleEvent)
     ];
     return result;
 }
@@ -63,15 +63,15 @@ export function composeBattleInit(args: psmsg.BattleInit): string[][]
  */
 export function composeBattleProgress(args: psmsg.BattleProgress): string[][]
 {
-    return args.events.map(composeBattleEvent);
+    return args.events.map(composePSBattleEvent);
 }
 
 /**
- * Composes all the word segments of a BattleEvent.
+ * Composes all the word segments of a PSBattleEvent.
  * @param event Event to stringify.
- * @returns An unparsed BattleEvent.
+ * @returns An unparsed PSBattleEvent.
  */
-export function composeBattleEvent(event: psevent.Any): string[]
+export function composePSBattleEvent(event: psevent.Any): string[]
 {
     let result: string[];
     switch (event.type)
