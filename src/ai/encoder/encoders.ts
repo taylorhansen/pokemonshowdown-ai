@@ -659,6 +659,7 @@ export const battleStateEncoder: Encoder<ReadonlyBattleState> = concat(
 export function alloc(encoder: Encoder<any>, shared = false): Float32Array
 {
     if (!shared) return new Float32Array(encoder.size);
+
     return new Float32Array(
         new SharedArrayBuffer(encoder.size * Float32Array.BYTES_PER_ELEMENT));
 }
@@ -673,5 +674,6 @@ export function allocUnsafe(encoder: Encoder<any>): Float32Array
     // unsafe allocation lets us not have to zero out the contents
     const buf = Buffer.allocUnsafe(
         encoder.size * Float32Array.BYTES_PER_ELEMENT);
+
     return new Float32Array(buf.buffer, buf.byteOffset, encoder.size);
 }

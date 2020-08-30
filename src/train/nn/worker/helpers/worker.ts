@@ -2,6 +2,8 @@
  * @file Dedicated worker for TensorFlow neural network operations during games.
  */
 import * as tf from "@tensorflow/tfjs";
+import { EventEmitter } from "events";
+import { TypedEmitter } from "tiny-typed-emitter";
 import { serialize } from "v8";
 import { MessageChannel, MessagePort, parentPort, workerData } from
     "worker_threads";
@@ -12,9 +14,11 @@ import { importTfn } from "../../../../tfn";
 import { ensureDir } from "../../../helpers/ensureDir";
 import { learn, LearnConfig } from "../../learn/learn";
 import { createModel } from "../../model";
-import { PredictMessage, PredictWorkerResult } from "../ModelPort";
+import { PredictMessage, PredictResult, PredictWorkerResult } from
+    "../ModelPort";
 import { RawPortResultError } from "./AsyncPort";
-import { NetworkProcessorLearnData, NetworkProcessorLearnResult,
+import { setTimeoutNs } from "./helpers";
+import { BatchOptions, NetworkProcessorLearnData, NetworkProcessorLearnResult,
     NetworkProcessorLoadResult, NetworkProcessorMessage,
     NetworkProcessorSaveResult, NetworkProcessorSubscribeResult,
     NetworkProcessorUnloadResult } from "./NetworkProcessorRequest";
@@ -24,23 +28,52 @@ if (!parentPort) throw new Error("No parent port!");
 // select native backend, defaulting to cpu if not told to use gpu
 const tfn = importTfn(!!workerData.gpu);
 
+/** State+callback entry for a NetworkRegistry's batch queue. */
+interface BatchEntry
+{
+    /** Encoded battle state. */
+    state: Float32Array;
+    /** Callback after getting the prediction for the given state. */
+    res(result: PredictResult): void;
+}
+
+/** Describes the events emitted by `NetworkRegistry#batchEvents`. */
+interface BatchEvents
+{
+    [NetworkRegistry.batchExecuteEvent](): void;
+}
+
 /** Manages a neural network registry. */
 class NetworkRegistry
 {
+    /** Event for when the current batch should be executed. */
+    public static readonly batchExecuteEvent = Symbol("batchExecuteEvent");
+
     /** Neural network object. */
     private readonly model: tf.LayersModel;
     /** Currently held game worker ports. */
-    private readonly ports: Set<MessagePort>;
+    private readonly ports = new Set<MessagePort>();
+
     /** Prediction request buffer. */
-    private readonly predictBuffer: {msg: PredictMessage, port: MessagePort}[];
+    private readonly nextBatch: BatchEntry[] = [];
+    /** Event listener for batch entries. */
+    private readonly batchEvents =
+        new EventEmitter({captureRejections: true}) as
+            TypedEmitter<BatchEvents>;
+    /** Resolves once the current batch timer expires. */
+    private timeoutPromise: Promise<void> | null = null;
+    /** Function to cancel the current timer. */
+    private cancelTimer: (() => void) | null = null;
     /** Lock promise for managing the neural network resource. */
     private inUse: Promise<any>;
 
     /**
      * Creates a NetworkRegistry.
      * @param model Neural network object.
+     * @param batchOptions Options for batching predict requests.
      */
-    constructor(model: tf.LayersModel)
+    constructor(model: tf.LayersModel,
+        private readonly batchOptions: BatchOptions)
     {
         try { verifyModel(model); }
         catch (e)
@@ -50,8 +83,17 @@ class NetworkRegistry
             throw e;
         }
         this.model = model;
-        this.ports = new Set();
-        this.predictBuffer = [];
+
+        this.batchOptions =
+        {
+            ...batchOptions,
+            // max 1 second
+            timeoutNs: Math.min(999999999, batchOptions.timeoutNs)
+        };
+
+        // setup batch event listener
+        this.batchEvents.on(NetworkRegistry.batchExecuteEvent,
+            () => this.executeBatch());
 
         // warmup the model using dummy data
         // only useful with gpu backend
@@ -91,19 +133,21 @@ class NetworkRegistry
         const {port1, port2} = new MessageChannel();
         this.ports.add(port1);
         port1.on("message", (msg: PredictMessage) =>
-        {
-            // queue a predict request
-            this.predictBuffer.push({msg, port: port1});
-            // see if we should flush the predict buffer once the neural network
-            //  is free
-            this.checkPredictBuffer();
-        });
-        port1.on("close", () =>
-        {
-            // remove this port from the recorded references
-            this.ports.delete(port1);
-            this.checkPredictBuffer();
-        });
+            this.predict(msg)
+                .then<PredictWorkerResult>(prediction =>
+                ({
+                    type: "predict", rid: msg.rid, done: true, ...prediction
+                }))
+                .catch<RawPortResultError>(err =>
+                ({
+                    type: "error", rid: msg.rid, done: true, err: serialize(err)
+                }))
+                .then(result =>
+                    port1.postMessage(result,
+                        result.type === "predict" ?
+                            [result.logits.buffer] : [result.err.buffer])));
+        // remove this port from the recorded references after close
+        port1.on("close", () => this.ports.delete(port1));
         return port2;
     }
 
@@ -119,16 +163,16 @@ class NetworkRegistry
         logPath?: string): Promise<void>
     {
         let trainCallback: tf.CustomCallback | undefined;
-        this.inUse = Promise.all(
+        this.inUse = Promise.allSettled(
         [
             this.inUse,
             ...(logPath ?
-            [
-                ensureDir(logPath)
-                    .then(() =>
-                        void (trainCallback = tfn.node.tensorBoard(logPath)))
-            ] : [])
-        ]);
+                [ensureDir(logPath).then(() => tfn.node.tensorBoard(logPath))]
+                : [])
+        ])
+            .then(([_, p]) =>
+                p.status === "fulfilled" ? trainCallback = p.value
+                    : Promise.reject(p.reason));
 
         return this.inUse = this.inUse.then(() =>learn(
         {
@@ -138,33 +182,84 @@ class NetworkRegistry
         }));
     }
 
-    /** Once this registry is free, checks and flushes the predict buffer. */
-    private checkPredictBuffer(): void
+    /** Queues a prediction for the neural network. */
+    private async predict(msg: PredictMessage): Promise<PredictResult>
     {
-        this.inUse = this.inUse.then(() => this.checkPredictBufferImpl());
+        return new Promise(res =>
+        {
+            this.nextBatch.push({state: msg.state, res});
+            this.checkPredictBatch();
+        });
     }
 
-    /** Flushes the predict buffer if sufficiently full. */
-    private async checkPredictBufferImpl(): Promise<void>
+    /**
+     * Checks batch size and timer to see if the predict batch should be
+     * executed.
+     */
+    private checkPredictBatch(): void
     {
-        if (this.predictBuffer.length <= 0) return;
-        const batchSize = Math.floor(this.ports.size / 2);
-        if (this.predictBuffer.length < batchSize) return;
+        if (this.nextBatch.length >= this.batchOptions.maxSize)
+        {
+            // full batch
+            this.batchEvents.emit(NetworkRegistry.batchExecuteEvent);
+            return;
+        }
+
+        if (this.timeoutPromise) return;
+
+        // setup batch timer
+        this.timeoutPromise = new Promise(res =>
+                this.cancelTimer =
+                    setTimeoutNs(res, this.batchOptions.timeoutNs))
+            .then(() =>
+            {
+                this.timeoutPromise = null;
+                this.cancelTimer = null;
+            });
+
+        // if the timer expired before the batch filled up, execute the
+        //  batch as it is
+        let didTimeout = false;
+        Promise.race(
+        [
+            this.timeoutPromise.then(() => didTimeout = true),
+            new Promise(res =>
+                    this.batchEvents.prependOnceListener(
+                        NetworkRegistry.batchExecuteEvent, res))
+                .then(this.cancelTimer)
+        ])
+            .then(() =>
+                didTimeout ?
+                    this.batchEvents.emit(NetworkRegistry.batchExecuteEvent)
+                    : undefined);
+    }
+
+    /** Flushes the predict buffer and executes the batch. */
+    private async executeBatch(): Promise<void>
+    {
+        if (this.nextBatch.length <= 0) return;
+
+        // allow for the next batch to start filling up
+        const batch = [...this.nextBatch];
+        this.nextBatch.length = 0;
+
+        // batch and execute model
 
         const [batchedLogits, batchedValues] = tf.tidy(() =>
         {
-            const batchStates = tf.stack(
-                this.predictBuffer.map(req => req.msg.state));
+            const batchStates = tf.stack(batch.map(req => req.state));
             const [batchLogits, batchValues] =
                 this.model.predictOnBatch(batchStates) as tf.Tensor[];
             return [
-                batchLogits.as2D(this.predictBuffer.length, intToChoice.length)
+                batchLogits.as2D(batch.length, intToChoice.length)
                     .unstack<tf.Tensor1D>(),
                 batchValues.as1D()
             ];
         });
 
-        const [batchedLogitsData, batchedValueData] = await Promise.all(
+        // unpack and distribute batch entries
+
+        const [logitsData, valueData] = await Promise.all(
         [
             Promise.all(batchedLogits.map(
                 t => t.data() as Promise<Float32Array>)),
@@ -173,17 +268,10 @@ class NetworkRegistry
         batchedLogits.forEach(t => t.dispose())
         batchedValues.dispose();
 
-        for (let i = 0; i < this.predictBuffer.length; ++i)
+        for (let i = 0; i < batch.length; ++i)
         {
-            const req = this.predictBuffer[i];
-            const rid = req.msg.rid;
-            const logits = batchedLogitsData[i];
-            const value = batchedValueData[i];
-            const result: PredictWorkerResult =
-                {type: "predict", rid, done: true, logits, value};
-            req.port.postMessage(result, [logits.buffer]);
+            batch[i].res({logits: logitsData[i], value: valueData[i]});
         }
-        this.predictBuffer.length = 0;
     }
 }
 
@@ -205,9 +293,9 @@ function getRegistry(uid: number): NetworkRegistry
 }
 
 /** Registers a recently loaded model. */
-function load(model: tf.LayersModel, rid: number)
+function load(model: tf.LayersModel, rid: number, batchOptions: BatchOptions)
 {
-    networks.set(uidCounter, new NetworkRegistry(model));
+    networks.set(uidCounter, new NetworkRegistry(model, batchOptions));
     const result: NetworkProcessorLoadResult =
         {type: "load", rid, done: true, uid: uidCounter++};
     parentPort!.postMessage(result);
@@ -220,8 +308,13 @@ parentPort.on("message", async function(msg: NetworkProcessorMessage)
     switch (msg.type)
     {
         case "load":
-            if (!msg.url) load(createModel(), rid);
-            else promise = tf.loadLayersModel(msg.url).then(m => load(m, rid));
+            // downcast msg to BatchOptions
+            if (!msg.url) load(createModel(), rid, msg);
+            else
+            {
+                promise = tf.loadLayersModel(msg.url)
+                    .then(m => load(m, rid, msg));
+            }
             break;
         case "save":
             promise = getRegistry(msg.uid).save(msg.url)

@@ -1,11 +1,11 @@
 import { resolve } from "path";
 import { MessagePort, Worker } from "worker_threads";
 import { AsyncPort } from "./helpers/AsyncPort";
-import { NetworkProcessorLearnConfig, NetworkProcessorLearnData,
-    NetworkProcessorLearnMessage, NetworkProcessorLoadMessage,
-    NetworkProcessorRequestMap, NetworkProcessorSaveMessage,
-    NetworkProcessorSubscribeMessage, NetworkProcessorUnloadMessage } from
-    "./helpers/NetworkProcessorRequest";
+import { BatchOptions, NetworkProcessorLearnConfig,
+    NetworkProcessorLearnData, NetworkProcessorLearnMessage,
+    NetworkProcessorLoadMessage, NetworkProcessorRequestMap,
+    NetworkProcessorSaveMessage, NetworkProcessorSubscribeMessage,
+    NetworkProcessorUnloadMessage } from "./helpers/NetworkProcessorRequest";
 
 /** Path to the worker script. */
 const workerScriptPath = resolve(__dirname, "helpers", "worker.js");
@@ -29,12 +29,18 @@ export class NetworkProcessor extends
     /**
      * Loads and registers a neural network.
      * @param url URL to load from. If omitted, create a default model.
+     * @param batchOptions Options for batching predict requests.
      * @returns A unique identifier for further requests involving this network.
      */
-    public load(url?: string): Promise<number>
+    public load(url?: string,
+        batchOptions: BatchOptions = {maxSize: 16, timeoutNs: 500000}):
+        Promise<number>
     {
         const msg: NetworkProcessorLoadMessage =
-            {type: "load", rid: this.generateRID(), ...(url && {url})};
+        {
+            type: "load", rid: this.generateRID(), ...(url && {url}),
+            ...batchOptions
+        };
 
         return new Promise((res, rej) =>
             this.postMessage<"load">(msg, [],
@@ -73,10 +79,10 @@ export class NetworkProcessor extends
     }
 
     /**
-     * Requests a unique game worker port from a neural network. This is
-     * intended to be used by a ModelPort object in a game worker thread.
-     * Closing the port will remove this link.
+     * Requests a unique access port from a neural network. Closing the port
+     * will remove this link.
      * @param uid ID of the network.
+     * @returns A MessagePort that implements the ModelPort protocol.
      * @see ModelPort
      */
     public subscribe(uid: number): Promise<MessagePort>

@@ -1,10 +1,12 @@
 /** @file Sets up a training session for the neural network. */
+import * as os from "os";
 import { join } from "path";
 import { setGracefulCleanup } from "tmp-promise";
 import { latestModelFolder, logPath, modelsFolder } from "../config";
 import { Logger } from "../Logger";
 import { episode } from "./episode";
 import { ensureDir } from "./helpers/ensureDir";
+import { BatchOptions } from "./nn/worker/helpers/NetworkProcessorRequest";
 import { NetworkProcessor } from "./nn/worker/NetworkProcessor";
 import { Opponent } from "./play/playGames";
 
@@ -20,6 +22,17 @@ const logger = Logger.stderr.addPrefix("Train: ");
 
 /** Manages the worker thread for Tensorflow ops. */
 const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
+/** Options for predict batching. */
+const batchOptions: BatchOptions =
+{
+    // when running games on multiple threads, the GamePool workers can tend to
+    //  "spam" the TF worker with messages, forcing the worker to queue them all
+    //  into a batch before the timer has a chance to update
+    // waiting for the next "wave" of messages could take several ms, around the
+    //  time it would take to execute the currently sitting batch (assuming
+    //  gpu), so it's best to cut it off nearly as soon as the timer updates
+    maxSize: os.cpus().length * 2, timeoutNs: /*50us*/50000
+};
 
 (async function()
 {
@@ -28,12 +41,12 @@ const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
     const latestModelUrl = `file://${latestModelFolder}`;
     const loadUrl = `file://${join(latestModelFolder, "model.json")}`;
     logger.debug("Loading latest model");
-    try { model = await processor.load(loadUrl); }
+    try { model = await processor.load(loadUrl, batchOptions); }
     catch (e)
     {
         logger.error(`Error opening model: ${e.stack ?? e}`);
         logger.debug("Creating default model");
-        model = await processor.load();
+        model = await processor.load(undefined, batchOptions);
 
         logger.debug("Saving");
         await ensureDir(latestModelFolder);
@@ -42,7 +55,7 @@ const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
 
     // save a copy of the original model for evaluating the trained model later
     logger.debug("Saving copy of original for reference");
-    const originalModel = await processor.load(loadUrl);
+    const originalModel = await processor.load(loadUrl, batchOptions);
     const originalModelFolder = join(modelsFolder, "original");
     await processor.save(originalModel, `file://${originalModelFolder}`);
 
@@ -90,7 +103,7 @@ const processor = new NetworkProcessor(/*gpu*/ process.argv[2] === "--gpu");
 
         // re-load it so we have a copy
         const modelCopy = await processor.load(
-            `file://${join(episodeModelFolder, "model.json")}`);
+            `file://${join(episodeModelFolder, "model.json")}`, batchOptions);
         evalOpponents.push(
         {
             name: episodeFolderName,

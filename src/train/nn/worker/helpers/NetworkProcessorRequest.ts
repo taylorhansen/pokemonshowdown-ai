@@ -45,10 +45,22 @@ type NetworkProcessorMessageBase<T extends NetworkProcessorRequestType> =
 
 /** Loads a neural network and registers it for the worker. */
 export interface NetworkProcessorLoadMessage extends
-    NetworkProcessorMessageBase<"load">
+    NetworkProcessorMessageBase<"load">, BatchOptions
 {
     /** URL to the `model.json` to load. If omitted, create a default model. */
     readonly url?: string;
+}
+
+/** Options for batching predict requests. */
+export interface BatchOptions
+{
+    /** Maximum size of a batch. */
+    readonly maxSize: number;
+    /**
+     * Max amount of time to wait until the next batch should be processed. Max
+     * 1 second.
+     */
+    readonly timeoutNs: number;
 }
 
 /** Saves a neural network to a given URL. */
