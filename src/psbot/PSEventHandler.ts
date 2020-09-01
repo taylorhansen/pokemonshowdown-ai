@@ -645,8 +645,8 @@ export class PSEventHandler
         return {
             result:
             [{
-                type: "countStatusEffect", monRef: this.getSide(event.id.owner),
-                effect: event.stat, amount: event.amount, add: true
+                type: "boost", monRef: this.getSide(event.id.owner),
+                stat: event.stat, amount: event.amount
             }],
             remaining: it
         };
@@ -970,8 +970,7 @@ export class PSEventHandler
         return {
             result:
             [{
-                type: "activateStatusEffect",
-                monRef: this.getSide(event.id.owner), effect: move, start: true
+                type: "prepareMove", monRef: this.getSide(event.id.owner), move
             }],
             remaining: it
         };
@@ -996,8 +995,8 @@ export class PSEventHandler
             [
                 (({id, stat, amount}) =>
                 ({
-                    type: "countStatusEffect",
-                    monRef: this.getSide(id.owner), effect: stat, amount
+                    type: "boost", monRef: this.getSide(id.owner), stat, amount,
+                    set: true
                 } as const))(event)
             ],
             remaining: it
@@ -1195,8 +1194,8 @@ export class PSEventHandler
         return {
             result:
             [{
-                type: "countStatusEffect", monRef: this.getSide(event.id.owner),
-                effect: event.stat, amount: -event.amount, add: true
+                type: "boost", monRef: this.getSide(event.id.owner),
+                stat: event.stat, amount: -event.amount
             }],
             remaining: it
         };
@@ -1361,7 +1360,10 @@ export class PSEventHandler
             {
                 const move = toIdName(ev);
                 // istanbul ignore else: not useful to test
-                if (dex.isFutureMove(move)) effect = move;
+                if (dex.isFutureMove(move))
+                {
+                    driverEvents = [{type: "futureMove", monRef, move, start}];
+                }
                 else
                 {
                     this.logger.debug(

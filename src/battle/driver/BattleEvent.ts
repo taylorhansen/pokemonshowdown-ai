@@ -13,6 +13,7 @@ interface EventMap
     activateFieldEffect: ActivateFieldEffect;
     activateStatusEffect: ActivateStatusEffect;
     activateTeamEffect: ActivateTeamEffect;
+    boost: Boost;
     changeType: ChangeType;
     clearAllBoosts: ClearAllBoosts;
     clearNegativeBoosts: ClearNegativeBoosts;
@@ -28,6 +29,7 @@ interface EventMap
     fatigue: Fatigue;
     feint: Feint;
     formChange: FormChange;
+    futureMove: FutureMove;
     gameOver: GameOver;
     hitCount: HitCount;
     immune: Immune;
@@ -42,6 +44,7 @@ interface EventMap
     mustRecharge: MustRecharge;
     noTarget: NoTarget;
     postTurn: PostTurn;
+    prepareMove: PrepareMove;
     preTurn: PreTurn;
     reenableMoves: ReenableMoves;
     rejectSwitchTrapped: RejectSwitchTrapped;
@@ -122,12 +125,11 @@ export interface ActivateStatusEffect extends EventBase<"activateStatusEffect">
 
 /** Typing for `ActivateStatusEffect#status`. */
 export type StatusEffectType = UpdatableStatusEffectType | dexutil.MajorStatus |
-    dex.FutureMove | dex.TwoTurnMove | SingleMoveEffect | SingleTurnEffect |
-    "aquaRing" | "attract" | "charge" | "curse" | "embargo" | "encore" |
-    "focusEnergy" | "foresight" | "healBlock" | "imprison" | "ingrain" |
-    "leechSeed" | "magnetRise" | "miracleEye" | "mudSport" | "nightmare" |
-    "powerTrick" | "slowStart" | "substitute" | "suppressAbility" | "taunt" |
-    "torment" | "waterSport" | "yawn";
+    SingleMoveEffect | SingleTurnEffect | "aquaRing" | "attract" | "charge" |
+    "curse" | "embargo" | "encore" | "focusEnergy" | "foresight" | "healBlock" |
+    "imprison" | "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" |
+    "mudSport" | "nightmare" | "powerTrick" | "slowStart" | "substitute" |
+    "suppressAbility" | "taunt" | "torment" | "waterSport" | "yawn";
 
 /** Types of sinlge-move effects. */
 export type SingleMoveEffect = "destinyBond" | "grudge" | "rage";
@@ -151,6 +153,22 @@ export interface ActivateTeamEffect extends EventBase<"activateTeamEffect">
 export type TeamEffectType = "healingWish" | "lightScreen" | "luckyChant" |
     "lunarDance" | "mist" | "reflect" | "safeguard" | "spikes" | "stealthRock" |
     "tailwind" | "toxicSpikes";
+
+/** Updates a stat boost. */
+export interface Boost extends EventBase<"boost">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Stat to boost. */
+    readonly stat: dexutil.BoostName;
+    /** Number to add to the stat boost counter. */
+    readonly amount: number;
+    /**
+     * Whether to set the stat boost counter rather than add to it. Default
+     * false.
+     */
+    readonly set?: true;
+}
 
 /** Temporarily changes the pokemon's types. Also resets third type. */
 export interface ChangeType extends EventBase<"changeType">
@@ -199,16 +217,10 @@ export interface CountStatusEffect extends EventBase<"countStatusEffect">
     readonly effect: CountableStatusEffectType;
     /** Number to set the effect counter to. */
     readonly amount: number;
-    /**
-     * Whether to add `#amount` onto the effect counter rather than overwrite
-     * it. Default false.
-     */
-    readonly add?: boolean;
 }
 
 /** Typing for `CountStatusEffect#effect`. */
-export type CountableStatusEffectType = dexutil.BoostName | "perish" |
-    "stockpile";
+export type CountableStatusEffectType = "perish" | "stockpile";
 
 /** Indicates a critical hit of a move on the pokemon. */
 export interface Crit extends EventBase<"crit">
@@ -268,6 +280,17 @@ export interface FormChange extends EventBase<"formChange">, DriverSwitchOptions
     readonly monRef: Side;
     /** Whether this form change is permanent. */
     readonly perm: boolean;
+}
+
+/** Prepares or releases a future move. */
+export interface FutureMove extends EventBase<"futureMove">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Move being prepared. */
+    readonly move: dex.FutureMove;
+    /** Whether the move is being prepared (true) or released (false). */
+    readonly start: boolean;
 }
 
 /** Indicates that the game has ended. */
@@ -411,6 +434,15 @@ export interface NoTarget extends EventBase<"noTarget">
 
 /** Indicates that the turn is about to end. */
 export interface PostTurn extends EventBase<"postTurn"> {}
+
+/** Prepares a two-turn move. */
+export interface PrepareMove extends EventBase<"prepareMove">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Move being prepared. */
+    readonly move: dex.TwoTurnMove;
+}
 
 /** Indicates that the turn is about to begin. */
 export interface PreTurn extends EventBase<"preTurn"> {}

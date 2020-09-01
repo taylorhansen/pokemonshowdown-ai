@@ -244,10 +244,7 @@ describe("PSEventHandler", function()
                     ability: "intimidate"
                 },
                 {type: "activateAbility", monRef: "us", ability: "intimidate"},
-                {
-                    type: "countStatusEffect", monRef: "them", effect: "atk",
-                    amount: -1, add: true
-                }
+                {type: "boost", monRef: "them", stat: "atk", amount: -1}
             ]);
         });
 
@@ -471,13 +468,13 @@ describe("PSEventHandler", function()
                 for (const start of [true, false])
                 {
                     const type = start ? "-start" : "-end";
-                    test(`Should emit activateStatusEffect for ${type}`,
+                    test(`Should emit futureMove for ${type}`,
                     [{
                         type, id: us, volatile: "Future Sight", otherArgs: []
                     }],
                     [{
-                        type: "activateStatusEffect", monRef: "us",
-                        effect: "futuresight", start
+                        type: "futureMove", monRef: "us", move: "futuresight",
+                        start
                     }]);
 
                 }
@@ -656,12 +653,9 @@ describe("PSEventHandler", function()
 
         describe("-boost", function()
         {
-            test("Should emit countStatusEffect",
+            test("Should emit boost",
                 [{type: "-boost", id: us, stat: "atk", amount: 1}],
-            [{
-                type: "countStatusEffect", monRef: "us", effect: "atk",
-                amount: 1, add: true
-            }]);
+                [{type: "boost", monRef: "us", stat: "atk", amount: 1}]);
         });
 
         describe("cant", function()
@@ -983,12 +977,9 @@ describe("PSEventHandler", function()
 
         describe("-prepare", function()
         {
-            test("Should emit activateStatusEffect",
+            test("Should emit prepareMove",
                 [{type: "-prepare", id: us, moveName: "Fly"}],
-            [{
-                type: "activateStatusEffect", monRef: "us", effect: "fly",
-                start: true
-            }]);
+                [{type: "prepareMove", monRef: "us", move: "fly"}]);
 
             it("Should throw if not a two-turn move", function()
             {
@@ -1007,11 +998,10 @@ describe("PSEventHandler", function()
 
         describe("-setboost", function()
         {
-            test("Should emit countStatusEffect",
+            test("Should emit boost",
                 [{type: "-setboost", id: us, stat: "atk", amount: 1}],
             [{
-                type: "countStatusEffect", monRef: "us", effect: "atk",
-                amount: 1
+                type: "boost", monRef: "us", stat: "atk", amount: 1, set: true
             }]);
         });
 
@@ -1222,12 +1212,9 @@ describe("PSEventHandler", function()
 
         describe("-unboost", function()
         {
-            test("Should emit countStatusEffect",
+            test("Should emit boost",
                 [{type: "-unboost", id: us, stat: "def", amount: 2}],
-            [{
-                type: "countStatusEffect", monRef: "us", effect: "def",
-                amount: -2, add: true
-            }]);
+                [{type: "boost", monRef: "us", stat: "def", amount: -2}]);
         });
 
         describe("upkeep", function()

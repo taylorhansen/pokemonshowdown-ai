@@ -1,7 +1,5 @@
 import { Logger } from "../../../Logger";
-import { isFutureMove, isTwoTurnMove } from "../../dex/dex";
-import { boostKeys, isBoostName, isMajorStatus, isWeatherType, StatExceptHP }
-    from "../../dex/dex-util";
+import * as dexutil from "../../dex/dex-util";
 import { BattleState } from "../../state/BattleState";
 import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
@@ -58,7 +56,7 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     /** Activates a field-wide effect. */
     public activateFieldEffect(event: events.ActivateFieldEffect): void
     {
-        if (isWeatherType(event.effect))
+        if (dexutil.isWeatherType(event.effect))
         {
             this.state.status.weather.start(null, event.effect);
         }
@@ -91,32 +89,12 @@ export class BaseContext extends DriverContext implements BattleEventHandler
                 mon.volatile.identified = event.start ? event.effect : null;
                 break;
             default:
-                if (isMajorStatus(event.effect))
+                if (dexutil.isMajorStatus(event.effect))
                 {
                     // afflict status
                     if (event.start) mon.majorStatus.afflict(event.effect);
                     // cure status (assert mentioned status)
                     else mon.majorStatus.assert(event.effect).cure();
-                }
-                else if (isFutureMove(event.effect))
-                {
-                    if (event.start)
-                    {
-                        // starting a future move mentions the user
-                        this.state.teams[event.monRef].status
-                            .futureMoves[event.effect].start(/*restart*/false);
-                    }
-                    else
-                    {
-                        // ending a future move mentions the target before
-                        //  taking damage
-                        this.state.teams[otherSide(event.monRef)].status
-                            .futureMoves[event.effect].end();
-                    }
-                }
-                else if (isTwoTurnMove(event.effect))
-                {
-                    mon.volatile.twoTurn.start(event.effect);
                 }
                 else
                 {
@@ -159,6 +137,14 @@ export class BaseContext extends DriverContext implements BattleEventHandler
         }
     }
 
+    /** Updates a stat boost. */
+    public boost(event: events.Boost): void
+    {
+        const {boosts} = this.state.teams[event.monRef].active.volatile;
+        if (event.set) boosts[event.stat] = event.amount;
+        else boosts[event.stat] += event.amount;
+    }
+
     /** Temporarily changes the pokemon's types. Also resets third type. */
     public changeType(event: events.ChangeType): void
     {
@@ -172,7 +158,7 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     {
         for (const side of Object.keys(this.state.teams) as Side[])
         {
-            for (const stat of boostKeys)
+            for (const stat of dexutil.boostKeys)
             {
                 this.state.teams[side].active.volatile.boosts[stat] = 0;
             }
@@ -183,14 +169,20 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     public clearNegativeBoosts(event: events.ClearNegativeBoosts): void
     {
         const boosts = this.state.teams[event.monRef].active.volatile.boosts;
-        for (const stat of boostKeys) if (boosts[stat] < 0) boosts[stat] = 0;
+        for (const stat of dexutil.boostKeys)
+        {
+            if (boosts[stat] < 0) boosts[stat] = 0;
+        }
     }
 
     /** Clears temporary positive stat boosts from the pokemon. */
     public clearPositiveBoosts(event: events.ClearPositiveBoosts): void
     {
         const boosts = this.state.teams[event.monRef].active.volatile.boosts;
-        for (const stat of boostKeys) if (boosts[stat] > 0) boosts[stat] = 0;
+        for (const stat of dexutil.boostKeys)
+        {
+            if (boosts[stat] > 0) boosts[stat] = 0;
+        }
     }
 
     /** Clears self-switch flags for both teams. */
@@ -207,23 +199,14 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     {
         const from = this.state.teams[event.from].active.volatile.boosts;
         const to = this.state.teams[event.to].active.volatile.boosts;
-        for (const stat of boostKeys) to[stat] = from[stat];
+        for (const stat of dexutil.boostKeys) to[stat] = from[stat];
     }
 
     /** Explicitly updates status counters. */
     public countStatusEffect(event: events.CountStatusEffect): void
     {
-        const v = this.state.teams[event.monRef].active.volatile;
-        if (isBoostName(event.effect))
-        {
-            if (event.add) v.boosts[event.effect] += event.amount;
-            else v.boosts[event.effect] = event.amount;
-        }
-        else
-        {
-            if (event.add) v[event.effect] += event.amount;
-            else v[event.effect] = event.amount;
-        }
+        this.state.teams[event.monRef].active.volatile[event.effect] =
+            event.amount;
     }
 
     /** Indicates a critical hit of a move on a pokemon. */
@@ -274,6 +257,24 @@ export class BaseContext extends DriverContext implements BattleEventHandler
         // TODO: should gender also be in the traits object?
         mon.gender = event.gender;
         mon.hp.set(event.hp, event.hpMax);
+    }
+
+    /** Prepares or releases a future move. */
+    public futureMove(event: events.FutureMove): void
+    {
+        if (event.start)
+        {
+            // starting a future move mentions the user
+            this.state.teams[event.monRef].status
+                .futureMoves[event.move].start(/*restart*/false);
+        }
+        else
+        {
+            // ending a future move mentions the target before
+            //  taking damage
+            this.state.teams[otherSide(event.monRef)].status
+                .futureMoves[event.move].end();
+        }
     }
 
     /** Indicates that the game has ended. */
@@ -336,8 +337,8 @@ export class BaseContext extends DriverContext implements BattleEventHandler
             {
                 // istanbul ignore if
                 if (!data.stats.hasOwnProperty(stat)) continue;
-                mon.traits.stats[stat as StatExceptHP]
-                    .set(data.stats[stat as StatExceptHP]);
+                mon.traits.stats[stat as dexutil.StatExceptHP]
+                    .set(data.stats[stat as dexutil.StatExceptHP]);
             }
             mon.traits.setAbility(data.baseAbility);
             // TODO: handle case where there's no item? change typings or
@@ -353,7 +354,7 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     public invertBoosts(event: events.InvertBoosts): void
     {
         const boosts = this.state.teams[event.monRef].active.volatile.boosts;
-        for (const stat of boostKeys) boosts[stat] = -boosts[stat];
+        for (const stat of dexutil.boostKeys) boosts[stat] = -boosts[stat];
     }
 
     /** Indicates that the pokemon is taking aim due to Lock-On. */
@@ -395,6 +396,13 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     public postTurn(event: events.PostTurn): void
     {
         this.state.postTurn();
+    }
+
+    /** Prepares a two-turn move. */
+    public prepareMove(event: events.PrepareMove): void
+    {
+        this.state.teams[event.monRef].active.volatile.twoTurn
+            .start(event.move);
     }
 
     /** Indicates that the turn is about to begin. */

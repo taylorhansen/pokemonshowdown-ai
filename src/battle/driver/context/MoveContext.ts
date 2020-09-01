@@ -12,8 +12,7 @@ import { SwitchContext } from "./SwitchContext";
 
 type StatusEffectMapKey =
     Exclude<events.StatusEffectType,
-        dexutil.MajorStatus | dex.FutureMove | dex.TwoTurnMove | "slowStart" |
-            "roost" | "rage" | "uproar">;
+        dexutil.MajorStatus | "slowStart" | "roost" | "rage" | "uproar">;
 
 // tslint:disable: no-trailing-whitespace (force newlines in doc)
 /**
@@ -738,7 +737,7 @@ export class MoveContext extends DriverContext
             case "slowStart":
                 return "expire";
             default:
-                // TODO: track more move effects: major status, future move
+                // TODO: major status
                 return "base";
         }
     }

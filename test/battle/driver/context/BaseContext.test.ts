@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { isBoostName, isWeatherType, StatExceptHP, statsExceptHP, Type } from
-    "../../../../src/battle/dex/dex-util";
+import * as dexutil from "../../../../src/battle/dex/dex-util";
 import * as events from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
@@ -78,7 +77,7 @@ describe("BaseContext", function()
         {
             function test(name: string, effect: events.FieldEffectType)
             {
-                if (isWeatherType(effect))
+                if (dexutil.isWeatherType(effect))
                 {
                     throw new Error("Weather not supported here");
                 }
@@ -243,45 +242,6 @@ describe("BaseContext", function()
                     expect(mon.majorStatus.current).to.equal("frz");
                 });
             });
-
-            describe("future move", function()
-            {
-                it("Should prepare and release future move", function()
-                {
-                    const ts = state.teams.us.status;
-                    // prepare the move, mentioning the user
-                    handle(
-                    {
-                        type: "activateStatusEffect", monRef: "us",
-                        effect: "doomdesire", start: true
-                    });
-                    expect(ts.futureMoves.doomdesire.isActive).to.be.true;
-
-                    // release the move, mentioning the target
-                    handle(
-                    {
-                        type: "activateStatusEffect", monRef: "them",
-                        effect: "doomdesire", start: false
-                    });
-                    expect(ts.futureMoves.futuresight.isActive).to.be.false;
-                });
-            });
-
-            describe("two-turn move", function()
-            {
-                it("Should prepare two-turn move", function()
-                {
-                    const vts = initActive("them").volatile.twoTurn;
-                    handle(
-                    {
-                        type: "activateStatusEffect", monRef: "them",
-                        effect: "dive", start: true
-                    });
-
-                    expect(vts.isActive).to.be.true;
-                    expect(vts.type).to.equal("dive");
-                });
-            });
         });
 
         describe("activateTeamEffect", function()
@@ -380,12 +340,44 @@ describe("BaseContext", function()
             testEffect("Tailwind", "tailwind", ts => ts.tailwind.isActive);
         });
 
+        describe("boost", function()
+        {
+            it("Should add boost", function()
+            {
+                const {boosts} = initActive("us").volatile;
+                boosts.atk = 1;
+                handle({type: "boost", monRef: "us", stat: "atk", amount: 2});
+                expect(boosts.atk).to.equal(3);
+            });
+
+            it("Should subtract boost", function()
+            {
+                const {boosts} = initActive("us").volatile;
+                boosts.spe = 6;
+                handle({type: "boost", monRef: "us", stat: "spe", amount: -2});
+                expect(boosts.spe).to.equal(4);
+            });
+
+            it("Should set boost", function()
+            {
+                const {boosts} = initActive("us").volatile;
+                boosts.evasion = -2;
+                handle(
+                {
+                    type: "boost", monRef: "us", stat: "evasion", amount: 4,
+                    set: true
+                });
+                expect(boosts.evasion).to.equal(4);
+            });
+        });
+
         describe("changeType", function()
         {
             it("Should change types", function()
             {
                 const mon = initActive("us");
-                const newTypes: [Type, Type] = ["bug", "dragon"];
+                const newTypes: [dexutil.Type, dexutil.Type] =
+                    ["bug", "dragon"];
                 handle({type: "changeType", monRef: "us", newTypes});
                 expect(mon.types).to.deep.equal(newTypes);
             });
@@ -475,27 +467,21 @@ describe("BaseContext", function()
         describe("countStatusEffect", function()
         {
             function test(name: string,
-                effect: events.CountableStatusEffectType, add = false): void
+                effect: events.CountableStatusEffectType): void
             {
                 it(`Should update ${name} count`, function()
                 {
                     const v = initActive("us").volatile;
-                    if (isBoostName(effect)) v.boosts[effect] = 1;
-                    else v[effect] = 1;
+                    v[effect] = 1;
                     handle(
                     {
                         type: "countStatusEffect", monRef: "us", effect,
-                        amount: 2, add
+                        amount: 2
                     });
-                    if (isBoostName(effect))
-                    {
-                        expect(v.boosts[effect]).to.equal(add ? 3 : 2);
-                    }
-                    else expect(v[effect]).to.equal(add ? 3 : 2);
+                    expect(v[effect]).to.equal(2);
                 });
             }
 
-            test("boost", "atk", /*add*/true)
             test("Perish Song", "perish");
             test("Stockpile", "stockpile");
         });
@@ -598,6 +584,29 @@ describe("BaseContext", function()
                 });
 
                 expect(mon.species).to.equal("gyarados");
+            });
+        });
+
+        describe("futureMove", function()
+        {
+            it("Should prepare and release future move", function()
+            {
+                const ts = state.teams.us.status;
+                // prepare the move, mentioning the user
+                handle(
+                {
+                    type: "futureMove", monRef: "us", move: "doomdesire",
+                    start: true
+                });
+                expect(ts.futureMoves.doomdesire.isActive).to.be.true;
+
+                // release the move, mentioning the target
+                handle(
+                {
+                    type: "futureMove", monRef: "them", move: "doomdesire",
+                    start: false
+                });
+                expect(ts.futureMoves.futuresight.isActive).to.be.false;
             });
         });
 
@@ -767,8 +776,8 @@ describe("BaseContext", function()
                         expect(mon.hp.current).to.equal(data.hp);
                         expect(mon.hp.max).to.equal(data.hpMax);
                         // then check other stats
-                        for (const stat of Object.keys(statsExceptHP) as
-                            StatExceptHP[])
+                        for (const stat of Object.keys(dexutil.statsExceptHP) as
+                            dexutil.StatExceptHP[])
                         {
                             expect(table[stat].hp).to.be.false;
                             expect(table[stat].min).to.equal(data.stats[stat]);
@@ -954,6 +963,18 @@ describe("BaseContext", function()
             it("TODO", function()
             {
                 handle({type: "preTurn"});
+            });
+        });
+
+        describe("prepareMove", function()
+        {
+            it("Should prepare two-turn move", function()
+            {
+                const vts = initActive("them").volatile.twoTurn;
+                handle({type: "prepareMove", monRef: "them",move: "dive"});
+
+                expect(vts.isActive).to.be.true;
+                expect(vts.type).to.equal("dive");
             });
         });
 
