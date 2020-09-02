@@ -176,198 +176,40 @@ export class MoveContext extends DriverContext
             case "stall":
                 if (event.endure) return "base";
                 // fallthrough
-            case "immune":
-            case "miss":
+            case "immune": case "miss":
                 // generally a complete miss fails the move
                 // TODO: partial misses (requires doubles support)
                 this.handleImplicitEffects(/*failed*/true);
                 return this.addTarget(event.monRef);
-            case "transform":
-                if (this.userRef !== event.source) return "expire";
-                return this.addTarget(event.target);
-            case "faint":
-            {
-                // handle self-faint effects from healingWish/lunarDance
-                // TODO(gen>4): consume healingWish/lunarDance since replacement
-                //  is no longer sent out immediately
-                let wishing = false;
-                if (this.self?.team === "healingWish")
-                {
-                    this.state.teams[this.userRef].status.healingWish = true;
-                    wishing = true;
-                }
-                else if (this.self?.team === "lunarDance")
-                {
-                    this.state.teams[this.userRef].status.lunarDance = true;
-                    wishing = true;
-                }
-                // gen4: replacement is sent out immediately, so communicate
-                //  that by setting self-switch
-                if (wishing)
-                {
-                    if (!this.primary) this.primary = {selfSwitch: true};
-                    else this.primary.selfSwitch = true;
-                }
-
-                // if the target fainted, some effects have to be canceled
-                const effect = event.monRef === this.userRef ?
-                    this.self : this.hit;
-                if (effect)
-                {
-                    // exclude team effects
-                    effect.status = null;
-                    effect.unique = null;
-                    effect.implicitStatus = null;
-                    effect.boost = null;
-                    effect.secondary = null;
-                }
-                // TODO: handle self-destruct moves
-                // fallthrough
-            }
-            // TODO: other target-mentioning events?
-            case "crit": case "resisted": case "superEffective":
-            case "takeDamage":
-                return this.addTarget(event.monRef);
             // handle move expectations/flags
-            case "useMove":
-                // if we're not expecting a move to be called, treat this as a
-                //  normal move event
-                if (!this.primary?.call) return "expire";
-
-                switch (this.primary?.call)
-                {
-                    case "self":
-                        // calling a move that is part of the user's moveset
-                        if (this.userRef !== event.monRef ||
-                            this.addTarget(this.userRef) === "expire")
-                        {
-                            return "expire";
-                        }
-                        this.user.moveset.reveal(event.move);
-                        break;
-                    case "target":
-                    {
-                        const targetRef = otherSide(this.userRef);
-                        if (this.userRef !== event.monRef ||
-                            this.addTarget(targetRef) === "expire")
-                        {
-                            return "expire";
-                        }
-                        this.state.teams[targetRef].active.moveset
-                            .reveal(event.move);
-                        break;
-                    }
-                }
-
-                this.primary.call = null;
-
-                // make sure this is handled like a called move
-                return new MoveContext(this.state, event,
-                    this.logger.addPrefix(`Move(${event.monRef}, ` +
-                        `${event.move}, called): `),
-                    /*called*/true);
-            case "switchIn":
-                // consume self-switch flag
-                if (this.userRef !== event.monRef ||
-                    !this.primary?.selfSwitch)
-                {
-                    return "expire";
-                }
-                const selfSwitch = this.primary.selfSwitch;
-                this.primary.selfSwitch = null;
-
-                // handle the switch in the context of this move
-                return new SwitchContext(this.state, event,
-                    this.logger.addPrefix(`Switch(${event.monRef}, ` +
-                        `${event.species}, self` +
-                        (selfSwitch === "copyvolatile" ? ", copy" : "") +
-                        "): "));
             case "activateAbility":
                 return new AbilityContext(this.state, event,
                     this.logger.addPrefix(`Ability(${event.monRef}, ` +
                         `${event.ability}): `));
-            case "activateFieldEffect":
-                return this.activateFieldEffect(event);
+            case "activateFieldEffect": return this.activateFieldEffect(event);
             case "activateStatusEffect":
                 return this.activateStatusEffect(event);
-            case "activateTeamEffect":
-                return this.activateTeamEffect(event);
-            case "boost":
-                return this.boost(event);
-            case "changeType":
-                if (this.consumeEffect(this.self, "unique", "conversion"))
-                {
-                    // changes the user's type into that of a known move
-                    this.user.moveset.addMoveSlotConstraint(
-                        dex.typeToMoves[event.newTypes[0]]);
-                }
-                return "base";
+            case "activateTeamEffect": return this.activateTeamEffect(event);
+            case "boost": return this.boost(event);
+            case "changeType": return this.changeType(event);
             case "clearSelfSwitch": case "gameOver": case "inactive":
             case "preTurn": case "postTurn": case "updateFieldEffect":
+                // TODO: other unrelated events?
                 return "expire";
-            case "countStatusEffect":
-                switch (event.effect)
-                {
-                    case "perish":
-                        // event is sent for each pokemon targeted by the perish
-                        //  song move, so it's difficult to pinpoint who exactly
-                        //  it will hit for now
-                        // TODO: a better solution would be to use the
-                        //  `|-fieldactivate|` event (#138) to consume the
-                        //  status, then rely on end-of-turn events for updating
-                        //  the counters
-                        this.consumeEffect(this.primary, "countableStatus",
-                            "perish");
-                        break;
-                    case "stockpile":
-                        if (!this.consumeEffect(this.primary, "countableStatus",
-                            "stockpile"))
-                        {
-                            return "expire";
-                        }
-                        break;
-                }
-                return "base";
-            case "futureMove":
-                if (!event.start) return "expire";
-                if (!dex.isFutureMove(this.moveName))
-                {
-                    throw new Error(`Invalid future move ${this.moveName}`);
-                }
-                if (!this.consumeEffect(this.primary, "delay", "future"))
-                {
-                    return "expire";
-                }
-                return "base";
-            case "prepareMove":
-                if (!dex.isTwoTurnMove(this.moveName))
-                {
-                    throw new Error(`Invalid future move ${this.moveName}`);
-                }
-                if (!this.consumeEffect(this.primary, "delay", "twoTurn"))
-                {
-                    return "expire";
-                }
-                return "base";
-            case "swapBoosts":
-                if (![event.monRef1, event.monRef2].includes(this.userRef))
-                {
-                    return "expire";
-                }
-                // didn't expect event
-                if (!this.primary?.swapBoost) return "expire";
-                // didn't expect wrong stats
-                if (event.stats.some(stat => !this.primary!.swapBoost![stat]))
-                {
-                    return "expire";
-                }
-                // consume matching flags
-                for (const stat of event.stats)
-                {
-                    this.primary.swapBoost[stat] = null;
-                }
-                return this.addTarget(event.monRef1 === this.userRef ?
-                    event.monRef2 : event.monRef1);
+            case "countStatusEffect": return this.countStatusEffect(event);
+            case "crit": case "resisted": case "superEffective":
+            case "takeDamage":
+                // TODO: other target-mentioning events?
+                return this.addTarget(event.monRef);
+            case "faint": return this.faint(event);
+            case "futureMove": return this.futureMove(event);
+            case "prepareMove": return this.prepareMove(event);
+            case "swapBoosts": return this.swapBoosts(event);
+            case "switchIn": return this.switchIn(event);
+            case "transform":
+                if (this.userRef !== event.source) return "expire";
+                return this.addTarget(event.target);
+            case "useMove": return this.useMove(event);
             // let the default context handle the event
             // TODO: should erroneous events cause a throw or expire?
             default: return "base";
@@ -599,10 +441,7 @@ export class MoveContext extends DriverContext
         if (this.pendingTargets[opponent]) this.addTarget(opponent);
         if (this.pendingTargets[this.userRef]) this.addTarget(this.userRef);
 
-        if (this.moveName === "naturalgift")
-        {
-            this.naturalGift(failed);
-        }
+        if (this.moveName === "naturalgift") this.naturalGift(failed);
 
         // reset stall counter if it wasn't updated this turn
         if (!this.called && !this.user.volatile.stalling)
@@ -614,10 +453,7 @@ export class MoveContext extends DriverContext
         {
             // handle fail inferences
             // the failed=false side of this is handled by a separate event
-            if (this.self?.status === "imprison")
-            {
-                this.imprison(/*failed*/true);
-            }
+            if (this.self?.status === "imprison") this.imprison(/*failed*/true);
 
             // clear pending flags
             this.primary = null;
@@ -726,8 +562,9 @@ export class MoveContext extends DriverContext
     private imprison(failed: boolean): void
     {
         // assume us is fully known, while them is unknown
+        // TODO: what if both are unknown?
         const us = this.state.teams.us.active.moveset;
-        const usMoves = [...us.moves].map(([name]) => name);
+        const usMoves = [...us.moves.keys()];
         const them = this.state.teams.them.active.moveset;
 
         if (failed)
@@ -977,5 +814,195 @@ export class MoveContext extends DriverContext
         // TODO: complete full tracking, then allow expire
         // return "expire";
         return "base";
+    }
+
+    /** Temporarily changes the pokemon's type. */
+    private changeType(event: events.ChangeType): ContextResult
+    {
+        if (this.consumeEffect(this.self, "unique", "conversion"))
+        {
+            // changes the user's type into that of a known move
+            this.user.moveset.addMoveSlotConstraint(
+                dex.typeToMoves[event.newTypes[0]]);
+        }
+        // TODO: track type change effects: camouflage, conversion2, colorchange
+        return "base";
+    }
+
+    private countStatusEffect(event: events.CountStatusEffect): ContextResult
+    {
+        switch (event.effect)
+        {
+            case "perish":
+                // event is sent for each pokemon targeted by the perish
+                //  song move, so it's difficult to pinpoint who exactly
+                //  it will hit for now
+                // TODO: a better solution would be to use the
+                //  `|-fieldactivate|` event (#138) to consume the
+                //  status (still letting BaseContext set the counters via this
+                //  event), then rely on end-of-turn events for updating the
+                //  counters
+                // TODO: infer soundproof if the counter doesn't take place at
+                //  the end of the turn
+                this.consumeEffect(this.primary, "countableStatus",
+                    "perish");
+                return "base";
+            case "stockpile":
+                if (!this.consumeEffect(this.primary, "countableStatus",
+                    "stockpile"))
+                {
+                    return "expire";
+                }
+                return "base";
+            default: return "expire";
+        }
+    }
+
+    /** Indicates that the pokemon fainted. */
+    private faint(event: events.Faint): ContextResult
+    {
+        // handle self-faint effects from healingWish/lunarDance
+        // TODO(gen>4): consume healingWish/lunarDance since replacement is no
+        //  longer sent out immediately
+        let wishing = false;
+        if (this.self?.team === "healingWish")
+        {
+            this.state.teams[this.userRef].status.healingWish = true;
+            wishing = true;
+        }
+        else if (this.self?.team === "lunarDance")
+        {
+            this.state.teams[this.userRef].status.lunarDance = true;
+            wishing = true;
+        }
+        // gen4: replacement is sent out immediately, so communicate that by
+        //  setting self-switch
+        if (wishing)
+        {
+            if (!this.primary) this.primary = {selfSwitch: true};
+            else this.primary.selfSwitch = true;
+        }
+
+        // if the target fainted, some effects have to be canceled
+        const effect = event.monRef === this.userRef ?
+            this.self : this.hit;
+        if (effect)
+        {
+            // exclude team effects
+            effect.status = null;
+            effect.unique = null;
+            effect.implicitStatus = null;
+            effect.boost = null;
+            effect.secondary = null;
+        }
+        // TODO: handle self-destruct moves
+        return this.addTarget(event.monRef);
+    }
+
+    private futureMove(event: events.FutureMove): ContextResult
+    {
+        if (!event.start) return "expire";
+        if (!dex.isFutureMove(this.moveName))
+        {
+            throw new Error(`Invalid future move ${this.moveName}`);
+        }
+        if (!this.consumeEffect(this.primary, "delay", "future"))
+        {
+            return "expire";
+        }
+        return "base";
+    }
+
+    private prepareMove(event: events.PrepareMove): ContextResult
+    {
+        if (!dex.isTwoTurnMove(this.moveName))
+        {
+            throw new Error(`Invalid future move ${this.moveName}`);
+        }
+        if (!this.consumeEffect(this.primary, "delay", "twoTurn"))
+        {
+            return "expire";
+        }
+        return "base";
+    }
+
+    /** Swaps temporary stat boosts between pokemon. */
+    private swapBoosts(event: events.SwapBoosts): ContextResult
+    {
+        // should be swapping with the user and a target
+        if (![event.monRef1, event.monRef2].includes(this.userRef))
+        {
+            return "expire";
+        }
+        // didn't expect event
+        if (!this.primary?.swapBoost) return "expire";
+        // didn't expect wrong stats
+        if (event.stats.some(stat => !this.primary!.swapBoost![stat]))
+        {
+            return "expire";
+        }
+        // consume matching flags
+        for (const stat of event.stats) this.primary.swapBoost[stat] = null;
+        return this.addTarget(event.monRef1 === this.userRef ?
+            event.monRef2 : event.monRef1);
+    }
+
+    /** Indicates that a pokemon has switched in. */
+    private switchIn(event: events.SwitchIn): ContextResult | DriverContext
+    {
+        // consume self-switch flag
+        if (this.userRef !== event.monRef ||
+            !this.primary?.selfSwitch)
+        {
+            return "expire";
+        }
+        const selfSwitch = this.primary.selfSwitch;
+        this.primary.selfSwitch = null;
+
+        // handle the switch in the context of this move
+        return new SwitchContext(this.state, event,
+            this.logger.addPrefix(`Switch(${event.monRef}, ${event.species}, ` +
+                `self${selfSwitch === "copyvolatile" ? ", copy" : ""}): `));
+    }
+
+    /** Indicates that the pokemon is attempting to use a move. */
+    private useMove(event: events.UseMove): ContextResult | DriverContext
+    {
+        // if we're not expecting a move to be called, treat this as a
+        //  normal move event
+        if (!this.primary?.call) return "expire";
+
+        switch (this.primary?.call)
+        {
+            case "self":
+                // calling a move that is part of the user's moveset
+                if (this.userRef !== event.monRef ||
+                    this.addTarget(this.userRef) === "expire")
+                {
+                    return "expire";
+                }
+                this.user.moveset.reveal(event.move);
+                break;
+            case "target":
+            {
+                const targetRef = otherSide(this.userRef);
+                if (this.userRef !== event.monRef ||
+                    this.addTarget(targetRef) === "expire")
+                {
+                    return "expire";
+                }
+                this.state.teams[targetRef].active.moveset
+                    .reveal(event.move);
+                break;
+            }
+        }
+
+        this.primary.call = null;
+
+        // make sure this is handled like a called move
+        return new MoveContext(this.state, event,
+            this.logger.addPrefix(`Move(${event.monRef}, ` +
+                `${event.move}, called): `),
+            /*called*/true);
     }
 }
