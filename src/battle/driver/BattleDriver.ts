@@ -24,6 +24,9 @@ export class BattleDriver
     protected get choices(): readonly Choice[] { return this._choices; }
     private _choices: Choice[] = [];
 
+    /** Logger passed to the BattleAgent. */
+    private readonly agentLogger = this.logger.addPrefix("BattleAgent: ");
+
     /**
      * Creates a BattleDriver.
      * @param agent Function that makes the decisions for this battle.
@@ -61,7 +64,8 @@ export class BattleDriver
         this.logger.debug(`Choices: [${this._choices.join(", ")}]`);
 
         // make initial decision
-        await this.agent(this.stateDriver.state, this._choices);
+        await this.agent(this.stateDriver.state, this._choices,
+            this.agentLogger);
         this.logger.debug(`Sorted choices: [${this._choices.join(", ")}]`);
 
         this.sender(this._choices[0]);
@@ -157,7 +161,8 @@ export class BattleDriver
         if (newInfo)
         {
             // re-sort choices based on new info
-            await this.agent(this.stateDriver.state, this._choices);
+            await this.agent(this.stateDriver.state, this._choices,
+                this.agentLogger);
             this.logger.debug(`Sorted choices: [${this._choices.join(", ")}]`);
         }
 

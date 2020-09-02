@@ -12,10 +12,12 @@ import { PSBot } from "./PSBot";
 // select native backend
 importTfn(/*gpu*/ process.argv[2] === "--gpu");
 
+const logger = Logger.stdout;
+
 (async function()
 {
     // create client object
-    const bot = new PSBot(Logger.stdout.addPrefix("PSBot: "));
+    const bot = new PSBot(logger.addPrefix("PSBot: "));
 
     // configure client to login once connected
     if (username) bot.login({username, password, loginServer});
@@ -35,5 +37,5 @@ importTfn(/*gpu*/ process.argv[2] === "--gpu");
     bot.acceptChallenges("gen4randombattle",
         (room, user, sender) =>
             new PSBattle(user, agent, sender,
-                Logger.stdout.addPrefix(`PSBattle(${room}): `)));
+                logger.addPrefix(`PSBattle(${room}): `)));
 })();

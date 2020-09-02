@@ -18,8 +18,8 @@ export abstract class ExperienceBattleDriver extends BattleDriver
     constructor(agent: ExperienceAgent, sender: ChoiceSender, logger: Logger)
     {
         super(
-            async (state, choices) =>
-                this.expAgentData = await agent(state, choices),
+            async (state, choices, agentLogger) =>
+                this.expAgentData = await agent(state, choices, agentLogger),
             sender, logger);
     }
 

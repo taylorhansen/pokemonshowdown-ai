@@ -1,6 +1,7 @@
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { Choice, choiceIds } from "../battle/agent/Choice";
 import { ReadonlyBattleState } from "../battle/state/BattleState";
+import { Logger } from "../Logger";
 import { weightedShuffle } from "./helpers";
 
 /**
@@ -9,23 +10,40 @@ import { weightedShuffle } from "./helpers";
  */
 export type PolicyType = "deterministic" | "stochastic";
 
-/** Function type for sorters. Both arrays must have the same length. */
-type Sorter = (logits: Float32Array, choices: Choice[]) => void;
+/**
+ * Function type for sorters.
+ * @param logits Weights of each choice, in order of `choiceIds`.
+ * @param choices Available choices to choose from. The function should sort
+ * this array in-place.
+ * @param logger Optional logger object.
+ * @see choiceIds
+ */
+type Sorter =
+    (logits: Float32Array, choices: Choice[], logger?: Logger) => void;
 /** Choice sorters for each PolicyType. */
 const sorters: {readonly [T in PolicyType]: Sorter} =
 {
-    deterministic(logits, choices)
+    deterministic(logits, choices, logger)
     {
+        logger?.debug("Ranked choices: {" +
+            choices.map(c => c + ": " + logits[choiceIds[c]].toPrecision(5))
+                .join(", ") + "}");
         choices.sort((a, b) =>
             logits[choiceIds[b]] - logits[choiceIds[a]]);
     },
-    stochastic(logits, choices)
+    stochastic(logits, choices, logger)
     {
         const filteredLogits = choices.map(c => logits[choiceIds[c]]);
+
         // apply softmax function to get a probability distribution
         const expLogits = filteredLogits.map(Math.exp);
         const sumExpLogits = expLogits.reduce((a, b) => a + b, 0);
         const weights = expLogits.map(n => n / sumExpLogits);
+
+        logger?.debug("Ranked choices: {" +
+            choices.map((c, i) => `${c}: ${(weights[i] * 100).toFixed(0)}%`)
+                .join(", ") + "}");
+
         weightedShuffle(weights, choices);
     }
 };
@@ -38,16 +56,18 @@ const sorters: {readonly [T in PolicyType]: Sorter} =
  * probability.
  * `stochastic` - Choose the action semi-randomly based on a discrete
  * probability distribution derived from the decision data.
+ * @returns A suitable BattleAgent for running the policy.
  */
 export function policyAgent(
     getLogits: (state: ReadonlyBattleState) =>
-            Float32Array | Promise<Float32Array>, type: PolicyType): BattleAgent
+            Float32Array | Promise<Float32Array>,
+    type: PolicyType): BattleAgent
 {
     const sorter = sorters[type];
-    return async function(state: ReadonlyBattleState, choices: Choice[]):
-        Promise<void>
+    return async function(state: ReadonlyBattleState, choices: Choice[],
+        logger?: Logger): Promise<void>
     {
         const logits = await getLogits(state);
-        sorter(logits, choices);
+        sorter(logits, choices, logger);
     };
 }

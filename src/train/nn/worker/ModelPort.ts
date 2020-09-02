@@ -63,9 +63,9 @@ export class ModelPort extends
             },
             policy);
 
-        return async (state, choices) =>
+        return async function portAgent(state, choices, logger)
         {
-            await innerAgent(state, choices);
+            await innerAgent(state, choices, logger);
             if (!data)
             {
                 throw new Error("ModelPort agent didn't collect experience " +

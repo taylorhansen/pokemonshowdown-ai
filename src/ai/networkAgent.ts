@@ -20,15 +20,15 @@ export type NetworkData =
  * `policyAgent()` for configuring action selection.
  * @param model The neural network.
  * @param policy Action selection method. See `policyAgent()` for details.
- * @param logger Optional. Observes the tensor inputs and outputs of the neural
- * network. This function will own the tensors, so it should take care of
+ * @param callback Optional. Observes the tensor inputs and outputs of the
+ * neural network. This function will own the tensors, so it should take care of
  * disposing them.
  * @throws Error if the given model does not have the right input and output
  * shapes.
  * @see policyAgent
  */
 export function networkAgent(model: tf.LayersModel, policy: PolicyType,
-    logger: (data: NetworkData) => void = tf.dispose):
+    callback: (data: NetworkData) => void = tf.dispose):
     BattleAgent
 {
     verifyModel(model);
@@ -46,7 +46,7 @@ export function networkAgent(model: tf.LayersModel, policy: PolicyType,
                 return [actLogits.as1D(), stateValue.asScalar()];
             });
             const logitsData = await logitsTensor.data() as Float32Array;
-            logger(
+            callback(
                 {state: stateTensor, logits: logitsTensor, value: valueTensor});
             return logitsData;
         },
