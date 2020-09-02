@@ -5,18 +5,17 @@
 import { ModdedDex } from "../pokemon-showdown/sim/dex";
 import { Species } from "../pokemon-showdown/sim/dex-data";
 import "../pokemon-showdown/sim/global-types";
-import { MoveData, MoveTarget, NaturalGiftData, PokemonData, SelfSwitch,
-    SelfVolatileEffect, SideCondition, Type, VolatileEffect } from
-    "../src/battle/dex/dex-util";
+import * as dexutil from "../src/battle/dex/dex-util";
+import { DeepWritable } from "../src/battle/driver/context/helpers";
 import { toIdName } from "../src/psbot/helpers";
 
 // TODO: support other gens?
 const dex = new ModdedDex("gen4").includeData();
 
 /**
- * Pre-compiled regex for checking whether a pokemon id name is not supported by
- * gen4 (e.g. megas, regional variants, etc). Actual pokedex differences,
- * however, must be handled separately.
+ * Regex for checking whether a pokemon id name is not supported by gen4 (e.g.
+ * megas, regional variants, etc). Actual pokedex differences, however, must be
+ * handled separately.
  */
 const nonGen4Regex =
     /(^(arceusfairy|((pikachu|eevee).+))$)|(((?<!yan)mega[xy]?)|primal|alola|totem|galar|gmax)$/;
@@ -76,15 +75,130 @@ let uid = 0;
 
 // moves
 
-const moves: (readonly [string, MoveData])[] = [];
+const moves: (readonly [string, dexutil.MoveData])[] = [];
+
+/** Maps some move names to CallEffects. */
+const callEffectMap: {readonly [move: string]: dexutil.CallEffect} =
+{
+    assist: true, copycat: true, mefirst: "target", metronome: true,
+    mirrormove: true, naturepower: true, sleeptalk: "self"
+};
+
+/** Maps some move names to swap boost effects. */
+const swapBoostMap:
+    {readonly [move: string]: {readonly [T in BoostName]?: true}} =
+{
+    // swapboost moves
+    guardswap: {def: true, spd: true},
+    heartswap:
+    {
+        atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true,
+        evasion: true
+    },
+    powerswap: {atk: true, spa: true}
+};
+
+/** Maps some move names to CountableStatusEffects. */
+const countableStatusEffectMap:
+    {readonly [move: string]: dexutil.CountableStatusEffect} =
+{
+    perishsong: "perish", stockpile: "stockpile"
+};
+
+/** Maps some move names to FieldEffects. */
+const fieldEffectMap: {readonly [move: string]: dexutil.FieldEffect} =
+{
+    // weathers
+    sunnyday: "SunnyDay", raindance: "RainDance", sandstorm: "Sandstorm",
+    hail: "Hail",
+    // pseudo-weathers
+    gravity: "gravity", trickroom: "trickRoom"
+};
+
+/** Maps some move names to StatusEffects. */
+const statusEffectMap: {readonly [move: string]: dexutil.StatusEffect} =
+{
+    // TODO: followme, helpinghand, partiallytrapped, telekinesis (gen5)
+    // normal statuses
+    aquaring: "aquaRing", attract: "attract", charge: "charge", curse: "curse",
+    embargo: "embargo", encore: "encore", focusenergy: "focusEnergy",
+    foresight: "foresight", healblock: "healBlock", imprison: "imprison",
+    ingrain: "ingrain", leechseed: "leechSeed", magnetrise: "magnetRise",
+    miracleeye: "miracleEye", mudsport: "mudSport", nightmare: "nightmare",
+    powertrick: "powerTrick", substitute: "substitute",
+    gastroacid: "suppressAbility", taunt: "taunt", torment: "torment",
+    watersport: "waterSport", yawn: "yawn",
+    // updatable
+    confusion: "confusion", bide: "bide", uproar: "uproar",
+    // singlemove
+    destinybond: "destinyBond", grudge: "grudge", rage: "rage",
+    // singleturn
+    endure: "endure", magiccoat: "magicCoat", protect: "protect",
+    roost: "roost", snatch: "snatch",
+    // major status
+    brn: "brn",  frz: "frz", par: "par", psn: "psn", slp: "slp", tox: "tox"
+};
+
+/** Maps some move names to ImplicitStatusEffects. */
+const implicitStatusEffectMap:
+    {readonly [move: string]: dexutil.ImplicitStatusEffect} =
+{
+    defensecurl: "defenseCurl", lockedmove: "lockedMove", minimize: "minimize",
+    mustrecharge: "mustRecharge"
+};
+
+/** Maps some move names to BoostEffects. */
+const boostEffectMap:
+    {readonly [move: string]: dexutil.BoostEffect} =
+{
+    // setboost moves
+    bellydrum: {set: {atk: 6}}
+};
+
+/** Maps some move names to TeamEffects. */
+const teamEffectMap: {readonly [move: string]: dexutil.TeamEffect} =
+{
+    healingwish: "healingWish", lightscreen: "lightScreen",
+    luckychant: "luckyChant", lunardance: "lunarDance", mist: "mist",
+    reflect: "reflect", safeguard: "safeguard", spikes: "spikes",
+    stealthrock: "stealthRock", tailwind: "tailwind",
+    toxicspikes: "toxicSpikes"
+    // TODO: auroraveil (gen6), stickyweb (gen6)
+};
+
+/** Maps some move names to ImplicitTeamEffects. */
+const implicitTeamEffectMap:
+    {readonly [move: string]: dexutil.ImplicitTeamEffect} = {wish: "wish"};
+
+/** Maps some VolatileEffects to UniqueEffects. */
+const uniqueEffectMap: {readonly [move: string]: dexutil.UniqueEffect} =
+{
+    conversion: "conversion", disable: "disable"
+};
+
+function addEffect<TKey extends string, TEffect extends any>(
+    move: string, effects: {[K in TKey]?: TEffect}, key: TKey,
+    map: {readonly [k: string]: TEffect}, effect: string): boolean
+{
+    if (!map.hasOwnProperty(effect)) return false;
+    if (effects.hasOwnProperty(key))
+    {
+        if (effects[key] === map[effect]) return true; // no-op
+        throw new Error(`Move '${move}' already has ${key} '${effects[key]}' ` +
+            `but trying to add '${effect}'`);
+    }
+    effects[key] = map[effect];
+    return true;
+}
 
 const futureMoves: string[] = [];
 const lockedMoves: string[] = [];
 const twoTurnMoves: string[] = [];
+const moveCallers: [string, dexutil.CallEffect][] = [];
 
 const sketchableMoves: string[] = [];
 
-const typeToMoves: {[T in Type]: string[]} =
+const typeToMoves: {[T in dexutil.Type]: string[]} =
 {
     bug: [], dark: [], dragon: [], fire: [], flying: [], ghost: [],
     electric: [], fighting: [], grass: [], ground: [], ice: [], normal: [],
@@ -98,64 +212,183 @@ for (const move of
         .filter(isGen4Move)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
-    const target = move.target as MoveTarget;
+    typeToMoves[move.type.toLowerCase() as dexutil.Type].push(move.id);
+    if (!move.noSketch) sketchableMoves.push(move.id);
+
+    const target = move.target;
 
     // factor pp boosts if the move supports it in game
     const pp = [move.pp, move.pp] as [number, number];
     if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
 
-    const selfSwitch = move.selfSwitch as SelfSwitch;
+    // get mirror move flag
+    const mirror = move.flags.mirror === 1;
 
-    let volatileEffect: VolatileEffect | undefined;
-    if (move.volatileStatus)
+    // setup primary effects
+
+    const primary: DeepWritable<dexutil.PrimaryEffect> = {};
+
+    if (move.selfSwitch)
     {
-        volatileEffect = move.volatileStatus as VolatileEffect;
+        primary.selfSwitch = move.selfSwitch as dexutil.SelfSwitch;
     }
 
-    let selfVolatileEffect: SelfVolatileEffect | undefined;
-    if (move.self && move.self.volatileStatus)
+    addEffect(move.id, primary, "call", callEffectMap, move.id);
+    // add to move callers dict
+    if (callEffectMap.hasOwnProperty(move.id) &&
+        moveCallers.every(m => m[0] !== move.id))
     {
-        selfVolatileEffect = move.self.volatileStatus as SelfVolatileEffect;
-        // locking moves are also recorded in a different object
-        if (move.self.volatileStatus === "lockedmove")
+        moveCallers.push([move.id, callEffectMap[move.id]])
+    }
+
+    addEffect(move.id, primary, "swapBoost", swapBoostMap, move.id);
+
+    addEffect(move.id, primary, "countableStatus",
+        countableStatusEffectMap, move.id);
+
+    addEffect(move.id, primary, "field", fieldEffectMap, move.id);
+    if (move.weather)
+    {
+        addEffect(move.id, primary, "field", fieldEffectMap,
+            toIdName(move.weather));
+    }
+    if (move.pseudoWeather)
+    {
+        addEffect(move.id, primary, "field", fieldEffectMap,
+            toIdName(move.pseudoWeather));
+    }
+
+    const self: DeepWritable<dexutil.MoveEffect> = {};
+    // TODO: also all?
+    const hit: DeepWritable<dexutil.MoveEffect> =
+        ["all", "allySide", "self"].includes(target) ? self : {};
+
+    function addEffects(effect: DeepWritable<dexutil.MoveEffect>,
+        psEffect: HitEffect): void
+    {
+        // TODO: more flags: weather effects, multi-hit, recoil, etc
+        // boost
+        addEffect(move.id, effect, "boost", boostEffectMap, move.id);
+        if (psEffect.boosts)
         {
-            lockedMoves.push(move.id);
+            if (!effect.boost) effect.boost = {};
+            if (effect.boost.add)
+            {
+                throw new Error(`Conflict ${move.id} with boostEffect.add`);
+            }
+            effect.boost.add = psEffect.boosts;
+        }
+
+        // single-target statuses
+        for (const effectName of
+        [
+            move.id,
+            ...(psEffect.volatileStatus && [psEffect.volatileStatus] || []),
+            ...(psEffect.status && [psEffect.status] || [])
+        ])
+        {
+            addEffect(move.id, effect, "status", statusEffectMap,
+                effectName);
+            addEffect(move.id, effect, "unique", uniqueEffectMap,
+                effectName);
+            addEffect(move.id, effect, "implicitStatus",
+                implicitStatusEffectMap, effectName)
+            // add to lockedmove dict
+            if (effectName === "lockedmove" && !lockedMoves.includes(move.id))
+            {
+                lockedMoves.push(move.id);
+            }
+        }
+
+        for (const effectName of
+        [
+            move.id,
+            ...(psEffect.sideCondition && [psEffect.sideCondition] || []),
+            ...(psEffect.slotCondition && [psEffect.slotCondition] || [])
+        ])
+        {
+            addEffect(move.id, effect, "team", teamEffectMap,
+                effectName);
+            addEffect(move.id, effect, "implicitTeam",
+                implicitTeamEffectMap, effectName);
         }
     }
 
-    let sideCondition: SideCondition | undefined;
-    if (move.sideCondition)
+    addEffects(hit, move);
+    if (move.self) addEffects(self, move.self);
+
+    // two turn/future moves are also recorded in a different object in addition
+    //  to containing a flag
+    if (move.isFutureMove)
     {
-        sideCondition = toIdName(move.sideCondition) as SideCondition;
+        addEffect(move.id, primary, "delay", {[move.id]: "future"}, move.id);
+        futureMoves.push(move.id);
+    }
+    if (move.flags.charge === 1)
+    {
+        // TODO: add effect for skullbash raising def on prepare
+        // TODO: add flag for solarbeam shortening during sun
+        addEffect(move.id, primary, "delay", {[move.id]: "twoTurn"}, move.id);
+        twoTurnMoves.push(move.id);
     }
 
-    const mirror = move.flags.mirror === 1;
+    const psSecondaries = move.secondaries ??
+        (move.secondary && [move.secondary] || []);
+    for (const psSecondary of psSecondaries)
+    {
+        const secondary: DeepWritable<dexutil.SecondaryEffect> =
+            {...(psSecondary.chance && {chance: psSecondary.chance})};
+        const psHitEffect = psSecondary.self ? psSecondary.self : psSecondary;
 
-    // two turn/future moves are also recorded in a different object
-    if (move.flags.charge === 1) twoTurnMoves.push(move.id);
-    if (move.isFutureMove) futureMoves.push(move.id);
+        // add secondary effects
+        let add = false;
+        if (psHitEffect.boosts)
+        {
+            secondary.boosts = psHitEffect.boosts;
+            add = true;
+        }
+        if (psHitEffect.volatileStatus)
+        {
+            if (psHitEffect.volatileStatus === "flinch")
+            {
+                secondary.flinch = add = true;
+            }
+            else
+            {
+                add = addEffect(move.id, secondary, "status",
+                    statusEffectMap, psHitEffect.volatileStatus);
+            }
+        }
+        if (psHitEffect.status)
+        {
+            add = addEffect(move.id, secondary, "status", statusEffectMap,
+                psHitEffect.status);
+        }
 
-    if (!move.noSketch) sketchableMoves.push(move.id);
-
-    typeToMoves[move.type.toLowerCase() as Type].push(move.id);
+        // add to move data
+        if (!add) continue;
+        const effect = psSecondary.self ? self : hit;
+        (effect.secondary ?? (effect.secondary = [])).push(secondary);
+    }
 
     moves[uid] =
     [
         move.id,
         {
-            uid, name: move.id, display: move.name, pp, target, mirror,
-            ...(selfSwitch && {selfSwitch}),
-            ...(volatileEffect && {volatileEffect}),
-            ...(selfVolatileEffect && {selfVolatileEffect}),
-            ...(sideCondition && {sideCondition})
+            uid, name: move.id, display: move.name, target, pp, mirror,
+            ...(Object.keys(primary).length && {primary}),
+            ...(Object.keys(self).length && {self}),
+            ...(self !== hit && Object.keys(hit).length && {hit})
         }
     ];
     ++uid;
 }
 
+// guarantee order
 futureMoves.sort();
 lockedMoves.sort();
 twoTurnMoves.sort();
+moveCallers.sort((a, b) => a[0] < b[0] ? -1 : +(a[0] > b[0]));
 
 // pokemon and abilities
 
@@ -214,7 +447,7 @@ function composeMovepool(species: Species, restrict = false): Set<string>
     return result;
 }
 
-const pokemon: (readonly [string, PokemonData])[] = []
+const pokemon: (readonly [string, dexutil.PokemonData])[] = []
 
 const abilities = new Set<string>();
 
@@ -238,14 +471,14 @@ for (const mon of
     }
 
     // don't sort types to keep primary/secondary type distinction
-    let types: [Type, Type];
-    const typeArr = mon.types.map(s => s.toLowerCase()) as Type[];
+    let types: [dexutil.Type, dexutil.Type];
+    const typeArr = mon.types.map(s => s.toLowerCase()) as dexutil.Type[];
     if (typeArr.length > 2)
     {
         console.error("Error: Too many types for species " + name);
     }
     else if (typeArr.length === 1) typeArr.push("???");
-    types = typeArr as [Type, Type];
+    types = typeArr as [dexutil.Type, dexutil.Type];
 
     const stats = mon.baseStats;
 
@@ -259,7 +492,7 @@ for (const mon of
 
     const movepool = [...composeMovepool(mon)].sort();
 
-    const entry: [string, PokemonData] =
+    const entry: [string, dexutil.PokemonData] =
     [
         mon.id,
         {
@@ -335,7 +568,7 @@ for (const mon of
 
 // make sure that having no item is possible
 const items: string[] = ["none"];
-const berries: (readonly [string, NaturalGiftData])[] = [];
+const berries: (readonly [string, dexutil.NaturalGiftData])[] = [];
 
 for (const itemName of Object.keys(dex.data.Items).sort())
 {
@@ -351,7 +584,7 @@ for (const itemName of Object.keys(dex.data.Items).sort())
             item.id,
             {
                 basePower: item.naturalGift.basePower,
-                type: item.naturalGift.type.toLowerCase() as Type
+                type: item.naturalGift.type.toLowerCase() as dexutil.Type
             }
         ]);
     }
@@ -449,6 +682,58 @@ function stringifyDict(dict: {readonly [name: string]: any},
 }
 
 /**
+ * Recursively stringifies a dictionary.
+ * @param dict Dictionary to stringify.
+ * @param converter Stringifier for dictionary values.
+ */
+function deepStringifyDict(dict: {readonly [name: string]: any},
+    converter: (value: any) => string): string
+{
+    const entries: string[] = [];
+    for (const key in dict)
+    {
+        if (!dict.hasOwnProperty(key)) continue;
+
+        let str: string;
+        const value = dict[key];
+        if (Array.isArray(value)) str = deepStringifyArray(value, converter);
+        else if (typeof value === "object")
+        {
+            str = deepStringifyDict(value, converter);
+        }
+        else str = converter(value);
+
+        entries.push(`${maybeQuote(key)}: ${str}`);
+    }
+    return "{" + entries.join(", ") + "}";
+}
+
+
+/**
+ * Recursively stringifies an array.
+ * @param arr Array to stringify.
+ * @param converter Stringifier for array values.
+ */
+function deepStringifyArray(arr: any[], converter: (value: any) => string):
+    string
+{
+    const values: string[] = [];
+    for (const value of arr)
+    {
+        let str: string;
+        if (Array.isArray(value)) str = deepStringifyArray(value, converter);
+        else if (typeof value === "object")
+        {
+            str = deepStringifyDict(value, converter);
+        }
+        else str = converter(value);
+
+        values.push(str);
+    }
+    return `[${values.join(", ")}]`;
+}
+
+/**
  * Creates an export dictionary, string union, etc. for a specific set of moves.
  * @param moves Array of the move names.
  * @param name Name for the variable.
@@ -485,18 +770,13 @@ console.log(`\
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import { MoveData, NaturalGiftData, PokemonData, Type } from "./dex-util";
+import * as dexutil from "./dex-util";
 
 /**
  * Contains info about each pokemon, with alternate forms as separate entries.
  */
-${exportEntriesToDict(pokemon, "pokemon", "PokemonData",
-    p => stringifyDict(p,
-        v =>
-            typeof v === "string" ? quote(v) :
-            Array.isArray(v) ? `[${v.map(quote).join(", ")}]` :
-            typeof v === "object" ? stringifyDict(v, vv => vv as string) :
-            v))}
+${exportEntriesToDict(pokemon, "pokemon", "dexutil.PokemonData",
+    p => deepStringifyDict(p, v => typeof v === "string" ? quote(v) : v))}
 
 /** Total number of pokemon species. */
 export const numPokemon = ${pokemon.length};
@@ -508,12 +788,8 @@ ${exportSetToDict(abilities, "abilities")}
 export const numAbilities = ${abilities.size};
 
 /** Contains info about each move. */
-${exportEntriesToDict(moves, "moves", "MoveData",
-    m => stringifyDict(m,
-        v =>
-            typeof v === "string" ? quote(v) :
-            Array.isArray(v) ? `[${v.join(", ")}]` :
-            v))}
+${exportEntriesToDict(moves, "moves", "dexutil.MoveData", m =>
+    deepStringifyDict(m, v => typeof v === "string" ? quote(v) : v))}
 
 /** Total number of moves. */
 export const numMoves = ${moves.length};
@@ -524,9 +800,13 @@ ${exportSpecificMoves(lockedMoves, "locked")}
 
 ${exportSpecificMoves(twoTurnMoves, "twoTurn", "two-turn")}
 
+/** Maps move name to its CallEffect, if any. */
+${exportEntriesToDict(moveCallers, "moveCallers", "dexutil.CallEffect",
+    v => typeof v === "string" ? quote(v) : v.toString())}
+
 /** Maps move type to each move of that type. */
 ${exportDict(typeToMoves, "typeToMoves",
-    "{readonly [T in Type]: readonly string[]}",
+    "{readonly [T in dexutil.Type]: readonly string[]}",
     a => `[${a.map(quote).join(", ")}]`)}
 
 /** Maps item id name to its id number. */
@@ -536,5 +816,5 @@ ${exportArrayToDict(items, "items")}
 export const numItems = ${items.length};
 
 /** Contains info about each berry item. */
-${exportEntriesToDict(berries, "berries", "NaturalGiftData",
+${exportEntriesToDict(berries, "berries", "dexutil.NaturalGiftData",
     b => stringifyDict(b, v => typeof v === "string" ? quote(v) : v))}`);

@@ -151,7 +151,7 @@ export class Team implements ReadonlyTeam
         mon.switchInto(this._pokemon[0],
             /*copy*/this.status.selfSwitch === "copyvolatile");
         // consume pending self-switch/copyvolatile flag
-        this.status.selfSwitch = false;
+        this.status.selfSwitch = null;
 
         // swap active slot with new pokemon
         [this._pokemon[0], this._pokemon[index]] =

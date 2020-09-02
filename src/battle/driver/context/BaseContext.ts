@@ -188,8 +188,8 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     /** Clears self-switch flags for both teams. */
     public clearSelfSwitch(event: events.ClearSelfSwitch): void
     {
-        this.state.teams.us.status.selfSwitch = false;
-        this.state.teams.them.status.selfSwitch = false;
+        this.state.teams.us.status.selfSwitch = null;
+        this.state.teams.them.status.selfSwitch = null;
     }
 
     /**

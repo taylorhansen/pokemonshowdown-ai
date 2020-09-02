@@ -75,7 +75,7 @@ describe("BaseContext", function()
 
         describe("activateFieldEffect", function()
         {
-            function test(name: string, effect: events.FieldEffectType)
+            function test(name: string, effect: dexutil.FieldEffect)
             {
                 if (dexutil.isWeatherType(effect))
                 {
@@ -118,7 +118,7 @@ describe("BaseContext", function()
 
         describe("activateStatusEffect", function()
         {
-            function test(name: string, effect: events.StatusEffectType,
+            function test(name: string, effect: dexutil.StatusEffect,
                 getter: (v: ReadonlyVolatileStatus) => boolean)
             {
                 it(`Should activate ${name}`, function()
@@ -306,7 +306,7 @@ describe("BaseContext", function()
             testHazard("Stealth Rock", "stealthRock");
             testHazard("Toxic Spikes", "toxicSpikes");
 
-            function testEffect(name: string, effect: events.TeamEffectType,
+            function testEffect(name: string, effect: dexutil.TeamEffect,
                 getter: (ts: ReadonlyTeamStatus) => boolean)
             {
                 it(`Should activate ${name}`, function()
@@ -445,7 +445,7 @@ describe("BaseContext", function()
             {
                 state.teams.them.status.selfSwitch = true;
                 handle({type: "clearSelfSwitch"});
-                expect(state.teams.them.status.selfSwitch).to.be.false;
+                expect(state.teams.them.status.selfSwitch).to.be.null;
             });
         });
 
@@ -467,7 +467,7 @@ describe("BaseContext", function()
         describe("countStatusEffect", function()
         {
             function test(name: string,
-                effect: events.CountableStatusEffectType): void
+                effect: dexutil.CountableStatusEffect): void
             {
                 it(`Should update ${name} count`, function()
                 {
@@ -1265,8 +1265,7 @@ describe("BaseContext", function()
 
         describe("updateStatusEffect", function()
         {
-            function test(name: string,
-                effect: events.UpdatableStatusEffectType)
+            function test(name: string, effect: dexutil.UpdatableStatusEffect)
             {
                 it(`Should update ${name}`, function()
                 {

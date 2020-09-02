@@ -98,13 +98,10 @@ export interface ActivateAbility extends EventBase<"activateAbility">
 export interface ActivateFieldEffect extends EventBase<"activateFieldEffect">
 {
     /** Name of the effect. */
-    readonly effect: FieldEffectType;
+    readonly effect: dexutil.FieldEffect;
     /** Whether to start (`true`) or end (`false`) the effect. */
     readonly start: boolean;
 }
-
-/** Typing for `ActivateFieldEffect#effect`. */
-export type FieldEffectType = dexutil.WeatherType | "gravity" | "trickRoom";
 
 /** Starts, sets, or ends a trivial status effect. */
 export interface ActivateStatusEffect extends EventBase<"activateStatusEffect">
@@ -112,7 +109,7 @@ export interface ActivateStatusEffect extends EventBase<"activateStatusEffect">
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Name of the effect. */
-    readonly effect: StatusEffectType;
+    readonly effect: dexutil.StatusEffect;
     /**
      * Whether to start (`true`) or end (`false`) the status.
      *
@@ -123,36 +120,16 @@ export interface ActivateStatusEffect extends EventBase<"activateStatusEffect">
     readonly start: boolean;
 }
 
-/** Typing for `ActivateStatusEffect#status`. */
-export type StatusEffectType = UpdatableStatusEffectType | dexutil.MajorStatus |
-    SingleMoveEffect | SingleTurnEffect | "aquaRing" | "attract" | "charge" |
-    "curse" | "embargo" | "encore" | "focusEnergy" | "foresight" | "healBlock" |
-    "imprison" | "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" |
-    "mudSport" | "nightmare" | "powerTrick" | "slowStart" | "substitute" |
-    "suppressAbility" | "taunt" | "torment" | "waterSport" | "yawn";
-
-/** Types of sinlge-move effects. */
-export type SingleMoveEffect = "destinyBond" | "grudge" | "rage";
-
-/** Types of sinlge-turn effects. */
-export type SingleTurnEffect = "endure" | "magicCoat" | "protect" | "roost" |
-    "snatch";
-
 /** Activates a team-wide effect. */
 export interface ActivateTeamEffect extends EventBase<"activateTeamEffect">
 {
     /** Team reference. */
     readonly teamRef: Side;
     /** Name of the status. */
-    readonly effect: TeamEffectType;
+    readonly effect: dexutil.TeamEffect;
     /** Whether to start (`true`) or end (`false`) the effect. */
     readonly start: boolean;
 }
-
-/** Typing for `ActivateTeamEffect#effect. */
-export type TeamEffectType = "healingWish" | "lightScreen" | "luckyChant" |
-    "lunarDance" | "mist" | "reflect" | "safeguard" | "spikes" | "stealthRock" |
-    "tailwind" | "toxicSpikes";
 
 /** Updates a stat boost. */
 export interface Boost extends EventBase<"boost">
@@ -214,13 +191,10 @@ export interface CountStatusEffect extends EventBase<"countStatusEffect">
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Type of effect. */
-    readonly effect: CountableStatusEffectType;
+    readonly effect: dexutil.CountableStatusEffect;
     /** Number to set the effect counter to. */
     readonly amount: number;
 }
-
-/** Typing for `CountStatusEffect#effect`. */
-export type CountableStatusEffectType = "perish" | "stockpile";
 
 /** Indicates a critical hit of a move on the pokemon. */
 export interface Crit extends EventBase<"crit">
@@ -621,11 +595,8 @@ export interface Trap extends EventBase<"trap">
 export interface UpdateFieldEffect extends EventBase<"updateFieldEffect">
 {
     /** Type of effect to update. */
-    readonly effect: UpdatableFieldEffectType;
+    readonly effect: dexutil.UpdatableFieldEffect;
 }
-
-/** Typing for `UpdateFieldEffect#effect`. These are also FieldEffectTypes. */
-export type UpdatableFieldEffectType = dexutil.WeatherType;
 
 /**
  * Indicates that a status effect is still going. Usually this is implied at the
@@ -638,11 +609,8 @@ export interface UpdateStatusEffect extends
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Type of effect to update. */
-    readonly effect: UpdatableStatusEffectType;
+    readonly effect: dexutil.UpdatableStatusEffect;
 }
-
-/** Typing for `UpdateStatusEffect#effect`. These are also StatusEffectTypes. */
-export type UpdatableStatusEffectType = "confusion" | "bide" | "uproar";
 
 /** Indicates that the pokemon is attempting to use a move. */
 export interface UseMove extends EventBase<"useMove">

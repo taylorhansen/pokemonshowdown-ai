@@ -25,7 +25,7 @@ export interface ReadonlyTeamStatus
      * Whether the team has to switch pokemon and how that switch will be
      * handled.
      */
-    readonly selfSwitch: SelfSwitch;
+    readonly selfSwitch: SelfSwitch | null;
     /** Spikes layers. Max 3. */
     readonly spikes: number;
     /** Stealth rock layers. Max 1. */
@@ -60,7 +60,7 @@ export class TeamStatus implements ReadonlyTeamStatus
     /** @override */
     public readonly safeguard = new TempStatus("safeguard", 5);
     /** @override */
-    public selfSwitch: SelfSwitch = false;
+    public selfSwitch: SelfSwitch | null = null;
     /** @override */
     public spikes = 0;
     /** @override */

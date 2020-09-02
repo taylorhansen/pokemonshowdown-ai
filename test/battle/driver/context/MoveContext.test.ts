@@ -1,10 +1,8 @@
 import { expect } from "chai";
 import "mocha";
 import * as dex from "../../../../src/battle/dex/dex";
-import { RolloutMove, rolloutMoves, selfMoveCallers, targetMoveCallers } from
-    "../../../../src/battle/dex/dex-util";
-import { StatusEffectType, UseMove } from
-    "../../../../src/battle/driver/BattleEvent";
+import * as dexutil from "../../../../src/battle/dex/dex-util";
+import { UseMove } from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
 import { MoveContext } from "../../../../src/battle/driver/context/MoveContext";
@@ -251,18 +249,23 @@ describe("MoveContext", function()
                 {
                     const {item} = initActive("them");
                     const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "hail"});
+                        {type: "useMove", monRef: "them", move: "raindance"});
                     expect(ctx.handle(
                         {
-                            type: "activateFieldEffect", effect: "Hail",
+                            type: "activateFieldEffect", effect: "RainDance",
                             start: true
                         }))
                         .to.equal("stop");
 
                     const weather = state.status.weather;
-                    expect(weather.type).to.equal("Hail");
+                    expect(weather.type).to.equal("RainDance");
                     expect(weather.duration).to.not.be.null;
                     expect(weather.source).to.equal(item);
+
+                    // tick 5 times to infer item
+                    expect(item.definiteValue).to.be.null;
+                    for (let i = 0; i < 5; ++i) weather.tick();
+                    expect(item.definiteValue).to.equal("damprock");
                 });
 
                 it("Should expire if mismatch", function()
@@ -287,8 +290,8 @@ describe("MoveContext", function()
 
         describe("activateStatusEffect", function()
         {
-            function testNonRemovable(name: string, effect: StatusEffectType,
-                move: string, target: Side): void
+            function testNonRemovable(name: string,
+                effect: dexutil.StatusEffect, move: string, target: Side): void
             {
                 // adjust perspective
                 target = otherSide(target);
@@ -346,7 +349,6 @@ describe("MoveContext", function()
             testNonRemovable("Attract", "attract", "attract", "them");
             testNonRemovable("Bide", "bide", "bide", "us");
             testNonRemovable("Charge", "charge", "charge", "us");
-            testNonRemovable("Confusion", "confusion", "confuseray", "them");
             // handled specially by another test case
             // testNonRemovable("Curse", "curse", "curse", "them");
             testNonRemovable("Embargo", "embargo", "embargo", "them");
@@ -381,7 +383,7 @@ describe("MoveContext", function()
             testNonRemovable("Roost", "roost", "roost", "us");
             testNonRemovable("Snatch", "snatch", "snatch", "us");
 
-            function testRemovable(name: string, effect: StatusEffectType,
+            function testRemovable(name: string, effect: dexutil.StatusEffect,
                 move: string, target: Side): void
             {
                 // adjust perspective
@@ -434,8 +436,14 @@ describe("MoveContext", function()
                 });
             }
 
+            testRemovable("Confusion", "confusion", "confuseray", "them");
             testRemovable("Leech Seed", "leechSeed", "leechseed", "them");
             testRemovable("Substitute", "substitute", "substitute", "us");
+
+            // secondary effect
+            testRemovable("Secondary confusion", "confusion", "confusion",
+                "them");
+            testRemovable("Sleep", "slp", "spore", "them");
 
             describe("Slow Start", function()
             {
@@ -639,6 +647,45 @@ describe("MoveContext", function()
             }
         });
 
+        describe("boost", function()
+        {
+            it("Should handle boost", function()
+            {
+                initActive("us");
+                initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "leafstorm"});
+
+                expect(ctx.handle(
+                        {type: "boost", monRef: "us", stat: "spa", amount: -2}))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+
+            it("Should allow partial boost if maxing out", function()
+            {
+                const mon = initActive("us");
+                mon.volatile.boosts.spa = 4;
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "tailglow"});
+
+                expect(ctx.handle(
+                        {type: "boost", monRef: "us", stat: "spa", amount: 2}))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+
+            it("Should allow no boost if maxed out", function()
+            {
+                const mon = initActive("us");
+                initActive("them");
+                mon.volatile.boosts.spa = -6;
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "dracometeor"});
+                ctx.expire(); // shouldn't throw
+            });
+        });
+
         describe("changeType", function()
         {
             it("Should infer move if conversion", function()
@@ -669,7 +716,110 @@ describe("MoveContext", function()
                 expect(mon.moveset.get("ember")).to.be.null;
                 expect(mon.moveset.get("watergun")).to.not.be.null;
             });
-        })
+        });
+
+        describe("faint", function()
+        {
+            it("Should cancel effects of target", function()
+            {
+                initActive("us");
+                initActive("them");
+                // 100% confuse rate
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "them", move: "dynamicpunch"});
+
+                expect(ctx.handle({type: "faint", monRef: "us"}))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+        });
+
+        describe("futureMove", function()
+        {
+            it("Should handle future move", function()
+            {
+                initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "them", move: "futuresight"});
+
+                expect(ctx.handle(
+                    {
+                        type: "futureMove", monRef: "them",
+                        move: "futuresight", start: true
+                    }))
+                    .to.equal("base");
+                expect(ctx.handle(
+                    {
+                        type: "futureMove", monRef: "them",
+                        move: "doomdesire", start: true
+                    }))
+                    .to.equal("expire");
+                expect(ctx.handle(
+                    {
+                        type: "futureMove", monRef: "them",
+                        move: "futuresight", start: false
+                    }))
+                    .to.equal("expire");
+            });
+        });
+
+        describe("prepareMove", function()
+        {
+            it("Should handle two-turn move", function()
+            {
+                // prepare
+                const mon = initActive("them");
+                initActive("us");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "them", move: "fly"});
+
+                expect(ctx.handle(
+                        {type: "prepareMove", monRef: "them", move: "fly"}))
+                    .to.equal("base");
+                expect(ctx.handle(
+                        {type: "prepareMove", monRef: "them", move: "bounce"}))
+                    .to.equal("expire");
+                ctx.expire();
+
+                // release
+                mon.volatile.twoTurn.start("fly");
+                initCtx({type: "useMove", monRef: "them", move: "fly"})
+                    .expire();
+                expect(mon.volatile.twoTurn.isActive).to.be.false;
+            });
+        });
+
+        describe("swapBoosts", function()
+        {
+            it("Should handle swap boost move", function()
+            {
+                initActive("us");
+                initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "them", move: "guardswap"});
+
+                expect(ctx.handle(
+                    {
+                        type: "swapBoosts", monRef1: "us", monRef2: "them",
+                        stats: ["def", "spd", "spe"]
+                    }))
+                    .to.equal("expire");
+                expect(ctx.handle(
+                    {
+                        type: "swapBoosts", monRef1: "us", monRef2: "them",
+                        stats: ["def", "spd"]
+                    }))
+                    .to.equal("base");
+                // effect should be consumed after accepting the 2nd swapBoosts
+                expect(ctx.handle(
+                    {
+                        type: "swapBoosts", monRef1: "us", monRef2: "them",
+                        stats: ["def", "spd"]
+                    }))
+                    .to.equal("expire");
+                ctx.expire();
+            });
+        });
 
         describe("switchIn", function()
         {
@@ -745,6 +895,16 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "them", move: "tackle"}))
                     .to.equal("expire");
             });
+
+            // extract self+target move-callers
+            const selfMoveCallers: string[] = [];
+            const targetMoveCallers: string[] = [];
+            for (const move of Object.keys(dex.moveCallers))
+            {
+                const effect = dex.moveCallers[move];
+                if (effect === "self") selfMoveCallers.push(move);
+                else if (effect === "target") targetMoveCallers.push(move);
+            }
 
             describe("Self move-callers", function()
             {
@@ -1060,12 +1220,7 @@ describe("MoveContext", function()
     {
         it("Should throw if not failed in a single battle", function()
         {
-            initActive("them");
-            const ctx =
-                initCtx({type: "useMove", monRef: "them", move: "helpinghand"});
-            expect(() => ctx.expire())
-                .to.throw(Error, "Expected VolatileEffect 'helpinghand' but " +
-                    "it didn't happen");
+            // TODO: support ally moves (e.g. helpinghand)
         });
     });
 
@@ -1211,8 +1366,7 @@ describe("MoveContext", function()
     describe("Implicit effects", function()
     {
         function testTeamEffect(name: string, move: string,
-            assertion: (team: ReadonlyTeam, shouldSet: boolean) => void,
-            selfFaint = false): void
+            assertion: (team: ReadonlyTeam, shouldSet: boolean) => void): void
         {
             describe(name, function()
             {
@@ -1223,11 +1377,6 @@ describe("MoveContext", function()
                     const team = state.teams.them;
                     const ctx = initCtx(
                         {type: "useMove", monRef: "them", move});
-                    if (selfFaint)
-                    {
-                        expect(ctx.handle({type: "faint", monRef: "them"}))
-                            .to.equal("base");
-                    }
                     ctx.halt();
                     assertion(team, /*shouldSet*/true);
                 });
@@ -1246,17 +1395,6 @@ describe("MoveContext", function()
             });
         }
 
-        testTeamEffect("Healing Wish", "healingwish",
-            (team, shouldSet) =>
-                expect(team.status.healingWish)
-                    .to.be[shouldSet ? "true" : "false"],
-            /*selfFaint*/true);
-        testTeamEffect("Lunar Dance", "lunardance",
-            (team, shouldSet) =>
-                expect(team.status.lunarDance)
-                    .to.be[shouldSet ? "true" : "false"],
-            /*selfFaint*/true);
-
         testTeamEffect("Wish", "wish",
             (team, shouldSet) =>
                 expect(team.status.wish.isActive)
@@ -1265,11 +1403,11 @@ describe("MoveContext", function()
         testTeamEffect("Self-switch", "uturn",
             (team, shouldSet) =>
                 expect(team.status.selfSwitch)
-                    .to.be[shouldSet ? "true" : "false"]);
+                    .to.be[shouldSet ? "true" : "null"]);
         testTeamEffect("Baton Pass", "batonpass",
             (team, shouldSet) =>
                 expect(team.status.selfSwitch)
-                    .to.equal(shouldSet ? "copyvolatile" : false));
+                    .to.equal(shouldSet ? "copyvolatile" : null));
 
         function testEffect(name: string, move: string,
             assertion: (mon: ReadonlyPokemon, shouldSet: boolean) => void):
@@ -1288,6 +1426,56 @@ describe("MoveContext", function()
             (mon, shouldSet) =>
                 expect(mon.volatile.defenseCurl)
                     .to.be[shouldSet ? "true" : "false"]);
+
+        for (const [name, effect] of
+            [["Healing Wish", "healingWish"], ["Lunar Dance", "lunarDance"]] as
+            const)
+        {
+            const move = effect.toLowerCase();
+            describe(name, function()
+            {
+                it(`Should set if using ${move}`, function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const team = state.teams.them;
+
+                    // use wishing move to faint user
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move});
+                    expect(ctx.handle({type: "faint", monRef: "them"}))
+                        .to.equal("base");
+                    ctx.halt();
+                    expect(team.status[effect]).to.be.true;
+
+                    // replacement is sent
+                    expect(ctx.handle(
+                            {type: "switchIn", monRef: "them", ...ditto}))
+                        .to.be.an.instanceOf(SwitchContext);
+                    // implicit: handle switch events, then expire at the
+                    //  healingwish event allowing the MoveContext to handle it
+                    expect(ctx.handle(
+                        {
+                            type: "activateTeamEffect", teamRef: "them", effect,
+                            start: false
+                        }))
+                        .to.equal("base");
+                    ctx.expire();
+                });
+
+                it(`Should not set if ${move} failed`, function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const team = state.teams.them;
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move});
+                    expect(ctx.handle({type: "fail", monRef: "them"}))
+                        .to.equal("base");
+                    expect(team.status[effect]).to.be.false;
+                });
+            });
+        }
     });
 
     function testLockingMoves<T extends string>(keys: readonly T[],
@@ -1376,7 +1564,8 @@ describe("MoveContext", function()
 
     describe("Rollout-like moves", function()
     {
-        testLockingMoves(Object.keys(rolloutMoves) as RolloutMove[],
+        testLockingMoves(
+            Object.keys(dexutil.rolloutMoves) as dexutil.RolloutMove[],
             mon => mon.volatile.rollout);
     });
 

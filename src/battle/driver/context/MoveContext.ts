@@ -8,65 +8,12 @@ import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { AbilityContext } from "./AbilityContext";
 import { ContextResult, DriverContext } from "./DriverContext";
+import { deepClone, DeepNullable, DeepWritable } from "./helpers";
 import { SwitchContext } from "./SwitchContext";
-
-type StatusEffectMapKey =
-    Exclude<events.StatusEffectType,
-        dexutil.MajorStatus | "slowStart" | "roost" | "rage" | "uproar">;
-
-// tslint:disable: no-trailing-whitespace (force newlines in doc)
-/**
- * If the move being used calls another move, this specifies how it will be
- * called, or `false` if nothing should happen.
- *
- * `true` - Calls a move normally.  
- * `"self"` - Calls a move from the user's moveset.  
- * `"target"` - Calls a move from the target's moveset (must have only one
- * target).
- */
-// tslint:enable: no-trailing-whitespace
-type CallEffect = boolean | "self" | "target";
 
 /** Handles events related to a move. */
 export class MoveContext extends DriverContext
 {
-    // TODO: should these be the same strings?
-    // could mention BattleEvents in dex data to make it clearer which types of
-    //  events are expected
-    /** Maps TeamEFfectTypes to SideCondition strings from dex-util. */
-    private static readonly teamEffectMap:
-        {readonly [T in events.TeamEffectType]: dexutil.SideCondition} =
-    {
-        healingWish: "healingwish", lightScreen: "lightscreen",
-        luckyChant: "luckychant", lunarDance: "lunardance", mist: "mist",
-        reflect: "reflect", safeguard: "safeguard", spikes: "spikes",
-        stealthRock: "stealthrock", tailwind: "tailwind",
-        toxicSpikes: "toxicspikes"
-    };
-
-    /**
-     * Maps StatusEffectTypes from ActivateStatusEffect events to VolatileEffect
-     * strings from dex-util.
-     */
-    private static readonly statusEffectMap:
-        {readonly [T in StatusEffectMapKey]: dexutil.VolatileEffect} =
-    {
-        aquaRing: "aquaring", attract: "attract", bide: "bide",
-        charge: "charge", confusion: "confusion", curse: "curse",
-        embargo: "embargo", encore: "encore", focusEnergy: "focusenergy",
-        foresight: "foresight", healBlock: "healblock", imprison: "imprison",
-        ingrain: "ingrain", leechSeed: "leechseed", magnetRise: "magnetrise",
-        miracleEye: "miracleeye", mudSport: "mudsport", nightmare: "nightmare",
-        powerTrick: "powertrick", substitute: "substitute",
-        suppressAbility: "gastroacid", taunt: "taunt", torment: "torment",
-        waterSport: "watersport", yawn: "yawn",
-        // singlemove
-        destinyBond: "destinybond", grudge: "grudge",
-        // singleturn
-        endure: "endure", magicCoat: "magiccoat", protect: "protect",
-        snatch: "snatch"
-    };
-
     // event data
     /** User of the move. */
     private readonly user: Pokemon;
@@ -88,24 +35,15 @@ export class MoveContext extends DriverContext
      */
     private readonly totalTargets: number;
 
-    // TODO: add more flags, and/or don't use fields to track this
     // move expectations (reset once handled)
     /** Whether all implicit effects have been handled. */
     private handled = false;
-    /** Specifies how to expect a called move. */
-    private callEffect: CallEffect;
-    /** Self-switch flag. */
-    private selfSwitch: dexutil.SelfSwitch;
-    /** Field effect flag. */
-    private fieldEffect: events.FieldEffectType | null;
-    /** Team effect flag. */
-    private sideCondition: dexutil.SideCondition | null;
-    /** Volatile effect flag. */
-    private volatileEffect: dexutil.VolatileEffect | null;
-    /** Self-volatile effect flag. */
-    private selfVolatileEffect: dexutil.SelfVolatileEffect | null;
-    /** Conversion effect flag. */
-    private conversion: boolean;
+    /** Pending primary move effects. */
+    private primary: DeepNullable<DeepWritable<dexutil.PrimaryEffect>>;
+    /** Pending move effects for user. */
+    private self: DeepNullable<DeepWritable<dexutil.MoveEffect>>;
+    /** Pending move effects for target. */
+    private hit: DeepNullable<DeepWritable<dexutil.MoveEffect>>;
 
     // in-progress move result flags
     /**
@@ -145,8 +83,8 @@ export class MoveContext extends DriverContext
                 this.pendingTargets = {us: false, them: false};
                 this.totalTargets = 0;
                 break;
-            case "adjacentAllyOrSelf": case "allySide": case "allyTeam":
-            case "self":
+            case "adjacentAllyOrSelf": case "allies": case "allySide":
+            case "allyTeam": case "self":
                 this.pendingTargets =
                     this.framePendingTargets({us: true, them: false});
                 this.totalTargets = 1;
@@ -165,47 +103,20 @@ export class MoveContext extends DriverContext
                 break;
         }
 
-        // move expectation flags
-        this.callEffect =
-            dexutil.selfMoveCallers.includes(this.moveName) ? "self"
-            : dexutil.targetMoveCallers.includes(this.moveName) ? "target"
-            : dexutil.otherMoveCallers.includes(this.moveName) ? true
-            : false;
-        this.selfSwitch = this.moveData.selfSwitch ?? false;
-        // TODO: make field condition part of dex data
-        const display = this.moveData.display.replace(" ", "");
-        this.fieldEffect =
-            this.moveName === "gravity" ? "gravity"
-            : this.moveName === "trickroom" ? "trickRoom"
-            : dexutil.isWeatherType(display) ? display
-            : null;
-        // TODO: make side conditions part of dex data
-        this.sideCondition = this.moveData.sideCondition ??
-            (this.moveName === "healingwish" ? "healingwish" : null);
-        this.volatileEffect = this.moveData.volatileEffect ?? null;
-        this.selfVolatileEffect = this.moveData.selfVolatileEffect ?? null;
-        this.conversion = this.moveName === "conversion";
+        // deep clone move expectation flags
+        this.primary = deepClone(this.moveData.primary) ?? null;
+        this.self = deepClone(this.moveData.self) ?? null;
+        this.hit = deepClone(this.moveData.hit) ?? null;
 
         // override for non-ghost type curse effect
         // TODO(gen6): handle interactions with protean
-        if (this.volatileEffect === "curse" &&
+        if (this.hit?.status === "curse" &&
             !this.user.types.includes("ghost"))
         {
             this.pendingTargets = this.framePendingTargets(
                 {us: true, them: false});
             this.totalTargets = 1;
-            this.volatileEffect = null;
-        }
-
-        // throw for unsupported effects
-        // TODO: support these
-        // istanbul ignore next: can't reproduce
-        if (this.sideCondition &&
-            (["auroraveil", "stickyweb"] as dexutil.SideCondition[])
-                .includes(this.sideCondition))
-        {
-            throw new Error(
-                `Unsupported SideCondition '${this.sideCondition}'`);
+            this.hit.status = null;
         }
 
         // release two-turn move
@@ -213,6 +124,7 @@ export class MoveContext extends DriverContext
         if (this.user.volatile.twoTurn.type === this.moveName)
         {
             this.user.volatile.twoTurn.reset();
+            this.consumeEffect(this.primary, "delay", "twoTurn");
             releasedTwoTurn = true;
         }
 
@@ -274,22 +186,44 @@ export class MoveContext extends DriverContext
                 if (this.userRef !== event.source) return "expire";
                 return this.addTarget(event.target);
             case "faint":
-                if (this.user.team && event.monRef === this.userRef)
+            {
+                // handle self-faint effects from healingWish/lunarDance
+                // TODO(gen>4): consume healingWish/lunarDance since replacement
+                //  is no longer sent out immediately
+                let wishing = false;
+                if (this.self?.team === "healingWish")
                 {
-                    // indicate successful use of healing wish
-                    if (this.sideCondition === "healingwish")
-                    {
-                        this.user.team.status.healingWish = true;
-                        this.sideCondition = null;
-                    }
-                    else if (this.sideCondition === "lunardance")
-                    {
-                        this.user.team.status.lunarDance = true;
-                        this.sideCondition = null;
-                    }
+                    this.state.teams[this.userRef].status.healingWish = true;
+                    wishing = true;
                 }
+                else if (this.self?.team === "lunarDance")
+                {
+                    this.state.teams[this.userRef].status.lunarDance = true;
+                    wishing = true;
+                }
+                // gen4: replacement is sent out immediately, so communicate
+                //  that by setting self-switch
+                if (wishing)
+                {
+                    if (!this.primary) this.primary = {selfSwitch: true};
+                    else this.primary.selfSwitch = true;
+                }
+
+                // if the target fainted, some effects have to be canceled
+                const effect = event.monRef === this.userRef ?
+                    this.self : this.hit;
+                if (effect)
+                {
+                    // exclude team effects
+                    effect.status = null;
+                    effect.unique = null;
+                    effect.implicitStatus = null;
+                    effect.boost = null;
+                    effect.secondary = null;
+                }
+                // TODO: handle self-destruct moves
                 // fallthrough
-                // TODO: does this handle self-destruct moves?
+            }
             // TODO: other target-mentioning events?
             case "crit": case "resisted": case "superEffective":
             case "takeDamage":
@@ -298,9 +232,9 @@ export class MoveContext extends DriverContext
             case "useMove":
                 // if we're not expecting a move to be called, treat this as a
                 //  normal move event
-                if (!this.callEffect) return "expire";
+                if (!this.primary?.call) return "expire";
 
-                switch (this.callEffect)
+                switch (this.primary?.call)
                 {
                     case "self":
                         // calling a move that is part of the user's moveset
@@ -325,7 +259,7 @@ export class MoveContext extends DriverContext
                     }
                 }
 
-                this.callEffect = false;
+                this.primary.call = null;
 
                 // make sure this is handled like a called move
                 return new MoveContext(this.state, event,
@@ -334,12 +268,13 @@ export class MoveContext extends DriverContext
                     /*called*/true);
             case "switchIn":
                 // consume self-switch flag
-                if (this.userRef !== event.monRef || !this.selfSwitch)
+                if (this.userRef !== event.monRef ||
+                    !this.primary?.selfSwitch)
                 {
                     return "expire";
                 }
-                const selfSwitch = this.selfSwitch;
-                this.selfSwitch = false;
+                const selfSwitch = this.primary.selfSwitch;
+                this.primary.selfSwitch = null;
 
                 // handle the switch in the context of this move
                 return new SwitchContext(this.state, event,
@@ -357,22 +292,157 @@ export class MoveContext extends DriverContext
                 return this.activateStatusEffect(event);
             case "activateTeamEffect":
                 return this.activateTeamEffect(event);
+            case "boost":
+                return this.boost(event);
             case "changeType":
-                if (this.conversion)
+                if (this.consumeEffect(this.self, "unique", "conversion"))
                 {
                     // changes the user's type into that of a known move
                     this.user.moveset.addMoveSlotConstraint(
                         dex.typeToMoves[event.newTypes[0]]);
-                    this.conversion = false;
                 }
                 return "base";
             case "clearSelfSwitch": case "gameOver": case "inactive":
-            case "preTurn": case "postTurn":
+            case "preTurn": case "postTurn": case "updateFieldEffect":
                 return "expire";
+            case "countStatusEffect":
+                switch (event.effect)
+                {
+                    case "perish":
+                        // event is sent for each pokemon targeted by the perish
+                        //  song move, so it's difficult to pinpoint who exactly
+                        //  it will hit for now
+                        // TODO: a better solution would be to use the
+                        //  `|-fieldactivate|` event (#138) to consume the
+                        //  status, then rely on end-of-turn events for updating
+                        //  the counters
+                        this.consumeEffect(this.primary, "countableStatus",
+                            "perish");
+                        break;
+                    case "stockpile":
+                        if (!this.consumeEffect(this.primary, "countableStatus",
+                            "stockpile"))
+                        {
+                            return "expire";
+                        }
+                        break;
+                }
+                return "base";
+            case "futureMove":
+                if (!event.start) return "expire";
+                if (!dex.isFutureMove(this.moveName))
+                {
+                    throw new Error(`Invalid future move ${this.moveName}`);
+                }
+                if (!this.consumeEffect(this.primary, "delay", "future"))
+                {
+                    return "expire";
+                }
+                return "base";
+            case "prepareMove":
+                if (!dex.isTwoTurnMove(this.moveName))
+                {
+                    throw new Error(`Invalid future move ${this.moveName}`);
+                }
+                if (!this.consumeEffect(this.primary, "delay", "twoTurn"))
+                {
+                    return "expire";
+                }
+                return "base";
+            case "swapBoosts":
+                if (![event.monRef1, event.monRef2].includes(this.userRef))
+                {
+                    return "expire";
+                }
+                // didn't expect event
+                if (!this.primary?.swapBoost) return "expire";
+                // didn't expect wrong stats
+                if (event.stats.some(stat => !this.primary!.swapBoost![stat]))
+                {
+                    return "expire";
+                }
+                // consume matching flags
+                for (const stat of event.stats)
+                {
+                    this.primary.swapBoost[stat] = null;
+                }
+                return this.addTarget(event.monRef1 === this.userRef ?
+                    event.monRef2 : event.monRef1);
             // let the default context handle the event
-            // TODO: should erroneous events cause a throw/expire?
+            // TODO: should erroneous events cause a throw or expire?
             default: return "base";
         }
+    }
+
+    /**
+     * Attempts to consume a pending effect.
+     * @param effects Effect container.
+     * @param effectType Category of effect.
+     * @param effect Type of effect to consume.
+     * @returns True if the effect is now consumed, false otherwise.
+     */
+    private consumeEffect<TEffectType extends string, TEffect extends any>(
+        effects: DeepNullable<{[T in TEffectType]?: TEffect}>,
+        effectType: TEffectType, effect: TEffect): boolean
+    {
+        if (effects?.[effectType] === effect)
+        {
+            effects[effectType] = null as any;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Attempts to consume a pending secondary effect.
+     * @param secondary Secondary effect container.
+     * @param effectType Category of effect.
+     * @param effect Type of effect to consume.
+     * @returns True if the effect is now consumed, false otherwise.
+     */
+    private consumeSecondary(
+        secondary:
+            DeepNullable<readonly DeepWritable<dexutil.SecondaryEffect>[]>,
+        effectType: "status", effect: dexutil.StatusEffect): boolean;
+    /**
+     * Attempts to consume a pending secondary effect.
+     * @param secondary Secondary effect container.
+     * @param effectType Category of effect.
+     * @param effect Type of effect to consume.
+     * @param boost Expected boost amount.
+     * @returns True if the effect is now consumed, false otherwise.
+     */
+    private consumeSecondary(
+        secondary:
+            DeepNullable<readonly DeepWritable<dexutil.SecondaryEffect>[]>,
+        effectType: "boosts", effect: dexutil.BoostName, boost: number):
+        boolean;
+    private consumeSecondary(
+        secondary:
+            DeepNullable<readonly DeepWritable<dexutil.SecondaryEffect>[]>,
+        effectType: "status" | "boosts",
+        effect: dexutil.StatusEffect | dexutil.BoostName, boost?: number):
+        boolean
+    {
+        for (const s of secondary ?? [])
+        {
+            if (!s) continue;
+            switch (effectType)
+            {
+                case "status":
+                    if (s.status !== effect) break;
+                    s.status = null;
+                    return true;
+                case "boosts":
+                    if (!dexutil.isBoostName(effect)) return false;
+                    if (boost === undefined) return false;
+                    if (s.boosts?.[effect] !== boost) break;
+                    s.boosts[effect] = null;
+                    return true;
+                default: return false;
+            }
+        }
+        return false;
     }
 
     /** @override */
@@ -392,38 +462,79 @@ export class MoveContext extends DriverContext
         // all other pending flags must be accounted for
 
         // if we had a self-switch flag, the game must've ignored it
-        if (!this.user.team) throw new Error("Move user doesn't have a team");
-        this.user.team.status.selfSwitch = this.selfSwitch = false;
+        if (this.primary) this.primary.selfSwitch = null;
+        this.state.teams[this.userRef].status.selfSwitch = null;
 
         // TODO: find cases where we shouldn't throw
-        if (this.callEffect)
+        // walk pending effect objs for sanity checks
+        if (this.primary)
         {
-            throw new Error(`Expected CallEffect '${this.callEffect}' but it ` +
-                "didn't happen");
+            for (const [value, name] of
+            [
+                [this.primary.delay, "delay"],
+                [this.primary.call, "CallEffect"],
+                // walk swapBoost dict
+                ...(this.primary.swapBoost ?
+                    (Object.keys(this.primary.swapBoost) as dexutil.BoostName[])
+                        .map(b =>
+                            [this.primary!.swapBoost![b], `swapBoost ${b}`] as
+                                const)
+                    : []),
+                [this.primary.countableStatus, "CountableStatusEffect"],
+                [this.primary.field, "FieldEffect"]
+            ] as const)
+            {
+                if (!value) continue;
+                throw new Error(`Expected primary ${name} '${value}' but it ` +
+                    `didn't happen`);
+            }
         }
-        if (this.fieldEffect)
+        for (const [effect, title] of
+            [[this.self, "self"], [this.hit, "hit"]] as const)
         {
-            throw new Error("Expected FieldEffect " +
-                `'${this.fieldEffect}' but it didn't happen`);
-        }
-        if (this.sideCondition)
-        {
-            throw new Error(`Expected SideCondition '${this.sideCondition}' ` +
-                "but it didn't happen");
-        }
-        if (this.volatileEffect)
-        {
-            throw new Error("Expected VolatileEffect " +
-                `'${this.volatileEffect}' but it didn't happen`);
-        }
-        if (this.selfVolatileEffect)
-        {
-            throw new Error("Expected SelfVolatileEffect " +
-                `'${this.selfVolatileEffect}' but it didn't happen`);
-        }
-        if (this.conversion)
-        {
-            throw new Error("Expected Conversion effect but it didn't happen");
+            if (!effect) continue;
+            for (const [value, name] of
+            [
+                [effect.unique, "UniqueEffect"],
+                [effect.implicitStatus, "ImplicitStatusEffect"],
+                // walk BoostEffect obj
+                ...(effect.boost ?
+                    (Object.keys(effect.boost) as (keyof dexutil.BoostEffect)[])
+                        .map(k =>
+                            (Object.keys(effect.boost![k]!) as
+                                    dexutil.BoostName[])
+                                .map(b =>
+                                [
+                                    effect.boost![k]![b],
+                                    `BoostEffect ${k} ${b}`
+                                ] as const))
+                        .reduce((a, b) => a.concat(b), [])
+                    : []),
+                [effect.team, "TeamEffect"],
+                [effect.implicitTeam, "ImplicitTeamEffect"],
+                // walk SecondaryEffect objs but only the guaranteed ones
+                ...(effect.secondary?.filter(s => s?.chance === 100)
+                    .map(s =>
+                    [
+                        [s?.status, "SecondaryEffect StatusEffect"] as const,
+                        // can't track flinch since its effect is applied once
+                        //  the target attempts to move (TODO)
+                        // [s?.flinch, "SecondaryEffect flinch"],
+                        ...(s?.boosts ?
+                            (Object.keys(s.boosts) as dexutil.BoostName[])
+                                .map(k =>
+                                [
+                                    s?.boosts?.[k], `SecondaryEffect boost ${k}`
+                                ] as const)
+                            : [])
+                    ])
+                    .reduce((a, b) => a.concat(b), []) ?? [])
+            ] as const)
+            {
+                if (value === null || value === undefined) continue;
+                throw new Error(`Expected ${title} ${name} '${value}' but it ` +
+                    `didn't happen`);
+            }
         }
     }
 
@@ -503,18 +614,15 @@ export class MoveContext extends DriverContext
         {
             // handle fail inferences
             // the failed=false side of this is handled by a separate event
-            if (this.volatileEffect === "imprison")
+            if (this.self?.status === "imprison")
             {
                 this.imprison(/*failed*/true);
             }
 
             // clear pending flags
-            this.callEffect = false;
-            this.fieldEffect = null;
-            this.sideCondition = null;
-            this.volatileEffect = null;
-            this.selfVolatileEffect = null;
-            this.conversion = false;
+            this.primary = null;
+            this.self = null;
+            this.hit = null;
 
             // clear continuous moves
             // TODO: can a called move lock the user?
@@ -530,73 +638,85 @@ export class MoveContext extends DriverContext
 
         // user effects
 
-        switch (this.volatileEffect)
+        if (this.self?.boost?.add)
         {
-            case "minimize":
-                this.user.volatile.minimize = true;
-                this.volatileEffect = null;
-                break;
-            case "defensecurl":
-                this.user.volatile.defenseCurl = true;
-                this.volatileEffect = null;
-                break;
+            for (const stat of Object.keys(this.self.boost.add) as
+                dexutil.BoostName[])
+            {
+                const amount = this.self.boost.add[stat];
+                if (!amount) continue;
+                const cur = this.user.volatile.boosts[stat];
+                const newBoost = cur + amount;
+                // consume silent boosts that were already maxed out
+                if ((cur <= -6 && newBoost <= -6) ||
+                    (cur >= 6 && newBoost >= 6))
+                {
+                    this.self.boost.add[stat] = null;
+                }
+            }
         }
 
-        if (!this.called)
+        let lockedMove = false;
+        switch (this.self?.implicitStatus)
         {
-            // TODO: can a locking move be called and still lock the user?
-            // start/continue locked move status
-            if (dex.isLockedMove(this.moveName))
-            {
+            case "defenseCurl":
+                this.user.volatile.defenseCurl = true;
+                this.self.implicitStatus = null;
+                break;
+            case "lockedMove":
+                this.self.implicitStatus = null;
+                if (!dex.isLockedMove(this.moveName))
+                {
+                    throw new Error(`Invalid locked move ${this.moveName}`);
+                }
+                // can't lock if called by another move (TODO: verify)
+                if (this.called) break;
                 if (this.user.volatile.lockedMove.type === this.moveName)
                 {
+                    // continue locked status
                     // already prevented from consuming pp in constructor
                     this.user.volatile.lockedMove.tick();
                 }
+                // start locked status
                 else this.user.volatile.lockedMove.start(this.moveName);
+                lockedMove = true;
+                break;
+            case "minimize":
+                this.user.volatile.minimize = true;
+                this.self.implicitStatus = null;
+                break;
+            // TODO: mustRecharge
+        }
+        if (!lockedMove) this.user.volatile.lockedMove.reset();
 
-                // consume lockedmove flag
-                if (this.selfVolatileEffect === "lockedmove")
-                {
-                    this.selfVolatileEffect = null;
-                }
-            }
-            // shouldn't have this flag set
-            else if (this.selfVolatileEffect === "lockedmove")
-            {
-                // istanbul ignore next: should never happen
-                throw new Error(`Invalid locked move '${this.moveName}'`);
-            }
-            // must've missed the status ending
-            else this.user.volatile.lockedMove.reset();
-
-            // TODO: can a rollout move be called and still lock the user?
+        // can't lock if called by another move (TODO: verify)
+        if (!this.called && dexutil.isRolloutMove(this.moveName))
+        {
+            // TODO: add rollout moves to ImplicitStatusEffect
             // start/continue rollout status
             if (this.user.volatile.rollout.type === this.moveName)
             {
+                // continue rollout status
                 // already prevented from consuming pp in constructor
                 this.user.volatile.rollout.tick();
             }
-            else if (dexutil.isRolloutMove(this.moveName))
-            {
-                this.user.volatile.rollout.start(this.moveName);
-            }
-            // must've missed the status ending
-            else this.user.volatile.rollout.reset();
+            else this.user.volatile.rollout.start(this.moveName);
         }
+        // must've missed the status ending
+        else this.user.volatile.rollout.reset();
 
         // team effects
 
-        if (!this.user.team) throw new Error("Move user doesn't have a team");
-        const team = this.user.team;
-
-        switch (this.moveName)
+        const team = this.state.teams[this.userRef];
+        switch (this.self?.implicitTeam)
         {
             // wish can be used consecutively, but only the first use counts
-            case "wish": team.status.wish.start(/*restart*/false); break;
+            case "wish":
+                team.status.wish.start(/*restart*/false);
+                this.self.implicitTeam = null;
+                break;
         }
-
-        team.status.selfSwitch = this.selfSwitch;
+        team.status.selfSwitch = this.primary?.selfSwitch ?? null;
     }
 
     /**
@@ -667,19 +787,19 @@ export class MoveContext extends DriverContext
     }
 
     /**
-     * Activates a field-wide effect. Consumes matching fieldEffect flags to
-     * make inferences.
+     * Activates a field-wide effect.
      * @returns Whether the parent DriverContexts should also handle this event.
      */
     private activateFieldEffect(event: events.ActivateFieldEffect):
         ContextResult
     {
         // is this event possible within the context of this move?
-        if (event.effect !== this.fieldEffect) return "expire";
-        // consume field effect flag
-        this.fieldEffect = null;
+        if (!this.consumeEffect(this.primary, "field", event.effect))
+        {
+            return "expire";
+        }
 
-        if (dexutil.isWeatherType(event.effect))
+        if (event.start && dexutil.isWeatherType(event.effect))
         {
             // fill in the user of the weather move (BaseContext just puts null)
             this.state.status.weather.start(this.user, event.effect);
@@ -689,71 +809,86 @@ export class MoveContext extends DriverContext
     }
 
     /**
-     * Activates a volatile status condition. Consumes matching volatileEffect
-     * and selfVolatileEffect flags to make inferences.
+     * Activates a volatile status condition.
      * @returns Whether the parent DriverContexts should also handle this event.
      */
     private activateStatusEffect(event: events.ActivateStatusEffect):
         ContextResult
     {
+        const effect = event.monRef === this.userRef ? this.self : this.hit;
         switch (event.effect)
         {
             case "aquaRing": case "attract": case "bide": case "charge":
-            case "confusion": case "curse": case "embargo": case "encore":
-            case "focusEnergy": case "foresight": case "healBlock":
-            case "ingrain": case "magnetRise": case "miracleEye":
-            case "mudSport": case "nightmare": case "powerTrick":
-            case "suppressAbility": case "taunt": case "torment":
-            case "waterSport": case "yawn":
+            case "curse": case "embargo": case "encore": case "focusEnergy":
+            case "foresight": case "healBlock": case "ingrain":
+            case "magnetRise": case "miracleEye": case "mudSport":
+            case "nightmare": case "powerTrick": case "suppressAbility":
+            case "taunt": case "torment": case "waterSport": case "yawn":
             // singlemove
             case "destinyBond": case "grudge":
             // singleturn
             case "endure": case "magicCoat": case "protect": case "snatch":
                 if (!event.start) return "expire";
-                if (this.checkStatusEffect(event.effect)) return "expire";
-                this.volatileEffect = null;
+                if (!this.consumeEffect(effect, "status", event.effect) &&
+                    !this.consumeSecondary(effect?.secondary, "status",
+                        event.effect))
+                {
+                    return "expire";
+                }
                 return this.addTarget(event.monRef);
-            case "leechSeed": case "substitute":
+            case "confusion": case "leechSeed": case "substitute":
                 // can be removed by a different move, but currently not tracked
                 //  yet (TODO)
                 if (!event.start) return "base";
-                if (this.checkStatusEffect(event.effect)) return "expire";
-                this.volatileEffect = null;
+                if (!this.consumeEffect(effect, "status", event.effect) &&
+                    !this.consumeSecondary(effect?.secondary, "status",
+                        event.effect))
+                {
+                    return "expire";
+                }
                 return this.addTarget(event.monRef);
             case "imprison":
+            {
                 if (!event.start) return "expire";
-                if (this.checkStatusEffect(event.effect)) return "expire";
                 if (this.userRef !== event.monRef) return "expire";
+                if (!this.consumeEffect(effect, "status", event.effect) &&
+                    !this.consumeSecondary(effect?.secondary, "status",
+                        event.effect))
+                {
+                    return "expire";
+                }
                 // verified that imprison was successful
-                this.volatileEffect = null;
-                this.addTarget(this.userRef);
+                const result = this.addTarget(this.userRef);
                 this.imprison(/*failed*/false);
-                return "base";
+                return result;
+            }
             case "rage": case "roost": case "uproar":
                 if (!event.start) return "expire";
-                if (this.selfVolatileEffect !== event.effect) return "expire";
-                this.selfVolatileEffect = null;
+                if (!this.consumeEffect(effect, "status", event.effect) &&
+                    !this.consumeSecondary(effect?.secondary, "status",
+                        event.effect))
+                {
+                    return "expire";
+                }
                 return "base";
             case "slowStart":
                 return "expire";
             default:
-                // TODO: major status
+                // TODO: also track curing moves
+                // for now, curing moves are ignored
+                if (dexutil.isMajorStatus(event.effect) && event.start &&
+                    !this.consumeEffect(effect, "status", event.effect) &&
+                    !this.consumeSecondary(effect?.secondary, "status",
+                        event.effect))
+                {
+                    return "expire";
+                }
                 return "base";
         }
     }
 
     /**
-     * @returns True if the given StatusEffectType doesn't match the
-     * corresponding pending flag, false otherwise.
-     */
-    private checkStatusEffect(status: StatusEffectMapKey): boolean
-    {
-        return MoveContext.statusEffectMap[status] !== this.volatileEffect;
-    }
-
-    /**
-     * Activates a team-wide effect. Consumes matching sideCondition flags to
-     * make inferences.
+     * Activates a team-wide effect.
      * @returns Whether the parent DriverContexts should also handle this event.
      */
     private activateTeamEffect(event: events.ActivateTeamEffect): ContextResult
@@ -761,29 +896,41 @@ export class MoveContext extends DriverContext
         switch (event.effect)
         {
             case "healingWish": case "lunarDance":
-                // no known move can explicitly cause a BattleEvent like this
-                // instead, the user of said move should faint
-                return "expire";
+                // no known move can explicitly start this effect, only when the
+                //  user faints and a replacement is sent
+                // TODO(gen>4): replacement is not sent out immediately
+                if (event.start) return "expire";
+                if (!this.consumeEffect(this.self, "team", event.effect))
+                {
+                    return "expire";
+                }
+                return "base";
             case "luckyChant": case "mist": case "safeguard": case "tailwind":
-                // no known move can explicitly end these SideConditions, only
-                //  when we're at the end of their durations
+                // no known move can explicitly end these effects, only when
+                //  we're at the end of their durations
                 if (!event.start) return "expire";
-                if (this.checkSideCondition(event.effect)) return "expire";
-                this.sideCondition = null;
+                if (!this.consumeEffect(this.self, "team", event.effect))
+                {
+                    return "expire";
+                }
                 return "base";
             case "spikes": case "stealthRock": case "toxicSpikes":
                 // can be cleared by a move, but aren't covered by a flag yet
                 //  (TODO)
                 if (!event.start) return "base";
-                if (this.checkSideCondition(event.effect)) return "expire";
-                this.sideCondition = null;
+                if (!this.consumeEffect(this.hit, "team", event.effect))
+                {
+                    return "expire";
+                }
                 return "base";
             case "lightScreen": case "reflect":
                 // can be cleared by a move, but aren't covered by a flag yet
                 //  (TODO)
                 if (!event.start) return "base";
-                if (this.checkSideCondition(event.effect)) return "expire";
-                this.sideCondition = null;
+                if (!this.consumeEffect(this.self, "team", event.effect))
+                {
+                    return "expire";
+                }
                 // fill in the user of the move (BaseContext just puts null)
                 this.state.teams[event.teamRef].status[event.effect]
                     .start(this.user);
@@ -792,11 +939,43 @@ export class MoveContext extends DriverContext
     }
 
     /**
-     * @returns True if the given TeamEffectType doesn't match the current
-     * pending flag, false otherwise.
+     * Updates a stat boost.
+     * @returns Whether the parent DriverContexts should also handle this event.
      */
-    private checkSideCondition(effect: events.TeamEffectType): boolean
+    private boost(event: events.Boost): ContextResult
     {
-        return MoveContext.teamEffectMap[effect] !== this.sideCondition;
+        const effect = event.monRef === this.userRef ?
+            this.self?.boost : this.hit?.boost;
+        const dict = effect?.[event.set ? "set" : "add"];
+        if (!dict?.hasOwnProperty(event.stat)) return "expire";
+
+        let valid = false;
+        if (!event.set)
+        {
+            // if it were to go over the 6 boost limit, it should still match
+            //  the boost with the move data
+            const cur = this.user.volatile.boosts[event.stat];
+            const next = cur + event.amount;
+            const expected = cur + dict[event.stat]!;
+            if ((next >= 6 && expected >= 6) || (next <= -6 && expected <= -6))
+            {
+                valid = true;
+            }
+        }
+        if (dict[event.stat] === event.amount) valid = true;
+        if (valid)
+        {
+            let result: ContextResult;
+            if (event.monRef !== this.userRef)
+            {
+                result = this.addTarget(event.monRef);
+            }
+            else result = "base";
+            dict[event.stat] = null;
+            return result;
+        }
+        // TODO: complete full tracking, then allow expire
+        // return "expire";
+        return "base";
     }
 }

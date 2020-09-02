@@ -29,27 +29,6 @@ export interface NaturalGiftData
     readonly type: Type;
 }
 
-/** Effects and moves that can call moves from the user's moveset. */
-export const selfMoveCallers: readonly string[] = ["sleeptalk"];
-
-/**
- * Effects and moves that can call moves from the target's moveset before
- * they're revealed.
- */
-export const targetMoveCallers: readonly string[] = ["mefirst"];
-
-/** Other move callers that can't currently be used to make inferences. */
-export const otherMoveCallers: readonly string[] =
-    ["assist", "copycat", "metronome", "mirrormove", "naturepower"];
-
-/** Effects and moves that can call moves that aren't in the user's moveset. */
-export const nonSelfMoveCallers: readonly string[] =
-    [...targetMoveCallers, ...otherMoveCallers];
-
-/** Effects and moves that can call other moves. */
-export const moveCallers: readonly string[] =
-    [...selfMoveCallers, ...nonSelfMoveCallers];
-
 /** List of moves that transfer items to the user. */
 export const itemTransferMoves: readonly string[] =
     ["thief", "covet", "trick", "switcheroo", "recycle"];
@@ -168,63 +147,167 @@ export interface PokemonData
     readonly movepool: readonly string[];
 }
 
-/** Format for each move entry in the Dex. */
+/** Format for each move entry in the dex. */
 export interface MoveData
 {
     /** Unique identifier number. */
     readonly uid: number;
-    /** Species name. */
+    /** Move name. */
     readonly name: string;
     /** Display name. */
     readonly display: string;
     /** Target of the move. */
     readonly target: MoveTarget;
-    /** Base power point range. First is base, second is with pp ups. */
+    /** Base power point range. */
     readonly pp: [number, number];
-    /** Whether this move causes the user to switch. */
-    readonly selfSwitch?: SelfSwitch;
-    /** Main volatile status effect that may affect the opponent. */
-    readonly volatileEffect?: VolatileEffect;
-    /** Self-inflicted volatile status effect. */
-    readonly selfVolatileEffect?: SelfVolatileEffect;
-    /** Team-inflicted status effect. */
-    readonly sideCondition?: SideCondition;
     /** Whether this move can be copied by Mirror Move. */
     readonly mirror: boolean;
+    /** Primary move effect. */
+    readonly primary?: PrimaryEffect;
+    /** Additional move effects for the user. */
+    readonly self?: MoveEffect;
+    /**
+     * Additional move effects for the target. Only useful if there is a target
+     * for the move other than the user.
+     */
+    readonly hit?: MoveEffect;
+}
+
+// TODO: apply effect type tracking to abilities, items, statuses, etc
+/** Primary effects of a move. */
+export interface PrimaryEffect
+{
+    /** Whether this move causes the user to switch. */
+    readonly selfSwitch?: SelfSwitch;
+    /** Whether this is a future or two-turn move. */
+    readonly delay?: "future" | "twoTurn";
+    /** Move calling effect. */
+    readonly call?: CallEffect;
+    // TODO: copy boost
+    /** Stat boosts that should be swapped. */
+    readonly swapBoost?: {readonly [T in BoostName]?: true};
+    /** Countable status effect associated with this move. */
+    readonly countableStatus?: CountableStatusEffect;
+    /** Field effect associated with this move. */
+    readonly field?: FieldEffect;
 }
 
 /** Types of targets for a move. */
 export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
-    "all" | "allAdjacent" | "allAdjacentFoes" | "allySide" | "allyTeam" |
-    "any" | "foeSide" | "normal" | "randomNormal" | "scripted" | "self";
+    "all" | "allAdjacent" | "allAdjacentFoes" | "allies" | "allySide" |
+    "allyTeam" | "any" | "foeSide" | "normal" | "randomNormal" | "scripted" |
+    "self";
+
+/** Base interface for move effect containers. */
+export interface MoveEffectBase
+{
+    /** Status effect that should activate. */
+    readonly status?: StatusEffect | null;
+}
+
+/** Primary move effects on the user or target. */
+export interface MoveEffect extends MoveEffectBase
+{
+    /** Unique status effects that should activate. */
+    readonly unique?: UniqueEffect;
+    /** Effect that can be implied by this move. */
+    readonly implicitStatus?: ImplicitStatusEffect;
+    /** Stat boosts that should be applied. */
+    readonly boost?: BoostEffect;
+    /** Team effect that should activate. */
+    readonly team?: TeamEffect;
+    /** Team effect that can be implied by this move. */
+    readonly implicitTeam?: ImplicitTeamEffect;
+    /** Secondary effects that could happen. */
+    readonly secondary?: readonly SecondaryEffect[];
+}
+
+/** Stat boost effects. */
+export interface BoostEffect
+{
+    /** Stat boosts to add. */
+    readonly add?: {readonly [T in BoostName]?: number}
+    /** Stat boosts to set. */
+    readonly set?: {readonly [T in BoostName]?: number}
+}
+
+/** Secondary effects of moves. */
+export interface SecondaryEffect extends MoveEffectBase
+{
+    /** Chance (out of 100) of the effect happening. */
+    readonly chance?: number;
+    /** Whether the effect can cause flinching. */
+    readonly flinch?: true | null;
+    /** Stat boosts added to the target. */
+    readonly boosts?: {readonly [T in BoostName]?: number};
+}
 
 /**
  * Whether this move causes the user to switch, but `copyvolatile` additionally
- * transfers volatile status conditions.
+ * transfers certain volatile status conditions.
  */
-export type SelfSwitch = boolean | "copyvolatile";
+export type SelfSwitch = true | "copyvolatile";
 
-/** Volatile status effect for moves. */
-export type VolatileEffect = "aquaring" | "attract" | "bide" | "charge" |
-    "confusion" | "curse" | "defensecurl" | "destinybond" | "disable" |
-    "embargo" | "encore" | "endure" | "focusenergy" | "followme" | "foresight" |
-    "gastroacid" | "grudge" | "healblock" | "helpinghand" | "imprison" |
-    "ingrain" | "leechseed" | "magiccoat" | "magnetrise" | "minimize" |
-    "miracleeye" | "mudsport" | "nightmare" | "partiallytrapped" |
-    "powertrick" | "protect" | "snatch" | "stockpile" | "substitute" | "taunt" |
-    "telekinesis" | "torment" | "watersport" | "yawn";
-
-/** Self-affecting volatile status effects for moves. */
-export type SelfVolatileEffect = "lockedmove" | "mustrecharge" | "rage" |
-    "roost" | "uproar";
+/** Status effects that are explicitly started/ended in game events. */
+export type StatusEffect = UpdatableStatusEffect | SingleMoveEffect |
+    SingleTurnEffect | MajorStatus | "aquaRing" | "attract" | "charge" |
+    "curse" | "embargo" | "encore" | "focusEnergy" | "foresight" | "healBlock" |
+    "imprison" | "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" |
+    "mudSport" | "nightmare" | "powerTrick" | "slowStart" | "substitute" |
+    "suppressAbility" | "taunt" | "torment" | "waterSport" | "yawn";
 
 /**
- * Team status effects. These are usually tracked over the course of multiple
- * Battle decisions.
+ * Status effects that are explicitly updated throughout their duration in game
+ * events.
  */
-export type SideCondition = "auroraveil" | "healingwish" | "lightscreen" |
-    "luckychant" | "lunardance" | "mist" | "reflect" | "safeguard" | "spikes" |
-    "stealthrock" | "stickyweb" | "tailwind" | "toxicspikes" | "wish";
+export type UpdatableStatusEffect = "confusion" | "bide" | "uproar";
+
+/** Types of sinlge-move effects. */
+export type SingleMoveEffect = "destinyBond" | "grudge" | "rage";
+
+/** Types of sinlge-turn effects. */
+export type SingleTurnEffect = "endure" | "magicCoat" | "protect" | "roost" |
+    "snatch";
+
+/** Status effects that are explicitly counted in game events. */
+export type CountableStatusEffect = "perish" | "stockpile";
+
+// TODO: add rollout
+/** Status effects that are implied by the successful use of a move. */
+export type ImplicitStatusEffect = "defenseCurl" | "lockedMove" | "minimize" |
+    "mustRecharge";
+
+/** Team effects that are explicitly started/ended in game events. */
+export type TeamEffect = "healingWish" | "lightScreen" | "luckyChant" |
+    "lunarDance" | "mist" | "reflect" | "safeguard" | "spikes" | "stealthRock" |
+    "tailwind" | "toxicSpikes";
+
+/** Team effects that are implied by the successful use of a move. */
+export type ImplicitTeamEffect = "wish";
+
+/** Status effects that are explicitly started/ended in game events. */
+export type FieldEffect = UpdatableFieldEffect | "gravity" | "trickRoom";
+
+// tslint:disable: no-trailing-whitespace (force newlines in doc)
+/**
+ * Specifies how this move can call another move.
+ *
+ * `true` - Calls a move normally.  
+ * `"self"` - Calls a move from the user's moveset.  
+ * `"target"` - Calls a move from the target's moveset (caller must have only
+ * one target).
+ */
+// tslint:enable: no-trailing-whitespace
+export type CallEffect = true | "self" | "target";
+
+/** Status effects that require more special attention. */
+export type UniqueEffect = "conversion" | "disable";
+
+/**
+ * Field effects that are explicitly updated throughout their duration in game
+ * events.
+ */
+export type UpdatableFieldEffect = WeatherType;
 
 /** Type info for the dex variable. */
 export interface Dex

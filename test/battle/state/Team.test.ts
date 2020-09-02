@@ -94,7 +94,7 @@ describe("Team", function()
             team.status.selfSwitch = "copyvolatile";
             const mon2 = team.switchIn(options2)!;
             expect(mon2.volatile.boosts.spa).to.equal(2);
-            expect(team.status.selfSwitch).to.be.false;
+            expect(team.status.selfSwitch).to.be.null;
         });
     });
 

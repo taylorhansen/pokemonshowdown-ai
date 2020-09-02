@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { itemRemovalMoves } from "../../src/battle/dex/dex-util";
+import * as dexutil from "../../src/battle/dex/dex-util";
 import * as events from "../../src/battle/driver/BattleEvent";
 import { Logger } from "../../src/Logger";
 import { PokemonID, toIdName } from "../../src/psbot/helpers";
@@ -321,8 +321,7 @@ describe("PSEventHandler", function()
                 }]);
             });
 
-            function testCountableStatus(
-                effect: events.CountableStatusEffectType)
+            function testCountableStatus(effect: dexutil.CountableStatusEffect)
             {
                 describe(effect, function()
                 {
@@ -367,7 +366,7 @@ describe("PSEventHandler", function()
             }
 
             function testTrivialStatus(name: string,
-                effect: events.StatusEffectType, start: boolean): void
+                effect: dexutil.StatusEffect, start: boolean): void
             {
                 const type: psevent.Type = start ? "-start" : "-end";
 
@@ -379,7 +378,7 @@ describe("PSEventHandler", function()
             }
 
             function describeTrivialStatus(name: string,
-                effect: events.StatusEffectType): void
+                effect: dexutil.StatusEffect): void
             {
                 describe(name, function()
                 {
@@ -938,7 +937,7 @@ describe("PSEventHandler", function()
                 [{type: "-enditem", id: us, item: "lifeorb", from: "stealeat"}],
                 [{type: "removeItem", monRef: "us", consumed: false}]);
 
-            for (const move of itemRemovalMoves)
+            for (const move of dexutil.itemRemovalMoves)
             {
                 test("Should emit removeItem with consumed=false if removed " +
                     `via ${move}`,
@@ -1021,7 +1020,7 @@ describe("PSEventHandler", function()
                 const testCases: readonly
                 {
                     readonly name: string,
-                    readonly effect: events.TeamEffectType
+                    readonly effect: dexutil.TeamEffect
                 }[] =
                 [
                     {name: "move: Lucky Chant", effect: "luckyChant"},

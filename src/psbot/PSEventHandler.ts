@@ -1,4 +1,5 @@
 import * as dex from "../battle/dex/dex";
+import * as dexutil from "../battle/dex/dex-util";
 import { itemRemovalMoves, itemTransferMoves, Type } from
     "../battle/dex/dex-util";
 import * as events from "../battle/driver/BattleEvent";
@@ -1011,7 +1012,7 @@ export class PSEventHandler
         it: Iter<psevent.Any>): PSResult
     {
         const teamRef = this.getSide(event.id);
-        let effect: events.TeamEffectType;
+        let effect: dexutil.TeamEffect;
 
         let psCondition = event.condition;
         if (psCondition.startsWith("move: "))
@@ -1049,7 +1050,7 @@ export class PSEventHandler
     protected handleSingleMove(event: psevent.SingleMove,
         it: Iter<psevent.Any>): PSResult
     {
-        let effect: events.SingleMoveEffect | undefined;
+        let effect: dexutil.SingleMoveEffect | undefined;
         if (event.move === "Destiny Bond") effect = "destinyBond";
         else if (event.move === "Grudge") effect = "grudge";
         else if (event.move === "Rage") effect = "rage";
@@ -1067,7 +1068,7 @@ export class PSEventHandler
     protected handleSingleTurn(event: psevent.SingleTurn,
         it: Iter<psevent.Any>): PSResult
     {
-        let effect: events.SingleTurnEffect;
+        let effect: dexutil.SingleTurnEffect;
         switch (event.status.startsWith("move: ") ?
             event.status.substr("move: ".length) : event.status)
         {
@@ -1287,7 +1288,7 @@ export class PSEventHandler
         const monRef = this.getSide(event.id.owner);
         const start = event.type === "-start";
 
-        let effect: events.StatusEffectType | undefined;
+        let effect: dexutil.StatusEffect | undefined;
 
         let ev = event.volatile;
         if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
