@@ -50,11 +50,10 @@ export class PSBattle implements RoomHandler
     /** @override */
     public async init(msg: psmsg.BattleInit): Promise<void>
     {
-        this.logger.debug(`battleinit:\n${
-            inspect(msg, {colors: false, depth: null})}`);
-
-        this.driver.handle(...this.eventHandler.initBattle(msg));
-        this.logger.debug(`State:\n${this.driver.getStateString()}`);
+        const events = this.eventHandler.initBattle(msg);
+        this.logger.debug("Init:\n" +
+            inspect(events, {colors: false, depth: null}));
+        this.driver.handle(...events);
 
         // possibly send a response
         return this.haltDriver();
@@ -66,11 +65,10 @@ export class PSBattle implements RoomHandler
         // indicate that the last choice was accepted
         this.driver.accept();
 
-        this.logger.debug(`battleprogress:\n${
-            inspect(msg, {colors: false, depth: null})}`);
-
-        this.driver.handle(...this.eventHandler.handleEvents(msg.events));
-        this.logger.debug(`State:\n${this.driver.getStateString()}`);
+        const events = this.eventHandler.handleEvents(msg.events);
+        this.logger.debug("Progress:\n" +
+            inspect(events, {colors: false, depth: null}));
+        this.driver.handle(...events);
 
         // possibly send a response
         return this.haltDriver();
@@ -79,9 +77,6 @@ export class PSBattle implements RoomHandler
     /** @override */
     public async request(msg: psmsg.Request): Promise<void>
     {
-        this.logger.debug(`request:\n${
-            inspect(msg, {colors: false, depth: null})}`);
-
         if (this.unavailableChoice)
         {
             // new info may be revealed
@@ -101,9 +96,13 @@ export class PSBattle implements RoomHandler
 
             this.unavailableChoice = null;
         }
-
-        this.driver.handle(...this.eventHandler.handleRequest(msg));
         this.lastRequest = msg;
+
+        const events = this.eventHandler.handleRequest(msg);
+        if (events.length <= 0) return;
+        this.logger.debug("Request:\n" +
+            inspect(events, {colors: false, depth: null, }));
+        this.driver.handle(...events);
     }
 
     /** @override */
@@ -114,6 +113,7 @@ export class PSBattle implements RoomHandler
             // rejected last choice based on unknown info
             // wait for another (guaranteed) request message before proceeding
             const s = msg.reason.substr("[Unavailable choice] Can't ".length);
+            // TODO: does this distinction matter?
             if (s.startsWith("move")) this.unavailableChoice = "move";
             else if (s.startsWith("switch")) this.unavailableChoice = "switch";
         }
@@ -126,8 +126,7 @@ export class PSBattle implements RoomHandler
 
     /**
      * Indicates to the BattleDriver that the stream of DriverEvents has
-     * temporarily ended, possibly awaiting a response from the user. Calling
-     * this again waits until the last BattleDriver promise resolves.
+     * temporarily ended, possibly awaiting a response from the user.
      */
     private haltDriver(): Promise<void>
     {

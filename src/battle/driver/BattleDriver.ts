@@ -50,7 +50,6 @@ export class BattleDriver
      */
     public async halt(command: "wait" | "switch" | "decide"): Promise<void>
     {
-        this.logger.debug(`State:\n${this.stateDriver.getStateString()}`);
         this.halted = true;
         this.stateDriver.halt();
 
@@ -163,13 +162,5 @@ export class BattleDriver
         }
 
         this.sender(this._choices[0]);
-    }
-
-    // TODO: make this not the case
-    // istanbul ignore next: unstable, hard to verify
-    /** Stringifies the BattleState. */
-    public getStateString(): string
-    {
-        return this.stateDriver.getStateString();
     }
 }

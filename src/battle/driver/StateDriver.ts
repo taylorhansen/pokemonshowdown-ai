@@ -97,6 +97,7 @@ export class StateDriver
             this.contexts[i].halt();
         }
         this.baseContext.halt();
+        this.logger.debug(`State:\n${this.state.toString()}`);
     }
 
     /** Gets the available choices for the current decision. */
