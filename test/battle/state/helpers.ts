@@ -29,6 +29,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.destinyBond = true;
     volatile.disableMove("tackle");
     volatile.encore.start();
+    volatile.flashFire = true;
     volatile.grudge = true;
     volatile.healBlock.start();
     volatile.identified = "foresight";

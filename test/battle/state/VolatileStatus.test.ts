@@ -13,16 +13,11 @@ describe("VolatileStatus", function()
         volatile = new VolatileStatus();
     });
 
-    function setEverything()
-    {
-        setAllVolatiles(volatile);
-    }
-
     describe("#clear()", function()
     {
         it("Should clear all statuses", function()
         {
-            setEverything();
+            setAllVolatiles(volatile);
             volatile.clear();
 
             expect(volatile.aquaRing).to.be.false;
@@ -52,6 +47,7 @@ describe("VolatileStatus", function()
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabled).to.be.null;
             expect(volatile.encore.isActive).to.be.false;
+            expect(volatile.flashFire).to.be.false;
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
@@ -97,7 +93,7 @@ describe("VolatileStatus", function()
     {
         it("Should keep only passable statuses", function()
         {
-            setEverything();
+            setAllVolatiles(volatile);
             volatile.clearUnpassable();
 
             // passed
@@ -132,6 +128,7 @@ describe("VolatileStatus", function()
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabled).to.be.null;
             expect(volatile.encore.isActive).to.be.false;
+            expect(volatile.flashFire).to.be.false;
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;

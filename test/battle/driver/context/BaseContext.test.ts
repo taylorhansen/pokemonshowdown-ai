@@ -152,6 +152,7 @@ describe("BaseContext", function()
             test("Curse", "curse", v => v.curse);
             test("Embargo", "embargo", v => v.embargo.isActive);
             test("Encore", "encore", v => v.encore.isActive);
+            test("Flash Fire", "flashFire", v => v.flashFire);
             test("Focus Energy", "focusEnergy", v => v.focusEnergy);
             test("Foresight", "foresight", v => v.identified === "foresight");
             test("Heal Block", "healBlock", v => v.healBlock.isActive);

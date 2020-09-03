@@ -251,10 +251,11 @@ export type SelfSwitch = true | "copyvolatile";
 /** Status effects that are explicitly started/ended in game events. */
 export type StatusEffect = UpdatableStatusEffect | SingleMoveEffect |
     SingleTurnEffect | MajorStatus | "aquaRing" | "attract" | "charge" |
-    "curse" | "embargo" | "encore" | "focusEnergy" | "foresight" | "healBlock" |
-    "imprison" | "ingrain" | "leechSeed" | "magnetRise" | "miracleEye" |
-    "mudSport" | "nightmare" | "powerTrick" | "slowStart" | "substitute" |
-    "suppressAbility" | "taunt" | "torment" | "waterSport" | "yawn";
+    "curse" | "embargo" | "encore" | "flashFire" | "focusEnergy" | "foresight" |
+    "healBlock" | "imprison" | "ingrain" | "leechSeed" | "magnetRise" |
+    "miracleEye" | "mudSport" | "nightmare" | "powerTrick" | "slowStart" |
+    "substitute" | "suppressAbility" | "taunt" | "torment" | "waterSport" |
+    "yawn";
 
 /**
  * Status effects that are explicitly updated throughout their duration in game

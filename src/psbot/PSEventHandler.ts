@@ -444,6 +444,22 @@ export class PSEventHandler
     /** @virtual */
     protected handleStart(event: psevent.Start, it: Iter<psevent.Any>): PSResult
     {
+        if (event.volatile === "ability: Flash Fire")
+        {
+            const monRef = this.getSide(event.id.owner);
+            return {
+                result:
+                [
+                    {type: "activateAbility", monRef, ability: "flashfire"},
+                    {
+                        type: "activateStatusEffect", monRef,
+                        effect: "flashFire", start: true
+                    },
+                    {type: "immune", monRef}
+                ],
+                remaining: it
+            };
+        }
         if (event.volatile === "typeadd")
         {
             // set added type
@@ -473,10 +489,7 @@ export class PSEventHandler
                         `(${parsedTypes.join(", ")})`);
                     parsedTypes.splice(2);
                 }
-                else if (parsedTypes.length === 1)
-                {
-                    parsedTypes.push("???");
-                }
+                else if (parsedTypes.length === 1) parsedTypes.push("???");
                 newTypes = parsedTypes as [Type, Type];
             }
             else newTypes = ["???", "???"];

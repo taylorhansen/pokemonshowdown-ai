@@ -69,10 +69,11 @@ export class BaseContext extends DriverContext implements BattleEventHandler
         const mon = this.state.teams[event.monRef].active;
         switch (event.effect)
         {
-            case "aquaRing": case "attract": case "curse": case "focusEnergy":
-            case "imprison": case "ingrain": case "leechSeed": case "mudSport":
-            case "nightmare": case "powerTrick": case "substitute":
-            case "suppressAbility": case "torment": case "waterSport":
+            case "aquaRing": case "attract": case "curse": case "flashFire":
+            case "focusEnergy": case "imprison": case "ingrain":
+            case "leechSeed": case "mudSport": case "nightmare":
+            case "powerTrick": case "substitute": case "suppressAbility":
+            case "torment": case "waterSport":
             case "destinyBond": case "grudge": case "rage": // singlemove
             case "magicCoat": case "roost": case "snatch": // singleturn
                 mon.volatile[event.effect] = event.start;

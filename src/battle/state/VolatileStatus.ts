@@ -86,6 +86,8 @@ export interface ReadonlyVolatileStatus
     readonly disabled: ReadonlyDisableData | null;
     /** Encore move status. Encored move corresponds to `#lastUsed`. */
     readonly encore: ReadonlyTempStatus;
+    /** Flash Fire ability effect. */
+    readonly flashFire: boolean;
     /** Grudge move status. */
     readonly grudge: boolean;
     /** Heal Block move status. */
@@ -288,6 +290,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public readonly encore = new TempStatus("encore", 7);
 
     /** @override */
+    public flashFire!: boolean;
+
+    /** @override */
     public grudge!: boolean;
 
     /** @override */
@@ -465,6 +470,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.destinyBond = false;
         this.enableMoves();
         this.encore.end();
+        this.flashFire = false;
         this.grudge = false;
         this.healBlock.end();
         this.identified = null;
@@ -619,6 +625,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.destinyBond ? ["destiny bond"] : [],
             this._disabled ? [this._disabled.ts.toString()] : [],
             this.encore.isActive ? [this.encore.toString()] : [],
+            this.flashFire ? ["flash fire"] : [],
             this.grudge ? ["grudge"] : [],
             this.healBlock.isActive ? [this.healBlock.toString()] : [],
             this.identified ? [this.identified] : [],

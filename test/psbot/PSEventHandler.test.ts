@@ -270,6 +270,27 @@ describe("PSEventHandler", function()
 
         describe("-start", function()
         {
+            describe("Flash Fire", function()
+            {
+                test("Should emit activateAbility, activateStatusEffect, and " +
+                    "immune",
+                [{
+                    type: "-start", id: us, volatile: "ability: Flash Fire",
+                    otherArgs: []
+                }],
+                [
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "flashfire"
+                    },
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "flashFire", start: true
+                    },
+                    {type: "immune", monRef: "us"}
+                ]);
+            });
+
             describe("typeadd", function()
             {
                 test("Should emit setThirdType",

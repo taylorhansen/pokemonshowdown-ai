@@ -303,6 +303,7 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
             }
             : {id: null},
         oneHotEncoder(dex.numMoves)),
+    augment(vs => vs.flashFire, booleanEncoder),
     augment(vs => vs.grudge, booleanEncoder),
     augment(vs => vs.healBlock, tempStatusEncoder),
     augment(vs => vs.identified === "foresight", booleanEncoder),
