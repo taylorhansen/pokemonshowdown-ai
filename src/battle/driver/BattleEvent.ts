@@ -13,6 +13,7 @@ interface EventMap
     activateFieldEffect: ActivateFieldEffect;
     activateStatusEffect: ActivateStatusEffect;
     activateTeamEffect: ActivateTeamEffect;
+    block: Block;
     boost: Boost;
     changeType: ChangeType;
     clearAllBoosts: ClearAllBoosts;
@@ -56,7 +57,6 @@ interface EventMap
     revealMove: RevealMove;
     setThirdType: SetThirdType;
     sketch: Sketch;
-    stall: Stall;
     superEffective: SuperEffective;
     swapBoosts: SwapBoosts;
     switchIn: SwitchIn;
@@ -110,13 +110,7 @@ export interface ActivateStatusEffect extends EventBase<"activateStatusEffect">
     readonly monRef: Side;
     /** Name of the effect. */
     readonly effect: dexutil.StatusEffect;
-    /**
-     * Whether to start (`true`) or end (`false`) the status.
-     *
-     * If `#status` is a future move, then `#monRef` refers to the user if
-     * `#start=true` as the move is being prepared, otherwise it refers to the
-     * target as the move is being released.
-     */
+    /** Whether to start (`true`) or end (`false`) the status. */
     readonly start: boolean;
 }
 
@@ -130,6 +124,18 @@ export interface ActivateTeamEffect extends EventBase<"activateTeamEffect">
     /** Whether to start (`true`) or end (`false`) the effect. */
     readonly start: boolean;
 }
+
+/** Indicates that an effect (e.g. a move) has been blocked by a status. */
+export interface Block extends EventBase<"block">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Status being invoked. */
+    readonly effect: BlockEffect;
+}
+
+/** Types of statuses that can block other effects. */
+export type BlockEffect = "endure" | "mist" | "protect" | "safeguard";
 
 /** Updates a stat boost. */
 export interface Boost extends EventBase<"boost">
@@ -263,7 +269,10 @@ export interface FutureMove extends EventBase<"futureMove">
     readonly monRef: Side;
     /** Move being prepared. */
     readonly move: dex.FutureMove;
-    /** Whether the move is being prepared (true) or released (false). */
+    /**
+     * Whether the move is being prepared (true, monRef mentions user) or
+     * released (false, monRef mentions target).
+     */
     readonly start: boolean;
 }
 
@@ -507,18 +516,6 @@ export interface Sketch extends EventBase<"sketch">
     readonly monRef: Side;
     /** Move being Sketched. */
     readonly move: string;
-}
-
-/** Indicates that the pokemon successfully stalled an attack. */
-export interface Stall extends EventBase<"stall">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /**
-     * Whether Endure was in effect, meaning the hit went through but the
-     * pokemon endured it.
-     */
-    readonly endure?: boolean;
 }
 
 /** Indicates that the pokemon was hit by a move it is weak to. */

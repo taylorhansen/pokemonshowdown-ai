@@ -340,6 +340,14 @@ describe("BaseContext", function()
             testEffect("Tailwind", "tailwind", ts => ts.tailwind.isActive);
         });
 
+        describe("block", function()
+        {
+            it("Should do nothing", function()
+            {
+                handle({type: "block", monRef: "us", effect: "protect"});
+            });
+        });
+
         describe("boost", function()
         {
             it("Should add boost", function()
@@ -1128,14 +1136,6 @@ describe("BaseContext", function()
                 expect(mon.moveset.get("sketch")).to.be.null;
                 expect(mon.baseMoveset.get("tackle")).to.not.be.null;
                 expect(mon.baseMoveset.get("sketch")).to.be.null;
-            });
-        });
-
-        describe("stall", function()
-        {
-            it("Should do nothing", function()
-            {
-                handle({type: "stall", monRef: "us"});
             });
         });
 

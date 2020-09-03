@@ -202,7 +202,7 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
 export interface MoveEffectBase
 {
     /** Status effect that should activate. */
-    readonly status?: StatusEffect | null;
+    readonly status?: StatusEffect;
 }
 
 /** Primary move effects on the user or target. */

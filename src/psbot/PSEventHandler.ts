@@ -509,9 +509,11 @@ export class PSEventHandler
         PSResult
     {
         const monRef = this.getSide(event.id.owner);
-        switch (event.volatile)
+        const volatile = event.volatile.startsWith("move: ") ?
+            event.volatile.substr("move: ".length) : event.volatile;
+        switch (volatile)
         {
-            case "move: Bide":
+            case "Bide":
                 return {
                     result:
                     [{
@@ -519,7 +521,7 @@ export class PSEventHandler
                     }],
                     remaining: it
                 };
-            case "move: Charge":
+            case "Charge":
                 return {
                     result:
                     [{
@@ -533,23 +535,22 @@ export class PSEventHandler
                     result:
                     [{
                         type: "updateStatusEffect", monRef,
-                        effect: event.volatile
+                        effect: volatile
                     }],
                     remaining: it
                 };
-            case "Endure": case "Protect":
-            case "move: Endure": case "move: Protect":
+            case "Endure": case "Mist": case "Protect": case "Safeguard":
                 return {
                     result:
                     [{
-                        type: "stall", monRef,
-                        ...(event.volatile.endsWith("Endure") && {endure: true})
+                        type: "block", monRef,
+                        effect: volatile.toLowerCase() as events.BlockEffect
                     }],
                     remaining: it
                 };
-            case "move: Feint":
+            case "Feint":
                 return {result: [{type: "feint", monRef}], remaining: it};
-            case "move: Grudge":
+            case "Grudge":
                 return {
                     result:
                     [{
@@ -558,16 +559,17 @@ export class PSEventHandler
                     }],
                     remaining: it
                 };
-            case "move: Lock-On":
-            case "move: Mind Reader":
-            {
-                const target = event.of ?
-                    this.getSide(event.of.owner) : otherSide(monRef);
+            case "Lock-On": case "Mind Reader":
                 return {
-                    result: [{type: "lockOn", monRef, target}], remaining: it
+                    result:
+                    [{
+                        type: "lockOn", monRef,
+                        target: event.of ?
+                            this.getSide(event.of.owner) : otherSide(monRef)
+                    }],
+                    remaining: it
                 };
-            }
-            case "move: Mimic":
+            case "Mimic":
             {
                 const move = toIdName(event.otherArgs[0]);
 
@@ -597,7 +599,7 @@ export class PSEventHandler
                 throw new Error(
                     `Unknown Mimic-like move '${lastEvent.moveName}'`);
             }
-            case "move: Spite":
+            case "Spite":
                 return {
                     result:
                     [{

@@ -498,6 +498,26 @@ describe("PSEventHandler", function()
                 }]);
             });
 
+            describe("block", function()
+            {
+                function testBlock(volatile: string,
+                    effect: events.BlockEffect): void
+                {
+                    test(`Should emit block '${effect}' from '${volatile}'`,
+                        [{type: "-activate", id: us, volatile, otherArgs: []}],
+                        [{type: "block", monRef: "us", effect}]);
+                }
+
+                testBlock("Endure", "endure");
+                testBlock("move: Endure", "endure");
+                testBlock("Mist", "mist");
+                testBlock("move: Mist", "mist");
+                testBlock("Protect", "protect");
+                testBlock("move: Protect", "protect");
+                testBlock("Safeguard", "safeguard");
+                testBlock("move: Safeguard", "safeguard");
+            });
+
             describe("Charge", function()
             {
                 test("Should emit activateStatusEffect",
@@ -619,24 +639,6 @@ describe("PSEventHandler", function()
                     type: "modifyPP", monRef: "us", move: "splash",
                     amount: -4
                 }]);
-            });
-
-            describe("stall", function()
-            {
-                function testStall(volatile: string, endure = false): void
-                {
-                    test(`Should emit stall ${endure ? "with endure " : ""}` +
-                            `from '${volatile}'`,
-                        [{type: "-activate", id: us, volatile, otherArgs: []}],
-                    [{
-                        type: "stall", monRef: "us", ...(endure && {endure})
-                    }]);
-                }
-
-                testStall("Protect");
-                testStall("move: Protect");
-                testStall("Endure", /*endure*/true);
-                testStall("move: Endure", /*endure*/true);
             });
 
             describe("trapped", function()

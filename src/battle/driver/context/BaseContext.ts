@@ -111,31 +111,27 @@ export class BaseContext extends DriverContext implements BattleEventHandler
         const ts = this.state.teams[event.teamRef].status;
         switch (event.effect)
         {
-            case "healingWish":
-            case "lunarDance":
+            case "healingWish": case "lunarDance":
                 ts[event.effect] = event.start;
                 break;
-            case "lightScreen":
-            case "reflect":
+            case "lightScreen": case "reflect":
                 // start should normally be handled under a MoveContext
                 if (event.start) ts[event.effect].start(/*source*/null);
                 else ts[event.effect].reset();
                 break;
-            case "luckyChant":
-            case "mist":
-            case "safeguard":
-            case "tailwind":
+            case "luckyChant": case "mist": case "safeguard": case "tailwind":
                 if (event.start) ts[event.effect].start();
                 else ts[event.effect].end();
                 break;
-            case "spikes":
-            case "stealthRock":
-            case "toxicSpikes":
+            case "spikes": case "stealthRock": case "toxicSpikes":
                 if (event.start) ++ts[event.effect];
                 else ts[event.effect] = 0;
                 break;
         }
     }
+
+    /** Indicates that an effect has been blocked by a status. */
+    public block(event: events.Block): void {}
 
     /** Updates a stat boost. */
     public boost(event: events.Boost): void
@@ -473,9 +469,6 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     {
         this.state.teams[event.monRef].active.sketch(event.move);
     }
-
-    /** Indicates that the pokemon successfully stalled an attack. */
-    public stall(event: events.Stall): void {}
 
     /** Indicates that the pokemon was hit by a move it was weak to. */
     public superEffective(event: events.SuperEffective): void {}

@@ -647,6 +647,22 @@ describe("MoveContext", function()
             }
         });
 
+        describe("block", function()
+        {
+            it("Should cancel move effects", function()
+            {
+                initActive("us");
+                initActive("them").team!.status.safeguard.start();
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "thunderwave"});
+
+                expect(ctx.handle(
+                        {type: "block", monRef: "them", effect: "safeguard"}))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+        });
+
         describe("boost", function()
         {
             it("Should handle boost", function()
@@ -1520,7 +1536,8 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "them", move});
                     expect(vts.isActive).to.be.true;
 
-                    expect(ctx.handle({type: "stall", monRef: "us"}))
+                    expect(ctx.handle(
+                            {type: "block", monRef: "us", effect: "protect"}))
                         .to.equal("base");
                     expect(vts.isActive).to.be.false;
                 });
@@ -1534,7 +1551,7 @@ describe("MoveContext", function()
                     expect(vts.isActive).to.be.true;
 
                     expect(ctx.handle(
-                            {type: "stall", monRef: "us", endure: true}))
+                            {type: "block", monRef: "us", effect: "endure"}))
                         .to.equal("base");
                     expect(vts.isActive).to.be.true;
                 });

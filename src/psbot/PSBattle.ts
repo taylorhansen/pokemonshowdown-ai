@@ -101,7 +101,7 @@ export class PSBattle implements RoomHandler
         const events = this.eventHandler.handleRequest(msg);
         if (events.length <= 0) return;
         this.logger.debug("Request:\n" +
-            inspect(events, {colors: false, depth: null, }));
+            inspect(events, {colors: false, depth: null}));
         this.driver.handle(...events);
     }
 

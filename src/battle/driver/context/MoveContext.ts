@@ -173,8 +173,10 @@ export class MoveContext extends DriverContext
                 if (this.userRef !== event.monRef) return "expire";
                 this.handleImplicitEffects(/*failed*/true);
                 return "base";
-            case "stall":
-                if (event.endure) return "base";
+            case "block":
+                // endure only protects from going to 0hp, so the move effects
+                //  still take place
+                if (event.effect === "endure") return "base";
                 // fallthrough
             case "immune": case "miss":
                 // generally a complete miss fails the move
