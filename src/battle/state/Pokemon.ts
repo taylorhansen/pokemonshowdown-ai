@@ -382,6 +382,7 @@ export class Pokemon implements ReadonlyPokemon
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
+        this.majorStatus.postTurn();
         if (this.active) this.volatile.postTurn();
     }
 

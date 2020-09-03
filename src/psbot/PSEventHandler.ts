@@ -744,7 +744,7 @@ export class PSEventHandler
         const newHP = [event.status.hp, event.status.hpMax] as const;
 
         const damageEvent: events.TakeDamage =
-            {type: "takeDamage", monRef, newHP, tox: event.from === "psn"};
+            {type: "takeDamage", monRef, newHP};
 
         // TODO: wish
         if (event.from === "move: Healing Wish")

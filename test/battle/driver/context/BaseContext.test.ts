@@ -1185,11 +1185,7 @@ describe("BaseContext", function()
                 const mon = initActive("us", smeargle);
                 expect(mon.hp.current).to.equal(smeargle.hp);
 
-                handle(
-                {
-                    type: "takeDamage", monRef: "us", newHP: [50, 100],
-                    tox: false
-                });
+                handle({type: "takeDamage", monRef: "us", newHP: [50, 100]});
                 expect(mon.hp.current).to.equal(50);
             });
         });

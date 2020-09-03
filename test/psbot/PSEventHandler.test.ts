@@ -774,20 +774,7 @@ describe("PSEventHandler", function()
                 [{
                     type, id: us, status: {hp: 1, hpMax: 100, condition: null}
                 }],
-                [{
-                    type: "takeDamage", monRef: "us", newHP: [1, 100],
-                    tox: false
-                }]);
-
-                test("Should emit takeDamage from psn/tox",
-                [{
-                    type, id: us, status: {hp: 1, hpMax: 100, condition: null},
-                    from: "psn"
-                }],
-                [{
-                    type: "takeDamage", monRef: "us", newHP: [1, 100],
-                    tox: true
-                }]);
+                    [{type: "takeDamage", monRef: "us", newHP: [1, 100]}]);
 
                 test("Should emit takeDamage and activateTeamEffect from " +
                     "Healing Wish",
@@ -801,10 +788,7 @@ describe("PSEventHandler", function()
                         type: "activateTeamEffect", teamRef: "us",
                         effect: "healingWish", start: false
                     },
-                    {
-                        type: "takeDamage", monRef: "us", newHP: [100, 100],
-                        tox: false
-                    }
+                    {type: "takeDamage", monRef: "us", newHP: [100, 100]}
                 ]);
 
                 test("Should emit takeDamage, restoreMoves and " +
@@ -819,10 +803,7 @@ describe("PSEventHandler", function()
                         type: "activateTeamEffect", teamRef: "us",
                         effect: "lunarDance", start: false
                     },
-                    {
-                        type: "takeDamage", monRef: "us", newHP: [100, 100],
-                        tox: false
-                    },
+                    {type: "takeDamage", monRef: "us", newHP: [100, 100]},
                     {type: "restoreMoves", monRef: "us"}
                 ]);
             });
@@ -1329,10 +1310,7 @@ describe("PSEventHandler", function()
                     type: "-heal", id: us, from: "item: Sitrus Berry",
                     status: {hp: 50, hpMax: 100, condition: null}
                 }],
-                [{
-                    type: "takeDamage", monRef: "us", newHP: [50, 100],
-                    tox: false
-                }]);
+                    [{type: "takeDamage", monRef: "us", newHP: [50, 100]}]);
             });
         });
     });

@@ -89,6 +89,26 @@ describe("MajorStatusCounter", function()
         });
     });
 
+    describe("#postTurn()", function()
+    {
+        it("Should update tox turns", function()
+        {
+            ms.afflict("tox");
+            expect(ms.turns).to.equal(1);
+            ms.postTurn();
+            expect(ms.turns).to.equal(2);
+        });
+
+        it("Should not update other status turns", function()
+        {
+            // should be updated explicitly by inactive events
+            ms.afflict("slp");
+            expect(ms.turns).to.equal(1);
+            ms.postTurn();
+            expect(ms.turns).to.equal(1);
+        });
+    });
+
     describe("#resetCounter()", function()
     {
         it("Should reset turn counter", function()

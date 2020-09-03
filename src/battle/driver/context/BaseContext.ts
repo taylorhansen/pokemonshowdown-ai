@@ -498,12 +498,6 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     {
         const mon = this.state.teams[event.monRef].active;
         mon.hp.set(event.newHP[0], event.newHP[1]);
-        // TODO: move tick call to postTurn() because sometimes tox damage isn't
-        //  taken but still builds up
-        if (event.tox && mon.majorStatus.current === "tox")
-        {
-            mon.majorStatus.tick();
-        }
     }
 
     /** Indicates that a pokemon has transformed into its target. */

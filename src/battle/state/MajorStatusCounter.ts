@@ -64,6 +64,12 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
         else ++this._turns;
     }
 
+    /** End of turn updates for certain statuses. */
+    public postTurn(): void
+    {
+        if (this._current === "tox") this.tick();
+    }
+
     /** Resets the current turn counter. */
     public resetCounter(): void
     {

@@ -551,11 +551,6 @@ export interface TakeDamage extends EventBase<"takeDamage">
     readonly monRef: Side;
     /** HP/max pair. */
     readonly newHP: readonly [number, number];
-    /**
-     * Whether the damage was due to poison or toxic. This is so the toxic
-     * counter can be updated properly.
-     */
-    readonly tox: boolean;
 }
 
 /** Indicates that a pokemon has transformed into its target. */
