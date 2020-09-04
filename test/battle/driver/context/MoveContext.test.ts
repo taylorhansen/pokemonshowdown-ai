@@ -79,9 +79,9 @@ describe("MoveContext", function()
                 // indicate that the two-turn move is being released
                 initCtx({type: "useMove", monRef: "us", move: "fly"});
                 expect(mon.volatile.twoTurn.isActive).to.be.false;
-                // should not deduct pp
-                expect(mon.moveset.get("fly")).to.not.be.null;
-                expect(mon.moveset.get("fly")).to.have.property("pp", 24);
+                // should not deduct pp or even reveal the move, assuming the
+                //  the start turn was called by an effect in this case
+                expect(mon.moveset.get("fly")).to.be.null;
             });
 
             it("Should still deduct pp if starting a different two-turn move",
@@ -111,9 +111,8 @@ describe("MoveContext", function()
                 // indicate that the locked move is continuing
                 initCtx({type: "useMove", monRef: "us", move: "thrash"});
                 expect(mon.volatile.lockedMove.isActive).to.be.true;
-                // should not deduct pp
-                expect(mon.moveset.get("thrash")).to.not.be.null;
-                expect(mon.moveset.get("thrash")).to.have.property("pp", 32);
+                // should not deduct pp or even reveal
+                expect(mon.moveset.get("thrash")).to.be.null;
             });
 
             it("Should still deduct pp if starting a different locked move",
@@ -138,9 +137,8 @@ describe("MoveContext", function()
                 // indicate that the rollout move is continuing
                 initCtx({type: "useMove", monRef: "us", move: "iceball"});
                 expect(mon.volatile.rollout.isActive).to.be.true;
-                // should not deduct pp
-                expect(mon.moveset.get("iceball")).to.not.be.null;
-                expect(mon.moveset.get("iceball")).to.have.property("pp", 32);
+                // should not deduct pp or even reveal
+                expect(mon.moveset.get("iceball")).to.be.null;
             });
 
             it("Should still deduct pp if starting a different rollout move",

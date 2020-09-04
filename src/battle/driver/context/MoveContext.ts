@@ -124,26 +124,25 @@ export class MoveContext extends DriverContext
             releasedTwoTurn = true;
         }
 
+        // only reveal and deduct pp if this event isn't continuing a multi-turn
+        //  move
+        const reveal = !releasedTwoTurn &&
+            this.user.volatile.lockedMove.type !== this.moveName &&
+            this.user.volatile.rollout.type !== this.moveName;
+
         // if this isn't a called move, then the user must have this move in its
-        //  moveset (i.e. it is an actual move decision)
+        //  moveset (i.e. it is an actual move selection by the player)
         if (called) return;
 
         // every move decision resets any single-move statuses
         this.user.volatile.resetSingleMove();
 
         // only struggle can be selected without being a part of the moveset
-        if (this.moveName === "struggle") return;
+        if (this.moveName === "struggle" || !reveal) return;
+
+        if (!reveal) return;
 
         const revealedMove = this.user.moveset.reveal(this.moveName);
-
-        // only deduct pp if this event isn't continuing a multi-turn
-        //  move
-        if (releasedTwoTurn ||
-            this.user.volatile.lockedMove.type === this.moveName ||
-            this.user.volatile.rollout.type === this.moveName)
-        {
-            return;
-        }
 
         // record the move object in case further deductions need to be made
         this.move = revealedMove;
@@ -322,12 +321,8 @@ export class MoveContext extends DriverContext
             this.effects.clear();
 
             // clear continuous moves
-            // TODO: can a called move lock the user?
-            if (!this.called)
-            {
-                this.user.volatile.lockedMove.reset();
-                this.user.volatile.rollout.reset();
-            }
+            this.user.volatile.lockedMove.reset();
+            this.user.volatile.rollout.reset();
 
             // TODO: other implications of a move failing
             return;
@@ -360,8 +355,6 @@ export class MoveContext extends DriverContext
                 {
                     throw new Error(`Invalid locked move ${this.moveName}`);
                 }
-                // can't lock if called by another move (TODO: verify)
-                if (this.called) break;
                 if (this.user.volatile.lockedMove.type === this.moveName)
                 {
                     // continue locked status
@@ -380,8 +373,8 @@ export class MoveContext extends DriverContext
         }
         if (!lockedMove) this.user.volatile.lockedMove.reset();
 
-        // can't lock if called by another move (TODO: verify)
-        if (!this.called && dexutil.isRolloutMove(this.moveName))
+        // TODO: add rollout to implicitStatus above
+        if (dexutil.isRolloutMove(this.moveName))
         {
             // TODO: add rollout moves to ImplicitStatusEffect
             // start/continue rollout status
