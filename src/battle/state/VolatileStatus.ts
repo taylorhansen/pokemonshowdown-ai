@@ -631,7 +631,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.identified ? [this.identified] : [],
             this.imprison ? ["imprison"] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
-            this.minimize ? ["magic coat"] : [],
+            this.magicCoat ? ["magic coat"] : [],
             this.minimize ? ["minimize"] : [],
             this.mudSport ? ["mud sport"] : [],
             this.mustRecharge ? ["must recharge"] : [],
