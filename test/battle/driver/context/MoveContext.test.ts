@@ -384,7 +384,8 @@ describe("MoveContext", function()
             testNonRemovable("Snatch", "snatch", "snatch", "us");
 
             function testRemovable(name: string, effect: dexutil.StatusEffect,
-                move: string, target: Side): void
+                move: string | undefined, target: Side, secondaryMove?: string,
+                secondaryMove100?: string): void
             {
                 // adjust perspective
                 target = otherSide(target);
@@ -393,57 +394,110 @@ describe("MoveContext", function()
                 {
                     beforeEach("Initialize active", function()
                     {
+                        initActive("us");
                         initActive("them");
-                        if (target !== "them") initActive("us");
                     });
 
-                    it("Should pass if expected", function()
+                    if (move)
                     {
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move});
-                        expect(ctx.handle(
-                            {
-                                type: "activateStatusEffect", monRef: target,
-                                effect, start: true
-                            }))
-                            .to.equal("base");
-                    });
+                        it("Should pass if expected", function()
+                        {
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "them", move});
+                            expect(ctx.handle(
+                                {
+                                    type: "activateStatusEffect",
+                                    monRef: target, effect, start: true
+                                }))
+                                .to.equal("base");
+                            ctx.expire();
+                        });
+                    }
 
-                    it("Should still pass if start=false", function()
+                    if (secondaryMove)
                     {
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move});
-                        // TODO: track moves that can do this
-                        expect(ctx.handle(
+                        it("Should pass if expected via secondary effect",
+                        function()
+                        {
+                            const ctx = initCtx(
                             {
-                                type: "activateStatusEffect", monRef: target,
-                                effect, start: false
-                            }))
-                            .to.equal("base");
-                    });
+                                type: "useMove", monRef: "them", move:
+                                secondaryMove
+                            });
+                            expect(ctx.handle(
+                                {
+                                    type: "activateStatusEffect",
+                                    monRef: target, effect, start: true
+                                }))
+                                .to.equal("base");
+                            ctx.expire();
+                        });
+                    }
 
-                    it("Should expire if mismatched flags", function()
+                    if (move)
                     {
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: "tackle"});
-                        expect(ctx.handle(
+                        it("Should still pass if start=false", function()
+                        {
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "them", move});
+                            // TODO: track moves that can do this
+                            expect(ctx.handle(
+                                {
+                                    type: "activateStatusEffect",
+                                    monRef: target, effect, start: false
+                                }))
+                                .to.equal("base");
+                            ctx.expire();
+                        });
+
+                        it("Should expire if mismatched flags", function()
+                        {
+                            const ctx = initCtx(
                             {
-                                type: "activateStatusEffect", monRef: target,
-                                effect, start: true
-                            }))
-                            .to.equal("expire");
-                    });
+                                type: "useMove", monRef: "them", move: "tackle"
+                            });
+                            expect(ctx.handle(
+                                {
+                                    type: "activateStatusEffect",
+                                    monRef: target, effect, start: true
+                                }))
+                                .to.equal("expire");
+                            ctx.expire();
+                        });
+                    }
+
+                    if (secondaryMove100)
+                    {
+                        it("Should throw if expire before 100% secondary " +
+                            "effect",
+                        function()
+                        {
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move:
+                                secondaryMove100
+                            });
+                            expect(() => ctx.expire()).to.throw(Error,
+                                "Expected hit SecondaryEffect StatusEffect " +
+                                `'${effect}' but it didn't happen`);
+                        });
+                    }
                 });
             }
 
-            testRemovable("Confusion", "confusion", "confuseray", "them");
+            testRemovable("Confusion", "confusion", "confuseray", "them",
+                "psybeam", "dynamicpunch");
             testRemovable("Leech Seed", "leechSeed", "leechseed", "them");
             testRemovable("Substitute", "substitute", "substitute", "us");
 
-            // secondary effect
-            testRemovable("Secondary confusion", "confusion", "confusion",
-                "them");
+            // major status
+            testRemovable("Burn", "brn", "willowisp", "them", "flamethrower");
+            testRemovable("Freeze", "frz", undefined, "them", "icebeam");
+            testRemovable("Paralyze", "par", "stunspore", "them", "thunderbolt",
+                "zapcannon");
+            testRemovable("Poison", "psn", "poisonpowder", "them", "gunkshot");
             testRemovable("Sleep", "slp", "spore", "them");
+            testRemovable("Toxic", "tox", "toxic", "them", "poisonfang");
 
             describe("Slow Start", function()
             {
@@ -560,7 +614,7 @@ describe("MoveContext", function()
                             {type: "useMove", monRef: "them", move});
                         expect(ctx.handle(
                             {
-                                type: "activateTeamEffect", teamRef: "them",
+                                type: "activateTeamEffect", teamRef: "us",
                                 effect, start: true
                             }))
                             .to.equal("base");
@@ -574,7 +628,7 @@ describe("MoveContext", function()
                         // TODO: track moves that can do this
                         expect(ctx.handle(
                             {
-                                type: "activateTeamEffect", teamRef: "them",
+                                type: "activateTeamEffect", teamRef: "us",
                                 effect, start: false
                             }))
                             .to.equal("base");
@@ -587,7 +641,7 @@ describe("MoveContext", function()
                             {type: "useMove", monRef: "them", move: "tackle"});
                         expect(ctx.handle(
                             {
-                                type: "activateTeamEffect", teamRef: "them",
+                                type: "activateTeamEffect", teamRef: "us",
                                 effect, start: true
                             }))
                             .to.equal("expire");
@@ -678,6 +732,39 @@ describe("MoveContext", function()
                 ctx.expire(); // shouldn't throw
             });
 
+            it("Should handle boost via secondary effect", function()
+            {
+                initActive("us");
+                initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "rocksmash"});
+
+                expect(ctx.handle(
+                    {
+                        // wrong pokemon
+                        type: "boost", monRef: "us", stat: "def", amount: -1
+                    }))
+                    .to.equal("base"); // TODO: expire
+                expect(ctx.handle(
+                    {
+                        // wrong boost number
+                        type: "boost", monRef: "them", stat: "def", amount: -2
+                    }))
+                    .to.equal("base"); // TODO: expire
+                expect(ctx.handle(
+                    {
+                        // wrong boost stat
+                        type: "boost", monRef: "them", stat: "atk", amount: -1
+                    }))
+                    .to.equal("base"); // TODO: expire
+                expect(ctx.handle(
+                    {
+                        type: "boost", monRef: "them", stat: "def", amount: -1
+                    }))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+
             it("Should allow partial boost if maxing out", function()
             {
                 const mon = initActive("us");
@@ -699,6 +786,30 @@ describe("MoveContext", function()
                 const ctx = initCtx(
                     {type: "useMove", monRef: "us", move: "dracometeor"});
                 ctx.expire(); // shouldn't throw
+            });
+
+            it("Should throw if expire before effect", function()
+            {
+                initActive("us");
+                initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "charm"});
+
+                expect(() => ctx.expire()).to.throw(Error,
+                    "Expected hit BoostEffect add atk '-2' but it didn't " +
+                    "happen");
+            });
+
+            it("Should throw if expire before 100% secondary effect", function()
+            {
+                initActive("us");
+                initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "rocktomb"});
+
+                expect(() => ctx.expire()).to.throw(Error,
+                    "Expected hit SecondaryEffect boost spe '-1' but it " +
+                    "didn't happen");
             });
         });
 
@@ -790,11 +901,15 @@ describe("MoveContext", function()
                     {type: "useMove", monRef: "them", move: "fly"});
 
                 expect(ctx.handle(
+                        {type: "prepareMove", monRef: "us", move: "fly"}))
+                    .to.equal("expire");
+                expect(ctx.handle(
                         {type: "prepareMove", monRef: "them", move: "fly"}))
                     .to.equal("base");
-                expect(ctx.handle(
+                expect(() => ctx.handle(
                         {type: "prepareMove", monRef: "them", move: "bounce"}))
-                    .to.equal("expire");
+                    .to.throw(Error, "Mismatched prepareMove: Using 'fly' " +
+                        "but got 'bounce'");
                 ctx.expire();
 
                 // release
@@ -834,6 +949,17 @@ describe("MoveContext", function()
                     }))
                     .to.equal("expire");
                 ctx.expire();
+            });
+
+            it("Should throw if expire before effect", function()
+            {
+                initActive("us");
+                initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "them", move: "guardswap"});
+                expect(() => ctx.expire()).to.throw(Error,
+                    "Expected primary swapBoost 'def,spd' but it didn't " +
+                    "happen");
             });
         });
 
