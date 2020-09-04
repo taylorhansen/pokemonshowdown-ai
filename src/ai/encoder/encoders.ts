@@ -634,7 +634,8 @@ export const teamEncoder: Encoder<ReadonlyTeam> = concat(
     }),
     augment(t => t.active, activePokemonEncoder),
     ...Array.from({length: Team.maxSize - 1}, (_, i) =>
-        augment((t: ReadonlyTeam) => t.pokemon[i], benchedPokemonEncoder)),
+        augment(({pokemon: p}: ReadonlyTeam) =>
+                p[i]?.fainted ? undefined : p[i], benchedPokemonEncoder)),
     augment(t => t.status, teamStatusEncoder)
 );
 

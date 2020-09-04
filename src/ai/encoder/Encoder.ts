@@ -26,8 +26,8 @@ export function assertEncoder<TState>(assertion: (state: TState) => void):
     return {
         encode(arr, state)
         {
-            assertion(state);
             checkLength(arr, 0);
+            assertion(state);
         },
         size: 0
     }
@@ -42,7 +42,7 @@ export function augment<TState1, TState2>(getter: (args: TState1) => TState2,
     encoder: Encoder<TState2>): Encoder<TState1>
 {
     return {
-        encode: (arr, args) => encoder.encode(arr, getter(args)),
+        encode(arr, args) { encoder.encode(arr, getter(args)); },
         size: encoder.size
     };
 }
@@ -69,7 +69,7 @@ export function concat<TState>(...encoders: Encoder<TState>[]):
                 nextByteOffset += encoder.size * arr.BYTES_PER_ELEMENT;
                 if (nextByteOffset > maxByteOffset)
                 {
-                    throw new Error("composeEncoders() array was too small " +
+                    throw new Error("concat() encoder array was too small " +
                         `for the given encoders (${arr.byteLength} bytes vs ` +
                         `at least ${nextByteOffset - arr.byteOffset})`);
                 }
@@ -79,7 +79,7 @@ export function concat<TState>(...encoders: Encoder<TState>[]):
             }
             if (nextByteOffset !== maxByteOffset)
             {
-                throw new Error("composeEncoders() didn't fill the given " +
+                throw new Error("concat() encoder didn't fill the given " +
                     `array (filled ${nextByteOffset - arr.byteOffset} bytes, ` +
                     `given ${arr.byteLength})`);
             }
