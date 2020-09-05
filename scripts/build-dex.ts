@@ -77,6 +77,23 @@ let uid = 0;
 
 const moves: (readonly [string, dexutil.MoveData])[] = [];
 
+// copied from pokemon-showdown/data/mods/gen4/moves
+/** Moves that can't be copied by Mirror Move. */
+const noMirror: {readonly [move: string]: boolean} =
+{
+    acupressure: true, aromatherapy: true, assist: true, chatter: true,
+    copycat: true, counter: true, curse: true, doomdesire: true, feint: true,
+    focuspunch: true, futuresight: true, gravity: true, hail: true, haze: true,
+    healbell: true, helpinghand: true, lightscreen: true, luckychant: true,
+    magiccoat: true, mefirst: true, metronome: true, mimic: true,
+    mirrorcoat: true, mirrormove: true, mist: true, mudsport: true,
+    naturepower: true, perishsong: true, psychup: true, raindance: true,
+    reflect: true, roleplay: true, safeguard: true, sandstorm: true,
+    sketch: true, sleeptalk: true, snatch: true, spikes: true, spitup: true,
+    stealthrock: true, struggle: true, sunnyday: true, tailwind: true,
+    toxicspikes: true, transform: true, watersport: true
+};
+
 /** Maps some move names to CallEffects. */
 const callEffectMap: {readonly [move: string]: dexutil.CallEffect} =
 {
@@ -222,7 +239,7 @@ for (const move of
     if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
 
     // get mirror move flag
-    const mirror = move.flags.mirror === 1;
+    const mirror = target !== "self" && !noMirror.hasOwnProperty(move.id);
 
     // setup primary effects
 

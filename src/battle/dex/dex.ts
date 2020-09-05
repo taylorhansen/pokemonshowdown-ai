@@ -767,7 +767,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     confusion: {uid: 62, name: "confusion", display: "Confusion", target: "normal", pp: [25, 40], mirror: true, hit: {status: "confusion", secondary: [{chance: 10, status: "confusion"}]}},
     constrict: {uid: 63, name: "constrict", display: "Constrict", target: "normal", pp: [35, 56], mirror: true, hit: {secondary: [{chance: 10, boosts: {spe: -1}}]}},
     conversion: {uid: 64, name: "conversion", display: "Conversion", target: "self", pp: [30, 48], mirror: false, self: {unique: "conversion"}},
-    conversion2: {uid: 65, name: "conversion2", display: "Conversion 2", target: "normal", pp: [30, 48], mirror: false},
+    conversion2: {uid: 65, name: "conversion2", display: "Conversion 2", target: "normal", pp: [30, 48], mirror: true},
     copycat: {uid: 66, name: "copycat", display: "Copycat", target: "self", pp: [20, 32], mirror: false, primary: {call: true}},
     cosmicpower: {uid: 67, name: "cosmicpower", display: "Cosmic Power", target: "self", pp: [20, 32], mirror: false, self: {boost: {add: {def: 1, spd: 1}}}},
     cottonspore: {uid: 68, name: "cottonspore", display: "Cotton Spore", target: "normal", pp: [40, 64], mirror: true, hit: {boost: {add: {spe: -2}}}},
