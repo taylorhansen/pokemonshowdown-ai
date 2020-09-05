@@ -1037,14 +1037,176 @@ describe("MoveContext", function()
             });
 
             // extract self+target move-callers
+            const mirrorCallers: string[] = [];
             const selfMoveCallers: string[] = [];
             const targetMoveCallers: string[] = [];
+            const otherCallers: string[] = [];
             for (const move of Object.keys(dex.moveCallers))
             {
                 const effect = dex.moveCallers[move];
-                if (effect === "self") selfMoveCallers.push(move);
+                if (effect === "mirror") mirrorCallers.push(move);
+                else if (effect === "self") selfMoveCallers.push(move);
                 else if (effect === "target") targetMoveCallers.push(move);
+                else otherCallers.push(move);
             }
+
+            describe("Move-callers", function()
+            {
+                for (const caller of otherCallers)
+                {
+                    it(`Should pass if using ${caller}`, function()
+                    {
+                        initActive("them");
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: caller});
+                        expect(ctx.handle(
+                            {
+                                type: "useMove", monRef: "them", move: "tackle"
+                            }))
+                            .to.be.an.instanceOf(MoveContext);
+                        ctx.expire();
+                    });
+                }
+            });
+
+            describe("Mirror move-callers", function()
+            {
+                it("Should track if targeted", function()
+                {
+                    const us = initActive("us");
+                    initActive("them");
+
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "tackle"});
+                    expect(us.volatile.mirrorMove).to.be.null;
+                    ctx.expire();
+                    expect(us.volatile.mirrorMove).to.equal("tackle");
+                });
+
+                it("Should track if targeted by a called move", function()
+                {
+                    const us = initActive("us");
+                    initActive("them");
+
+                    const ctx = initCtx(
+                    {
+                        type: "useMove", monRef: "them", move: otherCallers[0]
+                    });
+                    const ctx2 = ctx.handle(
+                            {type: "useMove", monRef: "them", move: "tackle"});
+                    expect(ctx2).to.be.an.instanceOf(MoveContext);
+
+                    expect(us.volatile.mirrorMove).to.be.null;
+                    (ctx2 as MoveContext).expire();
+                    expect(us.volatile.mirrorMove).to.equal("tackle");
+                    ctx.expire();
+                });
+
+                it("Should track on two-turn release turn", function()
+                {
+                    const us = initActive("us");
+                    const them = initActive("them");
+                    us.volatile.mirrorMove = "previous"; // test value
+
+                    // start a two-turn move
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "fly"});
+                    expect(ctx.handle(
+                            {type: "prepareMove", monRef: "them", move: "fly"}))
+                        .to.equal("base");
+                    them.volatile.twoTurn.start("fly"); // base
+                    ctx.expire();
+                    // shouldn't count the charging turn
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+
+                    // release the two-turn move
+                    const ctx2 = initCtx(
+                        {type: "useMove", monRef: "them", move: "fly"});
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+                    ctx2.expire();
+                    expect(us.volatile.mirrorMove).to.equal("fly");
+                });
+
+                it("Should not track if not targeted", function()
+                {
+                    const us = initActive("us");
+                    initActive("them");
+                    us.volatile.mirrorMove = "previous"; // test value
+                    // move that can't be mirrored but targets opponent
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "feint"});
+                    ctx.expire();
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+                });
+
+                // TODO: is this unique to PS?
+                it("Should reset tracking on called two-turn release turn",
+                function()
+                {
+                    const us = initActive("us");
+                    const them = initActive("them");
+                    us.volatile.mirrorMove = "previous"; // test value
+
+                    // call a two-turn move
+                    const ctx = initCtx(
+                    {
+                        type: "useMove", monRef: "them", move: otherCallers[0]
+                    });
+                    const ctx2 = ctx.handle(
+                        {type: "useMove", monRef: "them", move: "fly"});
+                    expect(ctx2).to.be.an.instanceOf(MoveContext);
+                    expect((ctx2 as MoveContext).handle(
+                            {type: "prepareMove", monRef: "them", move: "fly"}))
+                        .to.equal("base");
+                    them.volatile.twoTurn.start("fly"); // base
+                    (ctx2 as MoveContext).expire();
+                    ctx.expire();
+
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+
+                    // release the two-turn move
+                    const ctx3 = initCtx(
+                        {type: "useMove", monRef: "them", move: "fly"});
+                    ctx3.expire();
+
+                    expect(us.volatile.mirrorMove).to.equal("fly");
+                });
+
+                for (const caller of mirrorCallers)
+                {
+                    it(`Should pass if using ${caller} and move matches`,
+                    function()
+                    {
+                        const them = initActive("them");
+                        them.volatile.mirrorMove = "tackle"
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: caller});
+                        expect(ctx.handle(
+                            {
+                                type: "useMove", monRef: "them", move: "tackle"
+                            }))
+                            .to.be.an.instanceOf(MoveContext);
+                        ctx.expire();
+                    });
+
+                    it(`Should not pass if using ${caller} and mismatched move`,
+                    function()
+                    {
+                        const them = initActive("them");
+                        them.volatile.mirrorMove = "watergun"
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: caller});
+                        expect(ctx.handle(
+                            {
+                                type: "useMove", monRef: "them", move: "tackle"
+                            }))
+                            .to.equal("expire");
+                        expect(() => ctx.expire())
+                            .to.throw(Error, "Expected primary CallEffect " +
+                                "'mirror' but it didn't happen");
+                    });
+                }
+            });
 
             describe("Self move-callers", function()
             {

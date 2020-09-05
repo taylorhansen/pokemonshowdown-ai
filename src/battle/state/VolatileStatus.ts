@@ -110,6 +110,9 @@ export interface ReadonlyVolatileStatus
     readonly magicCoat: boolean;
     /** Whether the pokemon has used Minimize while out. */
     readonly minimize: boolean;
+    // TODO(non-single battles): use a list of [move, user] tuples
+    /** Last move that targeted this slot for mirrormove purposes. */
+    readonly mirrorMove: string | null;
     /** Mud Sport move status. */
     readonly mudSport: boolean;
     /** Whether this pokemon must recharge on the next turn. */
@@ -315,6 +318,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public minimize!: boolean;
 
     /** @override */
+    public mirrorMove!: string | null;
+
+    /** @override */
     public mudSport!: boolean;
 
     /** @override */
@@ -478,6 +484,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.lockedMove.reset();
         this.magicCoat = false;
         this.minimize = false;
+        this.mirrorMove = null;
         this.mudSport = false;
         this.mustRecharge = false;
         this.overrideMoveset.isolate();
@@ -633,6 +640,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.magicCoat ? ["magic coat"] : [],
             this.minimize ? ["minimize"] : [],
+            this.mirrorMove ? ["last targeted by " + this.mirrorMove] : [],
             this.mudSport ? ["mud sport"] : [],
             this.mustRecharge ? ["must recharge"] : [],
             // override traits are handled by Pokemon#toString()

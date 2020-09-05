@@ -294,12 +294,14 @@ export type FieldEffect = UpdatableFieldEffect | "gravity" | "trickRoom";
  * Specifies how this move can call another move.
  *
  * `true` - Calls a move normally.  
+ * `"mirror"` - Mirror move. Called move should match the user's `mirrorMove`
+ * VolatileStatus field, or fail if null.  
  * `"self"` - Calls a move from the user's moveset.  
  * `"target"` - Calls a move from the target's moveset (caller must have only
  * one target).
  */
 // tslint:enable: no-trailing-whitespace
-export type CallEffect = true | "self" | "target";
+export type CallEffect = true | "mirror" | "self" | "target";
 
 /** Status effects that require more special attention. */
 export type UniqueEffect = "conversion" | "disable";

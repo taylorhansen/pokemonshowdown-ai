@@ -255,6 +255,10 @@ export const emptyPokemonTraitsEncoder: Encoder<undefined> = concat(
     emptyStatTableEncoder,
     fillEncoder(-1, filteredTypes.length));
 
+// TODO: move to dex
+/** Contains every move name. */
+const moveNames = Object.keys(dex.moves) as readonly string[];
+
 /** Encoder for a VolatileStatus. */
 export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     // passable
@@ -313,6 +317,8 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
         variableTempStatusEncoder(Object.keys(dex.lockedMoves) as
             dex.LockedMove[])),
     augment(vs => vs.minimize, booleanEncoder),
+    augment(vs => ({id: vs.mirrorMove ? dex.moves[vs.mirrorMove].uid : null}),
+        oneHotEncoder(moveNames.length)),
     augment(vs => vs.mudSport, booleanEncoder),
     augment(vs => vs.mustRecharge, booleanEncoder),
     augment(vs => ({traits: vs.overrideTraits, addedType: vs.addedType}),
@@ -365,8 +371,6 @@ export const emptyMajorStatusCounterEncoder: Encoder<undefined> =
     fillEncoder(0, majorStatusCounterEncoder.size);
 
 // TODO: move to dex
-/** Contains every move name. */
-const moveNames = Object.keys(dex.moves) as readonly string[];
 /** Max PP of any move. */
 export const maxPossiblePP = 64;
 

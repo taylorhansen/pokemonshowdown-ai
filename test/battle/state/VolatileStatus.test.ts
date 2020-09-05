@@ -55,6 +55,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
+            expect(volatile.mirrorMove).to.be.null;
             expect(volatile.mudSport).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link
@@ -136,6 +137,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
+            expect(volatile.mirrorMove).to.be.null;
             expect(volatile.mudSport).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link

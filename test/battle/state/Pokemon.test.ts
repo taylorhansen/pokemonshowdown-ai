@@ -3,6 +3,7 @@ import "mocha";
 import * as dex from "../../../src/battle/dex/dex";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
+import { smeargle } from "../driver/helpers";
 
 describe("Pokemon", function()
 {
@@ -572,6 +573,19 @@ describe("Pokemon", function()
             expect(mon.majorStatus.turns).to.equal(2);
             switchOut(mon);
             expect(mon.majorStatus.turns).to.equal(2);
+        });
+
+        it("Should reset mirror move", function()
+        {
+            const state = new BattleState();
+            state.teams.us.size = 1;
+            const opp = state.teams.us.switchIn(smeargle)!;
+            state.teams.them.size = 1;
+            const mon = state.teams.them.switchIn(smeargle)!;
+
+            opp.volatile.mirrorMove = "tackle";
+            switchOut(mon);
+            expect(opp.volatile.mirrorMove).to.be.null;
         });
 
         it("Should clear volatile when switching out and back in", function()

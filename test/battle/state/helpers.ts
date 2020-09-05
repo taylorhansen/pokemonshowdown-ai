@@ -37,6 +37,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.lockedMove.start("outrage");
     volatile.magicCoat = true;
     volatile.minimize = true;
+    volatile.mirrorMove = "watergun";
     volatile.mudSport = true;
     volatile.mustRecharge = true;
     // TODO: test private moveset link

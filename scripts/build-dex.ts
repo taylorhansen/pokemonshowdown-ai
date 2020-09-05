@@ -81,7 +81,7 @@ const moves: (readonly [string, dexutil.MoveData])[] = [];
 const callEffectMap: {readonly [move: string]: dexutil.CallEffect} =
 {
     assist: true, copycat: true, mefirst: "target", metronome: true,
-    mirrormove: true, naturepower: true, sleeptalk: "self"
+    mirrormove: "mirror", naturepower: true, sleeptalk: "self"
 };
 
 /** Maps some move names to swap boost effects. */

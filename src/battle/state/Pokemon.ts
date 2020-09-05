@@ -395,7 +395,7 @@ export class Pokemon implements ReadonlyPokemon
      */
     public switchInto(mon?: Pokemon | null, copy = false): void
     {
-        if (!mon || !mon._volatile)
+        if (!mon?._volatile)
         {
             // create our own volatile status object
             this._volatile = new VolatileStatus();
@@ -410,9 +410,23 @@ export class Pokemon implements ReadonlyPokemon
         // switch out provided mon
 
         // toxic counter resets on switch
-        if (mon && mon.majorStatus.current === "tox")
+        if (mon?.majorStatus.current === "tox")
         {
             mon.majorStatus.resetCounter();
+        }
+
+        // clear mirrorMove
+        const state = mon?.team?.state;
+        if (state)
+        {
+            if (state.teams.us.active?.active)
+            {
+                state.teams.us.active.volatile.mirrorMove = null;
+            }
+            if (state.teams.them.active?.active)
+            {
+                state.teams.them.active.volatile.mirrorMove = null;
+            }
         }
 
         // switch in new mon

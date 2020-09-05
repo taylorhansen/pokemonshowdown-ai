@@ -40,6 +40,11 @@ export class MoveContext extends DriverContext
     private implicitHandled = false;
     /** Pending move effects. */
     private readonly effects: PendingEffects;
+    /**
+     * Whether this move should be recorded by its targets for Mirror Move.
+     * `"reset"` resets the target's recorded move.
+     */
+    private readonly mirror: boolean | "reset";
 
     // in-progress move result flags
     /**
@@ -123,6 +128,17 @@ export class MoveContext extends DriverContext
             }
             releasedTwoTurn = true;
         }
+
+        // expected to be a charging turn
+        if (this.effects.get("primary")?.delay === "twoTurn")
+        {
+            this.mirror = false;
+        }
+        // called+released two-turn moves reset the mirror move field
+        // TODO: is this unique to PS?
+        else if (called && releasedTwoTurn) this.mirror = "reset";
+        // default to move flag
+        else this.mirror = this.moveData.mirror;
 
         // only reveal and deduct pp if this event isn't continuing a multi-turn
         //  move
@@ -269,15 +285,25 @@ export class MoveContext extends DriverContext
 
         this.mentionedTargets.add(targetRef);
 
-        // deduct an extra pp if the target has pressure
-        // TODO: gen>=5: don't count allies
         const target = this.state.teams[targetRef].active;
-        if (this.move && this.user !== target &&
-            target.ability === "pressure" &&
-            // only ability that can cancel it
-            this.user.ability !== "moldbreaker")
+        if (this.user !== target)
         {
-            this.move.pp -= 1;
+            // update opponent's mirror move tracker
+            if (this.mirror)
+            {
+                target.volatile.mirrorMove =
+                    this.mirror === "reset" ? null : this.moveName;
+            }
+
+            // deduct an extra pp if the target has pressure
+            // TODO: gen>=5: don't count allies
+            if (this.move &&
+                target.ability === "pressure" &&
+                // only ability that can cancel it
+                this.user.ability !== "moldbreaker")
+            {
+                this.move.pp -= 1;
+            }
         }
 
         return "base";
@@ -308,9 +334,16 @@ export class MoveContext extends DriverContext
             this.user.volatile.stall(false);
         }
 
+        // handle fail inferences
         if (failed)
         {
-            // handle fail inferences
+            if (this.effects.get("primary")?.call === "mirror" &&
+                this.user.volatile.mirrorMove)
+            {
+                throw new Error("Mirror Move effect failed but should've " +
+                    `called '${this.user.volatile.mirrorMove}'`)
+            }
+
             // the failed=false side of this is handled by a separate event
             if (this.effects.get("self")?.status === "imprison")
             {
@@ -782,6 +815,12 @@ export class MoveContext extends DriverContext
 
         switch (callEffect)
         {
+            case "mirror":
+                if (this.user.volatile.mirrorMove !== event.move)
+                {
+                    return "expire";
+                }
+                break;
             case "self":
                 // calling a move that is part of the user's moveset
                 if (this.userRef !== event.monRef ||

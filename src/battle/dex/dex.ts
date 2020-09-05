@@ -953,7 +953,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     minimize: {uid: 248, name: "minimize", display: "Minimize", target: "self", pp: [20, 32], mirror: false, self: {boost: {add: {evasion: 1}}, implicitStatus: "minimize"}},
     miracleeye: {uid: 249, name: "miracleeye", display: "Miracle Eye", target: "normal", pp: [40, 64], mirror: true, hit: {status: "miracleEye"}},
     mirrorcoat: {uid: 250, name: "mirrorcoat", display: "Mirror Coat", target: "scripted", pp: [20, 32], mirror: false},
-    mirrormove: {uid: 251, name: "mirrormove", display: "Mirror Move", target: "self", pp: [20, 32], mirror: false, primary: {call: true}},
+    mirrormove: {uid: 251, name: "mirrormove", display: "Mirror Move", target: "self", pp: [20, 32], mirror: false, primary: {call: "mirror"}},
     mirrorshot: {uid: 252, name: "mirrorshot", display: "Mirror Shot", target: "normal", pp: [10, 16], mirror: true, hit: {secondary: [{chance: 30, boosts: {accuracy: -1}}]}},
     mist: {uid: 253, name: "mist", display: "Mist", target: "allySide", pp: [30, 48], mirror: false, self: {team: "mist"}},
     mistball: {uid: 254, name: "mistball", display: "Mist Ball", target: "normal", pp: [5, 8], mirror: true, hit: {secondary: [{chance: 50, boosts: {spa: -1}}]}},
@@ -1246,7 +1246,7 @@ export const moveCallers: {readonly [name: string]: dexutil.CallEffect} =
     copycat: true,
     mefirst: "target",
     metronome: true,
-    mirrormove: true,
+    mirrormove: "mirror",
     naturepower: true,
     sleeptalk: "self"
 };
