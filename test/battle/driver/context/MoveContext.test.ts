@@ -181,6 +181,28 @@ describe("MoveContext", function()
                     /*called*/true);
                 expect(mon.moveset.get("tackle")).to.be.null;
             });
+
+            it("Should indicate called locked move", function()
+            {
+                const mon = initActive("us");
+                initCtx({type: "useMove", monRef: "us", move: "thrash"},
+                        /*called*/true)
+                    .expire();
+                expect(mon.volatile.lockedMove.isActive).to.be.true;
+                expect(mon.volatile.lockedMove.type).to.equal("thrash");
+                expect(mon.volatile.lockedMove.called).to.be.true;
+            });
+
+            it("Should indicate called rollout move", function()
+            {
+                const mon = initActive("us");
+                initCtx({type: "useMove", monRef: "us", move: "iceball"},
+                        /*called*/true)
+                    .expire();
+                expect(mon.volatile.rollout.isActive).to.be.true;
+                expect(mon.volatile.rollout.type).to.equal("iceball");
+                expect(mon.volatile.rollout.called).to.be.true;
+            });
         });
     });
 
@@ -1083,23 +1105,18 @@ describe("MoveContext", function()
                     expect(us.volatile.mirrorMove).to.equal("tackle");
                 });
 
-                it("Should track if targeted by a called move", function()
+                it("Should track on continued rampage", function()
                 {
                     const us = initActive("us");
-                    initActive("them");
+                    const them = initActive("them");
+                    them.volatile.lockedMove.start("petaldance");
+                    them.volatile.lockedMove.tick();
 
                     const ctx = initCtx(
-                    {
-                        type: "useMove", monRef: "them", move: otherCallers[0]
-                    });
-                    const ctx2 = ctx.handle(
-                            {type: "useMove", monRef: "them", move: "tackle"});
-                    expect(ctx2).to.be.an.instanceOf(MoveContext);
-
+                        {type: "useMove", monRef: "them", move: "petaldance"});
                     expect(us.volatile.mirrorMove).to.be.null;
-                    (ctx2 as MoveContext).expire();
-                    expect(us.volatile.mirrorMove).to.equal("tackle");
                     ctx.expire();
+                    expect(us.volatile.mirrorMove).to.equal("petaldance");
                 });
 
                 it("Should track on two-turn release turn", function()
@@ -1127,21 +1144,7 @@ describe("MoveContext", function()
                     expect(us.volatile.mirrorMove).to.equal("fly");
                 });
 
-                it("Should not track if not targeted", function()
-                {
-                    const us = initActive("us");
-                    initActive("them");
-                    us.volatile.mirrorMove = "previous"; // test value
-                    // move that can't be mirrored but targets opponent
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "feint"});
-                    ctx.expire();
-                    expect(us.volatile.mirrorMove).to.equal("previous");
-                });
-
-                // TODO: is this unique to PS?
-                it("Should reset tracking on called two-turn release turn",
-                function()
+                it("Should track on called two-turn release turn", function()
                 {
                     const us = initActive("us");
                     const them = initActive("them");
@@ -1171,6 +1174,91 @@ describe("MoveContext", function()
 
                     expect(us.volatile.mirrorMove).to.equal("fly");
                 });
+
+                it("Should not track if not targeted", function()
+                {
+                    const us = initActive("us");
+                    initActive("them");
+                    us.volatile.mirrorMove = "previous"; // test value
+                    // move that can't target opponent
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "splash"});
+                    ctx.expire();
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+                });
+
+                it("Should not track if non-mirror-able move", function()
+                {
+                    const us = initActive("us");
+                    initActive("them");
+                    us.volatile.mirrorMove = "previous"; // test value
+                    // move that can't be mirrored but targets opponent
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "feint"});
+                    ctx.expire();
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+                });
+
+                it("Should not track if targeted by a called move", function()
+                {
+                    const us = initActive("us");
+                    initActive("them");
+                    us.volatile.mirrorMove = "previous"; // test value
+
+                    // call a move
+                    const ctx = initCtx(
+                    {
+                        type: "useMove", monRef: "them", move: otherCallers[0]
+                    });
+                    const ctx2 = ctx.handle(
+                            {type: "useMove", monRef: "them", move: "tackle"});
+                    expect(ctx2).to.be.an.instanceOf(MoveContext);
+                    (ctx2 as MoveContext).expire();
+                    ctx.expire();
+
+                    // shouldnt update
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+                });
+
+                for (const [name, move] of
+                    [["lockedMove", "thrash"], ["rollout", "rollout"]] as const)
+                {
+                    it(`Should not track on called ${name} move`, function()
+                    {
+                        const us = initActive("us");
+                        const them = initActive("them");
+                        us.volatile.mirrorMove = "previous"; // test value
+
+                        // call a move
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them",
+                            move: otherCallers[0]
+                        });
+                        const ctx2 = ctx.handle(
+                            {type: "useMove", monRef: "them", move});
+                        expect(ctx2).to.be.an.instanceOf(MoveContext);
+                        (ctx2 as MoveContext).expire();
+                        ctx.expire();
+
+                        expect(them.volatile[name].isActive).to.be.true;
+                        expect(them.volatile[name].type).to.equal(move);
+                        expect(them.volatile[name].called).to.be.true;
+                        // shouldn't update
+                        expect(us.volatile.mirrorMove).to.equal("previous");
+
+                        // continue the rampage on the next turn
+                        const ctx3 = initCtx(
+                            {type: "useMove", monRef: "them", move});
+                        ctx3.expire();
+
+                        expect(them.volatile[name].isActive).to.be.true;
+                        expect(them.volatile[name].type).to.equal(move);
+                        expect(them.volatile[name].called).to.be.true;
+                        // shouldn't update
+                        expect(us.volatile.mirrorMove).to.equal("previous");
+                    });
+                }
 
                 for (const caller of mirrorCallers)
                 {

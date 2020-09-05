@@ -7,6 +7,8 @@ export interface ReadonlyVariableTempStatus<TStatusType extends string>
     readonly isActive: boolean;
     /** Current status type. */
     readonly type: TStatusType | "none";
+    /** Whether this was status started by a called move. */
+    readonly called: boolean;
     /**
      * Number of turns this status has been active. This is 0-based, so this
      * will return 0 if the status was started this turn, and 1 after the end
@@ -38,6 +40,10 @@ export class VariableTempStatus<TStatusType extends string> implements
     private _type!: TStatusType | "none";
 
     /** @override */
+    public get called(): boolean { return this._called; }
+    private _called!: boolean
+
+    /** @override */
     public get turns(): number { return this._turns; }
     private _turns!: number;
 
@@ -59,13 +65,15 @@ export class VariableTempStatus<TStatusType extends string> implements
     public reset(): void
     {
         this._type = "none";
+        this._called = false;
         this._turns = 0;
     }
 
     /** Starts a status. */
-    public start(type: TStatusType): void
+    public start(type: TStatusType, called = false): void
     {
         this._type = type;
+        this._called = called;
         this._turns = 0;
     }
 
@@ -93,6 +101,7 @@ export class VariableTempStatus<TStatusType extends string> implements
     public toString(): string
     {
         if (this._type === "none") return "inactive";
-        return pluralTurns(this._type, this._turns, this.duration);
+        return pluralTurns(this._type, this._turns, this.duration) +
+            (this._called ? " (called)" : "");
     }
 }

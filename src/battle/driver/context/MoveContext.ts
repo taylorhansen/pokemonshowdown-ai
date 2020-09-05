@@ -40,11 +40,8 @@ export class MoveContext extends DriverContext
     private implicitHandled = false;
     /** Pending move effects. */
     private readonly effects: PendingEffects;
-    /**
-     * Whether this move should be recorded by its targets for Mirror Move.
-     * `"reset"` resets the target's recorded move.
-     */
-    private readonly mirror: boolean | "reset";
+    /** Whether this move should be recorded by its targets for Mirror Move. */
+    private readonly mirror: boolean;
 
     // in-progress move result flags
     /**
@@ -129,22 +126,26 @@ export class MoveContext extends DriverContext
             releasedTwoTurn = true;
         }
 
-        // expected to be a charging turn
-        if (this.effects.get("primary")?.delay === "twoTurn")
-        {
-            this.mirror = false;
-        }
-        // called+released two-turn moves reset the mirror move field
-        // TODO: is this unique to PS?
-        else if (called && releasedTwoTurn) this.mirror = "reset";
-        // default to move flag
-        else this.mirror = this.moveData.mirror;
+        const continueLock =
+            this.user.volatile.lockedMove.type === this.moveName;
+        const continueRollout =
+            this.user.volatile.rollout.type === this.moveName;
+
+        this.mirror =
+            // expected to be a charging turn, no mirror
+            this.effects.get("primary")?.delay !== "twoTurn" &&
+            // can't mirror called moves
+            !called &&
+            // can't mirror called rampage moves
+            (!continueLock || !this.user.volatile.lockedMove.called) &&
+            (!continueRollout || !this.user.volatile.rollout.called) &&
+            // default to move flag
+            // TODO: should called+released two-turn count? (unique to PS?)
+            this.moveData.mirror;
 
         // only reveal and deduct pp if this event isn't continuing a multi-turn
         //  move
-        const reveal = !releasedTwoTurn &&
-            this.user.volatile.lockedMove.type !== this.moveName &&
-            this.user.volatile.rollout.type !== this.moveName;
+        const reveal = !releasedTwoTurn && !continueLock && !continueRollout;
 
         // if this isn't a called move, then the user must have this move in its
         //  moveset (i.e. it is an actual move selection by the player)
@@ -289,11 +290,7 @@ export class MoveContext extends DriverContext
         if (this.user !== target)
         {
             // update opponent's mirror move tracker
-            if (this.mirror)
-            {
-                target.volatile.mirrorMove =
-                    this.mirror === "reset" ? null : this.moveName;
-            }
+            if (this.mirror) target.volatile.mirrorMove = this.moveName;
 
             // deduct an extra pp if the target has pressure
             // TODO: gen>=5: don't count allies
@@ -376,6 +373,7 @@ export class MoveContext extends DriverContext
         }
 
         let lockedMove = false;
+        const {lockedMove: lock} = this.user.volatile;
         switch (this.effects.get("self")?.implicitStatus)
         {
             case "defenseCurl":
@@ -388,14 +386,11 @@ export class MoveContext extends DriverContext
                 {
                     throw new Error(`Invalid locked move ${this.moveName}`);
                 }
-                if (this.user.volatile.lockedMove.type === this.moveName)
-                {
-                    // continue locked status
-                    // already prevented from consuming pp in constructor
-                    this.user.volatile.lockedMove.tick();
-                }
+                // continue locked status
+                // already prevented from consuming pp in constructor
+                if (lock.type === this.moveName) lock.tick();
                 // start locked status
-                else this.user.volatile.lockedMove.start(this.moveName);
+                else lock.start(this.moveName, this.called);
                 lockedMove = true;
                 break;
             case "minimize":
@@ -404,23 +399,24 @@ export class MoveContext extends DriverContext
                 break;
             // TODO: mustRecharge
         }
-        if (!lockedMove) this.user.volatile.lockedMove.reset();
+        // if the locked move was called, then this current context is the one
+        //  that called the move so we shouldn't reset it
+        if (!lockedMove && (lock.turns !== 0 || !lock.called)) lock.reset();
 
         // TODO: add rollout to implicitStatus above
+        const {rollout} = this.user.volatile;
         if (dexutil.isRolloutMove(this.moveName))
         {
             // TODO: add rollout moves to ImplicitStatusEffect
             // start/continue rollout status
-            if (this.user.volatile.rollout.type === this.moveName)
-            {
-                // continue rollout status
-                // already prevented from consuming pp in constructor
-                this.user.volatile.rollout.tick();
-            }
-            else this.user.volatile.rollout.start(this.moveName);
+            // already prevented from consuming pp in constructor if continuing
+            if (rollout.type === this.moveName) rollout.tick();
+            else rollout.start(this.moveName, this.called);
         }
         // must've missed the status ending
-        else this.user.volatile.rollout.reset();
+        // if the rollout move was called, then this current context is the one
+        //  that called the move so we shouldn't reset it
+        else if (rollout.turns !== 0 || !rollout.called) rollout.reset();
 
         // team effects
 

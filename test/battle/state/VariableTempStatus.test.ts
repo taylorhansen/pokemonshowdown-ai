@@ -10,11 +10,12 @@ describe("VariableTempStatus", function()
 
     /** Checks VariableTempStatus properties. */
     function check(type: keyof typeof map | "none", active: boolean,
-        turns: number): void
+        turns: number, called = false): void
     {
         expect(vts.type).to.equal(type);
         expect(vts.isActive).to.be[active ? "true" : "false"];
         expect(vts.turns).to.equal(turns);
+        expect(vts.called).to.be[called ? "true" : "false"];
     }
 
     it("Should be reset initially", function()
@@ -55,6 +56,12 @@ describe("VariableTempStatus", function()
         {
             vts.start("a");
             check("a", true, 0);
+        });
+
+        it("Should start a called status", function()
+        {
+            vts.start("a", /*called*/ true);
+            check("a", true, 0, /*called*/ true);
         });
     });
 
