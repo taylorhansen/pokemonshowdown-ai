@@ -271,15 +271,15 @@ export class PendingEffects
                 ...(effect.secondary?.filter(s => s?.chance === 100)
                     .map(s =>
                     [
-                        [s?.status, "SecondaryEffect StatusEffect"] as const,
+                        [s?.status, "secondary StatusEffect"] as const,
                         // can't track flinch since its effect is applied once
                         //  the target attempts to move (TODO)
-                        // [s?.flinch, "SecondaryEffect flinch"],
+                        // [s?.flinch, "secondary flinch"],
                         ...(s?.boosts ?
                             (Object.keys(s.boosts) as BoostName[])
                                 .map(k =>
                                 [
-                                    s?.boosts?.[k], `SecondaryEffect boost ${k}`
+                                    s?.boosts?.[k], `secondary boost ${k}`
                                 ] as const)
                             : [])
                     ])
@@ -355,7 +355,6 @@ export class PendingEffects
                         {
                             break;
                         }
-                        if (s.boosts?.[stat] !== boost) break;
                         s.boosts[stat] = null;
                         PendingEffects.checkCleared(s, "boosts");
                         result = true;

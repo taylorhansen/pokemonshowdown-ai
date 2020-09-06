@@ -375,12 +375,18 @@ export class MoveContext extends DriverContext
         // consume any silent boosts that were already maxed out
         for (const ctg of ["self", "hit"] as const)
         {
-            const add = this.effects.get(ctg)?.boost?.add;
-            if (!add) continue;
-            for (const stat of Object.keys(add) as dexutil.BoostName[])
+            // TODO(non-singles): support multiple targets
+            const monRefs =
+                ctg === "self" ? [this.userRef]
+                : [...this.mentionedTargets].filter(r => r !== this.userRef);
+            for (const monRef of monRefs)
             {
-                const cur = this.user.volatile.boosts[stat];
-                this.effects.consume(ctg, "boost", stat, 0, cur);
+                const mon = this.state.teams[monRef].active;
+                for (const stat of dexutil.boostKeys)
+                {
+                    const cur = mon.volatile.boosts[stat];
+                    this.effects.consume(ctg, "boost", stat, 0, cur);
+                }
             }
         }
 
@@ -754,6 +760,7 @@ export class MoveContext extends DriverContext
         {
             throw new Error(`Invalid future move ${this.moveName}`);
         }
+        if (event.move !== this.moveName) return "expire";
         if (!this.effects.consume("primary", "delay", "future"))
         {
             return "expire";

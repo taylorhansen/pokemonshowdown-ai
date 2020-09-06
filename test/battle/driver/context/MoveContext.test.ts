@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import * as dex from "../../../../src/battle/dex/dex";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
-import { UseMove } from "../../../../src/battle/driver/BattleEvent";
+import * as events from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
 import { MoveContext } from "../../../../src/battle/driver/context/MoveContext";
@@ -10,7 +10,7 @@ import { SwitchContext } from
     "../../../../src/battle/driver/context/SwitchContext";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon, ReadonlyPokemon } from "../../../../src/battle/state/Pokemon";
-import { otherSide, Side } from "../../../../src/battle/state/Side";
+import { Side } from "../../../../src/battle/state/Side";
 import { ReadonlyTeam } from "../../../../src/battle/state/Team";
 import { ReadonlyVariableTempStatus } from
     "../../../../src/battle/state/VariableTempStatus";
@@ -33,7 +33,7 @@ describe("MoveContext", function()
         return state.teams[monRef].switchIn(options)!;
     }
 
-    function initCtx(event: UseMove, called?: boolean): MoveContext
+    function initCtx(event: events.UseMove, called?: boolean): MoveContext
     {
         return new MoveContext(state, event, Logger.null, called);
     }
@@ -185,6 +185,7 @@ describe("MoveContext", function()
             it("Should indicate called locked move", function()
             {
                 const mon = initActive("us");
+                initActive("them");
                 initCtx({type: "useMove", monRef: "us", move: "thrash"},
                         /*called*/true)
                     .expire();
@@ -196,6 +197,7 @@ describe("MoveContext", function()
             it("Should indicate called rollout move", function()
             {
                 const mon = initActive("us");
+                initActive("them");
                 initCtx({type: "useMove", monRef: "us", move: "iceball"},
                         /*called*/true)
                     .expire();
@@ -235,87 +237,807 @@ describe("MoveContext", function()
             });
         });
 
-        describe("activateFieldEffect", function()
+        describe("block", function()
         {
-            it("Should pass if expected", function()
+            it("Should cancel move effects", function()
             {
                 initActive("us");
+                initActive("them").team!.status.safeguard.start();
                 const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "trickroom"});
+                    {type: "useMove", monRef: "us", move: "thunderwave"});
+
                 expect(ctx.handle(
-                    {
-                        type: "activateFieldEffect", effect: "trickRoom",
-                        start: true
-                    }))
+                        {type: "block", monRef: "them", effect: "safeguard"}))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+        });
+
+        describe("faint", function()
+        {
+            it("Should cancel effects of target", function()
+            {
+                initActive("us");
+                initActive("them");
+                // 100% confuse rate
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "them", move: "dynamicpunch"});
+
+                expect(ctx.handle({type: "faint", monRef: "us"}))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+        });
+
+        // TODO: add to MoveData#self.unique
+        describe("transform", function()
+        {
+            it("Should pass if user and source match", function()
+            {
+                initActive("us");
+                initActive("them");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "them", move: "transform"});
+                expect(ctx.handle(
+                        {type: "transform", source: "them", target: "us"}))
                     .to.equal("base");
             });
 
-            it("Should expire if not expected", function()
+            it("Should expire if user/source mismatch", function()
             {
-                initActive("us");
+                initActive("them");
                 const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "tackle"});
+                    {type: "useMove", monRef: "them", move: "transform"});
                 expect(ctx.handle(
-                    {
-                        type: "activateFieldEffect", effect: "gravity",
-                        start: true
-                    }))
+                        {type: "transform", source: "us", target: "them"}))
                     .to.equal("expire");
             });
+        });
+    });
 
-            describe("weather", function()
+    describe("Move effects", function()
+    {
+        describe("PrimaryEffect", function()
+        {
+            describe("SelfSwitch", function()
             {
-                it("Should infer source via move", function()
-                {
-                    const {item} = initActive("them");
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "raindance"});
-                    expect(ctx.handle(
-                        {
-                            type: "activateFieldEffect", effect: "RainDance",
-                            start: true
-                        }))
-                        .to.equal("stop");
-
-                    const weather = state.status.weather;
-                    expect(weather.type).to.equal("RainDance");
-                    expect(weather.duration).to.not.be.null;
-                    expect(weather.source).to.equal(item);
-
-                    // tick 5 times to infer item
-                    expect(item.definiteValue).to.be.null;
-                    for (let i = 0; i < 5; ++i) weather.tick();
-                    expect(item.definiteValue).to.equal("damprock");
-                });
-
-                it("Should expire if mismatch", function()
+                // TODO: track phazing moves (will require selfSwitch effect to
+                //  be moved to MoveEffect)
+                it("Should return SwitchContext if self-switch expected",
+                function()
                 {
                     initActive("them");
                     const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "raindance"});
+                        {type: "useMove", monRef: "them", move: "batonpass"});
+                    expect(ctx.handle(
+                            {type: "switchIn", monRef: "them", ...ditto}))
+                        .to.be.an.instanceOf(SwitchContext);
+                });
+
+                it("Should expire if no self-switch expected", function()
+                {
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "tackle"});
+                    expect(ctx.handle(
+                            {type: "switchIn", monRef: "them", ...smeargle}))
+                        .to.equal("expire");
+                });
+
+                it("Should expire if self-switch expected but opponent " +
+                    "switched",
+                function()
+                {
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "uturn"});
+                    expect(ctx.handle(
+                            {type: "switchIn", monRef: "us", ...smeargle}))
+                        .to.equal("expire");
+                });
+            });
+
+            describe("Delay", function()
+            {
+                describe("Future", function()
+                {
+                    it("Should handle future move", function()
+                    {
+                        initActive("them");
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them", move: "futuresight"
+                        });
+                        // shouldn't handle other cases
+                        expect(ctx.handle(
+                            {
+                                type: "futureMove", monRef: "them",
+                                move: "doomdesire", start: true
+                            }))
+                            .to.equal("expire");
+                        expect(ctx.handle(
+                            {
+                                type: "futureMove", monRef: "us",
+                                move: "futuresight", start: false
+                            }))
+                            .to.equal("expire");
+                        // should handle this case
+                        expect(ctx.handle(
+                            {
+                                type: "futureMove", monRef: "them",
+                                move: "futuresight", start: true
+                            }))
+                            .to.equal("base");
+                    });
+                });
+
+                describe("Two-turn", function()
+                {
+                    it("Should handle two-turn move", function()
+                    {
+                        // prepare
+                        const mon = initActive("them");
+                        initActive("us");
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "fly"});
+
+                        expect(ctx.handle(
+                            {
+                                type: "prepareMove", monRef: "us", move: "fly"
+                            }))
+                            .to.equal("expire");
+                        expect(ctx.handle(
+                            {
+                                type: "prepareMove", monRef: "them", move: "fly"
+                            }))
+                            .to.equal("base");
+                        expect(() => ctx.handle(
+                            {
+                                type: "prepareMove", monRef: "them",
+                                move: "bounce"
+                            }))
+                            .to.throw(Error, "Mismatched prepareMove: Using " +
+                                "'fly' but got 'bounce'");
+                        ctx.expire();
+
+                        // release
+                        mon.volatile.twoTurn.start("fly");
+                        initCtx({type: "useMove", monRef: "them", move: "fly"})
+                            .expire();
+                        expect(mon.volatile.twoTurn.isActive).to.be.false;
+                    });
+                });
+            });
+
+            describe("CallEffect", function()
+            {
+                it("Should expire if no call effect expected", function()
+                {
+                    initActive("them");
+                    const ctx = initCtx(
+                    {
+                        type: "useMove", monRef: "them",
+                        move: "tackle"
+                    });
+
+                    expect(ctx.handle(
+                            {type: "useMove", monRef: "them", move: "tackle"}))
+                        .to.equal("expire");
+                });
+
+                // extract self+target move-callers
+                const copycatCallers: string[] = [];
+                const mirrorCallers: string[] = [];
+                const selfMoveCallers: string[] = [];
+                const targetMoveCallers: string[] = [];
+                const otherCallers: string[] = [];
+                for (const move of Object.keys(dex.moveCallers))
+                {
+                    const effect = dex.moveCallers[move];
+                    if (effect === "copycat") copycatCallers.push(move);
+                    else if (effect === "mirror") mirrorCallers.push(move);
+                    else if (effect === "self") selfMoveCallers.push(move);
+                    else if (effect === "target") targetMoveCallers.push(move);
+                    else otherCallers.push(move);
+                }
+
+                describe("Move-callers", function()
+                {
+                    for (const caller of otherCallers)
+                    {
+                        it(`Should pass if using ${caller}`, function()
+                        {
+                            initActive("them");
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move: caller
+                            });
+                            expect(ctx.handle(
+                                {
+                                    type: "useMove", monRef: "them",
+                                    move: "tackle"
+                                }))
+                                .to.be.an.instanceOf(MoveContext);
+                            ctx.expire();
+                        });
+                    }
+                });
+
+                describe("Copycat callers", function()
+                {
+                    it("Should track last used move", function()
+                    {
+                        initActive("them");
+                        expect(state.status.lastMove).to.be.undefined;
+                        initCtx(
+                            {type: "useMove", monRef: "them", move: "tackle"});
+                        expect(state.status.lastMove).to.equal("tackle");
+                    });
+
+                    for (const caller of copycatCallers)
+                    {
+                        it(`Should pass if using ${caller} and move matches`,
+                        function()
+                        {
+                            initActive("them");
+                            state.status.lastMove = "tackle";
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move: caller
+                            });
+                            expect(ctx.handle(
+                                {
+                                    type: "useMove", monRef: "them",
+                                    move: "tackle"
+                                }))
+                                .to.be.an.instanceOf(MoveContext);
+                            ctx.expire();
+                        });
+
+                        it(`Should throw if using ${caller} and mismatched ` +
+                            "move",
+                        function()
+                        {
+                            initActive("them");
+                            state.status.lastMove = "watergun";
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move: caller
+                            });
+                            expect(ctx.handle(
+                                {
+                                    type: "useMove", monRef: "them",
+                                    move: "tackle"
+                                }))
+                                .to.equal("expire");
+                            expect(() => ctx.expire())
+                                .to.throw(Error, "Expected primary " +
+                                    "CallEffect 'copycat' but it didn't " +
+                                    "happen");
+                        });
+
+                        it(`Should throw if ${caller} failed but should've ` +
+                            "called",
+                        function()
+                        {
+                            initActive("them");
+                            state.status.lastMove = "tackle";
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move: caller
+                            });
+                            expect(() => ctx.handle(
+                                    {type: "fail", monRef: "them"}))
+                                .to.throw(Error, "Copycat effect failed but " +
+                                    "should've called 'tackle'");
+                        });
+                    }
+                });
+
+                describe("Mirror move-callers", function()
+                {
+                    it("Should track if targeted", function()
+                    {
+                        const us = initActive("us");
+                        initActive("them");
+
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "tackle"});
+                        expect(us.volatile.mirrorMove).to.be.null;
+                        ctx.expire();
+                        expect(us.volatile.mirrorMove).to.equal("tackle");
+                    });
+
+                    it("Should track on continued rampage", function()
+                    {
+                        const us = initActive("us");
+                        const them = initActive("them");
+                        them.volatile.lockedMove.start("petaldance");
+                        them.volatile.lockedMove.tick();
+
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them", move: "petaldance"
+                        });
+                        expect(us.volatile.mirrorMove).to.be.null;
+                        ctx.expire();
+                        expect(us.volatile.mirrorMove).to.equal("petaldance");
+                    });
+
+                    it("Should track on two-turn release turn", function()
+                    {
+                        const us = initActive("us");
+                        const them = initActive("them");
+                        us.volatile.mirrorMove = "previous"; // test value
+
+                        // start a two-turn move
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "fly"});
+                        expect(ctx.handle(
+                            {
+                                type: "prepareMove", monRef: "them", move: "fly"
+                            }))
+                            .to.equal("base");
+                        them.volatile.twoTurn.start("fly"); // base
+                        ctx.expire();
+                        // shouldn't count the charging turn
+                        expect(us.volatile.mirrorMove).to.equal("previous");
+
+                        // release the two-turn move
+                        const ctx2 = initCtx(
+                            {type: "useMove", monRef: "them", move: "fly"});
+                        expect(us.volatile.mirrorMove).to.equal("previous");
+                        ctx2.expire();
+                        expect(us.volatile.mirrorMove).to.equal("fly");
+                    });
+
+                    it("Should track on called two-turn release turn",
+                    function()
+                    {
+                        const us = initActive("us");
+                        const them = initActive("them");
+                        us.volatile.mirrorMove = "previous"; // test value
+
+                        // call a two-turn move
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them",
+                            move: otherCallers[0]
+                        });
+                        const ctx2 = ctx.handle(
+                            {type: "useMove", monRef: "them", move: "fly"});
+                        expect(ctx2).to.be.an.instanceOf(MoveContext);
+                        expect((ctx2 as MoveContext).handle(
+                            {
+                                type: "prepareMove", monRef: "them", move: "fly"
+                            }))
+                            .to.equal("base");
+                        them.volatile.twoTurn.start("fly"); // base
+                        (ctx2 as MoveContext).expire();
+                        ctx.expire();
+
+                        expect(us.volatile.mirrorMove).to.equal("previous");
+
+                        // release the two-turn move
+                        const ctx3 = initCtx(
+                            {type: "useMove", monRef: "them", move: "fly"});
+                        ctx3.expire();
+
+                        expect(us.volatile.mirrorMove).to.equal("fly");
+                    });
+
+                    it("Should not track if not targeted", function()
+                    {
+                        const us = initActive("us");
+                        initActive("them");
+                        us.volatile.mirrorMove = "previous"; // test value
+                        // move that can't target opponent
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "splash"});
+                        ctx.expire();
+                        expect(us.volatile.mirrorMove).to.equal("previous");
+                    });
+
+                    it("Should not track if non-mirror-able move", function()
+                    {
+                        const us = initActive("us");
+                        initActive("them");
+                        us.volatile.mirrorMove = "previous"; // test value
+                        // move that can't be mirrored but targets opponent
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "feint"});
+                        ctx.expire();
+                        expect(us.volatile.mirrorMove).to.equal("previous");
+                    });
+
+                    it("Should not track if targeted by a called move",
+                    function()
+                    {
+                        const us = initActive("us");
+                        initActive("them");
+                        us.volatile.mirrorMove = "previous"; // test value
+
+                        // call a move
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them",
+                            move: otherCallers[0]
+                        });
+                        const ctx2 = ctx.handle(
+                            {
+                                type: "useMove", monRef: "them", move: "tackle"
+                            });
+                        expect(ctx2).to.be.an.instanceOf(MoveContext);
+                        (ctx2 as MoveContext).expire();
+                        ctx.expire();
+
+                        // shouldnt update
+                        expect(us.volatile.mirrorMove).to.equal("previous");
+                    });
+
+                    for (const [name, move] of
+                        [["lockedMove", "thrash"], ["rollout", "rollout"]] as
+                            const)
+                    {
+                        it(`Should not track on called ${name} move`, function()
+                        {
+                            const us = initActive("us");
+                            const them = initActive("them");
+                            us.volatile.mirrorMove = "previous"; // test value
+
+                            // call a move
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them",
+                                move: otherCallers[0]
+                            });
+                            const ctx2 = ctx.handle(
+                                {type: "useMove", monRef: "them", move});
+                            expect(ctx2).to.be.an.instanceOf(MoveContext);
+                            (ctx2 as MoveContext).expire();
+                            ctx.expire();
+
+                            expect(them.volatile[name].isActive).to.be.true;
+                            expect(them.volatile[name].type).to.equal(move);
+                            expect(them.volatile[name].called).to.be.true;
+                            // shouldn't update
+                            expect(us.volatile.mirrorMove).to.equal("previous");
+
+                            // continue the rampage on the next turn
+                            const ctx3 = initCtx(
+                                {type: "useMove", monRef: "them", move});
+                            ctx3.expire();
+
+                            expect(them.volatile[name].isActive).to.be.true;
+                            expect(them.volatile[name].type).to.equal(move);
+                            expect(them.volatile[name].called).to.be.true;
+                            // shouldn't update
+                            expect(us.volatile.mirrorMove).to.equal("previous");
+                        });
+                    }
+
+                    for (const caller of mirrorCallers)
+                    {
+                        it(`Should pass if using ${caller} and move matches`,
+                        function()
+                        {
+                            const them = initActive("them");
+                            them.volatile.mirrorMove = "tackle";
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move: caller
+                            });
+                            expect(ctx.handle(
+                                {
+                                    type: "useMove", monRef: "them",
+                                    move: "tackle"
+                                }))
+                                .to.be.an.instanceOf(MoveContext);
+                            ctx.expire();
+                        });
+
+                        it(`Should throw if using ${caller} and mismatched ` +
+                            "move",
+                        function()
+                        {
+                            const them = initActive("them");
+                            them.volatile.mirrorMove = "watergun";
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move: caller
+                            });
+                            expect(ctx.handle(
+                                {
+                                    type: "useMove", monRef: "them",
+                                    move: "tackle"
+                                }))
+                                .to.equal("expire");
+                            expect(() => ctx.expire())
+                                .to.throw(Error, "Expected primary " +
+                                    "CallEffect 'mirror' but it didn't happen");
+                        });
+
+                        it(`Should throw if ${caller} failed but should've ` +
+                            "called",
+                        function()
+                        {
+                            const them = initActive("them");
+                            them.volatile.mirrorMove = "watergun";
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move: caller
+                            });
+                            expect(() => ctx.handle(
+                                    {type: "fail", monRef: "them"}))
+                                .to.throw(Error, "Mirror Move effect failed " +
+                                    "but should've called 'watergun'");
+                        });
+                    }
+                });
+
+                describe("Self move-callers", function()
+                {
+                    for (const caller of selfMoveCallers)
+                    {
+                        it(`Should infer user's move when using ${caller}`,
+                        function()
+                        {
+                            const them = initActive("them");
+
+                            // use the move-caller
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them", move: caller
+                            });
+
+                            // call the move
+                            expect(ctx.handle(
+                                {
+                                    type: "useMove", monRef: "them",
+                                    move: "tackle"
+                                }))
+                                .to.be.an.instanceOf(MoveContext);
+                            expect(them.moveset.get("tackle")).to.not.be.null;
+                            // shouldn't consume pp for the called move
+                            expect(them.moveset.get("tackle")!.pp).to.equal(56);
+                        });
+                    }
+
+                    it("Should expire if the call effect was ignored",
+                    function()
+                    {
+                        const them = initActive("them");
+
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them",
+                            move: selfMoveCallers[0]
+                        });
+
+                        expect(ctx.handle(
+                            {
+                                type: "useMove", monRef: "us", move: "tackle"
+                            }))
+                            .to.equal("expire");
+                        expect(them.moveset.get("tackle")).to.be.null;
+                    });
+                });
+
+                describe("Target move-callers", function()
+                {
+                    for (const caller of targetMoveCallers)
+                    {
+                        it(`Should infer target's move when using ${caller}`,
+                        function()
+                        {
+                            // switch in a pokemon that has the move-caller
+                            const us = initActive("us");
+                            const them = initActive("them");
+
+                            // use the move-caller
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "us", move: caller});
+
+                            // call the move
+                            expect(ctx.handle(
+                                {
+                                    type: "useMove", monRef: "us",
+                                    move: "tackle"
+                                }))
+                                .to.be.an.instanceOf(MoveContext);
+                            expect(us.moveset.get("tackle")).to.be.null;
+                            expect(them.moveset.get("tackle")).to.not.be.null;
+                            // shouldn't consume pp for the called move
+                            expect(them.moveset.get("tackle")!.pp).to.equal(56);
+                        });
+                    }
+
+                    it("Should expire if the call effect was ignored",
+                    function()
+                    {
+                        initActive("us");
+                        const them = initActive("them");
+
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them",
+                            move: targetMoveCallers[0]
+                        });
+
+                        expect(ctx.handle(
+                            {
+                                type: "useMove", monRef: "us", move: "tackle"
+                            }))
+                            .to.equal("expire");
+                        expect(them.moveset.get("tackle")).to.be.null;
+                    });
+                });
+            });
+
+            describe("SwapBoosts", function()
+            {
+                it("Should handle swap boost move", function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "guardswap"});
+
+                    // shouldn't handle
                     expect(ctx.handle(
                         {
-                            type: "activateFieldEffect", effect: "Hail",
+                            type: "swapBoosts", monRef1: "us", monRef2: "them",
+                            stats: ["def", "spd", "spe"]
+                        }))
+                        .to.equal("expire");
+                    // should handle
+                    expect(ctx.handle(
+                        {
+                            type: "swapBoosts", monRef1: "us", monRef2: "them",
+                            stats: ["def", "spd"]
+                        }))
+                        .to.equal("base");
+                    // effect should be consumed after accepting the previous
+                    //  swapBoosts event
+                    expect(ctx.handle(
+                        {
+                            type: "swapBoosts", monRef1: "us", monRef2: "them",
+                            stats: ["def", "spd"]
+                        }))
+                        .to.equal("expire");
+                    ctx.expire();
+                });
+
+                it("Should throw if expire before effect", function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "guardswap"});
+                    expect(() => ctx.expire()).to.throw(Error,
+                        "Expected primary swapBoost 'def,spd' but it didn't " +
+                        "happen");
+                });
+            });
+
+            describe("CountableStatusEffect", function()
+            {
+                it("TODO");
+            });
+
+            describe("FieldEffect", function()
+            {
+                it("Should pass if expected", function()
+                {
+                    initActive("us");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "us", move: "trickroom"});
+                    expect(ctx.handle(
+                        {
+                            type: "activateFieldEffect", effect: "trickRoom",
+                            start: true
+                        }))
+                        .to.equal("base");
+                });
+
+                it("Should expire if not expected", function()
+                {
+                    initActive("us");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "us", move: "tackle"});
+                    expect(ctx.handle(
+                        {
+                            type: "activateFieldEffect", effect: "gravity",
                             start: true
                         }))
                         .to.equal("expire");
-                    // once the BaseContext handles the event, this will be set
-                    //  appropriately
-                    expect(state.status.weather.type).to.equal("none");
-                    expect(state.status.weather.duration).to.be.null;
-                    expect(state.status.weather.source).to.be.null;
+                });
+
+                describe("weather", function()
+                {
+                    it("Should infer source via move", function()
+                    {
+                        const {item} = initActive("them");
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them", move: "raindance"
+                        });
+                        expect(ctx.handle(
+                            {
+                                type: "activateFieldEffect",
+                                effect: "RainDance", start: true
+                            }))
+                            .to.equal("stop");
+
+                        const weather = state.status.weather;
+                        expect(weather.type).to.equal("RainDance");
+                        expect(weather.duration).to.not.be.null;
+                        expect(weather.source).to.equal(item);
+
+                        // tick 5 times to infer item
+                        expect(item.definiteValue).to.be.null;
+                        for (let i = 0; i < 5; ++i) weather.tick();
+                        expect(item.definiteValue).to.equal("damprock");
+                    });
+
+                    it("Should expire if mismatch", function()
+                    {
+                        initActive("us");
+                        initActive("them");
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "them", move: "raindance"
+                        });
+                        expect(ctx.handle(
+                            {
+                                type: "activateFieldEffect", effect: "Hail",
+                                start: true
+                            }))
+                            .to.equal("expire");
+                        expect(() => ctx.expire()).to.throw(Error,
+                            "Expected primary FieldEffect 'RainDance' but it " +
+                            "didn't happen");
+                    });
                 });
             });
         });
 
-        describe("activateStatusEffect", function()
+        const moveEffectTests:
         {
-            function testNonRemovable(name: string,
-                effect: dexutil.StatusEffect, move: string, target: Side): void
+            readonly self:
             {
-                // adjust perspective
-                target = otherSide(target);
+                readonly [T in Exclude<keyof dexutil.MoveEffect, "secondary">]:
+                    (() =>  void)[]
+            },
+            readonly hit:
+            {
+                readonly [T in Exclude<keyof dexutil.MoveEffect, "secondary">]:
+                    (() =>  void)[]
+            }
+        } =
+        {
+            self:
+            {
+                status: [], unique: [], implicitStatus: [], boost: [], team: [],
+                implicitTeam: []
+            },
+            hit:
+            {
+                status: [], unique: [], implicitStatus: [], boost: [], team: [],
+                implicitTeam: []
+            }
+        };
 
+        //#region status effect
+
+        function testNonRemovable(ctg: "self" | "hit", name: string,
+            effect: dexutil.StatusEffect, move: string): void
+        {
+            // adjust perspective
+            const target = ctg === "self" ? "them" : "us";
+
+            moveEffectTests[ctg].status.push(function()
+            {
                 describe(name, function()
                 {
                     beforeEach("Initialize active", function()
@@ -363,53 +1085,18 @@ describe("MoveContext", function()
                             .to.equal("expire");
                     });
                 });
-            }
+            });
+        }
 
-            testNonRemovable("Aqua Ring", "aquaRing", "aquaring", "us");
-            testNonRemovable("Attract", "attract", "attract", "them");
-            testNonRemovable("Bide", "bide", "bide", "us");
-            testNonRemovable("Charge", "charge", "charge", "us");
-            // handled specially by another test case
-            // testNonRemovable("Curse", "curse", "curse", "them");
-            testNonRemovable("Embargo", "embargo", "embargo", "them");
-            testNonRemovable("Encore", "encore", "encore", "them");
-            testNonRemovable("Focus Energy", "focusEnergy", "focusenergy",
-                "us");
-            testNonRemovable("Foresight", "foresight", "foresight", "them");
-            testNonRemovable("Heal Block", "healBlock", "healblock", "them");
-            testNonRemovable("Ingrain", "ingrain", "ingrain", "us");
-            testNonRemovable("Magnet Rise", "magnetRise", "magnetrise", "us");
-            testNonRemovable("Miracle Eye", "miracleEye", "miracleeye", "them");
-            testNonRemovable("Mud Sport", "mudSport", "mudsport", "us");
-            testNonRemovable("Nightmare", "nightmare", "nightmare", "them");
-            testNonRemovable("Power Trick", "powerTrick", "powertrick", "us");
-            testNonRemovable("Suppress ability", "suppressAbility",
-                "gastroacid", "them");
-            testNonRemovable("Taunt", "taunt", "taunt", "them");
-            testNonRemovable("Torment", "torment", "torment", "them");
-            testNonRemovable("Water Sport", "waterSport", "watersport", "us");
-            testNonRemovable("Yawn", "yawn", "yawn", "them");
+        function testRemovable(ctg: "self" | "hit", name: string,
+            effect: dexutil.StatusEffect, move: string | undefined,
+            secondaryMove?: string, secondaryMove100?: string): void
+        {
+            // adjust perspective
+            const target = ctg === "self" ? "them" : "us";
 
-            // singlemove
-            testNonRemovable("Destiny Bond", "destinyBond", "destinybond",
-                "us");
-            testNonRemovable("Grudge", "grudge", "grudge", "us");
-            testNonRemovable("Rage", "rage", "rage", "us");
-
-            // singleturn
-            testNonRemovable("Endure", "endure", "endure", "us");
-            testNonRemovable("Magic Coat", "magicCoat", "magiccoat", "us");
-            testNonRemovable("Protect", "protect", "protect", "us");
-            testNonRemovable("Roost", "roost", "roost", "us");
-            testNonRemovable("Snatch", "snatch", "snatch", "us");
-
-            function testRemovable(name: string, effect: dexutil.StatusEffect,
-                move: string | undefined, target: Side, secondaryMove?: string,
-                secondaryMove100?: string): void
+            moveEffectTests[ctg].status.push(function()
             {
-                // adjust perspective
-                target = otherSide(target);
-
                 describe(name, function()
                 {
                     beforeEach("Initialize active", function()
@@ -498,47 +1185,733 @@ describe("MoveContext", function()
                                 secondaryMove100
                             });
                             expect(() => ctx.expire()).to.throw(Error,
-                                "Expected hit SecondaryEffect StatusEffect " +
+                                "Expected hit secondary StatusEffect " +
                                 `'${effect}' but it didn't happen`);
                         });
+                        // TODO: should silently pass if target already has the
+                        //  effect
                     }
                 });
-            }
+            });
+        }
 
-            testRemovable("Confusion", "confusion", "confuseray", "them",
-                "psybeam", "dynamicpunch");
-            testRemovable("Leech Seed", "leechSeed", "leechseed", "them");
-            testRemovable("Substitute", "substitute", "substitute", "us");
-
-            // major status
-            testRemovable("Burn", "brn", "willowisp", "them", "flamethrower");
-            testRemovable("Freeze", "frz", undefined, "them", "icebeam");
-            testRemovable("Paralyze", "par", "stunspore", "them", "thunderbolt",
-                "zapcannon");
-            testRemovable("Poison", "psn", "poisonpowder", "them", "gunkshot");
-            testRemovable("Sleep", "slp", "spore", "them");
-            testRemovable("Toxic", "tox", "toxic", "them", "poisonfang");
-
-            describe("Slow Start", function()
+        testNonRemovable("self", "Aqua Ring", "aquaRing", "aquaring");
+        testNonRemovable("hit", "Attract", "attract", "attract");
+        testNonRemovable("self", "Charge", "charge", "charge");
+        // curse
+        moveEffectTests.hit.status.push(function()
+        {
+            describe("Curse", function()
             {
-                it("Should expire", function()
+                it("Should pass if ghost type", function()
+                {
+                    initActive("us");
+                    initActive("them", smeargle).volatile.addedType = "ghost";
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "curse"});
+                    expect(ctx.handle(
+                        {
+                            type: "activateStatusEffect", monRef: "us",
+                            effect: "curse", start: true
+                        }))
+                        .to.equal("base");
+                    ctx.expire();
+                });
+
+                it("Should expire if not ghost type", function()
+                {
+                    initActive("them", smeargle);
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "curse"});
+                    expect(ctx.handle(
+                        {
+                            type: "activateStatusEffect", monRef: "us",
+                            effect: "curse", start: true
+                        }))
+                        .to.equal("expire");
+                    // TODO: expect boosts
+                    ctx.expire();
+                });
+
+                it("Should expire if start=false", function()
+                {
+                    initActive("them").volatile.addedType = "ghost";
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "curse"});
+                    expect(ctx.handle(
+                        {
+                            type: "activateStatusEffect", monRef: "us",
+                            effect: "curse", start: false
+                        }))
+                        .to.equal("expire");
+                });
+
+                it("Should expire if mismatched flags", function()
                 {
                     initActive("them");
                     const ctx = initCtx(
                         {type: "useMove", monRef: "them", move: "tackle"});
                     expect(ctx.handle(
                         {
-                            type: "activateStatusEffect", monRef: "them",
-                            effect: "slowStart", start: true
+                            type: "activateStatusEffect", monRef: "us",
+                            effect: "curse", start: true
                         }))
                         .to.equal("expire");
                 });
             });
+        });
+        testNonRemovable("hit", "Embargo", "embargo", "embargo");
+        testNonRemovable("hit", "Encore", "encore", "encore");
+        // flashfire (TODO)
+        moveEffectTests.hit.status.push(function()
+        {
+            describe("Flash Fire", function()
+            {
+                it("TODO");
+            });
+        })
+        testNonRemovable("self", "Focus Energy", "focusEnergy", "focusenergy");
+        testNonRemovable("hit", "Foresight", "foresight", "foresight");
+        testNonRemovable("hit", "Heal Block", "healBlock", "healblock");
+        // imprison
+        moveEffectTests.self.status.push(function()
+        {
+            let us: Pokemon;
+            let them: Pokemon;
 
-            testNonRemovable("Uproar", "uproar", "uproar", "us");
+            function setup(imprisonUser: Side, sameOpponent = true): void
+            {
+                us = initActive("us",
+                {
+                    species: "vulpix", level: 5, gender: "F", hp: 20, hpMax: 20
+                });
+                us.moveset.reveal(
+                    imprisonUser === "us" ? "imprison" : "protect");
+                us.moveset.reveal("ember");
+                us.moveset.reveal("tailwhip");
+                us.moveset.reveal("disable");
+
+                // switch in a similar pokemon
+                them = initActive("them",
+                {
+                    species: sameOpponent ? "vulpix" : "bulbasaur", level: 10,
+                    gender: "M", hp: 100, hpMax: 100
+                });
+
+                if (sameOpponent)
+                {
+                    // opponent should be able to have our moveset
+                    expect(them.moveset.constraint)
+                        .to.include.all.keys([...us.moveset.moves.keys()]);
+                }
+                else
+                {
+                    // opponent should not be able to have our moveset
+                    expect(them.moveset.constraint)
+                        .to.not.include.any.keys([...us.moveset.moves.keys()]);
+                }
+            }
+
+            describe("Failed", function()
+            {
+                for (const id of ["us", "them"] as const)
+                {
+                    it(`Should infer no common moves if ${id} failed`,
+                    function()
+                    {
+                        setup(id);
+
+                        // if imprison fails, then the opponent shouldn't be
+                        //  able to have any of our moves
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: id, move: "imprison"});
+                        expect(ctx.handle({type: "fail", monRef: id}))
+                            .to.equal("base");
+                        expect(them.moveset.constraint).to.not.include.any.keys(
+                            [...us.moveset.moves.keys()]);
+                    });
+                }
+
+                it("Should throw if shared moves", function()
+                {
+                    setup("us");
+
+                    const ctx = initCtx(
+                    {
+                        type: "useMove", monRef: "them", move: "imprison"
+                    });
+
+                    expect(() =>
+                            ctx.handle({type: "fail", monRef: "them"}))
+                        .to.throw(Error,
+                            "Imprison failed but both Pokemon have " +
+                                "common moves: imprison");
+                });
+            });
+
+            describe("Succeeded", function()
+            {
+                for (const id of ["us", "them"] as const)
+                {
+                    it(`Should infer a common move if ${id} succeeded`,
+                    function()
+                    {
+                        setup(id);
+
+                        // if imprison succeeds, then the opponent
+                        //  should be able to have one of our moves
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: id, move: "imprison"});
+                        expect(ctx.handle(
+                            {
+                                type: "activateStatusEffect", monRef: id,
+                                effect: "imprison", start: true
+                            }))
+                            .to.equal("base");
+                        expect(them.moveset.moveSlotConstraints)
+                            .to.have.lengthOf(1);
+                        expect(them.moveset.moveSlotConstraints[0])
+                            .to.have.keys([...us.moveset.moves.keys()]);
+                    });
+                }
+
+                it("Should throw if no shared moves", function()
+                {
+                    setup("us", /*sameOpponent*/false);
+                    const ctx = initCtx(
+                    {
+                        type: "useMove", monRef: "us", move: "imprison"
+                    });
+
+                    // if imprison succeeds, then the opponent
+                    //  should be able to have one of our moves
+                    expect(() =>
+                        ctx.handle(
+                        {
+                            type: "activateStatusEffect", monRef: "us",
+                            effect: "imprison", start: true
+                        }))
+                        .to.throw(Error, "Imprison succeeded but both " +
+                            "Pokemon cannot share any moves");
+                });
+            });
+        });
+        testNonRemovable("self", "Ingrain", "ingrain", "ingrain");
+        testRemovable("hit", "Leech Seed", "leechSeed", "leechseed");
+        testNonRemovable("self", "Magnet Rise", "magnetRise", "magnetrise");
+        testNonRemovable("hit", "Miracle Eye", "miracleEye", "miracleeye");
+        testNonRemovable("self", "Mud Sport", "mudSport", "mudsport");
+        testNonRemovable("hit", "Nightmare", "nightmare", "nightmare");
+        testNonRemovable("self", "Power Trick", "powerTrick", "powertrick");
+        // slowstart
+        for (const ctg of ["self", "hit"] as const)
+        {
+            moveEffectTests[ctg].status.push(function()
+            {
+                const target = ctg === "self" ? "them" : "us";
+                describe("Slow Start", function()
+                {
+                    it("Should expire", function()
+                    {
+                        initActive("them");
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "tackle"});
+                        expect(ctx.handle(
+                            {
+                                type: "activateStatusEffect", monRef: target,
+                                effect: "slowStart", start: true
+                            }))
+                            .to.equal("expire");
+                    });
+                });
+            });
+        }
+        testRemovable("self", "Substitute", "substitute", "substitute");
+        testNonRemovable("hit", "Suppress ability", "suppressAbility",
+            "gastroacid");
+        testNonRemovable("hit", "Taunt", "taunt", "taunt");
+        testNonRemovable("hit", "Torment", "torment", "torment");
+        testNonRemovable("self", "Water Sport", "waterSport", "watersport");
+        testNonRemovable("hit", "Yawn", "yawn", "yawn");
+
+        // updatable
+        testRemovable("hit", "Confusion", "confusion", "confuseray",
+            "psybeam", "dynamicpunch");
+        testNonRemovable("self", "Bide", "bide", "bide");
+        testNonRemovable("self", "Uproar", "uproar", "uproar");
+
+        // singlemove
+        testNonRemovable("self", "Destiny Bond", "destinyBond", "destinybond");
+        testNonRemovable("self", "Grudge", "grudge", "grudge");
+        testNonRemovable("self", "Rage", "rage", "rage");
+
+        // singleturn
+        testNonRemovable("self", "Endure", "endure", "endure");
+        testNonRemovable("self", "Magic Coat", "magicCoat", "magiccoat");
+        testNonRemovable("self", "Protect", "protect", "protect");
+        testNonRemovable("self", "Roost", "roost", "roost");
+        testNonRemovable("self", "Snatch", "snatch", "snatch");
+        // stall
+        moveEffectTests.self.status.push(function()
+        {
+            describe("Stall effect", function()
+            {
+                it("Should count stall turns then reset if failed", function()
+                {
+                    const v = initActive("them").volatile;
+                    expect(v.stalling).to.be.false;
+                    for (let i = 1; i <= 2; ++i)
+                    {
+                        state.preTurn();
+                        const innerCtx = initCtx(
+                            {type: "useMove", monRef: "them", move: "protect"});
+
+                        expect(innerCtx.handle(
+                            {
+                                type: "activateStatusEffect", monRef: "them",
+                                effect: "protect", start: true
+                            }))
+                            .to.equal("base");
+                        v.stall(true); // mock BaseContext behavior
+                        expect(v.stalling).to.be.true;
+                        expect(v.stallTurns).to.equal(i);
+
+                        state.postTurn();
+                        expect(v.stalling).to.be.false;
+                        expect(v.stallTurns).to.equal(i);
+                    }
+
+                    state.preTurn();
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "protect"});
+                    expect(ctx.handle({type: "fail", monRef: "them"}))
+                        .to.equal("base");
+                    expect(v.stalling).to.be.false;
+                    expect(v.stallTurns).to.equal(0);
+                });
+
+                it("Should reset stall count if using another move", function()
+                {
+                    const mon = initActive("them");
+                    let ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "protect"});
+
+                    // stall effect is put in place
+                    expect(ctx.handle(
+                        {
+                            type: "activateStatusEffect", monRef: "them",
+                            effect: "protect", start: true
+                        }))
+                        .to.equal("base");
+                    mon.volatile.stall(true); // mock BaseContext behavior
+                    expect(mon.volatile.stalling).to.be.true;
+                    expect(mon.volatile.stallTurns).to.equal(1);
+                    ctx.expire();
+                    state.postTurn();
+                    expect(mon.volatile.stalling).to.be.false;
+                    expect(mon.volatile.stallTurns).to.equal(1);
+
+                    // some other move is used
+                    state.preTurn();
+                    ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "splash"});
+                    ctx.halt();
+                    expect(mon.volatile.stalling).to.be.false;
+                    expect(mon.volatile.stallTurns).to.equal(0);
+                });
+
+                it("Should not reset counter if called", function()
+                {
+                    const mon = initActive("them");
+                    let ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "endure"});
+
+                    // stall effect is put in place
+                    expect(ctx.handle(
+                        {
+                            type: "activateStatusEffect", monRef: "them",
+                            effect: "endure", start: true
+                        }))
+                        .to.equal("base");
+                    mon.volatile.stall(true); // mock BaseContext behavior
+                    ctx.expire();
+
+                    // somehow the pokemon moves again in the same turn via call
+                    //  effect
+                    ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "metronome"});
+                    const innerCtx = ctx.handle(
+                        {type: "useMove", monRef: "them", move: "endure"});
+                    expect(innerCtx).to.be.an.instanceOf(MoveContext)
+                    expect((innerCtx as MoveContext).handle(
+                            {type: "fail", monRef: "them"}))
+                        .to.equal("base");
+                    (innerCtx as MoveContext).expire();
+                    ctx.expire();
+                    expect(mon.volatile.stalling).to.be.true;
+                    expect(mon.volatile.stallTurns).to.equal(1);
+                });
+            });
         });
 
-        describe("activateTeamEffect", function()
+        // major status
+        testRemovable("hit", "Burn", "brn", "willowisp", "flamethrower");
+        testRemovable("hit", "Freeze", "frz", undefined, "icebeam");
+        testRemovable("hit", "Paralyze", "par", "stunspore", "thunderbolt",
+            "zapcannon");
+        testRemovable("hit", "Poison", "psn", "poisonpowder", "gunkshot");
+        testRemovable("hit", "Sleep", "slp", "spore");
+        testRemovable("hit", "Toxic", "tox", "toxic", "poisonfang");
+
+        //#endregion
+
+        //#region unique effect
+        moveEffectTests.self.unique.push(function()
+        {
+            describe("Conversion", function()
+            {
+                it("Should infer move via type change", function()
+                {
+                    const mon = initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "conversion"});
+
+                    // changes into a water type, meaning the pokemon must
+                    //  have a water type move
+                    expect(ctx.handle(
+                        {
+                            type: "changeType", monRef: "them",
+                            newTypes: ["water", "???"]
+                        }))
+                        .to.equal("base");
+
+                    // one move slot left to infer after conversion
+                    mon.moveset.reveal("tackle");
+                    mon.moveset.reveal("takedown");
+
+                    // one of the moves can be either fire or water type
+                    expect(mon.moveset.get("ember")).to.be.null;
+                    expect(mon.moveset.get("watergun")).to.be.null;
+                    mon.moveset.addMoveSlotConstraint(["ember", "watergun"]);
+                    // should have now consumed the move slot constraint
+                    expect(mon.moveset.moveSlotConstraints).to.be.empty;
+                    expect(mon.moveset.get("ember")).to.be.null;
+                    expect(mon.moveset.get("watergun")).to.not.be.null;
+                });
+            });
+        });
+        moveEffectTests.hit.unique.push(function()
+        {
+            describe("Disable", function()
+            {
+                it("TODO");
+            });
+        });
+        //#endregion
+
+        //#region implicit status effect
+
+        function testImplicitStatusEffect(ctg: "self" | "hit", name: string,
+            move: string, event: events.Any,
+            getter: (mon: ReadonlyPokemon) => boolean): void
+        {
+            const target = ctg === "self" ? "us" : "them";
+            moveEffectTests[ctg].implicitStatus.push(function()
+            {
+                describe(name, function()
+                {
+                    it(`Should set if using ${move}`, function()
+                    {
+                        let mon = initActive("us");
+                        if (target === "them") mon = initActive("them");
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "us", move});
+                        ctx.handle(event);
+                        ctx.expire();
+                        expect(getter(mon)).to.be.true;
+                    });
+
+                    it(`Should not set if ${move} failed`, function()
+                    {
+                        let mon = initActive("us");
+                        if (target === "them") mon = initActive("them");
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "us", move});
+                        expect(ctx.handle({type: "fail", monRef: "us"}))
+                            .to.equal("base");
+                        ctx.expire();
+                        expect(getter(mon)).to.be.false;
+                    });
+                });
+            });
+        }
+
+        function testLockingMoves<T extends string>(name: string,
+            keys: readonly T[],
+            getter: (mon: ReadonlyPokemon) => ReadonlyVariableTempStatus<T>):
+            void
+        {
+            moveEffectTests.self.implicitStatus.push(function()
+            {
+                describe(name, () => keys.forEach(move =>
+                    describe(move, function()
+                    {
+                        function init(): ReadonlyVariableTempStatus<T>
+                        {
+                            initActive("us");
+                            const vts = getter(initActive("them"));
+                            expect(vts.isActive).to.be.false;
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "them", move});
+                            ctx.expire();
+                            state.postTurn();
+                            expect(vts.isActive).to.be.true;
+                            expect(vts.type).to.equal(move);
+                            return vts;
+                        }
+
+                        it("Should set if successful", init);
+
+                        it("Should reset if missed", function()
+                        {
+                            const vts = init();
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "them", move});
+                            expect(vts.isActive).to.be.true;
+
+                            expect(ctx.handle({type: "miss", monRef: "us"}))
+                                .to.equal("base");
+                            expect(vts.isActive).to.be.false;
+                        });
+
+                        it("Should reset if opponent protected", function()
+                        {
+                            const vts = init();
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "them", move});
+                            expect(vts.isActive).to.be.true;
+
+                            expect(ctx.handle(
+                                {
+                                    type: "block", monRef: "us",
+                                    effect: "protect"
+                                }))
+                                .to.equal("base");
+                            expect(vts.isActive).to.be.false;
+                        });
+
+                        it("Should not reset if opponent endured",
+                        function()
+                        {
+                            const vts = init();
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "them", move});
+                            expect(vts.isActive).to.be.true;
+
+                            expect(ctx.handle(
+                                {
+                                    type: "block", monRef: "us",
+                                    effect: "endure"
+                                }))
+                                .to.equal("base");
+                            expect(vts.isActive).to.be.true;
+                        });
+
+                        it("Should not consume pp if used consecutively",
+                        function()
+                        {
+                            const vts = init();
+                            expect(vts.isActive).to.be.true;
+                            expect(vts.turns).to.equal(0);
+
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "them", move});
+                            expect(vts.isActive).to.be.true;
+                            expect(vts.turns).to.equal(0);
+
+                            ctx.halt();
+                            expect(vts.isActive).to.be.true;
+                            expect(vts.turns).to.equal(1);
+
+                            const m = state.teams.them.active.moveset
+                                .get(move)!;
+                            expect(m).to.not.be.null;
+                            expect(m.pp).to.equal(m.maxpp - 1);
+                        });
+                    })));
+            });
+        }
+
+        testImplicitStatusEffect("self", "Defense Curl", "defensecurl",
+            {type: "boost", monRef: "us", stat: "def", amount: 1},
+            mon => mon.volatile.defenseCurl);
+        // TODO: rename to rampage move
+        testLockingMoves("Locked moves", dex.lockedMoveKeys,
+            mon => mon.volatile.lockedMove);
+        testImplicitStatusEffect("self", "Minimize", "minimize",
+            {type: "boost", monRef: "us", stat: "evasion", amount: 1},
+            mon => mon.volatile.minimize);
+        // TODO: mustRecharge
+        // TODO: move rollout moves to dex and MoveData
+        // TODO: rename to momentum move
+        testLockingMoves("Rollout moves", dexutil.rolloutKeys,
+            mon => mon.volatile.rollout);
+
+        //#endregion
+
+        //#region boost effect
+
+        function shouldHandleBoost(ctg: "self" | "hit", move: string,
+            stat: dexutil.BoostName, amount: number): void
+        {
+            const target = ctg === "self" ? "us" : "them";
+            moveEffectTests[ctg].boost.push(function()
+            {
+                it("Should handle boost", function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "us", move});
+
+                    expect(ctx.handle(
+                            {type: "boost", monRef: target, stat, amount}))
+                        .to.equal("base");
+                    ctx.expire(); // shouldn't throw
+                });
+
+                it("Should throw if expire before effect", function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx({type: "useMove", monRef: "us", move});
+
+                    expect(() => ctx.expire()).to.throw(Error,
+                        `Expected ${ctg} BoostEffect add ${stat} '${amount}' ` +
+                        "but it didn't happen");
+                });
+            });
+        }
+        shouldHandleBoost("self", "leafstorm", "spa", -2);
+        shouldHandleBoost("hit", "charm", "atk", -2);
+
+        // set boost
+        moveEffectTests.self.boost.push(function()
+        {
+            it("Should handle set boost", function()
+            {
+                initActive("us");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "bellydrum"});
+
+                expect(ctx.handle(
+                    {
+                        type: "boost", monRef: "us", stat: "atk", amount: 6,
+                        set: true
+                    }))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+        });
+
+        function shouldHandlePartialBoost(ctg: "self" | "hit", move: string,
+            stat: dexutil.BoostName, amount: 2 | -2): void
+        {
+            const sign = Math.sign(amount);
+            const target = ctg === "self" ? "us" : "them"
+            moveEffectTests[ctg].boost.push(function()
+            {
+                it("Should allow partial boost if maxing out", function()
+                {
+                    let mon = initActive("us");
+                    if (target === "them") mon = initActive("them");
+                    mon.volatile.boosts[stat] = sign * 5;
+                    const ctx = initCtx({type: "useMove", monRef: "us", move});
+
+                    expect(ctx.handle(
+                        {
+                            type: "boost", monRef: target, stat, amount: sign
+                        }))
+                        .to.equal("base");
+                    ctx.expire(); // shouldn't throw
+                });
+
+                it("Should allow 0 boost if maxed out", function()
+                {
+                    let mon = initActive("us");
+                    if (target === "them") mon = initActive("them");
+                    mon.volatile.boosts[stat] = sign * 6;
+                    const ctx = initCtx({type: "useMove", monRef: "us", move});
+
+                    expect(ctx.handle(
+                            {type: "boost", monRef: target, stat, amount: 0}))
+                        .to.equal("base");
+                    ctx.expire(); // shouldn't throw
+                });
+            });
+        }
+        shouldHandlePartialBoost("self", "swordsdance", "atk", 2);
+        shouldHandlePartialBoost("hit", "captivate", "spa", -2);
+
+        function shouldHandleSecondaryBoost(ctg: "self" | "hit", move: string,
+            stat: dexutil.BoostName, amount: number): void
+        {
+            moveEffectTests[ctg].boost.push(function()
+            {
+                it("Should handle boost via secondary effect", function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "us", move});
+                    expect(ctx.handle(
+                            {type: "boost", monRef: "them", stat, amount}))
+                        .to.equal("base");
+                    ctx.expire(); // shouldn't throw
+                });
+            });
+        }
+        shouldHandleSecondaryBoost("self", "chargebeam", "spa", 1);
+        shouldHandleSecondaryBoost("hit", "rocksmash", "def", -1);
+
+        function shouldHandle100SecondaryBoost(ctg: "self" | "hit",
+            move: string, stat: dexutil.BoostName, amount: number): void
+        {
+            const sign = Math.sign(amount);
+            const target = ctg === "self" ? "us" : "them"
+            moveEffectTests[ctg].boost.push(function()
+            {
+                it("Should throw if expire before 100% secondary effect",
+                function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx({type: "useMove", monRef: "us", move});
+                    expect(() => ctx.expire()).to.throw(Error,
+                        `Expected hit secondary boost ${stat} '${amount}' ` +
+                        "but it didn't happen");
+                });
+
+                it("Should allow no boost event for 100% secondary " +
+                    "effect if maxed out",
+                function()
+                {
+                    let mon = initActive("us");
+                    if (target === "them") mon = initActive("them");
+                    mon.volatile.boosts[stat] = sign * 6;
+                    const ctx = initCtx({type: "useMove", monRef: "us", move});
+                    ctx.expire(); // shouldn't throw
+                });
+            });
+        }
+        shouldHandle100SecondaryBoost("hit", "rocktomb", "spe", -1);
+
+        //#endregion
+
+        //#region team effect
+
+        // healingWish/lunarDance
+        moveEffectTests.self.team.push(function()
         {
             // can only be explicitly ended by a separate event, not a move
             const faintMoves =
@@ -550,7 +1923,49 @@ describe("MoveContext", function()
             {
                 describe(name, function()
                 {
-                    it("Should expire", function()
+                    it("Should set if successful faint", function()
+                    {
+                        initActive("us");
+                        initActive("them");
+                        const team = state.teams.them;
+
+                        // use wishing move to faint user
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move});
+                        expect(ctx.handle({type: "faint", monRef: "them"}))
+                            .to.equal("base");
+                        ctx.halt();
+                        expect(team.status[effect]).to.be.true;
+
+                        // replacement is sent
+                        expect(ctx.handle(
+                                {type: "switchIn", monRef: "them", ...ditto}))
+                            .to.be.an.instanceOf(SwitchContext);
+                        // implicit: handle switch events, then expire at the
+                        //  healingwish event allowing the MoveContext to handle
+                        //  it
+                        expect(ctx.handle(
+                            {
+                                type: "activateTeamEffect", teamRef: "them",
+                                effect, start: false
+                            }))
+                            .to.equal("base");
+                        ctx.expire();
+                    });
+
+                    it("Should not set if failed", function()
+                    {
+                        initActive("us");
+                        initActive("them");
+                        const team = state.teams.them;
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move});
+                        expect(ctx.handle({type: "fail", monRef: "them"}))
+                            .to.equal("base");
+                        expect(team.status[effect]).to.be.false;
+                    });
+
+                    it("Should expire if effect not expected", function()
                     {
                         initActive("them");
                         const ctx = initCtx(
@@ -564,7 +1979,11 @@ describe("MoveContext", function()
                     });
                 });
             }
+        });
 
+        // other non-screen self team effects
+        moveEffectTests.self.team.push(function()
+        {
             const otherMoves =
             [
                 ["Lucky Chant", "luckyChant", "luckychant"],
@@ -616,59 +2035,11 @@ describe("MoveContext", function()
                     });
                 });
             }
+        });
 
-            const hazardMoves =
-            [
-                ["Spikes", "spikes", "spikes"],
-                ["Stealth Rock", "stealthRock", "stealthrock"],
-                ["Toxic Spikes", "toxicSpikes", "toxicspikes"]
-            ] as const;
-            for (const [name, effect, move] of hazardMoves)
-            {
-                describe(name, function()
-                {
-                    it("Should pass if expected", function()
-                    {
-                        initActive("them");
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move});
-                        expect(ctx.handle(
-                            {
-                                type: "activateTeamEffect", teamRef: "us",
-                                effect, start: true
-                            }))
-                            .to.equal("base");
-                    });
-
-                    it("Should still pass if start=false", function()
-                    {
-                        initActive("them");
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move});
-                        // TODO: track moves that can do this
-                        expect(ctx.handle(
-                            {
-                                type: "activateTeamEffect", teamRef: "us",
-                                effect, start: false
-                            }))
-                            .to.equal("base");
-                    });
-
-                    it("Should expire if mismatched flags", function()
-                    {
-                        initActive("them");
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: "tackle"});
-                        expect(ctx.handle(
-                            {
-                                type: "activateTeamEffect", teamRef: "us",
-                                effect, start: true
-                            }))
-                            .to.equal("expire");
-                    });
-                });
-            }
-
+        // screen move self team effects
+        moveEffectTests.self.team.push(function()
+        {
             const screenMoves =
             [
                 ["Light Screen", "lightScreen", "lightscreen"],
@@ -721,947 +2092,142 @@ describe("MoveContext", function()
             }
         });
 
-        describe("block", function()
+        // hazard move hit team effects
+        moveEffectTests.hit.team.push(function()
         {
-            it("Should cancel move effects", function()
+            const hazardMoves =
+            [
+                ["Spikes", "spikes", "spikes"],
+                ["Stealth Rock", "stealthRock", "stealthrock"],
+                ["Toxic Spikes", "toxicSpikes", "toxicspikes"]
+            ] as const;
+            for (const [name, effect, move] of hazardMoves)
             {
-                initActive("us");
-                initActive("them").team!.status.safeguard.start();
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "thunderwave"});
-
-                expect(ctx.handle(
-                        {type: "block", monRef: "them", effect: "safeguard"}))
-                    .to.equal("base");
-                ctx.expire(); // shouldn't throw
-            });
-        });
-
-        describe("boost", function()
-        {
-            it("Should handle boost", function()
-            {
-                initActive("us");
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "leafstorm"});
-
-                expect(ctx.handle(
-                        {type: "boost", monRef: "us", stat: "spa", amount: -2}))
-                    .to.equal("base");
-                ctx.expire(); // shouldn't throw
-            });
-
-            it("Should handle set boost", function()
-            {
-                initActive("us");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "bellydrum"});
-
-                expect(ctx.handle(
-                    {
-                        type: "boost", monRef: "us", stat: "atk", amount: 6,
-                        set: true
-                    }))
-                    .to.equal("base");
-                ctx.expire(); // shouldn't throw
-            });
-
-            it("Should handle boost via secondary effect", function()
-            {
-                initActive("us");
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "rocksmash"});
-
-                expect(ctx.handle(
-                    {
-                        // wrong pokemon
-                        type: "boost", monRef: "us", stat: "def", amount: -1
-                    }))
-                    .to.equal("base"); // TODO: expire
-                expect(ctx.handle(
-                    {
-                        // wrong boost number
-                        type: "boost", monRef: "them", stat: "def", amount: -2
-                    }))
-                    .to.equal("base"); // TODO: expire
-                expect(ctx.handle(
-                    {
-                        // wrong boost stat
-                        type: "boost", monRef: "them", stat: "atk", amount: -1
-                    }))
-                    .to.equal("base"); // TODO: expire
-                expect(ctx.handle(
-                    {
-                        type: "boost", monRef: "them", stat: "def", amount: -1
-                    }))
-                    .to.equal("base");
-                ctx.expire(); // shouldn't throw
-            });
-
-            it("Should allow partial boost if maxing out", function()
-            {
-                const mon = initActive("us");
-                mon.volatile.boosts.spa = 4;
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "tailglow"});
-
-                expect(ctx.handle(
-                        {type: "boost", monRef: "us", stat: "spa", amount: 2}))
-                    .to.equal("base");
-                ctx.expire(); // shouldn't throw
-            });
-
-            it("Should allow no boost if maxed out", function()
-            {
-                const mon = initActive("us");
-                initActive("them");
-                mon.volatile.boosts.spa = -6;
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "dracometeor"});
-                ctx.expire(); // shouldn't throw
-            });
-
-            it("Should throw if expire before effect", function()
-            {
-                initActive("us");
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "charm"});
-
-                expect(() => ctx.expire()).to.throw(Error,
-                    "Expected hit BoostEffect add atk '-2' but it didn't " +
-                    "happen");
-            });
-
-            it("Should throw if expire before 100% secondary effect", function()
-            {
-                initActive("us");
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "us", move: "rocktomb"});
-
-                expect(() => ctx.expire()).to.throw(Error,
-                    "Expected hit SecondaryEffect boost spe '-1' but it " +
-                    "didn't happen");
-            });
-        });
-
-        describe("changeType", function()
-        {
-            it("Should infer move if conversion", function()
-            {
-                const mon = initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "conversion"});
-
-                // changes into a water type, meaning the pokemon must have a
-                //  water type move
-                expect(ctx.handle(
-                    {
-                        type: "changeType", monRef: "them",
-                        newTypes: ["water", "???"]
-                    }))
-                    .to.equal("base");
-
-                // one move slot left to infer after conversion
-                mon.moveset.reveal("tackle");
-                mon.moveset.reveal("takedown");
-
-                // one of the moves can be either fire or water type
-                expect(mon.moveset.get("ember")).to.be.null;
-                expect(mon.moveset.get("watergun")).to.be.null;
-                mon.moveset.addMoveSlotConstraint(["ember", "watergun"]);
-                // should have now consumed the move slot constraint
-                expect(mon.moveset.moveSlotConstraints).to.be.empty;
-                expect(mon.moveset.get("ember")).to.be.null;
-                expect(mon.moveset.get("watergun")).to.not.be.null;
-            });
-        });
-
-        describe("faint", function()
-        {
-            it("Should cancel effects of target", function()
-            {
-                initActive("us");
-                initActive("them");
-                // 100% confuse rate
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "dynamicpunch"});
-
-                expect(ctx.handle({type: "faint", monRef: "us"}))
-                    .to.equal("base");
-                ctx.expire(); // shouldn't throw
-            });
-        });
-
-        describe("futureMove", function()
-        {
-            it("Should handle future move", function()
-            {
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "futuresight"});
-
-                expect(ctx.handle(
-                    {
-                        type: "futureMove", monRef: "them",
-                        move: "futuresight", start: true
-                    }))
-                    .to.equal("base");
-                expect(ctx.handle(
-                    {
-                        type: "futureMove", monRef: "them",
-                        move: "doomdesire", start: true
-                    }))
-                    .to.equal("expire");
-                expect(ctx.handle(
-                    {
-                        type: "futureMove", monRef: "them",
-                        move: "futuresight", start: false
-                    }))
-                    .to.equal("expire");
-            });
-        });
-
-        describe("prepareMove", function()
-        {
-            it("Should handle two-turn move", function()
-            {
-                // prepare
-                const mon = initActive("them");
-                initActive("us");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "fly"});
-
-                expect(ctx.handle(
-                        {type: "prepareMove", monRef: "us", move: "fly"}))
-                    .to.equal("expire");
-                expect(ctx.handle(
-                        {type: "prepareMove", monRef: "them", move: "fly"}))
-                    .to.equal("base");
-                expect(() => ctx.handle(
-                        {type: "prepareMove", monRef: "them", move: "bounce"}))
-                    .to.throw(Error, "Mismatched prepareMove: Using 'fly' " +
-                        "but got 'bounce'");
-                ctx.expire();
-
-                // release
-                mon.volatile.twoTurn.start("fly");
-                initCtx({type: "useMove", monRef: "them", move: "fly"})
-                    .expire();
-                expect(mon.volatile.twoTurn.isActive).to.be.false;
-            });
-        });
-
-        describe("swapBoosts", function()
-        {
-            it("Should handle swap boost move", function()
-            {
-                initActive("us");
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "guardswap"});
-
-                expect(ctx.handle(
-                    {
-                        type: "swapBoosts", monRef1: "us", monRef2: "them",
-                        stats: ["def", "spd", "spe"]
-                    }))
-                    .to.equal("expire");
-                expect(ctx.handle(
-                    {
-                        type: "swapBoosts", monRef1: "us", monRef2: "them",
-                        stats: ["def", "spd"]
-                    }))
-                    .to.equal("base");
-                // effect should be consumed after accepting the 2nd swapBoosts
-                expect(ctx.handle(
-                    {
-                        type: "swapBoosts", monRef1: "us", monRef2: "them",
-                        stats: ["def", "spd"]
-                    }))
-                    .to.equal("expire");
-                ctx.expire();
-            });
-
-            it("Should throw if expire before effect", function()
-            {
-                initActive("us");
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "guardswap"});
-                expect(() => ctx.expire()).to.throw(Error,
-                    "Expected primary swapBoost 'def,spd' but it didn't " +
-                    "happen");
-            });
-        });
-
-        describe("switchIn", function()
-        {
-            it("Should return SwitchContext if self-switch expected",
-            function()
-            {
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "batonpass"});
-                expect(ctx.handle(
-                        {type: "switchIn", monRef: "them", ...ditto}))
-                    .to.be.an.instanceOf(SwitchContext);
-            });
-
-            it("Should expire if no self-switch expected", function()
-            {
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "pursuit"});
-                expect(ctx.handle(
-                        {type: "switchIn", monRef: "them", ...smeargle}))
-                    .to.equal("expire");
-            });
-
-            it("Should expire if self-switch expected but opponent switched",
-            function()
-            {
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "pursuit"});
-                expect(ctx.handle(
-                        {type: "switchIn", monRef: "us", ...smeargle}))
-                    .to.equal("expire");
-            });
-        });
-
-        describe("transform", function()
-        {
-            it("Should pass if user and source match", function()
-            {
-                initActive("us");
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "transform"});
-                expect(ctx.handle(
-                        {type: "transform", source: "them", target: "us"}))
-                    .to.equal("base");
-            });
-
-            it("Should expire if user/source mismatch", function()
-            {
-                initActive("them");
-                const ctx = initCtx(
-                    {type: "useMove", monRef: "them", move: "transform"});
-                expect(ctx.handle(
-                        {type: "transform", source: "us", target: "them"}))
-                    .to.equal("expire");
-            });
-        });
-
-        describe("useMove", function()
-        {
-            it("Should expire if no call effect expected", function()
-            {
-                initActive("them");
-                const ctx = initCtx(
+                describe(name, function()
                 {
-                    type: "useMove", monRef: "them",
-                    move: "tackle"
-                });
-
-                expect(ctx.handle(
-                        {type: "useMove", monRef: "them", move: "tackle"}))
-                    .to.equal("expire");
-            });
-
-            // extract self+target move-callers
-            const copycatCallers: string[] = [];
-            const mirrorCallers: string[] = [];
-            const selfMoveCallers: string[] = [];
-            const targetMoveCallers: string[] = [];
-            const otherCallers: string[] = [];
-            for (const move of Object.keys(dex.moveCallers))
-            {
-                const effect = dex.moveCallers[move];
-                if (effect === "copycat") copycatCallers.push(move);
-                else if (effect === "mirror") mirrorCallers.push(move);
-                else if (effect === "self") selfMoveCallers.push(move);
-                else if (effect === "target") targetMoveCallers.push(move);
-                else otherCallers.push(move);
-            }
-
-            describe("Move-callers", function()
-            {
-                for (const caller of otherCallers)
-                {
-                    it(`Should pass if using ${caller}`, function()
+                    it("Should pass if expected", function()
                     {
                         initActive("them");
                         const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: caller});
+                            {type: "useMove", monRef: "them", move});
                         expect(ctx.handle(
                             {
-                                type: "useMove", monRef: "them", move: "tackle"
+                                type: "activateTeamEffect", teamRef: "us",
+                                effect, start: true
                             }))
-                            .to.be.an.instanceOf(MoveContext);
-                        ctx.expire();
+                            .to.equal("base");
                     });
-                }
-            });
 
-            describe("Copycat callers", function()
-            {
-                it("Should track last used move", function()
-                {
-                    initActive("them");
-                    expect(state.status.lastMove).to.be.undefined;
-                    initCtx({type: "useMove", monRef: "them", move: "tackle"});
-                    expect(state.status.lastMove).to.equal("tackle");
-                });
-
-                for (const caller of copycatCallers)
-                {
-                    it(`Should pass if using ${caller} and move matches`,
-                    function()
+                    it("Should still pass if start=false", function()
                     {
                         initActive("them");
-                        state.status.lastMove = "tackle";
                         const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: caller});
+                            {type: "useMove", monRef: "them", move});
+                        // TODO: track moves that can do this
                         expect(ctx.handle(
                             {
-                                type: "useMove", monRef: "them", move: "tackle"
+                                type: "activateTeamEffect", teamRef: "us",
+                                effect, start: false
                             }))
-                            .to.be.an.instanceOf(MoveContext);
-                        ctx.expire();
+                            .to.equal("base");
                     });
 
-                    it(`Should throw if using ${caller} and mismatched move`,
-                    function()
+                    it("Should expire if mismatched flags", function()
                     {
                         initActive("them");
-                        state.status.lastMove = "watergun";
                         const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: caller});
-                        expect(ctx.handle(
-                            {
-                                type: "useMove", monRef: "them", move: "tackle"
-                            }))
-                            .to.equal("expire");
-                        expect(() => ctx.expire())
-                            .to.throw(Error, "Expected primary CallEffect " +
-                                "'copycat' but it didn't happen");
-                    });
-
-                    it(`Should throw if ${caller} failed but should've called`,
-                    function()
-                    {
-                        initActive("them");
-                        state.status.lastMove = "tackle";
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: caller});
-                        expect(() => ctx.handle({type: "fail", monRef: "them"}))
-                            .to.throw(Error, "Copycat effect failed but " +
-                                "should've called 'tackle'");
-                    });
-                }
-            });
-
-            describe("Mirror move-callers", function()
-            {
-                it("Should track if targeted", function()
-                {
-                    const us = initActive("us");
-                    initActive("them");
-
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "tackle"});
-                    expect(us.volatile.mirrorMove).to.be.null;
-                    ctx.expire();
-                    expect(us.volatile.mirrorMove).to.equal("tackle");
-                });
-
-                it("Should track on continued rampage", function()
-                {
-                    const us = initActive("us");
-                    const them = initActive("them");
-                    them.volatile.lockedMove.start("petaldance");
-                    them.volatile.lockedMove.tick();
-
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "petaldance"});
-                    expect(us.volatile.mirrorMove).to.be.null;
-                    ctx.expire();
-                    expect(us.volatile.mirrorMove).to.equal("petaldance");
-                });
-
-                it("Should track on two-turn release turn", function()
-                {
-                    const us = initActive("us");
-                    const them = initActive("them");
-                    us.volatile.mirrorMove = "previous"; // test value
-
-                    // start a two-turn move
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "fly"});
-                    expect(ctx.handle(
-                            {type: "prepareMove", monRef: "them", move: "fly"}))
-                        .to.equal("base");
-                    them.volatile.twoTurn.start("fly"); // base
-                    ctx.expire();
-                    // shouldn't count the charging turn
-                    expect(us.volatile.mirrorMove).to.equal("previous");
-
-                    // release the two-turn move
-                    const ctx2 = initCtx(
-                        {type: "useMove", monRef: "them", move: "fly"});
-                    expect(us.volatile.mirrorMove).to.equal("previous");
-                    ctx2.expire();
-                    expect(us.volatile.mirrorMove).to.equal("fly");
-                });
-
-                it("Should track on called two-turn release turn", function()
-                {
-                    const us = initActive("us");
-                    const them = initActive("them");
-                    us.volatile.mirrorMove = "previous"; // test value
-
-                    // call a two-turn move
-                    const ctx = initCtx(
-                    {
-                        type: "useMove", monRef: "them", move: otherCallers[0]
-                    });
-                    const ctx2 = ctx.handle(
-                        {type: "useMove", monRef: "them", move: "fly"});
-                    expect(ctx2).to.be.an.instanceOf(MoveContext);
-                    expect((ctx2 as MoveContext).handle(
-                            {type: "prepareMove", monRef: "them", move: "fly"}))
-                        .to.equal("base");
-                    them.volatile.twoTurn.start("fly"); // base
-                    (ctx2 as MoveContext).expire();
-                    ctx.expire();
-
-                    expect(us.volatile.mirrorMove).to.equal("previous");
-
-                    // release the two-turn move
-                    const ctx3 = initCtx(
-                        {type: "useMove", monRef: "them", move: "fly"});
-                    ctx3.expire();
-
-                    expect(us.volatile.mirrorMove).to.equal("fly");
-                });
-
-                it("Should not track if not targeted", function()
-                {
-                    const us = initActive("us");
-                    initActive("them");
-                    us.volatile.mirrorMove = "previous"; // test value
-                    // move that can't target opponent
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "splash"});
-                    ctx.expire();
-                    expect(us.volatile.mirrorMove).to.equal("previous");
-                });
-
-                it("Should not track if non-mirror-able move", function()
-                {
-                    const us = initActive("us");
-                    initActive("them");
-                    us.volatile.mirrorMove = "previous"; // test value
-                    // move that can't be mirrored but targets opponent
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move: "feint"});
-                    ctx.expire();
-                    expect(us.volatile.mirrorMove).to.equal("previous");
-                });
-
-                it("Should not track if targeted by a called move", function()
-                {
-                    const us = initActive("us");
-                    initActive("them");
-                    us.volatile.mirrorMove = "previous"; // test value
-
-                    // call a move
-                    const ctx = initCtx(
-                    {
-                        type: "useMove", monRef: "them", move: otherCallers[0]
-                    });
-                    const ctx2 = ctx.handle(
                             {type: "useMove", monRef: "them", move: "tackle"});
-                    expect(ctx2).to.be.an.instanceOf(MoveContext);
-                    (ctx2 as MoveContext).expire();
-                    ctx.expire();
-
-                    // shouldnt update
-                    expect(us.volatile.mirrorMove).to.equal("previous");
-                });
-
-                for (const [name, move] of
-                    [["lockedMove", "thrash"], ["rollout", "rollout"]] as const)
-                {
-                    it(`Should not track on called ${name} move`, function()
-                    {
-                        const us = initActive("us");
-                        const them = initActive("them");
-                        us.volatile.mirrorMove = "previous"; // test value
-
-                        // call a move
-                        const ctx = initCtx(
-                        {
-                            type: "useMove", monRef: "them",
-                            move: otherCallers[0]
-                        });
-                        const ctx2 = ctx.handle(
-                            {type: "useMove", monRef: "them", move});
-                        expect(ctx2).to.be.an.instanceOf(MoveContext);
-                        (ctx2 as MoveContext).expire();
-                        ctx.expire();
-
-                        expect(them.volatile[name].isActive).to.be.true;
-                        expect(them.volatile[name].type).to.equal(move);
-                        expect(them.volatile[name].called).to.be.true;
-                        // shouldn't update
-                        expect(us.volatile.mirrorMove).to.equal("previous");
-
-                        // continue the rampage on the next turn
-                        const ctx3 = initCtx(
-                            {type: "useMove", monRef: "them", move});
-                        ctx3.expire();
-
-                        expect(them.volatile[name].isActive).to.be.true;
-                        expect(them.volatile[name].type).to.equal(move);
-                        expect(them.volatile[name].called).to.be.true;
-                        // shouldn't update
-                        expect(us.volatile.mirrorMove).to.equal("previous");
-                    });
-                }
-
-                for (const caller of mirrorCallers)
-                {
-                    it(`Should pass if using ${caller} and move matches`,
-                    function()
-                    {
-                        const them = initActive("them");
-                        them.volatile.mirrorMove = "tackle";
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: caller});
                         expect(ctx.handle(
                             {
-                                type: "useMove", monRef: "them", move: "tackle"
-                            }))
-                            .to.be.an.instanceOf(MoveContext);
-                        ctx.expire();
-                    });
-
-                    it(`Should throw if using ${caller} and mismatched move`,
-                    function()
-                    {
-                        const them = initActive("them");
-                        them.volatile.mirrorMove = "watergun";
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: caller});
-                        expect(ctx.handle(
-                            {
-                                type: "useMove", monRef: "them", move: "tackle"
+                                type: "activateTeamEffect", teamRef: "us",
+                                effect, start: true
                             }))
                             .to.equal("expire");
-                        expect(() => ctx.expire())
-                            .to.throw(Error, "Expected primary CallEffect " +
-                                "'mirror' but it didn't happen");
                     });
+                });
+            }
 
-                    it(`Should throw if ${caller} failed but should've called`,
-                    function()
-                    {
-                        const them = initActive("them");
-                        them.volatile.mirrorMove = "watergun";
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: caller});
-                        expect(() => ctx.handle(
-                                {type: "fail", monRef: "them"}))
-                            .to.throw(Error, "Mirror Move effect failed but " +
-                                "should've called 'watergun'");
-                    });
-                }
-            });
+        });
 
-            describe("Self move-callers", function()
+        //#endregion
+
+        //#region implicit team effect
+
+        function testImplicitTeamEffect(ctg: "self" | "hit", name: string,
+            move: string, getter: (team: ReadonlyTeam) => boolean): void
+        {
+            const teamRef = ctg === "self" ? "them" : "us";
+            moveEffectTests[ctg].implicitTeam.push(function()
             {
-                for (const caller of selfMoveCallers)
+                describe(name, function()
                 {
-                    it(`Should infer user's move when using ${caller}`,
-                    function()
+                    it(`Should set if using ${move}`, function()
                     {
-                        const them = initActive("them");
-
-                        // use the move-caller
+                        initActive("us");
+                        initActive("them");
+                        const team = state.teams[teamRef];
                         const ctx = initCtx(
-                            {type: "useMove", monRef: "them", move: caller});
-
-                        // call the move
-                        expect(ctx.handle(
-                            {
-                                type: "useMove", monRef: "them", move: "tackle"
-                            }))
-                            .to.be.an.instanceOf(MoveContext);
-                        expect(them.moveset.get("tackle")).to.not.be.null;
-                        // shouldn't consume pp for the called move
-                        expect(them.moveset.get("tackle")!.pp).to.equal(56);
+                            {type: "useMove", monRef: "them", move});
+                        ctx.halt(); // expire would've consumed self-switch
+                        expect(getter(team)).to.be.true;
                     });
-                }
 
-                it("Should expire if the call effect was ignored", function()
-                {
-                    const them = initActive("them");
-
-                    const ctx = initCtx(
+                    it(`Should not set if ${move} failed`, function()
                     {
-                        type: "useMove", monRef: "them",
-                        move: selfMoveCallers[0]
+                        initActive("us");
+                        initActive("them");
+                        const team = state.teams[teamRef];
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move});
+                        expect(ctx.handle({type: "fail", monRef: "them"}))
+                            .to.equal("base");
+                        expect(getter(team)).to.be.false;
+                        ctx.expire();
                     });
-
-                    expect(ctx.handle(
-                            {type: "useMove", monRef: "us", move: "tackle"}))
-                        .to.equal("expire");
-                    expect(them.moveset.get("tackle")).to.be.null;
                 });
             });
-
-            describe("Target move-callers", function()
-            {
-                for (const caller of targetMoveCallers)
-                {
-                    it(`Should infer target's move when using ${caller}`,
-                    function()
-                    {
-                        // switch in a pokemon that has the move-caller
-                        const us = initActive("us");
-                        const them = initActive("them");
-
-                        // use the move-caller
-                        const ctx = initCtx(
-                            {type: "useMove", monRef: "us", move: caller});
-
-                        // call the move
-                        expect(ctx.handle(
-                            {
-                                type: "useMove", monRef: "us", move: "tackle"
-                            }))
-                            .to.be.an.instanceOf(MoveContext);
-                        expect(us.moveset.get("tackle")).to.be.null;
-                        expect(them.moveset.get("tackle")).to.not.be.null;
-                        // shouldn't consume pp for the called move
-                        expect(them.moveset.get("tackle")!.pp).to.equal(56);
-                    });
-                }
-
-                it("Should expire if the call effect was ignored", function()
-                {
-                    initActive("us");
-                    const them = initActive("them");
-
-                    const ctx = initCtx(
-                    {
-                        type: "useMove", monRef: "them",
-                        move: targetMoveCallers[0]
-                    });
-
-                    expect(ctx.handle(
-                            {type: "useMove", monRef: "us", move: "tackle"}))
-                        .to.equal("expire");
-                    expect(them.moveset.get("tackle")).to.be.null;
-                });
-            });
-        });
-    });
-
-    describe("#halt()", function()
-    {
-        // TODO
-    });
-
-    describe("#expire()", function()
-    {
-        // TODO
-    });
-
-    describe("Curse move", function()
-    {
-        it("Should pass if ghost type", function()
-        {
-            initActive("us");
-            initActive("them", smeargle).volatile.addedType = "ghost";
-            const ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "curse"});
-            expect(ctx.handle(
-                {
-                    type: "activateStatusEffect", monRef: "us", effect: "curse",
-                    start: true
-                }))
-                .to.equal("base");
-            ctx.expire();
-        });
-
-        it("Should expire if non-ghost type", function()
-        {
-            initActive("them", smeargle);
-            const ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "curse"});
-            expect(ctx.handle(
-                {
-                    type: "activateStatusEffect", monRef: "us", effect: "curse",
-                    start: true
-                }))
-                .to.equal("expire");
-            ctx.expire();
-        });
-
-        it("Should expire if start=false", function()
-        {
-            initActive("them").volatile.addedType = "ghost";
-            const ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "curse"});
-            expect(ctx.handle(
-                {
-                    type: "activateStatusEffect", monRef: "us",
-                    effect: "curse", start: false
-                }))
-                .to.equal("expire");
-        });
-
-        it("Should expire if mismatched flags", function()
-        {
-            initActive("them");
-            const ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "tackle"});
-            expect(ctx.handle(
-                {
-                    type: "activateStatusEffect", monRef: "us",
-                    effect: "curse", start: true
-                }))
-                .to.equal("expire");
-        });
-    });
-
-    describe("Imprison move", function()
-    {
-        let us: Pokemon;
-        let them: Pokemon;
-
-        function setup(imprisonUser: Side, sameOpponent = true): void
-        {
-            us = initActive("us",
-                {species: "vulpix", level: 5, gender: "F", hp: 20, hpMax: 20});
-            us.moveset.reveal(imprisonUser === "us" ? "imprison" : "protect");
-            us.moveset.reveal("ember");
-            us.moveset.reveal("tailwhip");
-            us.moveset.reveal("disable");
-
-            // switch in a similar pokemon
-            them = initActive("them",
-            {
-                species: sameOpponent ? "vulpix" : "bulbasaur", level: 10,
-                gender: "M", hp: 100, hpMax: 100
-            });
-
-            if (sameOpponent)
-            {
-                // opponent should be able to have our moveset
-                expect(them.moveset.constraint)
-                    .to.include.all.keys([...us.moveset.moves.keys()]);
-            }
-            else
-            {
-                // opponent should not be able to have our moveset
-                expect(them.moveset.constraint)
-                    .to.not.include.any.keys([...us.moveset.moves.keys()]);
-            }
         }
 
-        describe("Failed", function()
+        testImplicitTeamEffect("self", "Wish", "wish",
+            team => team.status.wish.isActive)
+
+        // TODO: move to primary self-switch test?
+        // or move primary self-switch to self/hit MoveEffect to support phazing
+        testImplicitTeamEffect("self", "Self-switch", "uturn",
+            team => team.status.selfSwitch === true);
+        testImplicitTeamEffect("self", "Baton Pass", "batonpass",
+            team => team.status.selfSwitch === "copyvolatile");
+
+        //#endregion
+
+        for (const [ctgName, ctg] of
+            [["Self", "self"], ["Hit", "hit"]] as const)
         {
-            for (const id of ["us", "them"] as const)
+            const testDict = moveEffectTests[ctg];
+            describe(`${ctgName} MoveEffect`, function()
             {
-                it(`Should infer no common moves if ${id} failed`,
-                function()
+                for (const [name, key] of
+                [
+                    ["StatusEffect", "status"],
+                    ["UniqueEffect", "unique"],
+                    ["ImplicitStatusEffect", "implicitStatus"],
+                    ["BoostEffect", "boost"],
+                    ["TeamEffect", "team"],
+                    ["ImplicitTeamEffect", "implicitTeam"]
+                ] as const)
                 {
-                    setup(id);
-
-                    // if imprison fails, then the opponent shouldn't be
-                    //  able to have any of our moves
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: id, move: "imprison"});
-                    expect(ctx.handle({type: "fail", monRef: id}))
-                        .to.equal("base");
-                    expect(them.moveset.constraint)
-                        .to.not.include.any.keys([...us.moveset.moves.keys()]);
-                });
-            }
-
-            it("Should throw if shared moves", function()
-            {
-                setup("us");
-
-                const ctx = initCtx(
-                {
-                    type: "useMove", monRef: "them", move: "imprison"
-                });
-
-                expect(() =>
-                        ctx.handle({type: "fail", monRef: "them"}))
-                    .to.throw(Error,
-                        "Imprison failed but both Pokemon have " +
-                            "common moves: imprison");
-            });
-        });
-
-        describe("Succeeded", function()
-        {
-            for (const id of ["us", "them"] as const)
-            {
-                it(`Should infer a common move if ${id} succeeded`,
-                function()
-                {
-                    setup(id);
-
-                    // if imprison succeeds, then the opponent
-                    //  should be able to have one of our moves
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: id, move: "imprison"});
-                    expect(ctx.handle(
-                        {
-                            type: "activateStatusEffect", monRef: id,
-                            effect: "imprison", start: true
-                        }))
-                        .to.equal("base");
-                    expect(them.moveset.moveSlotConstraints)
-                        .to.have.lengthOf(1);
-                    expect(them.moveset.moveSlotConstraints[0])
-                        .to.have.keys([...us.moveset.moves.keys()]);
-                });
-            }
-
-            it("Should throw if no shared moves", function()
-            {
-                setup("us", /*sameOpponent*/false);
-                const ctx = initCtx(
-                {
-                    type: "useMove", monRef: "us", move: "imprison"
-                });
-
-                // if imprison succeeds, then the opponent
-                //  should be able to have one of our moves
-                expect(() =>
-                    ctx.handle(
+                    const testArr = testDict[key];
+                    describe(name, function()
                     {
-                        type: "activateStatusEffect", monRef: "us",
-                        effect: "imprison", start: true
-                    }))
-                    .to.throw(Error, "Imprison succeeded but both " +
-                        "Pokemon cannot share any moves");
+                        if (testArr.length <= 0) it("TODO");
+                        else for (const testFunc of testArr) testFunc();
+                    });
+                }
             });
-        });
+        }
     });
 
+    // TODO: track in MoveData
     describe("Natural Gift move", function()
     {
         it("Should infer berry if successful", function()
@@ -1694,108 +2260,10 @@ describe("MoveContext", function()
         });
     });
 
+    // TODO: track ally move effects in MoveData
     describe("Ally moves", function()
     {
-        it("Should throw if not failed in a single battle", function()
-        {
-            // TODO: support ally moves (e.g. helpinghand)
-        });
-    });
-
-    describe("Stalling moves", function()
-    {
-        it("Should count stall turns then reset if failed", function()
-        {
-            const v = initActive("them").volatile;
-            expect(v.stalling).to.be.false;
-            for (let i = 1; i <= 2; ++i)
-            {
-                state.preTurn();
-                const innerCtx = initCtx(
-                    {type: "useMove", monRef: "them", move: "protect"});
-
-                expect(innerCtx.handle(
-                    {
-                        type: "activateStatusEffect", monRef: "them",
-                        effect: "protect", start: true
-                    }))
-                    .to.equal("base");
-                v.stall(true); // mock BaseContext behavior
-                expect(v.stalling).to.be.true;
-                expect(v.stallTurns).to.equal(i);
-
-                state.postTurn();
-                expect(v.stalling).to.be.false;
-                expect(v.stallTurns).to.equal(i);
-            }
-
-            state.preTurn();
-            const ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "protect"});
-            expect(ctx.handle({type: "fail", monRef: "them"}))
-                .to.equal("base");
-            expect(v.stalling).to.be.false;
-            expect(v.stallTurns).to.equal(0);
-        });
-
-        it("Should reset stall count if using another move", function()
-        {
-            const mon = initActive("them");
-            let ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "protect"});
-
-            // stall effect is put in place
-            expect(ctx.handle(
-                {
-                    type: "activateStatusEffect", monRef: "them",
-                    effect: "protect", start: true
-                }))
-                .to.equal("base");
-            mon.volatile.stall(true); // mock BaseContext behavior
-            expect(mon.volatile.stalling).to.be.true;
-            expect(mon.volatile.stallTurns).to.equal(1);
-            ctx.expire();
-            state.postTurn();
-            expect(mon.volatile.stalling).to.be.false;
-            expect(mon.volatile.stallTurns).to.equal(1);
-
-            // some other move is used
-            state.preTurn();
-            ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "splash"});
-            ctx.halt();
-            expect(mon.volatile.stalling).to.be.false;
-            expect(mon.volatile.stallTurns).to.equal(0);
-        });
-
-        it("Should not reset counter if called", function()
-        {
-            const mon = initActive("them");
-            let ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "endure"});
-
-            // stall effect is put in place
-            expect(ctx.handle(
-                {
-                    type: "activateStatusEffect", monRef: "them",
-                    effect: "endure", start: true
-                }))
-                .to.equal("base");
-            mon.volatile.stall(true); // mock BaseContext behavior
-
-            // some move gets called via some effect (e.g. metronome)
-            ctx.expire();
-            ctx = initCtx(
-                {type: "useMove", monRef: "them", move: "metronome"});
-            const innerCtx = ctx.handle(
-                {type: "useMove", monRef: "them", move: "endure"});
-            expect(innerCtx).to.be.an.instanceOf(MoveContext)
-            expect((innerCtx as MoveContext).handle(
-                    {type: "fail", monRef: "them"}))
-                .to.equal("base");
-            expect(mon.volatile.stalling).to.be.true;
-            expect(mon.volatile.stallTurns).to.equal(1);
-        });
+        it("Should throw if not failed in a single battle");
     });
 
     describe("Pressure ability handling", function()
@@ -1839,219 +2307,5 @@ describe("MoveContext", function()
             initCtx({type: "useMove", monRef: "them", move: "tackle"}).expire();
             expect(mon.moveset.get("tackle")!.pp).to.equal(55);
         });
-    });
-
-    describe("Implicit effects", function()
-    {
-        function testTeamEffect(name: string, move: string,
-            assertion: (team: ReadonlyTeam, shouldSet: boolean) => void): void
-        {
-            describe(name, function()
-            {
-                it(`Should set if using ${move}`, function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    const team = state.teams.them;
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    ctx.halt();
-                    assertion(team, /*shouldSet*/true);
-                });
-
-                it(`Should not set if ${move} failed`, function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    const team = state.teams.them;
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    expect(ctx.handle({type: "fail", monRef: "them"}))
-                        .to.equal("base");
-                    assertion(team, /*shouldSet*/false);
-                });
-            });
-        }
-
-        testTeamEffect("Wish", "wish",
-            (team, shouldSet) =>
-                expect(team.status.wish.isActive)
-                    .to.be[shouldSet ? "true" : "false"]);
-
-        testTeamEffect("Self-switch", "uturn",
-            (team, shouldSet) =>
-                expect(team.status.selfSwitch)
-                    .to.be[shouldSet ? "true" : "null"]);
-        testTeamEffect("Baton Pass", "batonpass",
-            (team, shouldSet) =>
-                expect(team.status.selfSwitch)
-                    .to.equal(shouldSet ? "copyvolatile" : null));
-
-        function testEffect(name: string, move: string,
-            assertion: (mon: ReadonlyPokemon, shouldSet: boolean) => void):
-            void
-        {
-            testTeamEffect(name, move,
-                (team, shouldSet) => assertion(team.active, shouldSet));
-        }
-
-        testEffect("Minimize", "minimize",
-            (mon, shouldSet) =>
-                expect(mon.volatile.minimize)
-                    .to.be[shouldSet ? "true" : "false"]);
-
-        testEffect("Defense Curl", "defensecurl",
-            (mon, shouldSet) =>
-                expect(mon.volatile.defenseCurl)
-                    .to.be[shouldSet ? "true" : "false"]);
-
-        for (const [name, effect] of
-            [["Healing Wish", "healingWish"], ["Lunar Dance", "lunarDance"]] as
-            const)
-        {
-            const move = effect.toLowerCase();
-            describe(name, function()
-            {
-                it(`Should set if using ${move}`, function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    const team = state.teams.them;
-
-                    // use wishing move to faint user
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    expect(ctx.handle({type: "faint", monRef: "them"}))
-                        .to.equal("base");
-                    ctx.halt();
-                    expect(team.status[effect]).to.be.true;
-
-                    // replacement is sent
-                    expect(ctx.handle(
-                            {type: "switchIn", monRef: "them", ...ditto}))
-                        .to.be.an.instanceOf(SwitchContext);
-                    // implicit: handle switch events, then expire at the
-                    //  healingwish event allowing the MoveContext to handle it
-                    expect(ctx.handle(
-                        {
-                            type: "activateTeamEffect", teamRef: "them", effect,
-                            start: false
-                        }))
-                        .to.equal("base");
-                    ctx.expire();
-                });
-
-                it(`Should not set if ${move} failed`, function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    const team = state.teams.them;
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    expect(ctx.handle({type: "fail", monRef: "them"}))
-                        .to.equal("base");
-                    expect(team.status[effect]).to.be.false;
-                });
-            });
-        }
-    });
-
-    function testLockingMoves<T extends string>(keys: readonly T[],
-        getter: (mon: ReadonlyPokemon) => ReadonlyVariableTempStatus<T>): void
-    {
-        for (const move of keys)
-        {
-            describe(move, function()
-            {
-                function init(): ReadonlyVariableTempStatus<T>
-                {
-                    initActive("us"); // to appease pressure targeting
-                    const vts = getter(initActive("them"));
-                    expect(vts.isActive).to.be.false;
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    ctx.expire();
-                    state.postTurn();
-                    expect(vts.isActive).to.be.true;
-                    expect(vts.type).to.equal(move);
-                    return vts;
-                }
-
-                it("Should set if successful", init);
-
-                it("Should reset if missed", function()
-                {
-                    const vts = init();
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    expect(vts.isActive).to.be.true;
-
-                    expect(ctx.handle({type: "miss", monRef: "us"}))
-                        .to.equal("base");
-                    expect(vts.isActive).to.be.false;
-                });
-
-                it("Should reset if opponent protected", function()
-                {
-                    const vts = init();
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    expect(vts.isActive).to.be.true;
-
-                    expect(ctx.handle(
-                            {type: "block", monRef: "us", effect: "protect"}))
-                        .to.equal("base");
-                    expect(vts.isActive).to.be.false;
-                });
-
-                it("Should not reset if opponent endured",
-                function()
-                {
-                    const vts = init();
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    expect(vts.isActive).to.be.true;
-
-                    expect(ctx.handle(
-                            {type: "block", monRef: "us", effect: "endure"}))
-                        .to.equal("base");
-                    expect(vts.isActive).to.be.true;
-                });
-
-                it("Should not consume pp if used consecutively", function()
-                {
-                    const vts = init();
-                    expect(vts.isActive).to.be.true;
-                    expect(vts.turns).to.equal(0);
-
-                    const ctx = initCtx(
-                        {type: "useMove", monRef: "them", move});
-                    expect(vts.isActive).to.be.true;
-                    expect(vts.turns).to.equal(0);
-
-                    ctx.halt();
-                    expect(vts.isActive).to.be.true;
-                    expect(vts.turns).to.equal(1);
-
-                    const m = state.teams.them.active.moveset.get(move)!;
-                    expect(m).to.not.be.null;
-                    expect(m.pp).to.equal(m.maxpp - 1);
-                });
-            });
-        }
-    }
-
-    describe("Rollout-like moves", function()
-    {
-        testLockingMoves(
-            Object.keys(dexutil.rolloutMoves) as dexutil.RolloutMove[],
-            mon => mon.volatile.rollout);
-    });
-
-    describe("Locked moves", function()
-    {
-        testLockingMoves(Object.keys(dex.lockedMoves) as
-                dex.LockedMove[],
-            mon => mon.volatile.lockedMove);
     });
 });
