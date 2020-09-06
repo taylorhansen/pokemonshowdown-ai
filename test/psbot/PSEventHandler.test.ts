@@ -164,11 +164,8 @@ describe("PSEventHandler", function()
                                 id: "test", pp: 0, maxpp: 0,
                                 disabled: false, move: "Test"
                             },
-                            {
-                                // not a real move
-                                id: "test2",
-                                disabled: false, move: "Test 2"
-                            }
+                            // not a real move
+                            {id: "test2", disabled: false, move: "Test 2"}
                         ]
                     }],
                     side: null as any
@@ -179,8 +176,7 @@ describe("PSEventHandler", function()
                     moves:
                     [
                         {id: "tackle", pp: 2, maxpp: 20},
-                        {id: "test", pp: 0, maxpp: 0},
-                        {id: "test2"}
+                        {id: "test", pp: 0, maxpp: 0}
                     ]
                 });
         });

@@ -104,14 +104,11 @@ export class PSEventHandler
     public updateMoves(args: psmsg.Request): events.UpdateMoves | null
     {
         if (!args.active?.[0].moves) return null;
-        return {
-            type: "updateMoves", monRef: "us",
-            moves: args.active[0].moves.map(
-                ({id, pp, maxpp}) =>
-                ({
-                    id, ...(pp != null && {pp}), ...(maxpp != null && {maxpp})
-                }))
-        };
+        const moves = args.active[0].moves
+                .filter(({pp, maxpp}) => pp != null && maxpp != null)
+                .map(({id, pp, maxpp}) => ({id, pp, maxpp}));
+        if (moves.length <= 0) return null;
+        return {type: "updateMoves", monRef: "us", moves};
     }
 
     /** Initializes the battle conditions. */
