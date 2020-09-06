@@ -217,6 +217,7 @@ export class MoveContext extends DriverContext
             case "changeType": return this.changeType(event);
             case "clearSelfSwitch": case "gameOver": case "inactive":
             case "preTurn": case "postTurn": case "updateFieldEffect":
+            case "updateMoves":
                 // TODO: other unrelated events?
                 return "expire";
             case "countStatusEffect": return this.countStatusEffect(event);

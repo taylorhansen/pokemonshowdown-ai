@@ -492,25 +492,6 @@ export class Pokemon implements ReadonlyPokemon
         this.volatile.addedType = target.volatile.addedType;
     }
 
-    /**
-     * Reveals and infers more details due to Transform. This pokemon should
-     * already have had `#transform()` called on it.
-     */
-    public transformPost(moves: readonly MoveData[]): void
-    {
-        if (!this.volatile.transformed)
-        {
-            throw new Error("Pokemon isn't transformed");
-        }
-
-        // infer moveset
-        for (const data of moves)
-        {
-            const move = this.moveset.reveal(data.id, data.maxpp);
-            if (data.pp) move.pp = data.pp;
-        }
-    }
-
     // istanbul ignore next: only used for logging
     /**
      * Encodes all pokemon data into a string.

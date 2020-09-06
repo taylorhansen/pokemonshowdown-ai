@@ -144,6 +144,48 @@ describe("PSEventHandler", function()
             "frustration", {happiness: 0});
     });
 
+    describe("#updateMoves()", function()
+    {
+        it("Should emit updateMoves", function()
+        {
+            expect(handler.updateMoves(
+                {
+                    type: "request",
+                    active:
+                    [{
+                        moves:
+                        [
+                            {
+                                id: "tackle", pp: 2, maxpp: 20,
+                                disabled: false, move: "Tackle"
+                            },
+                            {
+                                // not a real move
+                                id: "test", pp: 0, maxpp: 0,
+                                disabled: false, move: "Test"
+                            },
+                            {
+                                // not a real move
+                                id: "test2",
+                                disabled: false, move: "Test 2"
+                            }
+                        ]
+                    }],
+                    side: null as any
+                }))
+                .to.deep.equal(
+                {
+                    type: "updateMoves", monRef: "us",
+                    moves:
+                    [
+                        {id: "tackle", pp: 2, maxpp: 20},
+                        {id: "test", pp: 0, maxpp: 0},
+                        {id: "test2"}
+                    ]
+                });
+        });
+    });
+
     describe("#initBattle()", function()
     {
         it("Should initialize and emit initOtherTeamSize with p2 size",
@@ -1156,47 +1198,9 @@ describe("PSEventHandler", function()
 
         describe("-transform", function()
         {
-            test("Should emit transform and transformPost",
+            test("Should emit transform",
                 [{type: "-transform", source: us, target: them}],
-            [
-                {type: "transform", source: "us", target: "them"},
-                {
-                    type: "transformPost", monRef: "us",
-                    moves: request.active![0].moves
-                }
-            ]);
-
-            it("Should emit transform and transformPost even if last request " +
-                "message indicates forceSwitch", function()
-            {
-                handler.handleRequest({...request, forceSwitch: [true]});
-
-                expect(handler.handleEvents(
-                        [{type: "-transform", source: us, target: them}]))
-                    .to.deep.equal(
-                    [
-                        {type: "transform", source: "us", target: "them"},
-                        {
-                            type: "transformPost", monRef: "us",
-                            moves: request.active![0].moves
-                        }
-                    ]);
-            });
-
-            it("Should emit transform but not transformPost if last request " +
-                "message indicates fainting", function()
-            {
-                handler.handleRequest(
-                {
-                    ...request, forceSwitch: [true],
-                    side: {pokemon: [{...request.side.pokemon[0], hp: 0}]}
-                });
-
-                expect(handler.handleEvents(
-                        [{type: "-transform", source: us, target: them}]))
-                    .to.deep.equal(
-                        [{type: "transform", source: "us", target: "them"}]);
-            });
+                [{type: "transform", source: "us", target: "them"}]);
         });
 
         describe("turn", function()

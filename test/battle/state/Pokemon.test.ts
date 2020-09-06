@@ -781,22 +781,4 @@ describe("Pokemon", function()
             expect(mon2.traits.stats.atk.max).to.equal(200);
         });
     });
-
-    describe("transformPost()", function()
-    {
-        it("Should copy move and stat data", function()
-        {
-            const mon = new Pokemon("horsea", false);
-            mon.switchInto();
-
-            const mon2 = new Pokemon("smeargle", true);
-            mon2.traits.stats.level = 100;
-            mon2.switchInto();
-
-            mon.transform(mon2);
-            mon.transformPost([{id: "splash", pp: 5, maxpp: 64}]);
-            expect(mon.moveset.get("splash")).to.not.be.null;
-            expect(mon2.moveset.get("splash")).to.not.be.null;
-        });
-    });
 });

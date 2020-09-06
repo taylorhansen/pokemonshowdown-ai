@@ -18,8 +18,8 @@ export class PSBattle implements RoomHandler
     protected readonly driver: BattleDriver;
     /** Manages the BattleState by processing events. */
     protected readonly eventHandler: PSEventHandler;
-    /** Last |request| message that was processed. */
-    protected lastRequest?: psmsg.Request;
+    /** Pending Request message to process into an UpdateMoves event. */
+    protected lastRequest: psmsg.Request | null = null;
 
     /**
      * If the last unhandled `|error|` message indicated an unavailable
@@ -82,9 +82,8 @@ export class PSBattle implements RoomHandler
             // new info may be revealed
 
             if (this.unavailableChoice === "switch" &&
-                this.lastRequest && this.lastRequest.active &&
-                !this.lastRequest.active[0].trapped && msg.active &&
-                msg.active[0].trapped)
+                !this.lastRequest?.active?.[0].trapped &&
+                msg.active?.[0].trapped)
             {
                 await this.driver.reject("trapped");
             }
@@ -130,9 +129,20 @@ export class PSBattle implements RoomHandler
      */
     private haltDriver(): Promise<void>
     {
-        return this.driver.halt(
+        const command =
             !this.eventHandler.battling || this.lastRequest?.wait ? "wait"
-                : this.lastRequest?.forceSwitch ? "switch"
-                : "decide");
+            : this.lastRequest?.forceSwitch ? "switch"
+            : "decide";
+
+        // consume lastRequest
+        if (command === "decide" && this.lastRequest)
+        {
+            const event = this.eventHandler.updateMoves(this.lastRequest);
+            if (event) this.driver.handle(event);
+        }
+        this.lastRequest = null;
+
+        // now we can halt
+        return this.driver.halt(command);
     }
 }

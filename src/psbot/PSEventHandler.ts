@@ -26,8 +26,6 @@ export class PSEventHandler
     protected readonly username: string;
     /** Logger object. */
     protected readonly logger: Logger;
-    /** Last |request| message that was processed. */
-    protected lastRequest?: psmsg.Request;
     /**
      * Determines which PlayerID (p1 or p2) corresponds to which Side (us or
      * them).
@@ -50,8 +48,6 @@ export class PSEventHandler
     /** Processes a `request` message. */
     public handleRequest(args: psmsg.Request): events.Any[]
     {
-        this.lastRequest = args;
-
         // a request message is given at the start of the battle, before any
         //  other, which is all we need to initialize our side of the battle
         //  state before handling battleinit messages
@@ -102,6 +98,20 @@ export class PSEventHandler
         }
 
         return [{type: "initTeam", team}];
+    }
+
+    /** Gets the active moves part of a Request message. */
+    public updateMoves(args: psmsg.Request): events.UpdateMoves | null
+    {
+        if (!args.active?.[0].moves) return null;
+        return {
+            type: "updateMoves", monRef: "us",
+            moves: args.active[0].moves.map(
+                ({id, pp, maxpp}) =>
+                ({
+                    id, ...(pp != null && {pp}), ...(maxpp != null && {maxpp})
+                }))
+        };
     }
 
     /** Initializes the battle conditions. */
@@ -1165,35 +1175,7 @@ export class PSEventHandler
     {
         const source = this.getSide(event.source.owner);
         const target = this.getSide(event.target.owner);
-
-        let transformPost: events.TransformPost | undefined;
-
-        // use lastRequest to infer more details
-        if (this.lastRequest && this.lastRequest.active &&
-            // transform reverts after fainting but not after being forced to
-            //  choose a switch-in without fainting
-            (!this.lastRequest.forceSwitch ||
-                this.lastRequest.side.pokemon[0].hp > 0) &&
-            // could've been dragged out immediately after transforming
-            // TODO: let BattleDriver decide this by just supplying it the
-            //  request moves for each halt
-            this.lastRequest.side.pokemon[0].nickname === event.source.nickname)
-        {
-            transformPost =
-            {
-                type: "transformPost", monRef: source,
-                moves: this.lastRequest.active[0].moves
-            };
-        }
-
-        return {
-            result:
-            [
-                {type: "transform", source, target},
-                ...(transformPost ? [transformPost] : [])
-            ],
-            remaining: it
-        };
+        return {result: [{type: "transform", source, target}], remaining: it};
     }
 
     /** @virtual */

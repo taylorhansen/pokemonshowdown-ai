@@ -62,9 +62,9 @@ interface EventMap
     switchIn: SwitchIn;
     takeDamage: TakeDamage;
     transform: Transform;
-    transformPost: TransformPost;
     trap: Trap;
     updateFieldEffect: UpdateFieldEffect;
+    updateMoves: UpdateMoves;
     updateStatusEffect: UpdateStatusEffect;
     useMove: UseMove;
 }
@@ -562,18 +562,6 @@ export interface Transform extends EventBase<"transform">
     readonly target: Side;
 }
 
-/**
- * Reveals and infers more details due to Transform. The referenced pokemon
- * should already have been referenced in a recent Transform event.
- */
-export interface TransformPost extends EventBase<"transformPost">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Transformed pokemon's moves with pp values. */
-    readonly moves: readonly MoveData[];
-}
-
 /** Indicates that the pokemon is being trapped by another. */
 export interface Trap extends EventBase<"trap">
 {
@@ -588,6 +576,15 @@ export interface UpdateFieldEffect extends EventBase<"updateFieldEffect">
 {
     /** Type of effect to update. */
     readonly effect: dexutil.UpdatableFieldEffect;
+}
+
+/** Reveals moves and pp values. */
+export interface UpdateMoves extends EventBase<"updateMoves">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Pokemon's moves with pp values. */
+    readonly moves: readonly Readonly<MoveData>[];
 }
 
 /**

@@ -1203,11 +1203,6 @@ describe("BaseContext", function()
             });
         });
 
-        describe("transformPost", function()
-        {
-            it("TODO");
-        });
-
         describe("trap", function()
         {
             it("Should trap pokemon", function()
@@ -1257,6 +1252,29 @@ describe("BaseContext", function()
                         "'Sandstorm'");
                 expect(state.status.weather.type).to.equal("RainDance");
                 expect(state.status.weather.turns).to.equal(0);
+            });
+        });
+
+        describe("updateMoves", function()
+        {
+            it("Should update moves", function()
+            {
+                const mon = initActive("us");
+                const tackle = mon.moveset.reveal("tackle");
+                handle(
+                {
+                    type: "updateMoves", monRef: "us",
+                    moves:
+                    [
+                        {id: "tackle", pp: 2},
+                        {id: "watergun", pp: 5, maxpp: 20}
+                    ]
+                });
+                expect(tackle.pp).to.equal(2);
+                const watergun = mon.moveset.get("watergun")!;
+                expect(watergun).to.not.be.null;
+                expect(watergun.pp).to.equal(5);
+                expect(watergun.maxpp).to.equal(20);
             });
         });
 

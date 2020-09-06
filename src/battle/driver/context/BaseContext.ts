@@ -507,15 +507,6 @@ export class BaseContext extends DriverContext implements BattleEventHandler
             this.state.teams[event.target].active);
     }
 
-    /**
-     * Reveals and infers more details due to Transform. The referenced pokemon
-     * should already have been referenced in a recent Transform event.
-     */
-    public transformPost(event: events.TransformPost): void
-    {
-        this.state.teams[event.monRef].active.transformPost(event.moves);
-    }
-
     /** Indicates that the pokemon is being trapped by another. */
     public trap(event: events.Trap): void
     {
@@ -533,6 +524,19 @@ export class BaseContext extends DriverContext implements BattleEventHandler
         {
             throw new Error(`Weather is '${weather.type}' but ticked ` +
                 `weather is '${event.effect}'`);
+        }
+    }
+
+    /** Reveals moves and pp values. */
+    public updateMoves(event: events.UpdateMoves): void
+    {
+        const mon = this.state.teams[event.monRef].active;
+
+        // infer moveset
+        for (const data of event.moves)
+        {
+            const move = mon.moveset.reveal(data.id, data.maxpp);
+            if (data.pp != null) move.pp = data.pp;
         }
     }
 
