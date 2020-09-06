@@ -752,6 +752,21 @@ describe("MoveContext", function()
                 ctx.expire(); // shouldn't throw
             });
 
+            it("Should handle set boost", function()
+            {
+                initActive("us");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "bellydrum"});
+
+                expect(ctx.handle(
+                    {
+                        type: "boost", monRef: "us", stat: "atk", amount: 6,
+                        set: true
+                    }))
+                    .to.equal("base");
+                ctx.expire(); // shouldn't throw
+            });
+
             it("Should handle boost via secondary effect", function()
             {
                 initActive("us");

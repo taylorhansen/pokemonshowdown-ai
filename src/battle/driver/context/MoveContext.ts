@@ -667,7 +667,7 @@ export class MoveContext extends DriverContext
         const ctg = event.monRef === this.userRef ? "self" : "hit";
         const mon = this.state.teams[event.monRef].active;
         if (!this.effects.consume(ctg, "boost", event.stat, event.amount,
-                mon.volatile.boosts[event.stat]))
+                event.set ? undefined : mon.volatile.boosts[event.stat]))
         {
             // TODO: complete full tracking, then allow expire
             // return "expire";
