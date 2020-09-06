@@ -1059,6 +1059,7 @@ describe("MoveContext", function()
             });
 
             // extract self+target move-callers
+            const copycatCallers: string[] = [];
             const mirrorCallers: string[] = [];
             const selfMoveCallers: string[] = [];
             const targetMoveCallers: string[] = [];
@@ -1066,7 +1067,8 @@ describe("MoveContext", function()
             for (const move of Object.keys(dex.moveCallers))
             {
                 const effect = dex.moveCallers[move];
-                if (effect === "mirror") mirrorCallers.push(move);
+                if (effect === "copycat") copycatCallers.push(move);
+                else if (effect === "mirror") mirrorCallers.push(move);
                 else if (effect === "self") selfMoveCallers.push(move);
                 else if (effect === "target") targetMoveCallers.push(move);
                 else otherCallers.push(move);
@@ -1087,6 +1089,64 @@ describe("MoveContext", function()
                             }))
                             .to.be.an.instanceOf(MoveContext);
                         ctx.expire();
+                    });
+                }
+            });
+
+            describe("Copycat callers", function()
+            {
+                it("Should track last used move", function()
+                {
+                    initActive("them");
+                    expect(state.status.lastMove).to.be.undefined;
+                    initCtx({type: "useMove", monRef: "them", move: "tackle"});
+                    expect(state.status.lastMove).to.equal("tackle");
+                });
+
+                for (const caller of copycatCallers)
+                {
+                    it(`Should pass if using ${caller} and move matches`,
+                    function()
+                    {
+                        initActive("them");
+                        state.status.lastMove = "tackle";
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: caller});
+                        expect(ctx.handle(
+                            {
+                                type: "useMove", monRef: "them", move: "tackle"
+                            }))
+                            .to.be.an.instanceOf(MoveContext);
+                        ctx.expire();
+                    });
+
+                    it(`Should throw if using ${caller} and mismatched move`,
+                    function()
+                    {
+                        initActive("them");
+                        state.status.lastMove = "watergun";
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: caller});
+                        expect(ctx.handle(
+                            {
+                                type: "useMove", monRef: "them", move: "tackle"
+                            }))
+                            .to.equal("expire");
+                        expect(() => ctx.expire())
+                            .to.throw(Error, "Expected primary CallEffect " +
+                                "'copycat' but it didn't happen");
+                    });
+
+                    it(`Should throw if ${caller} failed but should've called`,
+                    function()
+                    {
+                        initActive("them");
+                        state.status.lastMove = "tackle";
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: caller});
+                        expect(() => ctx.handle({type: "fail", monRef: "them"}))
+                            .to.throw(Error, "Copycat effect failed but " +
+                                "should've called 'tackle'");
                     });
                 }
             });
@@ -1266,7 +1326,7 @@ describe("MoveContext", function()
                     function()
                     {
                         const them = initActive("them");
-                        them.volatile.mirrorMove = "tackle"
+                        them.volatile.mirrorMove = "tackle";
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move: caller});
                         expect(ctx.handle(
@@ -1277,11 +1337,11 @@ describe("MoveContext", function()
                         ctx.expire();
                     });
 
-                    it(`Should not pass if using ${caller} and mismatched move`,
+                    it(`Should throw if using ${caller} and mismatched move`,
                     function()
                     {
                         const them = initActive("them");
-                        them.volatile.mirrorMove = "watergun"
+                        them.volatile.mirrorMove = "watergun";
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move: caller});
                         expect(ctx.handle(
@@ -1292,6 +1352,19 @@ describe("MoveContext", function()
                         expect(() => ctx.expire())
                             .to.throw(Error, "Expected primary CallEffect " +
                                 "'mirror' but it didn't happen");
+                    });
+
+                    it(`Should throw if ${caller} failed but should've called`,
+                    function()
+                    {
+                        const them = initActive("them");
+                        them.volatile.mirrorMove = "watergun";
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: caller});
+                        expect(() => ctx.handle(
+                                {type: "fail", monRef: "them"}))
+                            .to.throw(Error, "Mirror Move effect failed but " +
+                                "should've called 'watergun'");
                     });
                 }
             });

@@ -7,6 +7,8 @@ export interface ReadonlyRoomStatus
 {
     /** Gravity field effect. */
     readonly gravity: ReadonlyTempStatus;
+    /** Last executed move in the game. */
+    readonly lastMove?: string;
     /** Trick Room status. */
     readonly trickRoom: ReadonlyTempStatus;
     /** Weather effect (usually temporary). */
@@ -19,6 +21,8 @@ export class RoomStatus implements ReadonlyRoomStatus
     /** @override */
     public readonly gravity = new TempStatus("gravity", 5);
     /** @override */
+    public lastMove?: string;
+    /** @override */
     public readonly trickRoom = new TempStatus("trick room", 5);
     /** @override */
     public readonly weather = new ItemTempStatus([5, 8], weatherItems);
@@ -27,7 +31,7 @@ export class RoomStatus implements ReadonlyRoomStatus
     public postTurn(): void
     {
         // weather is updated manually by in-game events, whereas with these
-        //  effects they're silent
+        //  pseudo-weather effects they're updated silently
         this.gravity.tick();
         this.trickRoom.tick();
     }
@@ -41,6 +45,7 @@ export class RoomStatus implements ReadonlyRoomStatus
     {
         return `[${([] as string[]).concat(
                 this.gravity.isActive ? [this.gravity.toString()] : [],
+                this.lastMove ? ["last used " + this.lastMove] : [],
                 this.trickRoom.isActive ? [this.trickRoom.toString()] : [],
                 [`weather: ${this.weather.toString()}`])
             .join(", ")}]`;

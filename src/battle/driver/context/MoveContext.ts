@@ -42,6 +42,8 @@ export class MoveContext extends DriverContext
     private readonly effects: PendingEffects;
     /** Whether this move should be recorded by its targets for Mirror Move. */
     private readonly mirror: boolean;
+    /** Last move before this one. */
+    private readonly lastMove?: string;
 
     // in-progress move result flags
     /**
@@ -67,6 +69,10 @@ export class MoveContext extends DriverContext
         {
             throw new Error(`Unsupported move '${event.move}'`);
         }
+
+        // set last move
+        this.lastMove = state.status.lastMove;
+        state.status.lastMove = event.move;
 
         // event data
         this.user = this.state.teams[event.monRef].active;
@@ -334,11 +340,17 @@ export class MoveContext extends DriverContext
         // handle fail inferences
         if (failed)
         {
+            if (this.effects.get("primary")?.call === "copycat" &&
+                this.lastMove && dex.moves[this.lastMove].copycat)
+            {
+                throw new Error("Copycat effect failed but should've called " +
+                    `'${this.lastMove}'`);
+            }
             if (this.effects.get("primary")?.call === "mirror" &&
                 this.user.volatile.mirrorMove)
             {
                 throw new Error("Mirror Move effect failed but should've " +
-                    `called '${this.user.volatile.mirrorMove}'`)
+                    `called '${this.user.volatile.mirrorMove}'`);
             }
 
             // the failed=false side of this is handled by a separate event
@@ -811,6 +823,9 @@ export class MoveContext extends DriverContext
 
         switch (callEffect)
         {
+            case "copycat":
+                if (this.lastMove !== event.move) return "expire";
+                break;
             case "mirror":
                 if (this.user.volatile.mirrorMove !== event.move)
                 {

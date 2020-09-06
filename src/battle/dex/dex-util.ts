@@ -162,6 +162,8 @@ export interface MoveData
     readonly pp: [number, number];
     /** Whether this move can be copied by Mirror Move. */
     readonly mirror: boolean;
+    /** Whether this move can be copied by Copycat. */
+    readonly copycat: boolean;
     /** Primary move effect. */
     readonly primary?: PrimaryEffect;
     /** Additional move effects for the user. */
@@ -294,6 +296,9 @@ export type FieldEffect = UpdatableFieldEffect | "gravity" | "trickRoom";
  * Specifies how this move can call another move.
  *
  * `true` - Calls a move normally.  
+ * `"copycat"` - Called move should match the RoomStatus' `#lastMove` field and
+ * have the `#copycat=true` in its MoveData, or fail if either of the fields are
+ * falsy.
  * `"mirror"` - Mirror move. Called move should match the user's `mirrorMove`
  * VolatileStatus field, or fail if null.  
  * `"self"` - Calls a move from the user's moveset.  
@@ -301,7 +306,7 @@ export type FieldEffect = UpdatableFieldEffect | "gravity" | "trickRoom";
  * one target).
  */
 // tslint:enable: no-trailing-whitespace
-export type CallEffect = true | "mirror" | "self" | "target";
+export type CallEffect = true | "copycat" | "mirror" | "self" | "target";
 
 /** Status effects that require more special attention. */
 export type UniqueEffect = "conversion" | "disable";

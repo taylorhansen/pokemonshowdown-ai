@@ -93,11 +93,20 @@ const noMirror: {readonly [move: string]: boolean} =
     stealthrock: true, struggle: true, sunnyday: true, tailwind: true,
     toxicspikes: true, transform: true, watersport: true
 };
+/** Moves that can't be copied by Copycat. */
+const noCopycat: {readonly [move: string]: boolean} = {
+    assist: true, chatter: true, copycat: true, counter: true, covet: true,
+    destinybond: true, detect: true, endure: true, feint: true,
+    focuspunch: true, followme: true, helpinghand: true, mefirst: true,
+    metronome: true, mimic: true, mirrorcoat: true, mirrormove: true,
+    protect: true, sketch: true, sleeptalk: true, snatch: true, struggle: true,
+    switcheroo: true, thief: true, trick: true
+};
 
 /** Maps some move names to CallEffects. */
 const callEffectMap: {readonly [move: string]: dexutil.CallEffect} =
 {
-    assist: true, copycat: true, mefirst: "target", metronome: true,
+    assist: true, copycat: "copycat", mefirst: "target", metronome: true,
     mirrormove: "mirror", naturepower: true, sleeptalk: "self"
 };
 
@@ -238,8 +247,9 @@ for (const move of
     const pp = [move.pp, move.pp] as [number, number];
     if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
 
-    // get mirror move flag
+    // get flags
     const mirror = target !== "self" && !noMirror.hasOwnProperty(move.id);
+    const copycat = !noCopycat.hasOwnProperty(move.id);
 
     // setup primary effects
 
@@ -392,7 +402,7 @@ for (const move of
     [
         move.id,
         {
-            uid, name: move.id, display: move.name, target, pp, mirror,
+            uid, name: move.id, display: move.name, target, pp, mirror, copycat,
             ...(Object.keys(primary).length && {primary}),
             ...(Object.keys(self).length && {self}),
             ...(self !== hit && Object.keys(hit).length && {hit})
