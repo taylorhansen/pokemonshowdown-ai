@@ -5,6 +5,8 @@ export const types =
     fighting: 7, grass: 8, ground: 9, ice: 10, normal: 11, poison: 12,
     psychic: 13, rock: 14, steel: 15, water: 16, "???": 17
 } as const;
+/** Sorted array of all types. */
+export const typeKeys = Object.keys(types).sort() as readonly Type[];
 /** The different types a pokemon can have. */
 export type Type = keyof typeof types;
 
@@ -15,8 +17,8 @@ export const hpTypes =
     fighting: 7, grass: 8, ground: 9, ice: 10, poison: 11, psychic: 12,
     rock: 13, steel: 14, water: 15
 } as const;
-/** Number of possible hidden power types. */
-export const numHPTypes = Object.keys(hpTypes).length;
+/** Sorted array of all hidden power types. */
+export const hpTypeKeys = Object.keys(hpTypes).sort() as readonly HPType[];
 /** The different hidden power types a pokemon can have. */
 export type HPType = keyof typeof hpTypes;
 
@@ -42,6 +44,9 @@ export const majorStatuses =
 {
     brn: 0, par: 1, psn: 2, tox: 3, slp: 4, frz: 5
 } as const;
+/** Sorted array of all major statuses. */
+export const majorStatusKeys = Object.keys(majorStatuses).sort() as
+    readonly MajorStatus[]
 /** Major pokemon status conditions. */
 export type MajorStatus = keyof typeof majorStatuses;
 /**
@@ -63,14 +68,16 @@ export type StatExceptHP = keyof typeof statsExceptHP;
 /** Holds the set of all stat names. */
 export const statNames =
     {hp: true, ...statsExceptHP} as const;
+/** Sorted array of all stat names. */
+export const statKeys = Object.keys(statNames).sort() as readonly StatName[]
 /** Names of pokemon stats. */
 export type StatName = keyof typeof statNames;
 
 /** Holds the set of all boostable stat names. */
 export const boostNames =
     {...statsExceptHP, accuracy: true, evasion: true} as const;
-/** Array of all boost names. */
-export const boostKeys = Object.keys(boostNames) as BoostName[];
+/** Sorted array of all boost names. */
+export const boostKeys = Object.keys(boostNames).sort() as readonly BoostName[];
 /** Names of pokemon stats that can be boosted. */
 export type BoostName = keyof typeof boostNames;
 /**
@@ -90,6 +97,9 @@ export const weatherItems =
     SunnyDay: "heatrock", RainDance: "damprock", Sandstorm: "smoothrock",
     Hail: "icyrock"
 } as const;
+/** Sorted array of all weather types. */
+export const weatherKeys = Object.keys(weatherItems).sort() as
+    readonly WeatherType[];
 /** Types of weather conditions. */
 export type WeatherType = keyof typeof weatherItems;
 /**
@@ -102,8 +112,12 @@ export function isWeatherType(type: any): type is WeatherType
     return weatherItems.hasOwnProperty(type);
 }
 
+// TODO: move to dex, rename to momentum moves
 /** Moves similar to Rollout. */
 export const rolloutMoves = {rollout: true, iceball: true} as const;
+/** Sorted array of all rollout moves. */
+export const rolloutKeys = Object.keys(rolloutMoves).sort() as
+    readonly RolloutMove[];
 /** Moves that are similar to Rollout. */
 export type RolloutMove = keyof typeof rolloutMoves;
 /**

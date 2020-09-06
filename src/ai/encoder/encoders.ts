@@ -1,9 +1,8 @@
 /** @file Formats BattleState objects into data usable by the neural network. */
 import { Buffer} from "buffer";
 import * as dex from "../../battle/dex/dex";
-import { boostKeys, HPType, hpTypes, majorStatuses, RolloutMove,
-    rolloutMoves, StatName, statNames, Type, types, weatherItems, WeatherType }
-    from "../../battle/dex/dex-util";
+import { boostKeys, hpTypeKeys, majorStatuses, majorStatusKeys, rolloutKeys,
+    statKeys, Type, typeKeys, weatherKeys } from "../../battle/dex/dex-util";
 import { ReadonlyBattleState } from "../../battle/state/BattleState";
 import { ReadonlyHP } from "../../battle/state/HP";
 import { ReadonlyItemTempStatus } from "../../battle/state/ItemTempStatus";
@@ -180,12 +179,6 @@ export const unknownStatRangeEncoder: Encoder<null> =
 export const emptyStatRangeEncoder: Encoder<undefined> =
     fillEncoder(-1, statRangeEncoder.size);
 
-// TODO: move to dex-util
-/** Stat names. */
-const statKeys = Object.keys(statNames) as readonly StatName[];
-/** Hidden Power type names. */
-const hpTypeKeys = Object.keys(hpTypes) as readonly HPType[];
-
 /** Encoder for a StatTable. */
 export const statTableEncoder: Encoder<ReadonlyStatTable> = concat(
     ...statKeys.map(statName =>
@@ -206,7 +199,7 @@ export const emptyStatTableEncoder: Encoder<undefined> = concat(
     fillEncoder(0, hpTypeKeys.length)); // no hp type possibilities
 
 /** Types without `???` type. */
-const filteredTypes = Object.keys(types).filter(t => t !== "???") as Type[];
+const filteredTypes = typeKeys.filter(t => t !== "???") as Type[];
 
 /** Args for `pokemonTraitsEncoder`. */
 export interface PokemonTraitsEncoderArgs
@@ -221,10 +214,10 @@ export interface PokemonTraitsEncoderArgs
 export const pokemonTraitsEncoder: Encoder<PokemonTraitsEncoderArgs> = concat(
     // ability
     augment(({traits: {ability}}) => ability,
-        possibilityClassEncoder(Object.keys(dex.abilities))),
+        possibilityClassEncoder(dex.abilityKeys)),
     // species
     augment(({traits: {data: {uid}}}) => ({id: uid}),
-        oneHotEncoder(dex.numPokemon)),
+        oneHotEncoder(dex.pokemonKeys.length)),
     // stats
     augment(({traits: {stats}}) => stats, statTableEncoder),
     // type
@@ -243,21 +236,17 @@ export const pokemonTraitsEncoder: Encoder<PokemonTraitsEncoderArgs> = concat(
 
 /** Encoder for an unknown PokemonTraits object. */
 export const unknownPokemonTraitsEncoder: Encoder<null> = concat(
-    fillEncoder(1 / dex.numAbilities, dex.numAbilities),
-    fillEncoder(1 / dex.numPokemon, dex.numPokemon),
+    fillEncoder(1 / dex.abilityKeys.length, dex.abilityKeys.length),
+    fillEncoder(1 / dex.pokemonKeys.length, dex.pokemonKeys.length),
     unknownStatTableEncoder,
     // could be any one or two of these types (avg 1 and 2)
     fillEncoder(1.5 / filteredTypes.length, filteredTypes.length));
 
 /** Encoder for a nonexistent PokemonTraits object. */
 export const emptyPokemonTraitsEncoder: Encoder<undefined> = concat(
-    fillEncoder(-1, dex.numAbilities + dex.numPokemon),
+    fillEncoder(-1, dex.abilityKeys.length + dex.pokemonKeys.length),
     emptyStatTableEncoder,
     fillEncoder(-1, filteredTypes.length));
-
-// TODO: move to dex
-/** Contains every move name. */
-const moveNames = Object.keys(dex.moves) as readonly string[];
 
 /** Encoder for a VolatileStatus. */
 export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
@@ -306,26 +295,23 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
                 one: tempStatusEncoderImpl(vs.disabled.ts)
             }
             : {id: null},
-        oneHotEncoder(dex.numMoves)),
+        oneHotEncoder(dex.moveKeys.length)),
     augment(vs => vs.flashFire, booleanEncoder),
     augment(vs => vs.grudge, booleanEncoder),
     augment(vs => vs.healBlock, tempStatusEncoder),
     augment(vs => vs.identified === "foresight", booleanEncoder),
     augment(vs => vs.identified === "miracleEye", booleanEncoder),
     augment(vs => vs.imprison, booleanEncoder),
-    augment(vs => vs.lockedMove,
-        variableTempStatusEncoder(Object.keys(dex.lockedMoves) as
-            dex.LockedMove[])),
+    augment(vs => vs.lockedMove, variableTempStatusEncoder(dex.lockedMoveKeys)),
     augment(vs => vs.minimize, booleanEncoder),
     augment(vs => ({id: vs.mirrorMove ? dex.moves[vs.mirrorMove].uid : null}),
-        oneHotEncoder(moveNames.length)),
+        oneHotEncoder(dex.moveKeys.length)),
     augment(vs => vs.mudSport, booleanEncoder),
     augment(vs => vs.mustRecharge, booleanEncoder),
     augment(vs => ({traits: vs.overrideTraits, addedType: vs.addedType}),
         pokemonTraitsEncoder),
     augment(vs => vs.rage, booleanEncoder),
-    augment(vs => vs.rollout,
-        variableTempStatusEncoder(Object.keys(rolloutMoves) as RolloutMove[])),
+    augment(vs => vs.rollout, variableTempStatusEncoder(rolloutKeys)),
     augment(vs => vs.roost, booleanEncoder),
     augment(vs => vs.slowStart, tempStatusEncoder),
     augment(vs => vs.snatch, booleanEncoder),
@@ -337,9 +323,7 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     augment(vs => vs.taunt, tempStatusEncoder),
     augment(vs => vs.torment, booleanEncoder),
     augment(vs => vs.transformed, booleanEncoder),
-    augment(vs => vs.twoTurn,
-        variableTempStatusEncoder(Object.keys(dex.twoTurnMoves) as
-            dex.TwoTurnMove[])),
+    augment(vs => vs.twoTurn, variableTempStatusEncoder(dex.twoTurnMoveKeys)),
     augment(vs => vs.unburden, booleanEncoder),
     augment(vs => vs.uproar, tempStatusEncoder),
     augment(vs => vs.waterSport, booleanEncoder),
@@ -360,7 +344,7 @@ export const majorStatusCounterEncoder: Encoder<ReadonlyMajorStatusCounter> =
                 // irrelevant
                 : 1
         }),
-        oneHotEncoder(Object.keys(majorStatuses).length));
+        oneHotEncoder(majorStatusKeys.length));
 
 /** Encoder for an unknown MajorStatusCounter. */
 export const unknownMajorStatusCounterEncoder: Encoder<null> =
@@ -388,7 +372,7 @@ const unknownPPEncoder: Encoder<any> =
 
 /** Encoder for a Move. */
 export const moveEncoder: Encoder<ReadonlyMove> = concat(
-    augment(m => ({id: m.id}), oneHotEncoder(moveNames.length)),
+    augment(m => ({id: m.id}), oneHotEncoder(dex.moveKeys.length)),
     // ratio of pp to maxpp
     augment(m => m.pp / m.maxpp, numberEncoder),
     // ratio of maxpp to max possible pp
@@ -412,27 +396,27 @@ export const constrainedMoveEncoder: Encoder<ConstrainedMoveArgs> =
         {
             encode(arr, {constraint, total})
             {
-                checkLength(arr, moveNames.length);
+                checkLength(arr, dex.moveKeys.length);
                 // encode constraint data
-                for (let i = 0; i < moveNames.length; ++i)
+                for (let i = 0; i < dex.moveKeys.length; ++i)
                 {
-                    arr[i] = (constraint[moveNames[i]] ?? 0) / total;
+                    arr[i] = (constraint[dex.moveKeys[i]] ?? 0) / total;
                 }
             },
-            size: moveNames.length
+            size: dex.moveKeys.length
         },
         unknownPPEncoder);
 
 /** Encoder for an unknown Move slot. */
 export const unknownMoveEncoder: Encoder<null> = concat(
     // assume each move is equally probable
-    fillEncoder(1 / moveNames.length, moveNames.length),
+    fillEncoder(1 / dex.moveKeys.length, dex.moveKeys.length),
     unknownPPEncoder);
 
 /** Encoder for an empty Move slot. */
 export const emptyMoveEncoder: Encoder<undefined> =
     // no likelihood for any move type + 0 pp
-    fillEncoder(0, moveNames.length + 2);
+    fillEncoder(0, dex.moveKeys.length + 2);
 
 /** Args for `moveEncoder` to indicate that the Move is known. */
 export interface KnownMoveArgs
@@ -540,14 +524,11 @@ export const unknownHPEncoder: Encoder<null> =
 /** Encoder for a nonexistent HP object. */
 export const emptyHPEncoder: Encoder<undefined> = fillEncoder(-1, 2);
 
-/** Holds every item name. */
-const itemKeys = Object.keys(dex.items) as readonly string[];
-
 /** Encoder for an inactive Pokemon. */
 export const inactivePokemonEncoder: Encoder<ReadonlyPokemon> = concat(
     augment(p => ({traits: p.traits}), pokemonTraitsEncoder),
-    augment(p => p.item, possibilityClassEncoder(itemKeys)),
-    augment(p => p.lastItem, possibilityClassEncoder(itemKeys)),
+    augment(p => p.item, possibilityClassEncoder(dex.itemKeys)),
+    augment(p => p.lastItem, possibilityClassEncoder(dex.itemKeys)),
     augment(p => p.moveset, movesetEncoder),
     augment(p => p.gender === "M", booleanEncoder),
     augment(p => p.gender === "F", booleanEncoder),
@@ -561,7 +542,7 @@ export const inactivePokemonEncoder: Encoder<ReadonlyPokemon> = concat(
 /** Encoder for an unrevealed Pokemon. */
 export const unknownPokemonEncoder: Encoder<null> = concat(
     unknownPokemonTraitsEncoder,
-    zeroEncoder(2 * itemKeys.length), // item + lastItem
+    zeroEncoder(2 * dex.itemKeys.length), // item + lastItem
     unknownMovesetEncoder,
     fillEncoder(1 / 3, 3), // gender possibilities
     fillEncoder(1, 1), // happiness guess
@@ -572,7 +553,7 @@ export const unknownPokemonEncoder: Encoder<null> = concat(
 /** Encoder for an empty Pokemon slot. */
 export const emptyPokemonEncoder: Encoder<undefined> = concat(
     emptyPokemonTraitsEncoder,
-    fillEncoder(0, 2 * itemKeys.length), // item + lastItem
+    fillEncoder(0, 2 * dex.itemKeys.length), // item + lastItem
     emptyMovesetEncoder,
     fillEncoder(-1, 4), // gender + happiness
     emptyHPEncoder,
@@ -589,13 +570,9 @@ export const activePokemonEncoder: Encoder<ReadonlyPokemon> = concat(
     inactivePokemonEncoder,
     augment(p => p.volatile, volatileStatusEncoder));
 
-/** Holds all the FutureMove names. */
-const futureMoveKeys = Object.keys(dex.futureMoves) as
-    readonly dex.FutureMove[];
-
 /** Encoder for a TeamStatus. */
 export const teamStatusEncoder: Encoder<ReadonlyTeamStatus> = concat(
-    ...futureMoveKeys.map(fm =>
+    ...dex.futureMoveKeys.map(fm =>
         augment((ts: ReadonlyTeamStatus) => ts.futureMoves[fm],
             tempStatusEncoder)),
     augment(ts => ts.healingWish, booleanEncoder),
@@ -647,8 +624,7 @@ export const teamEncoder: Encoder<ReadonlyTeam> = concat(
 export const roomStatusEncoder: Encoder<ReadonlyRoomStatus> = concat(
     augment(rs => rs.gravity, tempStatusEncoder),
     augment(rs => rs.trickRoom, tempStatusEncoder),
-    augment(rs => rs.weather,
-        itemTempStatusEncoder(Object.keys(weatherItems) as WeatherType[])));
+    augment(rs => rs.weather, itemTempStatusEncoder(weatherKeys)));
 
 /** Encoder for a BattleState. */
 export const battleStateEncoder: Encoder<ReadonlyBattleState> = concat(

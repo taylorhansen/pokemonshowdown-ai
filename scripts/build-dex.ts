@@ -218,7 +218,7 @@ function addEffect<TKey extends string, TEffect extends any>(
 }
 
 const futureMoves: string[] = [];
-const lockedMoves: string[] = [];
+const lockedMoves: string[] = []; // TODO: rename to rampage moves
 const twoTurnMoves: string[] = [];
 const moveCallers: [string, dexutil.CallEffect][] = [];
 
@@ -761,6 +761,20 @@ function deepStringifyArray(arr: any[], converter: (value: any) => string):
 }
 
 /**
+ * Creates an export array.
+ * @param arr Array to stringify.
+ * @param name Name of the dictionary.
+ * @param typeName Type name for the array values.
+ * @param converter Stringifier for array values.
+ */
+function exportArray<T>(arr: readonly T[], name: string, typeName: string,
+    converter: (t: T) => string): string
+{
+    return `export const ${name}: readonly ${typeName}[] = [` +
+        arr.map(converter).join(", ") + "];";
+}
+
+/**
  * Creates an export dictionary, string union, etc. for a specific set of moves.
  * @param moves Array of the move names.
  * @param name Name for the variable.
@@ -782,8 +796,8 @@ function exportSpecificMoves(moveNames: readonly string[], name: string,
 /** Types of ${display} moves. */
 export type ${cap}Move = keyof typeof ${name}Moves;
 
-/** Number of ${display} moves that exist. */
-export const num${cap}Moves = ${moves.length};
+/** Sorted array of all ${display} moves. */
+${exportArray(moveNames, `${name}MoveKeys`, `${cap}Move`, quote)}
 
 /** Checks if a value is a ${cap}Move. */
 export function is${cap}Move(value: any): value is ${cap}Move
@@ -805,21 +819,21 @@ import * as dexutil from "./dex-util";
 ${exportEntriesToDict(pokemon, "pokemon", "dexutil.PokemonData",
     p => deepStringifyDict(p, v => typeof v === "string" ? quote(v) : v))}
 
-/** Total number of pokemon species. */
-export const numPokemon = ${pokemon.length};
+/** Sorted array of all pokemon names. */
+${exportArray(pokemon, "pokemonKeys", "string", ([name]) => quote(name))}
 
 /** Maps ability id name to an id number. */
 ${exportSetToDict(abilities, "abilities")}
 
-/** Total number of abilities. */
-export const numAbilities = ${abilities.size};
+/** Sorted array of all ability names. */
+${exportArray([...abilities].sort(), "abilityKeys", "string", quote)}
 
 /** Contains info about each move. */
 ${exportEntriesToDict(moves, "moves", "dexutil.MoveData", m =>
     deepStringifyDict(m, v => typeof v === "string" ? quote(v) : v))}
 
-/** Total number of moves. */
-export const numMoves = ${moves.length};
+/** Sorted array of all move names. */
+${exportArray(moves, "moveKeys", "string", ([name]) => quote(name))}
 
 ${exportSpecificMoves(futureMoves, "future")}
 
@@ -839,8 +853,8 @@ ${exportDict(typeToMoves, "typeToMoves",
 /** Maps item id name to its id number. */
 ${exportArrayToDict(items, "items")}
 
-/** Total number of items. */
-export const numItems = ${items.length};
+/** Sorted array of all item names. */
+${exportArray(items, "itemKeys", "string", quote)}
 
 /** Contains info about each berry item. */
 ${exportEntriesToDict(berries, "berries", "dexutil.NaturalGiftData",
