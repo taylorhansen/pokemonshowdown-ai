@@ -138,6 +138,8 @@ export class PSBattle implements RoomHandler
         if (command === "decide" && this.lastRequest)
         {
             const event = this.eventHandler.updateMoves(this.lastRequest);
+            this.logger.debug("Update moves:\n" +
+                inspect(event, {colors: false, depth: null}));
             if (event) this.driver.handle(event);
         }
         this.lastRequest = null;
