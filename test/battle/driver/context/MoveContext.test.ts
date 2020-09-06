@@ -1175,6 +1175,27 @@ describe("MoveContext", function()
 
                     if (secondaryMove100)
                     {
+                        it("Should pass if expire before 100% secondary " +
+                            "effect if the target is already afflicted",
+                        function()
+                        {
+                            const mon = state.teams[target].active;
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them",
+                                move: secondaryMove100
+                            });
+                            if (dexutil.isMajorStatus(effect))
+                            {
+                                mon.majorStatus.afflict(effect);
+                            }
+                            else if (effect === "confusion")
+                            {
+                                mon.volatile[effect].start();
+                            }
+                            ctx.expire();
+                        });
+
                         it("Should throw if expire before 100% secondary " +
                             "effect",
                         function()

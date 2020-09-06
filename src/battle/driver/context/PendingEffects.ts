@@ -125,7 +125,21 @@ export class PendingEffects
         if (!effectOrStat)
         {
             // skip checks
-            (this[ctg as EffectCategory] as any)[key] = null;
+            const container = this[ctg as EffectCategory];
+            (container as any)[key] = null;
+
+            // also consume secondary status effects if possible
+            if (key === "status" && ctg !== "primary")
+            {
+                const moveEffect = (container as
+                    DeepNullable<DeepWritable<MoveEffect>>)!;
+                moveEffect.secondary = moveEffect?.secondary?.filter(
+                    s => !s?.flinch && !s?.boosts && s?.status) ?? null;
+                if (moveEffect.secondary?.length ?? 0 <= 0)
+                {
+                    moveEffect.secondary = null;
+                }
+            }
             this.checkEmpty(ctg);
             return true;
         }

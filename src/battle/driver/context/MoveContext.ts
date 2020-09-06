@@ -372,7 +372,6 @@ export class MoveContext extends DriverContext
 
         // user effects
 
-        // consume any silent boosts that were already maxed out
         for (const ctg of ["self", "hit"] as const)
         {
             // TODO(non-singles): support multiple targets
@@ -382,6 +381,27 @@ export class MoveContext extends DriverContext
             for (const monRef of monRefs)
             {
                 const mon = this.state.teams[monRef].active;
+
+                // consume any silent confusion effects if already confused
+                if (mon.volatile.confusion.isActive)
+                {
+                    this.effects.consume(ctg, "status", "confusion");
+                }
+
+                // consume any silent major status effects if already afflicted
+                //  by a major status
+                if (mon.majorStatus.current)
+                {
+                    const effect = this.effects.get(ctg);
+                    if (dexutil.isMajorStatus(effect?.status) ||
+                        effect?.secondary?.some(s =>
+                            dexutil.isMajorStatus(s?.status)))
+                    {
+                        this.effects.consume(ctg, "status");
+                    }
+                }
+
+                // consume any silent boosts that were already maxed out
                 for (const stat of dexutil.boostKeys)
                 {
                     const cur = mon.volatile.boosts[stat];
