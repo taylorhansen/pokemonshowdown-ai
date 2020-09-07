@@ -216,13 +216,14 @@ describe("parsePSMessage()", function()
 
         describe("updateChallenges", function()
         {
+            const json: Omit<psmsg.UpdateChallenges, "type"> =
+            {
+                challengesFrom: {somebody: "gen4ou"}, challengeTo: null
+            };
             const expected: psmsg.UpdateChallenges =
             {
-                type: "updateChallenges", challengesFrom: {somebody: "gen4ou"},
-                challengeTo: null
+                type: "updateChallenges", ...json
             };
-            const json = {...expected};
-            delete json.type;
 
             it("Should parse updateChallenges", function()
             {
