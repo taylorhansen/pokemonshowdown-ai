@@ -372,7 +372,7 @@ const unknownPPEncoder: Encoder<any> =
 
 /** Encoder for a Move. */
 export const moveEncoder: Encoder<ReadonlyMove> = concat(
-    augment(m => ({id: m.id}), oneHotEncoder(dex.moveKeys.length)),
+    augment(m => ({id: m.data.uid}), oneHotEncoder(dex.moveKeys.length)),
     // ratio of pp to maxpp
     augment(m => m.pp / m.maxpp, numberEncoder),
     // ratio of maxpp to max possible pp

@@ -1,12 +1,13 @@
 import * as dex from "../dex/dex";
+import { MoveData } from "../dex/dex-util";
 
 /** Readonly Move representation. */
 export interface ReadonlyMove
 {
     /** Move name. */
     readonly name: string;
-    /** Move id number. */
-    readonly id: number;
+    /** Move data. */
+    readonly data: MoveData;
     /** Amount of power points left on this move. */
     readonly pp: number;
     /** Max amount of power points this move can have. */
@@ -19,7 +20,7 @@ export class Move implements ReadonlyMove
     /** @override */
     public readonly name: string;
     /** @override */
-    public readonly id: number;
+    public readonly data: MoveData;
 
     /** @override */
     public get pp(): number { return this._pp; }
@@ -49,12 +50,11 @@ export class Move implements ReadonlyMove
         }
 
         this.name = name;
-        const data = dex.moves[name];
-        this.id = data.uid;
+        this.data = dex.moves[name];
 
-        if (maxpp === "min") maxpp = data.pp[0];
-        else if (maxpp === "max") maxpp = data.pp[1];
-        else maxpp = Math.max(1, Math.min(maxpp, data.pp[1]));
+        if (maxpp === "min") maxpp = this.data.pp[0];
+        else if (maxpp === "max") maxpp = this.data.pp[1];
+        else maxpp = Math.max(1, Math.min(maxpp, this.data.pp[1]));
         this.maxpp = maxpp;
         this.pp = pp === undefined ? maxpp : pp;
     }

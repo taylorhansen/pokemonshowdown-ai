@@ -89,7 +89,7 @@ export class Moveset implements ReadonlyMoveset
         // fill in default movepool
         if (typeof movepool === "number" || !movepool || movepool.length < 1)
         {
-            movepool = Object.keys(dex.moves);
+            movepool = dex.moveKeys;
         }
 
         // movepool constructor
