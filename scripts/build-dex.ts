@@ -241,6 +241,7 @@ for (const move of
     typeToMoves[move.type.toLowerCase() as dexutil.Type].push(move.id);
     if (!move.noSketch) sketchableMoves.push(move.id);
 
+    const category = move.category.toLowerCase() as dexutil.MoveCategory;
     const target = move.target;
 
     // factor pp boosts if the move supports it in game
@@ -402,7 +403,8 @@ for (const move of
     [
         move.id,
         {
-            uid, name: move.id, display: move.name, target, pp, mirror, copycat,
+            uid, name: move.id, display: move.name, category, target, pp,
+            mirror, copycat,
             ...(Object.keys(primary).length && {primary}),
             ...(Object.keys(self).length && {self}),
             ...(self !== hit && Object.keys(hit).length && {hit})

@@ -170,6 +170,8 @@ export interface MoveData
     readonly name: string;
     /** Display name. */
     readonly display: string;
+    /** Move category. */
+    readonly category: MoveCategory;
     /** Target of the move. */
     readonly target: MoveTarget;
     /** Base power point range. */
@@ -189,6 +191,15 @@ export interface MoveData
     readonly hit?: MoveEffect;
 }
 
+/** Types of categories for a move. */
+export type MoveCategory = "physical" | "special" | "status";
+
+/** Types of targets for a move. */
+export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
+    "all" | "allAdjacent" | "allAdjacentFoes" | "allies" | "allySide" |
+    "allyTeam" | "any" | "foeSide" | "normal" | "randomNormal" | "scripted" |
+    "self";
+
 // TODO: apply effect type tracking to abilities, items, statuses, etc
 /** Primary effects of a move. */
 export interface PrimaryEffect
@@ -207,12 +218,6 @@ export interface PrimaryEffect
     /** Field effect associated with this move. */
     readonly field?: FieldEffect;
 }
-
-/** Types of targets for a move. */
-export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
-    "all" | "allAdjacent" | "allAdjacentFoes" | "allies" | "allySide" |
-    "allyTeam" | "any" | "foeSide" | "normal" | "randomNormal" | "scripted" |
-    "self";
 
 /** Base interface for move effect containers. */
 export interface MoveEffectBase
