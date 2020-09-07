@@ -568,10 +568,11 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.embargo.tick();
         this._lockOnTurns.tick();
         this.magnetRise.tick();
-        this.taunt.tick();
-        this.slowStart.tick();
         this.charge.tick();
         this._disabled?.ts.tick();
+        this.encore.tick();
+        this.slowStart.tick();
+        this.taunt.tick();
         this.yawn.tick();
 
         // handle lockon ending
