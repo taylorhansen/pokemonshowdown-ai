@@ -233,7 +233,7 @@ const typeToMoves: {[T in dexutil.Type]: string[]} =
 
 uid = 0;
 for (const move of
-    Object.keys(dex.data.Movedex)
+    Object.keys(dex.data.Moves)
         .map(n => dex.getMove(n))
         .filter(isGen4Move)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
