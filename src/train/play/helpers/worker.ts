@@ -93,7 +93,7 @@ const gameStream = new stream.Transform(
 // setup experience stream if configured for it
 
 let expStream: [stream.Transform, stream.Writable] | [] = [];
-if (workerData.expPath)
+if (workerData?.expPath)
 {
     expStream =
     [
