@@ -42,7 +42,7 @@ async function processMessage(msg: GameWorkerPlay):
             {agents, maxTurns: msg.maxTurns, logPath: msg.logPath},
             msg.rollout);
 
-
+        // send the result back to the main thread
         const result: GameWorkerPlayResult =
         {
             type: "play", rid: msg.rid, done: true,
@@ -50,8 +50,6 @@ async function processMessage(msg: GameWorkerPlay):
             winner: gameResult.winner,
             ...(gameResult.err && {err: serialize(gameResult.err)})
         };
-
-        // send the result back to the main thread
         // make sure the appropriate data is moved, not copied
         parentPort!.postMessage(result,
             result.err ? [result.err.buffer] : undefined);
@@ -66,7 +64,7 @@ async function processMessage(msg: GameWorkerPlay):
 let lastGamePromise = Promise.resolve();
 const gameStream = new stream.Transform(
 {
-    objectMode: true, readableHighWaterMark: 128,
+    objectMode: true, readableHighWaterMark: 64,
     transform(msg: GameWorkerPlay, encoding: BufferEncoding,
         callback: stream.TransformCallback): void
     {
