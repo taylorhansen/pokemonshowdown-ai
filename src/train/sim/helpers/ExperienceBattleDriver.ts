@@ -24,8 +24,7 @@ export abstract class ExperienceBattleDriver extends BattleDriver
     }
 
     /**
-     * Hook for logging Experience objects. This method owns the given
-     * Experience, so it must be properly disposed once it's done being used.
+     * Hook for logging Experience objects.
      * @virtual
      */
     protected abstract async emitExperience(exp: Experience): Promise<void>;

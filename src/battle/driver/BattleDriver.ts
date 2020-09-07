@@ -56,12 +56,18 @@ export class BattleDriver
         this.halted = true;
         this.stateDriver.halt();
 
+        // nothing to do
         if (command === "wait") return;
 
         // go over what we can and can't do
         this._choices = this.stateDriver.getChoices(
             /*switchOnly*/command === "switch");
+
         this.logger.debug(`Choices: [${this._choices.join(", ")}]`);
+        if (this._choices.length <= 0)
+        {
+            throw new Error("Empty choices array on halt");
+        }
 
         // make initial decision
         await this.agent(this.stateDriver.state, this._choices,
@@ -158,6 +164,11 @@ export class BattleDriver
         }
 
         this.logger.debug(`Revised choices: [${this._choices.join(", ")}]`);
+        if (this._choices.length <= 0)
+        {
+            throw new Error("Empty choices array on reject");
+        }
+
         if (newInfo)
         {
             // re-sort choices based on new info

@@ -141,28 +141,32 @@ export class StateDriver
 
             // can always struggle if unable to use any move
             if (result.length <= 0) result.push("move 1");
-        }
 
-        // see if we can switch out
-        // can always switch if holding the shed shell item
-        if (!switchOnly && mon.item.definiteValue !== "shedshell")
-        {
-            // trapped by a trapping move
-            if (mon.volatile.trapped) return result;
-            // gen4: shadowtag cancels the other's trapping effect
-            if (them.ability === "shadowtag" && mon.ability !== "shadowtag")
+            // see if we can switch out
+            // can always switch if holding the shed shell item
+            if (mon.item.definiteValue !== "shedshell")
             {
-                return result;
+                // trapped by a trapping move
+                if (mon.volatile.trapped) return result;
+                // gen4: shadowtag cancels the other's trapping effect
+                if (them.ability === "shadowtag" && mon.ability !== "shadowtag")
+                {
+                    return result;
+                }
+                // magnetpull traps steel types
+                if (them.ability === "magnetpull" &&
+                    mon.types.includes("steel"))
+                {
+                    return result;
+                }
+                // arenatrap traps grounded opponents
+                if (them.ability === "arenatrap" && mon.isGrounded)
+                {
+                    return result;
+                }
+                // TODO: is this all?
+                // if not, should be able to recover from choice rejection
             }
-            // magnetpull traps steel types
-            if (them.ability === "magnetpull" && mon.types.includes("steel"))
-            {
-                return result;
-            }
-            // arenatrap traps grounded opponents
-            if (them.ability === "arenatrap" && mon.isGrounded) return result;
-            // TODO: is this all?
-            // if not, should be able to recover from choice rejection
         }
 
         // add switch choices
