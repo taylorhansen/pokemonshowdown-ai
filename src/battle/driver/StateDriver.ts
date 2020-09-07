@@ -119,6 +119,12 @@ export class StateDriver
 
                 // can't select without pp
                 if (move.pp <= 0) continue;
+                // can't select status moves if Taunted
+                if (mon.volatile.taunt.isActive &&
+                    move.data.category === "status")
+                {
+                    continue;
+                }
                 // can't select a Disabled move
                 if (moveName === mon.volatile.disabled?.name) continue;
                 // can't select if imprisoned

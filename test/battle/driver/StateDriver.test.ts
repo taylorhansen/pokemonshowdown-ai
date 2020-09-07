@@ -87,7 +87,17 @@ describe("StateDriver", function()
                     .to.have.members(["move 2", "switch 2"]);
             });
 
-            it("Should omit move choice if disabled", function()
+            it("Should omit move choice if Taunted", function()
+            {
+                init(["substitute", "focuspunch", "spore"]);
+                driver.handle(
+                {
+                    type: "activateStatusEffect", monRef: "us", effect: "taunt",
+                    start: true
+                });
+            });
+
+            it("Should omit move choice if Disabled", function()
             {
                 init(["splash", "tackle"]);
 
