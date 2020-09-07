@@ -161,6 +161,16 @@ describe("MoveContext", function()
                 initCtx({type: "useMove", monRef: "us", move: "struggle"});
                 expect(moveset.get("struggle")).to.be.null;
             });
+
+            it("Should throw if using status move while Taunted", function()
+            {
+                const mon = initActive("us");
+                mon.volatile.taunt.start();
+                expect(() => initCtx(
+                        {type: "useMove", monRef: "us", move: "protect"}))
+                    .to.throw(Error, "Using status move 'protect' but " +
+                        "should've been Taunted");
+            });
         });
 
         describe("called = true", function()

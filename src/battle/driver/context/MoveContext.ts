@@ -170,6 +170,13 @@ export class MoveContext extends DriverContext
         // record the move object in case further deductions need to be made
         this.move = revealedMove;
         --this.move.pp;
+
+        if (this.move?.data.category === "status" &&
+            this.user.volatile.taunt.isActive)
+        {
+            throw new Error(`Using status move '${this.moveName}' but ` +
+                "should've been Taunted");
+        }
     }
 
     /** Used when initializing `#pendingTargets`. */

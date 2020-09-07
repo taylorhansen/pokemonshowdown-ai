@@ -132,7 +132,7 @@ export class StateDriver
                 {
                     continue;
                 }
-                // TODO: choice item lock, taunt, torment, etc
+                // TODO: choice item lock, encore, torment, etc
                 // TODO: is that all?
                 // if not, should be able to recover from choice rejection
 

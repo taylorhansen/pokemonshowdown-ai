@@ -95,6 +95,8 @@ describe("StateDriver", function()
                     type: "activateStatusEffect", monRef: "us", effect: "taunt",
                     start: true
                 });
+                expect(driver.getChoices())
+                    .to.have.members(["move 2", "switch 2"]);
             });
 
             it("Should omit move choice if Disabled", function()
