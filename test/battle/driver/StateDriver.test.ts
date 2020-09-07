@@ -74,32 +74,6 @@ describe("StateDriver", function()
                     .to.have.members(["move 1", "move 2", "switch 2"]);
             });
 
-            it("Should return [move 1] if locked", function()
-            {
-                init(["splash", "outrage"]);
-                expect(driver.state.teams.us.active.volatile.lockedMove
-                        .isActive).to.be.false;
-
-                driver.handle({type: "useMove", monRef: "us", move: "outrage"},
-                    {type: "postTurn"});
-                expect(driver.state.teams.us.active.volatile.lockedMove
-                        .isActive).to.be.true;
-                expect(driver.getChoices()).to.have.members(["move 1"]);
-            });
-
-            it("Should return [move 1] if rollout", function()
-            {
-                init(["splash", "rollout"]);
-                expect(driver.state.teams.us.active.volatile.rollout.isActive)
-                    .to.be.false;
-
-                driver.handle({type: "useMove", monRef: "us", move: "rollout"},
-                    {type: "postTurn"});
-                expect(driver.state.teams.us.active.volatile.rollout.isActive)
-                    .to.be.true;
-                expect(driver.getChoices()).to.have.members(["move 1"]);
-            });
-
             it("Should omit move choice if no pp", function()
             {
                 init(["splash", "tackle"]);

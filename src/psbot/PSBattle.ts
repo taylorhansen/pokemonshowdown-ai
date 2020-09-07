@@ -127,24 +127,36 @@ export class PSBattle implements RoomHandler
      * Indicates to the BattleDriver that the stream of DriverEvents has
      * temporarily ended, possibly awaiting a response from the user.
      */
-    private haltDriver(): Promise<void>
+    private async haltDriver(): Promise<void>
     {
-        const command =
-            !this.eventHandler.battling || this.lastRequest?.wait ? "wait"
-            : this.lastRequest?.forceSwitch ? "switch"
-            : "decide";
-
         // consume lastRequest
-        if (command === "decide" && this.lastRequest)
+        const lastRequest = this.lastRequest;
+        this.lastRequest = null;
+
+        if (!this.eventHandler.battling || lastRequest?.wait)
         {
-            const event = this.eventHandler.updateMoves(this.lastRequest);
+            return this.driver.halt("wait");
+        }
+        else if (lastRequest?.forceSwitch)
+        {
+            return this.driver.halt("switch");
+        }
+        else if (lastRequest)
+        {
+            // see if we're locked into a multi-turn/recharge move
+            const active = lastRequest.active?.[0];
+            if (active?.trapped && active.moves.length === 1 &&
+                active.moves[0].pp == null && active.moves[0].maxpp == null)
+            {
+                await this.driver.halt("wait");
+                return this.sender("|/choose move 1");
+            }
+
+            const event = this.eventHandler.updateMoves(lastRequest);
             this.logger.debug("Update moves:\n" +
                 inspect(event, {colors: false, depth: null}));
             if (event) this.driver.handle(event);
         }
-        this.lastRequest = null;
-
-        // now we can halt
-        return this.driver.halt(command);
+        return this.driver.halt("decide");
     }
 }

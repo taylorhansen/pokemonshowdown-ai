@@ -112,12 +112,6 @@ export class StateDriver
         const them = this.state.teams.them.active;
         if (!switchOnly)
         {
-            if (mon.volatile.lockedMove.isActive ||
-                mon.volatile.rollout.isActive)
-            {
-                return ["move 1"];
-            }
-
             const moves = [...mon.moveset.moves];
             for (let i = 0; i < moves.length; ++i)
             {

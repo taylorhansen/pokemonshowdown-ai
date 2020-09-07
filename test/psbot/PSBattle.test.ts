@@ -38,7 +38,7 @@ describe("PSBattle", function()
             {
                 // swap in a switch choice into the top slot
                 const i = choices.indexOf("switch 2");
-                if (i < 0) return;
+                if (i <= 0) return;
                 [choices[0], choices[i]] = [choices[i], choices[0]];
             };
 
