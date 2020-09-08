@@ -94,7 +94,8 @@ const noMirror: {readonly [move: string]: boolean} =
     toxicspikes: true, transform: true, watersport: true
 };
 /** Moves that can't be copied by Copycat. */
-const noCopycat: {readonly [move: string]: boolean} = {
+const noCopycat: {readonly [move: string]: boolean} =
+{
     assist: true, chatter: true, copycat: true, counter: true, covet: true,
     destinybond: true, detect: true, endure: true, feint: true,
     focuspunch: true, followme: true, helpinghand: true, mefirst: true,

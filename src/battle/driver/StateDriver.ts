@@ -126,13 +126,23 @@ export class StateDriver
                     continue;
                 }
                 // can't select a Disabled move
-                if (moveName === mon.volatile.disabled?.name) continue;
-                // can't select if imprisoned
+                if (mon.volatile.disabled.ts.isActive &&
+                    moveName === mon.volatile.disabled.move)
+                {
+                    continue;
+                }
+                // can't select if Imprisoned
                 if (them.volatile.imprison && them.moveset.moves.has(moveName))
                 {
                     continue;
                 }
-                // TODO: choice item lock, encore, torment, etc
+                // locked into one move if Encored
+                if (mon.volatile.encore.ts.isActive &&
+                    moveName !== mon.volatile.encore.move)
+                {
+                    continue;
+                }
+                // TODO: choice item lock, torment, etc
                 // TODO: is that all?
                 // if not, should be able to recover from choice rejection
 

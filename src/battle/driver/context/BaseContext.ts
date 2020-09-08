@@ -78,10 +78,21 @@ export class BaseContext extends DriverContext implements BattleEventHandler
             case "magicCoat": case "roost": case "snatch": // singleturn
                 mon.volatile[event.effect] = event.start;
                 break;
-            case "bide": case "confusion": case "charge": case "encore":
-            case "magnetRise": case "embargo": case "healBlock":
-            case "slowStart": case "taunt": case "uproar": case "yawn":
+            case "bide": case "confusion": case "charge": case "magnetRise":
+            case "embargo": case "healBlock": case "slowStart": case "taunt":
+            case "uproar": case "yawn":
                 mon.volatile[event.effect][event.start ? "start" : "end"]();
+                break;
+            case "encore":
+                if (event.start)
+                {
+                    if (!mon.volatile.lastMove)
+                    {
+                        throw new Error("Can't Encore if lastMove is null");
+                    }
+                    mon.volatile.encoreMove(mon.volatile.lastMove);
+                }
+                else mon.volatile.removeEncore();
                 break;
             case "endure": case "protect": // stall
                 mon.volatile.stall(event.start);

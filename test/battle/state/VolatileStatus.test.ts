@@ -45,13 +45,16 @@ describe("VolatileStatus", function()
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.defenseCurl).to.be.false;
             expect(volatile.destinyBond).to.be.false;
-            expect(volatile.disabled).to.be.null;
-            expect(volatile.encore.isActive).to.be.false;
+            expect(volatile.disabled.move).to.be.null;
+            expect(volatile.disabled.ts.isActive).to.be.false;
+            expect(volatile.encore.move).to.be.null;
+            expect(volatile.encore.ts.isActive).to.be.false;
             expect(volatile.flashFire).to.be.false;
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
             expect(volatile.imprison).to.be.false;
+            expect(volatile.lastMove).to.be.null;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
@@ -127,13 +130,16 @@ describe("VolatileStatus", function()
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.defenseCurl).to.be.false;
             expect(volatile.destinyBond).to.be.false;
-            expect(volatile.disabled).to.be.null;
-            expect(volatile.encore.isActive).to.be.false;
+            expect(volatile.disabled.move).to.be.null;
+            expect(volatile.disabled.ts.isActive).to.be.false;
+            expect(volatile.encore.move).to.be.null;
+            expect(volatile.encore.ts.isActive).to.be.false;
             expect(volatile.flashFire).to.be.false;
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
             expect(volatile.imprison).to.be.false;
+            expect(volatile.lastMove).to.be.null;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
@@ -356,42 +362,50 @@ describe("VolatileStatus", function()
         });
     });
 
-    describe("#disabled", function()
+    for (const [field, set, reset] of
+    [
+        ["disabled", "disableMove", "enableMoves"],
+        ["encore", "encoreMove", "removeEncore"]
+    ] as const)
     {
-        it("Should not be disabled initially", function()
+        describe(`#${field}`, function()
         {
-            expect(volatile.disabled).to.be.null;
+            it("Should not be active initially", function()
+            {
+                expect(volatile[field].move).to.be.null;
+                expect(volatile[field].ts.isActive).to.be.false;
+            });
+
+            it("Should tick on #postTurn()", function()
+            {
+                volatile[set]("splash");
+                expect(volatile[field].ts.turns).to.equal(1);
+                volatile.postTurn();
+                expect(volatile[field].ts.turns).to.equal(2);
+            });
         });
 
-        it("Should tick on #postTurn()", function()
+        describe(`#${set}()`, function()
         {
-            volatile.disableMove("splash");
-            expect(volatile.disabled!.ts.turns).to.equal(1);
-            volatile.postTurn();
-            expect(volatile.disabled!.ts.turns).to.equal(2);
+            it(`Should set ${field}`, function()
+            {
+                volatile[set]("splash");
+                expect(volatile[field].move).to.equal("splash");
+                expect(volatile[field].ts.isActive).to.be.true;
+            });
         });
-    });
 
-    describe("#disableMove()", function()
-    {
-        it("Should disable move", function()
+        describe(`#${reset}()`, function()
         {
-            volatile.disableMove("splash");
-            expect(volatile.disabled).to.not.be.null;
-            expect(volatile.disabled!.name).to.equal("splash");
-            expect(volatile.disabled!.ts.isActive).to.be.true;
+            it(`Should end ${field} status`, function()
+            {
+                volatile[set]("splash");
+                volatile[reset]();
+                expect(volatile[field].move).to.be.null;
+                expect(volatile[field].ts.isActive).to.be.false;
+            });
         });
-    });
-
-    describe("#enableMoves()", function()
-    {
-        it("Should end disabled status", function()
-        {
-            volatile.disableMove("splash");
-            volatile.enableMoves();
-            expect(volatile.disabled).to.be.null;
-        });
-    });
+    }
 
     for (const type of ["magicCoat", "roost", "snatch"] as const)
     {

@@ -151,7 +151,44 @@ describe("BaseContext", function()
             test("Charge", "charge", v => v.charge.isActive);
             test("Curse", "curse", v => v.curse);
             test("Embargo", "embargo", v => v.embargo.isActive);
-            test("Encore", "encore", v => v.encore.isActive);
+            // separate test case for encore
+            it("Should activate Encore", function()
+            {
+                const v = initActive("us").volatile;
+                expect(v.encore.move).to.be.null;
+                expect(v.encore.ts.isActive).to.be.false;
+
+                // have to set lastMove first
+                expect(() => ctx.handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "encore", start: true
+                    }))
+                    .to.throw(Error, "Can't Encore if lastMove is null");
+
+                // set lastMove
+                handle({type: "useMove", monRef: "us", move: "splash"},
+                    MoveContext);
+                expect(v.lastMove).to.equal("splash");
+
+                // start the status
+                handle(
+                {
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "encore", start: true
+                });
+                expect(v.encore.move).to.equal("splash");
+                expect(v.encore.ts.isActive).to.be.true;
+
+                // end the status
+                handle(
+                {
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "encore", start: false
+                });
+                expect(v.encore.move).to.be.null;
+                expect(v.encore.ts.isActive).to.be.false;
+            });
             test("Flash Fire", "flashFire", v => v.flashFire);
             test("Focus Energy", "focusEnergy", v => v.focusEnergy);
             test("Foresight", "foresight", v => v.identified === "foresight");
@@ -526,9 +563,8 @@ describe("BaseContext", function()
             {
                 const mon = initActive("them");
                 handle({type: "disableMove", monRef: "them", move: "tackle"});
-                expect(mon.volatile.disabled).to.not.be.null;
-                expect(mon.volatile.disabled!.name).to.equal("tackle");
-                expect(mon.volatile.disabled!.ts.isActive).to.be.true;
+                expect(mon.volatile.disabled.move).to.equal("tackle");
+                expect(mon.volatile.disabled.ts.isActive).to.be.true;
             });
         });
 
@@ -1001,10 +1037,12 @@ describe("BaseContext", function()
             {
                 const v = initActive("them").volatile;
                 v.disableMove("tackle");
-                expect(v.disabled).to.not.be.null;
+                expect(v.disabled.move).to.equal("tackle");
+                expect(v.disabled.ts.isActive).to.be.true;
 
                 handle({type: "reenableMoves", monRef: "them"});
-                expect(v.disabled).to.be.null;
+                expect(v.disabled.move).to.be.null;
+                expect(v.disabled.ts.isActive).to.be.false;
             });
         });
 

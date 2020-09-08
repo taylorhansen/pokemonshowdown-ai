@@ -28,12 +28,13 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.defenseCurl = true;
     volatile.destinyBond = true;
     volatile.disableMove("tackle");
-    volatile.encore.start();
+    volatile.encoreMove("splash");
     volatile.flashFire = true;
     volatile.grudge = true;
     volatile.healBlock.start();
     volatile.identified = "foresight";
     volatile.imprison = true;
+    volatile.lastMove = "spore";
     volatile.lockedMove.start("outrage");
     volatile.magicCoat = true;
     volatile.minimize = true;

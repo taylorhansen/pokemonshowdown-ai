@@ -160,10 +160,12 @@ export class MoveContext extends DriverContext
         // every move decision resets any single-move statuses
         this.user.volatile.resetSingleMove();
 
-        // only struggle can be selected without being a part of the moveset
-        if (this.moveName === "struggle" || !reveal) return;
-
+        // set last move if directly selecting from moveset/struggle
         if (!reveal) return;
+        this.user.volatile.lastMove = this.moveName;
+
+        // only struggle can be selected without being a part of the moveset
+        if (this.moveName === "struggle") return;
 
         const revealedMove = this.user.moveset.reveal(this.moveName);
 
@@ -171,7 +173,7 @@ export class MoveContext extends DriverContext
         this.move = revealedMove;
         --this.move.pp;
 
-        if (this.move?.data.category === "status" &&
+        if (revealedMove.data.category === "status" &&
             this.user.volatile.taunt.isActive)
         {
             throw new Error(`Using status move '${this.moveName}' but ` +

@@ -124,6 +124,24 @@ describe("StateDriver", function()
                     .to.have.members(["move 2", "switch 2"]);
             });
 
+            it("Should omit all other move choices if Encored", function()
+            {
+                init(["splash", "tackle", "toxic"]);
+
+                // set last move to toxic
+                driver.handle(
+                    {type: "useMove", monRef: "us", move: "toxic"});
+                driver.handle({type: "fail", monRef: "us"});
+                // start encore
+                driver.handle(
+                {
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "encore", start: true
+                });
+                expect(driver.getChoices())
+                    .to.have.members(["move 3", "switch 2"]);
+            });
+
             it("Should keep [move 1] as struggle choice if all moves are " +
                 "unavailable", function()
             {

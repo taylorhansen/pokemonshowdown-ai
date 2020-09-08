@@ -58,19 +58,21 @@ describe("MoveContext", function()
 
             it("Should reveal move and deduct pp", function()
             {
-                const {moveset} = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 expect(moveset.get("tackle")).to.be.null;
+                expect(volatile.lastMove).to.be.null;
                 initCtx({type: "useMove", monRef: "us", move: "tackle"});
 
                 expect(moveset.get("tackle")).to.not.be.null;
                 expect(moveset.get("tackle")).to.have.property("pp", 55);
+                expect(volatile.lastMove).to.equal("tackle");
             });
 
             it("Should not deduct pp if releasing two-turn move", function()
             {
-                const mon = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 // assume pp was already deducted by preparing the move
-                mon.volatile.twoTurn.start("fly");
+                volatile.twoTurn.start("fly");
 
                 // start a new turn
                 state.postTurn();
@@ -78,18 +80,20 @@ describe("MoveContext", function()
 
                 // indicate that the two-turn move is being released
                 initCtx({type: "useMove", monRef: "us", move: "fly"});
-                expect(mon.volatile.twoTurn.isActive).to.be.false;
+                expect(volatile.twoTurn.isActive).to.be.false;
                 // should not deduct pp or even reveal the move, assuming the
                 //  the start turn was called by an effect in this case
-                expect(mon.moveset.get("fly")).to.be.null;
+                expect(moveset.get("fly")).to.be.null;
+                // shouldn't set when releasing two-turn move
+                expect(volatile.lastMove).to.be.null;
             });
 
-            it("Should still deduct pp if starting a different two-turn move",
+            it("Should deduct pp if starting a different two-turn move",
             function()
             {
-                const mon = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 // in the middle of preparing a two-turn move
-                mon.volatile.twoTurn.start("dig");
+                volatile.twoTurn.start("dig");
 
                 // start a new turn
                 state.postTurn();
@@ -97,69 +101,78 @@ describe("MoveContext", function()
 
                 // indicate that a different two-turn move is being started
                 initCtx({type: "useMove", monRef: "us", move: "razorwind"});
-                expect(mon.volatile.twoTurn.isActive).to.be.true;
+                expect(volatile.twoTurn.isActive).to.be.true;
                 // should deduct pp
-                expect(mon.moveset.get("razorwind")).to.not.be.null;
-                expect(mon.moveset.get("razorwind")).to.have.property("pp", 15);
+                expect(moveset.get("razorwind")).to.not.be.null;
+                expect(moveset.get("razorwind")).to.have.property("pp", 15);
+                expect(volatile.lastMove).to.equal("razorwind");
             });
 
             it("Should not deduct pp if continuing locked move", function()
             {
-                const mon = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 // assume pp was already deducted by starting the move
-                mon.volatile.lockedMove.start("thrash");
+                volatile.lockedMove.start("thrash");
                 // indicate that the locked move is continuing
                 initCtx({type: "useMove", monRef: "us", move: "thrash"});
-                expect(mon.volatile.lockedMove.isActive).to.be.true;
+                expect(volatile.lockedMove.isActive).to.be.true;
                 // should not deduct pp or even reveal
-                expect(mon.moveset.get("thrash")).to.be.null;
+                expect(moveset.get("thrash")).to.be.null;
+                // shouldn't set when continuing
+                expect(volatile.lastMove).to.be.null;
             });
 
-            it("Should still deduct pp if starting a different locked move",
+            it("Should deduct pp if starting a different locked move",
             function()
             {
-                const mon = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 // in the middle of a locked move
-                mon.volatile.lockedMove.start("petaldance");
+                volatile.lockedMove.start("petaldance");
                 // indicate that a different locked move is being used
                 initCtx({type: "useMove", monRef: "us", move: "outrage"});
-                expect(mon.volatile.lockedMove.isActive).to.be.true;
+                expect(volatile.lockedMove.isActive).to.be.true;
                 // should deduct pp
-                expect(mon.moveset.get("outrage")).to.not.be.null;
-                expect(mon.moveset.get("outrage")).to.have.property("pp", 23);
+                expect(moveset.get("outrage")).to.not.be.null;
+                expect(moveset.get("outrage")).to.have.property("pp", 23);
+                expect(volatile.lastMove).to.equal("outrage");
             });
 
             it("Should not deduct pp if continuing rollout move", function()
             {
-                const mon = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 // assume pp was already deducted by starting the move
-                mon.volatile.rollout.start("iceball");
+                volatile.rollout.start("iceball");
                 // indicate that the rollout move is continuing
                 initCtx({type: "useMove", monRef: "us", move: "iceball"});
-                expect(mon.volatile.rollout.isActive).to.be.true;
+                expect(volatile.rollout.isActive).to.be.true;
                 // should not deduct pp or even reveal
-                expect(mon.moveset.get("iceball")).to.be.null;
+                expect(moveset.get("iceball")).to.be.null;
+                // shouldn't set when continuing
+                expect(volatile.lastMove).to.be.null;
             });
 
-            it("Should still deduct pp if starting a different rollout move",
+            it("Should deduct pp if starting a different rollout move",
             function()
             {
-                const mon = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 // in the middle of a locked move
-                mon.volatile.rollout.start("iceball");
+                volatile.rollout.start("iceball");
                 // indicate that a different locked move is being used
                 initCtx({type: "useMove", monRef: "us", move: "rollout"});
-                expect(mon.volatile.rollout.isActive).to.be.true;
+                expect(volatile.rollout.isActive).to.be.true;
                 // should deduct pp
-                expect(mon.moveset.get("rollout")).to.not.be.null;
-                expect(mon.moveset.get("rollout")).to.have.property("pp", 31);
+                expect(moveset.get("rollout")).to.not.be.null;
+                expect(moveset.get("rollout")).to.have.property("pp", 31);
+                expect(volatile.lastMove).to.equal("rollout");
             });
 
             it("Should not reveal move if struggle", function()
             {
-                const {moveset} = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 initCtx({type: "useMove", monRef: "us", move: "struggle"});
                 expect(moveset.get("struggle")).to.be.null;
+                // should still set last move
+                expect(volatile.lastMove).to.equal("struggle");
             });
 
             it("Should throw if using status move while Taunted", function()
@@ -177,43 +190,46 @@ describe("MoveContext", function()
         {
             it("Should not reset single-move statuses", function()
             {
-                const {volatile: v} = initActive("us");
-                v.destinyBond = true;
+                const {volatile} = initActive("us");
+                volatile.destinyBond = true;
                 initCtx({type: "useMove", monRef: "us", move: "tackle"},
                     /*called*/true);
-                expect(v.destinyBond).to.be.true;
+                expect(volatile.destinyBond).to.be.true;
             });
 
             it("Shoud not reveal move", function()
             {
-                const mon = initActive("us");
+                const {moveset, volatile} = initActive("us");
                 initCtx({type: "useMove", monRef: "us", move: "tackle"},
                     /*called*/true);
-                expect(mon.moveset.get("tackle")).to.be.null;
+                expect(moveset.get("tackle")).to.be.null;
+                expect(volatile.lastMove).to.be.null;
             });
 
             it("Should indicate called locked move", function()
             {
-                const mon = initActive("us");
+                const {volatile} = initActive("us");
                 initActive("them");
                 initCtx({type: "useMove", monRef: "us", move: "thrash"},
                         /*called*/true)
                     .expire();
-                expect(mon.volatile.lockedMove.isActive).to.be.true;
-                expect(mon.volatile.lockedMove.type).to.equal("thrash");
-                expect(mon.volatile.lockedMove.called).to.be.true;
+                expect(volatile.lockedMove.isActive).to.be.true;
+                expect(volatile.lockedMove.type).to.equal("thrash");
+                expect(volatile.lockedMove.called).to.be.true;
+                expect(volatile.lastMove).to.be.null;
             });
 
             it("Should indicate called rollout move", function()
             {
-                const mon = initActive("us");
+                const {volatile} = initActive("us");
                 initActive("them");
                 initCtx({type: "useMove", monRef: "us", move: "iceball"},
                         /*called*/true)
                     .expire();
-                expect(mon.volatile.rollout.isActive).to.be.true;
-                expect(mon.volatile.rollout.type).to.equal("iceball");
-                expect(mon.volatile.rollout.called).to.be.true;
+                expect(volatile.rollout.isActive).to.be.true;
+                expect(volatile.rollout.type).to.equal("iceball");
+                expect(volatile.rollout.called).to.be.true;
+                expect(volatile.lastMove).to.be.null;
             });
         });
     });

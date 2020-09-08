@@ -7,18 +7,21 @@ import { pluralTurns, plus } from "./utility";
 import { ReadonlyVariableTempStatus, VariableTempStatus  } from
     "./VariableTempStatus";
 
-/** Tracks Disable status for ReadonlyVolatileStatus. */
-export interface ReadonlyDisableData
+// TODO: factor into a separate class?
+/** Tracks a move status turn counter. */
+export interface ReadonlyMoveStatus
 {
-    /** Name of the disabled move. */
-    readonly name: string;
-    /** Turn tracker for the Disable status. */
+    /** Name of the move, or null if inactive. */
+    readonly move: string | null;
+    /** Turn tracker. */
     readonly ts: ReadonlyTempStatus;
 }
 
-/** Tracks Disable status for VolatileStatus. */
-export interface DisableData extends ReadonlyDisableData
+/** Tracks a move status turn counter. */
+export interface MoveStatus extends ReadonlyMoveStatus
 {
+    /** @override */
+    move: string | null;
     /** @override */
     readonly ts: TempStatus;
 }
@@ -83,9 +86,12 @@ export interface ReadonlyVolatileStatus
     /** Destiny Bond move status. */
     readonly destinyBond: boolean;
     /** Currently disabled move. */
-    readonly disabled: ReadonlyDisableData | null;
-    /** Encore move status. Encored move corresponds to `#lastUsed`. */
-    readonly encore: ReadonlyTempStatus;
+    readonly disabled: ReadonlyMoveStatus;
+    /**
+     * Encore move status. Encored move corresponds to `#lastUsed` at the time
+     * it starts.
+     */
+    readonly encore: ReadonlyMoveStatus;
     /** Flash Fire ability effect. */
     readonly flashFire: boolean;
     /** Grudge move status. */
@@ -96,6 +102,11 @@ export interface ReadonlyVolatileStatus
     readonly identified: "foresight" | "miracleEye" | null;
     /** Imprison move status. */
     readonly imprison: boolean;
+    /**
+     * Last used move. Includes move selections and Struggle, but not called
+     * moves.
+     */
+    readonly lastMove: string | null;
     /**
      * Tracks locked moves, e.g. petaldance variants. Should be ticked after
      * every successful move attempt.
@@ -277,20 +288,38 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public destinyBond!: boolean;
 
     /** @override */
-    public get disabled(): DisableData | null { return this._disabled; }
-    /** Starts the disabled status for the given move. */
-    public disableMove(name: string): void
+    public get disabled(): ReadonlyMoveStatus { return this._disabled; }
+    /** Starts the Disabled status for the given move. */
+    public disableMove(move: string): void
     {
-        const ts = new TempStatus(`disabled ${name}`, 7);
-        ts.start();
-        this._disabled = {name, ts};
+        this._disabled.move = move;
+        this._disabled.ts.start();
     }
-    /** Removes disable status. */
-    public enableMoves(): void { this._disabled = null; }
-    private _disabled!: DisableData | null;
+    /** Removes Disable status. */
+    public enableMoves(): void
+    {
+        this._disabled.move = null;
+        this._disabled.ts.end();
+    }
+    private readonly _disabled: MoveStatus =
+        {move: null, ts: new TempStatus("disabled", 7)};
 
     /** @override */
-    public readonly encore = new TempStatus("encore", 7);
+    public get encore(): ReadonlyMoveStatus { return this._encore; }
+    /** Starts the Encore status for the given move. */
+    public encoreMove(move: string): void
+    {
+        this._encore.move = move;
+        this._encore.ts.start();
+    }
+    /** Removes disable status. */
+    public removeEncore(): void
+    {
+        this._encore.move = null;
+        this._encore.ts.end();
+    }
+    private readonly _encore: MoveStatus =
+        {move: null, ts: new TempStatus("encored", 7)};
 
     /** @override */
     public flashFire!: boolean;
@@ -306,6 +335,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public imprison!: boolean;
+
+    public lastMove!: string | null;
 
     /** @override */
     public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
@@ -475,12 +506,13 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.defenseCurl = false;
         this.destinyBond = false;
         this.enableMoves();
-        this.encore.end();
+        this.removeEncore();
         this.flashFire = false;
         this.grudge = false;
         this.healBlock.end();
         this.identified = null;
         this.imprison = false;
+        this.lastMove = null;
         this.lockedMove.reset();
         this.magicCoat = false;
         this.minimize = false;
@@ -569,8 +601,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._lockOnTurns.tick();
         this.magnetRise.tick();
         this.charge.tick();
-        this._disabled?.ts.tick();
-        this.encore.tick();
+        this._disabled.ts.tick();
+        this._encore.ts.tick();
         this.slowStart.tick();
         this.taunt.tick();
         this.yawn.tick();
@@ -631,13 +663,16 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.charge.isActive ? [this.charge.toString()] : [],
             this.defenseCurl ? ["defense curl"] : [],
             this.destinyBond ? ["destiny bond"] : [],
-            this._disabled ? [this._disabled.ts.toString()] : [],
-            this.encore.isActive ? [this.encore.toString()] : [],
+            this._disabled.ts.isActive ?
+                [`${this._disabled.move} ${this._disabled.ts.toString()}`] : [],
+            this._encore.ts.isActive ?
+                [`${this._encore.move} ${this._encore.ts.toString()}`] : [],
             this.flashFire ? ["flash fire"] : [],
             this.grudge ? ["grudge"] : [],
             this.healBlock.isActive ? [this.healBlock.toString()] : [],
             this.identified ? [this.identified] : [],
             this.imprison ? ["imprison"] : [],
+            this.lastMove ? [`last used ${this.lastMove}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.magicCoat ? ["magic coat"] : [],
             this.minimize ? ["minimize"] : [],

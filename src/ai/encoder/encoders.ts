@@ -21,7 +21,8 @@ import { ReadonlyTeamStatus } from "../../battle/state/TeamStatus";
 import { ReadonlyTempStatus } from "../../battle/state/TempStatus";
 import { ReadonlyVariableTempStatus } from
     "../../battle/state/VariableTempStatus";
-import { ReadonlyVolatileStatus } from "../../battle/state/VolatileStatus";
+import { ReadonlyMoveStatus, ReadonlyVolatileStatus } from
+    "../../battle/state/VolatileStatus";
 import { assertEncoder, augment, concat, Encoder, map, nullable, optional } from
     "./Encoder";
 import { booleanEncoder, checkLength, fillEncoder, limitedStatusTurns,
@@ -248,6 +249,16 @@ export const emptyPokemonTraitsEncoder: Encoder<undefined> = concat(
     emptyStatTableEncoder,
     fillEncoder(-1, filteredTypes.length));
 
+/** Encoder for a volatile MoveStatus. */
+export const moveStatusEncoder: Encoder<ReadonlyMoveStatus> =
+    augment(ms => ms.ts.isActive && ms.move ?
+            {
+                id: dex.moves[ms.move].uid,
+                one: tempStatusEncoderImpl(ms.ts)
+            }
+            : {id: null},
+        oneHotEncoder(dex.moveKeys.length));
+
 /** Encoder for a VolatileStatus. */
 export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     // passable
@@ -288,20 +299,16 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     augment(vs => vs.charge, tempStatusEncoder),
     augment(vs => vs.defenseCurl, booleanEncoder),
     augment(vs => vs.destinyBond, booleanEncoder),
-    augment(
-        vs => vs.disabled ?
-            {
-                id: dex.moves[vs.disabled.name].uid,
-                one: tempStatusEncoderImpl(vs.disabled.ts)
-            }
-            : {id: null},
-        oneHotEncoder(dex.moveKeys.length)),
+    augment(vs => vs.disabled, moveStatusEncoder),
+    augment(vs => vs.encore, moveStatusEncoder),
     augment(vs => vs.flashFire, booleanEncoder),
     augment(vs => vs.grudge, booleanEncoder),
     augment(vs => vs.healBlock, tempStatusEncoder),
     augment(vs => vs.identified === "foresight", booleanEncoder),
     augment(vs => vs.identified === "miracleEye", booleanEncoder),
     augment(vs => vs.imprison, booleanEncoder),
+    augment(vs => ({id: vs.lastMove ? dex.moves[vs.lastMove].uid : null}),
+        oneHotEncoder(dex.moveKeys.length)),
     augment(vs => vs.lockedMove, variableTempStatusEncoder(dex.lockedMoveKeys)),
     augment(vs => vs.minimize, booleanEncoder),
     augment(vs => ({id: vs.mirrorMove ? dex.moves[vs.mirrorMove].uid : null}),
