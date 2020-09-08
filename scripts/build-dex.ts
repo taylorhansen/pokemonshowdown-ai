@@ -597,16 +597,18 @@ for (const mon of
 // items and berries
 
 // make sure that having no item is possible
-const items: string[] = ["none"];
+const items: (readonly [string, dexutil.ItemData])[] =
+    [["none", {uid: 0, name: "none", display: "None"}]];
 const berries: (readonly [string, dexutil.NaturalGiftData])[] = [];
 
-for (const itemName of Object.keys(dex.data.Items).sort())
+uid = 1;
+for (const item of
+    Object.keys(dex.data.Items)
+        .map(n => dex.getItem(n))
+        // only gen4 and under items allowed
+        .filter(i => i.gen <= 4 && !i.isNonstandard)
+        .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
-    if (!dex.data.Items.hasOwnProperty(itemName)) continue;
-    const item = dex.getItem(itemName);
-    // only gen4 and under items allowed
-    if (item.gen > 4 || item.isNonstandard) continue;
-
     if (item.isBerry && item.naturalGift)
     {
         berries.push(
@@ -619,7 +621,8 @@ for (const itemName of Object.keys(dex.data.Items).sort())
         ]);
     }
 
-    items.push(item.id);
+    items.push([item.id, {uid, name: item.id, display: item.name}]);
+    ++uid;
 }
 
 // print data
@@ -854,10 +857,11 @@ ${exportDict(typeToMoves, "typeToMoves",
     a => `[${a.map(quote).join(", ")}]`)}
 
 /** Maps item id name to its id number. */
-${exportArrayToDict(items, "items")}
+${exportEntriesToDict(items, "items", "dexutil.ItemData", i =>
+    stringifyDict(i, v => typeof v === "string" ? quote(v) : v))}
 
-/** Sorted array of all item names. */
-${exportArray(items, "itemKeys", "string", quote)}
+/** Sorted array of all item names, except with \`none\` at position 0. */
+${exportArray(items, "itemKeys", "string", i => quote(i[0]))}
 
 /** Contains info about each berry item. */
 ${exportEntriesToDict(berries, "berries", "dexutil.NaturalGiftData",

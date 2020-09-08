@@ -1,5 +1,5 @@
 import * as dex from "../dex/dex";
-import { boostKeys, HPType, hpTypes, Type } from "../dex/dex-util";
+import { boostKeys, HPType, hpTypes, ItemData, Type } from "../dex/dex-util";
 import { HP, ReadonlyHP } from "./HP";
 import { MajorStatusCounter, ReadonlyMajorStatusCounter } from
     "./MajorStatusCounter";
@@ -42,9 +42,9 @@ export interface ReadonlyPokemon
     readonly types: readonly Type[];
 
     /** Current reference to held item possibilities. */
-    readonly item: ReadonlyPossibilityClass<number>;
+    readonly item: ReadonlyPossibilityClass<ItemData>;
     /** Current reference to last consumed item possibilities. */
-    readonly lastItem: ReadonlyPossibilityClass<number>;
+    readonly lastItem: ReadonlyPossibilityClass<ItemData>;
 
     /** Pokemon's current moveset. */
     readonly moveset: ReadonlyMoveset;
@@ -147,9 +147,9 @@ export class Pokemon implements ReadonlyPokemon
     }
 
     /** @override */
-    public get item(): PossibilityClass<number> { return this._item; }
+    public get item(): PossibilityClass<ItemData> { return this._item; }
     /** @override */
-    public get lastItem(): PossibilityClass<number> { return this._lastItem; }
+    public get lastItem(): PossibilityClass<ItemData> { return this._lastItem; }
     /**
      * Indicates that an item has been revealed or gained.
      * @param item Item id name.

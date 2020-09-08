@@ -1,3 +1,4 @@
+import { ItemData } from "../dex/dex-util";
 import { Pokemon } from "./Pokemon";
 import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
 import { pluralTurns } from "./utility";
@@ -10,7 +11,7 @@ export interface ReadonlyItemTempStatus<TStatusType extends string>
     /** Current weather type. */
     readonly type: TStatusType | "none";
     /** The weather-causer's item if there is one. */
-    readonly source: ReadonlyPossibilityClass<number> | null;
+    readonly source: ReadonlyPossibilityClass<ItemData> | null;
     /**
      * Number of turns this status has been active. This is 0-based, so this
      * will return 0 if the weather was started this turn, and 1 after the end
@@ -43,11 +44,11 @@ export class ItemTempStatus<TStatusType extends string> implements
     public get type(): TStatusType | "none" { return this._type; }
     private _type!: TStatusType | "none";
     /** @override */
-    public get source(): PossibilityClass<number> | null
+    public get source(): PossibilityClass<ItemData> | null
     {
         return this._source;
     }
-    private _source!: PossibilityClass<number> | null;
+    private _source!: PossibilityClass<ItemData> | null;
 
     /** @override */
     public get turns(): number { return this._turns; }
@@ -110,21 +111,16 @@ export class ItemTempStatus<TStatusType extends string> implements
         if (!source || infinite) return;
 
         // should currently be possible to have extension item
-        if (source.item.isSet(this.items[this._type]))
+        if (!source.item.isSet(this.items[this._type])) return;
+
+        // duration is certain once the item is known
+        if (source.item.definiteValue) this._duration = this.durations[1];
+        else
         {
-            // duration is certain once the item is known
-            if (source.item.definiteValue)
-            {
-                // we have the extension item
-                this._duration = this.durations[1];
-            }
-            else
-            {
-                // start tracking source item
-                this._source = source.item;
-                // set duration once narrowed by other means or by tick()
-                this._source.onNarrow(this.itemNarrowedLambda);
-            }
+            // start tracking source item
+            this._source = source.item;
+            // set duration once narrowed by other means or by tick()
+            this._source.onNarrow(this.itemNarrowedLambda);
         }
     }
 
@@ -133,11 +129,11 @@ export class ItemTempStatus<TStatusType extends string> implements
      * `PossibilityClass#onNarrow()` in this object's `#start()` method without
      * creating a new lambda every time.
      */
-    private itemNarrowedLambda = (item: PossibilityClass<number>) =>
-        this.itemNarrowed(item)
+    private itemNarrowedLambda =
+        (item: PossibilityClass<ItemData>) => this.itemNarrowed(item);
 
     /** Updates duration if extension item is found on the given source item. */
-    private itemNarrowed(item: PossibilityClass<number>): void
+    private itemNarrowed(item: PossibilityClass<ItemData>): void
     {
         // source was reassigned, this callback no longer applies
         if (this._source && this._source !== item) return;
@@ -167,6 +163,7 @@ export class ItemTempStatus<TStatusType extends string> implements
         if (this._turns < this._duration) return;
 
         // went over duration without reset()-ing, figure out why
+        let valid = false;
         if (this._duration === this.durations[0])
         {
             // currently using short duration, so we must have had the
@@ -175,17 +172,13 @@ export class ItemTempStatus<TStatusType extends string> implements
             {
                 this._source.narrow(this.items[this._type]);
                 this._duration = this.durations[1];
+                valid = true;
             }
-            // went over short duration without item, should never happen
-            else this.throwLongerThanExpected();
+            else; // went over short duration without item, should never happen
         }
-        // went over long duration, should never happen
-        else this.throwLongerThanExpected();
-    }
+        else; // went over long duration, should never happen
 
-    /** Throws an error saying the status lasted longer than expected. */
-    private throwLongerThanExpected(): void
-    {
+        if (valid) return;
         throw new Error(`Status '${this._type}' went longer than expected ` +
             `(duration=${this._duration}, turns=${this._turns})`);
     }

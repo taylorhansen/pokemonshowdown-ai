@@ -130,17 +130,22 @@ export function isRolloutMove(type: any): type is RolloutMove
     return rolloutMoves.hasOwnProperty(type);
 }
 
-/** Format of each pokemon entry in the Dex. */
-export interface PokemonData
+/** Base interface for dex data entries. */
+export interface DexData
 {
-    /** ID number in the Pokedex. */
-    readonly id: number;
-    /** Unique ID number that belongs to a single pokemon or form. */
+    /** Unique ID number that belongs to a single entry only. */
     readonly uid: number;
-    /** Species name. */
+    /** Entry name. */
     readonly name: string;
     /** Display name. */
     readonly display: string;
+}
+
+/** Format of each pokemon entry in the Dex. */
+export interface PokemonData extends DexData
+{
+    /** ID number in the Pokedex. */
+    readonly id: number;
     /** Species this pokemon is derived from. */
     readonly baseSpecies?: string;
     /** Alternate form this pokemon is derived from. */
@@ -162,14 +167,8 @@ export interface PokemonData
 }
 
 /** Format for each move entry in the dex. */
-export interface MoveData
+export interface MoveData extends DexData
 {
-    /** Unique identifier number. */
-    readonly uid: number;
-    /** Move name. */
-    readonly name: string;
-    /** Display name. */
-    readonly display: string;
     /** Move category. */
     readonly category: MoveCategory;
     /** Target of the move. */
@@ -336,25 +335,5 @@ export type UniqueEffect = "conversion" | "disable";
  */
 export type UpdatableFieldEffect = WeatherType;
 
-/** Type info for the dex variable. */
-export interface Dex
-{
-    /** Contains info about each pokemon. */
-    readonly pokemon: {readonly [name: string]: PokemonData};
-    /** Total number of pokemon species. */
-    readonly numPokemon: number;
-    /** Maps ability id name to an id number. */
-    readonly abilities: {readonly [name: string]: number};
-    /** Total number of abilities. */
-    readonly numAbilities: number;
-    /** Maps a move id name to its Dex object. */
-    readonly moves: {readonly [name: string]: MoveData};
-    /** Total number of moves. */
-    readonly numMoves: number;
-    /** Maps an item id name to its id number. */
-    readonly items: {readonly [name: string]: number};
-    /** Total number of items. */
-    readonly numItems: number;
-    /** Contains berry data for Natural Gift. */
-    readonly berries: {readonly [name: string]: NaturalGiftData};
-}
+/** Format for each item entry in the dex. */
+export interface ItemData extends DexData {}
