@@ -621,7 +621,14 @@ for (const item of
         ]);
     }
 
-    items.push([item.id, {uid, name: item.id, display: item.name}]);
+    items.push(
+    [
+        item.id,
+        {
+            uid, name: item.id, display: item.name,
+            ...(item.isChoice && {isChoice: item.isChoice})
+        }
+    ]);
     ++uid;
 }
 

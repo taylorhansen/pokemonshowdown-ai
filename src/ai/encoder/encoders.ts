@@ -297,6 +297,8 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     augment(vs => vs.attract, booleanEncoder),
     augment(vs => vs.bide, tempStatusEncoder),
     augment(vs => vs.charge, tempStatusEncoder),
+    augment(vs => ({id: vs.choiceLock ? dex.moves[vs.choiceLock].uid : null}),
+        oneHotEncoder(dex.moveKeys.length)),
     augment(vs => vs.defenseCurl, booleanEncoder),
     augment(vs => vs.destinyBond, booleanEncoder),
     augment(vs => vs.disabled, moveStatusEncoder),

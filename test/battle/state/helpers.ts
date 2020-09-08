@@ -25,6 +25,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.attract = true;
     volatile.bide.start();
     volatile.charge.start();
+    volatile.choiceLock = "pound";
     volatile.defenseCurl = true;
     volatile.destinyBond = true;
     volatile.disableMove("tackle");

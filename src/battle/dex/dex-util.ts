@@ -336,4 +336,8 @@ export type UniqueEffect = "conversion" | "disable";
 export type UpdatableFieldEffect = WeatherType;
 
 /** Format for each item entry in the dex. */
-export interface ItemData extends DexData {}
+export interface ItemData extends DexData
+{
+    /** Whether this is a choice item. */
+    isChoice?: true;
+}

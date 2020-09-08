@@ -217,6 +217,29 @@ describe("Pokemon", function()
                 expect(mon.volatile.unburden).to.be.true;
             });
         });
+
+        describe("#volatile.choiceLock", function()
+        {
+            it("Should reset choiceLock if revealed non-choice item", function()
+            {
+                const mon = new Pokemon("magikarp", true);
+                mon.switchInto();
+                mon.volatile.choiceLock = "test";
+
+                mon.setItem("lifeorb");
+                expect(mon.volatile.choiceLock).to.be.null;
+            });
+
+            it("Should not reset choiceLock if revealed choice item", function()
+            {
+                const mon = new Pokemon("magikarp", true);
+                mon.switchInto();
+                mon.volatile.choiceLock = "test";
+
+                mon.setItem("choiceband");
+                expect(mon.volatile.choiceLock).to.equal("test");
+            });
+        });
     });
 
     describe("#removeItem()", function()
@@ -305,11 +328,13 @@ describe("Pokemon", function()
                 const mon = new Pokemon("smeargle", false);
                 mon.switchInto();
                 mon.moveset.reveal("mimic");
+                mon.volatile.choiceLock = "test"; // also test choice lock
 
                 mon.mimic("tackle");
                 expect(mon.moveset.get("mimic")).to.be.null;
                 expect(mon.moveset.get("tackle")).to.not.be.null;
                 expect(mon.moveset.get("tackle")!.pp).to.equal(5);
+                expect(mon.volatile.choiceLock).to.be.null;
             });
 
             it("Should clear on switch out", function()
@@ -333,6 +358,7 @@ describe("Pokemon", function()
                 const mon = new Pokemon("smeargle", false);
                 mon.switchInto();
                 mon.moveset.reveal("sketch");
+                mon.volatile.choiceLock = "test"; // also test choice lock
 
                 mon.sketch("tackle");
                 // switch-out should not matter
@@ -340,6 +366,7 @@ describe("Pokemon", function()
                 expect(mon.moveset.get("sketch")).to.be.null;
                 expect(mon.moveset.get("tackle")).to.not.be.null;
                 expect(mon.moveset.get("tackle")!.pp).to.equal(35);
+                expect(mon.volatile.choiceLock).to.be.null;
             });
         });
     });
@@ -692,10 +719,11 @@ describe("Pokemon", function()
 
     describe("#transform()", function()
     {
-        it("Should copy known details", function()
+        it("Should copy known details and reset choice lock", function()
         {
             const mon1 = new Pokemon("smeargle", false);
             mon1.switchInto();
+            mon1.volatile.choiceLock = "splash";
             mon1.hpType.narrow("fire");
             expect(mon1.moveset.get("splash")).to.be.null;
 
@@ -708,11 +736,12 @@ describe("Pokemon", function()
 
             mon1.transform(mon2);
 
-            expect(mon1.species).to.equal("bulbasaur");
             expect(mon1.volatile.transformed).to.be.true;
-            expect(mon1.volatile.boosts.atk).to.equal(2);
-            expect(mon1.volatile.addedType).to.equal("bug");
+            expect(mon1.species).to.equal("bulbasaur");
             expect(mon1.ability).to.equal(mon2.ability);
+            expect(mon1.volatile.addedType).to.equal("bug");
+            expect(mon1.volatile.boosts.atk).to.equal(2);
+            expect(mon1.volatile.choiceLock).to.be.null;
             expect(mon1.volatile.overrideTraits.data)
                 .to.equal(mon2.traits.data);
             expect(mon1.volatile.overrideTraits.stats)

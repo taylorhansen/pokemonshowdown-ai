@@ -81,6 +81,8 @@ export interface ReadonlyVolatileStatus
     readonly bide: ReadonlyTempStatus;
     /** Charge move status. */
     readonly charge: ReadonlyTempStatus;
+    /** Choice item lock. */
+    readonly choiceLock: string | null;
     /** Defense curl move status. */
     readonly defenseCurl: boolean;
     /** Destiny Bond move status. */
@@ -277,6 +279,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public readonly bide = new TempStatus("bide", 1);
+
+    /** @override */
+    public choiceLock!: string | null;
 
     /** @override */
     public readonly charge = new TempStatus("charging", 2, /*silent*/true);
@@ -503,6 +508,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.attract = false;
         this.bide.end();
         this.charge.end();
+        this.choiceLock = null;
         this.defenseCurl = false;
         this.destinyBond = false;
         this.enableMoves();
@@ -661,6 +667,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.attract ? ["attracted"] : [],
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
+            this.choiceLock ? ["choice lock " + this.choiceLock] : [],
             this.defenseCurl ? ["defense curl"] : [],
             this.destinyBond ? ["destiny bond"] : [],
             this._disabled.ts.isActive ?

@@ -142,7 +142,16 @@ export class StateDriver
                 {
                     continue;
                 }
-                // TODO: choice item lock, torment, etc
+                const ability = mon.volatile.suppressAbility ? "" : mon.ability;
+                const ignoringItem = ability === "klutz" ||
+                    mon.volatile.embargo.isActive;
+                // locked into one move if choice item lock
+                if (!ignoringItem && mon.volatile.choiceLock &&
+                    moveName !== mon.volatile.choiceLock)
+                {
+                    continue;
+                }
+                // TODO: torment, etc
                 // TODO: is that all?
                 // if not, should be able to recover from choice rejection
 

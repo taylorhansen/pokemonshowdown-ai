@@ -173,6 +173,16 @@ export class MoveContext extends DriverContext
         this.move = revealedMove;
         --this.move.pp;
 
+        // activate choice item lock
+        // TODO: how to infer choice lock when the item is revealed?
+        // TODO: what if the item is removed after setting choice lock?
+        if (this.user.item.definiteValue &&
+            this.user.item.map[this.user.item.definiteValue].isChoice)
+        {
+            this.user.volatile.choiceLock = this.moveName;
+        }
+
+        // taunt assertion
         if (revealedMove.data.category === "status" &&
             this.user.volatile.taunt.isActive)
         {

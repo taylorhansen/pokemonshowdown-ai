@@ -43,6 +43,7 @@ describe("VolatileStatus", function()
             expect(volatile.attract).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
+            expect(volatile.choiceLock).to.be.null;
             expect(volatile.defenseCurl).to.be.false;
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabled.move).to.be.null;
@@ -128,6 +129,7 @@ describe("VolatileStatus", function()
             expect(volatile.attract).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
+            expect(volatile.choiceLock).to.be.null;
             expect(volatile.defenseCurl).to.be.false;
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabled.move).to.be.null;

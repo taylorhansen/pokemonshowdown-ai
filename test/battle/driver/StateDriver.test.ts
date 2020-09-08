@@ -48,7 +48,7 @@ describe("StateDriver", function()
 
     describe("#getChoices()", function()
     {
-        function init(moves: string[]): void
+        function init(moves?: string[], item?: string): void
         {
             driver.handle(
             {
@@ -56,8 +56,8 @@ describe("StateDriver", function()
                 team:
                 [
                     {
-                        ...initTeam.team[0],
-                        moves
+                        ...initTeam.team[0], ...(moves && {moves}),
+                        ...(item && {item})
                     },
                     ...initTeam.team.slice(1)
                 ]
@@ -138,6 +138,18 @@ describe("StateDriver", function()
                     type: "activateStatusEffect", monRef: "us",
                     effect: "encore", start: true
                 });
+                expect(driver.getChoices())
+                    .to.have.members(["move 3", "switch 2"]);
+            });
+
+            it("Should omit all other move choices if choice locked", function()
+            {
+                // reveal choice item
+                init(["splash", "tackle", "stoneedge"], "choicespecs");
+
+                // lock choice
+                driver.handle(
+                    {type: "useMove", monRef: "us", move: "stoneedge"});
                 expect(driver.getChoices())
                     .to.have.members(["move 3", "switch 2"]);
             });

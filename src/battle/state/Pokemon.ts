@@ -164,24 +164,16 @@ export class Pokemon implements ReadonlyPokemon
             // item was gained via the recycle move
             if (gained === "recycle")
             {
-                // since recycle moves lastItem to item, we have to make sure
-                //  that the gained item matches the current lastItem (or is a
-                //  possibility)
-                // this saves an extra PossibilityClass allocation
-                if (this._lastItem.isSet(item))
-                {
-                    this._item = this._lastItem;
-                    this._item.narrow(item);
-                }
-                // error: recycled item mismatches tracked lastItem
-                else
+                // recycled item must match tracked lastItem
+                if (!this._lastItem.isSet(item))
                 {
                     throw new Error(`Pokemon gained '${item}' via Recycle ` +
                         "but last item was '" +
                         (this._lastItem.definiteValue || "<unknown>") + "'");
                 }
-
-                // recycle also resets the lastItem field
+                this._item = this._lastItem;
+                this._item.narrow(item);
+                // recycle also resets lastItem
                 this._lastItem = new PossibilityClass(dex.items, "none");
             }
             // if it was just gained through normal needs we don't need to do
@@ -191,10 +183,12 @@ export class Pokemon implements ReadonlyPokemon
         // item is not gained but is just now being revealed
         else this._item.narrow(item);
 
-        // (de)activate unburden ability if the pokemon has it
         if (this._volatile)
         {
+            // (de)activate unburden ability if the pokemon has it
             this._volatile.unburden = item === "none" && !!gained;
+            // remove choice lock if we didn't gain a choice item
+            if (!dex.items[item].isChoice) this._volatile.choiceLock = null;
         }
     }
     /**
@@ -233,12 +227,16 @@ export class Pokemon implements ReadonlyPokemon
     {
         // mimicked moves have 5 pp and maxed maxpp
         this.moveset.replace("mimic", new Move(name, "max", 5));
+        // can't be choice locked if the move we're locked into is replaced
+        if (this._volatile) this._volatile.choiceLock = null;
     }
     /** Permanently replaces a move slot via Sketch. */
     public sketch(name: string): void
     {
         // sketched moves have no pp ups applied
         this.moveset.replace("sketch", new Move(name, "min"), /*base*/true);
+        // can't be choice locked if the move we're locked into is replaced
+        if (this._volatile) this._volatile.choiceLock = null;
     }
     /** @override */
     public readonly baseMoveset: Moveset;
@@ -477,6 +475,8 @@ export class Pokemon implements ReadonlyPokemon
     public transform(target: Pokemon): void
     {
         this.volatile.transformed = true;
+        // choice lock resets on transform
+        this.volatile.choiceLock = null;
 
         // copy boosts
         for (const stat of boostKeys)

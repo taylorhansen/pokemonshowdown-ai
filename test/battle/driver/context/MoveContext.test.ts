@@ -175,6 +175,15 @@ describe("MoveContext", function()
                 expect(volatile.lastMove).to.equal("struggle");
             });
 
+            it("Should set choice item lock", function()
+            {
+                const mon = initActive("us");
+                mon.item.narrow("choicescarf");
+                expect(mon.volatile.choiceLock).to.be.null;
+                initCtx({type: "useMove", monRef: "us", move: "pound"});
+                expect(mon.volatile.choiceLock).to.equal("pound");
+            });
+
             it("Should throw if using status move while Taunted", function()
             {
                 const mon = initActive("us");
