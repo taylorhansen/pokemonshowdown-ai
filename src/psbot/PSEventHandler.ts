@@ -164,9 +164,9 @@ export class PSEventHandler
         {
             const battleEvent = it.get();
             it = it.next();
-            const {result: driverEvents, remaining} =
+            const {result: battleEvents, remaining} =
                 this.handleEvent(battleEvent, it);
-            result.push(...driverEvents);
+            result.push(...battleEvents);
             it = remaining;
         }
 
@@ -560,6 +560,7 @@ export class PSEventHandler
                     remaining: it
                 };
             case "Endure": case "Mist": case "Protect": case "Safeguard":
+            case "Substitute":
                 return {
                     result:
                     [{
@@ -627,6 +628,11 @@ export class PSEventHandler
                         move: toIdName(event.otherArgs[0]),
                         amount: -parseInt(event.otherArgs[1], 10)
                     }],
+                    remaining: it
+                };
+            case "Substitute":
+                return {
+                    result: [{type: "block", monRef, effect: "substitute"}],
                     remaining: it
                 };
             case "trapped":
@@ -1287,39 +1293,36 @@ export class PSEventHandler
         let ev = event.volatile;
         if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);
 
-        let driverEvents: events.Any[] | undefined;
+        let battleEvents: events.Any[] | undefined;
         switch (ev)
         {
             case "Aqua Ring": effect = "aquaRing"; break;
             case "Attract": effect = "attract"; break;
             case "Bide": effect = "bide"; break;
             case "confusion":
-            {
-                const confEvent =
-                {
-                    type: "activateStatusEffect", monRef, start,
-                    effect: "confusion"
-                } as const;
+                battleEvents =
+                [{
+                    type: "activateStatusEffect", monRef, effect: "confusion",
+                    start
+                }];
                 if (event.fatigue)
                 {
-                    driverEvents = [{type: "fatigue", monRef}, confEvent];
+                    battleEvents.unshift({type: "fatigue", monRef});
                 }
-                else driverEvents = [confEvent];
                 break;
-            }
             case "Curse": effect = "curse"; break;
             case "Disable":
                 if (event.type === "-start")
                 {
                     // disable the given move
-                    driverEvents =
+                    battleEvents =
                     [{
                         type: "disableMove", monRef,
                         move: toIdName(event.otherArgs[0])
                     }];
                 }
                 // re-enable disabled moves
-                else driverEvents = [{type: "reenableMoves", monRef}];
+                else battleEvents = [{type: "reenableMoves", monRef}];
                 break;
             case "Embargo": effect = "embargo"; break;
             case "Encore": effect = "encore"; break;
@@ -1335,14 +1338,25 @@ export class PSEventHandler
             case "Nightmare": effect = "nightmare"; break;
             case "Power Trick": effect = "powerTrick"; break;
             case "Slow Start": effect = "slowStart"; break;
-            case "Substitute": effect = "substitute"; break;
+            case "Substitute":
+                battleEvents =
+                [{
+                    type: "activateStatusEffect", monRef, effect: "substitute",
+                    start
+                }];
+                if (!start)
+                {
+                    battleEvents.unshift(
+                        {type: "block", monRef, effect: "substitute"});
+                }
+                break;
             case "Taunt": effect = "taunt"; break;
             case "Torment": effect = "torment"; break;
             case "Uproar":
                 if (event.type === "-start" &&
                     event.otherArgs[0] === "[upkeep]")
                 {
-                    driverEvents =
+                    battleEvents =
                     [{
                         type: "updateStatusEffect", monRef, effect: "uproar"
                     }];
@@ -1357,7 +1371,7 @@ export class PSEventHandler
                 // istanbul ignore else: not useful to test
                 if (dex.isFutureMove(move))
                 {
-                    driverEvents = [{type: "futureMove", monRef, move, start}];
+                    battleEvents = [{type: "futureMove", monRef, move, start}];
                 }
                 else
                 {
@@ -1367,16 +1381,16 @@ export class PSEventHandler
             }
         }
 
-        if (!driverEvents)
+        if (!battleEvents)
         {
-            if (!effect) driverEvents = [];
+            if (!effect) battleEvents = [];
             else
             {
-                driverEvents =
+                battleEvents =
                     [{type: "activateStatusEffect", monRef, effect, start}];
             }
         }
-        return {result: driverEvents, remaining: it};
+        return {result: battleEvents, remaining: it};
     }
 
     // istanbul ignore next: trivial

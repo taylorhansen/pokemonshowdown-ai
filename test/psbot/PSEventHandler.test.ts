@@ -499,7 +499,20 @@ describe("PSEventHandler", function()
             describeTrivialStatus("Nightmare", "nightmare");
             describeTrivialStatus("Power Trick", "powerTrick");
             describeTrivialStatus("Slow Start", "slowStart");
-            describeTrivialStatus("Substitute", "substitute");
+            describe("Substitute", function()
+            {
+                testTrivialStatus("Substitute", "substitute", /*start*/true);
+
+                test("Should also emit block if end",
+                    [{type: "-end", id: us, volatile: "Substitute"}],
+                [
+                    {type: "block", monRef: "us", effect: "substitute"},
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "substitute", start: false
+                    }
+                ]);
+            });
             describeTrivialStatus("Taunt", "taunt");
             describeTrivialStatus("Torment", "torment");
 
@@ -575,6 +588,7 @@ describe("PSEventHandler", function()
                 testBlock("move: Protect", "protect");
                 testBlock("Safeguard", "safeguard");
                 testBlock("move: Safeguard", "safeguard");
+                testBlock("Substitute", "substitute");
             });
 
             describe("Charge", function()

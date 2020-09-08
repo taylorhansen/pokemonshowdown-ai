@@ -135,7 +135,8 @@ export interface Block extends EventBase<"block">
 }
 
 /** Types of statuses that can block other effects. */
-export type BlockEffect = "endure" | "mist" | "protect" | "safeguard";
+export type BlockEffect = "endure" | "mist" | "protect" | "safeguard" |
+    "substitute";
 
 /** Updates a stat boost. */
 export interface Boost extends EventBase<"boost">
