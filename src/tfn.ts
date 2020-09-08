@@ -1,7 +1,9 @@
+/** @file Imports `tfjs-node` or `tfjs-node-gpu` based on argument. */
 /** TF library import type for type checking. */
-export type TFN = typeof import("@tensorflow/tfjs-node-gpu") &
+export type TFN = typeof import("@tensorflow/tfjs-node-gpu") |
     typeof import("@tensorflow/tfjs-node");
 
+/** Previous importTfn() argument. */
 let importGpu: boolean | undefined;
 /**
  * Imports the appropriate tfjs-node library.
@@ -17,8 +19,6 @@ export function importTfn(gpu = false): TFN
         throw new Error("tfImport was previously called with " +
             `gpu=${importGpu} but is now being called with gpu=${gpu}`)
     }
-    /*return gpu ? import("@tensorflow/tfjs-node-gpu") :
-        import("@tensorflow/tfjs-node");*/
     return gpu ? require("@tensorflow/tfjs-node-gpu") :
         require("@tensorflow/tfjs-node");
 }
