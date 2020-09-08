@@ -361,12 +361,12 @@ describe("Pokemon", function()
                 mon.volatile.choiceLock = "test"; // also test choice lock
 
                 mon.sketch("tackle");
+                expect(mon.volatile.choiceLock).to.be.null;
                 // switch-out should not matter
                 switchOut(mon);
                 expect(mon.moveset.get("sketch")).to.be.null;
                 expect(mon.moveset.get("tackle")).to.not.be.null;
                 expect(mon.moveset.get("tackle")!.pp).to.equal(35);
-                expect(mon.volatile.choiceLock).to.be.null;
             });
         });
     });
