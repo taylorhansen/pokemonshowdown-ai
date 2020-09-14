@@ -1,23 +1,31 @@
 import { Logger } from "../../../Logger";
 import { BattleState } from "../../state/BattleState";
-import { Any } from "../BattleEvent";
+import * as events from "../BattleEvent";
 
 // tslint:disable: no-trailing-whitespace (force newlines in doc)
 /**
  * Specifies what to do after the current DriverContext handles an event.  
- * `"base"` - Let the default context also handle the same event.  
- * `"stop"` - Current DriverContext will proceed to the next event.  
- * `"expire"` - Expire the current DriverContext and let the next topmost
- * context handle the same event.
+ * `true` - Expire the current DriverContext and let the next topmost
+ * context handle the same event.  
+ * `<falsy>` - Current DriverContext will proceed to the next event.  
+ * `DriverContext` - Push a new context onto the stack, which will handle the
+ * next event.
  */
 // tslint:enable: no-trailing-whitespace
-export type ContextResult = "base" | "stop" | "expire";
+export type ContextResult = void | undefined | null | boolean | DriverContext;
+
+/**
+ * Ensures that the DriverContext implements handlers for each type of
+ * BattleEvent.
+ */
+type BattleEventHandler =
+    {[T in events.Type]: (event: events.Event<T>) => ContextResult};
 
 /**
  * Base class for sub-Driver contexts for parsing multiple BattleEvents
  * together.
  */
-export abstract class DriverContext
+export abstract class DriverContext implements BattleEventHandler
 {
     /**
      * Base DriverContext constructor.
@@ -34,7 +42,11 @@ export abstract class DriverContext
      * DriverContext chain (also works like `"stop"`).
      * @see ContextResult
      */
-    public abstract handle(event: Any): ContextResult | DriverContext;
+    public handle(event: events.Any): ContextResult
+    {
+        return (this[event.type] as (event: events.Any) => ContextResult)(
+            event);
+    }
 
     /**
      * Indicates that the current stream of BattleEvents has halted, awaiting a
@@ -48,4 +60,378 @@ export abstract class DriverContext
      * @virtual
      */
     public expire(): void {}
+
+    /**
+     * Reveals, changes, and/or activates a pokemon's ability.
+     * @virtual
+     */
+    public activateAbility(event: events.ActivateAbility): ContextResult
+    { return true; }
+
+    /**
+     * Activates a field-wide effect.
+     * @virtual
+     */
+    public activateFieldEffect(event: events.ActivateFieldEffect): ContextResult
+    { return true; }
+
+    /**
+     * Starts, sets, or ends a trivial status effect.
+     * @virtual
+     */
+    public activateStatusEffect(event: events.ActivateStatusEffect):
+        ContextResult { return true; }
+
+    /**
+     * Activates a team-wide effect.
+     * @virtual
+     */
+    public activateTeamEffect(event: events.ActivateTeamEffect): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that an effect has been blocked by a status.
+     * @virtual
+     */
+    public block(event: events.Block): ContextResult { return true; }
+
+    /**
+     * Updates a stat boost.
+     * @virtual
+     */
+    public boost(event: events.Boost): ContextResult { return true; }
+
+    /**
+     * Temporarily changes the pokemon's types. Also resets third type.
+     * @virtual
+     */
+    public changeType(event: events.ChangeType): ContextResult { return true; }
+
+    /**
+     * Clears all temporary stat boosts from the field.
+     * @virtual
+     */
+    public clearAllBoosts(event: events.ClearAllBoosts): ContextResult
+    { return true; }
+
+    /**
+     * Clears temporary negative stat boosts from the pokemon.
+     * @virtual
+     */
+    public clearNegativeBoosts(event: events.ClearNegativeBoosts): ContextResult
+    { return true; }
+
+    /**
+     * Clears temporary positive stat boosts from the pokemon.
+     * @virtual
+     */
+    public clearPositiveBoosts(event: events.ClearPositiveBoosts): ContextResult
+    { return true; }
+
+    /**
+     * Clears self-switch flags for both teams.
+     * @virtual
+     */
+    public clearSelfSwitch(event: events.ClearSelfSwitch): ContextResult
+    { return true; }
+
+    /**
+     * Copies temporary stat boosts from one pokemon to the other.
+     * @virtual
+     */
+    public copyBoosts(event: events.CopyBoosts): ContextResult { return true; }
+
+    /**
+     * Explicitly updates status counters.
+     * @virtual
+     */
+    public countStatusEffect(event: events.CountStatusEffect): ContextResult
+    { return true; }
+
+    /**
+     * Indicates a critical hit of a move on a pokemon.
+     * @virtual
+     */
+    public crit(event: events.Crit): ContextResult { return true; }
+
+    /**
+     * Cures all pokemon of a team of any major status conditions.
+     * @virtual
+     */
+    public cureTeam(event: events.CureTeam): ContextResult { return true; }
+
+    /**
+     * Temporarily disables the pokemon's move.
+     * @virtual
+     */
+    public disableMove(event: events.DisableMove): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that the pokemon failed at doing something.
+     * @virtual
+     */
+    public fail(event: events.Fail): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon fainted.
+     * @virtual
+     */
+    public faint(event: events.Faint): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon's locked move ended in fatigue.
+     * @virtual
+     */
+    public fatigue(event: events.Fatigue): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon's stalling move was broken by Feint.
+     * @virtual
+     */
+    public feint(event: events.Feint): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon changed its form.
+     * @virtual
+     */
+    public formChange(event: events.FormChange): ContextResult { return true; }
+
+    /**
+     * Prepares or releases a future move.
+     * @virtual
+     */
+    public futureMove(event: events.FutureMove): ContextResult { return true; }
+
+    /**
+     * Indicates that the game has ended.
+     * @virtual
+     */
+    public gameOver(event: events.GameOver): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon was hit by a move multiple times.
+     * @virtual
+     */
+    public hitCount(event: events.HitCount): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon was immune to an effect.
+     * @virtual
+     */
+    public immune(event: events.Immune): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon spent its turn being inactive.
+     * @virtual
+     */
+    public inactive(event: events.Inactive): ContextResult { return true; }
+
+    /**
+     * Initializes the opponent's team size.
+     * @virtual
+     */
+    public initOtherTeamSize(event: events.InitOtherTeamSize): ContextResult
+    { return true; }
+
+    /**
+     * Handles an InitTeam event.
+     * @virtual
+     */
+    public initTeam(event: events.InitTeam): ContextResult { return true; }
+
+    /**
+     * Inverts all of the pokemon's temporary stat boosts.
+     * @virtual
+     */
+    public invertBoosts(event: events.InvertBoosts): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that the pokemon is taking aim due to Lock-On.
+     * @virtual
+     */
+    public lockOn(event: events.LockOn): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon is Mimicking a move.
+     * @virtual
+     */
+    public mimic(event: events.Mimic): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon avoided a move.
+     * @virtual
+     */
+    public miss(event: events.Miss): ContextResult { return true; }
+
+    /**
+     * Reveals a move and modifies its PP value.
+     * @virtual
+     */
+    public modifyPP(event: events.ModifyPP): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon must recharge from the previous action.
+     * @virtual
+     */
+    public mustRecharge(event: events.MustRecharge): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that the pokemon's move couldn't target anything.
+     * @virtual
+     */
+    public noTarget(event: events.NoTarget): ContextResult { return true; }
+
+    /**
+     * Indicates that the turn is about to end.
+     * @virtual
+     */
+    public postTurn(event: events.PostTurn): ContextResult { return true; }
+
+    /**
+     * Prepares a two-turn move.
+     * @virtual
+     */
+    public prepareMove(event: events.PrepareMove): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that the turn is about to begin.
+     * @virtual
+     */
+    public preTurn(event: events.PreTurn): ContextResult { return true; }
+
+    /**
+     * Re-enables the pokemon's disabled moves.
+     * @virtual
+     */
+    public reenableMoves(event: events.ReenableMoves): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that the pokemon is being trapped by an unknown ability and
+     * tries to infer it.
+     * @virtual
+     */
+    public rejectSwitchTrapped(event: events.RejectSwitchTrapped): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that an item was just removed from the pokemon.
+     * @virtual
+     */
+    public removeItem(event: events.RemoveItem): ContextResult { return true; }
+
+    /**
+     * Resets the weather back to none.
+     * @virtual
+     */
+    public resetWeather(event: events.ResetWeather): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that the pokemon was hit by a move it resists.
+     * @virtual
+     */
+    public resisted(event: events.Resisted): ContextResult { return true; }
+
+    /**
+     * Restores the PP of each of the pokemon's moves.
+     * @virtual
+     */
+    public restoreMoves(event: events.RestoreMoves): ContextResult
+    { return true; }
+
+    /**
+     * Reveals that the pokemon is now holding an item.
+     * @virtual
+     */
+    public revealItem(event: events.RevealItem): ContextResult { return true; }
+
+    /**
+     * Reveals that the pokemon knows a move.
+     * @virtual
+     */
+    public revealMove(event: events.RevealMove): ContextResult { return true; }
+
+    /**
+     * Sets the pokemon's temporary third type.
+     * @virtual
+     */
+    public setThirdType(event: events.SetThirdType): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that the pokemon is Sketching a move.
+     * @virtual
+     */
+    public sketch(event: events.Sketch): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon was hit by a move it was weak to.
+     * @virtual
+     */
+    public superEffective(event: events.SuperEffective): ContextResult
+    { return true; }
+
+    /**
+     * Swaps the given temporary stat boosts of two pokemon.
+     * @virtual
+     */
+    public swapBoosts(event: events.SwapBoosts): ContextResult { return true; }
+
+    /**
+     * Indicates that a pokemon has switched in.
+     * @virtual
+     */
+    public switchIn(event: events.SwitchIn): ContextResult { return true; }
+
+    /**
+     * Indicates that a pokemon took damage and its HP changed.
+     * @virtual
+     */
+    public takeDamage(event: events.TakeDamage): ContextResult { return true; }
+
+    /**
+     * Indicates that a pokemon has transformed into its target.
+     * @virtual
+     */
+    public transform(event: events.Transform): ContextResult { return true; }
+
+    /**
+     * Indicates that the pokemon is being trapped by another.
+     * @virtual
+     */
+    public trap(event: events.Trap): ContextResult { return true; }
+
+    /**
+     * Explicitly indicates that a field effect is still going.
+     * @virtual
+     */
+    public updateFieldEffect(event: events.UpdateFieldEffect): ContextResult
+    { return true; }
+
+    /**
+     * Reveals moves and pp values.
+     * @virtual
+     */
+    public updateMoves(event: events.UpdateMoves): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that a status effect is still going. Usually this is implied at
+     * the end of the turn unless the game usually sends an explicit message,
+     * which this BattleEvent covers.
+     * @virtual
+     */
+    public updateStatusEffect(event: events.UpdateStatusEffect): ContextResult
+    { return true; }
+
+    /**
+     * Indicates that the pokemon used a move.
+     * @virtual
+     */
+    public useMove(event: events.UseMove): ContextResult { return true; }
 }

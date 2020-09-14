@@ -1,8 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { DriverSwitchOptions } from "../../../../src/battle/driver/BattleEvent";
-import { SwitchContext } from
-    "../../../../src/battle/driver/context/SwitchContext";
+import { SwitchContext } from "../../../../src/battle/driver/context/context";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Side } from "../../../../src/battle/state/Side";
 import { Logger } from "../../../../src/Logger";
@@ -47,7 +46,7 @@ describe("SwitchContext", function()
         {
             initTeam("us", 1);
             expect(initCtx("us", smeargle).handle({type: "clearSelfSwitch"}))
-                .to.equal("expire");
+                .to.not.be.ok;
         });
     });
 });

@@ -1,7 +1,7 @@
 import { Logger } from "../../../Logger";
 import { BattleState } from "../../state/BattleState";
 import * as events from "../BattleEvent";
-import { ContextResult, DriverContext } from "./DriverContext";
+import { ContextResult, DriverContext } from "./context";
 
 /** Handles events related to a switch-in. */
 export class SwitchContext extends DriverContext
@@ -18,10 +18,7 @@ export class SwitchContext extends DriverContext
         this.state.teams[event.monRef].switchIn(event);
     }
 
+    // TODO: handle switch effects
     /** @override */
-    public handle(event: events.Any): ContextResult | DriverContext
-    {
-        // TODO
-        return "expire";
-    }
+    public handle(event: events.Any): ContextResult {}
 }

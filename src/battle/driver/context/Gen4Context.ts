@@ -3,23 +3,14 @@ import * as dexutil from "../../dex/dex-util";
 import { BattleState } from "../../state/BattleState";
 import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
-import { AbilityContext } from "./AbilityContext";
-import { ContextResult, DriverContext } from "./DriverContext";
-import { MoveContext } from "./MoveContext";
-import { SwitchContext } from "./SwitchContext";
+import { AbilityContext, ContextResult, DriverContext, MoveContext,
+    SwitchContext } from "./context";
 
-/**
- * Ensures that the BaseContext implements handlers for each type of
- * BattleEvent.
- */
-type BattleEventHandler =
-    {[T in events.Type]: (event: events.Event<T>) => void | DriverContext};
-
-/** Handles events normally. */
-export class BaseContext extends DriverContext implements BattleEventHandler
+/** Handles events in a gen-4 context. */
+export class Gen4Context extends DriverContext
 {
     /**
-     * Constructs a base context for handling BattleEvents.
+     * Creates a Gen4Context.
      * @param state State object to mutate while handling events.
      * @param logger Logger object.
      */
@@ -29,42 +20,27 @@ export class BaseContext extends DriverContext implements BattleEventHandler
     }
 
     /** @override */
-    public handle(event: events.Any): ContextResult | DriverContext
-    {
-        const result =
-            (this[event.type] as
-                (event: events.Any) => void | DriverContext)(event);
-        if (result) return result;
-        return "stop";
-    }
-
-    // istanbul ignore next: should never be called
-    /** @override */
-    public expire(): void
-    {
-        throw new Error("BaseContext should never expire");
-    }
-
-    /** Reveals, changes, and/or activates a pokemon's ability. */
-    public activateAbility(event: events.ActivateAbility): AbilityContext
+    public activateAbility(event: events.ActivateAbility): ContextResult
     {
         return new AbilityContext(this.state, event,
             this.logger.addPrefix(`Ability(${event.monRef}, ${event.ability}` +
                 "): "));
     }
 
-    /** Activates a field-wide effect. */
-    public activateFieldEffect(event: events.ActivateFieldEffect): void
+    /** @override */
+    public activateFieldEffect(event: events.ActivateFieldEffect): ContextResult
     {
         if (dexutil.isWeatherType(event.effect))
         {
             this.state.status.weather.start(null, event.effect);
         }
         else this.state.status[event.effect][event.start ? "start" : "end"]();
+        return super.activateFieldEffect(event);
     }
 
-    /** Starts, sets, or ends a trivial status effect. */
-    public activateStatusEffect(event: events.ActivateStatusEffect): void
+    /** @override */
+    public activateStatusEffect(event: events.ActivateStatusEffect):
+        ContextResult
     {
         const mon = this.state.teams[event.monRef].active;
         switch (event.effect)
@@ -115,10 +91,11 @@ export class BaseContext extends DriverContext implements BattleEventHandler
                         `start=${event.start}`);
                 }
         }
+        return super.activateStatusEffect(event);
     }
 
-    /** Activates a team-wide effect. */
-    public activateTeamEffect(event: events.ActivateTeamEffect): void
+    /** @override */
+    public activateTeamEffect(event: events.ActivateTeamEffect): ContextResult
     {
         const ts = this.state.teams[event.teamRef].status;
         switch (event.effect)
@@ -140,29 +117,29 @@ export class BaseContext extends DriverContext implements BattleEventHandler
                 else ts[event.effect] = 0;
                 break;
         }
+        return super.activateTeamEffect(event);
     }
 
-    /** Indicates that an effect has been blocked by a status. */
-    public block(event: events.Block): void {}
-
-    /** Updates a stat boost. */
-    public boost(event: events.Boost): void
+    /** @override */
+    public boost(event: events.Boost): ContextResult
     {
         const {boosts} = this.state.teams[event.monRef].active.volatile;
         if (event.set) boosts[event.stat] = event.amount;
         else boosts[event.stat] += event.amount;
+        return super.boost(event);
     }
 
-    /** Temporarily changes the pokemon's types. Also resets third type. */
-    public changeType(event: events.ChangeType): void
+    /** @override */
+    public changeType(event: events.ChangeType): ContextResult
     {
         const mon = this.state.teams[event.monRef].active;
         mon.volatile.overrideTraits.types = event.newTypes;
         mon.volatile.addedType = "???";
+        return super.changeType(event);
     }
 
-    /** Clears all temporary stat boosts from the field. */
-    public clearAllBoosts(event: events.ClearAllBoosts): void
+    /** @override */
+    public clearAllBoosts(event: events.ClearAllBoosts): ContextResult
     {
         for (const side of Object.keys(this.state.teams) as Side[])
         {
@@ -171,90 +148,93 @@ export class BaseContext extends DriverContext implements BattleEventHandler
                 this.state.teams[side].active.volatile.boosts[stat] = 0;
             }
         }
+        return super.clearAllBoosts(event);
     }
 
-    /** Clears temporary negative stat boosts from the pokemon. */
-    public clearNegativeBoosts(event: events.ClearNegativeBoosts): void
+    /** @override */
+    public clearNegativeBoosts(event: events.ClearNegativeBoosts): ContextResult
     {
         const boosts = this.state.teams[event.monRef].active.volatile.boosts;
         for (const stat of dexutil.boostKeys)
         {
             if (boosts[stat] < 0) boosts[stat] = 0;
         }
+        return super.clearNegativeBoosts(event);
     }
 
-    /** Clears temporary positive stat boosts from the pokemon. */
-    public clearPositiveBoosts(event: events.ClearPositiveBoosts): void
+    /** @override */
+    public clearPositiveBoosts(event: events.ClearPositiveBoosts): ContextResult
     {
         const boosts = this.state.teams[event.monRef].active.volatile.boosts;
         for (const stat of dexutil.boostKeys)
         {
             if (boosts[stat] > 0) boosts[stat] = 0;
         }
+        return super.clearPositiveBoosts(event);
     }
 
-    /** Clears self-switch flags for both teams. */
-    public clearSelfSwitch(event: events.ClearSelfSwitch): void
+    /** @override */
+    public clearSelfSwitch(event: events.ClearSelfSwitch): ContextResult
     {
         this.state.teams.us.status.selfSwitch = null;
         this.state.teams.them.status.selfSwitch = null;
+        return super.clearSelfSwitch(event);
     }
 
-    /**
-     * Copies temporary stat boosts from one pokemon to the other.
-     */
-    public copyBoosts(event: events.CopyBoosts): void
+    /** @override */
+    public copyBoosts(event: events.CopyBoosts): ContextResult
     {
         const from = this.state.teams[event.from].active.volatile.boosts;
         const to = this.state.teams[event.to].active.volatile.boosts;
         for (const stat of dexutil.boostKeys) to[stat] = from[stat];
+        return super.copyBoosts(event);
     }
 
-    /** Explicitly updates status counters. */
-    public countStatusEffect(event: events.CountStatusEffect): void
+    /** @override */
+    public countStatusEffect(event: events.CountStatusEffect): ContextResult
     {
         this.state.teams[event.monRef].active.volatile[event.effect] =
             event.amount;
+        return super.countStatusEffect(event);
     }
 
-    /** Indicates a critical hit of a move on a pokemon. */
-    public crit(event: events.Crit): void {}
-
-    /** Cures all pokemon of a team of any major status conditions. */
-    public cureTeam(event: events.CureTeam): void
+    /** @override */
+    public cureTeam(event: events.CureTeam): ContextResult
     {
         this.state.teams[event.teamRef].cure();
+        return super.cureTeam(event);
     }
 
-    /** Temporarily disables the pokemon's move. */
-    public disableMove(event: events.DisableMove): void
+    /** @override */
+    public disableMove(event: events.DisableMove): ContextResult
     {
         this.state.teams[event.monRef].active.volatile.disableMove(event.move);
+        return super.disableMove(event);
     }
 
-    /** Indicates that the pokemon failed at doing something. */
-    public fail(event: events.Fail): void {}
-
-    /** Indicates that the pokemon fainted. */
-    public faint(event: events.Faint): void
+    /** @override */
+    public faint(event: events.Faint): ContextResult
     {
         this.state.teams[event.monRef].active.faint();
+        return super.faint(event);
     }
 
-    /** Indicates that the pokemon's locked move ended in fatigue. */
-    public fatigue(event: events.Fatigue): void
+    /** @override */
+    public fatigue(event: events.Fatigue): ContextResult
     {
         this.state.teams[event.monRef].active.volatile.lockedMove.reset();
+        return super.fatigue(event);
     }
 
-    /** Indicates that the pokemon's stalling move was broken by Feint. */
-    public feint(event: events.Feint): void
+    /** @override */
+    public feint(event: events.Feint): ContextResult
     {
         this.state.teams[event.monRef].active.volatile.feint();
+        return super.feint(event);
     }
 
-    /** Indicates that the pokemon changed its form. */
-    public formChange(event: events.FormChange): void
+    /** @override */
+    public formChange(event: events.FormChange): ContextResult
     {
         const mon = this.state.teams[event.monRef].active;
         mon.formChange(event.species, event.perm);
@@ -265,10 +245,11 @@ export class BaseContext extends DriverContext implements BattleEventHandler
         // TODO: should gender also be in the traits object?
         mon.gender = event.gender;
         mon.hp.set(event.hp, event.hpMax);
+        return super.formChange(event);
     }
 
-    /** Prepares or releases a future move. */
-    public futureMove(event: events.FutureMove): void
+    /** @override */
+    public futureMove(event: events.FutureMove): ContextResult
     {
         if (event.start)
         {
@@ -283,19 +264,11 @@ export class BaseContext extends DriverContext implements BattleEventHandler
             this.state.teams[otherSide(event.monRef)].status
                 .futureMoves[event.move].end();
         }
+        return super.futureMove(event);
     }
 
-    /** Indicates that the game has ended. */
-    public gameOver(event: events.GameOver): void {}
-
-    /** Indicates that the pokemon was hit by a move multiple times. */
-    public hitCount(event: events.HitCount): void {}
-
-    /** Indicates that the pokemon was immune to an effect. */
-    public immune(event: events.Immune): void {}
-
-    /** Indicates that the pokemon spent its turn being inactive. */
-    public inactive(event: events.Inactive): void
+    /** @override */
+    public inactive(event: events.Inactive): ContextResult
     {
         const mon = this.state.teams[event.monRef].active;
         if (event.move) mon.moveset.reveal(event.move);
@@ -322,16 +295,18 @@ export class BaseContext extends DriverContext implements BattleEventHandler
 
         // consumed an action this turn
         mon.inactive();
+        return super.inactive(event);
     }
 
-    /** Initializes the opponent's team size. */
-    public initOtherTeamSize(event: events.InitOtherTeamSize): void
+    /** @override */
+    public initOtherTeamSize(event: events.InitOtherTeamSize): ContextResult
     {
         this.state.teams.them.size = event.size;
+        return super.initOtherTeamSize(event);
     }
 
-    /** Handles an InitTeam event. */
-    public initTeam(event: events.InitTeam): void
+    /** @override */
+    public initTeam(event: events.InitTeam): ContextResult
     {
         const team = this.state.teams.us;
         team.size = event.team.length;
@@ -356,137 +331,140 @@ export class BaseContext extends DriverContext implements BattleEventHandler
             if (data.hpType) mon.hpType.narrow(data.hpType);
             if (data.happiness) mon.happiness = data.happiness;
         }
+        return super.initTeam(event);
     }
 
-    /** Inverts all of the pokemon's temporary stat boosts. */
-    public invertBoosts(event: events.InvertBoosts): void
+    /** @override */
+    public invertBoosts(event: events.InvertBoosts): ContextResult
     {
         const boosts = this.state.teams[event.monRef].active.volatile.boosts;
         for (const stat of dexutil.boostKeys) boosts[stat] = -boosts[stat];
+        return super.invertBoosts(event);
     }
 
-    /** Indicates that the pokemon is taking aim due to Lock-On. */
-    public lockOn(event: events.LockOn): void
+    /** @override */
+    public lockOn(event: events.LockOn): ContextResult
     {
         this.state.teams[event.monRef].active.volatile.lockOn(
             this.state.teams[event.target].active.volatile);
+        return super.lockOn(event);
     }
 
-    /** Indicates that the pokemon is Mimicking a move. */
-    public mimic(event: events.Mimic): void
+    /** @override */
+    public mimic(event: events.Mimic): ContextResult
     {
         this.state.teams[event.monRef].active.mimic(event.move);
+        return super.mimic(event);
     }
 
-    /** Indicates that the pokemon avoided a move. */
-    public miss(event: events.Miss): void {}
-
-    /** Reveals a move and modifies its PP value. */
-    public modifyPP(event: events.ModifyPP): void
+    /** @override */
+    public modifyPP(event: events.ModifyPP): ContextResult
     {
         const move = this.state.teams[event.monRef].active.moveset.reveal(
             event.move);
         if (event.amount === "deplete") move.pp = 0;
         else move.pp += event.amount;
+        return super.modifyPP(event);
     }
 
-    /** Indicates that the pokemon must recharge from the previous action. */
-    public mustRecharge(event: events.MustRecharge): void
+    /** @override */
+    public mustRecharge(event: events.MustRecharge): ContextResult
     {
         // TODO: imply this in useMove event
         this.state.teams[event.monRef].active.volatile.mustRecharge = true;
+        return super.mustRecharge(event);
     }
 
-    /** Indicates that the pokemon's move couldn't target anything. */
-    public noTarget(event: events.NoTarget): void {}
-
-    /** Indicates that the turn is about to end. */
-    public postTurn(event: events.PostTurn): void
+    /** @override */
+    public postTurn(event: events.PostTurn): ContextResult
     {
         this.state.postTurn();
+        return super.postTurn(event);
     }
 
-    /** Prepares a two-turn move. */
-    public prepareMove(event: events.PrepareMove): void
+    /** @override */
+    public prepareMove(event: events.PrepareMove): ContextResult
     {
         this.state.teams[event.monRef].active.volatile.twoTurn
             .start(event.move);
+        return super.prepareMove(event);
     }
 
-    /** Indicates that the turn is about to begin. */
-    public preTurn(event: events.PreTurn): void
+    /** @override */
+    public preTurn(event: events.PreTurn): ContextResult
     {
         this.state.preTurn();
+        return super.preTurn(event);
     }
 
-    /** Re-enables the pokemon's disabled moves. */
-    public reenableMoves(event: events.ReenableMoves): void
+    /** @override */
+    public reenableMoves(event: events.ReenableMoves): ContextResult
     {
         this.state.teams[event.monRef].active.volatile.enableMoves();
+        return super.reenableMoves(event);
     }
 
-    /**
-     * Indicates that the pokemon is being trapped by an unknown ability and
-     * tries to infer it.
-     */
-    public rejectSwitchTrapped(event: events.RejectSwitchTrapped): void
+    /** @override */
+    public rejectSwitchTrapped(event: events.RejectSwitchTrapped): ContextResult
     {
         this.state.teams[event.monRef].active.trapped(
             this.state.teams[event.by].active);
+        return super.rejectSwitchTrapped(event);
     }
 
-    /** Indicates that an item was just removed from the pokemon. */
-    public removeItem(event: events.RemoveItem): void
+    /** @override */
+    public removeItem(event: events.RemoveItem): ContextResult
     {
         this.state.teams[event.monRef].active.removeItem(event.consumed);
+        return super.removeItem(event);
     }
 
-    /** Resets the weather back to none. */
-    public resetWeather(event: events.ResetWeather): void
+    /** @override */
+    public resetWeather(event: events.ResetWeather): ContextResult
     {
         this.state.status.weather.reset();
+        return super.resetWeather(event);
     }
 
-    /** Indicates that the pokemon was hit by a move it resists. */
-    public resisted(event: events.Resisted): void {}
-
-    /** Restores the PP of each of the pokemon's moves. */
-    public restoreMoves(event: events.RestoreMoves): void
+    /** @override */
+    public restoreMoves(event: events.RestoreMoves): ContextResult
     {
         const moveset = this.state.teams[event.monRef].active.moveset;
         for (const move of moveset.moves.values()) move.pp = move.maxpp;
+        return super.restoreMoves(event);
     }
 
-    /** Reveals that the pokemon is now holding an item. */
-    public revealItem(event: events.RevealItem): void
+    /** @override */
+    public revealItem(event: events.RevealItem): ContextResult
     {
         this.state.teams[event.monRef].active.setItem(event.item, event.gained);
+        return super.revealItem(event);
     }
 
-    /** Reveals that the pokemon knows a move. */
-    public revealMove(event: events.RevealMove): void
+    /** @override */
+    public revealMove(event: events.RevealMove): ContextResult
     {
         this.state.teams[event.monRef].active.moveset.reveal(event.move);
+        return super.revealMove(event);
     }
 
-    /** Sets the pokemon's temporary third type. */
-    public setThirdType(event: events.SetThirdType): void
+    /** @override */
+    public setThirdType(event: events.SetThirdType): ContextResult
     {
         this.state.teams[event.monRef].active.volatile.addedType =
             event.thirdType;
+        return super.setThirdType(event);
     }
 
-    /** Indicates that the pokemon is Sketching a move. */
-    public sketch(event: events.Sketch): void
+    /** @override */
+    public sketch(event: events.Sketch): ContextResult
     {
         this.state.teams[event.monRef].active.sketch(event.move);
+        return super.sketch(event);
     }
 
-    /** Indicates that the pokemon was hit by a move it was weak to. */
-    public superEffective(event: events.SuperEffective): void {}
-
-    /** Swaps the given temporary stat boosts of two pokemon. */
-    public swapBoosts(event: events.SwapBoosts): void
+    /** @override */
+    public swapBoosts(event: events.SwapBoosts): ContextResult
     {
         const v1 = this.state.teams[event.monRef1].active.volatile.boosts;
         const v2 = this.state.teams[event.monRef2].active.volatile.boosts;
@@ -494,52 +472,57 @@ export class BaseContext extends DriverContext implements BattleEventHandler
         {
             [v1[stat], v2[stat]] = [v2[stat], v1[stat]];
         }
+        return super.swapBoosts(event);
     }
 
-    /** Indicates that a pokemon has switched in. */
-    public switchIn(event: events.SwitchIn): SwitchContext
+    /** @override */
+    public switchIn(event: events.SwitchIn): ContextResult
     {
         return new SwitchContext(this.state, event,
             this.logger.addPrefix(`Switch(${event.monRef}, ${event.species})` +
                 ": "));
     }
 
-    /** Indicates that a pokemon took damage and its HP changed. */
-    public takeDamage(event: events.TakeDamage): void
+    /** @override */
+    public takeDamage(event: events.TakeDamage): ContextResult
     {
         const mon = this.state.teams[event.monRef].active;
         mon.hp.set(event.newHP[0], event.newHP[1]);
+        return super.takeDamage(event);
     }
 
-    /** Indicates that a pokemon has transformed into its target. */
-    public transform(event: events.Transform): void
+    /** @override */
+    public transform(event: events.Transform): ContextResult
     {
         this.state.teams[event.source].active.transform(
             this.state.teams[event.target].active);
+        return super.transform(event);
     }
 
-    /** Indicates that the pokemon is being trapped by another. */
-    public trap(event: events.Trap): void
+    /** @override */
+    public trap(event: events.Trap): ContextResult
     {
         this.state.teams[event.by].active.volatile.trap(
             this.state.teams[event.target].active.volatile);
+        return super.trap(event);
     }
 
-    /** Explicitly indicates that a field effect is still going. */
-    public updateFieldEffect(event: events.UpdateFieldEffect): void
+    /** @override */
+    public updateFieldEffect(event: events.UpdateFieldEffect): ContextResult
     {
         // currently only applies to weather
         const weather = this.state.status.weather;
-        if (weather.type === event.effect) weather.tick();
-        else
+        if (weather.type !== event.effect)
         {
             throw new Error(`Weather is '${weather.type}' but ticked ` +
                 `weather is '${event.effect}'`);
         }
+        weather.tick();
+        return super.updateFieldEffect(event);
     }
 
-    /** Reveals moves and pp values. */
-    public updateMoves(event: events.UpdateMoves): void
+    /** @override */
+    public updateMoves(event: events.UpdateMoves): ContextResult
     {
         const mon = this.state.teams[event.monRef].active;
 
@@ -549,20 +532,18 @@ export class BaseContext extends DriverContext implements BattleEventHandler
             const move = mon.moveset.reveal(data.id, data.maxpp);
             if (data.pp != null) move.pp = data.pp;
         }
+        return super.updateMoves(event);
     }
 
-    /**
-     * Indicates that a status effect is still going. Usually this is implied at
-     * the end of the turn unless the game usually sends an explicit message,
-     * which this BattleEvent covers.
-     */
-    public updateStatusEffect(event: events.UpdateStatusEffect): void
+    /** @override */
+    public updateStatusEffect(event: events.UpdateStatusEffect): ContextResult
     {
         this.state.teams[event.monRef].active.volatile[event.effect].tick();
+        return super.updateStatusEffect(event);
     }
 
-    /** Indicates that the pokemon used a move. */
-    public useMove(event: events.UseMove): MoveContext
+    /** @override */
+    public useMove(event: events.UseMove): ContextResult
     {
         return new MoveContext(this.state, event,
             this.logger.addPrefix(`Move(${event.monRef}, ${event.move}): `));

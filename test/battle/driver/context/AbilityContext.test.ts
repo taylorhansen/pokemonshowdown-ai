@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { AbilityContext } from
-    "../../../../src/battle/driver/context/AbilityContext";
+import { AbilityContext } from "../../../../src/battle/driver/context/context";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
 import { Side } from "../../../../src/battle/state/Side";
@@ -57,7 +56,7 @@ describe("AbilityContext", function()
                                 type: "activateFieldEffect",
                                 effect: "SunnyDay", start: true
                             }))
-                        .to.equal("stop");
+                        .to.be.true;
                     expect(state.status.weather.type).to.equal("SunnyDay");
                     expect(state.status.weather.duration).to.be.null;
                 });
@@ -71,7 +70,7 @@ describe("AbilityContext", function()
                                 type: "activateFieldEffect",
                                 effect: "SunnyDay", start: true
                             }))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                     expect(state.status.weather.type).to.equal("none");
                 });
             });

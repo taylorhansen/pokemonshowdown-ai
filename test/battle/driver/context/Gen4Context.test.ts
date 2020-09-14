@@ -2,14 +2,8 @@ import { expect } from "chai";
 import "mocha";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
 import * as events from "../../../../src/battle/driver/BattleEvent";
-import { AbilityContext } from
-    "../../../../src/battle/driver/context/AbilityContext";
-import { BaseContext } from "../../../../src/battle/driver/context/BaseContext";
-import { DriverContext } from
-    "../../../../src/battle/driver/context/DriverContext";
-import { MoveContext } from "../../../../src/battle/driver/context/MoveContext";
-import { SwitchContext } from
-    "../../../../src/battle/driver/context/SwitchContext";
+import { AbilityContext, DriverContext, Gen4Context, MoveContext,
+    SwitchContext } from "../../../../src/battle/driver/context/context";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
 import { Side } from "../../../../src/battle/state/Side";
@@ -20,19 +14,19 @@ import { ReadonlyVolatileStatus } from
 import { Logger } from "../../../../src/Logger";
 import { ditto, smeargle } from "../helpers";
 
-describe("BaseContext", function()
+describe("Gen4Context", function()
 {
     let state: BattleState;
-    let ctx: BaseContext;
+    let ctx: Gen4Context;
 
     beforeEach("Initialize BattleState", function()
     {
         state = new BattleState();
     });
 
-    beforeEach("Initialize BaseContext", function()
+    beforeEach("Initialize Gen4Context", function()
     {
-        ctx = new BaseContext(state, Logger.null);
+        ctx = new Gen4Context(state, Logger.null);
     });
 
     function initTeam(teamRef: Side,
@@ -52,7 +46,7 @@ describe("BaseContext", function()
         instance?: new(...args: any[]) => DriverContext): void
     {
         if (instance) expect(ctx.handle(event)).to.be.an.instanceOf(instance);
-        else expect(ctx.handle(event)).to.equal("stop");
+        else expect(ctx.handle(event)).to.not.be.an.instanceOf(DriverContext);
     }
 
     describe("#handle()", function()
@@ -1355,15 +1349,6 @@ describe("BaseContext", function()
                 expect(move).to.not.be.null;
                 expect(move!.pp).to.equal(55);
             });
-        });
-    });
-
-    describe("#expire()", function()
-    {
-        it("Should throw", function()
-        {
-            expect(() => ctx.expire()).to.throw(Error,
-                "BaseContext should never expire");
         });
     });
 });

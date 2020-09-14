@@ -2,8 +2,7 @@ import { Logger } from "../../Logger";
 import { Choice } from "../agent/Choice";
 import { BattleState, ReadonlyBattleState } from "../state/BattleState";
 import { Any } from "./BattleEvent";
-import { BaseContext } from "./context/BaseContext";
-import { DriverContext } from "./context/DriverContext";
+import { DriverContext, Gen4Context } from "./context/context";
 
 /** Handles all state mutations and inferences. */
 export class StateDriver
@@ -12,12 +11,12 @@ export class StateDriver
     public get state(): ReadonlyBattleState { return this._state; }
     protected readonly _state = new BattleState();
 
+    // TODO: switch base ctx class based on format
     /** DriverContext stack for handling events. */
-    private readonly contexts: DriverContext[] = [];
-    // TODO: switch BaseContext subclasses based on format
-    /** Default context for handling events. */
-    private readonly baseContext =
-        new BaseContext(this._state, this.logger.addPrefix("Context(gen4): "));
+    private readonly contexts: DriverContext[] =
+    [
+        new Gen4Context(this._state, this.logger.addPrefix("Context(gen4): "))
+    ];
 
     /**
      * Creates a StateDriver.
@@ -32,7 +31,7 @@ export class StateDriver
     }
 
     /**
-     * Handles a BattleEvent, propagating down the DriverContext chain as
+     * Handles a BattleEvent, propagating down the DriverContext stack as
      * necessary.
      */
     private handleImpl(event: Any): void
@@ -41,11 +40,13 @@ export class StateDriver
         {
             const ctx = this.contexts[i];
             const result = ctx.handle(event);
-            if (result === "stop") return;
-            if (result === "base") break;
-            if (result === "expire")
+            if (!result)
             {
                 // should never happen
+                if (i === 0)
+                {
+                    throw new Error("Bottom context cannot expire");
+                }
                 if (i !== this.contexts.length - 1)
                 {
                     throw new Error("Only top context can expire");
@@ -55,6 +56,7 @@ export class StateDriver
                 this.contexts.pop();
                 // let the next topmost context handle this event
             }
+            else if (result === true) break;
             else
             {
                 // should never happen
@@ -64,23 +66,8 @@ export class StateDriver
                 }
 
                 this.contexts.push(result);
-                return; // works like "stop" result
+                break; // works like truthy result
             }
-        }
-
-        // let the default context handle the event if we haven't returned
-        const baseResult = this.baseContext.handle(event);
-        if (baseResult === "expire")
-        {
-            throw new Error("Base context can't expire");
-        }
-        else if (baseResult !== "base" && baseResult !== "stop")
-        {
-            if (this.contexts.length > 0)
-            {
-                throw new Error("Only top context can add a new context");
-            }
-            this.contexts.push(baseResult);
         }
     }
 
@@ -96,7 +83,6 @@ export class StateDriver
         {
             this.contexts[i].halt();
         }
-        this.baseContext.halt();
         this.logger.debug(`State:\n${this.state.toString()}`);
     }
 

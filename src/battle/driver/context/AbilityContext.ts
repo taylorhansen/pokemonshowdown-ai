@@ -3,7 +3,7 @@ import { isWeatherType, WeatherType } from "../../dex/dex-util";
 import { BattleState } from "../../state/BattleState";
 import { Pokemon } from "../../state/Pokemon";
 import * as events from "../BattleEvent";
-import { ContextResult, DriverContext } from "./DriverContext";
+import { ContextResult, DriverContext } from "./context";
 
 /** Handles events related to an ability. */
 export class AbilityContext extends DriverContext
@@ -40,27 +40,25 @@ export class AbilityContext extends DriverContext
         this.mon.traits.setAbility(this.abilityName);
     }
 
+    // TODO: handle ability effects
     /** @override */
-    public handle(event: events.Any): ContextResult | DriverContext
+    public handle(event: events.Any): ContextResult
     {
-        switch (event.type)
+        if (event.type !== "activateFieldEffect") return;
+        return super.handle(event);
+    }
+
+    /** @override */
+    public activateFieldEffect(event: events.ActivateFieldEffect): ContextResult
+    {
+        // see if the weather can be caused by the current ability
+        if (isWeatherType(event.effect) &&
+            AbilityContext.weatherAbilities[event.effect] === this.abilityName)
         {
-            case "activateFieldEffect":
-                // see if the weather can be caused by the current ability
-                if (isWeatherType(event.effect) &&
-                    AbilityContext.weatherAbilities[event.effect] ===
-                        this.abilityName)
-                {
-                    // fill in infinite duration (gen3-4) and/or source
-                    this.state.status.weather.start(this.mon,
-                        event.effect, /*infinite*/true);
-                    return "stop";
-                }
-                // fallthrough
-            default:
-                // if this is an event we're not expecting to do anything
-                //  special with, this context can be closed
-                return "expire";
+            // fill in infinite duration (gen3-4) and/or source
+            this.state.status.weather.start(this.mon,
+                event.effect, /*infinite*/true);
+            return super.activateFieldEffect(event);
         }
     }
 }

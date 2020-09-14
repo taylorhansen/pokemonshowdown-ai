@@ -5,7 +5,7 @@ import * as dexutil from "../../../../src/battle/dex/dex-util";
 import * as events from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
-import { MoveContext } from "../../../../src/battle/driver/context/MoveContext";
+import { MoveContext } from "../../../../src/battle/driver/context/context";
 import { SwitchContext } from
     "../../../../src/battle/driver/context/SwitchContext";
 import { BattleState } from "../../../../src/battle/state/BattleState";
@@ -245,14 +245,13 @@ describe("MoveContext", function()
 
     describe("#handle()", function()
     {
-        it("Should pass if no handler", function()
+        it("Should expire if no handler", function()
         {
             initActive("us");
             const ctx = initCtx(
                 {type: "useMove", monRef: "us", move: "tackle"});
-            // TODO: should erroneous events cause a throw/expire?
             expect(ctx.handle({type: "initOtherTeamSize", size: 1}))
-                .to.equal("base");
+                .to.not.be.ok;
         });
 
         describe("activateAbility", function()
@@ -283,7 +282,7 @@ describe("MoveContext", function()
 
                 expect(ctx.handle(
                         {type: "block", monRef: "them", effect: "safeguard"}))
-                    .to.equal("base");
+                    .to.be.true;
                 ctx.expire(); // shouldn't throw
             });
         });
@@ -299,7 +298,7 @@ describe("MoveContext", function()
                     {type: "useMove", monRef: "them", move: "dynamicpunch"});
 
                 expect(ctx.handle({type: "faint", monRef: "us"}))
-                    .to.equal("base");
+                    .to.be.true;
                 ctx.expire(); // shouldn't throw
             });
         });
@@ -315,7 +314,7 @@ describe("MoveContext", function()
                     {type: "useMove", monRef: "them", move: "transform"});
                 expect(ctx.handle(
                         {type: "transform", source: "them", target: "us"}))
-                    .to.equal("base");
+                    .to.be.true;
             });
 
             it("Should expire if user/source mismatch", function()
@@ -325,7 +324,7 @@ describe("MoveContext", function()
                     {type: "useMove", monRef: "them", move: "transform"});
                 expect(ctx.handle(
                         {type: "transform", source: "us", target: "them"}))
-                    .to.equal("expire");
+                    .to.not.be.ok;
             });
         });
     });
@@ -356,7 +355,7 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "them", move: "tackle"});
                     expect(ctx.handle(
                             {type: "switchIn", monRef: "them", ...smeargle}))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                 });
 
                 it("Should expire if self-switch expected but opponent " +
@@ -368,7 +367,7 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "them", move: "uturn"});
                     expect(ctx.handle(
                             {type: "switchIn", monRef: "us", ...smeargle}))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                 });
             });
 
@@ -389,20 +388,20 @@ describe("MoveContext", function()
                                 type: "futureMove", monRef: "them",
                                 move: "doomdesire", start: true
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                         expect(ctx.handle(
                             {
                                 type: "futureMove", monRef: "us",
                                 move: "futuresight", start: false
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                         // should handle this case
                         expect(ctx.handle(
                             {
                                 type: "futureMove", monRef: "them",
                                 move: "futuresight", start: true
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                     });
                 });
 
@@ -420,12 +419,12 @@ describe("MoveContext", function()
                             {
                                 type: "prepareMove", monRef: "us", move: "fly"
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                         expect(ctx.handle(
                             {
                                 type: "prepareMove", monRef: "them", move: "fly"
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                         expect(() => ctx.handle(
                             {
                                 type: "prepareMove", monRef: "them",
@@ -457,7 +456,7 @@ describe("MoveContext", function()
 
                     expect(ctx.handle(
                             {type: "useMove", monRef: "them", move: "tackle"}))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                 });
 
                 // extract self+target move-callers
@@ -503,7 +502,7 @@ describe("MoveContext", function()
                     it("Should track last used move", function()
                     {
                         initActive("them");
-                        expect(state.status.lastMove).to.be.undefined;
+                        expect(state.status.lastMove).to.not.be.ok;
                         initCtx(
                             {type: "useMove", monRef: "them", move: "tackle"});
                         expect(state.status.lastMove).to.equal("tackle");
@@ -544,7 +543,7 @@ describe("MoveContext", function()
                                     type: "useMove", monRef: "them",
                                     move: "tackle"
                                 }))
-                                .to.equal("expire");
+                                .to.not.be.ok;
                             expect(() => ctx.expire())
                                 .to.throw(Error, "Expected primary " +
                                     "CallEffect 'copycat' but it didn't " +
@@ -612,7 +611,7 @@ describe("MoveContext", function()
                             {
                                 type: "prepareMove", monRef: "them", move: "fly"
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                         them.volatile.twoTurn.start("fly"); // base
                         ctx.expire();
                         // shouldn't count the charging turn
@@ -646,7 +645,7 @@ describe("MoveContext", function()
                             {
                                 type: "prepareMove", monRef: "them", move: "fly"
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                         them.volatile.twoTurn.start("fly"); // base
                         (ctx2 as MoveContext).expire();
                         ctx.expire();
@@ -786,7 +785,7 @@ describe("MoveContext", function()
                                     type: "useMove", monRef: "them",
                                     move: "tackle"
                                 }))
-                                .to.equal("expire");
+                                .to.not.be.ok;
                             expect(() => ctx.expire())
                                 .to.throw(Error, "Expected primary " +
                                     "CallEffect 'mirror' but it didn't happen");
@@ -853,7 +852,7 @@ describe("MoveContext", function()
                             {
                                 type: "useMove", monRef: "us", move: "tackle"
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                         expect(them.moveset.get("tackle")).to.be.null;
                     });
                 });
@@ -903,7 +902,7 @@ describe("MoveContext", function()
                             {
                                 type: "useMove", monRef: "us", move: "tackle"
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                         expect(them.moveset.get("tackle")).to.be.null;
                     });
                 });
@@ -924,14 +923,14 @@ describe("MoveContext", function()
                             type: "swapBoosts", monRef1: "us", monRef2: "them",
                             stats: ["def", "spd", "spe"]
                         }))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                     // should handle
                     expect(ctx.handle(
                         {
                             type: "swapBoosts", monRef1: "us", monRef2: "them",
                             stats: ["def", "spd"]
                         }))
-                        .to.equal("base");
+                        .to.be.true;
                     // effect should be consumed after accepting the previous
                     //  swapBoosts event
                     expect(ctx.handle(
@@ -939,7 +938,7 @@ describe("MoveContext", function()
                             type: "swapBoosts", monRef1: "us", monRef2: "them",
                             stats: ["def", "spd"]
                         }))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                     ctx.expire();
                 });
 
@@ -972,7 +971,7 @@ describe("MoveContext", function()
                             type: "activateFieldEffect", effect: "trickRoom",
                             start: true
                         }))
-                        .to.equal("base");
+                        .to.be.true;
                 });
 
                 it("Should expire if not expected", function()
@@ -985,7 +984,7 @@ describe("MoveContext", function()
                             type: "activateFieldEffect", effect: "gravity",
                             start: true
                         }))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                 });
 
                 describe("weather", function()
@@ -1002,7 +1001,7 @@ describe("MoveContext", function()
                                 type: "activateFieldEffect",
                                 effect: "RainDance", start: true
                             }))
-                            .to.equal("stop");
+                            .to.be.true;
 
                         const weather = state.status.weather;
                         expect(weather.type).to.equal("RainDance");
@@ -1028,7 +1027,7 @@ describe("MoveContext", function()
                                 type: "activateFieldEffect", effect: "Hail",
                                 start: true
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                         expect(() => ctx.expire()).to.throw(Error,
                             "Expected primary FieldEffect 'RainDance' but it " +
                             "didn't happen");
@@ -1078,12 +1077,15 @@ describe("MoveContext", function()
                     beforeEach("Initialize active", function()
                     {
                         initActive("them");
-                        if (target !== "them") initActive("us");
+                        initActive("us");
                     });
 
                     it("Should pass if expected", function()
                     {
-                        initActive("them");
+                        // set last move in case of encore
+                        initCtx({type: "useMove", monRef: "us", move: "splash"})
+                            .expire();
+
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move});
                         expect(ctx.handle(
@@ -1091,12 +1093,11 @@ describe("MoveContext", function()
                                 type: "activateStatusEffect", monRef: target,
                                 effect, start: true
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                     });
 
                     it("Should expire if start=false", function()
                     {
-                        initActive("them");
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move});
                         expect(ctx.handle(
@@ -1104,12 +1105,11 @@ describe("MoveContext", function()
                                 type: "activateStatusEffect", monRef: target,
                                 effect, start: false
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                     });
 
                     it("Should expire if mismatched flags", function()
                     {
-                        initActive("them");
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move: "tackle"});
                         expect(ctx.handle(
@@ -1117,7 +1117,7 @@ describe("MoveContext", function()
                                 type: "activateStatusEffect", monRef: target,
                                 effect, start: true
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                     });
                 });
             });
@@ -1151,7 +1151,7 @@ describe("MoveContext", function()
                                     type: "activateStatusEffect",
                                     monRef: target, effect, start: true
                                 }))
-                                .to.equal("base");
+                                .to.be.true;
                             ctx.expire();
                         });
                     }
@@ -1171,7 +1171,7 @@ describe("MoveContext", function()
                                     type: "activateStatusEffect",
                                     monRef: target, effect, start: true
                                 }))
-                                .to.equal("base");
+                                .to.be.true;
                             ctx.expire();
                         });
                     }
@@ -1182,13 +1182,19 @@ describe("MoveContext", function()
                         {
                             const ctx = initCtx(
                                 {type: "useMove", monRef: "them", move});
+                            if (dexutil.isMajorStatus(effect))
+                            {
+                                // make sure majorstatus assertion passes
+                                state.teams[target].active.majorStatus
+                                    .afflict(effect);
+                            }
                             // TODO: track moves that can do this
                             expect(ctx.handle(
                                 {
                                     type: "activateStatusEffect",
                                     monRef: target, effect, start: false
                                 }))
-                                .to.equal("base");
+                                .to.be.true;
                             ctx.expire();
                         });
 
@@ -1203,7 +1209,7 @@ describe("MoveContext", function()
                                     type: "activateStatusEffect",
                                     monRef: target, effect, start: true
                                 }))
-                                .to.equal("expire");
+                                .to.not.be.ok;
                             ctx.expire();
                         });
                     }
@@ -1270,7 +1276,7 @@ describe("MoveContext", function()
                             type: "activateStatusEffect", monRef: "us",
                             effect: "curse", start: true
                         }))
-                        .to.equal("base");
+                        .to.be.true;
                     ctx.expire();
                 });
 
@@ -1284,7 +1290,7 @@ describe("MoveContext", function()
                             type: "activateStatusEffect", monRef: "us",
                             effect: "curse", start: true
                         }))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                     // TODO: expect boosts
                     ctx.expire();
                 });
@@ -1299,7 +1305,7 @@ describe("MoveContext", function()
                             type: "activateStatusEffect", monRef: "us",
                             effect: "curse", start: false
                         }))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                 });
 
                 it("Should expire if mismatched flags", function()
@@ -1312,7 +1318,7 @@ describe("MoveContext", function()
                             type: "activateStatusEffect", monRef: "us",
                             effect: "curse", start: true
                         }))
-                        .to.equal("expire");
+                        .to.not.be.ok;
                 });
             });
         });
@@ -1382,7 +1388,7 @@ describe("MoveContext", function()
                         const ctx = initCtx(
                             {type: "useMove", monRef: id, move: "imprison"});
                         expect(ctx.handle({type: "fail", monRef: id}))
-                            .to.equal("base");
+                            .to.be.true;
                         expect(them.moveset.constraint).to.not.include.any.keys(
                             [...us.moveset.moves.keys()]);
                     });
@@ -1423,7 +1429,7 @@ describe("MoveContext", function()
                                 type: "activateStatusEffect", monRef: id,
                                 effect: "imprison", start: true
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                         expect(them.moveset.moveSlotConstraints)
                             .to.have.lengthOf(1);
                         expect(them.moveset.moveSlotConstraints[0])
@@ -1477,7 +1483,7 @@ describe("MoveContext", function()
                                 type: "activateStatusEffect", monRef: target,
                                 effect: "slowStart", start: true
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                     });
                 });
             });
@@ -1527,8 +1533,7 @@ describe("MoveContext", function()
                                 type: "activateStatusEffect", monRef: "them",
                                 effect: "protect", start: true
                             }))
-                            .to.equal("base");
-                        v.stall(true); // mock BaseContext behavior
+                            .to.be.true;
                         expect(v.stalling).to.be.true;
                         expect(v.stallTurns).to.equal(i);
 
@@ -1541,7 +1546,7 @@ describe("MoveContext", function()
                     const ctx = initCtx(
                         {type: "useMove", monRef: "them", move: "protect"});
                     expect(ctx.handle({type: "fail", monRef: "them"}))
-                        .to.equal("base");
+                        .to.be.true;
                     expect(v.stalling).to.be.false;
                     expect(v.stallTurns).to.equal(0);
                 });
@@ -1558,8 +1563,7 @@ describe("MoveContext", function()
                             type: "activateStatusEffect", monRef: "them",
                             effect: "protect", start: true
                         }))
-                        .to.equal("base");
-                    mon.volatile.stall(true); // mock BaseContext behavior
+                        .to.be.true;
                     expect(mon.volatile.stalling).to.be.true;
                     expect(mon.volatile.stallTurns).to.equal(1);
                     ctx.expire();
@@ -1588,8 +1592,7 @@ describe("MoveContext", function()
                             type: "activateStatusEffect", monRef: "them",
                             effect: "endure", start: true
                         }))
-                        .to.equal("base");
-                    mon.volatile.stall(true); // mock BaseContext behavior
+                        .to.be.true;
                     ctx.expire();
 
                     // somehow the pokemon moves again in the same turn via call
@@ -1601,7 +1604,7 @@ describe("MoveContext", function()
                     expect(innerCtx).to.be.an.instanceOf(MoveContext)
                     expect((innerCtx as MoveContext).handle(
                             {type: "fail", monRef: "them"}))
-                        .to.equal("base");
+                        .to.be.true;
                     (innerCtx as MoveContext).expire();
                     ctx.expire();
                     expect(mon.volatile.stalling).to.be.true;
@@ -1639,7 +1642,7 @@ describe("MoveContext", function()
                             type: "changeType", monRef: "them",
                             newTypes: ["water", "???"]
                         }))
-                        .to.equal("base");
+                        .to.be.true;
 
                     // one move slot left to infer after conversion
                     mon.moveset.reveal("tackle");
@@ -1694,7 +1697,7 @@ describe("MoveContext", function()
                         const ctx = initCtx(
                             {type: "useMove", monRef: "us", move});
                         expect(ctx.handle({type: "fail", monRef: "us"}))
-                            .to.equal("base");
+                            .to.be.true;
                         ctx.expire();
                         expect(getter(mon)).to.be.false;
                     });
@@ -1736,7 +1739,7 @@ describe("MoveContext", function()
                             expect(vts.isActive).to.be.true;
 
                             expect(ctx.handle({type: "miss", monRef: "us"}))
-                                .to.equal("base");
+                                .to.be.true;
                             expect(vts.isActive).to.be.false;
                         });
 
@@ -1752,7 +1755,7 @@ describe("MoveContext", function()
                                     type: "block", monRef: "us",
                                     effect: "protect"
                                 }))
-                                .to.equal("base");
+                                .to.be.true;
                             expect(vts.isActive).to.be.false;
                         });
 
@@ -1769,7 +1772,7 @@ describe("MoveContext", function()
                                     type: "block", monRef: "us",
                                     effect: "endure"
                                 }))
-                                .to.equal("base");
+                                .to.be.true;
                             expect(vts.isActive).to.be.true;
                         });
 
@@ -1832,7 +1835,7 @@ describe("MoveContext", function()
 
                     expect(ctx.handle(
                             {type: "boost", monRef: target, stat, amount}))
-                        .to.equal("base");
+                        .to.be.true;
                     ctx.expire(); // shouldn't throw
                 });
 
@@ -1865,7 +1868,7 @@ describe("MoveContext", function()
                         type: "boost", monRef: "us", stat: "atk", amount: 6,
                         set: true
                     }))
-                    .to.equal("base");
+                    .to.be.true;
                 ctx.expire(); // shouldn't throw
             });
         });
@@ -1888,7 +1891,7 @@ describe("MoveContext", function()
                         {
                             type: "boost", monRef: target, stat, amount: sign
                         }))
-                        .to.equal("base");
+                        .to.be.true;
                     ctx.expire(); // shouldn't throw
                 });
 
@@ -1901,7 +1904,7 @@ describe("MoveContext", function()
 
                     expect(ctx.handle(
                             {type: "boost", monRef: target, stat, amount: 0}))
-                        .to.equal("base");
+                        .to.be.true;
                     ctx.expire(); // shouldn't throw
                 });
             });
@@ -1922,7 +1925,7 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "us", move});
                     expect(ctx.handle(
                             {type: "boost", monRef: "them", stat, amount}))
-                        .to.equal("base");
+                        .to.be.true;
                     ctx.expire(); // shouldn't throw
                 });
             });
@@ -1989,7 +1992,7 @@ describe("MoveContext", function()
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move});
                         expect(ctx.handle({type: "faint", monRef: "them"}))
-                            .to.equal("base");
+                            .to.be.true;
                         ctx.halt();
                         expect(team.status[effect]).to.be.true;
 
@@ -2005,7 +2008,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "them",
                                 effect, start: false
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                         ctx.expire();
                     });
 
@@ -2017,7 +2020,7 @@ describe("MoveContext", function()
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move});
                         expect(ctx.handle({type: "fail", monRef: "them"}))
-                            .to.equal("base");
+                            .to.be.true;
                         expect(team.status[effect]).to.be.false;
                     });
 
@@ -2031,7 +2034,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "them",
                                 effect, start: true
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                     });
                 });
             }
@@ -2061,7 +2064,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "them",
                                 effect, start: true
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                     });
 
                     it("Should expire if start=false", function()
@@ -2074,7 +2077,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "them",
                                 effect, start: false
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                     });
 
                     it("Should expire if mismatched flags", function()
@@ -2087,7 +2090,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "them",
                                 effect, start: true
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                     });
                 });
             }
@@ -2116,7 +2119,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "them",
                                 effect, start: true
                             }))
-                            .to.equal("stop");
+                            .to.be.true;
                         expect(team.status[effect].isActive).to.be.true;
                         expect(team.status[effect].source).to.equal(item);
                     });
@@ -2137,7 +2140,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "them",
                                 effect: otherEffect, start: true
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                         expect(ts.reflect.isActive).to.be.false;
                         expect(ts.reflect.source).to.be.null;
                         // BaseContext should handle this
@@ -2163,6 +2166,7 @@ describe("MoveContext", function()
                 {
                     it("Should pass if expected", function()
                     {
+                        initActive("us");
                         initActive("them");
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move});
@@ -2171,7 +2175,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "us",
                                 effect, start: true
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                     });
 
                     it("Should still pass if start=false", function()
@@ -2182,10 +2186,10 @@ describe("MoveContext", function()
                         // TODO: track moves that can do this
                         expect(ctx.handle(
                             {
-                                type: "activateTeamEffect", teamRef: "us",
+                                type: "activateTeamEffect", teamRef: "them",
                                 effect, start: false
                             }))
-                            .to.equal("base");
+                            .to.be.true;
                     });
 
                     it("Should expire if mismatched flags", function()
@@ -2198,7 +2202,7 @@ describe("MoveContext", function()
                                 type: "activateTeamEffect", teamRef: "us",
                                 effect, start: true
                             }))
-                            .to.equal("expire");
+                            .to.not.be.ok;
                     });
                 });
             }
@@ -2236,7 +2240,7 @@ describe("MoveContext", function()
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move});
                         expect(ctx.handle({type: "fail", monRef: "them"}))
-                            .to.equal("base");
+                            .to.be.true;
                         expect(getter(team)).to.be.false;
                         ctx.expire();
                     });
@@ -2308,7 +2312,7 @@ describe("MoveContext", function()
             const item = mon.item;
             const ctx = initCtx(
                 {type: "useMove", monRef: "them", move: "naturalgift"});
-            expect(ctx.handle({type: "fail", monRef: "them"})).to.equal("base");
+            expect(ctx.handle({type: "fail", monRef: "them"})).to.be.true;
 
             expect(mon.item).to.equal(item, "Item was consumed");
             expect(mon.item.possibleValues)
