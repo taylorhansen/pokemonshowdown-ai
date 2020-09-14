@@ -55,9 +55,9 @@ export class StateDriver
                 ctx.expire();
                 this.contexts.pop();
                 // let the next topmost context handle this event
+                continue;
             }
-            else if (result === true) break;
-            else
+            else if (result !== true) // DriverContext
             {
                 // should never happen
                 if (i !== this.contexts.length - 1)
@@ -66,8 +66,8 @@ export class StateDriver
                 }
 
                 this.contexts.push(result);
-                break; // works like truthy result
             }
+            break; // truthy result
         }
     }
 
