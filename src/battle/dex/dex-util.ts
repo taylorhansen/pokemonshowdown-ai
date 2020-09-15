@@ -1,3 +1,5 @@
+import * as effects from "./effects";
+
 /** Set of Type names. Each type has a 0-based unique index. */
 export const types =
 {
@@ -179,15 +181,8 @@ export interface MoveData extends DexData
     readonly mirror: boolean;
     /** Whether this move can be copied by Copycat. */
     readonly copycat: boolean;
-    /** Primary move effect. */
-    readonly primary?: PrimaryEffect;
-    /** Additional move effects for the user. */
-    readonly self?: MoveEffect;
-    /**
-     * Additional move effects for the target. Only useful if there is a target
-     * for the move other than the user.
-     */
-    readonly hit?: MoveEffect;
+    /** Additional move effects */
+    readonly effects?: readonly effects.Move[];
 }
 
 /** Types of categories for a move. */
@@ -198,142 +193,6 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
     "all" | "allAdjacent" | "allAdjacentFoes" | "allies" | "allySide" |
     "allyTeam" | "any" | "foeSide" | "normal" | "randomNormal" | "scripted" |
     "self";
-
-// TODO: apply effect type tracking to abilities, items, statuses, etc
-/** Primary effects of a move. */
-export interface PrimaryEffect
-{
-    /** Whether this move causes the user to switch. */
-    readonly selfSwitch?: SelfSwitch;
-    /** Whether this is a future or two-turn move. */
-    readonly delay?: "future" | "twoTurn";
-    /** Move calling effect. */
-    readonly call?: CallEffect;
-    // TODO: copy boost
-    /** Stat boosts that should be swapped. */
-    readonly swapBoost?: {readonly [T in BoostName]?: true};
-    /** Countable status effect associated with this move. */
-    readonly countableStatus?: CountableStatusEffect;
-    /** Field effect associated with this move. */
-    readonly field?: FieldEffect;
-}
-
-/** Base interface for move effect containers. */
-export interface MoveEffectBase
-{
-    /** Status effect that should activate. */
-    readonly status?: StatusEffect;
-}
-
-/** Primary move effects on the user or target. */
-export interface MoveEffect extends MoveEffectBase
-{
-    /** Unique status effects that should activate. */
-    readonly unique?: UniqueEffect;
-    /** Effect that can be implied by this move. */
-    readonly implicitStatus?: ImplicitStatusEffect;
-    /** Stat boosts that should be applied. */
-    readonly boost?: BoostEffect;
-    /** Team effect that should activate. */
-    readonly team?: TeamEffect;
-    /** Team effect that can be implied by this move. */
-    readonly implicitTeam?: ImplicitTeamEffect;
-    /** Secondary effects that could happen. */
-    readonly secondary?: readonly SecondaryEffect[];
-}
-
-/** Stat boost effects. */
-export interface BoostEffect
-{
-    /** Stat boosts to add. */
-    readonly add?: {readonly [T in BoostName]?: number}
-    /** Stat boosts to set. */
-    readonly set?: {readonly [T in BoostName]?: number}
-}
-
-/** Secondary effects of moves. */
-export interface SecondaryEffect extends MoveEffectBase
-{
-    /** Chance (out of 100) of the effect happening. */
-    readonly chance?: number;
-    /** Whether the effect can cause flinching. */
-    readonly flinch?: true | null;
-    /** Stat boosts added to the target. */
-    readonly boosts?: {readonly [T in BoostName]?: number};
-}
-
-/**
- * Whether this move causes the user to switch, but `copyvolatile` additionally
- * transfers certain volatile status conditions.
- */
-export type SelfSwitch = true | "copyvolatile";
-
-/** Status effects that are explicitly started/ended in game events. */
-export type StatusEffect = UpdatableStatusEffect | SingleMoveEffect |
-    SingleTurnEffect | MajorStatus | "aquaRing" | "attract" | "charge" |
-    "curse" | "embargo" | "encore" | "flashFire" | "focusEnergy" | "foresight" |
-    "healBlock" | "imprison" | "ingrain" | "leechSeed" | "magnetRise" |
-    "miracleEye" | "mudSport" | "nightmare" | "powerTrick" | "slowStart" |
-    "substitute" | "suppressAbility" | "taunt" | "torment" | "waterSport" |
-    "yawn";
-
-/**
- * Status effects that are explicitly updated throughout their duration in game
- * events.
- */
-export type UpdatableStatusEffect = "confusion" | "bide" | "uproar";
-
-/** Types of sinlge-move effects. */
-export type SingleMoveEffect = "destinyBond" | "grudge" | "rage";
-
-/** Types of sinlge-turn effects. */
-export type SingleTurnEffect = "endure" | "magicCoat" | "protect" | "roost" |
-    "snatch";
-
-/** Status effects that are explicitly counted in game events. */
-export type CountableStatusEffect = "perish" | "stockpile";
-
-// TODO: add rollout
-/** Status effects that are implied by the successful use of a move. */
-export type ImplicitStatusEffect = "defenseCurl" | "lockedMove" | "minimize" |
-    "mustRecharge";
-
-/** Team effects that are explicitly started/ended in game events. */
-export type TeamEffect = "healingWish" | "lightScreen" | "luckyChant" |
-    "lunarDance" | "mist" | "reflect" | "safeguard" | "spikes" | "stealthRock" |
-    "tailwind" | "toxicSpikes";
-
-/** Team effects that are implied by the successful use of a move. */
-export type ImplicitTeamEffect = "wish";
-
-/** Status effects that are explicitly started/ended in game events. */
-export type FieldEffect = UpdatableFieldEffect | "gravity" | "trickRoom";
-
-// tslint:disable: no-trailing-whitespace (force newlines in doc)
-/**
- * Specifies how this move can call another move.
- *
- * `true` - Calls a move normally.  
- * `"copycat"` - Called move should match the RoomStatus' `#lastMove` field and
- * have the `#copycat=true` in its MoveData, or fail if either of the fields are
- * falsy.
- * `"mirror"` - Mirror move. Called move should match the user's `mirrorMove`
- * VolatileStatus field, or fail if null.  
- * `"self"` - Calls a move from the user's moveset.  
- * `"target"` - Calls a move from the target's moveset (caller must have only
- * one target).
- */
-// tslint:enable: no-trailing-whitespace
-export type CallEffect = true | "copycat" | "mirror" | "self" | "target";
-
-/** Status effects that require more special attention. */
-export type UniqueEffect = "conversion" | "disable";
-
-/**
- * Field effects that are explicitly updated throughout their duration in game
- * events.
- */
-export type UpdatableFieldEffect = WeatherType;
 
 /** Format for each item entry in the dex. */
 export interface ItemData extends DexData

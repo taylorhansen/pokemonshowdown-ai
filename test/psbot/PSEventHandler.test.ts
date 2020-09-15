@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import * as dexutil from "../../src/battle/dex/dex-util";
+import * as effects from "../../src/battle/dex/effects";
 import * as events from "../../src/battle/driver/BattleEvent";
 import { Logger } from "../../src/Logger";
 import { PokemonID, toIdName } from "../../src/psbot/helpers";
@@ -380,7 +381,7 @@ describe("PSEventHandler", function()
                 }]);
             });
 
-            function testCountableStatus(effect: dexutil.CountableStatusEffect)
+            function testCountableStatus(effect: effects.CountableStatusType)
             {
                 describe(effect, function()
                 {
@@ -425,7 +426,7 @@ describe("PSEventHandler", function()
             }
 
             function testTrivialStatus(name: string,
-                effect: dexutil.StatusEffect, start: boolean): void
+                effect: effects.StatusType, start: boolean): void
             {
                 const type: psevent.Type = start ? "-start" : "-end";
 
@@ -437,7 +438,7 @@ describe("PSEventHandler", function()
             }
 
             function describeTrivialStatus(name: string,
-                effect: dexutil.StatusEffect): void
+                effect: effects.StatusType): void
             {
                 describe(name, function()
                 {
@@ -1076,7 +1077,7 @@ describe("PSEventHandler", function()
                 const testCases: readonly
                 {
                     readonly name: string,
-                    readonly effect: dexutil.TeamEffect
+                    readonly effect: effects.TeamType
                 }[] =
                 [
                     {name: "move: Lucky Chant", effect: "luckyChant"},

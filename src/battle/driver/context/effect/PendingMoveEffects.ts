@@ -1,11 +1,12 @@
-import { BoostEffect, boostKeys, BoostName, isMajorStatus, MoveData, MoveEffect,
-    PrimaryEffect } from "../../../dex/dex-util";
+import * as dexutil from "../../../dex/dex-util";
+import * as effects from "../../../dex/effects";
 import { PendingBoostEffect } from "./PendingBoostEffect";
+import { PendingEffect } from "./PendingEffect";
 import { PendingEffects } from "./PendingEffects";
 import { PendingValueEffect } from "./PendingValueEffect";
 
-/** Categories of move effects. */
-export type MoveEffectCategory = "primary" | "self" | "hit";
+/** Used for get()/consume() typings. */
+type TrivialOtherType = Exclude<effects.OtherType, "boost" | "secondary">;
 
 /** Container for managing/consuming effects derived from move data. */
 export class PendingMoveEffects
@@ -19,84 +20,89 @@ export class PendingMoveEffects
      * Creates a PendingMoveEffects obj.
      * @param data Move data to extract.
      */
-    constructor(data: MoveData)
+    constructor(data: dexutil.MoveData)
     {
         // populate PendingEffects container
+        for (const effect of data.effects ?? []) this.addEffect(effect);
+    }
 
-        const {primary, self, hit} = data;
-
-        if (primary)
+    /** Parses a MoveEffect object and creates PendingEffects for it. */
+    private addEffect(effect: effects.Move): void
+    {
+        switch (effect.type)
         {
-            for (const [value, name] of
-            [
-                [primary.selfSwitch, "selfSwitch"],
-                [primary.delay, "delay"],
-                [primary.call, "call"],
-                // walk swapBoost dict
-                ...(primary.swapBoost ?
-                    [[
-                        Object.keys(primary.swapBoost).join(","),
-                        "swapBoost"
-                    ] as const]
-                    : []),
-                [primary.countableStatus, "countableStatus"],
-                [primary.field, "field"]
-            ] as const)
+            case "call": case "countableStatus": case "delay": case "field":
+            case "selfSwitch":
+                this.addEffectImpl(`primary ${effect.type}`,
+                    new PendingValueEffect(effect.value));
+                break;
+            case "swapBoost":
             {
-                if (!value) continue;
-                this.effects.add("primary " + name,
-                    new PendingValueEffect(value));
+                const boosts = dexutil.boostKeys.filter(b => effect.value[b]);
+                this.addEffectImpl(`primary ${effect.type}`,
+                    new PendingValueEffect(boosts.join(",")));
+                break;
+            }
+            case "boost":
+                this.addBoostEffect(effect, effect.ctg);
+                break;
+            case "implicitStatus": case "implicitTeam": case "status":
+            case "team": case "unique":
+                this.addEffectImpl(`${effect.ctg} ${effect.type}`,
+                    new PendingValueEffect(effect.value));
+                break;
+            case "secondary":
+                if (effect.value.type === "status")
+                {
+                    this.addEffectImpl(`${effect.ctg} secondary status`,
+                        new PendingValueEffect(effect.value.value,
+                            effect.chance));
+                }
+                else if (effect.value.type === "boost")
+                {
+                    this.addBoostEffect(effect.value, effect.ctg,
+                        effect.chance);
+                }
+                // ignore flinch, since its effect is applied after the move
+                //  (TODO: support)
+                break;
+            default:
+                // should never happen
+                throw new Error(`Unknown MoveEffect type '${effect!.type}'`);
+        }
+    }
+
+    /**
+     * Parses a BoostEffect object and creates PendingEffects for it.
+     * @param effect Effect to parse.
+     * @param ctg Move effect category.
+     * @param chance Chance of happening, if this is a secondary effect.
+     */
+    private addBoostEffect(effect: effects.Boost,
+        ctg?: effects.MoveEffectCategory, chance?: number): void
+    {
+        const tables = effect.value;
+        for (const k of ["add", "set"] as const)
+        {
+            const table = tables[k];
+            if (!table) continue;
+            for (const b of dexutil.boostKeys)
+            {
+                if (!table.hasOwnProperty(b)) continue;
+                this.addEffectImpl(`${ctg} ${chance ? "secondary " : ""}` +
+                        `boost add ${b}`,
+                    new PendingBoostEffect(table[b]!,
+                        /*set*/ false, ...(chance ? [chance] : [])));
             }
         }
+    }
 
-        for (const [effect, title] of [[self, "self"], [hit, "hit"]] as const)
+    /** Adds a PendingEffect, or throws if duplicate. */
+    private addEffectImpl(name: string, effect: PendingEffect): void
+    {
+        if (!this.effects.add(name, effect))
         {
-            if (!effect) continue;
-
-            // value-based effects
-            for (const [value, name, chance, boost] of
-            [
-                [effect.status, "status"],
-                [effect.unique, "unique"],
-                [effect.implicitStatus, "implicitStatus"],
-                // walk BoostEffect obj
-                ...(Object.keys(effect.boost ?? {}) as (keyof BoostEffect)[])
-                        .map(k =>
-                            (Object.keys(effect.boost![k] ?? {}) as
-                                    BoostName[])
-                                .map(b =>
-                                [
-                                    effect.boost![k]![b], `boost ${k} ${b}`,
-                                    null, k
-                                ] as const))
-                        .reduce((a, b) => a.concat(b), []),
-                [effect.team, "team"],
-                [effect.implicitTeam, "implicitTeam"],
-                // walk SecondaryEffect objs
-                ...(effect.secondary
-                    ?.map(s =>
-                    [
-                        [s?.status, "secondary status", s?.chance] as const,
-                        // can't track flinch since its effect is applied once
-                        //  the target attempts to move (TODO)
-                        // [s?.flinch, "secondary flinch"],
-                        ...(Object.keys(s?.boosts ?? {}) as BoostName[])
-                            .map(b =>
-                            [
-                                s.boosts![b], `secondary boost add ${b}`,
-                                s.chance, "add"
-                            ] as const)
-                    ])
-                    .reduce((a, b) => a.concat(b), []) ?? [])
-            ] as const)
-            {
-                if (value == null) continue;
-                this.effects.add(title + " " + name,
-                    boost ?
-                        new PendingBoostEffect(value as number,
-                            /*set*/ boost === "set", chance)
-                        : new PendingValueEffect(value, chance));
-            }
+            throw new Error(`Duplicate MoveEffect '${name}'`);
         }
     }
 
@@ -126,11 +132,12 @@ export class PendingMoveEffects
             this.effects.consume(`${ctg} secondary ${name}`);
         }
 
-        for (const b of boostKeys)
+        for (const b of dexutil.boostKeys)
         {
             this.effects.consume(`${ctg} boost add ${b}`);
             this.effects.consume(`${ctg} boost set ${b}`);
             this.effects.consume(`${ctg} secondary boost add ${b}`);
+            this.effects.consume(`${ctg} secondary boost set ${b}`);
         }
     }
 
@@ -144,21 +151,16 @@ export class PendingMoveEffects
      * Gets a pending primary effect.
      * @param key Type of effect.
      */
-    public get<T extends keyof PrimaryEffect>(ctg: "primary", key: T):
-        PrimaryEffect[T] | null;
+    public get<T extends effects.PrimaryType>(ctg: "primary", key: T):
+        effects.PrimaryMap[T]["value"] | null;
     /**
-     * Gets a pending swap boost effect.
-     * @returns An array of stats expected to be swapped.
-     */
-    public get(ctg: "primary", key: "swapBoost"): readonly BoostName[];
-    /**
-     * Gets a pending self/hit effect.
+     * Gets a pending self/hit effect, excluding boost/secondaries.
      * @param ctg Category of effect.
      * @param key Type of effect.
      * @param effect Effect type to check. If omitted, checks are skipped.
      */
-    public get<T extends Exclude<keyof MoveEffect, "secondary">>(
-        ctg: "self" | "hit", key: T): MoveEffect[T] | null;
+    public get<T extends TrivialOtherType>(ctg: effects.MoveEffectCategory,
+        key: T): effects.OtherMap[T]["value"] | null;
     /**
      * Gets a pending self/hit boost effect.
      * @param ctg Category of effect.
@@ -166,19 +168,22 @@ export class PendingMoveEffects
      * @param set Whether to check for setting or adding boosts. Default false.
      * @returns The expected boost number to be applied.
      */
-    public get(ctg: "self" | "hit", key: "boost", stat: BoostName,
-        set?: boolean): number | null;
-    public get(ctg: MoveEffectCategory, key: string, stat?: BoostName,
-        set?: boolean):
-        PrimaryEffect[keyof PrimaryEffect] | readonly BoostName[] |
-        MoveEffect[Exclude<keyof MoveEffect, "secondary">] | number | null
+    public get(ctg: effects.MoveEffectCategory, key: "boost",
+        stat: dexutil.BoostName, set?: boolean): number | null;
+    // TODO: secondary
+    public get(ctg: "primary" | effects.MoveEffectCategory, key: string,
+        stat?: dexutil.BoostName, set?: boolean):
+        effects.PrimaryMap[effects.PrimaryType]["value"] |
+        effects.OtherMap[TrivialOtherType]["value"] | number | null
     {
         if (ctg === "primary" && key === "swapBoost")
         {
             const effect = this.effects.get("primary swapBoost") as
                 PendingValueEffect;
-            if (!effect) return [];
-            return (effect.value as string).split(",") as BoostName[];
+            if (!effect) return null;
+            // unpack swap-boost string
+            return Object.fromEntries(
+                (effect.value as string).split(",").map(s => [s, true]));
         }
         if (ctg !== "primary" && key === "boost")
         {
@@ -197,38 +202,43 @@ export class PendingMoveEffects
     }
 
     /**
-     * Checks and consumes a pending primary effect.
-     * @param ctg Category of effect.
+     * Checks and consumes a pending trivial primary effect.
      * @param key Type of effect to consume.
      * @param effect Effect type to check. If omitted, checks are skipped except
      * whether the effect is pending.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public consume<T extends keyof PrimaryEffect>(ctg: "primary",
-        key: T, effect?: PrimaryEffect[T]): boolean;
+    public consume<T extends effects.PrimaryType>(ctg: "primary",
+        key: T, effect?: effects.PrimaryMap[T]["value"]): boolean;
     /**
-     * Checks and consumes a pending primary effect.
-     * @param ctg Category of effect.
+     * Checks and consumes a pending self-switch effect.
+     * @param effect Effect type to check. If omitted, checks are skipped except
+     * whether the effect is pending.
+     * @returns True if the effect has now been consumed, false otherwise.
+     */
+    public consume(ctg: "primary", key: "selfSwitch",
+        effect?: effects.SelfSwitchType): boolean;
+    /**
+     * Checks and consumes a pending swap-boost effect.
      * @param stats Stats to check. The pending move effect must contain all of
      * the given stats before they can be consumed. If omitted, checks are
      * skipped except whether the effect is pending.
      * @returns True if the effect has now been consumed, false otherwise.
      */
     public consume(ctg: "primary", key: "swapBoost",
-        stats?: readonly BoostName[]):
-        boolean;
+        stats?: readonly dexutil.BoostName[]): boolean;
     /**
-     * Checks and consumes a pending self/hit effect.
+     * Checks and consumes a pending trivial self/hit effect.
      * @param ctg Category of effect.
      * @param key Type of effect to consume.
      * @param effect Effect type to check. If omitted, checks are skipped except
      * whether the effect is pending.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public consume<T extends keyof MoveEffect>(ctg: "self" | "hit",
-        key: T, effect?: MoveEffect[T]): boolean;
+    public consume<T extends effects.OtherType>(ctg: "self" | "hit",
+        key: T, effect?: effects.OtherMap[T]["value"]): boolean;
     /**
-     * Checks and consumes a pending self/hit effect.
+     * Checks and consumes a pending boost effect.
      * @param ctg Category of effect.
      * @param stat Stat to check.
      * @param amount Boost amount to check.
@@ -237,18 +247,18 @@ export class PendingMoveEffects
      * being set.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public consume(ctg: "self" | "hit", key: "boost", stat: BoostName,
+    public consume(ctg: "self" | "hit", key: "boost", stat: dexutil.BoostName,
         amount: number, cur?: number): boolean;
     /**
      * Checks and consumes any pending self/hit MajorStatus effect.
      * @param ctg Category of effect.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public consume<T extends keyof MoveEffect>(ctg: "self" | "hit",
+    public consume<T extends keyof effects.Move>(ctg: "self" | "hit",
         key: "status", effect: "MajorStatus"): boolean;
-    public consume(ctg: MoveEffectCategory, key: string,
-        effectOrStat?:
-            string | readonly BoostName[] | BoostName | "MajorStatus",
+    public consume(ctg: "primary" | effects.MoveEffectCategory, key: string,
+        effectOrStat?: string | effects.SelfSwitchType |
+            readonly dexutil.BoostName[] | dexutil.BoostName | "MajorStatus",
         amount?: number, cur?: number): boolean
     {
         if (!effectOrStat)
@@ -257,7 +267,7 @@ export class PendingMoveEffects
             let result = false;
             if (ctg !== "primary" && key === "boost")
             {
-                for (const b of boostKeys)
+                for (const b of dexutil.boostKeys)
                 {
                     const a = this.effects.consume(`${ctg} boost add ${b}`);
                     const c = this.effects.consume(`${ctg} boost set ${b}`);
@@ -278,7 +288,7 @@ export class PendingMoveEffects
         if (ctg !== "primary" && key === "boost")
         {
             const boost = cur == null ? "set" : "add"
-            const stat = effectOrStat as BoostName;
+            const stat = effectOrStat as dexutil.BoostName;
             return this.effects.consume(`${ctg} boost ${boost} ${stat}`, amount,
                     ...(cur == null ? [] : [cur])) ||
                 this.effects.consume(`${ctg} secondary boost ${boost} ${stat}`,
@@ -290,19 +300,20 @@ export class PendingMoveEffects
             let name = `${ctg} status`;
             let effect = this.effects.get(name);
             if (!(effect instanceof PendingValueEffect) ||
-                !isMajorStatus(name) || !this.effects.consume(name))
+                !dexutil.isMajorStatus(name) || !this.effects.consume(name))
             {
                 // check secondary effect
                 name = `${ctg} secondary status`;
                 effect = this.effects.get(name);
                 return effect instanceof PendingValueEffect &&
-                    isMajorStatus(effect.value) && this.effects.consume(name);
+                    dexutil.isMajorStatus(effect.value) &&
+                    this.effects.consume(name);
             }
             return true;
         }
         else if (ctg === "primary" && key === "swapBoost")
         {
-            const stats = effectOrStat as readonly BoostName[];
+            const stats = effectOrStat as readonly dexutil.BoostName[];
             return this.effects.consume("primary swapBoost", stats.join(","));
         }
         else

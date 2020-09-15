@@ -1,5 +1,5 @@
 import { FutureMove, futureMoves } from "../dex/dex";
-import { SelfSwitch } from "../dex/dex-util";
+import { SelfSwitchType } from "../dex/effects";
 import { ItemTempStatus, ReadonlyItemTempStatus } from "./ItemTempStatus";
 import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
 
@@ -25,7 +25,7 @@ export interface ReadonlyTeamStatus
      * Whether the team has to switch pokemon and how that switch will be
      * handled.
      */
-    readonly selfSwitch: SelfSwitch | null;
+    readonly selfSwitch: SelfSwitchType | null;
     /** Spikes layers. Max 3. */
     readonly spikes: number;
     /** Stealth rock layers. Max 1. */
@@ -60,7 +60,7 @@ export class TeamStatus implements ReadonlyTeamStatus
     /** @override */
     public readonly safeguard = new TempStatus("safeguard", 5);
     /** @override */
-    public selfSwitch: SelfSwitch | null = null;
+    public selfSwitch: SelfSwitchType | null = null;
     /** @override */
     public spikes = 0;
     /** @override */

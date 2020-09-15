@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
+import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext, DriverContext, Gen4Context, MoveContext,
     SwitchContext } from "../../../../src/battle/driver/context/context";
@@ -69,7 +70,7 @@ describe("Gen4Context", function()
 
         describe("activateFieldEffect", function()
         {
-            function test(name: string, effect: dexutil.FieldEffect)
+            function test(name: string, effect: effects.FieldType)
             {
                 if (dexutil.isWeatherType(effect))
                 {
@@ -112,7 +113,7 @@ describe("Gen4Context", function()
 
         describe("activateStatusEffect", function()
         {
-            function test(name: string, effect: dexutil.StatusEffect,
+            function test(name: string, effect: effects.StatusType,
                 getter: (v: ReadonlyVolatileStatus) => boolean)
             {
                 it(`Should activate ${name}`, function()
@@ -338,7 +339,7 @@ describe("Gen4Context", function()
             testHazard("Stealth Rock", "stealthRock");
             testHazard("Toxic Spikes", "toxicSpikes");
 
-            function testEffect(name: string, effect: dexutil.TeamEffect,
+            function testEffect(name: string, effect: effects.TeamType,
                 getter: (ts: ReadonlyTeamStatus) => boolean)
             {
                 it(`Should activate ${name}`, function()
@@ -507,7 +508,7 @@ describe("Gen4Context", function()
         describe("countStatusEffect", function()
         {
             function test(name: string,
-                effect: dexutil.CountableStatusEffect): void
+                effect: effects.CountableStatusType): void
             {
                 it(`Should update ${name} count`, function()
                 {
@@ -1312,7 +1313,7 @@ describe("Gen4Context", function()
 
         describe("updateStatusEffect", function()
         {
-            function test(name: string, effect: dexutil.UpdatableStatusEffect)
+            function test(name: string, effect: effects.UpdatableStatusType)
             {
                 it(`Should update ${name}`, function()
                 {

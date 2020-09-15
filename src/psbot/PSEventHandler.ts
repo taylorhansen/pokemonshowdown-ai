@@ -1,7 +1,6 @@
 import * as dex from "../battle/dex/dex";
 import * as dexutil from "../battle/dex/dex-util";
-import { itemRemovalMoves, itemTransferMoves, Type } from
-    "../battle/dex/dex-util";
+import * as effects from "../battle/dex/effects";
 import * as events from "../battle/driver/BattleEvent";
 import { otherSide, Side } from "../battle/state/Side";
 import { Logger } from "../Logger";
@@ -75,7 +74,7 @@ export class PSEventHandler
                     // set hidden power type
                     // format: hiddenpower<type><base power if gen2-5>
                     mon.hpType = moves[j].substr("hiddenpower".length)
-                        .replace(/\d+/, "") as Type;
+                        .replace(/\d+/, "") as dexutil.Type;
                     moves[j] = "hiddenpower";
                 }
                 else if (moves[j].startsWith("return") &&
@@ -471,7 +470,7 @@ export class PSEventHandler
         {
             // set added type
             const monRef = this.getSide(event.id.owner);
-            const thirdType = event.otherArgs[0].toLowerCase() as Type;
+            const thirdType = event.otherArgs[0].toLowerCase() as dexutil.Type;
             return {
                 result: [{type: "setThirdType", monRef, thirdType}],
                 remaining: it
@@ -481,12 +480,12 @@ export class PSEventHandler
         {
             // set types
             // format: Type1/Type2
-            let newTypes: [Type, Type];
+            let newTypes: [dexutil.Type, dexutil.Type];
 
             if (event.otherArgs[0])
             {
                 const parsedTypes = event.otherArgs[0].split("/")
-                    .map(type => type.toLowerCase()) as Type[];
+                    .map(type => type.toLowerCase()) as dexutil.Type[];
 
                 // make sure length is 2
                 if (parsedTypes.length > 2)
@@ -497,7 +496,7 @@ export class PSEventHandler
                     parsedTypes.splice(2);
                 }
                 else if (parsedTypes.length === 1) parsedTypes.push("???");
-                newTypes = parsedTypes as [Type, Type];
+                newTypes = parsedTypes as [dexutil.Type, dexutil.Type];
             }
             else newTypes = ["???", "???"];
 
@@ -920,7 +919,7 @@ export class PSEventHandler
         {
             const move = toIdName(event.from.substr("move: ".length));
             if (move === "recycle") gained = "recycle";
-            else gained = itemTransferMoves.includes(move);
+            else gained = dexutil.itemTransferMoves.includes(move);
         }
         else gained = false;
 
@@ -940,7 +939,7 @@ export class PSEventHandler
         let consumed: boolean | string;
         if (event.from === "stealeat" ||
             (event.from && event.from.startsWith("move: ") &&
-                itemRemovalMoves.includes(
+                dexutil.itemRemovalMoves.includes(
                     toIdName(event.from.substr("move: ".length)))))
         {
             consumed = false;
@@ -1040,7 +1039,7 @@ export class PSEventHandler
         it: Iter<psevent.Any>): PSResult
     {
         const teamRef = this.getSide(event.id);
-        let effect: dexutil.TeamEffect;
+        let effect: effects.TeamType;
 
         let psCondition = event.condition;
         if (psCondition.startsWith("move: "))
@@ -1078,7 +1077,7 @@ export class PSEventHandler
     protected handleSingleMove(event: psevent.SingleMove,
         it: Iter<psevent.Any>): PSResult
     {
-        let effect: dexutil.SingleMoveEffect | undefined;
+        let effect: effects.SingleMoveType | undefined;
         if (event.move === "Destiny Bond") effect = "destinyBond";
         else if (event.move === "Grudge") effect = "grudge";
         else if (event.move === "Rage") effect = "rage";
@@ -1096,7 +1095,7 @@ export class PSEventHandler
     protected handleSingleTurn(event: psevent.SingleTurn,
         it: Iter<psevent.Any>): PSResult
     {
-        let effect: dexutil.SingleTurnEffect;
+        let effect: effects.SingleTurnType;
         switch (event.status.startsWith("move: ") ?
             event.status.substr("move: ".length) : event.status)
         {
@@ -1288,7 +1287,7 @@ export class PSEventHandler
         const monRef = this.getSide(event.id.owner);
         const start = event.type === "-start";
 
-        let effect: dexutil.StatusEffect | undefined;
+        let effect: effects.StatusType | undefined;
 
         let ev = event.volatile;
         if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);

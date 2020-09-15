@@ -2,6 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import * as dex from "../../../../src/battle/dex/dex";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
+import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
@@ -1037,14 +1038,9 @@ describe("MoveContext", function()
 
         const moveEffectTests:
         {
-            readonly self:
+            readonly [T in effects.MoveEffectCategory]:
             {
-                readonly [T in Exclude<keyof dexutil.MoveEffect, "secondary">]:
-                    (() =>  void)[]
-            },
-            readonly hit:
-            {
-                readonly [T in Exclude<keyof dexutil.MoveEffect, "secondary">]:
+                readonly [U in Exclude<effects.Other["type"], "secondary">]:
                     (() =>  void)[]
             }
         } =
@@ -1064,7 +1060,7 @@ describe("MoveContext", function()
         //#region status effect
 
         function testNonRemovable(ctg: "self" | "hit", name: string,
-            effect: dexutil.StatusEffect, move: string): void
+            effect: effects.StatusType, move: string): void
         {
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
@@ -1123,7 +1119,7 @@ describe("MoveContext", function()
         }
 
         function testRemovable(ctg: "self" | "hit", name: string,
-            effect: dexutil.StatusEffect, move: string | undefined,
+            effect: effects.StatusType, move: string | undefined,
             secondaryMove?: string, secondaryMove100?: string): void
         {
             // adjust perspective
