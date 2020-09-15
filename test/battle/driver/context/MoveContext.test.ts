@@ -354,7 +354,7 @@ describe("MoveContext", function()
                     const ctx = initCtx(
                         {type: "useMove", monRef: "them", move: "tackle"});
                     expect(ctx.handle(
-                            {type: "switchIn", monRef: "them", ...smeargle}))
+                            {type: "switchIn", monRef: "them", ...ditto}))
                         .to.not.be.ok;
                 });
 
@@ -366,7 +366,7 @@ describe("MoveContext", function()
                     const ctx = initCtx(
                         {type: "useMove", monRef: "them", move: "uturn"});
                     expect(ctx.handle(
-                            {type: "switchIn", monRef: "us", ...smeargle}))
+                            {type: "switchIn", monRef: "us", ...ditto}))
                         .to.not.be.ok;
                 });
             });
@@ -545,9 +545,8 @@ describe("MoveContext", function()
                                 }))
                                 .to.not.be.ok;
                             expect(() => ctx.expire())
-                                .to.throw(Error, "Expected primary " +
-                                    "CallEffect 'copycat' but it didn't " +
-                                    "happen");
+                                .to.throw(Error, "Expected effects that " +
+                                    "didn't happen: primary call 'copycat'");
                         });
 
                         it(`Should throw if ${caller} failed but should've ` +
@@ -787,8 +786,8 @@ describe("MoveContext", function()
                                 }))
                                 .to.not.be.ok;
                             expect(() => ctx.expire())
-                                .to.throw(Error, "Expected primary " +
-                                    "CallEffect 'mirror' but it didn't happen");
+                                .to.throw(Error, "Expected effects that " +
+                                    "didn't happen: primary call 'mirror'");
                         });
 
                         it(`Should throw if ${caller} failed but should've ` +
@@ -949,8 +948,8 @@ describe("MoveContext", function()
                     const ctx = initCtx(
                         {type: "useMove", monRef: "them", move: "guardswap"});
                     expect(() => ctx.expire()).to.throw(Error,
-                        "Expected primary swapBoost 'def,spd' but it didn't " +
-                        "happen");
+                        "Expected effects that didn't happen: primary " +
+                        "swapBoost 'def,spd'");
                 });
             });
 
@@ -1029,8 +1028,8 @@ describe("MoveContext", function()
                             }))
                             .to.not.be.ok;
                         expect(() => ctx.expire()).to.throw(Error,
-                            "Expected primary FieldEffect 'RainDance' but it " +
-                            "didn't happen");
+                            "Expected effects that didn't happen: primary " +
+                            "field 'RainDance'");
                     });
                 });
             });
@@ -1156,6 +1155,27 @@ describe("MoveContext", function()
                         });
                     }
 
+                    it("Should still pass if start=false on an unrelated move",
+                    function()
+                    {
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "tackle"});
+                        if (dexutil.isMajorStatus(effect))
+                        {
+                            // make sure majorstatus assertion passes
+                            state.teams[target].active.majorStatus
+                                .afflict(effect);
+                        }
+                        // TODO: track moves that can do this
+                        expect(ctx.handle(
+                            {
+                                type: "activateStatusEffect", monRef: target,
+                                effect, start: false
+                            }))
+                            .to.be.true;
+                        ctx.expire();
+                    });
+
                     if (secondaryMove)
                     {
                         it("Should pass if expected via secondary effect",
@@ -1178,25 +1198,6 @@ describe("MoveContext", function()
 
                     if (move)
                     {
-                        it("Should still pass if start=false", function()
-                        {
-                            const ctx = initCtx(
-                                {type: "useMove", monRef: "them", move});
-                            if (dexutil.isMajorStatus(effect))
-                            {
-                                // make sure majorstatus assertion passes
-                                state.teams[target].active.majorStatus
-                                    .afflict(effect);
-                            }
-                            // TODO: track moves that can do this
-                            expect(ctx.handle(
-                                {
-                                    type: "activateStatusEffect",
-                                    monRef: target, effect, start: false
-                                }))
-                                .to.be.true;
-                            ctx.expire();
-                        });
 
                         it("Should expire if mismatched flags", function()
                         {
@@ -1221,11 +1222,6 @@ describe("MoveContext", function()
                         function()
                         {
                             const mon = state.teams[target].active;
-                            const ctx = initCtx(
-                            {
-                                type: "useMove", monRef: "them",
-                                move: secondaryMove100
-                            });
                             if (dexutil.isMajorStatus(effect))
                             {
                                 mon.majorStatus.afflict(effect);
@@ -1234,6 +1230,11 @@ describe("MoveContext", function()
                             {
                                 mon.volatile[effect].start();
                             }
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "them",
+                                move: secondaryMove100
+                            });
                             ctx.expire();
                         });
 
@@ -1247,8 +1248,8 @@ describe("MoveContext", function()
                                 secondaryMove100
                             });
                             expect(() => ctx.expire()).to.throw(Error,
-                                "Expected hit secondary StatusEffect " +
-                                `'${effect}' but it didn't happen`);
+                                "Expected effects that didn't happen: hit " +
+                                `secondary status '${effect}'`);
                         });
                         // TODO: should silently pass if target already has the
                         //  effect
@@ -1846,8 +1847,8 @@ describe("MoveContext", function()
                     const ctx = initCtx({type: "useMove", monRef: "us", move});
 
                     expect(() => ctx.expire()).to.throw(Error,
-                        `Expected ${ctg} BoostEffect add ${stat} '${amount}' ` +
-                        "but it didn't happen");
+                        `Expected effects that didn't happen: ${ctg} boost ` +
+                        `add ${stat} '${amount}'`);
                 });
             });
         }
@@ -1947,8 +1948,8 @@ describe("MoveContext", function()
                     initActive("them");
                     const ctx = initCtx({type: "useMove", monRef: "us", move});
                     expect(() => ctx.expire()).to.throw(Error,
-                        `Expected hit secondary boost ${stat} '${amount}' ` +
-                        "but it didn't happen");
+                        "Expected effects that didn't happen: hit secondary " +
+                        `boost add ${stat} '${amount}'`);
                 });
 
                 it("Should allow no boost event for 100% secondary " +

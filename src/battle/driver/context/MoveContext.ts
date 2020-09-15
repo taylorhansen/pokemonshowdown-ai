@@ -7,7 +7,7 @@ import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ContextResult, Gen4Context, SwitchContext } from "./context";
-import { PendingEffects } from "./PendingEffects";
+import { PendingMoveEffects } from "./effect/PendingMoveEffects";
 
 /** Handles events related to a move. */
 export class MoveContext extends Gen4Context
@@ -37,7 +37,7 @@ export class MoveContext extends Gen4Context
     /** Whether all implicit effects should have been handled by now. */
     private implicitHandled = false;
     /** Pending move effects. */
-    private readonly effects: PendingEffects;
+    private readonly effects: PendingMoveEffects;
     /** Whether this move should be recorded by its targets for Mirror Move. */
     private readonly mirror: boolean;
     /** Last move before this one. */
@@ -105,7 +105,7 @@ export class MoveContext extends Gen4Context
                 break;
         }
 
-        this.effects = new PendingEffects(this.moveData);
+        this.effects = new PendingMoveEffects(this.moveData);
 
         // override for non-ghost type curse effect
         // TODO(gen6): handle interactions with protean
@@ -137,7 +137,7 @@ export class MoveContext extends Gen4Context
 
         this.mirror =
             // expected to be a charging turn, no mirror
-            this.effects.get("primary")?.delay !== "twoTurn" &&
+            this.effects.get("primary", "delay") !== "twoTurn" &&
             // can't mirror called moves
             !called &&
             // can't mirror called rampage moves
@@ -224,6 +224,7 @@ export class MoveContext extends Gen4Context
         // all other pending flags must be accounted for
 
         // if we had a self-switch flag, the game must've ignored it
+        // TODO: detech when this should be ignored
         this.effects.consume("primary", "selfSwitch");
         this.state.teams[this.userRef].status.selfSwitch = null;
 
@@ -373,7 +374,7 @@ export class MoveContext extends Gen4Context
         const mon = this.state.teams[event.monRef].active;
         // TODO: complete full tracking, then expire if consume returns false
         return (!this.effects.consume(ctg, "boost", event.stat, event.amount,
-                    event.set ? undefined : mon.volatile.boosts[event.stat]) ||
+                    ...(event.set ? [] : [mon.volatile.boosts[event.stat]])) ||
                 // some moves can have a target but also boost the user's stats,
                 //  but the user still isn't technically a target in this case
                 ctg === "self" || this.addTarget(event.monRef)) &&
@@ -469,7 +470,7 @@ export class MoveContext extends Gen4Context
         //  longer sent out immediately
         if (event.monRef === this.userRef)
         {
-            const teamEffect = this.effects.get("self")?.team;
+            const teamEffect = this.effects.get("self", "team");
             if (teamEffect === "healingWish" || teamEffect === "lunarDance")
             {
                 this.state.teams[this.userRef].status[teamEffect] = true;
@@ -602,7 +603,7 @@ export class MoveContext extends Gen4Context
                 this.logger.addPrefix(
                     `Switch(${event.monRef}, ${event.species}, self` +
                     // note self-switch setting
-                    (this.effects.get("primary")?.selfSwitch ===
+                    (this.effects.get("primary", "selfSwitch") ===
                             "copyvolatile" ? ", copy" : "") +
                     "): "));
     }
@@ -636,7 +637,7 @@ export class MoveContext extends Gen4Context
     {
         // if we're not expecting a move to be called, treat this as a
         //  normal move event
-        const callEffect = this.effects.get("primary")?.call;
+        const callEffect = this.effects.get("primary", "call");
         if (!callEffect) return;
 
         switch (callEffect)
@@ -779,13 +780,13 @@ export class MoveContext extends Gen4Context
         // handle fail inferences
         if (failed)
         {
-            if (this.effects.get("primary")?.call === "copycat" &&
+            if (this.effects.get("primary", "call") === "copycat" &&
                 this.lastMove && dex.moves[this.lastMove].copycat)
             {
                 throw new Error("Copycat effect failed but should've called " +
                     `'${this.lastMove}'`);
             }
-            if (this.effects.get("primary")?.call === "mirror" &&
+            if (this.effects.get("primary", "call") === "mirror" &&
                 this.user.volatile.mirrorMove)
             {
                 throw new Error("Mirror Move effect failed but should've " +
@@ -793,7 +794,7 @@ export class MoveContext extends Gen4Context
             }
 
             // the failed=false side of this is handled by a separate event
-            if (this.effects.get("self")?.status === "imprison")
+            if (this.effects.get("self", "status") === "imprison")
             {
                 this.imprison(/*failed*/true);
             }
@@ -831,13 +832,7 @@ export class MoveContext extends Gen4Context
                 //  by a major status
                 if (mon.majorStatus.current)
                 {
-                    const effect = this.effects.get(ctg);
-                    if (dexutil.isMajorStatus(effect?.status) ||
-                        effect?.secondary?.some(s =>
-                            dexutil.isMajorStatus(s?.status)))
-                    {
-                        this.effects.consume(ctg, "status");
-                    }
+                    this.effects.consume(ctg, "status", "MajorStatus");
                 }
 
                 // consume any silent boosts that were already maxed out
@@ -851,7 +846,7 @@ export class MoveContext extends Gen4Context
 
         let lockedMove = false;
         const {lockedMove: lock} = this.user.volatile;
-        switch (this.effects.get("self")?.implicitStatus)
+        switch (this.effects.get("self", "implicitStatus"))
         {
             case "defenseCurl":
                 this.effects.consume("self", "implicitStatus");
@@ -898,7 +893,7 @@ export class MoveContext extends Gen4Context
         // team effects
 
         const team = this.state.teams[this.userRef];
-        switch (this.effects.get("self")?.implicitTeam)
+        switch (this.effects.get("self", "implicitTeam"))
         {
             // wish can be used consecutively, but only the first use counts
             case "wish":
@@ -907,7 +902,7 @@ export class MoveContext extends Gen4Context
                 break;
         }
         team.status.selfSwitch =
-            this.effects.get("primary")?.selfSwitch ?? null;
+            this.effects.get("primary", "selfSwitch") ?? null;
     }
 
     /**
