@@ -6,13 +6,8 @@ import { otherSide, Side } from "../battle/state/Side";
 import { Logger } from "../Logger";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
     "./helpers";
-import { Iter, iter } from "./parser/Iter";
 import * as psevent from "./parser/PSBattleEvent";
 import * as psmsg from "./parser/PSMessage";
-import { Result } from "./parser/types";
-
-/** Result from parsing PSBattleEvents into BattleEvents. */
-export type PSResult = Result<events.Any[], psevent.Any>;
 
 /** Translates PSBattleEvents from the PS server into BattleEvents. */
 export class PSEventHandler
@@ -157,16 +152,13 @@ export class PSEventHandler
         //  |turn| message
         this.newTurn = false;
 
-        // TODO: remove now-unneeded Iter logic
-        let it = iter(psEvents);
-        while (!it.done)
+        // handle events
+        for (let i = 0; i < psEvents.length; ++i)
         {
-            const battleEvent = it.get();
-            it = it.next();
-            const {result: battleEvents, remaining} =
-                this.handleEvent(battleEvent, it);
+            const psEvent = psEvents[i];
+            const last = psEvents[i - 1];
+            const battleEvents = this.handleEvent(psEvent, last);
             result.push(...battleEvents);
-            it = remaining;
         }
 
         // TODO: factor out into a separate method to allow multiple
@@ -244,78 +236,78 @@ export class PSEventHandler
      * @param it Points to the next BattleEvent.
      * @returns The translated BattleEvent and the remaining input Iter.
      */
-    private handleEvent(event: psevent.Any, it: Iter<psevent.Any>): PSResult
+    private handleEvent(event: psevent.Any, last?: psevent.Any): events.Any[]
     {
         const suffixEvents = this.handleSuffixes(event);
-        const {result: battleEvents, remaining} = this.delegateEvent(event, it);
+        const battleEvents = this.delegateEvent(event, last);
 
-        return {result: [...suffixEvents, ...battleEvents], remaining};
+        return [...suffixEvents, ...battleEvents];
     }
 
     /** Translates a BattleEvent without parsing suffixes. */
-    private delegateEvent(event: psevent.Any, it: Iter<psevent.Any>): PSResult
+    private delegateEvent(event: psevent.Any, last?: psevent.Any): events.Any[]
     {
         switch (event.type)
         {
             // major events
-            case "cant": return this.handleCant(event, it);
-            case "move": return this.handleMove(event, it);
-            // while drag is a minor event, it's handled the same as switch
-            case "drag": case "switch": return this.handleSwitch(event, it);
+            case "cant": return this.handleCant(event);
+            case "move": return this.handleMove(event);
+            // while drag is a minor event's handled the same as switch
+            case "drag": case "switch": return this.handleSwitch(event);
 
             // minor events
-            case "-ability": return this.handleAbility(event, it);
-            case "-endability": return this.handleEndAbility(event, it);
-            case "-start": return this.handleStart(event, it);
-            case "-activate": return this.handleActivate(event, it);
-            case "-end": return this.handleEnd(event, it);
-            case "-boost": return this.handleBoost(event, it);
-            case "-clearallboost": return this.handleClearAllBoost(event, it);
+            case "-ability": return this.handleAbility(event);
+            case "-endability": return this.handleEndAbility(event);
+            case "-start": return this.handleStart(event);
+            case "-activate": return this.handleActivate(event, last);
+            case "-end": return this.handleEnd(event);
+            case "-boost": return this.handleBoost(event);
+            case "-clearallboost": return this.handleClearAllBoost(event);
             case "-clearnegativeboost":
-                return this.handleClearNegativeBoost(event, it);
+                return this.handleClearNegativeBoost(event);
             case "-clearpositiveboost":
-                return this.handleClearPositiveBoost(event, it);
-            case "-copyboost": return this.handleCopyBoost(event, it);
-            case "-crit": return this.handleCrit(event, it);
-            case "-curestatus": return this.handleCureStatus(event, it);
-            case "-cureteam": return this.handleCureTeam(event, it);
+                return this.handleClearPositiveBoost(event);
+            case "-copyboost": return this.handleCopyBoost(event);
+            case "-crit": return this.handleCrit(event);
+            case "-curestatus": return this.handleCureStatus(event);
+            case "-cureteam": return this.handleCureTeam(event);
             case "-damage": case "-heal": case "-sethp":
-                return this.handleDamage(event, it);
-            case "detailschange": return this.handleDetailsChange(event, it);
-            case "-fail": return this.handleFail(event, it);
-            case "faint": return this.handleFaint(event, it);
+                return this.handleDamage(event);
+            case "detailschange": return this.handleDetailsChange(event);
+            case "-fail": return this.handleFail(event);
+            case "faint": return this.handleFaint(event);
             case "-fieldend": case "-fieldstart":
-                return this.handleFieldEffect(event, it);
-            case "-formechange": return this.handleFormeChange(event, it);
-            case "-hitcount": return this.handleHitCount(event, it);
-            case "-immune": return this.handleImmune(event, it);
-            case "-invertboost": return this.handleInvertBoost(event, it);
-            case "-item": return this.handleItem(event, it);
-            case "-enditem": return this.handleEndItem(event, it);
-            case "-miss": return this.handleMiss(event, it);
-            case "-mustrecharge": return this.handleMustRecharge(event, it);
-            case "-notarget": return this.handleNoTarget(event, it);
-            case "-prepare": return this.handlePrepare(event, it);
-            case "-resisted": return this.handleResisted(event, it);
-            case "-setboost": return this.handleSetBoost(event, it);
+                return this.handleFieldEffect(event);
+            case "-formechange": return this.handleFormeChange(event);
+            case "-hitcount": return this.handleHitCount(event);
+            case "-immune": return this.handleImmune(event);
+            case "-invertboost": return this.handleInvertBoost(event);
+            case "-item": return this.handleItem(event);
+            case "-enditem": return this.handleEndItem(event);
+            case "-miss": return this.handleMiss(event);
+            case "-mustrecharge": return this.handleMustRecharge(event);
+            case "-notarget": return this.handleNoTarget(event);
+            case "-prepare": return this.handlePrepare(event);
+            case "-resisted": return this.handleResisted(event);
+            case "-setboost": return this.handleSetBoost(event);
             case "-sideend": case "-sidestart":
-                return this.handleSideCondition(event, it);
-            case "-singlemove": return this.handleSingleMove(event, it);
-            case "-singleturn": return this.handleSingleTurn(event, it);
-            case "-status": return this.handleStatus(event, it);
-            case "-supereffective": return this.handleSuperEffective(event, it);
-            case "-swapboost": return this.handleSwapBoost(event, it);
-            case "tie": case "win": return this.handleGameOver(event, it);
-            case "-transform": return this.handleTransform(event, it);
-            case "turn": return this.handleTurn(event, it);
-            case "-unboost": return this.handleUnboost(event, it);
-            case "-weather": return this.handleWeather(event, it);
-            default: return {result: [], remaining: it};
+                return this.handleSideCondition(event);
+            case "-singlemove": return this.handleSingleMove(event);
+            case "-singleturn": return this.handleSingleTurn(event);
+            case "-status": return this.handleStatus(event);
+            case "-supereffective": return this.handleSuperEffective(event);
+            case "-swapboost": return this.handleSwapBoost(event);
+            case "tie": case "win": return this.handleGameOver(event);
+            case "-transform": return this.handleTransform(event);
+            case "turn": return this.handleTurn(event);
+            case "-unboost": return this.handleUnboost(event);
+            case "-weather": return this.handleWeather(event);
+            default: return [];
         }
     }
 
     /** @virtual */
-    protected handleCant(event: psevent.Cant, it: Iter<psevent.Any>): PSResult
+    protected handleCant(event: psevent.Cant): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
         let move: string | undefined;
@@ -355,39 +347,33 @@ export class PSEventHandler
         }
         else result = [{type: "inactive", monRef, ...(move && {move})}];
 
-        return {result, remaining: it};
+        return result;
     }
 
     /** @virtual */
-    protected handleMove(event: psevent.Move, it: Iter<psevent.Any>): PSResult
+    protected handleMove(event: psevent.Move): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
         const move = toIdName(event.moveName);
 
         // indicate that the pokemon has used this move
-        return {result: [{type: "useMove", monRef, move}], remaining: it};
+        return [{type: "useMove", monRef, move}];
     }
 
     /** @virtual */
-    protected handleSwitch(event: psevent.Drag | psevent.Switch,
-        it: Iter<psevent.Any>): PSResult
+    protected handleSwitch(event: psevent.Drag | psevent.Switch): events.Any[]
     {
-        return {
-            result:
-            [
-                (({id, species, level, gender, hp, hpMax}) =>
-                ({
-                    type: "switchIn", monRef: this.getSide(id.owner),
-                    species: toIdName(species), level, gender, hp, hpMax
-                } as const))(event)
-            ],
-            remaining: it
-        };
+        return [
+            (({id, species, level, gender, hp, hpMax}) =>
+            ({
+                type: "switchIn", monRef: this.getSide(id.owner),
+                species: toIdName(species), level, gender, hp, hpMax
+            } as const))(event)
+        ];
     }
 
     /** @virtual */
-    protected handleAbility(event: psevent.Ability, it: Iter<psevent.Any>):
-        PSResult
+    protected handleAbility(event: psevent.Ability): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
         const ability = toIdName(event.ability);
@@ -395,85 +381,67 @@ export class PSEventHandler
         const abilityEvent: events.ActivateAbility =
             {type: "activateAbility", monRef, ability};
 
-        return {
-            result: event.from === "ability: Trace" && event.of ?
-                [
-                    // trace ability: event.ability contains the Traced ability,
-                    //  event.of contains pokemon that was traced, event.id
-                    //  contains the pokemon that's Tracing the ability
-                    {type: "activateAbility", monRef, ability: "trace"},
-                    abilityEvent,
-                    {
-                        type: "activateAbility",
-                        monRef: this.getSide(event.of.owner), ability
-                    }
-                ]
-                : [abilityEvent],
-            remaining: it
-        };
+        return event.from === "ability: Trace" && event.of ?
+            [
+                // trace ability: event.ability contains the Traced ability,
+                //  event.of contains pokemon that was traced, event.id
+                //  contains the pokemon that's Tracing the ability
+                {type: "activateAbility", monRef, ability: "trace"},
+                abilityEvent,
+                {
+                    type: "activateAbility",
+                    monRef: this.getSide(event.of.owner), ability
+                }
+            ]
+            : [abilityEvent];
     }
 
     /** @virtual */
-    protected handleEndAbility(event: psevent.EndAbility,
-        it: Iter<psevent.Any>): PSResult
+    protected handleEndAbility(event: psevent.EndAbility): events.Any[]
     {
         // transform event was already taken care of, no need to handle
         //  this message
         // TODO: could this still be used to infer base ability?
         // typically this is never revealed this way in actual cartridge
         //  play, so best to leave it for now to preserve fairness
-        if (event.from === "move: Transform")
-        {
-            return {result: [], remaining: it};
-        }
+        if (event.from === "move: Transform") return [];
 
         // NOTE: may be replaced with "|-start|<PokemonID>|Gastro Acid" later
 
         const monRef = this.getSide(event.id.owner);
         const ability = toIdName(event.ability);
-        return {
-            result:
-            [
-                // TODO: does cartridge also reveal ability?
-                // when can this status be overwritten by an ability change?
-                {type: "activateAbility", monRef, ability},
-                {
-                    type: "activateStatusEffect", monRef,
-                    effect: "suppressAbility", start: true
-                }
-            ],
-            remaining: it
-        };
+        return [
+            // TODO: does cartridge also reveal ability?
+            // when can this status be overwritten by an ability change?
+            {type: "activateAbility", monRef, ability},
+            {
+                type: "activateStatusEffect", monRef, effect: "suppressAbility",
+                start: true
+            }
+        ];
     }
 
     /** @virtual */
-    protected handleStart(event: psevent.Start, it: Iter<psevent.Any>): PSResult
+    protected handleStart(event: psevent.Start): events.Any[]
     {
         if (event.volatile === "ability: Flash Fire")
         {
             const monRef = this.getSide(event.id.owner);
-            return {
-                result:
-                [
-                    {type: "activateAbility", monRef, ability: "flashfire"},
-                    {
-                        type: "activateStatusEffect", monRef,
-                        effect: "flashFire", start: true
-                    },
-                    {type: "immune", monRef}
-                ],
-                remaining: it
-            };
+            return [
+                {type: "activateAbility", monRef, ability: "flashfire"},
+                {
+                    type: "activateStatusEffect", monRef, effect: "flashFire",
+                    start: true
+                },
+                {type: "immune", monRef}
+            ];
         }
         if (event.volatile === "typeadd")
         {
             // set added type
             const monRef = this.getSide(event.id.owner);
             const thirdType = event.otherArgs[0].toLowerCase() as dexutil.Type;
-            return {
-                result: [{type: "setThirdType", monRef, thirdType}],
-                remaining: it
-            };
+            return [{type: "setThirdType", monRef, thirdType}];
         }
         if (event.volatile === "typechange")
         {
@@ -500,10 +468,7 @@ export class PSEventHandler
             else newTypes = ["???", "???"];
 
             const monRef = this.getSide(event.id.owner);
-            return {
-                result: [{type: "changeType", monRef, newTypes}],
-                remaining: it
-            };
+            return [{type: "changeType", monRef, newTypes}];
         }
         if (event.volatile.startsWith("perish") ||
             event.volatile.startsWith("stockpile"))
@@ -513,18 +478,15 @@ export class PSEventHandler
             const effect =
                 event.volatile.startsWith("perish") ? "perish" : "stockpile";
             const amount = parseInt(event.volatile.substr(effect.length), 10);
-            return {
-                result: [{type: "countStatusEffect", monRef, effect, amount}],
-                remaining: it
-            };
+            return [{type: "countStatusEffect", monRef, effect, amount}];
         }
         // trivial, handle using factored-out method
-        return this.handleTrivialStatus(event, it);
+        return this.handleTrivialStatus(event);
     }
 
     /** @virtual */
-    protected handleActivate(event: psevent.Activate, it: Iter<psevent.Any>):
-        PSResult
+    protected handleActivate(event: psevent.Activate, last?: psevent.Any):
+        events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
         const volatile = event.volatile.startsWith("move: ") ?
@@ -532,224 +494,154 @@ export class PSEventHandler
         switch (volatile)
         {
             case "Bide":
-                return {
-                    result:
-                    [{
-                        type: "updateStatusEffect", monRef, effect: "bide"
-                    }],
-                    remaining: it
-                };
+                return [{type: "updateStatusEffect", monRef, effect: "bide"}];
             case "Charge":
-                return {
-                    result:
-                    [{
-                        type: "activateStatusEffect", monRef, effect: "charge",
-                        start: true
-                    }],
-                    remaining: it
-                };
+                return [{
+                    type: "activateStatusEffect", monRef, effect: "charge",
+                    start: true
+                }];
             case "confusion":
-                return {
-                    result:
-                    [{
-                        type: "updateStatusEffect", monRef,
-                        effect: volatile
-                    }],
-                    remaining: it
-                };
+                return [{type: "updateStatusEffect", monRef, effect: volatile}];
             case "Endure": case "Mist": case "Protect": case "Safeguard":
             case "Substitute":
-                return {
-                    result:
-                    [{
-                        type: "block", monRef,
-                        effect: volatile.toLowerCase() as events.BlockEffect
-                    }],
-                    remaining: it
-                };
+                return [{
+                    type: "block", monRef,
+                    effect: volatile.toLowerCase() as events.BlockEffect
+                }];
             case "Feint":
-                return {result: [{type: "feint", monRef}], remaining: it};
+                return [{type: "feint", monRef}];
             case "Grudge":
-                return {
-                    result:
-                    [{
-                        type: "modifyPP", monRef,
-                        move: toIdName(event.otherArgs[0]), amount: "deplete"
-                    }],
-                    remaining: it
-                };
+                return [{
+                    type: "modifyPP", monRef,
+                    move: toIdName(event.otherArgs[0]), amount: "deplete"
+                }];
             case "Lock-On": case "Mind Reader":
-                return {
-                    result:
-                    [{
-                        type: "lockOn", monRef,
-                        target: event.of ?
-                            this.getSide(event.of.owner) : otherSide(monRef)
-                    }],
-                    remaining: it
-                };
+                return [{
+                    type: "lockOn", monRef,
+                    target: event.of ?
+                        this.getSide(event.of.owner) : otherSide(monRef)
+                }];
             case "Mimic":
             {
                 const move = toIdName(event.otherArgs[0]);
 
                 // use the last (move) event to see whether this is actually
                 //  Sketch or Mimic
-                const lastIt = it.prev().prev();
-                const lastEvent = lastIt.get();
-                if (lastIt.done || lastEvent.type !== "move" ||
-                    JSON.stringify(lastEvent.id) !==
-                        JSON.stringify(event.id))
+                if (last?.type !== "move" ||
+                    JSON.stringify(last.id) !== JSON.stringify(event.id))
                 {
                     throw new Error("Don't know how Mimic was caused");
                 }
 
-                if (lastEvent.moveName === "Mimic")
+                if (last.moveName === "Mimic")
                 {
-                    return {
-                        result: [{type: "mimic", monRef, move}], remaining: it
-                    };
+                    return [{type: "mimic", monRef, move}];
                 }
-                if (lastEvent.moveName === "Sketch")
+                if (last.moveName === "Sketch")
                 {
-                    return {
-                        result: [{type: "sketch", monRef, move}], remaining: it
-                    };
+                    return [{type: "sketch", monRef, move}];
                 }
                 throw new Error(
-                    `Unknown Mimic-like move '${lastEvent.moveName}'`);
+                    `Unknown Mimic-like move '${last.moveName}'`);
             }
             case "Spite":
-                return {
-                    result:
-                    [{
-                        type: "modifyPP", monRef,
-                        move: toIdName(event.otherArgs[0]),
-                        amount: -parseInt(event.otherArgs[1], 10)
-                    }],
-                    remaining: it
-                };
+                return [{
+                    type: "modifyPP", monRef,
+                    move: toIdName(event.otherArgs[0]),
+                    amount: -parseInt(event.otherArgs[1], 10)
+                }];
             case "Substitute":
-                return {
-                    result: [{type: "block", monRef, effect: "substitute"}],
-                    remaining: it
-                };
+                return [{type: "block", monRef, effect: "substitute"}];
             case "trapped":
-                return {
-                    result:
-                    [{
-                        type: "trap", target: monRef, by: otherSide(monRef)
-                    }],
-                    remaining: it
-                };
+                return [{type: "trap", target: monRef, by: otherSide(monRef)}];
             default:
                 this.logger.debug(`Ignoring activate '${event.volatile}'`);
-                return {result: [], remaining: it};
+                return [];
         }
     }
 
     /** @virtual */
-    protected handleEnd(event: psevent.End, it: Iter<psevent.Any>): PSResult
+    protected handleEnd(event: psevent.End): events.Any[]
     {
         if (event.volatile === "Stockpile")
         {
             // end stockpile stacks
-            return {
-                result:
-                [{
-                    type: "countStatusEffect",
-                    monRef: this.getSide(event.id.owner), effect: "stockpile",
-                    amount: 0
-                }],
-                remaining: it
-            };
+            return [{
+                type: "countStatusEffect", monRef: this.getSide(event.id.owner),
+                effect: "stockpile", amount: 0
+            }];
         }
-        return this.handleTrivialStatus(event, it);
+        return this.handleTrivialStatus(event);
     }
 
     /** @virtual */
-    protected handleBoost(event: psevent.Boost, it: Iter<psevent.Any>): PSResult
+    protected handleBoost(event: psevent.Boost): events.Any[]
     {
-        return {
-            result:
-            [{
-                type: "boost", monRef: this.getSide(event.id.owner),
-                stat: event.stat, amount: event.amount
-            }],
-            remaining: it
-        };
+        return [{
+            type: "boost", monRef: this.getSide(event.id.owner),
+            stat: event.stat, amount: event.amount
+        }];
     }
 
     /** @virtual */
-    protected handleClearAllBoost(event: psevent.ClearAllBoost,
-        it: Iter<psevent.Any>): PSResult
+    protected handleClearAllBoost(event: psevent.ClearAllBoost): events.Any[]
     {
-        return {result: [{type: "clearAllBoosts"}], remaining: it};
+        return [{type: "clearAllBoosts"}];
     }
 
     /** @virtual */
-    protected handleClearNegativeBoost(event: psevent.ClearNegativeBoost,
-        it: Iter<psevent.Any>): PSResult
+    protected handleClearNegativeBoost(event: psevent.ClearNegativeBoost):
+        events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
-        return {result: [{type: "clearNegativeBoosts", monRef}], remaining: it};
+        return [{type: "clearNegativeBoosts", monRef}];
     }
 
     /** @virtual */
-    protected handleClearPositiveBoost(event: psevent.ClearPositiveBoost,
-        it: Iter<psevent.Any>): PSResult
+    protected handleClearPositiveBoost(event: psevent.ClearPositiveBoost):
+        events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
-        return {result: [{type: "clearPositiveBoosts", monRef}], remaining: it};
+        return [{type: "clearPositiveBoosts", monRef}];
     }
 
     /** @virtual */
-    protected handleCopyBoost(event: psevent.CopyBoost, it: Iter<psevent.Any>):
-        PSResult
+    protected handleCopyBoost(event: psevent.CopyBoost): events.Any[]
     {
         const from = this.getSide(event.target.owner);
         const to = this.getSide(event.source.owner);
-        return {result: [{type: "copyBoosts", from, to}], remaining: it};
+        return [{type: "copyBoosts", from, to}];
     }
 
     /** @virtual */
-    protected handleCrit(event: psevent.Crit, it: Iter<psevent.Any>):
-        PSResult
+    protected handleCrit(event: psevent.Crit): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
-        return {result: [{type: "crit", monRef}], remaining: it};
+        return [{type: "crit", monRef}];
     }
 
     /** @virtual */
-    protected handleCureStatus(event: psevent.CureStatus,
-        it: Iter<psevent.Any>): PSResult
+    protected handleCureStatus(event: psevent.CureStatus): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
-        return {
-            result:
-            [{
-                type: "activateStatusEffect", monRef, effect: event.majorStatus,
-                start: false
-            }],
-            remaining: it
-        };
+        return [{
+            type: "activateStatusEffect", monRef, effect: event.majorStatus,
+            start: false
+        }];
     }
 
     /** @virtual */
-    protected handleCureTeam(event: psevent.CureTeam, it: Iter<psevent.Any>):
-        PSResult
+    protected handleCureTeam(event: psevent.CureTeam): events.Any[]
     {
-        return {
-            result: [{type: "cureTeam", teamRef: this.getSide(event.id.owner)}],
-            remaining: it
-        };
+        return [{type: "cureTeam", teamRef: this.getSide(event.id.owner)}];
     }
 
     /**
      * Handles a damage/heal/sethp event.
      * @virtual
      */
-    protected handleDamage(event: psevent.Damage | psevent.Heal | psevent.SetHP,
-        it: Iter<psevent.Any>): PSResult
+    protected handleDamage(
+        event: psevent.Damage | psevent.Heal | psevent.SetHP): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
         const newHP = [event.status.hp, event.status.hpMax] as const;
@@ -760,154 +652,107 @@ export class PSEventHandler
         // TODO: wish
         if (event.from === "move: Healing Wish")
         {
-            return {
-                result:
-                [
-                    {
-                        type: "activateTeamEffect", teamRef: monRef,
-                        effect: "healingWish", start: false
-                    },
-                    damageEvent
-                ],
-                remaining: it
-            };
+            return [
+                {
+                    type: "activateTeamEffect", teamRef: monRef,
+                    effect: "healingWish", start: false
+                },
+                damageEvent
+            ];
         }
         if (event.from === "move: Lunar Dance")
         {
-            return {
-                result:
-                [
-                    {
-                        type: "activateTeamEffect", teamRef: monRef,
-                        effect: "lunarDance", start: false
-                    },
-                    damageEvent, {type: "restoreMoves", monRef}
-                ],
-                remaining: it
-            };
+            return [
+                {
+                    type: "activateTeamEffect", teamRef: monRef,
+                    effect: "lunarDance", start: false
+                },
+                damageEvent, {type: "restoreMoves", monRef}
+            ];
         }
-        return {result: [damageEvent], remaining: it};
+        return [damageEvent];
     }
 
     /** @virtual */
-    protected handleDetailsChange(event: psevent.DetailsChange,
-        it: Iter<psevent.Any>): PSResult
+    protected handleDetailsChange(event: psevent.DetailsChange): events.Any[]
     {
-        return {
-            result:
-            [
-                (({id, species, level, gender, hp, hpMax}) =>
-                ({
-                    type: "formChange", monRef: this.getSide(id.owner), species,
-                    level, gender, hp, hpMax, perm: true
-                } as const))(event)
-            ],
-            remaining: it
-        };
+        return [
+            (({id, species, level, gender, hp, hpMax}) =>
+            ({
+                type: "formChange", monRef: this.getSide(id.owner), species,
+                level, gender, hp, hpMax, perm: true
+            } as const))(event)
+        ];
     }
 
     /** @virtual */
-    protected handleFail(event: psevent.Fail, it: Iter<psevent.Any>): PSResult
+    protected handleFail(event: psevent.Fail): events.Any[]
     {
-        return {
-            result: [{type: "fail", monRef: this.getSide(event.id.owner)}],
-            remaining: it
-        };
+        return [{type: "fail", monRef: this.getSide(event.id.owner)}];
     }
 
     /** @virtual */
-    protected handleFaint(event: psevent.Faint, it: Iter<psevent.Any>): PSResult
+    protected handleFaint(event: psevent.Faint): events.Any[]
     {
-        return {
-            result: [{type: "faint", monRef: this.getSide(event.id.owner)}],
-            remaining: it
-        };
+        return [{type: "faint", monRef: this.getSide(event.id.owner)}];
     }
 
     /**
      * Handles a field end/start event.
      * @virtual
      */
-    protected handleFieldEffect(event: psevent.FieldEnd | psevent.FieldStart,
-        it: Iter<psevent.Any>): PSResult
+    protected handleFieldEffect(event: psevent.FieldEnd | psevent.FieldStart):
+        events.Any[]
     {
         switch (event.effect)
         {
             case "move: Gravity":
-                return {
-                    result:
-                    [{
-                        type: "activateFieldEffect", effect: "gravity",
-                        start: event.type === "-fieldstart"
-                    }],
-                    remaining: it
-                };
+                return [{
+                    type: "activateFieldEffect", effect: "gravity",
+                    start: event.type === "-fieldstart"
+                }];
             case "move: Trick Room":
-                return {
-                    result:
-                    [{
-                        type: "activateFieldEffect", effect: "trickRoom",
-                        start: event.type === "-fieldstart"
-                    }],
-                    remaining: it
-                };
-            default: return {result: [], remaining: it};
+                return [{
+                    type: "activateFieldEffect", effect: "trickRoom",
+                    start: event.type === "-fieldstart"
+                }];
+            default: return [];
         }
     }
 
     /** @virtual */
-    protected handleFormeChange(event: psevent.FormeChange,
-        it: Iter<psevent.Any>): PSResult
+    protected handleFormeChange(event: psevent.FormeChange): events.Any[]
     {
-        return {
-            result:
-            [
-                (({id, species, level, gender, hp, hpMax}) =>
-                ({
-                    type: "formChange", monRef: this.getSide(id.owner), species,
-                    level, gender, hp, hpMax, perm: false
-                } as const))(event)
-            ],
-            remaining: it
-        };
+        return [
+            (({id, species, level, gender, hp, hpMax}) =>
+            ({
+                type: "formChange", monRef: this.getSide(id.owner), species,
+                level, gender, hp, hpMax, perm: false
+            } as const))(event)
+        ];
     }
 
     /** @virtual */
-    protected handleHitCount(event: psevent.HitCount, it: Iter<psevent.Any>):
-        PSResult
+    protected handleHitCount(event: psevent.HitCount): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
-        return {
-            result: [{type: "hitCount", monRef, count: event.count}],
-            remaining: it
-        };
+        return [{type: "hitCount", monRef, count: event.count}];
     }
 
     /** @virtual */
-    protected handleImmune(event: psevent.Immune, it: Iter<psevent.Any>):
-        PSResult
+    protected handleImmune(event: psevent.Immune): events.Any[]
     {
-        return {
-            result: [{type: "immune", monRef: this.getSide(event.id.owner)}],
-            remaining: it
-        };
+        return [{type: "immune", monRef: this.getSide(event.id.owner)}];
     }
 
     /** @virtual */
-    protected handleInvertBoost(event: psevent.InvertBoost,
-        it: Iter<psevent.Any>): PSResult
+    protected handleInvertBoost(event: psevent.InvertBoost): events.Any[]
     {
-        return {
-            result:
-            [{
-                type: "invertBoosts", monRef: this.getSide(event.id.owner)
-            }],
-            remaining: it
-        };
+        return [{type: "invertBoosts", monRef: this.getSide(event.id.owner)}];
     }
 
     /** @virtual */
-    protected handleItem(event: psevent.Item, it: Iter<psevent.Any>): PSResult
+    protected handleItem(event: psevent.Item): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
         const item = toIdName(event.item);
@@ -922,14 +767,11 @@ export class PSEventHandler
         }
         else gained = false;
 
-        return {
-            result: [{type: "revealItem", monRef, item, gained}], remaining: it
-        };
+        return [{type: "revealItem", monRef, item, gained}];
     }
 
     /** @virtual */
-    protected handleEndItem(event: psevent.EndItem, it: Iter<psevent.Any>):
-        PSResult
+    protected handleEndItem(event: psevent.EndItem): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
 
@@ -947,95 +789,64 @@ export class PSEventHandler
         //  back using Recycle
         else consumed = toIdName(event.item);
 
-        return {
-            result: [{type: "removeItem", monRef, consumed}], remaining: it
-        };
+        return [{type: "removeItem", monRef, consumed}];
     }
 
     /** @virtual */
-    protected handleMiss(event: psevent.Miss, it: Iter<psevent.Any>): PSResult
+    protected handleMiss(event: psevent.Miss): events.Any[]
     {
-        return {
-            result:
-                [{type: "miss", monRef: this.getSide(event.targetId.owner)}],
-            remaining: it
-        };
+        return [{type: "miss", monRef: this.getSide(event.targetId.owner)}];
     }
 
     /** @virtual */
-    protected handleMustRecharge(event: psevent.MustRecharge,
-        it: Iter<psevent.Any>): PSResult
+    protected handleMustRecharge(event: psevent.MustRecharge): events.Any[]
     {
-        return {
-            result:
-            [{
-                type: "mustRecharge", monRef: this.getSide(event.id.owner)
-            }],
-            remaining: it
-        };
+        return [{type: "mustRecharge", monRef: this.getSide(event.id.owner)}];
     }
 
     /** @virtual */
-    protected handleNoTarget(event: psevent.NoTarget, it: Iter<psevent.Any>):
-        PSResult
+    protected handleNoTarget(event: psevent.NoTarget): events.Any[]
     {
-        return {
-            result: [{type: "noTarget", monRef: this.getSide(event.id.owner)}],
-            remaining: it
-        };
+        return [{type: "noTarget", monRef: this.getSide(event.id.owner)}];
     }
 
     /** @virtual */
-    protected handlePrepare(event: psevent.Prepare, it: Iter<psevent.Any>):
-        PSResult
+    protected handlePrepare(event: psevent.Prepare): events.Any[]
     {
         const move = toIdName(event.moveName);
         if (!dex.isTwoTurnMove(move))
         {
             throw new Error(`'${move}' is not a two-turn move`);
         }
-        return {
-            result:
-            [{
-                type: "prepareMove", monRef: this.getSide(event.id.owner), move
-            }],
-            remaining: it
-        };
+        return [{
+            type: "prepareMove", monRef: this.getSide(event.id.owner), move
+        }];
     }
 
     /** @virtual */
-    protected handleResisted(event: psevent.Resisted, it: Iter<psevent.Any>):
-        PSResult
+    protected handleResisted(event: psevent.Resisted): events.Any[]
     {
-        return {
-            result: [{type: "resisted", monRef: this.getSide(event.id.owner)}],
-            remaining: it
-        };
+        return [{type: "resisted", monRef: this.getSide(event.id.owner)}];
     }
 
     /** @virtual */
-    protected handleSetBoost(event: psevent.SetBoost, it: Iter<psevent.Any>):
-        PSResult
+    protected handleSetBoost(event: psevent.SetBoost): events.Any[]
     {
-        return {
-            result:
-            [
-                (({id, stat, amount}) =>
-                ({
-                    type: "boost", monRef: this.getSide(id.owner), stat, amount,
-                    set: true
-                } as const))(event)
-            ],
-            remaining: it
-        };
+        return [
+            (({id, stat, amount}) =>
+            ({
+                type: "boost", monRef: this.getSide(id.owner), stat, amount,
+                set: true
+            } as const))(event)
+        ];
     }
 
     /**
      * Handles a side end/start event.
      * @virtual
      */
-    protected handleSideCondition(event: psevent.SideEnd | psevent.SideStart,
-        it: Iter<psevent.Any>): PSResult
+    protected handleSideCondition(event: psevent.SideEnd | psevent.SideStart):
+        events.Any[]
     {
         const teamRef = this.getSide(event.id);
         let effect: effects.TeamType;
@@ -1059,40 +870,30 @@ export class PSEventHandler
             case "Stealth Rock": effect = "stealthRock"; break;
             case "Tailwind": effect = "tailwind"; break;
             case "Toxic Spikes": effect = "toxicSpikes"; break;
-            default: return {result: [], remaining: it};
+            default: return [];
         }
 
-        return {
-            result:
-            [{
-                type: "activateTeamEffect", teamRef, effect,
-                start: event.type === "-sidestart"
-            }],
-            remaining: it
-        };
+        return [{
+            type: "activateTeamEffect", teamRef, effect,
+            start: event.type === "-sidestart"
+        }];
     }
 
     /** @virtual */
-    protected handleSingleMove(event: psevent.SingleMove,
-        it: Iter<psevent.Any>): PSResult
+    protected handleSingleMove(event: psevent.SingleMove): events.Any[]
     {
         let effect: effects.SingleMoveType | undefined;
         if (event.move === "Destiny Bond") effect = "destinyBond";
         else if (event.move === "Grudge") effect = "grudge";
         else if (event.move === "Rage") effect = "rage";
-        else return {result: [], remaining: it};
+        else return [];
 
         const monRef = this.getSide(event.id.owner);
-        return {
-            result:
-                [{type: "activateStatusEffect", monRef, effect, start: true}],
-            remaining: it
-        };
+        return [{type: "activateStatusEffect", monRef, effect, start: true}];
     }
 
     /** @virtual */
-    protected handleSingleTurn(event: psevent.SingleTurn,
-        it: Iter<psevent.Any>): PSResult
+    protected handleSingleTurn(event: psevent.SingleTurn): events.Any[]
     {
         let effect: effects.SingleTurnType;
         switch (event.status.startsWith("move: ") ?
@@ -1103,58 +904,40 @@ export class PSEventHandler
             case "Protect": effect = "protect"; break;
             case "Roost": effect = "roost"; break;
             case "Snatch": effect = "snatch"; break;
-            default: return {result: [], remaining: it};
+            default: return [];
         }
 
         const monRef = this.getSide(event.id.owner);
-        return {
-            result:
-                [{type: "activateStatusEffect", monRef, effect, start: true}],
-            remaining: it
-        };
+        return [{type: "activateStatusEffect", monRef, effect, start: true}];
     }
 
     /** @virtual */
-    protected handleStatus(event: psevent.Status, it: Iter<psevent.Any>):
-        PSResult
+    protected handleStatus(event: psevent.Status): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
-        return {
-            result:
-            [{
-                type: "activateStatusEffect", monRef, effect: event.majorStatus,
-                start: true
-            }],
-            remaining: it
-        };
+        return [{
+            type: "activateStatusEffect", monRef, effect: event.majorStatus,
+            start: true
+        }];
     }
 
     /** @virtual */
-    protected handleSuperEffective(event: psevent.SuperEffective,
-        it: Iter<psevent.Any>): PSResult
+    protected handleSuperEffective(event: psevent.SuperEffective): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
-        return {result: [{type: "superEffective", monRef}], remaining: it};
+        return [{type: "superEffective", monRef}];
     }
 
     /** @virtual */
-    protected handleSwapBoost(event: psevent.SwapBoost, it: Iter<psevent.Any>):
-        PSResult
+    protected handleSwapBoost(event: psevent.SwapBoost): events.Any[]
     {
         const monRef1 = this.getSide(event.source.owner);
         const monRef2 = this.getSide(event.target.owner);
-        return {
-            result:
-            [{
-                type: "swapBoosts", monRef1, monRef2, stats: event.stats
-            }],
-            remaining: it
-        };
+        return [{type: "swapBoosts", monRef1, monRef2, stats: event.stats}];
     }
 
     /** @virtual */
-    protected handleGameOver(event: psevent.Tie | psevent.Win,
-        it: Iter<psevent.Any>): PSResult
+    protected handleGameOver(event: psevent.Tie | psevent.Win): events.Any[]
     {
         this._battling = false;
 
@@ -1164,45 +947,36 @@ export class PSEventHandler
             winner = event.winner === this.username ? "us" : "them";
         }
 
-        return {
-            result: [{type: "gameOver", ...(winner && {winner})}],
-            remaining: it
-        };
+        return [{type: "gameOver", ...(winner && {winner})}];
     }
 
     /** @virtual */
-    protected handleTransform(event: psevent.Transform, it: Iter<psevent.Any>):
-        PSResult
+    protected handleTransform(event: psevent.Transform):
+        events.Any[]
     {
         const source = this.getSide(event.source.owner);
         const target = this.getSide(event.target.owner);
-        return {result: [{type: "transform", source, target}], remaining: it};
+        return [{type: "transform", source, target}];
     }
 
     /** @virtual */
-    protected handleTurn(event: psevent.Turn, it: Iter<psevent.Any>): PSResult
+    protected handleTurn(event: psevent.Turn): events.Any[]
     {
         this.newTurn = true;
-        return {result: [], remaining: it};
+        return [];
     }
 
     /** @virtual */
-    protected handleUnboost(event: psevent.Unboost, it: Iter<psevent.Any>):
-        PSResult
+    protected handleUnboost(event: psevent.Unboost): events.Any[]
     {
-        return {
-            result:
-            [{
-                type: "boost", monRef: this.getSide(event.id.owner),
-                stat: event.stat, amount: -event.amount
-            }],
-            remaining: it
-        };
+        return [{
+            type: "boost", monRef: this.getSide(event.id.owner),
+            stat: event.stat, amount: -event.amount
+        }];
     }
 
     /** @virtual */
-    protected handleWeather(event: psevent.Weather, it: Iter<psevent.Any>):
-        PSResult
+    protected handleWeather(event: psevent.Weather): events.Any[]
     {
         let result: events.Any[];
 
@@ -1220,7 +994,7 @@ export class PSEventHandler
             }];
         }
 
-        return {result, remaining: it};
+        return result;
     }
 
     /** Handles the `[of]` and `[from]` suffixes of an event. */
@@ -1269,8 +1043,8 @@ export class PSEventHandler
     }
 
     /** Handles the shared statuses in end/start events. */
-    private handleTrivialStatus(event: psevent.End | psevent.Start,
-        it: Iter<psevent.Any>): PSResult
+    private handleTrivialStatus(event: psevent.End | psevent.Start):
+        events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
         const start = event.type === "-start";
@@ -1377,7 +1151,7 @@ export class PSEventHandler
                     [{type: "activateStatusEffect", monRef, effect, start}];
             }
         }
-        return {result: battleEvents, remaining: it};
+        return battleEvents;
     }
 
     // istanbul ignore next: trivial
