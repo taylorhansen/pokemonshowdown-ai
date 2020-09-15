@@ -480,16 +480,6 @@ describe("Gen4Context", function()
             });
         });
 
-        describe("clearSelfSwitch", function()
-        {
-            it("Should clear self-switch flags", function()
-            {
-                state.teams.them.status.selfSwitch = true;
-                handle({type: "clearSelfSwitch"});
-                expect(state.teams.them.status.selfSwitch).to.be.null;
-            });
-        });
-
         describe("copyBoosts", function()
         {
             it("Should copy boosts", function()

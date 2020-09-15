@@ -20,7 +20,6 @@ interface EventMap
     clearAllBoosts: ClearAllBoosts;
     clearNegativeBoosts: ClearNegativeBoosts;
     clearPositiveBoosts: ClearPositiveBoosts;
-    clearSelfSwitch: ClearSelfSwitch;
     copyBoosts: CopyBoosts;
     countStatusEffect: CountStatusEffect;
     crit: Crit;
@@ -180,9 +179,6 @@ export interface ClearPositiveBoosts extends EventBase<"clearPositiveBoosts">
     /** Pokemon reference. */
     readonly monRef: Side;
 }
-
-/** Clears self-switch flags for both teams. */
-export interface ClearSelfSwitch extends EventBase<"clearSelfSwitch"> {}
 
 /** Copies temporary stat boosts from one pokemon to the other. */
 export interface CopyBoosts extends EventBase<"copyBoosts">

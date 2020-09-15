@@ -174,14 +174,6 @@ export class Gen4Context extends DriverContext
     }
 
     /** @override */
-    public clearSelfSwitch(event: events.ClearSelfSwitch): ContextResult
-    {
-        this.state.teams.us.status.selfSwitch = null;
-        this.state.teams.them.status.selfSwitch = null;
-        return super.clearSelfSwitch(event);
-    }
-
-    /** @override */
     public copyBoosts(event: events.CopyBoosts): ContextResult
     {
         const from = this.state.teams[event.from].active.volatile.boosts;

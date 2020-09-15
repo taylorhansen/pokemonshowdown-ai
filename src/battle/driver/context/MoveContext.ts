@@ -408,10 +408,6 @@ export class MoveContext extends Gen4Context
     { return false; }
 
     /** @override */
-    public clearSelfSwitch(event: events.ClearSelfSwitch): ContextResult
-    { return false; }
-
-    /** @override */
     public countStatusEffect(event: events.CountStatusEffect): ContextResult
     {
         let result: ContextResult;

@@ -1235,12 +1235,6 @@ describe("PSEventHandler", function()
                 [{type: "boost", monRef: "us", stat: "def", amount: -2}]);
         });
 
-        describe("upkeep", function()
-        {
-            test("Should emit clearSelfSwitch",
-                [{type: "upkeep"}], [{type: "clearSelfSwitch"}]);
-        });
-
         describe("-weather", function()
         {
             test("Should emit resetWeather if weatherType=none",

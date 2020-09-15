@@ -309,7 +309,6 @@ export class PSEventHandler
             case "-transform": return this.handleTransform(event, it);
             case "turn": return this.handleTurn(event, it);
             case "-unboost": return this.handleUnboost(event, it);
-            case "upkeep": return this.handleUpkeep(event, it);
             case "-weather": return this.handleWeather(event, it);
             default: return {result: [], remaining: it};
         }
@@ -1199,17 +1198,6 @@ export class PSEventHandler
             }],
             remaining: it
         };
-    }
-
-    /** @virtual */
-    protected handleUpkeep(event: psevent.Upkeep, it: Iter<psevent.Any>):
-        PSResult
-    {
-        // selfSwitch is the result of a move, which only occurs in the middle
-        //  of all the turn's main events (args.events)
-        // if the simulator ignored the fact that a selfSwitch move was used,
-        //  then it would emit an upkeep event
-        return {result: [{type: "clearSelfSwitch"}], remaining: it};
     }
 
     /** @virtual */

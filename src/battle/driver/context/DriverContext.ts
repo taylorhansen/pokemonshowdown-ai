@@ -129,13 +129,6 @@ export abstract class DriverContext implements BattleEventHandler
     { return true; }
 
     /**
-     * Clears self-switch flags for both teams.
-     * @virtual
-     */
-    public clearSelfSwitch(event: events.ClearSelfSwitch): ContextResult
-    { return true; }
-
-    /**
      * Copies temporary stat boosts from one pokemon to the other.
      * @virtual
      */

@@ -45,7 +45,7 @@ describe("SwitchContext", function()
         it("Should expire", function()
         {
             initTeam("us", 1);
-            expect(initCtx("us", smeargle).handle({type: "clearSelfSwitch"}))
+            expect(initCtx("us", smeargle).handle({type: "clearAllBoosts"}))
                 .to.not.be.ok;
         });
     });
