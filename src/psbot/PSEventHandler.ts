@@ -356,8 +356,15 @@ export class PSEventHandler
         const monRef = this.getSide(event.id.owner);
         const move = toIdName(event.moveName);
 
+        const prefix: events.Any[] = [];
+        if (event.from === "Magic Coat")
+        {
+            // move is being reflected
+            prefix.push({type: "block", monRef, effect: "magicCoat"});
+        }
+
         // indicate that the pokemon has used this move
-        return [{type: "useMove", monRef, move}];
+        return [...prefix, {type: "useMove", monRef, move}];
     }
 
     /** @virtual */

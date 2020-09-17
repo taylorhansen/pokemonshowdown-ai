@@ -1011,6 +1011,13 @@ describe("PSEventHandler", function()
             test("Should emit useMove",
                 [{type: "move", id: us, moveName: "Splash"}],
                 [{type: "useMove", monRef: "us", move: "splash"}]);
+
+            test("Should emit useMove and block if Magic Coat",
+                [{type: "move", id: us, moveName: "Flash", from: "Magic Coat"}],
+            [
+                {type: "block", monRef: "us", effect: "magicCoat"},
+                {type: "useMove", monRef: "us", move: "flash"}
+            ]);
         });
 
         describe("-miss", function()

@@ -141,6 +141,21 @@ export class PendingMoveEffects
         }
     }
 
+    /**
+     * Sets the CallEffect flag.
+     * @param move Called move being expected.
+     * @param bounced Whether the move was reflected by an effect.
+     */
+    public setCall(move: string, bounced = false): void
+    {
+        this.effects.add("primary call", new PendingValueEffect(move));
+        if (bounced)
+        {
+            this.effects.add("primary call bounced",
+                new PendingValueEffect(true));
+        }
+    }
+
     /** Sets the self-switch flag. */
     public setSelfSwitch(): void
     {
@@ -210,6 +225,15 @@ export class PendingMoveEffects
      */
     public consume<T extends effects.PrimaryType>(ctg: "primary",
         key: T, effect?: effects.PrimaryMap[T]["value"]): boolean;
+    /**
+     * Checks and consumes a pending call effect.
+     * @param effect Effect type to check. If `"bounced"` check for bounced
+     * flag. If omitted, checks are skipped except whether the effect is
+     * pending.
+     * @returns True if the effect has now been consumed, false otherwise.
+     */
+    public consume(ctg: "primary", key: "call",
+        effect?: effects.CallType | "bounced"): boolean;
     /**
      * Checks and consumes a pending self-switch effect.
      * @param effect Effect type to check. If omitted, checks are skipped except
@@ -285,6 +309,15 @@ export class PendingMoveEffects
             return result;
         }
 
+        if (ctg === "primary" && key === "call" && effectOrStat === "bounced")
+        {
+            return this.effects.consume("primary call bounced", true);
+        }
+        if (ctg === "primary" && key === "swapBoost")
+        {
+            const stats = effectOrStat as readonly dexutil.BoostName[];
+            return this.effects.consume("primary swapBoost", stats.join(","));
+        }
         if (ctg !== "primary" && key === "boost")
         {
             const boost = cur == null ? "set" : "add"
@@ -311,15 +344,7 @@ export class PendingMoveEffects
             }
             return true;
         }
-        else if (ctg === "primary" && key === "swapBoost")
-        {
-            const stats = effectOrStat as readonly dexutil.BoostName[];
-            return this.effects.consume("primary swapBoost", stats.join(","));
-        }
-        else
-        {
-            return this.effects.consume(`${ctg} ${key}`, effectOrStat) ||
-                this.effects.consume(`${ctg} secondary ${key}`, effectOrStat);
-        }
+        return this.effects.consume(`${ctg} ${key}`, effectOrStat) ||
+            this.effects.consume(`${ctg} secondary ${key}`, effectOrStat);
     }
 }

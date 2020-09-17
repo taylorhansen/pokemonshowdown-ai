@@ -250,6 +250,7 @@ for (const move of
     // get flags
     const mirror = target !== "self" && !noMirror.hasOwnProperty(move.id);
     const copycat = !noCopycat.hasOwnProperty(move.id);
+    const reflectable = !!move.flags.reflectable;
 
     // setup move effects
 
@@ -443,7 +444,7 @@ for (const move of
         move.id,
         {
             uid, name: move.id, display: move.name, category, target, pp,
-            mirror, copycat, ...(arr.length > 0 && {effects: arr})
+            mirror, copycat, reflectable, ...(arr.length > 0 && {effects: arr})
         }
     ];
     ++uid;

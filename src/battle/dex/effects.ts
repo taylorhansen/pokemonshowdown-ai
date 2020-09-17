@@ -59,10 +59,11 @@ export type Call = Effect<"call", CallType>;
  * VolatileStatus field, or fail if null.  
  * `"self"` - Calls a move from the user's moveset.  
  * `"target"` - Calls a move from the target's moveset (caller must have only
- * one target).
+ * one target).  
+ * `string` - Specifies the move that will be called.
  */
 // tslint:enable: no-trailing-whitespace
-export type CallType = true | "copycat" | "mirror" | "self" | "target";
+export type CallType = true | "copycat" | "mirror" | "self" | "target" | string;
 
 // TODO: add copy-boost effect
 

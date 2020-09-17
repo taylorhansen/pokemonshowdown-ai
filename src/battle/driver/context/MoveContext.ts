@@ -55,11 +55,11 @@ export class MoveContext extends Gen4Context
      * @param state State object to mutate while handling events.
      * @param event Event that started this context.
      * @param logger Logger object.
-     * @param called Whether this move was called by another move. Default
-     * false.
+     * @param called Whether this move was called by another move, or reflected
+     * (`"bounced"`) via another effect. Default false.
      */
     constructor(state: BattleState, event: events.UseMove, logger: Logger,
-        private readonly called = false)
+        private readonly called: boolean | "bounced" = false)
     {
         super(state, logger);
 
@@ -363,8 +363,21 @@ export class MoveContext extends Gen4Context
     {
         // endure only protects from going to 0hp, so the move effects still
         //  take place
-        return (event.effect === "endure" || this.handleBlock(event)) &&
-            super.block(event);
+        if (event.effect === "endure") return super.block(event);
+        // move effects were blocked
+        if (!this.handleBlock(event)) return;
+        // reflecting the move, expect the next event to call it
+        if (event.effect === "magicCoat")
+        {
+            const mon = this.state.teams[event.monRef].active;
+            if (!mon.volatile.magicCoat || this.called === "bounced" ||
+                !this.moveData.reflectable)
+            {
+                return;
+            }
+            this.effects.setCall(this.moveName, /*bounced*/ true);
+        }
+        return super.block(event);
     }
 
     /** @override */
@@ -636,8 +649,10 @@ export class MoveContext extends Gen4Context
         const callEffect = this.effects.get("primary", "call");
         if (!callEffect) return;
 
+        let bounced: boolean | undefined;
         switch (callEffect)
         {
+            case true: break; // nondeterministic move call
             case "copycat":
                 if (this.lastMove !== event.move) return;
                 break;
@@ -664,15 +679,19 @@ export class MoveContext extends Gen4Context
                     .reveal(event.move);
                 break;
             }
+            default:
+                // regular string specifies the move that should be called
+                if (event.move !== callEffect) return;
+                bounced = this.effects.consume("primary", "call", "bounced");
         }
 
-        this.effects.consume("primary", "call");
+        this.effects.consume("primary", "call", callEffect);
 
         // make sure this is handled like a called move
         return new MoveContext(this.state, event,
             this.logger.addPrefix(`Move(${event.monRef}, ` +
                 `${event.move}, called): `),
-            /*called*/true);
+            /*called*/ bounced ? "bounced" : true);
     }
 
     // grouped event handlers
@@ -858,7 +877,7 @@ export class MoveContext extends Gen4Context
                 // already prevented from consuming pp in constructor
                 if (lock.type === this.moveName) lock.tick();
                 // start locked status
-                else lock.start(this.moveName, this.called);
+                else lock.start(this.moveName, !!this.called);
                 lockedMove = true;
                 break;
             case "minimize":
@@ -879,7 +898,7 @@ export class MoveContext extends Gen4Context
             // start/continue rollout status
             // already prevented from consuming pp in constructor if continuing
             if (rollout.type === this.moveName) rollout.tick();
-            else rollout.start(this.moveName, this.called);
+            else rollout.start(this.moveName, !!this.called);
         }
         // must've missed the status ending
         // if the rollout move was called, then this current context is the one

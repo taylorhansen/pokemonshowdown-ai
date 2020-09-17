@@ -906,6 +906,87 @@ describe("MoveContext", function()
                         expect(them.moveset.get("tackle")).to.be.null;
                     });
                 });
+
+                describe("Reflected moves", function()
+                {
+                    it("Should pass reflected move", function()
+                    {
+                        initActive("us").volatile.magicCoat = true;
+                        initActive("them");
+                        // use reflectable move
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "yawn"});
+                        // block and reflect the move
+                        expect(ctx.handle(
+                            {
+                                type: "block", monRef: "us", effect: "magicCoat"
+                            }))
+                            .to.be.true;
+                        expect(ctx.handle(
+                                {type: "useMove", monRef: "us", move: "yawn"}))
+                            .to.be.an.instanceOf(MoveContext);
+                        ctx.expire();
+                    });
+
+                    it("Should not pass reflected move if no magicCoat status",
+                    function()
+                    {
+                        initActive("us");
+                        initActive("them");
+                        // use reflectable move
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "yawn"});
+                        // block and reflect the move
+                        expect(ctx.handle(
+                            {
+                                type: "block", monRef: "us", effect: "magicCoat"
+                            }))
+                            .to.not.be.ok;
+                    });
+
+                    it("Should not pass reflected move if already reflected",
+                    function()
+                    {
+                        initActive("us").volatile.magicCoat = true;
+                        initActive("them").volatile.magicCoat = true;
+                        // use reflectable move
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "yawn"});
+                        // block and reflect the move
+                        expect(ctx.handle(
+                            {
+                                type: "block", monRef: "us", effect: "magicCoat"
+                            }))
+                            .to.be.true;
+                        const ctx2 = ctx.handle(
+                            {type: "useMove", monRef: "us", move: "yawn"}) as
+                            MoveContext;
+                        expect(ctx2).to.be.an.instanceOf(MoveContext);
+                        // block and reflect the move again
+                        expect(ctx2.handle(
+                            {
+                                type: "block", monRef: "them",
+                                effect: "magicCoat"
+                            }))
+                            .to.not.be.ok;
+                    });
+
+                    it("Should not pass reflected move if not reflectable",
+                    function()
+                    {
+                        initActive("us").volatile.magicCoat = true;
+                        initActive("them");
+                        // use reflectable move
+                        const ctx = initCtx(
+                            {type: "useMove", monRef: "them", move: "taunt"});
+                        // block and reflect the move
+                        expect(ctx.handle(
+                            {
+                                type: "block", monRef: "us", effect: "magicCoat"
+                            }))
+                            .to.not.be.ok;
+                    });
+                });
             });
 
             describe("SwapBoosts", function()

@@ -177,10 +177,13 @@ export interface MoveData extends DexData
     readonly target: MoveTarget;
     /** Base power point range. */
     readonly pp: [number, number];
+    // TODO: too many flags cluttering dex, make them optional
     /** Whether this move can be copied by Mirror Move. */
     readonly mirror: boolean;
     /** Whether this move can be copied by Copycat. */
     readonly copycat: boolean;
+    /** Whether this move can be reflected by Magic Coat. */
+    readonly reflectable: boolean;
     /** Additional move effects */
     readonly effects?: readonly effects.Move[];
 }
