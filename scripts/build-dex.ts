@@ -248,9 +248,12 @@ for (const move of
     if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
 
     // get flags
-    const mirror = target !== "self" && !noMirror.hasOwnProperty(move.id);
-    const copycat = !noCopycat.hasOwnProperty(move.id);
-    const reflectable = !!move.flags.reflectable;
+    const flags: dexutil.MoveFlags =
+    {
+        ...(noMirror.hasOwnProperty(move.id) && {noMirror: true}),
+        ...(noCopycat.hasOwnProperty(move.id) && {noCopycat: true}),
+        ...(!!move.flags.reflectable && {reflectable: true})
+    };
 
     // setup move effects
 
@@ -444,7 +447,9 @@ for (const move of
         move.id,
         {
             uid, name: move.id, display: move.name, category, target, pp,
-            mirror, copycat, reflectable, ...(arr.length > 0 && {effects: arr})
+            ...((flags.noCopycat || flags.noMirror || flags.reflectable) &&
+                {flags}),
+            ...(arr.length > 0 && {effects: arr})
         }
     ];
     ++uid;

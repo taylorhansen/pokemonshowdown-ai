@@ -143,9 +143,9 @@ export class MoveContext extends Gen4Context
             // can't mirror called rampage moves
             (!continueLock || !this.user.volatile.lockedMove.called) &&
             (!continueRollout || !this.user.volatile.rollout.called) &&
-            // default to move flag
+            // default to mirror move flag
             // TODO: should called+released two-turn count? (unique to PS?)
-            this.moveData.mirror;
+            !this.moveData.flags?.noMirror;
 
         // only reveal and deduct pp if this event isn't continuing a multi-turn
         //  move
@@ -371,7 +371,7 @@ export class MoveContext extends Gen4Context
         {
             const mon = this.state.teams[event.monRef].active;
             if (!mon.volatile.magicCoat || this.called === "bounced" ||
-                !this.moveData.reflectable)
+                !this.moveData.flags?.reflectable)
             {
                 return;
             }
@@ -796,7 +796,7 @@ export class MoveContext extends Gen4Context
         if (failed)
         {
             if (this.effects.get("primary", "call") === "copycat" &&
-                this.lastMove && dex.moves[this.lastMove].copycat)
+                this.lastMove && !dex.moves[this.lastMove].flags?.noCopycat)
             {
                 throw new Error("Copycat effect failed but should've called " +
                     `'${this.lastMove}'`);

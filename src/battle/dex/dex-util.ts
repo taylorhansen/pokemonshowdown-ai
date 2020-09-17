@@ -184,13 +184,8 @@ export interface MoveData extends DexData
     readonly target: MoveTarget;
     /** Base power point range. */
     readonly pp: [number, number];
-    // TODO: too many flags cluttering dex, make them optional
-    /** Whether this move can be copied by Mirror Move. */
-    readonly mirror: boolean;
-    /** Whether this move can be copied by Copycat. */
-    readonly copycat: boolean;
-    /** Whether this move can be reflected by Magic Coat. */
-    readonly reflectable: boolean;
+    /** Optional move flags. */
+    readonly flags?: MoveFlags;
     /** Additional move effects */
     readonly effects?: readonly effects.Move[];
 }
@@ -203,6 +198,20 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
     "all" | "allAdjacent" | "allAdjacentFoes" | "allies" | "allySide" |
     "allyTeam" | "any" | "foeSide" | "normal" | "randomNormal" | "scripted" |
     "self";
+
+/** Flag container for moves. */
+export interface MoveFlags
+{
+    /**
+     * Whether this move can't be copied by Mirror Move. This should only be
+     * present for targeted moves.
+     */
+    readonly noMirror?: true;
+    /** Whether this move can't be copied by Copycat. */
+    readonly noCopycat?: true;
+    /** Whether this move can be reflected by Magic Coat. */
+    readonly reflectable?: true;
+}
 
 /** Format for each item entry in the dex. */
 export interface ItemData extends DexData
