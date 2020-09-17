@@ -641,7 +641,13 @@ for (const ability of
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
     abilities.push(
-        [ability.id, {uid, name: ability.id, display: ability.name}]);
+    [
+        ability.id,
+        {
+            uid, name: ability.id, display: ability.name,
+            ...(ability.id === "owntempo" && {immune: "confusion"})
+        }
+    ]);
     ++uid;
 }
 

@@ -1201,7 +1201,8 @@ describe("MoveContext", function()
 
         function testRemovable(ctg: "self" | "hit", name: string,
             effect: effects.StatusType, move: string | undefined,
-            secondaryMove?: string, secondaryMove100?: string): void
+            secondaryMove?: string, secondaryMove100?: string,
+            abilityImmunity?: string): void
         {
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
@@ -1319,6 +1320,9 @@ describe("MoveContext", function()
                             "effect",
                         function()
                         {
+                            // remove owntempo possibility from smeargle
+                            state.teams.us.active.traits
+                                .setAbility("technician");
                             const ctx = initCtx(
                             {
                                 type: "useMove", monRef: "them", move:
@@ -1328,8 +1332,27 @@ describe("MoveContext", function()
                                 "Expected effects that didn't happen: hit " +
                                 `secondary status '${effect}'`);
                         });
-                        // TODO: should silently pass if target already has the
-                        //  effect
+                    }
+
+                    if (secondaryMove100 && abilityImmunity)
+                    {
+                        // TODO: generalize for other abilities
+                        it("Should narrow ability if passed",
+                        function()
+                        {
+                            const them = state.teams.them.active;
+                            expect(them.traits.ability.possibleValues)
+                                // smeargle abilities
+                                .to.have.all.keys(["owntempo", "technician"]);
+                            expect(them.ability).to.be.empty;
+                            const ctx = initCtx(
+                            {
+                                type: "useMove", monRef: "us", move:
+                                secondaryMove100
+                            });
+                            ctx.expire();
+                            expect(them.ability).to.equal("owntempo");
+                        });
                     }
                 });
             });
@@ -1576,7 +1599,7 @@ describe("MoveContext", function()
 
         // updatable
         testRemovable("hit", "Confusion", "confusion", "confuseray",
-            "psybeam", "dynamicpunch");
+            "psybeam", "dynamicpunch", "owntempo");
         testNonRemovable("self", "Bide", "bide", "bide");
         testNonRemovable("self", "Uproar", "uproar", "uproar");
 

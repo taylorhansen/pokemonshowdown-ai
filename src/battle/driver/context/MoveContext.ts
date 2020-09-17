@@ -837,10 +837,25 @@ export class MoveContext extends Gen4Context
             {
                 const mon = this.state.teams[monRef].active;
 
-                // consume any silent confusion effects if already confused
-                if (mon.volatile.confusion.isActive)
+                // consume any silent confusion effects if silently immune
+                if (mon.volatile.confusion.isActive ||
+                    (mon.ability &&
+                        dex.abilities[mon.ability].immune === "confusion"))
                 {
                     this.effects.consume(ctg, "status", "confusion");
+                }
+                else if (this.effects.check(ctg, "status", "confusion"))
+                {
+                    // the only other source of immunity that can be secret is
+                    //  the ability
+                    const {ability} = mon.traits;
+                    const newAbilities = [...ability.possibleValues]
+                        .filter(n => dex.abilities[n].immune === "confusion");
+                    if (newAbilities.length > 0)
+                    {
+                        ability.narrow(...newAbilities);
+                        this.effects.consume(ctg, "status", "confusion");
+                    }
                 }
 
                 // consume any silent major status effects if already afflicted

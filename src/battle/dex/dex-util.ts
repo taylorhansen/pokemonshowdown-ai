@@ -169,7 +169,11 @@ export interface PokemonData extends DexData
 }
 
 /** Format for each ability entry in the dex. */
-export interface AbilityData extends DexData {}
+export interface AbilityData extends DexData
+{
+    /** Status immunity. */
+    immune?: "confusion";
+}
 
 /** Format for each move entry in the dex. */
 export interface MoveData extends DexData

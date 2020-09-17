@@ -217,6 +217,23 @@ export class PendingMoveEffects
     }
 
     /**
+     * Checks a pending trivial self/hit effect.
+     * @param ctg Category of effect.
+     * @param key Type of effect to check.
+     * @param effect Effect type to check. If omitted, checks are skipped except
+     * whether the effect is pending.
+     * @returns True if the effect has now been consumed, false otherwise.
+     */
+    public check<T extends effects.OtherType>(ctg: "self" | "hit",
+        key: T, effect?: effects.OtherMap[T]["value"]): boolean
+    {
+        return this.effects.check(`${ctg} ${key}`,
+                ...(effect ? [effect] : [])) ||
+            this.effects.check(`${ctg} secondary ${key}`,
+                ...(effect ? [effect] : []));
+    }
+
+    /**
      * Checks and consumes a pending trivial primary effect.
      * @param key Type of effect to consume.
      * @param effect Effect type to check. If omitted, checks are skipped except

@@ -65,6 +65,19 @@ export class PendingEffects
     }
 
     /**
+     * Checks a pending effect.
+     * @param name Name of the effect.
+     * @param args Arguments for matching the effect's value. If empty, the
+     * check will be skipped except for whether the effect is pending.
+     * @returns Whether the effect is present or matches the given args.
+     */
+    public check(name: string, ...args: any[]): boolean
+    {
+        return (args.length <= 0 && this.effects.has(name)) ||
+            !!this.effects.get(name)?.matches(...args);
+    }
+
+    /**
      * Consumes a pending effect.
      * @param name Name of the effect.
      * @param args Arguments for matching the effect's value. If empty, the
@@ -73,8 +86,6 @@ export class PendingEffects
      */
     public consume(name: string, ...args: any[]): boolean
     {
-        return (args.length <= 0 ||
-                (this.effects.get(name)?.matches(...args) ?? false)) &&
-            this.effects.delete(name);
+        return this.check(name, ...args) && this.effects.delete(name);
     }
 }

@@ -636,7 +636,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     normalize: {uid: 61, name: "normalize", display: "Normalize"},
     oblivious: {uid: 62, name: "oblivious", display: "Oblivious"},
     overgrow: {uid: 63, name: "overgrow", display: "Overgrow"},
-    owntempo: {uid: 64, name: "owntempo", display: "Own Tempo"},
+    owntempo: {uid: 64, name: "owntempo", display: "Own Tempo", immune: "confusion"},
     pickup: {uid: 65, name: "pickup", display: "Pickup"},
     plus: {uid: 66, name: "plus", display: "Plus"},
     poisonheal: {uid: 67, name: "poisonheal", display: "Poison Heal"},
