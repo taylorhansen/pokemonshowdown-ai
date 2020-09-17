@@ -168,6 +168,9 @@ export interface PokemonData extends DexData
     readonly movepool: readonly string[];
 }
 
+/** Format for each ability entry in the dex. */
+export interface AbilityData extends DexData {}
+
 /** Format for each move entry in the dex. */
 export interface MoveData extends DexData
 {

@@ -515,7 +515,7 @@ function composeMovepool(species: Species, restrict = false): Set<string>
 
 const pokemon: (readonly [string, dexutil.PokemonData])[] = []
 
-const abilities = new Set<string>();
+const abilityNames = new Set<string>();
 
 uid = 0;
 for (const mon of
@@ -533,7 +533,7 @@ for (const mon of
         if (!abilityName) continue;
         const abilityId = toIdName(abilityName);
         baseAbilities.push(abilityId);
-        if (!abilities.has(abilityId)) abilities.add(abilityId);
+        if (!abilityNames.has(abilityId)) abilityNames.add(abilityId);
     }
 
     // don't sort types to keep primary/secondary type distinction
@@ -630,6 +630,21 @@ for (const mon of
     if (mon.name !== "Cherrim") ++uid;
 }
 
+// ability data
+
+const abilities: (readonly [string, dexutil.AbilityData])[] = [];
+
+uid = 0;
+for (const ability of
+    [...abilityNames]
+        .map(n => dex.getAbility(n))
+        .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
+{
+    abilities.push(
+        [ability.id, {uid, name: ability.id, display: ability.name}]);
+    ++uid;
+}
+
 // items and berries
 
 // make sure that having no item is possible
@@ -669,32 +684,6 @@ for (const item of
 }
 
 // print data
-
-/**
- * Creates an export dictionary for a Set of names, sorting the Set and
- * assigning a uid to each entry in order.
- * @param set Set to stringify.
- * @param name Name of the dictionary.
- * @param indent Number of indent spaces. Default 4.
- */
-function exportSetToDict(set: Set<string>, name: string, indent = 4): string
-{
-    return exportArrayToDict([...set].sort(), name, indent);
-}
-
-/**
- * Creates an export dictionary for an array of names, assigning a uid to each
- * entry in order.
- * @param arr Array to stringify.
- * @param name Name of the dictionary.
- * @param indent Number of indent spaces. Default 4.
- */
-function exportArrayToDict(arr: readonly string[], name: string, indent = 4):
-    string
-{
-    return exportEntriesToDict(arr.map((key, i) => [key, i]), name,
-        "number", (t: number) => t.toString(), indent);
-}
 
 /**
  * Creates an export dictionary for an array of dictionary entries.
@@ -872,11 +861,12 @@ ${exportEntriesToDict(pokemon, "pokemon", "dexutil.PokemonData",
 /** Sorted array of all pokemon names. */
 ${exportArray(pokemon, "pokemonKeys", "string", ([name]) => quote(name))}
 
-/** Maps ability id name to an id number. */
-${exportSetToDict(abilities, "abilities")}
+/** Contains info about each ability. */
+${exportEntriesToDict(abilities, "abilities", "dexutil.AbilityData",
+    a => stringifyDict(a, v => typeof v === "string" ? quote(v) : v))}
 
 /** Sorted array of all ability names. */
-${exportArray([...abilities].sort(), "abilityKeys", "string", quote)}
+${exportArray(abilities, "abilityKeys", "string", ([name]) => quote(name))}
 
 /** Contains info about each move. */
 ${exportEntriesToDict(moves, "moves", "dexutil.MoveData", m =>
@@ -900,7 +890,7 @@ ${exportDict(typeToMoves, "typeToMoves",
     "{readonly [T in dexutil.Type]: readonly string[]}",
     a => `[${a.map(quote).join(", ")}]`)}
 
-/** Maps item id name to its id number. */
+/** Contains info about each item. */
 ${exportEntriesToDict(items, "items", "dexutil.ItemData", i =>
     stringifyDict(i, v => typeof v === "string" ? quote(v) : v))}
 
