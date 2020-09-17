@@ -5,13 +5,13 @@ import * as tmp from "tmp-promise";
 import s = require("../../../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
 import { BattleDriver } from "../../../battle/driver/BattleDriver";
+import * as events from "../../../battle/driver/BattleEvent";
 import { LogFunc, Logger } from "../../../Logger";
 import { PlayerID } from "../../../psbot/helpers";
-import { Iter } from "../../../psbot/parser/Iter";
 import { parsePSMessage } from "../../../psbot/parser/parsePSMessage";
 import * as psevent from "../../../psbot/parser/PSBattleEvent";
 import { PSBattle } from "../../../psbot/PSBattle";
-import { PSEventHandler, PSResult } from "../../../psbot/PSEventHandler";
+import { PSEventHandler } from "../../../psbot/PSEventHandler";
 import { ensureDir } from "../../helpers/ensureDir";
 import { SimResult } from "../simulators";
 
@@ -115,24 +115,23 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
             eventHandlerCtor = class extends PSEventHandler
             {
                 /** @override */
-                protected handleTurn(event: psevent.Turn,
-                    it: Iter<psevent.Any>): PSResult
+                protected handleTurn(event: psevent.Turn): events.Any[]
                 {
                     // also make sure the battle doesn't go too long
                     if (options.maxTurns && ++turns >= options.maxTurns)
                     {
                         done = true;
                     }
-                    return super.handleTurn(event, it);
+                    return super.handleTurn(event);
                 }
 
                 /** @override */
-                protected handleGameOver(event: psevent.Tie | psevent.Win,
-                    it: Iter<psevent.Any>): PSResult
+                protected handleGameOver(event: psevent.Tie | psevent.Win):
+                    events.Any[]
                 {
                     if (event.type === "win") winner = event.winner as PlayerID;
                     done = true;
-                    return super.handleGameOver(event, it);
+                    return super.handleGameOver(event);
                 }
             };
         }
