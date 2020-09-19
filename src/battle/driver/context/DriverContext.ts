@@ -76,6 +76,13 @@ export abstract class DriverContext implements BattleEventHandler
     { return true; }
 
     /**
+     * Reveals and activates a pokemon's held item.
+     * @virtual
+     */
+    public activateItem(event: events.ActivateItem): ContextResult
+    { return true; }
+
+    /**
      * Starts, sets, or ends a trivial status effect.
      * @virtual
      */

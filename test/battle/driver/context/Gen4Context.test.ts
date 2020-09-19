@@ -111,6 +111,17 @@ describe("Gen4Context", function()
             });
         });
 
+        describe("activateItem", function()
+        {
+            it("Should reveal item", function()
+            {
+                const {item} = initActive("them");
+                expect(item.definiteValue).to.be.null;
+                handle({type: "activateItem", monRef: "them", item: "lifeorb"});
+                expect(item.definiteValue).to.equal("lifeorb");
+            });
+        });
+
         describe("activateStatusEffect", function()
         {
             function test(name: string, effect: effects.StatusType,

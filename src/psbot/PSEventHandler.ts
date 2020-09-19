@@ -1043,7 +1043,7 @@ export class PSEventHandler
             // removeItem events are usually emitted when a berry's effects are
             //  used, so this helps us to not conflict with that
             if (dex.berries.hasOwnProperty(item)) return [];
-            return [{type: "revealItem", monRef, item, gained: false}];
+            return [{type: "activateItem", monRef, item}];
         }
         // nothing relevant to emit
         return [];

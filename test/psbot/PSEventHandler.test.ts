@@ -1309,19 +1309,17 @@ describe("PSEventHandler", function()
 
             describe("item", function()
             {
-                test("Should emit revealItem",
+                test("Should emit activateItem",
                 [{
                     type: "-immune", id: us, from: "item: Leftovers", of: them
                 }],
                 [
-                    {
-                        type: "revealItem", monRef: "them", item: "leftovers",
-                        gained: false
-                    },
+                    {type: "activateItem", monRef: "them", item: "leftovers"},
                     {type: "immune", monRef: "us"}
                 ]);
 
-                test("Should not emit revealItem if berry",
+                test("Should not emit activateItem if berry",
+                    // should instead have an enditem before this event
                 [{
                     type: "-heal", id: us, from: "item: Sitrus Berry",
                     status: {hp: 50, hpMax: 100, condition: null}

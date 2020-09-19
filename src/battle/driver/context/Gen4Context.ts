@@ -39,6 +39,13 @@ export class Gen4Context extends DriverContext
     }
 
     /** @override */
+    public activateItem(event: events.ActivateItem): ContextResult
+    {
+        this.state.teams[event.monRef].active.setItem(event.item);
+        return super.activateItem(event);
+    }
+
+    /** @override */
     public activateStatusEffect(event: events.ActivateStatusEffect):
         ContextResult
     {

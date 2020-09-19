@@ -12,6 +12,7 @@ interface EventMap
 {
     activateAbility: ActivateAbility;
     activateFieldEffect: ActivateFieldEffect;
+    activateItem: ActivateItem;
     activateStatusEffect: ActivateStatusEffect;
     activateTeamEffect: ActivateTeamEffect;
     block: Block;
@@ -101,6 +102,15 @@ export interface ActivateFieldEffect extends EventBase<"activateFieldEffect">
     readonly effect: effects.FieldType;
     /** Whether to start (`true`) or end (`false`) the effect. */
     readonly start: boolean;
+}
+
+/** Reveals and activates a pokemon's held item. */
+export interface ActivateItem extends EventBase<"activateItem">
+{
+    /** Pokemon reference. */
+    readonly monRef: Side;
+    /** Item being activated. */
+    readonly item: string;
 }
 
 /** Starts, sets, or ends a trivial status effect. */
