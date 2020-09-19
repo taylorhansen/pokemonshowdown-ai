@@ -40,7 +40,7 @@ export class StateDriver
         {
             const ctx = this.contexts[i];
             const result = ctx.handle(event);
-            if (!result)
+            if (!result) // falsy, expire
             {
                 // should never happen
                 if (i === 0)
@@ -67,7 +67,7 @@ export class StateDriver
 
                 this.contexts.push(result);
             }
-            break; // truthy result
+            break; // true, accept
         }
     }
 

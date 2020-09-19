@@ -5,7 +5,7 @@ import { Pokemon } from "../../state/Pokemon";
 import * as events from "../BattleEvent";
 import { ContextResult, DriverContext } from "./context";
 
-/** Handles events related to an ability. */
+/** Handles events related to an ability. Rejects unrelated events. */
 export class AbilityContext extends DriverContext
 {
     /** Maps weather type to the ability that can cause it. */
@@ -40,13 +40,7 @@ export class AbilityContext extends DriverContext
         this.mon.traits.setAbility(this.abilityName);
     }
 
-    // TODO: handle ability effects
-    /** @override */
-    public handle(event: events.Any): ContextResult
-    {
-        if (event.type !== "activateFieldEffect") return;
-        return super.handle(event);
-    }
+    // TODO: handle other ability effects
 
     /** @override */
     public activateFieldEffect(event: events.ActivateFieldEffect): ContextResult
@@ -58,7 +52,7 @@ export class AbilityContext extends DriverContext
             // fill in infinite duration (gen3-4) and/or source
             this.state.status.weather.start(this.mon,
                 event.effect, /*infinite*/true);
-            return super.activateFieldEffect(event);
+            return true;
         }
     }
 }

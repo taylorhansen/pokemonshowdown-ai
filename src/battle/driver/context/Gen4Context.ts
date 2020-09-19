@@ -6,7 +6,7 @@ import * as events from "../BattleEvent";
 import { AbilityContext, ContextResult, DriverContext, MoveContext,
     SwitchContext } from "./context";
 
-/** Handles events in a gen-4 context. */
+/** Handles and accepts all events in a gen-4 context. */
 export class Gen4Context extends DriverContext
 {
     /**
@@ -16,7 +16,7 @@ export class Gen4Context extends DriverContext
      */
     constructor(state: BattleState, logger: Logger)
     {
-        super(state, logger);
+        super(state, logger, /*accept*/ true);
     }
 
     /** @override */
