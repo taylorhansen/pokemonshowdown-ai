@@ -691,7 +691,8 @@ const eventEndAbility: EventParser<"-endability"> = transform(
  * |-fail|<PokemonID>
  */
 const eventFail: EventParser<"-fail"> =
-    transform(sequence(word("-fail"), pokemonId), ([type, id]) => ({type, id}));
+    transform(sequence(word("-fail"), pokemonId, maybe(anyWord)),
+        ([type, id, reason]) => ({type, id, ...(reason && {reason})}));
 
 /**
  * Parses a FaintEvent.

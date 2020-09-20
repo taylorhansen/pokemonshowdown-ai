@@ -273,8 +273,16 @@ export interface EndItem extends EventBase<"-enditem">
 /** Event where a pokemon has failed at a certain action. */
 export interface Fail extends EventBase<"-fail">
 {
-    /** ID of the pokemon. */
+    /**
+     * ID of the pokemon using the move if `#reason` is undefined, else the
+     * target.
+     */
     readonly id: PokemonID;
+    /**
+     * If specified, then a move failed to affect the mentioned pokemon because
+     * of this reason.
+     */
+    readonly reason?: string;
 }
 
 /** Event where a pokemon has fainted. */

@@ -695,7 +695,7 @@ export class PSEventHandler
     /** @virtual */
     protected handleFail(event: psevent.Fail): events.Any[]
     {
-        return [{type: "fail", monRef: this.getSide(event.id.owner)}];
+        return [{type: "fail"}];
     }
 
     /** @virtual */

@@ -540,7 +540,8 @@ export class MoveContext extends Gen4Context
     /** @override */
     public noTarget(event: events.NoTarget): ContextResult
     {
-        return this.handleFail(event) && super.noTarget(event);
+        return this.userRef === event.monRef && this.handleFail(event) &&
+            super.noTarget(event);
     }
 
     /** @override */
@@ -699,7 +700,6 @@ export class MoveContext extends Gen4Context
     /** Handles an event where the pokemon's move failed to take effect. */
     private handleFail(event: events.Fail | events.NoTarget): ContextResult
     {
-        if (this.userRef !== event.monRef) return;
         this.handleImplicitEffects(/*failed*/true);
         return true;
     }

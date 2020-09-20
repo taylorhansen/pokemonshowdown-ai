@@ -560,8 +560,7 @@ describe("MoveContext", function()
                             {
                                 type: "useMove", monRef: "them", move: caller
                             });
-                            expect(() => ctx.handle(
-                                    {type: "fail", monRef: "them"}))
+                            expect(() => ctx.handle({type: "fail"}))
                                 .to.throw(Error, "Copycat effect failed but " +
                                     "should've called 'tackle'");
                         });
@@ -801,8 +800,7 @@ describe("MoveContext", function()
                             {
                                 type: "useMove", monRef: "them", move: caller
                             });
-                            expect(() => ctx.handle(
-                                    {type: "fail", monRef: "them"}))
+                            expect(() => ctx.handle({type: "fail"}))
                                 .to.throw(Error, "Mirror Move effect failed " +
                                     "but should've called 'watergun'");
                         });
@@ -1488,8 +1486,7 @@ describe("MoveContext", function()
                         //  able to have any of our moves
                         const ctx = initCtx(
                             {type: "useMove", monRef: id, move: "imprison"});
-                        expect(ctx.handle({type: "fail", monRef: id}))
-                            .to.be.true;
+                        expect(ctx.handle({type: "fail"})).to.be.true;
                         expect(them.moveset.constraint).to.not.include.any.keys(
                             [...us.moveset.moves.keys()]);
                     });
@@ -1504,11 +1501,9 @@ describe("MoveContext", function()
                         type: "useMove", monRef: "them", move: "imprison"
                     });
 
-                    expect(() =>
-                            ctx.handle({type: "fail", monRef: "them"}))
-                        .to.throw(Error,
-                            "Imprison failed but both Pokemon have " +
-                                "common moves: imprison");
+                    expect(() => ctx.handle({type: "fail"}))
+                        .to.throw(Error, "Imprison failed but both Pokemon " +
+                            "have common moves: imprison");
                 });
             });
 
@@ -1646,8 +1641,7 @@ describe("MoveContext", function()
                     state.preTurn();
                     const ctx = initCtx(
                         {type: "useMove", monRef: "them", move: "protect"});
-                    expect(ctx.handle({type: "fail", monRef: "them"}))
-                        .to.be.true;
+                    expect(ctx.handle({type: "fail"})).to.be.true;
                     expect(v.stalling).to.be.false;
                     expect(v.stallTurns).to.equal(0);
                 });
@@ -1703,8 +1697,7 @@ describe("MoveContext", function()
                     const innerCtx = ctx.handle(
                         {type: "useMove", monRef: "them", move: "endure"});
                     expect(innerCtx).to.be.an.instanceOf(MoveContext)
-                    expect((innerCtx as MoveContext).handle(
-                            {type: "fail", monRef: "them"}))
+                    expect((innerCtx as MoveContext).handle({type: "fail"}))
                         .to.be.true;
                     (innerCtx as MoveContext).expire();
                     ctx.expire();
@@ -1797,8 +1790,7 @@ describe("MoveContext", function()
                         if (target === "them") mon = initActive("them");
                         const ctx = initCtx(
                             {type: "useMove", monRef: "us", move});
-                        expect(ctx.handle({type: "fail", monRef: "us"}))
-                            .to.be.true;
+                        expect(ctx.handle({type: "fail"})).to.be.true;
                         ctx.expire();
                         expect(getter(mon)).to.be.false;
                     });
@@ -2120,8 +2112,7 @@ describe("MoveContext", function()
                         const team = state.teams.them;
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move});
-                        expect(ctx.handle({type: "fail", monRef: "them"}))
-                            .to.be.true;
+                        expect(ctx.handle({type: "fail"})).to.be.true;
                         expect(team.status[effect]).to.be.false;
                     });
 
@@ -2340,8 +2331,7 @@ describe("MoveContext", function()
                         const team = state.teams[teamRef];
                         const ctx = initCtx(
                             {type: "useMove", monRef: "them", move});
-                        expect(ctx.handle({type: "fail", monRef: "them"}))
-                            .to.be.true;
+                        expect(ctx.handle({type: "fail"})).to.be.true;
                         expect(getter(team)).to.be.false;
                         ctx.expire();
                     });
@@ -2413,7 +2403,7 @@ describe("MoveContext", function()
             const item = mon.item;
             const ctx = initCtx(
                 {type: "useMove", monRef: "them", move: "naturalgift"});
-            expect(ctx.handle({type: "fail", monRef: "them"})).to.be.true;
+            expect(ctx.handle({type: "fail"})).to.be.true;
 
             expect(mon.item).to.equal(item, "Item was consumed");
             expect(mon.item.possibleValues)

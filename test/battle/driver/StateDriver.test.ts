@@ -131,7 +131,7 @@ describe("StateDriver", function()
                 // set last move to toxic
                 driver.handle(
                     {type: "useMove", monRef: "us", move: "toxic"});
-                driver.handle({type: "fail", monRef: "us"});
+                driver.handle({type: "fail"});
                 // start encore
                 driver.handle(
                 {

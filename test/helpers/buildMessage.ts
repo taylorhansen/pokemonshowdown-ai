@@ -114,7 +114,6 @@ export function composePSBattleEvent(event: psevent.Any): string[]
         case "-clearpositiveboost":
         case "-crit":
         case "-cureteam":
-        case "-fail":
         case "faint":
         case "-immune":
         case "-invertboost":
@@ -153,6 +152,13 @@ export function composePSBattleEvent(event: psevent.Any): string[]
             break;
         case "-end":
             result = [event.type, stringifyID(event.id), event.volatile];
+            break;
+        case "-fail":
+            result =
+            [
+                event.type, stringifyID(event.id),
+                ...(event.reason ? [event.reason] : [])
+            ];
             break;
         case "-fieldstart":
         case "-fieldend":

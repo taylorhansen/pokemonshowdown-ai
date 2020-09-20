@@ -568,7 +568,7 @@ describe("Gen4Context", function()
         {
             it("Should do nothing", function()
             {
-                handle({type: "fail", monRef: "us"});
+                handle({type: "fail"});
             });
         });
 

@@ -79,6 +79,7 @@ export const psEvents: psevent.Any[] =
         from: "stealeat"
     },
     {type: "-fail", id: pokemonId[1]},
+    {type: "-fail", id: pokemonId[0], reason: "par"},
     {type: "faint", id: pokemonId[2]},
     {type: "-fieldend", effect: "move: Gravity"},
     {type: "-fieldstart", effect: "move: Gravity"},

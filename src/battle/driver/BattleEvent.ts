@@ -233,12 +233,8 @@ export interface DisableMove extends EventBase<"disableMove">
     readonly move: string;
 }
 
-/** Indicates that the pokemon failed at doing something. */
-export interface Fail extends EventBase<"fail">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-}
+/** Indicates that a move failed. */
+export interface Fail extends EventBase<"fail"> {}
 
 /** Indicates that the pokemon fainted. */
 export interface Faint extends EventBase<"faint">
