@@ -172,9 +172,9 @@ export interface PokemonData extends DexData
 export interface AbilityData extends DexData
 {
     /** Status immunity. */
-    immune?: "confusion";
+    readonly immune?: "confusion";
     /** Whether this ability cancels move recoil damage. */
-    noRecoil?: true;
+    readonly noRecoil?: true;
 }
 
 /** Format for each move entry in the dex. */
@@ -219,5 +219,5 @@ export interface MoveFlags
 export interface ItemData extends DexData
 {
     /** Whether this is a choice item. */
-    isChoice?: true;
+    readonly isChoice?: true;
 }
