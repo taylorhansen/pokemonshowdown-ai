@@ -204,6 +204,8 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
 /** Flag container for moves. */
 export interface MoveFlags
 {
+    /** Whether this is a damaging contact move. */
+    readonly contact?: true;
     /**
      * Whether this move can't be copied by Mirror Move. This should only be
      * present for targeted moves.

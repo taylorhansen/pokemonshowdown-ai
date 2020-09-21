@@ -250,10 +250,13 @@ for (const move of
     // get flags
     const flags: dexutil.MoveFlags =
     {
+        ...(!!move.flags.contact && {contact: true}),
         ...(noMirror.hasOwnProperty(move.id) && {noMirror: true}),
         ...(noCopycat.hasOwnProperty(move.id) && {noCopycat: true}),
         ...(!!move.flags.reflectable && {reflectable: true})
     };
+    const hasFlags = flags.contact || flags.noMirror || flags.noCopycat ||
+        flags.reflectable;
 
     // setup move effects
 
@@ -453,9 +456,7 @@ for (const move of
         move.id,
         {
             uid, name: move.id, display: move.name, category, target, pp,
-            ...((flags.noCopycat || flags.noMirror || flags.reflectable) &&
-                {flags}),
-            ...(arr.length > 0 && {effects: arr})
+            ...(hasFlags && {flags}), ...(arr.length > 0 && {effects: arr})
         }
     ];
     ++uid;
