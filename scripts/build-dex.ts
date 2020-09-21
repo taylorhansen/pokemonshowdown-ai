@@ -306,6 +306,12 @@ for (const move of
             {type: "field", value: fieldTypeMap[move.pseudoWeather]});
     }
 
+    if (move.recoil)
+    {
+        addEffect(arr,
+            {type: "recoil", value: move.recoil[1] / move.recoil[0]});
+    }
+
     if (move.selfSwitch)
     {
         addEffect(arr,
@@ -637,6 +643,10 @@ for (const mon of
 
 // ability data
 
+/** Maps ability name to whether they cancel move recoil damage. */
+const noRecoil: {readonly [ability: string]: true | undefined} =
+    {magicguard: true, rockhead: true};
+
 const abilities: (readonly [string, dexutil.AbilityData])[] = [];
 
 uid = 0;
@@ -650,7 +660,8 @@ for (const ability of
         ability.id,
         {
             uid, name: ability.id, display: ability.name,
-            ...(ability.id === "owntempo" && {immune: "confusion"})
+            ...(ability.id === "owntempo" && {immune: "confusion"}),
+            ...(noRecoil[ability.id] && {noRecoil: true})
         }
     ]);
     ++uid;

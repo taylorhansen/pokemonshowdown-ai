@@ -332,7 +332,7 @@ describe("MoveContext", function()
 
     describe("Move effects", function()
     {
-        describe("PrimaryEffect", function()
+        describe("Primary", function()
         {
             describe("SelfSwitch", function()
             {
@@ -1112,6 +1112,116 @@ describe("MoveContext", function()
                             "field 'RainDance'");
                     });
                 });
+            });
+
+            describe("Recoil", function()
+            {
+                // can have swiftswim or rockhead
+                const relicanth: events.DriverSwitchOptions =
+                {
+                    species: "relicanth", level: 83, gender: "F", hp: 302,
+                    hpMax: 302
+                };
+
+                it("Should pass if expected", function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "bravebird"});
+                    expect(ctx.handle(
+                        {
+                            type: "takeDamage", monRef: "them", newHP: [0, 0],
+                            recoil: true
+                        }))
+                        .to.be.true;
+                    ctx.expire();
+                });
+
+                it("Should expire if not expected", function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "gust"});
+                    expect(ctx.handle(
+                        {
+                            type: "takeDamage", monRef: "them", newHP: [0, 0],
+                            recoil: true
+                        }))
+                        .to.not.be.ok;
+                    ctx.expire();
+                });
+
+                function testRecoil(name: string, pre: (mon: Pokemon) => void,
+                    recoilEvent: boolean, infer?: boolean | "throw"): void
+                {
+                    it(name, function()
+                    {
+                        initActive("them");
+                        const mon = initActive("us", relicanth);
+                        expect(mon.traits.ability.possibleValues)
+                            .to.have.all.keys(["swiftswim", "rockhead"]);
+                        pre?.(mon);
+
+                        const ctx = initCtx(
+                        {
+                            type: "useMove", monRef: "us", move: "doubleedge"
+                        });
+                        if (recoilEvent)
+                        {
+                            expect(ctx.handle(
+                                {
+                                    type: "takeDamage", monRef: "us",
+                                    newHP: [0, 0], recoil: true
+                                }))
+                                .to.be.true;
+                            ctx.expire();
+                        }
+                        if (infer === "throw")
+                        {
+                            expect(() => ctx.expire()).to.throw(Error,
+                                "Ability suppressed but still suppressed " +
+                                "recoil");
+                            return;
+                        }
+                        ctx.expire();
+                        if (infer === true)
+                        {
+                            expect(mon.traits.ability.possibleValues)
+                                .to.have.all.keys(["rockhead"]);
+                            expect(mon.ability).to.equal("rockhead");
+                        }
+                        else if (infer === false)
+                        {
+                            expect(mon.traits.ability.possibleValues)
+                                .to.have.all.keys(["swiftswim"]);
+                            expect(mon.ability).to.equal("swiftswim");
+                        }
+                        else
+                        {
+                            expect(mon.traits.ability.possibleValues)
+                                .to.have.all.keys(["swiftswim", "rockhead"]);
+                            expect(mon.ability).to.be.empty;
+                        }
+                    });
+                }
+
+                testRecoil(
+                    "Should infer no recoil-canceling ability if recoil event",
+                    () => {}, true, false);
+
+                testRecoil(
+                    "Should not infer ability if suppressed and recoil event",
+                    mon => mon.volatile.suppressAbility = true, true);
+
+                testRecoil(
+                    "Should infer recoil-canceling ability if no recoil event",
+                    () => {}, false, true);
+
+                testRecoil(
+                    "Should throw if ability suppressed and no recoil event",
+                    mon => mon.volatile.suppressAbility = true, false, "throw");
             });
         });
 

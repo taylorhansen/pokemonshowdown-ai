@@ -621,7 +621,14 @@ export class MoveContext extends Gen4Context
     /** @override */
     public takeDamage(event: events.TakeDamage): ContextResult
     {
-        return this.addTarget(event.monRef) && super.takeDamage(event);
+        return (event.recoil ?
+                event.monRef === this.userRef &&
+                    // TODO: verify damage fraction
+                    this.effects.consume("primary", "recoil") &&
+                    // infer recoil effect was consumed
+                    (this.recoil(/*consumed*/ true), true)
+                : this.addTarget(event.monRef)) &&
+            super.takeDamage(event);
     }
 
     /** @override */
@@ -874,6 +881,13 @@ export class MoveContext extends Gen4Context
             }
         }
 
+        // infer recoil effect ignored
+        if (this.effects.get("primary", "recoil"))
+        {
+            this.recoil(/*consumed*/ false);
+            this.effects.consume("primary", "recoil");
+        }
+
         let lockedMove = false;
         const {lockedMove: lock} = this.user.volatile;
         switch (this.effects.get("self", "implicitStatus"))
@@ -1001,5 +1015,32 @@ export class MoveContext extends Gen4Context
         }
         // fails if the user doesn't have a berry
         else this.user.item.remove(...Object.keys(dex.berries));
+    }
+
+    /**
+     * Makes an inference based on whether the recoil effect was consumed or
+     * ignored.
+     */
+    private recoil(consumed: boolean): void
+    {
+        // get possible recoil-canceling abilities
+        const {ability} = this.user.traits;
+        let noRecoilAbilities: string[];
+        if (!this.user.volatile.suppressAbility)
+        {
+            noRecoilAbilities = [...ability.possibleValues]
+                .filter(n => ability.map[n].noRecoil);
+        }
+        // can't infer ability if it's being suppressed
+        else noRecoilAbilities = [];
+
+        // can't have recoil-canceling abilities
+        if (consumed) ability.remove(...noRecoilAbilities);
+        // must have a recoil-canceling ability
+        else if (noRecoilAbilities.length <= 0)
+        {
+            throw new Error("Ability suppressed but still suppressed recoil");
+        }
+        else ability.narrow(...noRecoilAbilities);
     }
 }

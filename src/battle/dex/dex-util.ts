@@ -173,6 +173,8 @@ export interface AbilityData extends DexData
 {
     /** Status immunity. */
     immune?: "confusion";
+    /** Whether this ability cancels move recoil damage. */
+    noRecoil?: true;
 }
 
 /** Format for each move entry in the dex. */

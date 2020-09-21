@@ -64,6 +64,10 @@ export const psEvents: psevent.Any[] =
     {type: "-cureteam", id: pokemonId[2]},
     {type: "-damage", id: pokemonId[1], status: pokemonStatus[1]},
     {
+        type: "-damage", id: pokemonId[0], status: pokemonStatus[0],
+        from: "Recoil"
+    },
+    {
         type: "detailschange", id: pokemonId[0], ...pokemonDetails[0],
         ...pokemonStatus[0]
     },

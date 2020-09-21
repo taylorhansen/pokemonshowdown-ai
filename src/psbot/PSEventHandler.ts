@@ -656,28 +656,28 @@ export class PSEventHandler
         const damageEvent: events.TakeDamage =
             {type: "takeDamage", monRef, newHP};
 
-        // TODO: wish
-        if (event.from === "move: Healing Wish")
+        switch (event.from)
         {
-            return [
-                {
-                    type: "activateTeamEffect", teamRef: monRef,
-                    effect: "healingWish", start: false
-                },
-                damageEvent
-            ];
+            case "Recoil": return [{...damageEvent, recoil: true}];
+            // TODO: also handle wish
+            case "move: Healing Wish":
+                return [
+                    {
+                        type: "activateTeamEffect", teamRef: monRef,
+                        effect: "healingWish", start: false
+                    },
+                    damageEvent
+                ];
+            case "move: Lunar Dance":
+                return [
+                    {
+                        type: "activateTeamEffect", teamRef: monRef,
+                        effect: "lunarDance", start: false
+                    },
+                    damageEvent, {type: "restoreMoves", monRef}
+                ];
+            default: return [damageEvent];
         }
-        if (event.from === "move: Lunar Dance")
-        {
-            return [
-                {
-                    type: "activateTeamEffect", teamRef: monRef,
-                    effect: "lunarDance", start: false
-                },
-                damageEvent, {type: "restoreMoves", monRef}
-            ];
-        }
-        return [damageEvent];
     }
 
     /** @virtual */

@@ -31,6 +31,7 @@ export interface PrimaryMap
     countableStatus: CountableStatus;
     delay: Delay;
     field: Field;
+    recoil: Recoil;
     selfSwitch: SelfSwitch;
     swapBoost: SwapBoost;
 }
@@ -91,6 +92,12 @@ export type FieldType = UpdatableFieldType | "gravity" | "trickRoom";
  * events.
  */
 export type UpdatableFieldType = WeatherType;
+
+/**
+ * Effect that causes recoil damage to the user. Value is the ratio of dealt
+ * damage to recoil damage.
+ */
+export type Recoil = Effect<"recoil", number>;
 
 /** Effect that causes a pokemon to switch out in the middle of a turn. */
 export type SelfSwitch = Effect<"selfSwitch", SelfSwitchType>;

@@ -36,6 +36,12 @@ export class PendingMoveEffects
                 this.addEffectImpl(`primary ${effect.type}`,
                     new PendingValueEffect(effect.value));
                 break;
+            case "recoil":
+                this.addEffectImpl(`primary ${effect.type}`,
+                    // TODO: custom recoil handling
+                    new PendingValueEffect(
+                        `${Math.round(100 / effect.value)}%`));
+                break;
             case "swapBoost":
             {
                 const boosts = dexutil.boostKeys.filter(b => effect.value[b]);

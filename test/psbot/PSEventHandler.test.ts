@@ -829,6 +829,16 @@ describe("PSEventHandler", function()
                 }],
                     [{type: "takeDamage", monRef: "us", newHP: [1, 100]}]);
 
+                test("Should emit takeDamage with recoil",
+                [{
+                    type, id: us, status: {hp: 1, hpMax: 100, condition: null},
+                    from: "Recoil"
+                }],
+                [{
+                    type: "takeDamage", monRef: "us", newHP: [1, 100],
+                    recoil: true
+                }]);
+
                 test("Should emit takeDamage and activateTeamEffect from " +
                     "Healing Wish",
                 [{
