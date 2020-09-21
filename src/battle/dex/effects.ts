@@ -1,8 +1,5 @@
 import { BoostName, MajorStatus, WeatherType } from "./dex-util";
 
-/** Move effect interface. */
-export type Move = Primary | (MoveBase & Other);
-
 /** Base interface for Effects. */
 interface Effect<TType extends string, TValue>
 {
@@ -11,6 +8,82 @@ interface Effect<TType extends string, TValue>
     /** Main effect value. */
     readonly value: TValue;
 }
+
+// ability
+
+/** Ability effect interface. */
+export type Ability = AbilityBase & AbilityEffects;
+
+type AbilityEffects = TargetedAbilityEffects | Chance<TargetedAbilityEffects>;
+
+type TargetedAbilityEffects = TargetedEffect &
+    (PercentDamage | TypeChange | Status);
+
+// tslint:disable: no-trailing-whitespace (force newlines in doc)
+/**
+ * Name of the circumstance that should activate the ability effect.  
+ * `"contact"` - Hit by a damaging contact move.
+ * `"contactKO"` - Knocked out by a damaging contact move.
+ * `"damaged"` - Hit by a damaging move.
+ */
+// tslint:enable: no-trailing-whitespace
+export type AbilityOn = "contact" | "contactKO" | "damaged";
+
+// tslint:disable: no-trailing-whitespace (force newlines in doc)
+/**
+ * Target of the ability effect.
+ * `"hit"` - Opponent that caused the ability to activate.
+ * `"self"` - Owner of the ability. Cancels if fainted by a move before
+ * activating.
+ */
+// tslint:enable: no-trailing-whitespace
+// TODO: restrict hit based on AbilityOn container/generic
+export type AbilityTarget = "hit" | "self";
+
+/** Base interface for Ability effects. */
+interface AbilityBase
+{
+    /** Circumstance that should activate the effect. */
+    readonly on: AbilityOn;
+    /** Ability that blocks this effect. */
+    readonly blockedBy?: string;
+}
+
+/** Effect that has a target. */
+interface TargetedEffect
+{
+    /** Target of the effect. */
+    readonly tgt: AbilityTarget;
+}
+
+/** Effect that changes the pokemon's type. */
+export type TypeChange = Effect<"typeChange", TypeChangeRule>;
+
+// tslint:disable: no-trailing-whitespace (force newlines in doc)
+/**
+ * Rule for changing a pokemon's type according to a TypeChange effect.  
+ * `"colorchange"` - Matches the type of the move last used against it.
+ */
+// tslint:enable: no-trailing-whitespace
+export type TypeChangeRule = "colorchange";
+
+/**
+ * Effect that causes damage according to a percentage of the pokemon's max hp.
+ * Negative takes damage, while positive heals it.
+ */
+export type PercentDamage = Effect<"percentDamage", number>;
+
+/** Effect that has a chance to do one of the listed effects. */
+export interface Chance<TEffect> extends Effect<"chance", readonly TEffect[]>
+{
+    /** Percent chance of activating. */
+    readonly chance: number;
+}
+
+// move
+
+/** Move effect interface. */
+export type Move = Primary | (MoveBase & Other);
 
 /** Base interface for target-based MoveEffects. */
 interface MoveBase

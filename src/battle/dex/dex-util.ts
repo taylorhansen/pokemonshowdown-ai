@@ -175,6 +175,8 @@ export interface AbilityData extends DexData
     readonly immune?: "confusion";
     /** Whether this ability cancels move recoil damage. */
     readonly noRecoil?: true;
+    /** Additional ability effects. */
+    readonly effects?: readonly effects.Ability[];
 }
 
 /** Format for each move entry in the dex. */

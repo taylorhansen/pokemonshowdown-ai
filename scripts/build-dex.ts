@@ -648,6 +648,53 @@ for (const mon of
 const noRecoil: {readonly [ability: string]: true | undefined} =
     {magicguard: true, rockhead: true};
 
+/** Map for Ability effects. */
+const abilityEffectMap:
+    {readonly [ability: string]: readonly effects.Ability[] | undefined} =
+{
+    aftermath:
+    [{
+        type: "percentDamage", on: "contactKO", tgt: "hit", blockedBy: "damp",
+        value: 25
+    }],
+    colorchange:
+    [{
+        type: "typeChange", on: "damaged", tgt: "self", value: "colorchange"
+    }],
+    cutecharm:
+    [{
+        type: "chance", on: "contact", chance: 30,
+        value: [{type: "status", tgt: "hit", value: "attract"}]
+    }],
+    effectspore:
+    [{
+        type: "chance", on: "contact", chance: 30,
+        value:
+        [
+            {type: "status", tgt: "hit", value: "slp"},
+            {type: "status", tgt: "hit", value: "par"},
+            {type: "status", tgt: "hit", value: "psn"}
+        ]
+    }],
+    flamebody:
+    [{
+        type: "chance", on: "contact", chance: 30,
+        value: [{type: "status", tgt: "hit", value: "brn"}]
+    }],
+    poisonpoint:
+    [{
+        type: "chance", on: "contact", chance: 30,
+        value: [{type: "status", tgt: "hit", value: "psn"}]
+    }],
+    roughskin:
+        [{type: "percentDamage", on: "contact", tgt: "hit", value: 6.25}],
+    static:
+    [{
+        type: "chance", on: "contact", chance: 30,
+        value: [{type: "status", tgt: "hit", value: "par"}]
+    }],
+};
+
 const abilities: (readonly [string, dexutil.AbilityData])[] = [];
 
 uid = 0;
@@ -662,7 +709,9 @@ for (const ability of
         {
             uid, name: ability.id, display: ability.name,
             ...(ability.id === "owntempo" && {immune: "confusion"}),
-            ...(noRecoil[ability.id] && {noRecoil: true})
+            ...(noRecoil[ability.id] && {noRecoil: true}),
+            ...(abilityEffectMap[ability.id] &&
+                {effects: abilityEffectMap[ability.id]})
         }
     ]);
     ++uid;
@@ -886,7 +935,7 @@ ${exportArray(pokemon, "pokemonKeys", "string", ([name]) => quote(name))}
 
 /** Contains info about each ability. */
 ${exportEntriesToDict(abilities, "abilities", "dexutil.AbilityData",
-    a => stringifyDict(a, v => typeof v === "string" ? quote(v) : v))}
+    a => deepStringifyDict(a, v => typeof v === "string" ? quote(v) : v))}
 
 /** Sorted array of all ability names. */
 ${exportArray(abilities, "abilityKeys", "string", ([name]) => quote(name))}
