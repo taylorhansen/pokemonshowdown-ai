@@ -1227,11 +1227,8 @@ describe("MoveContext", function()
 
         const moveEffectTests:
         {
-            readonly [T in effects.MoveEffectCategory]:
-            {
-                readonly [U in Exclude<effects.Other["type"], "secondary">]:
-                    (() =>  void)[]
-            }
+            readonly [T in effects.move.Category]:
+                {readonly [U in effects.move.OtherType]: (() =>  void)[]}
         } =
         {
             self:

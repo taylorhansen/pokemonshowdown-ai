@@ -6,7 +6,10 @@ import { PendingEffects } from "./PendingEffects";
 import { PendingValueEffect } from "./PendingValueEffect";
 
 /** Used for get()/consume() typings. */
-type TrivialOtherType = Exclude<effects.OtherType, "boost" | "secondary">;
+type TrivialPrimaryType = Exclude<effects.move.PrimaryType, "swapBoost">;
+
+/** Used for get()/consume() typings. */
+type TrivialOtherType = Exclude<effects.move.OtherType, "boost">;
 
 /** Container for managing/consuming effects derived from move data. */
 export class PendingMoveEffects
@@ -27,7 +30,7 @@ export class PendingMoveEffects
     }
 
     /** Parses a MoveEffect object and creates PendingEffects for it. */
-    private addEffect(effect: effects.Move): void
+    private addEffect(effect: effects.move.Move): void
     {
         switch (effect.type)
         {
@@ -44,7 +47,7 @@ export class PendingMoveEffects
                 break;
             case "swapBoost":
             {
-                const boosts = dexutil.boostKeys.filter(b => effect.value[b]);
+                const boosts = dexutil.boostKeys.filter(b => effect[b]);
                 this.addEffectImpl(`primary ${effect.type}`,
                     new PendingValueEffect(boosts.join(",")));
                 break;
@@ -57,21 +60,29 @@ export class PendingMoveEffects
                 this.addEffectImpl(`${effect.ctg} ${effect.type}`,
                     new PendingValueEffect(effect.value));
                 break;
-            case "secondary":
-                if (effect.value.type === "status")
+            case "chance":
+            {
+                // secondary effects
+                if (effect.effects.length <= 0 || effect.effects.length > 1)
+                {
+                    // TODO: support
+                    throw new Error("Unsupported secondary effect quantity " +
+                        effect.effects.length);
+                }
+                const se = effect.effects[0];
+                if (se.type === "status")
                 {
                     this.addEffectImpl(`${effect.ctg} secondary status`,
-                        new PendingValueEffect(effect.value.value,
-                            effect.chance));
+                        new PendingValueEffect(se.value, effect.chance));
                 }
-                else if (effect.value.type === "boost")
+                else if (se.type === "boost")
                 {
-                    this.addBoostEffect(effect.value, effect.ctg,
-                        effect.chance);
+                    this.addBoostEffect(se, effect.ctg, effect.chance);
                 }
                 // ignore flinch, since its effect is applied after the move
                 //  (TODO: support)
                 break;
+            }
             default:
                 // should never happen
                 throw new Error(`Unknown MoveEffect type '${effect!.type}'`);
@@ -84,13 +95,12 @@ export class PendingMoveEffects
      * @param ctg Move effect category.
      * @param chance Chance of happening, if this is a secondary effect.
      */
-    private addBoostEffect(effect: effects.Boost,
-        ctg?: effects.MoveEffectCategory, chance?: number): void
+    private addBoostEffect(effect: effects.Boost, ctg?: effects.move.Category,
+        chance?: number): void
     {
-        const tables = effect.value;
         for (const k of ["add", "set"] as const)
         {
-            const table = tables[k];
+            const table = effect[k];
             if (!table) continue;
             for (const b of dexutil.boostKeys)
             {
@@ -169,19 +179,25 @@ export class PendingMoveEffects
     }
 
     /**
-     * Gets a pending primary effect.
+     * Gets a pending trivial primary effect.
      * @param key Type of effect.
      */
-    public get<T extends effects.PrimaryType>(ctg: "primary", key: T):
-        effects.PrimaryMap[T]["value"] | null;
+    public get<T extends TrivialPrimaryType>(ctg: "primary", key: T):
+        effects.move.PrimaryMap[T]["value"] | null;
+    /**
+     * Gets a pending swap-boost effect.
+     * @param key Type of effect.
+     */
+    public get(ctg: "primary", key: "swapBoost"):
+        Omit<effects.SwapBoost, "type"> | null;
     /**
      * Gets a pending self/hit effect, excluding boost/secondaries.
      * @param ctg Category of effect.
      * @param key Type of effect.
      * @param effect Effect type to check. If omitted, checks are skipped.
      */
-    public get<T extends TrivialOtherType>(ctg: effects.MoveEffectCategory,
-        key: T): effects.OtherMap[T]["value"] | null;
+    public get<T extends TrivialOtherType>(ctg: effects.move.Category,
+        key: T): effects.move.OtherMap[T]["value"] | null;
     /**
      * Gets a pending self/hit boost effect.
      * @param ctg Category of effect.
@@ -189,13 +205,14 @@ export class PendingMoveEffects
      * @param set Whether to check for setting or adding boosts. Default false.
      * @returns The expected boost number to be applied.
      */
-    public get(ctg: effects.MoveEffectCategory, key: "boost",
+    public get(ctg: effects.move.Category, key: "boost",
         stat: dexutil.BoostName, set?: boolean): number | null;
     // TODO: secondary
-    public get(ctg: "primary" | effects.MoveEffectCategory, key: string,
+    public get(ctg: "primary" | effects.move.Category, key: string,
         stat?: dexutil.BoostName, set?: boolean):
-        effects.PrimaryMap[effects.PrimaryType]["value"] |
-        effects.OtherMap[TrivialOtherType]["value"] | number | null
+        effects.move.PrimaryMap[TrivialPrimaryType]["value"] |
+        Omit<effects.SwapBoost, "type"> |
+        effects.move.OtherMap[TrivialOtherType]["value"] | number | null
     {
         if (ctg === "primary" && key === "swapBoost")
         {
@@ -230,8 +247,8 @@ export class PendingMoveEffects
      * whether the effect is pending.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public check<T extends effects.OtherType>(ctg: "self" | "hit",
-        key: T, effect?: effects.OtherMap[T]["value"]): boolean
+    public check<T extends TrivialOtherType>(ctg: "self" | "hit",
+        key: T, effect?: effects.move.OtherMap[T]["value"]): boolean
     {
         return this.effects.check(`${ctg} ${key}`,
                 ...(effect ? [effect] : [])) ||
@@ -246,8 +263,8 @@ export class PendingMoveEffects
      * whether the effect is pending.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public consume<T extends effects.PrimaryType>(ctg: "primary",
-        key: T, effect?: effects.PrimaryMap[T]["value"]): boolean;
+    public consume<T extends TrivialPrimaryType>(ctg: "primary",
+        key: T, effect?: effects.move.PrimaryMap[T]["value"]): boolean;
     /**
      * Checks and consumes a pending call effect.
      * @param effect Effect type to check. If `"bounced"` check for bounced
@@ -282,8 +299,8 @@ export class PendingMoveEffects
      * whether the effect is pending.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public consume<T extends effects.OtherType>(ctg: "self" | "hit",
-        key: T, effect?: effects.OtherMap[T]["value"]): boolean;
+    public consume<T extends TrivialOtherType>(ctg: "self" | "hit",
+        key: T, effect?: effects.move.OtherMap[T]["value"]): boolean;
     /**
      * Checks and consumes a pending boost effect.
      * @param ctg Category of effect.
@@ -301,9 +318,9 @@ export class PendingMoveEffects
      * @param ctg Category of effect.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public consume<T extends keyof effects.Move>(ctg: "self" | "hit",
-        key: "status", effect: "MajorStatus"): boolean;
-    public consume(ctg: "primary" | effects.MoveEffectCategory, key: string,
+    public consume(ctg: "self" | "hit", key: "status", effect: "MajorStatus"):
+        boolean;
+    public consume(ctg: "primary" | effects.move.Category, key: string,
         effectOrStat?: string | effects.SelfSwitchType |
             readonly dexutil.BoostName[] | dexutil.BoostName | "MajorStatus",
         amount?: number, cur?: number): boolean

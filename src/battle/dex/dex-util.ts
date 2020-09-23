@@ -91,6 +91,8 @@ export function isBoostName(stat: any): stat is BoostName
 {
     return boostNames.hasOwnProperty(stat);
 }
+/** Boost table mapped type. */
+export type BoostTable<T = number> = {readonly [U in BoostName]: T};
 
 // TODO: make weather types lowercase, shorten
 /** Holds the set of all weather types, mapping to its extension item. */
@@ -176,7 +178,7 @@ export interface AbilityData extends DexData
     /** Whether this ability cancels move recoil damage. */
     readonly noRecoil?: true;
     /** Additional ability effects. */
-    readonly effects?: readonly effects.Ability[];
+    readonly effects?: readonly effects.ability.Ability[];
 }
 
 /** Format for each move entry in the dex. */
@@ -191,7 +193,7 @@ export interface MoveData extends DexData
     /** Optional move flags. */
     readonly flags?: MoveFlags;
     /** Additional move effects */
-    readonly effects?: readonly effects.Move[];
+    readonly effects?: readonly effects.move.Move[];
 }
 
 /** Types of categories for a move. */

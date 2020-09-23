@@ -117,7 +117,7 @@ const callTypeMap: {readonly [move: string]: effects.CallType} =
 
 /** Maps some move names to swap boost effects. */
 const swapBoostMap:
-    {readonly [move: string]: effects.SwapBoost["value"]} =
+    {readonly [move: string]: Partial<dexutil.BoostTable<true>>} =
 {
     // swapboost moves
     guardswap: {def: true, spd: true},
@@ -146,10 +146,11 @@ const fieldTypeMap: {readonly [move: string]: effects.FieldType} =
     gravity: "gravity", trickroom: "trickRoom"
 };
 
-/** Maps some move names to StatusTypes. */
+/** Maps some move names or effects to StatusTypes. */
 const statusTypeMap: {readonly [move: string]: effects.StatusType} =
 {
     // TODO: followme, helpinghand, partiallytrapped, telekinesis (gen5)
+    // TODO: triattack
     // normal statuses
     aquaring: "aquaRing", attract: "attract", charge: "charge", curse: "curse",
     embargo: "embargo", encore: "encore", focusenergy: "focusEnergy",
@@ -178,12 +179,12 @@ const implicitStatusTypeMap:
     mustrecharge: "mustRecharge"
 };
 
-/** Maps some move names to BoostEffects. */
-const boostTypeMap:
-    {readonly [move: string]: effects.Boost["value"]} =
+/** Maps some move names to set-boost effects. */
+const setBoostMap:
+    {readonly [move: string]: Partial<dexutil.BoostTable<number>>} =
 {
     // setboost moves
-    bellydrum: {set: {atk: 6}}
+    bellydrum: {atk: 6}
 };
 
 /** Maps some move names to TeamEffects. */
@@ -207,7 +208,7 @@ const uniqueStatusTypeMap: {readonly [move: string]: effects.UniqueType} =
     conversion: "conversion", disable: "disable"
 };
 
-function addEffect(arr: effects.Move[], effect: effects.Move):
+function addEffect(arr: effects.move.Move[], effect: effects.move.Move):
     boolean
 {
     const jsonEffect = JSON.stringify(effect);
@@ -260,7 +261,7 @@ for (const move of
 
     // setup move effects
 
-    const arr: DeepWritable<effects.Move>[] = [];
+    const arr: DeepWritable<effects.move.Move>[] = [];
 
     // primary effects
 
@@ -325,26 +326,26 @@ for (const move of
 
     if (swapBoostMap.hasOwnProperty(move.id))
     {
-        addEffect(arr, {type: "swapBoost", value: swapBoostMap[move.id]});
+        addEffect(arr, {type: "swapBoost", ...swapBoostMap[move.id]});
     }
 
-    const self: effects.MoveEffectCategory = "self";
-    const hit: effects.MoveEffectCategory =
+    const self: effects.move.Category = "self";
+    const hit: effects.move.Category =
         ["all", "allySide", "self"].includes(target) ? self : "hit";
 
-    function addEffects(ctg: effects.MoveEffectCategory, psEffect: HitEffect):
+    function addEffects(ctg: effects.move.Category, psEffect: HitEffect):
         void
     {
         // TODO: more flags: multi-hit, recoil, etc
 
         // boost
-        if (boostTypeMap.hasOwnProperty(move.id))
+        if (setBoostMap.hasOwnProperty(move.id))
         {
-            addEffect(arr, {type: "boost", ctg, value: boostTypeMap[move.id]});
+            addEffect(arr, {type: "boost", ctg, set: setBoostMap[move.id]});
         }
         if (psEffect.boosts)
         {
-            addEffect(arr, {type: "boost", ctg, value: {add: psEffect.boosts}});
+            addEffect(arr, {type: "boost", ctg, add: psEffect.boosts});
         }
 
         // single-target statuses
@@ -412,8 +413,8 @@ for (const move of
         {
             addEffect(arr,
             {
-                type: "secondary", ctg, chance,
-                value: {type: "boost", value: {add: psHitEffect.boosts}}
+                type: "chance", ctg, chance,
+                effects: [{type: "boost", add: psHitEffect.boosts}]
             });
         }
         if (psHitEffect.volatileStatus)
@@ -421,21 +422,18 @@ for (const move of
             if (psHitEffect.volatileStatus === "flinch")
             {
                 addEffect(arr,
-                {
-                    type: "secondary", ctg, chance,
-                    value: {type: "flinch", value: true}
-                });
+                    {type: "chance", ctg, chance, effects: [{type: "flinch"}]});
             }
             else if (statusTypeMap.hasOwnProperty(psHitEffect.volatileStatus))
             {
                 addEffect(arr,
                 {
-                    type: "secondary", ctg, chance,
-                    value:
-                    {
+                    type: "chance", ctg, chance,
+                    effects:
+                    [{
                         type: "status",
-                        value: statusTypeMap[psHitEffect.volatileStatus]
-                    }
+                        value: statusTypeMap[psHitEffect.volatileStatus] as any
+                    }]
                 });
             }
         }
@@ -444,9 +442,9 @@ for (const move of
         {
             addEffect(arr,
             {
-                type: "secondary", ctg, chance,
-                value:
-                    {type: "status", value: statusTypeMap[psHitEffect.status]}
+                type: "chance", ctg, chance,
+                effects:
+                    [{type: "status", value: statusTypeMap[psHitEffect.status] as any}]
             });
         }
     }
@@ -650,7 +648,7 @@ const noRecoil: {readonly [ability: string]: true | undefined} =
 
 /** Map for Ability effects. */
 const abilityEffectMap:
-    {readonly [ability: string]: readonly effects.Ability[] | undefined} =
+    {readonly [ability: string]: readonly effects.ability.Ability[]} =
 {
     aftermath:
     [{
@@ -664,12 +662,12 @@ const abilityEffectMap:
     cutecharm:
     [{
         type: "chance", on: "contact", chance: 30,
-        value: [{type: "status", tgt: "hit", value: "attract"}]
+        effects: [{type: "status", tgt: "hit", value: "attract"}]
     }],
     effectspore:
     [{
         type: "chance", on: "contact", chance: 30,
-        value:
+        effects:
         [
             {type: "status", tgt: "hit", value: "slp"},
             {type: "status", tgt: "hit", value: "par"},
@@ -679,19 +677,19 @@ const abilityEffectMap:
     flamebody:
     [{
         type: "chance", on: "contact", chance: 30,
-        value: [{type: "status", tgt: "hit", value: "brn"}]
+        effects: [{type: "status", tgt: "hit", value: "brn"}]
     }],
     poisonpoint:
     [{
         type: "chance", on: "contact", chance: 30,
-        value: [{type: "status", tgt: "hit", value: "psn"}]
+        effects: [{type: "status", tgt: "hit", value: "psn"}]
     }],
     roughskin:
         [{type: "percentDamage", on: "contact", tgt: "hit", value: 6.25}],
     static:
     [{
         type: "chance", on: "contact", chance: 30,
-        value: [{type: "status", tgt: "hit", value: "par"}]
+        effects: [{type: "status", tgt: "hit", value: "par"}]
     }],
 };
 

@@ -1,11 +1,15 @@
 import { LockedMove, lockedMoves, TwoTurnMove, twoTurnMoves } from "../dex/dex";
-import { BoostName, MajorStatus, rolloutMoves, Type } from "../dex/dex-util";
+import { BoostName, BoostTable, MajorStatus, rolloutMoves, Type } from
+    "../dex/dex-util";
 import { Moveset, ReadonlyMoveset } from "./Moveset";
 import { PokemonTraits, ReadonlyPokemonTraits } from "./PokemonTraits";
 import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
 import { pluralTurns, plus } from "./utility";
 import { ReadonlyVariableTempStatus, VariableTempStatus  } from
     "./VariableTempStatus";
+
+/** Writable helper type. */
+type Writable<T> = T extends object ? {-readonly [U in keyof T]: T[U]} : never;
 
 // TODO: factor into a separate class?
 /** Tracks a move status turn counter. */
@@ -34,7 +38,7 @@ export interface ReadonlyVolatileStatus
     /* Aqua Ring move status. */
     readonly aquaRing: boolean;
     /** Stat boost stages. */
-    readonly boosts: {readonly [N in BoostName]: number};
+    readonly boosts: BoostTable<number>;
     /** Confusion status. */
     readonly confusion: ReadonlyTempStatus;
     /** Curse status. */
@@ -189,8 +193,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public aquaRing!: boolean;
 
     /** @override */
-    public get boosts(): {[N in BoostName]: number} { return this._boosts; }
-    private _boosts!: {[N in BoostName]: number};
+    public get boosts(): Writable<BoostTable<number>> { return this._boosts; }
+    private _boosts!: Writable<BoostTable<number>>;
 
     /** @override */
     public readonly confusion = new TempStatus("confused", 4);
