@@ -36,20 +36,21 @@ export class PendingMoveEffects
         {
             case "call": case "countableStatus": case "delay": case "field":
             case "selfSwitch":
-                this.addEffectImpl(`primary ${effect.type}`,
-                    new PendingValueEffect(effect.value));
+                this.effects.add(`primary ${effect.type}`,
+                    new PendingValueEffect(effect.value), /*assert*/ true);
                 break;
             case "recoil":
-                this.addEffectImpl(`primary ${effect.type}`,
+                this.effects.add(`primary ${effect.type}`,
                     // TODO: custom recoil handling
                     new PendingValueEffect(
-                        `${Math.round(100 / effect.value)}%`));
+                        `${Math.round(100 / effect.value)}%`),
+                    /*assert*/ true);
                 break;
             case "swapBoost":
             {
                 const boosts = dexutil.boostKeys.filter(b => effect[b]);
-                this.addEffectImpl(`primary ${effect.type}`,
-                    new PendingValueEffect(boosts.join(",")));
+                this.effects.add(`primary ${effect.type}`,
+                    new PendingValueEffect(boosts.join(",")), /*assert*/ true);
                 break;
             }
             case "boost":
@@ -57,8 +58,8 @@ export class PendingMoveEffects
                 break;
             case "implicitStatus": case "implicitTeam": case "status":
             case "team": case "unique":
-                this.addEffectImpl(`${effect.ctg} ${effect.type}`,
-                    new PendingValueEffect(effect.value));
+                this.effects.add(`${effect.ctg} ${effect.type}`,
+                    new PendingValueEffect(effect.value), /*assert*/ true);
                 break;
             case "chance":
             {
@@ -72,8 +73,9 @@ export class PendingMoveEffects
                 const se = effect.effects[0];
                 if (se.type === "status")
                 {
-                    this.addEffectImpl(`${effect.ctg} secondary status`,
-                        new PendingValueEffect(se.value, effect.chance));
+                    this.effects.add(`${effect.ctg} secondary status`,
+                        new PendingValueEffect(se.value, effect.chance),
+                        /*assert*/ true);
                 }
                 else if (se.type === "boost")
                 {
@@ -105,20 +107,12 @@ export class PendingMoveEffects
             for (const b of dexutil.boostKeys)
             {
                 if (!table.hasOwnProperty(b)) continue;
-                this.addEffectImpl(`${ctg} ${chance ? "secondary " : ""}` +
+                this.effects.add(`${ctg} ${chance ? "secondary " : ""}` +
                         `boost add ${b}`,
                     new PendingBoostEffect(table[b]!,
-                        /*set*/ false, ...(chance ? [chance] : [])));
+                        /*set*/ false, ...(chance ? [chance] : [])),
+                    /*assert*/ true);
             }
-        }
-    }
-
-    /** Adds a PendingEffect, or throws if duplicate. */
-    private addEffectImpl(name: string, effect: PendingEffect): void
-    {
-        if (!this.effects.add(name, effect))
-        {
-            throw new Error(`Duplicate MoveEffect '${name}'`);
         }
     }
 

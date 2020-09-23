@@ -55,11 +55,16 @@ export class PendingEffects
      * Adds a PendingEffect to this obj.
      * @param name Name of the effect.
      * @param effect Effect obj.
+     * @param assert Whether to throw if the effect can't be added.
      * @returns Whether the effect was successfully added.
      */
-    public add(name: string, effect: PendingEffect): boolean
+    public add(name: string, effect: PendingEffect, assert?: boolean): boolean
     {
-        if (this.effects.has(name)) return false;
+        if (this.effects.has(name))
+        {
+            if (!assert) return false;
+            throw new Error(`Duplicate PendingEffect '${name}'`);
+        }
         this.effects.set(name, effect);
         return true;
     }
