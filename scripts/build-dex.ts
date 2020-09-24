@@ -444,7 +444,10 @@ for (const move of
             {
                 type: "chance", ctg, chance,
                 effects:
-                    [{type: "status", value: statusTypeMap[psHitEffect.status] as any}]
+                [{
+                    type: "status",
+                    value: statusTypeMap[psHitEffect.status] as any
+                }]
             });
         }
     }
@@ -453,7 +456,8 @@ for (const move of
     [
         move.id,
         {
-            uid, name: move.id, display: move.name, category, target, pp,
+            uid, name: move.id, display: move.name, category,
+            type: move.type.toLowerCase() as dexutil.Type, target, pp,
             ...(hasFlags && {flags}), ...(arr.length > 0 && {effects: arr})
         }
     ];

@@ -186,6 +186,8 @@ export interface MoveData extends DexData
 {
     /** Move category. */
     readonly category: MoveCategory;
+    /** Type of move. */
+    readonly type: Type;
     /** Target of the move. */
     readonly target: MoveTarget;
     /** Base power point range. */
