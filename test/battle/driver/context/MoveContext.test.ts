@@ -7,6 +7,7 @@ import * as events from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext } from
     "../../../../src/battle/driver/context/AbilityContext";
 import { MoveContext } from "../../../../src/battle/driver/context/context";
+import { ItemContext } from "../../../../src/battle/driver/context/ItemContext";
 import { SwitchContext } from
     "../../../../src/battle/driver/context/SwitchContext";
 import { BattleState } from "../../../../src/battle/state/BattleState";
@@ -27,8 +28,7 @@ describe("MoveContext", function()
         state = new BattleState();
     });
 
-    function initActive(monRef: Side, options = smeargle,
-        teamSize = 1): Pokemon
+    function initActive(monRef: Side, options = smeargle, teamSize = 1): Pokemon
     {
         state.teams[monRef].size = teamSize;
         return state.teams[monRef].switchIn(options)!;
@@ -269,6 +269,31 @@ describe("MoveContext", function()
                         ability: "waterabsorb"
                     }))
                     .to.be.an.instanceOf(AbilityContext);
+            });
+        });
+
+        describe("activateItem", function()
+        {
+            it("Should return ItemContext if appropriate", function()
+            {
+                initActive("us");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "swift"});
+                expect(ctx.handle(
+                        {type: "activateItem", monRef: "us", item: "lifeorb"}))
+                    .to.be.an.instanceOf(ItemContext);
+            });
+
+            it("Should expire if not appropriate", function()
+            {
+                initActive("us");
+                const ctx = initCtx(
+                    {type: "useMove", monRef: "us", move: "swift"});
+                expect(ctx.handle(
+                    {
+                        type: "activateItem", monRef: "us", item: "leftovers"
+                    }))
+                    .to.not.be.ok;
             });
         });
 

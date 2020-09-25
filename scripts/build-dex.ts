@@ -77,6 +77,19 @@ function isGen4Move(move: Move): boolean
 // counter for the unique identifier of a pokemon, move, etc.
 let uid = 0;
 
+/**
+ * Adds an effect to an effect array if it isn't already there (by JSON
+ * comparison).
+ * @returns Whether the effect was added.
+ */
+function addEffect<T>(arr: T[], effect: T): boolean
+{
+    const jsonEffect = JSON.stringify(effect);
+    if (!arr.every(e => JSON.stringify(e) !== jsonEffect)) return false;
+    arr.push(effect);
+    return true;
+}
+
 // moves
 
 const moves: (readonly [string, dexutil.MoveData])[] = [];
@@ -207,15 +220,6 @@ const uniqueStatusTypeMap: {readonly [move: string]: effects.UniqueType} =
 {
     conversion: "conversion", disable: "disable"
 };
-
-function addEffect(arr: effects.move.Move[], effect: effects.move.Move):
-    boolean
-{
-    const jsonEffect = JSON.stringify(effect);
-    if (!arr.every(e => JSON.stringify(e) !== jsonEffect)) return false;
-    arr.push(effect);
-    return true;
-}
 
 const futureMoves: string[] = [];
 const lockedMoves: string[] = []; // TODO: rename to rampage moves
@@ -716,6 +720,25 @@ for (const ability of
 
 // items and berries
 
+/** Maps some item names to Item effects. */
+const itemEffectMap: {readonly [item: string]: readonly effects.item.Item[]} =
+{
+    blacksludge:
+    [
+        {
+            type: "percentDamage", ctg: "turn", restrictType: "poison",
+            value: 6.25
+        },
+        {
+            type: "percentDamage", ctg: "turn", noRestrictType: "poison",
+            value: -12.5
+        }
+    ],
+    leftovers: [{type: "percentDamage", ctg: "turn", value: 6.25}],
+    lifeorb: [{type: "percentDamage", ctg: "selfDamageMove", value: -10}],
+    stickybarb: [{type: "percentDamage", ctg: "turn", value: -12.5}]
+};
+
 // make sure that having no item is possible
 const items: (readonly [string, dexutil.ItemData])[] =
     [["none", {uid: 0, name: "none", display: "None"}]];
@@ -741,12 +764,16 @@ for (const item of
         ]);
     }
 
+    const arr: DeepWritable<effects.item.Item>[] = [];
+    for (const effect of itemEffectMap[item.id] ?? []) addEffect(arr, effect);
+
     items.push(
     [
         item.id,
         {
             uid, name: item.id, display: item.name,
-            ...(item.isChoice && {isChoice: item.isChoice})
+            ...(item.isChoice && {isChoice: item.isChoice}),
+            ...(arr.length > 0 && {effects: arr})
         }
     ]);
     ++uid;
@@ -961,7 +988,7 @@ ${exportDict(typeToMoves, "typeToMoves",
 
 /** Contains info about each item. */
 ${exportEntriesToDict(items, "items", "dexutil.ItemData", i =>
-    stringifyDict(i, v => typeof v === "string" ? quote(v) : v))}
+    deepStringifyDict(i, v => typeof v === "string" ? quote(v) : v))}
 
 /** Sorted array of all item names, except with \`none\` at position 0. */
 ${exportArray(items, "itemKeys", "string", i => quote(i[0]))}

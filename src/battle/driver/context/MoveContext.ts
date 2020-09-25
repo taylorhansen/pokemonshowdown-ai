@@ -279,6 +279,17 @@ export class MoveContext extends Gen4Context
     }
 
     /** @override */
+    public activateItem(event: events.ActivateItem): ContextResult
+    {
+        if (this.userRef === event.monRef &&
+            this.moveData.category !== "status")
+        {
+            // override effect category
+            return super.activateItem(event, "selfDamageMove");
+        }
+    }
+
+    /** @override */
     public activateStatusEffect(event: events.ActivateStatusEffect):
         ContextResult
     {

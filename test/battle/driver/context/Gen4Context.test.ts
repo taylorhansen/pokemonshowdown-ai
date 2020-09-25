@@ -5,6 +5,7 @@ import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/driver/BattleEvent";
 import { AbilityContext, DriverContext, Gen4Context, MoveContext,
     SwitchContext } from "../../../../src/battle/driver/context/context";
+import { ItemContext } from "../../../../src/battle/driver/context/ItemContext";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
 import { Side } from "../../../../src/battle/state/Side";
@@ -113,12 +114,22 @@ describe("Gen4Context", function()
 
         describe("activateItem", function()
         {
-            it("Should reveal item", function()
+            it("Should return ItemContext if appropriate", function()
             {
-                const {item} = initActive("them");
-                expect(item.definiteValue).to.be.null;
-                handle({type: "activateItem", monRef: "them", item: "lifeorb"});
-                expect(item.definiteValue).to.equal("lifeorb");
+                initActive("us");
+                expect(ctx.handle(
+                    {
+                        type: "activateItem", monRef: "us", item: "leftovers"
+                    }))
+                    .to.be.an.instanceOf(ItemContext);
+            });
+
+            it("Should expire if not appropriate", function()
+            {
+                initActive("us");
+                expect(ctx.handle(
+                        {type: "activateItem", monRef: "us", item: "lifeorb"}))
+                    .to.not.be.ok;
             });
         });
 

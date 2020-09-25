@@ -231,4 +231,6 @@ export interface ItemData extends DexData
 {
     /** Whether this is a choice item. */
     readonly isChoice?: true;
+    /** Additional item effects. */
+    readonly effects?: readonly effects.item.Item[];
 }

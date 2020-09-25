@@ -6,6 +6,7 @@ import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { AbilityContext, ContextResult, DriverContext, MoveContext,
     SwitchContext } from "./context";
+import { ItemContext } from "./ItemContext";
 
 /** Handles and accepts all events in a gen-4 context. */
 export class Gen4Context extends DriverContext
@@ -41,11 +42,17 @@ export class Gen4Context extends DriverContext
         return super.activateFieldEffect(event);
     }
 
-    /** @override */
-    public activateItem(event: events.ActivateItem): ContextResult
+    /**
+     * @param ctg Override effect category. Default `"turn"`.
+     * @override
+     */
+    public activateItem(event: events.ActivateItem,
+        ctg: effects.item.Category = "turn"): ContextResult
     {
-        this.state.teams[event.monRef].active.setItem(event.item);
-        return super.activateItem(event);
+        return ItemContext.from(this.state, event,
+            this.logger.addPrefix(`Item(${event.monRef}, ${event.item}, ` +
+                `${ctg}): `),
+            ctg);
     }
 
     /** @override */
