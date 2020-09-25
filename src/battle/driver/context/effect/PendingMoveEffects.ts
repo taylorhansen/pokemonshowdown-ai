@@ -1,7 +1,6 @@
 import * as dexutil from "../../../dex/dex-util";
 import * as effects from "../../../dex/effects";
 import { PendingBoostEffect } from "./PendingBoostEffect";
-import { PendingEffect } from "./PendingEffect";
 import { PendingEffects } from "./PendingEffects";
 import { PendingValueEffect } from "./PendingValueEffect";
 
@@ -37,20 +36,20 @@ export class PendingMoveEffects
             case "call": case "countableStatus": case "delay": case "field":
             case "selfSwitch":
                 this.effects.add(`primary ${effect.type}`,
-                    new PendingValueEffect(effect.value), /*assert*/ true);
+                    new PendingValueEffect(effect.value), "assert");
                 break;
             case "recoil":
                 this.effects.add(`primary ${effect.type}`,
                     // TODO: custom recoil handling
                     new PendingValueEffect(
                         `${Math.round(100 / effect.value)}%`),
-                    /*assert*/ true);
+                    "assert");
                 break;
             case "swapBoost":
             {
                 const boosts = dexutil.boostKeys.filter(b => effect[b]);
                 this.effects.add(`primary ${effect.type}`,
-                    new PendingValueEffect(boosts.join(",")), /*assert*/ true);
+                    new PendingValueEffect(boosts.join(",")), "assert");
                 break;
             }
             case "boost":
@@ -59,7 +58,7 @@ export class PendingMoveEffects
             case "implicitStatus": case "implicitTeam": case "status":
             case "team": case "unique":
                 this.effects.add(`${effect.ctg} ${effect.type}`,
-                    new PendingValueEffect(effect.value), /*assert*/ true);
+                    new PendingValueEffect(effect.value), "assert");
                 break;
             case "chance":
             {
@@ -75,7 +74,7 @@ export class PendingMoveEffects
                 {
                     this.effects.add(`${effect.ctg} secondary status`,
                         new PendingValueEffect(se.value, effect.chance),
-                        /*assert*/ true);
+                        "assert");
                 }
                 else if (se.type === "boost")
                 {
@@ -107,11 +106,10 @@ export class PendingMoveEffects
             for (const b of dexutil.boostKeys)
             {
                 if (!table.hasOwnProperty(b)) continue;
-                this.effects.add(`${ctg} ${chance ? "secondary " : ""}` +
-                        `boost add ${b}`,
+                this.effects.add(
+                    `${ctg} ${chance ? "secondary " : ""}boost add ${b}`,
                     new PendingBoostEffect(table[b]!,
-                        /*set*/ false, ...(chance ? [chance] : [])),
-                    /*assert*/ true);
+                        /*set*/ false, ...(chance ? [chance] : [])), "assert");
             }
         }
     }

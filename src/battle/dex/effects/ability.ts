@@ -3,20 +3,7 @@ import * as effects from "./effects";
 
 /** Ability effect interface. */
 export type Ability = AbilityBase &
-    (TargetedAbilityEffect | effects.Chance<TargetedAbilityEffect>);
-
-/** Base interface for Ability effects. */
-interface AbilityBase
-{
-    /** Circumstance that should activate the effect. */
-    readonly on: AbilityOn;
-    /** Ability that blocks this effect. */
-    readonly blockedBy?: string;
-}
-
-/** Viable ability effects with an AbilityTarget attached. */
-type TargetedAbilityEffect = TargetedEffect &
-    (effects.PercentDamage | effects.TypeChange | effects.Status);
+    (AbilityEffect | effects.Chance<effects.Status>);
 
 // tslint:disable: no-trailing-whitespace (force newlines in doc)
 /**
@@ -26,7 +13,20 @@ type TargetedAbilityEffect = TargetedEffect &
  * `"damaged"` - Hit by a damaging move.
  */
 // tslint:enable: no-trailing-whitespace
-export type AbilityOn = "contact" | "contactKO" | "damaged";
+export type On = "contact" | "contactKO" | "damaged";
+
+/** Base interface for Ability effects. */
+interface AbilityBase
+{
+    /** Target of the effect. */
+    readonly tgt: Target;
+    /** Ability that blocks this effect. */
+    readonly blockedBy?: string;
+}
+
+/** Base viable ability effects. */
+export type AbilityEffect = effects.PercentDamage | effects.TypeChange |
+    effects.Status;
 
 // tslint:disable: no-trailing-whitespace (force newlines in doc)
 /**
@@ -37,11 +37,4 @@ export type AbilityOn = "contact" | "contactKO" | "damaged";
  */
 // tslint:enable: no-trailing-whitespace
 // TODO: restrict hit based on AbilityOn container/generic
-export type AbilityTarget = "hit" | "self";
-
-/** Effect that has a target. */
-interface TargetedEffect
-{
-    /** Target of the effect. */
-    readonly tgt: AbilityTarget;
-}
+export type Target = "hit" | "self";

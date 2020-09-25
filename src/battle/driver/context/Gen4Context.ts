@@ -1,5 +1,6 @@
 import { Logger } from "../../../Logger";
 import * as dexutil from "../../dex/dex-util";
+import * as effects from "../../dex/effects";
 import { BattleState } from "../../state/BattleState";
 import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
@@ -20,11 +21,13 @@ export class Gen4Context extends DriverContext
     }
 
     /** @override */
-    public activateAbility(event: events.ActivateAbility): ContextResult
+    public activateAbility(event: events.ActivateAbility,
+        on: effects.ability.On | null = null, hitByMove?: string): ContextResult
     {
-        return new AbilityContext(this.state, event,
+        return AbilityContext.from(this.state, event,
             this.logger.addPrefix(`Ability(${event.monRef}, ${event.ability}` +
-                "): "));
+                "): "),
+            on, hitByMove);
     }
 
     /** @override */

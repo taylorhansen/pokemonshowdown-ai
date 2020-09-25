@@ -178,7 +178,10 @@ export interface AbilityData extends DexData
     /** Whether this ability cancels move recoil damage. */
     readonly noRecoil?: true;
     /** Additional ability effects. */
-    readonly effects?: readonly effects.ability.Ability[];
+    readonly effects?:
+    {
+        readonly [T in effects.ability.On]?: readonly effects.ability.Ability[]
+    };
 }
 
 /** Format for each move entry in the dex. */

@@ -547,7 +547,7 @@ describe("MoveContext", function()
                                 .to.not.be.ok;
                             expect(() => ctx.expire())
                                 .to.throw(Error, "Expected effects that " +
-                                    "didn't happen: primary call 'copycat'");
+                                    "didn't happen: primary call ['copycat']");
                         });
 
                         it(`Should throw if ${caller} failed but should've ` +
@@ -787,7 +787,7 @@ describe("MoveContext", function()
                                 .to.not.be.ok;
                             expect(() => ctx.expire())
                                 .to.throw(Error, "Expected effects that " +
-                                    "didn't happen: primary call 'mirror'");
+                                    "didn't happen: primary call ['mirror']");
                         });
 
                         it(`Should throw if ${caller} failed but should've ` +
@@ -1029,7 +1029,7 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "them", move: "guardswap"});
                     expect(() => ctx.expire()).to.throw(Error,
                         "Expected effects that didn't happen: primary " +
-                        "swapBoost 'def,spd'");
+                        "swapBoost ['def,spd']");
                 });
             });
 
@@ -1109,7 +1109,7 @@ describe("MoveContext", function()
                             .to.not.be.ok;
                         expect(() => ctx.expire()).to.throw(Error,
                             "Expected effects that didn't happen: primary " +
-                            "field 'RainDance'");
+                            "field ['RainDance']");
                     });
                 });
             });
@@ -1435,7 +1435,7 @@ describe("MoveContext", function()
                             });
                             expect(() => ctx.expire()).to.throw(Error,
                                 "Expected effects that didn't happen: hit " +
-                                `secondary status '${effect}'`);
+                                `secondary status ['${effect}']`);
                         });
                     }
 
@@ -2047,7 +2047,7 @@ describe("MoveContext", function()
 
                     expect(() => ctx.expire()).to.throw(Error,
                         `Expected effects that didn't happen: ${ctg} boost ` +
-                        `add ${stat} '${amount}'`);
+                        `add ${stat} ['${amount}']`);
                 });
             });
         }
@@ -2117,15 +2117,27 @@ describe("MoveContext", function()
         {
             moveEffectTests[ctg].boost.push(function()
             {
-                it("Should handle boost via secondary effect", function()
+                it("Should handle boost via secondary effect using " + move,
+                function()
                 {
+                    const target = ctg === "self" ? "us" : "them";
                     initActive("us");
                     initActive("them");
                     const ctx = initCtx(
                         {type: "useMove", monRef: "us", move});
                     expect(ctx.handle(
-                            {type: "boost", monRef: "them", stat, amount}))
+                            {type: "boost", monRef: target, stat, amount}))
                         .to.be.true;
+                    ctx.expire(); // shouldn't throw
+                });
+
+                it("Shouldn't throw if no boost event using " + move,
+                function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "us", move});
                     ctx.expire(); // shouldn't throw
                 });
             });
@@ -2148,7 +2160,7 @@ describe("MoveContext", function()
                     const ctx = initCtx({type: "useMove", monRef: "us", move});
                     expect(() => ctx.expire()).to.throw(Error,
                         "Expected effects that didn't happen: hit secondary " +
-                        `boost add ${stat} '${amount}'`);
+                        `boost add ${stat} ['${amount}']`);
                 });
 
                 it("Should allow no boost event for 100% secondary " +

@@ -158,7 +158,7 @@ export type TypeChange = Effect<"typeChange", TypeChangeRule>;
 // tslint:disable: no-trailing-whitespace (force newlines in doc)
 /**
  * Rule for changing a pokemon's type according to a TypeChange effect.  
- * `"colorchange"` - Matches the type of the move last used against it.
+ * `"colorchange"` - Matches the type of the move that was just used against it.
  */
 // tslint:enable: no-trailing-whitespace
 export type TypeChangeRule = "colorchange";

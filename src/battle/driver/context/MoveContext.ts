@@ -1,6 +1,7 @@
 import { Logger } from "../../../Logger";
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
+import * as effects from "../../dex/effects";
 import { BattleState } from "../../state/BattleState";
 import { Move } from "../../state/Move";
 import { Pokemon } from "../../state/Pokemon";
@@ -46,9 +47,10 @@ export class MoveContext extends Gen4Context
     // in-progress move result flags
     /**
      * Target-refs currently mentioned by listening to events. Lays groundwork
-     * for future double/triple battle support.
+     * for future double/triple battle support. Value type is whether the
+     * pokemon was damaged by this move, or `"ko"` if it was KO'd.
      */
-    private readonly mentionedTargets = new Set<Side>();
+    private readonly mentionedTargets = new Map<Side, boolean | "ko">();
 
     /**
      * Constructs a MoveContext.
@@ -220,6 +222,7 @@ export class MoveContext extends Gen4Context
     {
         // clean up flags
         this.handleImplicitEffects(/*failed*/false);
+        // TODO: simple way to infer blocked ability effects?
 
         // all other pending flags must be accounted for
 
@@ -233,6 +236,31 @@ export class MoveContext extends Gen4Context
     }
 
     // event handlers
+
+    /** @override */
+    public activateAbility(event: events.ActivateAbility): ContextResult
+    {
+        const on = this.getAbilityCategory(event.monRef);
+        const hitByMove = this.moveName;
+
+        // TODO: make inference based on Ability#blockedBy
+        return super.activateAbility(event, on, hitByMove);
+    }
+
+    /** Gets the category of the pokemon's ability activation. */
+    private getAbilityCategory(monRef: Side): effects.ability.On | null
+    {
+        // choose category with highest precedence
+        const damaged = this.mentionedTargets.get(monRef);
+        let on: effects.ability.On | null = null;
+        if (this.moveData.flags?.contact)
+        {
+            if (damaged === "ko") on = "contactKO";
+            else if (damaged) on = "contact";
+        }
+        else if (damaged) on = "damaged";
+        return on;
+    }
 
     /** @override */
     public activateFieldEffect(event: events.ActivateFieldEffect):
@@ -492,7 +520,7 @@ export class MoveContext extends Gen4Context
         // if the target fainted, some effects have to be canceled
         this.effects.clearFaint(event.monRef === this.userRef ? "self" : "hit");
         // TODO: handle self-destruct moves
-        return this.addTarget(event.monRef) && super.faint(event);
+        return this.addTarget(event.monRef, "ko") && super.faint(event);
     }
 
     /** @override */
@@ -627,7 +655,8 @@ export class MoveContext extends Gen4Context
                     this.effects.consume("primary", "recoil") &&
                     // infer recoil effect was consumed
                     (this.recoil(/*consumed*/ true), true)
-                : this.addTarget(event.monRef)) &&
+                : this.addTarget(event.monRef,
+                    /*damaged*/ event.newHP[0] <= 0 ? "ko" : true)) &&
             super.takeDamage(event);
     }
 
@@ -725,11 +754,23 @@ export class MoveContext extends Gen4Context
 
     /**
      * Indicates that the BattleEvents mentioned a target for the current move.
+     * @param damaged Whether the pokemon was damaged (true) or KO'd ('"ko"`).
      * @returns Falsy on error, true otherwise.
      */
-    private addTarget(targetRef: Side): ContextResult
+    private addTarget(targetRef: Side, damaged: boolean | "ko" = false):
+        ContextResult
     {
-        if (this.mentionedTargets.has(targetRef)) return true;
+        const last = this.mentionedTargets.get(targetRef);
+        if (last !== undefined)
+        {
+            // update damaged status if higher precedence (ko > true > false)
+            if (!last || damaged === "ko")
+            {
+                this.mentionedTargets.set(targetRef, damaged);
+            }
+
+            return true;
+        }
 
         // assertions about the move target
         // generally this happens when the move has been fully handled but the
@@ -751,7 +792,7 @@ export class MoveContext extends Gen4Context
             return;
         }
 
-        this.mentionedTargets.add(targetRef);
+        this.mentionedTargets.set(targetRef, damaged);
 
         const target = this.state.teams[targetRef].active;
         if (this.user !== target)
@@ -839,7 +880,8 @@ export class MoveContext extends Gen4Context
             // TODO(non-singles): support multiple targets
             const monRefs =
                 ctg === "self" ? [this.userRef]
-                : [...this.mentionedTargets].filter(r => r !== this.userRef);
+                : [...this.mentionedTargets.keys()]
+                    .filter(r => r !== this.userRef);
             for (const monRef of monRefs)
             {
                 const mon = this.state.teams[monRef].active;

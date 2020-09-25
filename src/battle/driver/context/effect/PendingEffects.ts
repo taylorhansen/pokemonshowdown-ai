@@ -1,6 +1,10 @@
 import { PendingBoostEffect } from "./PendingBoostEffect";
 import { PendingEffect } from "./PendingEffect";
+import { PendingPercentEffect } from "./PendingPercentEffect";
 import { PendingValueEffect } from "./PendingValueEffect";
+
+/** String union for `PendingEffects#add()`. */
+export type EffectAddMode = "assert" | "alt" | "reject";
 
 /** Container for managing/consuming PendingEffect objs. */
 export class PendingEffects
@@ -8,25 +12,37 @@ export class PendingEffects
     /** Whether all contained effects have been consumed. */
     public get handled(): boolean { return this.effects.size <= 0; }
     /** Internal effect container. */
-    private readonly effects = new Map<string, PendingEffect>();
+    private readonly effects = new Map<string, PendingEffect[]>();
 
     /** Asserts that all pending effects have been cleared. */
     public assert(): void
     {
         const expected: string[] = [];
-        for (const [name, effect] of this.effects)
+        for (const [name, effects] of this.effects)
         {
             // skip non-null non-100% chances
-            if (effect.chance != null && effect.chance !== 100) continue;
-            if (effect instanceof PendingValueEffect)
-            {
-                expected.push(`${name} '${effect.value}'`);
-            }
-            else if (effect instanceof PendingBoostEffect)
-            {
-                expected.push(`${name} '${effect.pendingBoost}'`);
-            }
-            else expected.push(name);
+            const filtered =
+                effects.filter(pe => pe.chance == null || pe.chance >= 100)
+            if (filtered.length <= 0) continue;
+            expected.push(`${name} [` +
+                filtered.map(function(pe)
+                {
+                    // TODO: virtual method?
+                    if (pe instanceof PendingValueEffect)
+                    {
+                        return `'${pe.value}'`;
+                    }
+                    if (pe instanceof PendingBoostEffect)
+                    {
+                        return `'${pe.pendingBoost}'`;
+                    }
+                    if (pe instanceof PendingPercentEffect)
+                    {
+                        return `'${pe.percent}%'`;
+                    }
+                    return "'unknown'";
+                })
+                .join(", ") + "]");
         }
         if (expected.length > 0)
         {
@@ -48,7 +64,7 @@ export class PendingEffects
      */
     public get(name: string): PendingEffect | undefined
     {
-        return this.effects.get(name);
+        return this.effects.get(name)?.[0];
     }
 
     /**
@@ -56,16 +72,24 @@ export class PendingEffects
      * @param name Name of the effect.
      * @param effect Effect obj.
      * @param assert Whether to throw if the effect can't be added.
+     * @param mode How the effect should be added. `"assert"` means no other
+     * effect name should exist, `"alt"` allows for an alternate effect, and
+     * `"reject"` returns an unsuccessful result. Default `"reject"`.
      * @returns Whether the effect was successfully added.
      */
-    public add(name: string, effect: PendingEffect, assert?: boolean): boolean
+    public add(name: string, effect: PendingEffect, mode?: EffectAddMode):
+        boolean
     {
         if (this.effects.has(name))
         {
-            if (!assert) return false;
-            throw new Error(`Duplicate PendingEffect '${name}'`);
+            if (mode === "reject") return false;
+            if (mode === "assert")
+            {
+                throw new Error(`Duplicate PendingEffect '${name}'`);
+            }
+            this.effects.get(name)!.push(effect);
         }
-        this.effects.set(name, effect);
+        else this.effects.set(name, [effect]);
         return true;
     }
 
@@ -79,7 +103,7 @@ export class PendingEffects
     public check(name: string, ...args: any[]): boolean
     {
         return (args.length <= 0 && this.effects.has(name)) ||
-            !!this.effects.get(name)?.matches(...args);
+            !!this.effects.get(name)?.some(pe => pe.matches(...args));
     }
 
     /**

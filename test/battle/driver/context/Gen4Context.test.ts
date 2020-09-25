@@ -58,12 +58,12 @@ describe("Gen4Context", function()
             {
                 const mon = initActive("them");
                 expect(mon.ability).to.be.empty;
-                handle(
-                {
-                    type: "activateAbility", monRef: "them",
-                    ability: "swiftswim"
-                },
-                    AbilityContext);
+                expect(ctx.handle(
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "swiftswim"
+                    }))
+                    .to.be.an.instanceOf(AbilityContext);
                 expect(mon.ability).to.equal("swiftswim");
             });
         });

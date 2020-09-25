@@ -652,49 +652,44 @@ const noRecoil: {readonly [ability: string]: true | undefined} =
 
 /** Map for Ability effects. */
 const abilityEffectMap:
-    {readonly [ability: string]: readonly effects.ability.Ability[]} =
+    {readonly [ability: string]: dexutil.AbilityData["effects"]} =
 {
     aftermath:
-    [{
-        type: "percentDamage", on: "contactKO", tgt: "hit", blockedBy: "damp",
-        value: 25
-    }],
+    {contactKO: [{
+        type: "percentDamage", tgt: "hit", blockedBy: "damp", value: -25
+    }]},
     colorchange:
-    [{
-        type: "typeChange", on: "damaged", tgt: "self", value: "colorchange"
-    }],
+        {damaged: [{type: "typeChange", tgt: "self", value: "colorchange"}]},
     cutecharm:
-    [{
-        type: "chance", on: "contact", chance: 30,
-        effects: [{type: "status", tgt: "hit", value: "attract"}]
-    }],
+    {contact: [{
+        type: "chance", tgt: "hit", chance: 30,
+        effects: [{type: "status", value: "attract"}]
+    }]},
     effectspore:
-    [{
-        type: "chance", on: "contact", chance: 30,
+    {contact: [{
+        type: "chance", tgt: "hit", chance: 30,
         effects:
         [
-            {type: "status", tgt: "hit", value: "slp"},
-            {type: "status", tgt: "hit", value: "par"},
-            {type: "status", tgt: "hit", value: "psn"}
+            {type: "status", value: "slp"}, {type: "status", value: "par"},
+            {type: "status", value: "psn"}
         ]
-    }],
+    }]},
     flamebody:
-    [{
-        type: "chance", on: "contact", chance: 30,
-        effects: [{type: "status", tgt: "hit", value: "brn"}]
-    }],
+    {contact: [{
+        type: "chance", tgt: "hit", chance: 30,
+        effects: [{type: "status", value: "brn"}]
+    }]},
     poisonpoint:
-    [{
-        type: "chance", on: "contact", chance: 30,
-        effects: [{type: "status", tgt: "hit", value: "psn"}]
-    }],
-    roughskin:
-        [{type: "percentDamage", on: "contact", tgt: "hit", value: 6.25}],
+    {contact: [{
+        type: "chance", tgt: "hit", chance: 30,
+        effects: [{type: "status", value: "psn"}]
+    }]},
+    roughskin: {contact: [{type: "percentDamage", tgt: "hit", value: -6.25}]},
     static:
-    [{
-        type: "chance", on: "contact", chance: 30,
-        effects: [{type: "status", tgt: "hit", value: "par"}]
-    }],
+    {contact: [{
+        type: "chance", tgt: "hit", chance: 30,
+        effects: [{type: "status", value: "par"}]
+    }]}
 };
 
 const abilities: (readonly [string, dexutil.AbilityData])[] = [];
