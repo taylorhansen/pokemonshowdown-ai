@@ -178,11 +178,14 @@ export class AbilityContext extends DriverContext
     public activateStatusEffect(event: events.ActivateStatusEffect):
         ContextResult
     {
+        if (!this.on || !event.start) return;
+
         const tgt: effects.ability.Target = event.monRef === this.monRef ?
             "self" : "hit";
-        const name = `${this.data.name} on-${this.on} ${tgt} status`;
 
-        return event.start && this.pendingEffects.consume(name, event.effect) &&
+        // TODO: simpler way?
+        return this.throughQualifiedCategories(tgt, "status",
+                name => this.pendingEffects.consume(name, event.effect)) &&
             this.base.activateStatusEffect(event);
     }
 
@@ -193,6 +196,7 @@ export class AbilityContext extends DriverContext
             "self" : "hit";
         const name = `${this.data.name} on-${this.on} ${tgt} typeChange`;
 
+        // TODO: what if #on=contact/contactKO or the #monRef was ko'd?
         return event.newTypes[1] === "???" &&
             this.hitBy?.type === event.newTypes[0] &&
             this.pendingEffects.consume(name, "colorchange") &&
@@ -204,14 +208,39 @@ export class AbilityContext extends DriverContext
     {
         const tgt: effects.ability.Target = event.monRef === this.monRef ?
             "self" : "hit";
-        const name = `${this.data.name} on-${this.on} ${tgt} percentDamage`;
 
         const mon = this.state.teams[event.monRef].active;
         const initial = mon.hp.current;
         const next = event.newHP[0];
         const max = event.newHP[1];
 
-        return this.pendingEffects.consume(name, initial, next, max) &&
+        return this.throughQualifiedCategories(tgt, "percentDamage",
+                name => this.pendingEffects.consume(name, initial, next,
+                    max)) &&
             this.base.takeDamage(event);
+    }
+
+    /**
+     * Iterates through qualified `effects.ability.On` types up to the current
+     * `#on` field.
+     * @param tgt Effect target.
+     * @param f Function to execute on the generated effect name.
+     * @param ctgs Category names to iterate over. Stops when an element equals
+     * the `#on` field.
+     * @returns Whether one of the calls to `f` returned true, false otherwise.
+     */
+    private throughQualifiedCategories(tgt: effects.ability.Target,
+        type: effects.ability.AbilityEffect["type"],
+        f: (name: string) => boolean,
+        ctgs: readonly effects.ability.On[] =
+            ["damaged", "contact", "contactKO"]): boolean
+    {
+        for (const on of ctgs)
+        {
+            const name = `${this.data.name} on-${on} ${tgt} ${type}`;
+            if (f(name)) return true;
+            if (this.on === on) break;
+        }
+        return false;
     }
 }

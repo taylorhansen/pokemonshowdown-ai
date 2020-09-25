@@ -133,6 +133,34 @@ describe("AbilityContext", function()
                     .to.be.true;
                 ctx.expire();
             });
+
+            it("Should handle if `on` is overqualified", function()
+            {
+                initActive("us");
+                initActive("them", magmar);
+                const ctx = initCtx("them", "flamebody", "contactKO");
+                expect(ctx.handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "brn", start: true
+                    }))
+                    .to.be.true;
+                ctx.expire();
+            });
+
+            it("Should not handle if `on` is underqualified", function()
+            {
+                initActive("us");
+                initActive("them", magmar);
+                const ctx = initCtx("them", "flamebody", "damaged");
+                expect(ctx.handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "brn", start: true
+                    }))
+                    .to.not.be.ok;
+                ctx.expire();
+            });
         });
 
         describe("changeType", function()
@@ -150,7 +178,7 @@ describe("AbilityContext", function()
                     }))
                     .to.be.true;
                 ctx.expire();
-            })
+            });
         });
 
         describe("takeDamage", function()
