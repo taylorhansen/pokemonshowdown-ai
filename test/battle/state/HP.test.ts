@@ -13,6 +13,15 @@ describe("HP", function()
             expect(hp.current).to.equal(50);
             expect(hp.max).to.equal(100);
         });
+
+        it("Should set current hp", function()
+        {
+            const hp = new HP(/*isPercent*/ false);
+            hp.set(50, 100);
+            hp.set(75);
+            expect(hp.current).to.equal(75);
+            expect(hp.max).to.equal(100);
+        });
     });
 
     describe("#current", function()

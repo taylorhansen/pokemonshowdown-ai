@@ -651,10 +651,8 @@ export class PSEventHandler
         event: psevent.Damage | psevent.Heal | psevent.SetHP): events.Any[]
     {
         const monRef = this.getSide(event.id.owner);
-        const newHP = [event.status.hp, event.status.hpMax] as const;
-
-        const damageEvent: events.TakeDamage =
-            {type: "takeDamage", monRef, newHP};
+        const hp = event.status.hp;
+        const damageEvent: events.TakeDamage = {type: "takeDamage", monRef, hp};
 
         switch (event.from)
         {

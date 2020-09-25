@@ -827,7 +827,7 @@ describe("PSEventHandler", function()
                 [{
                     type, id: us, status: {hp: 1, hpMax: 100, condition: null}
                 }],
-                    [{type: "takeDamage", monRef: "us", newHP: [1, 100]}]);
+                    [{type: "takeDamage", monRef: "us", hp: 1}]);
 
                 test("Should emit takeDamage with recoil",
                 [{
@@ -835,7 +835,7 @@ describe("PSEventHandler", function()
                     from: "Recoil"
                 }],
                 [{
-                    type: "takeDamage", monRef: "us", newHP: [1, 100],
+                    type: "takeDamage", monRef: "us", hp: 1,
                     recoil: true
                 }]);
 
@@ -851,7 +851,7 @@ describe("PSEventHandler", function()
                         type: "activateTeamEffect", teamRef: "us",
                         effect: "healingWish", start: false
                     },
-                    {type: "takeDamage", monRef: "us", newHP: [100, 100]}
+                    {type: "takeDamage", monRef: "us", hp: 100}
                 ]);
 
                 test("Should emit takeDamage, restoreMoves and " +
@@ -866,7 +866,7 @@ describe("PSEventHandler", function()
                         type: "activateTeamEffect", teamRef: "us",
                         effect: "lunarDance", start: false
                     },
-                    {type: "takeDamage", monRef: "us", newHP: [100, 100]},
+                    {type: "takeDamage", monRef: "us", hp: 100},
                     {type: "restoreMoves", monRef: "us"}
                 ]);
             });
@@ -1334,7 +1334,7 @@ describe("PSEventHandler", function()
                     type: "-heal", id: us, from: "item: Sitrus Berry",
                     status: {hp: 50, hpMax: 100, condition: null}
                 }],
-                    [{type: "takeDamage", monRef: "us", newHP: [50, 100]}]);
+                    [{type: "takeDamage", monRef: "us", hp: 50}]);
             });
         });
     });

@@ -45,6 +45,5 @@ describe("PendingPercentEffect", function()
 
         shouldMatch("% diff pushes above max", 10, 95, 100, 100);
         shouldMatch("% diff pushes below 0", -10, 5, 0, 100);
-        shouldMatch("% diff pushes below 0 and max=0", -10, 5, 0, 0);
     });
 });

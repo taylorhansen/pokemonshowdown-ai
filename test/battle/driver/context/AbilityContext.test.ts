@@ -188,8 +188,7 @@ describe("AbilityContext", function()
                 initActive("us");
                 initActive("them", sharpedo);
                 const ctx = initCtx("them", "roughskin", "contact");
-                expect(ctx.handle(
-                        {type: "takeDamage", monRef: "us", newHP: [94, 100]}))
+                expect(ctx.handle({type: "takeDamage", monRef: "us", hp: 94}))
                     .to.be.true;
                 ctx.expire();
             });

@@ -126,8 +126,7 @@ describe("ItemContext", function()
                 const ctx = initCtx(
                     {type: "activateItem", monRef: "us", item: "leftovers"},
                     "turn");
-                expect(ctx.handle(
-                        {type: "takeDamage", monRef: "us", newHP: [56, 100]}))
+                expect(ctx.handle({type: "takeDamage", monRef: "us", hp: 56}))
                     .to.be.ok;
                 expect(mon.hp.current).to.equal(56); // should also handle
                 ctx.expire();
@@ -146,10 +145,7 @@ describe("ItemContext", function()
                     },
                         "turn");
                     expect(ctx.handle(
-                        {
-                            type: "takeDamage", monRef: "them",
-                            newHP: [100, 100]
-                        }))
+                            {type: "takeDamage", monRef: "them", hp: 100}))
                         .to.be.ok;
                     ctx.expire();
                 });
@@ -164,10 +160,7 @@ describe("ItemContext", function()
                     },
                         "turn");
                     expect(ctx.handle(
-                        {
-                            type: "takeDamage", monRef: "them",
-                            newHP: [0, 100]
-                        }))
+                            {type: "takeDamage", monRef: "them", hp: 0}))
                         .to.be.ok;
                     ctx.expire();
                 });

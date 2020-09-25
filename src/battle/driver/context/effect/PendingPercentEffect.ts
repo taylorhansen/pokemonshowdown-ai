@@ -22,11 +22,9 @@ export class PendingPercentEffect extends PendingEffect
         boolean
     {
         if (args.length > 0) return false;
-        if (typeof initial !== "number") return false;
-        if (typeof next !== "number") return false;
-        if (typeof max !== "number") return false;
-        // max must be positive
-        if (max <= 0) max = 1;
+        if (typeof initial !== "number" || initial < 0) return false;
+        if (typeof next !== "number" || next < 0) return false;
+        if (typeof max !== "number" || max <= 0) return false;
         // calculate diffs
         const diff = next - initial;
         const expectedDiff = Math.floor(max * this.percent / 100);

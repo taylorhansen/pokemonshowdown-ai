@@ -211,8 +211,8 @@ export class AbilityContext extends DriverContext
 
         const mon = this.state.teams[event.monRef].active;
         const initial = mon.hp.current;
-        const next = event.newHP[0];
-        const max = event.newHP[1];
+        const next = event.hp;
+        const max = mon.hp.max;
 
         return this.throughQualifiedCategories(tgt, "percentDamage",
                 name => this.pendingEffects.consume(name, initial, next,

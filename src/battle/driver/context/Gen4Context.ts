@@ -496,7 +496,7 @@ export class Gen4Context extends DriverContext
     public takeDamage(event: events.TakeDamage): ContextResult
     {
         const mon = this.state.teams[event.monRef].active;
-        mon.hp.set(event.newHP[0], event.newHP[1]);
+        mon.hp.set(event.hp);
         return super.takeDamage(event);
     }
 

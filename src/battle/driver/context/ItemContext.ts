@@ -117,8 +117,8 @@ export class ItemContext extends DriverContext
             default: return;
         }
         const initial = mon.hp.current;
-        const next = event.newHP[0];
-        const max = event.newHP[1];
+        const next = event.hp;
+        const max = mon.hp.max;
 
         // check base effect name
         const baseEffectString = `${this.data.name} percentDamage ${this.ctg}`;

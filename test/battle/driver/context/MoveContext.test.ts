@@ -1156,7 +1156,7 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "them", move: "bravebird"});
                     expect(ctx.handle(
                         {
-                            type: "takeDamage", monRef: "them", newHP: [0, 0],
+                            type: "takeDamage", monRef: "them", hp: 0,
                             recoil: true
                         }))
                         .to.be.true;
@@ -1171,7 +1171,7 @@ describe("MoveContext", function()
                         {type: "useMove", monRef: "them", move: "gust"});
                     expect(ctx.handle(
                         {
-                            type: "takeDamage", monRef: "them", newHP: [0, 0],
+                            type: "takeDamage", monRef: "them", hp: 0,
                             recoil: true
                         }))
                         .to.not.be.ok;
@@ -1197,8 +1197,8 @@ describe("MoveContext", function()
                         {
                             expect(ctx.handle(
                                 {
-                                    type: "takeDamage", monRef: "us",
-                                    newHP: [0, 0], recoil: true
+                                    type: "takeDamage", monRef: "us", hp: 0,
+                                    recoil: true
                                 }))
                                 .to.be.true;
                             ctx.expire();

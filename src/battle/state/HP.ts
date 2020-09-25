@@ -40,11 +40,11 @@ export class HP implements ReadonlyHP
     /**
      * Sets the HP.
      * @param current Current HP.
-     * @param max Maximum HP.
+     * @param max Optional max HP.
      */
-    public set(current: number, max: number): void
+    public set(current: number, max?: number): void
     {
-        this._max = max;
+        if (max) this._max = max;
         this._current = Math.min(Math.max(0, current), this._max);
     }
 

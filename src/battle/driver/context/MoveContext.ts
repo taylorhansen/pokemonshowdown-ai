@@ -667,7 +667,7 @@ export class MoveContext extends Gen4Context
                     // infer recoil effect was consumed
                     (this.recoil(/*consumed*/ true), true)
                 : this.addTarget(event.monRef,
-                    /*damaged*/ event.newHP[0] <= 0 ? "ko" : true)) &&
+                    /*damaged*/ event.hp <= 0 ? "ko" : true)) &&
             super.takeDamage(event);
     }
 

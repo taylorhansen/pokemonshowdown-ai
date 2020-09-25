@@ -553,8 +553,8 @@ export interface TakeDamage extends EventBase<"takeDamage">
 {
     /** Pokemon reference. */
     readonly monRef: Side;
-    /** HP/max pair. */
-    readonly newHP: readonly [number, number];
+    /** New HP value.. */
+    readonly hp: number;
     /** Whether this damage is from recoil. */
     readonly recoil?: true;
 }

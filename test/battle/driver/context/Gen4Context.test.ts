@@ -1230,7 +1230,7 @@ describe("Gen4Context", function()
                 const mon = initActive("us", smeargle);
                 expect(mon.hp.current).to.equal(smeargle.hp);
 
-                handle({type: "takeDamage", monRef: "us", newHP: [50, 100]});
+                handle({type: "takeDamage", monRef: "us", hp: 50});
                 expect(mon.hp.current).to.equal(50);
             });
         });
