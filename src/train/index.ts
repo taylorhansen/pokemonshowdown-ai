@@ -84,11 +84,7 @@ const batchOptions: BatchOptions =
             algorithm:
             {
                 type: "ppo", variant: "clipped", epsilon: 0.2,
-                advantage:
-                {
-                    type: "generalized", lambda: 0.95, gamma: 0.95,
-                    standardize: true
-                },
+                advantage: {type: "reinforce", gamma: 1},
                 valueCoeff: 0.55, entropyCoeff: 0.9
             },
             epochs: 8, batchSize: 16,

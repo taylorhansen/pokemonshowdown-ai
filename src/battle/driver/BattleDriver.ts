@@ -42,7 +42,10 @@ export class BattleDriver
     {
     }
 
-    /** Handles a batch of DriverEvents. */
+    /**
+     * Handles a batch of DriverEvents.
+     * @virtual
+     */
     public handle(...events: Any[]): void
     {
         this.stateDriver.handle(...events);

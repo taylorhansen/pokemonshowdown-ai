@@ -23,7 +23,8 @@ export function createModel(): tf.LayersModel
     }).apply(fc1) as tf.SymbolicTensor;
     const stateValue = tf.layers.dense(
     {
-        name: "network/state-value", units: 1, activation: "linear",
+        // training reward is max -1 to 1, so output should be bounded by it
+        name: "network/state-value", units: 1, activation: "tanh",
         kernelInitializer: "heNormal", biasInitializer: "heNormal"
     }).apply(fc1) as tf.SymbolicTensor;
 
