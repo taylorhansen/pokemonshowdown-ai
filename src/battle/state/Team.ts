@@ -81,8 +81,7 @@ export class Team implements ReadonlyTeam
     /**
      * Index of the next pokemon that hasn't been revealed to the user yet.
      * Indexes to the `pokemon` field after or equal to this value point to
-     * newly constructed Pokemon objects that haven't been fully initialized
-     * yet.
+     * unrevealed or nonexistent slots.
      */
     private unrevealed = 0;
 
@@ -104,14 +103,14 @@ export class Team implements ReadonlyTeam
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void
     {
-        for (const mon of this._pokemon) if (mon) mon.preTurn();
+        for (const mon of this._pokemon) mon?.preTurn();
     }
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
         this.status.postTurn();
-        for (const mon of this._pokemon) if (mon) mon.postTurn();
+        for (const mon of this._pokemon) mon?.postTurn();
     }
 
     /**
@@ -119,8 +118,7 @@ export class Team implements ReadonlyTeam
      * current active pokemon.
      * @returns The new active pokemon, or null if invalid.
      */
-    public switchIn(options: DriverSwitchOptions):
-        Pokemon | null
+    public switchIn(options: DriverSwitchOptions): Pokemon | null
     {
         // see if we already know this pokemon
         let index = -1;
@@ -128,18 +126,15 @@ export class Team implements ReadonlyTeam
         {
             const m = this._pokemon[i];
             // TODO: in gen5 check everything since it could be illusion
-            if (m && m.traits.species.definiteValue === options.species)
+            if (m?.baseTraits.species.definiteValue === options.species)
             {
                 index = i;
                 break;
             }
         }
 
-        if (index < 0)
-        {
-            // revealing a new pokemon
-            index = this.revealIndex(options);
-        }
+        // revealing a new pokemon
+        if (index < 0) index = this.revealIndex(options);
 
         // trying to access an invalid pokemon
         if (index < 0 || index >= this.unrevealed) return null;
@@ -147,8 +142,14 @@ export class Team implements ReadonlyTeam
         const mon = this._pokemon[index];
         if (!mon) throw new Error(`Uninitialized pokemon slot ${index}`);
 
+        if (mon.active)
+        {
+            throw new Error(`Switching active pokemon '${options.species}' ` +
+                "into itself");
+        }
+
         // switch active status
-        mon.switchInto(this._pokemon[0],
+        mon.switchInto(index === 0 ? null : this._pokemon[0],
             /*copy*/this.status.selfSwitch === "copyvolatile");
         // consume pending self-switch/copyvolatile flag
         this.status.selfSwitch = null;
@@ -198,7 +199,7 @@ export class Team implements ReadonlyTeam
     /** Cures all pokemon of any major status conditions. */
     public cure(): void
     {
-        for (const mon of this._pokemon) if (mon) mon.majorStatus.cure();
+        for (const mon of this._pokemon) mon?.majorStatus.cure();
     }
 
     // istanbul ignore next: only used for logging

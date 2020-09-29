@@ -61,7 +61,6 @@ describe("Team", function()
 
     describe("#switchIn()", function()
     {
-
         it("Should not overflow team size", function()
         {
             team.size = 1;
@@ -95,6 +94,30 @@ describe("Team", function()
             const mon2 = team.switchIn(options2)!;
             expect(mon2.volatile.boosts.spa).to.equal(2);
             expect(team.status.selfSwitch).to.be.null;
+        });
+
+        it("Should throw if switching active pokemon into itself", function()
+        {
+            team.size = 1;
+            team.switchIn(options1);
+            expect(() => team.switchIn(options1)).to.throw(Error,
+                `Switching active pokemon '${options1.species}' into itself`);
+        });
+
+        it("Should not throw if switching pokemon into another that is " +
+            "transformed into the original",
+        function()
+        {
+            team.size = 3;
+            const mon1 = team.switchIn(options1)!;
+
+            const team2 = new Team("them");
+            team2.size = 1;
+            const mon2 = team2.switchIn(options2)!;
+
+            mon1.transform(mon2);
+            expect(team.switchIn(options2)).to.not.equal(mon1)
+                .and.to.not.be.null;
         });
     });
 
