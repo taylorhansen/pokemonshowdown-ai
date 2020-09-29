@@ -1,5 +1,5 @@
 import { choiceIds } from "../../../battle/agent/Choice";
-import { BattleDriver, ChoiceSender } from
+import { BattleDriver, ChoiceSender, CommandType } from
     "../../../battle/driver/BattleDriver";
 import { Logger } from "../../../Logger";
 import { Experience, ExperienceAgent, ExperienceAgentData } from "./Experience";
@@ -30,7 +30,7 @@ export abstract class ExperienceBattleDriver extends BattleDriver
     protected abstract async emitExperience(exp: Experience): Promise<void>;
 
     /** @override */
-    public async halt(command: "wait" | "switch" | "decide"): Promise<void>
+    public async halt(command: CommandType): Promise<void>
     {
         // still have to see the rest of the state transition
         if (command === "wait") return super.halt(command);

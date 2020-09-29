@@ -8,6 +8,9 @@ import { StateDriver } from "./StateDriver";
 /** Function type for sending a Choice to the game. */
 export type ChoiceSender = (choice: Choice) => void;
 
+/** Command type for `BattleDriver#halt()`. */
+export type CommandType = "wait" | "switch" | "decide" | "done";
+
 /** Main entry point for tracking a battle. */
 export class BattleDriver
 {
@@ -51,13 +54,13 @@ export class BattleDriver
      * handled.
      * @virtual
      */
-    public async halt(command: "wait" | "switch" | "decide"): Promise<void>
+    public async halt(command: CommandType): Promise<void>
     {
         this.halted = true;
         this.stateDriver.halt();
 
         // nothing to do
-        if (command === "wait") return;
+        if (command === "wait" || command === "done") return;
 
         // go over what we can and can't do
         this._choices = this.stateDriver.getChoices(

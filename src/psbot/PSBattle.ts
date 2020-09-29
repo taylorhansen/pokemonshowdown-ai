@@ -133,15 +133,10 @@ export class PSBattle implements RoomHandler
         const lastRequest = this.lastRequest;
         this.lastRequest = null;
 
-        if (!this.eventHandler.battling || lastRequest?.wait)
-        {
-            return this.driver.halt("wait");
-        }
-        else if (lastRequest?.forceSwitch)
-        {
-            return this.driver.halt("switch");
-        }
-        else if (lastRequest)
+        if (!this.eventHandler.battling) return this.driver.halt("done");
+        if (lastRequest?.wait) return this.driver.halt("wait");
+        if (lastRequest?.forceSwitch) return this.driver.halt("switch");
+        if (lastRequest)
         {
             // see if we're locked into a multi-turn/recharge move
             const active = lastRequest.active?.[0];
