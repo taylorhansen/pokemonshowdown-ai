@@ -117,12 +117,14 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 /** @override */
                 protected handleTurn(event: psevent.Turn): events.Any[]
                 {
+                    const result = super.handleTurn(event);
                     // also make sure the battle doesn't go too long
                     if (options.maxTurns && ++turns >= options.maxTurns)
                     {
-                        done = true;
+                        // tie
+                        result.push(...this.handleGameOver({type: "tie"}));
                     }
-                    return super.handleTurn(event);
+                    return result;
                 }
 
                 /** @override */
