@@ -179,6 +179,9 @@ export function composePSBattleEvent(event: psevent.Any): string[]
         case "-enditem":
             result = [event.type, stringifyID(event.id), event.item];
             break;
+        case "-message":
+            result = [event.type, event.message];
+            break;
         case "-miss":
             result =
             [

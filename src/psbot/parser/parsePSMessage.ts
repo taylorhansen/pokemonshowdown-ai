@@ -451,6 +451,7 @@ function battleEventHelper(input: Input, info: Info): EventResult<psevent.Type>
         case "-immune": return eventImmune(input, info);
         case "-invertboost": return eventInvertBoost(input, info);
         case "-item": case "-enditem": return eventItem(input, info);
+        case "-message": return eventMessage(input, info);
         case "-miss": return eventMiss(input, info);
         case "move": return eventMove(input, info);
         case "-mustrecharge": return eventMustRecharge(input, info);
@@ -756,6 +757,17 @@ const eventInvertBoost: EventParser<"-invertboost"> = transform(
 const eventItem: EventParser<"-enditem" | "-item"> = transform(
     sequence(word("-enditem", "-item"), pokemonId, anyWord),
     ([type, id, item]) => ({type, id, item}));
+
+/**
+ * Parses a Message event.
+ *
+ * Format:
+ * @example
+ * |-message|MESSAGE
+ */
+const eventMessage: EventParser<"-message"> = transform(
+    sequence(word("-message"), restOfLine),
+    ([type, msg]) => ({type, message: msg}));
 
 /**
  * Parses a MissEvent.

@@ -37,6 +37,7 @@ const types =
     "-immune": {} as Immune,
     "-invertboost": {} as InvertBoost,
     "-item": {} as Item,
+    "-message": {} as Message,
     "-miss": {} as Miss,
     move: {} as Move,
     "-mustrecharge": {} as MustRecharge,
@@ -349,6 +350,13 @@ export interface Item extends EventBase<"-item">
     readonly id: PokemonID;
     /** Name of the item. */
     readonly item: string;
+}
+
+/** Event where a clarification message is being sent. */
+export interface Message extends EventBase<"-message">
+{
+    /** Message text. */
+    readonly message: string;
 }
 
 /** Event where a move missed one of its targets. */

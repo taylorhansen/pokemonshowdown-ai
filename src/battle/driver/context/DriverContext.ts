@@ -118,6 +118,13 @@ export abstract class DriverContext implements BattleEventHandler
     { return this.accept; }
 
     /**
+     * Mentions a PS-specific clause mod taking effect.
+     * @virtual
+     */
+    public clause(event: events.Clause): ContextResult
+    { return this.accept; }
+
+    /**
      * Clears all temporary stat boosts from the field.
      * @virtual
      */

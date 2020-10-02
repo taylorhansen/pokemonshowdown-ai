@@ -459,6 +459,16 @@ export class MoveContext extends Gen4Context
     }
 
     /** @override */
+    public clause(event: events.Clause): ContextResult
+    {
+        // ps-specific clause mod is blocking an effect
+        switch (event.clause)
+        {
+            case "slp": return this.effects.consume("hit", "status", "slp");
+        }
+    }
+
+    /** @override */
     public clearAllBoosts(event: events.ClearAllBoosts): ContextResult
     { return false; }
 

@@ -99,6 +99,7 @@ export const psEvents: psevent.Any[] =
     {type: "-immune", id: pokemonId[0]},
     {type: "-invertboost", id: pokemonId[2]},
     {type: "-item", id: pokemonId[2], item: "Leftovers", from: "move: Trick"},
+    {type: "-message", message: "Sleep Clause Mod activated."},
     {type: "-miss", id: pokemonId[2], targetId: pokemonId[0]},
     {
         type: "move", id: pokemonId[0], moveName: "Splash",

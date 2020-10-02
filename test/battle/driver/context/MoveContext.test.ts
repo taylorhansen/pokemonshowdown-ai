@@ -1412,7 +1412,7 @@ describe("MoveContext", function()
         function testRemovable(ctg: "self" | "hit", name: string,
             effect: effects.StatusType, move: string | undefined,
             secondaryMove?: string, secondaryMove100?: string,
-            abilityImmunity?: string): void
+            abilityImmunity?: string, clause?: "slp"): void
         {
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
@@ -1562,6 +1562,18 @@ describe("MoveContext", function()
                             });
                             ctx.expire();
                             expect(them.ability).to.equal("owntempo");
+                        });
+                    }
+
+                    if (move && clause)
+                    {
+                        it(`Should be blocked by clause '${clause}'`, function()
+                        {
+                            const ctx = initCtx(
+                                {type: "useMove", monRef: "us", move});
+                            expect(ctx.handle({type: "clause", clause}))
+                                .to.be.true;
+                            ctx.expire();
                         });
                     }
                 });
@@ -1925,7 +1937,8 @@ describe("MoveContext", function()
         testRemovable("hit", "Paralyze", "par", "stunspore", "thunderbolt",
             "zapcannon");
         testRemovable("hit", "Poison", "psn", "poisonpowder", "gunkshot");
-        testRemovable("hit", "Sleep", "slp", "spore");
+        testRemovable("hit", "Sleep", "slp", "spore", undefined, undefined,
+            undefined, "slp");
         testRemovable("hit", "Toxic", "tox", "toxic", "poisonfang");
 
         //#endregion

@@ -1022,6 +1022,19 @@ describe("PSEventHandler", function()
             }
         });
 
+        describe("-message", function()
+        {
+            test("Should emit clause",
+                [{type: "-message", message: "Sleep Clause Mod activated."}],
+                [{type: "clause", clause: "slp"}]);
+        });
+
+        describe("-miss", function()
+        {
+            test("Should emit miss", [{type: "-miss", id: us, targetId: them}],
+                [{type: "miss", monRef: "them"}]);
+        });
+
         describe("move", function()
         {
             test("Should emit useMove",
@@ -1034,12 +1047,6 @@ describe("PSEventHandler", function()
                 {type: "block", monRef: "us", effect: "magicCoat"},
                 {type: "useMove", monRef: "us", move: "flash"}
             ]);
-        });
-
-        describe("-miss", function()
-        {
-            test("Should emit miss", [{type: "-miss", id: us, targetId: them}],
-                [{type: "miss", monRef: "them"}]);
         });
 
         describe("-mustrecharge", function()

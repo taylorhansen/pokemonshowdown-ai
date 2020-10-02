@@ -18,6 +18,7 @@ interface EventMap
     block: Block;
     boost: Boost;
     changeType: ChangeType;
+    clause: Clause;
     clearAllBoosts: ClearAllBoosts;
     clearNegativeBoosts: ClearNegativeBoosts;
     clearPositiveBoosts: ClearPositiveBoosts;
@@ -171,6 +172,13 @@ export interface ChangeType extends EventBase<"changeType">
     readonly monRef: Side;
     /** Types to set. */
     readonly newTypes: readonly [dexutil.Type, dexutil.Type];
+}
+
+/** PS-specific event mentioning a clause mod taking effect. */
+export interface Clause extends EventBase<"clause">
+{
+    /** Clause type being activated. */
+    readonly clause: "slp";
 }
 
 /** Clears all temporary stat boosts from the field. */

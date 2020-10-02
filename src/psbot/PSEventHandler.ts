@@ -284,6 +284,7 @@ export class PSEventHandler
             case "-invertboost": return this.handleInvertBoost(event);
             case "-item": return this.handleItem(event);
             case "-enditem": return this.handleEndItem(event);
+            case "-message": return this.handleMessage(event);
             case "-miss": return this.handleMiss(event);
             case "-mustrecharge": return this.handleMustRecharge(event);
             case "-notarget": return this.handleNoTarget(event);
@@ -796,6 +797,15 @@ export class PSEventHandler
         else consumed = toIdName(event.item);
 
         return [{type: "removeItem", monRef, consumed}];
+    }
+
+    protected handleMessage(event: psevent.Message): events.Any[]
+    {
+        if (event.message === "Sleep Clause Mod activated.")
+        {
+            return [{type: "clause", clause: "slp"}];
+        }
+        return [];
     }
 
     /** @virtual */
