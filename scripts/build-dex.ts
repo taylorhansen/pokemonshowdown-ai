@@ -300,6 +300,8 @@ for (const move of
         twoTurnMoves.push(move.id);
     }
 
+    if (move.drain) addEffect(arr, {type: "drain", value: move.drain});
+
     if (fieldTypeMap.hasOwnProperty(move.id))
     {
         addEffect(arr, {type: "field", value: fieldTypeMap[move.id]});
@@ -654,6 +656,10 @@ for (const mon of
 const noRecoil: {readonly [ability: string]: true | undefined} =
     {magicguard: true, rockhead: true};
 
+/** Maps ability name to whether they invert drain healing. */
+const invertDrain: {readonly [ability: string]: true | undefined} =
+    {liquidooze: true};
+
 /** Map for Ability effects. */
 const abilityEffectMap:
     {readonly [ability: string]: dexutil.AbilityData["effects"]} =
@@ -711,6 +717,7 @@ for (const ability of
             uid, name: ability.id, display: ability.name,
             ...(ability.id === "owntempo" && {immune: "confusion"}),
             ...(noRecoil[ability.id] && {noRecoil: true}),
+            ...(invertDrain[ability.id] && {invertDrain: true}),
             ...(abilityEffectMap[ability.id] &&
                 {effects: abilityEffectMap[ability.id]})
         }

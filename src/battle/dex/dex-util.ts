@@ -175,8 +175,14 @@ export interface AbilityData extends DexData
 {
     /** Status immunity. */
     readonly immune?: "confusion";
+    // TODO: collect into flags obj?
     /** Whether this ability cancels move recoil damage. */
     readonly noRecoil?: true;
+    /**
+     * Whether this ability inverts healing to damage when a draining move is
+     * used against it.
+     */
+    readonly invertDrain?: true;
     /** Additional ability effects. */
     readonly effects?:
     {

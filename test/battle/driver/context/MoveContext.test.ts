@@ -1139,6 +1139,86 @@ describe("MoveContext", function()
                 });
             });
 
+            describe("Drain", function()
+            {
+                // can have clearbody or liquidooze
+                const tentacruel: events.DriverSwitchOptions =
+                {
+                    species: "tentacruel", level: 100, gender: "M", hp: 364,
+                    hpMax: 364
+                };
+
+                it("Should pass if expected", function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "absorb"});
+                    // handle move damage
+                    expect(ctx.handle(
+                            {type: "takeDamage", monRef: "us", hp: 50}))
+                        .to.be.true;
+                    // handle drain effect
+                    expect(ctx.handle(
+                        {
+                            type: "takeDamage", monRef: "them", hp: 100,
+                            from: "drain"
+                        }))
+                        .to.be.true;
+                    ctx.expire();
+                });
+
+                it("Should infer no liquidooze if normal", function()
+                {
+                    const mon = initActive("us", tentacruel);
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys("clearbody", "liquidooze");
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "drainpunch"});
+                    // handle move damage
+                    expect(ctx.handle(
+                            {type: "takeDamage", monRef: "us", hp: 50}))
+                        .to.be.true;
+                    // handle drain effect
+                    expect(ctx.handle(
+                        {
+                            type: "takeDamage", monRef: "them", hp: 100,
+                            from: "drain"
+                        }))
+                        .to.be.true;
+                    ctx.expire();
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys("clearbody");
+                    expect(mon.ability).to.equal("clearbody");
+                });
+
+                it("Should pass if liquidooze activates", function()
+                {
+                    initActive("us", tentacruel);
+                    initActive("them");
+                    const ctx = initCtx(
+                        {type: "useMove", monRef: "them", move: "absorb"});
+                    // handle move damage
+                    expect(ctx.handle(
+                            {type: "takeDamage", monRef: "us", hp: 50}))
+                        .to.be.true;
+                    // liquidooze ability activates to replace drain effect
+                    const ctx2 = ctx.handle(
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "liquidooze"
+                    }) as AbilityContext;
+                    expect(ctx2).to.be.an.instanceOf(AbilityContext);
+                    // drain damage inverted due to liquidooze ability
+                    expect(ctx2.handle(
+                            {type: "takeDamage", monRef: "them", hp: 50}))
+                        .to.be.true;
+                    ctx2.expire();
+                    ctx.expire();
+                });
+            });
+
             describe("Recoil", function()
             {
                 // can have swiftswim or rockhead
@@ -1157,7 +1237,7 @@ describe("MoveContext", function()
                     expect(ctx.handle(
                         {
                             type: "takeDamage", monRef: "them", hp: 0,
-                            recoil: true
+                            from: "recoil"
                         }))
                         .to.be.true;
                     ctx.expire();
@@ -1172,7 +1252,7 @@ describe("MoveContext", function()
                     expect(ctx.handle(
                         {
                             type: "takeDamage", monRef: "them", hp: 0,
-                            recoil: true
+                            from: "recoil"
                         }))
                         .to.not.be.ok;
                     ctx.expire();
@@ -1198,7 +1278,7 @@ describe("MoveContext", function()
                             expect(ctx.handle(
                                 {
                                     type: "takeDamage", monRef: "us", hp: 0,
-                                    recoil: true
+                                    from: "recoil"
                                 }))
                                 .to.be.true;
                             ctx.expire();

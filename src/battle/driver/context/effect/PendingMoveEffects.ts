@@ -38,6 +38,13 @@ export class PendingMoveEffects
                 this.effects.add(`primary ${effect.type}`,
                     new PendingValueEffect(effect.value), "assert");
                 break;
+            case "drain":
+                this.effects.add(`primary ${effect.type}`,
+                    // TODO: custom drain handling
+                    new PendingValueEffect(
+                        `${effect.value[0]}/${effect.value[1]}`),
+                    "assert");
+                break;
             case "recoil":
                 this.effects.add(`primary ${effect.type}`,
                     // TODO: custom recoil handling

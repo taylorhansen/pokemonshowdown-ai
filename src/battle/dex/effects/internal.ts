@@ -8,6 +8,7 @@ export interface BaseEffectMap
     chance: effects.Chance<any>;
     countableStatus: effects.CountableStatus;
     delay: effects.Delay;
+    drain: effects.Drain;
     field: effects.Field;
     flinch: effects.Flinch;
     implicitStatus: effects.ImplicitStatus;

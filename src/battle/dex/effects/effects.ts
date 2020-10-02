@@ -63,6 +63,12 @@ export type CountableStatusType = "perish" | "stockpile";
 /** Effect that activates a delayed move. */
 export type Delay = Effect<"delay", DelayType>;
 
+/**
+ * Effect that heals the user proportional to the amount of damage dealt by a
+ * move. Value is the fraction of damage being healed by the user.
+ */
+export type Drain = Effect<"drain", readonly [number, number]>;
+
 /** Types of delayed moves. */
 export type DelayType = "future" | "twoTurn";
 

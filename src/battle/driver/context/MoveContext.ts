@@ -240,11 +240,22 @@ export class MoveContext extends Gen4Context
     /** @override */
     public activateAbility(event: events.ActivateAbility): ContextResult
     {
+        // if an invert-drain ability is activating, it must be overriding the
+        //  current pending drain effect
+        // TODO: only do this once the AbilityContext consumes the corresponding
+        //  takeDamage event
+        let result: ContextResult;
+        if (dex.abilities[event.ability]?.invertDrain)
+        {
+            result = this.effects.consume("primary", "drain");
+        }
+        else result = true;
+
         const on = this.getAbilityCategory(event.monRef);
         const hitByMove = this.moveName;
 
         // TODO: make inference based on Ability#blockedBy
-        return super.activateAbility(event, on, hitByMove);
+        return result && super.activateAbility(event, on, hitByMove);
     }
 
     /** Gets the category of the pokemon's ability activation. */
@@ -660,15 +671,29 @@ export class MoveContext extends Gen4Context
     /** @override */
     public takeDamage(event: events.TakeDamage): ContextResult
     {
-        return (event.recoil ?
-                event.monRef === this.userRef &&
+        let result: ContextResult;
+        switch (event.from)
+        {
+            case "drain":
+                result = event.monRef === this.userRef &&
+                    // TODO: verify damage fraction
+                    this.effects.consume("primary", "drain") &&
+                    // infer drain effect was consumed
+                    (this.drain(), true);
+                // TODO: infer no liquidooze
+                break;
+            case "recoil":
+                result = event.monRef === this.userRef &&
                     // TODO: verify damage fraction
                     this.effects.consume("primary", "recoil") &&
                     // infer recoil effect was consumed
-                    (this.recoil(/*consumed*/ true), true)
-                : this.addTarget(event.monRef,
-                    /*damaged*/ event.hp <= 0 ? "ko" : true)) &&
-            super.takeDamage(event);
+                    (this.recoil(/*consumed*/ true), true);
+                break;
+            default:
+                result = this.addTarget(event.monRef,
+                    /*damaged*/ event.hp <= 0 ? "ko" : true);
+        }
+        return result && super.takeDamage(event);
     }
 
     /** @override */
@@ -1068,6 +1093,26 @@ export class MoveContext extends Gen4Context
         }
         // fails if the user doesn't have a berry
         else this.user.item.remove(...Object.keys(dex.berries));
+    }
+
+    /** Makes an inference if the drain effect activated normally. */
+    private drain(): void
+    {
+        // go through opposing targets that were damaged by this move
+        for (const [monRef, damaged] of this.mentionedTargets)
+        {
+            if (monRef === this.userRef || !damaged) continue;
+            const mon = this.state.teams[monRef].active;
+
+            // get possible invert-drain abilities
+            const {ability} = mon.traits;
+            const invertDrainAbilities = mon.volatile.suppressAbility ? []
+                : [...ability.possibleValues]
+                    .filter(n => ability.map[n].invertDrain);
+            // can't have invert-drain ability if drain effect activated
+            //  normally
+            ability.remove(...invertDrainAbilities);
+        }
     }
 
     /**

@@ -124,6 +124,13 @@ export class AbilityContext extends DriverContext
             }
         }
 
+        if (data.invertDrain)
+        {
+            pendingEffects.add(`${data.name} on-damaged hit percentDamage`,
+                // TODO: custom drain damage calculation
+                new PendingPercentEffect(-1), "assert");
+        }
+
         return new AbilityContext(state, logger, mon, monRef, data, on,
             pendingEffects, hitBy);
     }

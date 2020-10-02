@@ -656,7 +656,8 @@ export class PSEventHandler
 
         switch (event.from)
         {
-            case "Recoil": return [{...damageEvent, recoil: true}];
+            case "drain": return [{...damageEvent, from: "drain"}];
+            case "Recoil": return [{...damageEvent, from: "recoil"}];
             // TODO: also handle wish
             case "move: Healing Wish":
                 return [

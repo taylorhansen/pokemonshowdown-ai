@@ -829,14 +829,20 @@ describe("PSEventHandler", function()
                 }],
                     [{type: "takeDamage", monRef: "us", hp: 1}]);
 
+                test("Should emit takeDamage with drain",
+                [{
+                    type, id: us, status: {hp: 9, hpMax: 100, condition: null},
+                    from: "drain", of: them
+                }],
+                    [{type: "takeDamage", monRef: "us", hp: 9, from: "drain"}]);
+
                 test("Should emit takeDamage with recoil",
                 [{
                     type, id: us, status: {hp: 1, hpMax: 100, condition: null},
                     from: "Recoil"
                 }],
                 [{
-                    type: "takeDamage", monRef: "us", hp: 1,
-                    recoil: true
+                    type: "takeDamage", monRef: "us", hp: 1, from: "recoil"
                 }]);
 
                 test("Should emit takeDamage and activateTeamEffect from " +

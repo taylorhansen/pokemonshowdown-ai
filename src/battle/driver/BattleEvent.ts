@@ -555,8 +555,9 @@ export interface TakeDamage extends EventBase<"takeDamage">
     readonly monRef: Side;
     /** New HP value.. */
     readonly hp: number;
-    /** Whether this damage is from recoil. */
-    readonly recoil?: true;
+    // TODO: should drain include monRef?
+    /** Whether this damage is from a drain or recoil move effect. */
+    readonly from?: "drain" | "recoil";
 }
 
 /** Indicates that a pokemon has transformed into its target. */

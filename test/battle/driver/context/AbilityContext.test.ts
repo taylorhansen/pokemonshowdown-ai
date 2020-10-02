@@ -192,6 +192,23 @@ describe("AbilityContext", function()
                     .to.be.true;
                 ctx.expire();
             });
+
+            // can have clearbody or liquidooze
+            const tentacruel: events.DriverSwitchOptions =
+            {
+                species: "tentacruel", level: 100, gender: "M", hp: 364,
+                hpMax: 364
+            };
+
+            it("Should handle AbilityData#invertDrain flag", function()
+            {
+                initActive("us");
+                initActive("them", tentacruel);
+                const ctx = initCtx("them", "liquidooze", "damaged");
+                expect(ctx.handle({type: "takeDamage", monRef: "us", hp: 94}))
+                    .to.be.true;
+                ctx.expire();
+            });
         });
     });
 });

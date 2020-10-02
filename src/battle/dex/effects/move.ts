@@ -19,8 +19,8 @@ export type Category = "self" | "hit";
 export type PrimaryMap = EffectMap<PrimaryType>;
 
 /** Types of Primary effects. */
-export type PrimaryType = "call" | "countableStatus" | "delay" | "field" |
-    "recoil" | "selfSwitch" | "swapBoost";
+export type PrimaryType = "call" | "countableStatus" | "delay" | "drain" |
+    "field" | "recoil" | "selfSwitch" | "swapBoost";
 
 /**
  * Primary effect of a move. MoveEffects with these will not have
