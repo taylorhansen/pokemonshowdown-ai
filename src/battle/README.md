@@ -1,9 +1,9 @@
 # `battle/`
-This is where the rules of a Pokemon battle are implemented.
+This is the final step in parsing game events, where the rules of a Pokemon battle are applied to infer the battle state and make decisions based on it.
 
 Subdirectories:
-* [`agent/`](agent/) Provides a base class for implementing the logic that decides what to do.
-  It can also listen for changes in the battle state to use for its own analysis.
+* [`agent/`](agent/) Provides a base interface for implementing the logic that decides what to do in a battle.
+  Typically, an [adapter](../ai/networkAgent.ts) is used to interface with a neural network.
 * [`dex/`](dex/) Contains generated data for use in a battle.
 * [`driver/`](driver/) Is used as an interface between intepreted game events and actual battle state mutations and inferences.
   This is the main entry point for tracking a battle.
