@@ -6,7 +6,6 @@ import { ParserState, SubParser } from
     "../../../../src/battle/parser/BattleParser";
 import { activateItem } from
     "../../../../src/battle/parser/gen4/activateItem";
-import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
 import { Side } from "../../../../src/battle/state/Side";
 import { smeargle } from "../../../helpers/switchOptions";
@@ -20,14 +19,12 @@ const nidoqueen: events.SwitchOptions =
 export function testActivateItem(f: () => Context,
     initActive: (monRef: Side, options?: events.SwitchOptions) => Pokemon)
 {
-    let state: BattleState;
     let pstate: ParserState;
     let parser: SubParser;
 
     beforeEach("Extract Context", function()
     {
-        ({state, pstate, parser} = f());
-        void state; // TODO
+        ({pstate, parser} = f());
     });
 
     async function initParser(monRef: Side, item: string,
