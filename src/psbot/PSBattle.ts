@@ -1,6 +1,9 @@
 import { inspect } from "util";
 import { BattleAgent } from "../battle/agent/BattleAgent";
-import { BattleDriver } from "../battle/driver/BattleDriver";
+import { HaltReason } from "../battle/parser/BattleEvent";
+import { BattleParser, BattleParserFunc, SenderResult } from
+    "../battle/parser/BattleParser";
+import * as parsers from "../battle/parser/parsers";
 import { ReadonlyBattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
 import * as psmsg from "./parser/PSMessage";
@@ -12,10 +15,15 @@ import { RoomHandler } from "./RoomHandler";
 export class PSBattle implements RoomHandler
 {
     /** Internal battle state. */
-    public get state(): ReadonlyBattleState { return this.driver.state; }
+    public get state(): ReadonlyBattleState
+    {
+        if (!this._state) throw new Error("State not yet initialized");
+        return this._state;
+    }
+    private _state: ReadonlyBattleState | null = null;
 
-    /** Battle state driver. */
-    protected readonly driver: BattleDriver;
+    /** BattleEvent parser. */
+    protected readonly parser: BattleParser;
     /** Manages the BattleState by processing events. */
     protected readonly eventHandler: PSEventHandler;
     /** Pending Request message to process into an UpdateMoves event. */
@@ -28,21 +36,41 @@ export class PSBattle implements RoomHandler
      */
     private unavailableChoice: "move" | "switch" | null = null;
 
+    /** Used for controlling the BattleParser's ChoiceSender Promise. */
+    private parserSendCallback: null | ((result?: SenderResult) => void) = null;
+
+    /** Promise for the parser to finish handling a `halt` event. */
+    private haltPromise: Promise<any> | null = null;
+
     /**
      * Creates a PSBattle.
      * @param username Client's username.
      * @param agent Makes the decisions for this battle.
      * @param sender Used to send messages to the server.
      * @param logger Logger object.
-     * @param driverCtor The type of BattleDriver to use.
+     * @param parserFunc The type of BattleParser to use.
      * @param eventHandlerCtor The type of PSEventHandler to use.
      */
     constructor(protected readonly username: string, agent: BattleAgent,
         private readonly sender: Sender, protected readonly logger: Logger,
-        driverCtor = BattleDriver, eventHandlerCtor = PSEventHandler)
+        parserFunc: BattleParserFunc = parsers.gen4,
+        eventHandlerCtor = PSEventHandler)
     {
-        this.driver = new driverCtor(agent, c => this.sender(`|/choose ${c}`),
-            logger.addPrefix("BattleDriver: "));
+        this.parser = parserFunc(
+        {
+            agent, logger: logger.addPrefix("BattleParser: "),
+            sender: choice =>
+                new Promise<SenderResult>(res =>
+                {
+                    this.parserSendCallback = res;
+                    this.sender(`|/choose ${choice}`);
+                })
+                .finally(() => this.parserSendCallback = null)
+        });
+        // first iteration should give us the BattleState
+        this.parser.next()
+            .then(({value}) => this._state = value as ReadonlyBattleState);
+
         this.eventHandler = new eventHandlerCtor(this.username,
             logger.addPrefix("PSEventHandler: "));
     }
@@ -53,55 +81,57 @@ export class PSBattle implements RoomHandler
         const events = this.eventHandler.initBattle(msg);
         this.logger.debug("Init:\n" +
             inspect(events, {colors: false, depth: null}));
-        this.driver.handle(...events);
+        for (const event of events) await this.parser.next(event);
 
         // possibly send a response
-        return this.haltDriver();
+        return this.haltParser();
     }
 
     /** @override */
     public async progress(msg: psmsg.BattleProgress): Promise<void>
     {
         // indicate that the last choice was accepted
-        this.driver.accept();
+        this.parserSendCallback?.();
+        if (this.haltPromise) await this.haltPromise;
 
         const events = this.eventHandler.handleEvents(msg.events);
         this.logger.debug("Progress:\n" +
             inspect(events, {colors: false, depth: null}));
-        this.driver.handle(...events);
+        for (const event of events) await this.parser.next(event);
 
         // possibly send a response
-        return this.haltDriver();
+        return this.haltParser();
     }
 
     /** @override */
     public async request(msg: psmsg.Request): Promise<void>
     {
+        const lastRequest = this.lastRequest;
+        this.lastRequest = msg;
         if (this.unavailableChoice)
         {
             // new info may be revealed
-
             if (this.unavailableChoice === "switch" &&
-                !this.lastRequest?.active?.[0].trapped &&
+                !lastRequest?.active?.[0].trapped &&
                 msg.active?.[0].trapped)
             {
-                await this.driver.reject("trapped");
+                this.parserSendCallback?.("trapped");
             }
             else if (this.unavailableChoice === "move" && msg.active)
             {
-                await this.driver.reject("disabled");
+                this.parserSendCallback?.("disabled");
             }
-            else await this.driver.reject();
+            else this.parserSendCallback?.(true);
 
             this.unavailableChoice = null;
+            return;
         }
-        this.lastRequest = msg;
 
         const events = this.eventHandler.handleRequest(msg);
         if (events.length <= 0) return;
         this.logger.debug("Request:\n" +
             inspect(events, {colors: false, depth: null}));
-        this.driver.handle(...events);
+        for (const event of events) await this.parser.next(event);
     }
 
     /** @override */
@@ -119,39 +149,59 @@ export class PSBattle implements RoomHandler
         else if (msg.reason.startsWith("[Invalid choice]"))
         {
             // rejected last choice based on known info
-            return this.driver.reject();
+            this.parserSendCallback?.(true);
         }
     }
 
     /**
-     * Indicates to the BattleDriver that the stream of DriverEvents has
-     * temporarily ended, possibly awaiting a response from the user.
+     * Indicates to the BattleParser that the stream of BattleEvents has
+     * temporarily halted, awaiting a response from the user or opponent based
+     * on `#lastRequest`.
      */
-    private async haltDriver(): Promise<void>
+    private async haltParser(): Promise<void>
     {
         // consume lastRequest
         const lastRequest = this.lastRequest;
         this.lastRequest = null;
 
-        if (!this.eventHandler.battling) return this.driver.halt("done");
-        if (lastRequest?.wait) return this.driver.halt("wait");
-        if (lastRequest?.forceSwitch) return this.driver.halt("switch");
-        if (lastRequest)
-        {
-            // see if we're locked into a multi-turn/recharge move
-            const active = lastRequest.active?.[0];
-            if (active?.trapped && active.moves.length === 1 &&
-                active.moves[0].pp == null && active.moves[0].maxpp == null)
-            {
-                await this.driver.halt("wait");
-                return this.sender("|/choose move 1");
-            }
+        // already terminated
+        if (!this.eventHandler.battling) return;
 
-            const event = this.eventHandler.updateMoves(lastRequest);
-            this.logger.debug("Update moves:\n" +
-                inspect(event, {colors: false, depth: null}));
-            if (event) this.driver.handle(event);
+        // should never happen
+        if (this.haltPromise) throw new Error("Already halted");
+
+        // function that emits the halt event
+        const halt = (reason: HaltReason) =>
+            this.haltPromise = this.parser.next({type: "halt", reason})
+                .finally(() => this.haltPromise = null);
+
+        // set haltPromise field to parser.next(halt)
+        // on next accept(), await it then reset it
+
+        // waiting for opponent
+        if (lastRequest?.wait) halt("wait");
+        // being forced to switch
+        else if (lastRequest?.forceSwitch) halt("switch");
+        // making a normal move/switch selection
+        else
+        {
+            if (lastRequest)
+            {
+                // see if we're locked into a multi-turn/recharge move
+                const active = lastRequest.active?.[0];
+                if (active?.trapped && active.moves.length === 1 &&
+                    active.moves[0].pp == null && active.moves[0].maxpp == null)
+                {
+                    halt("wait");
+                    return this.sender("|/choose move 1");
+                }
+
+                const event = this.eventHandler.updateMoves(lastRequest);
+                this.logger.debug("Update moves:\n" +
+                    inspect(event, {colors: false, depth: null}));
+                if (event) await this.parser.next(event);
+            }
+            halt("decide");
         }
-        return this.driver.halt("decide");
     }
 }

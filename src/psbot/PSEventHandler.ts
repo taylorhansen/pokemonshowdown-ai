@@ -1,7 +1,7 @@
 import * as dex from "../battle/dex/dex";
 import * as dexutil from "../battle/dex/dex-util";
 import * as effects from "../battle/dex/effects";
-import * as events from "../battle/driver/BattleEvent";
+import * as events from "../battle/parser/BattleEvent";
 import { otherSide, Side } from "../battle/state/Side";
 import { Logger } from "../Logger";
 import { isPlayerID, otherPlayerID, PlayerID, PokemonID, toIdName } from
@@ -49,7 +49,7 @@ export class PSEventHandler
 
         // first time: initialize client team data
         // copy pokemon array so we can modify it
-        const team: events.DriverInitPokemon[] = [...args.side.pokemon];
+        const team: events.InitPokemon[] = [...args.side.pokemon];
 
         // preprocess move names, which are encoded with additional features
         for (let i = 0; i < team.length; ++i)
@@ -963,7 +963,7 @@ export class PSEventHandler
             winner = event.winner === this.username ? "us" : "them";
         }
 
-        return [{type: "gameOver", ...(winner && {winner})}];
+        return [{type: "halt", reason: "gameOver", ...(winner && {winner})}];
     }
 
     /** @virtual */

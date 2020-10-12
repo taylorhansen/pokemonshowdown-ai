@@ -3,6 +3,9 @@ import { PendingEffect } from "./PendingEffect";
 import { PendingPercentEffect } from "./PendingPercentEffect";
 import { PendingValueEffect } from "./PendingValueEffect";
 
+// TODO: replace PendingEffects system with something better, likely requiring a
+//  dex refactor
+
 /** String union for `PendingEffects#add()`. */
 export type EffectAddMode = "assert" | "alt" | "reject";
 

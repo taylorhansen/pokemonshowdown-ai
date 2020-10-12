@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { PendingPercentEffect } from
-    "../../../../../src/battle/driver/context/effect/PendingPercentEffect";
+    "../../../../../src/battle/parser/gen4/pending/PendingPercentEffect";
 
 describe("PendingPercentEffect", function()
 {

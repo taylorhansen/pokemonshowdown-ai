@@ -1,11 +1,11 @@
-import { DriverSwitchOptions } from "../../../src/battle/driver/BattleEvent";
+import { SwitchOptions } from "../../src/battle/parser/BattleEvent";
 
 /**
  * Options for switching in a Ditto for testing. Low level allows for
  * 100 hp so it can also be used as a percentage when using this for an
  * opponent.
  */
-export const ditto: DriverSwitchOptions =
+export const ditto: SwitchOptions =
     {species: "ditto", level: 40, gender: null, hp: 100, hpMax: 100};
 
 /**
@@ -13,7 +13,7 @@ export const ditto: DriverSwitchOptions =
  * 100 hp so it can also be used as a percentage when using this for an
  * opponent.
  */
-export const smeargle: DriverSwitchOptions =
+export const smeargle: SwitchOptions =
 {
     species: "smeargle", level: 40, gender: "M", hp: 100,
     hpMax: 100

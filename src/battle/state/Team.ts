@@ -1,4 +1,4 @@
-import { DriverSwitchOptions } from "../driver/BattleEvent";
+import { SwitchOptions } from "../parser/BattleEvent";
 import { BattleState, ReadonlyBattleState } from "./BattleState";
 import { Pokemon, ReadonlyPokemon } from "./Pokemon";
 import { Side } from "./Side";
@@ -28,7 +28,7 @@ export interface ReadonlyTeam
 }
 
 /** Options for `Team#reveal()`. */
-export interface TeamRevealOptions extends DriverSwitchOptions
+export interface TeamRevealOptions extends SwitchOptions
 {
     /** Moveset to fill in. */
     readonly moves?: readonly string[];
@@ -118,7 +118,7 @@ export class Team implements ReadonlyTeam
      * current active pokemon.
      * @returns The new active pokemon, or null if invalid.
      */
-    public switchIn(options: DriverSwitchOptions): Pokemon | null
+    public switchIn(options: SwitchOptions): Pokemon | null
     {
         // see if we already know this pokemon
         let index = -1;

@@ -3,7 +3,7 @@ import "mocha";
 import * as dex from "../../../src/battle/dex/dex";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../src/battle/state/Pokemon";
-import { smeargle } from "../driver/helpers";
+import { smeargle } from "../../helpers/switchOptions";
 
 describe("Pokemon", function()
 {

@@ -10,23 +10,36 @@ describe("PSBattle", function()
 {
     const username = "username";
 
-    const sender: Sender = function(msg)
+    const sender: Sender = async function(...responses)
     {
-        sent.push(msg);
+        sentPromiseRes?.(responses);
+        initSentPromise(); // reinit
     };
-    let sent: string[];
+    let sentPromiseRes: ((responses: string[]) => void) | null;
+    /** Resolves on the next `sender` call. */
+    let sentPromise: Promise<string[]>;
+
+    function initSentPromise()
+    {
+        sentPromiseRes = null;
+        sentPromise = new Promise(res => sentPromiseRes = res);
+    }
+
+    beforeEach("Initialize Sender", function()
+    {
+        initSentPromise();
+    });
 
     // wrap battle agent so reassigning the agent variable will change the
     //  underlying agent
-    const agentWrapper: BattleAgent = (state, choices) => agent(state, choices);
-    let agent: BattleAgent;
+    const agent: BattleAgent = (state, choices) => innerAgent(state, choices);
+    let innerAgent: BattleAgent;
     let battle: PSBattle;
 
     beforeEach("Initialize PSBattle", function()
     {
-        sent = [];
-        agent = async function() {};
-        battle = new PSBattle(username, agentWrapper, sender, Logger.null);
+        innerAgent = async function() {};
+        battle = new PSBattle(username, agent, sender, Logger.null);
     });
 
     describe("ability trapping", function()
@@ -34,7 +47,7 @@ describe("PSBattle", function()
         it("Should handle unavailable choice", async function()
         {
             // configure agent to try and switch out each turn
-            agent = async function(state, choices)
+            innerAgent = async function(state, choices)
             {
                 // swap in a switch choice into the top slot
                 const i = choices.indexOf("switch 2");
@@ -83,6 +96,9 @@ describe("PSBattle", function()
 
             // receive switchins
             // opponent switches in a pokemon that can have shadowtag
+            // need to copy the sentPromise ref since it resets after the
+            //  battle.init() call when it calls the sender function
+            let lastSentPromise = sentPromise;
             await battle.init(
             {
                 type: "battleInit", id: "p1", username, gameType: "singles",
@@ -105,7 +121,8 @@ describe("PSBattle", function()
             });
 
             // client sends a switch decision
-            expect(sent).to.have.members(["|/choose switch 2"]);
+            expect(await lastSentPromise)
+                .to.have.members(["|/choose switch 2"]);
 
             // unavailable choice
             await battle.error(
@@ -116,6 +133,8 @@ describe("PSBattle", function()
             });
 
             // new request with trapped=true
+            // copy sentPromise ref like before
+            lastSentPromise = sentPromise;
             await battle.request(
             {
                 ...request,
@@ -127,125 +146,10 @@ describe("PSBattle", function()
             });
 
             // make a move decision
-            expect(sent).to.have.members(
-                ["|/choose switch 2", "|/choose move 1"]);
-        });
-    });
+            expect(await lastSentPromise).to.have.members(["|/choose move 1"]);
 
-    // TODO: handle all other move restrictions before testing imprison
-    describe.skip("imprison disabling", function()
-    {
-        it("Should handle unavailable choice", async function()
-        {
-            // receive request
-            const request: psmsg.Request =
-            {
-                type: "request",
-                active:
-                [
-                    {
-                        moves:
-                        [
-                            {
-                                move: "Tackle", id: "tackle", pp: 56, maxpp: 56,
-                                target: "adjacentFoe", disabled: false
-                            },
-                            {
-                                move: "Splash", id: "splash", pp: 64, maxpp: 64,
-                                target: "self", disabled: false
-                            },
-                            {
-                                move: "Bounce", id: "bounce", pp: 8, maxpp: 8,
-                                target: "adjacentFoe", disabled: false
-                            },
-                            {
-                                move: "Flail", id: "Flail", pp: 24, maxpp: 24,
-                                target: "adjacentFoe", disabled: false
-                            }
-                        ]
-                    }
-                ],
-                side:
-                {
-                    pokemon:
-                    [{
-                        owner: "p1", nickname: "Magikarp", species: "Magikarp",
-                        shiny: true, gender: "M", level: 50, hp: 100,
-                        hpMax: 100, condition: null, active: true,
-                        stats: {atk: 30, def: 75, spa: 35, spd: 40, spe: 100},
-                        moves: ["tackle", "splash", "bounce", "flail"],
-                        baseAbility: "swiftswim", item: "lifeorb",
-                        pokeball: "pokeball"
-                    }]
-                }
-            };
-            await battle.request(request);
-
-            // receive switchins
-            // opponent switches in a pokemon that can have imprison and tackle
-            await battle.init(
-            {
-                type: "battleInit", id: "p1", username, gameType: "singles",
-                gen: 4, teamSizes: {p1: 2, p2: 1},
-                events:
-                [
-                    {
-                        type: "switch", id: {owner: "p1", nickname: "Magikarp"},
-                        species: "Magikarp", shiny: true, gender: "M",
-                        level: 50, hp: 100, hpMax: 100, condition: null
-                    },
-                    {
-                        type: "switch", id: {owner: "p2", nickname: "Bronzor"},
-                        species: "Bronzor", shiny: false, gender: "M",
-                        level: 50, hp: 100, hpMax: 100, condition: null
-                    },
-                    // set imprison status for opponent
-                    {
-                        type: "-start", id: {owner: "p2", nickname: "Bronzor"},
-                        volatile: "move: Imprison", otherArgs: []
-                    }
-                ]
-            });
-
-            // shouldn't reveal yet
-            expect(battle.state.teams.them.active.moveset.get("tackle"))
-                .to.be.null;
-
-            // client sends a move decision (tackle)
-            expect(sent).to.have.members(["|/choose move 1"]);
-
-            // unavailable choice
-            await battle.error(
-            {
-                type: "error",
-                reason: "[Unavailable choice] Can't move: Magikarp's Tackle " +
-                    "is disabled"
-            });
-
-            // new request with disabled=true for tackle
-            await battle.request(
-            {
-                ...request,
-                active:
-                [{
-                    ...request.active![0],
-                    moves:
-                    [
-                        {
-                            ...request.active![0].moves[0],
-                            disabled: true
-                        },
-                        ...request.active![0].moves.slice(1)
-                    ]
-                }]
-            });
-            // since opponent has imprison, the move should be inferred for it
-            expect(battle.state.teams.them.active.moveset.get("tackle"))
-                .to.not.be.null;
-
-            // make a move decision
-            expect(sent).to.have.members(
-                ["|/choose move 1", "|/choose move 2"]);
+            // indicate choice was accepted
+            await battle.progress({type: "battleProgress", events: []});
         });
     });
 });

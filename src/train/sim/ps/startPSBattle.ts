@@ -4,8 +4,8 @@ import * as tmp from "tmp-promise";
 // @ts-ignore
 import s = require("../../../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
-import { BattleDriver } from "../../../battle/driver/BattleDriver";
-import * as events from "../../../battle/driver/BattleEvent";
+import * as events from "../../../battle/parser/BattleEvent";
+import { BattleParserFunc } from "../../../battle/parser/BattleParser";
 import { LogFunc, Logger } from "../../../Logger";
 import { PlayerID } from "../../../psbot/helpers";
 import { parsePSMessage } from "../../../psbot/parser/parsePSMessage";
@@ -28,8 +28,8 @@ export interface PlayerOptions
      * `username` parameter in constructor will always be the PlayerID.
      */
     readonly psBattleCtor?: typeof PSBattle;
-    /** Override BattleDriver if needed. */
-    readonly driverCtor?: typeof BattleDriver;
+    /** Override BattleParser if needed. */
+    readonly parserFunc?: BattleParserFunc;
 }
 
 type Players = {[P in PlayerID]: PlayerOptions};
@@ -108,7 +108,7 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
 
         // additionally stop the battle once a game-over event is emitted
         // only one player needs to track this
-        let eventHandlerCtor = PSEventHandler;
+        let eventHandlerCtor: typeof PSEventHandler | undefined;
         if (id === "p1")
         {
             let turns = 0;
@@ -139,11 +139,11 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         }
 
         const psBattleCtor = options[id].psBattleCtor ?? PSBattle;
-        const driverCtor = options[id].driverCtor ?? BattleDriver;
+        const parserFunc = options[id].parserFunc;
 
         // setup one side of the battle
         const battle = new psBattleCtor(id, options[id].agent, sender,
-            innerLog.addPrefix("PSBattle: "), driverCtor, eventHandlerCtor);
+            innerLog.addPrefix("PSBattle: "), parserFunc, eventHandlerCtor);
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
         // start event loop for this side of the battle

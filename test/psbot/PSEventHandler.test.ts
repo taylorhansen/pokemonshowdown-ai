@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import * as dexutil from "../../src/battle/dex/dex-util";
 import * as effects from "../../src/battle/dex/effects";
-import * as events from "../../src/battle/driver/BattleEvent";
+import * as events from "../../src/battle/parser/BattleEvent";
 import { Logger } from "../../src/Logger";
 import { PokemonID, toIdName } from "../../src/psbot/helpers";
 import * as psevent from "../../src/psbot/parser/PSBattleEvent";
@@ -90,14 +90,14 @@ describe("PSEventHandler", function()
         });
 
         /**
-         * Tests move preprocessing so that the BattleDriver can handle it.
+         * Tests move preprocessing so that the Battle can handle it.
          * @param name Name of the feature that should be inferred.
          * @param move Move name as it appears in a RequestMessage.
          * @param newMove Processed move name.
          * @param features Features that were stripped from the move.
          */
         function shouldInferFromMove(name: string, move: string,
-            newMove: string, features: Partial<events.DriverInitPokemon>): void
+            newMove: string, features: Partial<events.InitPokemon>): void
         {
             it(`Should emit initTeam with ${name}`, function()
             {
@@ -1234,7 +1234,7 @@ describe("PSEventHandler", function()
             });
 
             test("Should emit gameOver with no winner",
-                [{type: "tie"}], [{type: "gameOver"}]);
+                [{type: "tie"}], [{type: "halt", reason: "gameOver"}]);
         });
 
         describe("-transform", function()
@@ -1297,11 +1297,11 @@ describe("PSEventHandler", function()
 
             test("Should emit gameOver with winner=us if we won",
                 [{type: "win", winner: username}],
-                [{type: "gameOver", winner: "us"}]);
+                [{type: "halt", reason: "gameOver", winner: "us"}]);
 
             test("Should emit gameOver with winner=them if they won",
                 [{type: "win", winner: username + "1"}],
-                [{type: "gameOver", winner: "them"}]);
+                [{type: "halt", reason: "gameOver", winner: "them"}]);
         });
 
         describe("PSBattleEvent suffixes", function()

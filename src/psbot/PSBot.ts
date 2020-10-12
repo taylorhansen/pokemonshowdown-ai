@@ -194,6 +194,7 @@ export class PSBot
                     this.logger.debug(`Received:\n${data.utf8Data}`);
                     const {room, messages} = parsePSMessage(data.utf8Data,
                         this.logger.addPrefix("Parser: "));
+                    // TODO: ensure promises resolve?
                     return this.handleMessages(room, messages);
                 }
             });

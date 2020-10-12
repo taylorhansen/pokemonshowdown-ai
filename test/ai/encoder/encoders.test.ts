@@ -5,7 +5,7 @@ import * as encoders from "../../../src/ai/encoder/encoders";
 import { limitedStatusTurns, oneHotEncoder, OneHotEncoderArgs } from
     "../../../src/ai/encoder/helpers";
 import * as dex from "../../../src/battle/dex/dex";
-import { DriverSwitchOptions } from "../../../src/battle/driver/BattleEvent";
+import { SwitchOptions } from "../../../src/battle/parser/BattleEvent";
 import { BattleState } from "../../../src/battle/state/BattleState";
 import { HP } from "../../../src/battle/state/HP";
 import { ItemTempStatus } from "../../../src/battle/state/ItemTempStatus";
@@ -27,7 +27,7 @@ import { VariableTempStatus } from
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 import { setAllVolatiles } from "../../battle/state/helpers";
 
-const switchInOptions: DriverSwitchOptions =
+const switchInOptions: SwitchOptions =
     {species: "magikarp", level: 100, gender: "M", hp: 200, hpMax: 200};
 
 describe("BattleState encoders", function()

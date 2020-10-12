@@ -1,6 +1,6 @@
 /** @file Interfaces and helper functions for handling Events. */
 import { BoostName, MajorStatus, WeatherType } from "../../battle/dex/dex-util";
-import { DriverSwitchOptions } from "../../battle/driver/BattleEvent";
+import { SwitchOptions } from "../../battle/parser/BattleEvent";
 import { PlayerID, PokemonDetails, PokemonID, PokemonStatus } from "../helpers";
 
 /**
@@ -104,12 +104,12 @@ interface EventBase<T extends Type>
 /**
  * Event data that contains the id, details, and status of a pokemon.
  *
- * Note that when casting to DriverSwitchOptions, be sure to replace the
+ * Note that when casting to SwitchOptions, be sure to replace the
  * `species` field with an id name (e.g. via `toIdName()`).
- * @see DriverSwitchOptions
+ * @see SwitchOptions
  * @see toIdName
  */
-interface AllDetails extends DriverSwitchOptions, PokemonDetails, PokemonStatus
+interface AllDetails extends SwitchOptions, PokemonDetails, PokemonStatus
 {
     /** ID of the pokemon being revealed or changed. */
     readonly id: PokemonID;

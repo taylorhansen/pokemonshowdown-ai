@@ -33,7 +33,7 @@ interface EventMap
     feint: Feint;
     formChange: FormChange;
     futureMove: FutureMove;
-    gameOver: GameOver;
+    halt: Halt;
     hitCount: HitCount;
     immune: Immune;
     inactive: Inactive;
@@ -50,7 +50,6 @@ interface EventMap
     prepareMove: PrepareMove;
     preTurn: PreTurn;
     reenableMoves: ReenableMoves;
-    rejectSwitchTrapped: RejectSwitchTrapped;
     removeItem: RemoveItem;
     resetWeather: ResetWeather;
     resisted: Resisted;
@@ -266,7 +265,7 @@ export interface Feint extends EventBase<"feint">
 }
 
 /** Indicates that the pokemon changed its form. */
-export interface FormChange extends EventBase<"formChange">, DriverSwitchOptions
+export interface FormChange extends EventBase<"formChange">, SwitchOptions
 {
     /** Pokemon reference. */
     readonly monRef: Side;
@@ -288,12 +287,43 @@ export interface FutureMove extends EventBase<"futureMove">
     readonly start: boolean;
 }
 
-/** Indicates that the game has ended. */
-export interface GameOver extends EventBase<"gameOver">
+/**
+ * Indicates that the stream of BattleEvents has temporarily (or permantently)
+ * halted. After a Halt event has been handled, the BattleState should have the
+ * most up to date information if a decision has to be made soon.
+ * @see HaltReason
+ */
+export type Halt = EventBase<"halt"> &
+    (HaltGameOver | HaltWait | HaltSwitch | HaltDecide);
+
+// tslint:disable: no-trailing-whitespace (force newline in comments)
+/**
+ * String union specifying the reason for halting.  
+ * `gameOver` - The game has ended, with a `winner` field specifying the winner
+ * (or lack thereof if tied).  
+ * `wait` - Waiting for the opponent to make a decision.  
+ * `switch` - Waiting for the client to make a switch decision.  
+ * `decide` - Waiting for the client to make a move or switch decision.
+ */
+// tslint:enable: no-trailing-whitespace
+export type HaltReason = "gameOver" | "wait" | "switch" | "decide";
+
+interface HaltBase<T extends HaltReason>
+{
+    /**
+     * Reason for halting.
+     * @see HaltReason
+     */
+    readonly reason: T;
+}
+interface HaltGameOver extends HaltBase<"gameOver">
 {
     /** The side that won. Leave blank if tie. */
     readonly winner?: Side;
 }
+type HaltWait = HaltBase<"wait">;
+type HaltSwitch = HaltBase<"switch">;
+type HaltDecide = HaltBase<"decide">;
 
 /** Indicates that the pokemon was hit by a move multiple times. */
 export interface HitCount extends EventBase<"hitCount">
@@ -335,11 +365,11 @@ export interface InitOtherTeamSize extends EventBase<"initOtherTeamSize">
 /** Initializes the client's team. */
 export interface InitTeam extends EventBase<"initTeam">
 {
-    readonly team: readonly DriverInitPokemon[];
+    readonly team: readonly InitPokemon[];
 }
 
 /** Data for initializing a pokemon. */
-export interface DriverInitPokemon extends DriverSwitchOptions
+export interface InitPokemon extends SwitchOptions
 {
     /** Pokemon's stats. HP is provided in a separate field. */
     readonly stats: Readonly<Record<dexutil.StatExceptHP, number>>;
@@ -356,7 +386,7 @@ export interface DriverInitPokemon extends DriverSwitchOptions
 }
 
 /** Data for handling a switch-in. */
-export interface DriverSwitchOptions
+export interface SwitchOptions
 {
     /** Species id name. */
     readonly species: string;
@@ -449,16 +479,6 @@ export interface ReenableMoves extends EventBase<"reenableMoves">
     readonly monRef: Side;
 }
 
-/** Indicates that the pokemon is being trapped by an unknown ability. */
-export interface RejectSwitchTrapped extends
-    EventBase<"rejectSwitchTrapped">
-{
-    /** Pokemon reference. */
-    readonly monRef: Side;
-    /** Reference to the pokemon with the trapping ability. */
-    readonly by: Side;
-}
-
 /** Indicates that an item was just removed from the pokemon. */
 export interface RemoveItem extends EventBase<"removeItem">
 {
@@ -549,8 +569,7 @@ export interface SwapBoosts extends EventBase<"swapBoosts">
 }
 
 /** Indicates that a pokemon has switched in. */
-export interface SwitchIn extends EventBase<"switchIn">,
-    DriverSwitchOptions
+export interface SwitchIn extends EventBase<"switchIn">, SwitchOptions
 {
     /** Pokemon reference. */
     readonly monRef: Side;

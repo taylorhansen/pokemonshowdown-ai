@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import "mocha";
-import { DriverSwitchOptions } from "../../../src/battle/driver/BattleEvent";
+import { SwitchOptions } from "../../../src/battle/parser/BattleEvent";
 import { Team } from "../../../src/battle/state/Team";
 
-const options1: DriverSwitchOptions =
+const options1: SwitchOptions =
     {species: "magikarp", level: 100, gender: "M", hp: 200, hpMax: 200};
-const options2: DriverSwitchOptions =
+const options2: SwitchOptions =
     {species: "porygon", level: 100, gender: null, hp: 300, hpMax: 300};
 
 describe("Team", function()
