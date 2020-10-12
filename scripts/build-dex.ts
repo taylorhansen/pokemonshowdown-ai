@@ -188,7 +188,8 @@ const statusTypeMap: {readonly [move: string]: effects.StatusType} =
  * Moves that are included in the statusTypeMap but have their effect string
  * explicitly included in the Move object structure.
  */
-const explicitMoveEffect: {readonly [move: string]: boolean} = {rage: true};
+const explicitMoveEffect: {readonly [move: string]: boolean} =
+    {rage: true, uproar: true};
 
 /** Maps some move names to ImplicitStatusTypes. */
 const implicitStatusTypeMap:

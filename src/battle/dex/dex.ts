@@ -1142,7 +1142,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     trumpcard: {uid: 436, name: "trumpcard", display: "Trump Card", category: "special", type: "normal", target: "normal", pp: [5, 5], flags: {contact: true}},
     twineedle: {uid: 437, name: "twineedle", display: "Twineedle", category: "physical", type: "bug", target: "normal", pp: [20, 32], effects: [{type: "chance", ctg: "hit", chance: 20, effects: [{type: "status", value: "psn"}]}]},
     twister: {uid: 438, name: "twister", display: "Twister", category: "special", type: "dragon", target: "allAdjacentFoes", pp: [20, 32], effects: [{type: "chance", ctg: "hit", chance: 20, effects: [{type: "flinch"}]}]},
-    uproar: {uid: 439, name: "uproar", display: "Uproar", category: "special", type: "normal", target: "randomNormal", pp: [10, 16], effects: [{type: "status", ctg: "hit", value: "uproar"}, {type: "status", ctg: "self", value: "uproar"}]},
+    uproar: {uid: 439, name: "uproar", display: "Uproar", category: "special", type: "normal", target: "randomNormal", pp: [10, 16], effects: [{type: "status", ctg: "self", value: "uproar"}]},
     uturn: {uid: 440, name: "uturn", display: "U-turn", category: "physical", type: "bug", target: "normal", pp: [20, 32], flags: {contact: true}, effects: [{type: "selfSwitch", value: true}]},
     vacuumwave: {uid: 441, name: "vacuumwave", display: "Vacuum Wave", category: "special", type: "fighting", target: "normal", pp: [30, 48]},
     vinewhip: {uid: 442, name: "vinewhip", display: "Vine Whip", category: "physical", type: "grass", target: "normal", pp: [15, 24], flags: {contact: true}},
