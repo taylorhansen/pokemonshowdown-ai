@@ -1009,7 +1009,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     punishment: {uid: 303, name: "punishment", display: "Punishment", category: "physical", type: "dark", target: "normal", pp: [5, 8], flags: {contact: true}},
     pursuit: {uid: 304, name: "pursuit", display: "Pursuit", category: "physical", type: "dark", target: "normal", pp: [20, 32], flags: {contact: true}},
     quickattack: {uid: 305, name: "quickattack", display: "Quick Attack", category: "physical", type: "normal", target: "normal", pp: [30, 48], flags: {contact: true}},
-    rage: {uid: 306, name: "rage", display: "Rage", category: "physical", type: "normal", target: "normal", pp: [20, 32], flags: {contact: true}, effects: [{type: "status", ctg: "hit", value: "rage"}, {type: "status", ctg: "self", value: "rage"}]},
+    rage: {uid: 306, name: "rage", display: "Rage", category: "physical", type: "normal", target: "normal", pp: [20, 32], flags: {contact: true}, effects: [{type: "status", ctg: "self", value: "rage"}]},
     raindance: {uid: 307, name: "raindance", display: "Rain Dance", category: "status", type: "water", target: "all", pp: [5, 8], flags: {noMirror: true}, effects: [{type: "field", value: "RainDance"}]},
     rapidspin: {uid: 308, name: "rapidspin", display: "Rapid Spin", category: "physical", type: "normal", target: "normal", pp: [40, 64], flags: {contact: true}},
     razorleaf: {uid: 309, name: "razorleaf", display: "Razor Leaf", category: "physical", type: "grass", target: "allAdjacentFoes", pp: [25, 40]},

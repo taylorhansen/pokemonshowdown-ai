@@ -184,6 +184,12 @@ const statusTypeMap: {readonly [move: string]: effects.StatusType} =
     brn: "brn",  frz: "frz", par: "par", psn: "psn", slp: "slp", tox: "tox"
 };
 
+/**
+ * Moves that are included in the statusTypeMap but have their effect string
+ * explicitly included in the Move object structure.
+ */
+const explicitMoveEffect: {readonly [move: string]: boolean} = {rage: true};
+
 /** Maps some move names to ImplicitStatusTypes. */
 const implicitStatusTypeMap:
     {readonly [move: string]: effects.ImplicitStatusType} =
@@ -355,6 +361,7 @@ for (const move of
         }
 
         // single-target statuses
+        let firstIt = true;
         for (const effectName of
         [
             move.id,
@@ -362,13 +369,15 @@ for (const move of
             ...(psEffect.status && [psEffect.status] || [])
         ])
         {
-            for (const [key, map] of
+            for (const [key, map, noMap] of
             [
-                ["status", statusTypeMap], ["unique", uniqueStatusTypeMap],
+                ["status", statusTypeMap, explicitMoveEffect],
+                ["unique", uniqueStatusTypeMap],
                 ["implicitStatus", implicitStatusTypeMap]
             ] as const)
             {
-                if (map.hasOwnProperty(effectName))
+                if (map.hasOwnProperty(effectName) &&
+                    !(firstIt && noMap?.hasOwnProperty(move.id)))
                 {
                     addEffect(arr,
                         {type: key, ctg, value: map[effectName]} as any);
@@ -379,6 +388,7 @@ for (const move of
             {
                 lockedMoves.push(move.id);
             }
+            firstIt = false;
         }
 
         for (const effectName of
