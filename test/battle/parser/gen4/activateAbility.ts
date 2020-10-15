@@ -4,7 +4,7 @@ import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/parser/BattleEvent";
 import { ParserState, SubParser } from
     "../../../../src/battle/parser/BattleParser";
-import { activateAbility } from
+import { AbilityResult, activateAbility } from
     "../../../../src/battle/parser/gen4/activateAbility";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
@@ -37,8 +37,8 @@ export function testActivateAbility(f: () => Context,
     });
 
     async function initParser(monRef: Side, ability: string,
-        on: effects.ability.On | null = null, hitByMoveName?: string):
-        Promise<SubParser>
+        on: effects.ability.On | "preDamage" | null = null,
+        hitByMoveName?: string): Promise<SubParser>
     {
         parser = activateAbility(pstate,
             {type: "activateAbility", monRef, ability}, on, hitByMoveName);
@@ -62,6 +62,29 @@ export function testActivateAbility(f: () => Context,
     {
         await expect(initParser("us", "invalid"))
             .to.eventually.be.rejectedWith(Error, "Unknown ability 'invalid'");
+    });
+
+    describe("AbilityData#explosive", function()
+    {
+        it("Should infer non-blockExplosive ability for opponent",
+        async function()
+        {
+            // can have damp (blockExplosive ability)
+            const golduck: events.SwitchOptions =
+            {
+                species: "golduck", level: 100, gender: "M", hp: 100,
+                hpMax: 100
+            };
+            initActive("us");
+            const mon = initActive("them", golduck);
+
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys(["damp", "cloudnine"]);
+            // activate explosive ability
+            await initParser("us", "aftermath");
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys(["cloudnine"]);
+        });
     });
 
     describe("activateFieldEffect", function()
@@ -173,20 +196,90 @@ export function testActivateAbility(f: () => Context,
             await exitParser();
         });
 
-        // can have clearbody or liquidooze
-        const tentacruel: events.SwitchOptions =
+        describe("absorb", function()
         {
-            species: "tentacruel", level: 100, gender: "M", hp: 364,
-            hpMax: 364
-        };
+            it("Should handle AbilityData#absorb flag boost on preDamage",
+            async function()
+            {
+                // can have motordrive
+                const electivire: events.SwitchOptions =
+                {
+                    species: "electivire", level: 100, gender: "M", hp: 100,
+                    hpMax: 100
+                };
+                initActive("us");
+                initActive("them", electivire);
+                await initParser("them", "motordrive", "preDamage", "thunder");
+                await handle(
+                    {type: "boost", monRef: "them", stat: "spe", amount: 1});
+                await exitParser<AbilityResult>({immune: true});
+            });
 
-        it("Should handle AbilityData#invertDrain flag", async function()
+            // can have waterabsorb
+            const quagsire: events.SwitchOptions =
+            {
+                species: "quagsire", level: 100, gender: "M", hp: 100,
+                hpMax: 100
+            };
+
+            it("Should handle AbilityData#absorb flag immune on preDamage",
+            async function()
+            {
+                initActive("us");
+                initActive("them", quagsire);
+                await initParser("them", "waterabsorb", "preDamage", "bubble");
+                await handle({type: "immune", monRef: "them"});
+                await exitParser<AbilityResult>({immune: true});
+            });
+
+            it("Should handle AbilityData#absorb flag immune on preDamage",
+            async function()
+            {
+                initActive("us");
+                initActive("them", quagsire).hp.set(quagsire.hp - 1);
+                await initParser("them", "waterabsorb", "preDamage", "bubble");
+                await handle({type: "takeDamage", monRef: "them", hp: 364});
+                await exitParser<AbilityResult>({immune: true});
+            });
+
+            it("Should handle AbilityData#absorb flag status on preDamage",
+            async function()
+            {
+                // can have flashfire
+                const arcanine: events.SwitchOptions =
+                {
+                    species: "arcanine", level: 100, gender: "M", hp: 100,
+                    hpMax: 100
+                };
+                initActive("us");
+                initActive("them", arcanine);
+                await initParser("them", "flashfire", "preDamage", "ember");
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "them",
+                    effect: "flashFire", start: true
+                });
+                await exitParser<AbilityResult>({immune: true});
+            });
+        });
+
+        describe("invertDrain", function()
         {
-            initActive("us");
-            initActive("them", tentacruel);
-            await initParser("them", "liquidooze", "damaged");
-            await handle({type: "takeDamage", monRef: "us", hp: 94});
-            await exitParser();
+            // can have liquidooze
+            const tentacruel: events.SwitchOptions =
+            {
+                species: "tentacruel", level: 100, gender: "M", hp: 100,
+                hpMax: 100
+            };
+
+            it("Should handle AbilityData#invertDrain flag", async function()
+            {
+                initActive("us");
+                initActive("them", tentacruel);
+                await initParser("them", "liquidooze", "damaged");
+                await handle({type: "takeDamage", monRef: "us", hp: 94});
+                await exitParser<AbilityResult>({invertDrain: true});
+            });
         });
     });
 }

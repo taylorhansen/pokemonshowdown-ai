@@ -14,7 +14,7 @@ export const handlers =
 {
     activateAbility(
         ...[pstate, event, ...args]: Parameters<typeof activateAbility>):
-        SubParser
+        ReturnType<typeof activateAbility>
     {
         return activateAbility(
         {
@@ -34,6 +34,7 @@ export const handlers =
                 weatherInfinite);
         }
         else pstate.state.status[event.effect][event.start ? "start" : "end"]();
+        return {};
     },
     activateItem(...[pstate, event, ctg = "turn", ...args]:
         Parameters<typeof activateItem>): SubParser
@@ -50,6 +51,7 @@ export const handlers =
         event: events.ActivateStatusEffect): SubParser
     {
         const mon = pstate.state.teams[event.monRef].active;
+        // TODO: some way to fully reduce this switch statement to indirection?
         switch (event.effect)
         {
             case "aquaRing": case "attract": case "curse": case "flashFire":
@@ -98,6 +100,7 @@ export const handlers =
                         `start=${event.start}`);
                 }
         }
+        return {};
     },
     async* activateTeamEffect(pstate: ParserState,
         event: events.ActivateTeamEffect, source: Pokemon | null = null):
@@ -123,22 +126,27 @@ export const handlers =
                 else ts[event.effect] = 0;
                 break;
         }
+        return {};
     },
-    async* block(pstate: ParserState, event: events.Block): SubParser {},
+    async* block(pstate: ParserState, event: events.Block): SubParser
+    { return {}; },
     async* boost(pstate: ParserState, event: events.Boost): SubParser
     {
         const {boosts} = pstate.state.teams[event.monRef].active.volatile;
         if (event.set) boosts[event.stat] = event.amount;
         else boosts[event.stat] += event.amount;
+        return {};
     },
     async* changeType(pstate: ParserState, event: events.ChangeType): SubParser
     {
         const mon = pstate.state.teams[event.monRef].active;
         mon.volatile.overrideTraits.types = event.newTypes;
         mon.volatile.addedType = "???";
+        return {};
     },
     async* clause(pstate: ParserState, event: events.Clause): SubParser
     {
+        return {};
     },
     async* clearAllBoosts(pstate: ParserState, event: events.ClearAllBoosts):
         SubParser
@@ -150,6 +158,7 @@ export const handlers =
                 pstate.state.teams[side].active.volatile.boosts[stat] = 0;
             }
         }
+        return {};
     },
     async* clearNegativeBoosts(pstate: ParserState,
         event: events.ClearNegativeBoosts): SubParser
@@ -159,6 +168,7 @@ export const handlers =
         {
             if (boosts[stat] < 0) boosts[stat] = 0;
         }
+        return {};
     },
     async* clearPositiveBoosts(pstate: ParserState,
         event: events.ClearPositiveBoosts): SubParser
@@ -168,42 +178,52 @@ export const handlers =
         {
             if (boosts[stat] > 0) boosts[stat] = 0;
         }
+        return {};
     },
     async* copyBoosts(pstate: ParserState, event: events.CopyBoosts): SubParser
     {
         const from = pstate.state.teams[event.from].active.volatile.boosts;
         const to = pstate.state.teams[event.to].active.volatile.boosts;
         for (const stat of dexutil.boostKeys) to[stat] = from[stat];
+        return {};
     },
     async* countStatusEffect(pstate: ParserState,
         event: events.CountStatusEffect): SubParser
     {
         pstate.state.teams[event.monRef].active.volatile[event.effect] =
             event.amount;
+        return {};
     },
-    async* crit(pstate: ParserState, event: events.Crit): SubParser {},
+    async* crit(pstate: ParserState, event: events.Crit): SubParser
+    { return {}; },
     async* cureTeam(pstate: ParserState, event: events.CureTeam): SubParser
     {
         pstate.state.teams[event.teamRef].cure();
+        return {};
     },
     async* disableMove(pstate: ParserState, event: events.DisableMove):
         SubParser
     {
         pstate.state.teams[event.monRef].active.volatile
             .disableMove(event.move);
+        return {};
     },
-    async* fail(pstate: ParserState, event: events.Fail): SubParser {},
+    async* fail(pstate: ParserState, event: events.Fail): SubParser
+    { return {}; },
     async* faint(pstate: ParserState, event: events.Faint): SubParser
     {
         pstate.state.teams[event.monRef].active.faint();
+        return {};
     },
     async* fatigue(pstate: ParserState, event: events.Fatigue): SubParser
     {
         pstate.state.teams[event.monRef].active.volatile.lockedMove.reset();
+        return {};
     },
     async* feint(pstate: ParserState, event: events.Feint): SubParser
     {
         pstate.state.teams[event.monRef].active.volatile.feint();
+        return {};
     },
     async* formChange(pstate: ParserState, event: events.FormChange): SubParser
     {
@@ -216,6 +236,7 @@ export const handlers =
         // TODO: should gender also be in the traits object?
         mon.gender = event.gender;
         mon.hp.set(event.hp, event.hpMax);
+        return {};
     },
     async* futureMove(pstate: ParserState, event: events.FutureMove): SubParser
     {
@@ -232,6 +253,7 @@ export const handlers =
             pstate.state.teams[otherSide(event.monRef)].status
                 .futureMoves[event.move].end();
         }
+        return {};
     },
     halt(pstate: ParserState, event: events.Halt): SubParser
     {
@@ -242,8 +264,10 @@ export const handlers =
         },
             event);
     },
-    async* hitCount(pstate: ParserState, event: events.HitCount): SubParser {},
-    async* immune(pstate: ParserState, event: events.Immune): SubParser {},
+    async* hitCount(pstate: ParserState, event: events.HitCount): SubParser
+    { return {}; },
+    async* immune(pstate: ParserState, event: events.Immune): SubParser
+    { return {}; },
     async* inactive(pstate: ParserState, event: events.Inactive): SubParser
     {
         const mon = pstate.state.teams[event.monRef].active;
@@ -271,11 +295,13 @@ export const handlers =
 
         // consumed an action this turn
         mon.inactive();
+        return {};
     },
     async* initOtherTeamSize(pstate: ParserState,
         event: events.InitOtherTeamSize): SubParser
     {
         pstate.state.teams.them.size = event.size;
+        return {};
     },
     async* initTeam(pstate: ParserState, event: events.InitTeam): SubParser
     {
@@ -302,93 +328,113 @@ export const handlers =
             if (data.hpType) mon.hpType.narrow(data.hpType);
             if (data.happiness) mon.happiness = data.happiness;
         }
+        return {};
     },
     async* invertBoosts(pstate: ParserState, event: events.InvertBoosts):
         SubParser
     {
         const boosts = pstate.state.teams[event.monRef].active.volatile.boosts;
         for (const stat of dexutil.boostKeys) boosts[stat] = -boosts[stat];
+        return {};
     },
     async* lockOn(pstate: ParserState, event: events.LockOn): SubParser
     {
         pstate.state.teams[event.monRef].active.volatile.lockOn(
             pstate.state.teams[event.target].active.volatile);
+        return {};
     },
     async* mimic(pstate: ParserState, event: events.Mimic): SubParser
     {
         pstate.state.teams[event.monRef].active.mimic(event.move);
+        return {};
     },
-    async* miss(pstate: ParserState, event: events.Miss): SubParser {},
+    async* miss(pstate: ParserState, event: events.Miss): SubParser
+    { return {}; },
     async* modifyPP(pstate: ParserState, event: events.ModifyPP): SubParser
     {
         const move = pstate.state.teams[event.monRef].active.moveset.reveal(
             event.move);
         if (event.amount === "deplete") move.pp = 0;
         else move.pp += event.amount;
+        return {};
     },
     async* mustRecharge(pstate: ParserState, event: events.MustRecharge):
         SubParser
     {
         // TODO: imply this in useMove event
         pstate.state.teams[event.monRef].active.volatile.mustRecharge = true;
+        return {};
     },
-    async* noTarget(pstate: ParserState, event: events.NoTarget): SubParser {},
+    async* noTarget(pstate: ParserState, event: events.NoTarget): SubParser
+    { return {}; },
     async* postTurn(pstate: ParserState, event: events.PostTurn): SubParser
     {
         pstate.state.postTurn();
+        return {};
     },
     async* prepareMove(pstate: ParserState, event: events.PrepareMove):
         SubParser
     {
         pstate.state.teams[event.monRef].active.volatile.twoTurn
             .start(event.move);
+        return {};
     },
     async* preTurn(pstate: ParserState, event: events.PreTurn): SubParser
     {
         pstate.state.preTurn();
+        return {};
     },
     async* reenableMoves(pstate: ParserState, event: events.ReenableMoves):
         SubParser
     {
         pstate.state.teams[event.monRef].active.volatile.enableMoves();
+        return {};
     },
     async* removeItem(pstate: ParserState, event: events.RemoveItem): SubParser
     {
         pstate.state.teams[event.monRef].active.removeItem(event.consumed);
+        return {};
     },
     async* resetWeather(pstate: ParserState, event: events.ResetWeather):
         SubParser
     {
         pstate.state.status.weather.reset();
+        return {};
     },
-    async* resisted(pstate: ParserState, event: events.Resisted): SubParser {},
+    async* resisted(pstate: ParserState, event: events.Resisted): SubParser
+    { return {}; },
     async* restoreMoves(pstate: ParserState, event: events.RestoreMoves):
         SubParser
     {
         const moveset = pstate.state.teams[event.monRef].active.moveset;
         for (const move of moveset.moves.values()) move.pp = move.maxpp;
+        return {};
     },
     async* revealItem(pstate: ParserState, event: events.RevealItem): SubParser
     {
         pstate.state.teams[event.monRef].active
             .setItem(event.item, event.gained);
+        return {};
     },
     async* revealMove(pstate: ParserState, event: events.RevealMove): SubParser
     {
         pstate.state.teams[event.monRef].active.moveset.reveal(event.move);
+        return {};
     },
     async* setThirdType(pstate: ParserState, event: events.SetThirdType):
         SubParser
     {
         pstate.state.teams[event.monRef].active.volatile.addedType =
             event.thirdType;
+        return {};
     },
     async* sketch(pstate: ParserState, event: events.Sketch): SubParser
     {
         pstate.state.teams[event.monRef].active.sketch(event.move);
+        return {};
     },
     async* superEffective(pstate: ParserState, event: events.SuperEffective):
-        SubParser {},
+        SubParser { return {}; },
     async* swapBoosts(pstate: ParserState, event: events.SwapBoosts): SubParser
     {
         const v1 = pstate.state.teams[event.monRef1].active.volatile.boosts;
@@ -397,26 +443,31 @@ export const handlers =
         {
             [v1[stat], v2[stat]] = [v2[stat], v1[stat]];
         }
+        return {};
     },
     async* switchIn(pstate: ParserState, event: events.SwitchIn): SubParser
     {
         // TODO: switch ctx
         pstate.state.teams[event.monRef].switchIn(event);
+        return {};
     },
     async* takeDamage(pstate: ParserState, event: events.TakeDamage): SubParser
     {
         const mon = pstate.state.teams[event.monRef].active;
         mon.hp.set(event.hp);
+        return {};
     },
     async* transform(pstate: ParserState, event: events.Transform): SubParser
     {
         pstate.state.teams[event.source].active.transform(
             pstate.state.teams[event.target].active);
+        return {};
     },
     async* trap(pstate: ParserState, event: events.Trap): SubParser
     {
         pstate.state.teams[event.by].active.volatile.trap(
             pstate.state.teams[event.target].active.volatile);
+        return {};
     },
     async* updateFieldEffect(pstate: ParserState,
         event: events.UpdateFieldEffect): SubParser
@@ -429,6 +480,7 @@ export const handlers =
                 `weather is '${event.effect}'`);
         }
         weather.tick();
+        return {};
     },
     async* updateMoves(pstate: ParserState, event: events.UpdateMoves):
         SubParser
@@ -441,11 +493,13 @@ export const handlers =
             const move = mon.moveset.reveal(data.id, data.maxpp);
             if (data.pp != null) move.pp = data.pp;
         }
+        return {};
     },
     async* updateStatusEffect(pstate: ParserState,
         event: events.UpdateStatusEffect): SubParser
     {
         pstate.state.teams[event.monRef].active.volatile[event.effect].tick();
+        return {};
     },
     useMove(...[pstate, event, called = false, ...args]:
         Parameters<typeof useMove>): SubParser

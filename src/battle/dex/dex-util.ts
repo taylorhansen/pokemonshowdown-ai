@@ -174,8 +174,7 @@ export interface PokemonData extends DexData
 export interface AbilityData extends DexData
 {
     /** Status immunity. */
-    readonly immune?: "confusion";
-    // TODO: collect into flags obj?
+    readonly statusImmunity?: readonly effects.StatusType[];
     /** Whether this ability cancels move recoil damage. */
     readonly noRecoil?: true;
     /**
@@ -183,6 +182,27 @@ export interface AbilityData extends DexData
      * used against it.
      */
     readonly invertDrain?: true;
+    /**
+     * Whether this ability ignores the target's ability when using a move
+     * against it.
+     */
+    readonly ignoreTargetAbility?: true;
+    /**
+     * Whether this ability blocks `#explosive` moves and abilities. When
+     * blocking abilities (e.g. aftermath), nothing happens as if the ability
+     * was suppressed. (TODO: what about moves?)
+     */
+    readonly blockExplosive?: true;
+    /**
+     * Whether this ability is an explosion-type effect, i.e. it is blocked by
+     * an ability with `#blockExplosion=true`.
+     */
+    readonly explosive?: true;
+    /**
+     * Indicates that the ability grants an absorbing immunity. This will
+     * activate before move damage to block the move's effects.
+     */
+    readonly absorb?: effects.ability.Absorb;
     /** Additional ability effects. */
     readonly effects?:
     {

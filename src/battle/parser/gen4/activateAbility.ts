@@ -1,13 +1,28 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
 import * as effects from "../../dex/effects";
+import { ReadonlyPokemon } from "../../state/Pokemon";
+import { otherSide } from "../../state/Side";
 import * as events from "../BattleEvent";
-import { ParserState, SubParser } from "../BattleParser";
+import { ParserState, SubParser, SubParserResult } from "../BattleParser";
 import { eventLoop } from "../helpers";
 import { handlers as base } from "./base";
+import { PendingBoostEffect } from "./pending/PendingBoostEffect";
 import { PendingEffects } from "./pending/PendingEffects";
 import { PendingPercentEffect } from "./pending/PendingPercentEffect";
 import { PendingValueEffect } from "./pending/PendingValueEffect";
+
+/** Result from handling an ActivateAbility event. */
+export interface AbilityResult extends SubParserResult
+{
+    /**
+     * Whether the ability is the source of an immunity of the move on
+     * `preDamage`.
+     */
+    immune?: true;
+    /** Whether an invertDrain ability is activating on `damage`. */
+    invertDrain?: true;
+}
 
 /**
  * Handles events within the context of an ability activation. Returns the last
@@ -17,8 +32,9 @@ import { PendingValueEffect } from "./pending/PendingValueEffect";
  * applicable.
  */
 export async function* activateAbility(pstate: ParserState,
-    initialEvent: events.ActivateAbility, on: effects.ability.On | null = null,
-    hitByMoveName?: string): SubParser
+    initialEvent: events.ActivateAbility,
+    on: effects.ability.On | "preDamage" | null = null, hitByMoveName?: string):
+    SubParser<AbilityResult>
 {
     if (!dex.abilities.hasOwnProperty(initialEvent.ability))
     {
@@ -32,6 +48,8 @@ export async function* activateAbility(pstate: ParserState,
     {
         hitByMove = dex.moves[hitByMoveName];
     }
+
+    const baseResult: AbilityResult = {};
 
     // add pending effects
     const pendingEffects = new PendingEffects();
@@ -58,7 +76,7 @@ export async function* activateAbility(pstate: ParserState,
 
         for (const effect of data.effects![ctg]!)
         {
-            const baseName = `${data.name} on-${ctg} ${effect.tgt}`;
+            const baseName = `${data.name} ${effect.tgt}`;
 
             if (effect.tgt === "self")
             {
@@ -67,6 +85,7 @@ export async function* activateAbility(pstate: ParserState,
                 // TODO: when is this not the case?
                 if (ctg === "contactKO")
                 {
+                    // istanbul ignore next: should never happen
                     throw new Error(`Effect '${baseName}' can't activate`);
                 }
                 if (on === "contactKO") continue;
@@ -94,7 +113,7 @@ export async function* activateAbility(pstate: ParserState,
                         new PendingValueEffect(effect.value), "assert");
                     break;
                 default:
-                    // should never happen
+                    // istanbul ignore next: should never happen
                     throw new Error("Unknown Ability effect type " +
                         `'${effect!.type}'`);
             }
@@ -103,13 +122,85 @@ export async function* activateAbility(pstate: ParserState,
 
     if (data.invertDrain)
     {
-        pendingEffects.add(`${data.name} on-damaged hit percentDamage`,
+        // TODO: only set this once the below pending effect have been consumed
+        baseResult.invertDrain = true;
+        pendingEffects.add(`${data.name} hit percentDamage`,
             // TODO: custom drain damage calculation
             new PendingPercentEffect(-1), "assert");
     }
 
+    if (data.absorb && on === "preDamage")
+    {
+        // should be activating because we were hit by a move that this ability
+        //  absorbs (TODO: type changing moves judgment/hiddenpower)
+        if (hitByMoveName !== "judgment" && hitByMoveName !== "hiddenpower" &&
+            hitByMove?.type !== data.absorb.type)
+        {
+            return {...baseResult, event: initialEvent};
+        }
+
+        // TODO: only set this once the below pending effects have been consumed
+        baseResult.immune = true;
+
+        const baseName = `${data.name} self `;
+        for (const effect of data.absorb.effects)
+        {
+            const effectName = baseName + effect.type;
+            switch (effect.type)
+            {
+                case "boost":
+                    for (const k of ["add", "set"] as const)
+                    {
+                        const table = effect[k];
+                        if (!table) continue;
+                        for (const b of dexutil.boostKeys)
+                        {
+                            if (!table.hasOwnProperty(b)) continue;
+                            const boostEffectName = effectName + ` ${k} ${b}`;
+                            pendingEffects.add(boostEffectName,
+                                new PendingBoostEffect(table[b]!,
+                                    /*set*/ k === "set"), "assert");
+                            // skip if the boost is already maxed out
+                            pendingEffects.consume(boostEffectName, 0,
+                                ...(k === "set" ? [] :
+                                    [initialMon.volatile.boosts[b]]));
+                        }
+                    }
+                    break;
+                case "percentDamage":
+                    if (initialMon.hp.current === initialMon.hp.max) break;
+                    pendingEffects.add(effectName,
+                        new PendingPercentEffect(effect.value), "assert");
+                    break;
+                case "status":
+                    if (hasStatus(initialMon, effect.value)) break;
+                    pendingEffects.add(effectName,
+                        new PendingValueEffect(effect.value), "assert");
+                    break;
+                default:
+                    // istanbul ignore next: should never happen
+                    throw new Error("Unknown Ability absorb effect type " +
+                        `'${effect!.type}'`);
+            }
+        }
+    }
+
     // after the ability has been validated, we can infer it for the pokemon
     initialMon.traits.setAbility(data.name);
+
+    // should've been blocked by an opposing blockExplosive ability
+    if (data.explosive)
+    {
+        const opponent = pstate.state.teams[otherSide(initialEvent.monRef)]
+            .active;
+        if (!opponent.volatile.suppressAbility)
+        {
+            const pc = opponent.traits.ability;
+            const possibilities = [...pc.possibleValues]
+                .filter(a => pc.map[a].blockExplosive);
+            pc.remove(...possibilities);
+        }
+    }
 
     // handle ability effects
     const result = yield* eventLoop(async function* loop(event): SubParser
@@ -118,7 +209,7 @@ export async function* activateAbility(pstate: ParserState,
         {
             case "activateFieldEffect":
                 // see if the weather can be caused by the current ability
-                if (dexutil.isWeatherType(event.effect) &&
+                if (event.start && dexutil.isWeatherType(event.effect) &&
                     weatherAbilities[event.effect] === data.name)
                 {
                     // fill in infinite duration (gen3-4) and source
@@ -128,15 +219,30 @@ export async function* activateAbility(pstate: ParserState,
                 break;
             case "activateStatusEffect":
             {
-                if (!on || !event.start) return;
+                if (!event.start) return {};
 
                 const tgt: effects.ability.Target =
                     event.monRef === initialEvent.monRef ? "self" : "hit";
+                const name = `${data.name} ${tgt} status`;
 
-                if (throughQualifiedCategories(data.name, on, tgt, "status",
-                    name => pendingEffects.consume(name, event.effect)))
+                if (pendingEffects.consume(name, event.effect))
                 {
                     return yield* base.activateStatusEffect(pstate, event)
+                }
+                break;
+            }
+            case "boost":
+            {
+                const tgt: effects.ability.Target =
+                    event.monRef === initialEvent.monRef ? "self" : "hit";
+                const name = `${data.name} ${tgt} boost ` +
+                    `${event.set ? "set" : "add"} ${event.stat}`;
+
+                const mon = pstate.state.teams[event.monRef].active;
+                if (pendingEffects.consume(name, event.amount,
+                    ...(event.set ? [] : [mon.volatile.boosts[event.stat]])))
+                {
+                    return yield* base.boost(pstate, event);
                 }
                 break;
             }
@@ -144,10 +250,8 @@ export async function* activateAbility(pstate: ParserState,
             {
                 const tgt: effects.ability.Target =
                     event.monRef === initialEvent.monRef ? "self" : "hit";
-                const name = `${data.name} on-${on} ${tgt} typeChange`;
+                const name = `${data.name} ${tgt} typeChange`;
 
-                // TODO: what if on=contact/contactKO or the initialMon was
-                //  ko'd?
                 if (event.newTypes[1] === "???" &&
                     hitByMove?.type === event.newTypes[0] &&
                     pendingEffects.consume(name, "colorchange"))
@@ -156,32 +260,35 @@ export async function* activateAbility(pstate: ParserState,
                 }
                 break;
             }
+            case "immune":
+                // TODO: check whether this is possible
+                baseResult.immune = true;
+                return yield* base.immune(pstate, event);
             case "takeDamage":
             {
                 const tgt: effects.ability.Target =
                     event.monRef === initialEvent.monRef ? "self" : "hit";
+                const name = `${data.name} ${tgt} percentDamage`;
 
                 const damagedMon = pstate.state.teams[event.monRef].active;
                 const initial = damagedMon.hp.current;
                 const next = event.hp;
                 const max = damagedMon.hp.max;
 
-                if (throughQualifiedCategories(data.name, on, tgt,
-                    "percentDamage",
-                    name => pendingEffects.consume(name, initial, next, max)))
+                if (pendingEffects.consume(name, initial, next, max))
                 {
-                    return yield* base.takeDamage(pstate, event);
+                    return yield* base.takeDamage(pstate, event)
                 }
                 break;
             }
             // TODO: can an ability cause this?
             // case "halt": return yield* base.halt(pstate, event);
         }
-        return event; // stop loop
+        return {event}; // stop loop
     });
     // make sure all effects have been handled before returning
     pendingEffects.assert();
-    return result;
+    return {...baseResult, ...result};
 }
 
 // TODO: move to dex ability effects
@@ -192,28 +299,34 @@ const weatherAbilities: {readonly [T in dexutil.WeatherType]: string} =
     SunnyDay: "drought"
 };
 
-/**
- * Iterates through qualified `effects.ability.On` types up to the `on`
- * parameter to generate PendingEffects keys.
- * @param name Ability name.
- * @param on Category name.
- * @param tgt Effect target.
- * @param f Function to execute on the generated effect name.
- * @param ctgs Category names to iterate over. Stops when an element equals the
- * `on` parameter after calling `f`.
- * @returns Whether one of the calls to `f` returned true, false otherwise.
- */
-function throughQualifiedCategories(name: string, on: effects.ability.On | null,
-    tgt: effects.ability.Target, type: effects.ability.AbilityEffect["type"],
-    f: (effectName: string) => boolean,
-    ctgs: readonly effects.ability.On[] =
-        ["damaged", "contact", "contactKO"]): boolean
+function hasStatus(mon: ReadonlyPokemon, status: effects.StatusType): boolean
 {
-    for (const ctg of ctgs)
+    switch (status)
     {
-        const effectName = `${name} on-${ctg} ${tgt} ${type}`;
-        if (f(effectName)) return true;
-        if (ctg === on) break;
+        case "aquaRing": case "attract": case "curse": case "flashFire":
+        case "focusEnergy": case "imprison": case "ingrain":
+        case "leechSeed": case "mudSport": case "nightmare":
+        case "powerTrick": case "substitute": case "suppressAbility":
+        case "torment": case "waterSport":
+        case "destinyBond": case "grudge": case "rage": // singlemove
+        case "magicCoat": case "roost": case "snatch": // singleturn
+            return mon.volatile[status];
+        case "bide": case "confusion": case "charge": case "magnetRise":
+        case "embargo": case "healBlock": case "slowStart": case "taunt":
+        case "uproar": case "yawn":
+            return mon.volatile[status].isActive;
+        case "encore":
+            return mon.volatile[status].ts.isActive;
+        case "endure": case "protect": // stall
+            return mon.volatile.stalling;
+        case "foresight": case "miracleEye":
+            return mon.volatile.identified === status;
+        default:
+            if (dexutil.isMajorStatus(status))
+            {
+                return mon.majorStatus.current === status;
+            }
+            // istanbul ignore next: should never happen
+            throw new Error(`Invalid status effect '${status}'`);
     }
-    return false;
 }

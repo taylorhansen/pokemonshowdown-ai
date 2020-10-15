@@ -13,11 +13,11 @@ export async function* halt(pstate: ParserState, initialEvent: events.Halt):
 {
     switch (initialEvent.reason)
     {
-        case "wait": break; // don't need to do anything
-        case "gameOver": return true; // stop the parser
+        case "gameOver": return {permHalt: true}; // stop the parser
         case "switch": await decide(pstate, /*switchOnly*/true); break;
         case "decide": await decide(pstate, /*switchOnly*/false); break;
     }
+    return {};
 }
 
 /**

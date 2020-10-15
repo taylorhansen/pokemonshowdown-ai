@@ -1,4 +1,5 @@
 /** @file Describes ability effects. */
+import * as dexutil from "../dex-util";
 import * as effects from "./effects";
 
 /** Ability effect interface. */
@@ -20,8 +21,6 @@ interface AbilityBase
 {
     /** Target of the effect. */
     readonly tgt: Target;
-    /** Ability that blocks this effect. */
-    readonly blockedBy?: string;
 }
 
 /** Base viable ability effects. */
@@ -38,3 +37,16 @@ export type AbilityEffect = effects.PercentDamage | effects.TypeChange |
 // tslint:enable: no-trailing-whitespace
 // TODO: restrict hit based on AbilityOn container/generic
 export type Target = "hit" | "self";
+
+/** Absorb effect. */
+export interface Absorb
+{
+    /** Type of move that can be absorbed. */
+    readonly type: dexutil.Type;
+    /** Effects that happen after blocking a move. */
+    readonly effects: readonly AbsorbEffects[];
+}
+
+/** Types of effects from an absorbing ability. */
+export type AbsorbEffects = effects.PercentDamage | effects.Boost |
+    effects.Status;

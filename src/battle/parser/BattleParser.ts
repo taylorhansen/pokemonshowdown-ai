@@ -58,13 +58,21 @@ export interface ParserState extends BattleParserArgs
     readonly state: BattleState;
 }
 
-/**
- * Sub-parser type used in BattleParsers. The parser will return `true` only if
- * if it recognizes a game-over. It may also return the next BattleEvent yielded
- * to it only if it wasn't able to parse that event.
- */
-export type SubParser =
-    AsyncGenerator<void, void | boolean | events.Any, events.Any>;
+/** Sub-parser type used in BattleParsers. */
+export type SubParser<TReturn = SubParserResult> =
+    AsyncGenerator<void, TReturn, events.Any>;
+
+/** Return type of a SubParser. */
+export interface SubParserResult
+{
+    /** Whether a permanent halt event was detected. */
+    permHalt?: true;
+    /**
+     * Failed lookahead token. Should be used in place of a yield on the next
+     * event handler.
+     */
+    event?: events.Any;
+}
 
 /**
  * Function type for creating a SubParser.

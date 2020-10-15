@@ -663,22 +663,49 @@ for (const mon of
 
 // ability data
 
+/** Maps ability name to status immunities. */
+const statusImmunity:
+    {readonly [ability: string]: dexutil.AbilityData["statusImmunity"]} =
+{
+    immunity: ["psn", "tox"], insomnia: ["slp", "yawn"], limber: ["par"],
+    // TODO: oblivious should also be immune to captivate
+    magmaarmor: ["frz"], oblivious: ["attract"], owntempo: ["confusion"],
+    vitalspirit: ["slp", "yawn"], waterveil: ["brn"]
+};
+
 /** Maps ability name to whether they cancel move recoil damage. */
-const noRecoil: {readonly [ability: string]: true | undefined} =
+const noRecoil: {readonly [ability: string]: boolean} =
     {magicguard: true, rockhead: true};
 
 /** Maps ability name to whether they invert drain healing. */
-const invertDrain: {readonly [ability: string]: true | undefined} =
-    {liquidooze: true};
+const invertDrain: {readonly [ability: string]: boolean} = {liquidooze: true};
+
+/** Maps ability name to whether it ignores abilities. */
+const ignoreTargetAbility: {readonly [ability: string]: boolean} =
+    {moldbreaker: true};
+
+/** Maps ability name to whether it blocks explosive effects. */
+const blockExplosive: {readonly [ability: string]: boolean} = {damp: true};
+
+/** Maps ability name to whether it is an explosive effect. */
+const explosive: {readonly [ability: string]: boolean} = {aftermath: true};
+
+const absorbMap: {readonly [ability: string]: dexutil.AbilityData["absorb"]} =
+{
+    dryskin: {type: "water", effects: [{type: "percentDamage", value: 25}]},
+    // TODO(gen3-4): doesn't work while frozen
+    flashfire: {type: "fire", effects: [{type: "status", value: "flashFire"}]},
+    motordrive: {type: "electric", effects: [{type: "boost", add: {spe: 1}}]},
+    voltabsorb:
+        {type: "electric", effects: [{type: "percentDamage", value: 25}]},
+    waterabsorb: {type: "water", effects: [{type: "percentDamage", value: 25}]}
+};
 
 /** Map for Ability effects. */
 const abilityEffectMap:
     {readonly [ability: string]: dexutil.AbilityData["effects"]} =
 {
-    aftermath:
-    {contactKO: [{
-        type: "percentDamage", tgt: "hit", blockedBy: "damp", value: -25
-    }]},
+    aftermath: {contactKO: [{type: "percentDamage", tgt: "hit", value: -25}]},
     colorchange:
         {damaged: [{type: "typeChange", tgt: "self", value: "colorchange"}]},
     cutecharm:
@@ -726,9 +753,14 @@ for (const ability of
         ability.id,
         {
             uid, name: ability.id, display: ability.name,
-            ...(ability.id === "owntempo" && {immune: "confusion"}),
+            ...(statusImmunity[ability.id] &&
+                {statusImmunity: statusImmunity[ability.id]}),
             ...(noRecoil[ability.id] && {noRecoil: true}),
             ...(invertDrain[ability.id] && {invertDrain: true}),
+            ...(ignoreTargetAbility[ability.id] && {ignoreTargetAbility: true}),
+            ...(blockExplosive[ability.id] && {blockExplosive: true}),
+            ...(explosive[ability.id] && {explosive: true}),
+            ...(absorbMap[ability.id] && {absorb: absorbMap[ability.id]}),
             ...(abilityEffectMap[ability.id] &&
                 {effects: abilityEffectMap[ability.id]})
         }

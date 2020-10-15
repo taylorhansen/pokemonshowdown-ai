@@ -4,7 +4,7 @@ import { BattleAgent } from "../../../../src/battle/agent/BattleAgent";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
 import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/parser/BattleEvent";
-import { ChoiceSender, ParserState, SubParser } from
+import { ChoiceSender, ParserState, SubParser, SubParserResult } from
     "../../../../src/battle/parser/BattleParser";
 import { dispatch } from "../../../../src/battle/parser/gen4/base";
 import { BattleState } from "../../../../src/battle/state/BattleState";
@@ -51,24 +51,24 @@ export function testEvents()
         const p = async function*(): SubParser
         {
             let event: events.Any = yield;
-            let result: void | boolean | events.Any;
+            let result: SubParserResult;
             while (true)
             {
                 result = yield* dispatch(pstate, event);
+                // permanent halt detected, stop loop
+                if (result.permHalt) return result;
                 // parser rejected an event
-                if (typeof result === "object")
+                if (result.event)
                 {
                     // event handler rejected the event it was initially given
-                    if (result === event)
+                    if (result.event === event)
                     {
                         throw new Error("SubParser rejected an event: " +
                             `'${JSON.stringify(event)}'`);
                     }
-                    event = result;
+                    event = result.event;
                 }
-                // true indicates a detected permanent halt
-                else if (result) return result;
-                // falsy indicates continue
+                // continue
                 else event = yield;
             }
         }();
@@ -84,7 +84,7 @@ export function testEvents()
 
     afterEach("Close SubParser", async function()
     {
-        await parser.return();
+        await parser.return({});
     });
 
     function initTeam(teamRef: Side, options: readonly events.SwitchOptions[]):
@@ -101,12 +101,7 @@ export function testEvents()
     }
 
     /** Used to delegate to test suites found in separate files. */
-    const contextFunc = () =>
-    ({
-        state, pstate, parser,
-        setAgent: (a: BattleAgent) => agent = a,
-        setSender: (s: ChoiceSender) => sender = s
-    });
+    const contextFunc = () => ({state, pstate, parser});
 
     describe("activateAbility", function()
     {

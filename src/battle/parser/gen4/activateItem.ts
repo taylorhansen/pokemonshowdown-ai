@@ -32,7 +32,7 @@ export async function* activateItem(pstate: ParserState,
     {
         // wrong context to activate this item in
         // TODO: any reason to not reject?
-        if (effect.ctg !== ctg) return initialEvent;
+        if (effect.ctg !== ctg) return {event: initialEvent};
         // evaluate type restrictions
         if (effect.restrictType &&
             !holder.types.includes(effect.restrictType))
@@ -70,16 +70,16 @@ export async function* activateItem(pstate: ParserState,
     const result = yield* eventLoop(async function* loop(event): SubParser
     {
         // TODO: support other types of item activation
-        if (event.type !== "takeDamage") return event;
+        if (event.type !== "takeDamage") return {event};
 
         let mon: Pokemon;
         switch (ctg)
         {
             case "selfDamageMove": case "turn":
-                if (holderRef !== event.monRef) return event;
+                if (holderRef !== event.monRef) return {event};
                 mon = holder;
                 break;
-            default: return event;
+            default: return {event};
         }
         const initial = mon.hp.current;
         const next = event.hp;
@@ -112,6 +112,8 @@ export async function* activateItem(pstate: ParserState,
                 return yield* base.takeDamage(pstate, event);
             }
         }
+
+        return {event};
     });
     // make sure all effects have been handled before returning
     pendingEffects.assert();

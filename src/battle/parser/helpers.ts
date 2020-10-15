@@ -1,7 +1,7 @@
 import { BattleState } from "../state/BattleState";
 import * as events from "./BattleEvent";
 import { BattleParser, BattleParserArgs, BattleParserFunc, ParserState,
-    SubParser, SubParserFunc } from "./BattleParser";
+    SubParser, SubParserFunc, SubParserResult } from "./BattleParser";
 
 /** Maps BattleEvent type to a SubParser handler. */
 export type EventHandlerMap = {readonly [T in events.Type]: EventHandler<T>};
@@ -37,24 +37,24 @@ export function baseEventLoop(f: EventHandler<events.Type>): BattleParserFunc
         let event: events.Any = yield pstate.state;
         // base event loop, stopping the parser on the first truthy value which
         //  indicates a detected permanent halt
-        let result: void | boolean | events.Any;
+        let result: void | SubParserResult;
         while (true)
         {
             result = yield* f(pstate, event);
+            // permanent halt detected, stop loop
+            if (result.permHalt) break;
             // parser rejected an event
-            if (typeof result === "object")
+            if (result.event)
             {
                 // event handler rejected the event it was initially given
-                if (result === event)
+                if (result.event === event)
                 {
                     throw new Error("BattleParser rejected an event: " +
                         `'${JSON.stringify(event)}'`);
                 }
-                event = result;
+                event = result.event;
             }
-            // true indicates a detected permanent halt
-            else if (result) break;
-            // falsy indicates continue
+            // continue
             else event = yield;
         }
     };
@@ -63,12 +63,18 @@ export function baseEventLoop(f: EventHandler<events.Type>): BattleParserFunc
 /**
  * Creates a sub-parser event loop within a SubParser context.
  * @param f Event handler function. This will be called on newly-yielded
- * BattleEvents until it returns a truthy value, either a BattleEvent if the
- * event was rejected or `true` if a permanent halt event was detected.
+ * BattleEvents until it returns a `SubParserResult` with either
+ * `#permHalt=true` or `#event` equalling the event it was given.
+ * @param lastEvent Event to be used as a replacement for the first yield.
  */
-export async function* eventLoop(f: (event: events.Any) => SubParser): SubParser
+export async function* eventLoop(f: (event: events.Any) => SubParser,
+    lastEvent?: events.Any): SubParser
 {
-    let result: void | boolean | events.Any;
-    while (!(result = yield* f(yield)));
-    return result;
+    let event = lastEvent ?? (yield);
+    while (true)
+    {
+        const result = yield* f(event);
+        if (result?.permHalt || result?.event === event) return result;
+        event = result?.event ?? (yield);
+    }
 }

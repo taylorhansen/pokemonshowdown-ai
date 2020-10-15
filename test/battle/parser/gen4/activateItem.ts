@@ -44,7 +44,7 @@ export function testActivateItem(f: () => Context,
         const event: events.ActivateItem = {type: "activateItem", monRef, item};
         parser = activateItem(pstate, event, ctg);
         await expect(parser.next())
-            .to.eventually.become({value: event, done: true});
+            .to.eventually.become({value: {event}, done: true});
         return parser;
     }
 

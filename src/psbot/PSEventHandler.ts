@@ -440,8 +440,7 @@ export class PSEventHandler
                 {
                     type: "activateStatusEffect", monRef, effect: "flashFire",
                     start: true
-                },
-                {type: "immune", monRef}
+                }
             ];
         }
         if (event.volatile === "typeadd")

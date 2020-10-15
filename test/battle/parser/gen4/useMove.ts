@@ -243,17 +243,26 @@ export function testUseMove(f: () => Context,
         it("Should accept if appropriate", async function()
         {
             initActive("us");
+            initActive("them");
             await initParser("us", "swift");
+            // TODO: damage event
             await handle({type: "activateItem", monRef: "us", item: "lifeorb"});
         });
 
-        it("Should reject if not appropriate", async function()
+        it("Should reject if inappropriate item", async function()
         {
             initActive("us");
             initActive("them");
             await initParser("us", "swift");
             await reject(
                 {type: "activateItem", monRef: "us", item: "leftovers"});
+        });
+
+        it("Should reject if inappropriate move", async function()
+        {
+            initActive("us");
+            await initParser("us", "splash");
+            await reject({type: "activateItem", monRef: "us", item: "lifeorb"});
         });
     });
 
@@ -265,6 +274,18 @@ export function testUseMove(f: () => Context,
             initActive("them").team!.status.safeguard.start();
             await initParser("us", "thunderwave");
             await handle({type: "block", monRef: "them", effect: "safeguard"});
+            await exitParser();
+        });
+    });
+
+    describe("fail", function()
+    {
+        it("Should cancel move effects", async function()
+        {
+            initActive("us");
+            initActive("them");
+            await initParser("us", "thunderwave");
+            await handle({type: "fail"});
             await exitParser();
         });
     });
@@ -282,13 +303,44 @@ export function testUseMove(f: () => Context,
         });
     });
 
+    describe("immune", function()
+    {
+        it("Should cancel move effects", async function()
+        {
+            initActive("us");
+            initActive("them");
+            await initParser("us", "thunderwave");
+            await handle({type: "immune", monRef: "them"});
+            await exitParser();
+        });
+    });
+
     describe("halt", function()
     {
-        it("Should reject", async function()
+        it("Should reject if decide", async function()
         {
             initActive("us");
             await initParser("us", "splash");
             await reject({type: "halt", reason: "decide"});
+        });
+
+        it("Should reject if gameOver", async function()
+        {
+            initActive("us");
+            await initParser("us", "splash");
+            await reject({type: "halt", reason: "gameOver"});
+        });
+    });
+
+    describe("noTarget", function()
+    {
+        it("Should cancel move effects", async function()
+        {
+            initActive("us");
+            initActive("them").faint();
+            await initParser("us", "toxic");
+            await handle({type: "noTarget", monRef: "us"});
+            await exitParser();
         });
     });
 
@@ -733,6 +785,7 @@ export function testUseMove(f: () => Context,
                         it(`Should infer user's move when using ${caller}`,
                         async function()
                         {
+                            initActive("us");
                             const them = initActive("them");
                             // use the move-caller
                             await initParser("them", caller);
@@ -892,6 +945,17 @@ export function testUseMove(f: () => Context,
                     });
                 });
 
+                it("Should reject if event doesn't include user",
+                async function()
+                {
+                    await initParser("them", "tackle");
+                    await reject(
+                    {
+                        type: "swapBoosts", monRef1: "us", monRef2: "us",
+                        stats: ["def", "spd"]
+                    });
+                });
+
                 it("Should throw if too many stats", async function()
                 {
                     initActive("us");
@@ -924,7 +988,30 @@ export function testUseMove(f: () => Context,
 
             describe("CountableStatusEffect", function()
             {
-                it("TODO");
+                // TODO: better handling for perishsong events
+                it("Should always pass if perishsong", async function()
+                {
+                    initActive("us");
+                    await initParser("us", "splash");
+                    await handle(
+                    {
+                        type: "countStatusEffect", monRef: "us",
+                        effect: "perish", amount: 3
+                    });
+                    await exitParser();
+                });
+
+                it("Should pass if expected using stockpile", async function()
+                {
+                    initActive("us");
+                    await initParser("us", "stockpile");
+                    await handle(
+                    {
+                        type: "countStatusEffect", monRef: "us",
+                        effect: "stockpile", amount: 1
+                    });
+                    await exitParser();
+                });
             });
 
             describe("FieldEffect", function()
@@ -957,6 +1044,7 @@ export function testUseMove(f: () => Context,
                 {
                     it("Should infer source via move", async function()
                     {
+                        initActive("us")
                         const {item} = initActive("them");
                         await initParser("them", "raindance");
                         await handle(
@@ -1118,8 +1206,8 @@ export function testUseMove(f: () => Context,
                         {
                             await expect(exitParser())
                                 .to.eventually.be.rejectedWith(Error,
-                                    "Ability suppressed but still suppressed " +
-                                    "recoil");
+                                    "Ability can't suppress recoil but it " +
+                                    "still suppressed recoil");
                             return;
                         }
                         if (!recoilEvent) await exitParser();
@@ -1364,7 +1452,7 @@ export function testUseMove(f: () => Context,
                     if (secondaryMove100 && abilityImmunity)
                     {
                         // TODO: generalize for other abilities
-                        it("Should narrow ability if passed",
+                        it("Should narrow ability if no status event",
                         async function()
                         {
                             const them = state.teams.them.active;
@@ -1461,7 +1549,26 @@ export function testUseMove(f: () => Context,
         {
             describe("Flash Fire", function()
             {
-                it("TODO");
+                it("Should block move effects", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    // move with pending brn effect
+                    await initParser("them", "willowisp");
+                    // activate absorbing ability
+                    await handle(
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "flashfire"
+                    });
+                    await handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "flashFire", start: true
+                    });
+                    // effect should be blocked
+                    await exitParser(); // shouldn't throw
+                });
             });
         })
         testNonRemovable("self", "Focus Energy", "focusEnergy", "focusenergy");
@@ -1642,6 +1749,7 @@ export function testUseMove(f: () => Context,
                 {
                     const v = initActive("them").volatile;
                     expect(v.stalling).to.be.false;
+                    expect(v.stallTurns).to.equal(0);
                     for (let i = 1; i <= 2; ++i)
                     {
                         state.preTurn();
@@ -1672,17 +1780,10 @@ export function testUseMove(f: () => Context,
                 async function()
                 {
                     const mon = initActive("them");
-                    await initParser("them", "protect");
 
                     // stall effect is put in place
-                    await handle(
-                    {
-                        type: "activateStatusEffect", monRef: "them",
-                        effect: "protect", start: true
-                    });
-                    expect(mon.volatile.stalling).to.be.true;
-                    expect(mon.volatile.stallTurns).to.equal(1);
-                    await exitParser();
+                    state.preTurn();
+                    mon.volatile.stall(true);
                     state.postTurn();
                     expect(mon.volatile.stalling).to.be.false;
                     expect(mon.volatile.stallTurns).to.equal(1);
@@ -1770,7 +1871,24 @@ export function testUseMove(f: () => Context,
         {
             describe("Disable", function()
             {
-                it("TODO");
+                it("Should pass if expected", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", "disable");
+                    await handle(
+                        {type: "disableMove", monRef: "us", move: "splash"});
+                    await exitParser();
+                });
+
+                it("Should reject if not expected", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", "tackle");
+                    await reject(
+                        {type: "disableMove", monRef: "us", move: "splash"});
+                });
             });
         });
         //#endregion
@@ -2206,6 +2324,19 @@ export function testUseMove(f: () => Context,
                         expect(team.status[effect].source).to.equal(item);
                     });
 
+                    it("Should still pass if start=false", async function()
+                    {
+                        initActive("us");
+                        initActive("them");
+                        await initParser("them", move);
+                        // TODO: track moves that can do this
+                        await handle(
+                        {
+                            type: "activateTeamEffect", teamRef: "them",
+                            effect, start: false
+                        });
+                    });
+
                     it("Should reject if mismatch", async function()
                     {
                         const {status: ts} = state.teams.them;
@@ -2258,6 +2389,7 @@ export function testUseMove(f: () => Context,
 
                     it("Should still pass if start=false", async function()
                     {
+                        initActive("us");
                         initActive("them");
                         await initParser("them", move);
                         // TODO: track moves that can do this
@@ -2270,6 +2402,7 @@ export function testUseMove(f: () => Context,
 
                     it("Should reject if mismatched flags", async function()
                     {
+                        initActive("us");
                         initActive("them");
                         await initParser("them", "splash");
                         await reject(
@@ -2288,7 +2421,8 @@ export function testUseMove(f: () => Context,
         //#region implicit team effect
 
         function testImplicitTeamEffect(ctg: "self" | "hit", name: string,
-            move: string, getter: (team: ReadonlyTeam) => boolean): void
+            move: string, getter: (team: ReadonlyTeam) => boolean,
+            exit?: boolean): void
         {
             const teamRef = ctg === "self" ? "them" : "us";
             moveEffectTests[ctg].implicitTeam.push(function()
@@ -2301,8 +2435,8 @@ export function testUseMove(f: () => Context,
                         initActive("them");
                         const team = state.teams[teamRef];
                         await initParser("them", move);
-                        // halt instead of reject to preserve self-switch flag
-                        await handle({type: "halt", reason: "wait"});
+                        if (exit) await exitParser();
+                        else await handle({type: "halt", reason: "wait"});
                         expect(getter(team)).to.be.true;
                     });
 
@@ -2321,7 +2455,7 @@ export function testUseMove(f: () => Context,
         }
 
         testImplicitTeamEffect("self", "Wish", "wish",
-            team => team.status.wish.isActive)
+            team => team.status.wish.isActive, /*exit*/ true)
 
         // TODO: move to primary self-switch test?
         // or move primary self-switch to self/hit MoveEffect to support phazing
@@ -2393,6 +2527,14 @@ export function testUseMove(f: () => Context,
     describe("Ally moves", async function()
     {
         it("Should throw if not failed in a single battle");
+
+        it("Should fail", async function()
+        {
+            initActive("us");
+            await initParser("us", "helpinghand");
+            await handle({type: "fail"});
+            await exitParser();
+        });
     });
 
     describe("Pressure ability handling", async function()

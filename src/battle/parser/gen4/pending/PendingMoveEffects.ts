@@ -114,9 +114,10 @@ export class PendingMoveEffects
             {
                 if (!table.hasOwnProperty(b)) continue;
                 this.effects.add(
-                    `${ctg} ${chance ? "secondary " : ""}boost add ${b}`,
+                    `${ctg} ${chance ? "secondary " : ""}boost ${k} ${b}`,
                     new PendingBoostEffect(table[b]!,
-                        /*set*/ false, ...(chance ? [chance] : [])), "assert");
+                        /*set*/ k === "set", ...(chance ? [chance] : [])),
+                    "assert");
             }
         }
     }

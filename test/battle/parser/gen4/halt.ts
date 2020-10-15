@@ -33,10 +33,10 @@ export function testHalt(f: () => Context,
 
     describe("reason=gameOver", function()
     {
-        it("Should cause parser to return true", async function()
+        it("Should cause parser to return permHalt result", async function()
         {
             await expect(parser.next({type: "halt", reason: "gameOver"}))
-                .to.eventually.become({value: true, done: true});
+                .to.eventually.become({value: {permHalt: true}, done: true});
         });
     });
 
