@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { deserialize } from "v8";
-import { MessagePort } from "worker_threads";
+import { MessagePort, TransferListItem } from "worker_threads";
 
 /** Base type for AsyncPort request typings. */
 export type PortRequestMap<T extends string> =
@@ -72,7 +72,7 @@ type TRawResult<TMap extends PortRequestMap<string>,
  */
 export interface PortLike extends EventEmitter
 {
-    postMessage(value: any, transferList?: object[]): void;
+    postMessage(value: any, transferList?: readonly TransferListItem[]): void;
 }
 
 /** Function type for `AsyncPort#postMessage()` callbacks. */
