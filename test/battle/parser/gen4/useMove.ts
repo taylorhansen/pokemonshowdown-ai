@@ -1335,10 +1335,25 @@ export function testUseMove(f: () => Context,
             });
         }
 
-        function testRemovable(ctg: "self" | "hit", name: string,
-            effect: effects.StatusType, move: string | undefined,
-            secondaryMove?: string, secondaryMove100?: string,
-            abilityImmunity?: string, clause?: "slp"): void
+        interface TestRemovableArgs
+        {
+            readonly ctg: effects.move.Category;
+            readonly name: string;
+            readonly effect: effects.StatusType;
+            readonly move?: string;
+            readonly preMoveEffects?: readonly string[];
+            readonly preMoveEvents?: readonly events.Any[];
+            readonly secondaryMove?: string;
+            readonly secondaryMove100?: string;
+            readonly abilityImmunity?: string;
+            readonly clause?: "slp";
+        }
+
+        function testRemovable(
+            {
+                ctg, name, effect, move, preMoveEffects, preMoveEvents,
+                secondaryMove, secondaryMove100, abilityImmunity, clause
+            }: TestRemovableArgs): void
         {
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
@@ -1358,6 +1373,10 @@ export function testUseMove(f: () => Context,
                         it("Should pass if expected", async function()
                         {
                             await initParser("them", move);
+                            for (const event of preMoveEvents ?? [])
+                            {
+                                await handle(event);
+                            }
                             await handle(
                             {
                                 type: "activateStatusEffect", monRef: target,
@@ -1401,19 +1420,15 @@ export function testUseMove(f: () => Context,
                         });
                     }
 
-                    if (move)
+                    it("Should reject if mismatched flags", async function()
                     {
-
-                        it("Should reject if mismatched flags", async function()
+                        await initParser("them", "tackle");
+                        await reject(
                         {
-                            await initParser("them", "tackle");
-                            await reject(
-                            {
-                                type: "activateStatusEffect", monRef: target,
-                                effect, start: true
-                            });
+                            type: "activateStatusEffect", monRef: target,
+                            effect, start: true
                         });
-                    }
+                    });
 
                     if (secondaryMove100)
                     {
@@ -1442,10 +1457,16 @@ export function testUseMove(f: () => Context,
                             state.teams.us.active.traits
                                 .setAbility("technician");
                             await initParser("them", secondaryMove100);
+                            const effectString =
+                            [
+                                ...(preMoveEffects ?? []),
+                                `hit secondary status ['${effect}']`
+                            ]
+                                .join(", ");
                             await expect(exitParser())
                                 .to.eventually.be.rejectedWith(Error,
                                     "Expected effects that didn't happen: " +
-                                    `hit secondary status ['${effect}']`);
+                                    effectString);
                         });
                     }
 
@@ -1495,6 +1516,7 @@ export function testUseMove(f: () => Context,
                     initActive("us");
                     initActive("them", smeargle).volatile.addedType = "ghost";
                     await initParser("them", "curse");
+                    await handle({type: "takeDamage", monRef: "them", hp: 50});
                     await handle(
                     {
                         type: "activateStatusEffect", monRef: "us",
@@ -1527,6 +1549,7 @@ export function testUseMove(f: () => Context,
                         }))
                         .to.eventually.be.rejectedWith(Error,
                             "Expected effects that didn't happen: " +
+                            "self percentDamage ['-50%'], " +
                             "hit status ['curse']");
                 });
 
@@ -1686,7 +1709,11 @@ export function testUseMove(f: () => Context,
             });
         });
         testNonRemovable("self", "Ingrain", "ingrain", "ingrain");
-        testRemovable("hit", "Leech Seed", "leechSeed", "leechseed");
+        testRemovable(
+        {
+            ctg: "hit", name: "Leech Seed", effect: "leechSeed",
+            move: "leechseed"
+        });
         testNonRemovable("self", "Magnet Rise", "magnetRise", "magnetrise");
         testNonRemovable("hit", "Miracle Eye", "miracleEye", "miracleeye");
         testNonRemovable("self", "Mud Sport", "mudSport", "mudsport");
@@ -1714,7 +1741,12 @@ export function testUseMove(f: () => Context,
                 });
             });
         }
-        testRemovable("self", "Substitute", "substitute", "substitute");
+        testRemovable(
+        {
+            ctg: "self", name: "Substitute", effect: "substitute",
+            move: "substitute", preMoveEffects: ["self percentDamage ['-50%']"],
+            preMoveEvents: [{type: "takeDamage", monRef: "them", hp: 50}]
+        });
         testNonRemovable("hit", "Suppress ability", "suppressAbility",
             "gastroacid");
         testNonRemovable("hit", "Taunt", "taunt", "taunt");
@@ -1723,8 +1755,12 @@ export function testUseMove(f: () => Context,
         testNonRemovable("hit", "Yawn", "yawn", "yawn");
 
         // updatable
-        testRemovable("hit", "Confusion", "confusion", "confuseray",
-            "psybeam", "dynamicpunch", "owntempo");
+        testRemovable(
+        {
+            ctg: "hit", name: "Confusion", effect: "confusion",
+            move: "confuseray", secondaryMove: "psybeam",
+            secondaryMove100: "dynamicpunch", abilityImmunity: "owntempo"
+        });
         testNonRemovable("self", "Bide", "bide", "bide");
         testNonRemovable("self", "Uproar", "uproar", "uproar");
 
@@ -1825,14 +1861,36 @@ export function testUseMove(f: () => Context,
         });
 
         // major status
-        testRemovable("hit", "Burn", "brn", "willowisp", "flamethrower");
-        testRemovable("hit", "Freeze", "frz", undefined, "icebeam");
-        testRemovable("hit", "Paralyze", "par", "stunspore", "thunderbolt",
-            "zapcannon");
-        testRemovable("hit", "Poison", "psn", "poisonpowder", "gunkshot");
-        testRemovable("hit", "Sleep", "slp", "spore", undefined, undefined,
-            undefined, "slp");
-        testRemovable("hit", "Toxic", "tox", "toxic", "poisonfang");
+        // TODO: search for these moves automatically in dex
+        testRemovable(
+        {
+            ctg: "hit", name: "Burn", effect: "brn", move: "willowisp",
+            secondaryMove: "flamethrower"
+        });
+        testRemovable(
+        {
+            ctg: "hit", name: "Freeze", effect: "frz", secondaryMove: "icebeam"
+        });
+        testRemovable(
+        {
+            ctg: "hit", name: "Paralyze", effect: "par", move: "stunspore",
+            secondaryMove: "thunderbolt", secondaryMove100: "zapcannon"
+        });
+        testRemovable(
+        {
+            ctg: "hit", name: "Poison", effect: "psn", move: "poisonpowder",
+            secondaryMove: "gunkshot"
+        });
+        testRemovable(
+        {
+            ctg: "hit", name: "Sleep", effect: "slp", move: "spore",
+            clause: "slp"
+        });
+        testRemovable(
+        {
+            ctg: "hit", name: "Toxic", effect: "tox", move: "toxic",
+            secondaryMove: "poisonfang"
+        });
 
         //#endregion
 
@@ -2073,6 +2131,7 @@ export function testUseMove(f: () => Context,
             {
                 initActive("us");
                 await initParser("us", "bellydrum");
+                await handle({type: "takeDamage", monRef: "us", hp: 50});
                 await handle(
                 {
                     type: "boost", monRef: "us", stat: "atk", amount: 6,

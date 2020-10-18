@@ -355,11 +355,19 @@ for (const move of
         });
     }
 
-    if (move.id === "moonlight" || move.id === "morningsun" ||
-        move.id === "synthesis")
+    if (["moonlight", "morningsun", "synthesis"].includes(move.id))
     {
         // TODO: weather changes this amount (same for all 3)
         addEffect(arr, {type: "percentDamage", ctg: "self", value: 50});
+    }
+    // TODO: curse type-dependent effect
+    else if (["bellydrum", "curse"].includes(move.id))
+    {
+        addEffect(arr, {type: "percentDamage", ctg: "self", value: -50});
+    }
+    else if (move.id === "substitute")
+    {
+        addEffect(arr, {type: "percentDamage", ctg: "self", value: -25});
     }
 
     function addEffects(ctg: effects.move.Category, psEffect: HitEffect):

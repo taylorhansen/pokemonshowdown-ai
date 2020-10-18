@@ -170,6 +170,7 @@ function initCtx(pstate: ParserState, event: events.UseMove,
     if (!user.types.includes("ghost") &&
         pendingEffects.consume("hit", "status", "curse"))
     {
+        pendingEffects.clear();
         pendingTargets = framePendingTargets(userRef, {us: true, them: false});
         totalTargets = 1;
     }
