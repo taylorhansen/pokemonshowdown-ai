@@ -346,6 +346,22 @@ for (const move of
     const hit: effects.move.Category =
         ["all", "allySide", "self"].includes(target) ? self : "hit";
 
+    if (move.heal)
+    {
+        addEffect(arr,
+        {
+            type: "percentDamage", ctg: "self",
+            value: 100 * move.heal[0] / move.heal[1]
+        });
+    }
+
+    if (move.id === "moonlight" || move.id === "morningsun" ||
+        move.id === "synthesis")
+    {
+        // TODO: weather changes this amount (same for all 3)
+        addEffect(arr, {type: "percentDamage", ctg: "self", value: 50});
+    }
+
     function addEffects(ctg: effects.move.Category, psEffect: HitEffect):
         void
     {
@@ -690,6 +706,7 @@ const blockExplosive: {readonly [ability: string]: boolean} = {damp: true};
 /** Maps ability name to whether it is an explosive effect. */
 const explosive: {readonly [ability: string]: boolean} = {aftermath: true};
 
+/** Maps ability name to absorb effect. */
 const absorbMap: {readonly [ability: string]: dexutil.AbilityData["absorb"]} =
 {
     dryskin: {type: "water", effects: [{type: "percentDamage", value: 25}]},

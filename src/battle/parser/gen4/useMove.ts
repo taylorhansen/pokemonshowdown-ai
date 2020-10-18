@@ -793,6 +793,17 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                         // infer recoil effect was consumed
                         if (accept) recoil(ctx, /*consumed*/ true);
                         break;
+                    default:
+                    {
+                        const ctg = event.monRef === ctx.userRef ?
+                            "self" : "hit";
+                        const mon = ctx.pstate.state.teams[event.monRef].active;
+                        const initial = mon.hp.current;
+                        const next = event.hp;
+                        const max = mon.hp.max;
+                        accept = ctx.pendingEffects.consume(ctg,
+                            "percentDamage", initial, next, max);
+                    }
                 }
                 if (!accept) break;
                 return yield* base.takeDamage(ctx.pstate, event);

@@ -1259,12 +1259,12 @@ export function testUseMove(f: () => Context,
             self:
             {
                 status: [], unique: [], implicitStatus: [], boost: [], team: [],
-                implicitTeam: []
+                implicitTeam: [], percentDamage: []
             },
             hit:
             {
                 status: [], unique: [], implicitStatus: [], boost: [], team: [],
-                implicitTeam: []
+                implicitTeam: [], percentDamage: []
             }
         };
 
@@ -1284,7 +1284,7 @@ export function testUseMove(f: () => Context,
                 {
                     beforeEach("Initialize active", async function()
                     {
-                        initActive("them");
+                        initActive("them").hp.set(50); // for roost
                         initActive("us");
                     });
 
@@ -1737,7 +1737,9 @@ export function testUseMove(f: () => Context,
         testNonRemovable("self", "Endure", "endure", "endure");
         testNonRemovable("self", "Magic Coat", "magicCoat", "magiccoat");
         testNonRemovable("self", "Protect", "protect", "protect");
-        testNonRemovable("self", "Roost", "roost", "roost");
+        testNonRemovable("self", "Roost", "roost", "roost",
+            ["self percentDamage ['50%']"],
+            [{type: "takeDamage", monRef: "them", hp: 100}]);
         testNonRemovable("self", "Snatch", "snatch", "snatch");
         // stall
         moveEffectTests.self.status.push(function()
@@ -2466,6 +2468,26 @@ export function testUseMove(f: () => Context,
 
         //#endregion
 
+        //#region percent damage
+
+        moveEffectTests.self.percentDamage.push(function()
+        {
+            describe("Healing moves", function()
+            {
+                it("Should handle recover hp", async function()
+                {
+                    initActive("them").hp.set(50);
+                    await initParser("them", "recover");
+                    await handle({type: "takeDamage", monRef: "them", hp: 100});
+                    await exitParser();
+                });
+
+                it("Should handle weather-based recovery"); // TODO
+            });
+        });
+
+        //#endregion
+
         for (const [ctgName, ctg] of
             [["Self", "self"], ["Hit", "hit"]] as const)
         {
@@ -2479,7 +2501,8 @@ export function testUseMove(f: () => Context,
                     ["ImplicitStatusEffect", "implicitStatus"],
                     ["BoostEffect", "boost"],
                     ["TeamEffect", "team"],
-                    ["ImplicitTeamEffect", "implicitTeam"]
+                    ["ImplicitTeamEffect", "implicitTeam"],
+                    ["PercentDamage", "percentDamage"]
                 ] as const)
                 {
                     const testArr = testDict[key];

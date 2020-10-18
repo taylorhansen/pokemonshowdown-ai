@@ -32,8 +32,8 @@ export type Primary = PrimaryMap[PrimaryType];
 export type OtherMap = EffectMap<OtherType>;
 
 /** Types of Other effects. */
-export type OtherType = "boost" | "implicitStatus" | "implicitTeam" | "status" |
-    "team" | "unique";
+export type OtherType = "boost" | "implicitStatus" | "implicitTeam" |
+    "percentDamage" | "status" | "team" | "unique";
 
 /**
  * Other effects of a move. MoveEffects with these will have

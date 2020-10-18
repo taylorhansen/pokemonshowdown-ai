@@ -1,14 +1,17 @@
 import * as dexutil from "../../../dex/dex-util";
 import * as effects from "../../../dex/effects";
 import { PendingBoostEffect } from "./PendingBoostEffect";
+import { PendingEffect } from "./PendingEffect";
 import { PendingEffects } from "./PendingEffects";
+import { PendingPercentEffect } from "./PendingPercentEffect";
 import { PendingValueEffect } from "./PendingValueEffect";
 
 /** Used for get()/consume() typings. */
 type TrivialPrimaryType = Exclude<effects.move.PrimaryType, "swapBoost">;
 
 /** Used for get()/consume() typings. */
-type TrivialOtherType = Exclude<effects.move.OtherType, "boost">;
+type TrivialOtherType = Exclude<effects.move.OtherType,
+    "boost" | "percentDamage">;
 
 /** Container for managing/consuming effects derived from move data. */
 export class PendingMoveEffects
@@ -66,6 +69,10 @@ export class PendingMoveEffects
             case "team": case "unique":
                 this.effects.add(`${effect.ctg} ${effect.type}`,
                     new PendingValueEffect(effect.value), "assert");
+                break;
+            case "percentDamage":
+                this.effects.add(`${effect.ctg} ${effect.type}`,
+                    new PendingPercentEffect(effect.value), "assert");
                 break;
             case "chance":
             {
@@ -232,10 +239,10 @@ export class PendingMoveEffects
         }
         else
         {
-            const effect = this.effects.get(`${ctg} ${key}`) as
-                PendingValueEffect;
-            if (!effect) return null;
-            return effect.value as any;
+            const effect = this.effects.get(`${ctg} ${key}`) as PendingEffect;
+            if (effect instanceof PendingValueEffect) return effect.value;
+            if (effect instanceof PendingPercentEffect) return effect.percent;
+            return null;
         }
     }
 
@@ -314,6 +321,16 @@ export class PendingMoveEffects
     public consume(ctg: "self" | "hit", key: "boost", stat: dexutil.BoostName,
         amount: number, cur?: number): boolean;
     /**
+     * Checks and consumes a pending PercentDamage effect.
+     * @param ctg Category of effect.
+     * @param initial Initial HP value.
+     * @param next Next HP value being sent.
+     * @param max Max HP value.
+     * @returns True if the effect has now been consumed, false otherwise.
+     */
+    public consume(ctg: "self" | "hit", key: "percentDamage", initial: number,
+        next: number, max: number): boolean;
+    /**
      * Checks and consumes any pending self/hit MajorStatus effect.
      * @param ctg Category of effect.
      * @returns True if the effect has now been consumed, false otherwise.
@@ -322,7 +339,8 @@ export class PendingMoveEffects
         boolean;
     public consume(ctg: "primary" | effects.move.Category, key: string,
         effectOrStat?: string | effects.SelfSwitchType |
-            readonly dexutil.BoostName[] | dexutil.BoostName | "MajorStatus",
+            readonly dexutil.BoostName[] | dexutil.BoostName | number |
+            "MajorStatus",
         amount?: number, cur?: number): boolean
     {
         if (!effectOrStat)
@@ -366,6 +384,13 @@ export class PendingMoveEffects
                     ...(cur == null ? [] : [cur])) ||
                 this.effects.consume(`${ctg} secondary boost ${boost} ${stat}`,
                     amount, cur);
+        }
+        else if (ctg !== "primary" && key === "percentDamage")
+        {
+            const initial = effectOrStat as number;
+            const next = amount!;
+            const max = cur!;
+            return this.effects.consume(`${ctg} ${key}`, initial, next, max);
         }
         else if (ctg !== "primary" && key === "status" &&
             effectOrStat === "MajorStatus")
