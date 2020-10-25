@@ -428,6 +428,28 @@ export function testEvents()
         {
             await parser.next({type: "block", monRef: "us", effect: "protect"});
         });
+
+        describe("Substitute", function()
+        {
+            it("Should do nothing if mentioned Pokemon has a Substitute",
+            async function()
+            {
+                initActive("us").volatile.substitute = true;
+                await parser.next(
+                    {type: "block", monRef: "us", effect: "substitute"});
+            });
+
+            it("Should throw if mentioned Pokemon doesn't have a Substitute",
+            async function()
+            {
+                initActive("us");
+                await expect(parser.next(
+                        {type: "block", monRef: "us", effect: "substitute"}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Substitute blocked an effect but no Substitute " +
+                        "exists");
+            });
+        });
     });
 
     describe("boost", function()

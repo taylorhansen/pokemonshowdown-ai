@@ -263,12 +263,12 @@ for (const move of
     const flags: dexutil.MoveFlags =
     {
         ...(!!move.flags.contact && {contact: true}),
+        ...(!!move.flags.authentic && {ignoreSub: true}),
         ...(noMirror.hasOwnProperty(move.id) && {noMirror: true}),
         ...(noCopycat.hasOwnProperty(move.id) && {noCopycat: true}),
         ...(!!move.flags.reflectable && {reflectable: true})
     };
-    const hasFlags = flags.contact || flags.noMirror || flags.noCopycat ||
-        flags.reflectable;
+    const hasFlags = Object.keys(flags).length > 0;
 
     // setup move effects
 

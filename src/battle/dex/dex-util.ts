@@ -241,6 +241,8 @@ export interface MoveFlags
 {
     /** Whether this is a damaging contact move. */
     readonly contact?: true;
+    /** Whether this move ignores Subtitute. */
+    readonly ignoreSub?: true;
     /**
      * Whether this move can't be copied by Mirror Move. This should only be
      * present for targeted moves.

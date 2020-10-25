@@ -321,6 +321,12 @@ export class PendingMoveEffects
     public consume(ctg: "self" | "hit", key: "boost", stat: dexutil.BoostName,
         amount: number, cur?: number): boolean;
     /**
+     * Consumes all pending boost effects.
+     * @param ctg Category of effect.
+     * @returns True if the effect has now been consumed, false otherwise.
+     */
+    public consume(ctg: "self" | "hit", key: "boost"): boolean;
+    /**
      * Checks and consumes a pending PercentDamage effect.
      * @param ctg Category of effect.
      * @param initial Initial HP value.
@@ -355,14 +361,14 @@ export class PendingMoveEffects
                     const c = this.effects.consume(`${ctg} boost set ${b}`);
                     const d =
                         this.effects.consume(`${ctg} secondary boost add ${b}`);
-                    result ||= a || c || d;
+                    result = result || a || c || d;
                 }
             }
             else
             {
                 const e = this.effects.consume(`${ctg} ${key}`);
                 const f = this.effects.consume(`${ctg} secondary ${key}`);
-                result ||= e || f;
+                result = result || e || f;
             }
             return result;
         }

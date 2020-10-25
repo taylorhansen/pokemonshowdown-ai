@@ -276,6 +276,58 @@ export function testUseMove(f: () => Context,
             await handle({type: "block", monRef: "them", effect: "safeguard"});
             await exitParser();
         });
+
+        describe("Substitute", function()
+        {
+            beforeEach("Initialize active and substitute", function()
+            {
+                initActive("us");
+                initActive("them").volatile.substitute = true;
+            });
+
+            it("Should not throw if sub-ignoring move", async function()
+            {
+                await initParser("us", "torment");
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "them",
+                    effect: "torment", start: true
+                });
+                await exitParser();
+            });
+
+            it("Should block hit status effects", async function()
+            {
+                await initParser("us", "zapcannon"); // hit status par
+                // TODO: damage event?
+                await exitParser();
+            });
+
+            it("Should block hit boost effects", async function()
+            {
+                await initParser("us", "rocktomb"); // hit boost spe -1
+                // TODO: damage event?
+                await exitParser();
+            });
+
+            it("Should not block self effects", async function()
+            {
+                await initParser("us", "leafstorm");
+                await handle(
+                    {type: "boost", monRef: "us", stat: "spa", amount: -2});
+                await exitParser();
+            });
+
+            it("Should throw if sub ignored and non-sub-ignoring move",
+            async function()
+            {
+                await initParser("us", "tackle");
+                await expect(handle(
+                        {type: "takeDamage", monRef: "them", hp: 1}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Move should've been blocked by target's Substitute");
+            });
+        });
     });
 
     describe("fail", function()

@@ -61,6 +61,7 @@ export const handlers =
             case "torment": case "waterSport":
             case "destinyBond": case "grudge": case "rage": // singlemove
             case "magicCoat": case "roost": case "snatch": // singleturn
+                // TODO: if substitute, remove partial trapping (implicit?)
                 mon.volatile[event.effect] = event.start;
                 break;
             case "bide": case "confusion": case "charge": case "magnetRise":
@@ -129,7 +130,15 @@ export const handlers =
         return {};
     },
     async* block(pstate: ParserState, event: events.Block): SubParser
-    { return {}; },
+    {
+        if (event.effect === "substitute" &&
+            !pstate.state.teams[event.monRef].active.volatile.substitute)
+        {
+            throw new Error("Substitute blocked an effect but no Substitute " +
+                "exists");
+        }
+        return {};
+    },
     async* boost(pstate: ParserState, event: events.Boost): SubParser
     {
         const {boosts} = pstate.state.teams[event.monRef].active.volatile;

@@ -32,7 +32,7 @@ export async function* useMove(pstate: ParserState,
 
         // see if we should consider the move's damage
         let lastEvent: events.Any | undefined;
-        if (ctx.moveData.category !== "status" || preDamageResult.prepare)
+        if (ctx.moveData.category !== "status" || !preDamageResult.prepare)
         {
             const damageResult = yield* damage(ctx, preDamageResult?.event);
             lastEvent = damageResult.event;
@@ -105,10 +105,17 @@ interface MoveContext
     // in-progress move result flags
     /**
      * Target-refs currently mentioned by listening to events. Lays groundwork
-     * for future double/triple battle support. Value type is whether the
-     * pokemon was damaged by this move, or `"ko"` if it was KO'd.
+     * for future double/triple battle support.
      */
-    readonly mentionedTargets: Map<Side, boolean | "ko">;
+    readonly mentionedTargets: Map<Side, TargetFlags>;
+}
+
+interface TargetFlags
+{
+    /** Whether the target was damaged directly or KO'd. */
+    damaged?: true | "ko";
+    /** Whether the target applied Pressure. */
+    pressured?: true;
 }
 
 /** Initializes move context state. */
@@ -294,6 +301,8 @@ async function* preDamage(ctx: MoveContext): SubParser<PreDamageResult>
                 // move effects were blocked
                 // endure event should happen after damage
                 if (event.effect === "endure") break;
+                // substitute event should happen during damage
+                if (event.effect === "substitute") break;
                 if (!handleBlock(ctx, event.monRef)) break;
                 // reflecting the move, expect the next event to call it
                 if (event.effect === "magicCoat")
@@ -393,13 +402,33 @@ function handleBlock(ctx: MoveContext, monRef: Side): boolean
     return addTarget(ctx, monRef);
 }
 
-/** Handles move damage modifier events, e.g. crits and type effectiveness. */
-async function* damage(ctx: MoveContext, lastEvent?: events.Any): SubParser
+/** Result of `damage()`. */
+interface DamageResult extends SubParserResult
 {
+    /** Whether the damage was blocked by a Substitute. */
+    substitute?: true;
+}
+
+/** Handles move damage modifier events, e.g. crits and type effectiveness. */
+async function* damage(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<DamageResult>
+{
+    let substitute: true | undefined;
     const result = yield* eventLoop(async function*(event)
     {
         switch (event.type)
         {
+            case "block":
+                if (event.effect !== "substitute") break;
+                if (ctx.moveData.flags?.ignoreSub)
+                {
+                    // istanbul ignore next: can't reproduce until gen5 with
+                    //  damaging sub-ignoring moves
+                    throw new Error("Substitute-ignoring move shouldn't have " +
+                        "been blocked by Substitute");
+                }
+                substitute = true;
+                return yield* base.block(ctx.pstate, event);
             case "crit":
                 return addTarget(ctx, event.monRef) ?
                     yield* base.crit(ctx.pstate, event) : {event};
@@ -420,9 +449,10 @@ async function* damage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                 return yield* base.superEffective(ctx.pstate, event);
             case "takeDamage":
                 // main move damage
-                if (!event.from && ctx.userRef === event.monRef ||
-                    !addTarget(ctx, event.monRef,
-                        /*damaged*/ event.hp <= 0 ? "ko" : true))
+                if (event.from || ctx.userRef === event.monRef) break;
+                if (substitute) break;
+                if (!addTarget(ctx, event.monRef,
+                    /*damaged*/ event.hp <= 0 ? "ko" : true))
                 {
                     break;
                 }
@@ -430,9 +460,10 @@ async function* damage(ctx: MoveContext, lastEvent?: events.Any): SubParser
         }
         return {event};
     }, lastEvent);
+
     // TODO: assert type effectiveness
-    // TODO: include damage dealt in result for postDamage drain/recoil
-    return result;
+    // TODO: include damage dealt in result for drain/recoil/etc
+    return {...result, ...(substitute && {substitute})};
 }
 
 /** Handles effects after the main damage event. */
@@ -445,14 +476,14 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
             case "activateAbility":
             {
                 // choose category with highest precedence
-                const damaged = ctx.mentionedTargets.get(event.monRef);
+                const flags = ctx.mentionedTargets.get(event.monRef);
                 let on: effects.ability.On | null = null;
                 if (ctx.moveData.flags?.contact)
                 {
-                    if (damaged === "ko") on = "contactKO";
-                    else if (damaged) on = "contact";
+                    if (flags?.damaged === "ko") on = "contactKO";
+                    else if (flags?.damaged) on = "contact";
                 }
-                else if (damaged) on = "damaged";
+                else if (flags?.damaged) on = "damaged";
 
                 const abilityResult = yield* base.activateAbility(ctx.pstate,
                     event, on, ctx.moveName);
@@ -516,9 +547,9 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                         // can be removed by a different move, but currently not
                         //  tracked yet (TODO)
                         accept = !event.start ||
-                            ctx.pendingEffects.consume(ctg, "status",
-                                event.effect) &&
-                            addTarget(ctx, event.monRef);
+                            (ctx.pendingEffects.consume(ctg, "status",
+                                    event.effect) &&
+                                addTarget(ctx, event.monRef));
                         break;
                     case "imprison":
                         accept = ctg === "self" && event.start &&
@@ -880,44 +911,47 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
 // inference helper functions
 /**
  * Indicates that the BattleEvents mentioned a target for the current move.
- * @param damaged Whether the pokemon was damaged (true) or KO'd ('"ko"`).
+ * @param damaged Whether the pokemon was damaged directly (true) or KO'd
+ * ('"ko"`).
  * @returns False on error, true otherwise.
  */
 function addTarget(ctx: MoveContext, targetRef: Side,
     damaged: boolean | "ko" = false): boolean
 {
-    const last = ctx.mentionedTargets.get(targetRef);
+    let flags = ctx.mentionedTargets.get(targetRef);
     // already mentioned target earlier
-    if (last !== undefined)
+    if (flags)
     {
         // update damaged status if higher precedence (ko > true > false)
-        if (!last || damaged === "ko")
+        if (damaged && (!flags.damaged || damaged === "ko"))
         {
-            ctx.mentionedTargets.set(targetRef, damaged);
+            flags.damaged = damaged;
         }
-        return true;
     }
-
-    // assertions about the move target
-    // generally this happens when the move has been fully handled but the
-    //  context hasn't yet realized it and expired (TODO)
-    if (!ctx.pendingTargets[targetRef])
+    else
     {
-        ctx.pstate.logger.error(`Mentioned target '${targetRef}' but the ` +
-            `current move '${ctx.moveName}' can't target it`);
-        return false;
-    }
-    if (ctx.mentionedTargets.size >= ctx.totalTargets)
-    {
-        ctx.pstate.logger.error("Can't add more targets. Already mentioned " +
-            `${ctx.mentionedTargets.size} ` +
-            (ctx.mentionedTargets.size > 0 ?
-                `('${[...ctx.mentionedTargets].join("', '")}') ` : "") +
-            `but trying to add '${targetRef}'.`);
-        return false;
-    }
+        // assertions about the move target
+        // generally this happens when the move has been fully handled but the
+        //  context hasn't yet realized it and expired (TODO)
+        if (!ctx.pendingTargets[targetRef])
+        {
+            ctx.pstate.logger.error(`Mentioned target '${targetRef}' but the ` +
+                `current move '${ctx.moveName}' can't target it`);
+            return false;
+        }
+        if (ctx.mentionedTargets.size >= ctx.totalTargets)
+        {
+            ctx.pstate.logger.error("Can't add more targets. Already " +
+                `mentioned ${ctx.mentionedTargets.size} ` +
+                (ctx.mentionedTargets.size > 0 ?
+                    `('${[...ctx.mentionedTargets].join("', '")}') ` : "") +
+                `but trying to add '${targetRef}'.`);
+            return false;
+        }
 
-    ctx.mentionedTargets.set(targetRef, damaged);
+        ctx.mentionedTargets.set(targetRef,
+            flags = {...(!!damaged && {damaged})});
+    }
 
     const target = ctx.pstate.state.teams[targetRef].active;
     if (ctx.user !== target)
@@ -926,13 +960,30 @@ function addTarget(ctx: MoveContext, targetRef: Side,
         if (ctx.mirror) target.volatile.mirrorMove = ctx.moveName;
 
         // deduct an extra pp if the target has pressure
-        // TODO: gen>=5: don't count allies
-        if (ctx.move && !target.volatile.suppressAbility &&
+        // TODO(gen>=5): don't count allies
+        if (!flags.pressured && ctx.move && !target.volatile.suppressAbility &&
             target.ability === "pressure" &&
             // only ability that can cancel pressure
             ctx.user.ability !== "moldbreaker")
         {
             ctx.move.pp -= 1;
+            flags.pressured = true;
+        }
+
+        // cancel effects blocked by substitute
+        // TODO(doubles): consume pending effects independently for targets
+        if (target.volatile.substitute && !ctx.moveData.flags?.ignoreSub)
+        {
+            if (flags.damaged)
+            {
+                throw new Error("Move should've been blocked by target's " +
+                    "Substitute");
+            }
+
+            // blocks all status conditions
+            ctx.pendingEffects.consume("hit", "status");
+            // blocks all stat changes
+            ctx.pendingEffects.consume("hit", "boost");
         }
     }
 
@@ -1215,7 +1266,7 @@ function naturalGift(ctx: MoveContext, failed: boolean): void
 function drain(ctx: MoveContext): void
 {
     // go through opposing targets that were damaged by this move
-    for (const [monRef, damaged] of ctx.mentionedTargets)
+    for (const [monRef, {damaged}] of ctx.mentionedTargets)
     {
         if (monRef === ctx.userRef || !damaged) continue;
         const mon = ctx.pstate.state.teams[monRef].active;
