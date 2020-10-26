@@ -1049,6 +1049,8 @@ export class PSEventHandler
 
             let monRef: Side;
             // prefer id from event
+            // NOTE: non-healing absorb abilities (e.g. motordrive) don't do
+            //  this
             // |-heal|<holder>|...|[from] <ability>|[of] <attacker>
             if (event.type === "-heal" && dex.abilities[ability]?.absorb ||
                 // |-ability|<holder>|<target's ability>|[from] ability: Trace|

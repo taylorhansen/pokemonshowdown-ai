@@ -255,23 +255,6 @@ describe("PSEventHandler", function()
                 [{type: "-ability", id: us, ability: "Blaze"}],
                 [{type: "activateAbility", monRef: "us", ability: "blaze"}]);
 
-            describe("absorb ability", function()
-            {
-                test("Should emit activateAbility with takeDamage from |-heal|",
-                [{
-                    type: "-heal", id: them,
-                    status: {hp: 100, hpMax: 100, condition: null},
-                    from: "ability: Water Absorb", of: us
-                }],
-                [
-                    {
-                        type: "activateAbility", monRef: "them",
-                        ability: "waterabsorb"
-                    },
-                    {type: "takeDamage", monRef: "them", hp: 100}
-                ]);
-            });
-
             describe("Trace", function()
             {
                 test("Should emit activateAbility with Trace from |-ability|",
@@ -899,6 +882,27 @@ describe("PSEventHandler", function()
                     {type: "takeDamage", monRef: "us", hp: 100},
                     {type: "restoreMoves", monRef: "us"}
                 ]);
+
+                if (type === "-heal")
+                {
+                    describe("absorb ability", function()
+                    {
+                        test("Should emit activateAbility with takeDamage " +
+                            "from |-heal|",
+                        [{
+                            type: "-heal", id: them,
+                            status: {hp: 100, hpMax: 100, condition: null},
+                            from: "ability: Water Absorb", of: us
+                        }],
+                        [
+                            {
+                                type: "activateAbility", monRef: "them",
+                                ability: "waterabsorb"
+                            },
+                            {type: "takeDamage", monRef: "them", hp: 100}
+                        ]);
+                    });
+                }
             });
         }
 
