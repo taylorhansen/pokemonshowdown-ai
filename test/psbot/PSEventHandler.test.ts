@@ -264,6 +264,8 @@ describe("PSEventHandler", function()
                 }],
                 [
                     {type: "activateAbility", monRef: "us", ability: "trace"},
+                    // TODO: these 2 events technically reveal/set ability, not
+                    //  activate
                     {type: "activateAbility", monRef: "us", ability: "blaze"},
                     {type: "activateAbility", monRef: "them", ability: "blaze"}
                 ]);
@@ -1344,17 +1346,29 @@ describe("PSEventHandler", function()
 
             describe("ability", function()
             {
-                test("Should emit activateAbility",
+                test("Should emit activateAbility if [from]",
                 [{
-                    type: "-immune", id: us, from: "ability: Wonder Guard",
-                    of: them
+                    type: "-immune", id: us, from: "ability: Wonder Guard"
                 }],
                 [
                     {
-                        type: "activateAbility", monRef: "them",
+                        type: "activateAbility", monRef: "us",
                         ability: "wonderguard"
                     },
                     {type: "immune", monRef: "us"}
+                ]);
+
+                test("Should emit activateAbility if [from] using [of]",
+                [{
+                    type: "-fail", id: us, reason: "unboost",
+                    from: "ability: Clear Body", of: us
+                }],
+                [
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "clearbody"
+                    },
+                    {type: "fail"}
                 ]);
             });
 
