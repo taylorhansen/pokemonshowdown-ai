@@ -343,6 +343,7 @@ export class PSEventHandler
                     ...(ability === "truant" && {reason: "truant"}),
                     ...(move && {move})
                 },
+                // TODO: switch these two events since the ability caused this
                 {type: "activateAbility", monRef, ability}
             ];
         }
@@ -391,15 +392,18 @@ export class PSEventHandler
 
         return event.from === "ability: Trace" && event.of ?
             [
-                // trace ability: event.ability contains the Traced ability,
-                //  event.of contains pokemon that was traced, event.id
-                //  contains the pokemon that's Tracing the ability
-                {type: "activateAbility", monRef, ability: "trace"},
+                // |-ability|<holder>|<target's ability>|[from] ability: Trace|
+                //  [of] target
+                // initial trace activation should be handled by suffix handler
+                // TODO: set/reveal ability, not activate
                 abilityEvent,
                 {
+                    // TODO: reveal ability, not activate
                     type: "activateAbility",
                     monRef: this.getSide(event.of.owner), ability
                 }
+                // after these events we should get the traced ability's
+                //  activation if possible
             ]
             : [abilityEvent];
     }
@@ -1019,34 +1023,49 @@ export class PSEventHandler
         const f = event.from;
         if (!f) return [];
 
-        // these corner cases should already be handled
-        if (event.type === "-ability" && event.from === "ability: Trace")
-        {
-            return [];
-        }
+        // this corner case should already be handled
         if (event.from === "lockedmove") return [];
 
         // look for a PokemonID using the `of` or `id` fields
         // this will be used for handling the `from` field
-        let id: PokemonID | undefined;
-        if (event.of) id = event.of;
-        else if ((event as any).id && isPlayerID((event as any).id.owner))
+        let eventId: PokemonID | undefined;
+        let ofId: PokemonID | undefined;
+        if ((event as any).id && isPlayerID((event as any).id.owner))
         {
-            id = (event as any).id;
+            eventId = (event as any).id;
         }
+        if (event.of) ofId = event.of;
 
-        if (!id) throw new Error("No PokemonID given to handle suffixes with");
-        const monRef = this.getSide(id.owner);
+        if (!eventId && !ofId)
+        {
+            throw new Error("No PokemonID given to handle suffixes with");
+        }
 
         // TODO: should all use cases be handled in separate event handlers?
         // if so, this method might not need to exist
         if (f.startsWith("ability: "))
         {
             const ability = toIdName(f.substr("ability: ".length));
+
+            let monRef: Side;
+            // prefer id from event
+            // |-heal|<holder>|...|[from] <ability>|[of] <attacker>
+            if (event.type === "-heal" && dex.abilities[ability]?.absorb ||
+                // |-ability|<holder>|<target's ability>|[from] ability: Trace|
+                //  [of] target
+                event.type === "-ability" && ability === "trace")
+            {
+                monRef = this.getSide(event.id.owner);
+            }
+            // prefer id from [of] suffix
+            else monRef = this.getSide((ofId ?? eventId!).owner);
+
             return [{type: "activateAbility", monRef, ability}];
         }
         if (f.startsWith("item: "))
         {
+            // prefer id from [of] suffix (TODO: when to switch this?)
+            const monRef = this.getSide((ofId ?? eventId!).owner);
             const item = toIdName(f.substr("item: ".length));
             // removeItem events are usually emitted when a berry's effects are
             //  used, so this helps us to not conflict with that

@@ -255,36 +255,62 @@ describe("PSEventHandler", function()
                 [{type: "-ability", id: us, ability: "Blaze"}],
                 [{type: "activateAbility", monRef: "us", ability: "blaze"}]);
 
-            test("Should emit activateAbility with Trace",
-            [{
-                type: "-ability", id: us, ability: "Blaze",
-                from: "ability: Trace", of: them
-            }],
-            [
-                {type: "activateAbility", monRef: "us", ability: "trace"},
-                {type: "activateAbility", monRef: "us", ability: "blaze"},
-                {type: "activateAbility", monRef: "them", ability: "blaze"}
-            ]);
+            describe("absorb ability", function()
+            {
+                test("Should emit activateAbility with takeDamage from |-heal|",
+                [{
+                    type: "-heal", id: them,
+                    status: {hp: 100, hpMax: 100, condition: null},
+                    from: "ability: Water Absorb", of: us
+                }],
+                [
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "waterabsorb"
+                    },
+                    {type: "takeDamage", monRef: "them", hp: 100}
+                ]);
+            });
 
-            test("Should handle traced ability activating before Trace",
-            [
-                {type: "-ability", id: us, ability: "Intimidate"},
-                {type: "-unboost", id: them, stat: "atk", amount: 1},
-                {
-                    type: "-ability", id: us, ability: "Intimidate",
+            describe("Trace", function()
+            {
+                test("Should emit activateAbility with Trace from |-ability|",
+                [{
+                    type: "-ability", id: us, ability: "Blaze",
                     from: "ability: Trace", of: them
-                }
-            ],
-            [
-                {type: "activateAbility", monRef: "us", ability: "trace"},
-                {type: "activateAbility", monRef: "us", ability: "intimidate"},
-                {
-                    type: "activateAbility", monRef: "them",
-                    ability: "intimidate"
-                },
-                {type: "activateAbility", monRef: "us", ability: "intimidate"},
-                {type: "boost", monRef: "them", stat: "atk", amount: -1}
-            ]);
+                }],
+                [
+                    {type: "activateAbility", monRef: "us", ability: "trace"},
+                    {type: "activateAbility", monRef: "us", ability: "blaze"},
+                    {type: "activateAbility", monRef: "them", ability: "blaze"}
+                ]);
+
+                test("Should handle traced ability activating before Trace",
+                [
+                    {type: "-ability", id: us, ability: "Intimidate"},
+                    {type: "-unboost", id: them, stat: "atk", amount: 1},
+                    {
+                        type: "-ability", id: us, ability: "Intimidate",
+                        from: "ability: Trace", of: them
+                    }
+                ],
+                [
+                    {type: "activateAbility", monRef: "us", ability: "trace"},
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "intimidate"
+                    },
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "intimidate"
+                    },
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "intimidate"
+                    },
+                    {type: "boost", monRef: "them", stat: "atk", amount: -1}
+                ]);
+            });
         });
 
         describe("-endability", function()
