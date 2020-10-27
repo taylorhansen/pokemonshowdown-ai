@@ -964,6 +964,7 @@ function addTarget(ctx: MoveContext, targetRef: Side,
         if (!flags.pressured && ctx.move && !target.volatile.suppressAbility &&
             target.ability === "pressure" &&
             // only ability that can cancel pressure
+            // TODO: use ignoreTargetAbility flag
             ctx.user.ability !== "moldbreaker")
         {
             ctx.move.pp -= 1;

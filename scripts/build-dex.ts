@@ -249,11 +249,14 @@ for (const move of
         .filter(isGen4Move)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
-    typeToMoves[move.type.toLowerCase() as dexutil.Type].push(move.id);
     if (!move.noSketch) sketchableMoves.push(move.id);
 
     const category = move.category.toLowerCase() as dexutil.MoveCategory;
+    const basePower = move.ohko ? "ohko" : move.basePower;
+    const type = move.type.toLowerCase() as dexutil.Type;
     const target = move.target;
+
+    typeToMoves[type].push(move.id);
 
     // factor pp boosts if the move supports it in game
     const pp = [move.pp, move.pp] as [number, number];
@@ -497,9 +500,9 @@ for (const move of
     [
         move.id,
         {
-            uid, name: move.id, display: move.name, category,
-            type: move.type.toLowerCase() as dexutil.Type, target, pp,
-            ...(hasFlags && {flags}), ...(arr.length > 0 && {effects: arr})
+            uid, name: move.id, display: move.name, category, basePower, type,
+            target, pp, ...(hasFlags && {flags}),
+            ...(arr.length > 0 && {effects: arr})
         }
     ];
     ++uid;
@@ -714,6 +717,13 @@ const blockExplosive: {readonly [ability: string]: boolean} = {damp: true};
 /** Maps ability name to whether it is an explosive effect. */
 const explosive: {readonly [ability: string]: boolean} = {aftermath: true};
 
+/**
+ * Maps ability name to whether warns the holder of the opponent's strongest
+ * move.
+ */
+const warnStrongestMove: {readonly [ability: string]: boolean} =
+    {forewarn: true};
+
 /** Maps ability name to absorb effect. */
 const absorbMap: {readonly [ability: string]: dexutil.AbilityData["absorb"]} =
 {
@@ -785,6 +795,7 @@ for (const ability of
             ...(ignoreTargetAbility[ability.id] && {ignoreTargetAbility: true}),
             ...(blockExplosive[ability.id] && {blockExplosive: true}),
             ...(explosive[ability.id] && {explosive: true}),
+            ...(warnStrongestMove[ability.id] && {warnStrongestMove: true}),
             ...(absorbMap[ability.id] && {absorb: absorbMap[ability.id]}),
             ...(abilityEffectMap[ability.id] &&
                 {effects: abilityEffectMap[ability.id]})

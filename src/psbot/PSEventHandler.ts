@@ -504,6 +504,16 @@ export class PSEventHandler
             event.volatile.substr("move: ".length) : event.volatile;
         switch (volatile)
         {
+            case "ability: Forewarn":
+                return [
+                    {type: "activateAbility", monRef, ability: "forewarn"},
+                    {
+                        type: "revealMove",
+                        monRef: event.of ?
+                            this.getSide(event.of.owner) : otherSide(monRef),
+                        move: event.otherArgs[0]
+                    }
+                ]
             case "Bide":
                 return [{type: "updateStatusEffect", monRef, effect: "bide"}];
             case "Charge":
@@ -1052,10 +1062,10 @@ export class PSEventHandler
             // NOTE: non-healing absorb abilities (e.g. motordrive) don't do
             //  this
             // |-heal|<holder>|...|[from] <ability>|[of] <attacker>
-            if (event.type === "-heal" && dex.abilities[ability]?.absorb ||
+            if ((event.type === "-heal" && dex.abilities[ability]?.absorb) ||
                 // |-ability|<holder>|<target's ability>|[from] ability: Trace|
                 //  [of] target
-                event.type === "-ability" && ability === "trace")
+                (event.type === "-ability" && ability === "trace"))
             {
                 monRef = this.getSide(event.id.owner);
             }

@@ -185,6 +185,46 @@ export function testActivateAbility(f: () => Context,
         });
     });
 
+    describe("revealMove", function()
+    {
+        describe("warnStrongestMove", function()
+        {
+            // limited movepool for easier testing
+            const wobbuffet: events.SwitchOptions =
+            {
+                species: "wobbuffet", gender: "M", level: 100, hp: 100,
+                hpMax: 100
+            };
+
+            // forewarn pokemon
+            const hypno: events.SwitchOptions =
+            {
+                species: "hypno", gender: "M", level: 30, hp: 100,
+                hpMax: 100
+            };
+
+            it("Should eliminate stronger moves from moveset constraint",
+            async function()
+            {
+                initActive("us", hypno);
+                const {moveset} = initActive("them", wobbuffet);
+                expect(moveset.constraint).to.include.keys("counter",
+                    "mirrorcoat");
+
+                await initParser("us", "forewarn");
+                // forewarn doesn't actually activate when the opponent has all
+                //  status moves, but this is just for testing purposes
+                await handle(
+                    {type: "revealMove", monRef: "them", move: "splash"});
+                // should remove moves with bp higher than 0 (these two are
+                //  treated as 120)
+                expect(moveset.constraint).to.not.include.keys("counter",
+                    "mirrorcoat");
+                await exitParser();
+            });
+        });
+    });
+
     describe("takeDamage", function()
     {
         it("Should handle percentDamage effect", async function()

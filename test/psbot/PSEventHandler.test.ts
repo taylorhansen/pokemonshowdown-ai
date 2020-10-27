@@ -568,6 +568,35 @@ describe("PSEventHandler", function()
                 [{type: "-activate", id: us, volatile: "x", otherArgs: []}],
                 []);
 
+            describe("ability: Forewarn", function()
+            {
+                test("Should emit activateAbility with revealMove using [of]",
+                [{
+                    type: "-activate", id: us, volatile: "ability: Forewarn",
+                    otherArgs: ["tackle"], of: them
+                }],
+                [
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "forewarn"
+                    },
+                    {type: "revealMove", monRef: "them", move: "tackle"}
+                ]);
+
+                test("Should emit activateAbility with revealMove without [of]",
+                [{
+                    type: "-activate", id: them, volatile: "ability: Forewarn",
+                    otherArgs: ["tackle"]
+                }],
+                [
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "forewarn"
+                    },
+                    {type: "revealMove", monRef: "us", move: "tackle"}
+                ]);
+            });
+
             describe("Bide", function()
             {
                 test("Should emit updateStatusEffect",

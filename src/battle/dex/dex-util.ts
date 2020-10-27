@@ -173,6 +173,7 @@ export interface PokemonData extends DexData
 /** Format for each ability entry in the dex. */
 export interface AbilityData extends DexData
 {
+    // TODO: should some of these flags be mutually exclusive?
     /** Status immunity. */
     readonly statusImmunity?: readonly effects.StatusType[];
     /** Whether this ability cancels move recoil damage. */
@@ -199,6 +200,13 @@ export interface AbilityData extends DexData
      */
     readonly explosive?: true;
     /**
+     * Whether this ability, when acquired or switched in, warns the holder of
+     * one of the highest base-power moves out of all the opponents. Uses
+     * special rules for unspecified/variable base-power moves according to the
+     * Forewarn ability.
+     */
+    readonly warnStrongestMove?: true;
+    /**
      * Indicates that the ability grants an absorbing immunity. This will
      * activate before move damage to block the move's effects.
      */
@@ -215,6 +223,8 @@ export interface MoveData extends DexData
 {
     /** Move category. */
     readonly category: MoveCategory;
+    /** Move's base power. */
+    readonly basePower: MovePower;
     /** Type of move. */
     readonly type: Type;
     /** Target of the move. */
@@ -229,6 +239,16 @@ export interface MoveData extends DexData
 
 /** Types of categories for a move. */
 export type MoveCategory = "physical" | "special" | "status";
+
+// TODO: extract into structure for describing move damage
+// tslint:disable: no-trailing-whitespace (force newline in doc)
+/**
+ * Base power of a move.  
+ * `number` - Base power of the move, usually zero for status moves.  
+ * `"ohko"` - OHKO move.
+ */
+// tslint:enable: no-trailing-whitespace
+export type MovePower = number | "ohko";
 
 /** Types of targets for a move. */
 export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |

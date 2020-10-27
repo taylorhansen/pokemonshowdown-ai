@@ -122,11 +122,19 @@ export async function* activateAbility(pstate: ParserState,
 
     if (data.invertDrain)
     {
-        // TODO: only set this once the below pending effect have been consumed
+        // TODO: only set this once the below pending effect has been consumed
         baseResult.invertDrain = true;
         pendingEffects.add(`${data.name} hit percentDamage`,
             // TODO: custom drain damage calculation
             new PendingPercentEffect(-1), "assert");
+    }
+
+    // TODO: figure out how to make inferences when this doesn't activate
+    // TODO: add on="start" to the string union for switch-ins/ability changes
+    if (data.warnStrongestMove)
+    {
+        pendingEffects.add(`${data.name} warnStrongestMove`,
+            new PendingValueEffect(true), "assert");
     }
 
     if (data.absorb && on === "preDamage")
@@ -264,6 +272,23 @@ export async function* activateAbility(pstate: ParserState,
                 // TODO: check whether this is possible
                 baseResult.immune = true;
                 return yield* base.immune(pstate, event);
+            case "revealMove":
+            {
+                if (!pendingEffects.consume(`${data.name} warnStrongestMove`))
+                {
+                    break;
+                }
+                const subResult = yield* base.revealMove(pstate, event);
+
+                // rule out moves stronger than this one
+                const {moveset} = pstate.state.teams[event.monRef].active;
+                const bp = getForewarnPower(event.move);
+                moveset.inferDoesntHave(
+                    [...moveset.constraint]
+                        .filter(m => getForewarnPower(m) > bp));
+
+                return subResult;
+            }
             case "takeDamage":
             {
                 const tgt: effects.ability.Target =
@@ -329,4 +354,22 @@ function hasStatus(mon: ReadonlyPokemon, status: effects.StatusType): boolean
             // istanbul ignore next: should never happen
             throw new Error(`Invalid status effect '${status}'`);
     }
+}
+
+/**
+ * Looks up the base power of a move based on how the Forewarn ability evaluates
+ * it.
+ */
+function getForewarnPower(move: string): number
+{
+    const data = dex.moves[move];
+    const bp = data?.basePower;
+    // ohko moves
+    if (bp === "ohko") return 160;
+    // counter moves
+    if (["counter", "metalburst", "mirrorcoat"].includes(move)) return 120;
+    // fixed damage/variable power moves (hiddenpower, lowkick, etc)
+    if (!bp && data && data.category !== "status") return 80;
+    // regular base power, eruption/waterspout and status moves
+    return bp ?? 0;
 }
