@@ -2189,6 +2189,75 @@ export function testUseMove(f: () => Context,
                         await handle({type: "fail"});
                         await exitParser();
                     });
+
+                    it("Should pass if moldbreaker broke through " +
+                        abilityImmunity,
+                    async function()
+                    {
+                        initActive("us").traits.setAbility("moldbreaker");
+                        initActive("them").traits.setAbility(abilityImmunity);
+
+                        await initParser("us", move);
+                        await handle(
+                            {type: "boost", monRef: target, stat, amount});
+                        await exitParser();
+                    });
+
+                    it("Should throw if moldbreaker should've broken " +
+                        `through ${abilityImmunity}` ,
+                    async function()
+                    {
+                        initActive("us").traits.setAbility("moldbreaker");
+                        initActive("them");
+
+                        await initParser("us", move);
+                        await handle(
+                        {
+                            type: "activateAbility", monRef: "them", // target
+                            ability: abilityImmunity
+                        });
+                        await handle({type: "fail"});
+                        await expect(exitParser())
+                            .to.eventually.be.rejectedWith(Error,
+                                "Attacker shouldn't have ability " +
+                                "'moldbreaker' if the defender's ability " +
+                                `'${abilityImmunity}' blocked an unboost ` +
+                                "effect");
+                    });
+
+                    it(`Should rule out ${abilityImmunity} if it didn't ` +
+                        "activate",
+                    async function()
+                    {
+                        initActive("us");
+                        // blocking ability or useless ability (illuminate)
+                        const mon = initActive("them");
+                        mon.traits.setAbility(abilityImmunity, "illuminate");
+                        expect(mon.traits.ability.possibleValues)
+                            .to.have.keys(abilityImmunity, "illuminate");
+
+                        await initParser("us", move);
+                        await handle(
+                            {type: "boost", monRef: target, stat, amount});
+                        expect(mon.traits.ability.possibleValues)
+                            .to.have.keys("illuminate");
+                        await exitParser();
+                    });
+
+                    it(`Should throw if ${abilityImmunity} didn't activate ` +
+                        "when it's known",
+                    async function()
+                    {
+                        initActive("us");
+                        initActive("them").traits.setAbility(abilityImmunity);
+
+                        await initParser("us", move);
+                        await expect(handle(
+                                {type: "boost", monRef: target, stat, amount}))
+                            .to.eventually.be.rejectedWith(Error,
+                                "Defender shouldn't have unboost-blocking " +
+                                `ability '${abilityImmunity}'`);
+                    });
                 }
             });
         }

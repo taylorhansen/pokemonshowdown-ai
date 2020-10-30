@@ -309,6 +309,8 @@ async function* preDamage(ctx: MoveContext): SubParser<PreDamageResult>
                         ctx.pendingEffects.consume("hit", "boost",
                             b as dexutil.BoostName, 0, -6);
                     }
+                    const mon = ctx.pstate.state.teams[event.monRef].active;
+                    blockUnboost(ctx, mon, /*blocked*/ true);
                 }
                 return abilityResult;
             }
@@ -673,6 +675,16 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                 {
                     break;
                 }
+
+                // possibly infer that the opponent doesn't have an ability like
+                //  clearbody
+                // TODO: check to make sure this is the move's main effect
+                if (ctx.moveData.category === "status" && ctg === "hit" &&
+                    event.amount < 0)
+                {
+                    blockUnboost(ctx, mon, /*blocked*/ false);
+                }
+
                 return yield* base.boost(ctx.pstate, event);
             }
             case "changeType":
@@ -1276,6 +1288,61 @@ function naturalGift(ctx: MoveContext, failed: boolean): void
     }
     // fails if the user doesn't have a berry
     else ctx.user.item.remove(...Object.keys(dex.berries));
+}
+
+/**
+ * Makes an inference based on whether a status move's hit boost effect was
+ * blocked.
+ */
+function blockUnboost(ctx: MoveContext, target: Pokemon, blocked: boolean): void
+{
+    if (blocked)
+    {
+        // defender should have blocking ability and have it not be suppressed
+        const {ability: defender} = target.traits;
+        if (target.volatile.suppressAbility ||
+            !defender.map[defender.definiteValue as any]?.blockUnboost)
+        {
+            // istanbul ignore next: should never happen
+            throw new Error("Defender should've had an unboost-blocking " +
+                "ability");
+        }
+
+        // attacker shouldn't have moldbreaker if it isn't suppressed
+        // we can make this assertion safely because moldbreaker-like abilities
+        //  are always revealed on entry
+        const {ability: attacker} = ctx.user.traits;
+        if (!ctx.user.volatile.suppressAbility &&
+            attacker.map[attacker.definiteValue as any]?.ignoreTargetAbility)
+        {
+            throw new Error("Attacker shouldn't have ability " +
+                `'${attacker.definiteValue}' if the defender's ability ` +
+                `'${defender.definiteValue}' blocked an unboost effect` );
+        }
+    }
+    else
+    {
+        // if attacker doesn't have moldbreaker, defender shouldn't have ability
+        const {ability: attacker} = ctx.user.traits;
+        if (ctx.user.volatile.suppressAbility ||
+            !attacker.map[attacker.definiteValue as any]?.ignoreTargetAbility)
+        {
+            const {ability: defender} = target.traits;
+            if (!target.volatile.suppressAbility &&
+                defender.map[defender.definiteValue as any]?.blockUnboost)
+            {
+                throw new Error("Defender shouldn't have unboost-blocking " +
+                    `ability '${defender.definiteValue}'`);
+            }
+
+            // narrow the defender's ability possibilities
+            // the above assertion was essentially just to customize the
+            //  possible overnarrowing exception
+            const filtered = [...defender.possibleValues]
+                .filter(a => !!defender.map[a].blockUnboost)
+            defender.remove(...filtered);
+        }
+    }
 }
 
 /** Makes an inference if the drain effect activated normally. */
