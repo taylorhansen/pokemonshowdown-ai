@@ -582,7 +582,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     battlearmor: {uid: 7, name: "battlearmor", display: "Battle Armor"},
     blaze: {uid: 8, name: "blaze", display: "Blaze"},
     chlorophyll: {uid: 9, name: "chlorophyll", display: "Chlorophyll"},
-    clearbody: {uid: 10, name: "clearbody", display: "Clear Body"},
+    clearbody: {uid: 10, name: "clearbody", display: "Clear Body", blockUnboost: {atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true, evasion: true}},
     cloudnine: {uid: 11, name: "cloudnine", display: "Cloud Nine"},
     colorchange: {uid: 12, name: "colorchange", display: "Color Change", effects: {damaged: [{type: "typeChange", tgt: "self", value: "colorchange"}]}},
     compoundeyes: {uid: 13, name: "compoundeyes", display: "Compound Eyes"},
@@ -608,7 +608,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     hugepower: {uid: 33, name: "hugepower", display: "Huge Power"},
     hustle: {uid: 34, name: "hustle", display: "Hustle"},
     hydration: {uid: 35, name: "hydration", display: "Hydration"},
-    hypercutter: {uid: 36, name: "hypercutter", display: "Hyper Cutter"},
+    hypercutter: {uid: 36, name: "hypercutter", display: "Hyper Cutter", blockUnboost: {atk: true}},
     icebody: {uid: 37, name: "icebody", display: "Ice Body"},
     illuminate: {uid: 38, name: "illuminate", display: "Illuminate"},
     immunity: {uid: 39, name: "immunity", display: "Immunity", statusImmunity: ["psn", "tox"]},
@@ -616,7 +616,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     insomnia: {uid: 41, name: "insomnia", display: "Insomnia", statusImmunity: ["slp", "yawn"]},
     intimidate: {uid: 42, name: "intimidate", display: "Intimidate"},
     ironfist: {uid: 43, name: "ironfist", display: "Iron Fist"},
-    keeneye: {uid: 44, name: "keeneye", display: "Keen Eye"},
+    keeneye: {uid: 44, name: "keeneye", display: "Keen Eye", blockUnboost: {accuracy: true}},
     klutz: {uid: 45, name: "klutz", display: "Klutz"},
     leafguard: {uid: 46, name: "leafguard", display: "Leaf Guard"},
     levitate: {uid: 47, name: "levitate", display: "Levitate"},
@@ -693,7 +693,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     voltabsorb: {uid: 118, name: "voltabsorb", display: "Volt Absorb", absorb: {type: "electric", effects: [{type: "percentDamage", value: 25}]}},
     waterabsorb: {uid: 119, name: "waterabsorb", display: "Water Absorb", absorb: {type: "water", effects: [{type: "percentDamage", value: 25}]}},
     waterveil: {uid: 120, name: "waterveil", display: "Water Veil", statusImmunity: ["brn"]},
-    whitesmoke: {uid: 121, name: "whitesmoke", display: "White Smoke"},
+    whitesmoke: {uid: 121, name: "whitesmoke", display: "White Smoke", blockUnboost: {atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true, evasion: true}},
     wonderguard: {uid: 122, name: "wonderguard", display: "Wonder Guard"}
 };
 

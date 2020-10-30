@@ -724,6 +724,14 @@ const explosive: {readonly [ability: string]: boolean} = {aftermath: true};
 const warnStrongestMove: {readonly [ability: string]: boolean} =
     {forewarn: true};
 
+/** Maps ability name to unboost blocking effect. */
+const blockUnboostMap:
+    {readonly [ability: string]: {readonly [T in dexutil.BoostName]?: true}} =
+{
+    clearbody: dexutil.boostNames, hypercutter: {atk: true},
+    keeneye: {accuracy: true}, whitesmoke: dexutil.boostNames
+};
+
 /** Maps ability name to absorb effect. */
 const absorbMap: {readonly [ability: string]: dexutil.AbilityData["absorb"]} =
 {
@@ -796,6 +804,8 @@ for (const ability of
             ...(blockExplosive[ability.id] && {blockExplosive: true}),
             ...(explosive[ability.id] && {explosive: true}),
             ...(warnStrongestMove[ability.id] && {warnStrongestMove: true}),
+            ...(blockUnboostMap[ability.id] &&
+                {blockUnboost: blockUnboostMap[ability.id]}),
             ...(absorbMap[ability.id] && {absorb: absorbMap[ability.id]}),
             ...(abilityEffectMap[ability.id] &&
                 {effects: abilityEffectMap[ability.id]})

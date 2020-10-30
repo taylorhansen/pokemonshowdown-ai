@@ -311,21 +311,15 @@ export class PendingMoveEffects
     /**
      * Checks and consumes a pending boost effect.
      * @param ctg Category of effect.
-     * @param stat Stat to check.
-     * @param amount Boost amount to check.
+     * @param stat Stat to check. Omit to consume all boosts.
+     * @param amount Boost amount to check. Omit to consume boost regardless.
      * @param cur Current corresponding stat boost amount, in order to check
      * against the max value 6 for saturation. If omitted, assume the stat is
      * being set.
      * @returns True if the effect has now been consumed, false otherwise.
      */
-    public consume(ctg: "self" | "hit", key: "boost", stat: dexutil.BoostName,
-        amount: number, cur?: number): boolean;
-    /**
-     * Consumes all pending boost effects.
-     * @param ctg Category of effect.
-     * @returns True if the effect has now been consumed, false otherwise.
-     */
-    public consume(ctg: "self" | "hit", key: "boost"): boolean;
+    public consume(ctg: "self" | "hit", key: "boost", stat?: dexutil.BoostName,
+        amount?: number, cur?: number): boolean;
     /**
      * Checks and consumes a pending PercentDamage effect.
      * @param ctg Category of effect.
@@ -386,10 +380,16 @@ export class PendingMoveEffects
         {
             const boost = cur == null ? "set" : "add"
             const stat = effectOrStat as dexutil.BoostName;
-            return this.effects.consume(`${ctg} boost ${boost} ${stat}`, amount,
-                    ...(cur == null ? [] : [cur])) ||
+            const args =
+            [
+                ...(amount == null ?
+                    [] : [amount, ...(cur == null ? [] : [cur])])
+            ];
+
+            return this.effects.consume(`${ctg} boost ${boost} ${stat}`,
+                    ...args) ||
                 this.effects.consume(`${ctg} secondary boost ${boost} ${stat}`,
-                    amount, cur);
+                    ...args);
         }
         else if (ctg !== "primary" && key === "percentDamage")
         {

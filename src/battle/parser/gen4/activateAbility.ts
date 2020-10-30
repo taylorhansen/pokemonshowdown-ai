@@ -22,6 +22,8 @@ export interface AbilityResult extends SubParserResult
     immune?: true;
     /** Whether an invertDrain ability is activating on `damage`. */
     invertDrain?: true;
+    /** Unboost effects being blocked for the ability holder. */
+    blockUnboost?: {readonly [T in dexutil.BoostName]?: true}
 }
 
 /**
@@ -134,6 +136,13 @@ export async function* activateAbility(pstate: ParserState,
     if (data.warnStrongestMove)
     {
         pendingEffects.add(`${data.name} warnStrongestMove`,
+            new PendingValueEffect(true), "assert");
+    }
+
+    if (data.blockUnboost)
+    {
+        // boosts being blocked are inferred by ability data
+        pendingEffects.add(`${data.name} blockUnboost`,
             new PendingValueEffect(true), "assert");
     }
 
@@ -268,6 +277,10 @@ export async function* activateAbility(pstate: ParserState,
                 }
                 break;
             }
+            case "fail":
+                if (!pendingEffects.consume(`${data.name} blockUnboost`)) break;
+                baseResult.blockUnboost = data.blockUnboost;
+                return yield* base.fail(pstate, event);
             case "immune":
                 // TODO: check whether this is possible
                 baseResult.immune = true;

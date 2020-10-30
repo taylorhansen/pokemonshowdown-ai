@@ -2147,7 +2147,8 @@ export function testUseMove(f: () => Context,
         //#region boost effect
 
         function shouldHandleBoost(ctg: "self" | "hit", move: string,
-            stat: dexutil.BoostName, amount: number): void
+            stat: dexutil.BoostName, amount: number, abilityImmunity?: string):
+            void
         {
             const target = ctg === "self" ? "us" : "them";
             moveEffectTests[ctg].boost.push(function()
@@ -2171,10 +2172,28 @@ export function testUseMove(f: () => Context,
                             "Expected effects that didn't happen: " +
                             `${ctg} boost add ${stat} ['${amount}']`);
                 });
+
+                if (ctg === "hit" && abilityImmunity)
+                {
+                    it(`Should fail if ${abilityImmunity} activates`,
+                    async function()
+                    {
+                        initActive("us");
+                        initActive("them");
+                        await initParser("us", move);
+                        await handle(
+                        {
+                            type: "activateAbility", monRef: "them", // target
+                            ability: abilityImmunity
+                        });
+                        await handle({type: "fail"});
+                        await exitParser();
+                    });
+                }
             });
         }
         shouldHandleBoost("self", "leafstorm", "spa", -2);
-        shouldHandleBoost("hit", "charm", "atk", -2);
+        shouldHandleBoost("hit", "charm", "atk", -2, "hypercutter");
 
         // set boost
         moveEffectTests.self.boost.push(function()

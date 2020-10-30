@@ -206,6 +206,8 @@ export interface AbilityData extends DexData
      * Forewarn ability.
      */
     readonly warnStrongestMove?: true;
+    /** Stats that are blocked from being lowered by an opponent. */
+    readonly blockUnboost?: {readonly [T in BoostName]?: true}
     /**
      * Indicates that the ability grants an absorbing immunity. This will
      * activate before move damage to block the move's effects.

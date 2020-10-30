@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import "mocha";
+import * as dexutil from "../../../../src/battle/dex/dex-util";
 import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/parser/BattleEvent";
 import { ParserState, SubParser } from
@@ -64,7 +65,7 @@ export function testActivateAbility(f: () => Context,
             .to.eventually.be.rejectedWith(Error, "Unknown ability 'invalid'");
     });
 
-    describe("AbilityData#explosive", function()
+    describe("explosive", function()
     {
         it("Should infer non-blockExplosive ability for opponent",
         async function()
@@ -84,6 +85,26 @@ export function testActivateAbility(f: () => Context,
             await initParser("us", "aftermath");
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys(["cloudnine"]);
+        });
+    });
+
+    describe("blockUnboost", function()
+    {
+        it("Should indicate blocked unboost effect", async function()
+        {
+            // can have clearbody (blockUnboost ability)
+            const metagross: events.SwitchOptions =
+            {
+                species: "metagross", level: 100, gender: "M", hp: 100,
+                hpMax: 100
+            };
+
+            initActive("us");
+            initActive("them", metagross);
+
+            await initParser("them", "clearbody", "preDamage", "charm");
+            await handle({type: "fail"});
+            await exitParser({blockUnboost: dexutil.boostNames});
         });
     });
 

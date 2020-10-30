@@ -295,6 +295,21 @@ async function* preDamage(ctx: MoveContext): SubParser<PreDamageResult>
                 const abilityResult = yield* base.activateAbility(ctx.pstate,
                     event, "preDamage", ctx.moveName);
                 if (abilityResult.immune) handleBlock(ctx, event.monRef);
+                if (abilityResult.blockUnboost)
+                {
+                    for (const b in abilityResult.blockUnboost)
+                    {
+                        if (!abilityResult.blockUnboost.hasOwnProperty(b) ||
+                            !abilityResult.blockUnboost[b as dexutil.BoostName])
+                        {
+                            continue;
+                        }
+                        // use PendingBoostEffect's saturating logic to consume
+                        //  negative boosts
+                        ctx.pendingEffects.consume("hit", "boost",
+                            b as dexutil.BoostName, 0, -6);
+                    }
+                }
                 return abilityResult;
             }
             case "block":
