@@ -36,16 +36,16 @@ export const handlers =
         else pstate.state.status[event.effect][event.start ? "start" : "end"]();
         return {};
     },
-    activateItem(...[pstate, event, ctg = "turn", ...args]:
+    activateItem(...[pstate, event, on = "turn", ...args]:
         Parameters<typeof activateItem>): SubParser
     {
         return activateItem(
         {
             ...pstate,
             logger: pstate.logger.addPrefix(`Item(${event.monRef}, ` +
-                `${event.item}, ctg=${ctg}): `)
+                `${event.item}, on-${on}): `)
         },
-            event, ctg, ...args);
+            event, on, ...args);
     },
     async* activateStatusEffect(pstate: ParserState,
         event: events.ActivateStatusEffect): SubParser
@@ -119,6 +119,7 @@ export const handlers =
                 else ts[event.effect].reset();
                 break;
             case "luckyChant": case "mist": case "safeguard": case "tailwind":
+            case "wish":
                 if (event.start) ts[event.effect].start();
                 else ts[event.effect].end();
                 break;

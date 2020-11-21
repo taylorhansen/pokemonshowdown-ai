@@ -408,6 +408,33 @@ describe("PSEventHandler", function()
 
             testCountableStatus("perish");
             testCountableStatus("stockpile");
+
+            describe("Substitute", function()
+            {
+                test("Should reorder damage/status events",
+                [
+                    {
+                        type: "move", id: us, moveName: "Substitute",
+                        targetId: us
+                    },
+                    {
+                        type: "-start", id: us, volatile: "Substitute",
+                        otherArgs: []
+                    },
+                    {
+                        type: "-damage", id: us,
+                        status: {hp: 25, hpMax: 50, condition: null}
+                    }
+                ],
+                [
+                    {type: "useMove", monRef: "us", move: "substitute"},
+                    {type: "takeDamage", monRef: "us", hp: 25},
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "substitute", start: true
+                    }
+                ]);
+            });
         });
 
         describe("-end", function()
@@ -573,7 +600,7 @@ describe("PSEventHandler", function()
                 test("Should emit activateAbility with revealMove using [of]",
                 [{
                     type: "-activate", id: us, volatile: "ability: Forewarn",
-                    otherArgs: ["tackle"], of: them
+                    otherArgs: ["Tackle"], of: them
                 }],
                 [
                     {

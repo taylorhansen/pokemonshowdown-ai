@@ -130,7 +130,7 @@ export interface ActivateTeamEffect extends EventBase<"activateTeamEffect">
     /** Team reference. */
     readonly teamRef: Side;
     /** Name of the status. */
-    readonly effect: effects.TeamType;
+    readonly effect: effects.TeamType | effects.ImplicitTeamType;
     /** Whether to start (`true`) or end (`false`) the effect. */
     readonly start: boolean;
 }

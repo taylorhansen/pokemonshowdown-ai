@@ -98,8 +98,11 @@ export type ImplicitStatusType = "defenseCurl" | "lockedMove" | "minimize" |
 /** Effect that describes an implicit team status for a move. */
 export type ImplicitTeam = Effect<"implicitTeam", ImplicitTeamType>;
 
-/** Team effects that are implied by the successful use of a move. */
-export type ImplicitTeamType = "wish";
+/**
+ * Team effects that are implied by the successful use of a move, but events may
+ * still mention them based on specific circumstances.
+ */
+export type ImplicitTeamType = "healingWish" | "lunarDance" | "wish";
 
 /**
  * Effect that causes damage according to a percentage of the pokemon's max hp.
@@ -154,9 +157,8 @@ export type SwapBoost = Effect<"swapBoost"> & Partial<BoostTable<true>>;
 export type Team = Effect<"team", TeamType>;
 
 /** Team status effects that are explicitly started/ended in game events. */
-export type TeamType = "healingWish" | "lightScreen" | "luckyChant" |
-    "lunarDance" | "mist" | "reflect" | "safeguard" | "spikes" | "stealthRock" |
-    "tailwind" | "toxicSpikes";
+export type TeamType = "lightScreen" | "luckyChant" | "mist" | "reflect" |
+    "safeguard" | "spikes" | "stealthRock" | "tailwind" | "toxicSpikes";
 
 /** Effect that changes the pokemon's type. */
 export type TypeChange = Effect<"typeChange", TypeChangeRule>;

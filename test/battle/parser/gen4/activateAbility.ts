@@ -1,29 +1,16 @@
 import { expect } from "chai";
 import "mocha";
+import * as dex from "../../../../src/battle/dex/dex";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
-import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/parser/BattleEvent";
-import { ParserState, SubParser } from
+import { ParserState, SubParser, SubParserResult } from
     "../../../../src/battle/parser/BattleParser";
-import { AbilityResult, activateAbility } from
-    "../../../../src/battle/parser/gen4/activateAbility";
+import * as ability from "../../../../src/battle/parser/gen4/activateAbility";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
 import { Side } from "../../../../src/battle/state/Side";
 import { Context } from "./Context";
 import { createParserHelpers } from "./helpers";
-
-/** flamebody pokemon. */
-const magmar: events.SwitchOptions =
-    {species: "magmar", level: 40, gender: "F", hp: 100, hpMax: 100};
-
-/** colorchange pokemon. */
-const kecleon: events.SwitchOptions =
-    {species: "kecleon", level: 40, gender: "M", hp: 100, hpMax: 100};
-
-/** roughskin pokemon. */
-const sharpedo: events.SwitchOptions =
-    {species: "sharpedo", level: 40, gender: "M", hp: 100, hpMax: 100};
 
 export function testActivateAbility(f: () => Context,
     initActive: (monRef: Side, options?: events.SwitchOptions) => Pokemon)
@@ -37,310 +24,609 @@ export function testActivateAbility(f: () => Context,
         ({state, pstate, parser} = f());
     });
 
-    async function initParser(monRef: Side, ability: string,
-        on: effects.ability.On | "preDamage" | null = null,
-        hitByMoveName?: string): Promise<SubParser>
+    const {handle, reject, exitParser} = createParserHelpers(() => parser);
+
+    /** flamebody pokemon. */
+    const magmar: events.SwitchOptions =
+        {species: "magmar", level: 40, gender: "F", hp: 100, hpMax: 100};
+
+    /** colorchange pokemon. */
+    const kecleon: events.SwitchOptions =
+        {species: "kecleon", level: 40, gender: "M", hp: 100, hpMax: 100};
+
+    /** roughskin pokemon. */
+    const sharpedo: events.SwitchOptions =
+        {species: "sharpedo", level: 40, gender: "M", hp: 100, hpMax: 100};
+
+    // can have damp (explosive-blocking ability)
+    const golduck: events.SwitchOptions =
     {
-        parser = activateAbility(pstate,
-            {type: "activateAbility", monRef, ability}, on, hitByMoveName);
+        species: "golduck", level: 100, gender: "M", hp: 100,
+        hpMax: 100
+    };
+
+    // tests for activateAbility()
+    describe("Event", function()
+    {
+        async function initParser(monRef: Side, abilityName: string,
+            on: dexutil.AbilityOn | null = null,
+            hitByMoveName?: string): Promise<SubParser>
+        {
+            parser = ability.activateAbility(pstate,
+                {type: "activateAbility", monRef, ability: abilityName}, on,
+                hitByMoveName);
+            // first yield doesn't return anything
+            await expect(parser.next())
+                .to.eventually.become({value: undefined, done: false});
+            return parser;
+        }
+
+        it("Should reveal ability", async function()
+        {
+            const mon = initActive("them");
+            expect(mon.ability).to.equal("");
+            await initParser("them", "swiftswim");
+            expect(mon.ability).to.equal("swiftswim");
+        });
+
+        it("Should throw if unknown ability", async function()
+        {
+            await expect(initParser("us", "invalid"))
+                .to.eventually.be.rejectedWith(Error, "Unknown ability " +
+                    "'invalid'");
+        });
+
+        describe("On-start", function()
+        {
+            describe("CopyFoeAbility (Trace)", function()
+            {
+                it("Should reveal abilities", async function()
+                {
+                    initActive("us");
+                    const them = initActive("them");
+                    await initParser("us", "trace", "start");
+                    // trace ability for user
+                    await handle(
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "illuminate"
+                    });
+                    expect(them.ability).to.be.empty;
+                    // describe trace target
+                    await handle(
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "illuminate"
+                    });
+                    expect(them.ability).to.equal("illuminate");
+                    await exitParser();
+                });
+            });
+
+            describe("WarnStrongestMove (Forewarn)", function()
+            {
+                // limited movepool for easier testing
+                const wobbuffet: events.SwitchOptions =
+                {
+                    species: "wobbuffet", gender: "M", level: 100, hp: 100,
+                    hpMax: 100
+                };
+
+                // forewarn pokemon
+                const hypno: events.SwitchOptions =
+                {
+                    species: "hypno", gender: "M", level: 30, hp: 100,
+                    hpMax: 100
+                };
+
+                it("Should eliminate stronger moves from moveset constraint",
+                async function()
+                {
+                    initActive("us", hypno);
+                    const {moveset} = initActive("them", wobbuffet);
+                    expect(moveset.constraint).to.include.keys("counter",
+                        "mirrorcoat");
+
+                    await initParser("us", "forewarn", "start");
+                    // forewarn doesn't actually activate when the opponent has
+                    //  all status moves, but this is just for testing purposes
+                    await handle(
+                        {type: "revealMove", monRef: "them", move: "splash"});
+                    // should remove moves with bp higher than 0 (these two are
+                    //  treated as 120)
+                    expect(moveset.constraint).to.not.include.keys("counter",
+                        "mirrorcoat");
+                    await exitParser();
+                });
+            });
+        });
+
+        describe("On-block", function()
+        {
+            describe("Status", function()
+            {
+                it("Should block status effect", async function()
+                {
+                    // can have immunity
+                    const snorlax: events.SwitchOptions =
+                    {
+                        species: "snorlax", level: 100, gender: "M", hp: 100,
+                        hpMax: 100
+                    };
+                    initActive("them", snorlax);
+                    await initParser("them", "immunity", "block", "toxic");
+                    await handle({type: "immune", monRef: "them"});
+                    await exitParser({blockStatus: {psn: true, tox: true}});
+                });
+            });
+
+            describe("Move", function()
+            {
+                it("Should handle boost effect", async function()
+                {
+                    // can have motordrive
+                    const electivire: events.SwitchOptions =
+                    {
+                        species: "electivire", level: 100, gender: "M", hp: 100,
+                        hpMax: 100
+                    };
+                    initActive("us");
+                    initActive("them", electivire);
+                    await initParser("them", "motordrive", "block", "thunder");
+                    await handle(
+                    {
+                        type: "boost", monRef: "them", stat: "spe", amount: 1
+                    });
+                    await exitParser({immune: true});
+                });
+
+                // can have waterabsorb
+                const quagsire: events.SwitchOptions =
+                {
+                    species: "quagsire", level: 100, gender: "M", hp: 100,
+                    hpMax: 100
+                };
+
+                it("Should handle percentDamage effect",
+                async function()
+                {
+                    initActive("us");
+                    initActive("them", quagsire).hp.set(quagsire.hp - 1);
+                    await initParser("them", "waterabsorb", "block", "bubble");
+                    await handle({type: "takeDamage", monRef: "them", hp: 100});
+                    await exitParser<ability.AbilityResult>({immune: true});
+                });
+
+                it("Should handle silent percentDamage effect",
+                async function()
+                {
+                    initActive("us");
+                    initActive("them", quagsire);
+                    await initParser("them", "waterabsorb", "block", "bubble");
+                    await handle({type: "immune", monRef: "them"});
+                    await exitParser({immune: true});
+                });
+
+                it("Should handle status effect",
+                async function()
+                {
+                    // can have flashfire
+                    const arcanine: events.SwitchOptions =
+                    {
+                        species: "arcanine", level: 100, gender: "M", hp: 100,
+                        hpMax: 100
+                    };
+                    initActive("us");
+                    initActive("them", arcanine);
+                    await initParser("them", "flashfire", "block", "ember");
+                    await handle(
+                    {
+                        type: "activateStatusEffect", monRef: "them",
+                        effect: "flashFire", start: true
+                    });
+                    await exitParser({immune: true});
+                });
+            });
+
+            describe("Effect", function()
+            {
+                describe("Explosive", function()
+                {
+                    it("Should block explosive move", async function()
+                    {
+                        initActive("us");
+                        initActive("them", golduck);
+                        await initParser("them", "damp", "block", "explosion");
+                        await handle(
+                        {
+                            type: "inactive", monRef: "us", move: "explosion"
+                        });
+                        await exitParser({failed: true});
+                    });
+                });
+            });
+        });
+
+        describe("On-tryUnboost", function()
+        {
+            it("Should indicate blocked unboost effect", async function()
+            {
+                // can have clearbody (block-unboost ability)
+                const metagross: events.SwitchOptions =
+                {
+                    species: "metagross", level: 100, gender: "M", hp: 100,
+                    hpMax: 100
+                };
+
+                initActive("us");
+                initActive("them", metagross);
+
+                await initParser("them", "clearbody", "tryUnboost", "charm");
+                await handle({type: "fail"});
+                await exitParser({blockUnboost: dexutil.boostNames});
+            });
+        });
+
+        describe("On-moveContactKO", function()
+        {
+            it("Should handle", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("us", "aftermath", "moveContactKO", "tackle");
+                await handle({type: "takeDamage", monRef: "them", hp: 75});
+                await exitParser();
+            });
+
+            describe("explosive", function()
+            {
+                it("Should infer non-blockExplosive ability for opponent",
+                async function()
+                {
+                    initActive("us");
+                    const mon = initActive("them", golduck);
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(["damp", "cloudnine"]);
+
+                    // activate explosive ability, meaning other side doesn't
+                    //  have damp
+                    await initParser("us", "aftermath", "moveContactKO",
+                        "tackle");
+                    await handle({type: "takeDamage", monRef: "them", hp: 75});
+                    await exitParser();
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(["cloudnine"]);
+                });
+            });
+        });
+
+        describe("On-moveContact", function()
+        {
+            it("Should handle status effect", async function()
+            {
+                initActive("us");
+                initActive("them", magmar);
+                await initParser("them", "flamebody", "moveContact", "tackle");
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "brn", start: true
+                });
+                await exitParser();
+            });
+
+            it("Should handle percentDamage effect", async function()
+            {
+                initActive("us");
+                initActive("them", sharpedo);
+                await initParser("them", "roughskin", "moveContact", "tackle");
+                await handle({type: "takeDamage", monRef: "us", hp: 94});
+                await exitParser();
+            });
+
+            it("Should handle if `on` is overqualified and effect targets " +
+                "opponent", async function()
+            {
+                initActive("us");
+                initActive("them", magmar);
+                await initParser("them", "flamebody", "moveContactKO",
+                    "tackle");
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "brn", start: true
+                });
+                await exitParser();
+            });
+
+            it("Should not handle if `on` is underqualified", async function()
+            {
+                initActive("us");
+                initActive("them", magmar);
+                await expect(initParser("them", "flamebody", "moveDamage",
+                        "watergun"))
+                    .to.eventually.be.rejectedWith(Error, "On-moveDamage " +
+                        "effect shouldn't activate for ability 'flamebody'");
+            });
+        });
+
+        describe("On-moveDamage", function()
+        {
+            describe("ChangeToMoveType (Color Change)", function()
+            {
+                it("Should handle", async function()
+                {
+                    initActive("us");
+                    initActive("them", kecleon);
+                    await initParser("them", "colorchange", "moveDamage",
+                        "watergun");
+                    await handle(
+                    {
+                        type: "changeType", monRef: "them",
+                        newTypes: ["water", "???"]
+                    });
+                    await exitParser();
+                });
+            });
+        });
+
+        describe("On-moveDrain", function()
+        {
+            describe("Invert", function()
+            {
+                it("Should handle", async function()
+                {
+                    initActive("us");
+                    initActive("them", tentacruel);
+                    await initParser("them", "liquidooze", "moveDrain",
+                        "absorb");
+                    await handle({type: "takeDamage", monRef: "us", hp: 94});
+                    await exitParser({invertDrain: true});
+                });
+            });
+        });
+
+        // TODO: support in dex data
+        describe("activateFieldEffect", function()
+        {
+            describe("weather", function()
+            {
+                it("Should infer infinite duration if ability matches weather",
+                async function()
+                {
+                    initActive("them");
+                    await initParser("them", "drought");
+                    await handle(
+                    {
+                        type: "activateFieldEffect", effect: "SunnyDay",
+                        start: true
+                    });
+                    expect(state.status.weather.type).to.equal("SunnyDay");
+                    expect(state.status.weather.duration).to.be.null;
+                    await exitParser();
+                });
+
+                it("Should reject if mismatched ability", async function()
+                {
+                    initActive("them");
+                    await initParser("them", "snowwarning");
+                    await reject(
+                    {
+                        type: "activateFieldEffect", effect: "SunnyDay",
+                        start: true
+                    });
+                    expect(state.status.weather.type).to.equal("none");
+                });
+            });
+        });
+
+        describe("immune", function()
+        {
+            it("Should handle", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "wonderguard", null, "tackle");
+                await handle({type: "immune", monRef: "them"});
+                await exitParser({immune: true});
+            });
+        });
+    });
+
+    async function altParser<TParser extends SubParser>(gen: TParser):
+        Promise<TParser>
+    {
+        parser = gen;
         // first yield doesn't return anything
         await expect(parser.next())
             .to.eventually.become({value: undefined, done: false});
-        return parser;
+        return gen;
     }
 
-    const {handle, reject, exitParser} = createParserHelpers(() => parser);
-
-    it("Should reveal ability", async function()
+    async function rejectParser<TResult = SubParserResult>(
+        gen: SubParser<TResult>, baseResult?: TResult):
+        Promise<SubParser<TResult>>
     {
-        const mon = initActive("them");
-        expect(mon.ability).to.equal("");
-        await initParser("them", "swiftswim");
-        expect(mon.ability).to.equal("swiftswim");
-    });
+        parser = gen;
+        await expect(parser.next())
+            .to.eventually.become({value: baseResult ?? {}, done: true});
+        return gen;
+    }
 
-    it("Should throw if unknown ability", async function()
+    // can have clearbody or liquidooze
+    const tentacruel: events.SwitchOptions =
     {
-        await expect(initParser("us", "invalid"))
-            .to.eventually.be.rejectedWith(Error, "Unknown ability 'invalid'");
-    });
+        species: "tentacruel", level: 50, gender: "M", hp: 100, hpMax: 100
+    };
 
-    describe("explosive", function()
+
+    describe("onStart()", function()
     {
-        it("Should infer non-blockExplosive ability for opponent",
+        it("Should infer no on-start ability if it did not activate",
         async function()
         {
-            // can have damp (blockExplosive ability)
-            const golduck: events.SwitchOptions =
-            {
-                species: "golduck", level: 100, gender: "M", hp: 100,
-                hpMax: 100
-            };
-            initActive("us");
-            const mon = initActive("them", golduck);
-
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys(["damp", "cloudnine"]);
-            // activate explosive ability
-            await initParser("us", "aftermath");
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys(["cloudnine"]);
-        });
-    });
-
-    describe("blockUnboost", function()
-    {
-        it("Should indicate blocked unboost effect", async function()
-        {
-            // can have clearbody (blockUnboost ability)
-            const metagross: events.SwitchOptions =
-            {
-                species: "metagross", level: 100, gender: "M", hp: 100,
-                hpMax: 100
-            };
-
-            initActive("us");
-            initActive("them", metagross);
-
-            await initParser("them", "clearbody", "preDamage", "charm");
-            await handle({type: "fail"});
-            await exitParser({blockUnboost: dexutil.boostNames});
-        });
-    });
-
-    describe("activateFieldEffect", function()
-    {
-        describe("weather", function()
-        {
-            it("Should infer infinite duration if ability matches weather",
-            async function()
-            {
-                initActive("them");
-                await initParser("them", "drought");
-                await handle(
-                {
-                    type: "activateFieldEffect", effect: "SunnyDay", start: true
-                });
-                expect(state.status.weather.type).to.equal("SunnyDay");
-                expect(state.status.weather.duration).to.be.null;
-                await exitParser();
-            });
-
-            it("Should reject if mismatched ability", async function()
-            {
-                initActive("them");
-                await initParser("them", "snowwarning");
-                await reject(
-                {
-                    type: "activateFieldEffect", effect: "SunnyDay", start: true
-                });
-                expect(state.status.weather.type).to.equal("none");
-            });
-        });
-    });
-
-    describe("activateStatusEffect", function()
-    {
-        it("Should handle status effect", async function()
-        {
-            initActive("us");
-            initActive("them", magmar);
-            await initParser("them", "flamebody", "contact");
-            await handle(
-            {
-                type: "activateStatusEffect", monRef: "us",
-                effect: "brn", start: true
-            });
-            await exitParser();
-        });
-
-        it("Should handle if `on` is overqualified", async function()
-        {
-            initActive("us");
-            initActive("them", magmar);
-            await initParser("them", "flamebody", "contactKO");
-            await handle(
-            {
-                type: "activateStatusEffect", monRef: "us",
-                effect: "brn", start: true
-            });
-            await exitParser();
-        });
-
-        it("Should not handle if `on` is underqualified", async function()
-        {
-            initActive("us");
-            initActive("them", magmar);
-            await initParser("them", "flamebody", "damaged");
-            await reject(
-            {
-                type: "activateStatusEffect", monRef: "us",
-                effect: "brn", start: true
-            });
-        });
-    });
-
-    describe("changeType", function()
-    {
-        it("Should handle colorchange ability effect", async function()
-        {
-            initActive("us");
-            initActive("them", kecleon);
-            await initParser("them", "colorchange", "damaged", "watergun");
-            await handle(
-            {
-                type: "changeType", monRef: "them",
-                newTypes: ["water", "???"]
-            });
-            await exitParser();
-        });
-    });
-
-    describe("halt", function()
-    {
-        it("Should reject", async function()
-        {
-            initActive("us");
-            await initParser("us", "pressure");
-            await reject({type: "halt", reason: "decide"});
-        });
-    });
-
-    describe("revealMove", function()
-    {
-        describe("warnStrongestMove", function()
-        {
-            // limited movepool for easier testing
-            const wobbuffet: events.SwitchOptions =
-            {
-                species: "wobbuffet", gender: "M", level: 100, hp: 100,
-                hpMax: 100
-            };
-
-            // forewarn pokemon
+            // can have forewarn
             const hypno: events.SwitchOptions =
-            {
-                species: "hypno", gender: "M", level: 30, hp: 100,
-                hpMax: 100
-            };
+                {species: "hypno", level: 50, gender: "M", hp: 100, hpMax: 100};
+            const mon = initActive("them", hypno);
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("insomnia", "forewarn");
 
-            it("Should eliminate stronger moves from moveset constraint",
+            await altParser(ability.onStart(pstate, {them: true}));
+            await exitParser<ability.ExpectAbilitiesResult>({results: []});
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("insomnia");
+        });
+    });
+
+    describe("onBlock()", function()
+    {
+        // can have voltabsorb
+        const lanturn: events.SwitchOptions =
+            {species: "lanturn", level: 50, gender: "M", hp: 100, hpMax: 100};
+
+        it("Should reject if move user ignores abilities", async function()
+        {
+            const mon = initActive("them", lanturn);
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("voltabsorb", "illuminate");
+
+            initActive("us").traits.setAbility("moldbreaker");
+            await rejectParser<ability.ExpectAbilitiesResult>(
+                ability.onBlock(pstate, {them: true}, "us",
+                    dex.moves.thunderbolt),
+                {results: []});
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("voltabsorb", "illuminate");
+        });
+
+        it("Should infer no on-block ability if it did not activate",
+        async function()
+        {
+            const mon = initActive("them", lanturn);
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("voltabsorb", "illuminate");
+
+            initActive("us");
+            await altParser(ability.onBlock(pstate, {them: true}, "us",
+                    dex.moves.thunderbolt));
+            await exitParser<ability.ExpectAbilitiesResult>({results: []});
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("illuminate");
+        });
+    });
+
+    describe("onTryUnboost()", function()
+    {
+        it("Should reject if move user ignores abilities", async function()
+        {
+            const mon = initActive("them", tentacruel);
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("clearbody", "liquidooze");
+
+            initActive("us").traits.setAbility("moldbreaker");
+            await rejectParser<ability.ExpectAbilitiesResult>(
+                ability.onTryUnboost(pstate, {them: true}, "us",
+                    dex.moves.charm),
+                {results: []});
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("clearbody", "liquidooze");
+        });
+
+        it("Should infer no on-block ability if it did not activate",
+        async function()
+        {
+            const mon = initActive("them", tentacruel);
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("clearbody", "liquidooze");
+
+            initActive("us");
+            await altParser(ability.onTryUnboost(pstate, {them: true}, "us",
+                    dex.moves.charm));
+            await exitParser<ability.ExpectAbilitiesResult>({results: []});
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("liquidooze");
+        });
+    });
+
+    describe("onMoveDamage()", function()
+    {
+        describe("qualifier=contactKO", function()
+        {
+            it("Should infer no on-moveContactKO ability if it did not " +
+                "activate",
             async function()
             {
-                initActive("us", hypno);
-                const {moveset} = initActive("them", wobbuffet);
-                expect(moveset.constraint).to.include.keys("counter",
-                    "mirrorcoat");
+                // can have aftermath
+                const drifblim: events.SwitchOptions =
+                {
+                    species: "drifblim", level: 50, gender: "M", hp: 100,
+                    hpMax: 100
+                };
+                const mon = initActive("them", drifblim);
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("aftermath", "unburden");
 
-                await initParser("us", "forewarn");
-                // forewarn doesn't actually activate when the opponent has all
-                //  status moves, but this is just for testing purposes
-                await handle(
-                    {type: "revealMove", monRef: "them", move: "splash"});
-                // should remove moves with bp higher than 0 (these two are
-                //  treated as 120)
-                expect(moveset.constraint).to.not.include.keys("counter",
-                    "mirrorcoat");
-                await exitParser();
+                await altParser(ability.onMoveDamage(pstate, {them: true},
+                        "contactKO", dex.moves.tackle));
+                await exitParser<ability.ExpectAbilitiesResult>({results: []});
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("unburden");
+            });
+        });
+
+        describe("qualifier=contact", function()
+        {
+            it("Should infer no on-moveContact ability if it did not activate",
+            async function()
+            {
+                const mon = initActive("them", sharpedo);
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("roughskin");
+
+                await altParser(ability.onMoveDamage(pstate, {them: true},
+                        "contact", dex.moves.tackle));
+                await expect(exitParser<ability.ExpectAbilitiesResult>(
+                        {results: []}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Pokemon 'them' should've activated ability " +
+                        "[roughskin] but it wasn't activated on-moveContact");
+            });
+        });
+
+        describe("qualifier=damage", function()
+        {
+            describe("changeToMoveType", function()
+            {
+                it("Should not activate if KO'd", async function()
+                {
+                    const mon = initActive("us", kecleon);
+                    mon.traits.setAbility("colorchange");
+                    mon.faint();
+                    await altParser(
+                        ability.onMoveDamage(pstate, {us: true}, "damage",
+                            dex.moves.watergun));
+                    await exitParser<ability.ExpectAbilitiesResult>(
+                        {results: []});
+                });
             });
         });
     });
 
-    describe("takeDamage", function()
+    describe("onMoveDrain()", function()
     {
-        it("Should handle percentDamage effect", async function()
+        it("Should infer no on-moveDrain ability if it did not activate",
+        async function()
         {
-            initActive("us");
-            initActive("them", sharpedo);
-            await initParser("them", "roughskin", "contact");
-            await handle({type: "takeDamage", monRef: "us", hp: 94});
-            await exitParser();
-        });
+            const mon = initActive("them", tentacruel);
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("clearbody", "liquidooze");
 
-        describe("absorb", function()
-        {
-            it("Should handle AbilityData#absorb flag boost on preDamage",
-            async function()
-            {
-                // can have motordrive
-                const electivire: events.SwitchOptions =
-                {
-                    species: "electivire", level: 100, gender: "M", hp: 100,
-                    hpMax: 100
-                };
-                initActive("us");
-                initActive("them", electivire);
-                await initParser("them", "motordrive", "preDamage", "thunder");
-                await handle(
-                    {type: "boost", monRef: "them", stat: "spe", amount: 1});
-                await exitParser<AbilityResult>({immune: true});
-            });
-
-            // can have waterabsorb
-            const quagsire: events.SwitchOptions =
-            {
-                species: "quagsire", level: 100, gender: "M", hp: 100,
-                hpMax: 100
-            };
-
-            it("Should handle AbilityData#absorb flag immune on preDamage",
-            async function()
-            {
-                initActive("us");
-                initActive("them", quagsire);
-                await initParser("them", "waterabsorb", "preDamage", "bubble");
-                await handle({type: "immune", monRef: "them"});
-                await exitParser<AbilityResult>({immune: true});
-            });
-
-            it("Should handle AbilityData#absorb flag immune on preDamage",
-            async function()
-            {
-                initActive("us");
-                initActive("them", quagsire).hp.set(quagsire.hp - 1);
-                await initParser("them", "waterabsorb", "preDamage", "bubble");
-                await handle({type: "takeDamage", monRef: "them", hp: 364});
-                await exitParser<AbilityResult>({immune: true});
-            });
-
-            it("Should handle AbilityData#absorb flag status on preDamage",
-            async function()
-            {
-                // can have flashfire
-                const arcanine: events.SwitchOptions =
-                {
-                    species: "arcanine", level: 100, gender: "M", hp: 100,
-                    hpMax: 100
-                };
-                initActive("us");
-                initActive("them", arcanine);
-                await initParser("them", "flashfire", "preDamage", "ember");
-                await handle(
-                {
-                    type: "activateStatusEffect", monRef: "them",
-                    effect: "flashFire", start: true
-                });
-                await exitParser<AbilityResult>({immune: true});
-            });
-        });
-
-        describe("invertDrain", function()
-        {
-            // can have liquidooze
-            const tentacruel: events.SwitchOptions =
-            {
-                species: "tentacruel", level: 100, gender: "M", hp: 100,
-                hpMax: 100
-            };
-
-            it("Should handle AbilityData#invertDrain flag", async function()
-            {
-                initActive("us");
-                initActive("them", tentacruel);
-                await initParser("them", "liquidooze", "damaged");
-                await handle({type: "takeDamage", monRef: "us", hp: 94});
-                await exitParser<AbilityResult>({invertDrain: true});
-            });
+            await altParser(ability.onMoveDrain(pstate, {them: true},
+                    dex.moves.absorb));
+            await exitParser<ability.ExpectAbilitiesResult>({results: []});
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("clearbody");
         });
     });
 }

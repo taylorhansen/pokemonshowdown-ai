@@ -3,6 +3,24 @@ import * as events from "./BattleEvent";
 import { BattleParser, BattleParserArgs, BattleParserFunc, ParserState,
     SubParser, SubParserFunc, SubParserResult } from "./BattleParser";
 
+/**
+ * Checks if the boost amounts are suitable.
+ * @param set Whether the boost is being set (`true`) or added (`false`).
+ * @param pending Pending boost amount.
+ * @param given Given boost amount from game events.
+ * @param current Pokemon's current boost amount if adding (`set`=false).
+ */
+export function matchBoost(set: boolean, pending: number, given: number,
+    current?: number): boolean
+{
+    if (set) return current == null && pending === given;
+    if (current == null) return false;
+
+    const next = Math.max(-6, Math.min(given + current, 6));
+    const expected = Math.max(-6, Math.min(pending + current, 6));
+    return next === expected;
+}
+
 /** Maps BattleEvent type to a SubParser handler. */
 export type EventHandlerMap = {readonly [T in events.Type]: EventHandler<T>};
 

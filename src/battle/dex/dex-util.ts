@@ -173,52 +173,132 @@ export interface PokemonData extends DexData
 /** Format for each ability entry in the dex. */
 export interface AbilityData extends DexData
 {
-    // TODO: should some of these flags be mutually exclusive?
-    /** Status immunity. */
-    readonly statusImmunity?: readonly effects.StatusType[];
-    /** Whether this ability cancels move recoil damage. */
-    readonly noRecoil?: true;
+    // TODO: make these effects mutually exclusive within each `on` obj
     /**
-     * Whether this ability inverts healing to damage when a draining move is
-     * used against it.
+     * Specifies conditions for activating this ability to describe or interrupt
+     * an effect.
      */
-    readonly invertDrain?: true;
-    /**
-     * Whether this ability ignores the target's ability when using a move
-     * against it.
-     */
-    readonly ignoreTargetAbility?: true;
-    /**
-     * Whether this ability blocks `#explosive` moves and abilities. When
-     * blocking abilities (e.g. aftermath), nothing happens as if the ability
-     * was suppressed. (TODO: what about moves?)
-     */
-    readonly blockExplosive?: true;
-    /**
-     * Whether this ability is an explosion-type effect, i.e. it is blocked by
-     * an ability with `#blockExplosion=true`.
-     */
-    readonly explosive?: true;
-    /**
-     * Whether this ability, when acquired or switched in, warns the holder of
-     * one of the highest base-power moves out of all the opponents. Uses
-     * special rules for unspecified/variable base-power moves according to the
-     * Forewarn ability.
-     */
-    readonly warnStrongestMove?: true;
-    /** Stats that are blocked from being lowered by an opponent. */
-    readonly blockUnboost?: {readonly [T in BoostName]?: true}
-    /**
-     * Indicates that the ability grants an absorbing immunity. This will
-     * activate before move damage to block the move's effects.
-     */
-    readonly absorb?: effects.ability.Absorb;
-    /** Additional ability effects. */
-    readonly effects?:
+    readonly on?:
     {
-        readonly [T in effects.ability.On]?: readonly effects.ability.Ability[]
+        /**
+         * Whenever the holder switches in or gains the ability. Leaving this
+         * field defined but empty means it will reveal itself with no
+         * additional effects (e.g. moldbreaker, pressure).
+         */
+        readonly start?:
+        {
+            /** Whether this ability copies the foe's ability. */
+            readonly copyFoeAbility?: true;
+            /**
+             * Reveal the opponent's strongest move by base-power according to
+             * Forewarn rules.
+             */
+            readonly warnStrongestMove?: true;
+        };
+        /**
+         * Whenever a move or effect is about to hit the ability holder and the
+         * ability has an opportunity to block the effect under the given
+         * circumstances described by this object.
+         */
+        readonly block?:
+        {
+            /** Block certain statuses. */
+            readonly status?: {readonly [T in effects.StatusType]?: true};
+            /** Block certain moves. */
+            readonly move?:
+            {
+                /** Block moves of a specific type. */
+                readonly type: Type;
+                /**
+                 * Effects that should happen to the ability holder if possible
+                 * once the move is blocked. If empty or all the effects are
+                 * unapplicable, then the ability should at least mention the
+                 * immunity to the move.
+                 */
+                readonly effects?: readonly effects.ability.Absorb[];
+            };
+            /** Block effects that contain a certain flag. */
+            readonly effect?:
+            {
+                /** Block explosive effects (e.g. Aftermath, Explosion, etc). */
+                readonly explosive?: true
+            };
+        };
+        /**
+         * Whenever the ability holder has the opportunity to block an unboost
+         * effect.
+         */
+        readonly tryUnboost?:
+        {
+            /** Block certain unboost effects from the opponent. */
+            readonly block?: Partial<BoostTable<true>>;
+        }
+        /**
+         * Whenever a damaging move makes contact and KOs the ability holder.
+         */
+        readonly moveContactKO?:
+        {
+            /** Whether this is an explosive effect (i.e., blocked by Damp). */
+            readonly explosive?: true;
+            /**
+             * Effects that should happen if possible. Can only apply to
+             * attacker.
+             */
+            readonly effects: readonly effects.ability.MoveContactKO[];
+        };
+        /**
+         * Whenver a damaging move makes contact with the ability holder. Also
+         * applies to `#moveContactKO` if the effect targets the user.
+         */
+        readonly moveContact?:
+        {
+            /**
+             * Percent chance of this ability activating. Omit to assume that it
+             * always activates.
+             */
+            readonly chance?: number;
+            /** Target of the effect, either the ability holder or move user. */
+            readonly tgt: "holder" | "user";
+            /** One of these effects is equally likely to happen. */
+            readonly effects: readonly effects.ability.MoveContact[];
+        };
+        /**
+         * Whenever a move deals damage to the ability holder. Also applies to
+         * `#moveContact`.
+         */
+        readonly moveDamage?:
+        {
+            /**
+             * Change the holder's type to the type of the move used against it.
+             */
+            readonly changeToMoveType?: true;
+        };
+        /** Whenever a draining move or effect is about to heal the user. */
+        readonly moveDrain?:
+        {
+            /** Invert the drain healing effect. */
+            readonly invert?: true;
+        };
+    };
+
+    // TODO: rename to passive effects? or add a separate field?
+    /** Additional ability flags. */
+    readonly flags?:
+    {
+        // TODO: pressure, magicguard
+        /** Whether this ability ignores held item. */
+        readonly ignoreItem?: true;
+        /**
+         * Whether this ability ignores the target's ability when using a move.
+         */
+        readonly ignoreTargetAbility?: true;
+        /** Whether this ability silently blocks recoil damage. */
+        readonly noRecoil?: true;
     };
 }
+
+/** Ability "callback" object types. */
+export type AbilityOn = keyof NonNullable<AbilityData["on"]>;
 
 /** Format for each move entry in the dex. */
 export interface MoveData extends DexData
@@ -231,12 +311,142 @@ export interface MoveData extends DexData
     readonly type: Type;
     /** Target of the move. */
     readonly target: MoveTarget;
+    /**
+     * Target of the move if the user is not ghost-type. Defaults to whatever
+     * `#target` is.
+     */
+    readonly nonGhostTarget?: MoveTarget;
     /** Base power point range. */
     readonly pp: [number, number];
+
     /** Optional move flags. */
-    readonly flags?: MoveFlags;
+    readonly flags?:
+    {
+        /** Whether this is a damaging contact move. */
+        readonly contact?: true;
+        /**
+         * Whether this is an explosive move (e.g. Explosion), i.e., it's
+         * blocked by abilities that block explosive effects (e.g. Damp).
+         */
+        readonly explosive?: true;
+        /** Whether this move ignores Subtitute. */
+        readonly ignoreSub?: true;
+        /**
+         * Whether this move can't be copied by Mirror Move. This should only be
+         * present for targeted moves.
+         */
+        readonly noMirror?: true;
+        /** Whether this move can't be copied by Copycat. */
+        readonly noCopycat?: true;
+        /** Whether this move can be reflected by Magic Coat. */
+        readonly reflectable?: true;
+    };
+
     /** Additional move effects */
-    readonly effects?: readonly effects.move.Move[];
+    readonly effects?:
+    {
+        /** Call effect. */
+        readonly call?: effects.CallType;
+
+        /** Transform the user into the target. */
+        readonly transform?: true;
+
+        /** Damage delay effect. */
+        readonly delay?: effects.DelayType;
+
+        // TODO: verify order
+        /** Damage effects in addition to main move damage (not recoil). */
+        readonly damage?:
+        {
+            /** Pokemon receiving the damage. */
+            readonly target: MoveEffectTarget;
+            /** Damage dealt as a percentage of max hp. Positive heals. */
+            readonly percent: number;
+            /**
+             * Whether this effect can only activate if the user is ghost type.
+             */
+            readonly ghost?: true;
+        };
+
+        // TODO: separate stockpile from perish
+        /** Status effect to count. */
+        readonly count?: effects.CountableStatusType;
+
+        // TODO: should these boost effects be mutually exclusive?
+        /** Boost effects. */
+        readonly boost?:
+        {
+            /** Chance of the effect happening. */
+            readonly chance?: number;
+            /** Whether boosts are being set or added. */
+            readonly set?: true;
+            /**
+             * Whether this effect can only activate if the user is not ghost
+             * type.
+             */
+            readonly noGhost?: true;
+        } &
+            {readonly [T in MoveEffectTarget]?: Partial<BoostTable>};
+        /** Boosts to swap with the target. */
+        readonly swapBoosts?: Partial<BoostTable<boolean>>;
+        // TODO: other boost effects
+
+        // TODO: what about ending/curing statuses?
+        /** Possible status effects to start. */
+        readonly status?:
+        {
+            /** Chance of the effect happening. */
+            readonly chance?: number;
+            /**
+             * Whether this effect can only activate if the user is ghost type.
+             */
+            readonly ghost?: true;
+        } &
+            {readonly [T in MoveEffectTarget]?: readonly effects.StatusType[]};
+
+        /** Team effect to start. */
+        readonly team?: {readonly [T in MoveEffectTarget]?: effects.TeamType};
+
+        /** Field effect to start. */
+        readonly field?: effects.FieldType;
+
+        /**
+         * Change the target's type to the type of one of the target's known
+         * moves.
+         */
+        readonly changeType?: "conversion";
+
+        /** Disable the target's last used move. */
+        readonly disableMove?: true;
+
+        /** Fraction of move damage being healed by the user. */
+        readonly drain?: readonly [number, number];
+
+        // ability on-moveDamage, etc
+
+        /** Fraction of move damage being dealt to the user. */
+        readonly recoil?: readonly [number, number];
+
+        // TODO: item removal (trick, knockoff, covet, etc)
+
+        // item on-postMoveDamage
+        // faint event if applicable
+
+        /** Whether the user will faint after using the move. */
+        readonly selfFaint?: MoveSelfFaint;
+
+        /** Self-switch effect. */
+        readonly selfSwitch?: effects.SelfSwitchType;
+    };
+
+    /** Implicit effects on the user. */
+    readonly implicit?:
+    {
+        /** Implicit status effect. */
+        readonly status?: effects.ImplicitStatusType;
+        /** Implicit team effect. */
+        readonly team?: effects.ImplicitTeamType;
+    };
 }
 
 /** Types of categories for a move. */
@@ -258,29 +468,44 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
     "allyTeam" | "any" | "foeSide" | "normal" | "randomNormal" | "scripted" |
     "self";
 
-/** Flag container for moves. */
-export interface MoveFlags
-{
-    /** Whether this is a damaging contact move. */
-    readonly contact?: true;
-    /** Whether this move ignores Subtitute. */
-    readonly ignoreSub?: true;
-    /**
-     * Whether this move can't be copied by Mirror Move. This should only be
-     * present for targeted moves.
-     */
-    readonly noMirror?: true;
-    /** Whether this move can't be copied by Copycat. */
-    readonly noCopycat?: true;
-    /** Whether this move can be reflected by Magic Coat. */
-    readonly reflectable?: true;
-}
+/** Target of move effect. */
+export type MoveEffectTarget = "self" | "hit";
+
+// tslint:disable: no-trailing-whitespace (force newline in doc)
+/**
+ * Move self-faint description.  
+ * `"always"` - Immediately on move use, unless the move fails.  
+ * `"ifHit"` - Like `"always"` but also includes misses.
+ */
+// tslint:enable: no-trailing-whitespace
+export type MoveSelfFaint = "always" | "ifHit";
 
 /** Format for each item entry in the dex. */
 export interface ItemData extends DexData
 {
     /** Whether this is a choice item. */
     readonly isChoice?: true;
-    /** Additional item effects. */
-    readonly effects?: readonly effects.item.Item[];
+    /**
+     * Specifies conditions for activating this item to describe or interrupt
+     * an effect.
+     */
+    readonly on?:
+    {
+        /** After a move has dealt damage. Affects the user. */
+        readonly movePostDamage?: readonly effects.item.MovePostDamage[];
+        /** End of turn. */
+        readonly turn?:
+        {
+            /** Holder is poison-type. */
+            readonly poison?: readonly effects.item.Turn[];
+            /** Holder is not poison-type. */
+            readonly noPoison?: readonly effects.item.Turn[];
+            /** Additional effects. */
+            readonly effects?: readonly effects.item.Turn[];
+        };
+    };
+    // TODO: passive effects
 }
+
+/** Item "callback" object types. */
+export type ItemOn = keyof NonNullable<ItemData["on"]>;

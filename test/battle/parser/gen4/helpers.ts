@@ -11,12 +11,16 @@ export function createParserHelpers(parser: () => SubParser)
             return expect(parser().next(event))
                 .to.eventually.become({value: undefined, done: false});
         },
-        async reject<TResult = SubParserResult>(event: events.Any,
+        async handleEnd<TResult = SubParserResult>(event: events.Any,
             baseResult?: TResult): Promise<void>
         {
             return expect(parser().next(event))
-                .to.eventually.become(
-                    {value: {...baseResult, event}, done: true});
+                .to.eventually.become({value: {...baseResult}, done: true});
+        },
+        async reject<TResult = SubParserResult>(event: events.Any,
+            baseResult?: TResult): Promise<void>
+        {
+            return result.handleEnd(event, {...baseResult, event});
         },
         exitParser<TResult = SubParserResult>(baseResult?: TResult):
             Promise<void>

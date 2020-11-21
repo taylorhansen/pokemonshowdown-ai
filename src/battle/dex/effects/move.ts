@@ -2,6 +2,13 @@
 import * as effects from "./effects";
 import { EffectMap } from "./internal";
 
+export type Additional = MoveBase & AdditionalMap[AdditionalType];
+
+export type AdditionalMap = EffectMap<AdditionalType>;
+
+export type AdditionalType = "boost" | "call" | "countableStatus" | "field" |
+    "percentDamage" | "status" | "swapBoost" | "team" | "unique";
+
 /** Move effect interface. */
 export type Move = Primary | (MoveBase & (Other | Secondary));
 

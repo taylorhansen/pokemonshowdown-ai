@@ -39,7 +39,8 @@ export function testUseMove(f: () => Context,
         return parser;
     }
 
-    const {handle, reject, exitParser} = createParserHelpers(() => parser);
+    const {handle, handleEnd, reject, exitParser} =
+        createParserHelpers(() => parser);
 
     it("Should throw if unsupported move", async function()
     {
@@ -245,7 +246,7 @@ export function testUseMove(f: () => Context,
             initActive("us");
             initActive("them");
             await initParser("us", "swift");
-            // TODO: damage event
+            await handle({type: "takeDamage", monRef: "them", hp: 50});
             await handle({type: "activateItem", monRef: "us", item: "lifeorb"});
         });
 
@@ -299,14 +300,16 @@ export function testUseMove(f: () => Context,
             it("Should block hit status effects", async function()
             {
                 await initParser("us", "zapcannon"); // hit status par
-                // TODO: damage event?
+                await handle(
+                    {type: "block", monRef: "them", effect: "substitute"});
                 await exitParser();
             });
 
             it("Should block hit boost effects", async function()
             {
                 await initParser("us", "rocktomb"); // hit boost spe -1
-                // TODO: damage event?
+                await handle(
+                    {type: "block", monRef: "them", effect: "substitute"});
                 await exitParser();
             });
 
@@ -314,11 +317,29 @@ export function testUseMove(f: () => Context,
             {
                 await initParser("us", "leafstorm");
                 await handle(
+                    {type: "block", monRef: "them", effect: "substitute"});
+                await handle(
                     {type: "boost", monRef: "us", stat: "spa", amount: -2});
                 await exitParser();
             });
 
-            it("Should throw if sub ignored and non-sub-ignoring move",
+            it("Should not block self effects as Substitute ends",
+            async function()
+            {
+                await initParser("us", "leafstorm");
+                await handle(
+                    {type: "block", monRef: "them", effect: "substitute"});
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "them",
+                    effect: "substitute", start: false
+                });
+                await handle(
+                    {type: "boost", monRef: "us", stat: "spa", amount: -2});
+                await exitParser();
+            });
+
+            it("Should throw if non-sub-ignoring move ignores sub",
             async function()
             {
                 await initParser("us", "tackle");
@@ -348,10 +369,48 @@ export function testUseMove(f: () => Context,
         {
             initActive("us");
             initActive("them");
-            // 100% confuse rate
-            await initParser("them", "dynamicpunch");
+            // 100% unboost chance
+            await initParser("them", "rocktomb");
+            // target fainted before we could apply the effect
+            await handle({type: "takeDamage", monRef: "us", hp: 0});
             await handle({type: "faint", monRef: "us"});
             await exitParser();
+        });
+
+        describe("selfFaint", function()
+        {
+            it("Should pass self-faint move", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "explosion");
+                await handle({type: "takeDamage", monRef: "us", hp: 0});
+                await handle({type: "faint", monRef: "us"});
+                await handle({type: "faint", monRef: "them"});
+                await exitParser();
+            });
+
+            it("Should throw if no self-faint", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "explosion");
+                await handle({type: "takeDamage", monRef: "us", hp: 0});
+                await handle({type: "faint", monRef: "us"});
+                await expect(exitParser()).to.eventually.be.rejectedWith(Error,
+                    "Pokemon [them] haven't fainted yet");
+            });
+
+            it("Should ignore item-postMoveDamage", async function()
+            {
+                initActive("us");
+                initActive("them").setItem("lifeorb");
+                await initParser("them", "explosion");
+                await handle({type: "takeDamage", monRef: "us", hp: 0});
+                await handle({type: "faint", monRef: "us"});
+                await handle({type: "faint", monRef: "them"});
+                await exitParser();
+            });
         });
     });
 
@@ -389,6 +448,8 @@ export function testUseMove(f: () => Context,
         it("Should cancel move effects", async function()
         {
             initActive("us");
+            // this event can happen if the opponent fainted before we use a
+            //  move against it
             initActive("them").faint();
             await initParser("us", "toxic");
             await handle({type: "noTarget", monRef: "us"});
@@ -413,7 +474,11 @@ export function testUseMove(f: () => Context,
             initActive("us");
             initActive("them");
             await initParser("them", "transform");
-            await reject({type: "transform", source: "us", target: "them"});
+            await expect(handle(
+                    {type: "transform", source: "us", target: "them"}))
+                .to.eventually.be.rejectedWith(Error,
+                    "Transform effect failed: " +
+                    "Expected source 'them' but got 'us'");
         });
     });
 
@@ -424,29 +489,36 @@ export function testUseMove(f: () => Context,
             describe("SelfSwitch", function()
             {
                 // TODO: track phazing moves
+                // TODO: handle all throw cases
                 it("Should accept if self-switch expected", async function()
                 {
                     initActive("them");
                     await initParser("them", "batonpass");
-                    await handle({type: "switchIn", monRef: "them", ...ditto});
-                    await exitParser();
+                    await handle({type: "halt", reason: "wait"});
+                    await handleEnd(
+                        {type: "switchIn", monRef: "them", ...ditto});
                 });
 
-                it("Should reject if no self-switch expected", async function()
+                it("Should throw if no self-switch expected", async function()
                 {
                     initActive("them");
                     await initParser("them", "splash");
-                    await reject({type: "switchIn", monRef: "them", ...ditto});
+                    await reject({type: "halt", reason: "wait"});
                 });
 
-                it("Should reject if self-switch expected but opponent " +
+                it("Should throw if self-switch expected but opponent " +
                     "switched",
                 async function()
                 {
                     initActive("us");
                     initActive("them");
                     await initParser("them", "uturn");
-                    await reject({type: "switchIn", monRef: "us", ...ditto});
+                    await handle({type: "halt", reason: "wait"});
+                    await expect(handle(
+                            {type: "switchIn", monRef: "us", ...ditto}))
+                        .to.eventually.be.rejectedWith(Error,
+                            "SelfSwitch effect 'true' failed: " +
+                            "Expected 'them' but got 'us'");
                 });
             });
 
@@ -467,7 +539,7 @@ export function testUseMove(f: () => Context,
                         await exitParser();
                     });
 
-                    it("Should reject if mismatched move", async function()
+                    it("Should throw if mismatched move", async function()
                     {
                         initActive("us");
                         initActive("them");
@@ -478,11 +550,11 @@ export function testUseMove(f: () => Context,
                                 move: "doomdesire", start: true
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                "primary delay ['future']");
+                                "Future effect 'futuresight' failed: " +
+                                "Expected 'futuresight' but got 'doomdesire'");
                     });
 
-                    it("Should reject if start=false", async function()
+                    it("Should throw if start=false", async function()
                     {
                         initActive("us");
                         initActive("them");
@@ -493,8 +565,7 @@ export function testUseMove(f: () => Context,
                                 move: "futuresight", start: false
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                "primary delay ['future']");
+                                "Future effect 'futuresight' failed");
                     });
                 });
 
@@ -519,7 +590,7 @@ export function testUseMove(f: () => Context,
                         expect(mon.volatile.twoTurn.isActive).to.be.false;
                     });
 
-                    it("Should reject if monRef mismatch", async function()
+                    it("Should throw if monRef mismatch", async function()
                     {
                         initActive("them");
                         initActive("us");
@@ -529,8 +600,7 @@ export function testUseMove(f: () => Context,
                                 type: "prepareMove", monRef: "us", move: "fly"
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                "primary delay ['twoTurn']");
+                                "TwoTurn effect 'fly' failed");
                     });
 
                     it("Should throw if mismatched prepareMove event",
@@ -545,8 +615,8 @@ export function testUseMove(f: () => Context,
                                 move: "bounce"
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Mismatched prepareMove: Using 'fly' but got " +
-                                "'bounce'");
+                                "TwoTurn effect 'fly' failed: " +
+                                "Expected 'fly' but got 'bounce'");
                     });
                 });
             });
@@ -628,21 +698,9 @@ export function testUseMove(f: () => Context,
                             await initParser("them", caller);
                             await expect(handle(tackle))
                                 .to.eventually.be.rejectedWith(Error,
-                                    "Expected effects that didn't happen: " +
-                                    "primary call ['copycat']");
-                        });
-
-                        it(`Should throw if ${caller} failed but should've ` +
-                            "called",
-                        async function()
-                        {
-                            initActive("them");
-                            state.status.lastMove = "tackle";
-                            await initParser("them", caller);
-                            await expect(handle({type: "fail"}))
-                                .to.eventually.be.rejectedWith(Error,
-                                    "Copycat effect failed but should've " +
-                                    "called 'tackle'");
+                                    "Call effect 'copycat' failed: " +
+                                    "Should've called 'watergun' but got " +
+                                    `'${tackle.move}'`);
                         });
                     }
                 });
@@ -811,21 +869,9 @@ export function testUseMove(f: () => Context,
                             await initParser("them", caller);
                             await expect(handle(tackle))
                                 .to.eventually.be.rejectedWith(Error,
-                                    "Expected effects that didn't happen: " +
-                                    "primary call ['mirror']");
-                        });
-
-                        it(`Should throw if ${caller} failed but should've ` +
-                            "called",
-                        async function()
-                        {
-                            const them = initActive("them");
-                            them.volatile.mirrorMove = "watergun";
-                            await initParser("them", caller);
-                            await expect(handle({type: "fail"}))
-                                .to.eventually.be.rejectedWith(Error,
-                                    "Mirror Move effect failed but should've " +
-                                    "called 'watergun'");
+                                    "Call effect 'mirror' failed: " +
+                                    "Should've called 'watergun' but got " +
+                                    `'${tackle.move}'`);
                         });
                     }
                 });
@@ -859,8 +905,8 @@ export function testUseMove(f: () => Context,
                                 type: "useMove", monRef: "us", move: "tackle"
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                "primary call ['self']");
+                                "Call effect 'self' failed: " +
+                                "Expected 'them' but got 'us'");
                         expect(them.moveset.get("tackle")).to.be.null;
                     });
                 });
@@ -900,8 +946,8 @@ export function testUseMove(f: () => Context,
                                 type: "useMove", monRef: "us", move: "tackle"
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                "primary call ['target']");
+                                "Call effect 'target' failed: " +
+                                "Expected 'them' but got 'us'");
                         expect(them.moveset.get("tackle")).to.be.null;
                     });
                 });
@@ -925,19 +971,25 @@ export function testUseMove(f: () => Context,
                         await exitParser();
                     });
 
-                    it("Should reject reflected move if no magicCoat status",
+                    it("Should throw if reflecting move without an active " +
+                        "magicCoat status",
                     async function()
                     {
                         initActive("us");
                         initActive("them");
                         // use reflectable move
                         await initParser("them", "yawn");
-                        // block and reflect the move
-                        await reject(
-                            {type: "block", monRef: "us", effect: "magicCoat"});
+                        // try to block and reflect the move
+                        await expect(reject(
+                            {
+                                type: "block", monRef: "us", effect: "magicCoat"
+                            }))
+                            .to.eventually.be.rejectedWith(Error,
+                                "Expected effect that didn't happen: " +
+                                "hit status [yawn]");
                     });
 
-                    it("Should not pass reflected move if already reflected",
+                    it("Should throw if reflecting an already reflected move",
                     async function()
                     {
                         initActive("us").volatile.magicCoat = true;
@@ -950,13 +1002,17 @@ export function testUseMove(f: () => Context,
                         await handle(
                             {type: "useMove", monRef: "us", move: "yawn"});
                         // try to block and reflect the move again
-                        await reject(
-                        {
-                            type: "block", monRef: "them", effect: "magicCoat"
-                        });
+                        await expect(handle(
+                            {
+                                type: "block", monRef: "them",
+                                effect: "magicCoat"
+                            }))
+                            .to.eventually.be.rejectedWith(Error,
+                                "Expected effect that didn't happen: " +
+                                "hit status [yawn]");
                     });
 
-                    it("Should not pass reflected move if not reflectable",
+                    it("Should throw if reflecting unreflectable move",
                     async function()
                     {
                         initActive("us").volatile.magicCoat = true;
@@ -964,10 +1020,13 @@ export function testUseMove(f: () => Context,
                         // use reflectable move
                         await initParser("them", "taunt");
                         // block and reflect the move
-                        await reject(
-                        {
-                            type: "block", monRef: "us", effect: "magicCoat"
-                        });
+                        await expect(handle(
+                            {
+                                type: "block", monRef: "us", effect: "magicCoat"
+                            }))
+                            .to.eventually.be.rejectedWith(Error,
+                                "Expected effect that didn't happen: " +
+                                "hit status [taunt]");
                     });
                 });
             });
@@ -1021,9 +1080,8 @@ export function testUseMove(f: () => Context,
                             stats: ["def", "spd", "spe"]
                         }))
                         .to.eventually.be.rejectedWith(Error,
-                            "Expected effects that didn't happen: " +
-                            "primary swapBoost ['def,spd']") +
-                            "primary swapBoost ['def,spd']";
+                            "Expected effect that didn't happen: " +
+                            "swapBoosts [def, spd]")
                 });
 
                 it("Should throw if reject before effect", async function()
@@ -1033,21 +1091,27 @@ export function testUseMove(f: () => Context,
                     await initParser("them", "guardswap");
                     await expect(exitParser())
                         .to.eventually.be.rejectedWith(Error,
-                            "Expected effects that didn't happen: " +
-                            "primary swapBoost ['def,spd']");
+                            "Expected effect that didn't happen: " +
+                            "swapBoosts [def, spd]");
                 });
             });
 
             describe("CountableStatusEffect", function()
             {
                 // TODO: better handling for perishsong events
-                it("Should always pass if perishsong", async function()
+                it("Should pass if expected using perishsong", async function()
                 {
                     initActive("us");
-                    await initParser("us", "splash");
+                    initActive("them");
+                    await initParser("us", "perishsong");
                     await handle(
                     {
                         type: "countStatusEffect", monRef: "us",
+                        effect: "perish", amount: 3
+                    });
+                    await handle(
+                    {
+                        type: "countStatusEffect", monRef: "them",
                         effect: "perish", amount: 3
                     });
                     await exitParser();
@@ -1127,8 +1191,8 @@ export function testUseMove(f: () => Context,
                                 start: true
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                "primary field ['RainDance']");
+                                "Expected effect that didn't happen: " +
+                                "field RainDance");
                     });
                 });
             });
@@ -1145,11 +1209,9 @@ export function testUseMove(f: () => Context,
                 it("Should pass if expected", async function()
                 {
                     initActive("us");
-                    initActive("them");
+                    initActive("them").hp.set(1);
                     await initParser("them", "absorb");
-                    // handle move damage
                     await handle({type: "takeDamage", monRef: "us", hp: 50});
-                    // handle drain effect
                     await handle(
                     {
                         type: "takeDamage", monRef: "them", hp: 100,
@@ -1158,12 +1220,21 @@ export function testUseMove(f: () => Context,
                     await exitParser();
                 });
 
+                it("Should pass without event if full hp", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", "absorb");
+                    await handle({type: "takeDamage", monRef: "us", hp: 50});
+                    await exitParser();
+                });
+
                 it("Should infer no liquidooze if normal", async function()
                 {
                     const mon = initActive("us", tentacruel);
                     expect(mon.traits.ability.possibleValues)
                         .to.have.keys("clearbody", "liquidooze");
-                    initActive("them");
+                    initActive("them").hp.set(1);
                     await initParser("them", "drainpunch");
                     // handle move damage
                     await handle(
@@ -1215,7 +1286,7 @@ export function testUseMove(f: () => Context,
                     await initParser("them", "bravebird");
                     await handle(
                     {
-                        type: "takeDamage", monRef: "them", hp: 0,
+                        type: "takeDamage", monRef: "them", hp: 1,
                         from: "recoil"
                     });
                     await exitParser();
@@ -1249,7 +1320,7 @@ export function testUseMove(f: () => Context,
                         {
                             await handle(
                             {
-                                type: "takeDamage", monRef: "us", hp: 0,
+                                type: "takeDamage", monRef: "us", hp: 1,
                                 from: "recoil"
                             });
                             await exitParser();
@@ -1258,8 +1329,9 @@ export function testUseMove(f: () => Context,
                         {
                             await expect(exitParser())
                                 .to.eventually.be.rejectedWith(Error,
-                                    "Ability can't suppress recoil but it " +
-                                    "still suppressed recoil");
+                                    "Move doubleedge user 'us' suppressed " +
+                                    "recoil through an ability but ability " +
+                                    "is suppressed");
                             return;
                         }
                         if (!recoilEvent) await exitParser();
@@ -1324,8 +1396,7 @@ export function testUseMove(f: () => Context,
 
         function testNonRemovable(ctg: "self" | "hit", name: string,
             effect: effects.StatusType, move: string,
-            otherEffects?: readonly string[],
-            otherEffectEvents?: readonly events.Any[]): void
+            preEvents?: readonly events.Any[]): void
         {
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
@@ -1346,32 +1417,41 @@ export function testUseMove(f: () => Context,
                         state.teams.us.active.volatile.lastMove = "splash";
 
                         await initParser("them", move);
+                        for (const event of preEvents ?? [])
+                        {
+                            await handle(event);
+                        }
                         await handle(
                         {
                             type: "activateStatusEffect", monRef: target,
                             effect, start: true
                         });
-                        for (const event of otherEffectEvents ?? [])
-                        {
-                            await handle(event);
-                        }
                         await exitParser();
                     });
 
                     it("Should reject if start=false", async function()
                     {
                         await initParser("them", move);
-                        await expect(handle(
-                            {
-                                type: "activateStatusEffect", monRef: target,
-                                effect, start: false
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                [
-                                    ...(otherEffects ?? []),
-                                    `${ctg} status ['${effect}']`
-                                ].join(", "));
+                        for (const event of preEvents ?? [])
+                        {
+                            await handle(event);
+                        }
+                        const statusEvent: events.ActivateStatusEffect =
+                        {
+                            type: "activateStatusEffect", monRef: target,
+                            effect, start: false
+                        };
+                        // same condition in useMove for throwing this exception
+                        const data = dex.moves[move];
+                        if (!data.effects?.status?.chance &&
+                            data.category === "status")
+                        {
+                            await expect(handle(statusEvent))
+                                .to.eventually.be.rejectedWith(Error,
+                                    "Expected effect that didn't happen: " +
+                                    `${ctg} status [${effect}]`);
+                        }
+                        else await reject(statusEvent);
                     });
 
                     it("Should reject if mismatched flags", async function()
@@ -1393,7 +1473,6 @@ export function testUseMove(f: () => Context,
             readonly name: string;
             readonly effect: effects.StatusType;
             readonly move?: string;
-            readonly preMoveEffects?: readonly string[];
             readonly preMoveEvents?: readonly events.Any[];
             readonly secondaryMove?: string;
             readonly secondaryMove100?: string;
@@ -1403,8 +1482,8 @@ export function testUseMove(f: () => Context,
 
         function testRemovable(
             {
-                ctg, name, effect, move, preMoveEffects, preMoveEvents,
-                secondaryMove, secondaryMove100, abilityImmunity, clause
+                ctg, name, effect, move, preMoveEvents, secondaryMove,
+                secondaryMove100, abilityImmunity, clause
             }: TestRemovableArgs): void
         {
             // adjust perspective
@@ -1484,7 +1563,7 @@ export function testUseMove(f: () => Context,
 
                     if (secondaryMove100)
                     {
-                        it("Should pass if reject before 100% secondary " +
+                        it("Should pass if exit before 100% secondary " +
                             "effect if the target is already afflicted",
                         async function()
                         {
@@ -1509,16 +1588,12 @@ export function testUseMove(f: () => Context,
                             state.teams.us.active.traits
                                 .setAbility("technician");
                             await initParser("them", secondaryMove100);
-                            const effectString =
-                            [
-                                ...(preMoveEffects ?? []),
-                                `hit secondary status ['${effect}']`
-                            ]
-                                .join(", ");
                             await expect(exitParser())
                                 .to.eventually.be.rejectedWith(Error,
-                                    "Expected effects that didn't happen: " +
-                                    effectString);
+                                    `Move '${secondaryMove100}' status ` +
+                                    `[${effect}] was blocked by target ` +
+                                    `'${target}' but target's ability ` +
+                                    "[technician] can't block it");
                         });
                     }
 
@@ -1556,64 +1631,65 @@ export function testUseMove(f: () => Context,
         testNonRemovable("self", "Aqua Ring", "aquaRing", "aquaring");
         testNonRemovable("hit", "Attract", "attract", "attract");
         testNonRemovable("self", "Charge", "charge", "charge",
-            ["self boost add spd ['1']"],
             [{type: "boost", monRef: "them", stat: "spd", amount: 1}]);
         // curse
         moveEffectTests.hit.status.push(function()
         {
             describe("Curse", function()
             {
-                it("Should pass if ghost type", async function()
+                describe("Ghost-type", function()
                 {
-                    initActive("us");
-                    initActive("them", smeargle).volatile.addedType = "ghost";
-                    await initParser("them", "curse");
-                    await handle({type: "takeDamage", monRef: "them", hp: 50});
-                    await handle(
+                    it("Should expect curse status", async function()
                     {
-                        type: "activateStatusEffect", monRef: "us",
-                        effect: "curse", start: true
-                    });
-                    await exitParser();
-                });
-
-                it("Should reject if not ghost type", async function()
-                {
-                    initActive("them", smeargle);
-                    await initParser("them", "curse");
-                    await reject(
-                    {
-                        type: "activateStatusEffect", monRef: "us",
-                        effect: "curse", start: true
-                    });
-                    // TODO: expect boosts
-                });
-
-                it("Should reject if start=false", async function()
-                {
-                    initActive("us");
-                    initActive("them").volatile.addedType = "ghost";
-                    await initParser("them", "curse");
-                    await expect(handle(
+                        initActive("us");
+                        initActive("them", smeargle).volatile.addedType =
+                            "ghost";
+                        await initParser("them", "curse");
+                        await handle(
+                            {type: "takeDamage", monRef: "them", hp: 50});
+                        await handle(
                         {
                             type: "activateStatusEffect", monRef: "us",
-                            effect: "curse", start: false
-                        }))
-                        .to.eventually.be.rejectedWith(Error,
-                            "Expected effects that didn't happen: " +
-                            "self percentDamage ['-50%'], " +
-                            "hit status ['curse']");
+                            effect: "curse", start: true
+                        });
+                        await exitParser();
+                    });
+
+                    it("Should reject if mismatched flags", async function()
+                    {
+                        initActive("us");
+                        initActive("them");
+                        await initParser("them", "tackle");
+                        await reject(
+                        {
+                            type: "activateStatusEffect", monRef: "us",
+                            effect: "curse", start: true
+                        });
+                    });
                 });
 
-                it("Should reject if mismatched flags", async function()
+                describe("Non-ghost-type", function()
                 {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("them", "tackle");
-                    await reject(
+                    it("Should expect boosts", async function()
                     {
-                        type: "activateStatusEffect", monRef: "us",
-                        effect: "curse", start: true
+                        initActive("them");
+                        await initParser("them", "curse");
+                        await handle(
+                        {
+                            type: "boost", monRef: "them", stat: "spe",
+                            amount: -1
+                        });
+                        await handle(
+                        {
+                            type: "boost", monRef: "them", stat: "atk",
+                            amount: 1
+                        });
+                        await handle(
+                        {
+                            type: "boost", monRef: "them", stat: "def",
+                            amount: 1
+                        });
+                        await exitParser();
                     });
                 });
             });
@@ -1624,21 +1700,28 @@ export function testUseMove(f: () => Context,
         {
             describe("Flash Fire", function()
             {
+                // can have flashfire
+                const arcanine: events.SwitchOptions =
+                {
+                    species: "arcanine", gender: "F", level: 100, hp: 100,
+                    hpMax: 100
+                };
+
                 it("Should block move effects", async function()
                 {
                     initActive("us");
-                    initActive("them");
-                    // move with pending brn effect
-                    await initParser("them", "willowisp");
+                    initActive("them", arcanine);
+                    // fire-type move with guaranteed brn effect
+                    await initParser("us", "willowisp");
                     // activate absorbing ability
                     await handle(
                     {
-                        type: "activateAbility", monRef: "us",
+                        type: "activateAbility", monRef: "them",
                         ability: "flashfire"
                     });
                     await handle(
                     {
-                        type: "activateStatusEffect", monRef: "us",
+                        type: "activateStatusEffect", monRef: "them",
                         effect: "flashFire", start: true
                     });
                     // effect should be blocked
@@ -1796,7 +1879,7 @@ export function testUseMove(f: () => Context,
         testRemovable(
         {
             ctg: "self", name: "Substitute", effect: "substitute",
-            move: "substitute", preMoveEffects: ["self percentDamage ['-50%']"],
+            move: "substitute",
             preMoveEvents: [{type: "takeDamage", monRef: "them", hp: 50}]
         });
         testNonRemovable("hit", "Suppress ability", "suppressAbility",
@@ -1826,7 +1909,6 @@ export function testUseMove(f: () => Context,
         testNonRemovable("self", "Magic Coat", "magicCoat", "magiccoat");
         testNonRemovable("self", "Protect", "protect", "protect");
         testNonRemovable("self", "Roost", "roost", "roost",
-            ["self percentDamage ['50%']"],
             [{type: "takeDamage", monRef: "them", hp: 100}]);
         testNonRemovable("self", "Snatch", "snatch", "snatch");
         // stall
@@ -2147,8 +2229,8 @@ export function testUseMove(f: () => Context,
         //#region boost effect
 
         function shouldHandleBoost(ctg: "self" | "hit", move: string,
-            stat: dexutil.BoostName, amount: number, abilityImmunity?: string):
-            void
+            stat: dexutil.BoostName, amount: number, abilityImmunity?: string,
+            immunityHolder?: events.SwitchOptions): void
         {
             const target = ctg === "self" ? "us" : "them";
             moveEffectTests[ctg].boost.push(function()
@@ -2169,21 +2251,22 @@ export function testUseMove(f: () => Context,
                     await initParser("us", move);
                     await expect(exitParser())
                         .to.eventually.be.rejectedWith(Error,
-                            "Expected effects that didn't happen: " +
-                            `${ctg} boost add ${stat} ['${amount}']`);
+                            "Expected effect that didn't happen: " +
+                            `${ctg} boost add {"${stat}":${amount}}`);
                 });
 
                 if (ctg === "hit" && abilityImmunity)
                 {
-                    it(`Should fail if ${abilityImmunity} activates`,
+                    it(`Should fail unboost effect if ${abilityImmunity} ` +
+                        "activates",
                     async function()
                     {
                         initActive("us");
-                        initActive("them");
+                        initActive("them", immunityHolder);
                         await initParser("us", move);
                         await handle(
                         {
-                            type: "activateAbility", monRef: "them", // target
+                            type: "activateAbility", monRef: target,
                             ability: abilityImmunity
                         });
                         await handle({type: "fail"});
@@ -2211,18 +2294,16 @@ export function testUseMove(f: () => Context,
                         initActive("them");
 
                         await initParser("us", move);
-                        await handle(
-                        {
-                            type: "activateAbility", monRef: "them", // target
-                            ability: abilityImmunity
-                        });
-                        await handle({type: "fail"});
-                        await expect(exitParser())
+                        // move parser context should reject this event and
+                        //  attempt to exit
+                        await expect(handle(
+                            {
+                                type: "activateAbility", monRef: target,
+                                ability: abilityImmunity
+                            }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Attacker shouldn't have ability " +
-                                "'moldbreaker' if the defender's ability " +
-                                `'${abilityImmunity}' blocked an unboost ` +
-                                "effect");
+                                "Expected effect that didn't happen: " +
+                                `hit boost add {"${stat}":${amount}}`);
                     });
 
                     it(`Should rule out ${abilityImmunity} if it didn't ` +
@@ -2255,14 +2336,21 @@ export function testUseMove(f: () => Context,
                         await expect(handle(
                                 {type: "boost", monRef: target, stat, amount}))
                             .to.eventually.be.rejectedWith(Error,
-                                "Defender shouldn't have unboost-blocking " +
-                                `ability '${abilityImmunity}'`);
+                                `Pokemon '${target}' should've activated ` +
+                                `ability [${abilityImmunity}] but it wasn't ` +
+                                "activated on-tryUnboost");
                     });
                 }
             });
         }
         shouldHandleBoost("self", "leafstorm", "spa", -2);
-        shouldHandleBoost("hit", "charm", "atk", -2, "hypercutter");
+        // can have hypercutter
+        const pinsir: events.SwitchOptions =
+        {
+            species: "pinsir", gender: "M", level: 100, hp: 100,
+            hpMax: 100
+        };
+        shouldHandleBoost("hit", "charm", "atk", -2, "hypercutter", pinsir);
 
         // set boost
         moveEffectTests.self.boost.push(function()
@@ -2330,7 +2418,7 @@ export function testUseMove(f: () => Context,
                     await exitParser(); // shouldn't throw
                 });
 
-                it("Shouldn't throw if no boost event using " + move,
+                it("Shouldn't throw if no secondary boost using " + move,
                 async function()
                 {
                     initActive("us");
@@ -2358,8 +2446,8 @@ export function testUseMove(f: () => Context,
                     await initParser("us", move);
                     await expect(exitParser())
                         .to.eventually.be.rejectedWith(Error,
-                            "Expected effects that didn't happen: " +
-                            `hit secondary boost add ${stat} ['${amount}']`);
+                            "Expected effect that didn't happen: " +
+                            `hit boost add {"${stat}":${amount}}`);
                 });
 
                 it("Should allow no boost event for 100% secondary effect if " +
@@ -2387,13 +2475,14 @@ export function testUseMove(f: () => Context,
             const faintMoves =
             [
                 ["Healing Wish", "healingWish", "healingwish"],
-                ["Lunar Dnace", "lunarDance", "lunardance"]
+                ["Lunar Dance", "lunarDance", "lunardance"]
             ] as const;
             for (const [name, effect, move] of faintMoves)
             {
                 describe(name, function()
                 {
-                    it("Should set if successful faint", async function()
+                    it("Should handle faint/selfSwitch effects",
+                    async function()
                     {
                         initActive("us");
                         initActive("them");
@@ -2402,21 +2491,22 @@ export function testUseMove(f: () => Context,
                         // use wishing move to faint user
                         await initParser("them", move);
                         await handle({type: "faint", monRef: "them"});
+                        expect(team.status[effect]).to.be.true;
                         // wait for opponent to choose replacement
                         // gen4: replacement is sent out immediately
                         await handle({type: "halt", reason: "wait"});
-                        expect(team.status[effect]).to.be.true;
 
                         // replacement is sent
-                        await handle(
+                        await handleEnd(
                             {type: "switchIn", monRef: "them", ...ditto});
                         // replacement is healed
-                        await handle(
+                        // TODO: handle effect in switch context
+                        /*await handle(
                         {
                             type: "activateTeamEffect", teamRef: "them",
                             effect, start: false
                         });
-                        await exitParser();
+                        await exitParser();*/
                     });
 
                     it("Should not set if failed", async function()
@@ -2429,18 +2519,17 @@ export function testUseMove(f: () => Context,
                         expect(team.status[effect]).to.be.false;
                     });
 
-                    it("Should reject if effect not expected", async function()
+                    it("Should throw if no faint", async function()
                     {
                         initActive("them");
                         await initParser("them", move);
                         await expect(handle(
                             {
                                 type: "activateTeamEffect", teamRef: "them",
-                                effect, start: true
+                                effect, start: false
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                `self team ['${effect}']`)
+                                "Pokemon [them] haven't fainted yet");
                     });
                 });
             }
@@ -2481,8 +2570,8 @@ export function testUseMove(f: () => Context,
                                 effect, start: false
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                `self team ['${effect}']`)
+                                "Expected effect that didn't happen: " +
+                                `self team ${effect}`)
                     });
 
                     it("Should reject if mismatched flags", async function()
@@ -2529,11 +2618,11 @@ export function testUseMove(f: () => Context,
                     {
                         initActive("us");
                         initActive("them");
-                        await initParser("them", move);
+                        await initParser("them", "tackle");
                         // TODO: track moves that can do this
                         await handle(
                         {
-                            type: "activateTeamEffect", teamRef: "them",
+                            type: "activateTeamEffect", teamRef: "us",
                             effect, start: false
                         });
                     });
@@ -2551,8 +2640,8 @@ export function testUseMove(f: () => Context,
                                 effect: otherEffect, start: true
                             }))
                             .to.eventually.be.rejectedWith(Error,
-                                "Expected effects that didn't happen: " +
-                                `self team ['${effect}']`);
+                                "Expected effect that didn't happen: " +
+                                `self team ${effect}`);
                         expect(ts.reflect.isActive).to.be.false;
                         expect(ts.reflect.source).to.be.null;
                         // BaseContext should handle this
@@ -2592,7 +2681,7 @@ export function testUseMove(f: () => Context,
                     {
                         initActive("us");
                         initActive("them");
-                        await initParser("them", move);
+                        await initParser("them", "splash");
                         // TODO: track moves that can do this
                         await handle(
                         {

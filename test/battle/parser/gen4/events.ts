@@ -388,7 +388,8 @@ export function testEvents()
         testHazard("Stealth Rock", "stealthRock");
         testHazard("Toxic Spikes", "toxicSpikes");
 
-        function testEffect(name: string, effect: effects.TeamType,
+        function testEffect(name: string,
+            effect: effects.TeamType | effects.ImplicitTeamType,
             getter: (ts: ReadonlyTeamStatus) => boolean)
         {
             it(`Should activate ${name}`, async function()
@@ -417,9 +418,11 @@ export function testEvents()
         testEffect("Healing Wish", "healingWish", ts => ts.healingWish);
         testEffect("Lucky Chant", "luckyChant",
             ts => ts.luckyChant.isActive);
+        testEffect("Lunar Dance", "lunarDance", ts => ts.lunarDance);
         testEffect("Mist", "mist", ts => ts.mist.isActive);
         testEffect("Safeguard", "safeguard", ts => ts.safeguard.isActive);
         testEffect("Tailwind", "tailwind", ts => ts.tailwind.isActive);
+        testEffect("Wish", "wish", ts => ts.wish.isActive);
     });
 
     describe("block", function()

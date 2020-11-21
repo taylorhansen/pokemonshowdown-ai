@@ -1,29 +1,337 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
 import * as effects from "../../dex/effects";
-import { ReadonlyPokemon } from "../../state/Pokemon";
-import { otherSide } from "../../state/Side";
+import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
+import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
 import { eventLoop } from "../helpers";
-import { handlers as base } from "./base";
-import { PendingBoostEffect } from "./pending/PendingBoostEffect";
-import { PendingEffects } from "./pending/PendingEffects";
-import { PendingPercentEffect } from "./pending/PendingPercentEffect";
-import { PendingValueEffect } from "./pending/PendingValueEffect";
+import { dispatch, handlers as base } from "./base";
+import * as parsers from "./parsers";
 
+/** Result from `expectAbilities()` and variants like `onStart()`. */
+export interface ExpectAbilitiesResult extends SubParserResult
+{
+    /** Results from each ability activation. */
+    results: AbilityResult[];
+}
+
+/**
+ * Expects an on-`start` ability to activate.
+ * @param eligible Eligible pokemon.
+ */
+export async function* onStart(pstate: ParserState,
+    eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
+{
+    // TODO: some abilities aren't guaranteed to activate, and may have special
+    //  negative assertions if they're known
+    // TODO: attach negative assertion callbacks to each possibility?
+    // would likely replace expectAbility()'s getChance() call
+    const pendingAbilities = getAbilities(pstate, eligible, d => !!d.on?.start);
+
+    return yield* expectAbilities(pstate, "start", pendingAbilities,
+        /*hitByMove*/ undefined, lastEvent);
+}
+
+/**
+ * Expects an on-`block` ability to activate on a certain blockable effect.
+ * @param eligible Eligible pokemon.
+ * @param userRef Pokemon reference using the `hitByMove`.
+ * @param hitByMove Move by which the eligible pokemon are being hit.
+ */
+export async function* onBlock(pstate: ParserState,
+    eligible: Partial<Readonly<Record<Side, true>>>, userRef: Side,
+    hitByMove: dexutil.MoveData, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
+{
+    // if move user ignores the target's abilities, then this function can't be
+    //  called
+    const user = pstate.state.teams[userRef].active;
+    if (ignoresTargetAbility(user))
+    {
+        return {...lastEvent && {event: lastEvent}, results: []};
+    }
+
+    const status = !hitByMove.effects?.status?.chance ?
+        hitByMove.effects?.status?.hit : undefined;
+
+    const pendingAbilities = getAbilities(pstate, eligible,
+        d => !!d.on?.block &&
+            // block move's main status effect
+            (status?.some(s => !!d.on!.block!.status?.[s]) ||
+                // block move based on its type
+                hitByMove.type === d.on.block.move?.type ||
+                // block move based on damp
+                (!!hitByMove.flags?.explosive &&
+                    !!d.on.block.effect?.explosive)));
+
+    return yield* expectAbilities(pstate, "block", pendingAbilities,
+        hitByMove, lastEvent);
+}
+
+// TODO: refactor hitByMove to support other unboost effects, e.g. intimidate
+/**
+ * Expects an on-`tryUnboost` ability to activate on a certain unboost effect.
+ * @param eligible Eligible pokemon.
+ * @param userRef Pokemon reference using the `hitByMove`.
+ * @param hitByMove Move by which the eligible pokemon are being hit.
+ */
+export async function* onTryUnboost(pstate: ParserState,
+    eligible: Partial<Readonly<Record<Side, true>>>, userRef: Side,
+    hitByMove: dexutil.MoveData, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
+{
+    // if move user ignores the target's abilities, then this function can't be
+    //  called
+    const user = pstate.state.teams[userRef].active;
+    if (ignoresTargetAbility(user))
+    {
+        return {...lastEvent && {event: lastEvent}, results: []};
+    }
+
+    const boosts =
+        !hitByMove.effects?.boost?.chance && !hitByMove.effects?.boost?.set ?
+            hitByMove.effects?.boost?.hit ?? {} : {};
+
+    const pendingAbilities = getAbilities(pstate, eligible,
+        d => !!d.on?.tryUnboost?.block &&
+            // find a blockable unboost effect
+            (Object.keys(boosts) as dexutil.BoostName[]).some(
+                b => boosts[b]! < 0 && d.on!.tryUnboost!.block![b]));
+
+    return yield* expectAbilities(pstate, "tryUnboost", pendingAbilities,
+        hitByMove, lastEvent);
+}
+
+/** Checks if a pokemon's ability definitely ignores the target's abilities. */
+function ignoresTargetAbility(mon: ReadonlyPokemon): boolean
+{
+    if (!mon.volatile.suppressAbility)
+    {
+        const userAbility = mon.traits.ability;
+        if ([...userAbility.possibleValues]
+            .every(n => userAbility.map[n].flags?.ignoreTargetAbility))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Expects an on-`moveDamage` ability (or variants of this condition) to
+ * activate.
+ * @param eligible Eligible pokemon.
+ * @param qualifier The qualifier of which effects the ability may activate.
+ * @param hitByMove Move by which the eligible pokemon are being hit.
+ */
+export async function* onMoveDamage(pstate: ParserState,
+    eligible: Partial<Readonly<Record<Side, true>>>,
+    qualifier: "damage" | "contact" | "contactKO",
+    hitByMove: dexutil.MoveData, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
+{
+    const pendingAbilities = getAbilities(pstate, eligible,
+        function(d, mon)
+        {
+            if (!d.on) return false;
+            if (d.on.moveDamage && ["damage", "contact"].includes(qualifier))
+            {
+                return !(d.on.moveDamage.changeToMoveType && mon.fainted);
+            }
+            if (d.on.moveContact &&
+                ["contact", "contactKO"].includes(qualifier))
+            {
+                return true;
+            }
+            return !!d.on.moveContactKO && qualifier === "contactKO";
+        });
+
+    let on: dexutil.AbilityOn;
+    switch (qualifier)
+    {
+        case "damage": on = "moveDamage"; break;
+        case "contact": on = "moveContact"; break;
+        case "contactKO": on = "moveContactKO"; break;
+    }
+
+    return yield* expectAbilities(pstate, on, pendingAbilities,
+        hitByMove, lastEvent);
+}
+
+/**
+ * Expects an on-`moveDrain` ability to activate.
+ * @param eligible Eligible pokemon.
+ * @param hitByMove Move by which the eligible pokemon are being hit.
+ */
+export async function* onMoveDrain(pstate: ParserState,
+    eligible: Partial<Readonly<Record<Side, true>>>,
+    hitByMove: dexutil.MoveData, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
+{
+    const pendingAbilities = getAbilities(pstate, eligible,
+        d => !!d.on?.moveDrain);
+
+    return yield* expectAbilities(pstate, "moveDrain", pendingAbilities,
+        hitByMove, lastEvent);
+}
+
+/** Filters out ability possibilities that don't match the given predicate. */
+function getAbilities(pstate: ParserState,
+    monRefs: Partial<Readonly<Record<Side, any>>>,
+    f: (data: dexutil.AbilityData, mon: ReadonlyPokemon) => boolean):
+    Partial<Record<Side, string[]>>
+{
+    const result: Partial<Record<Side, string[]>> = {};
+    for (const monRef in monRefs)
+    {
+        if (!monRefs.hasOwnProperty(monRef)) continue;
+        // can't activate ability if suppressed
+        const mon = pstate.state.teams[monRef as Side].active;
+        if (mon.volatile.suppressAbility) continue;
+
+        const ability = mon.traits.ability;
+        const filtered = [...ability.possibleValues]
+            .filter(n => f(ability.map[n], mon));
+        if (filtered.length > 0) result[monRef as Side] = filtered;
+    }
+    return result;
+}
+
+/**
+ * Expects an ability activation.
+ * @param on Context in which the ability would activate.
+ * @param pendingAbilities Eligible ability possibilities.
+ * @param hitByMove Move that the eligible ability holders were hit by, if
+ * applicable.
+ */
+async function* expectAbilities(pstate: ParserState,
+    on: dexutil.AbilityOn,
+    pendingAbilities: Partial<Record<Side, readonly string[]>>,
+    hitByMove?: dexutil.MoveData, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
+{
+    // if the next event is an activateAbility with one of those appropriate
+    //  abilities, then handle it
+    // repeat until the next ability event isn't one of these
+    const results: AbilityResult[] = [];
+    const result = yield* eventLoop(
+        async function* expectAbilitiesLoop(event): SubParser
+        {
+            // next event must be an activateAbility event
+            if (event.type !== "activateAbility") return {event};
+
+            // get the possible abilities that could activate within this ctx
+            if (!pendingAbilities.hasOwnProperty(event.monRef)) return {event};
+            const abilities = pendingAbilities[event.monRef];
+
+            // find the AbilityData out of those possible abilities
+            const abilityName = abilities?.find(
+                n => n === (event as events.ActivateAbility).ability);
+            if (!abilityName) return {event};
+
+            // consume the pending ability for this pokemon
+            delete pendingAbilities[event.monRef];
+
+            // handle the ability
+            // TODO: replace hitByMoveName param with MoveData
+            const abilityResult =
+                yield* activateAbility(pstate, event, on, hitByMove?.name);
+            results.push(abilityResult);
+            return abilityResult;
+        },
+        lastEvent);
+
+    // for the pokemon's abilities that didn't activate, remove those as
+    //  possibilities
+    for (const monRef in pendingAbilities)
+    {
+        if (!pendingAbilities.hasOwnProperty(monRef)) continue;
+
+        // if the ability only had a chance of activating, don't include it when
+        //  narrowing
+        const mon = pstate.state.teams[monRef as Side].active;
+        const possibilities = pendingAbilities[monRef as Side]
+            ?.filter(n => getChance(mon.traits.ability.map[n], on) >= 100);
+        if (!possibilities || possibilities.length <= 0) continue;
+
+        try { mon.traits.ability.remove(...possibilities); }
+        catch (e)
+        {
+            // istanbul ignore next: should never happen
+            throw new Error(`Pokemon '${monRef}' should've activated ability ` +
+                `[${possibilities.join(", ")}] but it wasn't activated ` +
+                `on-${on}`);
+        }
+    }
+
+    return {...result, results};
+}
+
+/**
+ * Gets the chance of an ability activating.
+ * @param ability Ability data.
+ * @param on Context in which the ability would activate.
+ */
+function getChance(ability: dexutil.AbilityData, on: dexutil.AbilityOn | null):
+    number
+{
+    if (!on) return 100;
+    switch (on)
+    {
+        case "moveContactKO":
+        case "moveContact": return ability.on?.moveContact?.chance ?? 100;
+        default: return 100;
+    }
+}
+
+/** Result from `expectAbility()`. */
+export interface ExpectAbilityResult extends SubParserResult
+{
+    /** Results from each ability activation. */
+    results: AbilityResult[];
+}
+
+/** Context for handling ability activation. */
+interface AbilityContext
+{
+    /** Parser state. */
+    readonly pstate: ParserState;
+    /** Ability holder. */
+    readonly holder: Pokemon;
+    /** Ability holder Pokemon reference. */
+    readonly holderRef: Side;
+    /** Ability data. */
+    readonly ability: dexutil.AbilityData;
+    /** Circumstances in which the ability is activating. */
+    readonly on: dexutil.AbilityOn | null;
+    /** Move that the holder was hit by, if applicable. */
+    readonly hitByMove?: dexutil.MoveData;
+}
+
+// TODO: make this generic based on activateAbility()'s 'on' argument
 /** Result from handling an ActivateAbility event. */
 export interface AbilityResult extends SubParserResult
 {
+    // on-block
     /**
-     * Whether the ability is the source of an immunity of the move on
-     * `preDamage`.
+     * Whether the ability is the source of an immunity to the move on
+     * `block`.
      */
     immune?: true;
+    /** Whether the ability caused the move to fail on `block`. */
+    failed?: true;
+    /** Status effects being blocked for the ability holder. */
+    blockStatus?: {readonly [T in effects.StatusType]?: true};
+
+    // on-tryUnboost
+    /** Unboost effects being blocked for the ability holder. */
+    blockUnboost?: {readonly [T in dexutil.BoostName]?: true};
+
+    // on-moveDrain
     /** Whether an invertDrain ability is activating on `damage`. */
     invertDrain?: true;
-    /** Unboost effects being blocked for the ability holder. */
-    blockUnboost?: {readonly [T in dexutil.BoostName]?: true}
 }
 
 /**
@@ -35,191 +343,30 @@ export interface AbilityResult extends SubParserResult
  */
 export async function* activateAbility(pstate: ParserState,
     initialEvent: events.ActivateAbility,
-    on: effects.ability.On | "preDamage" | null = null, hitByMoveName?: string):
+    on: dexutil.AbilityOn | null = null, hitByMoveName?: string):
     SubParser<AbilityResult>
 {
     if (!dex.abilities.hasOwnProperty(initialEvent.ability))
     {
         throw new Error(`Unknown ability '${initialEvent.ability}'`);
     }
-    const initialMon = pstate.state.teams[initialEvent.monRef].active;
-    const data = dex.abilities[initialEvent.ability];
 
-    let hitByMove: dexutil.MoveData | undefined;
-    if (hitByMoveName && dex.moves.hasOwnProperty(hitByMoveName))
+    const ctx: AbilityContext =
     {
-        hitByMove = dex.moves[hitByMoveName];
-    }
+        pstate, holder: pstate.state.teams[initialEvent.monRef].active,
+        holderRef: initialEvent.monRef,
+        ability: dex.abilities[initialEvent.ability], on,
+        ...hitByMoveName && dex.moves.hasOwnProperty(hitByMoveName) &&
+            {hitByMove: dex.moves[hitByMoveName]}
+    };
 
-    const baseResult: AbilityResult = {};
+    // infer ability being activated
+    ctx.holder.traits.setAbility(ctx.ability.name);
 
-    // add pending effects
-    const pendingEffects = new PendingEffects();
-    for (const ctg of Object.keys(data.effects ?? {}) as
-        effects.ability.On[])
-    {
-        // let specific categories also count as less specific ones
-        let invalid = false;
-        switch (on)
-        {
-            case "contactKO":
-                if (ctg === "contactKO") break;
-                // fallthrough
-            case "contact":
-                if (ctg === "contact") break;
-                // fallthrough
-            case "damaged":
-                if (ctg === "damaged") break;
-                // fallthrough
-            default:
-                invalid = true;
-        }
-        if (invalid) continue;
+    // handle supported ability effects
+    const baseResult = yield* dispatchEffects(ctx);
 
-        for (const effect of data.effects![ctg]!)
-        {
-            const baseName = `${data.name} ${effect.tgt}`;
-
-            if (effect.tgt === "self")
-            {
-                // if the ability is activating due to a ko, we shouldn't
-                //  expect any self-effects from activating
-                // TODO: when is this not the case?
-                if (ctg === "contactKO")
-                {
-                    // istanbul ignore next: should never happen
-                    throw new Error(`Effect '${baseName}' can't activate`);
-                }
-                if (on === "contactKO") continue;
-            }
-
-            switch (effect.type)
-            {
-                case "chance":
-                {
-                    const name = baseName + " status";
-                    for (const innerEffect of effect.effects)
-                    {
-                        pendingEffects.add(name,
-                            new PendingValueEffect(innerEffect.value),
-                            "alt");
-                    }
-                    break;
-                }
-                case "percentDamage":
-                    pendingEffects.add(baseName + " percentDamage",
-                        new PendingPercentEffect(effect.value), "assert");
-                    break;
-                case "status": case "typeChange":
-                    pendingEffects.add(baseName + " " + effect.type,
-                        new PendingValueEffect(effect.value), "assert");
-                    break;
-                default:
-                    // istanbul ignore next: should never happen
-                    throw new Error("Unknown Ability effect type " +
-                        `'${effect!.type}'`);
-            }
-        }
-    }
-
-    if (data.invertDrain)
-    {
-        // TODO: only set this once the below pending effect has been consumed
-        baseResult.invertDrain = true;
-        pendingEffects.add(`${data.name} hit percentDamage`,
-            // TODO: custom drain damage calculation
-            new PendingPercentEffect(-1), "assert");
-    }
-
-    // TODO: figure out how to make inferences when this doesn't activate
-    // TODO: add on="start" to the string union for switch-ins/ability changes
-    if (data.warnStrongestMove)
-    {
-        pendingEffects.add(`${data.name} warnStrongestMove`,
-            new PendingValueEffect(true), "assert");
-    }
-
-    if (data.blockUnboost)
-    {
-        // boosts being blocked are inferred by ability data
-        pendingEffects.add(`${data.name} blockUnboost`,
-            new PendingValueEffect(true), "assert");
-    }
-
-    if (data.absorb && on === "preDamage")
-    {
-        // should be activating because we were hit by a move that this ability
-        //  absorbs (TODO: type changing moves judgment/hiddenpower)
-        if (hitByMoveName !== "judgment" && hitByMoveName !== "hiddenpower" &&
-            hitByMove?.type !== data.absorb.type)
-        {
-            return {...baseResult, event: initialEvent};
-        }
-
-        // TODO: only set this once the below pending effects have been consumed
-        baseResult.immune = true;
-
-        const baseName = `${data.name} self `;
-        for (const effect of data.absorb.effects)
-        {
-            const effectName = baseName + effect.type;
-            switch (effect.type)
-            {
-                case "boost":
-                    for (const k of ["add", "set"] as const)
-                    {
-                        const table = effect[k];
-                        if (!table) continue;
-                        for (const b of dexutil.boostKeys)
-                        {
-                            if (!table.hasOwnProperty(b)) continue;
-                            const boostEffectName = effectName + ` ${k} ${b}`;
-                            pendingEffects.add(boostEffectName,
-                                new PendingBoostEffect(table[b]!,
-                                    /*set*/ k === "set"), "assert");
-                            // skip if the boost is already maxed out
-                            pendingEffects.consume(boostEffectName, 0,
-                                ...(k === "set" ? [] :
-                                    [initialMon.volatile.boosts[b]]));
-                        }
-                    }
-                    break;
-                case "percentDamage":
-                    if (initialMon.hp.current === initialMon.hp.max) break;
-                    pendingEffects.add(effectName,
-                        new PendingPercentEffect(effect.value), "assert");
-                    break;
-                case "status":
-                    if (hasStatus(initialMon, effect.value)) break;
-                    pendingEffects.add(effectName,
-                        new PendingValueEffect(effect.value), "assert");
-                    break;
-                default:
-                    // istanbul ignore next: should never happen
-                    throw new Error("Unknown Ability absorb effect type " +
-                        `'${effect!.type}'`);
-            }
-        }
-    }
-
-    // after the ability has been validated, we can infer it for the pokemon
-    initialMon.traits.setAbility(data.name);
-
-    // should've been blocked by an opposing blockExplosive ability
-    if (data.explosive)
-    {
-        const opponent = pstate.state.teams[otherSide(initialEvent.monRef)]
-            .active;
-        if (!opponent.volatile.suppressAbility)
-        {
-            const pc = opponent.traits.ability;
-            const possibilities = [...pc.possibleValues]
-                .filter(a => pc.map[a].blockExplosive);
-            pc.remove(...possibilities);
-        }
-    }
-
-    // handle ability effects
+    // handle other ability effects (TODO: support)
     const result = yield* eventLoop(async function* loop(event): SubParser
     {
         switch (event.type)
@@ -227,146 +374,203 @@ export async function* activateAbility(pstate: ParserState,
             case "activateFieldEffect":
                 // see if the weather can be caused by the current ability
                 if (event.start && dexutil.isWeatherType(event.effect) &&
-                    weatherAbilities[event.effect] === data.name)
+                    weatherAbilities[event.effect] === ctx.ability.name)
                 {
                     // fill in infinite duration (gen3-4) and source
                     return yield* base.activateFieldEffect(pstate, event,
-                        initialMon, /*weatherInfinite*/ true);
+                        ctx.holder, /*weatherInfinite*/ true);
                 }
                 break;
-            case "activateStatusEffect":
-            {
-                if (!event.start) return {};
-
-                const tgt: effects.ability.Target =
-                    event.monRef === initialEvent.monRef ? "self" : "hit";
-                const name = `${data.name} ${tgt} status`;
-
-                if (pendingEffects.consume(name, event.effect))
-                {
-                    return yield* base.activateStatusEffect(pstate, event)
-                }
-                break;
-            }
-            case "boost":
-            {
-                const tgt: effects.ability.Target =
-                    event.monRef === initialEvent.monRef ? "self" : "hit";
-                const name = `${data.name} ${tgt} boost ` +
-                    `${event.set ? "set" : "add"} ${event.stat}`;
-
-                const mon = pstate.state.teams[event.monRef].active;
-                if (pendingEffects.consume(name, event.amount,
-                    ...(event.set ? [] : [mon.volatile.boosts[event.stat]])))
-                {
-                    return yield* base.boost(pstate, event);
-                }
-                break;
-            }
-            case "changeType":
-            {
-                const tgt: effects.ability.Target =
-                    event.monRef === initialEvent.monRef ? "self" : "hit";
-                const name = `${data.name} ${tgt} typeChange`;
-
-                if (event.newTypes[1] === "???" &&
-                    hitByMove?.type === event.newTypes[0] &&
-                    pendingEffects.consume(name, "colorchange"))
-                {
-                    return yield* base.changeType(pstate, event);
-                }
-                break;
-            }
-            case "fail":
-                if (!pendingEffects.consume(`${data.name} blockUnboost`)) break;
-                baseResult.blockUnboost = data.blockUnboost;
-                return yield* base.fail(pstate, event);
             case "immune":
                 // TODO: check whether this is possible
+                if (event.monRef !== ctx.holderRef) break;
                 baseResult.immune = true;
                 return yield* base.immune(pstate, event);
-            case "revealMove":
-            {
-                if (!pendingEffects.consume(`${data.name} warnStrongestMove`))
-                {
-                    break;
-                }
-                const subResult = yield* base.revealMove(pstate, event);
-
-                // rule out moves stronger than this one
-                const {moveset} = pstate.state.teams[event.monRef].active;
-                const bp = getForewarnPower(event.move);
-                moveset.inferDoesntHave(
-                    [...moveset.constraint]
-                        .filter(m => getForewarnPower(m) > bp));
-
-                return subResult;
-            }
-            case "takeDamage":
-            {
-                const tgt: effects.ability.Target =
-                    event.monRef === initialEvent.monRef ? "self" : "hit";
-                const name = `${data.name} ${tgt} percentDamage`;
-
-                const damagedMon = pstate.state.teams[event.monRef].active;
-                const initial = damagedMon.hp.current;
-                const next = event.hp;
-                const max = damagedMon.hp.max;
-
-                if (pendingEffects.consume(name, initial, next, max))
-                {
-                    return yield* base.takeDamage(pstate, event)
-                }
-                break;
-            }
-            // TODO: can an ability cause this?
-            // case "halt": return yield* base.halt(pstate, event);
         }
-        return {event}; // stop loop
-    });
-    // make sure all effects have been handled before returning
-    pendingEffects.assert();
+        return {event};
+    }, baseResult.event);
     return {...baseResult, ...result};
 }
 
-// TODO: move to dex ability effects
-/** Maps weather type to the ability that can cause it. */
-const weatherAbilities: {readonly [T in dexutil.WeatherType]: string} =
+/**
+ * Dispatches the effects of an ability. Assumes that the initial
+ * activateAbility event has already been handled.
+ * @param ctx Ability SubParser context.
+ * @param lastEvent Last unconsumed event if any.
+ */
+async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
+    SubParser<AbilityResult>
 {
-    Hail: "snowwarning", RainDance: "drizzle", Sandstorm: "sandstream",
-    SunnyDay: "drought"
-};
-
-function hasStatus(mon: ReadonlyPokemon, status: effects.StatusType): boolean
-{
-    switch (status)
+    switch (ctx.on)
     {
-        case "aquaRing": case "attract": case "curse": case "flashFire":
-        case "focusEnergy": case "imprison": case "ingrain":
-        case "leechSeed": case "mudSport": case "nightmare":
-        case "powerTrick": case "substitute": case "suppressAbility":
-        case "torment": case "waterSport":
-        case "destinyBond": case "grudge": case "rage": // singlemove
-        case "magicCoat": case "roost": case "snatch": // singleturn
-            return mon.volatile[status];
-        case "bide": case "confusion": case "charge": case "magnetRise":
-        case "embargo": case "healBlock": case "slowStart": case "taunt":
-        case "uproar": case "yawn":
-            return mon.volatile[status].isActive;
-        case "encore":
-            return mon.volatile[status].ts.isActive;
-        case "endure": case "protect": // stall
-            return mon.volatile.stalling;
-        case "foresight": case "miracleEye":
-            return mon.volatile.identified === status;
-        default:
-            if (dexutil.isMajorStatus(status))
+        case "start":
+            if (!ctx.ability.on?.start)
             {
-                return mon.majorStatus.current === status;
+                throw new Error("On-start effect shouldn't activate for " +
+                    `ability '${ctx.ability.name}'`);
             }
-            // istanbul ignore next: should never happen
-            throw new Error(`Invalid status effect '${status}'`);
+            if (ctx.ability.on.start.copyFoeAbility)
+            {
+                return yield* copyFoeAbility(ctx, lastEvent);
+            }
+            if (ctx.ability.on.start.warnStrongestMove)
+            {
+                return yield* warnStrongestMove(ctx, lastEvent);
+            }
+            // if nothing is set, then the ability just reveals itself
+            return {...lastEvent && {event: lastEvent}};
+        case "block":
+            if (!ctx.ability.on?.block)
+            {
+                throw new Error("On-block effect shouldn't activate for " +
+                    `ability '${ctx.ability.name}'`);
+            }
+            // TODO: assert non-ignoreTargetAbility (moldbreaker) after handling
+            if (ctx.ability.on.block.status)
+            {
+                return yield* blockStatus(ctx, ctx.ability.on.block.status,
+                    lastEvent);
+            }
+            if (ctx.ability.on.block.move)
+            {
+                return yield* blockMove(ctx, ctx.ability.on.block.move.effects,
+                    lastEvent);
+            }
+            if (ctx.ability.on.block.effect)
+            {
+                return yield* blockEffect(ctx,
+                    ctx.ability.on.block.effect.explosive, lastEvent);
+            }
+            // if nothing is set, then the ability shouldn't have activated
+            throw new Error("On-block effect shouldn't activate for " +
+                `ability '${ctx.ability.name}'`);
+        case "tryUnboost":
+            if (!ctx.ability.on?.tryUnboost)
+            {
+                throw new Error("On-tryUnboost effect shouldn't activate for " +
+                    `ability '${ctx.ability.name}'`);
+            }
+            // TODO: assert non-ignoreTargetAbility (moldbreaker) after handling
+            if (ctx.ability.on.tryUnboost.block)
+            {
+                return yield* blockUnboost(ctx, ctx.ability.on.tryUnboost.block,
+                    lastEvent);
+            }
+        case "moveContactKO":
+            if (ctx.ability.on?.moveContactKO)
+            {
+                // TODO: track hitByMove user
+                return yield* moveContactKO(ctx, otherSide(ctx.holderRef),
+                    ctx.ability.on.moveContactKO.effects,
+                    ctx.ability.on.moveContactKO.explosive, lastEvent);
+            }
+            // if no moveContactKO effects registered, try moveContact
+            // fallthrough
+        case "moveContact":
+            if (ctx.ability.on?.moveContact &&
+                // try moveContact if on=moveContactKO and the moveContact
+                //  effect doesn't target the ability holder
+                (ctx.on !== "moveContactKO" ||
+                    ctx.ability.on.moveContact.tgt !== "holder"))
+            {
+                // TODO: track hitByMove user
+                const targetRef = ctx.ability.on.moveContact.tgt === "holder" ?
+                    ctx.holderRef : otherSide(ctx.holderRef);
+                return yield* moveContact(ctx, targetRef,
+                    ctx.ability.on.moveContact.effects, lastEvent);
+            }
+            // if no moveContact effects registered, try moveDamage
+            // fallthrough
+        case "moveDamage":
+            if (ctx.ability.on?.moveDamage &&
+                // try moveDamage if on=moveContactKO and the moveDamage
+                //  effect doesn't target the ability holder
+                (ctx.on !== "moveContactKO" ||
+                    !ctx.ability.on.moveDamage.changeToMoveType))
+            {
+                if (ctx.ability.on.moveDamage.changeToMoveType)
+                {
+                    return yield* changeToMoveType(ctx, lastEvent);
+                }
+                // if nothing is set, then the ability shouldn't have activated
+                throw new Error(`On-${ctx.on} effect shouldn't activate for ` +
+                    `ability '${ctx.ability.name}'`);
+            }
+            throw new Error(`On-${ctx.on} effect shouldn't activate for ` +
+                `ability '${ctx.ability.name}'`);
+        case "moveDrain":
+            if (!ctx.ability.on?.moveDrain) break;
+            if (ctx.ability.on.moveDrain.invert)
+            {
+                return yield* invertDrain(ctx, lastEvent);
+            }
+            // if nothing is set, then the ability shouldn't have activated
+            throw new Error("On-moveDrain effect shouldn't activate for " +
+                `ability '${ctx.ability.name}'`);
     }
+    return {...lastEvent && {event: lastEvent}};
+}
+
+// on-start handlers
+
+/** Handles events due to a copeFoeAbility ability (e.g. Trace). */
+async function* copyFoeAbility(ctx: AbilityContext, lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    // handle trace events
+    // activateAbility holder <ability> (copied ability)
+    const next = lastEvent ?? (yield);
+    if (next.type !== "activateAbility" || next.monRef !== ctx.holderRef)
+    {
+        // TODO: better error messages
+        throw new Error("On-start copeFoeAbility effect failed");
+    }
+    ctx.holder.traits.setAbility(next.ability);
+
+    // TODO: these should be revealAbility events
+    // activateAbility target <ability> (describe trace target)
+    const next2 = yield;
+    if (next2.type !== "activateAbility" || next2.monRef === ctx.holderRef ||
+        next2.ability !== next.ability)
+    {
+        throw new Error("On-start copeFoeAbility effect failed");
+    }
+    const targetRef = next2.monRef;
+    const target = ctx.pstate.state.teams[targetRef].active;
+    target.traits.setAbility(next2.ability);
+
+    // possible on-start activation for holder's new ability
+    // if no activation, don't need to consume anymore events
+    const next3 = yield;
+    if (next3.type !== "activateAbility") return {event: next3};
+    if (next3.monRef !== ctx.holderRef) return {event: next3};
+    if (next3.ability !== next.ability) return {event: next3};
+    const data = dex.abilities[next3.ability];
+    if (!data?.on?.start) return {event: next3};
+    return yield* activateAbility(ctx.pstate, next3, "start");
+}
+
+/** Handles events due to a warnStrongestMove ability (e.g. Forewarn). */
+async function* warnStrongestMove(ctx: AbilityContext, lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    // handle forewarn events
+    // revealMove target <move>
+    const next = lastEvent ?? (yield);
+    if (next.type !== "revealMove" || next.monRef === ctx.holderRef)
+    {
+        throw new Error("On-start warnStrongestMove effect failed");
+    }
+    const subResult = yield* base.revealMove(ctx.pstate, next);
+
+    // rule out moves stronger than this one
+    const {moveset} = ctx.pstate.state.teams[next.monRef].active;
+    const bp = getForewarnPower(next.move);
+    const strongerMoves = [...moveset.constraint]
+        .filter(m => getForewarnPower(m) > bp);
+    moveset.inferDoesntHave(strongerMoves);
+
+    return subResult;
 }
 
 /**
@@ -385,4 +589,318 @@ function getForewarnPower(move: string): number
     if (!bp && data && data.category !== "status") return 80;
     // regular base power, eruption/waterspout and status moves
     return bp ?? 0;
+}
+
+// TODO: track weather in AbilityData
+
+// TODO: move to dex ability effects
+/** Maps weather type to the ability that can cause it. */
+const weatherAbilities: {readonly [T in dexutil.WeatherType]: string} =
+{
+    Hail: "snowwarning", RainDance: "drizzle", Sandstorm: "sandstream",
+    SunnyDay: "drought"
+};
+
+// on-block handlers
+
+/**
+ * Handles events due to a status-blocking ability (e.g. Immunity).
+ * @param statuses Map of the statuses being blocked.
+ */
+async function* blockStatus(ctx: AbilityContext,
+    statuses: {readonly [T in effects.StatusType]?: true},
+    lastEvent?: events.Any): SubParser<AbilityResult>
+{
+    // should have a fail or immune event
+    const next = lastEvent ?? (yield);
+    if (next.type !== "fail" &&
+        (next.type !== "immune" || next.monRef !== ctx.holderRef))
+    {
+        throw new Error("On-block status effect failed");
+    }
+    return {...yield* dispatch(ctx.pstate, next), blockStatus: statuses};
+}
+
+/**
+ * Handles events due to an ability immunity to a move (e.g. Water Absorb).
+ * @param blockEffects Effects that happen once blocked.
+ */
+async function* blockMove(ctx: AbilityContext,
+    blockEffects?: readonly effects.ability.Absorb[], lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    let allSilent = true;
+    for (const effect of blockEffects ?? [])
+    {
+        switch (effect.type)
+        {
+            case "boost":
+            {
+                const boostResult = yield* parsers.boost(ctx.pstate,
+                    ctx.holderRef, effect, /*silent*/ true, lastEvent);
+                if (Object.keys(boostResult.remaining).length > 0)
+                {
+                    throw new Error("On-block move boost effect failed");
+                }
+                // TODO: permHalt check?
+                lastEvent = boostResult.event;
+                allSilent &&= !!boostResult.allSilent;
+                break;
+            }
+            case "percentDamage":
+            {
+                const damageResult = yield* parsers.percentDamage(ctx.pstate,
+                    ctx.holderRef, effect.value, lastEvent);
+                if (!damageResult.success)
+                {
+                    throw new Error("On-block move percentDamage effect " +
+                        "failed");
+                }
+                lastEvent = damageResult.event;
+                allSilent &&= damageResult.success === "silent";
+                break;
+            }
+            case "status":
+            {
+                const statusResult = yield* parsers.status(ctx.pstate,
+                    ctx.holderRef, [effect.value], lastEvent);
+                if (!statusResult.success)
+                {
+                    throw new Error("On-block move status effect failed");
+                }
+                lastEvent = statusResult.event;
+                allSilent &&= statusResult.success === true;
+                break;
+            }
+            default:
+                // istanbul ignore next: should never happen
+                throw new Error("Unknown on-block move effect " +
+                    `'${effect!.type}'`);
+        }
+    }
+
+    // if the ability effects can't cause an explicit game event, then the least
+    //  it can do is give an immune event
+    if (allSilent)
+    {
+        lastEvent ??= yield;
+        if (lastEvent.type !== "immune" || lastEvent.monRef !== ctx.holderRef)
+        {
+            throw new Error("On-block move effect failed");
+        }
+        return {...yield* base.immune(ctx.pstate, lastEvent), immune: true};
+    }
+
+    return {...lastEvent && {event: lastEvent}, immune: true};
+}
+
+/**
+ * Handles events due to a certain effect type being blocked (e.g. Damp vs
+ * Explosion)
+ * @param explosive Explosive effect flag.
+ */
+async function* blockEffect(ctx: AbilityContext, explosive?: boolean,
+    lastEvent?: events.Any): SubParser<AbilityResult>
+{
+    // should see an inactive event (TODO(#262): change this?)
+    const next = lastEvent ?? (yield);
+    if (next.type !== "inactive" || next.monRef === ctx.holderRef)
+    {
+        throw new Error(`On-block effect${explosive ? " explosive" : ""} ` +
+            "failed");
+    }
+
+    return {failed: true};
+}
+
+// on-tryUnboost handlers
+
+/**
+ * Handles events due to an unboost-blocking ability (e.g. Clear Body).
+ * @param boosts Map of the unboosts being blocked.
+ */
+async function* blockUnboost(ctx: AbilityContext,
+    boosts: {readonly [T in dexutil.BoostName]?: true}, lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    // should see a fail event
+    const next = lastEvent ?? (yield);
+    if (next.type !== "fail")
+    {
+        throw new Error("On-tryUnboost block effect failed");
+    }
+    const subResult = yield* base.fail(ctx.pstate, next);
+    return {...subResult, blockUnboost: boosts};
+}
+
+// on-moveContactKO handlers
+
+/**
+ * Handles events due to a moveContactKO ability (e.g. Aftermath).
+ * @param targetRef Target of ability effects.
+ * @param expectedEffects Expected effects.
+ * @param explosive Explosive effect flag, meaning this ability's effects are
+ * blocked by abilities with `#on.block.effect.explosive=true` (e.g. Damp).
+ */
+async function* moveContactKO(ctx: AbilityContext, targetRef: Side,
+    expectedEffects: readonly effects.ability.MoveContactKO[],
+    explosive?: boolean, lastEvent?: events.Any): SubParser<AbilityResult>
+{
+    let allSilent = true;
+    for (const effect of expectedEffects ?? [])
+    {
+        switch (effect.type)
+        {
+            case "percentDamage":
+            {
+                const damageResult = yield* parsers.percentDamage(ctx.pstate,
+                    targetRef, effect.value, lastEvent);
+                if (!damageResult.success)
+                {
+                    throw new Error("On-moveContactKO " +
+                        `${explosive ? "explosive " : ""}effect ` +
+                        "percentDamage effect failed");
+                }
+                // TODO: permHalt check?
+                lastEvent = damageResult.event;
+                allSilent &&= damageResult.success === "silent";
+                break;
+            }
+            default:
+                // istanbul ignore next: should never happen
+                throw new Error("Unknown on-moveContactKO effect " +
+                    `'${effect!.type}'`);
+        }
+    }
+
+    // if the ability effects can't cause an explicit game event, then it
+    //  shouldn't have activated in the first place
+    if (allSilent) throw new Error("On-moveContactKO effect failed");
+
+    if (explosive)
+    {
+        // assert non-explosive-blocking ability
+        const target = ctx.pstate.state.teams[targetRef].active;
+        if (!target.volatile.suppressAbility)
+        {
+            const {ability} = target.traits;
+            const blockExplosive = [...ability.possibleValues]
+                .filter(n => ability.map[n].on?.block?.effect?.explosive);
+            ability.remove(...blockExplosive);
+        }
+    }
+
+    return {...lastEvent && {event: lastEvent}};
+}
+
+// on-moveContact handlers
+
+/**
+ * Handles events due to a moveContact ability (e.g. Rough Skin).
+ * @param targetRef Target of ability effects.
+ * @param expectedEffects Expected effects.
+ */
+async function* moveContact(ctx: AbilityContext, targetRef: Side,
+    expectedEffects: readonly effects.ability.MoveContact[],
+    lastEvent?: events.Any): SubParser<AbilityResult>
+{
+    let allSilent = true;
+    for (const effect of expectedEffects)
+    {
+        switch (effect.type)
+        {
+            case "percentDamage":
+            {
+                const damageResult = yield* parsers.percentDamage(ctx.pstate,
+                    targetRef, effect.value, lastEvent);
+                if (!damageResult.success)
+                {
+                    throw new Error("On-moveContact percentDamage effect " +
+                        "failed");
+                }
+                lastEvent = damageResult.event;
+                allSilent &&= damageResult.success === "silent";
+                break;
+            }
+            case "status":
+            {
+                const statusResult = yield* parsers.status(ctx.pstate,
+                    targetRef, [effect.value], lastEvent);
+                if (!statusResult.success)
+                {
+                    throw new Error("On-moveContact status effect failed");
+                }
+                lastEvent = statusResult.event;
+                allSilent &&= statusResult.success === true;
+                break;
+            }
+            default:
+                // istanbul ignore next: should never happen
+                throw new Error("Unknown on-moveContact effect " +
+                    `'${effect!.type}'`);
+        }
+    }
+
+    // if the ability effects can't cause an explicit game event, then it
+    //  shouldn't have activated in the first place
+    if (allSilent) throw new Error("On-moveContact effect failed");
+
+    return {...lastEvent && {event: lastEvent}};
+}
+
+// on-moveDamage handlers
+
+/**
+ * Handles events due to a changeMoveType ability (e.g. Color Change). Always
+ * targets ability holder.
+ */
+async function* changeToMoveType(ctx: AbilityContext, lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    if (!ctx.hitByMove)
+    {
+        throw new Error("On-moveDamage changeToMoveType effect failed: " +
+            "Attacking move not specified.");
+    }
+
+    const expectedType = ctx.hitByMove.type;
+
+    const next = lastEvent ?? (yield);
+    if (next.type !== "changeType" || next.monRef !== ctx.holderRef)
+    {
+        throw new Error("On-moveDamage changeToMoveType effect failed");
+    }
+    if (next.newTypes[0] !== expectedType || next.newTypes[1] !== "???")
+    {
+        throw new Error("On-moveDamage changeToMoveType effect failed: " +
+            `Expected type-change to '${expectedType}' but got ` +
+            `[${next.newTypes.join(", ")}]`);
+    }
+    return yield* base.changeType(ctx.pstate, next);
+}
+
+// on-moveDrain handlers
+
+/**
+ * Handles events due to an invertDrain ability (e.g. Liquid Ooze). Always
+ * targets the drain move's user.
+ */
+async function* invertDrain(ctx: AbilityContext, lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    // TODO: track hitByMove user
+    const userRef = otherSide(ctx.holderRef);
+
+    // expect the takeDamage event
+    const damageResult = yield* parsers.damage(ctx.pstate, userRef,
+        /*from*/ null, -1, lastEvent);
+    if (!damageResult.success)
+    {
+        throw new Error("On-moveDrain invert effect failed");
+    }
+
+    // TODO: include damage delta
+    return {
+        ...damageResult.event && {event: damageResult.event}, invertDrain: true
+    };
 }

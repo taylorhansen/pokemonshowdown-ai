@@ -148,8 +148,8 @@ export class PSEventHandler
         // starting a new turn
         if (this.newTurn) result.push({type: "preTurn"});
 
-        // this field should only stay true if one of these events contains a
-        //  |turn| message
+        // this field should stay true if one of these events contains a Turn
+        //  event
         this.newTurn = false;
 
         // handle events
@@ -165,13 +165,26 @@ export class PSEventHandler
         //  handleEvents() calls but only one Trace check
         // if an activateAbility is found, but an activateAbility with Trace is
         //  found after, move the Trace events so they happen before the ability
-        //  (of course, make sure the abilities/monRefs match)
+        //  (while making sure the abilities/monRefs match)
         // this is due to a weird behavior in PS with gen4 battles, not sure if
         //  it's also the case on cartridge
         const abilityEvents: {i: number, event: events.ActivateAbility}[] = [];
         for (let i = 0; i < result.length; ++i)
         {
             const event = result[i];
+            // also swap substitute start/damage events to the right order
+            if (event.type === "activateStatusEffect" &&
+                event.effect === "substitute" && event.start)
+            {
+                const next = result[i + 1];
+                if (next?.type === "takeDamage" && event.monRef === next.monRef)
+                {
+                    // swap the two events to the right order
+                    [result[i], result[i + 1]] = [next, event];
+                }
+                continue;
+            }
+
             if (event.type !== "activateAbility") continue;
             if (event.ability !== "trace")
             {
@@ -511,7 +524,7 @@ export class PSEventHandler
                         type: "revealMove",
                         monRef: event.of ?
                             this.getSide(event.of.owner) : otherSide(monRef),
-                        move: event.otherArgs[0]
+                        move: toIdName(event.otherArgs[0])
                     }
                 ]
             case "Bide":
@@ -1062,7 +1075,8 @@ export class PSEventHandler
             // NOTE: non-healing absorb abilities (e.g. motordrive) don't do
             //  this
             // |-heal|<holder>|...|[from] <ability>|[of] <attacker>
-            if ((event.type === "-heal" && dex.abilities[ability]?.absorb) ||
+            if ((event.type === "-heal" &&
+                    dex.abilities[ability]?.on?.block?.move?.effects) ||
                 // |-ability|<holder>|<target's ability>|[from] ability: Trace|
                 //  [of] target
                 (event.type === "-ability" && ability === "trace"))
