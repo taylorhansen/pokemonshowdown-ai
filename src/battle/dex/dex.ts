@@ -1007,7 +1007,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     psychup: {uid: 301, name: "psychup", display: "Psych Up", category: "status", basePower: 0, type: "normal", target: "normal", pp: [10, 16], flags: {ignoreSub: true, noMirror: true}},
     psywave: {uid: 302, name: "psywave", display: "Psywave", category: "special", basePower: 0, type: "psychic", target: "normal", pp: [15, 24]},
     punishment: {uid: 303, name: "punishment", display: "Punishment", category: "physical", basePower: 0, type: "dark", target: "normal", pp: [5, 8], flags: {contact: true}},
-    pursuit: {uid: 304, name: "pursuit", display: "Pursuit", category: "physical", basePower: 40, type: "dark", target: "normal", pp: [20, 32], flags: {contact: true}},
+    pursuit: {uid: 304, name: "pursuit", display: "Pursuit", category: "physical", basePower: 40, type: "dark", target: "normal", pp: [20, 32], flags: {contact: true, interceptSwitch: true}},
     quickattack: {uid: 305, name: "quickattack", display: "Quick Attack", category: "physical", basePower: 40, type: "normal", target: "normal", pp: [30, 48], flags: {contact: true}},
     rage: {uid: 306, name: "rage", display: "Rage", category: "physical", basePower: 20, type: "normal", target: "normal", pp: [20, 32], flags: {contact: true}, effects: {status: {self: ["rage"]}}},
     raindance: {uid: 307, name: "raindance", display: "Rain Dance", category: "status", basePower: 0, type: "water", target: "all", pp: [5, 8], flags: {noMirror: true}, effects: {field: "RainDance"}},

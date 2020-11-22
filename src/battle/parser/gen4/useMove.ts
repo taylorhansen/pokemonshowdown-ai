@@ -11,6 +11,7 @@ import * as ability from "./activateAbility";
 import * as item from "./activateItem";
 import { handlers as base } from "./base";
 import * as parsers from "./parsers";
+import { expectSwitch } from "./switchIn";
 
 /**
  * Handles events within the context of a move being used. Returns the
@@ -19,11 +20,11 @@ import * as parsers from "./parsers";
  * (`"bounced"`) via another effect. Default false.
  */
 export async function* useMove(pstate: ParserState,
-    initialEvent: events.UseMove, called: boolean | "bounced" = false):
+    event: events.UseMove, called: boolean | "bounced" = false):
     SubParser
 {
     // setup context
-    const ctx = initCtx(pstate, initialEvent, called);
+    const ctx = initCtx(pstate, event, called);
 
     // check for move interruptions
     const preDamageResult = yield* preDamage(ctx);
@@ -878,7 +879,6 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
         !ctx.pstate.state.teams[ctx.userRef].pokemon.every(
             (mon, i) => i === 0 || mon?.fainted))
     {
-        // TODO: switch ctx, communicate self-switch/healingwish
         const switchResult = yield* expectSelfSwitch(ctx,
             moveEffects.selfSwitch, lastEvent);
         lastEvent = switchResult.event;
@@ -1145,23 +1145,19 @@ async function* expectSelfSwitch(ctx: MoveContext,
     // make sure all information is up to date before possibly
     //  requesting a decision
     preHaltIgnoredEffects(ctx);
+    ctx.pstate.state.teams[ctx.userRef].status.selfSwitch = effect;
     const haltResult = yield* base.halt(ctx.pstate, haltEvent);
     lastEvent = haltResult.event;
 
     // expect the subsequent switch event
-    // TODO: handle pursuit move
-    const switchEvent = lastEvent ?? (yield);
-    if (switchEvent.type !== "switchIn")
+    // TODO: communicate self-switch/healingwish effects
+    const switchResult = yield* expectSwitch(ctx.pstate, ctx.userRef,
+        lastEvent);
+    if (!switchResult.success)
     {
         throw new Error(`SelfSwitch effect '${effect}' failed`);
     }
-    if (switchEvent.monRef !== ctx.userRef)
-    {
-        throw new Error(`SelfSwitch effect '${effect}' failed: Expected ` +
-            `'${ctx.userRef}' but got '${switchEvent.monRef}'`);
-    }
-    ctx.pstate.state.teams[ctx.userRef].status.selfSwitch = effect;
-    return yield* base.switchIn(ctx.pstate, switchEvent);
+    return switchResult;
 }
 
 // inference helper functions

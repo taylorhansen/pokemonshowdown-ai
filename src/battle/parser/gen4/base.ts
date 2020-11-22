@@ -7,6 +7,7 @@ import { baseHandler } from "../helpers";
 import { activateAbility } from "./activateAbility";
 import { activateItem } from "./activateItem";
 import { halt } from "./halt";
+import { switchIn } from "./switchIn";
 import { useMove } from "./useMove";
 
 /** Base handlers for each event. */
@@ -455,11 +456,16 @@ export const handlers =
         }
         return {};
     },
-    async* switchIn(pstate: ParserState, event: events.SwitchIn): SubParser
+    switchIn(...[pstate, event, ...args]: Parameters<typeof switchIn>):
+        SubParser
     {
-        // TODO: switch ctx
-        pstate.state.teams[event.monRef].switchIn(event);
-        return {};
+        return switchIn(
+        {
+            ...pstate,
+            // TODO: add log prefix indicator for drag/self-switch?
+            logger: pstate.logger.addPrefix(`Switch(${event.monRef}): `)
+        },
+            event, ...args);
     },
     async* takeDamage(pstate: ParserState, event: events.TakeDamage): SubParser
     {

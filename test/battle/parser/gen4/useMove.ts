@@ -517,8 +517,19 @@ export function testUseMove(f: () => Context,
                     await expect(handle(
                             {type: "switchIn", monRef: "us", ...ditto}))
                         .to.eventually.be.rejectedWith(Error,
-                            "SelfSwitch effect 'true' failed: " +
-                            "Expected 'them' but got 'us'");
+                            "SelfSwitch effect 'true' failed");
+                });
+
+                it("Should handle Pursuit", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", "uturn");
+                    await handle({type: "halt", reason: "wait"});
+                    await handle(
+                        {type: "useMove", monRef: "us", move: "pursuit"});
+                    await handleEnd(
+                        {type: "switchIn", monRef: "them", ...ditto});
                 });
             });
 

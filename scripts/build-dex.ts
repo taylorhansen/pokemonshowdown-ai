@@ -80,12 +80,15 @@ let uid = 0;
 
 const moves: (readonly [string, dexutil.MoveData])[] = [];
 
-// copied from pokemon-showdown/data/abilities
+// adapted from pokemon-showdown/data
+
 /** Moves that are blocked by Damp-like abilities. */
 const explosive: {readonly [move: string]: boolean} =
     {explosion: true, selfdestruct: true};
 
-// copied from pokemon-showdown/data/mods/gen4/moves
+/** Moves that intercept switch-ins. */
+const interceptSwitch: {readonly [move: string]: boolean} = {pursuit: true};
+
 /** Moves that can't be copied by Mirror Move. */
 const noMirror: {readonly [move: string]: boolean} =
 {
@@ -138,7 +141,7 @@ const customDamageMap:
     synthesis: {target: "self", percent: 50}
 };
 
-/** Maps some move names to swap boost effects. */
+/** Maps some move names to swap-boost effects. */
 const swapBoostMap:
     {readonly [move: string]: Partial<dexutil.BoostTable<true>>} =
 {
@@ -155,9 +158,7 @@ const swapBoostMap:
 /** Maps some move names to CountableStatusTypes. */
 const countableStatusTypeMap:
     {readonly [move: string]: effects.CountableStatusType} =
-{
-    perishsong: "perish", stockpile: "stockpile"
-};
+    {perishsong: "perish", stockpile: "stockpile"};
 
 /** Maps some move names to FieldTypes. */
 const fieldTypeMap: {readonly [move: string]: effects.FieldType} =
@@ -306,6 +307,7 @@ for (const move of
         ...!!move.flags.contact && {contact: true},
         ...explosive.hasOwnProperty(move.id) && {explosive: true},
         ...!!move.flags.authentic && {ignoreSub: true},
+        ...interceptSwitch.hasOwnProperty(move.id) && {interceptSwitch: true},
         ...noMirror.hasOwnProperty(move.id) && {noMirror: true},
         ...noCopycat.hasOwnProperty(move.id) && {noCopycat: true},
         ...!!move.flags.reflectable && {reflectable: true}

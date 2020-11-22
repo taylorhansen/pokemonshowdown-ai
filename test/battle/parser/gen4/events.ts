@@ -19,6 +19,7 @@ import { ditto, smeargle } from "../../../helpers/switchOptions";
 import { testActivateAbility } from "./activateAbility";
 import { testActivateItem } from "./activateItem";
 import { testHalt } from "./halt";
+import { testSwitchIn } from "./switchIn";
 import { testUseMove } from "./useMove";
 
 export function testEvents()
@@ -1249,14 +1250,7 @@ export function testEvents()
 
     describe("switchIn", function()
     {
-        it("Should switch in pokemon", async function()
-        {
-            state.teams.us.size = 1;
-            expect(state.teams.us.active).to.be.null;
-            await parser.next({type: "switchIn", monRef: "us", ...smeargle});
-            expect(state.teams.us.active).to.not.be.null;
-            expect(state.teams.us.active.active).to.be.true;
-        });
+        testSwitchIn(contextFunc, initActive);
     });
 
     describe("takeDamage", function()

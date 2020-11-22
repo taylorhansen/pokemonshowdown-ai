@@ -332,6 +332,11 @@ export interface MoveData extends DexData
         /** Whether this move ignores Subtitute. */
         readonly ignoreSub?: true;
         /**
+         * Whether this move can intercept the target's switch-in before it
+         * would normally be used.
+         */
+        readonly interceptSwitch?: true;
+        /**
          * Whether this move can't be copied by Mirror Move. This should only be
          * present for targeted moves.
          */
