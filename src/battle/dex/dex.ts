@@ -617,7 +617,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     intimidate: {uid: 42, name: "intimidate", display: "Intimidate"},
     ironfist: {uid: 43, name: "ironfist", display: "Iron Fist"},
     keeneye: {uid: 44, name: "keeneye", display: "Keen Eye", on: {tryUnboost: {block: {accuracy: true}}}},
-    klutz: {uid: 45, name: "klutz", display: "Klutz"},
+    klutz: {uid: 45, name: "klutz", display: "Klutz", flags: {ignoreItem: true}},
     leafguard: {uid: 46, name: "leafguard", display: "Leaf Guard"},
     levitate: {uid: 47, name: "levitate", display: "Levitate"},
     lightningrod: {uid: 48, name: "lightningrod", display: "Lightning Rod"},

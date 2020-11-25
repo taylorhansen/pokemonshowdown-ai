@@ -740,6 +740,7 @@ const abilityData:
     {on: {block: {move: {
         type: "fire", effects: [{type: "status", value: "flashFire"}]
     }}}},
+    // TODO: levitate
     motordrive: {on: {block: {move: {
         type: "electric", effects: [{type: "boost", add: {spe: 1}}]
     }}}},
@@ -797,6 +798,8 @@ const abilityData:
     colorchange: {on: {moveDamage: {changeToMoveType: true}}},
 
     liquidooze: {on: {moveDrain: {invert: true}}},
+
+    klutz: {flags: {ignoreItem: true}},
 
     magicguard: {flags: {noRecoil: true}},
     rockhead: {flags: {noRecoil: true}}

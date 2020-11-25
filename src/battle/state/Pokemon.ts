@@ -290,14 +290,17 @@ export class Pokemon implements ReadonlyPokemon
         }
 
         const v = this._volatile;
-        if (v && v.ingrain) return true;
+        if (v?.ingrain) return true;
 
-        // gastro acid status suppresses most abilities
-        const ignoringAbility = v && v.suppressAbility;
-        const ability = ignoringAbility ? "" : this.ability;
+        // look for an ability-suppressing effect
+        const ignoringAbility = v?.suppressAbility;
+        const ability = ignoringAbility ? undefined : this.traits.ability;
 
-        // klutz ability suppresses most items
-        const ignoringItem = (v && v.embargo.isActive) || ability === "klutz";
+        // look for an item-suppressing ability/effect
+        const ignoringItem = v?.embargo.isActive ||
+            (ability &&
+                [...ability.possibleValues]
+                    .every(n => ability!.map[n].flags?.ignoreItem));
         const item = (ignoringItem || !this._item.definiteValue) ?
             "" : this._item.definiteValue;
 
@@ -305,7 +308,9 @@ export class Pokemon implements ReadonlyPokemon
         if (item === "ironball") return true;
 
         // magnet rise and levitate lift
-        return (!v || !v.magnetRise.isActive) && ability !== "levitate" &&
+        return !v?.magnetRise.isActive &&
+            // TODO: add levitate ability effect to dex
+            ability?.definiteValue !== "levitate" &&
             // flying type lifts
             !this.types.includes("flying");
     }
@@ -319,20 +324,23 @@ export class Pokemon implements ReadonlyPokemon
         }
 
         const v = this._volatile;
-        if (v && v.ingrain) return true;
+        if (v?.ingrain) return true;
 
-        // gastro acid status suppresses most abilities
-        const ignoringAbility = v && v.suppressAbility;
+        // look for an ability-suppressing effect
+        const ignoringAbility = v?.suppressAbility;
 
-        // klutz ability suppresses most items
-        const ignoringItem = (v && v.embargo.isActive) ||
-            (!ignoringAbility && this.canHaveAbility("klutz"));
+        // look for possible item-suppressing effects
+        const ability = this.traits.ability;
+        const ignoringItem = v?.embargo.isActive ||
+            (!ignoringAbility &&
+                [...ability.possibleValues]
+                    .some(n => ability.map[n].flags?.ignoreItem));
 
         // iron ball causes grounding
         if (this._item.isSet("ironball") && !ignoringItem) return true;
 
         // magnet rise lifts
-        return (!v || !v.magnetRise.isActive) &&
+        return !v?.magnetRise.isActive &&
             // levitate lifts
             (ignoringAbility || !this.canHaveAbility("levitate")) &&
             // flying type lifts

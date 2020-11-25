@@ -138,9 +138,12 @@ export function getChoices(state: ReadonlyBattleState, switchOnly: boolean):
             {
                 continue;
             }
-            const ability = mon.volatile.suppressAbility ? "" : mon.ability;
-            const ignoringItem = ability === "klutz" ||
-                mon.volatile.embargo.isActive;
+            const ability = mon.volatile.suppressAbility ? undefined
+                : mon.traits.ability;
+            const ignoringItem = mon.volatile.embargo.isActive ||
+                (ability &&
+                    [...ability.possibleValues]
+                        .every(n => ability.map[n].flags?.ignoreItem));
             // locked into one move if choice item lock
             if (!ignoringItem && mon.volatile.choiceLock &&
                 moveName !== mon.volatile.choiceLock)
