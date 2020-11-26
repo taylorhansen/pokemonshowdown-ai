@@ -5,7 +5,7 @@ import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { eventLoop, matchBoost } from "../helpers";
+import { eventLoop, matchBoost, matchPercentDamage } from "../helpers";
 import { handlers as base } from "./base";
 
 /** SubParserResult that includes a success indicator. */
@@ -215,8 +215,7 @@ export async function* percentDamage(pstate: ParserState, targetRef: Side,
 {
     const target = pstate.state.teams[targetRef].active;
     // effect would do nothing
-    if (percent < 0 && target.hp.current <= 0 ||
-        percent > 0 && target.hp.current >= target.hp.max)
+    if (matchPercentDamage(percent, target.hp.current, target.hp.max))
     {
         return {...lastEvent && {event: lastEvent}, success: "silent"};
     }

@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import "mocha";
+import * as dex from "../../../../src/battle/dex/dex";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
 import * as events from "../../../../src/battle/parser/BattleEvent";
 import { ParserState, SubParser } from
@@ -21,7 +22,15 @@ export function testActivateItem(f: () => Context,
         ({pstate, parser} = f());
     });
 
-    const {exitParser} = createParserHelpers(() => parser);
+    const {handle, exitParser} = createParserHelpers(() => parser);
+
+    // can have cutecharm or magicguard
+    const clefable: events.SwitchOptions =
+        {species: "clefable", level: 50, gender: "F", hp: 100, hpMax: 100};
+
+    // can have cutecharm or klutz
+    const lopunny: events.SwitchOptions =
+        {species: "lopunny", level: 50, gender: "F", hp: 100, hpMax: 100};
 
     // tests for activateItem()
     describe("Event", function()
@@ -87,6 +96,19 @@ export function testActivateItem(f: () => Context,
                 await initParser("us", "lifeorb", "movePostDamage");
                 await handleEnd({type: "takeDamage", monRef: "us", hp: 56});
             });
+
+            it("Should infer no magicguard if damaged", async function()
+            {
+                const mon = initActive("them", clefable);
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("cutecharm", "magicguard");
+
+                await initParser("them", "lifeorb", "movePostDamage");
+                await handleEnd(
+                    {type: "takeDamage", monRef: "them", hp: 90});
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("cutecharm");
+            });
         });
 
         describe("On-turn", function()
@@ -137,6 +159,19 @@ export function testActivateItem(f: () => Context,
                         effect: "tox", start: true
                     });
                 });
+
+                it("Should infer no magicguard if damaged", async function()
+                {
+                    const mon = initActive("them", clefable);
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys("cutecharm", "magicguard");
+
+                    await initParser("them", "stickybarb", "turn");
+                    await handleEnd(
+                        {type: "takeDamage", monRef: "them", hp: 94});
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys("cutecharm");
+                });
             });
         });
     });
@@ -164,6 +199,101 @@ export function testActivateItem(f: () => Context,
             await exitParser<item.ExpectItemsResult>({results: []});
             expect(mon.item.possibleValues).to.not.have.keys("lifeorb");
         });
+
+        it("Shouldn't infer no on-movePostDamage item if it did not activate " +
+            "and the effect should've been silent",
+        async function()
+        {
+            const mon = initActive("them");
+            mon.hp.set(0);
+            expect(mon.item.possibleValues).to.include.keys("lifeorb");
+
+            await altParser(item.onMovePostDamage(pstate, {them: true}));
+            await exitParser<item.ExpectItemsResult>({results: []});
+            expect(mon.item.possibleValues).to.include.keys("lifeorb");
+        });
+
+
+        function test(name: string, ability: string,
+            switchOptions: events.SwitchOptions, itemName: string,
+            itemEvents: readonly events.Any[]): void
+        {
+            const otherAbilities = dex.pokemon[switchOptions.species].abilities
+                .filter(n => n !== ability);
+            describe(name, function()
+            {
+                it(`Should infer no ${ability} if item activated`,
+                async function()
+                {
+                    const mon = initActive("them", switchOptions);
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(ability, ...otherAbilities);
+
+                    await altParser(item.onMovePostDamage(pstate,
+                            {them: true}));
+                    for (const event of itemEvents) await handle(event);
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(...otherAbilities);
+                });
+
+                it(`Should infer ${ability} if item is confirmed but didn't ` +
+                    "activate", async function()
+                {
+                    const mon = initActive("them", switchOptions);
+                    mon.setItem(itemName);
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(ability, ...otherAbilities);
+
+                    await altParser(item.onMovePostDamage(pstate,
+                            {them: true}));
+                    await exitParser<item.ExpectItemsResult>({results: []});
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(ability);
+                });
+
+                it("Shouldn't infer ability if suppressed and item activates",
+                async function()
+                {
+                    const mon = initActive("them", switchOptions);
+                    mon.volatile.suppressAbility = true;
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(ability, ...otherAbilities);
+
+                    await altParser(item.onMovePostDamage(pstate,
+                            {them: true}));
+                    for (const event of itemEvents) await handle(event);
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(ability, ...otherAbilities);
+                });
+
+                it("Should infer no item if ability suppressed and the item " +
+                    "doesn't activate", async function()
+                {
+                    const mon = initActive("them", switchOptions);
+                    mon.volatile.suppressAbility = true;
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(ability, ...otherAbilities);
+                    expect(mon.item.possibleValues).to.include.keys(itemName);
+
+                    await altParser(item.onMovePostDamage(pstate,
+                            {them: true}));
+                    await exitParser<item.ExpectItemsResult>({results: []});
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.keys(ability, ...otherAbilities);
+                    expect(mon.item.possibleValues).to.not.have.keys(itemName);
+                });
+            });
+        }
+
+        const lifeorbEvents: readonly events.Any[] =
+        [
+            {type: "activateItem", monRef: "them", item: "lifeorb"},
+            {type: "takeDamage", monRef: "them", hp: 90}
+        ];
+
+        test("Klutz", "klutz", lopunny, "lifeorb", lifeorbEvents);
+        test("Magic Guard (lifeorb)", "magicguard", clefable, "lifeorb",
+            lifeorbEvents);
     });
 
     // TODO: onTurn() once added

@@ -1,11 +1,11 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
 import * as effects from "../../dex/effects";
-import { Pokemon } from "../../state/Pokemon";
+import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { eventLoop } from "../helpers";
+import { eventLoop, matchPercentDamage } from "../helpers";
 import * as parsers from "./parsers";
 
 /** Result from `expectItems()` and variants like `onMovePostDamage()`. */
@@ -23,21 +23,60 @@ export async function* onMovePostDamage(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
     SubParser<ExpectItemsResult>
 {
-    // TODO: assertions for lifeorb + sheerforce/magicguard, not just klutz
     const pendingItems = getItems(pstate, eligible,
-        d => !!d.on?.movePostDamage);
+        function movePostDamageFilter(data, mon)
+        {
+            if (!data.on?.movePostDamage) return false;
+
+            const abilities = new Set(mon.traits.ability.possibleValues);
+            for (const effect of data.on.movePostDamage)
+            {
+                // if the effect is silent, leave it
+                if (matchPercentDamage(effect.value, mon.hp.current,
+                    mon.hp.max))
+                {
+                    continue;
+                }
+                // filter ability possibilities that can block the remaining
+                //  effects
+                // if one effect can't be suppressed, then the item should
+                //  activate
+                if (mon.volatile.suppressAbility) return true;
+                for (const abilityName of abilities)
+                {
+                    const ability = mon.traits.ability.map[abilityName];
+                    if (ability.flags?.ignoreItem) continue;
+                    if (effect.value < 0 &&
+                        ability.flags?.noIndirectDamage === true)
+                    {
+                        continue;
+                    }
+                    abilities.delete(abilityName);
+                }
+                if (abilities.size <= 0) return true;
+            }
+            return abilities.size > 0 ? abilities : true;
+        });
 
     return yield* expectItems(pstate, "movePostDamage", pendingItems,
         lastEvent);
 }
 
+interface ItemInference
+{
+    readonly name: string;
+    /** Holder's possible abilities that can block the item activation. */
+    readonly blockingAbilities?: ReadonlySet<string>;
+}
+
 /** Filters out item possibilities that don't match the given predicate. */
 function getItems(pstate: ParserState,
     monRefs: Partial<Readonly<Record<Side, any>>>,
-    f: (data: dexutil.ItemData) => boolean):
-    Partial<Record<Side, string[]>>
+    f: (data: dexutil.ItemData, mon: ReadonlyPokemon) => boolean | Set<string>):
+    // TODO: make ItemInference[] a Map/Record?
+    Partial<Record<Side, ItemInference[]>>
 {
-    const result: Partial<Record<Side, string[]>> = {};
+    const result: Partial<Record<Side, ItemInference[]>> = {};
     for (const monRef in monRefs)
     {
         if (!monRefs.hasOwnProperty(monRef)) continue;
@@ -45,9 +84,19 @@ function getItems(pstate: ParserState,
         const mon = pstate.state.teams[monRef as Side].active;
         if (mon.volatile.embargo.isActive) continue;
 
-        const filtered = [...mon.item.possibleValues]
-            .filter(n => f(mon.item.map[n]));
-        if (filtered.length > 0) result[monRef as Side] = filtered;
+        const inferences: ItemInference[] = [];
+        for (const name of mon.item.possibleValues)
+        {
+            const cbResult = f(mon.item.map[name], mon);
+            if (!cbResult) continue;
+            inferences.push(
+            {
+                name,
+                ...cbResult instanceof Set && {blockingAbilities: cbResult}
+            });
+        }
+
+        if (inferences.length > 0) result[monRef as Side] = inferences;
     }
     return result;
 }
@@ -59,7 +108,7 @@ function getItems(pstate: ParserState,
  */
 async function* expectItems(pstate: ParserState,
     on: dexutil.ItemOn | null,
-    pendingItems: Partial<Record<Side, readonly string[]>>,
+    pendingItems: Partial<Record<Side, readonly ItemInference[]>>,
     lastEvent?: events.Any): SubParser<ExpectItemsResult>
 {
     // if the next event is an activateItem with one of those appropriate items,
@@ -73,19 +122,28 @@ async function* expectItems(pstate: ParserState,
 
             // get the possible items that could activate within this ctx
             if (!pendingItems.hasOwnProperty(event.monRef)) return {event};
-            const items = pendingItems[event.monRef];
+            const items = pendingItems[event.monRef]!;
 
-            // find the ItemData out of those possible items
-            const itemName = items?.find(
-                n => n === (event as events.ActivateItem).item);
-            if (!itemName) return {event};
+            // match with current item event
+            const inf = items.find(
+                i => i.name === (event as events.ActivateItem).item);
+            if (!inf) return {event};
 
             // consume the pending item for this pokemon
             delete pendingItems[event.monRef];
 
+            // abilities that blocked the item can be removed as possibilities
+            const mon = pstate.state.teams[event.monRef].active;
+            // suppressAbility check should've already been done earlier
+            if (inf.blockingAbilities)
+            {
+                mon.traits.ability.remove(...inf.blockingAbilities)
+            }
+
             // handle the item
             const itemResult = yield* activateItem(pstate, event, on);
             results.push(itemResult);
+
             return itemResult;
         },
         lastEvent);
@@ -100,26 +158,42 @@ async function* expectItems(pstate: ParserState,
 
         // can't infer yet since an ability can ignore item effects
         const mon = pstate.state.teams[monRef as Side].active;
-        const {ability} = mon.traits;
-        const filteredAbility = [...ability.possibleValues]
-            .filter(n => ability.map[n].flags?.ignoreItem);
-        // if every possible item should've activated, then we have an
-        //  item-ignoring ability
-        if (filteredAbility.length > 0 && !mon.volatile.suppressAbility)
+        // intersect each ItemInference ability set
+        let intersect: Set<string> | undefined;
+        for (const inf of possibilities)
         {
-            if (possibilities.length === mon.item.possibleValues.size)
+            if (!inf.blockingAbilities) continue;
+            if (!intersect) intersect = new Set(inf.blockingAbilities);
+            else
             {
-                ability.narrow(...filteredAbility);
+                for (const name of intersect)
+                {
+                    if (!inf.blockingAbilities.has(name))
+                    {
+                        intersect.delete(name);
+                    }
+                }
             }
-            // can't make any meaningful inferences if neither ability nor item
-            //  are definite
-            // TODO: register mutual onNarrow callbacks?
+        }
+        // if no ability/status is getting in the way of the possible item(s),
+        //  then the pokemon must not have had the item(s)
+        // suppressAbility check should've already been done earlier
+        if (!intersect || intersect.size <= 0)
+        {
+            mon.item.remove(...possibilities.map(i => i.name));
         }
         else
         {
-            // no item-ignoring ability, so must not have the pending item
-            pstate.state.teams[monRef as Side].active.item
-                .remove(...possibilities);
+            // if every possible item should've activated, then one of these
+            //  blocking abilities has to be there
+            // typically this only happens when the item is confirmed (length=1)
+            if (possibilities.length === mon.item.possibleValues.size)
+            {
+                mon.traits.ability.narrow(...intersect);
+            }
+            // can't make any meaningful inferences if neither ability nor item
+            //  are definite
+            // TODO: register onNarrow callbacks for item/ability?
         }
     }
 
@@ -230,6 +304,7 @@ async function* movePostDamage(ctx: ItemContext,
     {
         const damageResult = yield* parsers.percentDamage(ctx.pstate,
             ctx.holderRef, effect.value, lastEvent);
+        if (damageResult.success === true) indirectDamage(ctx);
         // TODO: permHalt check?
         lastEvent = damageResult.event;
     }
@@ -254,6 +329,7 @@ async function* turn(ctx: ItemContext,
             {
                 const damageResult = yield* parsers.percentDamage(ctx.pstate,
                     ctx.holderRef, effect.value, lastEvent);
+                if (damageResult.success === true) indirectDamage(ctx);
                 // TODO: permHalt check?
                 lastEvent = damageResult.event;
                 break;
@@ -268,4 +344,27 @@ async function* turn(ctx: ItemContext,
         }
     }
     return {...lastEvent && {event: lastEvent}};
+}
+
+/**
+ * Indicates that the item holder received indirect damage from the item, in
+ * order to make ability inferences.
+ */
+function indirectDamage(ctx: ItemContext): void
+{
+    if (ctx.holder.volatile.suppressAbility) return;
+
+    // can't have an ability that blocks indirect damage
+    const ability = ctx.holder.traits.ability;
+    const filteredAbilities =
+        [...ability.possibleValues]
+            .filter(n => ability.map[n].flags?.noIndirectDamage === true);
+    if (ability.possibleValues.size <= filteredAbilities.length)
+    {
+        throw new Error(`Pokemon '${ctx.holderRef}' received indirect damage ` +
+            `from item '${ctx.item.name}' even though its ability ` +
+            `[${[...ability.possibleValues].join(", ")}] suppresses that ` +
+            "damage");
+    }
+    ability.remove(...filteredAbilities);
 }

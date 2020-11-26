@@ -801,8 +801,8 @@ const abilityData:
 
     klutz: {flags: {ignoreItem: true}},
 
-    magicguard: {flags: {noRecoil: true}},
-    rockhead: {flags: {noRecoil: true}}
+    magicguard: {flags: {noIndirectDamage: true}},
+    rockhead: {flags: {noIndirectDamage: "recoil"}}
 };
 
 const abilities: (readonly [string, dexutil.AbilityData])[] = [];

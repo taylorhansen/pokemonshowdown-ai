@@ -1492,7 +1492,7 @@ function recoil(ctx: MoveContext, consumed: boolean): void
         // get possible recoil-canceling abilities
         const userAbility = ctx.user.traits.ability;
         const noRecoilAbilities = [...userAbility.possibleValues]
-            .filter(n => userAbility.map[n].flags?.noRecoil);
+            .filter(n => userAbility.map[n].flags?.noIndirectDamage);
         // can't have recoil-canceling abilities
         if (consumed)
         {

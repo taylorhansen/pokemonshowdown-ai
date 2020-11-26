@@ -292,8 +292,11 @@ export interface AbilityData extends DexData
          * Whether this ability ignores the target's ability when using a move.
          */
         readonly ignoreTargetAbility?: true;
-        /** Whether this ability silently blocks recoil damage. */
-        readonly noRecoil?: true;
+        /**
+         * Whether this ability silently blocks all indirect damage or just
+         * recoil.
+         */
+        readonly noIndirectDamage?: true | "recoil";
     };
 }
 

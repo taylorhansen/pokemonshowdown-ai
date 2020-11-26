@@ -21,6 +21,19 @@ export function matchBoost(set: boolean, pending: number, given: number,
     return next === expected;
 }
 
+/**
+ * Checks whether a percent-damage effect would be silent.
+ * @param percent Percent damage.
+ * @param hp Current hp.
+ * @param hpMax Max hp.
+ */
+export function matchPercentDamage(percent: number, hp: number, hpMax: number):
+    boolean
+{
+    // can't heal when full or damage when fainted
+    return (percent > 0 && hp >= hpMax) || (percent < 0 && hp <= 0);
+}
+
 /** Maps BattleEvent type to a SubParser handler. */
 export type EventHandlerMap = {readonly [T in events.Type]: EventHandler<T>};
 
