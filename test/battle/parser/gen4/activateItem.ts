@@ -109,6 +109,21 @@ export function testActivateItem(f: () => Context,
                 expect(mon.traits.ability.possibleValues)
                     .to.have.keys("cutecharm");
             });
+
+            it("Should throw if damaged while having magicguard",
+            async function()
+            {
+                const mon = initActive("them", clefable);
+                mon.traits.setAbility("magicguard");
+
+                await initParser("them", "lifeorb", "movePostDamage");
+                await expect(handle(
+                        {type: "takeDamage", monRef: "them", hp: 90}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Pokemon 'them' received indirect damage from item " +
+                        "'lifeorb' even though its ability [magicguard] " +
+                        "suppresses that damage");
+            });
         });
 
         describe("On-turn", function()
