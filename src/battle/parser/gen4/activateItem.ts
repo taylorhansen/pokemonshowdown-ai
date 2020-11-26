@@ -290,7 +290,7 @@ async function* dispatchEffects(ctx: ItemContext, lastEvent?: events.Any):
     return {...lastEvent && {event: lastEvent}};
 }
 
-// on-movePostDamagee handlers
+// on-movePostDamage handlers
 
 /**
  * Handles events due to a movePostDamage item (e.g. Life Orb).
