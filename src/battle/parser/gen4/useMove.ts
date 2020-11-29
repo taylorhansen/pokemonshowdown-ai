@@ -20,18 +20,18 @@ import { expectSwitch } from "./switchIn";
  * (`"bounced"`) via another effect. Default false.
  */
 export async function* useMove(pstate: ParserState,
-    event: events.UseMove, called: boolean | "bounced" = false):
-    SubParser
+    event: events.UseMove, called: boolean | "bounced" = false,
+    lastEvent?: events.Any): SubParser
 {
     // setup context
     const ctx = initCtx(pstate, event, called);
 
     // check for move interruptions
-    const preDamageResult = yield* preDamage(ctx);
+    const preDamageResult = yield* preDamage(ctx, lastEvent);
     if (!ctx.failed) handleImplicitEffects(ctx, /*failed*/ false);
 
     // expect move damage if applicable
-    let lastEvent: events.Any | undefined = preDamageResult.event;
+    lastEvent = preDamageResult.event;
     if (!ctx.failed && ctx.moveData.category !== "status" &&
         !preDamageResult.delay)
     {
@@ -41,9 +41,19 @@ export async function* useMove(pstate: ParserState,
 
     // expect post-damage move effects
     const postDamageResult = yield* postDamage(ctx, lastEvent);
+    lastEvent = postDamageResult.event;
 
     // clean up flags
     preHaltIgnoredEffects(ctx);
+
+    if (preDamageResult.delay === "shorten")
+    {
+        // execute event again to handle shortened release turn
+        // by creating a new MoveContext in this call, it'll no longer think
+        //  it's in the charging turn so certain obscure effects are still
+        //  handled properly (e.g. mirrormove tracking on release turn)
+        return yield* useMove(pstate, event, /*called*/ false, lastEvent);
+    }
     return postDamageResult;
 }
 
@@ -174,7 +184,7 @@ function initCtx(pstate: ParserState, event: events.UseMove,
     if (user.volatile.twoTurn.type === moveName)
     {
         user.volatile.twoTurn.reset();
-        if (moveData.effects?.delay !== "twoTurn")
+        if (moveData.effects?.delay?.type !== "twoTurn")
         {
             // istanbul ignore next: should never happen
             throw new Error(`Two-turn move '${moveName}' does not have ` +
@@ -188,7 +198,7 @@ function initCtx(pstate: ParserState, event: events.UseMove,
 
     const mirror =
         // expected to be a charging turn, can't mirror those
-        (moveData.effects?.delay !== "twoTurn" || releasedTwoTurn) &&
+        (moveData.effects?.delay?.type !== "twoTurn" || releasedTwoTurn) &&
         // can't mirror called moves
         !called &&
         // can't mirror called rampage moves
@@ -261,12 +271,16 @@ function framePendingTargets(userRef: Side,
 /** Result of `preDamage()`. */
 interface PreDamageResult extends SubParserResult
 {
-    /** Whether move damage is being prepared or delayed due to an effect. */
-    delay?: true;
+    /**
+     * Whether move damage is being prepared or delayed due to an effect, or the
+     * delay is being shortened.
+     */
+    delay?: true | "shorten";
 }
 
 /** Handles effects that interrupt before move damage. */
-async function* preDamage(ctx: MoveContext): SubParser<PreDamageResult>
+async function* preDamage(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<PreDamageResult>
 {
     // TODO: deconstruct eventLoop like in postDamage()
     const result = yield* eventLoop(async function*(event)
@@ -330,16 +344,15 @@ async function* preDamage(ctx: MoveContext): SubParser<PreDamageResult>
                 return yield* base.removeItem(ctx.pstate, event);
         }
         return {event};
-    });
-    let lastEvent = result.event;
+    }, lastEvent);
+    lastEvent = result.event;
 
-    let delay: boolean | undefined;
+    let delay: boolean | "shorten" | undefined;
     if (!ctx.failed && ctx.moveData.effects?.delay)
     {
-        const delayResult = yield* expectDelay(ctx, ctx.moveData.effects.delay,
-            lastEvent);
+        const delayResult = yield* expectDelay(ctx, lastEvent);
         lastEvent = delayResult.event;
-        delay = !!delayResult.success;
+        delay = delayResult.success;
     }
 
     // TODO: assert no type resist berry (weird if hiddenpower)
@@ -387,16 +400,20 @@ function handleBlock(ctx: MoveContext, monRef: Side): boolean
     return addTarget(ctx, monRef);
 }
 
-/**
- * Expects a move delay effect if applicable.
- * @param delay Delay type.
- * @returns A SuccessResult with `success=false` if the delay effect shouldn't
- * be started and `success=true` if it was started.
- */
-async function* expectDelay(ctx: MoveContext, delay: effects.DelayType,
-    lastEvent?: events.Any): SubParser<parsers.SuccessResult>
+interface DelayResult extends SubParserResult
 {
-    switch (delay)
+    /**
+     * Whether the effect was successful. If `"shorten"`, the move should be
+     * expected to execute immediately.
+     */
+    success?: true | "shorten";
+}
+
+/** Expects a move delay effect if applicable. */
+async function* expectDelay(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<DelayResult>
+{
+    switch (ctx.moveData.effects?.delay?.type)
     {
         case "twoTurn":
         {
@@ -419,8 +436,12 @@ async function* expectDelay(ctx: MoveContext, delay: effects.DelayType,
                 throw new Error(`TwoTurn effect '${ctx.moveName}' failed: ` +
                     `Expected '${ctx.moveName}' but got '${event.move}'`);
             }
+
+            const shorten = ctx.moveData.effects?.delay.solar &&
+                ctx.pstate.state.status.weather.type === "SunnyDay";
             return {
-                ...yield* base.prepareMove(ctx.pstate, event), success: true
+                ...yield* base.prepareMove(ctx.pstate, event),
+                success: shorten ? "shorten" : true
             };
         }
         case "future":

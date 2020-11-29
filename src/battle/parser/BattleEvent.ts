@@ -80,7 +80,7 @@ export type Event<T extends Type> = EventMap[T];
 export type Any = Event<Type>;
 
 /** Base class for all Events. */
-interface EventBase<T extends Type>
+export interface EventBase<T extends Type>
 {
     /** The type of Event this is. */
     readonly type: T;
@@ -288,7 +288,7 @@ export interface FutureMove extends EventBase<"futureMove">
 }
 
 /**
- * Indicates that the stream of BattleEvents has temporarily (or permantently)
+ * Indicates that the stream of BattleEvents has temporarily (or permanently)
  * halted. After a Halt event has been handled, the BattleState should have the
  * most up to date information if a decision has to be made soon.
  * @see HaltReason
@@ -308,7 +308,7 @@ export type Halt = EventBase<"halt"> &
 // tslint:enable: no-trailing-whitespace
 export type HaltReason = "gameOver" | "wait" | "switch" | "decide";
 
-interface HaltBase<T extends HaltReason>
+export interface HaltBase<T extends HaltReason>
 {
     /**
      * Reason for halting.
@@ -316,14 +316,14 @@ interface HaltBase<T extends HaltReason>
      */
     readonly reason: T;
 }
-interface HaltGameOver extends HaltBase<"gameOver">
+export interface HaltGameOver extends HaltBase<"gameOver">
 {
     /** The side that won. Leave blank if tie. */
     readonly winner?: Side;
 }
-type HaltWait = HaltBase<"wait">;
-type HaltSwitch = HaltBase<"switch">;
-type HaltDecide = HaltBase<"decide">;
+export type HaltWait = HaltBase<"wait">;
+export type HaltSwitch = HaltBase<"switch">;
+export type HaltDecide = HaltBase<"decide">;
 
 /** Indicates that the pokemon was hit by a move multiple times. */
 export interface HitCount extends EventBase<"hitCount">

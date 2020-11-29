@@ -360,7 +360,12 @@ export interface MoveData extends DexData
         readonly transform?: true;
 
         /** Damage delay effect. */
-        readonly delay?: effects.DelayType;
+        readonly delay?: {readonly type: "future"} |
+        {
+            readonly type: "twoTurn";
+            /** Whether the delay is shortened during sun. */
+            readonly solar?: true;
+        };
 
         // TODO: verify order
         /** Damage effects in addition to main move damage (not recoil). */

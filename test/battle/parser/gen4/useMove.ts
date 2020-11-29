@@ -586,6 +586,8 @@ export function testUseMove(f: () => Context,
                     {
                         // prepare
                         const mon = initActive("them");
+                        const move = mon.moveset.reveal("fly");
+                        expect(move.pp).to.equal(move.maxpp);
                         initActive("us");
                         await initParser("them", "fly");
                         await handle(
@@ -593,12 +595,40 @@ export function testUseMove(f: () => Context,
                             type: "prepareMove", monRef: "them", move: "fly"
                         });
                         await exitParser();
+                        expect(move.pp).to.equal(move.maxpp - 1);
 
                         // release
                         mon.volatile.twoTurn.start("fly");
                         await initParser("them", "fly");
                         await exitParser();
                         expect(mon.volatile.twoTurn.isActive).to.be.false;
+                        expect(move.pp).to.equal(move.maxpp - 1);
+                    });
+
+                    it("Should handle shortened two-turn move via sun",
+                    async function()
+                    {
+                        const mon = initActive("them");
+                        const move = mon.moveset.reveal("fly");
+                        expect(move.pp).to.equal(move.maxpp);
+                        initActive("us");
+                        state.status.weather.start(/*source*/ null, "SunnyDay");
+
+                        // prepare
+                        await initParser("them", "solarbeam");
+                        await handle(
+                        {
+                            type: "prepareMove", monRef: "them",
+                            move: "solarbeam"
+                        });
+                        expect(mon.volatile.twoTurn.isActive).to.be.true;
+
+                        // release
+                        await handle(
+                            {type: "takeDamage", monRef: "us", hp: 10});
+                        await exitParser();
+                        expect(mon.volatile.twoTurn.isActive).to.be.false;
+                        expect(move.pp).to.equal(move.maxpp - 1);
                     });
 
                     it("Should throw if monRef mismatch", async function()

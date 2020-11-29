@@ -409,8 +409,12 @@ for (const move of
 
         ...callTypeMap.hasOwnProperty(move.id) && {call: callTypeMap[move.id]},
 
-        ...move.isFutureMove ? {delay: "future"}
-        : move.flags.charge === 1 ? {delay: "twoTurn"}
+        ...move.isFutureMove ? {delay: {type: "future"}}
+        : move.flags.charge ?
+        {delay: {
+            // TODO: add effect for skullbash raising def on prepare
+            type: "twoTurn", ...move.id === "solarbeam" && {solar: true}
+        }}
         : {},
 
         ...move.heal ?
@@ -461,15 +465,10 @@ for (const move of
     if (moveEffects.call) moveCallers.push([move.id, moveEffects.call]);
 
     // two turn/future moves are also recorded in a different object
-    if (moveEffects.delay)
+    switch (moveEffects.delay?.type)
     {
-        switch (moveEffects.delay)
-        {
-            case "future": futureMoves.push(move.id); break;
-            // TODO: add effect for skullbash raising def on prepare
-            // TODO: add flag for solarbeam shortening during sun
-            case "twoTurn": twoTurnMoves.push(move.id); break;
-        }
+        case "future": futureMoves.push(move.id); break;
+        case "twoTurn": twoTurnMoves.push(move.id); break;
     }
 
     // implicit
