@@ -440,10 +440,23 @@ async function* expectDelay(ctx: MoveContext, lastEvent?: events.Any):
             const prepareResult = yield* base.prepareMove(ctx.pstate, event);
             lastEvent = prepareResult.event;
 
-            // TODO: move this to base prepareMove handler?
-            // TODO: cloudnine cancels this
-            let shorten = ctx.moveData.effects?.delay.solar &&
+            // TODO: move shorten logic to base prepareMove handler?
+
+            // check solar move (suppressed by airlock/cloudnine)
+            let suppressWeather: boolean | undefined;
+            for (const monRef of ["us", "them"] as Side[])
+            {
+                const mon = ctx.pstate.state.teams[monRef].active;
+                if (dex.abilities[mon.ability]?.flags?.suppressWeather)
+                {
+                    suppressWeather = true;
+                    break;
+                }
+            }
+            let shorten = !suppressWeather &&
+                ctx.moveData.effects?.delay.solar &&
                 ctx.pstate.state.status.weather.type === "SunnyDay";
+            // check for powerherb
             if (!shorten)
             {
                 // expect consumeOn-moveCharge item

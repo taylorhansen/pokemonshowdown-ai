@@ -286,6 +286,8 @@ export interface AbilityData extends DexData
     readonly flags?:
     {
         // TODO: pressure, magicguard
+        /** Whether this ability suppresses all weather effects. */
+        readonly suppressWeather?: true;
         /** Whether this ability ignores held item. */
         readonly ignoreItem?: true;
         /**

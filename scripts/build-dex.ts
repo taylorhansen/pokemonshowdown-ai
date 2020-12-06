@@ -715,6 +715,8 @@ const abilityData:
     trace: {on: {start: {copyFoeAbility: true}}},
     forewarn: {on: {start: {warnStrongestMove: true}}},
 
+    airlock: {on: {start: {}}, flags: {suppressWeather: true}},
+    cloudnine: {on: {start: {}}, flags: {suppressWeather: true}},
     moldbreaker: {on: {start: {}}, flags: {ignoreTargetAbility: true}},
     pressure: {on: {start: {}}},
 
