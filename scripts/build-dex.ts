@@ -843,6 +843,11 @@ const itemOnMap:
     toxicorb: {turn: {effects: [{type: "status", value: "tox"}]}}
 };
 
+/** Maps some item names to consume effects. */
+const itemConsumeOnMap:
+    {readonly [item: string]: NonNullable<dexutil.ItemData["consumeOn"]>} =
+    {powerherb: {moveCharge: "shorten"}};
+
 // make sure that having no item is possible
 const items: (readonly [string, dexutil.ItemData])[] =
     [["none", {uid: 0, name: "none", display: "None"}]];
@@ -874,7 +879,9 @@ for (const item of
         {
             uid, name: item.id, display: item.name,
             ...item.isChoice && {isChoice: true},
-            ...itemOnMap.hasOwnProperty(item.id) && {on: itemOnMap[item.id]}
+            ...itemOnMap.hasOwnProperty(item.id) && {on: itemOnMap[item.id]},
+            ...itemConsumeOnMap.hasOwnProperty(item.id) &&
+                {consumeOn: itemConsumeOnMap[item.id]}
         }
     ]);
     ++uid;

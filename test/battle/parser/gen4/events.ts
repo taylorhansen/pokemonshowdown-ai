@@ -19,6 +19,7 @@ import { ditto, smeargle } from "../../../helpers/switchOptions";
 import { testActivateAbility } from "./activateAbility";
 import { testActivateItem } from "./activateItem";
 import { testHalt } from "./halt";
+import { testRemoveItem } from "./removeItem";
 import { testSwitchIn } from "./switchIn";
 import { testUseMove } from "./useMove";
 
@@ -1109,17 +1110,7 @@ export function testEvents()
 
     describe("removeItem", function()
     {
-        it("Should remove item", async function()
-        {
-            const mon = initActive("them");
-            const oldItem = mon.item;
-            expect(mon.item.definiteValue).to.be.null;
-
-            await parser.next(
-                {type: "removeItem", monRef: "them", consumed: false});
-            expect(mon.item).to.not.equal(oldItem);
-            expect(mon.item.definiteValue).to.equal("none");
-        });
+        testRemoveItem(contextFunc, initActive);
     });
 
     describe("resetWeather", function()

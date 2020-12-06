@@ -609,7 +609,7 @@ export function testUseMove(f: () => Context,
                     async function()
                     {
                         const mon = initActive("them");
-                        const move = mon.moveset.reveal("fly");
+                        const move = mon.moveset.reveal("solarbeam");
                         expect(move.pp).to.equal(move.maxpp);
                         initActive("us");
                         state.status.weather.start(/*source*/ null, "SunnyDay");
@@ -622,6 +622,39 @@ export function testUseMove(f: () => Context,
                             move: "solarbeam"
                         });
                         expect(mon.volatile.twoTurn.isActive).to.be.true;
+
+                        // release
+                        await handle(
+                            {type: "takeDamage", monRef: "us", hp: 10});
+                        await exitParser();
+                        expect(mon.volatile.twoTurn.isActive).to.be.false;
+                        expect(move.pp).to.equal(move.maxpp - 1);
+                    });
+
+                    it("Should handle shortened two-turn move via powerherb",
+                    async function()
+                    {
+                        const mon = initActive("them");
+                        const move = mon.moveset.reveal("fly");
+                        expect(move.pp).to.equal(move.maxpp);
+                        mon.setItem("powerherb");
+                        initActive("us");
+
+                        // prepare
+                        await initParser("them", "fly");
+                        await handle(
+                        {
+                            type: "prepareMove", monRef: "them",
+                            move: "fly"
+                        });
+                        expect(mon.volatile.twoTurn.isActive).to.be.true;
+
+                        // consume item
+                        await handle(
+                        {
+                            type: "removeItem", monRef: "them",
+                            consumed: "powerherb"
+                        });
 
                         // release
                         await handle(

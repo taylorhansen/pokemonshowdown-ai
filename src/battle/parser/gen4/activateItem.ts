@@ -1,11 +1,13 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
 import * as effects from "../../dex/effects";
-import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
+import { Pokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { eventLoop, matchPercentDamage } from "../helpers";
+import { matchPercentDamage } from "../helpers";
+import { createItemEventInference, EventInference, expectEvents, getItems,
+    ItemInference } from "./helpers";
 import * as parsers from "./parsers";
 
 /** Result from `expectItems()` and variants like `onMovePostDamage()`. */
@@ -62,142 +64,37 @@ export async function* onMovePostDamage(pstate: ParserState,
         lastEvent);
 }
 
-interface ItemInference
-{
-    readonly name: string;
-    /** Holder's possible abilities that can block the item activation. */
-    readonly blockingAbilities?: ReadonlySet<string>;
-}
-
-/** Filters out item possibilities that don't match the given predicate. */
-function getItems(pstate: ParserState,
-    monRefs: Partial<Readonly<Record<Side, any>>>,
-    f: (data: dexutil.ItemData, mon: ReadonlyPokemon) => boolean | Set<string>):
-    // TODO: make ItemInference[] a Map/Record?
-    Partial<Record<Side, ItemInference[]>>
-{
-    const result: Partial<Record<Side, ItemInference[]>> = {};
-    for (const monRef in monRefs)
-    {
-        if (!monRefs.hasOwnProperty(monRef)) continue;
-        // can't activate item if suppressed by embargo status
-        const mon = pstate.state.teams[monRef as Side].active;
-        if (mon.volatile.embargo.isActive) continue;
-
-        const inferences: ItemInference[] = [];
-        for (const name of mon.item.possibleValues)
-        {
-            const cbResult = f(mon.item.map[name], mon);
-            if (!cbResult) continue;
-            inferences.push(
-            {
-                name,
-                ...cbResult instanceof Set && {blockingAbilities: cbResult}
-            });
-        }
-
-        if (inferences.length > 0) result[monRef as Side] = inferences;
-    }
-    return result;
-}
-
 /**
  * Expects an item activation.
  * @param on Context in which the item would activate.
  * @param pendingItems Eligible item possibilities.
  */
-async function* expectItems(pstate: ParserState,
-    on: dexutil.ItemOn | null,
-    pendingItems: Partial<Record<Side, readonly ItemInference[]>>,
+function expectItems(pstate: ParserState, on: dexutil.ItemOn,
+    pendingItems: Partial<Record<Side, ReadonlyMap<string, ItemInference>>>,
     lastEvent?: events.Any): SubParser<ExpectItemsResult>
 {
-    // if the next event is an activateItem with one of those appropriate items,
-    //  then handle it
-    // repeat until the next item event isn't one of these
-    const results: ItemResult[] = [];
-    const result = yield* eventLoop(
-        async function* expectItemsLoop(event): SubParser
-        {
-            if (event.type !== "activateItem") return {event};
-
-            // get the possible items that could activate within this ctx
-            if (!pendingItems.hasOwnProperty(event.monRef)) return {event};
-            const items = pendingItems[event.monRef]!;
-
-            // match with current item event
-            const inf = items.find(
-                i => i.name === (event as events.ActivateItem).item);
-            if (!inf) return {event};
-
-            // consume the pending item for this pokemon
-            delete pendingItems[event.monRef];
-
-            // abilities that blocked the item can be removed as possibilities
-            const mon = pstate.state.teams[event.monRef].active;
-            // suppressAbility check should've already been done earlier
-            if (inf.blockingAbilities)
-            {
-                mon.traits.ability.remove(...inf.blockingAbilities)
-            }
-
-            // handle the item
-            const itemResult = yield* activateItem(pstate, event, on);
-            results.push(itemResult);
-
-            return itemResult;
-        },
-        lastEvent);
-
-    // for the pokemon's items that didn't activate, remove those as
-    //  possibilities
+    const inferences: EventInference[] = [];
     for (const monRef in pendingItems)
     {
         if (!pendingItems.hasOwnProperty(monRef)) continue;
-        const possibilities = pendingItems[monRef as Side];
-        if (!possibilities || possibilities.length <= 0) continue;
+        const items = pendingItems[monRef as Side]!;
+        inferences.push(createItemEventInference(pstate, monRef as Side, items,
+            async function* itemInfTaker(event, takeAccept)
+            {
+                if (event.type !== "activateItem") return {event};
+                if (event.monRef !== monRef) return {event};
 
-        // can't infer yet since an ability can ignore item effects
-        const mon = pstate.state.teams[monRef as Side].active;
-        // intersect each ItemInference ability set
-        let intersect: Set<string> | undefined;
-        for (const inf of possibilities)
-        {
-            if (!inf.blockingAbilities) continue;
-            if (!intersect) intersect = new Set(inf.blockingAbilities);
-            else
-            {
-                for (const name of intersect)
-                {
-                    if (!inf.blockingAbilities.has(name))
-                    {
-                        intersect.delete(name);
-                    }
-                }
-            }
-        }
-        // if no ability/status is getting in the way of the possible item(s),
-        //  then the pokemon must not have had the item(s)
-        // suppressAbility check should've already been done earlier
-        if (!intersect || intersect.size <= 0)
-        {
-            mon.item.remove(...possibilities.map(i => i.name));
-        }
-        else
-        {
-            // if every possible item should've activated, then one of these
-            //  blocking abilities has to be there
-            // typically this only happens when the item is confirmed (length=1)
-            if (possibilities.length === mon.item.possibleValues.size)
-            {
-                mon.traits.ability.narrow(...intersect);
-            }
-            // can't make any meaningful inferences if neither ability nor item
-            //  are definite
-            // TODO: register onNarrow callbacks for item/ability?
-        }
+                // match pending item possibilities with current item event
+                const itemInf = items.get(event.item);
+                if (!itemInf) return {event};
+
+                // indicate accepted event
+                takeAccept(itemInf);
+                return yield* activateItem(pstate, event, on);
+            }));
     }
 
-    return {...result, results};
+    return expectEvents(pstate, inferences, lastEvent);
 }
 
 /** Context for handling item activation. */

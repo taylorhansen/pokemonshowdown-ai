@@ -517,8 +517,17 @@ export interface ItemData extends DexData
             readonly effects?: readonly effects.item.Turn[];
         };
     };
+    /** Like `#on` but for consumable items. */
+    readonly consumeOn?:
+    {
+        /** Whether this item shortens charging (twoTurn) moves. */
+        readonly moveCharge?: "shorten";
+    };
     // TODO: passive effects
 }
 
 /** Item "callback" object types. */
 export type ItemOn = keyof NonNullable<ItemData["on"]>;
+
+/** Item "callback" object types for consumable items. */
+export type ItemConsumeOn = keyof NonNullable<ItemData["consumeOn"]>;

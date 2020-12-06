@@ -1422,7 +1422,7 @@ export const items: {readonly [name: string]: dexutil.ItemData} =
     powerband: {uid: 141, name: "powerband", display: "Power Band"},
     powerbelt: {uid: 142, name: "powerbelt", display: "Power Belt"},
     powerbracer: {uid: 143, name: "powerbracer", display: "Power Bracer"},
-    powerherb: {uid: 144, name: "powerherb", display: "Power Herb"},
+    powerherb: {uid: 144, name: "powerherb", display: "Power Herb", consumeOn: {moveCharge: "shorten"}},
     powerlens: {uid: 145, name: "powerlens", display: "Power Lens"},
     powerweight: {uid: 146, name: "powerweight", display: "Power Weight"},
     premierball: {uid: 147, name: "premierball", display: "Premier Ball"},

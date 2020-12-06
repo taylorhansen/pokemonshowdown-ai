@@ -22,7 +22,7 @@ export function testActivateItem(f: () => Context,
         ({pstate, parser} = f());
     });
 
-    const {handle, exitParser} = createParserHelpers(() => parser);
+    const {handle, handleEnd, exitParser} = createParserHelpers(() => parser);
 
     // can have cutecharm or magicguard
     const clefable: events.SwitchOptions =
@@ -56,8 +56,6 @@ export function testActivateItem(f: () => Context,
                 .to.eventually.become({value: {}, done: true});
             return parser;
         }
-
-        const {handleEnd} = createParserHelpers(() => parser);
 
         it("Should infer item if valid", async function()
         {

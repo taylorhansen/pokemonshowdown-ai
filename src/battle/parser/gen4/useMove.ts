@@ -11,6 +11,7 @@ import * as ability from "./activateAbility";
 import * as item from "./activateItem";
 import { handlers as base } from "./base";
 import * as parsers from "./parsers";
+import * as consumeItem from "./removeItem";
 import { expectSwitch } from "./switchIn";
 
 /**
@@ -436,11 +437,27 @@ async function* expectDelay(ctx: MoveContext, lastEvent?: events.Any):
                 throw new Error(`TwoTurn effect '${ctx.moveName}' failed: ` +
                     `Expected '${ctx.moveName}' but got '${event.move}'`);
             }
+            const prepareResult = yield* base.prepareMove(ctx.pstate, event);
+            lastEvent = prepareResult.event;
 
-            const shorten = ctx.moveData.effects?.delay.solar &&
+            // TODO: move this to base prepareMove handler?
+            // TODO: cloudnine cancels this
+            let shorten = ctx.moveData.effects?.delay.solar &&
                 ctx.pstate.state.status.weather.type === "SunnyDay";
+            if (!shorten)
+            {
+                // expect consumeOn-moveCharge item
+                const chargeResult = yield* consumeItem.consumeOnMoveCharge(
+                    ctx.pstate, {[ctx.userRef]: true}, lastEvent);
+                lastEvent = chargeResult.event;
+                for (const consumeResult of chargeResult.results)
+                {
+                    shorten ||= consumeResult.shorten;
+                }
+            }
+
             return {
-                ...yield* base.prepareMove(ctx.pstate, event),
+                ...lastEvent && {event: lastEvent},
                 success: shorten ? "shorten" : true
             };
         }

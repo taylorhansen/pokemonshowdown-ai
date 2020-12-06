@@ -7,6 +7,7 @@ import { baseHandler } from "../helpers";
 import { activateAbility } from "./activateAbility";
 import { activateItem } from "./activateItem";
 import { halt } from "./halt";
+import { removeItem } from "./removeItem";
 import { switchIn } from "./switchIn";
 import { useMove } from "./useMove";
 
@@ -401,10 +402,16 @@ export const handlers =
         pstate.state.teams[event.monRef].active.volatile.enableMoves();
         return {};
     },
-    async* removeItem(pstate: ParserState, event: events.RemoveItem): SubParser
+    removeItem(...[pstate, event, on = null, ...args]:
+        Parameters<typeof removeItem>): SubParser
     {
-        pstate.state.teams[event.monRef].active.removeItem(event.consumed);
-        return {};
+        return removeItem(
+        {
+            ...pstate,
+            logger: pstate.logger.addPrefix(`RemoveItem(${event.monRef}, ` +
+                `consumed=${event.consumed}, on-${on}): `)
+        },
+            event, on, ...args);
     },
     async* resetWeather(pstate: ParserState, event: events.ResetWeather):
         SubParser
