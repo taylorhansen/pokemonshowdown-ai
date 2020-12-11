@@ -70,7 +70,8 @@ export async function* onMovePostDamage(pstate: ParserState,
  * @param pendingItems Eligible item possibilities.
  */
 function expectItems(pstate: ParserState, on: dexutil.ItemOn,
-    pendingItems: Partial<Record<Side, ReadonlyMap<string, ItemInference>>>,
+    pendingItems: Readonly<Partial<Record<Side,
+        ReadonlyMap<string, ItemInference>>>>,
     lastEvent?: events.Any): SubParser<ExpectItemsResult>
 {
     const inferences: EventInference[] = [];
@@ -94,7 +95,7 @@ function expectItems(pstate: ParserState, on: dexutil.ItemOn,
             }));
     }
 
-    return expectEvents(pstate, inferences, lastEvent);
+    return expectEvents(inferences, lastEvent);
 }
 
 /** Context for handling item activation. */

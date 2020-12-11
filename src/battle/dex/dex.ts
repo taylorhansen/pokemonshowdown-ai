@@ -600,7 +600,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     flowergift: {uid: 25, name: "flowergift", display: "Flower Gift"},
     forecast: {uid: 26, name: "forecast", display: "Forecast"},
     forewarn: {uid: 27, name: "forewarn", display: "Forewarn", on: {start: {warnStrongestMove: true}}},
-    frisk: {uid: 28, name: "frisk", display: "Frisk"},
+    frisk: {uid: 28, name: "frisk", display: "Frisk", on: {start: {revealItem: true}}},
     gluttony: {uid: 29, name: "gluttony", display: "Gluttony"},
     guts: {uid: 30, name: "guts", display: "Guts"},
     heatproof: {uid: 31, name: "heatproof", display: "Heatproof"},

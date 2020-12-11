@@ -71,8 +71,8 @@ export interface ExpectEventsResult<TResult = SubParserResult> extends
 
 export async function* expectEvents<
     TResult extends SubParserResult = SubParserResult>(
-    pstate: ParserState, inferences: EventInference<TResult>[],
-    lastEvent?: events.Any): SubParser<ExpectEventsResult<TResult>>
+    inferences: EventInference<TResult>[], lastEvent?: events.Any):
+    SubParser<ExpectEventsResult<TResult>>
 {
     const results: TResult[] = [];
     const result = yield* eventLoop(
@@ -119,7 +119,7 @@ export function createItemEventInference<
 {
     return {
         take: event => taker(event,
-            function(inf: ItemInference)
+            function takeAccept(inf: ItemInference)
             {
                 // abilities that blocked the item can be removed as
                 //  possibilities

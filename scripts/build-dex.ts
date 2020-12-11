@@ -713,6 +713,7 @@ const abilityData:
     {readonly [ability: string]: Pick<dexutil.AbilityData, "on" | "flags">} =
 {
     trace: {on: {start: {copyFoeAbility: true}}},
+    frisk: {on: {start: {revealItem: true}}},
     forewarn: {on: {start: {warnStrongestMove: true}}},
 
     airlock: {on: {start: {}}, flags: {suppressWeather: true}},
@@ -724,7 +725,7 @@ const abilityData:
     insomnia: {on: {block: {status: {slp: true, yawn: true}}}},
     limber: {on: {block: {status: {par: true}}}},
     magmaarmor: {on: {block: {status: {frz: true}}}},
-    // TODO: oblivious should also be immune to the captivate move
+    // TODO: oblivious should also be immune to captivate
     oblivious: {on: {block: {status: {attract: true}}}},
     owntempo: {on: {block: {status: {confusion: true}}}},
     vitalspirit: {on: {block: {status: {slp: true, yawn: true}}}},

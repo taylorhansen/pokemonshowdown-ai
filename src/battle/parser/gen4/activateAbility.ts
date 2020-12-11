@@ -7,6 +7,7 @@ import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
 import { eventLoop } from "../helpers";
 import { dispatch, handlers as base } from "./base";
+import { EventInference, expectEvents } from "./helpers";
 import * as parsers from "./parsers";
 
 /** Result from `expectAbilities()` and variants like `onStart()`. */
@@ -24,11 +25,14 @@ export async function* onStart(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
     SubParser<ExpectAbilitiesResult>
 {
-    // TODO: some abilities aren't guaranteed to activate, and may have special
-    //  negative assertions if they're known
-    // TODO: attach negative assertion callbacks to each possibility?
-    // would likely replace expectAbility()'s getChance() call
-    const pendingAbilities = getAbilities(pstate, eligible, d => !!d.on?.start);
+    // TODO: add trace/forewarn absent callbacks
+    const pendingAbilities = getAbilities(pstate, eligible,
+        function startFilter(data, monRef)
+        {
+            if (!data.on?.start) return null;
+            if (data.on.start.revealItem) return {opponentHasItem: true};
+            return {};
+        });
 
     return yield* expectAbilities(pstate, "start", pendingAbilities,
         /*hitByMove*/ undefined, lastEvent);
@@ -57,14 +61,14 @@ export async function* onBlock(pstate: ParserState,
         hitByMove.effects?.status?.hit : undefined;
 
     const pendingAbilities = getAbilities(pstate, eligible,
-        d => !!d.on?.block &&
+        d => d.on?.block &&
             // block move's main status effect
             (status?.some(s => !!d.on!.block!.status?.[s]) ||
                 // block move based on its type
                 hitByMove.type === d.on.block.move?.type ||
                 // block move based on damp
                 (!!hitByMove.flags?.explosive &&
-                    !!d.on.block.effect?.explosive)));
+                    !!d.on.block.effect?.explosive)) ? {} : null);
 
     return yield* expectAbilities(pstate, "block", pendingAbilities,
         hitByMove, lastEvent);
@@ -95,10 +99,17 @@ export async function* onTryUnboost(pstate: ParserState,
             hitByMove.effects?.boost?.hit ?? {} : {};
 
     const pendingAbilities = getAbilities(pstate, eligible,
-        d => !!d.on?.tryUnboost?.block &&
-            // find a blockable unboost effect
-            (Object.keys(boosts) as dexutil.BoostName[]).some(
-                b => boosts[b]! < 0 && d.on!.tryUnboost!.block![b]));
+        function tryUnboostFilter(data)
+        {
+            if (!data.on?.tryUnboost) return null;
+            // make sure an unboost can be blocked
+            if ((Object.keys(boosts) as dexutil.BoostName[]).every(
+                b => boosts[b]! >= 0 || !data.on!.tryUnboost!.block?.[b]))
+            {
+                return null;
+            }
+            return {};
+        });
 
     return yield* expectAbilities(pstate, "tryUnboost", pendingAbilities,
         hitByMove, lastEvent);
@@ -133,19 +144,22 @@ export async function* onMoveDamage(pstate: ParserState,
     SubParser<ExpectAbilitiesResult>
 {
     const pendingAbilities = getAbilities(pstate, eligible,
-        function(d, mon)
+        function moveDamageFilter(data, monRef)
         {
-            if (!d.on) return false;
-            if (d.on.moveDamage && ["damage", "contact"].includes(qualifier))
+            if (!data.on) return null;
+            if (data.on.moveDamage && ["damage", "contact"].includes(qualifier))
             {
-                return !(d.on.moveDamage.changeToMoveType && mon.fainted);
+                const mon = pstate.state.teams[monRef].active;
+                return !data.on.moveDamage.changeToMoveType || !mon.fainted ?
+                    {} : null;
             }
-            if (d.on.moveContact &&
+            if (data.on.moveContact &&
                 ["contact", "contactKO"].includes(qualifier))
             {
-                return true;
+                return {chance: data.on.moveContact.chance ?? 100};
             }
-            return !!d.on.moveContactKO && qualifier === "contactKO";
+            return data.on.moveContactKO && qualifier === "contactKO" ?
+                {} : null;
         });
 
     let on: dexutil.AbilityOn;
@@ -171,19 +185,28 @@ export async function* onMoveDrain(pstate: ParserState,
     SubParser<ExpectAbilitiesResult>
 {
     const pendingAbilities = getAbilities(pstate, eligible,
-        d => !!d.on?.moveDrain);
+        d => d.on?.moveDrain ? {chance: 100} : null);
 
     return yield* expectAbilities(pstate, "moveDrain", pendingAbilities,
         hitByMove, lastEvent);
 }
 
+/** Describes an ability possibility restriction. */
+interface AbilityInference
+{
+    /** Chance of the ability activating. Default 100 if omitted. */
+    chance?: number;
+    /** Whether this ability activates if the opponent has a held item. */
+    opponentHasItem?: true;
+}
+
 /** Filters out ability possibilities that don't match the given predicate. */
 function getAbilities(pstate: ParserState,
     monRefs: Partial<Readonly<Record<Side, any>>>,
-    f: (data: dexutil.AbilityData, mon: ReadonlyPokemon) => boolean):
-    Partial<Record<Side, string[]>>
+    f: (data: dexutil.AbilityData, monRef: Side) => AbilityInference | null):
+    Partial<Record<Side, Map<string, AbilityInference>>>
 {
-    const result: Partial<Record<Side, string[]>> = {};
+    const result: ReturnType<typeof getAbilities> = {};
     for (const monRef in monRefs)
     {
         if (!monRefs.hasOwnProperty(monRef)) continue;
@@ -191,10 +214,15 @@ function getAbilities(pstate: ParserState,
         const mon = pstate.state.teams[monRef as Side].active;
         if (mon.volatile.suppressAbility) continue;
 
-        const ability = mon.traits.ability;
-        const filtered = [...ability.possibleValues]
-            .filter(n => f(ability.map[n], mon));
-        if (filtered.length > 0) result[monRef as Side] = filtered;
+        // put the callback through each possible ability
+        const inferences = new Map<string, AbilityInference>();
+        for (const name of mon.traits.ability.possibleValues)
+        {
+            const cbResult = f(mon.traits.ability.map[name], monRef as Side);
+            if (!cbResult) continue;
+            inferences.set(name, cbResult);
+        }
+        if (inferences.size > 0) result[monRef as Side] = inferences;
     }
     return result;
 }
@@ -206,84 +234,85 @@ function getAbilities(pstate: ParserState,
  * @param hitByMove Move that the eligible ability holders were hit by, if
  * applicable.
  */
-async function* expectAbilities(pstate: ParserState,
-    on: dexutil.AbilityOn,
-    pendingAbilities: Partial<Record<Side, readonly string[]>>,
+function expectAbilities(pstate: ParserState, on: dexutil.AbilityOn,
+    pendingAbilities: Readonly<Partial<Record<Side,
+        ReadonlyMap<string, AbilityInference>>>>,
     hitByMove?: dexutil.MoveData, lastEvent?: events.Any):
     SubParser<ExpectAbilitiesResult>
 {
-    // if the next event is an activateAbility with one of those appropriate
-    //  abilities, then handle it
-    // repeat until the next ability event isn't one of these
-    const results: AbilityResult[] = [];
-    const result = yield* eventLoop(
-        async function* expectAbilitiesLoop(event): SubParser
-        {
-            // next event must be an activateAbility event
-            if (event.type !== "activateAbility") return {event};
-
-            // get the possible abilities that could activate within this ctx
-            if (!pendingAbilities.hasOwnProperty(event.monRef)) return {event};
-            const abilities = pendingAbilities[event.monRef];
-
-            // find the AbilityData out of those possible abilities
-            const abilityName = abilities?.find(
-                n => n === (event as events.ActivateAbility).ability);
-            if (!abilityName) return {event};
-
-            // consume the pending ability for this pokemon
-            delete pendingAbilities[event.monRef];
-
-            // handle the ability
-            // TODO: replace hitByMoveName param with MoveData
-            const abilityResult =
-                yield* activateAbility(pstate, event, on, hitByMove?.name);
-            results.push(abilityResult);
-            return abilityResult;
-        },
-        lastEvent);
-
-    // for the pokemon's abilities that didn't activate, remove those as
-    //  possibilities
+    const inferences: EventInference[] = [];
     for (const monRef in pendingAbilities)
     {
         if (!pendingAbilities.hasOwnProperty(monRef)) continue;
-
-        // if the ability only had a chance of activating, don't include it when
-        //  narrowing
-        const mon = pstate.state.teams[monRef as Side].active;
-        const possibilities = pendingAbilities[monRef as Side]
-            ?.filter(n => getChance(mon.traits.ability.map[n], on) >= 100);
-        if (!possibilities || possibilities.length <= 0) continue;
-
-        try { mon.traits.ability.remove(...possibilities); }
-        catch (e)
+        const abilities = pendingAbilities[monRef as Side]!;
+        inferences.push(
         {
-            // istanbul ignore next: should never happen
-            throw new Error(`Pokemon '${monRef}' should've activated ability ` +
-                `[${possibilities.join(", ")}] but it wasn't activated ` +
-                `on-${on}`);
-        }
-    }
+            async* take(event)
+            {
+                if (event.type !== "activateAbility") return {event};
+                if (event.monRef !== monRef) return {event};
 
-    return {...result, results};
-}
+                // match pending ability possibilities with current item event
+                const abilityInf = abilities.get(event.ability);
+                if (!abilityInf) return {event};
 
-/**
- * Gets the chance of an ability activating.
- * @param ability Ability data.
- * @param on Context in which the ability would activate.
- */
-function getChance(ability: dexutil.AbilityData, on: dexutil.AbilityOn | null):
-    number
-{
-    if (!on) return 100;
-    switch (on)
-    {
-        case "moveContactKO":
-        case "moveContact": return ability.on?.moveContact?.chance ?? 100;
-        default: return 100;
+                // accept event
+                return yield* activateAbility(pstate, event, on,
+                    hitByMove?.name);
+            },
+            absent()
+            {
+                const mon = pstate.state.teams[monRef as Side].active;
+                const opp = pstate.state.teams[otherSide(monRef as Side)]
+                    .active;
+
+                // collective AbilityInference flags
+                // whether all kept abilities have opponentHasItem=true
+                let allOpponentHasItem: boolean | undefined;
+
+                // figure out which abilities to remove
+                const removeCandidates: string[] = [];
+                for (const [name, inf] of abilities)
+                {
+                    // don't remove abilities that only had a chance of
+                    //  activating
+                    const guaranteed = (inf.chance ?? 100) >= 100;
+
+                    // ability should activate if opponent has an item
+                    if (inf.opponentHasItem)
+                    {
+                        // if the opponent definitely had an item, then the
+                        //  ability should've activated
+                        if (!opp.item.isSet("none"))
+                        {
+                            if (guaranteed) removeCandidates.push(name);
+                            continue;
+                        }
+                        // TODO: if opponent's item is unknown, add onNarrow
+                        //  callbacks
+                        // update collective opponentHasItem flag
+                        allOpponentHasItem ??= true;
+                        allOpponentHasItem &&= true;
+                    }
+                    // ability definitely should've activated
+                    else if (guaranteed) removeCandidates.push(name);
+                    else allOpponentHasItem = false;
+                }
+                // if all remaining abilities have opponentHasItem=true, then
+                //  the opponent must not have had an item
+                if (allOpponentHasItem) opp.setItem("none");
+
+                try { mon.traits.ability.remove(...removeCandidates); }
+                catch (e)
+                {
+                    throw new Error(`Pokemon '${monRef}' should've activated ` +
+                        `ability [${removeCandidates.join(", ")}] but it ` +
+                        `wasn't activated on-${on}`);
+                }
+            }
+        });
     }
+    return expectEvents(inferences, lastEvent);
 }
 
 /** Result from `expectAbility()`. */
@@ -412,6 +441,10 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
             if (ctx.ability.on.start.copyFoeAbility)
             {
                 return yield* copyFoeAbility(ctx, lastEvent);
+            }
+            if (ctx.ability.on.start.revealItem)
+            {
+                return yield* revealItem(ctx, lastEvent);
             }
             if (ctx.ability.on.start.warnStrongestMove)
             {
@@ -548,6 +581,21 @@ async function* copyFoeAbility(ctx: AbilityContext, lastEvent?: events.Any):
     const data = dex.abilities[next3.ability];
     if (!data?.on?.start) return {event: next3};
     return yield* activateAbility(ctx.pstate, next3, "start");
+}
+
+/** Handles events due to a revealItem ability (e.g. Frisk). */
+async function* revealItem(ctx: AbilityContext, lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    // handle frisk events
+    // revealItem target <item>
+    const next = lastEvent ?? (yield);
+    if (next.type !== "revealItem" || next.monRef === ctx.holderRef ||
+        next.gained)
+    {
+        throw new Error("On-start revealItem effect failed");
+    }
+    return yield* base.revealItem(ctx.pstate, next);
 }
 
 /** Handles events due to a warnStrongestMove ability (e.g. Forewarn). */

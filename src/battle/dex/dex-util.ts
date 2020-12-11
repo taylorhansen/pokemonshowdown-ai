@@ -183,12 +183,18 @@ export interface AbilityData extends DexData
         /**
          * Whenever the holder switches in or gains the ability. Leaving this
          * field defined but empty means it will reveal itself with no
-         * additional effects (e.g. moldbreaker, pressure).
+         * additional effects (e.g. moldbreaker, pressure, etc).
          */
         readonly start?:
         {
+            // TODO: document/handle conditions to not activate
             /** Whether this ability copies the foe's ability. */
             readonly copyFoeAbility?: true;
+            /**
+             * Reveal a random opponent's held item, or don't activate if the
+             * opponents don't have items.
+             */
+            readonly revealItem?: true;
             /**
              * Reveal the opponent's strongest move by base-power according to
              * Forewarn rules.

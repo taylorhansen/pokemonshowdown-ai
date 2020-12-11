@@ -63,7 +63,7 @@ function expectConsumeItems(pstate: ParserState, on: dexutil.ItemConsumeOn,
             }));
     }
 
-    return expectEvents(pstate, inferences, lastEvent);
+    return expectEvents(inferences, lastEvent);
 }
 
 /** Result from handling a RemoveItem event. */

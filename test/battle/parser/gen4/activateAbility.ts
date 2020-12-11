@@ -103,6 +103,22 @@ export function testActivateAbility(f: () => Context,
                 });
             });
 
+            describe("RevealItem (frisk)", function()
+            {
+                it("Should handle item reveal", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("us", "frisk", "start");
+                    await handle(
+                    {
+                        type: "revealItem", monRef: "them", item: "mail",
+                        gained: false
+                    });
+                    await exitParser();
+                });
+            });
+
             describe("WarnStrongestMove (Forewarn)", function()
             {
                 // limited movepool for easier testing
@@ -476,6 +492,64 @@ export function testActivateAbility(f: () => Context,
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("insomnia");
+        });
+
+        describe("revealItem (frisk)", function()
+        {
+            // can have frisk
+            const banette: events.SwitchOptions =
+            {
+                species: "banette", level: 50, gender: "M", hp: 100, hpMax: 100
+            };
+
+            it("Should infer opponent's lack of item if ability is known and " +
+                "opponent's item is unknown", async function()
+            {
+                const mon = initActive("them", banette);
+                mon.traits.ability.narrow("frisk");
+                // opponent could have an item or no item
+                const opp =  initActive("us");
+                expect(opp.item.possibleValues).to.include.keys("none");
+                expect(opp.item.possibleValues.size).to.be.gt(1);
+
+                await altParser(ability.onStart(pstate, {them: true}));
+                await exitParser<ability.ExpectAbilitiesResult>({results: []});
+                // opponent definitely has no item
+                expect(opp.item.possibleValues).to.have.keys("none");
+            });
+
+            it("Should infer no frisk if opponent has item", async function()
+            {
+                const mon = initActive("them", banette);
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("insomnia", "frisk");
+                // opponent definitely has an item
+                const opp =  initActive("us");
+                opp.item.remove("none");
+
+                await altParser(ability.onStart(pstate, {them: true}));
+                await exitParser<ability.ExpectAbilitiesResult>({results: []});
+                // should remove frisk
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("insomnia");
+            });
+
+            it("Should not infer ability if opponent has no item",
+            async function()
+            {
+                const mon = initActive("them", banette);
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("insomnia", "frisk");
+                // opponent could have an item or no item
+                const opp =  initActive("us");
+                opp.setItem("none");
+
+                await altParser(ability.onStart(pstate, {them: true}));
+                await exitParser<ability.ExpectAbilitiesResult>({results: []});
+                // shouldn't infer ability
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("insomnia", "frisk");
+            });
         });
     });
 

@@ -1084,6 +1084,19 @@ describe("PSEventHandler", function()
                 type: "revealItem", monRef: "us", item: "lifeorb",
                 gained: "recycle"
             }]);
+
+            test("Should emit revealItem with frisk",
+            [{
+                type: "-item", id: us, item: "lifeorb", from: "ability: Frisk",
+                of: them
+            }],
+            [
+                {type: "activateAbility", monRef: "them", ability: "frisk"},
+                {
+                    type: "revealItem", monRef: "us", item: "lifeorb",
+                    gained: false
+                }
+            ]);
         });
 
         describe("-enditem", function()
