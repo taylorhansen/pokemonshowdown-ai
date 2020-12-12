@@ -208,7 +208,7 @@ class NetworkRegistry
         if (this.timeoutPromise) return;
 
         // setup batch timer
-        this.timeoutPromise = new Promise(res =>
+        this.timeoutPromise = new Promise<void>(res =>
                 this.cancelTimer =
                     setTimeoutNs(res, this.batchOptions.timeoutNs))
             .then(() =>
@@ -223,7 +223,7 @@ class NetworkRegistry
         Promise.race(
         [
             this.timeoutPromise.then(() => didTimeout = true),
-            new Promise(res =>
+            new Promise<void>(res =>
                     this.batchEvents.prependOnceListener(
                         NetworkRegistry.batchExecuteEvent, res))
                 .then(this.cancelTimer)

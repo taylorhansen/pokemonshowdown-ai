@@ -64,7 +64,7 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
         // wait until a port is open
         while (this.freePorts.length <= 0)
         {
-            await new Promise(res =>
+            await new Promise<void>(res =>
                 this.once(ThreadPool.workerFreedEvent, res));
         }
 

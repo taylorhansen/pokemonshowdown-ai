@@ -29,7 +29,7 @@ export class TFRecordToAExp extends Transform
     /** Manages the async record reader loop. */
     private recordLoopPromise: Promise<void>;
     /** Promise that resolves once `#_flush()` has been called. */
-    private flushPromise = new Promise(res => this.flushResolve = res);
+    private flushPromise = new Promise<void>(res => this.flushResolve = res);
     /** Callback for resolving the flush promise. */
     private flushResolve!: () => void;
 
