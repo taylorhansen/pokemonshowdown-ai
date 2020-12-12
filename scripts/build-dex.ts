@@ -3,7 +3,6 @@
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
 import { ModdedDex } from "../pokemon-showdown/sim/dex";
-import { Species } from "../pokemon-showdown/sim/dex-data";
 import "../pokemon-showdown/sim/global-types";
 import * as dexutil from "../src/battle/dex/dex-util";
 import * as effects from "../src/battle/dex/effects";
@@ -603,9 +602,10 @@ for (const mon of
 {
     // don't sort base abilities, since the 3rd one is a hidden ability (gen5)
     const baseAbilities: string[] = [];
-    for (const index of Object.keys(mon.abilities) as (keyof SpeciesAbility)[])
+    for (const index in mon.abilities)
     {
-        const abilityName = mon.abilities[index];
+        if (!mon.abilities.hasOwnProperty(index)) continue;
+        const abilityName = mon.abilities[index as keyof Species["abilities"]];
         if (!abilityName) continue;
         const abilityId = toIdName(abilityName);
         baseAbilities.push(abilityId);

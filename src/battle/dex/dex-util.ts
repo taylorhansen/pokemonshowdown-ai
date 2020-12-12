@@ -291,7 +291,9 @@ export interface AbilityData extends DexData
     /** Additional ability flags. */
     readonly flags?:
     {
-        // TODO: pressure, magicguard
+        // TODO: pressure flag
+        // TODO: suppressWeather abilities only activate on switch-in, not
+        //  generally on-start
         /** Whether this ability suppresses all weather effects. */
         readonly suppressWeather?: true;
         /** Whether this ability ignores held item. */
