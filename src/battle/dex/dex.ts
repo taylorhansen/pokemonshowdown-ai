@@ -574,7 +574,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
 {
     adaptability: {uid: 0, name: "adaptability", display: "Adaptability"},
     aftermath: {uid: 1, name: "aftermath", display: "Aftermath", on: {moveContactKO: {explosive: true, effects: [{type: "percentDamage", value: -25}]}}},
-    airlock: {uid: 2, name: "airlock", display: "Air Lock", on: {start: {}}, flags: {suppressWeather: true}},
+    airlock: {uid: 2, name: "airlock", display: "Air Lock", flags: {suppressWeather: true}},
     angerpoint: {uid: 3, name: "angerpoint", display: "Anger Point"},
     anticipation: {uid: 4, name: "anticipation", display: "Anticipation"},
     arenatrap: {uid: 5, name: "arenatrap", display: "Arena Trap"},
@@ -583,7 +583,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     blaze: {uid: 8, name: "blaze", display: "Blaze"},
     chlorophyll: {uid: 9, name: "chlorophyll", display: "Chlorophyll"},
     clearbody: {uid: 10, name: "clearbody", display: "Clear Body", on: {tryUnboost: {block: {atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true, evasion: true}}}},
-    cloudnine: {uid: 11, name: "cloudnine", display: "Cloud Nine", on: {start: {}}, flags: {suppressWeather: true}},
+    cloudnine: {uid: 11, name: "cloudnine", display: "Cloud Nine", flags: {suppressWeather: true}},
     colorchange: {uid: 12, name: "colorchange", display: "Color Change", on: {moveDamage: {changeToMoveType: true}}},
     compoundeyes: {uid: 13, name: "compoundeyes", display: "Compound Eyes"},
     cutecharm: {uid: 14, name: "cutecharm", display: "Cute Charm", on: {moveContact: {chance: 30, tgt: "user", effects: [{type: "status", value: "attract"}]}}},

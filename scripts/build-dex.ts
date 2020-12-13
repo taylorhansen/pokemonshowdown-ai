@@ -716,8 +716,6 @@ const abilityData:
     frisk: {on: {start: {revealItem: true}}},
     forewarn: {on: {start: {warnStrongestMove: true}}},
 
-    airlock: {on: {start: {}}, flags: {suppressWeather: true}},
-    cloudnine: {on: {start: {}}, flags: {suppressWeather: true}},
     moldbreaker: {on: {start: {}}, flags: {ignoreTargetAbility: true}},
     pressure: {on: {start: {}}},
 
@@ -800,6 +798,10 @@ const abilityData:
     colorchange: {on: {moveDamage: {changeToMoveType: true}}},
 
     liquidooze: {on: {moveDrain: {invert: true}}},
+
+    // gen3-4: no on-switchIn msg
+    airlock: {flags: {suppressWeather: true}},
+    cloudnine: {flags: {suppressWeather: true}},
 
     klutz: {flags: {ignoreItem: true}},
 
