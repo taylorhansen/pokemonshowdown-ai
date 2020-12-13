@@ -823,6 +823,16 @@ describe("PSEventHandler", function()
                 {type: "activateAbility", monRef: "us", ability: "swiftswim"}
             ]);
 
+            test("Should emit activateAbility and fail from damp ability",
+            [{
+                type: "cant", id: them, reason: "ability: Damp",
+                moveName: "Explosion", of: us
+            }],
+            [
+                {type: "activateAbility", monRef: "us", ability: "damp"},
+                {type: "fail"}
+            ]);
+
             test("Should emit inactive and activateAbility from truant ability",
                 [{type: "cant", id: us, reason: "ability: Truant"}],
             [

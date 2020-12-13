@@ -333,23 +333,34 @@ export class PSEventHandler
             move = toIdName(event.moveName);
         }
 
-        let result: events.Any[];
         if (event.reason === "imprison" || event.reason === "recharge" ||
             event.reason === "slp")
         {
-            result =
-            [{
+            return [{
                 type: "inactive", monRef, reason: event.reason,
                 ...(move && {move})
             }];
         }
-        else if (event.reason.startsWith("ability: "))
+        if (event.reason.startsWith("ability: "))
         {
             // can't move due to an ability
             const ability = toIdName(
                 event.reason.substr("ability: ".length));
-            result =
-            [
+            if (ability === "damp" && event.of)
+            {
+                // opponent's ability prevents a move from being used
+                // TODO: could the ability=damp condition be removed?
+                // in these cases, a useMove event is shown prior, so a fail
+                //  event would be more appropriate
+                return [
+                    {
+                        type: "activateAbility",
+                        monRef: this.getSide(event.of.owner), ability
+                    },
+                    {type: "fail"}
+                ];
+            }
+            return [
                 {
                     type: "inactive", monRef,
                     // add in truant reason if applicable
@@ -360,9 +371,7 @@ export class PSEventHandler
                 {type: "activateAbility", monRef, ability}
             ];
         }
-        else result = [{type: "inactive", monRef, ...(move && {move})}];
-
-        return result;
+        return [{type: "inactive", monRef, ...(move && {move})}];
     }
 
     /** @virtual */

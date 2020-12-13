@@ -253,10 +253,7 @@ export function testActivateAbility(f: () => Context,
                         initActive("us");
                         initActive("them", golduck);
                         await initParser("them", "damp", "block", "explosion");
-                        await handle(
-                        {
-                            type: "inactive", monRef: "us", move: "explosion"
-                        });
+                        await handle({type: "fail"});
                         await exitParser({failed: true});
                     });
                 });
@@ -304,7 +301,7 @@ export function testActivateAbility(f: () => Context,
                     expect(mon.traits.ability.possibleValues)
                         .to.have.keys(["damp", "cloudnine"]);
 
-                    // activate explosive ability, meaning other side doesn't
+                    // activate explosive effect, meaning other side doesn't
                     //  have damp
                     await initParser("us", "aftermath", "moveContactKO",
                         "tackle");

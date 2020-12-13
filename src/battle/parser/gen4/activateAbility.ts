@@ -750,15 +750,15 @@ async function* blockMove(ctx: AbilityContext,
 async function* blockEffect(ctx: AbilityContext, explosive?: boolean,
     lastEvent?: events.Any): SubParser<AbilityResult>
 {
-    // should see an inactive event (TODO(#262): change this?)
+    // should see a fail event
     const next = lastEvent ?? (yield);
-    if (next.type !== "inactive" || next.monRef === ctx.holderRef)
+    if (next.type !== "fail")
     {
         throw new Error(`On-block effect${explosive ? " explosive" : ""} ` +
             "failed");
     }
 
-    return {failed: true};
+    return {...yield* base.fail(ctx.pstate, next), failed: true};
 }
 
 // on-tryUnboost handlers
