@@ -409,7 +409,7 @@ export function testActivateAbility(f: () => Context,
 
         describe("On-moveDamage", function()
         {
-            describe("ChangeToMoveType (Color Change)", function()
+            describe("ChangeToMoveType (colorchange)", function()
             {
                 it("Should handle", async function()
                 {
@@ -721,16 +721,46 @@ export function testActivateAbility(f: () => Context,
 
         describe("qualifier=damage", function()
         {
-            describe("changeToMoveType", function()
+            describe("changeToMoveType (colorchange)", function()
             {
+                it("Should handle", async function()
+                {
+                    initActive("us", kecleon)
+                    await altParser(
+                        ability.onMoveDamage(pstate, {us: true}, "damage",
+                            dex.moves.watergun));
+                    await handle(
+                    {
+                        type: "activateAbility", monRef: "us",
+                        ability: "colorchange"
+                    });
+                    await handle(
+                    {
+                        type: "changeType", monRef: "us",
+                        newTypes: ["water", "???"]
+                    });
+                    await exitParser<ability.ExpectAbilitiesResult>(
+                        {results: [{event: {type: "halt", reason: "decide"}}]});
+                });
+
                 it("Should not activate if KO'd", async function()
                 {
                     const mon = initActive("us", kecleon);
-                    mon.traits.setAbility("colorchange");
                     mon.faint();
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
                             dex.moves.watergun));
+                    await exitParser<ability.ExpectAbilitiesResult>(
+                        {results: []});
+                });
+
+                it("Should not activate if same type", async function()
+                {
+                    const mon = initActive("us", kecleon);
+                    mon.traits.types = ["fire", "???"];
+                    await altParser(
+                        ability.onMoveDamage(pstate, {us: true}, "damage",
+                            dex.moves.ember));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                 });

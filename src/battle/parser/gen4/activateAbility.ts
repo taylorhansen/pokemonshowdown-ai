@@ -229,7 +229,8 @@ export async function* onMoveDamage(pstate: ParserState,
             if (data.on.moveDamage && ["damage", "contact"].includes(qualifier))
             {
                 const mon = pstate.state.teams[monRef].active;
-                if (!data.on.moveDamage.changeToMoveType || !mon.fainted)
+                if (!data.on.moveDamage.changeToMoveType ||
+                    (!mon.fainted && !mon.types.includes(hitByMove.type)))
                 {
                     return {};
                 }
