@@ -1129,7 +1129,7 @@ async function* moveBoost(ctx: MoveContext, targetRef: Side,
     const effect: effects.Boost =
         {type: "boost", ...set ? {set: table} : {add: table}};
     const boostResult = yield* parsers.boost(ctx.pstate, targetRef,
-        effect, /*silent*/ chance != null, lastEvent);
+        effect, /*silent*/ true, lastEvent);
 
     if ((chance == null || chance >= 100) &&
         Object.keys(boostResult.remaining).length > 0)

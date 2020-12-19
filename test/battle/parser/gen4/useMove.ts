@@ -2383,6 +2383,30 @@ export function testUseMove(f: () => Context,
                             `${ctg} boost add {"${stat}":${amount}}`);
                 });
 
+                it("Should allow no boost message if maxed out",
+                async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    pstate.state.teams[target].active.volatile.boosts[stat] =
+                        6 * Math.sign(amount);
+                    await initParser("us", move);
+                    await exitParser();
+                });
+
+                it("Should allow boost message with amount=0 if maxed out",
+                async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    pstate.state.teams[target].active.volatile.boosts[stat] =
+                        6 * Math.sign(amount);
+                    await initParser("us", move);
+                    await handle(
+                        {type: "boost", monRef: target, stat, amount: 0});
+                    await exitParser();
+                });
+
                 if (ctg === "hit" && abilityImmunity)
                 {
                     it(`Should fail unboost effect if ${abilityImmunity} ` +

@@ -54,22 +54,6 @@ export async function* boost(pstate: ParserState, targetRef: Side,
     const table = effect.add ? {...effect.add} : {...effect.set};
     let allSilent = true;
 
-    // remove boosts that can't be fulfilled due to saturation
-    //  (e.g. boosting when already at at +6)
-    // TODO: should this be done for set as well?
-    if (silent && !set)
-    {
-        for (const b in table)
-        {
-            if (!table.hasOwnProperty(b)) continue;
-            if (matchBoost(set, table[b as dexutil.BoostName]!, 0,
-                target.volatile.boosts[b as dexutil.BoostName]))
-            {
-                delete table[b as dexutil.BoostName];
-            }
-        }
-    }
-
     const result = yield* eventLoop(
         async function* expectBoostLoop(event): SubParser
         {
@@ -88,6 +72,22 @@ export async function* boost(pstate: ParserState, targetRef: Side,
             return yield* base.boost(pstate, event);
         },
         lastEvent);
+
+    // remove boosts that can't be fulfilled due to saturation
+    //  (e.g. boosting when already at at +6)
+    // TODO: should this be done for set as well?
+    if (silent && !set)
+    {
+        for (const b in table)
+        {
+            if (!table.hasOwnProperty(b)) continue;
+            if (matchBoost(set, table[b as dexutil.BoostName]!, 0,
+                target.volatile.boosts[b as dexutil.BoostName]))
+            {
+                delete table[b as dexutil.BoostName];
+            }
+        }
+    }
 
     return {...result, remaining: table, ...allSilent && {allSilent: true}};
 }
