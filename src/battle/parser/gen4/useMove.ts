@@ -649,12 +649,17 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                 if (!table) continue;
                 const targetRef = tgt === "self" ?
                     ctx.userRef : otherSide(ctx.userRef);
-                // substitute blocks boost effects
-                if (tgt === "hit" && !ctx.moveData.flags?.ignoreSub &&
-                    ctx.pstate.state.teams[targetRef].active.volatile
-                        .substitute)
+                if (tgt === "hit")
                 {
-                    continue;
+                    const target = ctx.pstate.state.teams[targetRef].active;
+                    // can't boost target if about to faint
+                    if (target.hp.current <= 0) continue;
+                    // substitute blocks boosts
+                    if (!ctx.moveData.flags?.ignoreSub &&
+                        target.volatile.substitute)
+                    {
+                        continue;
+                    }
                 }
                 const {set} = moveEffects.boost;
                 const boostResult = yield* moveBoost(ctx, targetRef, table,
@@ -694,12 +699,17 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                 if (!statusTypes || statusTypes.length <= 0) continue;
                 const targetRef = tgt === "self" ?
                     ctx.userRef : otherSide(ctx.userRef);
-                // substitute blocks status conditions
-                if (tgt === "hit" && !ctx.moveData.flags?.ignoreSub &&
-                    ctx.pstate.state.teams[targetRef].active.volatile
-                        .substitute)
+                if (tgt === "hit")
                 {
-                    continue;
+                    const target = ctx.pstate.state.teams[targetRef].active;
+                    // can't inflict status if about to faint
+                    if (target.hp.current <= 0) continue;
+                    // substitute blocks status conditions
+                    if (!ctx.moveData.flags?.ignoreSub &&
+                        target.volatile.substitute)
+                    {
+                        continue;
+                    }
                 }
                 const statusResult = yield* parsers.status(ctx.pstate,
                     targetRef, statusTypes, lastEvent);

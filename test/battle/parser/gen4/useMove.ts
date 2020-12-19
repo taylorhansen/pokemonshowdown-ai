@@ -1710,6 +1710,17 @@ export function testUseMove(f: () => Context,
                                     `'${target}' but target's ability ` +
                                     "[technician] can't block it");
                         });
+
+                        it("Should pass without 100% secondary effect if " +
+                            "target fainted",
+                        async function()
+                        {
+                            await initParser("them", secondaryMove100);
+                            await handle(
+                                {type: "takeDamage", monRef: "us", hp: 0});
+                            await handle({type: "faint", monRef: "us"});
+                            await exitParser();
+                        });
                     }
 
                     if (secondaryMove100 && abilityImmunity)
