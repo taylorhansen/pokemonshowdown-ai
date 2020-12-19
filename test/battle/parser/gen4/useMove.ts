@@ -1358,9 +1358,24 @@ export function testUseMove(f: () => Context,
                     initActive("us");
                     initActive("them");
                     await initParser("them", "bravebird");
+                    await handle({type: "takeDamage", monRef: "us", hp: 1});
                     await handle(
                     {
-                        type: "takeDamage", monRef: "them", hp: 1,
+                        type: "takeDamage", monRef: "them", hp: 99,
+                        from: "recoil"
+                    });
+                    await exitParser();
+                });
+
+                it("Should pass if hp diff is 0", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", "bravebird");
+                    await handle({type: "takeDamage", monRef: "us", hp: 1});
+                    await handle(
+                    {
+                        type: "takeDamage", monRef: "them", hp: 100,
                         from: "recoil"
                     });
                     await exitParser();

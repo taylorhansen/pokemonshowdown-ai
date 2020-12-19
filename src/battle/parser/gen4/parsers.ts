@@ -162,7 +162,7 @@ export async function* damage(pstate: ParserState, monRef: Side,
     if ((event.from ?? null) !== (from ?? null)) return {event};
     // make sure damage matches sign
     const diff = event.hp - mon.hp.current;
-    if (Math.sign(diff) !== sign) return {event};
+    if (diff && Math.sign(diff) !== sign) return {event};
     return {...yield* base.takeDamage(pstate, event), success: true};
 }
 
