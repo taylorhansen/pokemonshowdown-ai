@@ -1537,6 +1537,27 @@ export function testUseMove(f: () => Context,
                             effect, start: true
                         });
                     });
+
+                    // TODO: factor out into parameters
+                    if (effect === "attract")
+                    {
+                        it("Should cancel status move effects if ability " +
+                            "immunity", async function()
+                        {
+                            // setup ability so it can activate
+                            const us = state.teams.us.active;
+                            us.traits.setAbility("oblivious");
+
+                            await initParser("them", "attract");
+                            await handle(
+                            {
+                                type: "activateAbility", monRef: "us",
+                                ability: "oblivious"
+                            });
+                            await handle({type: "immune", monRef: "us"});
+                            await exitParser();
+                        });
+                    }
                 });
             });
         }
@@ -1587,6 +1608,26 @@ export function testUseMove(f: () => Context,
                                 type: "activateStatusEffect", monRef: target,
                                 effect, start: true
                             });
+                            await exitParser();
+                        });
+                    }
+
+                    if (move && abilityImmunity)
+                    {
+                        it("Should cancel status move effects if ability " +
+                            "immunity", async function()
+                        {
+                            // setup ability so it can activate
+                            const us = state.teams.us.active;
+                            us.traits.setAbility(abilityImmunity);
+
+                            await initParser("them", move);
+                            await handle(
+                            {
+                                type: "activateAbility", monRef: "us",
+                                ability: abilityImmunity
+                            });
+                            await handle({type: "immune", monRef: "us"});
                             await exitParser();
                         });
                     }
@@ -1678,13 +1719,12 @@ export function testUseMove(f: () => Context,
                         async function()
                         {
                             const them = state.teams.them.active;
-                            expect(them.traits.ability.possibleValues)
-                                // smeargle abilities
-                                .to.have.all.keys(["owntempo", "technician"]);
+                            them.traits.setAbility(abilityImmunity,
+                                "illuminate");
                             expect(them.ability).to.be.empty;
                             await initParser("us", secondaryMove100);
                             await exitParser();
-                            expect(them.ability).to.equal("owntempo");
+                            expect(them.ability).to.equal(abilityImmunity);
                         });
                     }
 
@@ -2070,34 +2110,37 @@ export function testUseMove(f: () => Context,
 
         // major status
         // TODO: search for these moves automatically in dex
+
         testRemovable(
         {
             ctg: "hit", name: "Burn", effect: "brn", move: "willowisp",
-            secondaryMove: "flamethrower"
+            secondaryMove: "flamethrower", abilityImmunity: "waterveil"
         });
         testRemovable(
         {
-            ctg: "hit", name: "Freeze", effect: "frz", secondaryMove: "icebeam"
+            ctg: "hit", name: "Freeze", effect: "frz", secondaryMove: "icebeam",
+            abilityImmunity: "magmaarmor"
         });
         testRemovable(
         {
             ctg: "hit", name: "Paralyze", effect: "par", move: "stunspore",
-            secondaryMove: "thunderbolt", secondaryMove100: "zapcannon"
+            secondaryMove: "thunderbolt", secondaryMove100: "zapcannon",
+            abilityImmunity: "limber"
         });
         testRemovable(
         {
             ctg: "hit", name: "Poison", effect: "psn", move: "poisonpowder",
-            secondaryMove: "gunkshot"
+            secondaryMove: "gunkshot", abilityImmunity: "immunity"
         });
         testRemovable(
         {
             ctg: "hit", name: "Sleep", effect: "slp", move: "spore",
-            clause: "slp"
+            clause: "slp", abilityImmunity: "insomnia"
         });
         testRemovable(
         {
             ctg: "hit", name: "Toxic", effect: "tox", move: "toxic",
-            secondaryMove: "poisonfang"
+            secondaryMove: "poisonfang", abilityImmunity: "immunity"
         });
 
         //#endregion

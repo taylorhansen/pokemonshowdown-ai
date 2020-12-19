@@ -4,7 +4,7 @@ import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser } from "../BattleParser";
 import { baseHandler } from "../helpers";
-import { activateAbility } from "./activateAbility";
+import * as ability from "./activateAbility";
 import { activateItem } from "./activateItem";
 import { halt } from "./halt";
 import { removeItem } from "./removeItem";
@@ -15,10 +15,11 @@ import { useMove } from "./useMove";
 export const handlers =
 {
     activateAbility(
-        ...[pstate, event, ...args]: Parameters<typeof activateAbility>):
-        ReturnType<typeof activateAbility>
+        ...[pstate, event, ...args]:
+            Parameters<typeof ability.activateAbility>):
+        ReturnType<typeof ability.activateAbility>
     {
-        return activateAbility(
+        return ability.activateAbility(
         {
             ...pstate,
             logger: pstate.logger.addPrefix(`Ability(${event.monRef}, ` +
@@ -103,6 +104,14 @@ export const handlers =
                         `start=${event.start}`);
                 }
         }
+        // see if the target pokemon can use its ability to cure itself
+        // TODO: implement status berries and other on-status effects before
+        //  handling onStatus abilities
+        /*if (event.start)
+        {
+            return yield* ability.onStatus(pstate, {[event.monRef]: true},
+                event.effect);
+        }*/
         return {};
     },
     async* activateTeamEffect(pstate: ParserState,

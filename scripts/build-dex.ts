@@ -708,26 +708,34 @@ for (const mon of
 
 // ability data
 
+const statusImmunityOn: dexutil.AbilityData["on"] =
+    {start: {cure: true}, block: {status: true}, status: {cure: true}};
+
 /** Maps ability name to data. */
 const abilityData:
-    {readonly [ability: string]: Pick<dexutil.AbilityData, "on" | "flags">} =
 {
+    readonly [ability: string]:
+        Pick<dexutil.AbilityData, "on" | "statusImmunity" | "flags">
+} =
+{
+    // TODO(insomnia/vitalspirit): when using rest, ability causes it to fail if
+    //  hp not full (`|-fail|mon|heal`)
+    immunity: {on: statusImmunityOn, statusImmunity: {psn: true, tox: true}},
+    insomnia: {on: statusImmunityOn, statusImmunity: {slp: true}},
+    limber: {on: statusImmunityOn, statusImmunity: {par: true}},
+    magmaarmor: {on: statusImmunityOn, statusImmunity: {frz: true}},
+    // TODO: oblivious should also be immune to captivate
+    oblivious: {on: statusImmunityOn, statusImmunity: {attract: true}},
+    owntempo: {on: statusImmunityOn, statusImmunity: {confusion: true}},
+    vitalspirit: {on: statusImmunityOn, statusImmunity: {slp: true}},
+    waterveil: {on: statusImmunityOn, statusImmunity: {brn: true}},
+
     trace: {on: {start: {copyFoeAbility: true}}},
     frisk: {on: {start: {revealItem: true}}},
     forewarn: {on: {start: {warnStrongestMove: true}}},
 
     moldbreaker: {on: {start: {}}, flags: {ignoreTargetAbility: true}},
     pressure: {on: {start: {}}},
-
-    immunity: {on: {block: {status: {psn: true, tox: true}}}},
-    insomnia: {on: {block: {status: {slp: true, yawn: true}}}},
-    limber: {on: {block: {status: {par: true}}}},
-    magmaarmor: {on: {block: {status: {frz: true}}}},
-    // TODO: oblivious should also be immune to captivate
-    oblivious: {on: {block: {status: {attract: true}}}},
-    owntempo: {on: {block: {status: {confusion: true}}}},
-    vitalspirit: {on: {block: {status: {slp: true, yawn: true}}}},
-    waterveil: {on: {block: {status: {brn: true}}}},
 
     // TODO(dryskin): sun/fire weakness
     dryskin:

@@ -257,7 +257,7 @@ export async function* status(pstate: ParserState, targetRef: Side,
 {
     const target = pstate.state.teams[targetRef].active;
     // effect would do nothing
-    if (statusTypes.every(s => hasStatus(target, s)))
+    if (statusTypes.every(s => cantStatus(target, s)))
     {
         return {...lastEvent && {event: lastEvent}, success: true};
     }
@@ -285,7 +285,7 @@ export async function* status(pstate: ParserState, targetRef: Side,
 }
 
 /** Checks whether the pokemon can't be afflicted by the given status. */
-function hasStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
+function cantStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
     boolean
 {
     switch (statusType)

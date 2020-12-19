@@ -25,17 +25,66 @@ export async function* onStart(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
     SubParser<ExpectAbilitiesResult>
 {
-    // TODO: add trace/forewarn absent callbacks
     const pendingAbilities = getAbilities(pstate, eligible,
         function startFilter(data, monRef)
         {
             if (!data.on?.start) return null;
+            // TODO: add trace/forewarn restrictions
+            // activate on a certain status
+            if (data.on.start.cure && data.statusImmunity)
+            {
+                const mon = pstate.state.teams[monRef].active;
+                for (const statusType in data.statusImmunity)
+                {
+                    if (data.statusImmunity.hasOwnProperty(statusType) &&
+                        hasStatus(mon, statusType as effects.StatusType))
+                    {
+                        return {};
+                    }
+                }
+                return null;
+            }
             if (data.on.start.revealItem) return {opponentHasItem: true};
             return {};
         });
 
     return yield* expectAbilities(pstate, "start", pendingAbilities,
         /*hitByMove*/ undefined, lastEvent);
+}
+
+// TODO: move to a helper library?
+/** Checks whether the pokemon has the given status. */
+function hasStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
+    boolean
+{
+    switch (statusType)
+    {
+        case "aquaRing": case "attract": case "curse": case "flashFire":
+        case "focusEnergy": case "imprison": case "ingrain":
+        case "leechSeed": case "mudSport": case "nightmare":
+        case "powerTrick": case "substitute": case "suppressAbility":
+        case "torment": case "waterSport":
+        case "destinyBond": case "grudge": case "rage": // singlemove
+        case "magicCoat": case "roost": case "snatch": // singleturn
+            return mon.volatile[statusType];
+        case "bide": case "confusion": case "charge": case "magnetRise":
+        case "embargo": case "healBlock": case "slowStart": case "taunt":
+        case "uproar": case "yawn":
+            return mon.volatile[statusType].isActive;
+        case "encore":
+            return mon.volatile[statusType].ts.isActive;
+        case "endure": case "protect": // stall
+            return mon.volatile.stalling;
+        case "foresight": case "miracleEye":
+            return mon.volatile.identified === statusType;
+        default:
+            if (dexutil.isMajorStatus(statusType))
+            {
+                return mon.majorStatus.current === statusType;
+            }
+            // istanbul ignore next: should never happen
+            throw new Error(`Invalid status effect '${statusType}'`);
+    }
 }
 
 /**
@@ -57,18 +106,29 @@ export async function* onBlock(pstate: ParserState,
         return {...lastEvent && {event: lastEvent}, results: []};
     }
 
+    // TODO: account for ghost switch?
     const status = !hitByMove.effects?.status?.chance ?
         hitByMove.effects?.status?.hit : undefined;
 
     const pendingAbilities = getAbilities(pstate, eligible,
-        d => d.on?.block &&
+        function blockFilter(data)
+        {
+            if (!data.on?.block) return null;
             // block move's main status effect
-            (status?.some(s => !!d.on!.block!.status?.[s]) ||
-                // block move based on its type
-                hitByMove.type === d.on.block.move?.type ||
-                // block move based on damp
-                (!!hitByMove.flags?.explosive &&
-                    !!d.on.block.effect?.explosive)) ? {} : null);
+            if (data.on.block.status && data.statusImmunity &&
+                status?.some(s => data.statusImmunity![s]))
+            {
+                return {};
+            }
+            // block move based on its type
+            if (hitByMove.type === data.on.block.move?.type) return {};
+            // block move based on damp
+            if (hitByMove.flags?.explosive && data.on.block.effect?.explosive)
+            {
+                return {};
+            }
+            return null;
+        });
 
     return yield* expectAbilities(pstate, "block", pendingAbilities,
         hitByMove, lastEvent);
@@ -131,6 +191,25 @@ function ignoresTargetAbility(mon: ReadonlyPokemon): boolean
 }
 
 /**
+ * Expects an on-`status` ability to activate after afflicting a status
+ * condition.
+ * @param eligible Eligible pokemon with the status.
+ * @param statusType Status that was afflicted.
+ * @param hitByMove Move by which the eligible pokemon are being hit.
+ */
+export async function* onStatus(pstate: ParserState,
+    eligible: Partial<Readonly<Record<Side, true>>>,
+    statusType: effects.StatusType, hitByMove?: dexutil.MoveData,
+    lastEvent?: events.Any): SubParser<ExpectAbilitiesResult>
+{
+    const pendingAbilities = getAbilities(pstate, eligible,
+        d => d.on?.status?.cure && d.statusImmunity?.[statusType] ? {} : null);
+
+    return yield* expectAbilities(pstate, "status", pendingAbilities, hitByMove,
+        lastEvent);
+}
+
+/**
  * Expects an on-`moveDamage` ability (or variants of this condition) to
  * activate.
  * @param eligible Eligible pokemon.
@@ -150,16 +229,21 @@ export async function* onMoveDamage(pstate: ParserState,
             if (data.on.moveDamage && ["damage", "contact"].includes(qualifier))
             {
                 const mon = pstate.state.teams[monRef].active;
-                return !data.on.moveDamage.changeToMoveType || !mon.fainted ?
-                    {} : null;
+                if (!data.on.moveDamage.changeToMoveType || !mon.fainted)
+                {
+                    return {};
+                }
             }
-            if (data.on.moveContact &&
+            else if (data.on.moveContact &&
                 ["contact", "contactKO"].includes(qualifier))
             {
                 return {chance: data.on.moveContact.chance ?? 100};
             }
-            return data.on.moveContactKO && qualifier === "contactKO" ?
-                {} : null;
+            else if (data.on.moveContactKO && qualifier === "contactKO")
+            {
+                return {};
+            }
+            return null;
         });
 
     let on: dexutil.AbilityOn;
@@ -185,7 +269,7 @@ export async function* onMoveDrain(pstate: ParserState,
     SubParser<ExpectAbilitiesResult>
 {
     const pendingAbilities = getAbilities(pstate, eligible,
-        d => d.on?.moveDrain ? {chance: 100} : null);
+        d => d.on?.moveDrain ? {} : null);
 
     return yield* expectAbilities(pstate, "moveDrain", pendingAbilities,
         hitByMove, lastEvent);
@@ -247,72 +331,81 @@ function expectAbilities(pstate: ParserState, on: dexutil.AbilityOn,
         const abilities = pendingAbilities[monRef as Side]!;
         inferences.push(
         {
-            async* take(event)
-            {
-                if (event.type !== "activateAbility") return {event};
-                if (event.monRef !== monRef) return {event};
-
-                // match pending ability possibilities with current item event
-                const abilityInf = abilities.get(event.ability);
-                if (!abilityInf) return {event};
-
-                // accept event
-                return yield* activateAbility(pstate, event, on,
-                    hitByMove?.name);
-            },
-            absent()
-            {
-                const mon = pstate.state.teams[monRef as Side].active;
-                const opp = pstate.state.teams[otherSide(monRef as Side)]
-                    .active;
-
-                // collective AbilityInference flags
-                // whether all kept abilities have opponentHasItem=true
-                let allOpponentHasItem: boolean | undefined;
-
-                // figure out which abilities to remove
-                const removeCandidates: string[] = [];
-                for (const [name, inf] of abilities)
-                {
-                    // don't remove abilities that only had a chance of
-                    //  activating
-                    const guaranteed = (inf.chance ?? 100) >= 100;
-
-                    // ability should activate if opponent has an item
-                    if (inf.opponentHasItem)
-                    {
-                        // if the opponent definitely had an item, then the
-                        //  ability should've activated
-                        if (!opp.item.isSet("none"))
-                        {
-                            if (guaranteed) removeCandidates.push(name);
-                            continue;
-                        }
-                        // TODO: if opponent's item is unknown, add onNarrow
-                        //  callbacks
-                        // update collective opponentHasItem flag
-                        allOpponentHasItem ??= true;
-                        allOpponentHasItem &&= true;
-                    }
-                    // ability definitely should've activated
-                    else if (guaranteed) removeCandidates.push(name);
-                    else allOpponentHasItem = false;
-                }
-                // if all remaining abilities have opponentHasItem=true, then
-                //  the opponent must not have had an item
-                if (allOpponentHasItem) opp.setItem("none");
-
-                try { mon.traits.ability.remove(...removeCandidates); }
-                catch (e)
-                {
-                    throw new Error(`Pokemon '${monRef}' should've activated ` +
-                        `ability [${removeCandidates.join(", ")}] but it ` +
-                        `wasn't activated on-${on}`);
-                }
-            }
+            take: event => expectAbilitiesTake(pstate, event, monRef as Side,
+                on, abilities, hitByMove),
+            absent: () => expectAbilitiesAbsent(pstate, monRef as Side, on,
+                abilities)
         });
     }
     return expectEvents(inferences, lastEvent);
+}
+
+async function* expectAbilitiesTake(pstate: ParserState, event: events.Any,
+    monRef: Side, on: dexutil.AbilityOn,
+    abilities: ReadonlyMap<string, AbilityInference>,
+    hitByMove?: dexutil.MoveData): SubParser<AbilityResult>
+{
+    if (event.type !== "activateAbility") return {event};
+    if (event.monRef !== monRef) return {event};
+
+    // match pending ability possibilities with current item event
+    const abilityInf = abilities.get(event.ability);
+    if (!abilityInf) return {event};
+
+    // accept event
+    return yield* activateAbility(pstate, event, on, hitByMove?.name);
+}
+
+function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
+    on: dexutil.AbilityOn, abilities: ReadonlyMap<string, AbilityInference>):
+    void
+{
+    const mon = pstate.state.teams[monRef as Side].active;
+    const opp = pstate.state.teams[otherSide(monRef as Side)].active;
+
+    // collective AbilityInference flags
+    // whether all kept abilities have opponentHasItem=true
+    let allOpponentHasItem: boolean | undefined;
+
+    // figure out which abilities to remove
+    const removeCandidates: string[] = [];
+    for (const [name, inf] of abilities)
+    {
+        // don't remove abilities that only had a chance of
+        //  activating
+        const guaranteed = (inf.chance ?? 100) >= 100;
+
+        // ability should activate if opponent has an item
+        if (inf.opponentHasItem)
+        {
+            // if the opponent definitely had an item, then the
+            //  ability should've activated
+            if (!opp.item.isSet("none"))
+            {
+                if (guaranteed) removeCandidates.push(name);
+                continue;
+            }
+            // TODO: if opponent's item is unknown, add onNarrow
+            //  callbacks
+            // update collective opponentHasItem flag
+            allOpponentHasItem ??= true;
+            allOpponentHasItem &&= true;
+        }
+        // ability definitely should've activated
+        else if (guaranteed) removeCandidates.push(name);
+        else allOpponentHasItem = false;
+    }
+    // if all remaining abilities have opponentHasItem=true, then
+    //  the opponent must not have had an item
+    if (allOpponentHasItem) opp.setItem("none");
+
+    try { mon.traits.ability.remove(...removeCandidates); }
+    catch (e)
+    {
+        throw new Error(`Pokemon '${monRef}' should've activated ability ` +
+            `[${removeCandidates.join(", ")}] but it wasn't activated ` +
+            `on-${on}`);
+    }
 }
 
 /** Result from `expectAbility()`. */
@@ -438,6 +531,10 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
                 throw new Error("On-start effect shouldn't activate for " +
                     `ability '${ctx.ability.name}'`);
             }
+            if (ctx.ability.on.start.cure && ctx.ability.statusImmunity)
+            {
+                return yield* cure(ctx, lastEvent);
+            }
             if (ctx.ability.on.start.copyFoeAbility)
             {
                 return yield* copyFoeAbility(ctx, lastEvent);
@@ -459,9 +556,9 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
                     `ability '${ctx.ability.name}'`);
             }
             // TODO: assert non-ignoreTargetAbility (moldbreaker) after handling
-            if (ctx.ability.on.block.status)
+            if (ctx.ability.on.block.status && ctx.ability.statusImmunity)
             {
-                return yield* blockStatus(ctx, ctx.ability.on.block.status,
+                return yield* blockStatus(ctx, ctx.ability.statusImmunity,
                     lastEvent);
             }
             if (ctx.ability.on.block.move)
@@ -489,6 +586,20 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
                 return yield* blockUnboost(ctx, ctx.ability.on.tryUnboost.block,
                     lastEvent);
             }
+            throw new Error("On-tryUnboost effect shouldn't activate for " +
+                `ability '${ctx.ability.name}'`);
+        case "status":
+            if (!ctx.ability.on?.status)
+            {
+                throw new Error("On-status effect shouldn't activate for " +
+                    `ability '${ctx.ability.name}'`);
+            }
+            if (ctx.ability.on.status.cure && ctx.ability.statusImmunity)
+            {
+                return yield* cure(ctx, lastEvent);
+            }
+            throw new Error("On-status effect shouldn't activate for " +
+                `ability '${ctx.ability.name}'`);
         case "moveContactKO":
             if (ctx.ability.on?.moveContactKO)
             {
@@ -546,6 +657,24 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
 
 // on-start handlers
 
+/**
+ * Handles events due to a statusImmunity ability curing a status (e.g.
+ * Insomnia).
+ */
+async function* cure(ctx: AbilityContext, lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    const next = lastEvent ?? (yield);
+    if (next.type !== "activateStatusEffect" || next.start ||
+        next.monRef !== ctx.holderRef ||
+        !ctx.ability.statusImmunity?.[next.effect])
+    {
+        // TODO: better error messages
+        throw new Error(`On-${ctx.on} cure effect failed`);
+    }
+    return yield* base.activateStatusEffect(ctx.pstate, next);
+}
+
 /** Handles events due to a copeFoeAbility ability (e.g. Trace). */
 async function* copyFoeAbility(ctx: AbilityContext, lastEvent?: events.Any):
     SubParser<AbilityResult>
@@ -555,7 +684,6 @@ async function* copyFoeAbility(ctx: AbilityContext, lastEvent?: events.Any):
     const next = lastEvent ?? (yield);
     if (next.type !== "activateAbility" || next.monRef !== ctx.holderRef)
     {
-        // TODO: better error messages
         throw new Error("On-start copeFoeAbility effect failed");
     }
     ctx.holder.traits.setAbility(next.ability);

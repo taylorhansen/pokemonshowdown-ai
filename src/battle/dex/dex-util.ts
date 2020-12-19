@@ -188,6 +188,11 @@ export interface AbilityData extends DexData
         readonly start?:
         {
             // TODO: document/handle conditions to not activate
+            /**
+             * Whether this ability cures statuses specified by
+             * `#statusImmunity`.
+             */
+            readonly cure?: true;
             /** Whether this ability copies the foe's ability. */
             readonly copyFoeAbility?: true;
             /**
@@ -208,8 +213,8 @@ export interface AbilityData extends DexData
          */
         readonly block?:
         {
-            /** Block certain statuses. */
-            readonly status?: {readonly [T in effects.StatusType]?: true};
+            /** Block certain statuses specified by `#statusImmunity`. */
+            readonly status?: true;
             /** Block certain moves. */
             readonly move?:
             {
@@ -238,7 +243,16 @@ export interface AbilityData extends DexData
         {
             /** Block certain unboost effects from the opponent. */
             readonly block?: Partial<BoostTable<true>>;
-        }
+        };
+        /** Whenever the ability holder gets statused. */
+        readonly status?:
+        {
+            /**
+             * Whether this ability cures statuses specified by
+             * `#statusImmunity`.
+             */
+            readonly cure?: true;
+        };
         /**
          * Whenever a damaging move makes contact and KOs the ability holder.
          */
@@ -286,6 +300,9 @@ export interface AbilityData extends DexData
             readonly invert?: true;
         };
     };
+
+    /** Status immunities granted by this ability. */
+    readonly statusImmunity?: {readonly [T in effects.StatusType]?: true};
 
     // TODO: rename to passive effects? or add a separate field?
     /** Additional ability flags. */

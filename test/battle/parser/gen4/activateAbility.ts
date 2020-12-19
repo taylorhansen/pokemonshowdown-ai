@@ -45,6 +45,18 @@ export function testActivateAbility(f: () => Context,
         hpMax: 100
     };
 
+    // can have clearbody or liquidooze
+    const tentacruel: events.SwitchOptions =
+    {
+        species: "tentacruel", level: 50, gender: "M", hp: 100, hpMax: 100
+    };
+
+    // can have limber or owntempo
+    const glameow: events.SwitchOptions =
+    {
+        species: "glameow", level: 50, gender: "F", hp: 100, hpMax: 100
+    };
+
     // tests for activateAbility()
     describe("Event", function()
     {
@@ -78,6 +90,22 @@ export function testActivateAbility(f: () => Context,
 
         describe("On-start", function()
         {
+            describe("Cure (immunity)", function()
+            {
+                it("Should cure status", async function()
+                {
+                    const mon = initActive("us");
+                    mon.majorStatus.afflict("slp");
+                    await initParser("us", "insomnia", "start");
+                    await handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "slp", start: false
+                    });
+                    await exitParser();
+                });
+            });
+
             describe("CopyFoeAbility (Trace)", function()
             {
                 it("Should reveal abilities", async function()
@@ -280,6 +308,22 @@ export function testActivateAbility(f: () => Context,
             });
         });
 
+        describe("On-status", function()
+        {
+            it("Should handle", async function()
+            {
+                const mon = initActive("us");
+                mon.majorStatus.afflict("slp");
+                await initParser("us", "insomnia", "status");
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "slp", start: false
+                });
+                await exitParser();
+            });
+        });
+
         describe("On-moveContactKO", function()
         {
             it("Should handle", async function()
@@ -466,13 +510,6 @@ export function testActivateAbility(f: () => Context,
         return gen;
     }
 
-    // can have clearbody or liquidooze
-    const tentacruel: events.SwitchOptions =
-    {
-        species: "tentacruel", level: 50, gender: "M", hp: 100, hpMax: 100
-    };
-
-
     describe("onStart()", function()
     {
         it("Should infer no on-start ability if it did not activate",
@@ -604,7 +641,7 @@ export function testActivateAbility(f: () => Context,
                 .to.have.keys("clearbody", "liquidooze");
         });
 
-        it("Should infer no on-block ability if it did not activate",
+        it("Should infer no on-tryUnboost ability if it did not activate",
         async function()
         {
             const mon = initActive("them", tentacruel);
@@ -617,6 +654,23 @@ export function testActivateAbility(f: () => Context,
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("liquidooze");
+        });
+    });
+
+    describe("onStatus()", function()
+    {
+        it("Should infer no on-status ability if it did not activate",
+        async function()
+        {
+            const mon = initActive("them", glameow);
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("limber", "owntempo");
+
+            await altParser(ability.onStatus(pstate, {them: true}, "confusion",
+                    dex.moves.confuseray));
+            await exitParser<ability.ExpectAbilitiesResult>({results: []});
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("limber");
         });
     });
 

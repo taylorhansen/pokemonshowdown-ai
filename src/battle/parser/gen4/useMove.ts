@@ -116,6 +116,9 @@ interface MoveContext
     bouncing?: Side;
     /** Whether the move failed on its own or just missed its targets. */
     failed?: true | "miss";
+    // TODO(doubles): index by opponent as well
+    /** Status effects being blocked for the target. */
+    blockStatus?: {readonly [T in effects.StatusType]?: true};
 }
 
 interface TargetFlags
@@ -373,6 +376,8 @@ async function* preDamage(ctx: MoveContext, lastEvent?: events.Any):
             // TODO: what about blockStatus?
             if (abilityResult.immune) handleBlock(ctx, targetRef);
             else if (abilityResult.failed) handleFail(ctx);
+            ctx.blockStatus =
+                {...ctx.blockStatus, ...abilityResult.blockStatus};
         }
         return {
             ...expectResult.event && {event: expectResult.event},
@@ -683,8 +688,10 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
         {
             for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
             {
-                const statusTypes = moveEffects.status[tgt];
-                if (!statusTypes) continue;
+                // make sure the status isn't being blocked
+                const statusTypes = moveEffects.status[tgt]
+                    ?.filter(s => !ctx.blockStatus?.[s]);
+                if (!statusTypes || statusTypes.length <= 0) continue;
                 const targetRef = tgt === "self" ?
                     ctx.userRef : otherSide(ctx.userRef);
                 // substitute blocks status conditions
@@ -705,7 +712,8 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                         throw new Error("Expected effect that didn't happen: " +
                             `${tgt} status [${statusTypes.join(", ")}]`);
                     }
-                    // may have a status immunity ability
+                    // if it's not a status move but should've inflicted a
+                    //  status, the opponent must have a status immunity
                     statusImmunity(ctx, targetRef);
                 }
                 lastEvent = statusResult.event;
@@ -717,6 +725,7 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                 }
             }
         }
+        // untracked statuses
         const statusLoopResult = yield* eventLoop(
             async function* statusLoop(event): SubParser
             {
@@ -1399,6 +1408,7 @@ function preHaltIgnoredEffects(ctx: MoveContext): void
     }
 }
 
+// TODO: refactor to use EventInference helpers
 /**
  * Infers an implicit status immunity. Assumes the move's effect couldn't have
  * been silently consumed.
@@ -1443,7 +1453,8 @@ function statusImmunity(ctx: MoveContext, targetRef: Side): void
         // use some instead of every since if there are 2 possible statuses to
         //  inflict, it should consider immunities to either
         .filter(n => status.hit!.some(
-            s => targetAbility.map[n].on?.block?.status?.[s]));
+            s => targetAbility.map[n].on?.block?.status &&
+                targetAbility.map[n].statusImmunity?.[s]));
     if (filtered.length <= 0)
     {
         throw new Error(`Move '${ctx.moveName}' status ` +
