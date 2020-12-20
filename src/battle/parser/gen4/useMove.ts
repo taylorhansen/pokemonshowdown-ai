@@ -579,7 +579,6 @@ async function* damage(ctx: MoveContext, lastEvent?: events.Any):
 /** Handles effects after the main damage event. */
 async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
 {
-
     // TODO: verify order
     // TODO: move bounce handling to preDamage where ctx.bouncing was set?
     if (ctx.bouncing)
@@ -597,6 +596,7 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
         (moveEffects?.selfFaint === "ifHit" && !ctx.failed);
     if (!ctx.failed)
     {
+        // TODO: verify order (can't test call vs transform vs count)
         if (moveEffects?.call)
         {
             const callResult = yield* expectCalledMove(ctx, ctx.userRef,
@@ -607,23 +607,6 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
         {
             const transformResult = yield* expectTransform(ctx, lastEvent);
             lastEvent = transformResult.event;
-        }
-        if (moveEffects?.damage &&
-            // shouldn't activate if non-ghost type and ghost flag is set
-            !(moveEffects.damage.ghost && !ctx.user.types.includes("ghost")))
-        {
-            // TODO(doubles): actually track targets
-            const targetRef = moveEffects.damage.target === "self" ?
-                ctx.userRef : otherSide(ctx.userRef);
-            const damageResult = yield* parsers.percentDamage(ctx.pstate,
-                targetRef, moveEffects.damage.percent, lastEvent);
-            if (!damageResult.success)
-            {
-                throw new Error("Expected effect that didn't happen: " +
-                    `${moveEffects.damage.target} percentDamage ` +
-                    `${moveEffects.damage.percent}%`);
-            }
-            lastEvent = damageResult.event;
         }
         if (moveEffects?.count)
         {
@@ -638,103 +621,25 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
             }
             lastEvent = countResult.event;
         }
-        if (moveEffects?.boost &&
-            // shouldn't activate if ghost type and noGhost flag is set
-            !(moveEffects.boost.noGhost && ctx.user.types.includes("ghost")))
+        // TODO: some weird contradictory ordering when testing on PS is
+        //  reflected here, should the PSEventHandler re-order them or should
+        //  the dex make clearer distinguishments for these specific effects?
+        // self-heal generally happens before status (e.g. roost)
+        if ((moveEffects?.damage?.percent ?? 0) > 0)
         {
-            const chance = moveEffects.boost.chance;
-            for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
-            {
-                const table = moveEffects.boost[tgt];
-                if (!table) continue;
-                const targetRef = tgt === "self" ?
-                    ctx.userRef : otherSide(ctx.userRef);
-                if (tgt === "hit")
-                {
-                    const target = ctx.pstate.state.teams[targetRef].active;
-                    // can't boost target if about to faint
-                    if (target.hp.current <= 0) continue;
-                    // substitute blocks boosts
-                    if (!ctx.moveData.flags?.ignoreSub &&
-                        target.volatile.substitute)
-                    {
-                        continue;
-                    }
-                }
-                const {set} = moveEffects.boost;
-                const boostResult = yield* moveBoost(ctx, targetRef, table,
-                    chance, set, lastEvent);
-                if (Object.keys(boostResult.remaining).length > 0 &&
-                    !moveEffects.boost.chance)
-                {
-                    throw new Error("Expected effect that didn't happen: " +
-                        `${tgt} boost ${set ? "set" : "add"} ` +
-                        JSON.stringify(boostResult.remaining));
-                }
-                lastEvent = boostResult.event;
-            }
+            lastEvent = (yield* handlePercentDamage(ctx, moveEffects?.damage,
+                lastEvent)).event;
         }
-        if (moveEffects?.swapBoosts)
+        // charge message happens after boost so handle it earlier in this
+        //  specific case
+        if (moveEffects?.status?.self?.includes("charge"))
         {
-            const targetRef = otherSide(ctx.userRef);
-            const swapResult = yield* parsers.swapBoosts(ctx.pstate,
-                ctx.userRef, targetRef, moveEffects.swapBoosts, lastEvent);
-            if (!swapResult.success)
-            {
-                throw new Error("Expected effect that didn't happen: " +
-                    "swapBoosts " +
-                    `[${Object.keys(moveEffects.swapBoosts).join(", ")}]`);
-            }
-            lastEvent = swapResult.event;
+            lastEvent = (yield* handleBoost(ctx, moveEffects?.boost, lastEvent))
+                .event;
         }
-        if (moveEffects?.status &&
-            // shouldn't activate if non-ghost type and ghost flag is set
-            !(moveEffects.status.ghost && !ctx.user.types.includes("ghost")))
-        {
-            for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
-            {
-                // make sure the status isn't being blocked
-                const statusTypes = moveEffects.status[tgt]
-                    ?.filter(s => !ctx.blockStatus?.[s]);
-                if (!statusTypes || statusTypes.length <= 0) continue;
-                const targetRef = tgt === "self" ?
-                    ctx.userRef : otherSide(ctx.userRef);
-                if (tgt === "hit")
-                {
-                    const target = ctx.pstate.state.teams[targetRef].active;
-                    // can't inflict status if about to faint
-                    if (target.hp.current <= 0) continue;
-                    // substitute blocks status conditions
-                    if (!ctx.moveData.flags?.ignoreSub &&
-                        target.volatile.substitute)
-                    {
-                        continue;
-                    }
-                }
-                const statusResult = yield* parsers.status(ctx.pstate,
-                    targetRef, statusTypes, lastEvent);
-                if (!statusResult.success)
-                {
-                    // status was the main effect of the move (e.g. thunderwave)
-                    if (!moveEffects.status.chance &&
-                        ctx.moveData.category === "status")
-                    {
-                        throw new Error("Expected effect that didn't happen: " +
-                            `${tgt} status [${statusTypes.join(", ")}]`);
-                    }
-                    // if it's not a status move but should've inflicted a
-                    //  status, the opponent must have a status immunity
-                    statusImmunity(ctx, targetRef);
-                }
-                lastEvent = statusResult.event;
-
-                // verify if imprison was successful
-                if (statusResult.success === "imprison")
-                {
-                    imprison(ctx, /*failed*/ false);
-                }
-            }
-        }
+        // move status effects
+        lastEvent = (yield* handleStatus(ctx, moveEffects?.status, lastEvent))
+            .event;
         // untracked statuses
         const statusLoopResult = yield* eventLoop(
             async function* statusLoop(event): SubParser
@@ -744,7 +649,7 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
                 let accept = false;
                 switch (event.effect)
                 {
-                    case "confusion": case "leechSeed": case "substitute":
+                    case "confusion": case "leechSeed":
                         // can be removed by a different move, but currently not
                         //  tracked yet (TODO)
                         accept = !event.start;
@@ -763,6 +668,32 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
             },
             lastEvent);
         lastEvent = statusLoopResult.event;
+        // self-damage generally happens after status effects (e.g. curse,
+        //  substitute)
+        if ((moveEffects?.damage?.percent ?? 0) < 0)
+        {
+            lastEvent = (yield* handlePercentDamage(ctx, moveEffects?.damage,
+                lastEvent)).event;
+        }
+        // boost generally happens after damage effects (e.g. bellydrum)
+        if (!moveEffects?.status?.self?.includes("charge"))
+        {
+            lastEvent = (yield* handleBoost(ctx, moveEffects?.boost, lastEvent))
+                .event;
+        }
+        if (moveEffects?.swapBoosts)
+        {
+            const targetRef = otherSide(ctx.userRef);
+            const swapResult = yield* parsers.swapBoosts(ctx.pstate,
+                ctx.userRef, targetRef, moveEffects.swapBoosts, lastEvent);
+            if (!swapResult.success)
+            {
+                throw new Error("Expected effect that didn't happen: " +
+                    "swapBoosts " +
+                    `[${Object.keys(moveEffects.swapBoosts).join(", ")}]`);
+            }
+            lastEvent = swapResult.event;
+        }
         if (moveEffects?.team)
         {
             for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
@@ -1073,6 +1004,121 @@ async function* expectTransform(ctx: MoveContext, lastEvent?: events.Any):
         throw new Error("Transform effect failed");
     }
     return yield* base.transform(ctx.pstate, event);
+}
+
+/** Handles the status effects of a move. */
+async function* handleStatus(ctx: MoveContext,
+    status?: NonNullable<dexutil.MoveData["effects"]>["status"],
+    lastEvent?: events.Any): SubParser
+{
+    // shouldn't activate if non-ghost type and ghost flag is set
+    if (!status || (status.ghost && !ctx.user.types.includes("ghost")))
+    {
+        return {...lastEvent && {event: lastEvent}};
+    }
+    for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
+    {
+        // make sure the status isn't being blocked
+        const statusTypes = status[tgt]?.filter(s => !ctx.blockStatus?.[s]);
+        if (!statusTypes || statusTypes.length <= 0) continue;
+        const targetRef = tgt === "self" ? ctx.userRef : otherSide(ctx.userRef);
+        const target = ctx.pstate.state.teams[targetRef].active;
+        // can't inflict status if about to faint
+        if (target.hp.current <= 0) continue;
+        if (tgt === "hit")
+        {
+            // substitute blocks status conditions
+            if (!ctx.moveData.flags?.ignoreSub && target.volatile.substitute)
+            {
+                continue;
+            }
+        }
+        const statusResult = yield* parsers.status(ctx.pstate, targetRef,
+            statusTypes, lastEvent);
+        if (!statusResult.success)
+        {
+            // status was the main effect of the move (e.g. thunderwave)
+            if (!status.chance && ctx.moveData.category === "status")
+            {
+                throw new Error("Expected effect that didn't happen: " +
+                    `${tgt} status [${statusTypes.join(", ")}]`);
+            }
+            // if it's not a status move but should've inflicted a
+            //  status, the opponent must have a status immunity
+            statusImmunity(ctx, targetRef);
+        }
+        lastEvent = statusResult.event;
+
+        // verify if imprison was successful
+        if (statusResult.success === "imprison")
+        {
+            imprison(ctx, /*failed*/ false);
+        }
+    }
+    return {...lastEvent && {event: lastEvent}};
+}
+
+/** Handles the percent-damage/heal effects of a move. */
+async function* handlePercentDamage(ctx: MoveContext,
+    effect?: NonNullable<dexutil.MoveData["effects"]>["damage"],
+    lastEvent?: events.Any): SubParser
+{
+    // shouldn't activate if non-ghost type and ghost flag is set
+    if (!effect || (effect.ghost && !ctx.user.types.includes("ghost")))
+    {
+        return {...lastEvent && {event: lastEvent}};
+    }
+    // TODO(doubles): actually track targets
+    const targetRef = effect.target === "self" ?
+        ctx.userRef : otherSide(ctx.userRef);
+    const damageResult = yield* parsers.percentDamage(ctx.pstate, targetRef,
+        effect.percent, lastEvent);
+    if (!damageResult.success)
+    {
+        throw new Error("Expected effect that didn't happen: " +
+            `${effect.target} percentDamage ${effect.percent}%`);
+    }
+    return damageResult;
+}
+
+/** Handles the boost effects of a move. */
+async function* handleBoost(ctx: MoveContext,
+    effect?: NonNullable<dexutil.MoveData["effects"]>["boost"],
+    lastEvent?: events.Any): SubParser
+{
+    // shouldn't activate if ghost type and noGhost flag is set
+    if (!effect || (effect.noGhost && ctx.user.types.includes("ghost")))
+    {
+        return {...lastEvent && {event: lastEvent}};
+    }
+    const chance = effect.chance;
+    for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
+    {
+        const table = effect[tgt];
+        if (!table) continue;
+        const targetRef = tgt === "self" ? ctx.userRef : otherSide(ctx.userRef);
+        const target = ctx.pstate.state.teams[targetRef].active;
+        // can't boost target if about to faint
+        if (target.hp.current <= 0) continue;
+        if (tgt === "hit")
+        {
+            // substitute blocks boosts
+            if (!ctx.moveData.flags?.ignoreSub && target.volatile.substitute)
+            {
+                continue;
+            }
+        }
+        const boostResult = yield* moveBoost(ctx, targetRef, table, chance,
+            effect.set, lastEvent);
+        if (Object.keys(boostResult.remaining).length > 0 && !effect.chance)
+        {
+            throw new Error("Expected effect that didn't happen: " +
+                `${tgt} boost ${effect.set ? "set" : "add"} ` +
+                JSON.stringify(boostResult.remaining));
+        }
+        lastEvent = boostResult.event;
+    }
+    return {...lastEvent && {event: lastEvent}};
 }
 
 /**

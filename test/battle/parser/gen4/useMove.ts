@@ -1485,7 +1485,8 @@ export function testUseMove(f: () => Context,
 
         function testNonRemovable(ctg: "self" | "hit", name: string,
             effect: effects.StatusType, move: string,
-            preEvents?: readonly events.Any[]): void
+            preEvents?: readonly events.Any[],
+            postEvents?: readonly events.Any[]): void
         {
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
@@ -1515,6 +1516,10 @@ export function testUseMove(f: () => Context,
                             type: "activateStatusEffect", monRef: target,
                             effect, start: true
                         });
+                        for (const event of postEvents ?? [])
+                        {
+                            await handle(event);
+                        }
                         await exitParser();
                     });
 
@@ -1583,7 +1588,6 @@ export function testUseMove(f: () => Context,
             readonly name: string;
             readonly effect: effects.StatusType;
             readonly move?: string;
-            readonly preMoveEvents?: readonly events.Any[];
             readonly secondaryMove?: string;
             readonly secondaryMove100?: string;
             readonly abilityImmunity?: string;
@@ -1592,8 +1596,8 @@ export function testUseMove(f: () => Context,
 
         function testRemovable(
             {
-                ctg, name, effect, move, preMoveEvents, secondaryMove,
-                secondaryMove100, abilityImmunity, clause
+                ctg, name, effect, move, secondaryMove, secondaryMove100,
+                abilityImmunity, clause
             }: TestRemovableArgs): void
         {
             // adjust perspective
@@ -1614,10 +1618,6 @@ export function testUseMove(f: () => Context,
                         it("Should pass if expected", async function()
                         {
                             await initParser("them", move);
-                            for (const event of preMoveEvents ?? [])
-                            {
-                                await handle(event);
-                            }
                             await handle(
                             {
                                 type: "activateStatusEffect", monRef: target,
@@ -1786,12 +1786,12 @@ export function testUseMove(f: () => Context,
                             "ghost";
                         await initParser("them", "curse");
                         await handle(
-                            {type: "takeDamage", monRef: "them", hp: 50});
-                        await handle(
                         {
                             type: "activateStatusEffect", monRef: "us",
                             effect: "curse", start: true
                         });
+                        await handle(
+                            {type: "takeDamage", monRef: "them", hp: 50});
                         await exitParser();
                     });
 
@@ -2016,12 +2016,9 @@ export function testUseMove(f: () => Context,
                 });
             });
         }
-        testRemovable(
-        {
-            ctg: "self", name: "Substitute", effect: "substitute",
-            move: "substitute",
-            preMoveEvents: [{type: "takeDamage", monRef: "them", hp: 50}]
-        });
+        testNonRemovable("self", "Substitute", "substitute", "substitute",
+            /*preEvents*/ undefined,
+            /*postEvents*/ [{type: "takeDamage", monRef: "them", hp: 50}]);
         testNonRemovable("hit", "Suppress ability", "suppressAbility",
             "gastroacid");
         testNonRemovable("hit", "Taunt", "taunt", "taunt");
