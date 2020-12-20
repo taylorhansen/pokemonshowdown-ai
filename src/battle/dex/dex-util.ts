@@ -180,6 +180,16 @@ export interface AbilityData extends DexData
      */
     readonly on?:
     {
+        /** Whenever the holder is about to switch out (except when fainted). */
+        readonly switchOut?:
+        {
+            /**
+             * Whether to cure any major statuses (e.g. naturalcure). This
+             * generally happens silently but some indicators on cartridge and
+             * PS makes the ability known to both players in most cases.
+             */
+            readonly cure?: true;
+        }
         /**
          * Whenever the holder switches in or gains the ability. Leaving this
          * field defined but empty means it will reveal itself with no

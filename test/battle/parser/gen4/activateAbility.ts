@@ -47,15 +47,15 @@ export function testActivateAbility(f: () => Context,
 
     // can have clearbody or liquidooze
     const tentacruel: events.SwitchOptions =
-    {
-        species: "tentacruel", level: 50, gender: "M", hp: 100, hpMax: 100
-    };
+        {species: "tentacruel", level: 50, gender: "M", hp: 100, hpMax: 100};
 
     // can have limber or owntempo
     const glameow: events.SwitchOptions =
-    {
-        species: "glameow", level: 50, gender: "F", hp: 100, hpMax: 100
-    };
+        {species: "glameow", level: 50, gender: "F", hp: 100, hpMax: 100};
+
+    // can have naturalcure
+    const starmie: events.SwitchOptions =
+        {species: "starmie", level: 50, gender: null, hp: 100, hpMax: 100};
 
     // tests for activateAbility()
     describe("Event", function()
@@ -86,6 +86,25 @@ export function testActivateAbility(f: () => Context,
             await expect(initParser("us", "invalid"))
                 .to.eventually.be.rejectedWith(Error, "Unknown ability " +
                     "'invalid'");
+        });
+
+        describe("On-switchOut", function()
+        {
+            describe("Cure (naturalcure)", function()
+            {
+                it("Should cure status", async function()
+                {
+                    const mon = initActive("us");
+                    mon.majorStatus.afflict("par");
+                    await initParser("us", "naturalcure", "switchOut");
+                    await handle(
+                    {
+                        type: "activateStatusEffect", monRef: "us",
+                        effect: "par", start: false
+                    });
+                    await exitParser();
+                });
+            });
         });
 
         describe("On-start", function()
@@ -509,6 +528,45 @@ export function testActivateAbility(f: () => Context,
             .to.eventually.become({value: baseResult ?? {}, done: true});
         return gen;
     }
+
+    describe("onSwitchOut()", function()
+    {
+        it("Should infer no on-switchOut ability if it did not activate",
+        async function()
+        {
+            // can have naturalcure
+            const mon = initActive("them", starmie);
+            mon.majorStatus.afflict("tox"); // required for this ability
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("illuminate", "naturalcure");
+
+            await altParser(ability.onSwitchOut(pstate, {them: true}));
+            await exitParser<ability.ExpectAbilitiesResult>({results: []});
+            expect(mon.traits.ability.possibleValues)
+                .to.have.keys("illuminate");
+        });
+
+        describe("cure (naturalcure)", function()
+        {
+            it("Should handle", async function()
+            {
+                initActive("them", starmie).majorStatus.afflict("brn");
+                await altParser(ability.onSwitchOut(pstate, {them: true}));
+                await handle(
+                {
+                    type: "activateAbility", monRef: "them",
+                    ability: "naturalcure"
+                });
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "them", effect: "brn",
+                    start: false
+                });
+                await exitParser<ability.ExpectAbilitiesResult>(
+                    {results: [{event: {type: "halt", reason: "decide"}}]});
+            });
+        });
+    });
 
     describe("onStart()", function()
     {

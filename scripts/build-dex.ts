@@ -718,6 +718,8 @@ const abilityData:
         Pick<dexutil.AbilityData, "on" | "statusImmunity" | "flags">
 } =
 {
+    naturalcure: {on: {switchOut: {cure: true}}},
+
     // TODO(insomnia/vitalspirit): when using rest, ability causes it to fail if
     //  hp not full (`|-fail|mon|heal`)
     immunity: {on: statusImmunityOn, statusImmunity: {psn: true, tox: true}},

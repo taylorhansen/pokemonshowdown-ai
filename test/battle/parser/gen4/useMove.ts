@@ -531,6 +531,28 @@ export function testUseMove(f: () => Context,
                     await handleEnd(
                         {type: "switchIn", monRef: "them", ...ditto});
                 });
+
+                it("Should handle Natural Cure", async function()
+                {
+                    const mon = initActive("them");
+                    mon.majorStatus.afflict("slp");
+                    // could have naturalcure
+                    mon.traits.setAbility("naturalcure", "illuminate");
+                    await initParser("them", "batonpass");
+                    await handle({type: "halt", reason: "wait"});
+                    await handle(
+                    {
+                        type: "activateAbility", monRef: "them",
+                        ability: "naturalcure"
+                    });
+                    await handle(
+                    {
+                        type: "activateStatusEffect", monRef: "them",
+                        effect: "slp", start: false
+                    });
+                    await handleEnd(
+                        {type: "switchIn", monRef: "them", ...ditto});
+                });
             });
 
             describe("Delay", function()

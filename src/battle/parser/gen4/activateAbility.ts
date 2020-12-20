@@ -18,6 +18,28 @@ export interface ExpectAbilitiesResult extends SubParserResult
 }
 
 /**
+ * Expects an on-`switchOut` ability to activate.
+ * @param eligible Eligible pokemon.
+ */
+export async function* onSwitchOut(pstate: ParserState,
+    eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
+{
+    const pendingAbilities = getAbilities(pstate, eligible,
+        function switchoutFilter(data, monRef)
+        {
+            if (!data.on?.switchOut) return null;
+            const mon = pstate.state.teams[monRef].active;
+            // cure a major status condition
+            return data.on.switchOut.cure && mon.majorStatus.current ?
+                {} : null;
+        });
+
+    return yield* expectAbilities(pstate, "switchOut", pendingAbilities,
+        /*hitByMove*/ undefined, lastEvent);
+}
+
+/**
  * Expects an on-`start` ability to activate.
  * @param eligible Eligible pokemon.
  */
@@ -526,6 +548,19 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
 {
     switch (ctx.on)
     {
+        case "switchOut":
+            if (!ctx.ability.on?.switchOut)
+            {
+                throw new Error("On-switchOut effect shouldn't activate for " +
+                    `ability '${ctx.ability.name}'`);
+            }
+            if (ctx.ability.on.switchOut.cure)
+            {
+                return yield* cureMajorStatus(ctx, lastEvent);
+            }
+            // if nothing is set, then the ability shouldn't have activated
+            throw new Error("On-switchOut effect shouldn't activate for " +
+                `ability '${ctx.ability.name}'`);
         case "start":
             if (!ctx.ability.on?.start)
             {
@@ -572,7 +607,6 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
                 return yield* blockEffect(ctx,
                     ctx.ability.on.block.effect.explosive, lastEvent);
             }
-            // if nothing is set, then the ability shouldn't have activated
             throw new Error("On-block effect shouldn't activate for " +
                 `ability '${ctx.ability.name}'`);
         case "tryUnboost":
@@ -654,6 +688,21 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
                 `ability '${ctx.ability.name}'`);
     }
     return {...lastEvent && {event: lastEvent}};
+}
+
+// on-switchOut handlers
+
+async function* cureMajorStatus(ctx: AbilityContext, lastEvent?: events.Any):
+    SubParser<AbilityResult>
+{
+    const next = lastEvent ?? (yield);
+    if (next.type !== "activateStatusEffect" || next.start ||
+        next.monRef !== ctx.holderRef || !dexutil.isMajorStatus(next.effect))
+    {
+        // TODO: better error messages
+        throw new Error(`On-${ctx.on} cure effect failed`);
+    }
+    return yield* base.activateStatusEffect(ctx.pstate, next);
 }
 
 // on-start handlers

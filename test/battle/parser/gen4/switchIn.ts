@@ -78,7 +78,7 @@ export function testSwitchIn(f: () => Context,
             await handleEnd(event, {event});
         });
 
-        describe("interceptSwitch moves (Pursuit)", function()
+        describe("interceptSwitch moves (pursuit)", function()
         {
             it("Should handle Pursuit", async function()
             {
@@ -96,24 +96,51 @@ export function testSwitchIn(f: () => Context,
             it("Should throw if move doesn't have interceptSwitch flag",
             async function()
             {
-                state.teams.us.size = 1;
+                state.teams.us.size = 2;
+                state.teams.us.switchIn(smeargle);
                 initActive("them");
                 await altParser(expectSwitch(pstate, "us"));
                 await expect(handle(
                         {type: "useMove", monRef: "them", move: "tackle"}))
                     .to.eventually.be.rejectedWith(Error,
                         "Move 'tackle' cannot be used to intercept a " +
-                        "switch-in");
+                        "switch-out");
             });
 
             it("Should throw if mismatched monRef", async function()
             {
-                state.teams.us.size = 1;
+                state.teams.us.size = 2;
+                state.teams.us.switchIn(smeargle);
                 await altParser(expectSwitch(pstate, "us"));
                 await expect(handle(
                         {type: "useMove", monRef: "us", move: "pursuit"}))
                     .to.eventually.be.rejectedWith(Error,
                         "Pokemon 'us' was expected to switch out");
+            });
+        });
+
+        describe("on-switchOut abilities (naturalcure)", function()
+        {
+            it("Should handle", async function()
+            {
+                state.teams.us.size = 2;
+                const mon = state.teams.us.switchIn(smeargle)!;
+                mon.majorStatus.afflict("frz");
+                // could have naturalcure
+                mon.traits.setAbility("naturalcure", "illuminate");
+                await altParser(expectSwitch(pstate, "us"));
+                await handle(
+                {
+                    type: "activateAbility", monRef: "us",
+                    ability: "naturalcure"
+                });
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "us", effect: "frz",
+                    start: false
+                });
+                await handleEnd({type: "switchIn", monRef: "us", ...ditto},
+                    {success: true});
             });
         });
     });

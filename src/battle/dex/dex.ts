@@ -631,7 +631,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     moldbreaker: {uid: 56, name: "moldbreaker", display: "Mold Breaker", on: {start: {}}, flags: {ignoreTargetAbility: true}},
     motordrive: {uid: 57, name: "motordrive", display: "Motor Drive", on: {block: {move: {type: "electric", effects: [{type: "boost", add: {spe: 1}}]}}}},
     multitype: {uid: 58, name: "multitype", display: "Multitype"},
-    naturalcure: {uid: 59, name: "naturalcure", display: "Natural Cure"},
+    naturalcure: {uid: 59, name: "naturalcure", display: "Natural Cure", on: {switchOut: {cure: true}}},
     noguard: {uid: 60, name: "noguard", display: "No Guard"},
     normalize: {uid: 61, name: "normalize", display: "Normalize"},
     oblivious: {uid: 62, name: "oblivious", display: "Oblivious", on: {start: {cure: true}, block: {status: true}, status: {cure: true}}, statusImmunity: {attract: true}},
