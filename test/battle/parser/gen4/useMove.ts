@@ -17,7 +17,7 @@ import { ditto, smeargle } from "../../../helpers/switchOptions";
 import { Context } from "./Context";
 import { createParserHelpers } from "./helpers";
 
-export function testUseMove(f: () => Context,
+export function testUseMove(ctxFunc: () => Context,
     initActive: (monRef: Side, options?: events.SwitchOptions) => Pokemon)
 {
     let state: BattleState;
@@ -26,7 +26,7 @@ export function testUseMove(f: () => Context,
 
     beforeEach("Extract Context", function()
     {
-        ({state, pstate, parser} = f());
+        ({state, pstate, parser} = ctxFunc());
     });
 
     async function initParser(monRef: Side, move: string,
@@ -457,1053 +457,1042 @@ export function testUseMove(f: () => Context,
         });
     });
 
-    // TODO: add transform effect to Move effects
-    describe("transform", function()
-    {
-        it("Should pass if user and source match", async function()
-        {
-            initActive("us");
-            initActive("them");
-            await initParser("them", "transform");
-            await handle({type: "transform", source: "them", target: "us"});
-            await exitParser();
-        });
-
-        it("Should reject if user/source mismatch", async function()
-        {
-            initActive("us");
-            initActive("them");
-            await initParser("them", "transform");
-            await expect(handle(
-                    {type: "transform", source: "us", target: "them"}))
-                .to.eventually.be.rejectedWith(Error,
-                    "Transform effect failed: " +
-                    "Expected source 'them' but got 'us'");
-        });
-    });
-
     describe("Move effects", function()
     {
-        describe("Primary", function()
+        const moveEffectTests:
         {
-            describe("SelfSwitch", function()
+            readonly [T in keyof NonNullable<dexutil.MoveData["effects"]>]-?:
+                (() =>  void)[]
+        } =
+        {
+            call: [], transform: [], delay: [], damage: [], count: [],
+            boost: [], swapBoosts: [], status: [], team: [], field: [],
+            changeType: [], disableMove: [], drain: [], recoil: [],
+            selfFaint: [], selfSwitch: []
+        };
+
+        //#region call
+
+        /** Tackle from `them` side. */
+        const tackle: events.UseMove =
+            {type: "useMove", monRef: "them", move: "tackle"};
+
+        moveEffectTests.call.push(function()
+        {
+            it("Should reject if no call effect expected", async function()
             {
-                // TODO: track phazing moves
-                // TODO: handle all throw cases
-                it("Should accept if self-switch expected", async function()
-                {
-                    initActive("them");
-                    await initParser("them", "batonpass");
-                    await handle({type: "halt", reason: "wait"});
-                    await handleEnd(
-                        {type: "switchIn", monRef: "them", ...ditto});
-                });
+                initActive("us");
+                initActive("them");
+                await initParser("them", "tackle");
+                await reject(tackle);
+            });
+        });
 
-                it("Should throw if no self-switch expected", async function()
-                {
-                    initActive("them");
-                    await initParser("them", "splash");
-                    await reject({type: "halt", reason: "wait"});
-                });
+        // extract self+target move-callers
+        const copycatCallers: string[] = [];
+        const mirrorCallers: string[] = [];
+        const selfMoveCallers: string[] = [];
+        const targetMoveCallers: string[] = [];
+        const otherCallers: string[] = [];
+        for (const move of Object.keys(dex.moveCallers))
+        {
+            const effect = dex.moveCallers[move];
+            if (effect === "copycat") copycatCallers.push(move);
+            else if (effect === "mirror") mirrorCallers.push(move);
+            else if (effect === "self") selfMoveCallers.push(move);
+            else if (effect === "target") targetMoveCallers.push(move);
+            else otherCallers.push(move);
+        }
 
-                it("Should throw if self-switch expected but opponent " +
-                    "switched",
+        moveEffectTests.call.push(() => describe("Move-callers", function()
+        {
+            for (const caller of otherCallers)
+            {
+                it(`Should handle ${caller}`, async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", caller);
+                    await handle(tackle);
+                    await exitParser();
+                });
+            }
+        }));
+
+        moveEffectTests.call.push(() => describe("Copycat", function()
+        {
+            it("Should track last used move", async function()
+            {
+                initActive("them");
+                expect(state.status.lastMove).to.not.be.ok;
+                await initParser("them", "tackle");
+                expect(state.status.lastMove).to.equal("tackle");
+            });
+
+            for (const caller of copycatCallers)
+            {
+                it(`Should pass if using ${caller} and move matches`,
                 async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("them", "uturn");
-                    await handle({type: "halt", reason: "wait"});
-                    await expect(handle(
-                            {type: "switchIn", monRef: "us", ...ditto}))
-                        .to.eventually.be.rejectedWith(Error,
-                            "SelfSwitch effect 'true' failed");
+                    state.status.lastMove = "tackle";
+                    await initParser("them", caller);
+                    await handle(tackle);
+                    await exitParser();
                 });
 
-                it("Should handle Pursuit", async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("them", "uturn");
-                    await handle({type: "halt", reason: "wait"});
-                    await handle(
-                        {type: "useMove", monRef: "us", move: "pursuit"});
-                    await handleEnd(
-                        {type: "switchIn", monRef: "them", ...ditto});
-                });
-
-                it("Should handle Natural Cure", async function()
-                {
-                    const mon = initActive("them");
-                    mon.majorStatus.afflict("slp");
-                    // could have naturalcure
-                    mon.traits.setAbility("naturalcure", "illuminate");
-                    await initParser("them", "batonpass");
-                    await handle({type: "halt", reason: "wait"});
-                    await handle(
-                    {
-                        type: "activateAbility", monRef: "them",
-                        ability: "naturalcure"
-                    });
-                    await handle(
-                    {
-                        type: "activateStatusEffect", monRef: "them",
-                        effect: "slp", start: false
-                    });
-                    await handleEnd(
-                        {type: "switchIn", monRef: "them", ...ditto});
-                });
-            });
-
-            describe("Delay", function()
-            {
-                describe("Future", function()
-                {
-                    it("Should handle future move", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", "futuresight");
-                        await handle(
-                        {
-                            type: "futureMove", monRef: "them",
-                            move: "futuresight", start: true
-                        });
-                        await exitParser();
-                    });
-
-                    it("Should throw if mismatched move", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", "futuresight");
-                        await expect(handle(
-                            {
-                                type: "futureMove", monRef: "them",
-                                move: "doomdesire", start: true
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Future effect 'futuresight' failed: " +
-                                "Expected 'futuresight' but got 'doomdesire'");
-                    });
-
-                    it("Should throw if start=false", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", "futuresight");
-                        await expect(handle(
-                            {
-                                type: "futureMove", monRef: "us",
-                                move: "futuresight", start: false
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Future effect 'futuresight' failed");
-                    });
-                });
-
-                describe("Two-turn", function()
-                {
-                    it("Should handle two-turn move", async function()
-                    {
-                        // prepare
-                        const mon = initActive("them");
-                        const move = mon.moveset.reveal("fly");
-                        expect(move.pp).to.equal(move.maxpp);
-                        initActive("us");
-                        await initParser("them", "fly");
-                        await handle(
-                        {
-                            type: "prepareMove", monRef: "them", move: "fly"
-                        });
-                        await exitParser();
-                        expect(move.pp).to.equal(move.maxpp - 1);
-
-                        // release
-                        mon.volatile.twoTurn.start("fly");
-                        await initParser("them", "fly");
-                        await exitParser();
-                        expect(mon.volatile.twoTurn.isActive).to.be.false;
-                        expect(move.pp).to.equal(move.maxpp - 1);
-                    });
-
-                    it("Should handle shortened two-turn move via sun",
-                    async function()
-                    {
-                        const mon = initActive("them");
-                        const move = mon.moveset.reveal("solarbeam");
-                        expect(move.pp).to.equal(move.maxpp);
-                        initActive("us");
-                        state.status.weather.start(/*source*/ null, "SunnyDay");
-
-                        // prepare
-                        await initParser("them", "solarbeam");
-                        await handle(
-                        {
-                            type: "prepareMove", monRef: "them",
-                            move: "solarbeam"
-                        });
-                        expect(mon.volatile.twoTurn.isActive).to.be.true;
-
-                        // release
-                        await handle(
-                            {type: "takeDamage", monRef: "us", hp: 10});
-                        await exitParser();
-                        expect(mon.volatile.twoTurn.isActive).to.be.false;
-                        expect(move.pp).to.equal(move.maxpp - 1);
-                    });
-
-                    it("Should handle shortened two-turn move via powerherb",
-                    async function()
-                    {
-                        const mon = initActive("them");
-                        const move = mon.moveset.reveal("fly");
-                        expect(move.pp).to.equal(move.maxpp);
-                        mon.setItem("powerherb");
-                        initActive("us");
-
-                        // prepare
-                        await initParser("them", "fly");
-                        await handle(
-                        {
-                            type: "prepareMove", monRef: "them",
-                            move: "fly"
-                        });
-                        expect(mon.volatile.twoTurn.isActive).to.be.true;
-
-                        // consume item
-                        await handle(
-                        {
-                            type: "removeItem", monRef: "them",
-                            consumed: "powerherb"
-                        });
-
-                        // release
-                        await handle(
-                            {type: "takeDamage", monRef: "us", hp: 10});
-                        await exitParser();
-                        expect(mon.volatile.twoTurn.isActive).to.be.false;
-                        expect(move.pp).to.equal(move.maxpp - 1);
-                    });
-
-                    it("Should throw if monRef mismatch", async function()
-                    {
-                        initActive("them");
-                        initActive("us");
-                        await initParser("them", "fly");
-                        await expect(handle(
-                            {
-                                type: "prepareMove", monRef: "us", move: "fly"
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "TwoTurn effect 'fly' failed");
-                    });
-
-                    it("Should throw if mismatched prepareMove event",
-                    async function()
-                    {
-                        initActive("them");
-                        initActive("us");
-                        await initParser("them", "fly");
-                        await expect(handle(
-                            {
-                                type: "prepareMove", monRef: "them",
-                                move: "bounce"
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "TwoTurn effect 'fly' failed: " +
-                                "Expected 'fly' but got 'bounce'");
-                    });
-                });
-            });
-
-            describe("CallEffect", function()
-            {
-                /** Tackle from `them` side. */
-                const tackle: events.UseMove =
-                    {type: "useMove", monRef: "them", move: "tackle"};
-
-                it("Should reject if no call effect expected", async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("them", "tackle");
-                    await reject(tackle);
-                });
-
-                // extract self+target move-callers
-                const copycatCallers: string[] = [];
-                const mirrorCallers: string[] = [];
-                const selfMoveCallers: string[] = [];
-                const targetMoveCallers: string[] = [];
-                const otherCallers: string[] = [];
-                for (const move of Object.keys(dex.moveCallers))
-                {
-                    const effect = dex.moveCallers[move];
-                    if (effect === "copycat") copycatCallers.push(move);
-                    else if (effect === "mirror") mirrorCallers.push(move);
-                    else if (effect === "self") selfMoveCallers.push(move);
-                    else if (effect === "target") targetMoveCallers.push(move);
-                    else otherCallers.push(move);
-                }
-
-                describe("Move-callers", function()
-                {
-                    for (const caller of otherCallers)
-                    {
-                        it(`Should pass if using ${caller}`, async function()
-                        {
-                            initActive("us");
-                            initActive("them");
-                            await initParser("them", caller);
-                            await handle(tackle);
-                            await exitParser();
-                        });
-                    }
-                });
-
-                describe("Copycat callers", function()
-                {
-                    it("Should track last used move", async function()
-                    {
-                        initActive("them");
-                        expect(state.status.lastMove).to.not.be.ok;
-                        await initParser("them", "tackle");
-                        expect(state.status.lastMove).to.equal("tackle");
-                    });
-
-                    for (const caller of copycatCallers)
-                    {
-                        it(`Should pass if using ${caller} and move matches`,
-                        async function()
-                        {
-                            initActive("us");
-                            initActive("them");
-                            state.status.lastMove = "tackle";
-                            await initParser("them", caller);
-                            await handle(tackle);
-                            await exitParser();
-                        });
-
-                        it(`Should throw if using ${caller} and mismatched ` +
-                            "move",
-                        async function()
-                        {
-                            initActive("them");
-                            state.status.lastMove = "watergun";
-                            await initParser("them", caller);
-                            await expect(handle(tackle))
-                                .to.eventually.be.rejectedWith(Error,
-                                    "Call effect 'copycat' failed: " +
-                                    "Should've called 'watergun' but got " +
-                                    `'${tackle.move}'`);
-                        });
-                    }
-                });
-
-                describe("Mirror move-callers", function()
-                {
-                    it("Should track if targeted", async function()
-                    {
-                        const us = initActive("us");
-                        initActive("them");
-
-                        await initParser("them", "tackle");
-                        expect(us.volatile.mirrorMove).to.be.null;
-                        await exitParser();
-                        expect(us.volatile.mirrorMove).to.equal("tackle");
-                    });
-
-                    it("Should track on continued rampage", async function()
-                    {
-                        const us = initActive("us");
-                        const them = initActive("them");
-                        them.volatile.lockedMove.start("petaldance");
-                        them.volatile.lockedMove.tick();
-
-                        await initParser("them", "petaldance");
-                        expect(us.volatile.mirrorMove).to.be.null;
-                        await exitParser();
-                        expect(us.volatile.mirrorMove).to.equal("petaldance");
-                    });
-
-                    it("Should track on two-turn release turn", async function()
-                    {
-                        const us = initActive("us");
-                        initActive("them");
-                        us.volatile.mirrorMove = "previous"; // test value
-
-                        // start a two-turn move
-                        await initParser("them", "fly");
-                        await handle(
-                            {type: "prepareMove", monRef: "them", move: "fly"});
-                        await exitParser();
-                        // shouldn't count the charging turn
-                        expect(us.volatile.mirrorMove).to.equal("previous");
-
-                        // release the two-turn move
-                        await initParser("them", "fly");
-                        expect(us.volatile.mirrorMove).to.equal("previous");
-                        await exitParser();
-                        expect(us.volatile.mirrorMove).to.equal("fly");
-                    });
-
-                    it("Should track on called two-turn release turn",
-                    async function()
-                    {
-                        const us = initActive("us");
-                        initActive("them");
-                        us.volatile.mirrorMove = "previous"; // test value
-
-                        // call a two-turn move
-                        await initParser("them", otherCallers[0]);
-                        await handle(
-                            {type: "useMove", monRef: "them", move: "fly"});
-                        await handle(
-                            {type: "prepareMove", monRef: "them", move: "fly"});
-                        await exitParser();
-                        expect(us.volatile.mirrorMove).to.equal("previous");
-
-                        // release the two-turn move
-                        await initParser("them", "fly");
-                        await exitParser();
-                        expect(us.volatile.mirrorMove).to.equal("fly");
-                    });
-
-                    it("Should not track if not targeted", async function()
-                    {
-                        const us = initActive("us");
-                        initActive("them");
-                        us.volatile.mirrorMove = "previous"; // test value
-                        // move that can't target opponent
-                        await initParser("them", "splash");
-                        await exitParser();
-                        expect(us.volatile.mirrorMove).to.equal("previous");
-                    });
-
-                    it("Should not track if non-mirror-able move",
-                    async function()
-                    {
-                        const us = initActive("us");
-                        initActive("them");
-                        us.volatile.mirrorMove = "previous"; // test value
-                        // move that can't be mirrored but targets opponent
-                        await initParser("them", "feint");
-                        await exitParser();
-                        expect(us.volatile.mirrorMove).to.equal("previous");
-                    });
-
-                    it("Should not track if targeted by a called move",
-                    async function()
-                    {
-                        const us = initActive("us");
-                        initActive("them");
-                        us.volatile.mirrorMove = "previous"; // test value
-
-                        // call a move
-                        await initParser("them", otherCallers[0]);
-                        await handle(tackle);
-                        await exitParser();
-
-                        expect(us.volatile.mirrorMove).to.equal("previous");
-                    });
-
-                    for (const [name, move] of
-                        [["lockedMove", "thrash"], ["rollout", "rollout"]] as
-                            const)
-                    {
-                        it(`Should not track on called ${name} move`,
-                        async function()
-                        {
-                            const us = initActive("us");
-                            const them = initActive("them");
-                            us.volatile.mirrorMove = "previous"; // test value
-
-                            // call a move
-                            await initParser("them", otherCallers[0]);
-                            await handle(
-                                {type: "useMove", monRef: "them", move});
-                            await exitParser();
-
-                            expect(them.volatile[name].isActive).to.be.true;
-                            expect(them.volatile[name].type).to.equal(move);
-                            expect(them.volatile[name].called).to.be.true;
-                            // shouldn't update
-                            expect(us.volatile.mirrorMove).to.equal("previous");
-
-                            // continue the rampage on the next turn
-                            await initParser("them", move);
-                            await exitParser();
-
-                            expect(them.volatile[name].isActive).to.be.true;
-                            expect(them.volatile[name].type).to.equal(move);
-                            expect(them.volatile[name].called).to.be.true;
-                            // shouldn't update
-                            expect(us.volatile.mirrorMove).to.equal("previous");
-                        });
-                    }
-
-                    for (const caller of mirrorCallers)
-                    {
-                        it(`Should pass if using ${caller} and move matches`,
-                        async function()
-                        {
-                            initActive("us");
-                            const them = initActive("them");
-                            them.volatile.mirrorMove = "tackle";
-                            await initParser("them", caller);
-                            await handle(tackle);
-                            await exitParser();
-                        });
-
-                        it(`Should throw if using ${caller} and mismatched ` +
-                            "move",
-                        async function()
-                        {
-                            const them = initActive("them");
-                            them.volatile.mirrorMove = "watergun";
-                            await initParser("them", caller);
-                            await expect(handle(tackle))
-                                .to.eventually.be.rejectedWith(Error,
-                                    "Call effect 'mirror' failed: " +
-                                    "Should've called 'watergun' but got " +
-                                    `'${tackle.move}'`);
-                        });
-                    }
-                });
-
-                describe("Self move-callers", function()
-                {
-                    for (const caller of selfMoveCallers)
-                    {
-                        it(`Should infer user's move when using ${caller}`,
-                        async function()
-                        {
-                            initActive("us");
-                            const them = initActive("them");
-                            // use the move-caller
-                            await initParser("them", caller);
-                            // call the move
-                            await handle(tackle);
-                            // shouldn't consume pp for the called move
-                            expect(them.moveset.get("tackle")).to.not.be.null;
-                            expect(them.moveset.get("tackle")!.pp).to.equal(56);
-                        });
-                    }
-
-                    it("Should reject if the call effect was ignored",
-                    async function()
-                    {
-                        const them = initActive("them");
-                        await initParser("them", selfMoveCallers[0]);
-                        await expect(handle(
-                            {
-                                type: "useMove", monRef: "us", move: "tackle"
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Call effect 'self' failed: " +
-                                "Expected 'them' but got 'us'");
-                        expect(them.moveset.get("tackle")).to.be.null;
-                    });
-                });
-
-                describe("Target move-callers", function()
-                {
-                    for (const caller of targetMoveCallers)
-                    {
-                        it(`Should infer target's move when using ${caller}`,
-                        async function()
-                        {
-                            // switch in a pokemon that has the move-caller
-                            const us = initActive("us");
-                            const them = initActive("them");
-
-                            // use the move-caller
-                            await initParser("us", caller);
-                            await handle(
-                            {
-                                type: "useMove", monRef: "us", move: "tackle"
-                            });
-                            expect(us.moveset.get("tackle")).to.be.null;
-                            expect(them.moveset.get("tackle")).to.not.be.null;
-                            // shouldn't consume pp for the called move
-                            expect(them.moveset.get("tackle")!.pp).to.equal(56);
-                        });
-                    }
-
-                    it("Should throw if the call effect was ignored",
-                    async function()
-                    {
-                        initActive("us");
-                        const them = initActive("them");
-                        await initParser("them", targetMoveCallers[0]);
-                        await expect(handle(
-                            {
-                                type: "useMove", monRef: "us", move: "tackle"
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Call effect 'target' failed: " +
-                                "Expected 'them' but got 'us'");
-                        expect(them.moveset.get("tackle")).to.be.null;
-                    });
-                });
-
-                describe("Reflected moves", function()
-                {
-                    it("Should pass reflected move", async function()
-                    {
-                        initActive("us").volatile.magicCoat = true;
-                        initActive("them");
-                        // use reflectable move
-                        await initParser("them", "yawn");
-                        // block and reflect the move
-                        await handle(
-                        {
-                            type: "block", monRef: "us", effect: "magicCoat"
-                        });
-                        await handle(
-                            {type: "useMove", monRef: "us", move: "yawn"});
-                        await handle({type: "fail"}); // yawn effects
-                        await exitParser();
-                    });
-
-                    it("Should throw if reflecting move without an active " +
-                        "magicCoat status",
-                    async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        // use reflectable move
-                        await initParser("them", "yawn");
-                        // try to block and reflect the move
-                        await expect(reject(
-                            {
-                                type: "block", monRef: "us", effect: "magicCoat"
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Expected effect that didn't happen: " +
-                                "hit status [yawn]");
-                    });
-
-                    it("Should throw if reflecting an already reflected move",
-                    async function()
-                    {
-                        initActive("us").volatile.magicCoat = true;
-                        initActive("them").volatile.magicCoat = true;
-                        // use reflectable move
-                        await initParser("them", "yawn");
-                        // block and reflect the move
-                        await handle(
-                            {type: "block", monRef: "us", effect: "magicCoat"});
-                        await handle(
-                            {type: "useMove", monRef: "us", move: "yawn"});
-                        // try to block and reflect the move again
-                        await expect(handle(
-                            {
-                                type: "block", monRef: "them",
-                                effect: "magicCoat"
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Expected effect that didn't happen: " +
-                                "hit status [yawn]");
-                    });
-
-                    it("Should throw if reflecting unreflectable move",
-                    async function()
-                    {
-                        initActive("us").volatile.magicCoat = true;
-                        initActive("them");
-                        // use reflectable move
-                        await initParser("them", "taunt");
-                        // block and reflect the move
-                        await expect(handle(
-                            {
-                                type: "block", monRef: "us", effect: "magicCoat"
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Expected effect that didn't happen: " +
-                                "hit status [taunt]");
-                    });
-                });
-            });
-
-            describe("SwapBoosts", function()
-            {
-                beforeEach("Initialize us/them", function()
-                {
-                    initActive("us");
-                    initActive("them");
-                });
-
-                it("Should handle swap boost move", async function()
-                {
-                    await initParser("them", "guardswap");
-                    await handle(
-                    {
-                        type: "swapBoosts", monRef1: "us", monRef2: "them",
-                        stats: ["def", "spd"]
-                    });
-                    // effect should be consumed after accepting the previous
-                    //  swapBoosts event
-                    await reject(
-                    {
-                        type: "swapBoosts", monRef1: "us", monRef2: "them",
-                        stats: ["def", "spd"]
-                    });
-                });
-
-                it("Should reject if event doesn't include user",
+                it(`Should throw if using ${caller} and mismatched ` +
+                    "move",
                 async function()
                 {
-                    await initParser("them", "tackle");
-                    await reject(
-                    {
-                        type: "swapBoosts", monRef1: "us", monRef2: "us",
-                        stats: ["def", "spd"]
-                    });
+                    initActive("them");
+                    state.status.lastMove = "watergun";
+                    await initParser("them", caller);
+                    await expect(handle(tackle))
+                        .to.eventually.be.rejectedWith(Error,
+                            "Call effect 'copycat' failed: " +
+                            "Should've called 'watergun' but got " +
+                            `'${tackle.move}'`);
+                });
+            }
+        }));
+
+        moveEffectTests.call.push(() => describe("Mirror Move", function()
+        {
+            it("Should track if targeted", async function()
+            {
+                const us = initActive("us");
+                initActive("them");
+
+                await initParser("them", "tackle");
+                expect(us.volatile.mirrorMove).to.be.null;
+                await exitParser();
+                expect(us.volatile.mirrorMove).to.equal("tackle");
+            });
+
+            it("Should track on continued rampage", async function()
+            {
+                const us = initActive("us");
+                const them = initActive("them");
+                them.volatile.lockedMove.start("petaldance");
+                them.volatile.lockedMove.tick();
+
+                await initParser("them", "petaldance");
+                expect(us.volatile.mirrorMove).to.be.null;
+                await exitParser();
+                expect(us.volatile.mirrorMove).to.equal("petaldance");
+            });
+
+            it("Should track on two-turn release turn", async function()
+            {
+                const us = initActive("us");
+                initActive("them");
+                us.volatile.mirrorMove = "previous"; // test value
+
+                // start a two-turn move
+                await initParser("them", "fly");
+                await handle(
+                    {type: "prepareMove", monRef: "them", move: "fly"});
+                await exitParser();
+                // shouldn't count the charging turn
+                expect(us.volatile.mirrorMove).to.equal("previous");
+
+                // release the two-turn move
+                await initParser("them", "fly");
+                expect(us.volatile.mirrorMove).to.equal("previous");
+                await exitParser();
+                expect(us.volatile.mirrorMove).to.equal("fly");
+            });
+
+            it("Should track on called two-turn release turn",
+            async function()
+            {
+                const us = initActive("us");
+                initActive("them");
+                us.volatile.mirrorMove = "previous"; // test value
+
+                // call a two-turn move
+                await initParser("them", otherCallers[0]);
+                await handle({type: "useMove", monRef: "them", move: "fly"});
+                await handle(
+                    {type: "prepareMove", monRef: "them", move: "fly"});
+                await exitParser();
+                expect(us.volatile.mirrorMove).to.equal("previous");
+
+                // release the two-turn move
+                await initParser("them", "fly");
+                await exitParser();
+                expect(us.volatile.mirrorMove).to.equal("fly");
+            });
+
+            it("Should not track if not targeted", async function()
+            {
+                const us = initActive("us");
+                initActive("them");
+                us.volatile.mirrorMove = "previous"; // test value
+                // move that can't target opponent
+                await initParser("them", "splash");
+                await exitParser();
+                expect(us.volatile.mirrorMove).to.equal("previous");
+            });
+
+            it("Should not track if non-mirror-able move",
+            async function()
+            {
+                const us = initActive("us");
+                initActive("them");
+                us.volatile.mirrorMove = "previous"; // test value
+                // move that can't be mirrored but targets opponent
+                await initParser("them", "feint");
+                await exitParser();
+                expect(us.volatile.mirrorMove).to.equal("previous");
+            });
+
+            it("Should not track if targeted by a called move",
+            async function()
+            {
+                const us = initActive("us");
+                initActive("them");
+                us.volatile.mirrorMove = "previous"; // test value
+
+                // call a move
+                await initParser("them", otherCallers[0]);
+                await handle(tackle);
+                await exitParser();
+
+                expect(us.volatile.mirrorMove).to.equal("previous");
+            });
+
+            for (const [name, move] of
+                [["lockedMove", "thrash"], ["rollout", "rollout"]] as const)
+            {
+                it(`Should not track on called ${name} move`,
+                async function()
+                {
+                    const us = initActive("us");
+                    const them = initActive("them");
+                    us.volatile.mirrorMove = "previous"; // test value
+
+                    // call a move
+                    await initParser("them", otherCallers[0]);
+                    await handle({type: "useMove", monRef: "them", move});
+                    await exitParser();
+
+                    expect(them.volatile[name].isActive).to.be.true;
+                    expect(them.volatile[name].type).to.equal(move);
+                    expect(them.volatile[name].called).to.be.true;
+                    // shouldn't update
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+
+                    // continue the rampage on the next turn
+                    await initParser("them", move);
+                    await exitParser();
+
+                    expect(them.volatile[name].isActive).to.be.true;
+                    expect(them.volatile[name].type).to.equal(move);
+                    expect(them.volatile[name].called).to.be.true;
+                    // shouldn't update
+                    expect(us.volatile.mirrorMove).to.equal("previous");
+                });
+            }
+
+            for (const caller of mirrorCallers)
+            {
+                it(`Should pass if using ${caller} and move matches`,
+                async function()
+                {
+                    initActive("us");
+                    const them = initActive("them");
+                    them.volatile.mirrorMove = "tackle";
+                    await initParser("them", caller);
+                    await handle(tackle);
+                    await exitParser();
                 });
 
-                it("Should throw if too many stats", async function()
+                it(`Should throw if using ${caller} and mismatched move`,
+                async function()
+                {
+                    const them = initActive("them");
+                    them.volatile.mirrorMove = "watergun";
+                    await initParser("them", caller);
+                    await expect(handle(tackle))
+                        .to.eventually.be.rejectedWith(Error,
+                            "Call effect 'mirror' failed: " +
+                            "Should've called 'watergun' but got " +
+                            `'${tackle.move}'`);
+                });
+            }
+        }));
+
+        moveEffectTests.call.push(() => describe("Self move-callers", function()
+        {
+            for (const caller of selfMoveCallers)
+            {
+                it(`Should infer user's move when using ${caller}`,
+                async function()
+                {
+                    initActive("us");
+                    const them = initActive("them");
+                    // use the move-caller
+                    await initParser("them", caller);
+                    // call the move
+                    await handle(tackle);
+                    // shouldn't consume pp for the called move
+                    expect(them.moveset.get("tackle")).to.not.be.null;
+                    expect(them.moveset.get("tackle")!.pp).to.equal(56);
+                });
+            }
+
+            it("Should reject if the call effect was ignored",
+            async function()
+            {
+                const them = initActive("them");
+                await initParser("them", selfMoveCallers[0]);
+                await expect(handle(
+                        {type: "useMove", monRef: "us", move: "tackle"}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Call effect 'self' failed: " +
+                        "Expected 'them' but got 'us'");
+                expect(them.moveset.get("tackle")).to.be.null;
+            });
+        }));
+
+        moveEffectTests.call.push(() => describe("Target move-callers",
+        function()
+        {
+            for (const caller of targetMoveCallers)
+            {
+                it(`Should infer target's move when using ${caller}`,
+                async function()
+                {
+                    // switch in a pokemon that has the move-caller
+                    const us = initActive("us");
+                    const them = initActive("them");
+
+                    // use the move-caller
+                    await initParser("us", caller);
+                    await handle(
+                    {
+                        type: "useMove", monRef: "us", move: "tackle"
+                    });
+                    expect(us.moveset.get("tackle")).to.be.null;
+                    expect(them.moveset.get("tackle")).to.not.be.null;
+                    // shouldn't consume pp for the called move
+                    expect(them.moveset.get("tackle")!.pp).to.equal(56);
+                });
+            }
+
+            it("Should throw if the call effect was ignored",
+            async function()
+            {
+                initActive("us");
+                const them = initActive("them");
+                await initParser("them", targetMoveCallers[0]);
+                await expect(handle(
+                    {
+                        type: "useMove", monRef: "us", move: "tackle"
+                    }))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Call effect 'target' failed: " +
+                        "Expected 'them' but got 'us'");
+                expect(them.moveset.get("tackle")).to.be.null;
+            });
+        }));
+
+        moveEffectTests.call.push(() => describe("Reflected moves", function()
+        {
+            it("Should pass reflected move", async function()
+            {
+                initActive("us").volatile.magicCoat = true;
+                initActive("them");
+                // use reflectable move
+                await initParser("them", "yawn");
+                // block and reflect the move
+                await handle(
+                    {type: "block", monRef: "us", effect: "magicCoat"});
+                await handle({type: "useMove", monRef: "us", move: "yawn"});
+                await handle({type: "fail"}); // yawn effects
+                await exitParser();
+            });
+
+            it("Should throw if reflecting move without an active " +
+                "magicCoat status",
+            async function()
+            {
+                initActive("us");
+                initActive("them");
+                // use reflectable move
+                await initParser("them", "yawn");
+                // try to block and reflect the move
+                await expect(reject(
+                        {type: "block", monRef: "us", effect: "magicCoat"}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Expected effect that didn't happen: " +
+                        "hit status [yawn]");
+            });
+
+            it("Should throw if reflecting an already reflected move",
+            async function()
+            {
+                initActive("us").volatile.magicCoat = true;
+                initActive("them").volatile.magicCoat = true;
+                // use reflectable move
+                await initParser("them", "yawn");
+                // block and reflect the move
+                await handle(
+                    {type: "block", monRef: "us", effect: "magicCoat"});
+                await handle({type: "useMove", monRef: "us", move: "yawn"});
+                // try to block and reflect the move again
+                await expect(handle(
+                        {type: "block", monRef: "them", effect: "magicCoat"}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Expected effect that didn't happen: " +
+                        "hit status [yawn]");
+            });
+
+            it("Should throw if reflecting unreflectable move",
+            async function()
+            {
+                initActive("us").volatile.magicCoat = true;
+                initActive("them");
+                // use reflectable move
+                await initParser("them", "taunt");
+                // block and reflect the move
+                await expect(handle(
+                        {type: "block", monRef: "us", effect: "magicCoat"}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Expected effect that didn't happen: " +
+                        "hit status [taunt]");
+            });
+        }));
+
+        //#endregion
+
+        //#region transform
+
+        moveEffectTests.transform.push(function()
+        {
+            it("Should pass if user and source match", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "transform");
+                await handle({type: "transform", source: "them", target: "us"});
+                await exitParser();
+            });
+
+            it("Should reject if user/source mismatch", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "transform");
+                await expect(handle(
+                        {type: "transform", source: "us", target: "them"}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Transform effect failed: " +
+                        "Expected source 'them' but got 'us'");
+            });
+        });
+
+        //#endregion
+
+        //#region delay
+
+        moveEffectTests.delay.push(() => describe("Future", function()
+        {
+            it("Should handle future move", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "futuresight");
+                await handle(
+                {
+                    type: "futureMove", monRef: "them", move: "futuresight",
+                    start: true
+                });
+                await exitParser();
+            });
+
+            it("Should throw if mismatched move", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "futuresight");
+                await expect(handle(
+                    {
+                        type: "futureMove", monRef: "them", move: "doomdesire",
+                        start: true
+                    }))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Future effect 'futuresight' failed: " +
+                        "Expected 'futuresight' but got 'doomdesire'");
+            });
+
+            it("Should throw if start=false", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "futuresight");
+                await expect(handle(
+                    {
+                        type: "futureMove", monRef: "us", move: "futuresight",
+                        start: false
+                    }))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Future effect 'futuresight' failed");
+            });
+        }));
+
+        moveEffectTests.delay.push(() => describe("Two-turn", function()
+        {
+            it("Should handle two-turn move", async function()
+            {
+                // prepare
+                const mon = initActive("them");
+                const move = mon.moveset.reveal("fly");
+                expect(move.pp).to.equal(move.maxpp);
+                initActive("us");
+                await initParser("them", "fly");
+                await handle(
+                    {type: "prepareMove", monRef: "them", move: "fly"});
+                await exitParser();
+                expect(move.pp).to.equal(move.maxpp - 1);
+
+                // release
+                mon.volatile.twoTurn.start("fly");
+                await initParser("them", "fly");
+                await exitParser();
+                expect(mon.volatile.twoTurn.isActive).to.be.false;
+                expect(move.pp).to.equal(move.maxpp - 1);
+            });
+
+            it("Should handle shortened two-turn move via sun",
+            async function()
+            {
+                const mon = initActive("them");
+                const move = mon.moveset.reveal("solarbeam");
+                expect(move.pp).to.equal(move.maxpp);
+                initActive("us");
+                state.status.weather.start(/*source*/ null, "SunnyDay");
+
+                // prepare
+                await initParser("them", "solarbeam");
+                await handle(
+                    {type: "prepareMove", monRef: "them", move: "solarbeam"});
+                expect(mon.volatile.twoTurn.isActive).to.be.true;
+
+                // release
+                await handle({type: "takeDamage", monRef: "us", hp: 10});
+                await exitParser();
+                expect(mon.volatile.twoTurn.isActive).to.be.false;
+                expect(move.pp).to.equal(move.maxpp - 1);
+            });
+
+            it("Should handle shortened two-turn move via powerherb",
+            async function()
+            {
+                const mon = initActive("them");
+                const move = mon.moveset.reveal("fly");
+                expect(move.pp).to.equal(move.maxpp);
+                mon.setItem("powerherb");
+                initActive("us");
+
+                // prepare
+                await initParser("them", "fly");
+                await handle(
+                    {type: "prepareMove", monRef: "them", move: "fly"});
+                expect(mon.volatile.twoTurn.isActive).to.be.true;
+
+                // consume item
+                await handle(
+                {
+                    type: "removeItem", monRef: "them", consumed: "powerherb"
+                });
+
+                // release
+                await handle({type: "takeDamage", monRef: "us", hp: 10});
+                await exitParser();
+                expect(mon.volatile.twoTurn.isActive).to.be.false;
+                expect(move.pp).to.equal(move.maxpp - 1);
+            });
+
+            it("Should throw if monRef mismatch", async function()
+            {
+                initActive("them");
+                initActive("us");
+                await initParser("them", "fly");
+                await expect(handle(
+                        {type: "prepareMove", monRef: "us", move: "fly"}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "TwoTurn effect 'fly' failed");
+            });
+
+            it("Should throw if mismatched prepareMove event",
+            async function()
+            {
+                initActive("them");
+                initActive("us");
+                await initParser("them", "fly");
+                await expect(handle(
+                        {type: "prepareMove", monRef: "them", move: "bounce"}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "TwoTurn effect 'fly' failed: " +
+                        "Expected 'fly' but got 'bounce'");
+            });
+        }));
+
+        //#endregion
+
+        //#region damage
+
+        // TODO(gen5): self/hit distinction
+        moveEffectTests.damage.push(() => describe("Healing moves", function()
+        {
+            it("Should handle recover hp", async function()
+            {
+                initActive("them").hp.set(50);
+                await initParser("them", "recover");
+                await handle({type: "takeDamage", monRef: "them", hp: 100});
+                await exitParser();
+            });
+        }));
+
+        moveEffectTests.damage.push(() => describe("Split (painsplit)",
+        function()
+        {
+            it("Should handle damage", async function()
+            {
+                initActive("us");
+                initActive("them").hp.set(50);
+                await initParser("them", "painsplit")
+                await handle({type: "takeDamage", monRef: "them", hp: 75});
+                await handle({type: "takeDamage", monRef: "us", hp: 75});
+                await exitParser();
+            });
+        }));
+
+        //#endregion
+
+        //#region count
+
+        moveEffectTests.count.push(function()
+        {
+            // TODO: better handling for perishsong events
+            it("Should pass if expected using perishsong", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("us", "perishsong");
+                await handle(
+                {
+                    type: "countStatusEffect", monRef: "us", effect: "perish",
+                    amount: 3
+                });
+                await handle(
+                {
+                    type: "countStatusEffect", monRef: "them", effect: "perish",
+                    amount: 3
+                });
+                await exitParser();
+            });
+
+            it("Should pass if expected using stockpile", async function()
+            {
+                initActive("us");
+                await initParser("us", "stockpile");
+                await handle(
+                {
+                    type: "countStatusEffect", monRef: "us",
+                    effect: "stockpile", amount: 1
+                });
+                await exitParser();
+            });
+        });
+
+        //#endregion
+
+        //#region boost
+
+        const boostTests: {[T in dexutil.MoveEffectTarget]: (() =>  void)[]} =
+            {self: [], hit: []};
+        for (const [name, key] of
+            [["Self", "self"], ["Hit", "hit"]] as const)
+        {
+            moveEffectTests.boost.push(() => describe(name, function()
+            {
+                for (const f of boostTests[key]) f();
+            }));
+        }
+
+        function shouldHandleBoost(ctg: "self" | "hit", move: string,
+            stat: dexutil.BoostName, amount: number, abilityImmunity?: string,
+            immunityHolder?: events.SwitchOptions): void
+        {
+            const target = ctg === "self" ? "us" : "them";
+            boostTests[ctg].push(function()
+            {
+                it("Should handle boost", async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("them", "guardswap");
-
-                    // shouldn't handle
-                    await expect(handle(
-                        {
-                            type: "swapBoosts", monRef1: "us", monRef2: "them",
-                            stats: ["def", "spd", "spe"]
-                        }))
-                        .to.eventually.be.rejectedWith(Error,
-                            "Expected effect that didn't happen: " +
-                            "swapBoosts [def, spd]")
+                    await initParser("us", move);
+                    await handle({type: "boost", monRef: target, stat, amount});
+                    await exitParser(); // shouldn't throw
                 });
 
                 it("Should throw if reject before effect", async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("them", "guardswap");
+                    await initParser("us", move);
                     await expect(exitParser())
                         .to.eventually.be.rejectedWith(Error,
                             "Expected effect that didn't happen: " +
-                            "swapBoosts [def, spd]");
+                            `${ctg} boost add {"${stat}":${amount}}`);
                 });
-            });
 
-            describe("CountableStatusEffect", function()
-            {
-                // TODO: better handling for perishsong events
-                it("Should pass if expected using perishsong", async function()
+                it("Should allow no boost message if maxed out",
+                async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("us", "perishsong");
-                    await handle(
-                    {
-                        type: "countStatusEffect", monRef: "us",
-                        effect: "perish", amount: 3
-                    });
-                    await handle(
-                    {
-                        type: "countStatusEffect", monRef: "them",
-                        effect: "perish", amount: 3
-                    });
+                    pstate.state.teams[target].active.volatile.boosts[stat] =
+                        6 * Math.sign(amount);
+                    await initParser("us", move);
                     await exitParser();
                 });
 
-                it("Should pass if expected using stockpile", async function()
-                {
-                    initActive("us");
-                    await initParser("us", "stockpile");
-                    await handle(
-                    {
-                        type: "countStatusEffect", monRef: "us",
-                        effect: "stockpile", amount: 1
-                    });
-                    await exitParser();
-                });
-            });
-
-            describe("FieldEffect", function()
-            {
-                it("Should pass if expected", async function()
+                it("Should allow boost message with amount=0 if maxed out",
+                async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("us", "trickroom");
+                    pstate.state.teams[target].active.volatile.boosts[stat] =
+                        6 * Math.sign(amount);
+                    await initParser("us", move);
                     await handle(
-                    {
-                        type: "activateFieldEffect", effect: "trickRoom",
-                        start: true
-                    });
+                        {type: "boost", monRef: target, stat, amount: 0});
                     await exitParser();
                 });
 
-                it("Should reject if not expected", async function()
+                if (ctg === "hit" && abilityImmunity)
                 {
-                    initActive("us");
-                    await initParser("us", "splash");
-                    await reject(
-                    {
-                        type: "activateFieldEffect", effect: "gravity",
-                        start: true
-                    });
-                });
-
-                describe("weather", function()
-                {
-                    it("Should infer source via move", async function()
-                    {
-                        initActive("us")
-                        const {item} = initActive("them");
-                        await initParser("them", "raindance");
-                        await handle(
-                        {
-                            type: "activateFieldEffect",
-                            effect: "RainDance", start: true
-                        });
-
-                        const weather = state.status.weather;
-                        expect(weather.type).to.equal("RainDance");
-                        expect(weather.duration).to.not.be.null;
-                        expect(weather.source).to.equal(item);
-
-                        // tick 5 times to infer item
-                        expect(item.definiteValue).to.be.null;
-                        for (let i = 0; i < 5; ++i) weather.tick();
-                        expect(item.definiteValue).to.equal("damprock");
-                    });
-
-                    it("Should reject if mismatch", async function()
+                    it(`Should fail unboost effect if ${abilityImmunity} ` +
+                        "activates",
+                    async function()
                     {
                         initActive("us");
+                        initActive("them", immunityHolder);
+                        await initParser("us", move);
+                        await handle(
+                        {
+                            type: "activateAbility", monRef: target,
+                            ability: abilityImmunity
+                        });
+                        await handle({type: "fail"});
+                        await exitParser();
+                    });
+
+                    it("Should pass if moldbreaker broke through " +
+                        abilityImmunity,
+                    async function()
+                    {
+                        initActive("us").traits.setAbility("moldbreaker");
+                        initActive("them").traits.setAbility(abilityImmunity);
+
+                        await initParser("us", move);
+                        await handle(
+                            {type: "boost", monRef: target, stat, amount});
+                        await exitParser();
+                    });
+
+                    it("Should throw if moldbreaker should've broken " +
+                        `through ${abilityImmunity}` ,
+                    async function()
+                    {
+                        initActive("us").traits.setAbility("moldbreaker");
                         initActive("them");
-                        await initParser("them", "raindance");
+
+                        await initParser("us", move);
+                        // move parser context should reject this event and
+                        //  attempt to exit
                         await expect(handle(
                             {
-                                type: "activateFieldEffect", effect: "Hail",
-                                start: true
+                                type: "activateAbility", monRef: target,
+                                ability: abilityImmunity
                             }))
                             .to.eventually.be.rejectedWith(Error,
                                 "Expected effect that didn't happen: " +
-                                "field RainDance");
+                                `hit boost add {"${stat}":${amount}}`);
                     });
-                });
-            });
 
-            describe("Drain", function()
-            {
-                // can have clearbody or liquidooze
-                const tentacruel: events.SwitchOptions =
-                {
-                    species: "tentacruel", level: 100, gender: "M", hp: 364,
-                    hpMax: 364
-                };
-
-                it("Should pass if expected", async function()
-                {
-                    initActive("us");
-                    initActive("them").hp.set(1);
-                    await initParser("them", "absorb");
-                    await handle({type: "takeDamage", monRef: "us", hp: 50});
-                    await handle(
+                    it(`Should rule out ${abilityImmunity} if it didn't ` +
+                        "activate",
+                    async function()
                     {
-                        type: "takeDamage", monRef: "them", hp: 100,
-                        from: "drain"
-                    });
-                    await exitParser();
-                });
-
-                it("Should pass without event if full hp", async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("them", "absorb");
-                    await handle({type: "takeDamage", monRef: "us", hp: 50});
-                    await exitParser();
-                });
-
-                it("Should infer no liquidooze if normal", async function()
-                {
-                    const mon = initActive("us", tentacruel);
-                    expect(mon.traits.ability.possibleValues)
-                        .to.have.keys("clearbody", "liquidooze");
-                    initActive("them").hp.set(1);
-                    await initParser("them", "drainpunch");
-                    // handle move damage
-                    await handle(
-                        {type: "takeDamage", monRef: "us", hp: 50});
-                    // handle drain effect
-                    await handle(
-                    {
-                        type: "takeDamage", monRef: "them", hp: 100,
-                        from: "drain"
-                    });
-                    await exitParser();
-                    expect(mon.traits.ability.possibleValues)
-                        .to.have.keys("clearbody");
-                    expect(mon.ability).to.equal("clearbody");
-                });
-
-                it("Should pass if liquidooze activates", async function()
-                {
-                    initActive("us", tentacruel);
-                    initActive("them");
-                    await initParser("them", "absorb");
-                    // handle move damage
-                    await handle({type: "takeDamage", monRef: "us", hp: 50});
-                    // liquidooze ability activates to replace drain effect
-                    await handle(
-                    {
-                        type: "activateAbility", monRef: "us",
-                        ability: "liquidooze"
-                    });
-                    // drain damage inverted due to liquidooze ability
-                    await handle({type: "takeDamage", monRef: "them", hp: 50});
-                    await exitParser();
-                });
-            });
-
-            describe("Recoil", function()
-            {
-                // can have swiftswim or rockhead
-                const relicanth: events.SwitchOptions =
-                {
-                    species: "relicanth", level: 83, gender: "F", hp: 302,
-                    hpMax: 302
-                };
-
-                it("Should pass if expected", async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("them", "bravebird");
-                    await handle({type: "takeDamage", monRef: "us", hp: 1});
-                    await handle(
-                    {
-                        type: "takeDamage", monRef: "them", hp: 99,
-                        from: "recoil"
-                    });
-                    await exitParser();
-                });
-
-                it("Should pass if hp diff is 0", async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("them", "bravebird");
-                    await handle({type: "takeDamage", monRef: "us", hp: 1});
-                    await handle(
-                    {
-                        type: "takeDamage", monRef: "them", hp: 100,
-                        from: "recoil"
-                    });
-                    await exitParser();
-                });
-
-                it("Should reject if not expected", async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("them", "gust");
-                    await reject(
-                    {
-                        type: "takeDamage", monRef: "them", hp: 0,
-                        from: "recoil"
-                    });
-                });
-
-                function testRecoil(name: string, pre: (mon: Pokemon) => void,
-                    recoilEvent: boolean, infer?: boolean | "throw"): void
-                {
-                    it(name, async function()
-                    {
-                        initActive("them");
-                        const mon = initActive("us", relicanth);
+                        initActive("us");
+                        // blocking ability or useless ability (illuminate)
+                        const mon = initActive("them");
+                        mon.traits.setAbility(abilityImmunity, "illuminate");
                         expect(mon.traits.ability.possibleValues)
-                            .to.have.all.keys(["swiftswim", "rockhead"]);
-                        pre?.(mon);
+                            .to.have.keys(abilityImmunity, "illuminate");
 
-                        await initParser("us", "doubleedge");
-                        if (recoilEvent)
-                        {
-                            await handle(
-                            {
-                                type: "takeDamage", monRef: "us", hp: 1,
-                                from: "recoil"
-                            });
-                            await exitParser();
-                        }
-                        if (infer === "throw")
-                        {
-                            await expect(exitParser())
-                                .to.eventually.be.rejectedWith(Error,
-                                    "Move doubleedge user 'us' suppressed " +
-                                    "recoil through an ability but ability " +
-                                    "is suppressed");
-                            return;
-                        }
-                        if (!recoilEvent) await exitParser();
-                        if (infer === true)
-                        {
-                            expect(mon.traits.ability.possibleValues)
-                                .to.have.all.keys(["rockhead"]);
-                            expect(mon.ability).to.equal("rockhead");
-                        }
-                        else if (infer === false)
-                        {
-                            expect(mon.traits.ability.possibleValues)
-                                .to.have.all.keys(["swiftswim"]);
-                            expect(mon.ability).to.equal("swiftswim");
-                        }
-                        else
-                        {
-                            expect(mon.traits.ability.possibleValues)
-                                .to.have.all.keys(["swiftswim", "rockhead"]);
-                            expect(mon.ability).to.be.empty;
-                        }
+                        await initParser("us", move);
+                        await handle(
+                            {type: "boost", monRef: target, stat, amount});
+                        expect(mon.traits.ability.possibleValues)
+                            .to.have.keys("illuminate");
+                        await exitParser();
+                    });
+
+                    it(`Should throw if ${abilityImmunity} didn't activate ` +
+                        "when it's known",
+                    async function()
+                    {
+                        initActive("us");
+                        initActive("them").traits.setAbility(abilityImmunity);
+
+                        await initParser("us", move);
+                        await expect(handle(
+                                {type: "boost", monRef: target, stat, amount}))
+                            .to.eventually.be.rejectedWith(Error,
+                                `Pokemon '${target}' should've activated ` +
+                                `ability [${abilityImmunity}] but it wasn't ` +
+                                "activated on-tryUnboost");
                     });
                 }
+            });
+        }
+        shouldHandleBoost("self", "leafstorm", "spa", -2);
+        // can have hypercutter
+        const pinsir: events.SwitchOptions =
+        {
+            species: "pinsir", gender: "M", level: 100, hp: 100,
+            hpMax: 100
+        };
+        shouldHandleBoost("hit", "charm", "atk", -2, "hypercutter", pinsir);
 
-                testRecoil(
-                    "Should infer no recoil-canceling ability if recoil event",
-                    () => {}, true, false);
-
-                testRecoil(
-                    "Should not infer ability if suppressed and recoil event",
-                    mon => mon.volatile.suppressAbility = true, true);
-
-                testRecoil(
-                    "Should infer recoil-canceling ability if no recoil event",
-                    () => {}, false, true);
-
-                testRecoil(
-                    "Should throw if ability suppressed and no recoil event",
-                    mon => mon.volatile.suppressAbility = true, false, "throw");
+        // set boost
+        boostTests.self.push(function()
+        {
+            it("Should handle set boost", async function()
+            {
+                initActive("us");
+                await initParser("us", "bellydrum");
+                await handle({type: "takeDamage", monRef: "us", hp: 50});
+                await handle(
+                {
+                    type: "boost", monRef: "us", stat: "atk", amount: 6,
+                    set: true
+                });
+                await exitParser(); // shouldn't throw
             });
         });
 
-        const moveEffectTests:
+        function shouldHandlePartialBoost(ctg: "self" | "hit", move: string,
+            stat: dexutil.BoostName, amount: 2 | -2): void
         {
-            readonly [T in effects.move.Category]:
-                {readonly [U in effects.move.OtherType]: (() =>  void)[]}
-        } =
-        {
-            self:
+            const sign = Math.sign(amount);
+            const target = ctg === "self" ? "us" : "them"
+            boostTests[ctg].push(function()
             {
-                status: [], unique: [], implicitStatus: [], boost: [], team: [],
-                implicitTeam: [], percentDamage: []
-            },
-            hit:
-            {
-                status: [], unique: [], implicitStatus: [], boost: [], team: [],
-                implicitTeam: [], percentDamage: []
-            }
-        };
+                it("Should allow partial boost if maxing out", async function()
+                {
+                    let mon = initActive("us");
+                    if (target === "them") mon = initActive("them");
+                    mon.volatile.boosts[stat] = sign * 5;
+                    await initParser("us", move);
+                    await handle(
+                        {type: "boost", monRef: target, stat, amount: sign});
+                    await exitParser(); // shouldn't throw
+                });
 
-        //#region status effect
+                it("Should allow 0 boost if maxed out", async function()
+                {
+                    let mon = initActive("us");
+                    if (target === "them") mon = initActive("them");
+                    mon.volatile.boosts[stat] = sign * 6;
+                    await initParser("us", move);
+                    await handle(
+                        {type: "boost", monRef: target, stat, amount: 0});
+                    await exitParser(); // shouldn't throw
+                });
+            });
+        }
+        shouldHandlePartialBoost("self", "swordsdance", "atk", 2);
+        shouldHandlePartialBoost("hit", "captivate", "spa", -2);
+
+        function shouldHandleSecondaryBoost(ctg: "self" | "hit", move: string,
+            stat: dexutil.BoostName, amount: number): void
+        {
+            boostTests[ctg].push(function()
+            {
+                it("Should handle boost via secondary effect using " + move,
+                async function()
+                {
+                    const target = ctg === "self" ? "us" : "them";
+                    initActive("us");
+                    initActive("them");
+                    await initParser("us", move);
+                    await handle({type: "boost", monRef: target, stat, amount});
+                    await exitParser(); // shouldn't throw
+                });
+
+                it("Shouldn't throw if no secondary boost using " + move,
+                async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("us", move);
+                    await exitParser(); // shouldn't throw
+                });
+            });
+        }
+        shouldHandleSecondaryBoost("self", "chargebeam", "spa", 1);
+        shouldHandleSecondaryBoost("hit", "rocksmash", "def", -1);
+
+        function shouldHandle100SecondaryBoost(ctg: "self" | "hit",
+            move: string, stat: dexutil.BoostName, amount: number): void
+        {
+            const sign = Math.sign(amount);
+            const target = ctg === "self" ? "us" : "them"
+            boostTests[ctg].push(function()
+            {
+                it("Should throw if reject before 100% secondary effect",
+                async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("us", move);
+                    await expect(exitParser())
+                        .to.eventually.be.rejectedWith(Error,
+                            "Expected effect that didn't happen: " +
+                            `hit boost add {"${stat}":${amount}}`);
+                });
+
+                it("Should allow no boost event for 100% secondary effect if " +
+                    "maxed out",
+                async function()
+                {
+                    let mon = initActive("us");
+                    if (target === "them") mon = initActive("them");
+                    mon.volatile.boosts[stat] = sign * 6;
+                    await initParser("us", move);
+                    await exitParser(); // shouldn't throw
+                });
+            });
+        }
+        shouldHandle100SecondaryBoost("hit", "rocktomb", "spe", -1);
+
+        boostTests.self.push(() => describe("Curse (non-ghost)", function()
+        {
+            it("Should expect boosts", async function()
+            {
+                initActive("them");
+                await initParser("them", "curse");
+                await handle(
+                {
+                    type: "boost", monRef: "them", stat: "spe",
+                    amount: -1
+                });
+                await handle(
+                {
+                    type: "boost", monRef: "them", stat: "atk",
+                    amount: 1
+                });
+                await handle(
+                {
+                    type: "boost", monRef: "them", stat: "def",
+                    amount: 1
+                });
+                await exitParser();
+            });
+        }));
+
+        //#endregion
+
+        //#region swapBoosts
+
+        moveEffectTests.swapBoosts.push(function()
+        {
+            beforeEach("Initialize us/them", function()
+            {
+                initActive("us");
+                initActive("them");
+            });
+
+            it("Should handle swap boost move", async function()
+            {
+                await initParser("them", "guardswap");
+                await handle(
+                {
+                    type: "swapBoosts", monRef1: "us", monRef2: "them",
+                    stats: ["def", "spd"]
+                });
+                // effect should be consumed after accepting the previous
+                //  swapBoosts event
+                await reject(
+                {
+                    type: "swapBoosts", monRef1: "us", monRef2: "them",
+                    stats: ["def", "spd"]
+                });
+            });
+
+            it("Should reject if event doesn't include user",
+            async function()
+            {
+                await initParser("them", "tackle");
+                await reject(
+                {
+                    type: "swapBoosts", monRef1: "us", monRef2: "us",
+                    stats: ["def", "spd"]
+                });
+            });
+
+            it("Should throw if too many stats", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "guardswap");
+
+                // shouldn't handle
+                await expect(handle(
+                    {
+                        type: "swapBoosts", monRef1: "us", monRef2: "them",
+                        stats: ["def", "spd", "spe"]
+                    }))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Expected effect that didn't happen: " +
+                        "swapBoosts [def, spd]")
+            });
+
+            it("Should throw if reject before effect", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "guardswap");
+                await expect(exitParser())
+                    .to.eventually.be.rejectedWith(Error,
+                        "Expected effect that didn't happen: " +
+                        "swapBoosts [def, spd]");
+            });
+        });
+
+        //#endregion
+
+        //#region status
+
+        const statusTests: {[T in dexutil.MoveEffectTarget]: (() =>  void)[]} =
+            {self: [], hit: []};
+        for (const [name, key] of
+            [["Self", "self"], ["Hit", "hit"]] as const)
+        {
+            moveEffectTests.status.push(() => describe(name, function()
+            {
+                for (const f of statusTests[key]) f();
+            }));
+        }
 
         function testNonRemovable(ctg: "self" | "hit", name: string,
             effect: effects.StatusType, move: string,
@@ -1513,100 +1502,88 @@ export function testUseMove(f: () => Context,
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
 
-            moveEffectTests[ctg].status.push(function()
+            statusTests[ctg].push(() => describe(name, function()
             {
-                describe(name, function()
+                beforeEach("Initialize active", async function()
                 {
-                    beforeEach("Initialize active", async function()
+                    initActive("them").hp.set(50); // for roost
+                    initActive("us");
+                });
+
+                it("Should pass if expected", async function()
+                {
+                    // set last move in case of encore
+                    state.teams.us.active.volatile.lastMove = "splash";
+
+                    await initParser("them", move);
+                    for (const event of preEvents ?? []) await handle(event);
+                    await handle(
                     {
-                        initActive("them").hp.set(50); // for roost
-                        initActive("us");
+                        type: "activateStatusEffect", monRef: target, effect,
+                        start: true
                     });
+                    for (const event of postEvents ?? []) await handle(event);
+                    await exitParser();
+                });
 
-                    it("Should pass if expected", async function()
+                it("Should reject if start=false", async function()
+                {
+                    await initParser("them", move);
+                    for (const event of preEvents ?? []) await handle(event);
+                    const statusEvent: events.ActivateStatusEffect =
                     {
-                        // set last move in case of encore
-                        state.teams.us.active.volatile.lastMove = "splash";
+                        type: "activateStatusEffect", monRef: target, effect,
+                        start: false
+                    };
+                    // same condition in useMove for throwing this exception
+                    const data = dex.moves[move];
+                    if (!data.effects?.status?.chance &&
+                        data.category === "status")
+                    {
+                        await expect(handle(statusEvent))
+                            .to.eventually.be.rejectedWith(Error,
+                                "Expected effect that didn't happen: " +
+                                `${ctg} status [${effect}]`);
+                    }
+                    else await reject(statusEvent);
+                });
 
-                        await initParser("them", move);
-                        for (const event of preEvents ?? [])
-                        {
-                            await handle(event);
-                        }
+                it("Should reject if mismatched flags", async function()
+                {
+                    await initParser("them", "tackle");
+                    await reject(
+                    {
+                        type: "activateStatusEffect", monRef: target, effect,
+                        start: true
+                    });
+                });
+
+                // TODO: factor out into parameters
+                if (effect === "attract")
+                {
+                    it("Should cancel status move effects if ability immunity",
+                    async function()
+                    {
+                        // setup ability so it can activate
+                        const us = state.teams.us.active;
+                        us.traits.setAbility("oblivious");
+
+                        await initParser("them", "attract");
                         await handle(
                         {
-                            type: "activateStatusEffect", monRef: target,
-                            effect, start: true
+                            type: "activateAbility", monRef: "us",
+                            ability: "oblivious"
                         });
-                        for (const event of postEvents ?? [])
-                        {
-                            await handle(event);
-                        }
+                        await handle({type: "immune", monRef: "us"});
                         await exitParser();
                     });
-
-                    it("Should reject if start=false", async function()
-                    {
-                        await initParser("them", move);
-                        for (const event of preEvents ?? [])
-                        {
-                            await handle(event);
-                        }
-                        const statusEvent: events.ActivateStatusEffect =
-                        {
-                            type: "activateStatusEffect", monRef: target,
-                            effect, start: false
-                        };
-                        // same condition in useMove for throwing this exception
-                        const data = dex.moves[move];
-                        if (!data.effects?.status?.chance &&
-                            data.category === "status")
-                        {
-                            await expect(handle(statusEvent))
-                                .to.eventually.be.rejectedWith(Error,
-                                    "Expected effect that didn't happen: " +
-                                    `${ctg} status [${effect}]`);
-                        }
-                        else await reject(statusEvent);
-                    });
-
-                    it("Should reject if mismatched flags", async function()
-                    {
-                        await initParser("them", "tackle");
-                        await reject(
-                        {
-                            type: "activateStatusEffect", monRef: target,
-                            effect, start: true
-                        });
-                    });
-
-                    // TODO: factor out into parameters
-                    if (effect === "attract")
-                    {
-                        it("Should cancel status move effects if ability " +
-                            "immunity", async function()
-                        {
-                            // setup ability so it can activate
-                            const us = state.teams.us.active;
-                            us.traits.setAbility("oblivious");
-
-                            await initParser("them", "attract");
-                            await handle(
-                            {
-                                type: "activateAbility", monRef: "us",
-                                ability: "oblivious"
-                            });
-                            await handle({type: "immune", monRef: "us"});
-                            await exitParser();
-                        });
-                    }
-                });
-            });
+                }
+            }));
         }
 
         interface TestRemovableArgs
         {
-            readonly ctg: effects.move.Category;
+            readonly ctg: dexutil.MoveEffectTarget;
             readonly name: string;
             readonly effect: effects.StatusType;
             readonly move?: string;
@@ -1625,7 +1602,7 @@ export function testUseMove(f: () => Context,
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
 
-            moveEffectTests[ctg].status.push(function()
+            statusTests[ctg].push(function()
             {
                 describe(name, function()
                 {
@@ -1794,108 +1771,73 @@ export function testUseMove(f: () => Context,
         testNonRemovable("hit", "Attract", "attract", "attract");
         testNonRemovable("self", "Charge", "charge", "charge",
             [{type: "boost", monRef: "them", stat: "spd", amount: 1}]);
-        // curse
-        moveEffectTests.hit.status.push(function()
+        statusTests.hit.push(() => describe("Curse (ghost)", function()
         {
-            describe("Curse", function()
+            it("Should expect curse status", async function()
             {
-                describe("Ghost-type", function()
+                initActive("us");
+                initActive("them", smeargle).volatile.addedType =
+                    "ghost";
+                await initParser("them", "curse");
+                await handle(
                 {
-                    it("Should expect curse status", async function()
-                    {
-                        initActive("us");
-                        initActive("them", smeargle).volatile.addedType =
-                            "ghost";
-                        await initParser("them", "curse");
-                        await handle(
-                        {
-                            type: "activateStatusEffect", monRef: "us",
-                            effect: "curse", start: true
-                        });
-                        await handle(
-                            {type: "takeDamage", monRef: "them", hp: 50});
-                        await exitParser();
-                    });
-
-                    it("Should reject if mismatched flags", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", "tackle");
-                        await reject(
-                        {
-                            type: "activateStatusEffect", monRef: "us",
-                            effect: "curse", start: true
-                        });
-                    });
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "curse", start: true
                 });
+                await handle(
+                    {type: "takeDamage", monRef: "them", hp: 50});
+                await exitParser();
+            });
 
-                describe("Non-ghost-type", function()
+            it("Should reject if mismatched flags", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "tackle");
+                await reject(
                 {
-                    it("Should expect boosts", async function()
-                    {
-                        initActive("them");
-                        await initParser("them", "curse");
-                        await handle(
-                        {
-                            type: "boost", monRef: "them", stat: "spe",
-                            amount: -1
-                        });
-                        await handle(
-                        {
-                            type: "boost", monRef: "them", stat: "atk",
-                            amount: 1
-                        });
-                        await handle(
-                        {
-                            type: "boost", monRef: "them", stat: "def",
-                            amount: 1
-                        });
-                        await exitParser();
-                    });
+                    type: "activateStatusEffect", monRef: "us",
+                    effect: "curse", start: true
                 });
             });
-        });
+        }));
         testNonRemovable("hit", "Embargo", "embargo", "embargo");
         testNonRemovable("hit", "Encore", "encore", "encore");
-        moveEffectTests.hit.status.push(function()
+        statusTests.hit.push(() => describe("Flash Fire", function()
         {
-            describe("Flash Fire", function()
+            // can have flashfire
+            const arcanine: events.SwitchOptions =
             {
-                // can have flashfire
-                const arcanine: events.SwitchOptions =
-                {
-                    species: "arcanine", gender: "F", level: 100, hp: 100,
-                    hpMax: 100
-                };
+                species: "arcanine", gender: "F", level: 100, hp: 100,
+                hpMax: 100
+            };
 
-                it("Should block move effects", async function()
+            it("Should block move effects", async function()
+            {
+                initActive("us");
+                initActive("them", arcanine);
+                // fire-type move with guaranteed brn effect
+                await initParser("us", "willowisp");
+                // activate absorbing ability
+                await handle(
                 {
-                    initActive("us");
-                    initActive("them", arcanine);
-                    // fire-type move with guaranteed brn effect
-                    await initParser("us", "willowisp");
-                    // activate absorbing ability
-                    await handle(
-                    {
-                        type: "activateAbility", monRef: "them",
-                        ability: "flashfire"
-                    });
-                    await handle(
-                    {
-                        type: "activateStatusEffect", monRef: "them",
-                        effect: "flashFire", start: true
-                    });
-                    // effect should be blocked
-                    await exitParser(); // shouldn't throw
+                    type: "activateAbility", monRef: "them",
+                    ability: "flashfire"
                 });
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "them",
+                    effect: "flashFire", start: true
+                });
+                // effect should be blocked
+                await exitParser(); // shouldn't throw
             });
-        })
+        }));
         testNonRemovable("self", "Focus Energy", "focusEnergy", "focusenergy");
         testNonRemovable("hit", "Foresight", "foresight", "foresight");
         testNonRemovable("hit", "Heal Block", "healBlock", "healblock");
         // imprison
-        moveEffectTests.self.status.push(function()
+        statusTests.self.push(() => describe("Imprison", function()
         {
             let us: Pokemon;
             let them: Pokemon;
@@ -2004,7 +1946,7 @@ export function testUseMove(f: () => Context,
                             "share any moves");
                 });
             });
-        });
+        }));
         testNonRemovable("self", "Ingrain", "ingrain", "ingrain");
         testRemovable(
         {
@@ -2019,24 +1961,21 @@ export function testUseMove(f: () => Context,
         // slowstart
         for (const ctg of ["self", "hit"] as const)
         {
-            moveEffectTests[ctg].status.push(function()
+            const target = ctg === "self" ? "them" : "us";
+            statusTests[ctg].push(() => describe("Slow Start", function()
             {
-                const target = ctg === "self" ? "them" : "us";
-                describe("Slow Start", function()
+                it("Should reject", async function()
                 {
-                    it("Should reject", async function()
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", "tackle");
+                    await reject(
                     {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", "tackle");
-                        await reject(
-                        {
-                            type: "activateStatusEffect", monRef: target,
-                            effect: "slowStart", start: true
-                        });
+                        type: "activateStatusEffect", monRef: target,
+                        effect: "slowStart", start: true
                     });
                 });
-            });
+            }));
         }
         testNonRemovable("self", "Substitute", "substitute", "substitute",
             /*preEvents*/ undefined,
@@ -2071,87 +2010,83 @@ export function testUseMove(f: () => Context,
             [{type: "takeDamage", monRef: "them", hp: 100}]);
         testNonRemovable("self", "Snatch", "snatch", "snatch");
         // stall
-        moveEffectTests.self.status.push(function()
+        statusTests.self.push(() => describe("Stall effect", function()
         {
-            describe("Stall effect", function()
+            it("Should count stall turns then reset if failed",
+            async function()
             {
-                it("Should count stall turns then reset if failed",
-                async function()
+                const v = initActive("them").volatile;
+                expect(v.stalling).to.be.false;
+                expect(v.stallTurns).to.equal(0);
+                for (let i = 1; i <= 2; ++i)
                 {
-                    const v = initActive("them").volatile;
-                    expect(v.stalling).to.be.false;
-                    expect(v.stallTurns).to.equal(0);
-                    for (let i = 1; i <= 2; ++i)
-                    {
-                        state.preTurn();
-                        await initParser("them", "protect");
-                        await handle(
-                        {
-                            type: "activateStatusEffect", monRef: "them",
-                            effect: "protect", start: true
-                        });
-                        await exitParser();
-                        expect(v.stalling).to.be.true;
-                        expect(v.stallTurns).to.equal(i);
-
-                        state.postTurn();
-                        expect(v.stalling).to.be.false;
-                        expect(v.stallTurns).to.equal(i);
-                    }
-
                     state.preTurn();
                     await initParser("them", "protect");
-                    await handle({type: "fail"});
-                    expect(v.stalling).to.be.false;
-                    expect(v.stallTurns).to.equal(0);
-                    await exitParser();
-                });
-
-                it("Should reset stall count if using another move",
-                async function()
-                {
-                    const mon = initActive("them");
-
-                    // stall effect is put in place
-                    state.preTurn();
-                    mon.volatile.stall(true);
-                    state.postTurn();
-                    expect(mon.volatile.stalling).to.be.false;
-                    expect(mon.volatile.stallTurns).to.equal(1);
-
-                    // some other move is used next turn
-                    state.preTurn();
-                    await initParser("them", "splash");
-                    await exitParser();
-                    expect(mon.volatile.stalling).to.be.false;
-                    expect(mon.volatile.stallTurns).to.equal(0);
-                });
-
-                it("Should not reset counter if called", async function()
-                {
-                    const mon = initActive("them");
-                    await initParser("them", "endure");
-
-                    // stall effect is put in place
                     await handle(
                     {
                         type: "activateStatusEffect", monRef: "them",
-                        effect: "endure", start: true
+                        effect: "protect", start: true
                     });
                     await exitParser();
+                    expect(v.stalling).to.be.true;
+                    expect(v.stallTurns).to.equal(i);
 
-                    // somehow the pokemon moves again in the same turn via call
-                    //  effect
-                    await initParser("them", "metronome");
-                    await handle(
-                        {type: "useMove", monRef: "them", move: "endure"});
-                    await handle({type: "fail"});
-                    await exitParser();
-                    expect(mon.volatile.stalling).to.be.true;
-                    expect(mon.volatile.stallTurns).to.equal(1);
-                });
+                    state.postTurn();
+                    expect(v.stalling).to.be.false;
+                    expect(v.stallTurns).to.equal(i);
+                }
+
+                state.preTurn();
+                await initParser("them", "protect");
+                await handle({type: "fail"});
+                expect(v.stalling).to.be.false;
+                expect(v.stallTurns).to.equal(0);
+                await exitParser();
             });
-        });
+
+            it("Should reset stall count if using another move",
+            async function()
+            {
+                const mon = initActive("them");
+
+                // stall effect is put in place
+                state.preTurn();
+                mon.volatile.stall(true);
+                state.postTurn();
+                expect(mon.volatile.stalling).to.be.false;
+                expect(mon.volatile.stallTurns).to.equal(1);
+
+                // some other move is used next turn
+                state.preTurn();
+                await initParser("them", "splash");
+                await exitParser();
+                expect(mon.volatile.stalling).to.be.false;
+                expect(mon.volatile.stallTurns).to.equal(0);
+            });
+
+            it("Should not reset counter if called", async function()
+            {
+                const mon = initActive("them");
+                await initParser("them", "endure");
+
+                // stall effect is put in place
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "them",
+                    effect: "endure", start: true
+                });
+                await exitParser();
+
+                // somehow the pokemon moves again in the same turn via call
+                //  effect
+                await initParser("them", "metronome");
+                await handle({type: "useMove", monRef: "them", move: "endure"});
+                await handle({type: "fail"});
+                await exitParser();
+                expect(mon.volatile.stalling).to.be.true;
+                expect(mon.volatile.stallTurns).to.equal(1);
+            });
+        }));
 
         // major status
         // TODO: search for these moves automatically in dex
@@ -2190,817 +2125,826 @@ export function testUseMove(f: () => Context,
 
         //#endregion
 
-        //#region unique effect
-        moveEffectTests.self.unique.push(function()
-        {
-            describe("Conversion", function()
-            {
-                it("Should infer move via type change", async function()
-                {
-                    const mon = initActive("them");
-                    await initParser("them", "conversion");
+        //#region team
 
-                    // changes into a water type, meaning the pokemon must
-                    //  have a water type move
+        const teamTests: {[T in dexutil.MoveEffectTarget]: (() =>  void)[]} =
+            {self: [], hit: []};
+        for (const [name, key] of
+            [["Self", "self"], ["Hit", "hit"]] as const)
+        {
+            moveEffectTests.team.push(() => describe(name, function()
+            {
+                for (const f of teamTests[key]) f();
+            }));
+        }
+
+        // screen move self team effects
+        const screenMoves =
+        [
+            ["Light Screen", "lightScreen", "lightscreen"],
+            ["Reflect", "reflect", "reflect"]
+        ] as const;
+        for (const [name, effect, move] of screenMoves)
+        {
+            teamTests.self.push(() => describe(name, function()
+            {
+                it("Should infer source via move", async function()
+                {
+                    const team = state.teams.them;
+                    const {item} = initActive("them");
+                    await initParser("them", move);
                     await handle(
                     {
-                        type: "changeType", monRef: "them",
-                        newTypes: ["water", "???"]
+                        type: "activateTeamEffect", teamRef: "them", effect,
+                        start: true
                     });
-
-                    // one move slot left to infer after conversion
-                    mon.moveset.reveal("tackle");
-                    mon.moveset.reveal("takedown");
-
-                    // one of the moves can be either fire or water type
-                    expect(mon.moveset.get("ember")).to.be.null;
-                    expect(mon.moveset.get("watergun")).to.be.null;
-                    mon.moveset.addMoveSlotConstraint(["ember", "watergun"]);
-                    // should have now consumed the move slot constraint
-                    expect(mon.moveset.moveSlotConstraints).to.be.empty;
-                    expect(mon.moveset.get("ember")).to.be.null;
-                    expect(mon.moveset.get("watergun")).to.not.be.null;
+                    expect(team.status[effect].isActive).to.be.true;
+                    expect(team.status[effect].source).to.equal(item);
                 });
-            });
-        });
-        moveEffectTests.hit.unique.push(function()
+
+                it("Should still pass if start=false", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", "tackle");
+                    // TODO: track moves that can do this
+                    await handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "us", effect,
+                        start: false
+                    });
+                });
+
+                it("Should reject if mismatch", async function()
+                {
+                    const {status: ts} = state.teams.them;
+                    initActive("them");
+                    await initParser("them", effect.toLowerCase());
+                    const otherEffect = effect === "reflect" ?
+                        "lightScreen" : "reflect";
+                    await expect(handle(
+                        {
+                            type: "activateTeamEffect", teamRef: "them",
+                            effect: otherEffect, start: true
+                        }))
+                        .to.eventually.be.rejectedWith(Error,
+                            "Expected effect that didn't happen: " +
+                            `self team ${effect}`);
+                    expect(ts.reflect.isActive).to.be.false;
+                    expect(ts.reflect.source).to.be.null;
+                    // BaseContext should handle this
+                    expect(ts.lightScreen.isActive).to.be.false;
+                    expect(ts.lightScreen.source).to.be.null;
+                });
+            }));
+        }
+
+        // other non-screen self team effects
+        const otherMoves =
+        [
+            ["Lucky Chant", "luckyChant", "luckychant"],
+            ["Mist", "mist", "mist"],
+            ["Safeguard", "safeguard", "safeguard"],
+            ["Tailwind", "tailwind", "tailwind"]
+        ] as const;
+        for (const [name, effect, move] of otherMoves)
         {
-            describe("Disable", function()
+            teamTests.self.push(() => describe(name, function()
+            {
+                it("Should pass if expected", async function()
+                {
+                    initActive("them");
+                    await initParser("them", move);
+                    await handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "them", effect,
+                        start: true
+                    });
+                });
+
+                it("Should reject if start=false", async function()
+                {
+                    initActive("them");
+                    await initParser("them", move);
+                    await expect(handle(
+                        {
+                            type: "activateTeamEffect", teamRef: "them", effect,
+                            start: false
+                        }))
+                        .to.eventually.be.rejectedWith(Error,
+                            "Expected effect that didn't happen: " +
+                            `self team ${effect}`)
+                });
+
+                it("Should reject if mismatched flags", async function()
+                {
+                    initActive("them");
+                    await initParser("them", "splash");
+                    await reject(
+                    {
+                        type: "activateTeamEffect", teamRef: "them", effect,
+                        start: true
+                    });
+                });
+            }));
+        }
+
+        // hazard move hit team effects
+        const hazardMoves =
+        [
+            ["Spikes", "spikes", "spikes"],
+            ["Stealth Rock", "stealthRock", "stealthrock"],
+            ["Toxic Spikes", "toxicSpikes", "toxicspikes"]
+        ] as const;
+        for (const [name, effect, move] of hazardMoves)
+        {
+            teamTests.hit.push(() => describe(name, function()
             {
                 it("Should pass if expected", async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("them", "disable");
+                    await initParser("them", move);
                     await handle(
-                        {type: "disableMove", monRef: "us", move: "splash"});
-                    await exitParser();
+                    {
+                        type: "activateTeamEffect", teamRef: "us", effect,
+                        start: true
+                    });
                 });
 
-                it("Should reject if not expected", async function()
+                // TODO: track moves that can do this
+                it("Should pass unrelated move if start=false", async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("them", "tackle");
+                    await initParser("them", "splash");
+                    await handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "them", effect,
+                        start: false
+                    });
+                });
+
+                it("Should reject if mismatched flags", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    await initParser("them", "splash");
                     await reject(
-                        {type: "disableMove", monRef: "us", move: "splash"});
+                    {
+                        type: "activateTeamEffect", teamRef: "us", effect,
+                        start: true
+                    });
+                });
+            }));
+        }
+
+        //#endregion
+
+        //#region field
+
+        moveEffectTests.field.push(function()
+        {
+            it("Should pass if expected", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("us", "trickroom");
+                await handle(
+                {
+                    type: "activateFieldEffect", effect: "trickRoom",
+                    start: true
+                });
+                await exitParser();
+            });
+
+            it("Should reject if not expected", async function()
+            {
+                initActive("us");
+                await initParser("us", "splash");
+                await reject(
+                {
+                    type: "activateFieldEffect", effect: "gravity",
+                    start: true
                 });
             });
         });
+
+        moveEffectTests.field.push(() => describe("Weather", function()
+        {
+            it("Should infer source via move", async function()
+            {
+                initActive("us")
+                const {item} = initActive("them");
+                await initParser("them", "raindance");
+                await handle(
+                {
+                    type: "activateFieldEffect", effect: "RainDance",
+                    start: true
+                });
+
+                const weather = state.status.weather;
+                expect(weather.type).to.equal("RainDance");
+                expect(weather.duration).to.not.be.null;
+                expect(weather.source).to.equal(item);
+
+                // tick 5 times to infer item
+                expect(item.definiteValue).to.be.null;
+                for (let i = 0; i < 5; ++i) weather.tick();
+                expect(item.definiteValue).to.equal("damprock");
+            });
+
+            it("Should reject if mismatch", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "raindance");
+                await expect(handle(
+                    {
+                        type: "activateFieldEffect", effect: "Hail", start: true
+                    }))
+                    .to.eventually.be.rejectedWith(Error,
+                        "Expected effect that didn't happen: " +
+                        "field RainDance");
+            });
+        }));
+
         //#endregion
 
-        //#region implicit status effect
+        //#region changeType
 
-        function testImplicitStatusEffect(ctg: "self" | "hit", name: string,
-            move: string, event: events.Any,
-            getter: (mon: ReadonlyPokemon) => boolean): void
+        moveEffectTests.changeType.push(() => describe("Conversion", function()
         {
-            const target = ctg === "self" ? "us" : "them";
-            moveEffectTests[ctg].implicitStatus.push(async function()
+            it("Should infer move via type change", async function()
             {
-                describe(name, async function()
-                {
-                    it(`Should set if using ${move}`, async function()
-                    {
-                        let mon = initActive("us");
-                        if (target === "them") mon = initActive("them");
-                        await initParser("us", move);
-                        await handle(event);
-                        await exitParser();
-                        expect(getter(mon)).to.be.true;
-                    });
+                const mon = initActive("them");
+                await initParser("them", "conversion");
 
-                    it(`Should not set if ${move} failed`, async function()
-                    {
-                        let mon = initActive("us");
-                        if (target === "them") mon = initActive("them");
-                        await initParser("us", move);
-                        await handle({type: "fail"});
-                        await exitParser();
-                        expect(getter(mon)).to.be.false;
-                    });
+                // changes into a water type, meaning the pokemon must
+                //  have a water type move
+                await handle(
+                {
+                    type: "changeType", monRef: "them",
+                    newTypes: ["water", "???"]
+                });
+
+                // one move slot left to infer after conversion
+                mon.moveset.reveal("tackle");
+                mon.moveset.reveal("takedown");
+
+                // one of the moves can be either fire or water type
+                expect(mon.moveset.get("ember")).to.be.null;
+                expect(mon.moveset.get("watergun")).to.be.null;
+                mon.moveset.addMoveSlotConstraint(["ember", "watergun"]);
+                // should have now consumed the move slot constraint
+                expect(mon.moveset.moveSlotConstraints).to.be.empty;
+                expect(mon.moveset.get("ember")).to.be.null;
+                expect(mon.moveset.get("watergun")).to.not.be.null;
+            });
+        }));
+
+        //#endregion
+
+        //#region disableMove
+
+        moveEffectTests.disableMove.push(function()
+        {
+            it("Should pass if expected", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "disable");
+                await handle(
+                    {type: "disableMove", monRef: "us", move: "splash"});
+                await exitParser();
+            });
+
+            it("Should reject if not expected", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "tackle");
+                await reject(
+                    {type: "disableMove", monRef: "us", move: "splash"});
+            });
+        });
+
+        //#endregion
+
+        //#region drain
+
+        moveEffectTests.drain.push(function()
+        {
+            // can have clearbody or liquidooze
+            const tentacruel: events.SwitchOptions =
+            {
+                species: "tentacruel", level: 100, gender: "M", hp: 364,
+                hpMax: 364
+            };
+
+            it("Should pass if expected", async function()
+            {
+                initActive("us");
+                initActive("them").hp.set(1);
+                await initParser("them", "absorb");
+                await handle({type: "takeDamage", monRef: "us", hp: 50});
+                await handle(
+                {
+                    type: "takeDamage", monRef: "them", hp: 100, from: "drain"
+                });
+                await exitParser();
+            });
+
+            it("Should pass without event if full hp", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "absorb");
+                await handle({type: "takeDamage", monRef: "us", hp: 50});
+                await exitParser();
+            });
+
+            it("Should infer no liquidooze if normal", async function()
+            {
+                const mon = initActive("us", tentacruel);
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("clearbody", "liquidooze");
+                initActive("them").hp.set(1);
+                await initParser("them", "drainpunch");
+                // handle move damage
+                await handle({type: "takeDamage", monRef: "us", hp: 50});
+                // handle drain effect
+                await handle(
+                {
+                    type: "takeDamage", monRef: "them", hp: 100, from: "drain"
+                });
+                await exitParser();
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("clearbody");
+                expect(mon.ability).to.equal("clearbody");
+            });
+
+            it("Should pass if liquidooze activates", async function()
+            {
+                initActive("us", tentacruel);
+                initActive("them");
+                await initParser("them", "absorb");
+                // handle move damage
+                await handle({type: "takeDamage", monRef: "us", hp: 50});
+                // liquidooze ability activates to replace drain effect
+                await handle(
+                {
+                    type: "activateAbility", monRef: "us", ability: "liquidooze"
+                });
+                // drain damage inverted due to liquidooze ability
+                await handle({type: "takeDamage", monRef: "them", hp: 50});
+                await exitParser();
+            });
+        });
+
+        //#endregion
+
+        //#region recoil
+
+        moveEffectTests.recoil.push(function()
+        {
+            // can have swiftswim or rockhead
+            const relicanth: events.SwitchOptions =
+            {
+                species: "relicanth", level: 83, gender: "F", hp: 302,
+                hpMax: 302
+            };
+
+            it("Should pass if expected", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "bravebird");
+                await handle({type: "takeDamage", monRef: "us", hp: 1});
+                await handle(
+                {
+                    type: "takeDamage", monRef: "them", hp: 99, from: "recoil"
+                });
+                await exitParser();
+            });
+
+            it("Should pass if hp diff is 0", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "bravebird");
+                await handle({type: "takeDamage", monRef: "us", hp: 1});
+                await handle(
+                {
+                    type: "takeDamage", monRef: "them", hp: 100, from: "recoil"
+                });
+                await exitParser();
+            });
+
+            it("Should reject if not expected", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "gust");
+                await reject(
+                {
+                    type: "takeDamage", monRef: "them", hp: 0, from: "recoil"
                 });
             });
+
+            function testRecoil(name: string, pre: (mon: Pokemon) => void,
+                recoilEvent: boolean, infer?: boolean | "throw"): void
+            {
+                it(name, async function()
+                {
+                    initActive("them");
+                    const mon = initActive("us", relicanth);
+                    expect(mon.traits.ability.possibleValues)
+                        .to.have.all.keys(["swiftswim", "rockhead"]);
+                    pre?.(mon);
+
+                    await initParser("us", "doubleedge");
+                    if (recoilEvent)
+                    {
+                        await handle(
+                        {
+                            type: "takeDamage", monRef: "us", hp: 1,
+                            from: "recoil"
+                        });
+                        await exitParser();
+                    }
+                    if (infer === "throw")
+                    {
+                        await expect(exitParser())
+                            .to.eventually.be.rejectedWith(Error,
+                                "Move doubleedge user 'us' suppressed recoil " +
+                                "through an ability but ability is suppressed");
+                        return;
+                    }
+                    if (!recoilEvent) await exitParser();
+                    if (infer === true)
+                    {
+                        expect(mon.traits.ability.possibleValues)
+                            .to.have.all.keys(["rockhead"]);
+                        expect(mon.ability).to.equal("rockhead");
+                    }
+                    else if (infer === false)
+                    {
+                        expect(mon.traits.ability.possibleValues)
+                            .to.have.all.keys(["swiftswim"]);
+                        expect(mon.ability).to.equal("swiftswim");
+                    }
+                    else
+                    {
+                        expect(mon.traits.ability.possibleValues)
+                            .to.have.all.keys(["swiftswim", "rockhead"]);
+                        expect(mon.ability).to.be.empty;
+                    }
+                });
+            }
+
+            testRecoil(
+                "Should infer no recoil-canceling ability if recoil event",
+                () => {}, true, false);
+
+            testRecoil(
+                "Should not infer ability if suppressed and recoil event",
+                mon => mon.volatile.suppressAbility = true, true);
+
+            testRecoil(
+                "Should infer recoil-canceling ability if no recoil event",
+                () => {}, false, true);
+
+            testRecoil(
+                "Should throw if ability suppressed and no recoil event",
+                mon => mon.volatile.suppressAbility = true, false, "throw");
+        });
+
+        //#endregion
+
+        //#region selfFaint
+
+        // TODO
+
+        //#endregion
+
+        //#region selfSwitch
+
+        moveEffectTests.selfSwitch.push(function()
+        {
+            // TODO: track phazing moves
+            // TODO: handle all throw cases
+            it("Should accept if self-switch expected", async function()
+            {
+                initActive("them");
+                await initParser("them", "batonpass");
+                await handle({type: "halt", reason: "wait"});
+                await handleEnd({type: "switchIn", monRef: "them", ...ditto});
+            });
+
+            it("Should throw if no self-switch expected", async function()
+            {
+                initActive("them");
+                await initParser("them", "splash");
+                await reject({type: "halt", reason: "wait"});
+            });
+
+            it("Should throw if self-switch expected but opponent " +
+                "switched",
+            async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "uturn");
+                await handle({type: "halt", reason: "wait"});
+                await expect(handle({type: "switchIn", monRef: "us", ...ditto}))
+                    .to.eventually.be.rejectedWith(Error,
+                        "SelfSwitch effect 'true' failed");
+            });
+
+            it("Should handle Pursuit", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "uturn");
+                await handle({type: "halt", reason: "wait"});
+                await handle({type: "useMove", monRef: "us", move: "pursuit"});
+                await handleEnd({type: "switchIn", monRef: "them", ...ditto});
+            });
+
+            it("Should handle Natural Cure", async function()
+            {
+                const mon = initActive("them");
+                mon.majorStatus.afflict("slp");
+                // could have naturalcure
+                mon.traits.setAbility("naturalcure", "illuminate");
+                await initParser("them", "batonpass");
+                await handle({type: "halt", reason: "wait"});
+                await handle(
+                {
+                    type: "activateAbility", monRef: "them",
+                    ability: "naturalcure"
+                });
+                await handle(
+                {
+                    type: "activateStatusEffect", monRef: "them", effect: "slp",
+                    start: false
+                });
+                await handleEnd({type: "switchIn", monRef: "them", ...ditto});
+            });
+        });
+
+        //#endregion
+
+        for (const [name, key] of
+        [
+            ["Call", "call"], ["Transform", "transform"], ["Delay", "delay"],
+            ["Self-damage", "damage"], ["Count", "count"], ["Boost", "boost"],
+            ["Swap-boosts", "swapBoosts"], ["Status", "status"],
+            ["Team", "team"], ["Field", "field"], ["Change-type", "changeType"],
+            ["Disable-move (disable)", "disableMove"], ["Drain", "drain"],
+            ["Recoil", "recoil"], ["Self-faint", "selfFaint"],
+            ["Self-switch", "selfSwitch"]
+        ] as const)
+        {
+            const tests = moveEffectTests[key];
+            describe(name, function()
+            {
+                if (tests.length <= 0) it("TODO");
+                for (const f of tests) f();
+            });
         }
+    });
+
+    describe("Implicit effects", function()
+    {
+        const implicitEffectTests:
+        {
+            readonly [T in keyof NonNullable<dexutil.MoveData["implicit"]>]-?:
+                (() =>  void)[]
+        } =
+            {status: [], team: []};
+
+        //#region status
+
+        function testImplicitStatusEffect(name: string, move: string,
+            event: events.Any, getter: (mon: ReadonlyPokemon) => boolean): void
+        {
+            implicitEffectTests.status.push(() => describe(name, function()
+            {
+                it(`Should set if using ${move}`, async function()
+                {
+                    const mon = initActive("us");
+                    await initParser("us", move);
+                    await handle(event);
+                    await exitParser();
+                    expect(getter(mon)).to.be.true;
+                });
+
+                it(`Should not set if ${move} failed`, async function()
+                {
+                    const mon = initActive("us");
+                    await initParser("us", move);
+                    await handle({type: "fail"});
+                    await exitParser();
+                    expect(getter(mon)).to.be.false;
+                });
+            }));
+        }
+
+        testImplicitStatusEffect("Defense Curl", "defensecurl",
+            {type: "boost", monRef: "us", stat: "def", amount: 1},
+            mon => mon.volatile.defenseCurl);
+        testImplicitStatusEffect("Minimize", "minimize",
+            {type: "boost", monRef: "us", stat: "evasion", amount: 1},
+            mon => mon.volatile.minimize);
+        // TODO: add mustRecharge effect
 
         function testLockingMoves<T extends string>(name: string,
             keys: readonly T[],
             getter: (mon: ReadonlyPokemon) => ReadonlyVariableTempStatus<T>):
             void
         {
-            moveEffectTests.self.implicitStatus.push(function()
-            {
-                describe(name, () => keys.forEach(move =>
-                    describe(move, function()
+            implicitEffectTests.status.push(() => describe(name,
+                () => keys.forEach(move => describe(move, function()
+                {
+                    async function init():
+                        Promise<ReadonlyVariableTempStatus<T>>
                     {
-                        async function init():
-                            Promise<ReadonlyVariableTempStatus<T>>
-                        {
-                            // execute the move once to set lockedmove status
-                            initActive("us");
-                            const vts = getter(initActive("them"));
-                            expect(vts.isActive).to.be.false;
-                            await initParser("them", move);
-                            await exitParser();
-                            state.postTurn();
-                            expect(vts.isActive).to.be.true;
-                            expect(vts.type).to.equal(move);
-                            return vts;
-                        }
+                        // execute the move once to set lockedmove status
+                        initActive("us");
+                        const vts = getter(initActive("them"));
+                        expect(vts.isActive).to.be.false;
+                        await initParser("them", move);
+                        await exitParser();
+                        state.postTurn();
+                        expect(vts.isActive).to.be.true;
+                        expect(vts.type).to.equal(move);
+                        return vts;
+                    }
 
-                        it("Should set if successful", init);
+                    it("Should set if successful", init);
 
-                        it("Should reset if missed", async function()
-                        {
-                            const vts = await init();
-                            await initParser("them", move);
-                            expect(vts.isActive).to.be.true;
-                            await handle({type: "miss", monRef: "us"});
-                            expect(vts.isActive).to.be.false;
-                        });
+                    it("Should reset if missed", async function()
+                    {
+                        const vts = await init();
+                        await initParser("them", move);
+                        expect(vts.isActive).to.be.true;
+                        await handle({type: "miss", monRef: "us"});
+                        expect(vts.isActive).to.be.false;
+                    });
 
-                        it("Should reset if opponent protected",
-                        async function()
-                        {
-                            const vts = await init();
-                            await initParser("them", move);
-                            expect(vts.isActive).to.be.true;
+                    it("Should reset if opponent protected",
+                    async function()
+                    {
+                        const vts = await init();
+                        await initParser("them", move);
+                        expect(vts.isActive).to.be.true;
 
-                            await handle(
-                            {
-                                type: "block", monRef: "us", effect: "protect"
-                            });
-                            expect(vts.isActive).to.be.false;
-                        });
+                        await handle(
+                            {type: "block", monRef: "us", effect: "protect"});
+                        expect(vts.isActive).to.be.false;
+                    });
 
-                        it("Should not reset if opponent endured",
-                        async function()
-                        {
-                            const vts = await init();
-                            await initParser("them", move);
-                            expect(vts.isActive).to.be.true;
+                    it("Should not reset if opponent endured",
+                    async function()
+                    {
+                        const vts = await init();
+                        await initParser("them", move);
+                        expect(vts.isActive).to.be.true;
 
-                            await handle(
-                            {
-                                type: "block", monRef: "us", effect: "endure"
-                            });
-                            expect(vts.isActive).to.be.true;
-                        });
+                        await handle(
+                            {type: "block", monRef: "us", effect: "endure"});
+                        expect(vts.isActive).to.be.true;
+                    });
 
-                        it("Should not consume pp if used consecutively",
-                        async function()
-                        {
-                            const vts = await init();
-                            expect(vts.isActive).to.be.true;
-                            expect(vts.turns).to.equal(0);
+                    it("Should not consume pp if used consecutively",
+                    async function()
+                    {
+                        const vts = await init();
+                        expect(vts.isActive).to.be.true;
+                        expect(vts.turns).to.equal(0);
 
-                            await initParser("them", move);
-                            expect(vts.isActive).to.be.true;
-                            expect(vts.turns).to.equal(0);
+                        await initParser("them", move);
+                        expect(vts.isActive).to.be.true;
+                        expect(vts.turns).to.equal(0);
 
-                            await exitParser();
-                            expect(vts.isActive).to.be.true;
-                            expect(vts.turns).to.equal(1);
+                        await exitParser();
+                        expect(vts.isActive).to.be.true;
+                        expect(vts.turns).to.equal(1);
 
-                            const m = state.teams.them.active.moveset
-                                .get(move)!;
-                            expect(m).to.not.be.null;
-                            expect(m.pp).to.equal(m.maxpp - 1);
-                        });
-                    })));
-            });
+                        const m = state.teams.them.active.moveset.get(move)!;
+                        expect(m).to.not.be.null;
+                        expect(m.pp).to.equal(m.maxpp - 1);
+                    });
+                }))));
         }
 
-        testImplicitStatusEffect("self", "Defense Curl", "defensecurl",
-            {type: "boost", monRef: "us", stat: "def", amount: 1},
-            mon => mon.volatile.defenseCurl);
         // TODO: rename to rampage move
         testLockingMoves("Locked moves", dex.lockedMoveKeys,
             mon => mon.volatile.lockedMove);
-        testImplicitStatusEffect("self", "Minimize", "minimize",
-            {type: "boost", monRef: "us", stat: "evasion", amount: 1},
-            mon => mon.volatile.minimize);
-        // TODO: mustRecharge
-        // TODO: move rollout moves to dex and MoveData
+        // TODO: add rollout moves to dex and MoveData
         // TODO: rename to momentum move
         testLockingMoves("Rollout moves", dexutil.rolloutKeys,
             mon => mon.volatile.rollout);
 
         //#endregion
 
-        //#region boost effect
+        //#region team
 
-        function shouldHandleBoost(ctg: "self" | "hit", move: string,
-            stat: dexutil.BoostName, amount: number, abilityImmunity?: string,
-            immunityHolder?: events.SwitchOptions): void
+        function testImplicitTeamEffect(name: string, move: string,
+            getter: (team: ReadonlyTeam) => boolean, exit?: boolean): void
         {
-            const target = ctg === "self" ? "us" : "them";
-            moveEffectTests[ctg].boost.push(function()
+           implicitEffectTests.team.push(() => describe(name, function()
             {
-                it("Should handle boost", async function()
+                it(`Should set if using ${move}`, async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("us", move);
-                    await handle({type: "boost", monRef: target, stat, amount});
-                    await exitParser(); // shouldn't throw
+                    await initParser("them", move);
+                    if (exit) await exitParser();
+                    else await handle({type: "halt", reason: "wait"});
+                    expect(getter(state.teams.them)).to.be.true;
                 });
 
-                it("Should throw if reject before effect", async function()
+                it(`Should not set if ${move} failed`, async function()
                 {
                     initActive("us");
                     initActive("them");
-                    await initParser("us", move);
-                    await expect(exitParser())
-                        .to.eventually.be.rejectedWith(Error,
-                            "Expected effect that didn't happen: " +
-                            `${ctg} boost add {"${stat}":${amount}}`);
-                });
-
-                it("Should allow no boost message if maxed out",
-                async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    pstate.state.teams[target].active.volatile.boosts[stat] =
-                        6 * Math.sign(amount);
-                    await initParser("us", move);
+                    await initParser("them", move);
+                    await handle({type: "fail"});
+                    expect(getter(state.teams.them)).to.be.false;
                     await exitParser();
                 });
-
-                it("Should allow boost message with amount=0 if maxed out",
-                async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    pstate.state.teams[target].active.volatile.boosts[stat] =
-                        6 * Math.sign(amount);
-                    await initParser("us", move);
-                    await handle(
-                        {type: "boost", monRef: target, stat, amount: 0});
-                    await exitParser();
-                });
-
-                if (ctg === "hit" && abilityImmunity)
-                {
-                    it(`Should fail unboost effect if ${abilityImmunity} ` +
-                        "activates",
-                    async function()
-                    {
-                        initActive("us");
-                        initActive("them", immunityHolder);
-                        await initParser("us", move);
-                        await handle(
-                        {
-                            type: "activateAbility", monRef: target,
-                            ability: abilityImmunity
-                        });
-                        await handle({type: "fail"});
-                        await exitParser();
-                    });
-
-                    it("Should pass if moldbreaker broke through " +
-                        abilityImmunity,
-                    async function()
-                    {
-                        initActive("us").traits.setAbility("moldbreaker");
-                        initActive("them").traits.setAbility(abilityImmunity);
-
-                        await initParser("us", move);
-                        await handle(
-                            {type: "boost", monRef: target, stat, amount});
-                        await exitParser();
-                    });
-
-                    it("Should throw if moldbreaker should've broken " +
-                        `through ${abilityImmunity}` ,
-                    async function()
-                    {
-                        initActive("us").traits.setAbility("moldbreaker");
-                        initActive("them");
-
-                        await initParser("us", move);
-                        // move parser context should reject this event and
-                        //  attempt to exit
-                        await expect(handle(
-                            {
-                                type: "activateAbility", monRef: target,
-                                ability: abilityImmunity
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Expected effect that didn't happen: " +
-                                `hit boost add {"${stat}":${amount}}`);
-                    });
-
-                    it(`Should rule out ${abilityImmunity} if it didn't ` +
-                        "activate",
-                    async function()
-                    {
-                        initActive("us");
-                        // blocking ability or useless ability (illuminate)
-                        const mon = initActive("them");
-                        mon.traits.setAbility(abilityImmunity, "illuminate");
-                        expect(mon.traits.ability.possibleValues)
-                            .to.have.keys(abilityImmunity, "illuminate");
-
-                        await initParser("us", move);
-                        await handle(
-                            {type: "boost", monRef: target, stat, amount});
-                        expect(mon.traits.ability.possibleValues)
-                            .to.have.keys("illuminate");
-                        await exitParser();
-                    });
-
-                    it(`Should throw if ${abilityImmunity} didn't activate ` +
-                        "when it's known",
-                    async function()
-                    {
-                        initActive("us");
-                        initActive("them").traits.setAbility(abilityImmunity);
-
-                        await initParser("us", move);
-                        await expect(handle(
-                                {type: "boost", monRef: target, stat, amount}))
-                            .to.eventually.be.rejectedWith(Error,
-                                `Pokemon '${target}' should've activated ` +
-                                `ability [${abilityImmunity}] but it wasn't ` +
-                                "activated on-tryUnboost");
-                    });
-                }
-            });
-        }
-        shouldHandleBoost("self", "leafstorm", "spa", -2);
-        // can have hypercutter
-        const pinsir: events.SwitchOptions =
-        {
-            species: "pinsir", gender: "M", level: 100, hp: 100,
-            hpMax: 100
-        };
-        shouldHandleBoost("hit", "charm", "atk", -2, "hypercutter", pinsir);
-
-        // set boost
-        moveEffectTests.self.boost.push(function()
-        {
-            it("Should handle set boost", async function()
-            {
-                initActive("us");
-                await initParser("us", "bellydrum");
-                await handle({type: "takeDamage", monRef: "us", hp: 50});
-                await handle(
-                {
-                    type: "boost", monRef: "us", stat: "atk", amount: 6,
-                    set: true
-                });
-                await exitParser(); // shouldn't throw
-            });
-        });
-
-        function shouldHandlePartialBoost(ctg: "self" | "hit", move: string,
-            stat: dexutil.BoostName, amount: 2 | -2): void
-        {
-            const sign = Math.sign(amount);
-            const target = ctg === "self" ? "us" : "them"
-            moveEffectTests[ctg].boost.push(function()
-            {
-                it("Should allow partial boost if maxing out", async function()
-                {
-                    let mon = initActive("us");
-                    if (target === "them") mon = initActive("them");
-                    mon.volatile.boosts[stat] = sign * 5;
-                    await initParser("us", move);
-                    await handle(
-                        {type: "boost", monRef: target, stat, amount: sign});
-                    await exitParser(); // shouldn't throw
-                });
-
-                it("Should allow 0 boost if maxed out", async function()
-                {
-                    let mon = initActive("us");
-                    if (target === "them") mon = initActive("them");
-                    mon.volatile.boosts[stat] = sign * 6;
-                    await initParser("us", move);
-                    await handle(
-                        {type: "boost", monRef: target, stat, amount: 0});
-                    await exitParser(); // shouldn't throw
-                });
-            });
-        }
-        shouldHandlePartialBoost("self", "swordsdance", "atk", 2);
-        shouldHandlePartialBoost("hit", "captivate", "spa", -2);
-
-        function shouldHandleSecondaryBoost(ctg: "self" | "hit", move: string,
-            stat: dexutil.BoostName, amount: number): void
-        {
-            moveEffectTests[ctg].boost.push(function()
-            {
-                it("Should handle boost via secondary effect using " + move,
-                async function()
-                {
-                    const target = ctg === "self" ? "us" : "them";
-                    initActive("us");
-                    initActive("them");
-                    await initParser("us", move);
-                    await handle({type: "boost", monRef: target, stat, amount});
-                    await exitParser(); // shouldn't throw
-                });
-
-                it("Shouldn't throw if no secondary boost using " + move,
-                async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("us", move);
-                    await exitParser(); // shouldn't throw
-                });
-            });
-        }
-        shouldHandleSecondaryBoost("self", "chargebeam", "spa", 1);
-        shouldHandleSecondaryBoost("hit", "rocksmash", "def", -1);
-
-        function shouldHandle100SecondaryBoost(ctg: "self" | "hit",
-            move: string, stat: dexutil.BoostName, amount: number): void
-        {
-            const sign = Math.sign(amount);
-            const target = ctg === "self" ? "us" : "them"
-            moveEffectTests[ctg].boost.push(function()
-            {
-                it("Should throw if reject before 100% secondary effect",
-                async function()
-                {
-                    initActive("us");
-                    initActive("them");
-                    await initParser("us", move);
-                    await expect(exitParser())
-                        .to.eventually.be.rejectedWith(Error,
-                            "Expected effect that didn't happen: " +
-                            `hit boost add {"${stat}":${amount}}`);
-                });
-
-                it("Should allow no boost event for 100% secondary effect if " +
-                    "maxed out",
-                async function()
-                {
-                    let mon = initActive("us");
-                    if (target === "them") mon = initActive("them");
-                    mon.volatile.boosts[stat] = sign * 6;
-                    await initParser("us", move);
-                    await exitParser(); // shouldn't throw
-                });
-            });
-        }
-        shouldHandle100SecondaryBoost("hit", "rocktomb", "spe", -1);
-
-        //#endregion
-
-        //#region team effect
-
-        // healingWish/lunarDance
-        moveEffectTests.self.team.push(function()
-        {
-            // can only be explicitly ended by a separate event, not a move
-            const faintMoves =
-            [
-                ["Healing Wish", "healingWish", "healingwish"],
-                ["Lunar Dance", "lunarDance", "lunardance"]
-            ] as const;
-            for (const [name, effect, move] of faintMoves)
-            {
-                describe(name, function()
-                {
-                    it("Should handle faint/selfSwitch effects",
-                    async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        const team = state.teams.them;
-
-                        // use wishing move to faint user
-                        await initParser("them", move);
-                        await handle({type: "faint", monRef: "them"});
-                        expect(team.status[effect]).to.be.true;
-                        // wait for opponent to choose replacement
-                        // gen4: replacement is sent out immediately
-                        await handle({type: "halt", reason: "wait"});
-
-                        // replacement is sent
-                        await handleEnd(
-                            {type: "switchIn", monRef: "them", ...ditto});
-                        // replacement is healed
-                        // TODO: handle effect in switch context
-                        /*await handle(
-                        {
-                            type: "activateTeamEffect", teamRef: "them",
-                            effect, start: false
-                        });
-                        await exitParser();*/
-                    });
-
-                    it("Should not set if failed", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        const team = state.teams.them;
-                        await initParser("them", move);
-                        await handle({type: "fail"});
-                        expect(team.status[effect]).to.be.false;
-                    });
-
-                    it("Should throw if no faint", async function()
-                    {
-                        initActive("them");
-                        await initParser("them", move);
-                        await expect(handle(
-                            {
-                                type: "activateTeamEffect", teamRef: "them",
-                                effect, start: false
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Pokemon [them] haven't fainted yet");
-                    });
-                });
-            }
-        });
-
-        // other non-screen self team effects
-        moveEffectTests.self.team.push(function()
-        {
-            const otherMoves =
-            [
-                ["Lucky Chant", "luckyChant", "luckychant"],
-                ["Mist", "mist", "mist"],
-                ["Safeguard", "safeguard", "safeguard"],
-                ["Tailwind", "tailwind", "tailwind"]
-            ] as const;
-            for (const [name, effect, move] of otherMoves)
-            {
-                describe(name, function()
-                {
-                    it("Should pass if expected", async function()
-                    {
-                        initActive("them");
-                        await initParser("them", move);
-                        await handle(
-                        {
-                            type: "activateTeamEffect", teamRef: "them",
-                            effect, start: true
-                        });
-                    });
-
-                    it("Should reject if start=false", async function()
-                    {
-                        initActive("them");
-                        await initParser("them", move);
-                        await expect(handle(
-                            {
-                                type: "activateTeamEffect", teamRef: "them",
-                                effect, start: false
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Expected effect that didn't happen: " +
-                                `self team ${effect}`)
-                    });
-
-                    it("Should reject if mismatched flags", async function()
-                    {
-                        initActive("them");
-                        await initParser("them", "splash");
-                        await reject(
-                        {
-                            type: "activateTeamEffect", teamRef: "them",
-                            effect, start: true
-                        });
-                    });
-                });
-            }
-        });
-
-        // screen move self team effects
-        moveEffectTests.self.team.push(function()
-        {
-            const screenMoves =
-            [
-                ["Light Screen", "lightScreen", "lightscreen"],
-                ["Reflect", "reflect", "reflect"]
-            ] as const;
-            for (const [name, effect, move] of screenMoves)
-            {
-                describe(name, function()
-                {
-                    it("Should infer source via move", async function()
-                    {
-                        const team = state.teams.them;
-                        const {item} = initActive("them");
-                        await initParser("them", move);
-                        await handle(
-                        {
-                            type: "activateTeamEffect", teamRef: "them",
-                            effect, start: true
-                        });
-                        expect(team.status[effect].isActive).to.be.true;
-                        expect(team.status[effect].source).to.equal(item);
-                    });
-
-                    it("Should still pass if start=false", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", "tackle");
-                        // TODO: track moves that can do this
-                        await handle(
-                        {
-                            type: "activateTeamEffect", teamRef: "us",
-                            effect, start: false
-                        });
-                    });
-
-                    it("Should reject if mismatch", async function()
-                    {
-                        const {status: ts} = state.teams.them;
-                        initActive("them");
-                        await initParser("them", effect.toLowerCase());
-                        const otherEffect = effect === "reflect" ?
-                            "lightScreen" : "reflect";
-                        await expect(handle(
-                            {
-                                type: "activateTeamEffect", teamRef: "them",
-                                effect: otherEffect, start: true
-                            }))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Expected effect that didn't happen: " +
-                                `self team ${effect}`);
-                        expect(ts.reflect.isActive).to.be.false;
-                        expect(ts.reflect.source).to.be.null;
-                        // BaseContext should handle this
-                        expect(ts.lightScreen.isActive).to.be.false;
-                        expect(ts.lightScreen.source).to.be.null;
-                    });
-                });
-            }
-        });
-
-        // hazard move hit team effects
-        moveEffectTests.hit.team.push(function()
-        {
-            const hazardMoves =
-            [
-                ["Spikes", "spikes", "spikes"],
-                ["Stealth Rock", "stealthRock", "stealthrock"],
-                ["Toxic Spikes", "toxicSpikes", "toxicspikes"]
-            ] as const;
-            for (const [name, effect, move] of hazardMoves)
-            {
-                describe(name, function()
-                {
-                    it("Should pass if expected", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", move);
-                        await handle(
-                        {
-                            type: "activateTeamEffect", teamRef: "us",
-                            effect, start: true
-                        });
-                    });
-
-                    it("Should still pass if start=false", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", "splash");
-                        // TODO: track moves that can do this
-                        await handle(
-                        {
-                            type: "activateTeamEffect", teamRef: "them",
-                            effect, start: false
-                        });
-                    });
-
-                    it("Should reject if mismatched flags", async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("them", "splash");
-                        await reject(
-                        {
-                            type: "activateTeamEffect", teamRef: "us",
-                            effect, start: true
-                        });
-                    });
-                });
-            }
-
-        });
-
-        //#endregion
-
-        //#region implicit team effect
-
-        function testImplicitTeamEffect(ctg: "self" | "hit", name: string,
-            move: string, getter: (team: ReadonlyTeam) => boolean,
-            exit?: boolean): void
-        {
-            const teamRef = ctg === "self" ? "them" : "us";
-            moveEffectTests[ctg].implicitTeam.push(function()
-            {
-                describe(name, function()
-                {
-                    it(`Should set if using ${move}`, async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        const team = state.teams[teamRef];
-                        await initParser("them", move);
-                        if (exit) await exitParser();
-                        else await handle({type: "halt", reason: "wait"});
-                        expect(getter(team)).to.be.true;
-                    });
-
-                    it(`Should not set if ${move} failed`, async function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                        const team = state.teams[teamRef];
-                        await initParser("them", move);
-                        await handle({type: "fail"});
-                        expect(getter(team)).to.be.false;
-                        await exitParser();
-                    });
-                });
-            });
+            }));
         }
 
-        testImplicitTeamEffect("self", "Wish", "wish",
+        testImplicitTeamEffect("Wish", "wish",
             team => team.status.wish.isActive, /*exit*/ true)
 
-        // TODO: move to primary self-switch test?
-        // or move primary self-switch to self/hit MoveEffect to support phazing
-        testImplicitTeamEffect("self", "Self-switch", "uturn",
-            team => team.status.selfSwitch === true);
-        testImplicitTeamEffect("self", "Baton Pass", "batonpass",
-            team => team.status.selfSwitch === "copyvolatile");
-
-        //#endregion
-
-        //#region percent damage
-
-        moveEffectTests.self.percentDamage.push(function()
+        // healingWish/lunarDance
+        const faintWishMoves =
+        [
+            ["Healing Wish", "healingWish", "healingwish"],
+            ["Lunar Dance", "lunarDance", "lunardance"]
+        ] as const;
+        for (const [name, effect, move] of faintWishMoves)
         {
-            describe("Healing moves", function()
+            implicitEffectTests.team.push(() => describe(name, function()
             {
-                it("Should handle recover hp", async function()
-                {
-                    initActive("them").hp.set(50);
-                    await initParser("them", "recover");
-                    await handle({type: "takeDamage", monRef: "them", hp: 100});
-                    await exitParser();
-                });
-
-                it("Should handle weather-based recovery"); // TODO
-            });
-
-            describe("Split (painsplit)", function()
-            {
-                it("Should handle damage", async function()
+                it("Should handle faint/selfSwitch effects", async function()
                 {
                     initActive("us");
-                    initActive("them").hp.set(50);
-                    await initParser("them", "painsplit")
-                    await handle({type: "takeDamage", monRef: "them", hp: 75});
-                    await handle({type: "takeDamage", monRef: "us", hp: 75});
-                    await exitParser();
+                    initActive("them");
+                    const team = state.teams.them;
+
+                    // use wishing move to faint user
+                    await initParser("them", move);
+                    await handle({type: "faint", monRef: "them"});
+                    expect(team.status[effect]).to.be.true;
+                    // wait for opponent to choose replacement
+                    // gen4: replacement is sent out immediately
+                    await handle({type: "halt", reason: "wait"});
+
+                    // replacement is sent
+                    await handleEnd(
+                        {type: "switchIn", monRef: "them", ...ditto});
+                    // replacement is healed
+                    // TODO: handle effect in switch context
+                    /*await handle(
+                    {
+                        type: "activateTeamEffect", teamRef: "them",
+                        effect, start: false
+                    });
+                    await exitParser();*/
                 });
-            });
-        });
+
+                it("Should not set if failed", async function()
+                {
+                    initActive("us");
+                    initActive("them");
+                    const team = state.teams.them;
+                    await initParser("them", move);
+                    await handle({type: "fail"});
+                    expect(team.status[effect]).to.be.false;
+                });
+
+                it("Should throw if no faint", async function()
+                {
+                    initActive("them");
+                    await initParser("them", move);
+                    await expect(handle(
+                        {
+                            type: "activateTeamEffect", teamRef: "them", effect,
+                            start: false
+                        }))
+                        .to.eventually.be.rejectedWith(Error,
+                            "Pokemon [them] haven't fainted yet");
+                });
+            }));
+        }
 
         //#endregion
-
-        for (const [ctgName, ctg] of
-            [["Self", "self"], ["Hit", "hit"]] as const)
-        {
-            const testDict = moveEffectTests[ctg];
-            describe(`${ctgName} MoveEffect`, function()
-            {
-                for (const [name, key] of
-                [
-                    ["StatusEffect", "status"],
-                    ["UniqueEffect", "unique"],
-                    ["ImplicitStatusEffect", "implicitStatus"],
-                    ["BoostEffect", "boost"],
-                    ["TeamEffect", "team"],
-                    ["ImplicitTeamEffect", "implicitTeam"],
-                    ["PercentDamage", "percentDamage"]
-                ] as const)
-                {
-                    const testArr = testDict[key];
-                    describe(name, function()
-                    {
-                        if (testArr.length <= 0) it("TODO");
-                        else for (const testFunc of testArr) testFunc();
-                    });
-                }
-            });
-        }
     });
 
     // TODO: track in MoveData
