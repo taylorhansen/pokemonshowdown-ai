@@ -621,11 +621,16 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
             }
             lastEvent = countResult.event;
         }
+        if (moveEffects?.damage?.type === "split")
+        {
+            lastEvent = (yield* handleSplitDamage(ctx, lastEvent)).event;
+        }
         // TODO: some weird contradictory ordering when testing on PS is
         //  reflected here, should the PSEventHandler re-order them or should
         //  the dex make clearer distinguishments for these specific effects?
         // self-heal generally happens before status (e.g. roost)
-        if ((moveEffects?.damage?.percent ?? 0) > 0)
+        if (moveEffects?.damage?.type === "percent" &&
+            moveEffects.damage.percent > 0)
         {
             lastEvent = (yield* handlePercentDamage(ctx, moveEffects?.damage,
                 lastEvent)).event;
@@ -670,7 +675,8 @@ async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
         lastEvent = statusLoopResult.event;
         // self-damage generally happens after status effects (e.g. curse,
         //  substitute)
-        if ((moveEffects?.damage?.percent ?? 0) < 0)
+        if (moveEffects?.damage?.type === "percent" &&
+            moveEffects.damage.percent < 0)
         {
             lastEvent = (yield* handlePercentDamage(ctx, moveEffects?.damage,
                 lastEvent)).event;
@@ -1058,13 +1064,41 @@ async function* handleStatus(ctx: MoveContext,
     return {...lastEvent && {event: lastEvent}};
 }
 
+/** Handles the split-damage effect of a move (e.g. painsplit). */
+async function* handleSplitDamage(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser
+{
+    let usMentioned = false;
+    let targetMentioned = false;
+    const result = yield* eventLoop(
+        async function* splitDamageLoop(event)
+        {
+            if (event.type !== "takeDamage") return {event};
+            if (event.from) return {event};
+            if (event.monRef !== ctx.userRef)
+            {
+                if (targetMentioned || !addTarget(ctx, event.monRef))
+                {
+                    return {event};
+                }
+                targetMentioned = true;
+            }
+            else if (usMentioned) return {event};
+            else usMentioned = true;
+            return yield* base.takeDamage(ctx.pstate, event);
+        },
+        lastEvent);
+    return result;
+}
+
 /** Handles the percent-damage/heal effects of a move. */
 async function* handlePercentDamage(ctx: MoveContext,
     effect?: NonNullable<dexutil.MoveData["effects"]>["damage"],
     lastEvent?: events.Any): SubParser
 {
     // shouldn't activate if non-ghost type and ghost flag is set
-    if (!effect || (effect.ghost && !ctx.user.types.includes("ghost")))
+    if (!effect || effect.type !== "percent" ||
+        (effect.ghost && !ctx.user.types.includes("ghost")))
     {
         return {...lastEvent && {event: lastEvent}};
     }

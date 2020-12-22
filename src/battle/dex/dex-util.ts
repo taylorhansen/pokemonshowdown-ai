@@ -406,6 +406,8 @@ export interface MoveData extends DexData
         /** Damage effects in addition to main move damage (not recoil). */
         readonly damage?:
         {
+            /** Damage dealt as a percentage of max HP. */
+            readonly type: "percent";
             /** Pokemon receiving the damage. */
             readonly target: MoveEffectTarget;
             /** Damage dealt as a percentage of max hp. Positive heals. */
@@ -414,6 +416,13 @@ export interface MoveData extends DexData
              * Whether this effect can only activate if the user is ghost type.
              */
             readonly ghost?: true;
+        } |
+        {
+            /**
+             * The user's and opponent's current HP stats are averaged and set
+             * to the result (limited by max HP).
+             */
+            readonly type: "split"
         };
 
         // TODO: separate stockpile from perish

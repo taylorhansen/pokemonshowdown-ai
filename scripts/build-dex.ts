@@ -130,14 +130,16 @@ const customDamageMap:
     readonly [move: string]: NonNullable<dexutil.MoveData["effects"]>["damage"]
 } =
 {
-    bellydrum: {target: "self", percent: -50},
-    curse: {target: "self", percent: -50, ghost: true},
-    substitute: {target: "self", percent: -25},
+    bellydrum: {type: "percent", target: "self", percent: -50},
+    curse: {type: "percent", target: "self", percent: -50, ghost: true},
+    substitute: {type: "percent", target: "self", percent: -25},
 
     // TODO: weather changes this amount (same for all 3)
-    moonlight: {target: "self", percent: 50},
-    morningsun: {target: "self", percent: 50},
-    synthesis: {target: "self", percent: 50}
+    moonlight: {type: "percent", target: "self", percent: 50},
+    morningsun: {type: "percent", target: "self", percent: 50},
+    synthesis: {type: "percent", target: "self", percent: 50},
+
+    painsplit: {type: "split"}
 };
 
 /** Maps some move names to swap-boost effects. */
@@ -417,7 +419,11 @@ for (const move of
         : {},
 
         ...move.heal ?
-            {damage: {target: self, percent: 100 * move.heal[0] / move.heal[1]}}
+        {damage: {
+            type: "percent", target: self,
+            // TODO: should the fraction tuple be preserved in the MoveData?
+            percent: 100 * move.heal[0] / move.heal[1]}
+        }
         : customDamageMap.hasOwnProperty(move.id) ?
             {damage: customDamageMap[move.id]}
         : {},

@@ -2958,6 +2958,19 @@ export function testUseMove(f: () => Context,
 
                 it("Should handle weather-based recovery"); // TODO
             });
+
+            describe("Split (painsplit)", function()
+            {
+                it("Should handle damage", async function()
+                {
+                    initActive("us");
+                    initActive("them").hp.set(50);
+                    await initParser("them", "painsplit")
+                    await handle({type: "takeDamage", monRef: "them", hp: 75});
+                    await handle({type: "takeDamage", monRef: "us", hp: 75});
+                    await exitParser();
+                });
+            });
         });
 
         //#endregion
