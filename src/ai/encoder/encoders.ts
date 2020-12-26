@@ -325,7 +325,8 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     augment(vs => vs.slowStart, tempStatusEncoder),
     augment(vs => vs.snatch, booleanEncoder),
     // stall fail rate
-    // halves each time a stalling move is used, capped at 12.5% in gen4
+    // halves each time a stalling move is used, capped at min 12.5% success
+    //  rate in gen4
     augment(vs => Math.min(0.875, 1 - Math.pow(2, -vs.stallTurns)),
         numberEncoder),
     augment(vs => vs.stockpile / 3, numberEncoder),
