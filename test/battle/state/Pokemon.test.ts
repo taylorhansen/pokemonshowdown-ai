@@ -626,7 +626,34 @@ describe("Pokemon", function()
             expect(mon.volatile.lockedMove.isActive).to.be.false;
         });
 
-        describe("copy = true", function()
+        describe("selfSwitch = true", function()
+        {
+            it("Should copy lastMove", function()
+            {
+                const mon = new Pokemon("magikarp", false);
+                mon.switchInto();
+                mon.volatile.lastMove = "tackle";
+
+                const mon2 = new Pokemon("smeargle", false);
+                mon2.switchInto(mon, /*selfSwitch*/ true);
+                expect(mon2.volatile.lastMove).to.equal("tackle");
+            });
+
+            it("Should not copy lastMove if switch-in can't have the move",
+            function()
+            {
+                const mon = new Pokemon("magikarp", false);
+                mon.switchInto();
+                mon.volatile.lastMove = "tackle";
+
+                const mon2 = new Pokemon("smeargle", false);
+                mon2.moveset.inferDoesntHave(["tackle"]);
+                mon2.switchInto(mon, /*selfSwitch*/ true);
+                expect(mon2.volatile.lastMove).to.be.null;
+            });
+        });
+
+        describe("selfSwitch = copyvolatile", function()
         {
             it("Should copy passable statuses", function()
             {
@@ -635,7 +662,7 @@ describe("Pokemon", function()
                 mon.volatile.boosts.atk = 1;
 
                 const other = new Pokemon("magikarp", false);
-                other.switchInto(mon, /*copy*/true);
+                other.switchInto(mon, "copyvolatile");
                 expect(other.volatile.boosts.atk).to.equal(1);
             });
 
@@ -651,7 +678,7 @@ describe("Pokemon", function()
                 expect(mon.volatile.lockOnTurns.turns).to.equal(2);
 
                 const bench = new Pokemon("seaking", false);
-                bench.switchInto(mon, /*copy*/true);
+                bench.switchInto(mon, "copyvolatile");
                 expect(bench.volatile.lockOnTurns.isActive).to.be.true;
                 expect(bench.volatile.lockOnTurns.turns).to.equal(1);
             });
@@ -664,7 +691,7 @@ describe("Pokemon", function()
                 mon.volatile.nightmare = true;
 
                 const other = new Pokemon("magikarp", false);
-                other.switchInto(mon, /*copy*/true);
+                other.switchInto(mon, "copyvolatile");
                 expect(other.volatile.nightmare).to.be.false;
             });
 
@@ -677,7 +704,7 @@ describe("Pokemon", function()
 
                 const other = new Pokemon("magikarp", false);
                 other.majorStatus.afflict("slp");
-                other.switchInto(mon, /*copy*/true);
+                other.switchInto(mon, "copyvolatile");
                 expect(other.volatile.nightmare).to.be.true;
             });
         });
@@ -715,7 +742,7 @@ describe("Pokemon", function()
     });
 
     // TODO
-    describe("#trapped()", function() {});
+    describe("#trapped()", function() { it("TODO"); });
 
     describe("#transform()", function()
     {

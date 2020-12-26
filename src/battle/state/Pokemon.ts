@@ -1,5 +1,6 @@
 import * as dex from "../dex/dex";
 import { boostKeys, HPType, hpTypes, ItemData, Type } from "../dex/dex-util";
+import { SelfSwitchType } from "../dex/effects";
 import { HP, ReadonlyHP } from "./HP";
 import { MajorStatusCounter, ReadonlyMajorStatusCounter } from
     "./MajorStatusCounter";
@@ -396,16 +397,13 @@ export class Pokemon implements ReadonlyPokemon
      * Switches this Pokemon in as if it replaces the given Pokemon.
      * @param mon Pokemon to replace with. If falsy, the Pokemon is switching
      * into an empty slot.
-     * @param copy Whether to copy volatile statuses via Baton Pass. Default
-     * false.
+     * @param selfSwitch Self-switch status if any.
      */
-    public switchInto(mon?: Pokemon | null, copy = false): void
+    public switchInto(mon?: Pokemon | null,
+        selfSwitch?: SelfSwitchType | null): void
     {
-        if (!mon?._volatile)
-        {
-            // create our own volatile status object
-            this._volatile = new VolatileStatus();
-        }
+        // create our own volatile status object
+        if (!mon?._volatile) this._volatile = new VolatileStatus();
         else
         {
             // transfer volatile status object
@@ -416,10 +414,7 @@ export class Pokemon implements ReadonlyPokemon
         // switch out provided mon
 
         // toxic counter resets on switch
-        if (mon?.majorStatus.current === "tox")
-        {
-            mon.majorStatus.resetCounter();
-        }
+        if (mon?.majorStatus.current === "tox") mon.majorStatus.resetCounter();
 
         // clear mirrorMove
         const state = mon?.team?.state;
@@ -438,19 +433,27 @@ export class Pokemon implements ReadonlyPokemon
         // switch in new mon
 
         // handle baton pass
-        if (copy)
+        if (selfSwitch === "copyvolatile")
         {
+            // leave self-switch passable
             this._volatile.clearUnpassable();
             this._volatile.batonPass(this.majorStatus.current ?? undefined);
+        }
+        else if (selfSwitch)
+        {
+            this._volatile.clearPassable();
+            // leave self-switch passable statuses
+            this._volatile.clearUnpassable();
         }
         else this._volatile.clear();
 
         // make sure volatile has updated info about this pokemon
         this._volatile.overrideMoveset.link(this.baseMoveset, "base");
         this._volatile.overrideTraits.copy(this.baseTraits);
+        if (selfSwitch) this._volatile.selfSwitch();
     }
 
-    /** Tells the pokemon that it has fainted. */
+    /** Indicates that the pokemon has fainted. */
     public faint(): void
     {
         this.hp.set(0, 0);

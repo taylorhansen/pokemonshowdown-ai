@@ -150,7 +150,7 @@ export class Team implements ReadonlyTeam
 
         // switch active status
         mon.switchInto(index === 0 ? null : this._pokemon[0],
-            /*copy*/this.status.selfSwitch === "copyvolatile");
+            this.status.selfSwitch);
         // consume pending self-switch/copyvolatile flag
         this.status.selfSwitch = null;
 

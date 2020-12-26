@@ -40,6 +40,8 @@ describe("VolatileStatus", function()
             expect(volatile.trapped).to.be.null;
             expect(volatile.trapping).to.be.null;
 
+            expect(volatile.lastMove).to.be.null;
+
             expect(volatile.attract).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
@@ -55,7 +57,6 @@ describe("VolatileStatus", function()
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
             expect(volatile.imprison).to.be.false;
-            expect(volatile.lastMove).to.be.null;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
@@ -141,7 +142,6 @@ describe("VolatileStatus", function()
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
             expect(volatile.imprison).to.be.false;
-            expect(volatile.lastMove).to.be.null;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
             expect(volatile.minimize).to.be.false;
@@ -395,6 +395,17 @@ describe("VolatileStatus", function()
                 expect(volatile[field].move).to.equal("splash");
                 expect(volatile[field].ts.isActive).to.be.true;
             });
+
+            if (field === "encore")
+            {
+                it("Should reveal move", function()
+                {
+                    expect(volatile.overrideMoveset.get("splash")).to.be.null;
+                    volatile[set]("splash");
+                    expect(volatile.overrideMoveset.get("splash"))
+                        .to.not.be.null;
+                })
+            }
         });
 
         describe(`#${reset}()`, function()

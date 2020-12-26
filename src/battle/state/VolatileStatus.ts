@@ -77,6 +77,13 @@ export interface ReadonlyVolatileStatus
     /** Who we're trapping. */
     readonly trapping: ReadonlyVolatileStatus | null;
 
+    // passed by self-switch moves
+    /**
+     * Last used move. Includes move selections and Struggle, but not called
+     * moves.
+     */
+    readonly lastMove: string | null;
+
     // not passed when copying
 
     /** Attract move status. */
@@ -108,11 +115,6 @@ export interface ReadonlyVolatileStatus
     readonly identified: "foresight" | "miracleEye" | null;
     /** Imprison move status. */
     readonly imprison: boolean;
-    /**
-     * Last used move. Includes move selections and Struggle, but not called
-     * moves.
-     */
-    readonly lastMove: string | null;
     /**
      * Tracks locked moves, e.g. petaldance variants. Should be ticked after
      * every successful move attempt.
@@ -276,6 +278,11 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         target._trapped = this;
     }
 
+    // passed by self-switch moves
+
+    /** @override */
+    public lastMove!: string | null;
+
     // not passed when copying
 
     /** @override */
@@ -318,10 +325,14 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** Starts the Encore status for the given move. */
     public encoreMove(move: string): void
     {
+        // can't encore unless the pokemon has the affected move
+        this.overrideMoveset.reveal(move);
+
         this._encore.move = move;
         this._encore.ts.start();
     }
-    /** Removes disable status. */
+    // TODO: also do this when the move runs out of pp
+    /** Removes encore status. */
     public removeEncore(): void
     {
         this._encore.move = null;
@@ -344,8 +355,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public imprison!: boolean;
-
-    public lastMove!: string | null;
 
     /** @override */
     public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
@@ -468,6 +477,17 @@ export class VolatileStatus implements ReadonlyVolatileStatus
      */
     public clear(): void
     {
+        this.clearPassable();
+        this.clearSelfSwitchPassable();
+        this.clearUnpassable();
+    }
+
+    /**
+     * Clears statuses that can passed by a copy-volatile effect (e.g. Baton
+     * Pass).
+     */
+    public clearPassable()
+    {
         this.aquaRing = false;
         this._boosts =
         {
@@ -502,8 +522,12 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         // clear our trapping status
         if (this._trapping) this._trapping._trapped = null;
         this._trapping = null;
+    }
 
-        this.clearUnpassable();
+    /** Clears statuses that can be passed by self-switch moves. */
+    public clearSelfSwitchPassable(): void
+    {
+        this.lastMove = null;
     }
 
     /** Clears statuses that can't be Baton Passed. */
@@ -522,7 +546,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.healBlock.end();
         this.identified = null;
         this.imprison = false;
-        this.lastMove = null;
         this.lockedMove.reset();
         this.magicCoat = false;
         this.minimize = false;
@@ -559,8 +582,22 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     {
         // restart lockon so the recipient can use it
         if (this._lockOnTurns.isActive) this._lockOnTurns.start();
-        // nightmare status should persist if the recipient is asleep
+        // nightmare status shouldn't persist if the recipient isn't asleep
         if (majorStatus !== "slp") this.nightmare = false;
+    }
+
+    /** Updates some statuses after handling a self-switch. */
+    public selfSwitch()
+    {
+        // make sure lastMove is still valid
+        if (this.lastMove)
+        {
+            if (!this.overrideMoveset.constraint.has(this.lastMove))
+            {
+                this.lastMove = null;
+            }
+            // TODO: callback for when moveset updates constraint
+        }
     }
 
     /** Indicates that the pokemon spent its turn being inactive. */
@@ -668,6 +705,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             // TODO: be more specific with trapping info
             this._trapped ? ["trapped"] : [],
             this._trapping ? ["trapping"] : [],
+            this.lastMove ? [`last used ${this.lastMove}`] : [],
             this.attract ? ["attracted"] : [],
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
@@ -683,7 +721,6 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.healBlock.isActive ? [this.healBlock.toString()] : [],
             this.identified ? [this.identified] : [],
             this.imprison ? ["imprison"] : [],
-            this.lastMove ? [`last used ${this.lastMove}`] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.magicCoat ? ["magic coat"] : [],
             this.minimize ? ["minimize"] : [],
