@@ -294,8 +294,9 @@ for (const move of
     const basePower = move.ohko ? "ohko" : move.basePower;
 
     const type = move.type.toLowerCase() as dexutil.Type;
-    let modifyType: "hpType" | undefined;
+    let modifyType: "hpType" | "plateType" | undefined;
     if (move.id === "hiddenpower") modifyType = "hpType";
+    else if (move.id === "judgment") modifyType = "plateType";
     typeToMoves[type].push(move.id);
 
     const target = move.target;
@@ -904,6 +905,8 @@ for (const item of
         {
             uid, name: item.id, display: item.name,
             ...item.isChoice && {isChoice: true},
+            ...item.onPlate &&
+                {plateType: item.onPlate.toLowerCase() as dexutil.Type},
             ...itemOnMap.hasOwnProperty(item.id) && {on: itemOnMap[item.id]},
             ...itemConsumeOnMap.hasOwnProperty(item.id) &&
                 {consumeOn: itemConsumeOnMap[item.id]}

@@ -350,10 +350,12 @@ export interface MoveData extends DexData
     // tslint:disable: no-trailing-whitespace (force newline in doc)
     /**
      * Type modification when used in battle.  
-     * `"hpType"` - User's base hiddenpower type.
+     * `"hpType"` - User's base hiddenpower type.  
+     * `"plateType"` - Type of held plate item, if any. Default normal if no
+     * plate.
      */
     // tslint:enable: no-trailing-whitespace
-    readonly modifyType?: "hpType";
+    readonly modifyType?: "hpType" | "plateType";
     /** Target of the move. */
     readonly target: MoveTarget;
     /**
@@ -549,6 +551,8 @@ export interface ItemData extends DexData
 {
     /** Whether this is a choice item. */
     readonly isChoice?: true;
+    /** Plate type if this is a plate item. Used for handling Arceus types. */
+    readonly plateType?: Type;
     /**
      * Specifies conditions for activating this item to describe or interrupt
      * an effect.
