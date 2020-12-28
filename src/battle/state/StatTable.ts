@@ -52,6 +52,7 @@ export class StatTable implements ReadonlyStatTable, StatRanges
     }
     private _data: PokemonData | null = null;
 
+    // TODO: make this a separate obj backed by ivs implementing this interface
     /** @override */
     public readonly hpType = new PossibilityClass(hpTypes);
 

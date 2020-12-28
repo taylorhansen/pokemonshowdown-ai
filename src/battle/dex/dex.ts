@@ -885,7 +885,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     heartswap: {uid: 179, name: "heartswap", display: "Heart Swap", category: "status", basePower: 0, type: "psychic", target: "normal", pp: [10, 16], flags: {ignoreSub: true}, effects: {swapBoosts: {atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true, evasion: true}}},
     heatwave: {uid: 180, name: "heatwave", display: "Heat Wave", category: "special", basePower: 100, type: "fire", target: "allAdjacentFoes", pp: [10, 16], effects: {status: {chance: 10, hit: ["brn"]}}},
     helpinghand: {uid: 181, name: "helpinghand", display: "Helping Hand", category: "status", basePower: 0, type: "normal", target: "adjacentAlly", pp: [20, 32], flags: {ignoreSub: true, noMirror: true, noCopycat: true}},
-    hiddenpower: {uid: 182, name: "hiddenpower", display: "Hidden Power", category: "special", basePower: 0, type: "normal", target: "normal", pp: [15, 24]},
+    hiddenpower: {uid: 182, name: "hiddenpower", display: "Hidden Power", category: "special", basePower: 0, type: "normal", modifyType: "hpType", target: "normal", pp: [15, 24]},
     highjumpkick: {uid: 183, name: "highjumpkick", display: "High Jump Kick", category: "physical", basePower: 100, type: "fighting", target: "normal", pp: [20, 32], flags: {contact: true}},
     hornattack: {uid: 184, name: "hornattack", display: "Horn Attack", category: "physical", basePower: 65, type: "normal", target: "normal", pp: [25, 40], flags: {contact: true}},
     horndrill: {uid: 185, name: "horndrill", display: "Horn Drill", category: "physical", basePower: "ohko", type: "normal", target: "normal", pp: [5, 8], flags: {contact: true}},

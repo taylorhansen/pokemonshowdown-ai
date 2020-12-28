@@ -347,6 +347,13 @@ export interface MoveData extends DexData
     readonly basePower: MovePower;
     /** Type of move. */
     readonly type: Type;
+    // tslint:disable: no-trailing-whitespace (force newline in doc)
+    /**
+     * Type modification when used in battle.  
+     * `"hpType"` - User's base hiddenpower type.
+     */
+    // tslint:enable: no-trailing-whitespace
+    readonly modifyType?: "hpType";
     /** Target of the move. */
     readonly target: MoveTarget;
     /**

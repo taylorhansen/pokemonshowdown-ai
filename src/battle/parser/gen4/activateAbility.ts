@@ -252,6 +252,7 @@ export async function* onMoveDamage(pstate: ParserState,
             {
                 const mon = pstate.state.teams[monRef].active;
                 if (!data.on.moveDamage.changeToMoveType ||
+                    // TODO(#254): handle hpType
                     (!mon.fainted && !mon.types.includes(hitByMove.type)))
                 {
                     return {};

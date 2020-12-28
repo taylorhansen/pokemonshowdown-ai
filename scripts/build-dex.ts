@@ -292,11 +292,14 @@ for (const move of
 
     const category = move.category.toLowerCase() as dexutil.MoveCategory;
     const basePower = move.ohko ? "ohko" : move.basePower;
+
     const type = move.type.toLowerCase() as dexutil.Type;
+    let modifyType: "hpType" | undefined;
+    if (move.id === "hiddenpower") modifyType = "hpType";
+    typeToMoves[type].push(move.id);
+
     const target = move.target;
     const nonGhostTarget = move.nonGhostTarget as MoveTarget;
-
-    typeToMoves[type].push(move.id);
 
     // factor pp boosts if the move supports it
     const pp = [move.pp, move.pp] as [number, number];
@@ -522,7 +525,8 @@ for (const move of
         move.id,
         {
             uid, name: move.id, display: move.name, category, basePower, type,
-            target, ...nonGhostTarget && {nonGhostTarget}, pp,
+            ...modifyType && {modifyType}, target,
+            ...nonGhostTarget && {nonGhostTarget}, pp,
             ...Object.keys(flags).length > 0 && {flags},
             ...Object.keys(moveEffects).length > 0 && {effects: moveEffects},
             ...Object.keys(implicit).length > 0 && {implicit}
