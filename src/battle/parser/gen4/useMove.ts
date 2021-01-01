@@ -617,8 +617,7 @@ function handleTypeEffectiveness(ctx: MoveContext,
     let moveType: dexutil.Type;
     if (ctx.moveData.modifyType === "hpType")
     {
-        // hiddenpower uses base traits for ditto/transform case
-        const {hpType} = ctx.user.baseTraits.stats;
+        const {hpType} = ctx.user;
         if (!hpType.definiteValue)
         {
             // look for types that would match the given effectiveness

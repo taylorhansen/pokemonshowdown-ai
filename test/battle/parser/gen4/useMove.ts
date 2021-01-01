@@ -450,7 +450,7 @@ export function testUseMove(ctxFunc: () => Context,
         it("Should infer hiddenpower type", async function()
         {
             initActive("us");
-            const {hpType} = initActive("them").baseTraits.stats;
+            const {hpType} = initActive("them");
             expect(hpType.definiteValue).to.be.null;
 
             await initParser("them", "hiddenpower");
