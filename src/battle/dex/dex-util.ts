@@ -350,9 +350,9 @@ export interface MoveData extends DexData
     // tslint:disable: no-trailing-whitespace (force newline in doc)
     /**
      * Type modification when used in battle.  
-     * `"hpType"` - User's base hiddenpower type.  
-     * `"plateType"` - Type of held plate item, if any. Default normal if no
-     * plate.
+     * `"hpType"` - User's base hiddenpower type (pre-Transform).  
+     * `"plateType"` - Type of held plate item, if any. Defaults to the original
+     * move type if no plate.
      */
     // tslint:enable: no-trailing-whitespace
     readonly modifyType?: "hpType" | "plateType";

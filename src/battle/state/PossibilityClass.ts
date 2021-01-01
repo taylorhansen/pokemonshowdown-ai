@@ -1,3 +1,4 @@
+// TODO: support string unions
 /** Readonly PossibilityClass representation. */
 export interface ReadonlyPossibilityClass<TData>
 {

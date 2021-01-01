@@ -1,6 +1,7 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
 import * as effects from "../../dex/effects";
+import { typechart } from "../../dex/typechart";
 import { Move } from "../../state/Move";
 import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
@@ -29,15 +30,30 @@ export async function* useMove(pstate: ParserState,
 
     // check for move interruptions
     const preDamageResult = yield* preDamage(ctx, lastEvent);
+    lastEvent = preDamageResult.event;
     if (!ctx.failed) handleImplicitEffects(ctx, /*failed*/ false);
 
-    // expect move damage if applicable
-    lastEvent = preDamageResult.event;
-    if (!ctx.failed && ctx.moveData.category !== "status" &&
-        !preDamageResult.delay)
+    let effectiveness: Effectiveness = preDamageResult.immune ?
+        "immune" : "regular";
+
+    if (!preDamageResult.delay)
     {
-        const damageResult = yield* damage(ctx, lastEvent);
-        lastEvent = damageResult.event;
+        // expect move damage if applicable
+        if (!ctx.failed && !preDamageResult.immune && !preDamageResult.delay &&
+            ctx.moveData.category !== "status")
+        {
+            const damageResult = yield* damage(ctx, lastEvent);
+            lastEvent = damageResult.event;
+            effectiveness = damageResult.effectiveness
+        }
+
+        // only consider type effectiveness for targeted moves that haven't
+        //  failed
+        if ((preDamageResult.immune || !ctx.failed) &&
+            !ctx.pendingTargets[ctx.userRef] && ctx.totalTargets > 0)
+        {
+            handleTypeEffectiveness(ctx, effectiveness);
+        }
     }
 
     // expect post-damage move effects
@@ -280,6 +296,8 @@ interface PreDamageResult extends SubParserResult
      * delay is being shortened.
      */
     delay?: true | "shorten";
+    /** Whether the move failed due to a type-based immunity. */
+    immune?: true;
 }
 
 /** Handles effects that interrupt before move damage. */
@@ -287,6 +305,7 @@ async function* preDamage(ctx: MoveContext, lastEvent?: events.Any):
     SubParser<PreDamageResult>
 {
     // TODO: deconstruct eventLoop like in postDamage()
+    let immune: boolean | undefined;
     const result = yield* eventLoop(async function*(event)
     {
         switch (event.type)
@@ -326,8 +345,8 @@ async function* preDamage(ctx: MoveContext, lastEvent?: events.Any):
                 if (!handleFail(ctx)) break;
                 return yield* base.fail(ctx.pstate, event);
             case "immune":
-                // TODO: check type effectiveness?
                 if (!handleBlock(ctx, event.monRef)) break;
+                immune = true;
                 return yield* base.immune(ctx.pstate, event);
             case "miss":
                 // TODO: check accuracy?
@@ -385,7 +404,10 @@ async function* preDamage(ctx: MoveContext, lastEvent?: events.Any):
         };
     }
 
-    return {...lastEvent && {event: lastEvent}, ...delay && {delay}};
+    return {
+        ...lastEvent && {event: lastEvent}, ...delay && {delay},
+        ...immune && {immune}
+    };
 }
 
 /** Handles an event where the pokemon's move failed to take effect. */
@@ -517,6 +539,8 @@ interface DamageResult extends SubParserResult
 {
     /** Whether the damage was blocked by a Substitute. */
     substitute?: true;
+    /** Type effectiveness of the move. */
+    effectiveness: Effectiveness;
 }
 
 /** Handles move damage modifier events, e.g. crits and type effectiveness. */
@@ -524,6 +548,7 @@ async function* damage(ctx: MoveContext, lastEvent?: events.Any):
     SubParser<DamageResult>
 {
     let substitute: true | undefined;
+    let effectiveness: Effectiveness = "regular";
     const result = yield* eventLoop(async function*(event)
     {
         switch (event.type)
@@ -548,14 +573,15 @@ async function* damage(ctx: MoveContext, lastEvent?: events.Any):
             case "crit":
                 if (!addTarget(ctx, event.monRef)) break;
                 return yield* base.crit(ctx.pstate, event);
-            // TODO: support type effectiveness
             case "resisted":
                 if (ctx.userRef === event.monRef) break;
                 if (!addTarget(ctx, event.monRef)) break;
+                effectiveness = "resist";
                 return yield* base.resisted(ctx.pstate, event);
             case "superEffective":
                 if (ctx.userRef === event.monRef) break;
                 if (!addTarget(ctx, event.monRef)) break;
+                effectiveness = "super";
                 return yield* base.superEffective(ctx.pstate, event);
             case "takeDamage":
                 // main move damage
@@ -571,9 +597,108 @@ async function* damage(ctx: MoveContext, lastEvent?: events.Any):
         return {event};
     }, lastEvent);
 
-    // TODO: assert type effectiveness
-    // TODO: include damage dealt in result for drain/recoil/etc
-    return {...result, ...(substitute && {substitute})};
+    // TODO: include damage dealt for drain/recoil handling
+    return {...result, ...(substitute && {substitute}), effectiveness};
+}
+
+/** Shorthand string union for type effectiveness. */
+type Effectiveness = "immune" | "resist" | "regular" | "super";
+
+/**
+ * Handles type effectiveness assertions.
+ * @param effectiveness Type effectiveness.
+ */
+function handleTypeEffectiveness(ctx: MoveContext,
+    effectiveness: Effectiveness): void
+{
+    // TODO(doubles): do this for each defender
+    const defender = ctx.pstate.state.teams[otherSide(ctx.userRef)].active;
+
+    let moveType: dexutil.Type;
+    if (ctx.moveData.modifyType === "hpType")
+    {
+        // hiddenpower uses base traits for ditto/transform case
+        const {hpType} = ctx.user.baseTraits.stats;
+        if (!hpType.definiteValue)
+        {
+            // look for types that would match the given effectiveness
+            const possibleTypes = [...hpType.possibleValues].filter(
+                type => effectiveness ===
+                    getTypeEffectiveness(defender.types, type as dexutil.Type));
+            hpType.narrow(...possibleTypes);
+            // the assertion at the end would be guaranteed to pass if we fully
+            //  narrowed the hpType, so return regardless
+            return;
+        }
+
+        moveType = hpType.definiteValue as dexutil.Type;
+    }
+    else if (ctx.moveData.modifyType === "plateType")
+    {
+        const heldItem = ctx.user.item;
+        if (!heldItem.definiteValue)
+        {
+            // look for plate items that would match the given effectiveness
+            const possiblePlates = [...heldItem.possibleValues].filter(
+                n => effectiveness ===
+                    getTypeEffectiveness(defender.types,
+                        heldItem.map[n].plateType ?? ctx.moveData.type));
+            heldItem.narrow(...possiblePlates);
+            // the assertion at the end would be guaranteed to pass if we fully
+            //  narrowed the item/plate, so return regardless
+            return;
+        }
+
+        const {plateType} = heldItem.map[heldItem.definiteValue];
+        if (!plateType) return;
+        moveType = plateType;
+    }
+    else moveType = ctx.moveData.type;
+
+    // assert type effectiveness
+    const expectedEff = getTypeEffectiveness(defender.types, moveType,
+        /*status*/ ctx.moveData.category === "status");
+    if (effectiveness !== expectedEff)
+    {
+        // could be a status move being blocked by a type-based status immunity
+        if (effectiveness === "immune" && ctx.moveData.category === "status" &&
+            ctx.moveData.effects?.status?.hit?.every(s =>
+                dexutil.isMajorStatus(s) &&
+                    defender.types.some(t => typechart[t][s])))
+        {
+            return;
+        }
+
+        throw new Error(`Move effectiveness expected to be '${expectedEff}' ` +
+            `but got '${effectiveness}'`);
+    }
+}
+
+/**
+ * Gets the type effectiveness multiplier.
+ * @param defender Defender types.
+ * @param attacker Attacking move type.
+ */
+function getTypeMultiplier(defender: readonly dexutil.Type[],
+    attacker: dexutil.Type): number
+{
+    return defender.map(t => typechart[t][attacker]).reduce((a, b) => a * b, 1);
+}
+
+/**
+ * Gets the type effectiveness string.
+ * @param defender Defender types.
+ * @param attacker Attacking move type.
+ * @param status Whether this is a status move.
+ */
+function getTypeEffectiveness(defender: readonly dexutil.Type[],
+    attacker: dexutil.Type, status?: boolean): Effectiveness
+{
+    const mult = getTypeMultiplier(defender, attacker);
+    if (mult <= 0) return "immune";
+    if (mult < 1) return status ? "regular" : "resist";
+    if (mult > 1) return status ? "regular" : "super";
+    return "regular";
 }
 
 /** Handles effects after the main damage event. */

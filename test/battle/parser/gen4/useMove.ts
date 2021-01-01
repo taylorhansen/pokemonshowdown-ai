@@ -414,18 +414,6 @@ export function testUseMove(ctxFunc: () => Context,
         });
     });
 
-    describe("immune", function()
-    {
-        it("Should cancel move effects", async function()
-        {
-            initActive("us");
-            initActive("them");
-            await initParser("us", "thunderwave");
-            await handle({type: "immune", monRef: "them"});
-            await exitParser();
-        });
-    });
-
     describe("halt", function()
     {
         it("Should reject if decide", async function()
@@ -454,6 +442,90 @@ export function testUseMove(ctxFunc: () => Context,
             await initParser("us", "toxic");
             await handle({type: "noTarget", monRef: "us"});
             await exitParser();
+        });
+    });
+
+    describe("Type effectiveness", function()
+    {
+        it("Should infer hiddenpower type", async function()
+        {
+            initActive("us");
+            const {hpType} = initActive("them").baseTraits.stats;
+            expect(hpType.definiteValue).to.be.null;
+
+            await initParser("them", "hiddenpower");
+            await handle({type: "immune", monRef: "us"});
+            await exitParser();
+            expect(hpType.definiteValue).to.equal("ghost");
+        });
+
+        it("Should infer judgment plate type", async function()
+        {
+            initActive("us");
+            const {item} = initActive("them");
+            expect(item.definiteValue).to.be.null;
+
+            await initParser("them", "judgment");
+            await handle({type: "immune", monRef: "us"});
+            await exitParser();
+            expect(item.definiteValue).to.equal("spookyplate"); // ghost
+        });
+
+        describe("immune", function()
+        {
+            it("Should handle type immunity and cancel move effects",
+            async function()
+            {
+                initActive("us").volatile.addedType = "ground";
+                initActive("them");
+                await initParser("them", "thunderwave");
+                await handle({type: "immune", monRef: "us"});
+                await exitParser();
+            });
+
+            it("Should handle status immunity", async function()
+            {
+                initActive("us").volatile.addedType = "poison";
+                initActive("them");
+                await initParser("them", "toxic");
+                await handle({type: "immune", monRef: "us"});
+                await exitParser();
+            });
+
+            it("Should reject if mismatched immunity", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "thunderwave");
+                await handle({type: "immune", monRef: "us"});
+                await expect(exitParser()).to.eventually.be.rejectedWith(Error,
+                    "Move effectiveness expected to be 'regular' but got " +
+                    "'immune'");
+            });
+        });
+
+        describe("resisted", function()
+        {
+            it("Should handle type effectiveness", async function()
+            {
+                initActive("us").volatile.addedType = "ice";
+                initActive("them");
+                await initParser("them", "icebeam");
+                await handle({type: "resisted", monRef: "us"});
+                await exitParser();
+            });
+        });
+
+        describe("superEffective", function()
+        {
+            it("Should handle type effectiveness", async function()
+            {
+                initActive("us").volatile.addedType = "ice";
+                initActive("them");
+                await initParser("them", "rockslide");
+                await handle({type: "superEffective", monRef: "us"});
+                await exitParser();
+            });
         });
     });
 
@@ -1350,7 +1422,7 @@ export function testUseMove(ctxFunc: () => Context,
             });
         }
         shouldHandleSecondaryBoost("self", "chargebeam", "spa", 1);
-        shouldHandleSecondaryBoost("hit", "rocksmash", "def", -1);
+        shouldHandleSecondaryBoost("hit", "psychic", "spd", -1);
 
         function shouldHandle100SecondaryBoost(ctg: "self" | "hit",
             move: string, stat: dexutil.BoostName, amount: number): void
@@ -1506,8 +1578,12 @@ export function testUseMove(ctxFunc: () => Context,
             {
                 beforeEach("Initialize active", async function()
                 {
-                    initActive("them").hp.set(50); // for roost
-                    initActive("us");
+                    const user = initActive("them");
+                    user.hp.set(50); // for roost
+
+                    const tgt = initActive("us");
+                    // bypassing type effectiveness assertions
+                    tgt.volatile.overrideTraits.types = ["???", "???"];
                 });
 
                 it("Should pass if expected", async function()
@@ -1602,169 +1678,164 @@ export function testUseMove(ctxFunc: () => Context,
             // adjust perspective
             const target = ctg === "self" ? "them" : "us";
 
-            statusTests[ctg].push(function()
+            statusTests[ctg].push(() => describe(name, function()
             {
-                describe(name, function()
+                beforeEach("Initialize active", function()
                 {
-                    beforeEach("Initialize active", function()
-                    {
-                        initActive("us");
-                        initActive("them");
-                    });
+                    // bypassing type effectiveness assertions
+                    initActive("us").volatile.overrideTraits.types =
+                        ["???", "???"];
+                    initActive("them");
+                });
 
-                    if (move)
+                if (move)
+                {
+                    it("Should pass if expected", async function()
                     {
-                        it("Should pass if expected", async function()
-                        {
-                            await initParser("them", move);
-                            await handle(
-                            {
-                                type: "activateStatusEffect", monRef: target,
-                                effect, start: true
-                            });
-                            await exitParser();
-                        });
-                    }
-
-                    if (move && abilityImmunity)
-                    {
-                        it("Should cancel status move effects if ability " +
-                            "immunity", async function()
-                        {
-                            // setup ability so it can activate
-                            const us = state.teams.us.active;
-                            us.traits.setAbility(abilityImmunity);
-
-                            await initParser("them", move);
-                            await handle(
-                            {
-                                type: "activateAbility", monRef: "us",
-                                ability: abilityImmunity
-                            });
-                            await handle({type: "immune", monRef: "us"});
-                            await exitParser();
-                        });
-                    }
-
-                    it("Should still pass if start=false on an unrelated move",
-                    async function()
-                    {
-                        await initParser("them", "tackle");
-                        if (dexutil.isMajorStatus(effect))
-                        {
-                            // make sure majorstatus assertion passes
-                            state.teams[target].active.majorStatus
-                                .afflict(effect);
-                        }
-                        // TODO: track moves that can do this
+                        await initParser("them", move);
                         await handle(
-                        {
-                            type: "activateStatusEffect", monRef: target,
-                            effect, start: false
-                        });
-                        await exitParser();
-                    });
-
-                    if (secondaryMove)
-                    {
-                        it("Should pass if expected via secondary effect",
-                        async function()
-                        {
-                            await initParser("them", secondaryMove);
-                            await handle(
-                            {
-                                type: "activateStatusEffect", monRef: target,
-                                effect, start: true
-                            });
-                            await exitParser();
-                        });
-                    }
-
-                    it("Should reject if mismatched flags", async function()
-                    {
-                        await initParser("them", "tackle");
-                        await reject(
                         {
                             type: "activateStatusEffect", monRef: target,
                             effect, start: true
                         });
+                        await exitParser();
+                    });
+                }
+
+                if (move && abilityImmunity)
+                {
+                    it("Should cancel status move effects if ability immunity",
+                    async function()
+                    {
+                        // setup ability so it can activate
+                        const us = state.teams.us.active;
+                        us.traits.setAbility(abilityImmunity);
+
+                        await initParser("them", move);
+                        await handle(
+                        {
+                            type: "activateAbility", monRef: "us",
+                            ability: abilityImmunity
+                        });
+                        await handle({type: "immune", monRef: "us"});
+                        await exitParser();
+                    });
+                }
+
+                it("Should still pass if start=false on an unrelated move",
+                async function()
+                {
+                    await initParser("them", "tackle");
+                    if (dexutil.isMajorStatus(effect))
+                    {
+                        // make sure majorstatus assertion passes
+                        state.teams[target].active.majorStatus.afflict(effect);
+                    }
+                    // TODO: track moves that can do this
+                    await handle(
+                    {
+                        type: "activateStatusEffect", monRef: target, effect,
+                        start: false
+                    });
+                    await exitParser();
+                });
+
+                if (secondaryMove)
+                {
+                    it("Should pass if expected via secondary effect",
+                    async function()
+                    {
+                        await initParser("them", secondaryMove);
+                        await handle(
+                        {
+                            type: "activateStatusEffect", monRef: target,
+                            effect, start: true
+                        });
+                        await exitParser();
+                    });
+                }
+
+                it("Should reject if mismatched flags", async function()
+                {
+                    await initParser("them", "tackle");
+                    await reject(
+                    {
+                        type: "activateStatusEffect", monRef: target, effect,
+                        start: true
+                    });
+                });
+
+                if (secondaryMove100)
+                {
+                    it("Should pass if exit before 100% secondary effect if " +
+                        "the target is already afflicted",
+                    async function()
+                    {
+                        const mon = state.teams[target].active;
+                        if (dexutil.isMajorStatus(effect))
+                        {
+                            mon.majorStatus.afflict(effect);
+                        }
+                        else if (effect === "confusion")
+                        {
+                            mon.volatile[effect].start();
+                        }
+                        await initParser("them", secondaryMove100);
+                        await exitParser();
                     });
 
-                    if (secondaryMove100)
+                    it("Should throw if reject before 100% secondary effect ",
+                    async function()
                     {
-                        it("Should pass if exit before 100% secondary " +
-                            "effect if the target is already afflicted",
-                        async function()
-                        {
-                            const mon = state.teams[target].active;
-                            if (dexutil.isMajorStatus(effect))
-                            {
-                                mon.majorStatus.afflict(effect);
-                            }
-                            else if (effect === "confusion")
-                            {
-                                mon.volatile[effect].start();
-                            }
-                            await initParser("them", secondaryMove100);
-                            await exitParser();
-                        });
+                        // remove owntempo possibility from smeargle
+                        state.teams.us.active.traits
+                            .setAbility("technician");
+                        await initParser("them", secondaryMove100);
+                        await expect(exitParser())
+                            .to.eventually.be.rejectedWith(Error,
+                                `Move '${secondaryMove100}' status ` +
+                                `[${effect}] was blocked by target ` +
+                                `'${target}' but target's ability ` +
+                                "[technician] can't block it");
+                    });
 
-                        it("Should throw if reject before 100% secondary " +
-                            "effect",
-                        async function()
-                        {
-                            // remove owntempo possibility from smeargle
-                            state.teams.us.active.traits
-                                .setAbility("technician");
-                            await initParser("them", secondaryMove100);
-                            await expect(exitParser())
-                                .to.eventually.be.rejectedWith(Error,
-                                    `Move '${secondaryMove100}' status ` +
-                                    `[${effect}] was blocked by target ` +
-                                    `'${target}' but target's ability ` +
-                                    "[technician] can't block it");
-                        });
-
-                        it("Should pass without 100% secondary effect if " +
-                            "target fainted",
-                        async function()
-                        {
-                            await initParser("them", secondaryMove100);
-                            await handle(
-                                {type: "takeDamage", monRef: "us", hp: 0});
-                            await handle({type: "faint", monRef: "us"});
-                            await exitParser();
-                        });
-                    }
-
-                    if (secondaryMove100 && abilityImmunity)
+                    it("Should pass without 100% secondary effect if target " +
+                        "fainted",
+                    async function()
                     {
-                        // TODO: generalize for other abilities
-                        it("Should narrow ability if no status event",
-                        async function()
-                        {
-                            const them = state.teams.them.active;
-                            them.traits.setAbility(abilityImmunity,
-                                "illuminate");
-                            expect(them.ability).to.be.empty;
-                            await initParser("us", secondaryMove100);
-                            await exitParser();
-                            expect(them.ability).to.equal(abilityImmunity);
-                        });
-                    }
+                        await initParser("them", secondaryMove100);
+                        await handle({type: "takeDamage", monRef: "us", hp: 0});
+                        await handle({type: "faint", monRef: "us"});
+                        await exitParser();
+                    });
+                }
 
-                    if (move && clause)
+                if (secondaryMove100 && abilityImmunity)
+                {
+                    // TODO: generalize for other abilities
+                    it("Should narrow ability if no status event",
+                    async function()
                     {
-                        it(`Should be blocked by clause '${clause}'`,
-                        async function()
-                        {
-                            await initParser("us", move);
-                            await handle({type: "clause", clause});
-                            await exitParser();
-                        });
-                    }
-                });
-            });
+                        const mon = state.teams.us.active;
+                        mon.traits.setAbility(abilityImmunity, "illuminate");
+                        expect(mon.ability).to.be.empty;
+                        await initParser("them", secondaryMove100);
+                        await exitParser();
+                        expect(mon.ability).to.equal(abilityImmunity);
+                    });
+                }
+
+                if (move && clause)
+                {
+                    it(`Should be blocked by clause '${clause}'`,
+                    async function()
+                    {
+                        await initParser("us", move);
+                        await handle({type: "clause", clause});
+                        await exitParser();
+                    });
+                }
+            }));
         }
 
         testNonRemovable("self", "Aqua Ring", "aquaRing", "aquaring");
@@ -2470,7 +2541,7 @@ export function testUseMove(ctxFunc: () => Context,
                 expect(mon.traits.ability.possibleValues)
                     .to.have.keys("clearbody", "liquidooze");
                 initActive("them").hp.set(1);
-                await initParser("them", "drainpunch");
+                await initParser("them", "gigadrain");
                 // handle move damage
                 await handle({type: "takeDamage", monRef: "us", hp: 50});
                 // handle drain effect

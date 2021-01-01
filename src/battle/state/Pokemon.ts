@@ -142,9 +142,11 @@ export class Pokemon implements ReadonlyPokemon
     /** @override */
     public get types(): readonly Type[]
     {
-        const result = [...this.traits.types];
+        let result = [...this.traits.types];
         if (this._volatile) result.push(this._volatile.addedType);
-        return result.filter(type => type !== "???");
+        result = result.filter(type => type !== "???");
+        if (result.length <= 0) return ["???"];
+        return result;
     }
 
     /** @override */
