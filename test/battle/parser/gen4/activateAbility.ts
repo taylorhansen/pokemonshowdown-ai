@@ -443,6 +443,40 @@ export function testActivateAbility(f: () => Context,
                     });
                     await exitParser();
                 });
+
+                it("Should infer hiddenpower type", async function()
+                {
+                    const {hpType} = initActive("us");
+                    expect(hpType.definiteValue).to.be.null;
+                    initActive("them", kecleon);
+
+                    await initParser("them", "colorchange", "moveDamage",
+                        "hiddenpower");
+                    await handle(
+                    {
+                        type: "changeType", monRef: "them",
+                        newTypes: ["water", "???"]
+                    });
+                    await exitParser();
+                    expect(hpType.definiteValue).to.equal("water");
+                });
+
+                it("Should infer judgment plate type", async function()
+                {
+                    const {item} = initActive("us");
+                    expect(item.definiteValue).to.be.null;
+                    initActive("them", kecleon);
+
+                    await initParser("them", "colorchange", "moveDamage",
+                        "judgment");
+                    await handle(
+                    {
+                        type: "changeType", monRef: "them",
+                        newTypes: ["water", "???"]
+                    });
+                    await exitParser();
+                    expect(item.definiteValue).to.equal("splashplate"); // water
+                });
             });
         });
 
@@ -821,6 +855,38 @@ export function testActivateAbility(f: () => Context,
                             dex.moves.ember));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
+                });
+
+                it("Should infer hiddenpower type if ability didn't activate",
+                async function()
+                {
+                    const mon = initActive("us", kecleon);
+                    mon.traits.types = ["ghost", "???"];
+                    const {hpType} = initActive("them");
+                    expect(hpType.definiteValue).to.be.null;
+
+                    await altParser(
+                        ability.onMoveDamage(pstate, {us: true}, "damage",
+                            dex.moves.hiddenpower));
+                    await exitParser<ability.ExpectAbilitiesResult>(
+                        {results: []});
+                    expect(hpType.definiteValue).to.equal("ghost");
+                });
+
+                it("Should infer judgment plate type if ability didn't " +
+                    "activate", async function()
+                {
+                    const mon = initActive("us", kecleon);
+                    mon.traits.types = ["electric", "???"];
+                    const {item} = initActive("them");
+                    expect(item.definiteValue).to.be.null;
+
+                    await altParser(
+                        ability.onMoveDamage(pstate, {us: true}, "damage",
+                            dex.moves.judgment));
+                    await exitParser<ability.ExpectAbilitiesResult>(
+                        {results: []});
+                    expect(item.definiteValue).to.equal("zapplate"); // electric
                 });
             });
         });

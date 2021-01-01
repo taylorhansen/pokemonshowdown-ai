@@ -251,11 +251,9 @@ export async function* onMoveDamage(pstate: ParserState,
             if (data.on.moveDamage && ["damage", "contact"].includes(qualifier))
             {
                 const mon = pstate.state.teams[monRef].active;
-                if (!data.on.moveDamage.changeToMoveType ||
-                    // TODO(#254): handle hpType
-                    (!mon.fainted && !mon.types.includes(hitByMove.type)))
+                if (data.on.moveDamage.changeToMoveType && !mon.fainted)
                 {
-                    return {};
+                    return {diffMoveType: true};
                 }
             }
             else if (data.on.moveContact &&
@@ -306,6 +304,11 @@ interface AbilityInference
     chance?: number;
     /** Whether this ability activates if the opponent has a held item. */
     opponentHasItem?: true;
+    /**
+     * Whether this ability activates if the holder isn't the same type as the
+     * move being used against it.
+     */
+    diffMoveType?: true;
 }
 
 /** Filters out ability possibilities that don't match the given predicate. */
@@ -358,7 +361,7 @@ function expectAbilities(pstate: ParserState, on: dexutil.AbilityOn,
             take: event => expectAbilitiesTake(pstate, event, monRef as Side,
                 on, abilities, hitByMove),
             absent: () => expectAbilitiesAbsent(pstate, monRef as Side, on,
-                abilities)
+                abilities, hitByMove)
         });
     }
     return expectEvents(inferences, lastEvent);
@@ -381,15 +384,36 @@ async function* expectAbilitiesTake(pstate: ParserState, event: events.Any,
 }
 
 function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
-    on: dexutil.AbilityOn, abilities: ReadonlyMap<string, AbilityInference>):
+    on: dexutil.AbilityOn, abilities: ReadonlyMap<string, AbilityInference>,
+    hitByMove?: dexutil.MoveData):
     void
 {
     const mon = pstate.state.teams[monRef as Side].active;
+    // TODO(doubles): track actual targets
     const opp = pstate.state.teams[otherSide(monRef as Side)].active;
 
     // collective AbilityInference flags
     // whether all kept abilities have opponentHasItem=true
     let allOpponentHasItem: boolean | undefined;
+    // whether all kept abilities have diffMoveType=true
+    let allDiffMoveType: boolean | undefined;
+
+    // figure out move type
+    let hitByMoveType: dexutil.Type | null | undefined;
+    switch (hitByMove?.modifyType)
+    {
+        case "hpType":
+            hitByMoveType = opp.hpType.definiteValue as
+                dexutil.Type | null;
+            break;
+        case "plateType":
+            if (!opp.item.definiteValue) break;
+            hitByMoveType =
+                opp.item.map[opp.item.definiteValue].plateType;
+            break;
+        default:
+            hitByMoveType = hitByMove?.type;
+    }
 
     // figure out which abilities to remove
     const removeCandidates: string[] = [];
@@ -406,22 +430,67 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
             //  ability should've activated
             if (!opp.item.isSet("none"))
             {
-                if (guaranteed) removeCandidates.push(name);
+                removeCandidates.push(name);
                 continue;
             }
             // TODO: if opponent's item is unknown, add onNarrow
             //  callbacks
-            // update collective opponentHasItem flag
+            // update collective flags
             allOpponentHasItem ??= true;
             allOpponentHasItem &&= true;
+            allDiffMoveType = false;
+        }
+        // ability should activate if holder is a different type than the move
+        else if (inf.diffMoveType)
+        {
+            if (!hitByMove)
+            {
+                removeCandidates.push(name);
+                continue;
+            }
+            // if holder isn't move type, remove
+            if (hitByMoveType && !mon.types.every(t => t === hitByMoveType))
+            {
+                removeCandidates.push(name);
+                continue;
+            }
+
+            // update collective flags
+            allOpponentHasItem = false;
+            allDiffMoveType ??= true;
+            allDiffMoveType &&= true;
         }
         // ability definitely should've activated
         else if (guaranteed) removeCandidates.push(name);
-        else allOpponentHasItem = false;
+        else
+        {
+            allOpponentHasItem = false;
+            allDiffMoveType = false;
+        }
     }
     // if all remaining abilities have opponentHasItem=true, then
     //  the opponent must not have had an item
     if (allOpponentHasItem) opp.setItem("none");
+    // if they all have diffMoveType=true, infer/match move type to the holder's
+    //  type
+    if (allDiffMoveType)
+    {
+        switch (hitByMove?.modifyType)
+        {
+            case "hpType": opp.hpType.narrow(...mon.types); break;
+            case "plateType":
+                opp.item.narrow(...[...opp.item.possibleValues].filter(n =>
+                    mon.types.every(t => t === opp.item.map[n].plateType)));
+                break;
+            default:
+                if (!mon.types.every(t => t === hitByMoveType))
+                {
+                    throw new Error("diffMoveType (colorchange) ability " +
+                    `expected holder's type [${mon.types.join(", ")}] to ` +
+                    `match the move type '${hitByMoveType}'`);
+                }
+        }
+    }
 
     try { mon.traits.ability.remove(...removeCandidates); }
     catch (e)
@@ -1090,19 +1159,61 @@ async function* changeToMoveType(ctx: AbilityContext, lastEvent?: events.Any):
             "Attacking move not specified.");
     }
 
-    const expectedType = ctx.hitByMove.type;
-
     const next = lastEvent ?? (yield);
     if (next.type !== "changeType" || next.monRef !== ctx.holderRef)
     {
         throw new Error("On-moveDamage changeToMoveType effect failed");
     }
-    if (next.newTypes[0] !== expectedType || next.newTypes[1] !== "???")
+    if (next.newTypes[1] !== "???")
     {
         throw new Error("On-moveDamage changeToMoveType effect failed: " +
-            `Expected type-change to '${expectedType}' but got ` +
-            `[${next.newTypes.join(", ")}]`);
+            `Expected one type but got multiple (${next.newTypes.join(", ")})`);
     }
+
+    // TODO(doubles): track actual hitByMove user
+    const opp = ctx.pstate.state.teams[otherSide(ctx.holderRef)].active;
+
+    // figure out move type
+    let hitByMoveType: dexutil.Type | null | undefined;
+    switch (ctx.hitByMove.modifyType)
+    {
+        case "hpType":
+            hitByMoveType = opp.hpType.definiteValue as dexutil.Type | null;
+            break;
+        case "plateType":
+            if (!opp.item.definiteValue) break;
+            hitByMoveType =
+                opp.item.map[opp.item.definiteValue].plateType;
+            break;
+        default:
+            hitByMoveType = ctx.hitByMove.type;
+    }
+
+
+    if (hitByMoveType)
+    {
+        if (next.newTypes[0] !== hitByMoveType)
+        {
+            throw new Error("On-moveDamage changeToMoveType effect failed: " +
+                `Expected type-change to '${hitByMoveType}' but got ` +
+                `[${next.newTypes.join(", ")}]`);
+        }
+    }
+    else
+    {
+        switch (ctx.hitByMove.modifyType)
+        {
+            case "hpType":
+                opp.hpType.narrow(next.newTypes[0]);
+                break;
+            case "plateType":
+                // TODO: add an inverse map for plateTypes to optimize this case
+                opp.item.narrow(...[...opp.item.possibleValues].filter(
+                        n => next.newTypes[0] === opp.item.map[n].plateType));
+                break;
+        }
+    }
+
     return yield* base.changeType(ctx.pstate, next);
 }
 
