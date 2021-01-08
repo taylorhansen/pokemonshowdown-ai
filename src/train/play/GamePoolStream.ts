@@ -26,8 +26,8 @@ export class GamePoolStream extends Transform
     }
 
     /** @override */
-    public async _transform(args: GamePoolArgs, encoding: BufferEncoding,
-        callback: TransformCallback): Promise<void>
+    public _transform(args: GamePoolArgs, encoding: BufferEncoding,
+        callback: TransformCallback): void
     {
         // queue a game, passing errors and queueing the next one once a port
         //  has been assigned
@@ -36,7 +36,7 @@ export class GamePoolStream extends Transform
             .catch(err => this.emit("error", err));
         this.gamePromises.add(gamePromise);
 
-        // not really necessary, but keeps the Set from getting too big
+        // keep the Set from getting too big
         gamePromise.finally(() => this.gamePromises.delete(gamePromise));
     }
 
@@ -45,6 +45,6 @@ export class GamePoolStream extends Transform
     {
         // wait for all queued games to finish, then the stream can be safely
         //  closed
-        Promise.all(this.gamePromises).then(() => callback()).catch(callback);
+        Promise.all(this.gamePromises).finally(callback);
     }
 }

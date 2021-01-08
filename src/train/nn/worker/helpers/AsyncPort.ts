@@ -66,6 +66,7 @@ type TRawResult<TMap extends PortRequestMap<string>,
         T extends keyof TMap = keyof TMap> =
     TMap[T]["result"] | RawPortResultError;
 
+// FIXME: MessagePort no longer extends EventEmitter
 /**
  * Interface for objects that work like `worker_threads` ports. This works for
  * the MessagePort and Worker types from that module.
@@ -121,11 +122,9 @@ export abstract class AsyncPort<TMap extends PortRequestMap<string>,
             }
             else callback(result);
         })
-        // prepend listener in case derived ports want to also terminate the
-        //  underlying port
         // this is to make sure that all currently pending callbacks get
-        //  resolved
-        .prependListener("error", err =>
+        //  resolved in the case of a worker error
+        .on("error", err =>
         {
             const requests = [...this.requests];
             this.requests.clear();
