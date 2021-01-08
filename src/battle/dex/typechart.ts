@@ -101,7 +101,7 @@ export const typechart:
     poison:
     {
         "???": 1, bug: 0.5, dark: 1, dragon: 1, electric: 1, fighting: 0.5,
-        fire: 1, flying: 1, ghost: 1, grass: 0.5, ground: 1, ice: 1, normal: 1,
+        fire: 1, flying: 1, ghost: 1, grass: 0.5, ground: 2, ice: 1, normal: 1,
         poison: 0.5, psychic: 2, rock: 1, steel: 1, water: 1,
         psn: true, tox: true
     },
