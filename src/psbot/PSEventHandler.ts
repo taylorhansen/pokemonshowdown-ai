@@ -172,18 +172,6 @@ export class PSEventHandler
         for (let i = 0; i < result.length; ++i)
         {
             const event = result[i];
-            // also swap substitute start/damage events to the right order
-            if (event.type === "activateStatusEffect" &&
-                event.effect === "substitute" && event.start)
-            {
-                const next = result[i + 1];
-                if (next?.type === "takeDamage" && event.monRef === next.monRef)
-                {
-                    // swap the two events to the right order
-                    [result[i], result[i + 1]] = [next, event];
-                }
-                continue;
-            }
 
             if (event.type !== "activateAbility") continue;
             if (event.ability !== "trace")

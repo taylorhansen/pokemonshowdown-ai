@@ -411,7 +411,7 @@ describe("PSEventHandler", function()
 
             describe("Substitute", function()
             {
-                test("Should reorder damage/status events",
+                test("Should emit activateStatusEffect",
                 [
                     {
                         type: "move", id: us, moveName: "Substitute",
@@ -428,11 +428,11 @@ describe("PSEventHandler", function()
                 ],
                 [
                     {type: "useMove", monRef: "us", move: "substitute"},
-                    {type: "takeDamage", monRef: "us", hp: 25},
                     {
                         type: "activateStatusEffect", monRef: "us",
                         effect: "substitute", start: true
-                    }
+                    },
+                    {type: "takeDamage", monRef: "us", hp: 25}
                 ]);
             });
         });
