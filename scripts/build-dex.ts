@@ -303,8 +303,17 @@ for (const move of
     const nonGhostTarget = move.nonGhostTarget as MoveTarget;
 
     // factor pp boosts if the move supports it
-    const pp = [move.pp, move.pp] as [number, number];
-    if (!move.noPPBoosts) pp[1] = Math.floor(move.pp * 8 / 5);
+    const pp =
+        [move.pp, move.noPPBoosts ? move.pp : Math.floor(move.pp * 8 / 5)] as
+        const;
+
+    let multihit = move.multihit as number | [number, number] | undefined;
+    if (typeof multihit === "number") multihit = [multihit, multihit];
+    else if (multihit && multihit.length !== 2)
+    {
+        throw new Error(`Invalid multihit array [${multihit.join(", ")}] for ` +
+            `move '${move.id}'`);
+    }
 
     // get flags
     const flags: dexutil.MoveData["flags"] =
@@ -528,6 +537,7 @@ for (const move of
             uid, name: move.id, display: move.name, category, basePower, type,
             ...modifyType && {modifyType}, target,
             ...nonGhostTarget && {nonGhostTarget}, pp,
+            ...multihit && {multihit},
             ...Object.keys(flags).length > 0 && {flags},
             ...Object.keys(moveEffects).length > 0 && {effects: moveEffects},
             ...Object.keys(implicit).length > 0 && {implicit}
@@ -825,6 +835,8 @@ const abilityData:
     cloudnine: {flags: {suppressWeather: true}},
 
     klutz: {flags: {ignoreItem: true}},
+
+    skilllink: {flags: {maxMultihit: true}},
 
     magicguard: {flags: {noIndirectDamage: true}},
     rockhead: {flags: {noIndirectDamage: "recoil"}}

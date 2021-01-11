@@ -327,6 +327,12 @@ export interface AbilityData extends DexData
          * Whether this ability ignores the target's ability when using a move.
          */
         readonly ignoreTargetAbility?: true;
+        // TODO: support inferences for this
+        /**
+         * Whether to make multi-hit moves used by the holder hit for the max
+         * amount of times.
+         */
+        readonly maxMultihit?: true;
         /**
          * Whether this ability silently blocks all indirect damage or just
          * recoil.
@@ -364,7 +370,9 @@ export interface MoveData extends DexData
      */
     readonly nonGhostTarget?: MoveTarget;
     /** Base power point range. */
-    readonly pp: [number, number];
+    readonly pp: readonly [number, number];
+    /** Multi-hit move's range for the number of hits. */
+    readonly multihit?: readonly [number, number];
 
     /** Optional move flags. */
     readonly flags?:

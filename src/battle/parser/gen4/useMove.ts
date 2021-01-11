@@ -20,6 +20,7 @@ import { expectSwitch } from "./switchIn";
  * last event that it didn't handle.
  * @param called Whether this move was called by another move, or reflected
  * (`"bounced"`) via another effect. Default false.
+ * @param lastEvent Next event after the useMove event, if it was taken.
  */
 export async function* useMove(pstate: ParserState,
     event: events.UseMove, called: boolean | "bounced" = false,
@@ -27,51 +28,23 @@ export async function* useMove(pstate: ParserState,
 {
     // setup context
     const ctx = initCtx(pstate, event, called);
+    inferTargets(ctx);
 
-    // check for move interruptions
-    const preDamageResult = yield* preDamage(ctx, lastEvent);
-    lastEvent = preDamageResult.event;
-    if (!ctx.failed) handleImplicitEffects(ctx, /*failed*/ false);
-
-    let effectiveness: Effectiveness = preDamageResult.immune ?
-        "immune" : "regular";
-
-    if (!preDamageResult.delay)
+    // look for move interruptions
+    const tryResult = yield* tryExecute(ctx, lastEvent);
+    if (tryResult.fail === "fail")
     {
-        // expect move damage if applicable
-        if (!ctx.failed && !preDamageResult.immune && !preDamageResult.delay &&
-            ctx.moveData.category !== "status")
-        {
-            const damageResult = yield* damage(ctx, lastEvent);
-            lastEvent = damageResult.event;
-            effectiveness = damageResult.effectiveness
-        }
-
-        // only consider type effectiveness for targeted moves that haven't
-        //  failed
-        if ((preDamageResult.immune || !ctx.failed) &&
-            !ctx.pendingTargets[ctx.userRef] && ctx.totalTargets > 0)
-        {
-            handleTypeEffectiveness(ctx, effectiveness);
-        }
+        return {...tryResult.event && {event: tryResult.event}};
     }
+    lastEvent = tryResult.event;
 
-    // expect post-damage move effects
-    const postDamageResult = yield* postDamage(ctx, lastEvent);
-    lastEvent = postDamageResult.event;
+    // execute move effects
+    const execResult = yield* execute(ctx, tryResult.fail === "miss",
+        lastEvent);
 
-    // clean up flags
+    // clean up flags and return
     preHaltIgnoredEffects(ctx);
-
-    if (preDamageResult.delay === "shorten")
-    {
-        // execute event again to handle shortened release turn
-        // by creating a new MoveContext in this call, it'll no longer think
-        //  it's in the charging turn so certain obscure effects are still
-        //  handled properly (e.g. mirrormove tracking on release turn)
-        return yield* useMove(pstate, event, /*called*/ false, lastEvent);
-    }
-    return postDamageResult;
+    return execResult;
 }
 
 /** Extended parser state for move context. */
@@ -79,6 +52,8 @@ interface MoveContext
 {
     /** Base ParserState. */
     readonly pstate: ParserState;
+    /** Original UseMove event. */
+    readonly event: events.UseMove;
     /**
      * Whether this move was called by another move, or reflected (`"bounced"`)
      * via another effect.
@@ -231,9 +206,9 @@ function initCtx(pstate: ParserState, event: events.UseMove,
     // setup result object
     const result: MoveContext =
     {
-        pstate, called, userRef, moveName, user, moveData, pendingTargets,
-        totalTargets, implicitHandled: false, ignoredHandled: false,
-        mirror, ...lastMove && {lastMove},
+        pstate, event, called, userRef, moveName, user, moveData,
+        pendingTargets, totalTargets, implicitHandled: false,
+        ignoredHandled: false, mirror, ...lastMove && {lastMove},
         ...releasedTwoTurn && {releasedTwoTurn}, mentionedTargets: new Map()
     };
 
@@ -288,70 +263,74 @@ function framePendingTargets(userRef: Side,
     return {them: obj.us, us: obj.them};
 }
 
-/** Result of `preDamage()`. */
-interface PreDamageResult extends SubParserResult
+
+
+/** Result of `tryExecute()`. */
+interface TryExecuteResult extends SubParserResult
 {
-    /**
-     * Whether move damage is being prepared or delayed due to an effect, or the
-     * delay is being shortened.
-     */
-    delay?: true | "shorten";
-    /** Whether the move failed due to a type-based immunity. */
-    immune?: true;
+    /** Whether the move failed on its own or missed/was blocked. */
+    fail?: "fail" | "miss";
 }
 
-/** Handles effects that interrupt before move damage. */
-async function* preDamage(ctx: MoveContext, lastEvent?: events.Any):
-    SubParser<PreDamageResult>
+/**
+ * Checks if the move can be executed normally. Result has `#success=true` if it
+ * can.
+ */
+async function* tryExecute(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<TryExecuteResult>
 {
-    // TODO: deconstruct eventLoop like in postDamage()
-    let immune: boolean | undefined;
-    const result = yield* eventLoop(async function*(event)
+    // see if the move failed on its own
+    const failResult = yield* checkFail(ctx, lastEvent);
+    // TODO: separate implicit effects
+    if (failResult.success)
+    {
+        return {...failResult.event && {event: failResult.event}, fail: "fail"};
+    }
+    lastEvent = failResult.event;
+
+    // check for delayed move
+    const delayResult = yield* checkDelay(ctx, lastEvent);
+    if (delayResult.ret === true)
+    {
+        // set fail marker here so the caller short-circuits
+        return {
+            ...delayResult.event && {event: delayResult.event}, fail: "fail"
+        };
+    }
+    if (delayResult.ret) return {...yield* delayResult.ret, fail: "fail"};
+    lastEvent = delayResult.event;
+
+    // check for other effects/abilities blocking this move
+    // TODO(doubles): allow move to execute with fewer targets if only one of
+    //  them blocks it
+    const blockResult = yield* checkBlock(ctx, lastEvent);
+    if (blockResult.success)
+    {
+        return {
+            ...blockResult.event && {event: blockResult.event}, fail: "miss"
+        };
+    }
+    lastEvent = blockResult.event;
+
+    // all checks passed
+    return {...lastEvent && {event: lastEvent}};
+}
+
+/** Checks if the move failed on its own. */
+async function* checkFail(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<parsers.SuccessResult>
+{
+    let success: boolean | undefined;
+    const result = yield* eventLoop(async function* checkFailLoop(event)
     {
         switch (event.type)
         {
-            case "block":
-                // move effects were blocked
-                // endure event should happen after damage
-                // TODO: testing shows this is where the endure event should
-                //  happen on PS, but not on cartridge
-                if (event.effect === "endure")
-                {
-                    // endure only protects from going to 0hp, so the move
-                    //  effects still take place
-                    return yield* base.block(ctx.pstate, event);
-                }
-                // substitute event should happen during damage
-                if (event.effect === "substitute") break;
-                // reflecting the move, expect the next event to call it
-                // TODO: expect this immediately instead of waiting for
-                //  postDamage()
-                if (event.effect === "magicCoat")
-                {
-                    const mon = ctx.pstate.state.teams[event.monRef].active;
-                    // verify magiccoat and reflectable flags
-                    if (!mon.volatile.magicCoat || ctx.called === "bounced" ||
-                        !ctx.moveData.flags?.reflectable)
-                    {
-                        break;
-                    }
-                    ctx.bouncing = event.monRef;
-                }
-                if (!handleBlock(ctx, event.monRef)) break;
-                return yield* base.block(ctx.pstate, event);
             case "fail":
                 // move couldn't be used
                 // TODO: assertions on why the move could fail?
-                if (!handleFail(ctx)) break;
+                success = true;
+                handleFail(ctx);
                 return yield* base.fail(ctx.pstate, event);
-            case "immune":
-                if (!handleBlock(ctx, event.monRef)) break;
-                immune = true;
-                return yield* base.immune(ctx.pstate, event);
-            case "miss":
-                // TODO: check accuracy?
-                if (!handleBlock(ctx, event.monRef)) break;
-                return yield* base.miss(ctx.pstate, event);
             case "noTarget":
                 // no opponent to target
                 if (!ctx.pstate.state.teams[otherSide(ctx.userRef)].active
@@ -359,75 +338,605 @@ async function* preDamage(ctx: MoveContext, lastEvent?: events.Any):
                 {
                     break;
                 }
-                if (!handleFail(ctx)) break;
+                success = true;
+                handleNoTarget(ctx);
                 return yield* base.noTarget(ctx.pstate, event);
-            case "removeItem":
-                // TODO: type resist berry to modify damage calcs
-                // TODO: move to damage()?
-                return yield* base.removeItem(ctx.pstate, event);
         }
         return {event};
-    }, lastEvent);
-    lastEvent = result.event;
+    }, lastEvent)
+    return {...result, ...success && {success}};
+}
 
-    let delay: boolean | "shorten" | undefined;
-    if (!ctx.failed && ctx.moveData.effects?.delay)
+/** Result of `checkDelay()`. */
+interface CheckDelayResult extends SubParserResult
+{
+    /**
+     * Whether to short-circuit the move execution. If true it should stop
+     * immediately, but if there's a SubParser (expected to be a tail call to
+     * `useMove()` with the same original event) the original `useMove()` call
+     * should `return yield*` this value.
+     */
+    ret?: true | SubParser;
+}
+
+/** Checks for a delayed move effect. */
+async function* checkDelay(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<CheckDelayResult>
+{
+    if (!ctx.moveData.effects?.delay)
     {
-        const delayResult = yield* expectDelay(ctx, lastEvent);
-        lastEvent = delayResult.event;
-        delay = delayResult.success;
+        return {...lastEvent && {event: lastEvent}};
+    }
+    const delayResult = yield* expectDelay(ctx, lastEvent);
+    lastEvent = delayResult.event;
+    if (delayResult.success === "shorten")
+    {
+        // execute event again to handle shortened release turn
+        // by creating a new MoveContext in this call, it'll no longer think
+        //  it's in the charging turn so certain obscure effects are still
+        //  handled properly (e.g. mirrormove tracking on release turn)
+        return {
+            ret: useMove(ctx.pstate, ctx.event, /*called*/ false, lastEvent)
+        };
+    }
+    if (delayResult.success)
+    {
+        preHaltIgnoredEffects(ctx);
+        return {...lastEvent && {event: lastEvent}, ret: true};
+    }
+    return {...lastEvent && {event: lastEvent}};
+}
+
+// TODO(doubles): communicate whether only one of the targets blocks the move
+/**
+ * Checks for and acts upon any pre-hit blocking effects and abilities. Result
+ * has `#success=true` if the move was blocked.
+ */
+async function* checkBlock(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<parsers.SuccessResult>
+{
+    // check for a block event due to an effect
+    lastEvent ??= yield;
+    if (lastEvent.type === "block" && lastEvent.effect !== "substitute" &&
+        addTarget(ctx, lastEvent.monRef))
+    {
+        if (lastEvent.effect === "magicCoat")
+        {
+            const mon = ctx.pstate.state.teams[lastEvent.monRef].active;
+            // verify magiccoat and reflectable flags
+            if (!mon.volatile.magicCoat || ctx.called === "bounced" ||
+                !ctx.moveData.flags?.reflectable)
+            {
+                return {event: lastEvent};
+            }
+            handleBlock(ctx);
+            const blockResult = yield* base.block(ctx.pstate, lastEvent);
+            return {
+                ...yield* expectCalledMove(ctx, lastEvent.monRef,
+                    ctx.moveName, /*bounced*/ true, blockResult.event),
+                success: true
+            };
+        }
+        // normal block event (safeguard, protect, etc)
+        // this also includes endure due to weird PS event ordering
+        return {...yield* base.block(ctx.pstate, lastEvent), success: true};
+    }
+    else if (lastEvent.type === "miss" && addTarget(ctx, lastEvent.monRef))
+    {
+        handleBlock(ctx);
+        return {...yield* base.miss(ctx.pstate, lastEvent), success: true};
+    }
+    else if (lastEvent.type === "immune" && addTarget(ctx, lastEvent.monRef))
+    {
+        handleBlock(ctx);
+        handleTypeEffectiveness(ctx, "immune");
+        return {...yield* base.immune(ctx.pstate, lastEvent), success: true};
     }
 
-    // TODO: assert no type resist berry (weird if hiddenpower)
-
+    // check for a blocking ability
     // TODO(doubles): multiple eligible targets
+    let success: boolean | undefined;
     const targetRef = otherSide(ctx.userRef);
-    if (!ctx.failed && !delay && ctx.pendingTargets[targetRef])
+    if (!ctx.failed && !ctx.pendingTargets[ctx.userRef] &&
+        ctx.totalTargets > 0 && addTarget(ctx, targetRef))
     {
         // ability blocking
         // TODO: precedence with regard to type resist berries, and others?
         const expectResult = yield* ability.onBlock(ctx.pstate,
-            {[otherSide(ctx.userRef)]: true}, ctx.userRef, ctx.moveData,
-            result.event);
+            {[targetRef]: true}, ctx.userRef, ctx.moveData, lastEvent);
         for (const abilityResult of expectResult.results)
         {
             // handle block results
-            // TODO: what about blockStatus?
-            if (abilityResult.immune) handleBlock(ctx, targetRef);
-            else if (abilityResult.failed) handleFail(ctx);
+            success ||= abilityResult.immune || abilityResult.failed;
+            // in the event that success=false, block parts of the move that the
+            //  ability takes issue with
             ctx.blockStatus =
                 {...ctx.blockStatus, ...abilityResult.blockStatus};
         }
-        return {
-            ...expectResult.event && {event: expectResult.event},
-            ...expectResult.permHalt && {permHalt: expectResult.permHalt}
-        };
+        if (success) handleBlock(ctx);
+        lastEvent = expectResult.event;
     }
+    return {...lastEvent && {event: lastEvent}, ...success && {success: true}};
+}
 
+/**
+ * Dispatches move effects and hits.
+ * @param miss Whether the move missed on the first accuracy check, which can
+ * affect certain moves.
+ */
+async function* execute(ctx: MoveContext, miss?: boolean,
+    lastEvent?: events.Any): SubParser
+{
+    // TODO: add helpers for composing SubParsers?
+    if (!miss)
+    {
+        lastEvent = (yield* hitLoop(ctx, lastEvent)).event;
+        lastEvent = (yield* otherEffects(ctx, lastEvent)).event;
+        handleImplicitEffects(ctx);
+    }
+    lastEvent = (yield* handleFaint(ctx, miss, lastEvent)).event;
+    if (!miss) lastEvent = (yield* handleFinalEffects(ctx, lastEvent)).event;
+    return {...lastEvent && {event: lastEvent}};
+}
+
+/** Handles the possibly multiple hits from a move. */
+async function* hitLoop(ctx: MoveContext, lastEvent?: events.Any): SubParser
+{
+    const maxHits = ctx.moveData.multihit?.[1] ?? 1;
+    let multihitEnded: boolean | undefined; // presence of hitcount event
+    for (let i = 0; i < maxHits; ++i)
+    {
+        if (ctx.moveData.category !== "status")
+        {
+            const hitResult = yield* hit(ctx, lastEvent);
+            handleTypeEffectiveness(ctx, hitResult.effectiveness);
+            lastEvent = hitResult.event;
+        }
+
+        const postHitResult = yield* postHit(ctx, lastEvent);
+        lastEvent = postHitResult.event;
+
+        // check for hitcount event to terminate hit loop
+        const hitCountResult = yield* checkHitCount(ctx, i + 1, lastEvent);
+        lastEvent = hitCountResult.event;
+        if (hitCountResult.success)
+        {
+            multihitEnded = true;
+            break;
+        }
+    }
+    if (ctx.moveData.multihit && !multihitEnded)
+    {
+        throw new Error("Expected HitCount event to terminate multi-hit move");
+    }
+    return {...lastEvent && {event: lastEvent}};
+}
+
+/**
+ * Checks for a `HitCount` event.
+ * @param hits Current number of hits.
+ */
+async function* checkHitCount(ctx: MoveContext, hits: number,
+    lastEvent?: events.Any): SubParser<parsers.SuccessResult>
+{
+    const event = lastEvent ?? (yield);
+    if (event.type === "hitCount")
+    {
+        if (hits !== event.count || !addTarget(ctx, event.monRef))
+        {
+            throw new Error("Invalid HitCount event: expected " +
+                `non-'${ctx.userRef}' ${hits} but got '${event.monRef}' ` +
+                event.count);
+        }
+        return {success: true};
+    }
+    return {event};
+}
+
+/** Result of `hit()`. */
+interface HitResult extends SubParserResult
+{
+    /** Whether the damage was blocked by a Substitute. */
+    substitute?: true;
+    /** Type effectiveness of the move. */
+    effectiveness: Effectiveness;
+}
+
+/** Handles move damage modifier events, e.g. crits and type effectiveness. */
+async function* hit(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<HitResult>
+{
+    // TODO: type resist berry
+    let effectiveness: Effectiveness = "regular";
+    let damaged: boolean | "substitute" | undefined;
+    let crit: boolean | undefined;
+    const result = yield* eventLoop(async function*(event)
+    {
+        switch (event.type)
+        {
+            // TODO: support multi-hit moves
+            case "activateStatusEffect":
+                // substitute could break after blocking
+                if (event.effect !== "substitute" || event.start) break;
+                if (ctx.userRef === event.monRef) break;
+                if (damaged !== "substitute") break;
+                if (!addTarget(ctx, event.monRef)) break;
+                return yield* base.activateStatusEffect(ctx.pstate, event);
+            case "block":
+                if (event.effect !== "substitute") break;
+                if (ctx.userRef === event.monRef) break;
+                if (damaged) break;
+                if (!addTarget(ctx, event.monRef)) break;
+                if (ctx.moveData.flags?.ignoreSub)
+                {
+                    // istanbul ignore next: can't reproduce until gen5 with
+                    //  damaging sub-ignoring moves
+                    throw new Error("Substitute-ignoring move shouldn't have " +
+                        "been blocked by Substitute");
+                }
+                damaged = "substitute";
+                return yield* base.block(ctx.pstate, event);
+            case "crit":
+                if (ctx.userRef === event.monRef) break;
+                if (crit) break;
+                if (!addTarget(ctx, event.monRef)) break;
+                crit = true;
+                return yield* base.crit(ctx.pstate, event);
+            case "resisted":
+                if (ctx.userRef === event.monRef) break;
+                if (effectiveness !== "regular") break;
+                if (!addTarget(ctx, event.monRef)) break;
+                effectiveness = "resist";
+                return yield* base.resisted(ctx.pstate, event);
+            case "superEffective":
+                if (ctx.userRef === event.monRef) break;
+                if (effectiveness !== "regular") break;
+                if (!addTarget(ctx, event.monRef)) break;
+                effectiveness = "super";
+                return yield* base.superEffective(ctx.pstate, event);
+            case "takeDamage":
+                // main move damage
+                if (event.from || ctx.userRef === event.monRef) break;
+                if (damaged) break;
+                if (!addTarget(ctx, event.monRef,
+                    /*damaged*/ event.hp <= 0 ? "ko" : true))
+                {
+                    break;
+                }
+                damaged = true;
+                return yield* base.takeDamage(ctx.pstate, event);
+        }
+        return {event};
+    }, lastEvent);
+
+    // TODO: include damage dealt for drain/recoil handling
     return {
-        ...lastEvent && {event: lastEvent}, ...delay && {delay},
-        ...immune && {immune}
+        ...result, ...(damaged === "substitute" && {substitute: true}),
+        effectiveness
     };
 }
 
-/** Handles an event where the pokemon's move failed to take effect. */
-function handleFail(ctx: MoveContext): boolean
+/** Handles move effects after the move officially hits. */
+async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
 {
-    handleImplicitEffects(ctx, /*failed*/true);
-    ctx.failed = true;
-    return true;
+    const moveEffects = ctx.moveData.effects;
+    if (moveEffects?.count)
+    {
+        // TODO: if perish, infer soundproof if the counter doesn't take
+        //  place at the end of the turn
+        const countResult = yield* parsers.countStatus(ctx.pstate,
+            ctx.userRef, moveEffects.count, lastEvent);
+        if (!countResult.success)
+        {
+            throw new Error("Expected effect that didn't happen: " +
+                `countStatus ${moveEffects.count}`);
+        }
+        // TODO: permHalt check?
+        lastEvent = countResult.event;
+    }
+    if (moveEffects?.damage?.type === "split")
+    {
+        lastEvent = (yield* handleSplitDamage(ctx, lastEvent)).event;
+    }
+    // TODO: some weird contradictory ordering when testing on PS is
+    //  reflected here, should the PSEventHandler re-order them or should
+    //  the dex make clearer distinguishments for these specific effects?
+    // self-heal generally happens before status (e.g. roost)
+    if (moveEffects?.damage?.type === "percent" &&
+        moveEffects.damage.percent > 0)
+    {
+        lastEvent = (yield* handlePercentDamage(ctx, moveEffects?.damage,
+            lastEvent)).event;
+    }
+    // charge message happens after boost so handle it earlier in this
+    //  specific case
+    if (moveEffects?.status?.self?.includes("charge"))
+    {
+        lastEvent = (yield* handleBoost(ctx, moveEffects?.boost, lastEvent))
+            .event;
+    }
+    // move status effects
+    lastEvent = (yield* handleStatus(ctx, moveEffects?.status, lastEvent))
+        .event;
+    // untracked statuses
+    const statusLoopResult = yield* eventLoop(
+        async function* statusLoop(event): SubParser
+        {
+            if (event.type !== "activateStatusEffect") return {event};
+
+            let accept = false;
+            switch (event.effect)
+            {
+                case "confusion": case "leechSeed":
+                    // can be removed by a different move, but currently not
+                    //  tracked yet (TODO)
+                    accept = !event.start;
+                    break;
+                default:
+                    if (dexutil.isMajorStatus(event.effect))
+                    {
+                        // TODO: also track curing moves
+                        // for now, curing moves are ignored and silently
+                        //  passed
+                        accept = !event.start;
+                    }
+            }
+            if (!accept) return {event};
+            return yield* base.activateStatusEffect(ctx.pstate, event);
+        },
+        lastEvent);
+    lastEvent = statusLoopResult.event;
+    // self-damage generally happens after status effects (e.g. curse,
+    //  substitute)
+    if (moveEffects?.damage?.type === "percent" &&
+        moveEffects.damage.percent < 0)
+    {
+        lastEvent = (yield* handlePercentDamage(ctx, moveEffects?.damage,
+            lastEvent)).event;
+    }
+    // boost generally happens after damage effects (e.g. bellydrum)
+    if (!moveEffects?.status?.self?.includes("charge"))
+    {
+        lastEvent = (yield* handleBoost(ctx, moveEffects?.boost, lastEvent))
+            .event;
+    }
+    if (ctx.moveData.category !== "status")
+    {
+        // drain effect
+        if (moveEffects?.drain)
+        {
+            // see if an ability interrupts the drain effect
+            let blocked: boolean | undefined;
+            const expectResult = yield* ability.onMoveDrain(ctx.pstate,
+                {[otherSide(ctx.userRef)]: true}, ctx.moveData, lastEvent);
+            for (const abilityResult of expectResult.results)
+            {
+                blocked ||= abilityResult.invertDrain;
+            }
+            lastEvent = expectResult.event;
+
+            if (!blocked)
+            {
+                const damageResult = yield* parsers.damage(ctx.pstate,
+                    ctx.userRef, "drain", +1, lastEvent);
+                if (!damageResult.success)
+                {
+                    throw new Error("Expected effects that didn't " +
+                        "happen: drain " +
+                        `${moveEffects.drain[0]}/${moveEffects.drain[1]}`);
+                }
+                lastEvent = damageResult.event;
+            }
+        }
+
+        // see if an on-moveDamage variant ability will activate
+        // TODO: track actual move targets
+        const holderRef = otherSide(ctx.userRef);
+        const flags = ctx.mentionedTargets.get(holderRef);
+        // choose category with highest precedence
+        let qualifier: "damage" | "contact" | "contactKO" | undefined;
+        if (ctx.moveData.flags?.contact)
+        {
+            if (flags?.damaged === "ko") qualifier = "contactKO";
+            else if (flags?.damaged) qualifier = "contact";
+        }
+        else if (flags?.damaged) qualifier = "damage";
+        if (qualifier)
+        {
+            const expectResult = yield* ability.onMoveDamage(ctx.pstate,
+                {[holderRef]: true}, qualifier, ctx.moveData, lastEvent);
+            lastEvent = expectResult.event;
+        }
+    }
+    return {...lastEvent && {event: lastEvent}};
 }
 
-/** Handles an event where a pokemon blocked the move. */
-function handleBlock(ctx: MoveContext, monRef: Side): boolean
+/** Handles other effects of a move apart from status/boost/damage. */
+async function* otherEffects(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser
 {
-    // generally a complete miss fails the move
-    // TODO(doubles): support partial misses
-    handleImplicitEffects(ctx, /*failed*/true);
-    ctx.failed = "miss";
-    return addTarget(ctx, monRef);
+    const moveEffects = ctx.moveData.effects;
+
+    // TODO: verify order, or stop it from being enforced
+    if (moveEffects?.swapBoosts)
+    {
+        const targetRef = otherSide(ctx.userRef);
+        const swapResult = yield* parsers.swapBoosts(ctx.pstate,
+            ctx.userRef, targetRef, moveEffects.swapBoosts, lastEvent);
+        if (!swapResult.success)
+        {
+            throw new Error("Expected effect that didn't happen: " +
+                "swapBoosts " +
+                `[${Object.keys(moveEffects.swapBoosts).join(", ")}]`);
+        }
+        lastEvent = swapResult.event;
+    }
+    if (moveEffects?.team)
+    {
+        for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
+        {
+            const effectType = moveEffects.team[tgt];
+            if (!effectType) continue;
+            const targetRef = tgt === "self" ?
+                ctx.userRef : otherSide(ctx.userRef);
+            const teamResult = yield* parsers.teamEffect(ctx.pstate,
+                ctx.user, targetRef, effectType, lastEvent);
+            if (!teamResult.success)
+            {
+                throw new Error("Expected effect that didn't happen: " +
+                    `${tgt} team ${effectType}`);
+            }
+            lastEvent = teamResult.event;
+        }
+    }
+    // unsupported team effects
+    const teamLoopResult = yield* eventLoop(
+        async function* teamLoop(event): SubParser
+        {
+            if (event.type !== "activateTeamEffect") return {event};
+
+            let accept: boolean | undefined;
+            switch (event.effect)
+            {
+                case "spikes": case "stealthRock": case "toxicSpikes":
+                    // TODO: cover hazard removal moves
+                    accept = !event.start;
+                    break;
+                case "lightScreen": case "reflect":
+                    // TODO: cover screens removal moves
+                    accept = !event.start && event.teamRef !== ctx.userRef;
+                    break;
+            }
+            if (!accept) return {event};
+            return yield* base.activateTeamEffect(ctx.pstate, event);
+        },
+        lastEvent);
+    lastEvent = teamLoopResult.event;
+    if (moveEffects?.field)
+    {
+        const fieldResult = yield* parsers.fieldEffect(ctx.pstate, ctx.user,
+            moveEffects.field, lastEvent);
+        if (!fieldResult.success)
+        {
+            throw new Error("Expected effect that didn't happen: " +
+                `field ${moveEffects.field}`);
+        }
+        lastEvent = fieldResult.event;
+    }
+    if (moveEffects?.changeType)
+    {
+        const changeTypeResult = yield* expectChangeType(ctx,
+            moveEffects.changeType, lastEvent);
+        lastEvent = changeTypeResult.event;
+    }
+    if (moveEffects?.disableMove)
+    {
+        const disableResult = yield* expectDisable(ctx, lastEvent);
+        lastEvent = disableResult.event;
+    }
+    // recoil
+    if (moveEffects?.recoil)
+    {
+        const damageResult = yield* parsers.damage(ctx.pstate,
+            ctx.userRef, "recoil", -1, lastEvent);
+        if (damageResult.success !== "silent")
+        {
+            recoil(ctx, /*consumed*/ !!damageResult.success);
+        }
+        lastEvent = damageResult.event;
+    }
+    // TODO: focussash
+    // TODO: item removal effects
+    // TODO: when do resist berries activate?
+    const removeItemResult = yield* eventLoop(
+        async function* removeItemLoop(event): SubParser
+        {
+            // TODO: track effects that can cause this
+            if (event.type !== "removeItem") return {event};
+            return yield* base.removeItem(ctx.pstate, event);
+        },
+        lastEvent);
+    lastEvent = removeItemResult.event;
+    // item effect after damaging move effects
+    // TODO(gen5): properly respect selfFaint for finalgambit
+    if (ctx.moveData.category !== "status" &&
+        [...ctx.mentionedTargets].some(([, flags]) => flags.damaged) &&
+        !ctx.user.fainted && !moveEffects?.selfFaint)
+    {
+        const itemResult = yield* item.onMovePostDamage(ctx.pstate,
+            {[ctx.userRef]: true}, lastEvent);
+        lastEvent = itemResult.event;
+    }
+
+    return {...lastEvent && {event: lastEvent}};
 }
 
+/**
+ * Handles expected faint events from the targets of the current move, as well
+ * as self-fainting.
+ * @param miss Whether the move missed or was blocked, which can affect certain
+ * self-faint moves.
+ */
+async function* handleFaint(ctx: MoveContext, miss?: boolean,
+    lastEvent?: events.Any): SubParser
+{
+    const moveEffects = ctx.moveData.effects;
+    const selfFaint = moveEffects?.selfFaint === "always" ||
+        (moveEffects?.selfFaint === "ifHit" && !miss);
+    const faintCandidates = new Set<Side>();
+
+    // see if the move directly KO'd a target
+    for (const [monRef, flags] of ctx.mentionedTargets)
+    {
+        if (flags.damaged !== "ko") continue;
+        faintCandidates.add(monRef);
+    }
+    // see if self-damage or self-faint effect would cause the user to faint
+    if (ctx.user.fainted || selfFaint) faintCandidates.add(ctx.userRef);
+    if (faintCandidates.size > 0)
+    {
+        const faintResult = yield* eventLoop(
+            async function* faintLoop(event): SubParser
+            {
+                if (event.type !== "faint") return {event};
+                if (!faintCandidates.delete(event.monRef)) return {event}
+                return yield* base.faint(ctx.pstate, event);
+            },
+            lastEvent);
+        if (faintCandidates.size > 0)
+        {
+            throw new Error(`Pokemon [${[...faintCandidates].join(", ")}] ` +
+                "haven't fainted yet");
+        }
+        lastEvent = faintResult.event;
+    }
+    return {...lastEvent && {event: lastEvent}};
+}
+
+/** Handles terminating move effects, e.g. self-switch, called moves, etc. */
+async function* handleFinalEffects(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser
+{
+    const moveEffects = ctx.moveData.effects;
+    // TODO: should transform be moved out?
+    if (moveEffects?.transform) return yield* expectTransform(ctx, lastEvent);
+    if (moveEffects?.selfSwitch &&
+        // if last mon remaining, self-switch effects should either fail or be
+        //  ignored
+        !ctx.pstate.state.teams[ctx.userRef].pokemon.every(
+            (mon, i) => i === 0 || mon?.fainted))
+    {
+        return yield* expectSelfSwitch(ctx, moveEffects.selfSwitch, lastEvent);
+    }
+    if (moveEffects?.call)
+    {
+        return yield* expectCalledMove(ctx, ctx.userRef,
+            moveEffects.call, /*bounced*/ false, lastEvent);
+    }
+    return {...lastEvent && {event: lastEvent}};
+}
+
+/** Result from `expectDelay()`. */
 interface DelayResult extends SubParserResult
 {
     /**
@@ -534,78 +1043,11 @@ async function* expectDelay(ctx: MoveContext, lastEvent?: events.Any):
     return {...lastEvent && {event: lastEvent}};
 }
 
-/** Result of `damage()`. */
-interface DamageResult extends SubParserResult
-{
-    /** Whether the damage was blocked by a Substitute. */
-    substitute?: true;
-    /** Type effectiveness of the move. */
-    effectiveness: Effectiveness;
-}
-
-/** Handles move damage modifier events, e.g. crits and type effectiveness. */
-async function* damage(ctx: MoveContext, lastEvent?: events.Any):
-    SubParser<DamageResult>
-{
-    let substitute: true | undefined;
-    let effectiveness: Effectiveness = "regular";
-    const result = yield* eventLoop(async function*(event)
-    {
-        switch (event.type)
-        {
-            // TODO: support multi-hit moves
-            case "activateStatusEffect":
-                // substitute could break after blocking
-                if (event.effect !== "substitute" || !substitute) break;
-                if (event.start) break;
-                return yield* base.activateStatusEffect(ctx.pstate, event);
-            case "block":
-                if (event.effect !== "substitute") break;
-                if (ctx.moveData.flags?.ignoreSub)
-                {
-                    // istanbul ignore next: can't reproduce until gen5 with
-                    //  damaging sub-ignoring moves
-                    throw new Error("Substitute-ignoring move shouldn't have " +
-                        "been blocked by Substitute");
-                }
-                substitute = true;
-                return yield* base.block(ctx.pstate, event);
-            case "crit":
-                if (!addTarget(ctx, event.monRef)) break;
-                return yield* base.crit(ctx.pstate, event);
-            case "resisted":
-                if (ctx.userRef === event.monRef) break;
-                if (!addTarget(ctx, event.monRef)) break;
-                effectiveness = "resist";
-                return yield* base.resisted(ctx.pstate, event);
-            case "superEffective":
-                if (ctx.userRef === event.monRef) break;
-                if (!addTarget(ctx, event.monRef)) break;
-                effectiveness = "super";
-                return yield* base.superEffective(ctx.pstate, event);
-            case "takeDamage":
-                // main move damage
-                if (event.from || ctx.userRef === event.monRef) break;
-                if (substitute) break;
-                if (!addTarget(ctx, event.monRef,
-                    /*damaged*/ event.hp <= 0 ? "ko" : true))
-                {
-                    break;
-                }
-                return yield* base.takeDamage(ctx.pstate, event);
-        }
-        return {event};
-    }, lastEvent);
-
-    // TODO: include damage dealt for drain/recoil handling
-    return {...result, ...(substitute && {substitute}), effectiveness};
-}
-
 /** Shorthand string union for type effectiveness. */
 type Effectiveness = "immune" | "resist" | "regular" | "super";
 
 /**
- * Handles type effectiveness assertions.
+ * Handles type effectiveness assertions, even for status moves.
  * @param effectiveness Type effectiveness.
  */
 function handleTypeEffectiveness(ctx: MoveContext,
@@ -699,326 +1141,6 @@ function getTypeEffectiveness(defender: readonly dexutil.Type[],
     if (mult > 1) return status ? "regular" : "super";
     return "regular";
 }
-
-/** Handles effects after the main damage event. */
-async function* postDamage(ctx: MoveContext, lastEvent?: events.Any): SubParser
-{
-    // TODO: verify order
-    // TODO: move bounce handling to preDamage where ctx.bouncing was set?
-    if (ctx.bouncing)
-    {
-        const callResult = yield* expectCalledMove(ctx, ctx.bouncing,
-            ctx.moveName, /*bounced*/ true, lastEvent);
-        // TODO: permHalt check?
-        lastEvent = callResult.event;
-    }
-    const moveEffects = ctx.moveData.effects;
-    const selfFaint =
-        // if selfFaint=always, count failed=false or miss
-        (moveEffects?.selfFaint === "always" && ctx.failed !== true) ||
-        // if selfFaint=ifHit, only count failed=false
-        (moveEffects?.selfFaint === "ifHit" && !ctx.failed);
-    if (!ctx.failed)
-    {
-        // TODO: verify order (can't test call vs transform vs count)
-        if (moveEffects?.call)
-        {
-            const callResult = yield* expectCalledMove(ctx, ctx.userRef,
-                moveEffects.call, /*bounced*/ false, lastEvent);
-            lastEvent = callResult.event;
-        }
-        if (moveEffects?.transform)
-        {
-            const transformResult = yield* expectTransform(ctx, lastEvent);
-            lastEvent = transformResult.event;
-        }
-        if (moveEffects?.count)
-        {
-            // TODO: if perish, infer soundproof if the counter doesn't take
-            //  place at the end of the turn
-            const countResult = yield* parsers.countStatus(ctx.pstate,
-                ctx.userRef, moveEffects.count, lastEvent);
-            if (!countResult.success)
-            {
-                throw new Error("Expected effect that didn't happen: " +
-                    `countStatus ${moveEffects.count}`);
-            }
-            lastEvent = countResult.event;
-        }
-        if (moveEffects?.damage?.type === "split")
-        {
-            lastEvent = (yield* handleSplitDamage(ctx, lastEvent)).event;
-        }
-        // TODO: some weird contradictory ordering when testing on PS is
-        //  reflected here, should the PSEventHandler re-order them or should
-        //  the dex make clearer distinguishments for these specific effects?
-        // self-heal generally happens before status (e.g. roost)
-        if (moveEffects?.damage?.type === "percent" &&
-            moveEffects.damage.percent > 0)
-        {
-            lastEvent = (yield* handlePercentDamage(ctx, moveEffects?.damage,
-                lastEvent)).event;
-        }
-        // charge message happens after boost so handle it earlier in this
-        //  specific case
-        if (moveEffects?.status?.self?.includes("charge"))
-        {
-            lastEvent = (yield* handleBoost(ctx, moveEffects?.boost, lastEvent))
-                .event;
-        }
-        // move status effects
-        lastEvent = (yield* handleStatus(ctx, moveEffects?.status, lastEvent))
-            .event;
-        // untracked statuses
-        const statusLoopResult = yield* eventLoop(
-            async function* statusLoop(event): SubParser
-            {
-                if (event.type !== "activateStatusEffect") return {event};
-
-                let accept = false;
-                switch (event.effect)
-                {
-                    case "confusion": case "leechSeed":
-                        // can be removed by a different move, but currently not
-                        //  tracked yet (TODO)
-                        accept = !event.start;
-                        break;
-                    default:
-                        if (dexutil.isMajorStatus(event.effect))
-                        {
-                            // TODO: also track curing moves
-                            // for now, curing moves are ignored and silently
-                            //  passed
-                            accept = !event.start;
-                        }
-                }
-                if (!accept) return {event};
-                return yield* base.activateStatusEffect(ctx.pstate, event);
-            },
-            lastEvent);
-        lastEvent = statusLoopResult.event;
-        // self-damage generally happens after status effects (e.g. curse,
-        //  substitute)
-        if (moveEffects?.damage?.type === "percent" &&
-            moveEffects.damage.percent < 0)
-        {
-            lastEvent = (yield* handlePercentDamage(ctx, moveEffects?.damage,
-                lastEvent)).event;
-        }
-        // boost generally happens after damage effects (e.g. bellydrum)
-        if (!moveEffects?.status?.self?.includes("charge"))
-        {
-            lastEvent = (yield* handleBoost(ctx, moveEffects?.boost, lastEvent))
-                .event;
-        }
-        if (moveEffects?.swapBoosts)
-        {
-            const targetRef = otherSide(ctx.userRef);
-            const swapResult = yield* parsers.swapBoosts(ctx.pstate,
-                ctx.userRef, targetRef, moveEffects.swapBoosts, lastEvent);
-            if (!swapResult.success)
-            {
-                throw new Error("Expected effect that didn't happen: " +
-                    "swapBoosts " +
-                    `[${Object.keys(moveEffects.swapBoosts).join(", ")}]`);
-            }
-            lastEvent = swapResult.event;
-        }
-        if (moveEffects?.team)
-        {
-            for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
-            {
-                const effectType = moveEffects.team[tgt];
-                if (!effectType) continue;
-                const targetRef = tgt === "self" ?
-                    ctx.userRef : otherSide(ctx.userRef);
-                const teamResult = yield* parsers.teamEffect(ctx.pstate,
-                    ctx.user, targetRef, effectType, lastEvent);
-                if (!teamResult.success)
-                {
-                    throw new Error("Expected effect that didn't happen: " +
-                        `${tgt} team ${effectType}`);
-                }
-                lastEvent = teamResult.event;
-            }
-        }
-        const teamLoopResult = yield* eventLoop(
-            async function* teamLoop(event): SubParser
-            {
-                if (event.type !== "activateTeamEffect") return {event};
-
-                let accept: boolean | undefined;
-                switch (event.effect)
-                {
-                    case "spikes": case "stealthRock": case "toxicSpikes":
-                        // TODO: cover hazard removal moves
-                        accept = !event.start;
-                        break;
-                    case "lightScreen": case "reflect":
-                        // TODO: cover screens removal moves
-                        accept = !event.start && event.teamRef !== ctx.userRef;
-                        break;
-                }
-                if (!accept) return {event};
-                return yield* base.activateTeamEffect(ctx.pstate, event);
-            },
-            lastEvent);
-        lastEvent = teamLoopResult.event;
-        if (moveEffects?.field)
-        {
-            const fieldResult = yield* parsers.fieldEffect(ctx.pstate, ctx.user,
-                moveEffects.field, lastEvent);
-            if (!fieldResult.success)
-            {
-                throw new Error("Expected effect that didn't happen: " +
-                    `field ${moveEffects.field}`);
-            }
-            lastEvent = fieldResult.event;
-        }
-        if (moveEffects?.changeType)
-        {
-            const changeTypeResult = yield* expectChangeType(ctx,
-                moveEffects.changeType, lastEvent);
-            lastEvent = changeTypeResult.event;
-        }
-        if (moveEffects?.disableMove)
-        {
-            const disableResult = yield* expectDisable(ctx, lastEvent);
-            lastEvent = disableResult.event;
-        }
-
-        if (ctx.moveData.category !== "status")
-        {
-            // drain effect
-            if (moveEffects?.drain)
-            {
-                // see if an ability interrupts the drain effect
-                let blocked: boolean | undefined;
-                const expectResult = yield* ability.onMoveDrain(ctx.pstate,
-                    {[otherSide(ctx.userRef)]: true}, ctx.moveData, lastEvent);
-                for (const abilityResult of expectResult.results)
-                {
-                    blocked ||= abilityResult.invertDrain;
-                }
-                lastEvent = expectResult.event;
-
-                if (!blocked)
-                {
-                    const damageResult = yield* parsers.damage(ctx.pstate,
-                        ctx.userRef, "drain", +1, lastEvent);
-                    if (!damageResult.success)
-                    {
-                        throw new Error("Expected effects that didn't " +
-                            "happen: drain " +
-                            `${moveEffects.drain[0]}/${moveEffects.drain[1]}`);
-                    }
-                    lastEvent = damageResult.event;
-                }
-            }
-
-            // see if an on-moveDamage variant ability will activate
-            // TODO: track actual move targets
-            const holderRef = otherSide(ctx.userRef);
-            const flags = ctx.mentionedTargets.get(holderRef);
-            // choose category with highest precedence
-            let qualifier: "damage" | "contact" | "contactKO" | undefined;
-            if (ctx.moveData.flags?.contact)
-            {
-                if (flags?.damaged === "ko") qualifier = "contactKO";
-                else if (flags?.damaged) qualifier = "contact";
-            }
-            else if (flags?.damaged) qualifier = "damage";
-            if (qualifier)
-            {
-                const expectResult = yield* ability.onMoveDamage(ctx.pstate,
-                    {[holderRef]: true}, qualifier, ctx.moveData, lastEvent);
-                lastEvent = expectResult.event;
-            }
-
-            // recoil effect
-            if (moveEffects?.recoil)
-            {
-                const damageResult = yield* parsers.damage(ctx.pstate,
-                    ctx.userRef, "recoil", -1, lastEvent);
-                if (damageResult.success !== "silent")
-                {
-                    recoil(ctx, /*consumed*/ !!damageResult.success);
-                }
-                lastEvent = damageResult.event;
-            }
-        }
-
-        // TODO: focussash
-        // TODO: item removal effects
-        // TODO: when do resist berries activate?
-        const removeItemResult = yield* eventLoop(
-            async function* removeItemLoop(event): SubParser
-            {
-                // TODO: track effects that can cause this
-                if (event.type !== "removeItem") return {event};
-                return yield* base.removeItem(ctx.pstate, event);
-            },
-            lastEvent);
-        lastEvent = removeItemResult.event;
-
-        // item effect after damaging move effects
-        if (ctx.moveData.category !== "status" &&
-            [...ctx.mentionedTargets].some(([, flags]) => flags.damaged) &&
-            !ctx.user.fainted && !selfFaint)
-        {
-            const itemResult = yield* item.onMovePostDamage(ctx.pstate,
-                {[ctx.userRef]: true}, lastEvent);
-            lastEvent = itemResult.event;
-        }
-    }
-
-    // expect faint events if applicable
-    const faintCandidates = new Set<Side>();
-    if (!ctx.failed)
-    {
-        for (const [monRef, flags] of ctx.mentionedTargets)
-        {
-            if (flags.damaged !== "ko") continue;
-            faintCandidates.add(monRef);
-        }
-    }
-    if (ctx.user.fainted || selfFaint)
-    {
-        faintCandidates.add(ctx.userRef);
-    }
-    if (faintCandidates.size > 0)
-    {
-        const faintResult = yield* eventLoop(
-            async function* faintLoop(event): SubParser
-            {
-                if (event.type !== "faint") return {event};
-                if (!faintCandidates.delete(event.monRef)) return {event}
-                return yield* base.faint(ctx.pstate, event);
-            },
-            lastEvent);
-        if (faintCandidates.size > 0)
-        {
-            throw new Error(`Pokemon [${[...faintCandidates].join(", ")}] ` +
-                "haven't fainted yet");
-        }
-        lastEvent = faintResult.event;
-    }
-
-    if (!ctx.failed && moveEffects?.selfSwitch &&
-        // if last mon remaining, self-switch effects should either fail or be
-        //  ignored
-        !ctx.pstate.state.teams[ctx.userRef].pokemon.every(
-            (mon, i) => i === 0 || mon?.fainted))
-    {
-        const switchResult = yield* expectSelfSwitch(ctx,
-            moveEffects.selfSwitch, lastEvent);
-        lastEvent = switchResult.event;
-    }
-
-    return {...lastEvent && {event: lastEvent}};
-}
-
-// postDamage event helpers
 
 /**
  * Expects a called move effect.
@@ -1114,10 +1236,7 @@ async function* expectTransform(ctx: MoveContext, lastEvent?: events.Any):
     SubParser
 {
     // can't do anything if fainted
-    if (ctx.user.fainted)
-    {
-        return {...lastEvent && {event: lastEvent}};
-    }
+    if (ctx.user.fainted) return {...lastEvent && {event: lastEvent}};
 
     const event = lastEvent ?? (yield);
     if (event.type !== "transform")
@@ -1402,6 +1521,9 @@ async function* expectSelfSwitch(ctx: MoveContext,
         return {...lastEvent && {event: lastEvent}};
     }
 
+    const team = ctx.pstate.state.teams[ctx.userRef];
+    team.status.selfSwitch = effect;
+
     // expect a halt event requesting a switch choice
     const haltEvent = lastEvent ?? (yield);
     if (haltEvent.type !== "halt")
@@ -1436,6 +1558,15 @@ async function* expectSelfSwitch(ctx: MoveContext,
 
 // inference helper functions
 
+/** Infers move targets. */
+function inferTargets(ctx: MoveContext): void
+{
+    // TODO(doubles): this may be more complicated or just ignored
+    const opponent = otherSide(ctx.userRef);
+    if (ctx.pendingTargets[opponent]) addTarget(ctx, opponent);
+    if (ctx.pendingTargets[ctx.userRef]) addTarget(ctx, ctx.userRef);
+}
+
 /**
  * Indicates that the BattleEvents mentioned a target for the current move.
  * @param damaged Whether the pokemon was damaged directly (true) or KO'd
@@ -1458,8 +1589,6 @@ function addTarget(ctx: MoveContext, targetRef: Side,
     else
     {
         // assertions about the move target
-        // generally this happens when the move has been fully handled but the
-        //  context hasn't yet realized it and expired (TODO)
         if (!ctx.pendingTargets[targetRef])
         {
             ctx.pstate.logger.error(`Mentioned target '${targetRef}' but the ` +
@@ -1480,8 +1609,10 @@ function addTarget(ctx: MoveContext, targetRef: Side,
             flags = {...(!!damaged && {damaged})});
     }
 
+    // TODO: fainting prior to the move should cause active to be null so this
+    //  check isn't as complicated
     const target = ctx.pstate.state.teams[targetRef].active;
-    if (ctx.user !== target)
+    if (ctx.user !== target && (!target.fainted || flags.damaged === "ko"))
     {
         // update opponent's mirror move tracker
         if (ctx.mirror) target.volatile.mirrorMove = ctx.moveName;
@@ -1509,45 +1640,56 @@ function addTarget(ctx: MoveContext, targetRef: Side,
     return true;
 }
 
-/**
- * Handles implicit move effects, consuming most remaining flags. This should be
- * called once it is confirmed whether the move failed or not.
- * @param failed Whether this is being called in the context of a move failure.
- */
-function handleImplicitEffects(ctx: MoveContext, failed: boolean): void
+/** Handles the implications of a move failing. */
+function handleFail(ctx: MoveContext): void
 {
-    if (ctx.implicitHandled) return;
-    ctx.implicitHandled = true;
+    // TODO: add MoveData field to support this move
+    if (ctx.moveName === "naturalgift") naturalGift(ctx, /*failed*/ true);
 
-    // singles: try to infer targets
-    // TODO: in doubles, this may be more complicated or just ignored
-    const opponent = otherSide(ctx.userRef);
-    if (ctx.pendingTargets[opponent]) addTarget(ctx, opponent);
-    if (ctx.pendingTargets[ctx.userRef]) addTarget(ctx, ctx.userRef);
-
-    if (ctx.moveName === "naturalgift") naturalGift(ctx, failed);
-
-    // handle fail inferences
-    if (failed)
+    if (ctx.moveData.effects?.status?.self?.includes("imprison") &&
+        !ctx.moveData.effects.status.chance)
     {
-        // the failed=false side of this is handled by a separate event
-        if (ctx.moveData.effects?.status?.self?.includes("imprison") &&
-            !ctx.moveData.effects.status.chance)
-        {
-            imprison(ctx, /*failed*/true);
-        }
-
-        if (!ctx.called) ctx.user.volatile.stall(false);
-
-        // clear continuous moves
-        ctx.user.volatile.lockedMove.reset();
-        ctx.user.volatile.rollout.reset();
-
-        // TODO: other implications of a move failing
-        return;
+        imprison(ctx, /*failed*/ true);
     }
 
-    // user effects
+    // non-called moves affect the stall counter
+    if (!ctx.called) ctx.user.volatile.stall(false);
+
+    // clear continuous moves
+    ctx.user.volatile.lockedMove.reset();
+    ctx.user.volatile.rollout.reset();
+
+    // TODO: verify other implications
+}
+
+/** Handles the implications of a move lacking a target. */
+function handleNoTarget(ctx: MoveContext): void
+{
+    // non-called moves affect the stall counter
+    if (!ctx.called) ctx.user.volatile.stall(false);
+
+    // clear continuous moves
+    ctx.user.volatile.lockedMove.reset();
+    ctx.user.volatile.rollout.reset();
+
+    // TODO: verify other implications
+}
+
+/** Handles the implications of a move being blocked by an effect. */
+function handleBlock(ctx: MoveContext): void
+{
+    // non-called moves affect the stall counter
+    if (!ctx.called) ctx.user.volatile.stall(false);
+
+    // clear continuous moves
+    ctx.user.volatile.lockedMove.reset();
+    ctx.user.volatile.rollout.reset();
+}
+
+/** Handles implicit move effects, consuming most remaining flags. */
+function handleImplicitEffects(ctx: MoveContext): void
+{
+    if (ctx.moveName === "naturalgift") naturalGift(ctx, /*failed*/ false);
 
     let lockedMove = false;
     const {lockedMove: lock} = ctx.user.volatile;
@@ -1602,7 +1744,8 @@ function handleImplicitEffects(ctx: MoveContext, failed: boolean): void
             team.status.wish.start(/*restart*/false);
             break;
     }
-    team.status.selfSwitch = ctx.moveData.effects?.selfSwitch ?? null;
+
+    preHaltIgnoredEffects(ctx);
 }
 
 /**
@@ -1744,6 +1887,7 @@ function naturalGift(ctx: MoveContext, failed: boolean): void
         ctx.user.removeItem(/*consumed*/true);
     }
     // fails if the user doesn't have a berry
+    // TODO: also check for klutz/embargo blocking the berry from being used
     else ctx.user.item.remove(...Object.keys(dex.berries));
 }
 
