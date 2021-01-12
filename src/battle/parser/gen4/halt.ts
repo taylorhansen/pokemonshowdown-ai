@@ -160,8 +160,8 @@ export function getChoices(state: ReadonlyBattleState, switchOnly: boolean):
         // can always struggle if unable to use any move
         if (result.length <= 0) result.push("move 1");
 
-        // see if we can switch out
-        // can always switch if holding the shed shell item
+        // see if we can possibly switch out
+        // can always switch if holding shedshell (TODO: add to dex)
         if (mon.item.definiteValue !== "shedshell")
         {
             // trapped by a trapping move
@@ -178,7 +178,7 @@ export function getChoices(state: ReadonlyBattleState, switchOnly: boolean):
                 return result;
             }
             // arenatrap traps grounded opponents
-            if (them.ability === "arenatrap" && mon.isGrounded)
+            if (them.ability === "arenatrap" && mon.grounded)
             {
                 return result;
             }

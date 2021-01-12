@@ -419,33 +419,21 @@ describe("Pokemon", function()
 
     describe("#isGrounded/#maybeGrounded", function()
     {
-        /**
-         * Checks the `isGrounded` and `maybeGrounded` properties of a Pokemon.
-         */
-        function checkGrounded(mon: Pokemon, isGrounded: boolean,
-            maybeGrounded: boolean): void
-        {
-            expect(mon).to.have.property("isGrounded", isGrounded);
-            expect(mon).to.have.property("maybeGrounded", maybeGrounded);
-        }
-
         it("Should not be grounded if flying type", function()
         {
             const mon = new Pokemon("pidgey", false);
             // remove iron ball possibility
             mon.item.narrow("lifeorb");
-            checkGrounded(mon, false, false);
+            expect(mon.grounded).to.be.false;
         });
 
         it("Should be grounded if not flying type", function()
         {
             const mon = new Pokemon("magikarp", false);
-            // remove iron ball possibility
-            mon.item.narrow("lifeorb");
-            checkGrounded(mon, true, true);
+            expect(mon.grounded).to.be.true;
         });
 
-        it("Should be grounded if Gravity is active", function()
+        it("Should be grounded if gravity is active", function()
         {
             const state = new BattleState();
             state.status.gravity.start();
@@ -453,40 +441,46 @@ describe("Pokemon", function()
             state.teams.us.size = 1;
             const mon = state.teams.us.switchIn(
                 {species: "pidgey", level: 1, gender: "M", hp: 11, hpMax: 11})!;
-            checkGrounded(mon, true, true);
+            expect(mon.grounded).to.be.true;
         });
 
-        it("Should be grounded if Ingrain", function()
+        it("Should be grounded if ingrain", function()
         {
             const mon = new Pokemon("pidgey", false);
             mon.switchInto();
             mon.volatile.ingrain = true;
-            checkGrounded(mon, true, true);
+            expect(mon.grounded).to.be.true;
         });
 
-        it("Should be grounded if holding iron ball", function()
+        it("Should be grounded if holding ironball", function()
         {
             const mon = new Pokemon("pidgey", false);
             mon.item.narrow("ironball");
-            checkGrounded(mon, true, true);
+            expect(mon.grounded).to.be.true;
         });
 
-        it("Should ignore iron ball if Embargo", function()
+        it("Should possibly be grounded if able to hold ironball", function()
+        {
+            const mon = new Pokemon("pidgey", false);
+            expect(mon.grounded).to.be.null;
+        });
+
+        it("Should ignore ironball if Embargo", function()
         {
             const mon = new Pokemon("pidgey", false);
             mon.switchInto();
             mon.item.narrow("ironball");
             mon.volatile.embargo.start();
-            checkGrounded(mon, false, false);
+            expect(mon.grounded).to.be.false;
         });
 
-        it("Should ignore iron ball if klutz", function()
+        it("Should ignore ironball if klutz", function()
         {
             const mon = new Pokemon("pidgey", false); // flying type
             mon.switchInto();
             mon.traits.setAbility("klutz");
             mon.item.narrow("ironball");
-            checkGrounded(mon, false, false);
+            expect(mon.grounded).to.be.false;
         });
 
         it("Should ignore klutz if ability suppressed", function()
@@ -496,29 +490,38 @@ describe("Pokemon", function()
             mon.traits.setAbility("klutz");
             mon.item.narrow("ironball");
             mon.volatile.suppressAbility = true;
-            checkGrounded(mon, true, true);
+            expect(mon.grounded).to.be.true;
         });
 
-        it("Should not be grounded if Magnet Rise", function()
+        it("Should not be grounded if magnetrise", function()
         {
             const mon = new Pokemon("magikarp", false);
             mon.switchInto();
             // remove iron ball possibility
             mon.item.narrow("leftovers");
             mon.volatile.magnetRise.start();
-            checkGrounded(mon, false, false);
+            expect(mon.grounded).to.be.false;
         });
 
-        it("Should not be grounded if Levitate ability", function()
+        it("Should still consider ironball if magnetrise", function()
+        {
+            const mon = new Pokemon("magikarp", false);
+            mon.switchInto();
+            mon.volatile.magnetRise.start();
+            expect(mon.grounded).to.be.null;
+        });
+
+        it("Should not be grounded if levitate ability", function()
         {
             const mon = new Pokemon("bronzong", false);
+            mon.switchInto();
             mon.traits.setAbility("levitate");
             // remove iron ball possibility
             mon.item.narrow("leftovers");
-            checkGrounded(mon, false, false);
+            expect(mon.grounded).to.be.false;
         });
 
-        it("Should possibly be not grounded if able to have Levitate ability",
+        it("Should possibly be grounded if able to not have levitate ability",
         function()
         {
             // can have levitate or heatproof
@@ -526,7 +529,7 @@ describe("Pokemon", function()
             // remove iron ball possibility
             mon.item.narrow("leftovers");
             mon.switchInto();
-            checkGrounded(mon, true, false);
+            expect(mon.grounded).to.be.null;
         });
     });
 

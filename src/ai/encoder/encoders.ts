@@ -546,8 +546,13 @@ export const inactivePokemonEncoder: Encoder<ReadonlyPokemon> = concat(
     augment(p => (p.happiness ?? /*half*/127.5) / 255, numberEncoder),
     augment(p => p.hp, hpEncoder),
     augment(p => p.majorStatus, majorStatusCounterEncoder),
-    augment(p => p.isGrounded, booleanEncoder),
-    augment(p => p.maybeGrounded, booleanEncoder));
+    augment(function(p)
+    {
+        const grounded = p.grounded;
+        if (grounded === true) return [1, 0];
+        if (grounded === false) return [0, 1];
+        return [0.5, 0.5];
+    }, map(2, numberEncoder)));
 
 /** Encoder for an unrevealed Pokemon. */
 export const unknownPokemonEncoder: Encoder<null> = concat(

@@ -70,15 +70,10 @@ export interface ReadonlyPokemon
     readonly majorStatus: ReadonlyMajorStatusCounter;
 
     /**
-     * Checks if the pokemon is definitely grounded, ignoring incomplete
-     * information.
+     * Whether the pokemon is definitely grounded or ungrounded, or null if
+     * there isn't enough information.
      */
-    readonly isGrounded: boolean;
-    /**
-     * Checks if the pokemon may be grounded, based on incomplete information.
-     * Unnarrowed ability and item classes are included here.
-     */
-    readonly maybeGrounded: boolean;
+    readonly grounded: boolean | null;
 
     /** Minor status conditions. Cleared on switch. */
     readonly volatile: ReadonlyVolatileStatus;
@@ -284,77 +279,83 @@ export class Pokemon implements ReadonlyPokemon
     });
 
     /** @override */
-    public get isGrounded(): boolean
+    public get grounded(): boolean | null
     {
+        // gravity/ingrain override all ground checks
         if (this.team && this.team.state &&
             this.team.state.status.gravity.isActive)
         {
             return true;
         }
-
         const v = this._volatile;
         if (v?.ingrain) return true;
 
         // look for an ability-suppressing effect
-        const ignoringAbility = v?.suppressAbility;
-        const ability = ignoringAbility ? undefined : this.traits.ability;
+        const ignoreAbility = v?.suppressAbility;
+        const ability = ignoreAbility ? undefined : this.traits.ability;
 
         // look for an item-suppressing ability/effect
-        const ignoringItem = v?.embargo.isActive ||
-            (ability &&
-                [...ability.possibleValues].every(
-                    n => ability.map[n].flags?.ignoreItem));
-        const item = (ignoringItem || !this._item.definiteValue) ?
-            "" : this._item.definiteValue;
-
-        // iron ball causes grounding
-        if (item === "ironball") return true;
-
-        // magnet rise and levitate lift
-        return !v?.magnetRise.isActive &&
-            // levitate ability
-            // TODO: when to account for moldbreaker?
-            (!ability ||
-                ![...ability.possibleValues].every(
-                    n => ability.map[n].on?.block?.move?.type === "ground")) &&
-            // flying type lifts
-            !this.types.includes("flying");
-    }
-    /** @override */
-    public get maybeGrounded(): boolean
-    {
-        if (this.team && this.team.state &&
-            this.team.state.status.gravity.isActive)
+        let ignoreItem: boolean | null = !!v?.embargo.isActive;
+        if (!ignoreItem && ability)
         {
-            return true;
+            // if all possible abilities ignore item, ignoreItem=true
+            // if some don't, ignoreItem=maybe (null)
+            // if all don't, ignoreItem=false
+            let allIgnoreItem = true;
+            let oneIgnoreItem = false;
+            for (const n of ability.possibleValues)
+            {
+                if (!ability.map[n].flags?.ignoreItem) allIgnoreItem = false;
+                else oneIgnoreItem = true;
+            }
+            if (allIgnoreItem && oneIgnoreItem) ignoreItem = true;
+            else if (!allIgnoreItem && !oneIgnoreItem) ignoreItem = false;
+            else ignoreItem = null;
         }
 
-        const v = this._volatile;
-        if (v?.ingrain) return true;
+        // whether the return value cannot be false, i.e. a prior grounded check
+        //  could've overridden later ungroundedness checks but we don't have
+        //  enough information to know the result of that check
+        let maybeGrounded = false;
 
-        // look for an ability-suppressing effect
-        const ignoringAbility = v?.suppressAbility;
+        // ironball causes grounding
+        if (this._item.definiteValue === "ironball")
+        {
+            // item is definitely working so definitely grounded
+            if (ignoreItem === false) return true;
+            // item may be working so could be grounded
+            if (ignoreItem === null) maybeGrounded = true;
+        }
+        // can't rule out ironball
+        else if (this._item.isSet("ironball") && ignoreItem !== true)
+        {
+            maybeGrounded = true;
+        }
 
-        // look for possible item-suppressing effects
-        const ability = this.traits.ability;
-        const ignoringItem = v?.embargo.isActive ||
-            (!ignoringAbility &&
-                // TODO: ignoringItem=maybe if this is the case
-                [...ability.possibleValues]
-                    .some(n => ability.map[n].flags?.ignoreItem));
+        // magnetrise lifts non-levitate/non-flying-types but is overridden by
+        //  ironball and other prior checks
+        if (v?.magnetRise.isActive) return maybeGrounded ? null : false;
 
-        // iron ball causes grounding
-        if (this._item.isSet("ironball") && !ignoringItem) return true;
+        // whether the return value cannot be true (similar to maybeGrounded)
+        let maybeUngrounded = false;
 
-        // magnet rise lifts
-        return !v?.magnetRise.isActive &&
-            // levitate ability
-            // TODO: when to account for moldbreaker?
-            (ignoringAbility ||
-                ![...ability.possibleValues].some(
-                    n => ability.map[n].on?.block?.move?.type === "ground")) &&
-            // flying type lifts
-            !this.types.includes("flying");
+        // levitate ability lifts non-flying types
+        if (ability && [...ability.possibleValues].some(
+                n => ability.map[n].on?.block?.move?.type === "ground"))
+        {
+            // levitate is definitely there so definitely ungrounded unless
+            //  ironball negates it
+            if (ability.definiteValue) return maybeGrounded ? null : false;
+            // levitate may be there so could be ungrounded
+            else maybeUngrounded = true;
+        }
+
+        // flying type lifts
+        if (!this.types.includes("flying"))
+        {
+            return maybeUngrounded ? null : true;
+        }
+        return maybeGrounded ? null : false;
     }
 
     /** @override */
@@ -477,13 +478,14 @@ export class Pokemon implements ReadonlyPokemon
         // opposing pokemon can have only one of these abilities here
         const abilities: string[] = [];
 
-        // arena trap traps grounded pokemon
-        if (this.isGrounded) abilities.push("arenatrap");
+        // TODO: add features of these abilities to dex data
+        // arenatrap traps grounded pokemon
+        if (this.grounded !== false) abilities.push("arenatrap");
 
-        // magnet pull traps steel types
+        // magnetpull traps steel types
         if (this.types.includes("steel")) abilities.push("magnetpull");
 
-        // shadow tag traps all pokemon who don't have it
+        // shadowtag traps all pokemon who don't have it
         if (this.ability !== "shadowtag") abilities.push("shadowtag");
 
         // infer possible trapping abilities
@@ -528,11 +530,10 @@ ${s}stats: ${this.stringifyStats()}
 ${s}status: ${this.majorStatus.toString()}
 ${s}active: ${this.active}\
 ${this.active ? `\n${s}volatile: ${this.volatile.toString()}` : ""}
-${s}grounded: \
-${this.isGrounded ? "true" : this.maybeGrounded ? "maybe" : "false"}
 ${s}types: ${this.stringifyTypes()}
 ${s}ability: ${this.stringifyAbility()}
 ${s}item: ${this.stringifyItem()}
+${s}grounded: ${this.stringifyGrounded()}
 ${this.stringifyMoveset(indent)}`;
     }
 
@@ -609,6 +610,16 @@ ${this.stringifyMoveset(indent)}`;
 
         if (last === "none") return base;
         return `${base} (consumed: ${last})`;
+    }
+
+    // istanbul ignore next: only used for logging
+    /** Displays result of grounded check. */
+    private stringifyGrounded(): string
+    {
+        const grounded = this.grounded;
+        if (grounded === true) return "true";
+        if (grounded === false) return "false";
+        return "maybe";
     }
 
     // istanbul ignore next: only used for logging
