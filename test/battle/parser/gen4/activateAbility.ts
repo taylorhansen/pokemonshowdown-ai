@@ -250,8 +250,7 @@ export function testActivateAbility(f: () => Context,
                     hpMax: 100
                 };
 
-                it("Should handle percentDamage effect",
-                async function()
+                it("Should handle percentDamage effect", async function()
                 {
                     initActive("us");
                     initActive("them", quagsire).hp.set(quagsire.hp - 1);
@@ -260,8 +259,7 @@ export function testActivateAbility(f: () => Context,
                     await exitParser<ability.AbilityResult>({immune: true});
                 });
 
-                it("Should handle silent percentDamage effect",
-                async function()
+                it("Should handle silent percentDamage effect", async function()
                 {
                     initActive("us");
                     initActive("them", quagsire);
@@ -270,8 +268,7 @@ export function testActivateAbility(f: () => Context,
                     await exitParser({immune: true});
                 });
 
-                it("Should handle status effect",
-                async function()
+                it("Should handle status effect", async function()
                 {
                     // can have flashfire
                     const arcanine: events.SwitchOptions =
@@ -288,6 +285,32 @@ export function testActivateAbility(f: () => Context,
                         effect: "flashFire", start: true
                     });
                     await exitParser({immune: true});
+                });
+
+                it("Should infer hiddenpower type", async function()
+                {
+                    const {hpType} = initActive("us");
+                    expect(hpType.definiteValue).to.be.null;
+                    initActive("them", quagsire);
+
+                    await initParser("them", "waterabsorb", "block",
+                        "hiddenpower");
+                    await handle({type: "immune", monRef: "them"});
+                    await exitParser({immune: true});
+                    expect(hpType.definiteValue).to.equal("water");
+                });
+
+                it("Should infer judgment plate type", async function()
+                {
+                    const {item} = initActive("us");
+                    expect(item.definiteValue).to.be.null;
+                    initActive("them", quagsire);
+
+                    await initParser("them", "waterabsorb", "block",
+                        "judgment");
+                    await handle({type: "immune", monRef: "them"});
+                    await exitParser({immune: true});
+                    expect(item.definiteValue).to.equal("splashplate"); // water
                 });
             });
 
@@ -713,6 +736,44 @@ export function testActivateAbility(f: () => Context,
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("illuminate");
+        });
+
+        it("Should narrow hiddenpower type if ability didn't activate",
+        async function()
+        {
+            // defender immune to electric through an ability
+            const mon = initActive("them", lanturn);
+            mon.traits.setAbility("voltabsorb");
+
+            // hpType could be electric
+            const {hpType} = initActive("us");
+            expect(hpType.definiteValue).to.be.null;
+            expect(hpType.possibleValues).to.include("electric");
+
+            // ability didn't activate, so hpType must not be electric
+            await altParser(ability.onBlock(pstate, {them: true}, "us",
+                    dex.moves.hiddenpower));
+            await exitParser<ability.ExpectAbilitiesResult>({results: []});
+            expect(hpType.possibleValues).to.not.include("electric");
+        });
+
+        it("Should infer judgment plate type if ability didn't activate",
+            async function()
+        {
+            // defender immune to electric through an ability
+            const mon = initActive("them", lanturn);
+            mon.traits.setAbility("voltabsorb");
+
+            // plateType could be electric
+            const {item} = initActive("us");
+            expect(item.definiteValue).to.be.null;
+            expect(item.possibleValues).to.include("zapplate"); // electric
+
+            // ability didn't activate, so plateType must not be electric
+            await altParser( ability.onBlock(pstate, {them: true}, "us",
+                    dex.moves.judgment));
+            await exitParser<ability.ExpectAbilitiesResult>({results: []});
+            expect(item.possibleValues).to.not.include("zapplate");
         });
     });
 

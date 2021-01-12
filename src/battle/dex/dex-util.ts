@@ -1,3 +1,4 @@
+import { ReadonlyPokemon } from "../state/Pokemon";
 import * as effects from "./effects";
 
 /** Set of Type names. Each type has a 0-based unique index. */
@@ -541,6 +542,45 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
     "all" | "allAdjacent" | "allAdjacentFoes" | "allies" | "allySide" |
     "allyTeam" | "any" | "foeSide" | "normal" | "randomNormal" | "scripted" |
     "self";
+
+
+/** Gets all the possible types of a move based on its user. */
+export function getMoveTypes(move: MoveData, user: ReadonlyPokemon): Set<Type>
+{
+    switch (move.modifyType)
+    {
+        // TODO: also include naturalgift and others
+        case "hpType": return new Set(user.hpType.possibleValues) as Set<Type>;
+        case "plateType":
+        {
+            const result = new Set<Type>();
+            for (const n of user.item.possibleValues)
+            {
+                result.add(user.item.map[n].plateType ?? "normal");
+            }
+            return result;
+        }
+        default: return new Set([move.type]);
+    }
+}
+
+/**
+ * Gets the move's type based on its user if the user's currently revealed
+ * traits guarantees it, or null if not enough information has been revealed.
+ */
+export function getDefiniteMoveType(move: MoveData, user: ReadonlyPokemon):
+    Type | null
+{
+    switch (move.modifyType)
+    {
+        // TODO: also include naturalgift and others
+        case "hpType": return user.hpType.definiteValue as Type | null;
+        case "plateType":
+            if (!user.item.definiteValue) return null;
+            return user.item.map[user.item.definiteValue].plateType ?? null;
+        default: return move.type;
+    }
+}
 
 /** Target of move effect. */
 export type MoveEffectTarget = "self" | "hit";
