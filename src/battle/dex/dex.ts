@@ -619,7 +619,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     keeneye: {uid: 44, name: "keeneye", display: "Keen Eye", on: {tryUnboost: {block: {accuracy: true}}}},
     klutz: {uid: 45, name: "klutz", display: "Klutz", flags: {ignoreItem: true}},
     leafguard: {uid: 46, name: "leafguard", display: "Leaf Guard"},
-    levitate: {uid: 47, name: "levitate", display: "Levitate"},
+    levitate: {uid: 47, name: "levitate", display: "Levitate", on: {block: {move: {type: "ground"}}}},
     lightningrod: {uid: 48, name: "lightningrod", display: "Lightning Rod"},
     limber: {uid: 49, name: "limber", display: "Limber", on: {start: {cure: true}, block: {status: true}, status: {cure: true}}, statusImmunity: {par: true}},
     liquidooze: {uid: 50, name: "liquidooze", display: "Liquid Ooze", on: {moveDrain: {invert: true}}},

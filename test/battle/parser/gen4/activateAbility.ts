@@ -225,6 +225,21 @@ export function testActivateAbility(f: () => Context,
 
             describe("Move", function()
             {
+                it("Should handle type immunity", async function()
+                {
+                    // can have levitate
+                    const bronzong: events.SwitchOptions =
+                    {
+                        species: "bronzong", level: 100, gender: null, hp: 100,
+                        hpMax: 100
+                    };
+                    initActive("us");
+                    initActive("them", bronzong);
+                    await initParser("them", "levitate", "block", "mudshot");
+                    await handle({type: "immune", monRef: "them"});
+                    await exitParser({immune: true});
+                });
+
                 it("Should handle boost effect", async function()
                 {
                     // can have motordrive

@@ -771,7 +771,7 @@ const abilityData:
     {on: {block: {move: {
         type: "fire", effects: [{type: "status", value: "flashFire"}]
     }}}},
-    // TODO: levitate
+    levitate: {on: {block: {move: {type: "ground"}}}},
     motordrive: {on: {block: {move: {
         type: "electric", effects: [{type: "boost", add: {spe: 1}}]
     }}}},

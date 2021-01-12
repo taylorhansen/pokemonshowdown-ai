@@ -302,8 +302,8 @@ export class Pokemon implements ReadonlyPokemon
         // look for an item-suppressing ability/effect
         const ignoringItem = v?.embargo.isActive ||
             (ability &&
-                [...ability.possibleValues]
-                    .every(n => ability!.map[n].flags?.ignoreItem));
+                [...ability.possibleValues].every(
+                    n => ability.map[n].flags?.ignoreItem));
         const item = (ignoringItem || !this._item.definiteValue) ?
             "" : this._item.definiteValue;
 
@@ -312,8 +312,11 @@ export class Pokemon implements ReadonlyPokemon
 
         // magnet rise and levitate lift
         return !v?.magnetRise.isActive &&
-            // TODO: add levitate ability effect to dex
-            ability?.definiteValue !== "levitate" &&
+            // levitate ability
+            // TODO: when to account for moldbreaker?
+            (!ability ||
+                ![...ability.possibleValues].every(
+                    n => ability.map[n].on?.block?.move?.type === "ground")) &&
             // flying type lifts
             !this.types.includes("flying");
     }
@@ -336,6 +339,7 @@ export class Pokemon implements ReadonlyPokemon
         const ability = this.traits.ability;
         const ignoringItem = v?.embargo.isActive ||
             (!ignoringAbility &&
+                // TODO: ignoringItem=maybe if this is the case
                 [...ability.possibleValues]
                     .some(n => ability.map[n].flags?.ignoreItem));
 
@@ -344,8 +348,11 @@ export class Pokemon implements ReadonlyPokemon
 
         // magnet rise lifts
         return !v?.magnetRise.isActive &&
-            // levitate lifts
-            (ignoringAbility || !this.canHaveAbility("levitate")) &&
+            // levitate ability
+            // TODO: when to account for moldbreaker?
+            (ignoringAbility ||
+                ![...ability.possibleValues].some(
+                    n => ability.map[n].on?.block?.move?.type === "ground")) &&
             // flying type lifts
             !this.types.includes("flying");
     }
