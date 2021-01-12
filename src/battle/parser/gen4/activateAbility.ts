@@ -1277,7 +1277,7 @@ function assertMoveType(move: dexutil.MoveData, type: dexutil.Type,
     {
         if (type !== moveType)
         {
-            throw new Error("On-moveDamage changeToMoveType effect failed: " +
+            throw new Error("Move type assertion failed: " +
                 `Expected type-change to '${moveType}' but got '${type}'`);
         }
         return;
