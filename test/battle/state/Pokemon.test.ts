@@ -100,6 +100,15 @@ describe("Pokemon", function()
             mon.volatile.addedType = "grass";
             expect(mon.types).to.have.members(["water", "dragon", "grass"]);
         });
+
+        it("Should remove flying type if roost", function()
+        {
+            const mon = new Pokemon("pidgey", false);
+            mon.switchInto();
+            expect(mon.types).to.have.members(["normal", "flying"]);
+            mon.volatile.roost = true;
+            expect(mon.types).to.have.members(["normal"]);
+        });
     });
 
     describe("#setItem()", function()

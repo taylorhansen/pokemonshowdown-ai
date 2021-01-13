@@ -518,6 +518,17 @@ export function testUseMove(ctxFunc: () => Context,
             expect(item.definiteValue).to.equal("spookyplate"); // ghost
         });
 
+        it("Should handle roost", async function()
+        {
+            const mon = initActive("us");
+            mon.volatile.addedType = "flying";
+            mon.volatile.roost = true;
+            initActive("them");
+            await initParser("them", "earthquake");
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            await exitParser();
+        });
+
         describe("immune", function()
         {
             it("Should handle type immunity and cancel move effects",

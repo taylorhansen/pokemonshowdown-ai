@@ -139,7 +139,10 @@ export class Pokemon implements ReadonlyPokemon
     {
         let result = [...this.traits.types];
         if (this._volatile) result.push(this._volatile.addedType);
-        result = result.filter(type => type !== "???");
+        result = result.filter(
+            type => type !== "???" &&
+                // roost removes flying type
+                (!this._volatile?.roost || type !== "flying"));
         if (result.length <= 0) return ["???"];
         return result;
     }
