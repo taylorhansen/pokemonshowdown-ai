@@ -143,12 +143,12 @@ export type StatusType = UpdatableStatusType | SingleMoveType |
  */
 export type UpdatableStatusType = "confusion" | "bide" | "uproar";
 
-/** Types of sinlge-move effects. */
+/** Types of single-move effects. */
 export type SingleMoveType = "destinyBond" | "grudge" | "rage";
 
-/** Types of sinlge-turn effects. */
-export type SingleTurnType = "endure" | "magicCoat" | "protect" | "roost" |
-    "snatch";
+/** Types of single-turn effects. */
+export type SingleTurnType = "endure" | "focus" | "magicCoat" | "protect" |
+    "roost" | "snatch";
 
 /** Effect that causes certain boosts to be swapped. */
 export type SwapBoost = Effect<"swapBoost"> & Partial<BoostTable<true>>;

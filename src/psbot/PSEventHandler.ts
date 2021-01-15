@@ -314,6 +314,9 @@ export class PSEventHandler
         const monRef = this.getSide(event.id.owner);
         let move: string | undefined;
 
+        // already indicated by other events
+        if (event.reason === "Focus Punch") return [];
+
         if (event.moveName)
         {
             // prevented from using a move, which might not have been revealed
@@ -939,6 +942,7 @@ export class PSEventHandler
             event.status.substr("move: ".length) : event.status)
         {
             case "Endure": effect = "endure"; break;
+            case "Focus Punch": effect = "focus"; break;
             case "Magic Coat": effect = "magicCoat"; break;
             case "Protect": effect = "protect"; break;
             case "Roost": effect = "roost"; break;

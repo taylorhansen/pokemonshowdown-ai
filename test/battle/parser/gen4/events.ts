@@ -266,6 +266,7 @@ export function testEvents()
         test("Rage", "rage", v => v.rage);
 
         // singleturn
+        test("Focus Punch", "focus", v => v.focus);
         test("Endure", "endure", v => v.stallTurns > 0);
         test("Magic Coat", "magicCoat", v => v.magicCoat);
         test("Protect", "protect", v => v.stallTurns > 0);

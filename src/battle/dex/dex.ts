@@ -847,7 +847,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     fly: {uid: 141, name: "fly", display: "Fly", category: "physical", basePower: 90, type: "flying", target: "any", pp: [15, 24], flags: {contact: true}, effects: {delay: {type: "twoTurn"}}},
     focusblast: {uid: 142, name: "focusblast", display: "Focus Blast", category: "special", basePower: 120, type: "fighting", target: "normal", pp: [5, 8], effects: {boost: {chance: 10, hit: {spd: -1}}}},
     focusenergy: {uid: 143, name: "focusenergy", display: "Focus Energy", category: "status", basePower: 0, type: "normal", target: "self", pp: [30, 48], effects: {status: {self: ["focusEnergy"]}}},
-    focuspunch: {uid: 144, name: "focuspunch", display: "Focus Punch", category: "physical", basePower: 150, type: "fighting", target: "normal", pp: [20, 32], flags: {contact: true, noMirror: true, noCopycat: true}},
+    focuspunch: {uid: 144, name: "focuspunch", display: "Focus Punch", category: "physical", basePower: 150, type: "fighting", target: "normal", pp: [20, 32], flags: {contact: true, focus: true, noMirror: true, noCopycat: true}},
     followme: {uid: 145, name: "followme", display: "Follow Me", category: "status", basePower: 0, type: "normal", target: "self", pp: [20, 32], flags: {noCopycat: true}},
     forcepalm: {uid: 146, name: "forcepalm", display: "Force Palm", category: "physical", basePower: 60, type: "fighting", target: "normal", pp: [10, 16], flags: {contact: true}, effects: {status: {chance: 30, hit: ["par"]}}},
     foresight: {uid: 147, name: "foresight", display: "Foresight", category: "status", basePower: 0, type: "normal", target: "normal", pp: [40, 64], flags: {ignoreSub: true}, effects: {status: {hit: ["foresight"]}}},

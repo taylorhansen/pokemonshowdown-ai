@@ -46,6 +46,7 @@ describe("VolatileStatus", function()
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.choiceLock).to.be.null;
+            expect(volatile.damaged).to.be.false;
             expect(volatile.defenseCurl).to.be.false;
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabled.move).to.be.null;
@@ -53,6 +54,7 @@ describe("VolatileStatus", function()
             expect(volatile.encore.move).to.be.null;
             expect(volatile.encore.ts.isActive).to.be.false;
             expect(volatile.flashFire).to.be.false;
+            expect(volatile.focus).to.be.false;
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
@@ -131,6 +133,7 @@ describe("VolatileStatus", function()
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
             expect(volatile.choiceLock).to.be.null;
+            expect(volatile.damaged).to.be.false;
             expect(volatile.defenseCurl).to.be.false;
             expect(volatile.destinyBond).to.be.false;
             expect(volatile.disabled.move).to.be.null;
@@ -138,6 +141,7 @@ describe("VolatileStatus", function()
             expect(volatile.encore.move).to.be.null;
             expect(volatile.encore.ts.isActive).to.be.false;
             expect(volatile.flashFire).to.be.false;
+            expect(volatile.focus).to.be.false;
             expect(volatile.grudge).to.be.false;
             expect(volatile.healBlock.isActive).to.be.false;
             expect(volatile.identified).to.be.null;
@@ -420,7 +424,8 @@ describe("VolatileStatus", function()
         });
     }
 
-    for (const type of ["magicCoat", "roost", "snatch"] as const)
+    for (const type of ["damaged", "focus", "magicCoat", "roost", "snatch"] as
+        const)
     {
         describe(`#${type}`, function()
         {

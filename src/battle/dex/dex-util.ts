@@ -385,6 +385,8 @@ export interface MoveData extends DexData
          * blocked by abilities that block explosive effects (e.g. Damp).
          */
         readonly explosive?: true;
+        /** Whether this move requires `VolatileStatus#focus` to execute. */
+        readonly focus?: true;
         /** Whether this move ignores Subtitute. */
         readonly ignoreSub?: true;
         /**

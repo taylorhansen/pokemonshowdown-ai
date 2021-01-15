@@ -320,6 +320,7 @@ for (const move of
     {
         ...!!move.flags.contact && {contact: true},
         ...explosive.hasOwnProperty(move.id) && {explosive: true},
+        ...move.id === "focuspunch" && {focus: true},
         ...!!move.flags.authentic && {ignoreSub: true},
         ...interceptSwitch.hasOwnProperty(move.id) && {interceptSwitch: true},
         ...noMirror.hasOwnProperty(move.id) && {noMirror: true},

@@ -94,6 +94,8 @@ export interface ReadonlyVolatileStatus
     readonly charge: ReadonlyTempStatus;
     /** Choice item lock. */
     readonly choiceLock: string | null;
+    /** Whether the pokemon was directly damaged by a move this turn. */
+    readonly damaged: boolean;
     /** Defense curl move status. */
     readonly defenseCurl: boolean;
     /** Destiny Bond move status. */
@@ -107,6 +109,8 @@ export interface ReadonlyVolatileStatus
     readonly encore: ReadonlyMoveStatus;
     /** Flash Fire ability effect. */
     readonly flashFire: boolean;
+    /** Focus Punch pre-move effect. */
+    readonly focus: boolean;
     /** Grudge move status. */
     readonly grudge: boolean;
     /** Heal Block move status. */
@@ -295,6 +299,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public choiceLock!: string | null;
 
     /** @override */
+    public damaged!: boolean;
+
+    /** @override */
     public readonly charge = new TempStatus("charging", 2, /*silent*/true);
 
     /** @override */
@@ -343,6 +350,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /** @override */
     public flashFire!: boolean;
+
+    /** @override */
+    public focus!: boolean;
 
     /** @override */
     public grudge!: boolean;
@@ -537,11 +547,13 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.bide.end();
         this.charge.end();
         this.choiceLock = null;
+        this.damaged = false;
         this.defenseCurl = false;
         this.destinyBond = false;
         this.enableMoves();
         this.removeEncore();
         this.flashFire = false;
+        this.focus = false;
         this.grudge = false;
         this.healBlock.end();
         this.identified = null;
@@ -662,6 +674,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         }
 
         // reset single-turn statuses
+        this.damaged = false;
+        this.focus = false;
         this.magicCoat = false;
         this.roost = false;
         this.snatch = false;
@@ -710,6 +724,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.bide.isActive ? [this.bide.toString()] : [],
             this.charge.isActive ? [this.charge.toString()] : [],
             this.choiceLock ? ["choice lock " + this.choiceLock] : [],
+            this.damaged ? ["damaged this turn"] : [],
             this.defenseCurl ? ["defense curl"] : [],
             this.destinyBond ? ["destiny bond"] : [],
             this._disabled.ts.isActive ?
@@ -717,6 +732,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this._encore.ts.isActive ?
                 [`${this._encore.move} ${this._encore.ts.toString()}`] : [],
             this.flashFire ? ["flash fire"] : [],
+            this.focus ? ["preparing focuspunch"] : [],
             this.grudge ? ["grudge"] : [],
             this.healBlock.isActive ? [this.healBlock.toString()] : [],
             this.identified ? [this.identified] : [],

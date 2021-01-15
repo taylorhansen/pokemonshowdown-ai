@@ -3166,4 +3166,19 @@ export function testUseMove(ctxFunc: () => Context,
             expect(mon.moveset.get("tackle")!.pp).to.equal(55);
         });
     });
+
+    describe("Target damaged flag", function()
+    {
+        it("Should set damaged flag for target once hit", async function()
+        {
+            const mon = initActive("us");
+            expect(mon.volatile.damaged).to.be.false;
+            initActive("them");
+            await initParser("them", "tackle");
+            expect(mon.volatile.damaged).to.be.false;
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            expect(mon.volatile.damaged).to.be.true;
+            await exitParser();
+        });
+    });
 }

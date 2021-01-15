@@ -804,6 +804,13 @@ describe("PSEventHandler", function()
                 [{type: "cant", id: us, reason: "some reason"}],
                 [{type: "inactive", monRef: "us"}]);
 
+            test("Should ignore focuspunch",
+            [{
+                type: "cant", id: us, reason: "Focus Punch",
+                moveName: "Focus Punch"
+            }],
+                []);
+
             test("Should emit inactive from imprison",
                 [{type: "cant", id: us, reason: "imprison"}],
                 [{type: "inactive", monRef: "us", reason: "imprison"}]);
@@ -1284,6 +1291,7 @@ describe("PSEventHandler", function()
             [
                 {name: "Endure", effect: "endure"},
                 {name: "move: Endure", effect: "endure"},
+                {name: "move: Focus Punch", effect: "focus"},
                 {name: "Magic Coat", effect: "magicCoat"},
                 {name: "move: Magic Coat", effect: "magicCoat"},
                 {name: "Protect", effect: "protect"},

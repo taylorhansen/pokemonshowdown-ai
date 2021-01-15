@@ -28,6 +28,7 @@ export async function* useMove(pstate: ParserState,
 {
     // setup context
     const ctx = initCtx(pstate, event, called);
+    preMoveAssertions(ctx);
     inferTargets(ctx);
 
     // look for move interruptions
@@ -263,7 +264,16 @@ function framePendingTargets(userRef: Side,
     return {them: obj.us, us: obj.them};
 }
 
-
+/** Assertions surrounding the selection of a move. */
+function preMoveAssertions(ctx: MoveContext): void
+{
+    if (ctx.moveData.flags?.focus && !ctx.user.volatile.focus &&
+        !ctx.user.volatile.encore.ts.isActive && !ctx.called)
+    {
+        ctx.pstate.logger.error("User has focus=false yet focus move being " +
+            "used");
+    }
+}
 
 /** Result of `tryExecute()`. */
 interface TryExecuteResult extends SubParserResult
@@ -343,7 +353,26 @@ async function* checkFail(ctx: MoveContext, lastEvent?: events.Any):
                 return yield* base.noTarget(ctx.pstate, event);
         }
         return {event};
-    }, lastEvent)
+    }, lastEvent);
+
+    // fail assertions
+    if (success)
+    {
+        if (ctx.moveData.flags?.focus && !ctx.user.volatile.damaged)
+        {
+            ctx.pstate.logger.error("User has damaged=false yet focus move " +
+                "failed");
+        }
+    }
+    else
+    {
+        if (ctx.moveData.flags?.focus && ctx.user.volatile.damaged)
+        {
+            ctx.pstate.logger.error("User has damaged=true yet focus move " +
+                "didn't fail");
+        }
+    }
+
     return {...result, ...success && {success}};
 }
 
@@ -1612,6 +1641,7 @@ function addTarget(ctx: MoveContext, targetRef: Side,
     // TODO: fainting prior to the move should cause active to be null so this
     //  check isn't as complicated
     const target = ctx.pstate.state.teams[targetRef].active;
+    if (flags.damaged) target.volatile.damaged = true;
     if (ctx.user !== target && (!target.fainted || flags.damaged === "ko"))
     {
         // update opponent's mirror move tracker

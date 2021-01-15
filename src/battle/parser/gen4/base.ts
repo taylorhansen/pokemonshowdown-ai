@@ -62,8 +62,10 @@ export const handlers =
             case "leechSeed": case "mudSport": case "nightmare":
             case "powerTrick": case "substitute": case "suppressAbility":
             case "torment": case "waterSport":
-            case "destinyBond": case "grudge": case "rage": // singlemove
-            case "magicCoat": case "roost": case "snatch": // singleturn
+            // singlemove
+            case "destinyBond": case "grudge": case "rage":
+            // singleturn
+            case "focus": case "magicCoat": case "roost": case "snatch":
                 // TODO: if substitute, remove partial trapping (implicit?)
                 mon.volatile[event.effect] = event.start;
                 break;
