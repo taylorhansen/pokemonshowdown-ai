@@ -351,7 +351,9 @@ export interface MoveData extends DexData
     /** Move category. */
     readonly category: MoveCategory;
     /** Move's base power. */
-    readonly basePower: MovePower;
+    readonly basePower: number;
+    /** Whether this is a fixed damage move, and what the rules are for this. */
+    readonly damage?: MoveDamage;
     /** Type of move. */
     readonly type: Type;
     // tslint:disable: no-trailing-whitespace (force newline in doc)
@@ -387,6 +389,8 @@ export interface MoveData extends DexData
         readonly explosive?: true;
         /** Whether this move requires `VolatileStatus#focus` to execute. */
         readonly focus?: true;
+        /** Whether this move ignores type immunities when dealing damage. */
+        readonly ignoreImmunity?: true;
         /** Whether this move ignores Subtitute. */
         readonly ignoreSub?: true;
         /**
@@ -529,15 +533,23 @@ export interface MoveData extends DexData
 /** Types of categories for a move. */
 export type MoveCategory = "physical" | "special" | "status";
 
-// TODO: extract into structure for describing move damage
 // tslint:disable: no-trailing-whitespace (force newline in doc)
 /**
- * Base power of a move.  
- * `number` - Base power of the move, usually zero for status moves.  
- * `"ohko"` - OHKO move.
+ * Fixed damage move specification.  
+ * `number` - Damage amount.  
+ * `"ohko"` - OHKO move.  
+ * `"level"` - User's level.  
+ * `"half"` - Half of target's remaining HP.  
+ * `"bide"` - Double the damage accumulated during Bide status.  
+ * `"counter"` - Double damage received from the last attack matching this
+ * move's category this turn.  
+ * `"metalburst"` - 1.5x damage received from the last attack this turn.  
+ * `"psywave"` - Random, 0.5x to 1.5x the user's level.  
+ * `"hpdiff"` - Difference between target's hp and user's hp.
  */
 // tslint:enable: no-trailing-whitespace
-export type MovePower = number | "ohko";
+export type MoveDamage = number | "ohko" | "level" | "half" | "bide" |
+    "counter" | "metalburst" | "psywave" | "hpdiff";
 
 /** Types of targets for a move. */
 export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |

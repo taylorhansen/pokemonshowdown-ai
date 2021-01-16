@@ -921,15 +921,14 @@ async function* warnStrongestMove(ctx: AbilityContext, lastEvent?: events.Any):
 function getForewarnPower(move: string): number
 {
     const data = dex.moves[move];
-    const bp = data?.basePower;
     // ohko moves
-    if (bp === "ohko") return 160;
+    if (data.damage === "ohko") return 160;
     // counter moves
-    if (["counter", "metalburst", "mirrorcoat"].includes(move)) return 120;
+    if (data.damage === "counter" || data.damage === "metalburst") return 120;
     // fixed damage/variable power moves (hiddenpower, lowkick, etc)
-    if (!bp && data && data.category !== "status") return 80;
+    if (!data.basePower && data.category !== "status") return 80;
     // regular base power, eruption/waterspout and status moves
-    return bp ?? 0;
+    return data.basePower;
 }
 
 // TODO: track weather in AbilityData

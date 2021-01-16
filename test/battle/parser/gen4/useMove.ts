@@ -529,6 +529,16 @@ export function testUseMove(ctxFunc: () => Context,
             await exitParser();
         });
 
+        it("Should allow fixed-damage move without type effectiveness event",
+        async function()
+        {
+            initActive("us").volatile.addedType = "steel";
+            initActive("them");
+            await initParser("them", "superfang");
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            await exitParser();
+        });
+
         describe("immune", function()
         {
             it("Should handle type immunity and cancel move effects",

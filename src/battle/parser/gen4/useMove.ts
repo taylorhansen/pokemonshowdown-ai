@@ -476,6 +476,7 @@ async function* checkBlock(ctx: MoveContext, lastEvent?: events.Any):
         for (const abilityResult of expectResult.results)
         {
             // handle block results
+            // TODO: if wonderguard, assert type effectiveness
             success ||= abilityResult.immune || abilityResult.failed;
             // in the event that success=false, block parts of the move that the
             //  ability takes issue with
@@ -1127,7 +1128,7 @@ function handleTypeEffectiveness(ctx: MoveContext,
 
     // assert type effectiveness
     const expectedEff = getTypeEffectiveness(defender.types, moveType,
-        /*status*/ ctx.moveData.category === "status");
+        /*binary*/ ctx.moveData.category === "status" || !!ctx.moveData.damage);
     if (effectiveness !== expectedEff)
     {
         // could be a status move being blocked by a type-based status immunity
@@ -1135,6 +1136,12 @@ function handleTypeEffectiveness(ctx: MoveContext,
             ctx.moveData.effects?.status?.hit?.every(s =>
                 dexutil.isMajorStatus(s) &&
                     defender.types.some(t => typechart[t][s])))
+        {
+            return;
+        }
+
+        // immunity-ignoring move
+        if (effectiveness === "immune" && ctx.moveData.flags?.ignoreImmunity)
         {
             return;
         }
@@ -1159,15 +1166,15 @@ function getTypeMultiplier(defender: readonly dexutil.Type[],
  * Gets the type effectiveness string.
  * @param defender Defender types.
  * @param attacker Attacking move type.
- * @param status Whether this is a status move.
+ * @param binary Whether this move can only be immune or regular.
  */
 function getTypeEffectiveness(defender: readonly dexutil.Type[],
-    attacker: dexutil.Type, status?: boolean): Effectiveness
+    attacker: dexutil.Type, binary?: boolean): Effectiveness
 {
     const mult = getTypeMultiplier(defender, attacker);
     if (mult <= 0) return "immune";
-    if (mult < 1) return status ? "regular" : "resist";
-    if (mult > 1) return status ? "regular" : "super";
+    if (mult < 1) return binary ? "regular" : "resist";
+    if (mult > 1) return binary ? "regular" : "super";
     return "regular";
 }
 

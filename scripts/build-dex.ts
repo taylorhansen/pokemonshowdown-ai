@@ -291,7 +291,23 @@ for (const move of
     if (!move.noSketch) sketchableMoves.push(move.id);
 
     const category = move.category.toLowerCase() as dexutil.MoveCategory;
-    const basePower = move.ohko ? "ohko" : move.basePower;
+    const basePower = move.basePower;
+
+    let damage: dexutil.MoveDamage | undefined;
+    if (move.ohko) damage = "ohko";
+    else if (move.damage) damage = move.damage;
+    else
+    {
+        switch (move.id)
+        {
+            case "superfang": damage = "half"; break;
+            case "bide": damage = "bide"; break;
+            case "counter": case "mirrorcoat": damage = "counter"; break;
+            case "metalburst": damage = "metalburst"; break;
+            case "psywave": damage = "psywave"; break;
+            case "endeavor": damage = "hpdiff";
+        }
+    }
 
     const type = move.type.toLowerCase() as dexutil.Type;
     let modifyType: "hpType" | "plateType" | undefined;
@@ -321,6 +337,9 @@ for (const move of
         ...!!move.flags.contact && {contact: true},
         ...explosive.hasOwnProperty(move.id) && {explosive: true},
         ...move.id === "focuspunch" && {focus: true},
+        // TODO(gen6): support type-based ignoreImmunity flag
+        ...category !== "status" && move.ignoreImmunity &&
+            {ignoreImmunity: true},
         ...!!move.flags.authentic && {ignoreSub: true},
         ...interceptSwitch.hasOwnProperty(move.id) && {interceptSwitch: true},
         ...noMirror.hasOwnProperty(move.id) && {noMirror: true},
@@ -535,8 +554,8 @@ for (const move of
     [
         move.id,
         {
-            uid, name: move.id, display: move.name, category, basePower, type,
-            ...modifyType && {modifyType}, target,
+            uid, name: move.id, display: move.name, category, basePower,
+            ...damage && {damage}, type, ...modifyType && {modifyType}, target,
             ...nonGhostTarget && {nonGhostTarget}, pp,
             ...multihit && {multihit},
             ...Object.keys(flags).length > 0 && {flags},
