@@ -380,7 +380,7 @@ export interface InitPokemon extends SwitchOptions
     /** Item id name. */
     readonly item: string;
     /** Hidden Power type if applicable. */
-    readonly hpType?: dexutil.Type;
+    readonly hpType?: dexutil.HPType;
     /** Happiness value if applicable. */
     readonly happiness?: number;
 }

@@ -14,7 +14,7 @@ export interface ReadonlyStatTable extends ReadonlyStatRanges
     /** Reference to the base species data. Setting this will re-calc stats. */
     readonly data: PokemonData | null;
     /** Hidden power type possibility tracker. */
-    readonly hpType: ReadonlyPossibilityClass<typeof hpTypes[HPType]>;
+    readonly hpType: ReadonlyPossibilityClass<HPType>;
 }
 
 /** Tracks stat ranges and species/level for stat calculations. */

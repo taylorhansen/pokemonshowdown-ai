@@ -57,7 +57,6 @@ describe("ItemTempStatus", function()
         {
             its.start(source, "b");
             expect(its.type).to.equal("b");
-            // duration is uncertain so need to track item
             expect(its.source).to.equal(source.item);
             expect(its.duration).to.equal(its.durations[0]);
             expect(its.turns).to.equal(0);
@@ -68,8 +67,7 @@ describe("ItemTempStatus", function()
             source.item.narrow(its.items.a);
             its.start(source, "a");
             expect(its.type).to.equal("a");
-            // duration is certain so no need to track item
-            expect(its.source).to.be.null;
+            expect(its.source).to.equal(source.item);
             expect(its.duration).to.equal(its.durations[1]);
             expect(its.turns).to.equal(0);
         });
@@ -78,7 +76,7 @@ describe("ItemTempStatus", function()
         {
             its.start(source, "a", /*infinite*/true);
             expect(its.type).to.equal("a");
-            // duration is certain so no need to track item
+            // don't track item since infinite duration overrides it
             expect(its.source).to.be.null;
             expect(its.duration).to.be.null;
             expect(its.turns).to.equal(0);

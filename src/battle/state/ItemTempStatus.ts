@@ -11,7 +11,7 @@ export interface ReadonlyItemTempStatus<TStatusType extends string>
     /** Current weather type. */
     readonly type: TStatusType | "none";
     /** The weather-causer's item if there is one. */
-    readonly source: ReadonlyPossibilityClass<ItemData> | null;
+    readonly source: ReadonlyPossibilityClass<string, ItemData> | null;
     /**
      * Number of turns this status has been active. This is 0-based, so this
      * will return 0 if the weather was started this turn, and 1 after the end
@@ -44,11 +44,11 @@ export class ItemTempStatus<TStatusType extends string> implements
     public get type(): TStatusType | "none" { return this._type; }
     private _type!: TStatusType | "none";
     /** @override */
-    public get source(): PossibilityClass<ItemData> | null
+    public get source(): PossibilityClass<string, ItemData> | null
     {
         return this._source;
     }
-    private _source!: PossibilityClass<ItemData> | null;
+    private _source!: PossibilityClass<string, ItemData> | null;
 
     /** @override */
     public get turns(): number { return this._turns; }
@@ -114,42 +114,19 @@ export class ItemTempStatus<TStatusType extends string> implements
         if (!source.item.isSet(this.items[this._type])) return;
 
         // duration is certain once the item is known
-        if (source.item.definiteValue) this._duration = this.durations[1];
-        else
+        this._source = source.item;
+        this._source.then(name =>
         {
-            // start tracking source item
-            this._source = source.item;
-            // set duration once narrowed by other means or by tick()
-            this._source.onNarrow(this.itemNarrowedLambda);
-        }
-    }
+            // start() was called again with a different source before this
+            //  callback fired, so the old source item is no longer relevant
+            if (this._source !== source.item) return;
 
-    /**
-     * Lambda form of `#itemNarrowed()` so it can be passed directly to
-     * `PossibilityClass#onNarrow()` in this object's `#start()` method without
-     * creating a new lambda every time.
-     */
-    private itemNarrowedLambda =
-        (item: PossibilityClass<ItemData>) => this.itemNarrowed(item);
-
-    /** Updates duration if extension item is found on the given source item. */
-    private itemNarrowed(item: PossibilityClass<ItemData>): void
-    {
-        // source was reassigned, this callback no longer applies
-        if (this._source && this._source !== item) return;
-        // can't extend "none"
-        if (this._type === "none") return;
-        // item wasn't narrowed
-        // istanbul ignore next: should never happen
-        if (!item.definiteValue)
-        {
-            throw new Error("Item was assumed to be narrowed");
-        }
-        // item wasn't narrowed to current status' extension item
-        if (item.definiteValue !== this.items[this._type]) return;
-
-        // source has extension item, set to extended duration
-        this._duration = this.durations[1];
+            // confirmed extension item
+            if (this._type !== "none" && this.items[this._type] === name)
+            {
+                this._duration = this.durations[1];
+            }
+        });
     }
 
     /** Indicates that the status lasted another turn. */

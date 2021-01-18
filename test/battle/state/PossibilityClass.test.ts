@@ -79,15 +79,16 @@ describe("PossibilityClass", function()
         });
     });
 
-    describe("#onNarrow()", function()
+    describe("#then()", function()
     {
         it("Should set listener", function(done)
         {
             const pc = new PossibilityClass(map);
-            pc.onNarrow(p =>
+            pc.then((key, data) =>
             {
-                expect(pc).to.equal(p);
-                expect(p.definiteValue).to.equal("a");
+                expect(key).to.equal("a");
+                expect(data).to.equal(map.a);
+                expect(pc.definiteValue).to.equal(key);
                 done();
             });
             pc.narrow("a");
@@ -97,10 +98,11 @@ describe("PossibilityClass", function()
         {
             const pc = new PossibilityClass(map);
             let count = 0;
-            pc.onNarrow(p =>
+            pc.then((key, data) =>
             {
-                expect(pc).to.equal(p);
-                expect(p.definiteValue).to.equal("a");
+                expect(key).to.equal("a");
+                expect(data).to.equal(map.a);
+                expect(pc.definiteValue).to.equal(key);
                 ++count;
             });
             pc.narrow("a");
@@ -114,10 +116,11 @@ describe("PossibilityClass", function()
         {
             const pc = new PossibilityClass(map);
             pc.narrow("a");
-            pc.onNarrow(p =>
+            pc.then((key, data) =>
             {
-                expect(pc).to.equal(p);
-                expect(p.definiteValue).to.equal("a");
+                expect(key).to.equal("a");
+                expect(data).to.equal(map.a);
+                expect(pc.definiteValue).to.equal(key);
                 done();
             });
         });

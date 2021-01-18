@@ -500,10 +500,10 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
             case "hpType": opp.hpType.narrow(...mon.types); break;
             case "plateType":
                 opp.item.narrow(...[...opp.item.possibleValues].filter(n =>
-                    mon.types.every(t => t === opp.item.map[n].plateType)));
+                    mon.types.some(t => t === opp.item.map[n].plateType)));
                 break;
             default:
-                if (!mon.types.every(t => t === hitByMoveType))
+                if (!mon.types.some(t => t === hitByMoveType))
                 {
                     throw new Error("diffMoveType (colorchange) ability " +
                     `expected holder's type [${mon.types.join(", ")}] to ` +

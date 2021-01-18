@@ -69,7 +69,7 @@ export class PSEventHandler
                     // set hidden power type
                     // format: hiddenpower<type><base power if gen2-5>
                     mon.hpType = moves[j].substr("hiddenpower".length)
-                        .replace(/\d+/, "") as dexutil.Type;
+                        .replace(/\d+/, "") as dexutil.HPType;
                     moves[j] = "hiddenpower";
                 }
                 else if (moves[j].startsWith("return") &&

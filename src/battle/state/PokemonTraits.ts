@@ -1,22 +1,26 @@
 import * as dex from "../dex/dex";
+import * as dexutil from "../dex/dex-util";
 import { PokemonData, Type } from "../dex/dex-util";
 import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
 import { ReadonlyStatTable, StatTable } from "./StatTable";
 
+/** Readonly PokemonTraits representation. */
 export interface ReadonlyPokemonTraits
 {
     /** Current ability possibility. */
-    readonly ability: ReadonlyPossibilityClass<typeof dex.abilities[string]>;
+    readonly ability: ReadonlyPossibilityClass<string, dexutil.AbilityData>;
     /** Current species data. */
     readonly data: PokemonData;
     /** Current species possibility. */
-    readonly species: PossibilityClass<typeof dex.pokemon[string]>;
+    readonly species: ReadonlyPossibilityClass<string, dexutil.PokemonData>;
     /** Current stat range possibilities. */
     readonly stats: ReadonlyStatTable;
     /** Current primary and secondary types. */
     readonly types: readonly [Type, Type];
 }
 
+// TODO: cleanup/verify usage with regard to unknown traits and diverging
+//  base/override traits
 /**
  * Tracks the overridable traits of a Pokemon. Typically contains fields that
  * would warrant having two nearly identical fields on Pokemon and
@@ -25,7 +29,7 @@ export interface ReadonlyPokemonTraits
 export class PokemonTraits implements ReadonlyPokemonTraits
 {
     /** @override */
-    public get ability(): PossibilityClass<typeof dex.abilities[string]>
+    public get ability(): PossibilityClass<string, dexutil.AbilityData>
     {
         if (!this._ability) throw new Error("Ability not initialized");
         return this._ability;
@@ -47,7 +51,7 @@ export class PokemonTraits implements ReadonlyPokemonTraits
         // reset if not exist or cant be set
         else this._ability = new PossibilityClass(dex.abilities, ...abilities);
     }
-    private _ability!: PossibilityClass<typeof dex.abilities[string]> | null;
+    private _ability!: PossibilityClass<string, dexutil.AbilityData> | null;
 
     /** @override */
     public get data(): PokemonData
@@ -58,7 +62,7 @@ export class PokemonTraits implements ReadonlyPokemonTraits
     private _data!: PokemonData | null;
 
     /** @override */
-    public get species(): PossibilityClass<typeof dex.pokemon[string]>
+    public get species(): PossibilityClass<string, dexutil.PokemonData>
     {
         if (!this._species) throw new Error("Species not initialized");
         return this._species;
@@ -69,23 +73,21 @@ export class PokemonTraits implements ReadonlyPokemonTraits
      * Narrows species possibility to the given species name. Resets to a new
      * object if it can't be narrowed.
      */
-    public setSpecies(species: string): void
+    public setSpecies(name: string): void
     {
         // narrow if exist and can be set
-        if (this._species && this._species.isSet(species) &&
+        if (this._species && this._species.isSet(name) &&
             !this._species.definiteValue)
         {
-            this._species.narrow(species);
+            this._species.narrow(name);
         }
-        // reset if not exist or definite value isnt whats provided
-        else if (!this._species || !this._species.isSet(species))
+        // reset if no species or can't be the given value
+        else if (!this._species || !this._species.isSet(name))
         {
-            this._species = new PossibilityClass(dex.pokemon, species);
-            // immediately call narrow handler
-            this.onSpeciesNarrowed(this._species);
+            this.initSpecies(name);
         }
     }
-    private _species!: PossibilityClass<typeof dex.pokemon[string]> | null;
+    private _species!: PossibilityClass<string, dexutil.PokemonData> | null;
 
     /** @override */
     public get stats(): StatTable
@@ -103,29 +105,6 @@ export class PokemonTraits implements ReadonlyPokemonTraits
     }
     public set types(types: readonly [Type, Type]) { this._types = types; }
     private _types!: readonly [Type, Type] | null;
-
-    /** Callback for when the `#species` possibility is narrowed. */
-    private readonly onSpeciesNarrowed =
-        (pc: PossibilityClass<typeof dex.pokemon[string]>) =>
-    {
-        // once species is known, everything else can be fully initialized
-        // first must make sure we didn't reassign the species reference, else
-        //  this would be invalid
-        if (pc !== this._species) return;
-
-        const data = pc.map[pc.definiteValue!];
-        this._data = data;
-
-        // narrow ability possibilities if not already set to something else
-        this.setAbility(...data.abilities);
-
-        // copy type data
-        // no need to guard from type changes since form changes can override
-        this._types = data.types;
-
-        // initialize stat ranges
-        if (this._stats) this._stats.data = data;
-    }
 
     /** Creates a PokemonTraits object with default null values. */
     constructor() { this.reset(); }
@@ -149,11 +128,12 @@ export class PokemonTraits implements ReadonlyPokemonTraits
         this._stats = other._stats;
         this._types = other._types;
 
+        // TODO: is this necessary?
         if (this._species && !this._species.definiteValue)
         {
-            // the other's onNarrow handler will reset some properties, so best
+            // the other's then handler will reset some properties, so best
             //  to reassign them once that happens
-            this._species.onNarrow(() => this.copy(other));
+            this._species.then(() => this.copy(other));
         }
     }
 
@@ -161,10 +141,25 @@ export class PokemonTraits implements ReadonlyPokemonTraits
     public init(): void
     {
         this._ability = new PossibilityClass(dex.abilities);
-        this._species = new PossibilityClass(dex.pokemon);
         this._stats = new StatTable();
         this._types = ["???", "???"];
+        this.initSpecies();
+    }
 
-        this._species.onNarrow(this.onSpeciesNarrowed);
+    private initSpecies(name?: string): void
+    {
+        const species = this._species = new PossibilityClass(dex.pokemon);
+        species.then((_, data) =>
+        {
+            // reassigned species, no longer relevant
+            if (this._species !== species) return;
+
+            // narrow base traits
+            this._data = data;
+            this.setAbility(...data.abilities);
+            this._types = data.types;
+            this._stats!.data = data;
+        });
+        if (name) species.narrow(name);
     }
 }
