@@ -621,7 +621,7 @@ export async function* activateAbility(pstate: ParserState,
     };
 
     // infer ability being activated
-    ctx.holder.traits.setAbility(ctx.ability.name);
+    ctx.holder.setAbility(ctx.ability.name);
 
     // handle supported ability effects
     const baseResult = yield* dispatchEffects(ctx);
@@ -849,24 +849,26 @@ async function* copyFoeAbility(ctx: AbilityContext, lastEvent?: events.Any):
     const next = lastEvent ?? (yield);
     if (next.type !== "activateAbility" || next.monRef !== ctx.holderRef)
     {
-        throw new Error("On-start copeFoeAbility effect failed");
+        throw new Error("On-start copyFoeAbility effect failed");
     }
-    ctx.holder.traits.setAbility(next.ability);
+    ctx.holder.volatile.overrideTraits =
+        ctx.holder.baseTraits.divergeAbility(next.ability);
 
-    // TODO: these should be revealAbility events
+    // TODO: these should be revealAbility events and delegated to base handler
     // activateAbility target <ability> (describe trace target)
     const next2 = yield;
     if (next2.type !== "activateAbility" || next2.monRef === ctx.holderRef ||
         next2.ability !== next.ability)
     {
-        throw new Error("On-start copeFoeAbility effect failed");
+        throw new Error("On-start copyFoeAbility effect failed");
     }
     const targetRef = next2.monRef;
     const target = ctx.pstate.state.teams[targetRef].active;
-    target.traits.setAbility(next2.ability);
+    target.setAbility(next2.ability);
 
     // possible on-start activation for holder's new ability
     // if no activation, don't need to consume anymore events
+    // TODO: call onStart?
     const next3 = yield;
     if (next3.type !== "activateAbility") return {event: next3};
     if (next3.monRef !== ctx.holderRef) return {event: next3};

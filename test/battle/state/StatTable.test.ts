@@ -2,84 +2,79 @@ import { expect } from "chai";
 import "mocha";
 import * as dex from "../../../src/battle/dex/dex";
 import { StatExceptHP, statNames } from "../../../src/battle/dex/dex-util";
+import { StatRange } from "../../../src/battle/state/StatRange";
 import { StatTable } from "../../../src/battle/state/StatTable";
 
 describe("StatTable", function()
 {
-    let stats: StatTable;
-
-    beforeEach("Initialize StatTable", function()
+    describe(".base()", function()
     {
-        stats = new StatTable();
-    });
-
-    it("Should initialize StatRanges when species and level are initialized",
-    function()
-    {
-        stats.data = dex.pokemon.mew; // all base 100 stats
-        stats.level = 100;
-        for (const stat in statNames)
+        it("Should initialize StatRanges", function()
         {
-            if (!statNames.hasOwnProperty(stat)) continue;
-
-            if (stat === "hp")
+            // all base 100 stats
+            const stats = StatTable.base(dex.pokemon.mew, 100);
+            for (const stat in statNames)
             {
-                expect(stats[stat].min).to.equal(310);
-                expect(stats[stat].max).to.equal(404);
+                if (!statNames.hasOwnProperty(stat)) continue;
+
+                if (stat === "hp")
+                {
+                    expect(stats[stat].min).to.equal(310);
+                    expect(stats[stat].max).to.equal(404);
+                }
+                else
+                {
+                    expect(stats[stat as StatExceptHP].min).to.equal(184);
+                    expect(stats[stat as StatExceptHP].max).to.equal(328);
+                }
             }
-            else
+        });
+
+        describe("#level", function()
+        {
+            it("Should be 1 if set to 0", function()
             {
-                expect(stats[stat as StatExceptHP].min).to.equal(184);
-                expect(stats[stat as StatExceptHP].max).to.equal(328);
-            }
-        }
-    });
+                const stats = StatTable.base(dex.pokemon.mew, 0);
+                expect(stats.level).to.equal(1);
+            });
 
-    describe("#level", function()
-    {
-        it("Should be null initially", function()
-        {
-            expect(stats.level).to.be.null;
-        });
+            it("Should be 1 if set to a negative number", function()
+            {
+                const stats = StatTable.base(dex.pokemon.mew, -50);
+                expect(stats.level).to.equal(1);
+            });
 
-        it("Should be 1 if set to 0", function()
-        {
-            stats.level = 0;
-            expect(stats.level).to.equal(1);
-        });
+            it("Should be 100 if set to a larger number", function()
+            {
+                const stats = StatTable.base(dex.pokemon.mew, 105);
+                expect(stats.level).to.equal(100);
+            });
 
-        it("Should be 1 if set to a negative number", function()
-        {
-            stats.level = -1;
-            expect(stats.level).to.equal(1);
-        });
-
-        it("Should be 100 if set to a larger number", function()
-        {
-            stats.level = 101;
-            expect(stats.level).to.equal(100);
-        });
-
-        it("Should set normally if between 1 and 100", function()
-        {
-            stats.level = 50;
-            expect(stats.level).to.equal(50);
+            it("Should set normally if between 1 and 100", function()
+            {
+                const stats = StatTable.base(dex.pokemon.mew, 50);
+                expect(stats.level).to.equal(50);
+            });
         });
     });
 
-    describe("#data", function()
+    describe("#divergeHP()", function()
     {
-        it("Should set #data", function()
+        it("Should create partial shallow copy", function()
         {
-            stats.data = dex.pokemon.magikarp;
-            expect(stats.data).to.equal(dex.pokemon.magikarp);
-        });
+            const stats = StatTable.base(dex.pokemon.mew, 100);
+            const overrideHP = new StatRange(50, 100, /*hp*/ true);
+            const dstats = stats.transform(overrideHP);
 
-        it("Should set #data and calc stats if #level is also set", function()
-        {
-            stats.data = dex.pokemon.magikarp;
-            stats.level = 100;
-            expect(stats.hp.base).to.not.be.null;
+            expect(stats.level).to.equal(dstats.level);
+            expect(stats.hp).to.not.equal(dstats.hp);
+            expect(dstats.hp).to.equal(overrideHP);
+            expect(stats.atk).to.equal(dstats.atk);
+            expect(stats.def).to.equal(dstats.def);
+            expect(stats.spa).to.equal(dstats.spa);
+            expect(stats.spd).to.equal(dstats.spd);
+            expect(stats.spe).to.equal(dstats.spe);
+            expect(stats.hpType).to.equal(dstats.hpType);
         });
     });
 });

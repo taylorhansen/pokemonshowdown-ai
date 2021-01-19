@@ -1338,8 +1338,8 @@ export function testUseMove(ctxFunc: () => Context,
                         abilityImmunity,
                     async function()
                     {
-                        initActive("us").traits.setAbility("moldbreaker");
-                        initActive("them").traits.setAbility(abilityImmunity);
+                        initActive("us").setAbility("moldbreaker");
+                        initActive("them").setAbility(abilityImmunity);
 
                         await initParser("us", move);
                         await handle(
@@ -1351,7 +1351,7 @@ export function testUseMove(ctxFunc: () => Context,
                         `through ${abilityImmunity}` ,
                     async function()
                     {
-                        initActive("us").traits.setAbility("moldbreaker");
+                        initActive("us").setAbility("moldbreaker");
                         initActive("them");
 
                         await initParser("us", move);
@@ -1374,7 +1374,7 @@ export function testUseMove(ctxFunc: () => Context,
                         initActive("us");
                         // blocking ability or useless ability (illuminate)
                         const mon = initActive("them");
-                        mon.traits.setAbility(abilityImmunity, "illuminate");
+                        mon.setAbility(abilityImmunity, "illuminate");
                         expect(mon.traits.ability.possibleValues)
                             .to.have.keys(abilityImmunity, "illuminate");
 
@@ -1391,7 +1391,7 @@ export function testUseMove(ctxFunc: () => Context,
                     async function()
                     {
                         initActive("us");
-                        initActive("them").traits.setAbility(abilityImmunity);
+                        initActive("them").setAbility(abilityImmunity);
 
                         await initParser("us", move);
                         await expect(handle(
@@ -1651,7 +1651,7 @@ export function testUseMove(ctxFunc: () => Context,
 
                     const tgt = initActive("us");
                     // bypassing type effectiveness assertions
-                    tgt.volatile.overrideTraits.types = ["???", "???"];
+                    tgt.volatile.changeTypes(["???", "???"]);
                 });
 
                 it("Should pass if expected", async function()
@@ -1710,7 +1710,7 @@ export function testUseMove(ctxFunc: () => Context,
                     {
                         // setup ability so it can activate
                         const us = state.teams.us.active;
-                        us.traits.setAbility("oblivious");
+                        us.setAbility("oblivious");
 
                         await initParser("them", "attract");
                         await handle(
@@ -1751,8 +1751,7 @@ export function testUseMove(ctxFunc: () => Context,
                 beforeEach("Initialize active", function()
                 {
                     // bypassing type effectiveness assertions
-                    initActive("us").volatile.overrideTraits.types =
-                        ["???", "???"];
+                    initActive("us").volatile.changeTypes(["???", "???"]);
                     initActive("them");
                 });
 
@@ -1777,7 +1776,7 @@ export function testUseMove(ctxFunc: () => Context,
                     {
                         // setup ability so it can activate
                         const us = state.teams.us.active;
-                        us.traits.setAbility(abilityImmunity);
+                        us.setAbility(abilityImmunity);
 
                         await initParser("them", move);
                         await handle(
@@ -1856,8 +1855,7 @@ export function testUseMove(ctxFunc: () => Context,
                     async function()
                     {
                         // remove owntempo possibility from smeargle
-                        state.teams.us.active.traits
-                            .setAbility("technician");
+                        state.teams.us.active.setAbility("technician");
                         await initParser("them", secondaryMove100);
                         await expect(exitParser())
                             .to.eventually.be.rejectedWith(Error,
@@ -1880,12 +1878,11 @@ export function testUseMove(ctxFunc: () => Context,
 
                 if (secondaryMove100 && abilityImmunity)
                 {
-                    // TODO: generalize for other abilities
                     it("Should narrow ability if no status event",
                     async function()
                     {
                         const mon = state.teams.us.active;
-                        mon.traits.setAbility(abilityImmunity, "illuminate");
+                        mon.setAbility(abilityImmunity, "illuminate");
                         expect(mon.ability).to.be.empty;
                         await initParser("them", secondaryMove100);
                         await exitParser();
@@ -2816,7 +2813,7 @@ export function testUseMove(ctxFunc: () => Context,
                 const mon = initActive("them");
                 mon.majorStatus.afflict("slp");
                 // could have naturalcure
-                mon.traits.setAbility("naturalcure", "illuminate");
+                mon.setAbility("naturalcure", "illuminate");
                 await initParser("them", "batonpass");
                 await handle({type: "halt", reason: "wait"});
                 await handle(
@@ -3137,7 +3134,7 @@ export function testUseMove(ctxFunc: () => Context,
         beforeEach("Setup pressure mon", async function()
         {
             us = initActive("us");
-            us.traits.setAbility("pressure");
+            us.setAbility("pressure");
         });
 
         it("Should use extra pp if targeted", async function()
@@ -3161,7 +3158,7 @@ export function testUseMove(ctxFunc: () => Context,
         it("Should not use double pp if self target", async function()
         {
             const mon = initActive("them");
-            mon.traits.setAbility("pressure");
+            mon.setAbility("pressure");
             await initParser("them", "splash");
             await exitParser();
             expect(mon.moveset.get("splash")!.pp).to.equal(63);
@@ -3170,7 +3167,7 @@ export function testUseMove(ctxFunc: () => Context,
         it("Should not use double pp if mold breaker", async function()
         {
             const mon = initActive("them");
-            mon.traits.setAbility("moldbreaker");
+            mon.setAbility("moldbreaker");
             await initParser("them", "tackle");
             await exitParser();
             expect(mon.moveset.get("tackle")!.pp).to.equal(55);

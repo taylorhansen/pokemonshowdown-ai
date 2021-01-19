@@ -31,12 +31,12 @@ describe("Pokemon", function()
             {
                 const mon = new Pokemon("magikarp", false);
                 mon.switchInto();
-                mon.formChange("charmander");
+
+                mon.formChange("charmander", 100);
                 expect(mon.species).to.equal("charmander");
-                expect(mon.volatile.overrideTraits.species.possibleValues)
-                    .to.have.keys("charmander");
-                expect(mon.baseTraits.species.possibleValues)
-                    .to.have.keys("magikarp");
+                expect(mon.volatile.overrideTraits!.species.name)
+                    .to.equal("charmander");
+                expect(mon.baseTraits.species.name).to.equal("magikarp");
             });
         });
 
@@ -46,12 +46,12 @@ describe("Pokemon", function()
             {
                 const mon = new Pokemon("magikarp", false);
                 mon.switchInto();
-                mon.formChange("charmander", true);
+
+                mon.formChange("charmander", 100, true);
                 expect(mon.species).to.equal("charmander");
-                expect(mon.volatile.overrideTraits.species.possibleValues)
-                    .to.have.keys("charmander");
-                expect(mon.baseTraits.species.possibleValues)
-                    .to.have.keys("charmander");
+                expect(mon.volatile.overrideTraits!.species.name)
+                    .to.equal("charmander");
+                expect(mon.baseTraits.species.name).to.equal("charmander");
             });
 
             it("Should not set base species if transformed", function()
@@ -59,17 +59,17 @@ describe("Pokemon", function()
                 const mon = new Pokemon("magikarp", false);
                 mon.switchInto();
                 mon.volatile.transformed = true;
-                mon.formChange("charmander", true);
+
+                mon.formChange("charmander", 100, true);
                 expect(mon.species).to.equal("charmander");
-                expect(mon.volatile.overrideTraits.species.possibleValues)
-                    .to.have.keys("charmander");
-                expect(mon.baseTraits.species.possibleValues)
-                    .to.have.keys("magikarp");
+                expect(mon.volatile.overrideTraits!.species.name)
+                    .to.equal("charmander");
+                expect(mon.baseTraits.species.name).to.equal("magikarp");
             });
         });
     });
 
-    describe("#ability", function()
+    describe("#ability methods", function()
     {
         it("Should be defined if species has one ability", function()
         {
@@ -82,6 +82,31 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("togepi", false);
             expect(mon.ability).to.be.empty;
+        });
+
+        describe("#setAbility()", function()
+        {
+            it("Should narrow ability if not already", function()
+            {
+                const mon = new Pokemon("magikarp", false);
+                const ability = mon.traits.ability;
+
+                mon.setAbility("swiftswim");
+                expect(ability).to.equal(mon.traits.ability);
+                expect(mon.traits.ability.definiteValue).to.equal("swiftswim");
+            });
+
+            it("Should override ability", function()
+            {
+                const mon = new Pokemon("smeargle", false);
+                mon.switchInto();
+                const ability = mon.traits.ability;
+                ability.remove("technician");
+
+                mon.setAbility("technician");
+                expect(ability).to.not.equal(mon.traits.ability);
+                expect(mon.traits.ability.definiteValue).to.equal("technician");
+            });
         });
     });
 
@@ -324,7 +349,7 @@ describe("Pokemon", function()
                 //  been inserted in the default movepool's order
                 const moves = [...dex.pokemon.magikarp.movepool].reverse();
                 expect(moves).to.have.lengthOf(4);
-                const mon = new Pokemon("magikarp", false, moves);
+                const mon = new Pokemon("magikarp", false, 100, moves);
                 expect([...mon.moveset.moves].map(m => m[0]))
                     .to.have.ordered.members(moves)
             });
@@ -487,7 +512,7 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("pidgey", false); // flying type
             mon.switchInto();
-            mon.traits.setAbility("klutz");
+            mon.setAbility("klutz");
             mon.item.narrow("ironball");
             expect(mon.grounded).to.be.false;
         });
@@ -496,7 +521,7 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("pidgey", false); // flying type
             mon.switchInto();
-            mon.traits.setAbility("klutz");
+            mon.setAbility("klutz");
             mon.item.narrow("ironball");
             mon.volatile.suppressAbility = true;
             expect(mon.grounded).to.be.true;
@@ -524,7 +549,7 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("bronzong", false);
             mon.switchInto();
-            mon.traits.setAbility("levitate");
+            mon.setAbility("levitate");
             // remove iron ball possibility
             mon.item.narrow("leftovers");
             expect(mon.grounded).to.be.false;
@@ -553,7 +578,7 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("magikarp", false);
             expect(() => mon.volatile).to.throw(Error,
-                "This Pokemon is currently inactive.");
+                "Pokemon is currently inactive");
             mon.switchInto();
             expect(mon.active).to.be.true;
         });
@@ -573,16 +598,15 @@ describe("Pokemon", function()
         {
             const mon = new Pokemon("magikarp", false);
             mon.switchInto();
-            expect(mon.baseTraits.ability)
-                .to.equal(mon.volatile.overrideTraits.ability);
-            expect(mon.baseTraits.data)
-                .to.equal(mon.volatile.overrideTraits.data);
+            expect(mon.baseTraits).to.not.equal(mon.volatile.overrideTraits);
             expect(mon.baseTraits.species)
-                .to.equal(mon.volatile.overrideTraits.species);
+                .to.equal(mon.volatile.overrideTraits!.species);
+            expect(mon.baseTraits.ability)
+                .to.equal(mon.volatile.overrideTraits!.ability);
             expect(mon.baseTraits.stats)
-                .to.equal(mon.volatile.overrideTraits.stats);
+                .to.equal(mon.volatile.overrideTraits!.stats);
             expect(mon.baseTraits.types)
-                .to.equal(mon.volatile.overrideTraits.types);
+                .to.equal(mon.volatile.overrideTraits!.types);
         });
 
         it("Should become inactive if another switches into it", function()
@@ -781,18 +805,24 @@ describe("Pokemon", function()
             expect(mon1.volatile.addedType).to.equal("bug");
             expect(mon1.volatile.boosts.atk).to.equal(2);
             expect(mon1.volatile.choiceLock).to.be.null;
-            expect(mon1.volatile.overrideTraits.data)
-                .to.equal(mon2.traits.data);
-            expect(mon1.volatile.overrideTraits.stats)
-                .to.equal(mon2.traits.stats);
+            expect(mon1.volatile.overrideTraits!.species)
+                .to.equal(mon2.traits.species);
+            expect(mon1.volatile.overrideTraits!.stats)
+                .to.not.equal(mon2.traits.stats);
+            expect(mon1.traits.stats.level).to.equal(mon2.traits.stats.level);
+            expect(mon1.traits.stats.hp).to.not.equal(mon2.traits.stats.hp);
+            expect(mon1.traits.stats.atk).to.equal(mon2.traits.stats.atk);
+            expect(mon1.traits.stats.def).to.equal(mon2.traits.stats.def);
+            expect(mon1.traits.stats.spa).to.equal(mon2.traits.stats.spa);
+            expect(mon1.traits.stats.spd).to.equal(mon2.traits.stats.spd);
+            expect(mon1.traits.stats.spe).to.equal(mon2.traits.stats.spe);
+            expect(mon1.traits.stats.hpType).to.equal(mon2.traits.stats.hpType);
             expect(mon1.types).to.have.members(mon2.types);
             expect(mon1.moveset.get("splash")).to.not.be.null;
             expect(mon1.hpType).to.equal(mon2.hpType);
 
             // should still keep base traits
-            expect(mon1.baseTraits.species.possibleValues)
-                .to.have.key("smeargle");
-            expect(mon1.baseTraits.data).to.equal(dex.pokemon.smeargle);
+            expect(mon1.baseTraits.species).to.equal(dex.pokemon.smeargle);
             expect(mon1.baseTraits.ability.possibleValues)
                 .to.have.keys(dex.pokemon.smeargle.abilities);
             expect(mon1.baseTraits.stats.hpType.possibleValues)
@@ -824,29 +854,33 @@ describe("Pokemon", function()
             mon2.switchInto();
 
             mon1.transform(mon2);
-            mon2.traits.setAbility("heatproof");
-            mon2.traits.setAbility("pressure");
+            mon2.setAbility("heatproof");
+            mon2.setAbility("pressure");
 
             expect(mon1.ability).to.equal("heatproof");
         });
 
-        it("Should link stat inference", function()
+        it("Should link stat inference except hp", function()
         {
             const mon1 = new Pokemon("magikarp", false);
             mon1.switchInto();
 
             const mon2 = new Pokemon("bronzong", true);
-            mon2.traits.stats.level = 100;
             mon2.switchInto();
+            expect(mon2.traits.stats.hp.min).to.equal(244);
+            expect(mon2.traits.stats.hp.max).to.equal(338);
 
             mon1.transform(mon2);
+            mon1.traits.stats.hp.set(200); // shouldn't transfer
             mon1.traits.stats.atk.set(200);
             mon2.traits.stats.spe.set(100);
 
-            expect(mon1.traits.stats.spe.min).to.equal(100);
-            expect(mon1.traits.stats.spe.max).to.equal(100);
+            expect(mon2.traits.stats.hp.min).to.equal(244);
+            expect(mon2.traits.stats.hp.max).to.equal(338);
             expect(mon2.traits.stats.atk.min).to.equal(200);
             expect(mon2.traits.stats.atk.max).to.equal(200);
+            expect(mon1.traits.stats.spe.min).to.equal(100);
+            expect(mon1.traits.stats.spe.max).to.equal(100);
         });
     });
 });

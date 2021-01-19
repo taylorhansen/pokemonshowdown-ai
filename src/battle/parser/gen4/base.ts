@@ -162,9 +162,8 @@ export const handlers =
     },
     async* changeType(pstate: ParserState, event: events.ChangeType): SubParser
     {
-        const mon = pstate.state.teams[event.monRef].active;
-        mon.volatile.overrideTraits.types = event.newTypes;
-        mon.volatile.addedType = "???";
+        pstate.state.teams[event.monRef].active.volatile
+            .changeTypes(event.newTypes);
         return {};
     },
     async* clause(pstate: ParserState, event: events.Clause): SubParser
@@ -251,11 +250,9 @@ export const handlers =
     async* formChange(pstate: ParserState, event: events.FormChange): SubParser
     {
         const mon = pstate.state.teams[event.monRef].active;
-        mon.formChange(event.species, event.perm);
+        mon.formChange(event.species, event.level, event.perm);
 
         // set other details just in case
-        mon.traits.stats.level = event.level;
-        mon.traits.stats.hp.set(event.hpMax);
         // TODO: should gender also be in the traits object?
         mon.gender = event.gender;
         mon.hp.set(event.hp, event.hpMax);
@@ -335,15 +332,15 @@ export const handlers =
             // initial revealed pokemon can't be null, since we already
             //  set the teamsize
             const mon = team.reveal(data)!;
-            mon.traits.stats.hp.set(data.hpMax);
+            mon.baseTraits.stats.hp.set(data.hpMax);
             for (const stat in data.stats)
             {
                 // istanbul ignore if
                 if (!data.stats.hasOwnProperty(stat)) continue;
-                mon.traits.stats[stat as dexutil.StatExceptHP]
+                mon.baseTraits.stats[stat as dexutil.StatExceptHP]
                     .set(data.stats[stat as dexutil.StatExceptHP]);
             }
-            mon.traits.setAbility(data.baseAbility);
+            mon.baseTraits.ability.narrow(data.baseAbility);
             // TODO: handle case where there's no item? change typings or
             //  default to "none"
             mon.setItem(data.item);

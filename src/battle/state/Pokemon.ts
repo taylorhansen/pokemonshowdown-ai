@@ -88,50 +88,72 @@ export class Pokemon implements ReadonlyPokemon
     /** @override */
     public get traits(): PokemonTraits
     {
-        if (this._volatile) return this._volatile.overrideTraits;
-        return this.baseTraits;
+        return this._volatile?.overrideTraits ?? this.baseTraits;
     }
     /** @override */
-    public readonly baseTraits = new PokemonTraits();
+    public get baseTraits(): PokemonTraits { return this._baseTraits; }
+    private _baseTraits: PokemonTraits;
 
     /** @override */
     public get ability(): string
     {
-        if (!this.traits.hasAbility) return "";
+        if (!this.traits.ability.definiteValue) return "";
 
         const ability = this.traits.ability;
-        return ability.definiteValue || "";
+        return ability.definiteValue ?? "";
     }
     /** Checks whether the Pokemon can currently have the given ability. */
     public canHaveAbility(ability: string): boolean
     {
-        if (!this.traits.hasAbility) return false;
         return this.traits.ability.isSet(ability);
+    }
+    /**
+     * Narrows the current ability possibility or overrides it in the
+     * VolatileStatus if narrowing isn't possible.
+     */
+    public setAbility(...ability: string[]): void
+    {
+        if (ability.every(a => this.canHaveAbility(a)))
+        {
+            this.traits.ability.narrow(...ability);
+        }
+        else
+        {
+            this.volatile.overrideTraits =
+                this.volatile.overrideTraits!.divergeAbility(...ability);
+        }
     }
 
     /** @override */
     public get species(): string
     {
-        const traits = this.traits;
-        if (!traits.hasSpecies) return "";
-
-        const species = traits.species;
-        return species.definiteValue || "";
+        return this.traits.species.name;
     }
     /**
      * Does a form change for this Pokemon.
      * @param species The species to change into.
+     * @param level New form's level for stat calcs.
      * @param perm Whether this is permanent. Default false. Can be overridden
      * to false by `VolatileStatus#transformed`.
      */
-    public formChange(species: string, perm = false): void
+    public formChange(species: string, level: number, perm = false): void
     {
+        if (!dex.pokemon.hasOwnProperty(species))
+        {
+            throw new Error(`Unknown species ${species}`);
+        }
+        const data = dex.pokemon[species];
+
         if (perm && !this.volatile.transformed)
         {
-            this.baseTraits.setSpecies(species);
-            this.volatile.overrideTraits.copy(this.baseTraits);
+            // completely diverge from original base traits
+            // TODO: what changes stay the same?
+            // TODO: how to recover stats for "us" case? need evs/ivs/etc
+            this._baseTraits = PokemonTraits.base(data, level);
+            this.volatile.overrideTraits = this._baseTraits.volatile();
         }
-        else this.volatile.overrideTraits.setSpecies(species);
+        // diverge from original override traits
+        else this.volatile.overrideTraits = PokemonTraits.base(data, level);
     }
 
     /** @override */
@@ -367,7 +389,7 @@ export class Pokemon implements ReadonlyPokemon
     public get volatile(): VolatileStatus
     {
         if (this._volatile) return this._volatile;
-        throw new Error("This Pokemon is currently inactive.");
+        throw new Error("Pokemon is currently inactive");
     }
     /** Minor status conditions. Cleared on switch. */
     private _volatile: VolatileStatus | null = null;
@@ -376,16 +398,22 @@ export class Pokemon implements ReadonlyPokemon
      * Creates a Pokemon.
      * @param species Species name.
      * @param hpPercent Whether to report HP as a percentage.
+     * @param level Level for stat calcs.
      * @param moves Optional moveset to fill in.
      * @param team Optional reference to the parent Team.
      */
-    constructor(species: string, hpPercent: boolean, moves?: readonly string[],
-        public readonly team?: Team)
+    constructor(species: string, hpPercent: boolean, level = 100,
+        moves?: readonly string[], public readonly team?: Team)
     {
-        this.baseTraits.init();
-        this.baseTraits.species.narrow(species);
+        if (!dex.pokemon.hasOwnProperty(species))
+        {
+            throw new Error(`Unknown species ${species}`);
+        }
+        const data = dex.pokemon[species];
+
+        this._baseTraits = PokemonTraits.base(data, level)
         if (moves) this.baseMoveset = new Moveset(moves, moves.length);
-        else this.baseMoveset = new Moveset(this.baseTraits.data.movepool);
+        else this.baseMoveset = new Moveset(data.movepool);
         this.hp = new HP(hpPercent);
     }
 
@@ -464,7 +492,7 @@ export class Pokemon implements ReadonlyPokemon
 
         // make sure volatile has updated info about this pokemon
         this._volatile.overrideMoveset.link(this.baseMoveset, "base");
-        this._volatile.overrideTraits.copy(this.baseTraits);
+        this._volatile.overrideTraits = this.baseTraits.volatile();
         if (selfSwitch) this._volatile.selfSwitch();
     }
 
@@ -514,8 +542,8 @@ export class Pokemon implements ReadonlyPokemon
         // link moveset inference
         this.volatile.overrideMoveset.link(target.moveset, "transform");
 
-        // copy/link current form, ability, types, stats, etc
-        this.volatile.overrideTraits.copy(target.traits);
+        // copy traits but preserve some according to transform rules
+        this.volatile.overrideTraits = target.traits.transform(this.traits);
         this.volatile.addedType = target.volatile.addedType;
     }
 
@@ -546,18 +574,11 @@ ${this.stringifyMoveset(indent)}`;
     /** Displays the species as well as whether it's overridden. */
     private stringifySpecies(): string
     {
-        // should never happen but just in case
         const base = this.baseTraits.species;
-        if (!base.definiteValue) return "<unrevealed>";
+        const override = this._volatile?.overrideTraits?.species;
 
-        const over = this._volatile ?
-            this._volatile.overrideTraits.species : null;
-
-        if (!over || !over.definiteValue || over === base)
-        {
-            return base.definiteValue;
-        }
-        return `${over.definiteValue} (base: ${base.definiteValue})`;
+        if (!override || override === base) return base.name;
+        return `${override.name} (base: ${base.name})`;
     }
 
     // istanbul ignore next: only used for logging
@@ -565,12 +586,10 @@ ${this.stringifyMoveset(indent)}`;
     private stringifyStats(): string
     {
         const base = this.baseTraits.stats;
+        const override = this._volatile?.overrideTraits?.stats;
 
-        if (!this._volatile || base === this._volatile.overrideTraits.stats)
-        {
-            return base.toString();
-        }
-        return `${this._volatile.overrideTraits.stats} (base: ${base})`;
+        if (!override || base === override) return base.toString();
+        return `${override} (base: ${base})`;
     }
 
     // istanbul ignore next: only used for logging
@@ -578,12 +597,9 @@ ${this.stringifyMoveset(indent)}`;
     private stringifyTypes(): string
     {
         const base = this.baseTraits.types;
-        if (!this._volatile || base === this._volatile.overrideTraits.types)
-        {
-            return `[${base.join(", ")}]`;
-        }
-        return `[${this._volatile.overrideTraits.types.join(", ")}] ` +
-            `(base: [${base.join(", ")}])`;
+        const override = this._volatile?.overrideTraits?.types;
+        if (!override || base === override) return `[${base.join(", ")}]`;
+        return `[${override.join(", ")}] (base: [${base.join(", ")}])`;
     }
 
     // istanbul ignore next: only used for logging
@@ -592,15 +608,13 @@ ${this.stringifyMoveset(indent)}`;
     {
         const base = this.baseTraits.ability;
         const baseStr = `${base.definiteValue ? "" : "possibly "}${base}`;
+        const override = this._volatile?.overrideTraits?.ability;
 
-        if (!this._volatile || base === this._volatile.overrideTraits.ability)
-        {
-            return baseStr;
-        }
+        if (!override || base === override) return baseStr;
 
-        const over = this._volatile.overrideTraits.ability;
-        const overStr = `${over.definiteValue ? "" : "possibly "}${over}`;
-        return `${overStr} (base: ${baseStr})`;
+        const overrideStr =
+            `${override.definiteValue ? "" : "possibly "}${override}`;
+        return `${overrideStr} (base: ${baseStr})`;
     }
 
     // istanbul ignore next: only used for logging

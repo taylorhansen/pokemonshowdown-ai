@@ -2,205 +2,90 @@ import { expect } from "chai";
 import "mocha";
 import * as dex from "../../../src/battle/dex/dex";
 import { PokemonTraits } from "../../../src/battle/state/PokemonTraits";
-import { PossibilityClass } from "../../../src/battle/state/PossibilityClass";
-import { StatTable } from "../../../src/battle/state/StatTable";
 
 describe("PokemonTraits", function()
 {
-    let traits: PokemonTraits;
-
-    function checkField(name: string, ctor: any): void
+    describe(".base()", function()
     {
-        expect(traits).to.have.property(name).and.to.be.an.instanceOf(ctor);
-    }
-
-    beforeEach("Initialize PokemonTraits", function()
-    {
-        traits = new PokemonTraits();
-    });
-
-    describe("#ability methods", function()
-    {
-        it("Should not have ability initially", function()
+        it("Should initialize PokemonTraits", function()
         {
-            expect(traits.hasAbility).to.be.false;
-            expect(() => traits.ability).to.throw(Error,
-                "Ability not initialized");
-        });
-
-        describe("#setAbility()", function()
-        {
-            it("Should narrow ability if not already", function()
-            {
-                traits.init();
-                const ability = traits.ability;
-
-                traits.setAbility("swiftswim");
-                expect(ability).to.equal(traits.ability); // should not reassign
-                expect(traits.ability.definiteValue).to.equal("swiftswim");
-            });
-
-            it("Should reset ability", function()
-            {
-                traits.init();
-                const ability = traits.ability;
-                traits.ability.remove("swiftswim");
-
-                traits.setAbility("swiftswim");
-                expect(ability).to.not.equal(traits.ability); // should reassign
-                expect(traits.ability.definiteValue).to.equal("swiftswim");
-            });
+            const traits = PokemonTraits.base(dex.pokemon.magikarp, 100);
+            expect(traits.species).to.equal(dex.pokemon.magikarp);
+            expect(traits.ability.possibleValues)
+                .to.have.keys(dex.pokemon.magikarp.abilities)
+            expect(traits.stats.level).to.equal(100);
+            expect(traits.types).to.equal(dex.pokemon.magikarp.types);
         });
     });
 
-    describe("#species methods", function()
+    describe("#volatile()", function()
     {
-        it("Should not have species initially", function()
+        it("Should create shallow copy", function()
         {
-            expect(() => traits.data).to.throw(Error,
-                "Species not initialized or narrowed");
-            expect(() => traits.species).to.throw(Error,
-                "Species not initialized");
-        });
-
-        describe("#setSpecies()", function()
-        {
-            it("Should narrow species if not already", function()
-            {
-                traits.init();
-                const species = traits.species;
-
-                traits.setSpecies("magikarp");
-                expect(species).to.equal(traits.species); // should not reassign
-                expect(traits.species.definiteValue).to.equal("magikarp");
-            });
-
-            it("Should reset species", function()
-            {
-                traits.init();
-                const species = traits.species;
-                traits.species.remove("magikarp");
-
-                traits.setSpecies("magikarp");
-                expect(species).to.not.equal(traits.species); // should reassign
-                expect(traits.species.definiteValue).to.equal("magikarp");
-            });
-        });
-
-        describe("narrow handler", function()
-        {
-            it("Should initialize dex data/types/stats and narrow ability",
-            function()
-            {
-                traits.init();
-                traits.setSpecies("magikarp");
-                expect(traits.data).to.equal(dex.pokemon.magikarp);
-                expect(traits.stats.data).to.equal(dex.pokemon.magikarp);
-                expect(traits.ability.possibleValues)
-                    .to.have.all.keys(...dex.pokemon.magikarp.abilities);
-                expect(traits.types)
-                    .to.have.members(dex.pokemon.magikarp.types);
-            });
-
-            it("Should overwrite current fields", function()
-            {
-                traits.init();
-                traits.setSpecies("togepi");
-                traits.setAbility("naturalcure");
-                traits.types = ["grass", "water"];
-
-                traits.setSpecies("magikarp");
-                expect(traits.data).to.equal(dex.pokemon.magikarp);
-                expect(traits.stats.data).to.equal(dex.pokemon.magikarp);
-                expect(traits.ability.possibleValues)
-                    .to.have.all.keys(...dex.pokemon.magikarp.abilities);
-                expect(traits.types)
-                    .to.have.members(dex.pokemon.magikarp.types);
-            });
-
-            it("Should not do anything if old PossibilityClass is narrowed",
-            function()
-            {
-                traits.init();
-                const species = traits.species;
-                traits.init(); // re-init
-
-                expect(traits.species).to.not.equal(species);
-
-                species.narrow("magikarp");
-                // should still not be initialized
-                expect(() => traits.data).to.throw();
-
-                traits.species.narrow("magikarp");
-                // now this should be initialized
-                expect(() => traits.data).to.not.throw();
-            });
+            const traits = PokemonTraits.base(dex.pokemon.magikarp, 100);
+            const vtraits = traits.volatile();
+            expect(traits).to.not.equal(vtraits);
+            expect(traits.species).to.equal(vtraits.species);
+            expect(traits.ability).to.equal(vtraits.ability);
+            expect(traits.stats).to.equal(vtraits.stats);
+            expect(traits.types).to.equal(vtraits.types);
         });
     });
 
-    describe("#reset()", function()
+    describe("#transform()", function()
     {
-        it("Should reset all fields", function()
+        it("Should create partial shallow copy", function()
         {
-            traits.init();
-            traits.setSpecies("magikarp");
-            traits.reset();
-            expect(traits.hasAbility).to.be.false;
-            expect(() => traits.ability).to.throw(Error,
-                "Ability not initialized");
-            expect(() => traits.data).to.throw(Error,
-                "Species not initialized or narrowed");
-            expect(() => traits.species).to.throw(Error,
-                "Species not initialized");
-            expect(() => traits.stats).to.throw(Error,
-                "Stat table not initialized");
-            expect(() => traits.types).to.throw(Error,
-                "Types not initialized");
+            const source = PokemonTraits.base(dex.pokemon.mew, 100);
+            const traits = PokemonTraits.base(dex.pokemon.magikarp, 100);
+            const ttraits = traits.transform(source);
+            expect(traits).to.not.equal(ttraits);
+            expect(traits.species).to.equal(ttraits.species);
+            expect(traits.ability).to.equal(ttraits.ability);
+            expect(traits.stats).to.not.equal(ttraits.stats);
+            expect(traits.stats.hp).to.not.equal(ttraits.stats.hp);
+            expect(ttraits.stats.hp).to.equal(source.stats.hp);
+            expect(traits.stats.atk).to.equal(ttraits.stats.atk);
+            expect(traits.stats.def).to.equal(ttraits.stats.def);
+            expect(traits.stats.spa).to.equal(ttraits.stats.spa);
+            expect(traits.stats.spd).to.equal(ttraits.stats.spd);
+            expect(traits.stats.spe).to.equal(ttraits.stats.spe);
+            expect(traits.stats.hpType).to.equal(ttraits.stats.hpType);
+            expect(traits.types).to.equal(ttraits.types);
         });
     });
 
-    describe("#copy()", function()
+    describe("#divergeAbility()", function()
     {
-        it("Should copy fields", function()
+        it("Should create partial shallow copy", function()
         {
-            const other = new PokemonTraits();
-            other.init();
-            other.setSpecies("magikarp");
-
-            traits.copy(other);
-            expect(traits.ability).to.equal(other.ability);
-            expect(traits.data).to.equal(other.data);
-            expect(traits.species).to.equal(other.species);
-            expect(traits.stats).to.equal(other.stats);
-            expect(traits.types).to.equal(other.types);
-        });
-
-        it("Should recopy once species is narrowed", function()
-        {
-            const other = new PokemonTraits();
-            other.init();
-            traits.copy(other);
-
-            // some fields are reset so make sure they still match after
-            other.setSpecies("magikarp");
-            expect(traits.ability).to.equal(other.ability);
-            expect(traits.data).to.equal(other.data);
-            expect(traits.species).to.equal(other.species);
-            expect(traits.stats).to.equal(other.stats);
-            expect(traits.types).to.equal(other.types);
+            const traits = PokemonTraits.base(dex.pokemon.magikarp, 100);
+            const dtraits = traits.divergeAbility("illuminate", "technician");
+            expect(traits).to.not.equal(dtraits);
+            expect(traits.species).to.equal(dtraits.species);
+            expect(traits.ability).to.not.equal(dtraits.ability);
+            expect(traits.ability.possibleValues)
+                .to.have.keys(dex.pokemon.magikarp.abilities)
+            expect(dtraits.ability.possibleValues)
+                .to.have.keys("illuminate", "technician");
+            expect(traits.stats).to.equal(dtraits.stats);
+            expect(traits.types).to.equal(dtraits.types);
         });
     });
 
-    describe("#init()", function()
+    describe("#divergeTypes()", function()
     {
-
-        it("Should initialize most members", function()
+        it("Should create partial shallow copy", function()
         {
-            traits.init();
-            checkField("ability", PossibilityClass);
-            checkField("species", PossibilityClass);
-            checkField("stats", StatTable);
-            checkField("types", Array);
+            const traits = PokemonTraits.base(dex.pokemon.magikarp, 100);
+            const dtraits = traits.divergeTypes(["fire", "ice"]);
+            expect(traits).to.not.equal(dtraits);
+            expect(traits.species).to.equal(dtraits.species);
+            expect(traits.ability).to.equal(dtraits.ability);
+            expect(traits.stats).to.equal(dtraits.stats);
+            expect(traits.types).to.not.equal(dtraits.types);
+            expect(traits.types).to.equal(dex.pokemon.magikarp.types);
+            expect(dtraits.types).to.have.members(["fire", "ice"]);
         });
     });
 });

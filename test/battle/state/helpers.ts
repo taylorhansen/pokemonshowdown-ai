@@ -1,3 +1,5 @@
+import * as dex from "../../../src/battle/dex/dex";
+import { PokemonTraits } from "../../../src/battle/state/PokemonTraits";
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 
 /** Sets every status in a VolatileStatus. */
@@ -45,9 +47,8 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.mudSport = true;
     volatile.mustRecharge = true;
     // TODO: test private moveset link
-    volatile.overrideTraits.init();
-    volatile.overrideTraits.setSpecies("slaking"); // has truant ability
-    volatile.overrideTraits.stats.level = 100;
+    // has truant ability
+    volatile.overrideTraits = PokemonTraits.base(dex.pokemon.slaking, 100);
     volatile.addedType = "ice";
     volatile.rage = true;
     volatile.rollout.start("iceball");

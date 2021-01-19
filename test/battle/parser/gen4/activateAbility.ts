@@ -729,7 +729,7 @@ export function testActivateAbility(f: () => Context,
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("voltabsorb", "illuminate");
 
-            initActive("us").traits.setAbility("moldbreaker");
+            initActive("us").setAbility("moldbreaker");
             await rejectParser<ability.ExpectAbilitiesResult>(
                 ability.onBlock(pstate, {them: true}, "us",
                     dex.moves.thunderbolt),
@@ -758,7 +758,7 @@ export function testActivateAbility(f: () => Context,
         {
             // defender immune to electric through an ability
             const mon = initActive("them", lanturn);
-            mon.traits.setAbility("voltabsorb");
+            mon.setAbility("voltabsorb");
 
             // hpType could be electric
             const {hpType} = initActive("us");
@@ -777,7 +777,7 @@ export function testActivateAbility(f: () => Context,
         {
             // defender immune to electric through an ability
             const mon = initActive("them", lanturn);
-            mon.traits.setAbility("voltabsorb");
+            mon.setAbility("voltabsorb");
 
             // plateType could be electric
             const {item} = initActive("us");
@@ -800,7 +800,7 @@ export function testActivateAbility(f: () => Context,
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("clearbody", "liquidooze");
 
-            initActive("us").traits.setAbility("moldbreaker");
+            initActive("us").setAbility("moldbreaker");
             await rejectParser<ability.ExpectAbilitiesResult>(
                 ability.onTryUnboost(pstate, {them: true}, "us",
                     dex.moves.charm),
@@ -925,7 +925,7 @@ export function testActivateAbility(f: () => Context,
                 it("Should not activate if same type", async function()
                 {
                     const mon = initActive("us", kecleon);
-                    mon.traits.types = ["fire", "???"];
+                    mon.volatile.changeTypes(["fire", "???"]);
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
                             dex.moves.ember));
@@ -937,7 +937,7 @@ export function testActivateAbility(f: () => Context,
                 async function()
                 {
                     const mon = initActive("us", kecleon);
-                    mon.traits.types = ["ghost", "???"];
+                    mon.volatile.changeTypes(["ghost", "???"]);
                     const {hpType} = initActive("them");
                     expect(hpType.definiteValue).to.be.null;
 
@@ -953,7 +953,7 @@ export function testActivateAbility(f: () => Context,
                     "activate", async function()
                 {
                     const mon = initActive("us", kecleon);
-                    mon.traits.types = ["electric", "???"];
+                    mon.volatile.changeTypes(["electric", "???"]);
                     const {item} = initActive("them");
                     expect(item.definiteValue).to.be.null;
 

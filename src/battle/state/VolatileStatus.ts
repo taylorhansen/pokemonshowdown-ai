@@ -146,7 +146,7 @@ export interface ReadonlyVolatileStatus
      */
     readonly overrideMoveset: ReadonlyMoveset;
     /** Override pokemon traits. Applies until switched out. */
-    readonly overrideTraits: ReadonlyPokemonTraits;
+    readonly overrideTraits: ReadonlyPokemonTraits | null;
     /** Temporary third type. */
     readonly addedType: Type;
     /** Rage move status. */
@@ -389,10 +389,22 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public readonly overrideMoveset = new Moveset();
 
     /** @override */
-    public readonly overrideTraits = new PokemonTraits();
+    public overrideTraits!: PokemonTraits | null;
 
     /** @override */
     public addedType!: Type;
+
+    /** Changes current type while active. Also resets `#addedType`. */
+    public changeTypes(types: readonly [Type, Type]): void
+    {
+        // istanbul ignore next: should never happen
+        if (!this.overrideTraits)
+        {
+            throw new Error("Override traits not set");
+        }
+        this.overrideTraits = this.overrideTraits.divergeTypes(types);
+        this.addedType = "???";
+    }
 
     /** @override */
     public rage!: boolean;
@@ -461,12 +473,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** Indicates that the Truant ability has activated. */
     public activateTruant(): void
     {
-        if (!this.overrideTraits.hasAbility ||
-            this.overrideTraits.ability.definiteValue !== "truant")
+        if (this.overrideTraits?.ability.definiteValue !== "truant")
         {
-            throw new Error("Expected ability to equal truant but found " +
-                (this.overrideTraits.hasAbility &&
-                    this.overrideTraits.ability.definiteValue ||
+            throw new Error("Expected ability to be truant but found " +
+                (this.overrideTraits?.ability.definiteValue ??
                     "unknown ability"));
         }
 
@@ -565,7 +575,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.mudSport = false;
         this.mustRecharge = false;
         this.overrideMoveset.isolate();
-        this.overrideTraits.reset();
+        this.overrideTraits = null;
         this.addedType = "???";
         this.rage = false;
         this.rollout.reset();
@@ -682,8 +692,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._stalling = false;
 
         // toggle truant activation
-        if (this.overrideTraits.hasAbility &&
-            this.overrideTraits.ability.definiteValue === "truant")
+        if (this.overrideTraits?.ability.definiteValue === "truant")
         {
             this._willTruant = !this._willTruant;
         }

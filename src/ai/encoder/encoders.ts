@@ -164,9 +164,9 @@ export const statRangeEncoder: Encoder<ReadonlyStatRange> =
         checkLength(arr, 3);
         // normalize based on max possible stats
         const reference = sr.hp ? maxStatHP : maxStat;
-        arr[0] = sr.min !== null ? sr.min / reference : 0.5; // TODO: guess
-        arr[1] = sr.max !== null ? sr.max / reference : 0.5;
-        arr[2] = sr.base !== null ? sr.base / maxBaseStat : 0.5;
+        arr[0] = sr.min / reference;
+        arr[1] = sr.max / reference;
+        arr[2] = sr.base / maxBaseStat;
     },
     size: 3
 };
@@ -213,15 +213,15 @@ export interface PokemonTraitsEncoderArgs
 
 /** Encoder for a PokemonTraits object. */
 export const pokemonTraitsEncoder: Encoder<PokemonTraitsEncoderArgs> = concat(
+    // species
+    augment(({traits: {species: {uid}}}) => ({id: uid}),
+        oneHotEncoder(dex.pokemonKeys.length)),
     // ability
     augment(({traits: {ability}}) => ability,
         possibilityClassEncoder(dex.abilityKeys)),
-    // species
-    augment(({traits: {data: {uid}}}) => ({id: uid}),
-        oneHotEncoder(dex.pokemonKeys.length)),
     // stats
     augment(({traits: {stats}}) => stats, statTableEncoder),
-    // type
+    // type: multi-hot encode
     {
         encode(arr, {traits: {types: monTypes}, addedType})
         {
@@ -320,7 +320,7 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
         oneHotEncoder(dex.moveKeys.length)),
     augment(vs => vs.mudSport, booleanEncoder),
     augment(vs => vs.mustRecharge, booleanEncoder),
-    augment(vs => ({traits: vs.overrideTraits, addedType: vs.addedType}),
+    augment(vs => ({traits: vs.overrideTraits!, addedType: vs.addedType}),
         pokemonTraitsEncoder),
     augment(vs => vs.rage, booleanEncoder),
     augment(vs => vs.rollout, variableTempStatusEncoder(rolloutKeys)),

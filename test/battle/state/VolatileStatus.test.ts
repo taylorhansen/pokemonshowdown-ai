@@ -1,6 +1,8 @@
 import { expect } from "chai";
 import "mocha";
+import * as dex from "../../../src/battle/dex/dex";
 import { BoostName, boostNames } from "../../../src/battle/dex/dex-util";
+import { PokemonTraits } from "../../../src/battle/state/PokemonTraits";
 import { VolatileStatus } from "../../../src/battle/state/VolatileStatus";
 import { setAllVolatiles } from "./helpers";
 
@@ -66,17 +68,7 @@ describe("VolatileStatus", function()
             expect(volatile.mudSport).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link
-            expect(volatile.overrideTraits.hasAbility).to.be.false;
-            expect(() => volatile.overrideTraits.ability).to.throw(Error,
-                "Ability not initialized");
-            expect(() => volatile.overrideTraits.data).to.throw(Error,
-                "Species not initialized or narrowed");
-            expect(() => volatile.overrideTraits.species).to.throw(Error,
-                "Species not initialized");
-            expect(() => volatile.overrideTraits.stats).to.throw(Error,
-                "Stat table not initialized");
-            expect(() => volatile.overrideTraits.types).to.throw(Error,
-                "Types not initialized");
+            expect(volatile.overrideTraits).to.be.null;
             expect(volatile.addedType).to.equal("???");
             expect(volatile.rage).to.be.false;
             expect(volatile.rollout.isActive).to.be.false;
@@ -153,17 +145,7 @@ describe("VolatileStatus", function()
             expect(volatile.mudSport).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
             // TODO: test private moveset link
-            expect(volatile.overrideTraits.hasAbility).to.be.false;
-            expect(() => volatile.overrideTraits.ability).to.throw(Error,
-                "Ability not initialized");
-            expect(() => volatile.overrideTraits.data).to.throw(Error,
-                "Species not initialized or narrowed");
-            expect(() => volatile.overrideTraits.species).to.throw(Error,
-                "Species not initialized");
-            expect(() => volatile.overrideTraits.stats).to.throw(Error,
-                "Stat table not initialized");
-            expect(() => volatile.overrideTraits.types).to.throw(Error,
-                "Types not initialized");
+            expect(volatile.overrideTraits).to.be.null;
             expect(volatile.addedType).to.equal("???");
             expect(volatile.rage).to.be.false;
             expect(volatile.rollout.isActive).to.be.false;
@@ -486,8 +468,8 @@ describe("VolatileStatus", function()
     {
         it("Should set #willTruant if ability is truant", function()
         {
-            volatile.overrideTraits.init();
-            volatile.overrideTraits.setAbility("truant");
+            volatile.overrideTraits =
+                PokemonTraits.base(dex.pokemon.slaking, 100);
             volatile.activateTruant();
             expect(volatile.willTruant).to.be.true;
         });
@@ -495,13 +477,13 @@ describe("VolatileStatus", function()
         it("Should fail if ability is not truant", function()
         {
             expect(() => volatile.activateTruant()).to.throw(Error,
-                "Expected ability to equal truant but found unknown ability");
+                "Expected ability to be truant but found unknown ability");
         });
 
         it("Should toggle on #postTurn() if ability is truant", function()
         {
-            volatile.overrideTraits.init();
-            volatile.overrideTraits.setAbility("truant");
+            volatile.overrideTraits =
+                PokemonTraits.base(dex.pokemon.slaking, 100);
             volatile.activateTruant();
             volatile.postTurn();
             expect(volatile.willTruant).to.be.false;

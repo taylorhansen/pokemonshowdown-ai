@@ -126,7 +126,7 @@ export class Team implements ReadonlyTeam
         {
             const m = this._pokemon[i];
             // TODO: in gen5 check everything since it could be illusion
-            if (m?.baseTraits.species.definiteValue === options.species)
+            if (m?.baseTraits.species.name === options.species)
             {
                 index = i;
                 break;
@@ -184,11 +184,10 @@ export class Team implements ReadonlyTeam
         if (this.unrevealed === this._size) return -1;
 
         const newMon = new Pokemon(species, /*hpPercent*/ this.side === "them",
-            moves, this);
+            level, moves, this);
         this._pokemon[this.unrevealed] = newMon;
 
         // initialize new pokemon
-        newMon.traits.stats.level = level;
         newMon.gender = gender;
         newMon.hp.set(hp, hpMax);
         if (!newMon.hp.isPercent) newMon.traits.stats.hp.set(hpMax);

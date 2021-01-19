@@ -235,34 +235,12 @@ describe("BattleState encoders", function()
     {
         name: "Fully Initialized",
         encoder: encoders.statRangeEncoder,
-        init()
-        {
-            const stat = new StatRange(/*hp*/false);
-            stat.calc(100, 100);
-            return stat;
-        }
+        init: () => new StatRange(100, 100, /*hp*/false)
     },
     {
         name: "Fully Initialized + HP",
         encoder: encoders.statRangeEncoder,
-        init()
-        {
-            const stat = new StatRange(/*hp*/true);
-            stat.calc(100, 100);
-            return stat;
-        }
-    },
-    {
-        name: "Uninitialized",
-        encoder: encoders.statRangeEncoder,
-        init: () => new StatRange(/*hp*/false),
-        values: new Float32Array([0.5, 0.5, 0.5])
-    },
-    {
-        name: "Uninitialized + HP",
-        encoder: encoders.statRangeEncoder,
-        init: () => new StatRange(/*hp*/true),
-        values: new Float32Array([0.5, 0.5, 0.5])
+        init: () => new StatRange(100, 100, /*hp*/true)
     },
     {
         name: "Unrevealed",
@@ -281,13 +259,7 @@ describe("BattleState encoders", function()
     {
         name: "Fully Initialized",
         encoder: encoders.statTableEncoder,
-        init()
-        {
-            const stats = new StatTable();
-            stats.data = dex.pokemon.magikarp;
-            stats.level = 100;
-            return stats;
-        }
+        init: () => StatTable.base(dex.pokemon.magikarp, 100)
     },
     {
         name: "Unrevealed",
@@ -304,26 +276,16 @@ describe("BattleState encoders", function()
     {
         name: "Fully Initialized",
         encoder: encoders.pokemonTraitsEncoder,
-        init(): encoders.PokemonTraitsEncoderArgs
-        {
-            const traits = new PokemonTraits();
-            traits.init();
-            traits.setSpecies("magikarp");
-            traits.stats.level = 100;
-            return {traits};
-        }
+        init: () => ({traits: PokemonTraits.base(dex.pokemon.magikarp, 100)})
     },
     {
         name: "Added Type",
         encoder: encoders.pokemonTraitsEncoder,
-        init(): encoders.PokemonTraitsEncoderArgs
-        {
-            const traits = new PokemonTraits();
-            traits.init();
-            traits.setSpecies("magikarp");
-            traits.stats.level = 100;
-            return {traits, addedType: "fire"};
-        }
+        init: () =>
+        ({
+            traits: PokemonTraits.base(dex.pokemon.magikarp, 100),
+            addedType: "fire" as const
+        })
     },
     {
         name: "Unrevealed",
@@ -343,9 +305,7 @@ describe("BattleState encoders", function()
         init()
         {
             const v = new VolatileStatus();
-            v.overrideTraits.init();
-            v.overrideTraits.setSpecies("magikarp");
-            v.overrideTraits.stats.level = 100;
+            v.overrideTraits = PokemonTraits.base(dex.pokemon.magikarp, 100);
             return v;
         }
     },

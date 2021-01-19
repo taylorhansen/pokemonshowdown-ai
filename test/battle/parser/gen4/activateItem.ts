@@ -112,7 +112,7 @@ export function testActivateItem(f: () => Context,
             async function()
             {
                 const mon = initActive("them", clefable);
-                mon.traits.setAbility("magicguard");
+                mon.setAbility("magicguard");
 
                 await initParser("them", "lifeorb", "movePostDamage");
                 await expect(handle(

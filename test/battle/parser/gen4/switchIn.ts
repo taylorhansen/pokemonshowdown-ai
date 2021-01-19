@@ -126,8 +126,8 @@ export function testSwitchIn(f: () => Context,
                 state.teams.us.size = 2;
                 const mon = state.teams.us.switchIn(smeargle)!;
                 mon.majorStatus.afflict("frz");
-                // could have naturalcure
-                mon.traits.setAbility("naturalcure", "illuminate");
+                mon.setAbility("naturalcure")
+
                 await altParser(expectSwitch(pstate, "us"));
                 await handle(
                 {

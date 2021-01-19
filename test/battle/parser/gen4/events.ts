@@ -804,7 +804,7 @@ export function testEvents()
             {
                 // first make sure the pokemon has truant
                 const mon = initActive("us");
-                mon.traits.setAbility("truant");
+                mon.setAbility("truant");
                 expect(mon.volatile.willTruant).to.be.false;
 
                 // also flipped back on postTurn to sync with this event
@@ -817,7 +817,7 @@ export function testEvents()
             {
                 // first make sure the pokemon has truant
                 const mon = initActive("us");
-                mon.traits.setAbility("truant");
+                mon.setAbility("truant");
                 expect(mon.volatile.willTruant).to.be.false;
 
                 // indicate that the next turn is a recharge turn
