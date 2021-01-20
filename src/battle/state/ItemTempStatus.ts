@@ -43,6 +43,7 @@ export class ItemTempStatus<TStatusType extends string> implements
     /** @override */
     public get type(): TStatusType | "none" { return this._type; }
     private _type!: TStatusType | "none";
+    // TODO: should the getter make this readonly?
     /** @override */
     public get source(): PossibilityClass<string, ItemData> | null
     {
@@ -145,7 +146,7 @@ export class ItemTempStatus<TStatusType extends string> implements
         {
             // currently using short duration, so we must have had the
             //  extension item all along
-            if (this._source && this._source.isSet(this.items[this._type]))
+            if (this._source?.isSet(this.items[this._type]))
             {
                 this._source.narrow(this.items[this._type]);
                 this._duration = this.durations[1];

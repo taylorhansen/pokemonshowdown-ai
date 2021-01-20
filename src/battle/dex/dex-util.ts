@@ -564,7 +564,7 @@ export function getMoveTypes(move: MoveData, user: ReadonlyPokemon): Set<Type>
     switch (move.modifyType)
     {
         // TODO: also include naturalgift and others
-        case "hpType": return new Set(user.hpType.possibleValues) as Set<Type>;
+        case "hpType": return new Set(user.hpType.possibleValues);
         case "plateType":
         {
             const result = new Set<Type>();

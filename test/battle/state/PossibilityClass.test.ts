@@ -21,45 +21,9 @@ describe("PossibilityClass", function()
         });
     });
 
-    describe("#remove()", function()
-    {
-        it("Should rule out one type if removed", function()
-        {
-            const pc = new PossibilityClass(map);
-            pc.remove("a");
-            expect(pc.isSet("a")).to.be.false;
-            expect(pc.possibleValues).to.have.keys("b", "c");
-        });
-
-        it("Should rule out multiple types", function()
-        {
-            const pc = new PossibilityClass(map);
-            pc.remove("a", "b");
-            expect(pc.isSet("a")).to.be.false;
-            expect(pc.isSet("b")).to.be.false;
-            expect(pc.possibleValues).to.have.keys("c");
-            expect(pc.definiteValue).to.equal("c");
-        });
-
-        it("Should throw if unknown type is given", function()
-        {
-            const pc = new PossibilityClass(map);
-            expect(() => pc.remove("d")).to.throw(Error,
-                "PossibilityClass has no value name 'd'");
-        });
-
-        it("Should reject call if it would overnarrow", function()
-        {
-            const pc = new PossibilityClass(map);
-            expect(() => pc.remove("a", "b", "c")).to.throw(Error,
-                "Tried to remove 3 possibilities when there were 3 left");
-            expect(pc.possibleValues).to.have.keys("a", "b", "c");
-        });
-    });
-
     describe("#narrow()", function()
     {
-        it("Should narrow values", function()
+        it("Should narrow keys via spread", function()
         {
             const pc = new PossibilityClass(map);
             pc.narrow("a");
@@ -69,13 +33,94 @@ describe("PossibilityClass", function()
             expect(pc.possibleValues).to.have.keys("a");
         });
 
-        it("Should reject call if it would overnarrow", function()
+        it("Should narrow keys via array", function()
+        {
+            const pc = new PossibilityClass(map);
+            pc.narrow(["a", "c"]);
+
+            expect(pc.isSet("a")).to.be.true;
+            expect(pc.isSet("c")).to.be.true;
+            expect(pc.definiteValue).to.be.null;
+            expect(pc.possibleValues).to.have.keys("a", "c");
+        });
+
+        it("Should narrow keys via Set", function()
+        {
+            const pc = new PossibilityClass(map);
+            pc.narrow(new Set(["a", "c"]));
+
+            expect(pc.isSet("a")).to.be.true;
+            expect(pc.isSet("c")).to.be.true;
+            expect(pc.definiteValue).to.be.null;
+            expect(pc.possibleValues).to.have.keys("a", "c");
+        });
+
+        it("Should narrow keys via predicate", function()
+        {
+            const pc = new PossibilityClass(map);
+            pc.narrow(n => n === "b");
+
+            expect(pc.isSet("b")).to.be.true;
+            expect(pc.definiteValue).to.equal("b");
+            expect(pc.possibleValues).to.have.keys("b");
+        });
+
+        it("Should throw if overnarrowed", function()
         {
             const pc = new PossibilityClass(map);
             pc.narrow("c");
             expect(() => pc.narrow("a", "b")).to.throw(Error,
-                "Rejected narrow with [a, b] as it would overnarrow {c}");
+                "All possibilities have been ruled out (should never happen)");
+            expect(pc.possibleValues).to.be.empty;
+        });
+    });
+
+    describe("#remove()", function()
+    {
+        it("Should rule out types via spread", function()
+        {
+            const pc = new PossibilityClass(map);
+            pc.remove("a", "b");
+            expect(pc.isSet("a")).to.be.false;
+            expect(pc.isSet("b")).to.be.false;
             expect(pc.possibleValues).to.have.keys("c");
+            expect(pc.definiteValue).to.equal("c");
+        });
+
+        it("Should rule out types via array", function()
+        {
+            const pc = new PossibilityClass(map);
+            pc.remove(["a", "b"]);
+            expect(pc.isSet("a")).to.be.false;
+            expect(pc.isSet("b")).to.be.false;
+            expect(pc.possibleValues).to.have.keys("c");
+            expect(pc.definiteValue).to.equal("c");
+        });
+
+        it("Should rule out types via Set", function()
+        {
+            const pc = new PossibilityClass(map);
+            pc.remove(new Set(["a", "c"]));
+            expect(pc.isSet("a")).to.be.false;
+            expect(pc.isSet("c")).to.be.false;
+            expect(pc.possibleValues).to.have.keys("b");
+            expect(pc.definiteValue).to.equal("b");
+        });
+
+        it("Should rule out types via predicate", function()
+        {
+            const pc = new PossibilityClass(map);
+            pc.remove(n => n === "c");
+            expect(pc.isSet("c")).to.be.false;
+            expect(pc.possibleValues).to.have.keys("a", "b");
+        });
+
+        it("Should throw if overnarrowed", function()
+        {
+            const pc = new PossibilityClass(map);
+            expect(() => pc.remove("a", "b", "c")).to.throw(Error,
+                "All possibilities have been ruled out (should never happen)");
+            expect(pc.possibleValues).to.be.empty;
         });
     });
 

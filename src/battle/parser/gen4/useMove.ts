@@ -1093,10 +1093,9 @@ function handleTypeEffectiveness(ctx: MoveContext,
         if (!hpType.definiteValue)
         {
             // look for types that would match the given effectiveness
-            const possibleTypes = [...hpType.possibleValues].filter(
+            hpType.narrow(
                 type => effectiveness ===
                     getTypeEffectiveness(defender.types, type as dexutil.Type));
-            hpType.narrow(...possibleTypes);
             // the assertion at the end would be guaranteed to pass if we fully
             //  narrowed the hpType, so return regardless
             return;
@@ -1110,11 +1109,10 @@ function handleTypeEffectiveness(ctx: MoveContext,
         if (!heldItem.definiteValue)
         {
             // look for plate items that would match the given effectiveness
-            const possiblePlates = [...heldItem.possibleValues].filter(
+            heldItem.narrow(
                 n => effectiveness ===
                     getTypeEffectiveness(defender.types,
                         heldItem.map[n].plateType ?? ctx.moveData.type));
-            heldItem.narrow(...possiblePlates);
             // the assertion at the end would be guaranteed to pass if we fully
             //  narrowed the item/plate, so return regardless
             return;
@@ -1856,7 +1854,7 @@ function statusImmunity(ctx: MoveContext, targetRef: Side): void
             "but target's ability " +
             `[${[...targetAbility.possibleValues].join(", ")}] can't block it`);
     }
-    targetAbility.narrow(...filtered);
+    targetAbility.narrow(filtered);
 }
 
 /**
@@ -1920,12 +1918,12 @@ function naturalGift(ctx: MoveContext, failed: boolean): void
     if (!failed)
     {
         // TODO: narrow further based on perceived power and type
-        ctx.user.item.narrow(...Object.keys(dex.berries));
-        ctx.user.removeItem(/*consumed*/true);
+        ctx.user.item.narrow(Object.keys(dex.berries));
+        ctx.user.removeItem(/*consumed*/ true);
     }
     // fails if the user doesn't have a berry
     // TODO: also check for klutz/embargo blocking the berry from being used
-    else ctx.user.item.remove(...Object.keys(dex.berries));
+    else ctx.user.item.remove(Object.keys(dex.berries));
 }
 
 /**
@@ -1960,7 +1958,7 @@ function recoil(ctx: MoveContext, consumed: boolean): void
                     `[${noRecoilAbilities.join(", ")}] but recoil still ` +
                     "happened");
             }
-            userAbility.remove(...noRecoilAbilities);
+            userAbility.remove(noRecoilAbilities);
         }
         // must have a recoil-canceling ability
         else if (noRecoilAbilities.length <= 0)
@@ -1969,6 +1967,6 @@ function recoil(ctx: MoveContext, consumed: boolean): void
                 `ability [${[...userAbility.possibleValues].join(", ")}] ` +
                 "can't suppress recoil but it still suppressed recoil");
         }
-        else userAbility.narrow(...noRecoilAbilities);
+        else userAbility.narrow(noRecoilAbilities);
     }
 }

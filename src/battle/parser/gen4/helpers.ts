@@ -127,7 +127,7 @@ export function createItemEventInference<
                 // suppressAbility check should've already been done earlier
                 if (inf.blockingAbilities)
                 {
-                    mon.traits.ability.remove(...inf.blockingAbilities)
+                    mon.traits.ability.remove(inf.blockingAbilities)
                 }
             }),
         absent(): void
@@ -170,7 +170,7 @@ export function createItemEventInference<
                 //  (i.e., length=1)
                 if (items.size === mon.item.possibleValues.size)
                 {
-                    mon.traits.ability.narrow(...intersect);
+                    mon.traits.ability.narrow(intersect);
                 }
                 // can't make any meaningful inferences if neither ability nor
                 //  item are definite

@@ -264,5 +264,5 @@ function indirectDamage(ctx: ItemContext): void
             `[${[...ability.possibleValues].join(", ")}] suppresses that ` +
             "damage");
     }
-    ability.remove(...filteredAbilities);
+    ability.remove(filteredAbilities);
 }

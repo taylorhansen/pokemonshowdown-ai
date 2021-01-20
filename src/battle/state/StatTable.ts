@@ -1,4 +1,5 @@
-import { HPType, hpTypes, PokemonData, StatName } from "../dex/dex-util";
+import { HPType, hpTypeKeys, hpTypes, PokemonData, StatName } from
+    "../dex/dex-util";
 import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
 import { ReadonlyStatRange, StatRange } from "./StatRange";
 
@@ -61,7 +62,7 @@ export class StatTable implements ReadonlyStatTable, StatRanges
         this.spe = typeof baseStats.spe === "number" ?
             new StatRange(baseStats.spe, this.level) : baseStats.spe;
 
-        this.hpType = hpType ?? new PossibilityClass(hpTypes);
+        this.hpType = hpType ?? new PossibilityClass(hpTypes, hpTypeKeys);
     }
 
     // TODO: change param type to StatTable

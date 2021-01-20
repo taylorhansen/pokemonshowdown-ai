@@ -56,7 +56,7 @@ export interface ReadonlyPokemon
     readonly gender?: string | null;
 
     /** Current Hidden Power type possibility. */
-    readonly hpType: PossibilityClass<dexutil.HPType>;
+    readonly hpType: ReadonlyPossibilityClass<dexutil.HPType>;
 
     /** Happiness value between 0 and 255, or null if unknown. */
     readonly happiness: number | null;
@@ -115,7 +115,7 @@ export class Pokemon implements ReadonlyPokemon
     {
         if (ability.every(a => this.canHaveAbility(a)))
         {
-            this.traits.ability.narrow(...ability);
+            this.traits.ability.narrow(ability);
         }
         else
         {
@@ -509,20 +509,20 @@ export class Pokemon implements ReadonlyPokemon
     public trapped(by: Pokemon): void
     {
         // opposing pokemon can have only one of these abilities here
-        const abilities: string[] = [];
+        const abilities = new Set<string>();
 
         // TODO: add features of these abilities to dex data
         // arenatrap traps grounded pokemon
-        if (this.grounded !== false) abilities.push("arenatrap");
+        if (this.grounded !== false) abilities.add("arenatrap");
 
         // magnetpull traps steel types
-        if (this.types.includes("steel")) abilities.push("magnetpull");
+        if (this.types.includes("steel")) abilities.add("magnetpull");
 
         // shadowtag traps all pokemon who don't have it
-        if (this.ability !== "shadowtag") abilities.push("shadowtag");
+        if (this.ability !== "shadowtag") abilities.add("shadowtag");
 
         // infer possible trapping abilities
-        if (abilities.length > 0) by.traits.ability.narrow(...abilities);
+        if (abilities.size > 0) by.traits.ability.narrow(abilities);
         else throw new Error("Can't figure out why we're trapped");
     }
 

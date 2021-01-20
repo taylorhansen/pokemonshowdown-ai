@@ -34,7 +34,7 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     {
         return this._possibleValues;
     }
-    private _possibleValues: Set<TKey>;
+    private readonly _possibleValues: Set<TKey>;
 
     /**
      * Gets the class name and data if narrowed down sufficiently, otherwise
@@ -51,30 +51,54 @@ export class PossibilityClass<TKey extends string, TData = any> implements
      * @param map Base dictionary object. Should not change during the lifetime
      * of this object.
      * @param values Optional values to immediately narrow to. Defaults to all
-     * possible values
+     * possible values given by the `map`.
      */
-    constructor(map: {readonly [T in TKey]: TData}, ...values: string[])
+    constructor(map: {readonly [T in TKey]: TData}, ...values: string[]);
+    /**
+     * Creates a PossibilityClass.
+     * @param map Base dictionary object. Should not change during the lifetime
+     * of this object.
+     * @param values Optional values to immediately narrow to if not empty.
+     * Defaults to all possible values given by the `map`.
+     */
+    constructor(map: {readonly [T in TKey]: TData},
+        values: readonly string[] | ReadonlySet<string>);
+    constructor(map: {readonly [T in TKey]: TData},
+        arg1?: string | readonly string[] | ReadonlySet<string>,
+        ...values: string[])
     {
         this.map = map;
 
-        if (values.length <= 0)
+        let set: Set<TKey> | undefined;
+        if (typeof arg1 === "string")
         {
-            this._possibleValues = new Set(Object.keys(map) as TKey[]);
+            this.check(arg1);
+            for (const v of values) this.check(v);
+            values.push(arg1);
+            set = new Set(values as TKey[]);
         }
-        else
+        else if (typeof arg1 !== "undefined")
         {
-            values.forEach(v => this.check(v));
-            this._possibleValues = new Set(values as TKey[]);
+            for (const v of arg1) this.check(v);
+            set = new Set(arg1 as readonly TKey[] | ReadonlySet<TKey>);
         }
+
+        if (!set || set.size <= 0) set = new Set(Object.keys(map) as TKey[]);
+        this._possibleValues = set;
 
         this.checkNarrowed();
     }
 
-    /**
-     * Adds a listener for when this object gets fully narrowed. The provided
-     * function can be immediately called if this PossibilityClass is already
-     * narrowed.
-     */
+    /** Checks that a given name is part of this object's map. */
+    private check(name: string): asserts name is TKey
+    {
+        if (!this.map.hasOwnProperty(name))
+        {
+            throw new Error(`PossibilityClass has no value name '${name}'`);
+        }
+    }
+
+    /** @override */
     public then(f: (key: TKey, data: TData) => void): this
     {
         this.listeners.push(f);
@@ -88,55 +112,71 @@ export class PossibilityClass<TKey extends string, TData = any> implements
         return this._possibleValues.has(name);
     }
 
-    /** Removes values from the data possibility. */
+    /** Removes keys that are not in the given array. */
+    public narrow(...values: string[]): void;
+    /** Removes keys that are not in the given Set/array. */
+    public narrow(values: readonly string[] | ReadonlySet<string>): void;
+    /** Removes keys that don't satisfy the given predicate. */
+    // tslint:disable-next-line: unified-signatures
+    public narrow(pred: (name: TKey, data: TData) => boolean): void;
+    public narrow(
+        arg0?: string | readonly string[] | ReadonlySet<string> |
+            ((name: TKey, data: TData) => boolean),
+        ...values: string[]): void
+    {
+        if (typeof arg0 === "undefined")
+        {
+            // over-narrow to 0 keys to trigger error
+            this._possibleValues.clear();
+            return this.checkNarrowed();
+        }
+        if (typeof arg0 === "string")
+        {
+            values.push(arg0);
+            return this.narrow(new Set(values));
+        }
+        if (Array.isArray(arg0)) return this.narrow(new Set(arg0));
+        if (arg0 instanceof Set) return this.narrow(n => arg0.has(n));
+
+        // filter based on predicate
+        // TODO: should overnarrowing errors be recovered from? many callers
+        //  guard against it anyway
+        const pred = arg0 as (name: TKey, data: TData) => boolean;
+        for (const name of this._possibleValues)
+        {
+            if (!pred(name, this.map[name])) this._possibleValues.delete(name);
+        }
+        this.checkNarrowed();
+    }
+
+    /** Removes keys if they are included in the given array. */
     public remove(...values: string[]): void
+    /** Removes keys if they are included in the given Set/array. */
+    public remove(values: readonly string[] | ReadonlySet<string>): void
+    /** Removes keys if they satisfy the predicate. */
+    // tslint:disable-next-line: unified-signatures
+    public remove(pred: (name: TKey, data: TData) => boolean): void;
+    public remove(
+        arg0?: string | readonly string[] | ReadonlySet<string> |
+            ((name: TKey,  data: TData) => boolean),
+        ...values: string[]): void
     {
-        // guard against overnarrowing
-        let amtToRemove = 0;
-        for (const value of values)
+        if (typeof arg0 === "undefined") return;
+        if (typeof arg0 === "string")
         {
-            this.check(value);
-            if (this._possibleValues.has(value)) ++amtToRemove;
+            values.push(arg0);
+            return this.remove(new Set(values));
         }
-        if (amtToRemove >= this._possibleValues.size)
+        if (Array.isArray(arg0)) return this.remove(new Set(arg0));
+        if (arg0 instanceof Set) return this.remove(n => arg0.has(n));
+
+        // filter based on predicate
+        const pred = arg0 as (name: TKey, data: TData) => boolean;
+        for (const name of this._possibleValues)
         {
-            throw new Error(`Tried to remove ${amtToRemove} possibilities ` +
-                `when there were ${this._possibleValues.size} left`);
+            if (pred(name, this.map[name])) this._possibleValues.delete(name);
         }
-
-        for (const value of values) this._possibleValues.delete(value as TKey);
-
         this.checkNarrowed();
-    }
-
-    /** Removes currently set value names that are not in the given array. */
-    public narrow(...values: string[]): void
-    {
-        for (const value of values) this.check(value);
-
-        // intersect the current set with the given one
-        const newValues = [...this._possibleValues]
-            .filter(x => values.includes(x));
-
-        // guard against overnarrowing
-        if (newValues.length < 1)
-        {
-            throw new Error(`Rejected narrow with [${values.join(", ")}] as ` +
-                "it would overnarrow " +
-                `{${[...this._possibleValues].join(", ")}}`);
-        }
-
-        this._possibleValues = new Set(newValues);
-        this.checkNarrowed();
-    }
-
-    /** Checks that a given name is part of this object's map. */
-    private check(name: string): asserts name is TKey
-    {
-        if (!this.map.hasOwnProperty(name))
-        {
-            throw new Error(`PossibilityClass has no value name '${name}'`);
-        }
     }
 
     /**

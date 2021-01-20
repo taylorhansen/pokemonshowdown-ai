@@ -418,7 +418,7 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
         dexutil.getDefiniteMoveType(hitByMove, opp) : null;
 
     // figure out which abilities to remove
-    const removeCandidates: string[] = [];
+    const removeCandidates = new Set<string>();
     for (const [name, inf] of abilities)
     {
         // don't remove abilities that only had a chance of
@@ -432,7 +432,7 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
             //  ability should've activated
             if (!opp.item.isSet("none"))
             {
-                removeCandidates.push(name);
+                removeCandidates.add(name);
                 continue;
             }
             // TODO: if opponent's item is unknown, add onNarrow
@@ -448,13 +448,13 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
         {
             if (!hitByMove)
             {
-                removeCandidates.push(name);
+                removeCandidates.add(name);
                 continue;
             }
             // if holder isn't move type, remove
             if (hitByMoveType && !mon.types.every(t => t === hitByMoveType))
             {
-                removeCandidates.push(name);
+                removeCandidates.add(name);
                 continue;
             }
 
@@ -469,7 +469,7 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
             // if ability definitely blocks the move, remove the ability
             if (!hitByMove || inf.moveType === hitByMoveType)
             {
-                removeCandidates.push(name);
+                removeCandidates.add(name);
                 continue;
             }
 
@@ -480,7 +480,7 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
             if (allMoveType !== inf.moveType) allMoveType = false;
         }
         // ability definitely should've activated
-        else if (guaranteed) removeCandidates.push(name);
+        else if (guaranteed) removeCandidates.add(name);
         else
         {
             allOpponentHasItem = false;
@@ -497,10 +497,10 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
     {
         switch (hitByMove?.modifyType)
         {
-            case "hpType": opp.hpType.narrow(...mon.types); break;
+            case "hpType": opp.hpType.narrow(mon.types); break;
             case "plateType":
-                opp.item.narrow(...[...opp.item.possibleValues].filter(n =>
-                    mon.types.some(t => t === opp.item.map[n].plateType)));
+                opp.item.narrow(
+                    n => mon.types.some(t => t === opp.item.map[n].plateType));
                 break;
             default:
                 if (!mon.types.some(t => t === hitByMoveType))
@@ -521,8 +521,7 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
         {
             case "hpType": opp.hpType.remove(allMoveType); break;
             case "plateType":
-                opp.item.remove(...[...opp.item.possibleValues].filter(n =>
-                        allMoveType === opp.item.map[n].plateType));
+                opp.item.remove(n => allMoveType === opp.item.map[n].plateType);
                 break;
             default:
                 // sanity check
@@ -537,13 +536,13 @@ function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
         }
     }
 
-    try { mon.traits.ability.remove(...removeCandidates); }
-    catch (e)
+    if (removeCandidates.size >= mon.traits.ability.possibleValues.size)
     {
         throw new Error(`Pokemon '${monRef}' should've activated ability ` +
-            `[${removeCandidates.join(", ")}] but it wasn't activated ` +
+            `[${[...removeCandidates].join(", ")}] but it wasn't activated ` +
             `on-${on}`);
     }
+    mon.traits.ability.remove(removeCandidates);
 }
 
 /** Result from `expectAbility()`. */
@@ -1137,9 +1136,7 @@ async function* moveContactKO(ctx: AbilityContext, targetRef: Side,
         if (!target.volatile.suppressAbility)
         {
             const {ability} = target.traits;
-            const blockExplosive = [...ability.possibleValues]
-                .filter(n => ability.map[n].on?.block?.effect?.explosive);
-            ability.remove(...blockExplosive);
+            ability.remove((_, a) => !!a.on?.block?.effect?.explosive);
         }
     }
 
@@ -1292,8 +1289,7 @@ function assertMoveType(move: dexutil.MoveData, type: dexutil.Type,
         // asserted type is the type of plate the user is holding
         case "plateType":
             // TODO: add an inverse map for plateTypes to optimize this case
-            user.item.narrow(...[...user.item.possibleValues].filter(
-                    n => type === user.item.map[n].plateType));
+            user.item.narrow(n => type === user.item.map[n].plateType);
             break;
     }
 }
