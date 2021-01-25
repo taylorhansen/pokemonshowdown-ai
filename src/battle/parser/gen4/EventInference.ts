@@ -1,0 +1,192 @@
+import * as events from "../BattleEvent";
+import { SubParser, SubParserResult } from "../BattleParser";
+import { eventLoop } from "../helpers";
+
+/**
+ * Describes the different but related cases in which a single group of events
+ * can be parsed. Should only be created by the `createEventInference()`
+ * function.
+ * @template TResult Result type from parsing an event.
+ * @see createEventInference
+ */
+export interface EventInference<
+    TResult extends SubParserResult = SubParserResult>
+{
+    /**
+     * Parser for the event.
+     * @param event Initial event.
+     */
+    take(event: events.Any): SubParser<TResult>;
+    /**
+     * Models the possible cases in which this inference can activate or
+     * `#take()`.
+     */
+    readonly cases: ReadonlySet<SubInference>;
+}
+
+/**
+ * Creates an EventInference.
+ * @template TResult Result type from parsing an event.
+ * @param cases Possible cases in which this inference could accept an event.
+ * @param taker Parser function that selects from the given cases. If it accepts
+ * the given event, it should call the provided `accept` callback before parsing
+ * to indicate which one it chose.
+ */
+export function createEventInference<
+    TResult extends SubParserResult = SubParserResult>(
+    cases: ReadonlySet<SubInference>,
+    taker: (event: events.Any, accept: (inf: SubInference) => void) =>
+        SubParser<TResult>):
+    EventInference<TResult>
+{
+    return {
+        take: event => taker(event,
+            function accept(inf: SubInference)
+            {
+                // istanbul ignore next: should never happen
+                if (!cases.has(inf))
+                {
+                    throw new Error("Taker accept callback didn't provide " +
+                        "the correct SubInference");
+                }
+                // assert the case that happened
+                assertAll(inf.reasons);
+                // reject all the other cases that didn't happen
+                for (const c of cases) if (c !== inf) rejectOne(c.reasons);
+            }),
+        cases
+    };
+}
+
+// TODO: should this be removed in favor of its reasons field directly?
+/** A possible candidate for an EventInference. */
+export interface SubInference
+{
+    /**
+     * Reasons why this SubInference should be the one that activates for the
+     * EventInference. If one of them is disproven, then this SubInference
+     * shouldn't be considered (i.e., the entire SubInference is disproven).
+     *
+     * This Set will eventually be emptied as SubReasons get proven/disproven.
+     */
+    readonly reasons: Set<SubReason>;
+}
+
+/** Reason for a SubInference to activate. */
+export interface SubReason
+{
+    /** Asserts that the reason holds. Requires `#canHold()=true`. */
+    assert(): void;
+    /** Asserts that the reason cannot hold. */
+    reject(): void;
+    /**
+     * Sets up callbacks to wait for more information before asserting.
+     * @param cb Callback for when the reason can be asserted (param
+     * `held=true`) or rejected (`held=false`). Can be called immediately.
+     * @returns A callback to cancel this call. Should be called automatically
+     * when `cb` is called by this function. Should do nothing if called again.
+     */
+    delay(cb: (held: boolean) => void): () => void;
+}
+
+/** Result from `expectEvents()`. */
+export interface ExpectEventsResult<TResult = SubParserResult> extends
+    SubParserResult
+{
+    results: TResult[];
+}
+
+/** Evaluates a group of EventInferences in any order. */
+export async function* expectEvents<
+    TResult extends SubParserResult = SubParserResult>(
+    inferences: EventInference<TResult>[], lastEvent?: events.Any):
+    SubParser<ExpectEventsResult<TResult>>
+{
+    const results: TResult[] = [];
+    const result = yield* eventLoop(
+        async function* expectEventsLoop(event): SubParser
+        {
+            for (let i = 0; i < inferences.length; ++i)
+            {
+                // see if the EventInference takes the event
+                const inf = inferences[i];
+                const infResult = yield* inf.take(event);
+                // if it didn't, try a different EventInference
+                if (infResult.event === event) continue;
+                // if it did, we can move on to the next event
+                inferences.splice(i, 1);
+                results.push(infResult);
+                return infResult;
+            }
+            // if no EventInferences take the event, then stop the event loop
+            return {event};
+        },
+        lastEvent);
+
+    // for the EventInferences that didn't take any events, reject each case
+    for (const inf of inferences)
+    {
+        for (const subInf of inf.cases) rejectOne(subInf.reasons);
+    }
+
+    return {...result, results};
+}
+
+/** Asserts that all the reasons are valid. */
+function assertAll(reasons: Set<SubReason>): void
+{
+    for (const reason of reasons) reason.assert();
+    reasons.clear();
+}
+
+/**
+ * Asserts that at least one of the reasons is invalid and sets up inferences to
+ * figure out which.
+ */
+function rejectOne(reasons: Set<SubReason>): void
+{
+    // TODO: also early return for SubReasons that were already disproven
+
+    // early return: only one reason provided which must be the invalid one
+    if (reasons.size <= 1)
+    {
+        for (const reason of reasons) reason.reject();
+        reasons.clear();
+        return;
+    }
+
+    // keep track of delay() cancel callbacks for cleanup after disproving a
+    //  SubReason
+    const cancelCbs: (() => void)[] = [];
+
+    // main callback function for delay() calls
+    function evalReason(reason: SubReason, held: boolean): void
+    {
+        if (held)
+        {
+            // the reason held, so we don't need to care about it anymore
+            reason.assert(); // sanity check
+            reasons.delete(reason);
+            // if all other reasons held, then the last one shouldn't have held
+            if (reasons.size !== 1) return;
+            for (const r of reasons) r.reject();
+            reasons.clear(); // return from reasons loop if we're still in it
+        }
+        else
+        {
+            // the reason didn't hold, so we don't need to care about any other
+            //  inferences
+            // not doing this would imply that this reason as well as another
+            //  must be disproven in order to disprove the entire inference
+            reason.reject(); // sanity check
+            for (const cb of cancelCbs) cb();
+            reasons.clear();
+        }
+    }
+
+    // delay() each reason and keep track of cancel callbacks
+    for (const reason of reasons)
+    {
+        cancelCbs.push(reason.delay(held => evalReason(reason, held)));
+    }
+}

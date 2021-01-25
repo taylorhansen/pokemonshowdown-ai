@@ -129,7 +129,7 @@ export function testRemoveItem(f: () => Context,
                 {them: true}));
             await handle(
                 {type: "removeItem", monRef: "them", consumed: "powerherb"});
-            await exitParser<consumeItem.ExpectConsumeResult>(
+            await exitParser<consumeItem.ExpectConsumeItemsResult>(
                 {results: [{shorten: true}]});
             expect(mon.lastItem.possibleValues).to.have.keys("powerherb");
         });
@@ -143,7 +143,8 @@ export function testRemoveItem(f: () => Context,
 
             await altParser(consumeItem.consumeOnMoveCharge(pstate,
                 {them: true}));
-            await exitParser<consumeItem.ExpectConsumeResult>({results: []});
+            await exitParser<consumeItem.ExpectConsumeItemsResult>(
+                {results: []});
             expect(mon.item.possibleValues).to.not.have.keys("powerherb");
         });
 
@@ -158,7 +159,8 @@ export function testRemoveItem(f: () => Context,
 
             await altParser(consumeItem.consumeOnMoveCharge(pstate,
                 {them: true}));
-            await exitParser<consumeItem.ExpectConsumeResult>({results: []});
+            await exitParser<consumeItem.ExpectConsumeItemsResult>(
+                {results: []});
             expect(mon.item.possibleValues).to.include.keys("powerherb");
         });
     });

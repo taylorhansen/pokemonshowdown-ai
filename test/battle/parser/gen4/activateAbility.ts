@@ -861,7 +861,7 @@ export function testActivateAbility(f: () => Context,
                     .to.have.keys("aftermath", "unburden");
 
                 await altParser(ability.onMoveDamage(pstate, {them: true},
-                        "contactKO", dex.moves.tackle));
+                        "contactKO", "us", dex.moves.tackle));
                 await exitParser<ability.ExpectAbilitiesResult>({results: []});
                 expect(mon.traits.ability.possibleValues)
                     .to.have.keys("unburden");
@@ -878,12 +878,12 @@ export function testActivateAbility(f: () => Context,
                     .to.have.keys("roughskin");
 
                 await altParser(ability.onMoveDamage(pstate, {them: true},
-                        "contact", dex.moves.tackle));
+                        "contact", "us", dex.moves.tackle));
                 await expect(exitParser<ability.ExpectAbilitiesResult>(
                         {results: []}))
-                    .to.eventually.be.rejectedWith(Error,
-                        "Pokemon 'them' should've activated ability " +
-                        "[roughskin] but it wasn't activated on-moveContact");
+                    .to.eventually.be.rejectedWith(
+                        "All possibilities have been ruled out " +
+                        "(should never happen)");
             });
         });
 
@@ -893,10 +893,11 @@ export function testActivateAbility(f: () => Context,
             {
                 it("Should handle", async function()
                 {
-                    initActive("us", kecleon)
+                    initActive("us", kecleon);
+                    initActive("them");
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            dex.moves.watergun));
+                            "them", dex.moves.watergun));
                     await handle(
                     {
                         type: "activateAbility", monRef: "us",
@@ -915,9 +916,10 @@ export function testActivateAbility(f: () => Context,
                 {
                     const mon = initActive("us", kecleon);
                     mon.faint();
+                    initActive("them");
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            dex.moves.watergun));
+                            "them", dex.moves.watergun));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                 });
@@ -926,9 +928,10 @@ export function testActivateAbility(f: () => Context,
                 {
                     const mon = initActive("us", kecleon);
                     mon.volatile.changeTypes(["fire", "???"]);
+                    initActive("them");
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            dex.moves.ember));
+                            "them", dex.moves.ember));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                 });
@@ -943,7 +946,7 @@ export function testActivateAbility(f: () => Context,
 
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            dex.moves.hiddenpower));
+                            "them", dex.moves.hiddenpower));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                     expect(hpType.definiteValue).to.equal("ghost");
@@ -959,7 +962,7 @@ export function testActivateAbility(f: () => Context,
 
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            dex.moves.judgment));
+                            "them", dex.moves.judgment));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                     expect(item.definiteValue).to.equal("zapplate"); // electric

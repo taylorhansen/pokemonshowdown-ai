@@ -1,35 +1,67 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
+import { Pokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { createItemEventInference, EventInference, expectEvents, getItems,
-    ItemInference } from "./helpers";
+import { createEventInference, EventInference, expectEvents, ExpectEventsResult,
+    SubInference, SubReason } from "./EventInference";
+import { cantHaveAbilities, getItems } from "./itemHelpers";
 
-/** Result from `expectConsume()` and variants like `consumeOnMoveCharge()`. */
-export interface ExpectConsumeResult extends SubParserResult
-{
-    /** Results from each item consumption. */
-    results: ItemConsumeResult[];
-}
+/**
+ * Result from `expectConsumeItems()` and variants like `consumeOnMoveCharge()`.
+ */
+export type ExpectConsumeItemsResult = ExpectEventsResult<ItemConsumeResult>;
 
 /**
  * Expects a consumeOn-`moveCharge` item to activate.
  * @param eligible Eligible holders.
  */
-export async function* consumeOnMoveCharge(pstate: ParserState,
+export function consumeOnMoveCharge(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
-    SubParser<ExpectConsumeResult>
+    SubParser<ExpectConsumeItemsResult>
 {
     const pendingItems = getItems(pstate, eligible,
-        function moveChargeFilter(data)
+        function moveChargeFilter(data, mon)
         {
-            if (!data.consumeOn?.moveCharge) return false;
-            return data.consumeOn.moveCharge === "shorten";
+            if (!data.consumeOn?.moveCharge) return null;
+            if (data.consumeOn.moveCharge === "shorten")
+            {
+                return cantHaveKlutz(mon);
+            }
+            return null;
         });
+    return expectConsumeItems(pstate, "moveCharge", pendingItems, lastEvent);
+}
 
-    return yield* expectConsumeItems(pstate, "moveCharge", pendingItems,
-        lastEvent);
+/** Klutz check wrapped in a bounds check. */
+function cantHaveKlutz(mon: Pokemon): Set<SubReason> | null
+{
+    const klutz = checkKlutz(mon);
+    if (klutz.size <= 0) return new Set();
+    if (klutz.size >= mon.traits.ability.possibleValues.size)
+    {
+        return null;
+    }
+    return new Set([cantHaveAbilities(mon, klutz)]);
+}
+
+/**
+ * Checks for item-ignoring abilities.
+ * @returns A Set of possible item-ignoring abilities (empty if none are
+ * possible).
+ */
+function checkKlutz(mon: Pokemon): Set<string>
+{
+    if (mon.volatile.suppressAbility) return new Set();
+
+    const {ability} = mon.traits;
+    const abilities = new Set<string>();
+    for (const n of ability.possibleValues)
+    {
+        if (ability.map[n].flags?.ignoreItem) abilities.add(n);
+    }
+    return abilities;
 }
 
 /**
@@ -38,27 +70,27 @@ export async function* consumeOnMoveCharge(pstate: ParserState,
  * @param pendingItems Eligible item possibilities.
  */
 function expectConsumeItems(pstate: ParserState, on: dexutil.ItemConsumeOn,
-    pendingItems: Partial<Record<Side, ReadonlyMap<string, ItemInference>>>,
-    lastEvent?: events.Any): SubParser<ExpectConsumeResult>
+    pendingItems: Partial<Record<Side, ReadonlyMap<string, SubInference>>>,
+    lastEvent?: events.Any): SubParser<ExpectConsumeItemsResult>
 {
     const inferences: EventInference[] = [];
     for (const monRef in pendingItems)
     {
         if (!pendingItems.hasOwnProperty(monRef)) continue;
         const items = pendingItems[monRef as Side]!;
-        inferences.push(createItemEventInference(pstate, monRef as Side, items,
-            async function* consumeItemInfTaker(event, takeAccept)
+        inferences.push(createEventInference(new Set(items.values()),
+            async function* expectConsumeItemsTaker(event, accept)
             {
                 if (event.type !== "removeItem") return {event};
                 if (event.monRef !== monRef) return {event};
                 if (typeof event.consumed !== "string") return {event};
 
                 // match pending item possibilities with current item event
-                const itemInf = items.get(event.consumed);
-                if (!itemInf) return {event};
+                const inf = items.get(event.consumed);
+                if (!inf) return {event};
 
                 // indicate accepted event
-                takeAccept(itemInf);
+                accept(inf);
                 return yield* removeItem(pstate, event, on);
             }));
     }

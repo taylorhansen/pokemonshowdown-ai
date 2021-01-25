@@ -6,16 +6,13 @@ import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
 import { matchPercentDamage } from "../helpers";
-import { createItemEventInference, EventInference, expectEvents, getItems,
-    ItemInference } from "./helpers";
+import { createEventInference, EventInference, expectEvents, ExpectEventsResult,
+    SubInference } from "./EventInference";
+import { cantHaveAbilities, getItems } from "./itemHelpers";
 import * as parsers from "./parsers";
 
 /** Result from `expectItems()` and variants like `onMovePostDamage()`. */
-export interface ExpectItemsResult extends SubParserResult
-{
-    /** Results from each item activation. */
-    results: ItemResult[];
-}
+export type ExpectItemsResult = ExpectEventsResult<ItemResult>;
 
 /**
  * Expects an on-`movePostDamage` item to activate.
@@ -28,7 +25,7 @@ export async function* onMovePostDamage(pstate: ParserState,
     const pendingItems = getItems(pstate, eligible,
         function movePostDamageFilter(data, mon)
         {
-            if (!data.on?.movePostDamage) return false;
+            if (!data.on?.movePostDamage) return null;
 
             const abilities = new Set(mon.traits.ability.possibleValues);
             for (const effect of data.on.movePostDamage)
@@ -43,7 +40,7 @@ export async function* onMovePostDamage(pstate: ParserState,
                 //  effects
                 // if one effect can't be suppressed, then the item should
                 //  activate
-                if (mon.volatile.suppressAbility) return true;
+                if (mon.volatile.suppressAbility) return new Set();
                 for (const abilityName of abilities)
                 {
                     const ability = mon.traits.ability.map[abilityName];
@@ -55,9 +52,14 @@ export async function* onMovePostDamage(pstate: ParserState,
                     }
                     abilities.delete(abilityName);
                 }
-                if (abilities.size <= 0) return true;
+                if (abilities.size <= 0) return new Set();
             }
-            return abilities.size > 0 ? abilities : true;
+            if (abilities.size <= 0) return new Set();
+            if (abilities.size >= mon.traits.ability.possibleValues.size)
+            {
+                return null;
+            }
+            return new Set([cantHaveAbilities(mon, abilities)]);
         });
 
     return yield* expectItems(pstate, "movePostDamage", pendingItems,
@@ -70,27 +72,26 @@ export async function* onMovePostDamage(pstate: ParserState,
  * @param pendingItems Eligible item possibilities.
  */
 function expectItems(pstate: ParserState, on: dexutil.ItemOn,
-    pendingItems: Readonly<Partial<Record<Side,
-        ReadonlyMap<string, ItemInference>>>>,
+    pendingItems: {readonly [S in Side]?: ReadonlyMap<string, SubInference>},
     lastEvent?: events.Any): SubParser<ExpectItemsResult>
 {
-    const inferences: EventInference[] = [];
+    const inferences: EventInference<ItemResult>[] = [];
     for (const monRef in pendingItems)
     {
         if (!pendingItems.hasOwnProperty(monRef)) continue;
         const items = pendingItems[monRef as Side]!;
-        inferences.push(createItemEventInference(pstate, monRef as Side, items,
-            async function* itemInfTaker(event, takeAccept)
+        inferences.push(createEventInference(new Set(items.values()),
+            async function* expectItemsTaker(event, accept)
             {
                 if (event.type !== "activateItem") return {event};
                 if (event.monRef !== monRef) return {event};
 
                 // match pending item possibilities with current item event
-                const itemInf = items.get(event.item);
-                if (!itemInf) return {event};
+                const inf = items.get(event.item);
+                if (!inf) return {event};
 
                 // indicate accepted event
-                takeAccept(itemInf);
+                accept(inf);
                 return yield* activateItem(pstate, event, on);
             }));
     }

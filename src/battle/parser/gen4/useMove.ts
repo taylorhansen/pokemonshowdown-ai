@@ -774,7 +774,8 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
         if (qualifier)
         {
             const expectResult = yield* ability.onMoveDamage(ctx.pstate,
-                {[holderRef]: true}, qualifier, ctx.moveData, lastEvent);
+                {[holderRef]: true}, qualifier, ctx.userRef, ctx.moveData,
+                lastEvent);
             lastEvent = expectResult.event;
         }
     }

@@ -590,6 +590,7 @@ export function getDefiniteMoveType(move: MoveData, user: ReadonlyPokemon):
         // TODO: also include naturalgift and others
         case "hpType": return user.hpType.definiteValue as Type | null;
         case "plateType":
+            // TODO: include item-blocking effects
             if (!user.item.definiteValue) return null;
             return user.item.map[user.item.definiteValue].plateType ?? null;
         default: return move.type;

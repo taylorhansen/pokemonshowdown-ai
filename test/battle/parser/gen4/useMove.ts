@@ -1396,10 +1396,9 @@ export function testUseMove(ctxFunc: () => Context,
                         await initParser("us", move);
                         await expect(handle(
                                 {type: "boost", monRef: target, stat, amount}))
-                            .to.eventually.be.rejectedWith(Error,
-                                `Pokemon '${target}' should've activated ` +
-                                `ability [${abilityImmunity}] but it wasn't ` +
-                                "activated on-tryUnboost");
+                            .to.eventually.be.rejectedWith(
+                                "All possibilities have been ruled out " +
+                                "(should never happen)");
                     });
                 }
             });

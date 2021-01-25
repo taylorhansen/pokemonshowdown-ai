@@ -7,15 +7,12 @@ import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
 import { eventLoop } from "../helpers";
 import { dispatch, handlers as base } from "./base";
-import { EventInference, expectEvents } from "./helpers";
+import { createEventInference, EventInference, expectEvents, ExpectEventsResult,
+    SubInference, SubReason } from "./EventInference";
 import * as parsers from "./parsers";
 
 /** Result from `expectAbilities()` and variants like `onStart()`. */
-export interface ExpectAbilitiesResult extends SubParserResult
-{
-    /** Results from each ability activation. */
-    results: AbilityResult[];
-}
+export type ExpectAbilitiesResult = ExpectEventsResult<AbilityResult>;
 
 /**
  * Expects an on-`switchOut` ability to activate.
@@ -32,7 +29,7 @@ export async function* onSwitchOut(pstate: ParserState,
             const mon = pstate.state.teams[monRef].active;
             // cure a major status condition
             return data.on.switchOut.cure && mon.majorStatus.current ?
-                {} : null;
+                new Set() : null;
         });
 
     return yield* expectAbilities(pstate, "switchOut", pendingAbilities,
@@ -61,13 +58,18 @@ export async function* onStart(pstate: ParserState,
                     if (data.statusImmunity.hasOwnProperty(statusType) &&
                         hasStatus(mon, statusType as effects.StatusType))
                     {
-                        return {};
+                        return new Set();
                     }
                 }
                 return null;
             }
-            if (data.on.start.revealItem) return {opponentHasItem: true};
-            return {};
+            if (data.on.start.revealItem)
+            {
+                // TODO(doubles): track actual opponents
+                const opp = pstate.state.teams[otherSide(monRef)].active;
+                return new Set([opponentHasItem(opp)]);
+            }
+            return new Set();
         });
 
     return yield* expectAbilities(pstate, "start", pendingAbilities,
@@ -117,8 +119,8 @@ function hasStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
  */
 export async function* onBlock(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>, userRef: Side,
-    hitByMove: dexutil.MoveData, lastEvent?: events.Any):
-    SubParser<ExpectAbilitiesResult>
+    hitByMove: dexutil.MoveData,
+    lastEvent?: events.Any): SubParser<ExpectAbilitiesResult>
 {
     // if move user ignores the target's abilities, then this function can't be
     //  called
@@ -142,19 +144,20 @@ export async function* onBlock(pstate: ParserState,
             if (data.on.block.status && data.statusImmunity &&
                 status?.some(s => data.statusImmunity![s]))
             {
-                return {};
+                return new Set();
             }
             // block move based on its type
             // can't activate unless the ability could block one of the move's
             //  possible types
             if (data.on.block.move && moveTypes.has(data.on.block.move.type))
             {
-                return {moveType: data.on.block.move.type};
+                return new Set(
+                    [moveIsType(hitByMove, data.on.block.move.type, user)]);
             }
             // block move based on damp
             if (hitByMove.flags?.explosive && data.on.block.effect?.explosive)
             {
-                return {};
+                return new Set();
             }
             return null;
         });
@@ -197,7 +200,7 @@ export async function* onTryUnboost(pstate: ParserState,
             {
                 return null;
             }
-            return {};
+            return new Set();
         });
 
     return yield* expectAbilities(pstate, "tryUnboost", pendingAbilities,
@@ -232,7 +235,8 @@ export async function* onStatus(pstate: ParserState,
     lastEvent?: events.Any): SubParser<ExpectAbilitiesResult>
 {
     const pendingAbilities = getAbilities(pstate, eligible,
-        d => d.on?.status?.cure && d.statusImmunity?.[statusType] ? {} : null);
+        d => d.on?.status?.cure && d.statusImmunity?.[statusType] ?
+            new Set() : null);
 
     return yield* expectAbilities(pstate, "status", pendingAbilities, hitByMove,
         lastEvent);
@@ -243,12 +247,14 @@ export async function* onStatus(pstate: ParserState,
  * activate.
  * @param eligible Eligible pokemon.
  * @param qualifier The qualifier of which effects the ability may activate.
+ * @param userRef Pokemon reference using the `hitByMove`.
  * @param hitByMove Move by which the eligible pokemon are being hit.
  */
 export async function* onMoveDamage(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>,
-    qualifier: "damage" | "contact" | "contactKO", hitByMove: dexutil.MoveData,
-    lastEvent?: events.Any): SubParser<ExpectAbilitiesResult>
+    qualifier: "damage" | "contact" | "contactKO", userRef: Side,
+    hitByMove: dexutil.MoveData, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
 {
     const pendingAbilities = getAbilities(pstate, eligible,
         function moveDamageFilter(data, monRef)
@@ -259,17 +265,20 @@ export async function* onMoveDamage(pstate: ParserState,
                 const mon = pstate.state.teams[monRef].active;
                 if (data.on.moveDamage.changeToMoveType && !mon.fainted)
                 {
-                    return {diffMoveType: true};
+                    const user = pstate.state.teams[userRef].active;
+                    return new Set([diffMoveType(mon, hitByMove, user)]);
                 }
             }
             else if (data.on.moveContact &&
                 ["contact", "contactKO"].includes(qualifier))
             {
-                return {chance: data.on.moveContact.chance ?? 100};
+                const chance = data.on.moveContact.chance ?? 100;
+                if (chance === 100) return new Set();
+                return new Set([chanceReason]);
             }
             else if (data.on.moveContactKO && qualifier === "contactKO")
             {
-                return {};
+                return new Set();
             }
             return null;
         });
@@ -297,38 +306,278 @@ export async function* onMoveDrain(pstate: ParserState,
     SubParser<ExpectAbilitiesResult>
 {
     const pendingAbilities = getAbilities(pstate, eligible,
-        d => d.on?.moveDrain ? {} : null);
+        d => d.on?.moveDrain ? new Set() : null);
 
     return yield* expectAbilities(pstate, "moveDrain", pendingAbilities,
         hitByMove, lastEvent);
 }
 
-/** Describes an ability possibility restriction. */
-interface AbilityInference
+// activateAbility SubReason builders
+
+/** Creates a SubReason that asserts that the pokemon has the given ability. */
+export function hasAbility(mon: Pokemon, abilityName: string): SubReason
 {
-    /** Chance of the ability activating. Default 100 if omitted. */
-    chance?: number;
-    /** Whether this ability activates if the opponent has a held item. */
-    opponentHasItem?: true;
-    /**
-     * Whether this ability activates if the holder isn't the same type as the
-     * move being used against it.
-     */
-    diffMoveType?: true;
-    /**
-     * The ability activates iff the move being used against the holder is of
-     * the type specified here.
-     */
-    moveType?: dexutil.Type;
+    const {traits} = mon; // snapshot in case traits changes
+    return {
+        // TODO: guard against overnarrowing? need a better framework for error
+        //  handling/logging
+        assert: () => traits.ability.narrow(abilityName),
+        reject: () => traits.ability.remove(abilityName),
+        delay(cb: (held: boolean) => void): () => void
+        {
+            // TODO: PossibilityClass should track this behavior
+            // early return: can't have ability
+            if (!traits.ability.isSet(abilityName))
+            {
+                cb(/*held*/ false);
+                return () => {};
+            }
+
+            let cancel = false;
+            // TODO: call then cb sooner
+            traits.ability.then(n =>
+            {
+                if (cancel) return;
+                cb(n === abilityName);
+            });
+            // TODO: returned callback should actually cancel cb
+            return () => cancel = true;
+        }
+    };
 }
 
-/** Filters out ability possibilities that don't match the given predicate. */
-function getAbilities(pstate: ParserState,
-    monRefs: Partial<Readonly<Record<Side, any>>>,
-    f: (data: dexutil.AbilityData, monRef: Side) => AbilityInference | null):
-    Partial<Record<Side, Map<string, AbilityInference>>>
+/** Creates a SubReason that asserts that the opponent has a held item. */
+export function opponentHasItem(opp: Pokemon): SubReason
 {
-    const result: ReturnType<typeof getAbilities> = {};
+    return cantHaveItem(opp, "none");
+}
+
+// TODO: generalize for multiple possible types, as well as a negative case
+/**
+ * Creates a SubReason that asserts that the move being used by the given
+ * pokemon is of the specified type.
+ */
+export function moveIsType(move: dexutil.MoveData, type: dexutil.Type,
+    user: Pokemon): SubReason
+{
+    const moveType = dexutil.getDefiniteMoveType(move, user);
+    const {hpType, item} = user; // snapshot in case user changes
+    return {
+        assert()
+        {
+            switch (move.modifyType)
+            {
+                case "hpType": hpType.narrow(type); break;
+                case "plateType":
+                    item.narrow((_, i) => (i.plateType ?? "normal") === type);
+                    break;
+                default:
+                    if (move.type !== type)
+                    {
+                        throw new Error(`Move of type '${move.type}' cannot ` +
+                            `be asserted to be of type ${type}`);
+                    }
+            }
+        },
+        reject()
+        {
+            switch (move.modifyType)
+            {
+                case "hpType": hpType.remove(type); break;
+                case "plateType":
+                    item.remove((_, i) => (i.plateType ?? "normal") === type);
+                    break;
+                default:
+                    if (move.type === type)
+                    {
+                        throw new Error(`Move of type '${move.type}' cannot ` +
+                            `be asserted to not be of type ${type}`);
+                    }
+            }
+        },
+        delay(cb)
+        {
+            // early return: move type already known
+            if (moveType)
+            {
+                cb(/*held*/ moveType === type);
+                return () => {};
+            }
+
+            let cancel = false;
+            switch (move.modifyType)
+            {
+                case "hpType":
+                    // TODO: call then cb sooner on partial narrow
+                    hpType.then(t =>
+                    {
+                        if (cancel) return;
+                        cb(t === type);
+                    });
+                    // TODO: returned callback should actually de-register cb
+                    return () => cancel = true;
+                case "plateType":
+                    item.then((_, i) =>
+                    {
+                        if (cancel) return;
+                        cb((i.plateType ?? "normal") === type);
+                    });
+                    return () => cancel = true;
+                default:
+                    // istanbul ignore next: should never happen
+                    throw new Error(`Unsupported modifyType string ` +
+                        `'${move.modifyType}'`);
+            }
+        }
+    };
+}
+
+/**
+ * Creates a SubReason that asserts that the holder isn't the same type as the
+ * move being used against it.
+ */
+export function diffMoveType(mon: Pokemon, hitByMove: dexutil.MoveData,
+    user: Pokemon):
+    SubReason
+{
+    // essentially an inversion of moveIsType() but for multiple possible types
+    //  with the type param being the holder's types
+    const moveType = dexutil.getDefiniteMoveType(hitByMove, user);
+    const {hpType, item} = user; // snapshot in case user changes
+    const {types} = mon;
+    return {
+        assert()
+        {
+            // assert that the move type is not in the holder's types
+            switch (hitByMove.modifyType)
+            {
+                case "hpType": hpType.remove(...types); break;
+                case "plateType":
+                    item.remove((_, i) =>
+                        types.includes((i.plateType ?? "normal")));
+                    break;
+                default:
+                    if (types.includes(hitByMove.type))
+                    {
+                        throw new Error(`diffMoveType (colorchange) ability ` +
+                            `expected holder's type [${types.join(", ")}] to ` +
+                            `not match the move type '${hitByMove.type}'`);
+                    }
+            }
+        },
+        reject()
+        {
+            // assert that the move type is in the holder's types
+            switch (hitByMove.modifyType)
+            {
+                case "hpType": hpType.narrow(...types); break;
+                case "plateType":
+                    item.narrow((_, i) =>
+                        types.includes((i.plateType ?? "normal")));
+                    break;
+                default:
+                    if (!types.includes(hitByMove.type))
+                    {
+                        throw new Error(`diffMoveType (colorchange) ability ` +
+                            `expected holder's type [${types.join(", ")}] to ` +
+                            `match the move type '${hitByMove.type}'`);
+                    }
+            }
+        },
+        delay(cb)
+        {
+            // early return: move type already known
+            if (moveType)
+            {
+                cb(/*held*/ !types.includes(moveType));
+                return () => {};
+            }
+
+            let cancel = false;
+            switch (hitByMove.modifyType)
+            {
+                case "hpType":
+                    // TODO: call then cb sooner on partial narrow
+                    hpType.then(t =>
+                    {
+                        if (cancel) return;
+                        cb(!types.includes(t));
+                    });
+                    // TODO: returned callback should actually de-register cb
+                    return () => cancel = true;
+                case "plateType":
+                    item.then((_, i) =>
+                    {
+                        if (cancel) return;
+                        cb(!types.includes(i.plateType ?? "normal"));
+                    });
+                    return () => cancel = true;
+                default:
+                    // istanbul ignore next: should never happen
+                    throw new Error(`Unsupported modifyType string ` +
+                        `'${hitByMove.modifyType}'`);
+            }
+        }
+    };
+}
+
+/**
+ * SubReason value that asserts that the inference is dependent on random
+ * factors outside what can be deduced.
+ */
+export const chanceReason: SubReason =
+    // TODO: what should delay() do?
+    {assert() {}, reject() {}, delay() { return () => {}; }};
+
+/**
+ * Creates a SubReason that asserts that the pokemon doesn't have the given
+ * item.
+ */
+export function cantHaveItem(mon: Pokemon, itemName: string): SubReason
+{
+    const {item} = mon; // snapshot in case item changes
+    return {
+        assert: () => item.remove(itemName),
+        reject: () => item.narrow(itemName),
+        delay(cb: (held: boolean) => void): () => void
+        {
+            // TODO: PossibilityClass should track this behavior
+            // early return: already disproven
+            if (!item.isSet(itemName))
+            {
+                cb(/*held*/ true);
+                return () => {};
+            }
+
+            let cancel = false;
+            // TODO: call then cb sooner
+            item.then(n =>
+            {
+                if (cancel) return;
+                cb(n !== itemName);
+            });
+            // TODO: returned callback should actually cancel cb
+            return () => cancel = true;
+        }
+    };
+}
+
+/**
+ * Filters out ability possibilities that don't match the given predicate.
+ * @param monRefs Eligible ability holders.
+ * @param f Callback for filtering eligible abilities. Should return a set of
+ * reasons that prove the ability should activate, or null if it definitely
+ * shouldn't.
+ * @returns An object mapping the given `monRefs` keys to Maps of ability
+ * possibility name to a SubInference modeling the restrictions on each ability
+ * possibility.
+ */
+function getAbilities(pstate: ParserState,
+    monRefs: {readonly [S in Side]?: any},
+    f: (data: dexutil.AbilityData, monRef: Side) => Set<SubReason> | null):
+    {[S in Side]?: Map<string, SubInference>}
+{
+    const result: {[S in Side]?: Map<string, SubInference>} = {};
     for (const monRef in monRefs)
     {
         if (!monRefs.hasOwnProperty(monRef)) continue;
@@ -337,12 +586,13 @@ function getAbilities(pstate: ParserState,
         if (mon.volatile.suppressAbility) continue;
 
         // put the callback through each possible ability
-        const inferences = new Map<string, AbilityInference>();
+        const inferences = new Map<string, SubInference>();
         for (const name of mon.traits.ability.possibleValues)
         {
             const cbResult = f(mon.traits.ability.map[name], monRef as Side);
             if (!cbResult) continue;
-            inferences.set(name, cbResult);
+            cbResult.add(hasAbility(mon, name));
+            inferences.set(name, {reasons: cbResult});
         }
         if (inferences.size > 0) result[monRef as Side] = inferences;
     }
@@ -357,199 +607,33 @@ function getAbilities(pstate: ParserState,
  * applicable.
  */
 function expectAbilities(pstate: ParserState, on: dexutil.AbilityOn,
-    pendingAbilities: Readonly<Partial<Record<Side,
-        ReadonlyMap<string, AbilityInference>>>>,
+    pendingAbilities:
+        {readonly [S in Side]?: ReadonlyMap<string, SubInference>},
     hitByMove?: dexutil.MoveData, lastEvent?: events.Any):
     SubParser<ExpectAbilitiesResult>
 {
-    const inferences: EventInference[] = [];
+    const inferences: EventInference<AbilityResult>[] = [];
     for (const monRef in pendingAbilities)
     {
         if (!pendingAbilities.hasOwnProperty(monRef)) continue;
         const abilities = pendingAbilities[monRef as Side]!;
-        inferences.push(
-        {
-            take: event => expectAbilitiesTake(pstate, event, monRef as Side,
-                on, abilities, hitByMove),
-            absent: () => expectAbilitiesAbsent(pstate, monRef as Side, on,
-                abilities, hitByMove)
-        });
+        inferences.push(createEventInference(new Set(abilities.values()),
+            async function* expectAbilitiesTaker(event, accept)
+            {
+                if (event.type !== "activateAbility") return {event};
+                if (event.monRef !== monRef) return {event};
+
+                // match pending ability possibilities with current item event
+                const inf = abilities.get(event.ability);
+                if (!inf) return {event};
+
+                // indicate accepted event
+                accept(inf);
+                return yield* activateAbility(pstate, event, on,
+                    hitByMove?.name);
+            }));
     }
     return expectEvents(inferences, lastEvent);
-}
-
-async function* expectAbilitiesTake(pstate: ParserState, event: events.Any,
-    monRef: Side, on: dexutil.AbilityOn,
-    abilities: ReadonlyMap<string, AbilityInference>,
-    hitByMove?: dexutil.MoveData): SubParser<AbilityResult>
-{
-    if (event.type !== "activateAbility") return {event};
-    if (event.monRef !== monRef) return {event};
-
-    // match pending ability possibilities with current item event
-    const abilityInf = abilities.get(event.ability);
-    if (!abilityInf) return {event};
-
-    // accept event
-    return yield* activateAbility(pstate, event, on, hitByMove?.name);
-}
-
-function expectAbilitiesAbsent(pstate: ParserState, monRef: Side,
-    on: dexutil.AbilityOn, abilities: ReadonlyMap<string, AbilityInference>,
-    hitByMove?: dexutil.MoveData): void
-{
-    const mon = pstate.state.teams[monRef as Side].active;
-    // TODO(doubles): track actual targets
-    const opp = pstate.state.teams[otherSide(monRef as Side)].active;
-
-    // collective AbilityInference flags
-    // TODO: these are incomplete, since there are ambiguous cases where more
-    //  information is needed in addition to this information, which is
-    //  forgotten after this function returns
-    // whether all kept abilities have opponentHasItem=true
-    let allOpponentHasItem: boolean | undefined;
-    // whether all kept abilities have diffMoveType=true
-    let allDiffMoveType: boolean | undefined;
-    // whether all kept abilities block the same move type
-    let allMoveType: dexutil.Type | false | undefined;
-
-    // figure out move type
-    const hitByMoveType = hitByMove ?
-        dexutil.getDefiniteMoveType(hitByMove, opp) : null;
-
-    // figure out which abilities to remove
-    const removeCandidates = new Set<string>();
-    for (const [name, inf] of abilities)
-    {
-        // don't remove abilities that only had a chance of
-        //  activating
-        const guaranteed = (inf.chance ?? 100) >= 100;
-
-        // ability should activate if opponent has an item
-        if (inf.opponentHasItem)
-        {
-            // if the opponent definitely had an item, then the
-            //  ability should've activated
-            if (!opp.item.isSet("none"))
-            {
-                removeCandidates.add(name);
-                continue;
-            }
-            // TODO: if opponent's item is unknown, add onNarrow
-            //  callbacks
-            // update collective flags
-            allOpponentHasItem ??= true;
-            allOpponentHasItem &&= true;
-            allDiffMoveType = false;
-            allMoveType = false;
-        }
-        // ability should activate if holder is a different type than the move
-        else if (inf.diffMoveType)
-        {
-            if (!hitByMove)
-            {
-                removeCandidates.add(name);
-                continue;
-            }
-            // if holder isn't move type, remove
-            if (hitByMoveType && !mon.types.every(t => t === hitByMoveType))
-            {
-                removeCandidates.add(name);
-                continue;
-            }
-
-            // update collective flags
-            allOpponentHasItem = false;
-            allDiffMoveType ??= true;
-            allDiffMoveType &&= true;
-            allMoveType = false;
-        }
-        else if (inf.moveType)
-        {
-            // if ability definitely blocks the move, remove the ability
-            if (!hitByMove || inf.moveType === hitByMoveType)
-            {
-                removeCandidates.add(name);
-                continue;
-            }
-
-            // update collective flags
-            allOpponentHasItem = false;
-            allDiffMoveType = false;
-            allMoveType ??= inf.moveType;
-            if (allMoveType !== inf.moveType) allMoveType = false;
-        }
-        // ability definitely should've activated
-        else if (guaranteed) removeCandidates.add(name);
-        else
-        {
-            allOpponentHasItem = false;
-            allDiffMoveType = false;
-            allMoveType = false;
-        }
-    }
-    // if all remaining abilities have opponentHasItem=true, then
-    //  the opponent must not have had an item
-    if (allOpponentHasItem) opp.setItem("none");
-    // if they all have diffMoveType=true, infer/match move type to the holder's
-    //  type
-    if (allDiffMoveType)
-    {
-        switch (hitByMove?.modifyType)
-        {
-            case "hpType": opp.hpType.narrow(mon.types); break;
-            case "plateType":
-                opp.item.narrow(
-                    n => mon.types.some(t => t === opp.item.map[n].plateType));
-                break;
-            default:
-                if (!mon.types.some(t => t === hitByMoveType))
-                {
-                    throw new Error("diffMoveType (colorchange) ability " +
-                    `expected holder's type [${mon.types.join(", ")}] to ` +
-                    `match the move type '${hitByMoveType}'`);
-                }
-        }
-    }
-    // if they all block the same move type, remove it from the move's type
-    //  possibilities
-    // TODO: handle delayed cases where both ability and hpType/plateType are
-    //  unknown
-    if (allMoveType)
-    {
-        switch (hitByMove?.modifyType)
-        {
-            case "hpType": opp.hpType.remove(allMoveType); break;
-            case "plateType":
-                opp.item.remove(n => allMoveType === opp.item.map[n].plateType);
-                break;
-            default:
-                // sanity check
-                if (allMoveType !== hitByMoveType)
-                {
-                    // istanbul ignore next: can't reproduce since
-                    //  onMoveDamage() already checked for this
-                    throw new Error("moveType immunity ability expected " +
-                    `type '${allMoveType} to match the move type ` +
-                    `'${hitByMoveType}'`);
-                }
-        }
-    }
-
-    if (removeCandidates.size >= mon.traits.ability.possibleValues.size)
-    {
-        throw new Error(`Pokemon '${monRef}' should've activated ability ` +
-            `[${[...removeCandidates].join(", ")}] but it wasn't activated ` +
-            `on-${on}`);
-    }
-    mon.traits.ability.remove(removeCandidates);
-}
-
-/** Result from `expectAbility()`. */
-export interface ExpectAbilityResult extends SubParserResult
-{
-    /** Results from each ability activation. */
-    results: AbilityResult[];
 }
 
 /** Context for handling ability activation. */
