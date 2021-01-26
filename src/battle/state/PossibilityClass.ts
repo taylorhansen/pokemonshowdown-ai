@@ -115,12 +115,12 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     /** Removes keys that are not in the given array. */
     public narrow(...values: string[]): void;
     /** Removes keys that are not in the given Set/array. */
-    public narrow(values: readonly string[] | ReadonlySet<string>): void;
+    public narrow(values: Iterable<string> | ReadonlySet<string>): void;
     /** Removes keys that don't satisfy the given predicate. */
     // tslint:disable-next-line: unified-signatures
     public narrow(pred: (name: TKey, data: TData) => boolean): void;
     public narrow(
-        arg0?: string | readonly string[] | ReadonlySet<string> |
+        arg0?: string | Iterable<string> | ReadonlySet<string> |
             ((name: TKey, data: TData) => boolean),
         ...values: string[]): void
     {
@@ -135,8 +135,8 @@ export class PossibilityClass<TKey extends string, TData = any> implements
             values.push(arg0);
             return this.narrow(new Set(values));
         }
-        if (Array.isArray(arg0)) return this.narrow(new Set(arg0));
         if (arg0 instanceof Set) return this.narrow(n => arg0.has(n));
+        if (typeof arg0 !== "function") return this.narrow(new Set(arg0));
 
         // filter based on predicate
         // TODO: should overnarrowing errors be recovered from? many callers
@@ -152,12 +152,12 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     /** Removes keys if they are included in the given array. */
     public remove(...values: string[]): void
     /** Removes keys if they are included in the given Set/array. */
-    public remove(values: readonly string[] | ReadonlySet<string>): void
+    public remove(values: Iterable<string> | ReadonlySet<string>): void
     /** Removes keys if they satisfy the predicate. */
     // tslint:disable-next-line: unified-signatures
     public remove(pred: (name: TKey, data: TData) => boolean): void;
     public remove(
-        arg0?: string | readonly string[] | ReadonlySet<string> |
+        arg0?: string | Iterable<string> | ReadonlySet<string> |
             ((name: TKey,  data: TData) => boolean),
         ...values: string[]): void
     {
@@ -167,8 +167,8 @@ export class PossibilityClass<TKey extends string, TData = any> implements
             values.push(arg0);
             return this.remove(new Set(values));
         }
-        if (Array.isArray(arg0)) return this.remove(new Set(arg0));
         if (arg0 instanceof Set) return this.remove(n => arg0.has(n));
+        if (typeof arg0 !== "function") return this.remove(new Set(arg0));
 
         // filter based on predicate
         const pred = arg0 as (name: TKey, data: TData) => boolean;

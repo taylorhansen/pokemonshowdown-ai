@@ -451,7 +451,7 @@ export function diffMoveType(mon: Pokemon, hitByMove: dexutil.MoveData,
             // assert that the move type is not in the holder's types
             switch (hitByMove.modifyType)
             {
-                case "hpType": hpType.remove(...types); break;
+                case "hpType": hpType.remove(types); break;
                 case "plateType":
                     item.remove((_, i) =>
                         types.includes((i.plateType ?? "normal")));
