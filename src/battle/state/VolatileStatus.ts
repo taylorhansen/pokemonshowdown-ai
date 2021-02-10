@@ -131,6 +131,8 @@ export interface ReadonlyVolatileStatus
     readonly lockedMove: ReadonlyVariableTempStatus<LockedMove>;
     /** Whether the pokemon has used Magic Coat during this turn. */
     readonly magicCoat: boolean;
+    /** Micle Berry status. */
+    readonly micleberry: boolean;
     /** Whether the pokemon has used Minimize while out. */
     readonly minimize: boolean;
     // TODO(non-single battles): use a list of [move, user] tuples
@@ -374,6 +376,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public magicCoat!: boolean;
 
     /** @override */
+    public micleberry!: boolean;
+
+    /** @override */
     public minimize!: boolean;
 
     /** @override */
@@ -570,6 +575,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.imprison = false;
         this.lockedMove.reset();
         this.magicCoat = false;
+        this.micleberry = false;
         this.minimize = false;
         this.mirrorMove = null;
         this.mudSport = false;
@@ -748,6 +754,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.imprison ? ["imprison"] : [],
             this.lockedMove.isActive ? [this.lockedMove.toString()] : [],
             this.magicCoat ? ["magic coat"] : [],
+            this.micleberry ? ["micle berry"] : [],
             this.minimize ? ["minimize"] : [],
             this.mirrorMove ? ["last targeted by " + this.mirrorMove] : [],
             this.mudSport ? ["mud sport"] : [],

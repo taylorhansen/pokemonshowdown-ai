@@ -269,6 +269,7 @@ export function testUseMove(ctxFunc: () => Context,
         it("Should reject if inappropriate move", async function()
         {
             initActive("us");
+            initActive("them");
             await initParser("us", "splash");
             await reject({type: "activateItem", monRef: "us", item: "lifeorb"});
         });
@@ -368,6 +369,17 @@ export function testUseMove(ctxFunc: () => Context,
             await handle({type: "fail"});
             await exitParser();
         });
+
+        it("Should end micleberry status", async function()
+        {
+            const mon = initActive("us");
+            initActive("them");
+            mon.volatile.micleberry = true;
+            await initParser("us", "thunderwave");
+            await handle({type: "fail"});
+            await exitParser();
+            expect(mon.volatile.micleberry).to.be.false;
+        });
     });
 
     describe("faint", function()
@@ -426,6 +438,7 @@ export function testUseMove(ctxFunc: () => Context,
         it("Should reject if decide", async function()
         {
             initActive("us");
+            initActive("them");
             await initParser("us", "splash");
             await reject({type: "halt", reason: "decide"});
         });
@@ -433,6 +446,7 @@ export function testUseMove(ctxFunc: () => Context,
         it("Should reject if gameOver", async function()
         {
             initActive("us");
+            initActive("them");
             await initParser("us", "splash");
             await reject({type: "halt", reason: "gameOver"});
         });
@@ -448,6 +462,133 @@ export function testUseMove(ctxFunc: () => Context,
             initActive("them").faint();
             await initParser("us", "toxic");
             await handle({type: "noTarget", monRef: "us"});
+            await exitParser();
+        });
+
+        it("Should not end micleberry status", async function()
+        {
+            const mon = initActive("us");
+            initActive("them").faint();
+            mon.volatile.micleberry = true;
+            await initParser("us", "thunderwave");
+            await handle({type: "noTarget", monRef: "us"});
+            await exitParser();
+            expect(mon.volatile.micleberry).to.be.true;
+        });
+    });
+
+    describe("Micle Berry", function()
+    {
+        it("Should end micleberry status after block", async function()
+        {
+            initActive("us").volatile.stall(true);
+            const mon = initActive("them");
+            mon.volatile.micleberry = true;
+            await initParser("them", "tackle");
+            await handleEnd({type: "block", monRef: "us", effect: "protect"});
+            expect(mon.volatile.micleberry).to.be.false;
+        });
+
+        it("Should end micleberry status after two-turn hit", async function()
+        {
+            initActive("us").volatile.stall(true);
+            const mon = initActive("them");
+            mon.volatile.micleberry = true;
+            await initParser("them", "fly");
+            await handle({type: "prepareMove", monRef: "them", move: "fly"});
+            await exitParser();
+            // should only reset once the move hits
+            expect(mon.volatile.micleberry).to.be.true;
+            await initParser("them", "fly");
+            await exitParser();
+            expect(mon.volatile.micleberry).to.be.false;
+        });
+    });
+
+    describe("ConsumeOn-preHit items (resist berries)", function()
+    {
+        it("Should handle resist berry", async function()
+        {
+            initActive("us").volatile.addedType = "water";
+            initActive("them");
+            await initParser("them", "thunder");
+            await handle(
+                {type: "removeItem", monRef: "us", consumed: "wacanberry"});
+            await handle({type: "superEffective", monRef: "us"});
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            await exitParser();
+        });
+
+        it("Should throw if type effectiveness doesn't match resist berry",
+        async function()
+        {
+            initActive("us").volatile.addedType = "water";
+            initActive("them");
+            await initParser("them", "thunder");
+            await handle(
+                {type: "removeItem", monRef: "us", consumed: "wacanberry"});
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            await expect(exitParser()).to.be.rejectedWith(Error,
+                "Move effectiveness expected to be 'super' but got 'regular'");
+        });
+    });
+
+    describe("ConsumeOn-super items (enigmaberry)", function()
+    {
+        it("Should handle enigmaberry", async function()
+        {
+            initActive("us").volatile.addedType = "water";
+            initActive("them").hp.set(50);
+            await initParser("them", "absorb");
+            await handle({type: "superEffective", monRef: "us"});
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            await handle(
+                {type: "takeDamage", monRef: "them", hp: 100, from: "drain"});
+            // item activates after drain effect
+            await handle(
+                {type: "removeItem", monRef: "us", consumed: "enigmaberry"});
+            await handle({type: "takeDamage", monRef: "us", hp: 100});
+            await exitParser();
+        });
+
+        it("Shouldn't activate enigmaberry if fainted", async function()
+        {
+            const mon = initActive("us");
+            mon.volatile.addedType = "water";
+            mon.setItem("enigmaberry"); // will be expecteed to activate if hp>0
+            initActive("them");
+            await initParser("them", "thunder");
+            await handle({type: "superEffective", monRef: "us"});
+            await handle({type: "takeDamage", monRef: "us", hp: 0});
+            // berry doesn't activate because hp=0
+            await handle({type: "faint", monRef: "us"});
+            await exitParser();
+        });
+    });
+
+    describe("ConsumeOn-postHit items (jabocaberry/rowapberry)", function()
+    {
+        it("Should handle jabocaberry (physical)", async function()
+        {
+            initActive("us");
+            initActive("them");
+            await initParser("them", "tackle");
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            await handle(
+                {type: "removeItem", monRef: "us", consumed: "jabocaberry"});
+            await handle({type: "takeDamage", monRef: "them", hp: 50});
+            await exitParser();
+        });
+
+        it("Should handle rowapberry (special)", async function()
+        {
+            initActive("us");
+            initActive("them");
+            await initParser("them", "ember");
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            await handle(
+                {type: "removeItem", monRef: "us", consumed: "rowapberry"});
+            await handle({type: "takeDamage", monRef: "them", hp: 50});
             await exitParser();
         });
     });
@@ -661,6 +802,7 @@ export function testUseMove(ctxFunc: () => Context,
         {
             it("Should track last used move", async function()
             {
+                initActive("us");
                 initActive("them");
                 expect(state.status.lastMove).to.not.be.ok;
                 await initParser("them", "splash");
@@ -684,6 +826,7 @@ export function testUseMove(ctxFunc: () => Context,
                     "move",
                 async function()
                 {
+                    initActive("us");
                     initActive("them");
                     state.status.lastMove = "watergun";
                     await initParser("them", caller);
@@ -851,6 +994,7 @@ export function testUseMove(ctxFunc: () => Context,
                 it(`Should throw if using ${caller} and mismatched move`,
                 async function()
                 {
+                    initActive("us");
                     const them = initActive("them");
                     them.volatile.mirrorMove = "watergun";
                     await initParser("them", caller);
@@ -885,6 +1029,7 @@ export function testUseMove(ctxFunc: () => Context,
             it("Should reject if the call effect was ignored",
             async function()
             {
+                initActive("us");
                 const them = initActive("them");
                 await initParser("them", selfMoveCallers[0]);
                 await expect(handle(
@@ -1191,6 +1336,7 @@ export function testUseMove(ctxFunc: () => Context,
         {
             it("Should handle recover hp", async function()
             {
+                initActive("us");
                 initActive("them").hp.set(50);
                 await initParser("them", "recover");
                 await handle({type: "takeDamage", monRef: "them", hp: 100});
@@ -1240,6 +1386,7 @@ export function testUseMove(ctxFunc: () => Context,
             it("Should pass if expected using stockpile", async function()
             {
                 initActive("us");
+                initActive("them");
                 await initParser("us", "stockpile");
                 await handle(
                 {
@@ -1418,6 +1565,7 @@ export function testUseMove(ctxFunc: () => Context,
             it("Should handle set boost", async function()
             {
                 initActive("us");
+                initActive("them");
                 await initParser("us", "bellydrum");
                 await handle({type: "takeDamage", monRef: "us", hp: 50});
                 await handle(
@@ -1440,6 +1588,7 @@ export function testUseMove(ctxFunc: () => Context,
                 {
                     let mon = initActive("us");
                     if (target === "them") mon = initActive("them");
+                    else initActive("them");
                     mon.volatile.boosts[stat] = sign * 5;
                     await initParser("us", move);
                     await handle(
@@ -1451,6 +1600,7 @@ export function testUseMove(ctxFunc: () => Context,
                 {
                     let mon = initActive("us");
                     if (target === "them") mon = initActive("them");
+                    else initActive("them");
                     mon.volatile.boosts[stat] = sign * 6;
                     await initParser("us", move);
                     await handle(
@@ -1528,6 +1678,7 @@ export function testUseMove(ctxFunc: () => Context,
         {
             it("Should expect boosts", async function()
             {
+                initActive("us");
                 initActive("them");
                 await initParser("them", "curse");
                 await handle(
@@ -2150,6 +2301,7 @@ export function testUseMove(ctxFunc: () => Context,
             it("Should count stall turns then reset if failed",
             async function()
             {
+                initActive("us");
                 const v = initActive("them").volatile;
                 expect(v.stalling).to.be.false;
                 expect(v.stallTurns).to.equal(0);
@@ -2182,6 +2334,7 @@ export function testUseMove(ctxFunc: () => Context,
             it("Should reset stall count if using another move",
             async function()
             {
+                initActive("us");
                 const mon = initActive("them");
 
                 // stall effect is put in place
@@ -2201,6 +2354,7 @@ export function testUseMove(ctxFunc: () => Context,
 
             it("Should not reset counter if called", async function()
             {
+                initActive("us");
                 const mon = initActive("them");
                 await initParser("them", "endure");
 
@@ -2286,6 +2440,7 @@ export function testUseMove(ctxFunc: () => Context,
                 it("Should infer source via move", async function()
                 {
                     const team = state.teams.them;
+                    initActive("us");
                     const {item} = initActive("them");
                     await initParser("them", move);
                     await handle(
@@ -2313,6 +2468,7 @@ export function testUseMove(ctxFunc: () => Context,
                 it("Should reject if mismatch", async function()
                 {
                     const {status: ts} = state.teams.them;
+                    initActive("us");
                     initActive("them");
                     await initParser("them", effect.toLowerCase());
                     const otherEffect = effect === "reflect" ?
@@ -2348,6 +2504,7 @@ export function testUseMove(ctxFunc: () => Context,
             {
                 it("Should pass if expected", async function()
                 {
+                    initActive("us");
                     initActive("them");
                     await initParser("them", move);
                     await handle(
@@ -2359,6 +2516,7 @@ export function testUseMove(ctxFunc: () => Context,
 
                 it("Should reject if start=false", async function()
                 {
+                    initActive("us");
                     initActive("them");
                     await initParser("them", move);
                     await expect(handle(
@@ -2373,6 +2531,7 @@ export function testUseMove(ctxFunc: () => Context,
 
                 it("Should reject if mismatched flags", async function()
                 {
+                    initActive("us");
                     initActive("them");
                     await initParser("them", "splash");
                     await reject(
@@ -2456,6 +2615,7 @@ export function testUseMove(ctxFunc: () => Context,
             it("Should reject if not expected", async function()
             {
                 initActive("us");
+                initActive("them");
                 await initParser("us", "splash");
                 await reject(
                 {
@@ -2512,6 +2672,7 @@ export function testUseMove(ctxFunc: () => Context,
         {
             it("Should infer move via type change", async function()
             {
+                initActive("us");
                 const mon = initActive("them");
                 await initParser("them", "conversion");
 
@@ -2771,6 +2932,7 @@ export function testUseMove(ctxFunc: () => Context,
             // TODO: handle all throw cases
             it("Should accept if self-switch expected", async function()
             {
+                initActive("us");
                 initActive("them");
                 await initParser("them", "batonpass");
                 await handle({type: "halt", reason: "wait"});
@@ -2779,6 +2941,7 @@ export function testUseMove(ctxFunc: () => Context,
 
             it("Should throw if no self-switch expected", async function()
             {
+                initActive("us");
                 initActive("them");
                 await initParser("them", "splash");
                 await reject({type: "halt", reason: "wait"});
@@ -2809,6 +2972,7 @@ export function testUseMove(ctxFunc: () => Context,
 
             it("Should handle Natural Cure", async function()
             {
+                initActive("us");
                 const mon = initActive("them");
                 mon.majorStatus.afflict("slp");
                 // could have naturalcure

@@ -49,7 +49,7 @@ export const majorStatuses =
 } as const;
 /** Sorted array of all major statuses. */
 export const majorStatusKeys = Object.keys(majorStatuses).sort() as
-    readonly MajorStatus[]
+    readonly MajorStatus[];
 /** Major pokemon status conditions. */
 export type MajorStatus = keyof typeof majorStatuses;
 /**
@@ -319,7 +319,9 @@ export interface AbilityData extends DexData
     /** Additional ability flags. */
     readonly flags?:
     {
-        // TODO: pressure flag
+        // TODO: pressure, normalize
+        /** Eat 25% HP berries early at 50%. */
+        readonly earlyBerry?: true;
         /** Whether this ability suppresses all weather effects. */
         readonly suppressWeather?: true;
         /** Whether this ability ignores held item. */
@@ -570,7 +572,7 @@ export function getMoveTypes(move: MoveData, user: ReadonlyPokemon): Set<Type>
             const result = new Set<Type>();
             for (const n of user.item.possibleValues)
             {
-                result.add(user.item.map[n].plateType ?? "normal");
+                result.add(user.item.map[n].plateType ?? move.type);
             }
             return result;
         }
@@ -592,7 +594,8 @@ export function getDefiniteMoveType(move: MoveData, user: ReadonlyPokemon):
         case "plateType":
             // TODO: include item-blocking effects
             if (!user.item.definiteValue) return null;
-            return user.item.map[user.item.definiteValue].plateType ?? null;
+            return user.item.map[user.item.definiteValue].plateType ??
+                move.type;
         default: return move.type;
     }
 }
@@ -614,6 +617,8 @@ export interface ItemData extends DexData
 {
     /** Whether this is a choice item. */
     readonly isChoice?: true;
+    /** Whether this is a berry item. */
+    readonly isBerry?: true;
     /** Plate type if this is a plate item. Used for handling Arceus types. */
     readonly plateType?: Type;
     /**
@@ -638,8 +643,96 @@ export interface ItemData extends DexData
     /** Like `#on` but for consumable items. */
     readonly consumeOn?:
     {
+        /** Before the holder makes a move. */
+        readonly preMove?:
+        {
+            /** Percent HP threshold for activating. */
+            readonly threshold: number;
+            /** Holder moves first in its priority bracket. */
+            readonly moveFirst: true;
+        };
         /** Whether this item shortens charging (twoTurn) moves. */
         readonly moveCharge?: "shorten";
+        /** Before a move is about to hit the holder directly. */
+        readonly preHit?:
+        {
+            /**
+             * Halve damage from a super-effective hit of the given type. If
+             * `normal`, doesn't have to be super-effective to activate.
+             */
+            readonly resistSuper: Type;
+        };
+        /**
+         * Activates after being hit by a super-effective move (before ability's
+         * on-`moveDamage` effects but after drain effect).
+         */
+        readonly super?:
+        {
+            /** Percent HP healed by holder. */
+            readonly heal: number;
+        };
+        /**
+         * Activates after being hit by a move (after ability's on-`moveDamage`
+         * effects).
+         */
+        readonly postHit?:
+        {
+            /** Activates on physical or special move hit. */
+            readonly condition: "physical" | "special";
+            /** Percent HP damage dealt to attacker. */
+            readonly damage: number;
+        };
+        /** Whenever the game decides to check activation conditions. */
+        readonly update?:
+        {
+            /** Activates under a certain HP threshold. */
+            readonly condition: "hp";
+            /** Percent HP threshold for activating. */
+            readonly threshold: number;
+            /** Effect of the item once it hits the threshold. */
+            readonly effect:
+            {
+                /** Effect heals by percent max-hp or fixed amount. */
+                readonly type: "healPercent" | "healFixed";
+                /** HP healed. */
+                readonly heal: number;
+                /**
+                 * The stat that, if the holder's nature reduces it, will also
+                 * cause the holder to become confused.
+                 */
+                readonly dislike?: StatExceptHP;
+            } |
+            {
+                /** Effect boosts the holder's stats. */
+                readonly type: "boost";
+                /** Boost one of the listed stats at random. */
+                readonly boostOne: Partial<BoostTable>;
+            } |
+            {
+                /** Effect raises the holder's critical hit ratio. */
+                readonly type: "focusEnergy";
+            };
+        } |
+        {
+            /** Activates when the holder has a certain status. */
+            readonly condition: "status";
+            /** Cure a specified status. */
+            readonly cure: {readonly [T in effects.StatusType]?: true};
+        } |
+        {
+            /** Activates when a holder's move has depleted. */
+            readonly condition: "depleted";
+            /** Amount of PP restored. */
+            readonly restore: number;
+        };
+        /** End of turn, after main moves/switches. */
+        readonly residual?:
+        {
+            /** Percent HP threshold for activating. */
+            readonly threshold: number;
+            /** Implicit self-inflicted status. */
+            readonly status: "micleberry";
+        };
     };
     // TODO: passive effects
 }

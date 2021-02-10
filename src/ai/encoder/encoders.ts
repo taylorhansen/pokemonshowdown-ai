@@ -315,6 +315,8 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     augment(vs => vs.identified === "miracleEye", booleanEncoder),
     augment(vs => vs.imprison, booleanEncoder),
     augment(vs => vs.lockedMove, variableTempStatusEncoder(dex.lockedMoveKeys)),
+    augment(vs => vs.magicCoat, booleanEncoder),
+    augment(vs => vs.micleberry, booleanEncoder),
     augment(vs => vs.minimize, booleanEncoder),
     augment(vs => ({id: vs.mirrorMove ? dex.moves[vs.mirrorMove].uid : null}),
         oneHotEncoder(dex.moveKeys.length)),

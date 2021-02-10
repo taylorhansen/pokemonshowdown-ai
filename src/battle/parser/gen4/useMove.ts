@@ -1,7 +1,8 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
 import * as effects from "../../dex/effects";
-import { typechart } from "../../dex/typechart";
+import { Effectiveness, getAttackerTypes, getTypeEffectiveness, typechart } from
+    "../../dex/typechart";
 import { Move } from "../../state/Move";
 import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
@@ -310,6 +311,10 @@ async function* tryExecute(ctx: MoveContext, lastEvent?: events.Any):
     if (delayResult.ret) return {...yield* delayResult.ret, fail: "fail"};
     lastEvent = delayResult.event;
 
+    // accuracy calculations start here, consume micleberry status
+    // TODO(later): accuracy calcs and probablistic inductions
+    ctx.user.volatile.micleberry = false;
+
     // check for other effects/abilities blocking this move
     // TODO(doubles): allow move to execute with fewer targets if only one of
     //  them blocks it
@@ -518,7 +523,13 @@ async function* hitLoop(ctx: MoveContext, lastEvent?: events.Any): SubParser
     {
         if (ctx.moveData.category !== "status")
         {
-            const hitResult = yield* hit(ctx, lastEvent);
+            const preHitResult = yield* preHit(ctx, lastEvent);
+            const hitResult = yield* hit(ctx, preHitResult.event);
+            if (preHitResult.resistSuper && hitResult.effectiveness !== "super")
+            {
+                throw new Error("Move effectiveness expected to be 'super' " +
+                    `but got '${hitResult.effectiveness}'`);
+            }
             handleTypeEffectiveness(ctx, hitResult.effectiveness);
             lastEvent = hitResult.event;
         }
@@ -563,6 +574,32 @@ async function* checkHitCount(ctx: MoveContext, hits: number,
     return {event};
 }
 
+/** Result of `preHit()`. */
+interface PreHitResult extends SubParserResult
+{
+    /** Resist berry type. */
+    resistSuper?: dexutil.Type;
+}
+
+/** Check for pre-hit modifier events. */
+async function* preHit(ctx: MoveContext, lastEvent?: events.Any):
+    SubParser<PreHitResult>
+{
+    // check for resist berry effect
+    let resistSuper: dexutil.Type | undefined;
+    const itemPreHitResult = yield* consumeItem.consumeOnPreHit(ctx.pstate,
+        {[otherSide(ctx.userRef)]: true}, ctx.moveData, ctx.userRef, lastEvent);
+    for (const result of itemPreHitResult.results)
+    {
+        resistSuper ||= result.resistSuper;
+    }
+
+    return {
+        ...itemPreHitResult.event && {event: itemPreHitResult.event},
+        ...resistSuper && {resistSuper}
+    };
+}
+
 /** Result of `hit()`. */
 interface HitResult extends SubParserResult
 {
@@ -576,7 +613,6 @@ interface HitResult extends SubParserResult
 async function* hit(ctx: MoveContext, lastEvent?: events.Any):
     SubParser<HitResult>
 {
-    // TODO: type resist berry
     let effectiveness: Effectiveness = "regular";
     let damaged: boolean | "substitute" | undefined;
     let crit: boolean | undefined;
@@ -756,12 +792,29 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
                         `${moveEffects.drain[0]}/${moveEffects.drain[1]}`);
                 }
                 lastEvent = damageResult.event;
+                lastEvent = (yield* parsers.update(ctx.pstate, lastEvent))
+                    .event;
             }
         }
 
-        // see if an on-moveDamage variant ability will activate
+        // check for target effects
+
         // TODO: track actual move targets
         const holderRef = otherSide(ctx.userRef);
+        const holder = ctx.pstate.state.teams[holderRef].active;
+
+        // consumeOn-super item (enigmaberry)
+        // note: doesn't work if fainted
+        if (!holder.fainted)
+        {
+            const itemSuperResult = yield* consumeItem.consumeOnSuper(
+                ctx.pstate, {[holderRef]: true}, ctx.moveData, ctx.userRef,
+                lastEvent);
+            lastEvent = itemSuperResult.event;
+        }
+
+        // see if an on-moveDamage variant ability will activate
+        // note: still works if fainted
         const flags = ctx.mentionedTargets.get(holderRef);
         // choose category with highest precedence
         let qualifier: "damage" | "contact" | "contactKO" | undefined;
@@ -778,8 +831,16 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
                 lastEvent);
             lastEvent = expectResult.event;
         }
+
+        // consumeOn-postHit item (jabocaberry/rowapberry)
+        // note: still works if fainted
+        const itemPostHitResult = yield* consumeItem.consumeOnPostHit(
+            ctx.pstate, {[holderRef]: true}, ctx.moveData, ctx.userRef,
+            lastEvent);
+        lastEvent = itemPostHitResult.event;
     }
-    return {...lastEvent && {event: lastEvent}};
+    // make sure no more items need to activate
+    return yield* parsers.update(ctx.pstate, lastEvent);
 }
 
 /** Handles other effects of a move apart from status/boost/damage. */
@@ -875,10 +936,10 @@ async function* otherEffects(ctx: MoveContext, lastEvent?: events.Any):
             recoil(ctx, /*consumed*/ !!damageResult.success);
         }
         lastEvent = damageResult.event;
+        lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     }
     // TODO: focussash
     // TODO: item removal effects
-    // TODO: when do resist berries activate?
     const removeItemResult = yield* eventLoop(
         async function* removeItemLoop(event): SubParser
         {
@@ -1074,9 +1135,6 @@ async function* expectDelay(ctx: MoveContext, lastEvent?: events.Any):
     return {...lastEvent && {event: lastEvent}};
 }
 
-/** Shorthand string union for type effectiveness. */
-type Effectiveness = "immune" | "resist" | "regular" | "super";
-
 /**
  * Handles type effectiveness assertions, even for status moves.
  * @param effectiveness Type effectiveness.
@@ -1087,6 +1145,9 @@ function handleTypeEffectiveness(ctx: MoveContext,
     // TODO(doubles): do this for each defender
     const defender = ctx.pstate.state.teams[otherSide(ctx.userRef)].active;
 
+    const binary = ctx.moveData.category === "status" || !!ctx.moveData.damage;
+    const expectedMoveTypes = getAttackerTypes(ctx.user.types, effectiveness,
+        binary);
     let moveType: dexutil.Type;
     if (ctx.moveData.modifyType === "hpType")
     {
@@ -1094,9 +1155,7 @@ function handleTypeEffectiveness(ctx: MoveContext,
         if (!hpType.definiteValue)
         {
             // look for types that would match the given effectiveness
-            hpType.narrow(
-                type => effectiveness ===
-                    getTypeEffectiveness(defender.types, type as dexutil.Type));
+            hpType.narrow(expectedMoveTypes);
             // the assertion at the end would be guaranteed to pass if we fully
             //  narrowed the hpType, so return regardless
             return;
@@ -1111,17 +1170,15 @@ function handleTypeEffectiveness(ctx: MoveContext,
         {
             // look for plate items that would match the given effectiveness
             heldItem.narrow(
-                n => effectiveness ===
-                    getTypeEffectiveness(defender.types,
-                        heldItem.map[n].plateType ?? ctx.moveData.type));
+                (_, i) => expectedMoveTypes.has(
+                    i.plateType ?? ctx.moveData.type));
             // the assertion at the end would be guaranteed to pass if we fully
             //  narrowed the item/plate, so return regardless
             return;
         }
 
         const {plateType} = heldItem.map[heldItem.definiteValue];
-        if (!plateType) return;
-        moveType = plateType;
+        moveType = plateType ?? ctx.moveData.type;
     }
     else moveType = ctx.moveData.type;
 
@@ -1148,33 +1205,6 @@ function handleTypeEffectiveness(ctx: MoveContext,
         throw new Error(`Move effectiveness expected to be '${expectedEff}' ` +
             `but got '${effectiveness}'`);
     }
-}
-
-/**
- * Gets the type effectiveness multiplier.
- * @param defender Defender types.
- * @param attacker Attacking move type.
- */
-function getTypeMultiplier(defender: readonly dexutil.Type[],
-    attacker: dexutil.Type): number
-{
-    return defender.map(t => typechart[t][attacker]).reduce((a, b) => a * b, 1);
-}
-
-/**
- * Gets the type effectiveness string.
- * @param defender Defender types.
- * @param attacker Attacking move type.
- * @param binary Whether this move can only be immune or regular.
- */
-function getTypeEffectiveness(defender: readonly dexutil.Type[],
-    attacker: dexutil.Type, binary?: boolean): Effectiveness
-{
-    const mult = getTypeMultiplier(defender, attacker);
-    if (mult <= 0) return "immune";
-    if (mult < 1) return binary ? "regular" : "resist";
-    if (mult > 1) return binary ? "regular" : "super";
-    return "regular";
 }
 
 /**
@@ -1319,6 +1349,7 @@ async function* handleStatus(ctx: MoveContext,
         }
         const statusResult = yield* parsers.status(ctx.pstate, targetRef,
             statusTypes, lastEvent);
+        lastEvent = statusResult.event;
         if (!statusResult.success)
         {
             // status was the main effect of the move (e.g. thunderwave)
@@ -1331,14 +1362,15 @@ async function* handleStatus(ctx: MoveContext,
             //  status, the opponent must have a status immunity
             statusImmunity(ctx, targetRef);
         }
-        lastEvent = statusResult.event;
 
         // verify if imprison was successful
         if (statusResult.success === "imprison")
         {
             imprison(ctx, /*failed*/ false);
         }
+        lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     }
+
     return {...lastEvent && {event: lastEvent}};
 }
 
@@ -1366,6 +1398,7 @@ async function* handleSplitDamage(ctx: MoveContext, lastEvent?: events.Any):
             return yield* base.takeDamage(ctx.pstate, event);
         },
         lastEvent);
+    lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     return result;
 }
 
@@ -1390,7 +1423,7 @@ async function* handlePercentDamage(ctx: MoveContext,
         throw new Error("Expected effect that didn't happen: " +
             `${effect.target} percentDamage ${effect.percent}%`);
     }
-    return damageResult;
+    return yield* parsers.update(ctx.pstate, damageResult.event);
 }
 
 /** Handles the boost effects of a move. */
@@ -1682,6 +1715,7 @@ function handleFail(ctx: MoveContext): void
     // TODO: add MoveData field to support this move
     if (ctx.moveName === "naturalgift") naturalGift(ctx, /*failed*/ true);
 
+    // imprison move failed, make inferences based on fail conditions
     if (ctx.moveData.effects?.status?.self?.includes("imprison") &&
         !ctx.moveData.effects.status.chance)
     {
@@ -1694,6 +1728,9 @@ function handleFail(ctx: MoveContext): void
     // clear continuous moves
     ctx.user.volatile.lockedMove.reset();
     ctx.user.volatile.rollout.reset();
+
+    // when the move fails, micle status is silently ended
+    ctx.user.volatile.micleberry = false;
 
     // TODO: verify other implications
 }

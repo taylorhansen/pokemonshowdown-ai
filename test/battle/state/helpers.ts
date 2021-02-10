@@ -42,6 +42,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.lastMove = "spore";
     volatile.lockedMove.start("outrage");
     volatile.magicCoat = true;
+    volatile.micleberry = true;
     volatile.minimize = true;
     volatile.mirrorMove = "watergun";
     volatile.mudSport = true;

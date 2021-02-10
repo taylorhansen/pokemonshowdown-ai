@@ -5,10 +5,11 @@ import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { eventLoop } from "../helpers";
+import { eventLoop, hasStatus } from "../helpers";
 import { dispatch, handlers as base } from "./base";
 import { createEventInference, EventInference, expectEvents, ExpectEventsResult,
     SubInference, SubReason } from "./EventInference";
+import { assertMoveType, moveIsType } from "./helpers";
 import * as parsers from "./parsers";
 
 /** Result from `expectAbilities()` and variants like `onStart()`. */
@@ -76,41 +77,6 @@ export async function* onStart(pstate: ParserState,
         /*hitByMove*/ undefined, lastEvent);
 }
 
-// TODO: move to a helper library?
-/** Checks whether the pokemon has the given status. */
-function hasStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
-    boolean
-{
-    switch (statusType)
-    {
-        case "aquaRing": case "attract": case "curse": case "flashFire":
-        case "focusEnergy": case "imprison": case "ingrain":
-        case "leechSeed": case "mudSport": case "nightmare":
-        case "powerTrick": case "substitute": case "suppressAbility":
-        case "torment": case "waterSport":
-        case "destinyBond": case "grudge": case "rage": // singlemove
-        case "magicCoat": case "roost": case "snatch": // singleturn
-            return mon.volatile[statusType];
-        case "bide": case "confusion": case "charge": case "magnetRise":
-        case "embargo": case "healBlock": case "slowStart": case "taunt":
-        case "uproar": case "yawn":
-            return mon.volatile[statusType].isActive;
-        case "encore":
-            return mon.volatile[statusType].ts.isActive;
-        case "endure": case "protect": // stall
-            return mon.volatile.stalling;
-        case "foresight": case "miracleEye":
-            return mon.volatile.identified === statusType;
-        default:
-            if (dexutil.isMajorStatus(statusType))
-            {
-                return mon.majorStatus.current === statusType;
-            }
-            // istanbul ignore next: should never happen
-            throw new Error(`Invalid status effect '${statusType}'`);
-    }
-}
-
 /**
  * Expects an on-`block` ability to activate on a certain blockable effect.
  * @param eligible Eligible pokemon.
@@ -119,8 +85,8 @@ function hasStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
  */
 export async function* onBlock(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>, userRef: Side,
-    hitByMove: dexutil.MoveData,
-    lastEvent?: events.Any): SubParser<ExpectAbilitiesResult>
+    hitByMove: dexutil.MoveData, lastEvent?: events.Any):
+    SubParser<ExpectAbilitiesResult>
 {
     // if move user ignores the target's abilities, then this function can't be
     //  called
@@ -152,7 +118,10 @@ export async function* onBlock(pstate: ParserState,
             if (data.on.block.move && moveTypes.has(data.on.block.move.type))
             {
                 return new Set(
-                    [moveIsType(hitByMove, data.on.block.move.type, user)]);
+                [
+                    moveIsType(hitByMove, user,
+                        new Set([data.on.block.move.type]))
+                ]);
             }
             // block move based on damp
             if (hitByMove.flags?.explosive && data.on.block.effect?.explosive)
@@ -352,85 +321,6 @@ export function opponentHasItem(opp: Pokemon): SubReason
     return cantHaveItem(opp, "none");
 }
 
-// TODO: generalize for multiple possible types, as well as a negative case
-/**
- * Creates a SubReason that asserts that the move being used by the given
- * pokemon is of the specified type.
- */
-export function moveIsType(move: dexutil.MoveData, type: dexutil.Type,
-    user: Pokemon): SubReason
-{
-    const moveType = dexutil.getDefiniteMoveType(move, user);
-    const {hpType, item} = user; // snapshot in case user changes
-    return {
-        assert()
-        {
-            switch (move.modifyType)
-            {
-                case "hpType": hpType.narrow(type); break;
-                case "plateType":
-                    item.narrow((_, i) => (i.plateType ?? "normal") === type);
-                    break;
-                default:
-                    if (move.type !== type)
-                    {
-                        throw new Error(`Move of type '${move.type}' cannot ` +
-                            `be asserted to be of type ${type}`);
-                    }
-            }
-        },
-        reject()
-        {
-            switch (move.modifyType)
-            {
-                case "hpType": hpType.remove(type); break;
-                case "plateType":
-                    item.remove((_, i) => (i.plateType ?? "normal") === type);
-                    break;
-                default:
-                    if (move.type === type)
-                    {
-                        throw new Error(`Move of type '${move.type}' cannot ` +
-                            `be asserted to not be of type ${type}`);
-                    }
-            }
-        },
-        delay(cb)
-        {
-            // early return: move type already known
-            if (moveType)
-            {
-                cb(/*held*/ moveType === type);
-                return () => {};
-            }
-
-            let cancel = false;
-            switch (move.modifyType)
-            {
-                case "hpType":
-                    // TODO: call then cb sooner on partial narrow
-                    hpType.then(t =>
-                    {
-                        if (cancel) return;
-                        cb(t === type);
-                    });
-                    // TODO: returned callback should actually de-register cb
-                    return () => cancel = true;
-                case "plateType":
-                    item.then((_, i) =>
-                    {
-                        if (cancel) return;
-                        cb((i.plateType ?? "normal") === type);
-                    });
-                    return () => cancel = true;
-                default:
-                    // istanbul ignore next: should never happen
-                    throw new Error(`Unsupported modifyType string ` +
-                        `'${move.modifyType}'`);
-            }
-        }
-    };
-}
 
 /**
  * Creates a SubReason that asserts that the holder isn't the same type as the
@@ -454,7 +344,7 @@ export function diffMoveType(mon: Pokemon, hitByMove: dexutil.MoveData,
                 case "hpType": hpType.remove(types); break;
                 case "plateType":
                     item.remove((_, i) =>
-                        types.includes((i.plateType ?? "normal")));
+                        types.includes((i.plateType ?? hitByMove.type)));
                     break;
                 default:
                     if (types.includes(hitByMove.type))
@@ -473,7 +363,7 @@ export function diffMoveType(mon: Pokemon, hitByMove: dexutil.MoveData,
                 case "hpType": hpType.narrow(...types); break;
                 case "plateType":
                     item.narrow((_, i) =>
-                        types.includes((i.plateType ?? "normal")));
+                        types.includes((i.plateType ?? hitByMove.type)));
                     break;
                 default:
                     if (!types.includes(hitByMove.type))
@@ -509,7 +399,7 @@ export function diffMoveType(mon: Pokemon, hitByMove: dexutil.MoveData,
                     item.then((_, i) =>
                     {
                         if (cancel) return;
-                        cb(!types.includes(i.plateType ?? "normal"));
+                        cb(!types.includes(i.plateType ?? hitByMove.type));
                     });
                     return () => cancel = true;
                 default:
@@ -651,6 +541,7 @@ interface AbilityContext
     readonly on: dexutil.AbilityOn | null;
     /** Move that the holder was hit by, if applicable. */
     readonly hitByMove?: dexutil.MoveData;
+    // TODO: add userRef
 }
 
 // TODO: make this generic based on activateAbility()'s 'on' argument
@@ -735,6 +626,7 @@ export async function* activateAbility(pstate: ParserState,
     return {...baseResult, ...result};
 }
 
+// TODO: remove lastEvent arg?
 /**
  * Dispatches the effects of an ability. Assumes that the initial
  * activateAbility event has already been handled.
@@ -1207,6 +1099,7 @@ async function* moveContactKO(ctx: AbilityContext, targetRef: Side,
                 throw new Error("Unknown on-moveContactKO effect " +
                     `'${effect!.type}'`);
         }
+        lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     }
 
     // if the ability effects can't cause an explicit game event, then it
@@ -1273,6 +1166,7 @@ async function* moveContact(ctx: AbilityContext, targetRef: Side,
                 throw new Error("Unknown on-moveContact effect " +
                     `'${effect!.type}'`);
         }
+        lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     }
 
     // if the ability effects can't cause an explicit game event, then it
@@ -1334,46 +1228,11 @@ async function* invertDrain(ctx: AbilityContext, lastEvent?: events.Any):
     {
         throw new Error("On-moveDrain invert effect failed");
     }
+    lastEvent = damageResult.event;
+    lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
 
     // TODO: include damage delta
     return {
-        ...damageResult.event && {event: damageResult.event}, invertDrain: true
+        ...lastEvent && {event: lastEvent}, invertDrain: true
     };
-}
-
-// helpers
-
-/**
- * Compares the given move with its expected type, making inferences on the user
- * if the move type varies with the user's traits.
- * @param move Given move.
- * @param type Expected move type.
- * @param user User of the move.
- */
-function assertMoveType(move: dexutil.MoveData, type: dexutil.Type,
-    user: Pokemon): void
-{
-    // assert move type if known
-    const moveType = dexutil.getDefiniteMoveType(move, user);
-    if (moveType)
-    {
-        if (type !== moveType)
-        {
-            throw new Error("Move type assertion failed: " +
-                `Expected type-change to '${moveType}' but got '${type}'`);
-        }
-        return;
-    }
-
-    // if move type is unknown, reverse the assertion into an inference
-    switch (move.modifyType)
-    {
-        // asserted type is the user's hiddenpower type
-        case "hpType": user.hpType.narrow(type); break;
-        // asserted type is the type of plate the user is holding
-        case "plateType":
-            // TODO: add an inverse map for plateTypes to optimize this case
-            user.item.narrow(n => type === user.item.map[n].plateType);
-            break;
-    }
 }

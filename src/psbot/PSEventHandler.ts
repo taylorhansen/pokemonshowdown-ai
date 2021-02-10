@@ -549,6 +549,11 @@ export class PSEventHandler
                     type: "modifyPP", monRef,
                     move: toIdName(event.otherArgs[0]), amount: "deplete"
                 }];
+            case "item: Leppa Berry":
+                return [{
+                    type: "modifyPP", monRef,
+                    move: toIdName(event.otherArgs[0]), amount: 10
+                }]
             case "Lock-On": case "Mind Reader":
                 return [{
                     type: "lockOn", monRef,
@@ -810,6 +815,7 @@ export class PSEventHandler
 
         // handle case where an item-removal or steal-eat move was used
         //  against us, which removes but doesn't consume our item
+        // TODO: these should also specify the item being removed
         let consumed: boolean | string;
         if (event.from === "stealeat" ||
             (event.from && event.from.startsWith("move: ") &&
@@ -821,6 +827,9 @@ export class PSEventHandler
         // in most other cases we can assume that the item can be brought
         //  back using Recycle
         else consumed = toIdName(event.item);
+
+        // likely consuming the status, not actual item
+        if (event.item === "micleberry" && !event.eat) return [];
 
         return [{type: "removeItem", monRef, consumed}];
     }

@@ -5,8 +5,20 @@ import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { eventLoop, matchBoost, matchPercentDamage } from "../helpers";
+import { eventLoop, hasStatus, matchBoost, matchPercentDamage } from
+    "../helpers";
 import { handlers as base } from "./base";
+import { consumeOnUpdate } from "./removeItem";
+
+/** Checks if items should activate. */
+export async function* update(pstate: ParserState, lastEvent?: events.Any):
+    SubParser
+{
+    // TODO: also check abilities? in what order?
+    const result = yield* consumeOnUpdate(pstate, {us: true, them: true},
+        lastEvent);
+    return {...result.event && {event: result.event}};
+}
 
 /** SubParserResult that includes a success indicator. */
 export interface SuccessResult extends SubParserResult
@@ -75,7 +87,7 @@ export async function* boost(pstate: ParserState, targetRef: Side,
 
     // remove boosts that can't be fulfilled due to saturation
     //  (e.g. boosting when already at at +6)
-    // TODO: should this be done for set as well?
+    // TODO: should something similar to this be done for set as well?
     if (silent && !set)
     {
         for (const b in table)
@@ -90,6 +102,32 @@ export async function* boost(pstate: ParserState, targetRef: Side,
     }
 
     return {...result, remaining: table, ...allSilent && {allSilent: true}};
+}
+
+/** Result from `boostOne()`. */
+export interface BoostOneResult extends SubParserResult
+{
+    /** If successful, provides the stat that was boosted. */
+    success?: dexutil.BoostName;
+}
+
+/**
+ * Expects one of the given stats to be boosted.
+ * @param targetRef Target pokemon reference.
+ * @param possibleBoosts Table of possible boosts.
+ */
+export async function* boostOne(pstate: ParserState, targetRef: Side,
+    possibleBoosts: Partial<dexutil.BoostTable<number>>,
+    lastEvent?: events.Any): SubParser<BoostOneResult>
+{
+    const event = lastEvent ?? (yield);
+    if (event.type !== "boost" || event.monRef !== targetRef || event.set ||
+        possibleBoosts[event.stat] !== event.amount)
+    {
+        return {event}; // fail
+    }
+
+    return {...yield* base.boost(pstate, event), success: event.stat};
 }
 
 /**
@@ -316,6 +354,53 @@ function cantStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
             // istanbul ignore next: should never happen
             throw new Error(`Invalid status effect '${statusType}'`);
     }
+}
+
+/** Result from `cure()`. */
+export interface CureResult extends SubParserResult
+{
+    /**
+     * Whether the call was successful. `true` if fully consumed, `"silent"` if
+     * no statuses to cure, or `Set<StatusType>` if some statuses were not
+     * cured.
+     */
+    ret: true | "silent" | Set<effects.StatusType>;
+}
+
+/**
+ * Expects some statuses to be cured.
+ * @param targetRef Target pokemon reference.
+ * @param statuses Statuses to cure.
+ */
+export async function* cure(pstate: ParserState, targetRef: Side,
+    statuses: readonly effects.StatusType[], lastEvent?: events.Any):
+    SubParser<CureResult>
+{
+    // only need to care about the curable statuses the target has
+    const target = pstate.state.teams[targetRef].active;
+    statuses = statuses.filter(s => hasStatus(target, s));
+
+    // no statuses to cure
+    if (statuses.length <= 0)
+    {
+        return {...lastEvent && {event: lastEvent}, ret: "silent"};
+    }
+
+    // look for cure events
+    const pendingCures = new Set(statuses);
+    while (pendingCures.size > 0)
+    {
+        lastEvent ??= yield;
+        if (lastEvent.type !== "activateStatusEffect" || lastEvent.start ||
+            lastEvent.monRef !== targetRef ||
+            !pendingCures.has(lastEvent.effect))
+        {
+            return {event: lastEvent, ret: pendingCures}; // fail/partial
+        }
+        pendingCures.delete(lastEvent.effect);
+        lastEvent = (yield* base.activateStatusEffect(pstate, lastEvent)).event;
+    }
+    return {ret: true}; // success
 }
 
 /**

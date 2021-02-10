@@ -695,7 +695,7 @@ describe("PSEventHandler", function()
 
             describe("Grudge", function()
             {
-                test("Should emit ModifyPP",
+                test("Should emit modifyPP",
                 [{
                     type: "-activate", id: us, volatile: "move: Grudge",
                     otherArgs: ["Tackle"]
@@ -703,6 +703,19 @@ describe("PSEventHandler", function()
                 [{
                     type: "modifyPP", monRef: "us", move: "tackle",
                     amount: "deplete"
+                }]);
+            });
+
+            describe("item: Leppa Berry", function()
+            {
+                test("Should emit modifyPP",
+                [{
+                    type: "-activate", id: us, volatile: "item: Leppa Berry",
+                    otherArgs: ["Splash"]
+                }],
+                [{
+                    type: "modifyPP", monRef: "us", move: "splash",
+                    amount: 10
                 }]);
             });
 
@@ -1136,6 +1149,9 @@ describe("PSEventHandler", function()
                 }],
                     [{type: "removeItem", monRef: "us", consumed: false}]);
             }
+
+            test("Should emit nothing for micleberry status",
+                [{type: "-enditem", id: us, item: "micleberry"}], []);
         });
 
         describe("-message", function()

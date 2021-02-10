@@ -1,7 +1,44 @@
+import * as dexutil from "../dex/dex-util";
+import * as effects from "../dex/effects";
 import { BattleState } from "../state/BattleState";
+import { ReadonlyPokemon } from "../state/Pokemon";
 import * as events from "./BattleEvent";
 import { BattleParser, BattleParserArgs, BattleParserFunc, ParserState,
     SubParser, SubParserFunc, SubParserResult } from "./BattleParser";
+
+/** Checks whether the pokemon has the given status. */
+export function hasStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
+    boolean
+{
+    switch (statusType)
+    {
+        case "aquaRing": case "attract": case "curse": case "flashFire":
+        case "focusEnergy": case "imprison": case "ingrain":
+        case "leechSeed": case "mudSport": case "nightmare":
+        case "powerTrick": case "substitute": case "suppressAbility":
+        case "torment": case "waterSport":
+        case "destinyBond": case "grudge": case "rage": // singlemove
+        case "magicCoat": case "roost": case "snatch": // singleturn
+            return mon.volatile[statusType];
+        case "bide": case "confusion": case "charge": case "magnetRise":
+        case "embargo": case "healBlock": case "slowStart": case "taunt":
+        case "uproar": case "yawn":
+            return mon.volatile[statusType].isActive;
+        case "encore":
+            return mon.volatile[statusType].ts.isActive;
+        case "endure": case "protect": // stall
+            return mon.volatile.stalling;
+        case "foresight": case "miracleEye":
+            return mon.volatile.identified === statusType;
+        default:
+            if (dexutil.isMajorStatus(statusType))
+            {
+                return mon.majorStatus.current === statusType;
+            }
+            // istanbul ignore next: should never happen
+            throw new Error(`Invalid status effect '${statusType}'`);
+    }
+}
 
 /**
  * Checks if the boost amounts are suitable.

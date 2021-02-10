@@ -1,7 +1,72 @@
-import { MajorStatus, Type } from "./dex-util";
+import * as dexutil from "./dex-util";
 
-type AttackerMap = {readonly [TAttacker in Type]: number};
-type StatusMap = {readonly [TStatus in MajorStatus]?: boolean};
+/** Shorthand string union for type effectiveness. */
+export type Effectiveness = "immune" | "resist" | "regular" | "super";
+
+/**
+ * Gets the type effectiveness multiplier.
+ * @param defender Defender types.
+ * @param attacker Attacking move type.
+ */
+export function getTypeMultiplier(defender: readonly dexutil.Type[],
+        attacker: dexutil.Type): number
+{
+    return defender.map(t => typechart[t][attacker]).reduce((a, b) => a * b, 1);
+}
+
+/**
+ * Gets the type effectiveness string.
+ * @param defender Defender types.
+ * @param attacker Attacking move type.
+ * @param binary Whether this move can only be immune or regular.
+ */
+export function getTypeEffectiveness(defender: readonly dexutil.Type[],
+    attacker: dexutil.Type, binary?: boolean): Effectiveness
+{
+    return multiplierToEffectiveness(getTypeMultiplier(defender, attacker),
+        binary);
+}
+
+// TODO(gen6): won't work for typechart-modifying moves
+/**
+ * Gets the attacking types that match the given effectiveness against the
+ * defender.
+ * @param defender Defender types.
+ * @param effectiveness Target effectiveness.
+ * @param binary Whether the move can only be immune/regular.
+ * @returns A Set with the appropriate attacker types.
+ */
+export function getAttackerTypes(defender: readonly dexutil.Type[],
+    effectiveness: Effectiveness, binary?: boolean): Set<dexutil.Type>
+{
+    const result = new Set<dexutil.Type>();
+    const attackerCharts = defender.map(t => typechart[t]);
+    for (const type of dexutil.typeKeys)
+    {
+        const mult = attackerCharts.reduce((m, chart) => m * chart[type], 1);
+        const eff = multiplierToEffectiveness(mult, binary);
+        if (eff === effectiveness) result.add(type);
+    }
+    return result;
+}
+
+/**
+ * Gets an effectiveness string from a type effectiveness multiplier.
+ * @param multiplier Damage multiplier.
+ * @param binary Whether the move can only be immune/regular.
+ */
+function multiplierToEffectiveness(multiplier: number, binary?: boolean):
+    Effectiveness
+{
+    if (multiplier <= 0) return "immune";
+    if (binary) return "regular";
+    if (multiplier < 1) return "resist";
+    if (multiplier > 1) return "super";
+    return "regular";
+}
+
+type AttackerMap = {readonly [TAttacker in dexutil.Type]: number};
+type StatusMap = {readonly [TStatus in dexutil.MajorStatus]?: boolean};
 
 // TODO: include TDefender's weather immunity, groundedness, etc
 // tslint:disable: no-trailing-whitespace (force newline in doc)
@@ -16,7 +81,7 @@ type StatusMap = {readonly [TStatus in MajorStatus]?: boolean};
  */
 // tslint:enable: no-trailing-whitespace
 export const typechart:
-    {readonly [TDefender in Type]: AttackerMap & StatusMap} =
+    {readonly [TDefender in dexutil.Type]: AttackerMap & StatusMap} =
 {
     "???":
     {

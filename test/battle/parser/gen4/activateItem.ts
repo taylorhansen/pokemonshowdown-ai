@@ -22,7 +22,7 @@ export function testActivateItem(f: () => Context,
         ({pstate, parser} = f());
     });
 
-    const {handle, handleEnd, exitParser} = createParserHelpers(() => parser);
+    const {handle, exitParser} = createParserHelpers(() => parser);
 
     // can have cutecharm or magicguard
     const clefable: events.SwitchOptions =
@@ -91,19 +91,22 @@ export function testActivateItem(f: () => Context,
             it("Should handle percentDamage effect", async function()
             {
                 initActive("us");
+                initActive("them");
                 await initParser("us", "lifeorb", "movePostDamage");
-                await handleEnd({type: "takeDamage", monRef: "us", hp: 56});
+                await handle({type: "takeDamage", monRef: "us", hp: 56});
+                await exitParser();
             });
 
             it("Should infer no magicguard if damaged", async function()
             {
+                initActive("us");
                 const mon = initActive("them", clefable);
                 expect(mon.traits.ability.possibleValues)
                     .to.have.keys("cutecharm", "magicguard");
 
                 await initParser("them", "lifeorb", "movePostDamage");
-                await handleEnd(
-                    {type: "takeDamage", monRef: "them", hp: 90});
+                await handle({type: "takeDamage", monRef: "them", hp: 90});
+                await exitParser();
                 expect(mon.traits.ability.possibleValues)
                     .to.have.keys("cutecharm");
             });
@@ -137,19 +140,21 @@ export function testActivateItem(f: () => Context,
 
                 it("Should have poison effect if poison type", async function()
                 {
+                    initActive("us");
                     initActive("them", nidoqueen).hp.set(90);
                     await initParser("them", "blacksludge", "turn");
-                    await handleEnd(
-                        {type: "takeDamage", monRef: "them", hp: 100});
+                    await handle({type: "takeDamage", monRef: "them", hp: 100});
+                    await exitParser();
                 });
 
                 it("Should have noPoison effect if not poison type",
                     async function()
                 {
+                    initActive("us");
                     initActive("them");
                     await initParser("them", "blacksludge", "turn");
-                    await handleEnd(
-                        {type: "takeDamage", monRef: "them", hp: 0});
+                    await handle({type: "takeDamage", monRef: "them", hp: 0});
+                    await exitParser();
                 });
             });
 
@@ -158,30 +163,35 @@ export function testActivateItem(f: () => Context,
                 it("Should handle percentDamage effect", async function()
                 {
                     initActive("us").hp.set(50);
+                    initActive("them");
                     await initParser("us", "leftovers", "turn");
-                    await handleEnd({type: "takeDamage", monRef: "us", hp: 56});
+                    await handle({type: "takeDamage", monRef: "us", hp: 56});
+                    await exitParser();
                 });
 
                 it("Should handle status effect", async function()
                 {
                     initActive("us");
+                    initActive("them");
                     await initParser("us", "toxicorb", "turn");
-                    await handleEnd(
+                    await handle(
                     {
                         type: "activateStatusEffect", monRef: "us",
                         effect: "tox", start: true
                     });
+                    await exitParser();
                 });
 
                 it("Should infer no magicguard if damaged", async function()
                 {
+                    initActive("us");
                     const mon = initActive("them", clefable);
                     expect(mon.traits.ability.possibleValues)
                         .to.have.keys("cutecharm", "magicguard");
 
                     await initParser("them", "stickybarb", "turn");
-                    await handleEnd(
-                        {type: "takeDamage", monRef: "them", hp: 94});
+                    await handle({type: "takeDamage", monRef: "them", hp: 94});
+                    await exitParser();
                     expect(mon.traits.ability.possibleValues)
                         .to.have.keys("cutecharm");
                 });
@@ -189,7 +199,6 @@ export function testActivateItem(f: () => Context,
         });
     });
 
-    // TODO: move to helpers
     async function altParser<TParser extends SubParser>(gen: TParser):
         Promise<TParser>
     {
@@ -238,6 +247,7 @@ export function testActivateItem(f: () => Context,
                 it(`Should infer no ${ability} if item activated`,
                 async function()
                 {
+                    initActive("us");
                     const mon = initActive("them", switchOptions);
                     expect(mon.traits.ability.possibleValues)
                         .to.have.keys(ability, ...otherAbilities);
@@ -252,6 +262,7 @@ export function testActivateItem(f: () => Context,
                 it(`Should infer ${ability} if item is confirmed but didn't ` +
                     "activate", async function()
                 {
+                    initActive("us");
                     const mon = initActive("them", switchOptions);
                     mon.setItem(itemName);
                     expect(mon.traits.ability.possibleValues)
@@ -267,6 +278,7 @@ export function testActivateItem(f: () => Context,
                 it("Shouldn't infer ability if suppressed and item activates",
                 async function()
                 {
+                    initActive("us");
                     const mon = initActive("them", switchOptions);
                     mon.volatile.suppressAbility = true;
                     expect(mon.traits.ability.possibleValues)

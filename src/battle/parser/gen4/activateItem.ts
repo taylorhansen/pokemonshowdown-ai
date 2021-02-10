@@ -18,7 +18,7 @@ export type ExpectItemsResult = ExpectEventsResult<ItemResult>;
  * Expects an on-`movePostDamage` item to activate.
  * @param eligible Eligible holders.
  */
-export async function* onMovePostDamage(pstate: ParserState,
+export function onMovePostDamage(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
     SubParser<ExpectItemsResult>
 {
@@ -62,8 +62,7 @@ export async function* onMovePostDamage(pstate: ParserState,
             return new Set([cantHaveAbilities(mon, abilities)]);
         });
 
-    return yield* expectItems(pstate, "movePostDamage", pendingItems,
-        lastEvent);
+    return expectItems(pstate, "movePostDamage", pendingItems, lastEvent);
 }
 
 /**
@@ -203,9 +202,13 @@ async function* movePostDamage(ctx: ItemContext,
     {
         const damageResult = yield* parsers.percentDamage(ctx.pstate,
             ctx.holderRef, effect.value, lastEvent);
-        if (damageResult.success === true) indirectDamage(ctx);
         // TODO: permHalt check?
         lastEvent = damageResult.event;
+        if (damageResult.success === true)
+        {
+            indirectDamage(ctx);
+            lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
+        }
     }
     return {...lastEvent && {event: lastEvent}};
 }
@@ -241,6 +244,7 @@ async function* turn(ctx: ItemContext,
                 break;
             }
         }
+        lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     }
     return {...lastEvent && {event: lastEvent}};
 }

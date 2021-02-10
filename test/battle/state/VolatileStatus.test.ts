@@ -63,6 +63,7 @@ describe("VolatileStatus", function()
             expect(volatile.imprison).to.be.false;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
+            expect(volatile.micleberry).to.be.false;
             expect(volatile.minimize).to.be.false;
             expect(volatile.mirrorMove).to.be.null;
             expect(volatile.mudSport).to.be.false;
@@ -140,6 +141,7 @@ describe("VolatileStatus", function()
             expect(volatile.imprison).to.be.false;
             expect(volatile.lockedMove.isActive).to.be.false;
             expect(volatile.magicCoat).to.be.false;
+            expect(volatile.micleberry).to.be.false;
             expect(volatile.minimize).to.be.false;
             expect(volatile.mirrorMove).to.be.null;
             expect(volatile.mudSport).to.be.false;

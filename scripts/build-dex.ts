@@ -850,6 +850,8 @@ const abilityData:
 
     liquidooze: {on: {moveDrain: {invert: true}}},
 
+    gluttony: {flags: {earlyBerry: true}},
+
     // gen3-4: no on-switchIn msg
     airlock: {flags: {suppressWeather: true}},
     cloudnine: {flags: {suppressWeather: true}},
@@ -904,7 +906,138 @@ const itemOnMap:
 /** Maps some item names to consume effects. */
 const itemConsumeOnMap:
     {readonly [item: string]: NonNullable<dexutil.ItemData["consumeOn"]>} =
-    {powerherb: {moveCharge: "shorten"}};
+{
+    custapberry: {preMove: {threshold: 25, moveFirst: true}},
+
+    powerherb: {moveCharge: "shorten"},
+
+    // resist berries
+    tangaberry: {preHit: {resistSuper: "bug"}},
+    colburberry: {preHit: {resistSuper: "dark"}},
+    habanberry: {preHit: {resistSuper: "dragon"}},
+    wacanberry: {preHit: {resistSuper: "electric"}},
+    chopleberry: {preHit: {resistSuper: "fighting"}},
+    occaberry: {preHit: {resistSuper: "fire"}},
+    cobaberry: {preHit: {resistSuper: "flying"}},
+    kasibberry: {preHit: {resistSuper: "ghost"}},
+    rindoberry: {preHit: {resistSuper: "grass"}},
+    shucaberry: {preHit: {resistSuper: "ground"}},
+    yacheberry: {preHit: {resistSuper: "ice"}},
+    chilanberry: {preHit: {resistSuper: "normal"}},
+    kebiaberry: {preHit: {resistSuper: "poison"}},
+    payapaberry: {preHit: {resistSuper: "psychic"}},
+    chartiberry: {preHit: {resistSuper: "rock"}},
+    babiriberry: {preHit: {resistSuper: "steel"}},
+    passhoberry: {preHit: {resistSuper: "water"}},
+
+    // on-hit berries
+    enigmaberry: {super: {heal: 25}},
+    jabocaberry: {postHit: {condition: "physical", damage: 12.5}},
+    rowapberry: {postHit: {condition: "special", damage: 12.5}},
+
+    // fixed-heal berries
+    oranberry:
+    {update: {
+        condition: "hp", threshold: 50, effect: {type: "healFixed", heal: 10}
+    }},
+    berryjuice:
+    {update: {
+        condition: "hp", threshold: 50, effect: {type: "healFixed", heal: 20}
+    }},
+
+    // percent-heal berries
+    sitrusberry:
+    {update: {
+        condition: "hp", threshold: 50, effect: {type: "healPercent", heal: 25}
+    }},
+    figyberry:
+    {update: {
+        condition: "hp", threshold: 50,
+        effect: {type: "healPercent", heal: 12.5, dislike: "atk"}
+    }},
+    iapapaberry:
+    {update: {
+        condition: "hp", threshold: 50,
+        effect: {type: "healPercent", heal: 12.5, dislike: "def"}
+    }},
+    wikiberry:
+    {update: {
+        condition: "hp", threshold: 50,
+        effect: {type: "healPercent", heal: 12.5, dislike: "spa"}
+    }},
+    aguavberry:
+    {update: {
+        condition: "hp", threshold: 50,
+        effect: {type: "healPercent", heal: 12.5, dislike: "spd"}
+    }},
+    magoberry:
+    {update: {
+        condition: "hp", threshold: 50,
+        effect: {type: "healPercent", heal: 12.5, dislike: "spe"}
+    }},
+
+    // stat-boost berries
+    liechiberry:
+    {update: {
+        condition: "hp", threshold: 25,
+        effect: {type: "boost", boostOne: {atk: 1}}
+    }},
+    ganlonberry:
+    {update: {
+        condition: "hp", threshold: 25,
+        effect: {type: "boost", boostOne: {def: 1}}
+    }},
+    petayaberry:
+    {update: {
+        condition: "hp", threshold: 25,
+        effect: {type: "boost", boostOne: {spa: 1}}
+    }},
+    apicotberry:
+    {update: {
+        condition: "hp", threshold: 25,
+        effect: {type: "boost", boostOne: {spd: 1}}
+    }},
+    salacberry:
+    {update: {
+        condition: "hp", threshold: 25,
+        effect: {type: "boost", boostOne: {spe: 1}}
+    }},
+    starfberry:
+    {update: {
+        condition: "hp", threshold: 25,
+        effect:
+            {type: "boost", boostOne: {atk: 2, def: 2, spa: 2, spd: 2, spe: 2}}
+    }},
+
+    lansatberry:
+    {update: {
+        condition: "hp", threshold: 25, effect: {type: "focusEnergy"}
+    }},
+
+    // TODO: white herb
+
+    // status berries
+    rawstberry: {update: {condition: "status", cure: {brn: true}}},
+    cheriberry: {update: {condition: "status", cure: {par: true}}},
+    pechaberry: {update: {condition: "status", cure: {psn: true, tox: true}}},
+    chestoberry: {update: {condition: "status", cure: {slp: true}}},
+    aspearberry: {update: {condition: "status", cure: {frz: true}}},
+    persimberry: {update: {condition: "status", cure: {confusion: true}}},
+    lumberry:
+    {update: {
+        condition: "status",
+        cure: {
+            brn: true, par: true, psn: true, tox: true, slp: true, frz: true,
+            confusion: true
+        }
+    }},
+    // gen4: only cures attract
+    mentalherb: {update: {condition: "status", cure: {attract: true}}},
+
+    leppaberry: {update: {condition: "depleted", restore: 10}},
+
+    micleberry: {residual: {threshold: 25, status: "micleberry"}}
+};
 
 // make sure that having no item is possible
 const items: (readonly [string, dexutil.ItemData])[] =
@@ -937,6 +1070,7 @@ for (const item of
         {
             uid, name: item.id, display: item.name,
             ...item.isChoice && {isChoice: true},
+            ...item.isBerry && {isBerry: true},
             ...item.onPlate &&
                 {plateType: item.onPlate.toLowerCase() as dexutil.Type},
             ...itemOnMap.hasOwnProperty(item.id) && {on: itemOnMap[item.id]},
