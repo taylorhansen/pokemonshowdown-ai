@@ -79,7 +79,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         options.logPrefix ?? "Battle: ");
 
     // start simulating a battle
-    const streams = s.getPlayerStreams(new s.BattleStream());
+    const battleStream = new s.BattleStream({keepAlive: true});
+    const streams = s.getPlayerStreams(battleStream);
     streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
     const eventLoops: Promise<void>[] = [];
@@ -175,7 +176,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 {
                     // log game errors and leave a new exception specifying
                     //  where to find it
-                    innerLog.error(e && e.stack || e);
+                    innerLog.error(e?.stack ? e.stack : e);
+                    done = true; // signal to other side to stop
                     throw new Error("startPSBattle() encountered an error. " +
                         `Check ${logPath} for details.`);
                 }
@@ -190,7 +192,11 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
     try { await Promise.all(eventLoops); }
     catch (e) { err = e; }
 
-    await new Promise(res => file.end(res));
+    // make sure the game completely ends to make sure logs are complete
+    await Promise.allSettled(eventLoops);
+    battleStream.destroy();
 
-    return {winner, ...(err && {err})};
+    // close the file and return
+    await new Promise(res => file.end(res));
+    return {winner, ...err && {err}};
 }
