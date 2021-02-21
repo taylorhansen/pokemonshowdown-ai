@@ -116,14 +116,15 @@ export class ItemTempStatus<TStatusType extends string> implements
 
         // duration is certain once the item is known
         this._source = source.item;
-        this._source.then(name =>
+        this._source.onNarrow(key =>
         {
             // start() was called again with a different source before this
             //  callback fired, so the old source item is no longer relevant
+            // TODO: instead cancel callback when this happens?
             if (this._source !== source.item) return;
 
             // confirmed extension item
-            if (this._type !== "none" && this.items[this._type] === name)
+            if (this._type !== "none" && this.items[this._type] === key)
             {
                 this._duration = this.durations[1];
             }

@@ -674,7 +674,7 @@ export function testActivateAbility(f: () => Context,
                 // opponent could have an item or no item
                 const opp =  initActive("us");
                 expect(opp.item.possibleValues).to.include.keys("none");
-                expect(opp.item.possibleValues.size).to.be.gt(1);
+                expect(opp.item.size).to.be.gt(1);
 
                 await altParser(ability.onStart(pstate, {them: true}));
                 await exitParser<ability.ExpectAbilitiesResult>({results: []});

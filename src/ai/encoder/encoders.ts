@@ -39,16 +39,16 @@ export function possibilityClassEncoder(keys: readonly string[]):
         encode(arr, pc)
         {
             checkLength(arr, keys.length);
-            if (pc.possibleValues.size < 0)
+            if (pc.size < 0)
             {
                 arr.fill(0);
                 return;
             }
 
-            const sumR = 1 / pc.possibleValues.size;
+            const sumR = 1 / pc.size;
             for (let i = 0; i < keys.length; ++i)
             {
-                arr[i] = pc.possibleValues.has(keys[i]) ? sumR : 0;
+                arr[i] = pc.isSet(keys[i]) ? sumR : 0;
             }
         },
         size: keys.length
@@ -95,7 +95,7 @@ export function itemTempStatusEncoder<TStatusType extends string>(
             // currently assuming short duration but could have extension item
             else if (its.duration === its.durations[0] && its.source &&
                 !its.source.definiteValue &&
-                its.source.possibleValues.has(its.items[its.type]))
+                its.source.isSet(its.items[its.type]))
             {
                 // take average of both durations since either is likely
                 // TODO: interpolate instead by the likelihood that the source

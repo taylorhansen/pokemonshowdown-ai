@@ -124,26 +124,29 @@ describe("PossibilityClass", function()
         });
     });
 
-    describe("#then()", function()
+    describe("#onNarrow()", function()
     {
-        it("Should set listener", function(done)
+        it("Should set listener", function()
         {
             const pc = new PossibilityClass(map);
-            pc.then((key, data) =>
+            let called = false;
+            pc.onNarrow((key, data) =>
             {
                 expect(key).to.equal("a");
                 expect(data).to.equal(map.a);
                 expect(pc.definiteValue).to.equal(key);
-                done();
+                called = true;
             });
+            expect(called).to.be.false;
             pc.narrow("a");
+            expect(called).to.be.true;
         });
 
         it("Should not be called more than once", function()
         {
             const pc = new PossibilityClass(map);
             let count = 0;
-            pc.then((key, data) =>
+            pc.onNarrow((key, data) =>
             {
                 expect(key).to.equal("a");
                 expect(data).to.equal(map.a);
@@ -157,17 +160,139 @@ describe("PossibilityClass", function()
                 `${count} times`);
         });
 
-        it("Should immediately call if already narrowed", function(done)
+        it("Should immediately call if already narrowed", function()
         {
             const pc = new PossibilityClass(map);
             pc.narrow("a");
-            pc.then((key, data) =>
+            let called = false;
+            pc.onNarrow((key, data) =>
             {
                 expect(key).to.equal("a");
                 expect(data).to.equal(map.a);
                 expect(pc.definiteValue).to.equal(key);
-                done();
+                called = true;
             });
+            expect(called).to.be.true;
+        });
+    });
+
+    describe("#onUpdate()", function()
+    {
+        it("Should call with kept=true when narrowed down", function()
+        {
+            const pc = new PossibilityClass(map);
+            let kept: boolean | null = null;
+            pc.onUpdate(new Set("a"), k => kept = k);
+            expect(kept).to.be.null;
+            pc.narrow("a");
+            expect(kept).to.be.true;
+        });
+
+        it("Should call with kept=true when narrowed down to a subset",
+        function()
+        {
+            const pc = new PossibilityClass(map);
+            let kept: boolean | null = null;
+            pc.onUpdate(new Set(["a", "b"]), k => kept = k);
+            expect(kept).to.be.null;
+            pc.remove("c");
+            expect(kept).to.be.true;
+        });
+
+        it("Should call with kept=false when ruled out", function()
+        {
+            const pc = new PossibilityClass(map);
+            let kept: boolean | null = null;
+            pc.onUpdate(new Set("a"), k => kept = k);
+            expect(kept).to.be.null;
+            pc.remove("a");
+            expect(kept).to.be.false;
+        });
+
+        it("Should call with kept=false when entire subset is ruled out",
+        function()
+        {
+            const pc = new PossibilityClass(map);
+            let kept: boolean | null = null;
+            pc.onUpdate(new Set(["a", "b"]), k => kept = k);
+            expect(kept).to.be.null;
+            pc.remove("a");
+            expect(kept).to.be.null;
+            pc.remove("b");
+            expect(kept).to.be.false;
+        });
+
+        it("Should allow cancelling callback", function()
+        {
+            const pc = new PossibilityClass(map);
+            const cancel = pc.onUpdate(new Set(["a"]),
+                () => { throw new Error("Didn't cancel callback"); });
+            cancel();
+            pc.remove("a");
+        });
+
+        it("Should call immediately with kept=false when subset over-narrowed",
+        function()
+        {
+            const pc = new PossibilityClass(map);
+            let kept: boolean | null = null;
+            pc.remove("a");
+            pc.onUpdate(new Set("a"), k => kept = k);
+            expect(kept).to.be.false;
+        });
+
+        it("Should call immediately with kept=true when already narrowed",
+        function()
+        {
+            const pc = new PossibilityClass(map);
+            pc.narrow("a");
+            let kept: boolean | null = null;
+            pc.onUpdate(new Set("a"), k => kept = k);
+            expect(kept).to.be.true;
+        });
+
+        it("Should allow filter predicate", function()
+        {
+            const pc = new PossibilityClass(map);
+            let kept: boolean | null = null;
+            pc.onUpdate(x => x === "a" || x === "b", k => kept = k);
+            expect(kept).to.be.null;
+            pc.narrow("c");
+            expect(kept).to.be.false;
+        });
+
+        it("Should have same behavior if predicate and kept callback are " +
+            "inverted",
+        function()
+        {
+            const pc = new PossibilityClass(map);
+            let kept1: boolean | null = null;
+            pc.onUpdate(x => x === "a" || x === "b", k => kept1 = k);
+            let kept2: boolean | null = null;
+            pc.onUpdate(x => x !== "a" && x !== "b", k => kept2 = !k);
+
+            expect(kept1).to.be.null;
+            expect(kept2).to.be.null;
+            pc.narrow("c");
+            expect(kept1).to.be.false;
+            expect(kept2).to.be.false;
+        });
+
+        it("Should cancel callback within callback in order", function()
+        {
+            const pc = new PossibilityClass(map);
+            let kept1: boolean | null = null;
+            pc.onUpdate(x => x === "a" || x === "b",
+                k => { kept1 = k; cancel() });
+            let kept2: boolean | null = null;
+            const cancel = pc.onUpdate(x => x !== "a" && x !== "b",
+                k => kept2 = !k);
+
+            expect(kept1).to.be.null;
+            expect(kept2).to.be.null;
+            pc.narrow("c");
+            expect(kept1).to.be.false;
+            expect(kept2).to.be.null;
         });
     });
 });

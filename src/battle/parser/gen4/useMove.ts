@@ -1989,7 +1989,7 @@ function recoil(ctx: MoveContext, consumed: boolean): void
         // can't have recoil-canceling abilities
         if (consumed)
         {
-            if (noRecoilAbilities.length === userAbility.possibleValues.size)
+            if (noRecoilAbilities.length === userAbility.size)
             {
                 throw new Error(`Move ${ctx.moveName} user '${ctx.userRef}' ` +
                     "must have a recoil-canceling ability " +

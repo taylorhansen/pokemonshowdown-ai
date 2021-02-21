@@ -55,10 +55,7 @@ export function onMovePostDamage(pstate: ParserState,
                 if (abilities.size <= 0) return new Set();
             }
             if (abilities.size <= 0) return new Set();
-            if (abilities.size >= mon.traits.ability.possibleValues.size)
-            {
-                return null;
-            }
+            if (abilities.size >= mon.traits.ability.size) return null;
             return new Set([cantHaveAbilities(mon, abilities)]);
         });
 
@@ -262,7 +259,7 @@ function indirectDamage(ctx: ItemContext): void
     const filteredAbilities =
         [...ability.possibleValues]
             .filter(n => ability.map[n].flags?.noIndirectDamage === true);
-    if (ability.possibleValues.size <= filteredAbilities.length)
+    if (ability.size <= filteredAbilities.length)
     {
         throw new Error(`Pokemon '${ctx.holderRef}' received indirect damage ` +
             `from item '${ctx.item.name}' even though its ability ` +

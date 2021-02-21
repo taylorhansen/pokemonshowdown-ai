@@ -84,7 +84,7 @@ export interface SubReason
      * @param cb Callback for when the reason can be asserted (param
      * `held=true`) or rejected (`held=false`). Can be called immediately.
      * @returns A callback to cancel this call. Should be called automatically
-     * when `cb` is called by this function. Should do nothing if called again.
+     * when this function calls `cb`. Should do nothing if called again.
      */
     delay(cb: (held: boolean) => void): () => void;
 }
@@ -145,9 +145,8 @@ function assertAll(reasons: Set<SubReason>): void
  */
 function rejectOne(reasons: Set<SubReason>): void
 {
-    // TODO: also early return for SubReasons that were already disproven
-
     // early return: only one reason provided which must be the invalid one
+    // TODO: also add early return for SubReasons that were already disproven
     if (reasons.size <= 1)
     {
         for (const reason of reasons) reason.reject();
@@ -158,29 +157,49 @@ function rejectOne(reasons: Set<SubReason>): void
     // keep track of delay() cancel callbacks for cleanup after disproving a
     //  SubReason
     const cancelCbs: (() => void)[] = [];
+    // cancels all delay() callbacks
+    function cancelAll()
+    {
+        for (const cb of cancelCbs) cb();
+        cancelCbs.length = 0;
+    }
 
     // main callback function for delay() calls
     function evalReason(reason: SubReason, held: boolean): void
     {
+        if (!reasons.has(reason)) return;
         if (held)
         {
             // the reason held, so we don't need to care about it anymore
-            reason.assert(); // sanity check
+            // note: remove elements from set first in case assert()/reject()
+            //  cause this function to be called again
             reasons.delete(reason);
+            if (reasons.size < 1)
+            {
+                throw new Error("All SubReasons held but was supposed to " +
+                    "reject one");
+            }
             // if all other reasons held, then the last one shouldn't have held
-            if (reasons.size !== 1) return;
-            for (const r of reasons) r.reject();
-            reasons.clear(); // return from reasons loop if we're still in it
+            if (reasons.size === 1)
+            {
+                const toReject = reasons.keys().next().value! as SubReason;
+                reasons.clear();
+                toReject.reject();
+
+                // cancel all other delay() callbacks since we're now done
+                cancelAll();
+            }
+            reason.assert(); // sanity check
         }
         else
         {
             // the reason didn't hold, so we don't need to care about any other
             //  inferences
-            // not doing this would imply that this reason as well as another
-            //  must be disproven in order to disprove the entire inference
-            reason.reject(); // sanity check
-            for (const cb of cancelCbs) cb();
             reasons.clear();
+            reason.reject(); // sanity check
+
+            // cancel all other delay() callbacks since we're now done
+            cancelAll();
         }
     }
 

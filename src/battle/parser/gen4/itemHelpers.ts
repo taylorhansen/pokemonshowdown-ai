@@ -43,6 +43,7 @@ export function getItems(pstate: ParserState,
     return result;
 }
 
+// TODO: should these be classes?
 /** Creates a SubReason that asserts that the pokemon has the given item. */
 export function hasItem(mon: Pokemon, itemName: string): SubReason
 {
@@ -52,23 +53,7 @@ export function hasItem(mon: Pokemon, itemName: string): SubReason
         reject: () => item.remove(itemName),
         delay(cb: (held: boolean) => void): () => void
         {
-            // TODO: PossibilityClass should track this behavior
-            // early return: already disproven
-            if (!item.isSet(itemName))
-            {
-                cb(/*held*/ false);
-                return () => {};
-            }
-
-            let cancel = false;
-            // TODO: call then cb sooner
-            item.then(n =>
-            {
-                if (cancel) return;
-                cb(n === itemName);
-            });
-            // TODO: returned callback should actually cancel cb
-            return () => cancel = true;
+            return item.onUpdate(new Set([itemName]), cb);
         }
     };
 }
@@ -77,9 +62,12 @@ export function hasItem(mon: Pokemon, itemName: string): SubReason
  * Creates a SubReason that asserts that the pokemon's ability shouldn't come
  * from the given set of abilities. Assumes that ability-ignoring effects have
  * already been taken into account.
+ * @param mon Pokemon to track.
+ * @param abilities Set of abilities to check for. Will be owned by this
+ * function.
  */
-export function cantHaveAbilities(mon: Pokemon,
-    abilities: ReadonlySet<string>): SubReason
+export function cantHaveAbilities(mon: Pokemon, abilities: Set<string>):
+    SubReason
 {
     const {traits} = mon; // snapshot in case traits change
     return {
@@ -87,15 +75,7 @@ export function cantHaveAbilities(mon: Pokemon,
         reject: () => traits.ability.narrow(abilities),
         delay(cb: (held: boolean) => void): () => void
         {
-            let cancel = false;
-            // TODO: call then cb sooner
-            traits.ability.then(n =>
-            {
-                if (cancel) return;
-                cb(!abilities.has(n));
-            });
-            // TODO: returned callback should actually cancel cb
-            return () => cancel = true;
+            return traits.ability.onUpdate(abilities, kept => cb(!kept));
         }
     };
 }

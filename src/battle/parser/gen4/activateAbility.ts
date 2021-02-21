@@ -283,6 +283,7 @@ export async function* onMoveDrain(pstate: ParserState,
 
 // activateAbility SubReason builders
 
+// TODO: make these into classes?
 /** Creates a SubReason that asserts that the pokemon has the given ability. */
 export function hasAbility(mon: Pokemon, abilityName: string): SubReason
 {
@@ -294,23 +295,7 @@ export function hasAbility(mon: Pokemon, abilityName: string): SubReason
         reject: () => traits.ability.remove(abilityName),
         delay(cb: (held: boolean) => void): () => void
         {
-            // TODO: PossibilityClass should track this behavior
-            // early return: can't have ability
-            if (!traits.ability.isSet(abilityName))
-            {
-                cb(/*held*/ false);
-                return () => {};
-            }
-
-            let cancel = false;
-            // TODO: call then cb sooner
-            traits.ability.then(n =>
-            {
-                if (cancel) return;
-                cb(n === abilityName);
-            });
-            // TODO: returned callback should actually cancel cb
-            return () => cancel = true;
+            return traits.ability.onUpdate(new Set([abilityName]), cb);
         }
     };
 }
@@ -321,14 +306,12 @@ export function opponentHasItem(opp: Pokemon): SubReason
     return cantHaveItem(opp, "none");
 }
 
-
 /**
  * Creates a SubReason that asserts that the holder isn't the same type as the
  * move being used against it.
  */
 export function diffMoveType(mon: Pokemon, hitByMove: dexutil.MoveData,
-    user: Pokemon):
-    SubReason
+    user: Pokemon): SubReason
 {
     // essentially an inversion of moveIsType() but for multiple possible types
     //  with the type param being the holder's types
@@ -383,25 +366,31 @@ export function diffMoveType(mon: Pokemon, hitByMove: dexutil.MoveData,
                 return () => {};
             }
 
-            let cancel = false;
             switch (hitByMove.modifyType)
             {
                 case "hpType":
-                    // TODO: call then cb sooner on partial narrow
-                    hpType.then(t =>
-                    {
-                        if (cancel) return;
-                        cb(!types.includes(t));
-                    });
-                    // TODO: returned callback should actually de-register cb
-                    return () => cancel = true;
+                    // types cannot be shared by hpType
+                    return hpType.onUpdate(new Set(types), kept => cb(!kept));
                 case "plateType":
-                    item.then((_, i) =>
+                {
+                    // item cannot cause the move to become one of the types
+                    // optimization: keep subsets small
+                    if (types.includes(hitByMove.type))
                     {
-                        if (cancel) return;
-                        cb(!types.includes(i.plateType ?? hitByMove.type));
-                    });
-                    return () => cancel = true;
+                        // kept=true only if the user has a plate item that's
+                        //  not of the move type
+                        // TODO: replace predicate with set of plate items
+                        return item.onUpdate(
+                            (_, i) => !!i.plateType &&
+                                !types.includes(i.plateType),
+                            cb);
+                    }
+                    // kept=false only if the user has a plate item that is of
+                    //  the move type
+                    return item.onUpdate(
+                        (_, i) => !!i.plateType && types.includes(i.plateType),
+                        kept => cb(!kept));
+                }
                 default:
                     // istanbul ignore next: should never happen
                     throw new Error(`Unsupported modifyType string ` +
@@ -431,23 +420,7 @@ export function cantHaveItem(mon: Pokemon, itemName: string): SubReason
         reject: () => item.narrow(itemName),
         delay(cb: (held: boolean) => void): () => void
         {
-            // TODO: PossibilityClass should track this behavior
-            // early return: already disproven
-            if (!item.isSet(itemName))
-            {
-                cb(/*held*/ true);
-                return () => {};
-            }
-
-            let cancel = false;
-            // TODO: call then cb sooner
-            item.then(n =>
-            {
-                if (cancel) return;
-                cb(n !== itemName);
-            });
-            // TODO: returned callback should actually cancel cb
-            return () => cancel = true;
+            return item.onUpdate(new Set([itemName]), kept => cb(!kept));
         }
     };
 }

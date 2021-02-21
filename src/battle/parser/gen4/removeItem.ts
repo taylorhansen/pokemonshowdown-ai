@@ -262,13 +262,10 @@ function checkHPThreshold(mon: Pokemon, threshold: number, isBerry?: boolean):
         return null;
     }
 
-    const {ability} = mon.traits;
+    const {ability} = mon.traits; // shorthand
 
     const blockingAbilities = checkKlutz(mon);
-    if (blockingAbilities.size >= mon.traits.ability.possibleValues.size)
-    {
-        return null;
-    }
+    if (blockingAbilities.size >= ability.size) return null;
 
     // hp is between 25-50% so the 25% berry can't activate on it's own, but it
     //  will if the holder has gluttony ability
@@ -287,10 +284,7 @@ function checkHPThreshold(mon: Pokemon, threshold: number, isBerry?: boolean):
     else if (percentHP > threshold) return null;
 
     if (blockingAbilities.size <= 0) return new Set();
-    if (blockingAbilities.size >= mon.traits.ability.possibleValues.size)
-    {
-        return null;
-    }
+    if (blockingAbilities.size >= ability.size) return null;
     return new Set([cantHaveAbilities(mon, blockingAbilities)]);
 }
 
@@ -299,10 +293,7 @@ function cantHaveKlutz(mon: Pokemon): Set<SubReason> | null
 {
     const klutz = checkKlutz(mon);
     if (klutz.size <= 0) return new Set();
-    if (klutz.size >= mon.traits.ability.possibleValues.size)
-    {
-        return null;
-    }
+    if (klutz.size >= mon.traits.ability.size) return null;
     return new Set([cantHaveAbilities(mon, klutz)]);
 }
 
