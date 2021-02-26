@@ -1150,7 +1150,7 @@ function handleTypeEffectiveness(ctx: MoveContext,
     const defender = ctx.pstate.state.teams[otherSide(ctx.userRef)].active;
 
     const binary = ctx.moveData.category === "status" || !!ctx.moveData.damage;
-    const expectedMoveTypes = getAttackerTypes(ctx.user.types, effectiveness,
+    const expectedMoveTypes = getAttackerTypes(defender.types, effectiveness,
         binary);
     let moveType: dexutil.Type;
     if (ctx.moveData.modifyType === "hpType")

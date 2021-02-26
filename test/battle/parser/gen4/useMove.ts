@@ -636,7 +636,7 @@ export function testUseMove(ctxFunc: () => Context,
 
     describe("Type effectiveness", function()
     {
-        it("Should infer hiddenpower type", async function()
+        it("Should infer hiddenpower type from immune", async function()
         {
             initActive("us");
             const {hpType} = initActive("them");
@@ -645,6 +645,21 @@ export function testUseMove(ctxFunc: () => Context,
             await initParser("them", "hiddenpower");
             await handleEnd({type: "immune", monRef: "us"});
             expect(hpType.definiteValue).to.equal("ghost");
+        });
+
+        it("Should infer hiddenpower type from different opponent",
+        async function()
+        {
+            const us = initActive("us");
+            us.volatile.addedType = "fire";
+            const {hpType} = initActive("them");
+            expect(hpType.definiteValue).to.be.null;
+
+            await initParser("them", "hiddenpower");
+            await handle({type: "takeDamage", monRef: "us", hp: 1});
+            await exitParser();
+            expect(hpType.possibleValues).to.have.keys(
+                "dark", "psychic", "dragon", "electric", "flying", "poison");
         });
 
         it("Should infer judgment plate type", async function()
