@@ -79,8 +79,7 @@ const simulatorsImpl =
             }
             // TODO: guarantee ExperienceAgent/ExperienceBattleDriver typing as
             //  args for startPSBattle
-            return {agent: agentArgs.agent, ...(parserFunc && {parserFunc})} as
-                PlayerOptions;
+            return {agent: agentArgs.agent, parserFunc} as PlayerOptions;
         });
 
         // play the game

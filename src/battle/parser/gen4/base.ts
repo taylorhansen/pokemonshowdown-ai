@@ -3,7 +3,7 @@ import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser } from "../BattleParser";
-import { baseHandler } from "../helpers";
+import { baseHandler, EventHandler } from "../helpers";
 import * as ability from "./activateAbility";
 import { activateItem } from "./activateItem";
 import { halt } from "./halt";
@@ -550,4 +550,4 @@ export const handlers =
 } as const;
 
 /** Dispatches event handler. */
-export const dispatch = baseHandler(handlers);
+export const dispatch: EventHandler<events.Type> = baseHandler(handlers);

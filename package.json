@@ -47,9 +47,9 @@
   "author": "Taylor Hansen (taylorhansen)",
   "license": "MIT",
   "dependencies": {
-    "@tensorflow/tfjs": "^2.8.2",
-    "@tensorflow/tfjs-node": "^2.8.2",
-    "@tensorflow/tfjs-node-gpu": "^2.8.2",
+    "@tensorflow/tfjs": "^3.2.0",
+    "@tensorflow/tfjs-node": "^3.2.0",
+    "@tensorflow/tfjs-node-gpu": "^3.2.0",
     "long": "^4.0.0",
     "node-fetch": "^2.6.1",
     "progress": "^2.0.3",

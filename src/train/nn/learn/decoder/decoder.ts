@@ -54,7 +54,7 @@ parentPort.on("message", (msg: DecoderMessage) =>
         const pipelinePromise = pipeline(fileStream, decoderStream);
 
         // use an async generator iife to emit AugmentedExperiences
-        const gen = async function*()
+        const gen = async function*(): AsyncGenerator<AugmentedExperience, null>
         {
             // continuously read aexps from decoder unless signaled to stop
             for await (const aexp of decoderStream)
