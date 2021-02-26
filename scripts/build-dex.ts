@@ -2,7 +2,10 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh` after the `Pokemon-Showdown` repo has been cloned.
  */
-import { ModdedDex } from "../pokemon-showdown/sim/dex";
+// TODO: getting errors when trying to import the ts file, but js works fine
+// @ts-ignore
+import psDex = require("../pokemon-showdown/.sim-dist/dex");
+// import { ModdedDex } from "../pokemon-showdown/sim/dex";
 import "../pokemon-showdown/sim/global-types";
 import * as dexutil from "../src/battle/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
@@ -11,7 +14,7 @@ import { toIdName } from "../src/psbot/helpers";
 type Writable<T> = {-readonly [K in keyof T]: T[K]};
 
 // TODO: support other gens?
-const dex = new ModdedDex("gen4").includeData();
+const dex = new psDex.ModdedDex("gen4").includeData();
 
 /**
  * Regex for checking whether a pokemon id name is not supported by gen4 (e.g.
@@ -331,7 +334,7 @@ for (const move of
     }
 
     // get flags
-    const flags: dexutil.MoveData["flags"] =
+    const flags: NonNullable<dexutil.MoveData["flags"]> =
     {
         ...!!move.flags.contact && {contact: true},
         ...explosive.hasOwnProperty(move.id) && {explosive: true},
@@ -355,7 +358,7 @@ for (const move of
     type MoveEffects = Writable<NonNullable<dexutil.MoveData["effects"]>>;
 
     // boost
-    let boost: Writable<MoveEffects["boost"]> =
+    let boost: Writable<NonNullable<MoveEffects["boost"]>> =
         setBoostMap.hasOwnProperty(move.id) ?
             {set: true, [hit]: setBoostMap[move.id]}
         :
@@ -591,7 +594,7 @@ function composeMovepool(species: Species, restrict = false): Set<string>
         {
             if (!learnset.hasOwnProperty(moveName)) continue;
 
-            if (learnset[moveName].some(source =>
+            if (learnset[moveName].some((source: string) =>
                     // must be learnable in gen 4 or earlier
                     parseInt(source.charAt(0), 10) <= 4 &&
                     // include restricted moves unless told not to
@@ -654,10 +657,11 @@ for (const mon of
 
     // don't sort types to keep primary/secondary type distinction
     let types: [dexutil.Type, dexutil.Type];
-    const typeArr = mon.types.map(s => s.toLowerCase()) as dexutil.Type[];
+    const typeArr = mon.types.map((s: string) => s.toLowerCase()) as
+        dexutil.Type[];
     if (typeArr.length > 2)
     {
-        console.error("Error: Too many types for species " + name);
+        console.error(`Error: Too many types for species '${mon.id}'`);
     }
     else if (typeArr.length === 1) typeArr.push("???");
     types = typeArr as [dexutil.Type, dexutil.Type];
