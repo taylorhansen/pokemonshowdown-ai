@@ -322,8 +322,6 @@ for (const move of
         case "judgment": modifyType = "plateType"; break;
         case "struggle": modifyType = "???"; break;
     }
-    // note: conversion move (which uses this obj) treats modifyType moves as
-    //  their default type (normal)
     typeToMoves[type].push(move.id);
 
     const target = move.target;

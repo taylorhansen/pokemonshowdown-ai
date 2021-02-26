@@ -1562,6 +1562,7 @@ async function* expectChangeType(ctx: MoveContext, effect: "conversion",
     // TODO: track type change effects: camouflage, conversion2
     // for now only conversion is tracked, which changes the user's type into
     //  that of a known move
+    // note: conversion move treats modifyType moves as their default type
     ctx.user.moveset.addMoveSlotConstraint(dex.typeToMoves[event.newTypes[0]]);
     return yield* base.changeType(ctx.pstate, event);
 }
