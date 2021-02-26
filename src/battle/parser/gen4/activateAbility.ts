@@ -1,6 +1,5 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
-import * as effects from "../../dex/effects";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
 import * as events from "../BattleEvent";
@@ -57,7 +56,7 @@ export async function* onStart(pstate: ParserState,
                 for (const statusType in data.statusImmunity)
                 {
                     if (data.statusImmunity.hasOwnProperty(statusType) &&
-                        hasStatus(mon, statusType as effects.StatusType))
+                        hasStatus(mon, statusType as dexutil.StatusType))
                     {
                         return new Set();
                     }
@@ -200,7 +199,7 @@ function ignoresTargetAbility(mon: ReadonlyPokemon): boolean
  */
 export async function* onStatus(pstate: ParserState,
     eligible: Partial<Readonly<Record<Side, true>>>,
-    statusType: effects.StatusType, hitByMove?: dexutil.MoveData,
+    statusType: dexutil.StatusType, hitByMove?: dexutil.MoveData,
     lastEvent?: events.Any): SubParser<ExpectAbilitiesResult>
 {
     const pendingAbilities = getAbilities(pstate, eligible,
@@ -530,7 +529,7 @@ export interface AbilityResult extends SubParserResult
     /** Whether the ability caused the move to fail on `block`. */
     failed?: true;
     /** Status effects being blocked for the ability holder. */
-    blockStatus?: {readonly [T in effects.StatusType]?: true};
+    blockStatus?: {readonly [T in dexutil.StatusType]?: true};
 
     // on-tryUnboost
     /** Unboost effects being blocked for the ability holder. */
@@ -662,8 +661,12 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
             }
             if (ctx.ability.on.block.move)
             {
+                // TODO: allow for multiple effects
+                const effectContainer = ctx.ability.on.block.move;
+                const effect = effectContainer.boost ??
+                    effectContainer.percentDamage ?? effectContainer.status;
                 return yield* blockMove(ctx, ctx.ability.on.block.move.type,
-                    ctx.ability.on.block.move.effects, lastEvent);
+                    effect, lastEvent);
             }
             if (ctx.ability.on.block.effect)
             {
@@ -703,7 +706,7 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
             {
                 // TODO: track hitByMove user
                 return yield* moveContactKO(ctx, otherSide(ctx.holderRef),
-                    ctx.ability.on.moveContactKO.effects,
+                    ctx.ability.on.moveContactKO.percentDamage,
                     ctx.ability.on.moveContactKO.explosive, lastEvent);
             }
             // if no moveContactKO effects registered, try moveContact
@@ -718,8 +721,12 @@ async function* dispatchEffects(ctx: AbilityContext, lastEvent?: events.Any):
                 // TODO: track hitByMove user
                 const targetRef = ctx.ability.on.moveContact.tgt === "holder" ?
                     ctx.holderRef : otherSide(ctx.holderRef);
-                return yield* moveContact(ctx, targetRef,
-                    ctx.ability.on.moveContact.effects, lastEvent);
+                // TODO: allow for multiple effects
+                const effectContainer = ctx.ability.on.moveContact;
+                const effect = effectContainer.percentDamage ??
+                    effectContainer.status;
+                return yield* moveContact(ctx, targetRef, effect,
+                    lastEvent);
             }
             // if no moveContact effects registered, try moveDamage
             // fallthrough
@@ -898,7 +905,7 @@ const weatherAbilities: {readonly [T in dexutil.WeatherType]: string} =
  * @param statuses Map of the statuses being blocked.
  */
 async function* blockStatus(ctx: AbilityContext,
-    statuses: {readonly [T in effects.StatusType]?: true},
+    statuses: {readonly [T in dexutil.StatusType]?: true},
     lastEvent?: events.Any): SubParser<AbilityResult>
 {
     // should have a fail or immune event
@@ -914,11 +921,12 @@ async function* blockStatus(ctx: AbilityContext,
 /**
  * Handles events due to an ability immunity to a move (e.g. Water Absorb).
  * @param blockType Type of move to block.
- * @param blockEffects Effects that happen once blocked.
+ * @param effect Effect that happens once blocked. Either self-inflicted
+ * boost/status or self-damage.
  */
 async function* blockMove(ctx: AbilityContext, blockType: dexutil.Type,
-    blockEffects?: readonly effects.ability.Absorb[], lastEvent?: events.Any):
-    SubParser<AbilityResult>
+    effect?: Partial<dexutil.BoostTable<number>> | number | dexutil.StatusType,
+    lastEvent?: events.Any): SubParser<AbilityResult>
 {
     if (!ctx.hitByMove)
     {
@@ -930,59 +938,57 @@ async function* blockMove(ctx: AbilityContext, blockType: dexutil.Type,
     const opp = ctx.pstate.state.teams[otherSide(ctx.holderRef)].active;
     assertMoveType(ctx.hitByMove, blockType, opp);
 
-    let allSilent = true;
-    for (const effect of blockEffects ?? [])
+    let silent: boolean;
+    switch (typeof effect)
     {
-        switch (effect.type)
+        case "object": // boost table
         {
-            case "boost":
+            const boostResult = yield* parsers.boost(ctx.pstate,
+                ctx.holderRef, effect, /*set*/ false, /*silent*/ true,
+                lastEvent);
+            if (Object.keys(boostResult.remaining).length > 0)
             {
-                const boostResult = yield* parsers.boost(ctx.pstate,
-                    ctx.holderRef, effect, /*silent*/ true, lastEvent);
-                if (Object.keys(boostResult.remaining).length > 0)
-                {
-                    throw new Error("On-block move boost effect failed");
-                }
-                // TODO: permHalt check?
-                lastEvent = boostResult.event;
-                allSilent &&= !!boostResult.allSilent;
-                break;
+                throw new Error("On-block move boost effect failed");
             }
-            case "percentDamage":
-            {
-                const damageResult = yield* parsers.percentDamage(ctx.pstate,
-                    ctx.holderRef, effect.value, lastEvent);
-                if (!damageResult.success)
-                {
-                    throw new Error("On-block move percentDamage effect " +
-                        "failed");
-                }
-                lastEvent = damageResult.event;
-                allSilent &&= damageResult.success === "silent";
-                break;
-            }
-            case "status":
-            {
-                const statusResult = yield* parsers.status(ctx.pstate,
-                    ctx.holderRef, [effect.value], lastEvent);
-                if (!statusResult.success)
-                {
-                    throw new Error("On-block move status effect failed");
-                }
-                lastEvent = statusResult.event;
-                allSilent &&= statusResult.success === true;
-                break;
-            }
-            default:
-                // istanbul ignore next: should never happen
-                throw new Error("Unknown on-block move effect " +
-                    `'${effect!.type}'`);
+            // TODO: permHalt check?
+            lastEvent = boostResult.event;
+            silent = !!boostResult.allSilent;
+            break;
         }
+        case "number": // percent-damage
+        {
+            const damageResult = yield* parsers.percentDamage(ctx.pstate,
+                ctx.holderRef, effect, lastEvent);
+            if (!damageResult.success)
+            {
+                throw new Error("On-block move percentDamage effect " +
+                    "failed");
+            }
+            lastEvent = damageResult.event;
+            silent = damageResult.success === "silent";
+            break;
+        }
+        case "string": // status
+        {
+            const statusResult = yield* parsers.status(ctx.pstate,
+                ctx.holderRef, [effect], lastEvent);
+            if (!statusResult.success)
+            {
+                throw new Error("On-block move status effect failed");
+            }
+            lastEvent = statusResult.event;
+            silent = statusResult.success === true;
+            break;
+        }
+        case "undefined": silent = true; break;
+        default:
+            // istanbul ignore next: should never happen
+            throw new Error(`Unknown on-block move effect '${effect}'`);
     }
 
     // if the ability effects can't cause an explicit game event, then the least
     //  it can do is give an immune event
-    if (allSilent)
+    if (silent)
     {
         lastEvent ??= yield;
         if (lastEvent.type !== "immune" || lastEvent.monRef !== ctx.holderRef)
@@ -1039,45 +1045,33 @@ async function* blockUnboost(ctx: AbilityContext,
 /**
  * Handles events due to a moveContactKO ability (e.g. Aftermath).
  * @param targetRef Target of ability effects.
- * @param expectedEffects Expected effects.
+ * @param percentDamage Expected percent-damage effect.
  * @param explosive Explosive effect flag, meaning this ability's effects are
  * blocked by abilities with `#on.block.effect.explosive=true` (e.g. Damp).
  */
 async function* moveContactKO(ctx: AbilityContext, targetRef: Side,
-    expectedEffects: readonly effects.ability.MoveContactKO[],
-    explosive?: boolean, lastEvent?: events.Any): SubParser<AbilityResult>
+    percentDamage?: number, explosive?: boolean, lastEvent?: events.Any):
+    SubParser<AbilityResult>
 {
-    let allSilent = true;
-    for (const effect of expectedEffects ?? [])
+    let silent = true;
+    if (percentDamage)
     {
-        switch (effect.type)
+        const damageResult = yield* parsers.percentDamage(ctx.pstate,
+            targetRef, percentDamage, lastEvent);
+        if (!damageResult.success)
         {
-            case "percentDamage":
-            {
-                const damageResult = yield* parsers.percentDamage(ctx.pstate,
-                    targetRef, effect.value, lastEvent);
-                if (!damageResult.success)
-                {
-                    throw new Error("On-moveContactKO " +
-                        `${explosive ? "explosive " : ""}effect ` +
-                        "percentDamage effect failed");
-                }
-                // TODO: permHalt check?
-                lastEvent = damageResult.event;
-                allSilent &&= damageResult.success === "silent";
-                break;
-            }
-            default:
-                // istanbul ignore next: should never happen
-                throw new Error("Unknown on-moveContactKO effect " +
-                    `'${effect!.type}'`);
+            throw new Error("On-moveContactKO " +
+                `${explosive ? "explosive " : ""} percentDamage effect failed`);
         }
+        // TODO: permHalt check?
+        lastEvent = damageResult.event;
+        silent = damageResult.success === "silent";
         lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     }
 
     // if the ability effects can't cause an explicit game event, then it
     //  shouldn't have activated in the first place
-    if (allSilent) throw new Error("On-moveContactKO effect failed");
+    if (silent) throw new Error("On-moveContactKO effect failed");
 
     if (explosive)
     {
@@ -1098,54 +1092,51 @@ async function* moveContactKO(ctx: AbilityContext, targetRef: Side,
 /**
  * Handles events due to a moveContact ability (e.g. Rough Skin).
  * @param targetRef Target of ability effects.
- * @param expectedEffects Expected effects.
+ * @param effect Expected effect, either inflicted damage or random status.
  */
 async function* moveContact(ctx: AbilityContext, targetRef: Side,
-    expectedEffects: readonly effects.ability.MoveContact[],
+    effect?: number | readonly dexutil.StatusType[],
     lastEvent?: events.Any): SubParser<AbilityResult>
 {
-    let allSilent = true;
-    for (const effect of expectedEffects)
+    let silent: boolean;
+    switch (typeof effect)
     {
-        switch (effect.type)
+        case "undefined": silent = true; break;
+        case "number":
         {
-            case "percentDamage":
+            const damageResult = yield* parsers.percentDamage(ctx.pstate,
+                targetRef, effect, lastEvent);
+            if (!damageResult.success)
             {
-                const damageResult = yield* parsers.percentDamage(ctx.pstate,
-                    targetRef, effect.value, lastEvent);
-                if (!damageResult.success)
-                {
-                    throw new Error("On-moveContact percentDamage effect " +
-                        "failed");
-                }
-                lastEvent = damageResult.event;
-                allSilent &&= damageResult.success === "silent";
-                break;
+                throw new Error("On-moveContact percentDamage effect " +
+                    "failed");
             }
-            case "status":
+            lastEvent = damageResult.event;
+            silent = damageResult.success === "silent";
+            break;
+        }
+        default:
+            if (Array.isArray(effect))
             {
                 const statusResult = yield* parsers.status(ctx.pstate,
-                    targetRef, [effect.value], lastEvent);
+                    targetRef, effect, lastEvent);
                 if (!statusResult.success)
                 {
                     throw new Error("On-moveContact status effect failed");
                 }
                 lastEvent = statusResult.event;
-                allSilent &&= statusResult.success === true;
+                silent = statusResult.success === true;
                 break;
             }
-            default:
-                // istanbul ignore next: should never happen
-                throw new Error("Unknown on-moveContact effect " +
-                    `'${effect!.type}'`);
-        }
-        lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
+            // istanbul ignore next: should never happen
+            throw new Error(`Unknown on-moveContact effect '${effect}'`);
     }
 
     // if the ability effects can't cause an explicit game event, then it
     //  shouldn't have activated in the first place
-    if (allSilent) throw new Error("On-moveContact effect failed");
+    if (silent) throw new Error("On-moveContact effect failed");
 
+    lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     return {...lastEvent && {event: lastEvent}};
 }
 

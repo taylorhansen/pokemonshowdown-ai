@@ -1,5 +1,5 @@
 import { FutureMove, futureMoves } from "../dex/dex";
-import { SelfSwitchType } from "../dex/effects";
+import { SelfSwitchType } from "../dex/dex-util";
 import { ItemTempStatus, ReadonlyItemTempStatus } from "./ItemTempStatus";
 import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
 

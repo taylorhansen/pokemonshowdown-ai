@@ -1,6 +1,5 @@
 import * as dex from "../dex/dex";
 import * as dexutil from "../dex/dex-util";
-import * as effects from "../dex/effects";
 import { MoveData } from "../state/Pokemon";
 import { Side } from "../state/Side";
 
@@ -99,7 +98,7 @@ export interface ActivateAbility extends EventBase<"activateAbility">
 export interface ActivateFieldEffect extends EventBase<"activateFieldEffect">
 {
     /** Name of the effect. */
-    readonly effect: effects.FieldType;
+    readonly effect: dexutil.FieldEffectType;
     /** Whether to start (`true`) or end (`false`) the effect. */
     readonly start: boolean;
 }
@@ -119,7 +118,7 @@ export interface ActivateStatusEffect extends EventBase<"activateStatusEffect">
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Name of the effect. */
-    readonly effect: effects.StatusType;
+    readonly effect: dexutil.StatusType;
     /** Whether to start (`true`) or end (`false`) the status. */
     readonly start: boolean;
 }
@@ -130,7 +129,7 @@ export interface ActivateTeamEffect extends EventBase<"activateTeamEffect">
     /** Team reference. */
     readonly teamRef: Side;
     /** Name of the status. */
-    readonly effect: effects.TeamType | effects.ImplicitTeamType;
+    readonly effect: dexutil.TeamEffectType | dexutil.ImplicitTeamEffectType;
     /** Whether to start (`true`) or end (`false`) the effect. */
     readonly start: boolean;
 }
@@ -212,7 +211,7 @@ export interface CountStatusEffect extends EventBase<"countStatusEffect">
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Type of effect. */
-    readonly effect: effects.CountableStatusType;
+    readonly effect: dexutil.CountableStatusType;
     /** Number to set the effect counter to. */
     readonly amount: number;
 }
@@ -609,7 +608,7 @@ export interface Trap extends EventBase<"trap">
 export interface UpdateFieldEffect extends EventBase<"updateFieldEffect">
 {
     /** Type of effect to update. */
-    readonly effect: effects.UpdatableFieldType;
+    readonly effect: dexutil.UpdatableFieldEffectType;
 }
 
 /** Reveals moves and pp values. */
@@ -631,7 +630,7 @@ export interface UpdateStatusEffect extends EventBase<"updateStatusEffect">
     /** Pokemon reference. */
     readonly monRef: Side;
     /** Type of effect to update. */
-    readonly effect: effects.UpdatableStatusType;
+    readonly effect: dexutil.UpdatableStatusType;
 }
 
 /** Indicates that the pokemon is attempting to use a move. */

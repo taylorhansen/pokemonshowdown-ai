@@ -1,6 +1,5 @@
 /** @file SubParsers used to expect specific kinds of events. */
 import * as dexutil from "../../dex/dex-util";
-import * as effects from "../../dex/effects";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
@@ -52,18 +51,19 @@ export interface BoostResult extends SubParserResult
 /**
  * Expects a boost effect.
  * @param targetRef Pokemon reference that's supposed to receive the boosts.
- * @param effect Effect object describing the boosts.
+ * @param boosts Object describing the boosts.
+ * @param set Whether to set (true) or add (false) the boosts.
  * @param silent Whether to silently consume saturated boosts (e.g. +1 when
  * already at +6).
  * @param lastEvent Last unconsumed event if any.
  */
 export async function* boost(pstate: ParserState, targetRef: Side,
-    effect: effects.Boost, silent?: boolean, lastEvent?: events.Any):
+    boosts: Partial<dexutil.BoostTable<number>>, set?: boolean,
+    silent?: boolean, lastEvent?: events.Any):
     SubParser<BoostResult>
 {
     const target = pstate.state.teams[targetRef].active;
-    const set = !effect.add;
-    const table = effect.add ? {...effect.add} : {...effect.set};
+    const table = {...boosts};
     let allSilent = true;
 
     const result = yield* eventLoop(
@@ -73,7 +73,7 @@ export async function* boost(pstate: ParserState, targetRef: Side,
             if (event.monRef !== targetRef) return {event};
             if (!event.set === set) return {event};
             if (!table.hasOwnProperty(event.stat)) return {event};
-            if (!matchBoost(set, table[event.stat]!, event.amount,
+            if (!matchBoost(!!set, table[event.stat]!, event.amount,
                 ...set ? [] : [target.volatile.boosts[event.stat]]))
             {
                 return {event};
@@ -93,7 +93,7 @@ export async function* boost(pstate: ParserState, targetRef: Side,
         for (const b in table)
         {
             if (!table.hasOwnProperty(b)) continue;
-            if (matchBoost(set, table[b as dexutil.BoostName]!, 0,
+            if (matchBoost(!!set, table[b as dexutil.BoostName]!, 0,
                 target.volatile.boosts[b as dexutil.BoostName]))
             {
                 delete table[b as dexutil.BoostName];
@@ -136,7 +136,7 @@ export async function* boostOne(pstate: ParserState, targetRef: Side,
  * @param effectType Effect type being expected.
  */
 export async function* countStatus(pstate: ParserState, source: Side,
-    effectType: effects.CountableStatusType, lastEvent?: events.Any):
+    effectType: dexutil.CountableStatusType, lastEvent?: events.Any):
     SubParser<SuccessResult>
 {
     switch (effectType)
@@ -227,7 +227,7 @@ export async function* faint(pstate: ParserState, monRef: Side,
  * @param effectType Effect type being expected.
  */
 export async function* fieldEffect(pstate: ParserState, source: Pokemon | null,
-    effectType: effects.FieldType, lastEvent?: events.Any):
+    effectType: dexutil.FieldEffectType, lastEvent?: events.Any):
     SubParser<SuccessResult>
 {
     // TODO: silently pass without event if effect already present
@@ -280,7 +280,7 @@ export async function* percentDamage(pstate: ParserState, targetRef: Side,
 export interface StatusResult extends SubParserResult
 {
     /** Status type that was consumed, or `true` if silently consumed. */
-    success?: true | effects.StatusType;
+    success?: true | dexutil.StatusType;
 }
 
 /**
@@ -290,7 +290,7 @@ export interface StatusResult extends SubParserResult
  * @param lastEvent Last unconsumed event if any.
  */
 export async function* status(pstate: ParserState, targetRef: Side,
-    statusTypes: readonly effects.StatusType[], lastEvent?: events.Any):
+    statusTypes: readonly dexutil.StatusType[], lastEvent?: events.Any):
     SubParser<StatusResult>
 {
     const target = pstate.state.teams[targetRef].active;
@@ -323,7 +323,7 @@ export async function* status(pstate: ParserState, targetRef: Side,
 }
 
 /** Checks whether the pokemon can't be afflicted by the given status. */
-function cantStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
+function cantStatus(mon: ReadonlyPokemon, statusType: dexutil.StatusType):
     boolean
 {
     switch (statusType)
@@ -364,7 +364,7 @@ export interface CureResult extends SubParserResult
      * no statuses to cure, or `Set<StatusType>` if some statuses were not
      * cured.
      */
-    ret: true | "silent" | Set<effects.StatusType>;
+    ret: true | "silent" | Set<dexutil.StatusType>;
 }
 
 /**
@@ -373,7 +373,7 @@ export interface CureResult extends SubParserResult
  * @param statuses Statuses to cure.
  */
 export async function* cure(pstate: ParserState, targetRef: Side,
-    statuses: readonly effects.StatusType[], lastEvent?: events.Any):
+    statuses: readonly dexutil.StatusType[], lastEvent?: events.Any):
     SubParser<CureResult>
 {
     // only need to care about the curable statuses the target has
@@ -446,7 +446,7 @@ export async function* swapBoosts(pstate: ParserState, source: Side,
  * @param effectType Effect type being expected.
  */
 export async function* teamEffect(pstate: ParserState, source: Pokemon | null,
-    teamRef: Side, effectType: effects.TeamType, lastEvent?: events.Any):
+    teamRef: Side, effectType: dexutil.TeamEffectType, lastEvent?: events.Any):
     SubParser<SuccessResult>
 {
     // TODO: silently pass without event if effect already present

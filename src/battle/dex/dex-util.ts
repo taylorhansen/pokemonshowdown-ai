@@ -1,5 +1,7 @@
+/** @file Type definitions and helper functions for dealing with the dex. */
 import { ReadonlyPokemon } from "../state/Pokemon";
-import * as effects from "./effects";
+
+// TODO: split into multiple files
 
 /** Set of Type names. Each type has a 0-based unique index. */
 export const types =
@@ -231,13 +233,12 @@ export interface AbilityData extends DexData
             {
                 /** Block moves of a specific type. */
                 readonly type: Type;
-                /**
-                 * Effects that should happen to the ability holder if possible
-                 * once the move is blocked. If empty or all the effects are
-                 * unapplicable, then the ability should at least mention the
-                 * immunity to the move.
-                 */
-                readonly effects?: readonly effects.ability.Absorb[];
+                /** Add a stat boost onto the holder. */
+                readonly boost?: Partial<BoostTable<number>>;
+                /** Percent damage dealt to holder. */
+                readonly percentDamage?: number;
+                /** Inflict a status on the holder. */
+                readonly status?: StatusType;
             };
             /** Block effects that contain a certain flag. */
             readonly effect?:
@@ -271,11 +272,8 @@ export interface AbilityData extends DexData
         {
             /** Whether this is an explosive effect (i.e., blocked by Damp). */
             readonly explosive?: true;
-            /**
-             * Effects that should happen if possible. Can only apply to
-             * attacker.
-             */
-            readonly effects: readonly effects.ability.MoveContactKO[];
+            /** Percent damage dealt to move user. */
+            readonly percentDamage?: number;
         };
         /**
          * Whenver a damaging move makes contact with the ability holder. Also
@@ -290,8 +288,10 @@ export interface AbilityData extends DexData
             readonly chance?: number;
             /** Target of the effect, either the ability holder or move user. */
             readonly tgt: "holder" | "user";
-            /** One of these effects is equally likely to happen. */
-            readonly effects: readonly effects.ability.MoveContact[];
+            /** Percent damage dealt to move user. */
+            readonly percentDamage?: number;
+            /** Inflict one of these statuses at random. */
+            readonly status?: readonly StatusType[];
         };
         /**
          * Whenever a move deals damage to the ability holder. Also applies to
@@ -313,7 +313,7 @@ export interface AbilityData extends DexData
     };
 
     /** Status immunities granted by this ability. */
-    readonly statusImmunity?: {readonly [T in effects.StatusType]?: true};
+    readonly statusImmunity?: {readonly [T in StatusType]?: true};
 
     // TODO: rename to passive effects? or add a separate field?
     /** Additional ability flags. */
@@ -415,7 +415,7 @@ export interface MoveData extends DexData
     readonly effects?:
     {
         /** Call effect. */
-        readonly call?: effects.CallType;
+        readonly call?: CallType;
 
         /** Transform the user into the target. */
         readonly transform?: true;
@@ -453,7 +453,7 @@ export interface MoveData extends DexData
 
         // TODO: separate stockpile from perish
         /** Status effect to count. */
-        readonly count?: effects.CountableStatusType;
+        readonly count?: CountableStatusType;
 
         // TODO: should these boost effects be mutually exclusive?
         /** Boost effects. */
@@ -485,13 +485,13 @@ export interface MoveData extends DexData
              */
             readonly ghost?: true;
         } &
-            {readonly [T in MoveEffectTarget]?: readonly effects.StatusType[]};
+            {readonly [T in MoveEffectTarget]?: readonly StatusType[]};
 
         /** Team effect to start. */
-        readonly team?: {readonly [T in MoveEffectTarget]?: effects.TeamType};
+        readonly team?: {readonly [T in MoveEffectTarget]?: TeamEffectType};
 
         /** Field effect to start. */
-        readonly field?: effects.FieldType;
+        readonly field?: FieldEffectType;
 
         /**
          * Change the target's type to the type of one of the target's known
@@ -519,16 +519,16 @@ export interface MoveData extends DexData
         readonly selfFaint?: MoveSelfFaint;
 
         /** Self-switch effect. */
-        readonly selfSwitch?: effects.SelfSwitchType;
+        readonly selfSwitch?: SelfSwitchType;
     };
 
     /** Implicit effects on the user. */
     readonly implicit?:
     {
         /** Implicit status effect. */
-        readonly status?: effects.ImplicitStatusType;
+        readonly status?: ImplicitStatusType;
         /** Implicit team effect. */
-        readonly team?: effects.ImplicitTeamType;
+        readonly team?: ImplicitTeamEffectType;
     };
 }
 
@@ -603,6 +603,62 @@ export function getDefiniteMoveType(move: MoveData, user: ReadonlyPokemon):
 /** Target of move effect. */
 export type MoveEffectTarget = "self" | "hit";
 
+// tslint:disable: no-trailing-whitespace (force newlines in doc)
+/**
+ * Specifies how this move can call another move.
+ *
+ * `true` - Calls a move normally.  
+ * `"copycat"` - Called move must match the RoomStatus' `#lastMove` field and
+ * not have the `noCopycat` flag set, else this effect should fail.  
+ * `"mirror"` - Mirror move. Called move should match the user's `mirrorMove`
+ * VolatileStatus field, or fail if null.  
+ * `"self"` - Calls a move from the user's moveset.  
+ * `"target"` - Calls a move from the target's moveset (caller must have only
+ * one target).  
+ * `string` - Specifies the move that will be called.
+ */
+// tslint:enable: no-trailing-whitespace
+export type CallType = true | "copycat" | "mirror" | "self" | "target" | string;
+
+/** Status effects that are explicitly counted in game events. */
+export type CountableStatusType = "perish" | "stockpile";
+
+/** Status effects that are explicitly started/ended in game events. */
+export type StatusType = UpdatableStatusType | SingleMoveType |
+    SingleTurnType | MajorStatus | "aquaRing" | "attract" | "charge" |
+    "curse" | "embargo" | "encore" | "flashFire" | "focusEnergy" | "foresight" |
+    "healBlock" | "imprison" | "ingrain" | "leechSeed" | "magnetRise" |
+    "miracleEye" | "mudSport" | "nightmare" | "powerTrick" | "slowStart" |
+    "substitute" | "suppressAbility" | "taunt" | "torment" | "waterSport" |
+    "yawn";
+
+/**
+ * Status effects that are explicitly updated throughout their duration in game
+ * events.
+ */
+export type UpdatableStatusType = "confusion" | "bide" | "uproar";
+
+/** Types of single-move effects. */
+export type SingleMoveType = "destinyBond" | "grudge" | "rage";
+
+/** Types of single-turn effects. */
+export type SingleTurnType = "endure" | "focus" | "magicCoat" | "protect" |
+    "roost" | "snatch";
+
+/** Team status effects that are explicitly started/ended in game events. */
+export type TeamEffectType = "lightScreen" | "luckyChant" | "mist" | "reflect" |
+    "safeguard" | "spikes" | "stealthRock" | "tailwind" | "toxicSpikes";
+
+/** Status effects that are explicitly started/ended in game events. */
+export type FieldEffectType = UpdatableFieldEffectType | "gravity" |
+    "trickRoom";
+
+/**
+ * Field effects that are explicitly updated throughout their duration in game
+ * events.
+ */
+export type UpdatableFieldEffectType = WeatherType;
+
 // tslint:disable: no-trailing-whitespace (force newline in doc)
 /**
  * Move self-faint description.  
@@ -611,6 +667,23 @@ export type MoveEffectTarget = "self" | "hit";
  */
 // tslint:enable: no-trailing-whitespace
 export type MoveSelfFaint = "always" | "ifHit";
+
+/**
+ * Whether this move causes the user to switch, but `copyvolatile` additionally
+ * transfers certain volatile status conditions.
+ */
+export type SelfSwitchType = true | "copyvolatile";
+
+// TODO: add rollout
+/** Status effects that are implied by the successful use of a move. */
+export type ImplicitStatusType = "defenseCurl" | "lockedMove" | "minimize" |
+    "mustRecharge";
+
+/**
+ * Team effects that are implied by the successful use of a move, but events may
+ * still mention them based on specific circumstances.
+ */
+export type ImplicitTeamEffectType = "healingWish" | "lunarDance" | "wish";
 
 /** Format for each item entry in the dex. */
 export interface ItemData extends DexData
@@ -628,16 +701,20 @@ export interface ItemData extends DexData
     readonly on?:
     {
         /** After a move has dealt damage. Affects the user. */
-        readonly movePostDamage?: readonly effects.item.MovePostDamage[];
+        readonly movePostDamage?:
+        {
+            /** Percent damage dealt to the holder. */
+            readonly percentDamage?: number;
+        };
         /** End of turn. */
         readonly turn?:
         {
-            /** Holder is poison-type. */
-            readonly poison?: readonly effects.item.Turn[];
-            /** Holder is not poison-type. */
-            readonly noPoison?: readonly effects.item.Turn[];
-            /** Additional effects. */
-            readonly effects?: readonly effects.item.Turn[];
+            /** Percent damage dealt to holder if poison-type. */
+            readonly poisonDamage?: number;
+            /** Percent damage dealt to holder if not poison-type. */
+            readonly noPoisonDamage?: number;
+            /** Inflict a status onto the holder.. */
+            readonly status?: StatusType;
         };
     };
     /** Like `#on` but for consumable items. */
@@ -717,7 +794,7 @@ export interface ItemData extends DexData
             /** Activates when the holder has a certain status. */
             readonly condition: "status";
             /** Cure a specified status. */
-            readonly cure: {readonly [T in effects.StatusType]?: true};
+            readonly cure: {readonly [T in StatusType]?: true};
         } |
         {
             /** Activates when a holder's move has depleted. */

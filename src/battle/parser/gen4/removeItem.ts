@@ -1,7 +1,5 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
-import * as effects from "../../dex/effects";
-import { StatusType } from "../../dex/effects";
 import { getAttackerTypes, getTypeEffectiveness } from "../../dex/typechart";
 import { Pokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
@@ -197,7 +195,7 @@ export function consumeOnUpdate(pstate: ParserState,
                     {
                         if (!cure.hasOwnProperty(status)) continue;
                         if (canCure ||=
-                            hasStatus(mon, status as effects.StatusType))
+                            hasStatus(mon, status as dexutil.StatusType))
                         {
                             break;
                         }
@@ -598,7 +596,7 @@ async function* updateItem(ctx: RemoveItemContext,
         {
             // cure all the relevant statuses
             const statusResult = yield* parsers.cure(ctx.pstate, ctx.holderRef,
-                Object.keys(data.cure) as StatusType[]);
+                Object.keys(data.cure) as dexutil.StatusType[]);
             if (statusResult.ret !== true && statusResult.ret !== "silent")
             {
                 throw new Error("ConsumeOn-update cure effect failed");

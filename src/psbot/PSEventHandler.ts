@@ -1,6 +1,5 @@
 import * as dex from "../battle/dex/dex";
 import * as dexutil from "../battle/dex/dex-util";
-import * as effects from "../battle/dex/effects";
 import * as events from "../battle/parser/BattleEvent";
 import { otherSide, Side } from "../battle/state/Side";
 import { Logger } from "../Logger";
@@ -900,7 +899,7 @@ export class PSEventHandler
         events.Any[]
     {
         const teamRef = this.getSide(event.id);
-        let effect: effects.TeamType;
+        let effect: dexutil.TeamEffectType;
 
         let psCondition = event.condition;
         if (psCondition.startsWith("move: "))
@@ -933,7 +932,7 @@ export class PSEventHandler
     /** @virtual */
     protected handleSingleMove(event: psevent.SingleMove): events.Any[]
     {
-        let effect: effects.SingleMoveType | undefined;
+        let effect: dexutil.SingleMoveType | undefined;
         if (event.move === "Destiny Bond") effect = "destinyBond";
         else if (event.move === "Grudge") effect = "grudge";
         else if (event.move === "Rage") effect = "rage";
@@ -946,7 +945,7 @@ export class PSEventHandler
     /** @virtual */
     protected handleSingleTurn(event: psevent.SingleTurn): events.Any[]
     {
-        let effect: effects.SingleTurnType;
+        let effect: dexutil.SingleTurnType;
         switch (event.status.startsWith("move: ") ?
             event.status.substr("move: ".length) : event.status)
         {
@@ -1086,7 +1085,8 @@ export class PSEventHandler
             //  this
             // |-heal|<holder>|...|[from] <ability>|[of] <attacker>
             if ((event.type === "-heal" &&
-                    dex.abilities[ability]?.on?.block?.move?.effects) ||
+                    (dex.abilities[ability]?.on?.block?.move?.percentDamage
+                        ?? 0) > 0) ||
                 // |-ability|<holder>|<target's ability>|[from] ability: Trace|
                 //  [of] target
                 (event.type === "-ability" && ability === "trace"))
@@ -1119,7 +1119,7 @@ export class PSEventHandler
         const monRef = this.getSide(event.id.owner);
         const start = event.type === "-start";
 
-        let effect: effects.StatusType | undefined;
+        let effect: dexutil.StatusType | undefined;
 
         let ev = event.volatile;
         if (ev.startsWith("move: ")) ev = ev.substr("move: ".length);

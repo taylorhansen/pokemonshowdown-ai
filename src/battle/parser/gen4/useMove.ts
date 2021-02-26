@@ -1,6 +1,5 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
-import * as effects from "../../dex/effects";
 import { Effectiveness, getAttackerTypes, getTypeEffectiveness, typechart } from
     "../../dex/typechart";
 import { Move } from "../../state/Move";
@@ -111,7 +110,7 @@ interface MoveContext
     failed?: true | "miss";
     // TODO(doubles): index by opponent as well
     /** Status effects being blocked for the target. */
-    blockStatus?: {readonly [T in effects.StatusType]?: true};
+    blockStatus?: {readonly [T in dexutil.StatusType]?: true};
 }
 
 interface TargetFlags
@@ -1220,7 +1219,7 @@ function handleTypeEffectiveness(ctx: MoveContext,
  * Coat).
  */
 async function* expectCalledMove(ctx: MoveContext, userRef: Side,
-    callEffect: effects.CallType, bounced?: boolean, lastEvent?: events.Any):
+    callEffect: dexutil.CallType, bounced?: boolean, lastEvent?: events.Any):
     SubParser
 {
     // can't do anything if fainted
@@ -1521,11 +1520,8 @@ async function* moveBoost(ctx: MoveContext, targetRef: Side,
         return {...lastEvent && {event: lastEvent}, remaining: {}};
     }
 
-    // TODO: refactor parsers.boost to accept deconstructed Effect
-    const effect: effects.Boost =
-        {type: "boost", ...set ? {set: table} : {add: table}};
     const boostResult = yield* parsers.boost(ctx.pstate, targetRef,
-        effect, /*silent*/ true, lastEvent);
+        table, set, /*silent*/ true, lastEvent);
 
     if ((chance == null || chance >= 100) &&
         Object.keys(boostResult.remaining).length > 0)
@@ -1585,7 +1581,7 @@ async function* expectDisable(ctx: MoveContext, lastEvent?: events.Any):
  * @param effect Type of effect.
  */
 async function* expectSelfSwitch(ctx: MoveContext,
-    effect: effects.SelfSwitchType, lastEvent?: events.Any): SubParser
+    effect: dexutil.SelfSwitchType, lastEvent?: events.Any): SubParser
 {
     // can't do anything if fainted, unless this was intended like with
     //  healingwish/lunardance moves (gen4: replacement is sent out immediately)

@@ -5,7 +5,6 @@
 import { ModdedDex } from "../pokemon-showdown/sim/dex";
 import "../pokemon-showdown/sim/global-types";
 import * as dexutil from "../src/battle/dex/dex-util";
-import * as effects from "../src/battle/dex/effects";
 import { toIdName } from "../src/psbot/helpers";
 
 /** Helper type for converting readonly containers to writable versions. */
@@ -118,7 +117,7 @@ const noCopycat: {readonly [move: string]: boolean} =
 const transformMap: {readonly [move: string]: boolean} = {transform: true};
 
 /** Maps some move names to CallTypes. */
-const callTypeMap: {readonly [move: string]: effects.CallType} =
+const callTypeMap: {readonly [move: string]: dexutil.CallType} =
 {
     assist: true, copycat: "copycat", mefirst: "target", metronome: true,
     mirrormove: "mirror", naturepower: true, sleeptalk: "self"
@@ -158,11 +157,11 @@ const swapBoostMap:
 
 /** Maps some move names to CountableStatusTypes. */
 const countableStatusTypeMap:
-    {readonly [move: string]: effects.CountableStatusType} =
+    {readonly [move: string]: dexutil.CountableStatusType} =
     {perishsong: "perish", stockpile: "stockpile"};
 
 /** Maps some move names to FieldTypes. */
-const fieldTypeMap: {readonly [move: string]: effects.FieldType} =
+const fieldTypeMap: {readonly [move: string]: dexutil.FieldEffectType} =
 {
     // weathers
     sunnyday: "SunnyDay", raindance: "RainDance", sandstorm: "Sandstorm",
@@ -172,7 +171,7 @@ const fieldTypeMap: {readonly [move: string]: effects.FieldType} =
 };
 
 /** Maps some move names or effects to StatusTypes. */
-const statusTypeMap: {readonly [move: string]: readonly effects.StatusType[]} =
+const statusTypeMap: {readonly [move: string]: readonly dexutil.StatusType[]} =
 {
     // TODO: followme, helpinghand, partiallytrapped, telekinesis (gen5)
     // normal statuses
@@ -218,7 +217,7 @@ const customStatusMap:
 
 /** Maps some move names to ImplicitStatusTypes. */
 const implicitStatusTypeMap:
-    {readonly [move: string]: effects.ImplicitStatusType} =
+    {readonly [move: string]: dexutil.ImplicitStatusType} =
 {
     defensecurl: "defenseCurl", lockedmove: "lockedMove", minimize: "minimize",
     mustrecharge: "mustRecharge"
@@ -240,7 +239,7 @@ const customBoostMap:
     {curse: {noGhost: true, self: {atk: 1, def: 1, spe: -1}}};
 
 /** Maps some move names to TeamEffects. */
-const teamStatusTypeMap: {readonly [move: string]: effects.TeamType} =
+const teamStatusTypeMap: {readonly [move: string]: dexutil.TeamEffectType} =
 {
     lightscreen: "lightScreen", luckychant: "luckyChant", mist: "mist",
     reflect: "reflect", safeguard: "safeguard", spikes: "spikes",
@@ -251,7 +250,7 @@ const teamStatusTypeMap: {readonly [move: string]: effects.TeamType} =
 
 /** Maps some move names to ImplicitTeamTypes. */
 const implicitTeamTypeMap:
-    {readonly [move: string]: effects.ImplicitTeamType} =
+    {readonly [move: string]: dexutil.ImplicitTeamEffectType} =
     {healingwish: "healingWish", lunardance: "lunarDance", wish: "wish"};
 
 /** Maps move name to how/whether it changes the target's type. */
@@ -264,13 +263,13 @@ const disableMoveMap: {readonly [move: string]: boolean} = {disable: true};
 // NOTE(gen4): healingwish-like moves send in a replacement immediately after
 //  self-faint
 /** Secondary map for move name to self-switch effect. */
-const selfSwitchMap: {readonly [move: string]: effects.SelfSwitchType} =
+const selfSwitchMap: {readonly [move: string]: dexutil.SelfSwitchType} =
     {healingwish: true, lunardance: true}
 
 const futureMoves: string[] = [];
 const lockedMoves: string[] = []; // TODO: rename to rampage moves
 const twoTurnMoves: string[] = [];
-const moveCallers: [string, effects.CallType][] = [];
+const moveCallers: [string, dexutil.CallType][] = [];
 
 const sketchableMoves: string[] = [];
 
@@ -495,7 +494,7 @@ for (const move of
             {selfFaint: move.selfdestruct as dexutil.MoveSelfFaint},
 
         ...move.selfSwitch &&
-            {selfSwitch: move.selfSwitch as effects.SelfSwitchType},
+            {selfSwitch: move.selfSwitch as dexutil.SelfSwitchType},
         ...selfSwitchMap.hasOwnProperty(move.id) &&
             {selfSwitch: selfSwitchMap[move.id]}
     };
@@ -781,28 +780,13 @@ const abilityData:
     pressure: {on: {start: {}}},
 
     // TODO(dryskin): sun/fire weakness
-    dryskin:
-    {on: {block: {move: {
-        type: "water",
-        effects: [{type: "percentDamage", value: 25}]
-    }}}},
+    dryskin: {on: {block: {move: {type: "water", percentDamage: 25}}}},
     // TODO(gen3-4): doesn't work while frozen
-    flashfire:
-    {on: {block: {move: {
-        type: "fire", effects: [{type: "status", value: "flashFire"}]
-    }}}},
+    flashfire: {on: {block: {move: {type: "fire", status: "flashFire"}}}},
     levitate: {on: {block: {move: {type: "ground"}}}},
-    motordrive: {on: {block: {move: {
-        type: "electric", effects: [{type: "boost", add: {spe: 1}}]
-    }}}},
-    voltabsorb:
-    {on: {block: {move: {
-        type: "electric", effects: [{type: "percentDamage", value: 25}]
-    }}}},
-    waterabsorb:
-    {on: {block: {move: {
-        type: "water", effects: [{type: "percentDamage", value: 25}]
-    }}}},
+    motordrive: {on: {block: {move: {type: "electric", boost: {spe: 1}}}}},
+    voltabsorb: {on: {block: {move: {type: "electric", percentDamage: 25}}}},
+    waterabsorb: {on: {block: {move: {type: "water", percentDamage: 25}}}},
 
     damp: {on: {block: {effect: {explosive: true}}}},
 
@@ -811,40 +795,19 @@ const abilityData:
     keeneye: {on: {tryUnboost: {block: {accuracy: true}}}},
     whitesmoke: {on: {tryUnboost: {block: dexutil.boostNames}}},
 
-    aftermath:
-    {on: {moveContactKO: {
-        explosive: true, effects: [{type: "percentDamage", value: -25}]
-    }}},
+    aftermath: {on: {moveContactKO: {explosive: true, percentDamage: -25}}},
 
     cutecharm:
-    {on: {moveContact: {
-        chance: 30, tgt: "user", effects: [{type: "status", value: "attract"}]
-    }}},
+        {on: {moveContact: {chance: 30, tgt: "user", status: ["attract"]}}},
     effectspore:
     {on: {moveContact: {
-        chance: 30, tgt: "user",
-        effects:
-        [
-            {type: "status", value: "par"}, {type: "status", value: "psn"},
-            {type: "status", value: "slp"}
-        ]
+        chance: 30, tgt: "user", status: ["par", "psn", "slp"]
     }}},
-    flamebody:
-    {on: {moveContact: {
-        chance: 30, tgt: "user", effects: [{type: "status", value: "brn"}]
-    }}},
+    flamebody: {on: {moveContact: {chance: 30, tgt: "user", status: ["brn"]}}},
     poisonpoint:
-    {on: {moveContact: {
-        chance: 30, tgt: "user", effects: [{type: "status", value: "psn"}]
-    }}},
-    roughskin:
-    {on: {moveContact: {
-        tgt: "user", effects: [{type: "percentDamage", value: -6.25}]
-    }}},
-    static:
-    {on: {moveContact: {
-        chance: 30, tgt: "user", effects: [{type: "status", value: "par"}]
-    }}},
+        {on: {moveContact: {chance: 30, tgt: "user", status: ["psn"]}}},
+    roughskin: {on: {moveContact: {tgt: "user", percentDamage: -6.25}}},
+    static: {on: {moveContact: {chance: 30, tgt: "user", status: ["par"]}}},
 
     colorchange: {on: {moveDamage: {changeToMoveType: true}}},
 
@@ -889,18 +852,14 @@ for (const ability of
 const itemOnMap:
     {readonly [item: string]: NonNullable<dexutil.ItemData["on"]>} =
 {
-    lifeorb: {movePostDamage: [{type: "percentDamage", value: -10}]},
+    lifeorb: {movePostDamage: {percentDamage: -10}},
 
-    blacksludge:
-    {turn: {
-        poison: [{type: "percentDamage", value: 6.25}],
-        noPoison: [{type: "percentDamage", value: -12.5}]
-    }},
-    leftovers: {turn: {effects: [{type: "percentDamage", value: 6.25}]}},
-    stickybarb: {turn: {effects: [{type: "percentDamage", value: -12.5}]}},
+    blacksludge: {turn: {poisonDamage: 6.25, noPoisonDamage: -12.5}},
+    leftovers: {turn: {poisonDamage: 6.25, noPoisonDamage: 6.25}},
+    stickybarb: {turn: {poisonDamage:-12.5, noPoisonDamage: -12.5}},
 
-    flameorb: {turn: {effects: [{type: "status", value: "brn"}]}},
-    toxicorb: {turn: {effects: [{type: "status", value: "tox"}]}}
+    flameorb: {turn: {status: "brn"}},
+    toxicorb: {turn: {status: "tox"}}
 };
 
 /** Maps some item names to consume effects. */
@@ -1248,7 +1207,6 @@ console.log(`\
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
 import * as dexutil from "./dex-util";
-import * as effects from "./effects";
 
 /**
  * Contains info about each pokemon, with alternate forms as separate entries.
@@ -1280,7 +1238,7 @@ ${exportSpecificMoves(lockedMoves, "locked")}
 ${exportSpecificMoves(twoTurnMoves, "twoTurn", "two-turn")}
 
 /** Maps move name to its CallType, if any. Primarily used for easy testing. */
-${exportEntriesToDict(moveCallers, "moveCallers", "effects.CallType",
+${exportEntriesToDict(moveCallers, "moveCallers", "dexutil.CallType",
     v => typeof v === "string" ? quote(v) : v.toString())}
 
 /** Maps move type to each move of that type. */

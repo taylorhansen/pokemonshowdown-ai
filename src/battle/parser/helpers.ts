@@ -1,5 +1,4 @@
 import * as dexutil from "../dex/dex-util";
-import * as effects from "../dex/effects";
 import { BattleState } from "../state/BattleState";
 import { ReadonlyPokemon } from "../state/Pokemon";
 import * as events from "./BattleEvent";
@@ -7,7 +6,7 @@ import { BattleParser, BattleParserArgs, BattleParserFunc, ParserState,
     SubParser, SubParserFunc, SubParserResult } from "./BattleParser";
 
 /** Checks whether the pokemon has the given status. */
-export function hasStatus(mon: ReadonlyPokemon, statusType: effects.StatusType):
+export function hasStatus(mon: ReadonlyPokemon, statusType: dexutil.StatusType):
     boolean
 {
     switch (statusType)

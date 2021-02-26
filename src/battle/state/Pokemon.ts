@@ -1,6 +1,5 @@
 import * as dex from "../dex/dex";
 import * as dexutil from "../dex/dex-util";
-import { SelfSwitchType } from "../dex/effects";
 import { HP, ReadonlyHP } from "./HP";
 import { MajorStatusCounter, ReadonlyMajorStatusCounter } from
     "./MajorStatusCounter";
@@ -443,7 +442,7 @@ export class Pokemon implements ReadonlyPokemon
      * @param selfSwitch Self-switch status if any.
      */
     public switchInto(mon?: Pokemon | null,
-        selfSwitch?: SelfSwitchType | null): void
+        selfSwitch?: dexutil.SelfSwitchType | null): void
     {
         // create our own volatile status object
         if (!mon?._volatile) this._volatile = new VolatileStatus();

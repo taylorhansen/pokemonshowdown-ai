@@ -1,6 +1,5 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
-import * as effects from "../../dex/effects";
 import { Pokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
@@ -28,14 +27,11 @@ export function onMovePostDamage(pstate: ParserState,
             if (!data.on?.movePostDamage) return null;
 
             const abilities = new Set(mon.traits.ability.possibleValues);
-            for (const effect of data.on.movePostDamage)
+            // if the effect is silent or nonexistent, leave it
+            const percent = data.on.movePostDamage.percentDamage;
+            if (percent &&
+                !matchPercentDamage(percent, mon.hp.current, mon.hp.max))
             {
-                // if the effect is silent, leave it
-                if (matchPercentDamage(effect.value, mon.hp.current,
-                    mon.hp.max))
-                {
-                    continue;
-                }
                 // filter ability possibilities that can block the remaining
                 //  effects
                 // if one effect can't be suppressed, then the item should
@@ -45,7 +41,7 @@ export function onMovePostDamage(pstate: ParserState,
                 {
                     const ability = mon.traits.ability.map[abilityName];
                     if (ability.flags?.ignoreItem) continue;
-                    if (effect.value < 0 &&
+                    if (percent < 0 &&
                         ability.flags?.noIndirectDamage === true)
                     {
                         continue;
@@ -155,28 +151,29 @@ async function* dispatchEffects(ctx: ItemContext, lastEvent?: events.Any):
                 throw new Error("On-movePostDamage effect shouldn't activate " +
                     `for item '${ctx.item.name}'`);
             }
-            return yield* movePostDamage(ctx, ctx.item.on.movePostDamage,
-                lastEvent)
+            return yield* movePostDamage(ctx,
+                ctx.item.on.movePostDamage.percentDamage, lastEvent);
         case "turn":
             if (!ctx.item.on?.turn)
             {
                 throw new Error("On-turn effect shouldn't activate for item " +
                     `'${ctx.item.name}'`);
             }
-            if (ctx.item.on.turn.poison && ctx.item.on.turn.poison.length > 0 &&
+            if (ctx.item.on.turn.poisonDamage &&
                 ctx.holder.types.includes("poison"))
             {
-                return yield* turn(ctx, ctx.item.on.turn.poison, lastEvent);
+                return yield* turn(ctx, ctx.item.on.turn.poisonDamage,
+                    lastEvent);
             }
-            if (ctx.item.on.turn.noPoison &&
-                ctx.item.on.turn.noPoison.length > 0 &&
+            if (ctx.item.on.turn.noPoisonDamage &&
                 !ctx.holder.types.includes("poison"))
             {
-                return yield* turn(ctx, ctx.item.on.turn.noPoison, lastEvent);
+                return yield* turn(ctx, ctx.item.on.turn.noPoisonDamage,
+                    lastEvent);
             }
-            if (ctx.item.on.turn.effects && ctx.item.on.turn.effects.length > 0)
+            if (ctx.item.on.turn.status)
             {
-                return yield* turn(ctx, ctx.item.on.turn.effects, lastEvent);
+                return yield* turn(ctx, ctx.item.on.turn.status, lastEvent);
             }
             // if nothing is set, then the item shouldn't have activated
             throw new Error("On-turn effect shouldn't activate for item " +
@@ -189,16 +186,15 @@ async function* dispatchEffects(ctx: ItemContext, lastEvent?: events.Any):
 
 /**
  * Handles events due to a movePostDamage item (e.g. Life Orb).
- * @param itemEffects Expected effects.
+ * @param percentDamage Expected percent-damage effect.
  */
-async function* movePostDamage(ctx: ItemContext,
-    itemEffects: readonly effects.item.MovePostDamage[],
+async function* movePostDamage(ctx: ItemContext, percentDamage?: number,
     lastEvent?: events.Any): SubParser<ItemResult>
 {
-    for (const effect of itemEffects)
+    if (percentDamage)
     {
         const damageResult = yield* parsers.percentDamage(ctx.pstate,
-            ctx.holderRef, effect.value, lastEvent);
+            ctx.holderRef, percentDamage, lastEvent);
         // TODO: permHalt check?
         lastEvent = damageResult.event;
         if (damageResult.success === true)
@@ -214,35 +210,27 @@ async function* movePostDamage(ctx: ItemContext,
 
 /**
  * Handles events due to a turn item (e.g. Leftovers).
- * @param itemEffects Expected effects.
+ * @param itemEffect Expected effect, either percent-damage or self-inflicted
+ * status.
  */
-async function* turn(ctx: ItemContext,
-    itemEffects: readonly effects.item.Turn[],
+async function* turn(ctx: ItemContext, itemEffect: number | dexutil.StatusType,
     lastEvent?: events.Any): SubParser<ItemResult>
 {
-    for (const effect of itemEffects)
+    if (typeof itemEffect === "number")
     {
-        switch (effect.type)
-        {
-            case "percentDamage":
-            {
-                const damageResult = yield* parsers.percentDamage(ctx.pstate,
-                    ctx.holderRef, effect.value, lastEvent);
-                if (damageResult.success === true) indirectDamage(ctx);
-                // TODO: permHalt check?
-                lastEvent = damageResult.event;
-                break;
-            }
-            case "status":
-            {
-                const statusResult = yield* parsers.status(ctx.pstate,
-                    ctx.holderRef, [effect.value], lastEvent);
-                lastEvent = statusResult.event;
-                break;
-            }
-        }
-        lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
+        const damageResult = yield* parsers.percentDamage(ctx.pstate,
+            ctx.holderRef, itemEffect, lastEvent);
+        if (damageResult.success === true) indirectDamage(ctx);
+        // TODO: permHalt check?
+        lastEvent = damageResult.event;
     }
+    else
+    {
+        const statusResult = yield* parsers.status(ctx.pstate,
+            ctx.holderRef, [itemEffect], lastEvent);
+        lastEvent = statusResult.event;
+    }
+    lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
     return {...lastEvent && {event: lastEvent}};
 }
 

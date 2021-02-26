@@ -2,7 +2,6 @@ import { expect } from "chai";
 import "mocha";
 import * as dex from "../../../../src/battle/dex/dex";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
-import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/parser/BattleEvent";
 import { ParserState, SubParser } from
     "../../../../src/battle/parser/BattleParser";
@@ -1785,7 +1784,7 @@ export function testUseMove(ctxFunc: () => Context,
         }
 
         function testNonRemovable(ctg: "self" | "hit", name: string,
-            effect: effects.StatusType, move: string,
+            effect: dexutil.StatusType, move: string,
             preEvents?: readonly events.Any[],
             postEvents?: readonly events.Any[]): void
         {
@@ -1879,7 +1878,7 @@ export function testUseMove(ctxFunc: () => Context,
         {
             readonly ctg: dexutil.MoveEffectTarget;
             readonly name: string;
-            readonly effect: effects.StatusType;
+            readonly effect: dexutil.StatusType;
             readonly move?: string;
             readonly secondaryMove?: string;
             readonly secondaryMove100?: string;

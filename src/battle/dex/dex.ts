@@ -3,7 +3,6 @@
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
 import * as dexutil from "./dex-util";
-import * as effects from "./effects";
 
 /**
  * Contains info about each pokemon, with alternate forms as separate entries.
@@ -573,7 +572,7 @@ export const pokemonKeys: readonly string[] = ["abomasnow", "abra", "absol", "ae
 export const abilities: {readonly [name: string]: dexutil.AbilityData} =
 {
     adaptability: {uid: 0, name: "adaptability", display: "Adaptability"},
-    aftermath: {uid: 1, name: "aftermath", display: "Aftermath", on: {moveContactKO: {explosive: true, effects: [{type: "percentDamage", value: -25}]}}},
+    aftermath: {uid: 1, name: "aftermath", display: "Aftermath", on: {moveContactKO: {explosive: true, percentDamage: -25}}},
     airlock: {uid: 2, name: "airlock", display: "Air Lock", flags: {suppressWeather: true}},
     angerpoint: {uid: 3, name: "angerpoint", display: "Anger Point"},
     anticipation: {uid: 4, name: "anticipation", display: "Anticipation"},
@@ -586,17 +585,17 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     cloudnine: {uid: 11, name: "cloudnine", display: "Cloud Nine", flags: {suppressWeather: true}},
     colorchange: {uid: 12, name: "colorchange", display: "Color Change", on: {moveDamage: {changeToMoveType: true}}},
     compoundeyes: {uid: 13, name: "compoundeyes", display: "Compound Eyes"},
-    cutecharm: {uid: 14, name: "cutecharm", display: "Cute Charm", on: {moveContact: {chance: 30, tgt: "user", effects: [{type: "status", value: "attract"}]}}},
+    cutecharm: {uid: 14, name: "cutecharm", display: "Cute Charm", on: {moveContact: {chance: 30, tgt: "user", status: ["attract"]}}},
     damp: {uid: 15, name: "damp", display: "Damp", on: {block: {effect: {explosive: true}}}},
     download: {uid: 16, name: "download", display: "Download"},
     drizzle: {uid: 17, name: "drizzle", display: "Drizzle"},
     drought: {uid: 18, name: "drought", display: "Drought"},
-    dryskin: {uid: 19, name: "dryskin", display: "Dry Skin", on: {block: {move: {type: "water", effects: [{type: "percentDamage", value: 25}]}}}},
+    dryskin: {uid: 19, name: "dryskin", display: "Dry Skin", on: {block: {move: {type: "water", percentDamage: 25}}}},
     earlybird: {uid: 20, name: "earlybird", display: "Early Bird"},
-    effectspore: {uid: 21, name: "effectspore", display: "Effect Spore", on: {moveContact: {chance: 30, tgt: "user", effects: [{type: "status", value: "par"}, {type: "status", value: "psn"}, {type: "status", value: "slp"}]}}},
+    effectspore: {uid: 21, name: "effectspore", display: "Effect Spore", on: {moveContact: {chance: 30, tgt: "user", status: ["par", "psn", "slp"]}}},
     filter: {uid: 22, name: "filter", display: "Filter"},
-    flamebody: {uid: 23, name: "flamebody", display: "Flame Body", on: {moveContact: {chance: 30, tgt: "user", effects: [{type: "status", value: "brn"}]}}},
-    flashfire: {uid: 24, name: "flashfire", display: "Flash Fire", on: {block: {move: {type: "fire", effects: [{type: "status", value: "flashFire"}]}}}},
+    flamebody: {uid: 23, name: "flamebody", display: "Flame Body", on: {moveContact: {chance: 30, tgt: "user", status: ["brn"]}}},
+    flashfire: {uid: 24, name: "flashfire", display: "Flash Fire", on: {block: {move: {type: "fire", status: "flashFire"}}}},
     flowergift: {uid: 25, name: "flowergift", display: "Flower Gift"},
     forecast: {uid: 26, name: "forecast", display: "Forecast"},
     forewarn: {uid: 27, name: "forewarn", display: "Forewarn", on: {start: {warnStrongestMove: true}}},
@@ -629,7 +628,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     marvelscale: {uid: 54, name: "marvelscale", display: "Marvel Scale"},
     minus: {uid: 55, name: "minus", display: "Minus"},
     moldbreaker: {uid: 56, name: "moldbreaker", display: "Mold Breaker", on: {start: {}}, flags: {ignoreTargetAbility: true}},
-    motordrive: {uid: 57, name: "motordrive", display: "Motor Drive", on: {block: {move: {type: "electric", effects: [{type: "boost", add: {spe: 1}}]}}}},
+    motordrive: {uid: 57, name: "motordrive", display: "Motor Drive", on: {block: {move: {type: "electric", boost: {spe: 1}}}}},
     multitype: {uid: 58, name: "multitype", display: "Multitype"},
     naturalcure: {uid: 59, name: "naturalcure", display: "Natural Cure", on: {switchOut: {cure: true}}},
     noguard: {uid: 60, name: "noguard", display: "No Guard"},
@@ -640,7 +639,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     pickup: {uid: 65, name: "pickup", display: "Pickup"},
     plus: {uid: 66, name: "plus", display: "Plus"},
     poisonheal: {uid: 67, name: "poisonheal", display: "Poison Heal"},
-    poisonpoint: {uid: 68, name: "poisonpoint", display: "Poison Point", on: {moveContact: {chance: 30, tgt: "user", effects: [{type: "status", value: "psn"}]}}},
+    poisonpoint: {uid: 68, name: "poisonpoint", display: "Poison Point", on: {moveContact: {chance: 30, tgt: "user", status: ["psn"]}}},
     pressure: {uid: 69, name: "pressure", display: "Pressure", on: {start: {}}},
     purepower: {uid: 70, name: "purepower", display: "Pure Power"},
     quickfeet: {uid: 71, name: "quickfeet", display: "Quick Feet"},
@@ -648,7 +647,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     reckless: {uid: 73, name: "reckless", display: "Reckless"},
     rivalry: {uid: 74, name: "rivalry", display: "Rivalry"},
     rockhead: {uid: 75, name: "rockhead", display: "Rock Head", flags: {noIndirectDamage: "recoil"}},
-    roughskin: {uid: 76, name: "roughskin", display: "Rough Skin", on: {moveContact: {tgt: "user", effects: [{type: "percentDamage", value: -6.25}]}}},
+    roughskin: {uid: 76, name: "roughskin", display: "Rough Skin", on: {moveContact: {tgt: "user", percentDamage: -6.25}}},
     runaway: {uid: 77, name: "runaway", display: "Run Away"},
     sandstream: {uid: 78, name: "sandstream", display: "Sand Stream"},
     sandveil: {uid: 79, name: "sandveil", display: "Sand Veil"},
@@ -669,7 +668,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     soundproof: {uid: 94, name: "soundproof", display: "Soundproof"},
     speedboost: {uid: 95, name: "speedboost", display: "Speed Boost"},
     stall: {uid: 96, name: "stall", display: "Stall"},
-    static: {uid: 97, name: "static", display: "Static", on: {moveContact: {chance: 30, tgt: "user", effects: [{type: "status", value: "par"}]}}},
+    static: {uid: 97, name: "static", display: "Static", on: {moveContact: {chance: 30, tgt: "user", status: ["par"]}}},
     steadfast: {uid: 98, name: "steadfast", display: "Steadfast"},
     stench: {uid: 99, name: "stench", display: "Stench"},
     stickyhold: {uid: 100, name: "stickyhold", display: "Sticky Hold"},
@@ -690,8 +689,8 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     unaware: {uid: 115, name: "unaware", display: "Unaware"},
     unburden: {uid: 116, name: "unburden", display: "Unburden"},
     vitalspirit: {uid: 117, name: "vitalspirit", display: "Vital Spirit", on: {start: {cure: true}, block: {status: true}, status: {cure: true}}, statusImmunity: {slp: true}},
-    voltabsorb: {uid: 118, name: "voltabsorb", display: "Volt Absorb", on: {block: {move: {type: "electric", effects: [{type: "percentDamage", value: 25}]}}}},
-    waterabsorb: {uid: 119, name: "waterabsorb", display: "Water Absorb", on: {block: {move: {type: "water", effects: [{type: "percentDamage", value: 25}]}}}},
+    voltabsorb: {uid: 118, name: "voltabsorb", display: "Volt Absorb", on: {block: {move: {type: "electric", percentDamage: 25}}}},
+    waterabsorb: {uid: 119, name: "waterabsorb", display: "Water Absorb", on: {block: {move: {type: "water", percentDamage: 25}}}},
     waterveil: {uid: 120, name: "waterveil", display: "Water Veil", on: {start: {cure: true}, block: {status: true}, status: {cure: true}}, statusImmunity: {brn: true}},
     whitesmoke: {uid: 121, name: "whitesmoke", display: "White Smoke", on: {tryUnboost: {block: {atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true, evasion: true}}}},
     wonderguard: {uid: 122, name: "wonderguard", display: "Wonder Guard"}
@@ -1241,7 +1240,7 @@ export function isTwoTurnMove(value: any): value is TwoTurnMove
 }
 
 /** Maps move name to its CallType, if any. Primarily used for easy testing. */
-export const moveCallers: {readonly [name: string]: effects.CallType} =
+export const moveCallers: {readonly [name: string]: dexutil.CallType} =
 {
     assist: true,
     copycat: "copycat",
@@ -1290,7 +1289,7 @@ export const items: {readonly [name: string]: dexutil.ItemData} =
     bigroot: {uid: 9, name: "bigroot", display: "Big Root"},
     blackbelt: {uid: 10, name: "blackbelt", display: "Black Belt"},
     blackglasses: {uid: 11, name: "blackglasses", display: "Black Glasses"},
-    blacksludge: {uid: 12, name: "blacksludge", display: "Black Sludge", on: {turn: {poison: [{type: "percentDamage", value: 6.25}], noPoison: [{type: "percentDamage", value: -12.5}]}}},
+    blacksludge: {uid: 12, name: "blacksludge", display: "Black Sludge", on: {turn: {poisonDamage: 6.25, noPoisonDamage: -12.5}}},
     blukberry: {uid: 13, name: "blukberry", display: "Bluk Berry", isBerry: true},
     brightpowder: {uid: 14, name: "brightpowder", display: "Bright Powder"},
     charcoal: {uid: 15, name: "charcoal", display: "Charcoal"},
@@ -1332,7 +1331,7 @@ export const items: {readonly [name: string]: dexutil.ItemData} =
     figyberry: {uid: 51, name: "figyberry", display: "Figy Berry", isBerry: true, consumeOn: {update: {condition: "hp", threshold: 50, effect: {type: "healPercent", heal: 12.5, dislike: "atk"}}}},
     firestone: {uid: 52, name: "firestone", display: "Fire Stone"},
     fistplate: {uid: 53, name: "fistplate", display: "Fist Plate", plateType: "fighting"},
-    flameorb: {uid: 54, name: "flameorb", display: "Flame Orb", on: {turn: {effects: [{type: "status", value: "brn"}]}}},
+    flameorb: {uid: 54, name: "flameorb", display: "Flame Orb", on: {turn: {status: "brn"}}},
     flameplate: {uid: 55, name: "flameplate", display: "Flame Plate", plateType: "fire"},
     focusband: {uid: 56, name: "focusband", display: "Focus Band"},
     focussash: {uid: 57, name: "focussash", display: "Focus Sash"},
@@ -1365,11 +1364,11 @@ export const items: {readonly [name: string]: dexutil.ItemData} =
     lansatberry: {uid: 84, name: "lansatberry", display: "Lansat Berry", isBerry: true, consumeOn: {update: {condition: "hp", threshold: 25, effect: {type: "focusEnergy"}}}},
     laxincense: {uid: 85, name: "laxincense", display: "Lax Incense"},
     leafstone: {uid: 86, name: "leafstone", display: "Leaf Stone"},
-    leftovers: {uid: 87, name: "leftovers", display: "Leftovers", on: {turn: {effects: [{type: "percentDamage", value: 6.25}]}}},
+    leftovers: {uid: 87, name: "leftovers", display: "Leftovers", on: {turn: {poisonDamage: 6.25, noPoisonDamage: 6.25}}},
     leppaberry: {uid: 88, name: "leppaberry", display: "Leppa Berry", isBerry: true, consumeOn: {update: {condition: "depleted", restore: 10}}},
     levelball: {uid: 89, name: "levelball", display: "Level Ball"},
     liechiberry: {uid: 90, name: "liechiberry", display: "Liechi Berry", isBerry: true, consumeOn: {update: {condition: "hp", threshold: 25, effect: {type: "boost", boostOne: {atk: 1}}}}},
-    lifeorb: {uid: 91, name: "lifeorb", display: "Life Orb", on: {movePostDamage: [{type: "percentDamage", value: -10}]}},
+    lifeorb: {uid: 91, name: "lifeorb", display: "Life Orb", on: {movePostDamage: {percentDamage: -10}}},
     lightball: {uid: 92, name: "lightball", display: "Light Ball"},
     lightclay: {uid: 93, name: "lightclay", display: "Light Clay"},
     loveball: {uid: 94, name: "loveball", display: "Love Ball"},
@@ -1468,7 +1467,7 @@ export const items: {readonly [name: string]: dexutil.ItemData} =
     sportball: {uid: 187, name: "sportball", display: "Sport Ball"},
     starfberry: {uid: 188, name: "starfberry", display: "Starf Berry", isBerry: true, consumeOn: {update: {condition: "hp", threshold: 25, effect: {type: "boost", boostOne: {atk: 2, def: 2, spa: 2, spd: 2, spe: 2}}}}},
     stick: {uid: 189, name: "stick", display: "Stick"},
-    stickybarb: {uid: 190, name: "stickybarb", display: "Sticky Barb", on: {turn: {effects: [{type: "percentDamage", value: -12.5}]}}},
+    stickybarb: {uid: 190, name: "stickybarb", display: "Sticky Barb", on: {turn: {poisonDamage: -12.5, noPoisonDamage: -12.5}}},
     stoneplate: {uid: 191, name: "stoneplate", display: "Stone Plate", plateType: "rock"},
     sunstone: {uid: 192, name: "sunstone", display: "Sun Stone"},
     tamatoberry: {uid: 193, name: "tamatoberry", display: "Tamato Berry", isBerry: true},
@@ -1476,7 +1475,7 @@ export const items: {readonly [name: string]: dexutil.ItemData} =
     thickclub: {uid: 195, name: "thickclub", display: "Thick Club"},
     thunderstone: {uid: 196, name: "thunderstone", display: "Thunder Stone"},
     timerball: {uid: 197, name: "timerball", display: "Timer Ball"},
-    toxicorb: {uid: 198, name: "toxicorb", display: "Toxic Orb", on: {turn: {effects: [{type: "status", value: "tox"}]}}},
+    toxicorb: {uid: 198, name: "toxicorb", display: "Toxic Orb", on: {turn: {status: "tox"}}},
     toxicplate: {uid: 199, name: "toxicplate", display: "Toxic Plate", plateType: "poison"},
     twistedspoon: {uid: 200, name: "twistedspoon", display: "Twisted Spoon"},
     ultraball: {uid: 201, name: "ultraball", display: "Ultra Ball"},

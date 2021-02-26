@@ -2,7 +2,6 @@ import { expect } from "chai";
 import "mocha";
 import { BattleAgent } from "../../../../src/battle/agent/BattleAgent";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
-import * as effects from "../../../../src/battle/dex/effects";
 import * as events from "../../../../src/battle/parser/BattleEvent";
 import { ChoiceSender, ParserState, SubParser, SubParserResult } from
     "../../../../src/battle/parser/BattleParser";
@@ -112,7 +111,7 @@ export function testEvents()
 
     describe("activateFieldEffect", function()
     {
-        function test(name: string, effect: effects.FieldType)
+        function test(name: string, effect: dexutil.FieldEffectType)
         {
             if (dexutil.isWeatherType(effect))
             {
@@ -163,7 +162,7 @@ export function testEvents()
 
     describe("activateStatusEffect", function()
     {
-        function test(name: string, effect: effects.StatusType,
+        function test(name: string, effect: dexutil.StatusType,
             getter: (v: ReadonlyVolatileStatus) => boolean)
         {
             it(`Should activate ${name}`, async function()
@@ -392,7 +391,7 @@ export function testEvents()
         testHazard("Toxic Spikes", "toxicSpikes");
 
         function testEffect(name: string,
-            effect: effects.TeamType | effects.ImplicitTeamType,
+            effect: dexutil.TeamEffectType | dexutil.ImplicitTeamEffectType,
             getter: (ts: ReadonlyTeamStatus) => boolean)
         {
             it(`Should activate ${name}`, async function()
@@ -575,7 +574,7 @@ export function testEvents()
     describe("countStatusEffect", function()
     {
         function test(name: string,
-            effect: effects.CountableStatusType): void
+            effect: dexutil.CountableStatusType): void
         {
             it(`Should update ${name} count`, async function()
             {
@@ -1344,7 +1343,7 @@ export function testEvents()
 
     describe("updateStatusEffect", function()
     {
-        async function test(name: string, effect: effects.UpdatableStatusType)
+        async function test(name: string, effect: dexutil.UpdatableStatusType)
         {
             it(`Should update ${name}`, async function()
             {
