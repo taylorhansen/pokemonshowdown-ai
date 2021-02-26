@@ -911,11 +911,12 @@ async function* otherEffects(ctx: MoveContext, lastEvent?: events.Any):
     if (moveEffects?.field)
     {
         const fieldResult = yield* parsers.fieldEffect(ctx.pstate, ctx.user,
-            moveEffects.field, lastEvent);
+            moveEffects.field.effect, moveEffects.field.toggle, lastEvent);
         if (!fieldResult.success)
         {
             throw new Error("Expected effect that didn't happen: " +
-                `field ${moveEffects.field}`);
+                `field ${moveEffects.field.effect}` +
+                (moveEffects.field.toggle ? " toggle" : ""));
         }
         lastEvent = fieldResult.event;
     }

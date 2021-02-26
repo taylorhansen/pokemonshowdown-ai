@@ -491,7 +491,13 @@ export interface MoveData extends DexData
         readonly team?: {readonly [T in MoveEffectTarget]?: TeamEffectType};
 
         /** Field effect to start. */
-        readonly field?: FieldEffectType;
+        readonly field?:
+        {
+            /** Effect to start. */
+            readonly effect: FieldEffectType;
+            /** Whether this move can toggle the effect. */
+            readonly toggle?: true;
+        }
 
         /**
          * Change the target's type to the type of one of the target's known

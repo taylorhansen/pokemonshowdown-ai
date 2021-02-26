@@ -225,15 +225,16 @@ export async function* faint(pstate: ParserState, monRef: Side,
  * Expects a field effect to be started.
  * @param source Pokemon that originated the effect.
  * @param effectType Effect type being expected.
+ * @param toggle Whether the effect can be toggled.
  */
 export async function* fieldEffect(pstate: ParserState, source: Pokemon | null,
-    effectType: dexutil.FieldEffectType, lastEvent?: events.Any):
-    SubParser<SuccessResult>
+    effectType: dexutil.FieldEffectType, toggle?: boolean,
+    lastEvent?: events.Any): SubParser<SuccessResult>
 {
     // TODO: silently pass without event if effect already present
     const event = lastEvent ?? (yield);
     if (event.type !== "activateFieldEffect") return {event};
-    if (!event.start) return {event};
+    if (!event.start && !toggle) return {event};
     if (event.effect !== effectType) return {event};
     return {
         ...yield* base.activateFieldEffect(pstate, event, source), success: true

@@ -2645,6 +2645,20 @@ export function testUseMove(ctxFunc: () => Context,
                     start: true
                 });
             });
+
+            it("Should toggle trickRoom", async function()
+            {
+                initActive("us");
+                initActive("them");
+                state.status.trickRoom.start();
+                await initParser("us", "trickroom");
+                await handle(
+                {
+                    type: "activateFieldEffect", effect: "trickRoom",
+                    start: false
+                });
+                await exitParser();
+            });
         });
 
         moveEffectTests.field.push(() => describe("Weather", function()

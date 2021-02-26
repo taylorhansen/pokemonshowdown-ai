@@ -164,13 +164,16 @@ const countableStatusTypeMap:
     {perishsong: "perish", stockpile: "stockpile"};
 
 /** Maps some move names to FieldTypes. */
-const fieldTypeMap: {readonly [move: string]: dexutil.FieldEffectType} =
+const fieldTypeMap:
+{
+    readonly [move: string]: NonNullable<dexutil.MoveData["effects"]>["field"]
+} =
 {
     // weathers
-    sunnyday: "SunnyDay", raindance: "RainDance", sandstorm: "Sandstorm",
-    hail: "Hail",
+    sunnyday: {effect: "SunnyDay"}, raindance: {effect: "RainDance"},
+    sandstorm: {effect: "Sandstorm"}, hail: {effect: "Hail"},
     // pseudo-weathers
-    gravity: "gravity", trickroom: "trickRoom"
+    gravity: {effect: "gravity"}, trickroom: {effect: "trickRoom", toggle: true}
 };
 
 /** Maps some move names or effects to StatusTypes. */
