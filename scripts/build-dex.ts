@@ -315,9 +315,15 @@ for (const move of
     }
 
     const type = move.type.toLowerCase() as dexutil.Type;
-    let modifyType: "hpType" | "plateType" | undefined;
-    if (move.id === "hiddenpower") modifyType = "hpType";
-    else if (move.id === "judgment") modifyType = "plateType";
+    let modifyType: dexutil.MoveData["modifyType"];
+    switch (move.id)
+    {
+        case "hiddenpower": modifyType = "hpType"; break;
+        case "judgment": modifyType = "plateType"; break;
+        case "struggle": modifyType = "???"; break;
+    }
+    // note: conversion move (which uses this obj) treats modifyType moves as
+    //  their default type (normal)
     typeToMoves[type].push(move.id);
 
     const target = move.target;
@@ -494,7 +500,12 @@ for (const move of
 
         ...move.drain && {drain: move.drain},
 
-        ...move.recoil && {recoil: move.recoil},
+        ...move.recoil ?
+        {recoil: {
+            ratio: move.recoil, ...move.struggleRecoil && {struggle: true}
+        }}
+        : move.struggleRecoil ? {recoil: {ratio: [1, 4], struggle: true}}
+        : {},
 
         ...move.selfdestruct &&
             {selfFaint: move.selfdestruct as dexutil.MoveSelfFaint},

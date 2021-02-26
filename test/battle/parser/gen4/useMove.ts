@@ -694,6 +694,17 @@ export function testUseMove(ctxFunc: () => Context,
             await exitParser();
         });
 
+        it("Should treat Struggle as a typeless move", async function()
+        {
+            initActive("us").volatile.addedType = "steel";
+            initActive("them");
+            await initParser("them", "struggle");
+            await handle({type: "takeDamage", monRef: "us", hp: 50});
+            await handle(
+                {type: "takeDamage", monRef: "them", hp: 50, from: "recoil"});
+            await exitParser();
+        });
+
         describe("immune", function()
         {
             it("Should handle type immunity and cancel move effects",

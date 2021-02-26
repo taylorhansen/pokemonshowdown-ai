@@ -364,9 +364,10 @@ export interface MoveData extends DexData
      * `"hpType"` - User's base hiddenpower type (pre-Transform).  
      * `"plateType"` - Type of held plate item, if any. Defaults to the original
      * move type if no plate.
+     * `"???"` - Move is treated as typeless when used.
      */
     // tslint:enable: no-trailing-whitespace
-    readonly modifyType?: "hpType" | "plateType";
+    readonly modifyType?: "hpType" | "plateType" | "???";
     /** Target of the move. */
     readonly target: MoveTarget;
     /**
@@ -513,8 +514,17 @@ export interface MoveData extends DexData
 
         // ability on-moveDamage, etc
 
-        /** Fraction of move damage being dealt to the user. */
-        readonly recoil?: readonly [number, number];
+        /** Self-inflicted damage. */
+        readonly recoil?:
+        {
+            /** Fraction of move damage being dealt to the user. */
+            readonly ratio: readonly [number, number];
+            /**
+             * Whether this is Struggle recoil, i.e., the fraction applies to
+             * the user's max HP rather than damage dealt.
+             */
+            readonly struggle?: true;
+        }
 
         // TODO: item removal (trick, knockoff, covet, etc)
 

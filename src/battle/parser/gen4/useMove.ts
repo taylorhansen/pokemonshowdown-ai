@@ -1154,38 +1154,44 @@ function handleTypeEffectiveness(ctx: MoveContext,
     const expectedMoveTypes = getAttackerTypes(defender.types, effectiveness,
         binary);
     let moveType: dexutil.Type;
-    if (ctx.moveData.modifyType === "hpType")
+    switch (ctx.moveData.modifyType)
     {
-        const {hpType} = ctx.user;
-        if (!hpType.definiteValue)
+        case "hpType":
         {
-            // look for types that would match the given effectiveness
-            hpType.narrow(expectedMoveTypes);
-            // the assertion at the end would be guaranteed to pass if we fully
-            //  narrowed the hpType, so return regardless
-            return;
-        }
+            const {hpType} = ctx.user;
+            if (!hpType.definiteValue)
+            {
+                // look for types that would match the given effectiveness
+                hpType.narrow(expectedMoveTypes);
+                // the assertion at the end would be guaranteed to pass if we
+                //  fully narrowed the hpType, so return regardless
+                return;
+            }
 
-        moveType = hpType.definiteValue as dexutil.Type;
-    }
-    else if (ctx.moveData.modifyType === "plateType")
-    {
-        const heldItem = ctx.user.item;
-        if (!heldItem.definiteValue)
+            moveType = hpType.definiteValue as dexutil.Type;
+            break;
+        }
+        case "plateType":
         {
-            // look for plate items that would match the given effectiveness
-            heldItem.narrow(
-                (_, i) => expectedMoveTypes.has(
-                    i.plateType ?? ctx.moveData.type));
-            // the assertion at the end would be guaranteed to pass if we fully
-            //  narrowed the item/plate, so return regardless
-            return;
-        }
+            const heldItem = ctx.user.item;
+            if (!heldItem.definiteValue)
+            {
+                // look for plate items that would match the given effectiveness
+                heldItem.narrow(
+                    (_, i) => expectedMoveTypes.has(
+                        i.plateType ?? ctx.moveData.type));
+                // the assertion at the end would be guaranteed to pass if we
+                //  fully narrowed the item/plate, so return regardless
+                return;
+            }
 
-        const {plateType} = heldItem.map[heldItem.definiteValue];
-        moveType = plateType ?? ctx.moveData.type;
+            const {plateType} = heldItem.map[heldItem.definiteValue];
+            moveType = plateType ?? ctx.moveData.type;
+            break;
+        }
+        case "???": moveType = "???"; break;
+        default: moveType = ctx.moveData.type;
     }
-    else moveType = ctx.moveData.type;
 
     // assert type effectiveness
     const expectedEff = getTypeEffectiveness(defender.types, moveType,
