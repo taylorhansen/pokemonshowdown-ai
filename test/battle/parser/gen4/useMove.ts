@@ -707,6 +707,14 @@ export function testUseMove(ctxFunc: () => Context,
 
             it("Should handle status immunity", async function()
             {
+                initActive("us").volatile.addedType = "grass";
+                initActive("them");
+                await initParser("them", "leechseed");
+                await handleEnd({type: "immune", monRef: "us"});
+            });
+
+            it("Should handle major status immunity", async function()
+            {
                 initActive("us").volatile.addedType = "poison";
                 initActive("them");
                 await initParser("them", "toxic");

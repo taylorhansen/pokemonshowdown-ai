@@ -1,7 +1,7 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
-import { Effectiveness, getAttackerTypes, getTypeEffectiveness, typechart } from
-    "../../dex/typechart";
+import { canBlockStatus, Effectiveness, getAttackerTypes, getTypeEffectiveness }
+    from "../../dex/typechart";
 import { Move } from "../../state/Move";
 import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
@@ -1194,8 +1194,7 @@ function handleTypeEffectiveness(ctx: MoveContext,
         // could be a status move being blocked by a type-based status immunity
         if (effectiveness === "immune" && ctx.moveData.category === "status" &&
             ctx.moveData.effects?.status?.hit?.every(s =>
-                dexutil.isMajorStatus(s) &&
-                    defender.types.some(t => typechart[t][s])))
+                    canBlockStatus(defender.types, s)))
         {
             return;
         }

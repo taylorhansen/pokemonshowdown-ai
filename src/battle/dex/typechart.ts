@@ -65,8 +65,15 @@ function multiplierToEffectiveness(multiplier: number, binary?: boolean):
     return "regular";
 }
 
+/** Checks whether the defender is immune to the given status. */
+export function canBlockStatus(defender: readonly dexutil.Type[],
+    status: dexutil.StatusType): boolean
+{
+    return defender.some(t => typechart[t][status]);
+}
+
 type AttackerMap = {readonly [TAttacker in dexutil.Type]: number};
-type StatusMap = {readonly [TStatus in dexutil.MajorStatus]?: boolean};
+type StatusMap = {readonly [TStatus in dexutil.StatusType]?: boolean};
 
 // TODO: include TDefender's weather immunity, groundedness, etc
 // tslint:disable: no-trailing-whitespace (force newline in doc)
@@ -142,7 +149,8 @@ export const typechart:
     {
         "???": 1, bug: 2, dark: 1, dragon: 1, electric: 0.5, fighting: 1,
         fire: 2, flying: 2, ghost: 1, grass: 0.5, ground: 0.5, ice: 2,
-        normal: 1, poison: 2, psychic: 1, rock: 1, steel: 1, water: 0.5
+        normal: 1, poison: 2, psychic: 1, rock: 1, steel: 1, water: 0.5,
+        leechSeed: true
     },
     ground:
     {
