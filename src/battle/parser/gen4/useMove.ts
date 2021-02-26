@@ -421,7 +421,7 @@ async function* checkDelay(ctx: MoveContext, lastEvent?: events.Any):
     return {...lastEvent && {event: lastEvent}};
 }
 
-// TODO(doubles): communicate whether only one of the targets blocks the move
+// TODO(doubles): handle multiple targets
 /**
  * Checks for and acts upon any pre-hit blocking effects and abilities. Result
  * has `#success=true` if the move was blocked.
@@ -452,8 +452,13 @@ async function* checkBlock(ctx: MoveContext, lastEvent?: events.Any):
             };
         }
         // normal block event (safeguard, protect, etc)
-        // this also includes endure due to weird PS event ordering
-        return {...yield* base.block(ctx.pstate, lastEvent), success: true};
+        // this may also include endure due to weird PS event ordering
+        if (lastEvent.effect !== "endure")
+        {
+            handleBlock(ctx);
+            return {...yield* base.block(ctx.pstate, lastEvent), success: true};
+        }
+        lastEvent = (yield* base.block(ctx.pstate, lastEvent)).event;
     }
     else if (lastEvent.type === "miss" && addTarget(ctx, lastEvent.monRef))
     {
@@ -1754,8 +1759,8 @@ function handleBlock(ctx: MoveContext): void
     // non-called moves affect the stall counter
     if (!ctx.called) ctx.user.volatile.stall(false);
 
-    // clear continuous moves
-    ctx.user.volatile.lockedMove.reset();
+    // interrupted momentum move
+    // TODO(gen>=5): also reset rampage move
     ctx.user.volatile.rollout.reset();
 }
 

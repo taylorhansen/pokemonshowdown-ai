@@ -3034,6 +3034,7 @@ export function testUseMove(ctxFunc: () => Context,
                 it(`Should set if using ${move}`, async function()
                 {
                     const mon = initActive("us");
+                    initActive("them");
                     await initParser("us", move);
                     await handle(event);
                     await exitParser();
@@ -3043,6 +3044,7 @@ export function testUseMove(ctxFunc: () => Context,
                 it(`Should not set if ${move} failed`, async function()
                 {
                     const mon = initActive("us");
+                    initActive("them");
                     await initParser("us", move);
                     await handle({type: "fail"});
                     await exitParser();
@@ -3057,12 +3059,14 @@ export function testUseMove(ctxFunc: () => Context,
         testImplicitStatusEffect("Minimize", "minimize",
             {type: "boost", monRef: "us", stat: "evasion", amount: 1},
             mon => mon.volatile.minimize);
-        // TODO: add mustRecharge effect
+        testImplicitStatusEffect("Must recharge", "hyperbeam",
+            {type: "takeDamage", monRef: "them", hp: 1},
+            mon => mon.volatile.mustRecharge);
 
         function testLockingMoves<T extends string>(name: string,
             keys: readonly T[],
-            getter: (mon: ReadonlyPokemon) => ReadonlyVariableTempStatus<T>):
-            void
+            getter: (mon: ReadonlyPokemon) => ReadonlyVariableTempStatus<T>,
+            resetOnMiss?: boolean): void
         {
             implicitEffectTests.status.push(() => describe(name,
                 () => keys.forEach(move => describe(move, function()
@@ -3079,30 +3083,32 @@ export function testUseMove(ctxFunc: () => Context,
                         state.postTurn();
                         expect(vts.isActive).to.be.true;
                         expect(vts.type).to.equal(move);
+                        expect(vts.turns).to.equal(0);
                         return vts;
                     }
 
                     it("Should set if successful", init);
 
-                    it("Should reset if missed", async function()
-                    {
-                        const vts = await init();
-                        await initParser("them", move);
-                        expect(vts.isActive).to.be.true;
-                        await handle({type: "miss", monRef: "us"});
-                        expect(vts.isActive).to.be.false;
-                    });
-
-                    it("Should reset if opponent protected",
+                    it(`Should ${resetOnMiss ? "" : "not "}reset if missed`,
                     async function()
                     {
                         const vts = await init();
                         await initParser("them", move);
-                        expect(vts.isActive).to.be.true;
+                        await handleEnd({type: "miss", monRef: "us"});
+                        expect(vts.isActive)
+                            .to.be[resetOnMiss ? "false" : "true"];
+                    });
 
-                        await handle(
+                    it(`Should ${resetOnMiss ? "" : "not "}reset if opponent ` +
+                        "protected",
+                    async function()
+                    {
+                        const vts = await init();
+                        await initParser("them", move);
+                        await handleEnd(
                             {type: "block", monRef: "us", effect: "protect"});
-                        expect(vts.isActive).to.be.false;
+                        expect(vts.isActive)
+                            .to.be[resetOnMiss ? "false" : "true"];
                     });
 
                     it("Should not reset if opponent endured",
@@ -3110,10 +3116,9 @@ export function testUseMove(ctxFunc: () => Context,
                     {
                         const vts = await init();
                         await initParser("them", move);
-                        expect(vts.isActive).to.be.true;
-
                         await handle(
                             {type: "block", monRef: "us", effect: "endure"});
+                        await exitParser();
                         expect(vts.isActive).to.be.true;
                     });
 
@@ -3121,9 +3126,6 @@ export function testUseMove(ctxFunc: () => Context,
                     async function()
                     {
                         const vts = await init();
-                        expect(vts.isActive).to.be.true;
-                        expect(vts.turns).to.equal(0);
-
                         await initParser("them", move);
                         expect(vts.isActive).to.be.true;
                         expect(vts.turns).to.equal(0);
@@ -3145,7 +3147,7 @@ export function testUseMove(ctxFunc: () => Context,
         // TODO: add rollout moves to dex and MoveData
         // TODO: rename to momentum move
         testLockingMoves("Rollout moves", dexutil.rolloutKeys,
-            mon => mon.volatile.rollout);
+            mon => mon.volatile.rollout, /*resetOnMiss*/ true);
 
         //#endregion
 
@@ -3172,8 +3174,8 @@ export function testUseMove(ctxFunc: () => Context,
                     initActive("them");
                     await initParser("them", move);
                     await handle({type: "fail"});
-                    expect(getter(state.teams.them)).to.be.false;
                     await exitParser();
+                    expect(getter(state.teams.them)).to.be.false;
                 });
             }));
         }
@@ -3225,11 +3227,13 @@ export function testUseMove(ctxFunc: () => Context,
                     const team = state.teams.them;
                     await initParser("them", move);
                     await handle({type: "fail"});
+                    await exitParser();
                     expect(team.status[effect]).to.be.false;
                 });
 
                 it("Should throw if no faint", async function()
                 {
+                    initActive("us");
                     initActive("them");
                     await initParser("them", move);
                     await expect(handle(
@@ -3244,6 +3248,9 @@ export function testUseMove(ctxFunc: () => Context,
         }
 
         //#endregion
+
+        describe("Status", () => implicitEffectTests.status.forEach(f => f()));
+        describe("Team", () => implicitEffectTests.team.forEach(f => f()));
     });
 
     // TODO: track in MoveData
