@@ -28,8 +28,14 @@ export function testRemoveItem(f: () => Context,
         on: dexutil.ItemConsumeOn | null = null, hitByMove?: dexutil.MoveData,
         userRef?: Side): Promise<SubParser>
     {
+        let hitBy: dexutil.MoveAndUserRef | undefined;
+        if (hitByMove && userRef)
+        {
+            hitBy = {move: dex.getMove(hitByMove), userRef};
+        }
+
         parser = consumeItem.removeItem(pstate,
-            {type: "removeItem", monRef, consumed}, on, hitByMove, userRef);
+            {type: "removeItem", monRef, consumed}, on, hitBy);
         // first yield doesn't return anything
         await expect(parser.next())
             .to.eventually.become({value: undefined, done: false});
@@ -41,8 +47,14 @@ export function testRemoveItem(f: () => Context,
         userRef?: Side, result: consumeItem.ItemConsumeResult = {}):
         Promise<SubParser<consumeItem.ItemConsumeResult>>
     {
+        let hitBy: dexutil.MoveAndUserRef | undefined;
+        if (hitByMove && userRef)
+        {
+            hitBy = {move: dex.getMove(hitByMove), userRef};
+        }
+
         parser = consumeItem.removeItem(pstate,
-            {type: "removeItem", monRef, consumed}, on, hitByMove, userRef);
+            {type: "removeItem", monRef, consumed}, on, hitBy);
         await expect(parser.next())
             .to.eventually.become({value: result, done: true});
         return parser;
@@ -427,7 +439,8 @@ export function testRemoveItem(f: () => Context,
             it("Should reject unrelated item", async function()
             {
                 initActive("us");
-                await expect(initParser("us", itemName, consumeOn))
+                await expect(initParser("us", itemName, consumeOn,
+                        dex.moves.tackle, "them"))
                     .to.eventually.be.rejectedWith(Error,
                         `ConsumeOn-${consumeOn} effect shouldn't activate ` +
                         `for item '${itemName}'`);
@@ -541,7 +554,7 @@ export function testRemoveItem(f: () => Context,
         async function preHitTaken()
         {
             await altParser(consumeItem.consumeOnPreHit(pstate, {them: true},
-                dex.moves.thunder, "us"));
+                {move: dex.getMove(dex.moves.thunder), userRef: "us"}));
             await handle(
                 {type: "removeItem", monRef: "them", consumed: "wacanberry"});
             await exitParser<consumeItem.ExpectConsumeItemsResult>(
@@ -551,7 +564,7 @@ export function testRemoveItem(f: () => Context,
         async function preHitAbsent()
         {
             await altParser(consumeItem.consumeOnPreHit(pstate, {them: true},
-                dex.moves.thunder, "us"));
+                {move: dex.getMove(dex.moves.thunder), userRef: "us"}));
             await exitParser<consumeItem.ExpectConsumeItemsResult>(
                 {results: []});
         }
@@ -586,7 +599,7 @@ export function testRemoveItem(f: () => Context,
         async function superTaken()
         {
             await altParser(consumeItem.consumeOnSuper(pstate, {them: true},
-                dex.moves.lowkick, "us"));
+                {move: dex.getMove(dex.moves.lowkick), userRef: "us"}));
             await handle(
                 {type: "removeItem", monRef: "them", consumed: "enigmaberry"});
             // enigmaberry heals holder
@@ -598,7 +611,7 @@ export function testRemoveItem(f: () => Context,
         async function superAbsent()
         {
             await altParser(consumeItem.consumeOnSuper(pstate, {them: true},
-                dex.moves.lowkick, "us"));
+                {move: dex.getMove(dex.moves.lowkick), userRef: "us"}));
             await exitParser<consumeItem.ExpectConsumeItemsResult>(
                 {results: []});
         }
@@ -626,7 +639,7 @@ export function testRemoveItem(f: () => Context,
         async function postHitTaken(move: dexutil.MoveData, itemName: string)
         {
             await altParser(consumeItem.consumeOnPostHit(pstate, {them: true},
-                move, "us"));
+                {move: dex.getMove(move), userRef: "us"}));
             await handle(
                 {type: "removeItem", monRef: "them", consumed: itemName});
             // jaboca/rowap berry damage user
@@ -640,7 +653,7 @@ export function testRemoveItem(f: () => Context,
         async function postHitAbsent(move: dexutil.MoveData)
         {
             await altParser(consumeItem.consumeOnPostHit(pstate, {them: true},
-                move, "us"));
+                {move: dex.getMove(move), userRef: "us"}));
             await exitParser<consumeItem.ExpectConsumeItemsResult>(
                 {results: []});
         }

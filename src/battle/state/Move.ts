@@ -6,6 +6,7 @@ export interface ReadonlyMove
 {
     /** Move name. */
     readonly name: string;
+    // TODO: use dex.Move wrapper instead of data
     /** Move data. */
     readonly data: MoveData;
     /** Amount of power points left on this move. */

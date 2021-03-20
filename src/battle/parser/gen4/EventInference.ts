@@ -2,6 +2,7 @@ import * as events from "../BattleEvent";
 import { SubParser, SubParserResult } from "../BattleParser";
 import { eventLoop } from "../helpers";
 
+// TODO: make this a class?
 /**
  * Describes the different but related cases in which a single group of events
  * can be parsed. Should only be created by the `createEventInference()`
@@ -72,6 +73,7 @@ export interface SubInference
     readonly reasons: Set<SubReason>;
 }
 
+// TODO: rename to assumption or premise?
 /** Reason for a SubInference to activate. */
 export interface SubReason
 {

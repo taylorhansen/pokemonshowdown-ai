@@ -73,7 +73,7 @@ export function testSwitchIn(f: () => Context,
         it("Should not handle invalid switch-in", async function()
         {
             await altParser(expectSwitch(pstate, "us"));
-            const event: events.SwitchIn = 
+            const event: events.SwitchIn =
                 {type: "switchIn", monRef: "them", ...smeargle};
             await handleEnd(event, {event});
         });

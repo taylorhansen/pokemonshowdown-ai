@@ -69,9 +69,9 @@ interface MoveContext
     /** User of the move. */
     readonly user: Pokemon;
     /** Dex data for the move. */
-    readonly moveData: dexutil.MoveData;
+    readonly move: dex.Move;
     /** Move object if this event came directly from the user's moveset. */
-    readonly move?: Move;
+    readonly moveState?: Move;
     // TODO: expand for doubles/triples
     /** Maps mon-ref to whether the move may hit them. */
     readonly pendingTargets: {readonly [TMonRef in Side]: boolean};
@@ -127,27 +127,22 @@ function initCtx(pstate: ParserState, event: events.UseMove,
 {
     // TODO: should there be so many exceptions? replace these with error logs
     //  and provide a recovery path if not testing
-    if (!dex.moves.hasOwnProperty(event.move))
-    {
-        throw new Error(`Unsupported move '${event.move}'`);
-    }
+    const moveName = event.move;
+    const move = dex.getMove(moveName);
+    if (!move) throw new Error(`Unknown move '${moveName}'`);
 
     // set last move
     const lastMove = pstate.state.status.lastMove;
     pstate.state.status.lastMove = event.move;
 
-    // event data
+    // other trivial event data
     const userRef = event.monRef;
-    const moveName = event.move;
     const user = pstate.state.teams[userRef].active;
-    const moveData = dex.moves[moveName];
 
     // find out which pokemon should be targeted by the move
     let pendingTargets: {readonly [TMonRef in Side]: boolean};
     let totalTargets: number;
-    // TODO(gen6): nonGhostTarget interactions with protean
-    switch (moveData.nonGhostTarget && !user.types.includes("ghost") ?
-        moveData.nonGhostTarget : moveData.target)
+    switch (move.getTarget(user))
     {
         // TODO: support non-single battles
         case "adjacentAlly":
@@ -180,7 +175,7 @@ function initCtx(pstate: ParserState, event: events.UseMove,
     if (user.volatile.twoTurn.type === moveName)
     {
         user.volatile.twoTurn.reset();
-        if (moveData.effects?.delay?.type !== "twoTurn")
+        if (move.data.effects?.delay?.type !== "twoTurn")
         {
             // istanbul ignore next: should never happen
             throw new Error(`Two-turn move '${moveName}' does not have ` +
@@ -194,7 +189,7 @@ function initCtx(pstate: ParserState, event: events.UseMove,
 
     const mirror =
         // expected to be a charging turn, can't mirror those
-        (moveData.effects?.delay?.type !== "twoTurn" || releasedTwoTurn) &&
+        (move.data.effects?.delay?.type !== "twoTurn" || releasedTwoTurn) &&
         // can't mirror called moves
         !called &&
         // can't mirror called rampage moves
@@ -202,15 +197,15 @@ function initCtx(pstate: ParserState, event: events.UseMove,
         (!continueRollout || !user.volatile.rollout.called) &&
         // default to mirror move flag
         // TODO: should called+released two-turn count? (unique to PS?)
-        !moveData.flags?.noMirror;
+        !move.data.flags?.noMirror;
 
     // setup result object
     const result: MoveContext =
     {
-        pstate, event, called, userRef, moveName, user, moveData,
-        pendingTargets, totalTargets, implicitHandled: false,
-        ignoredHandled: false, mirror, ...lastMove && {lastMove},
-        ...releasedTwoTurn && {releasedTwoTurn}, mentionedTargets: new Map()
+        pstate, event, called, userRef, moveName, user, move, pendingTargets,
+        totalTargets, implicitHandled: false, ignoredHandled: false, mirror,
+        ...lastMove && {lastMove}, ...releasedTwoTurn && {releasedTwoTurn},
+        mentionedTargets: new Map()
     };
 
     // only reveal and deduct pp if this event isn't continuing a multi-turn
@@ -252,7 +247,7 @@ function initCtx(pstate: ParserState, event: events.UseMove,
             "Taunted");
     }
 
-    return {...result, move: revealedMove};
+    return {...result, moveState: revealedMove};
 }
 
 /** Converts a user(us)/target(them) map to an actual monRef us/them map. */
@@ -267,7 +262,7 @@ function framePendingTargets(userRef: Side,
 /** Assertions surrounding the selection of a move. */
 function preMoveAssertions(ctx: MoveContext): void
 {
-    if (ctx.moveData.flags?.focus && !ctx.user.volatile.focus &&
+    if (ctx.move.data.flags?.focus && !ctx.user.volatile.focus &&
         !ctx.user.volatile.encore.ts.isActive && !ctx.called)
     {
         ctx.pstate.logger.error("User has focus=false yet focus move being " +
@@ -362,7 +357,7 @@ async function* checkFail(ctx: MoveContext, lastEvent?: events.Any):
     // fail assertions
     if (success)
     {
-        if (ctx.moveData.flags?.focus && !ctx.user.volatile.damaged)
+        if (ctx.move.data.flags?.focus && !ctx.user.volatile.damaged)
         {
             ctx.pstate.logger.error("User has damaged=false yet focus move " +
                 "failed");
@@ -370,7 +365,7 @@ async function* checkFail(ctx: MoveContext, lastEvent?: events.Any):
     }
     else
     {
-        if (ctx.moveData.flags?.focus && ctx.user.volatile.damaged)
+        if (ctx.move.data.flags?.focus && ctx.user.volatile.damaged)
         {
             ctx.pstate.logger.error("User has damaged=true yet focus move " +
                 "didn't fail");
@@ -396,7 +391,7 @@ interface CheckDelayResult extends SubParserResult
 async function* checkDelay(ctx: MoveContext, lastEvent?: events.Any):
     SubParser<CheckDelayResult>
 {
-    if (!ctx.moveData.effects?.delay)
+    if (!ctx.move.data.effects?.delay)
     {
         return {...lastEvent && {event: lastEvent}};
     }
@@ -438,7 +433,7 @@ async function* checkBlock(ctx: MoveContext, lastEvent?: events.Any):
             const mon = ctx.pstate.state.teams[lastEvent.monRef].active;
             // verify magiccoat and reflectable flags
             if (!mon.volatile.magicCoat || ctx.called === "bounced" ||
-                !ctx.moveData.flags?.reflectable)
+                !ctx.move.data.flags?.reflectable)
             {
                 return {event: lastEvent};
             }
@@ -481,7 +476,7 @@ async function* checkBlock(ctx: MoveContext, lastEvent?: events.Any):
         // ability blocking
         // TODO: precedence with regard to type resist berries, and others?
         const expectResult = yield* ability.onBlock(ctx.pstate,
-            {[targetRef]: true}, ctx.userRef, ctx.moveData, lastEvent);
+            {[targetRef]: true}, ctx, lastEvent);
         for (const abilityResult of expectResult.results)
         {
             // handle block results
@@ -521,11 +516,11 @@ async function* execute(ctx: MoveContext, miss?: boolean,
 /** Handles the possibly multiple hits from a move. */
 async function* hitLoop(ctx: MoveContext, lastEvent?: events.Any): SubParser
 {
-    const maxHits = ctx.moveData.multihit?.[1] ?? 1;
+    const maxHits = ctx.move.data.multihit?.[1] ?? 1;
     let multihitEnded: boolean | undefined; // presence of hitcount event
     for (let i = 0; i < maxHits; ++i)
     {
-        if (ctx.moveData.category !== "status")
+        if (ctx.move.data.category !== "status")
         {
             const preHitResult = yield* preHit(ctx, lastEvent);
             const hitResult = yield* hit(ctx, preHitResult.event);
@@ -550,7 +545,7 @@ async function* hitLoop(ctx: MoveContext, lastEvent?: events.Any): SubParser
             break;
         }
     }
-    if (ctx.moveData.multihit && !multihitEnded)
+    if (ctx.move.data.multihit && !multihitEnded)
     {
         throw new Error("Expected HitCount event to terminate multi-hit move");
     }
@@ -592,7 +587,7 @@ async function* preHit(ctx: MoveContext, lastEvent?: events.Any):
     // check for resist berry effect
     let resistSuper: dexutil.Type | undefined;
     const itemPreHitResult = yield* consumeItem.consumeOnPreHit(ctx.pstate,
-        {[otherSide(ctx.userRef)]: true}, ctx.moveData, ctx.userRef, lastEvent);
+        {[otherSide(ctx.userRef)]: true}, ctx, lastEvent);
     for (const result of itemPreHitResult.results)
     {
         resistSuper ||= result.resistSuper;
@@ -637,7 +632,7 @@ async function* hit(ctx: MoveContext, lastEvent?: events.Any):
                 if (ctx.userRef === event.monRef) break;
                 if (damaged) break;
                 if (!addTarget(ctx, event.monRef)) break;
-                if (ctx.moveData.flags?.ignoreSub)
+                if (ctx.move.data.flags?.ignoreSub)
                 {
                     // istanbul ignore next: can't reproduce until gen5 with
                     //  damaging sub-ignoring moves
@@ -689,7 +684,7 @@ async function* hit(ctx: MoveContext, lastEvent?: events.Any):
 /** Handles move effects after the move officially hits. */
 async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
 {
-    const moveEffects = ctx.moveData.effects;
+    const moveEffects = ctx.move.data.effects;
     if (moveEffects?.count)
     {
         // TODO: if perish, infer soundproof if the counter doesn't take
@@ -770,7 +765,7 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
         lastEvent = (yield* handleBoost(ctx, moveEffects?.boost, lastEvent))
             .event;
     }
-    if (ctx.moveData.category !== "status")
+    if (ctx.move.data.category !== "status")
     {
         // drain effect
         if (moveEffects?.drain)
@@ -778,7 +773,7 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
             // see if an ability interrupts the drain effect
             let blocked: boolean | undefined;
             const expectResult = yield* ability.onMoveDrain(ctx.pstate,
-                {[otherSide(ctx.userRef)]: true}, ctx.moveData, lastEvent);
+                {[otherSide(ctx.userRef)]: true}, ctx, lastEvent);
             for (const abilityResult of expectResult.results)
             {
                 blocked ||= abilityResult.invertDrain;
@@ -812,8 +807,7 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
         if (!holder.fainted)
         {
             const itemSuperResult = yield* consumeItem.consumeOnSuper(
-                ctx.pstate, {[holderRef]: true}, ctx.moveData, ctx.userRef,
-                lastEvent);
+                ctx.pstate, {[holderRef]: true}, ctx, lastEvent);
             lastEvent = itemSuperResult.event;
         }
 
@@ -822,7 +816,7 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
         const flags = ctx.mentionedTargets.get(holderRef);
         // choose category with highest precedence
         let qualifier: "damage" | "contact" | "contactKO" | undefined;
-        if (ctx.moveData.flags?.contact)
+        if (ctx.move.data.flags?.contact)
         {
             if (flags?.damaged === "ko") qualifier = "contactKO";
             else if (flags?.damaged) qualifier = "contact";
@@ -831,16 +825,14 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
         if (qualifier)
         {
             const expectResult = yield* ability.onMoveDamage(ctx.pstate,
-                {[holderRef]: true}, qualifier, ctx.userRef, ctx.moveData,
-                lastEvent);
+                {[holderRef]: true}, qualifier, ctx, lastEvent);
             lastEvent = expectResult.event;
         }
 
         // consumeOn-postHit item (jabocaberry/rowapberry)
         // note: still works if fainted
         const itemPostHitResult = yield* consumeItem.consumeOnPostHit(
-            ctx.pstate, {[holderRef]: true}, ctx.moveData, ctx.userRef,
-            lastEvent);
+            ctx.pstate, {[holderRef]: true}, ctx, lastEvent);
         lastEvent = itemPostHitResult.event;
     }
     // make sure no more items need to activate
@@ -851,7 +843,7 @@ async function* postHit(ctx: MoveContext, lastEvent?: events.Any): SubParser
 async function* otherEffects(ctx: MoveContext, lastEvent?: events.Any):
     SubParser
 {
-    const moveEffects = ctx.moveData.effects;
+    const moveEffects = ctx.move.data.effects;
 
     // TODO: verify order, or stop it from being enforced
     if (moveEffects?.swapBoosts)
@@ -956,7 +948,7 @@ async function* otherEffects(ctx: MoveContext, lastEvent?: events.Any):
     lastEvent = removeItemResult.event;
     // item effect after damaging move effects
     // TODO(gen5): properly respect selfFaint for finalgambit
-    if (ctx.moveData.category !== "status" &&
+    if (ctx.move.data.category !== "status" &&
         [...ctx.mentionedTargets].some(([, flags]) => flags.damaged) &&
         !ctx.user.fainted && !moveEffects?.selfFaint)
     {
@@ -977,7 +969,7 @@ async function* otherEffects(ctx: MoveContext, lastEvent?: events.Any):
 async function* handleFaint(ctx: MoveContext, miss?: boolean,
     lastEvent?: events.Any): SubParser
 {
-    const moveEffects = ctx.moveData.effects;
+    const moveEffects = ctx.move.data.effects;
     const selfFaint = moveEffects?.selfFaint === "always" ||
         (moveEffects?.selfFaint === "ifHit" && !miss);
     const faintCandidates = new Set<Side>();
@@ -1014,7 +1006,7 @@ async function* handleFaint(ctx: MoveContext, miss?: boolean,
 async function* handleFinalEffects(ctx: MoveContext, lastEvent?: events.Any):
     SubParser
 {
-    const moveEffects = ctx.moveData.effects;
+    const moveEffects = ctx.move.data.effects;
     // TODO: should transform be moved out?
     if (moveEffects?.transform) return yield* expectTransform(ctx, lastEvent);
     if (moveEffects?.selfSwitch &&
@@ -1047,7 +1039,7 @@ interface DelayResult extends SubParserResult
 async function* expectDelay(ctx: MoveContext, lastEvent?: events.Any):
     SubParser<DelayResult>
 {
-    switch (ctx.moveData.effects?.delay?.type)
+    switch (ctx.move.data.effects?.delay?.type)
     {
         case "twoTurn":
         {
@@ -1087,7 +1079,7 @@ async function* expectDelay(ctx: MoveContext, lastEvent?: events.Any):
                 }
             }
             let shorten = !suppressWeather &&
-                ctx.moveData.effects?.delay.solar &&
+                ctx.move.data.effects?.delay.solar &&
                 ctx.pstate.state.status.weather.type === "SunnyDay";
             // check for powerherb
             if (!shorten)
@@ -1150,11 +1142,11 @@ function handleTypeEffectiveness(ctx: MoveContext,
     // TODO(doubles): do this for each defender
     const defender = ctx.pstate.state.teams[otherSide(ctx.userRef)].active;
 
-    const binary = ctx.moveData.category === "status" || !!ctx.moveData.damage;
+    const binary = !ctx.move.canBeEffective;
     const expectedMoveTypes = getAttackerTypes(defender.types, effectiveness,
         binary);
     let moveType: dexutil.Type;
-    switch (ctx.moveData.modifyType)
+    switch (ctx.move.data.modifyType)
     {
         case "hpType":
         {
@@ -1179,35 +1171,34 @@ function handleTypeEffectiveness(ctx: MoveContext,
                 // look for plate items that would match the given effectiveness
                 heldItem.narrow(
                     (_, i) => expectedMoveTypes.has(
-                        i.plateType ?? ctx.moveData.type));
+                        i.plateType ?? ctx.move.data.type));
                 // the assertion at the end would be guaranteed to pass if we
                 //  fully narrowed the item/plate, so return regardless
                 return;
             }
 
             const {plateType} = heldItem.map[heldItem.definiteValue];
-            moveType = plateType ?? ctx.moveData.type;
+            moveType = plateType ?? ctx.move.data.type;
             break;
         }
         case "???": moveType = "???"; break;
-        default: moveType = ctx.moveData.type;
+        default: moveType = ctx.move.data.type;
     }
 
     // assert type effectiveness
-    const expectedEff = getTypeEffectiveness(defender.types, moveType,
-        /*binary*/ ctx.moveData.category === "status" || !!ctx.moveData.damage);
+    const expectedEff = getTypeEffectiveness(defender.types, moveType, binary);
     if (effectiveness !== expectedEff)
     {
         // could be a status move being blocked by a type-based status immunity
-        if (effectiveness === "immune" && ctx.moveData.category === "status" &&
-            ctx.moveData.effects?.status?.hit?.every(s =>
+        if (effectiveness === "immune" && ctx.move.data.category === "status" &&
+            ctx.move.data.effects?.status?.hit?.every(s =>
                     canBlockStatus(defender.types, s)))
         {
             return;
         }
 
         // immunity-ignoring move
-        if (effectiveness === "immune" && ctx.moveData.flags?.ignoreImmunity)
+        if (effectiveness === "immune" && ctx.move.data.flags?.ignoreImmunity)
         {
             return;
         }
@@ -1352,7 +1343,7 @@ async function* handleStatus(ctx: MoveContext,
         if (tgt === "hit")
         {
             // substitute blocks status conditions
-            if (!ctx.moveData.flags?.ignoreSub && target.volatile.substitute)
+            if (!ctx.move.data.flags?.ignoreSub && target.volatile.substitute)
             {
                 continue;
             }
@@ -1363,7 +1354,7 @@ async function* handleStatus(ctx: MoveContext,
         if (!statusResult.success)
         {
             // status was the main effect of the move (e.g. thunderwave)
-            if (!status.chance && ctx.moveData.category === "status")
+            if (!status.chance && ctx.move.data.category === "status")
             {
                 throw new Error("Expected effect that didn't happen: " +
                     `${tgt} status [${statusTypes.join(", ")}]`);
@@ -1458,7 +1449,7 @@ async function* handleBoost(ctx: MoveContext,
         if (tgt === "hit")
         {
             // substitute blocks boosts
-            if (!ctx.moveData.flags?.ignoreSub && target.volatile.substitute)
+            if (!ctx.move.data.flags?.ignoreSub && target.volatile.substitute)
             {
                 continue;
             }
@@ -1500,7 +1491,7 @@ async function* moveBoost(ctx: MoveContext, targetRef: Side,
     if (targetRef !== ctx.userRef && !set)
     {
         const expectResult = yield* ability.onTryUnboost(ctx.pstate,
-            {[targetRef]: true}, ctx.userRef, ctx.moveData, lastEvent);
+            {[targetRef]: true}, ctx, lastEvent);
         // only one ability should activate
         if (expectResult.results.length === 1)
         {
@@ -1592,7 +1583,7 @@ async function* expectSelfSwitch(ctx: MoveContext,
 {
     // can't do anything if fainted, unless this was intended like with
     //  healingwish/lunardance moves (gen4: replacement is sent out immediately)
-    if (ctx.user.fainted && !ctx.moveData.effects?.selfFaint)
+    if (ctx.user.fainted && !ctx.move.data.effects?.selfFaint)
     {
         return {...lastEvent && {event: lastEvent}};
     }
@@ -1696,17 +1687,17 @@ function addTarget(ctx: MoveContext, targetRef: Side,
 
         // deduct an extra pp if the target has pressure
         // TODO(gen>=5): don't count allies
-        if (!flags.pressured && ctx.move && !target.volatile.suppressAbility &&
-            target.ability === "pressure" &&
+        if (!flags.pressured && ctx.moveState &&
+            !target.volatile.suppressAbility && target.ability === "pressure" &&
             // only ability that can cancel pressure
             // TODO: use ignoreTargetAbility flag
             ctx.user.ability !== "moldbreaker")
         {
-            ctx.move.pp -= 1;
+            ctx.moveState.pp -= 1;
             flags.pressured = true;
         }
 
-        if (target.volatile.substitute && !ctx.moveData.flags?.ignoreSub &&
+        if (target.volatile.substitute && !ctx.move.data.flags?.ignoreSub &&
             flags.damaged)
         {
             throw new Error("Move should've been blocked by target's " +
@@ -1724,8 +1715,8 @@ function handleFail(ctx: MoveContext): void
     if (ctx.moveName === "naturalgift") naturalGift(ctx, /*failed*/ true);
 
     // imprison move failed, make inferences based on fail conditions
-    if (ctx.moveData.effects?.status?.self?.includes("imprison") &&
-        !ctx.moveData.effects.status.chance)
+    if (ctx.move.data.effects?.status?.self?.includes("imprison") &&
+        !ctx.move.data.effects.status.chance)
     {
         imprison(ctx, /*failed*/ true);
     }
@@ -1774,10 +1765,10 @@ function handleImplicitEffects(ctx: MoveContext): void
 
     let lockedMove = false;
     const {lockedMove: lock} = ctx.user.volatile;
-    switch (ctx.moveData.implicit?.status)
+    switch (ctx.move.data.implicit?.status)
     {
         case "defenseCurl": case "minimize": case "mustRecharge":
-            ctx.user.volatile[ctx.moveData.implicit.status] = true;
+            ctx.user.volatile[ctx.move.data.implicit.status] = true;
             break;
         case "lockedMove":
             if (!dex.isLockedMove(ctx.moveName))
@@ -1815,10 +1806,10 @@ function handleImplicitEffects(ctx: MoveContext): void
     // team effects
 
     const team = ctx.pstate.state.teams[ctx.userRef];
-    switch (ctx.moveData.implicit?.team)
+    switch (ctx.move.data.implicit?.team)
     {
         case "healingWish": case "lunarDance":
-            team.status[ctx.moveData.implicit.team] = true;
+            team.status[ctx.move.data.implicit.team] = true;
             break;
         // wish can be used consecutively, but only the first use counts
         case "wish":
@@ -1856,7 +1847,7 @@ function preHaltIgnoredEffects(ctx: MoveContext): void
 function statusImmunity(ctx: MoveContext, targetRef: Side): void
 {
     // status must have a 100% secondary chance
-    const status = ctx.moveData.effects?.status;
+    const status = ctx.move.data.effects?.status;
     // TODO: what about self-status moves? e.g. locked move w/owntempo ability
     if (!status?.hit) return;
     if ((status.chance ?? 0) < 100) return;
@@ -1887,20 +1878,21 @@ function statusImmunity(ctx: MoveContext, targetRef: Side): void
 
     // find abilities that grant applicable status immunities
     const targetAbility = target.traits.ability;
-    const filtered = [...targetAbility.possibleValues]
-        // use some instead of every since if there are 2 possible statuses to
-        //  inflict, it should consider immunities to either
-        .filter(n => status.hit!.some(
-            s => targetAbility.map[n].on?.block?.status &&
-                targetAbility.map[n].statusImmunity?.[s]));
-    if (filtered.length <= 0)
+    // note: can consider immunities to either status if there are multiple
+    //  possible statuses to afflict
+    // TODO: rework api to allow for custom overnarrowing errors/recovery
+    const filteredAbilities = [...targetAbility.possibleValues]
+        .filter(n => status.hit!.some(s =>
+                dex.getAbility(targetAbility.map[n]).canBlockStatus(s)));
+    if (filteredAbilities.length <= 0)
     {
+        // overnarrowed error
         throw new Error(`Move '${ctx.moveName}' status ` +
             `[${status.hit.join(", ")}] was blocked by target '${targetRef}' ` +
             "but target's ability " +
             `[${[...targetAbility.possibleValues].join(", ")}] can't block it`);
     }
-    targetAbility.narrow(filtered);
+    targetAbility.narrow(filteredAbilities);
 }
 
 /**

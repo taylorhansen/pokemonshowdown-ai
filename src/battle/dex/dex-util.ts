@@ -1,5 +1,6 @@
 /** @file Type definitions and helper functions for dealing with the dex. */
-import { ReadonlyPokemon } from "../state/Pokemon";
+export { MoveAndUser, MoveAndUserRef, MoveUserSnapshot, ReadonlyMoveAndUser,
+    ReadonlyMoveUserSnapshot } from "./wrappers/Move";
 
 // TODO: split into multiple files
 
@@ -277,7 +278,7 @@ export interface AbilityData extends DexData
         };
         /**
          * Whenver a damaging move makes contact with the ability holder. Also
-         * applies to `#moveContactKO` if the effect targets the user.
+         * applies to `#moveContactKO`.
          */
         readonly moveContact?:
         {
@@ -286,11 +287,9 @@ export interface AbilityData extends DexData
              * always activates.
              */
             readonly chance?: number;
-            /** Target of the effect, either the ability holder or move user. */
-            readonly tgt: "holder" | "user";
             /** Percent damage dealt to move user. */
             readonly percentDamage?: number;
-            /** Inflict one of these statuses at random. */
+            /** Inflict one of these statuses at random on the user. */
             readonly status?: readonly StatusType[];
         };
         /**
@@ -575,46 +574,6 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
     "allyTeam" | "any" | "foeSide" | "normal" | "randomNormal" | "scripted" |
     "self";
 
-
-/** Gets all the possible types of a move based on its user. */
-export function getMoveTypes(move: MoveData, user: ReadonlyPokemon): Set<Type>
-{
-    switch (move.modifyType)
-    {
-        // TODO: also include naturalgift and others
-        case "hpType": return new Set(user.hpType.possibleValues);
-        case "plateType":
-        {
-            const result = new Set<Type>();
-            for (const n of user.item.possibleValues)
-            {
-                result.add(user.item.map[n].plateType ?? move.type);
-            }
-            return result;
-        }
-        default: return new Set([move.type]);
-    }
-}
-
-/**
- * Gets the move's type based on its user if the user's currently revealed
- * traits guarantees it, or null if not enough information has been revealed.
- */
-export function getDefiniteMoveType(move: MoveData, user: ReadonlyPokemon):
-    Type | null
-{
-    switch (move.modifyType)
-    {
-        // TODO: also include naturalgift and others
-        case "hpType": return user.hpType.definiteValue as Type | null;
-        case "plateType":
-            // TODO: include item-blocking effects
-            if (!user.item.definiteValue) return null;
-            return user.item.map[user.item.definiteValue].plateType ??
-                move.type;
-        default: return move.type;
-    }
-}
 
 /** Target of move effect. */
 export type MoveEffectTarget = "self" | "hit";

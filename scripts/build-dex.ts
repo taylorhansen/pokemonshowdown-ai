@@ -813,17 +813,13 @@ const abilityData:
 
     aftermath: {on: {moveContactKO: {explosive: true, percentDamage: -25}}},
 
-    cutecharm:
-        {on: {moveContact: {chance: 30, tgt: "user", status: ["attract"]}}},
+    cutecharm: {on: {moveContact: {chance: 30, status: ["attract"]}}},
     effectspore:
-    {on: {moveContact: {
-        chance: 30, tgt: "user", status: ["par", "psn", "slp"]
-    }}},
-    flamebody: {on: {moveContact: {chance: 30, tgt: "user", status: ["brn"]}}},
-    poisonpoint:
-        {on: {moveContact: {chance: 30, tgt: "user", status: ["psn"]}}},
-    roughskin: {on: {moveContact: {tgt: "user", percentDamage: -6.25}}},
-    static: {on: {moveContact: {chance: 30, tgt: "user", status: ["par"]}}},
+        {on: {moveContact: {chance: 30, status: ["par", "psn", "slp"]}}},
+    flamebody: {on: {moveContact: {chance: 30, status: ["brn"]}}},
+    poisonpoint: {on: {moveContact: {chance: 30, status: ["psn"]}}},
+    roughskin: {on: {moveContact: {percentDamage: -6.25}}},
+    static: {on: {moveContact: {chance: 30, status: ["par"]}}},
 
     colorchange: {on: {moveDamage: {changeToMoveType: true}}},
 
@@ -1217,12 +1213,51 @@ export function is${cap}Move(value: any): value is ${cap}Move
 }`;
 }
 
+/**
+ * Creates an exported memoized function for wrapping mapped `dexutil`
+ * structures.
+ * @param name Name of the wrapper class.
+ * @param dataName Name of the `dexutil` wrapped type.
+ * @param mapName Name of the `dexutil` type map.
+ */
+function exportDataWrapper(name: string, dataName: string, mapName: string):
+    string
+{
+    const lower = name.charAt(0).toLowerCase() + name.substr(1);
+    return `\
+/** Memoization of \`get${name}()\`. */
+const ${lower}Memo = new Map<${dataName}, ${name}>();
+
+/** Creates a \`${dataName}\` wrapper. */
+export function get${name}(data: ${dataName}): ${name};
+/** Creates a \`${dataName}\` wrapper, or null if not found. */
+export function get${name}(name: string): ${name} | null;
+export function get${name}(name: string | ${dataName}): ${name} | null
+{
+    if (typeof name === "string")
+    {
+        if (!${mapName}.hasOwnProperty(name)) return null;
+        name = ${mapName}[name];
+    }
+    let result = ${lower}Memo.get(name);
+    if (!result) ${lower}Memo.set(name, result = new ${name}(name));
+    return result;
+}`;
+}
+
 console.log(`\
 // istanbul ignore file
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
 import * as dexutil from "./dex-util";
+import { Ability } from "./wrappers/Ability";
+import { Item } from "./wrappers/Item";
+import { Move } from "./wrappers/Move";
+
+export { Ability } from "./wrappers/Ability";
+export { Item } from "./wrappers/Item";
+export { Move } from "./wrappers/Move";
 
 /**
  * Contains info about each pokemon, with alternate forms as separate entries.
@@ -1233,12 +1268,16 @@ ${exportEntriesToDict(pokemon, "pokemon", "dexutil.PokemonData",
 /** Sorted array of all pokemon names. */
 ${exportArray(pokemon, "pokemonKeys", "string", ([name]) => quote(name))}
 
+${exportDataWrapper("Ability", "dexutil.AbilityData", "abilities")}
+
 /** Contains info about each ability. */
 ${exportEntriesToDict(abilities, "abilities", "dexutil.AbilityData",
     a => deepStringifyDict(a, v => typeof v === "string" ? quote(v) : v))}
 
 /** Sorted array of all ability names. */
 ${exportArray(abilities, "abilityKeys", "string", ([name]) => quote(name))}
+
+${exportDataWrapper("Move", "dexutil.MoveData", "moves")}
 
 /** Contains info about each move. */
 ${exportEntriesToDict(moves, "moves", "dexutil.MoveData", m =>
@@ -1261,6 +1300,8 @@ ${exportEntriesToDict(moveCallers, "moveCallers", "dexutil.CallType",
 ${exportDict(typeToMoves, "typeToMoves",
     "{readonly [T in dexutil.Type]: readonly string[]}",
     a => `[${a.map(quote).join(", ")}]`)}
+
+${exportDataWrapper("Item", "dexutil.ItemData", "items")}
 
 /** Contains info about each item. */
 ${exportEntriesToDict(items, "items", "dexutil.ItemData", i =>

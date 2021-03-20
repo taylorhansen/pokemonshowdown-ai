@@ -3,6 +3,13 @@
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
 import * as dexutil from "./dex-util";
+import { Ability } from "./wrappers/Ability";
+import { Item } from "./wrappers/Item";
+import { Move } from "./wrappers/Move";
+
+export { Ability } from "./wrappers/Ability";
+export { Item } from "./wrappers/Item";
+export { Move } from "./wrappers/Move";
 
 /**
  * Contains info about each pokemon, with alternate forms as separate entries.
@@ -568,6 +575,25 @@ export const pokemon: {readonly [name: string]: dexutil.PokemonData} =
 /** Sorted array of all pokemon names. */
 export const pokemonKeys: readonly string[] = ["abomasnow", "abra", "absol", "aerodactyl", "aggron", "aipom", "alakazam", "altaria", "ambipom", "ampharos", "anorith", "arbok", "arcanine", "arceus", "arceusbug", "arceusdark", "arceusdragon", "arceuselectric", "arceusfighting", "arceusfire", "arceusflying", "arceusghost", "arceusgrass", "arceusground", "arceusice", "arceuspoison", "arceuspsychic", "arceusrock", "arceussteel", "arceuswater", "ariados", "armaldo", "aron", "articuno", "azelf", "azumarill", "azurill", "bagon", "baltoy", "banette", "barboach", "bastiodon", "bayleef", "beautifly", "beedrill", "beldum", "bellossom", "bellsprout", "bibarel", "bidoof", "blastoise", "blaziken", "blissey", "bonsly", "breloom", "bronzong", "bronzor", "budew", "buizel", "bulbasaur", "buneary", "burmy", "butterfree", "cacnea", "cacturne", "camerupt", "carnivine", "carvanha", "cascoon", "castform", "castformrainy", "castformsnowy", "castformsunny", "caterpie", "celebi", "chansey", "charizard", "charmander", "charmeleon", "chatot", "cherrim", "cherrimsunshine", "cherubi", "chikorita", "chimchar", "chimecho", "chinchou", "chingling", "clamperl", "claydol", "clefable", "clefairy", "cleffa", "cloyster", "combee", "combusken", "corphish", "corsola", "cradily", "cranidos", "crawdaunt", "cresselia", "croagunk", "crobat", "croconaw", "cubone", "cyndaquil", "darkrai", "delcatty", "delibird", "deoxys", "deoxysattack", "deoxysdefense", "deoxysspeed", "dewgong", "dialga", "diglett", "ditto", "dodrio", "doduo", "donphan", "dragonair", "dragonite", "drapion", "dratini", "drifblim", "drifloon", "drowzee", "dugtrio", "dunsparce", "dusclops", "dusknoir", "duskull", "dustox", "eevee", "ekans", "electabuzz", "electivire", "electrike", "electrode", "elekid", "empoleon", "entei", "espeon", "exeggcute", "exeggutor", "exploud", "farfetchd", "fearow", "feebas", "feraligatr", "finneon", "flaaffy", "flareon", "floatzel", "flygon", "forretress", "froslass", "furret", "gabite", "gallade", "garchomp", "gardevoir", "gastly", "gastrodon", "gastrodoneast", "gengar", "geodude", "gible", "girafarig", "giratina", "giratinaorigin", "glaceon", "glalie", "glameow", "gligar", "gliscor", "gloom", "golbat", "goldeen", "golduck", "golem", "gorebyss", "granbull", "graveler", "grimer", "grotle", "groudon", "grovyle", "growlithe", "grumpig", "gulpin", "gyarados", "happiny", "hariyama", "haunter", "heatran", "heracross", "hippopotas", "hippowdon", "hitmonchan", "hitmonlee", "hitmontop", "honchkrow", "hooh", "hoothoot", "hoppip", "horsea", "houndoom", "houndour", "huntail", "hypno", "igglybuff", "illumise", "infernape", "ivysaur", "jigglypuff", "jirachi", "jolteon", "jumpluff", "jynx", "kabuto", "kabutops", "kadabra", "kakuna", "kangaskhan", "kecleon", "kingdra", "kingler", "kirlia", "koffing", "krabby", "kricketot", "kricketune", "kyogre", "lairon", "lanturn", "lapras", "larvitar", "latias", "latios", "leafeon", "ledian", "ledyba", "lickilicky", "lickitung", "lileep", "linoone", "lombre", "lopunny", "lotad", "loudred", "lucario", "ludicolo", "lugia", "lumineon", "lunatone", "luvdisc", "luxio", "luxray", "machamp", "machoke", "machop", "magby", "magcargo", "magikarp", "magmar", "magmortar", "magnemite", "magneton", "magnezone", "makuhita", "mamoswine", "manaphy", "manectric", "mankey", "mantine", "mantyke", "mareep", "marill", "marowak", "marshtomp", "masquerain", "mawile", "medicham", "meditite", "meganium", "meowth", "mesprit", "metagross", "metang", "metapod", "mew", "mewtwo", "mightyena", "milotic", "miltank", "mimejr", "minun", "misdreavus", "mismagius", "moltres", "monferno", "mothim", "mrmime", "mudkip", "muk", "munchlax", "murkrow", "natu", "nidoking", "nidoqueen", "nidoranf", "nidoranm", "nidorina", "nidorino", "nincada", "ninetales", "ninjask", "noctowl", "nosepass", "numel", "nuzleaf", "octillery", "oddish", "omanyte", "omastar", "onix", "pachirisu", "palkia", "paras", "parasect", "pelipper", "persian", "phanpy", "phione", "pichu", "pichuspikyeared", "pidgeot", "pidgeotto", "pidgey", "pikachu", "piloswine", "pineco", "pinsir", "piplup", "plusle", "politoed", "poliwag", "poliwhirl", "poliwrath", "ponyta", "poochyena", "porygon", "porygon2", "porygonz", "primeape", "prinplup", "probopass", "psyduck", "pupitar", "purugly", "quagsire", "quilava", "qwilfish", "raichu", "raikou", "ralts", "rampardos", "rapidash", "raticate", "rattata", "rayquaza", "regice", "regigigas", "regirock", "registeel", "relicanth", "remoraid", "rhydon", "rhyhorn", "rhyperior", "riolu", "roselia", "roserade", "rotom", "rotomfan", "rotomfrost", "rotomheat", "rotommow", "rotomwash", "sableye", "salamence", "sandshrew", "sandslash", "sceptile", "scizor", "scyther", "seadra", "seaking", "sealeo", "seedot", "seel", "sentret", "seviper", "sharpedo", "shaymin", "shayminsky", "shedinja", "shelgon", "shellder", "shellos", "shieldon", "shiftry", "shinx", "shroomish", "shuckle", "shuppet", "silcoon", "skarmory", "skiploom", "skitty", "skorupi", "skuntank", "slaking", "slakoth", "slowbro", "slowking", "slowpoke", "slugma", "smeargle", "smoochum", "sneasel", "snorlax", "snorunt", "snover", "snubbull", "solrock", "spearow", "spheal", "spinarak", "spinda", "spiritomb", "spoink", "squirtle", "stantler", "staraptor", "staravia", "starly", "starmie", "staryu", "steelix", "stunky", "sudowoodo", "suicune", "sunflora", "sunkern", "surskit", "swablu", "swalot", "swampert", "swellow", "swinub", "taillow", "tangela", "tangrowth", "tauros", "teddiursa", "tentacool", "tentacruel", "togekiss", "togepi", "togetic", "torchic", "torkoal", "torterra", "totodile", "toxicroak", "trapinch", "treecko", "tropius", "turtwig", "typhlosion", "tyranitar", "tyrogue", "umbreon", "unown", "unownb", "unownc", "unownd", "unowne", "unownf", "unowng", "unownh", "unowni", "unownj", "unownk", "unownl", "unownm", "unownn", "unowno", "unownp", "unownq", "unownr", "unowns", "unownt", "unownu", "unownv", "unownw", "unownx", "unowny", "unownz", "unownexclamation", "unownquestion", "ursaring", "uxie", "vaporeon", "venomoth", "venonat", "venusaur", "vespiquen", "vibrava", "victreebel", "vigoroth", "vileplume", "volbeat", "voltorb", "vulpix", "wailmer", "wailord", "walrein", "wartortle", "weavile", "weedle", "weepinbell", "weezing", "whiscash", "whismur", "wigglytuff", "wingull", "wobbuffet", "wooper", "wormadam", "wormadamsandy", "wormadamtrash", "wurmple", "wynaut", "xatu", "yanma", "yanmega", "zangoose", "zapdos", "zigzagoon", "zubat"];
 
+/** Memoization of `getAbility()`. */
+const abilityMemo = new Map<dexutil.AbilityData, Ability>();
+
+/** Creates a `dexutil.AbilityData` wrapper. */
+export function getAbility(data: dexutil.AbilityData): Ability;
+/** Creates a `dexutil.AbilityData` wrapper, or null if not found. */
+export function getAbility(name: string): Ability | null;
+export function getAbility(name: string | dexutil.AbilityData): Ability | null
+{
+    if (typeof name === "string")
+    {
+        if (!abilities.hasOwnProperty(name)) return null;
+        name = abilities[name];
+    }
+    let result = abilityMemo.get(name);
+    if (!result) abilityMemo.set(name, result = new Ability(name));
+    return result;
+}
+
 /** Contains info about each ability. */
 export const abilities: {readonly [name: string]: dexutil.AbilityData} =
 {
@@ -585,16 +611,16 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     cloudnine: {uid: 11, name: "cloudnine", display: "Cloud Nine", flags: {suppressWeather: true}},
     colorchange: {uid: 12, name: "colorchange", display: "Color Change", on: {moveDamage: {changeToMoveType: true}}},
     compoundeyes: {uid: 13, name: "compoundeyes", display: "Compound Eyes"},
-    cutecharm: {uid: 14, name: "cutecharm", display: "Cute Charm", on: {moveContact: {chance: 30, tgt: "user", status: ["attract"]}}},
+    cutecharm: {uid: 14, name: "cutecharm", display: "Cute Charm", on: {moveContact: {chance: 30, status: ["attract"]}}},
     damp: {uid: 15, name: "damp", display: "Damp", on: {block: {effect: {explosive: true}}}},
     download: {uid: 16, name: "download", display: "Download"},
     drizzle: {uid: 17, name: "drizzle", display: "Drizzle"},
     drought: {uid: 18, name: "drought", display: "Drought"},
     dryskin: {uid: 19, name: "dryskin", display: "Dry Skin", on: {block: {move: {type: "water", percentDamage: 25}}}},
     earlybird: {uid: 20, name: "earlybird", display: "Early Bird"},
-    effectspore: {uid: 21, name: "effectspore", display: "Effect Spore", on: {moveContact: {chance: 30, tgt: "user", status: ["par", "psn", "slp"]}}},
+    effectspore: {uid: 21, name: "effectspore", display: "Effect Spore", on: {moveContact: {chance: 30, status: ["par", "psn", "slp"]}}},
     filter: {uid: 22, name: "filter", display: "Filter"},
-    flamebody: {uid: 23, name: "flamebody", display: "Flame Body", on: {moveContact: {chance: 30, tgt: "user", status: ["brn"]}}},
+    flamebody: {uid: 23, name: "flamebody", display: "Flame Body", on: {moveContact: {chance: 30, status: ["brn"]}}},
     flashfire: {uid: 24, name: "flashfire", display: "Flash Fire", on: {block: {move: {type: "fire", status: "flashFire"}}}},
     flowergift: {uid: 25, name: "flowergift", display: "Flower Gift"},
     forecast: {uid: 26, name: "forecast", display: "Forecast"},
@@ -639,7 +665,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     pickup: {uid: 65, name: "pickup", display: "Pickup"},
     plus: {uid: 66, name: "plus", display: "Plus"},
     poisonheal: {uid: 67, name: "poisonheal", display: "Poison Heal"},
-    poisonpoint: {uid: 68, name: "poisonpoint", display: "Poison Point", on: {moveContact: {chance: 30, tgt: "user", status: ["psn"]}}},
+    poisonpoint: {uid: 68, name: "poisonpoint", display: "Poison Point", on: {moveContact: {chance: 30, status: ["psn"]}}},
     pressure: {uid: 69, name: "pressure", display: "Pressure", on: {start: {}}},
     purepower: {uid: 70, name: "purepower", display: "Pure Power"},
     quickfeet: {uid: 71, name: "quickfeet", display: "Quick Feet"},
@@ -647,7 +673,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     reckless: {uid: 73, name: "reckless", display: "Reckless"},
     rivalry: {uid: 74, name: "rivalry", display: "Rivalry"},
     rockhead: {uid: 75, name: "rockhead", display: "Rock Head", flags: {noIndirectDamage: "recoil"}},
-    roughskin: {uid: 76, name: "roughskin", display: "Rough Skin", on: {moveContact: {tgt: "user", percentDamage: -6.25}}},
+    roughskin: {uid: 76, name: "roughskin", display: "Rough Skin", on: {moveContact: {percentDamage: -6.25}}},
     runaway: {uid: 77, name: "runaway", display: "Run Away"},
     sandstream: {uid: 78, name: "sandstream", display: "Sand Stream"},
     sandveil: {uid: 79, name: "sandveil", display: "Sand Veil"},
@@ -668,7 +694,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     soundproof: {uid: 94, name: "soundproof", display: "Soundproof"},
     speedboost: {uid: 95, name: "speedboost", display: "Speed Boost"},
     stall: {uid: 96, name: "stall", display: "Stall"},
-    static: {uid: 97, name: "static", display: "Static", on: {moveContact: {chance: 30, tgt: "user", status: ["par"]}}},
+    static: {uid: 97, name: "static", display: "Static", on: {moveContact: {chance: 30, status: ["par"]}}},
     steadfast: {uid: 98, name: "steadfast", display: "Steadfast"},
     stench: {uid: 99, name: "stench", display: "Stench"},
     stickyhold: {uid: 100, name: "stickyhold", display: "Sticky Hold"},
@@ -698,6 +724,25 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
 
 /** Sorted array of all ability names. */
 export const abilityKeys: readonly string[] = ["adaptability", "aftermath", "airlock", "angerpoint", "anticipation", "arenatrap", "baddreams", "battlearmor", "blaze", "chlorophyll", "clearbody", "cloudnine", "colorchange", "compoundeyes", "cutecharm", "damp", "download", "drizzle", "drought", "dryskin", "earlybird", "effectspore", "filter", "flamebody", "flashfire", "flowergift", "forecast", "forewarn", "frisk", "gluttony", "guts", "heatproof", "honeygather", "hugepower", "hustle", "hydration", "hypercutter", "icebody", "illuminate", "immunity", "innerfocus", "insomnia", "intimidate", "ironfist", "keeneye", "klutz", "leafguard", "levitate", "lightningrod", "limber", "liquidooze", "magicguard", "magmaarmor", "magnetpull", "marvelscale", "minus", "moldbreaker", "motordrive", "multitype", "naturalcure", "noguard", "normalize", "oblivious", "overgrow", "owntempo", "pickup", "plus", "poisonheal", "poisonpoint", "pressure", "purepower", "quickfeet", "raindish", "reckless", "rivalry", "rockhead", "roughskin", "runaway", "sandstream", "sandveil", "scrappy", "serenegrace", "shadowtag", "shedskin", "shellarmor", "shielddust", "simple", "skilllink", "slowstart", "sniper", "snowcloak", "snowwarning", "solarpower", "solidrock", "soundproof", "speedboost", "stall", "static", "steadfast", "stench", "stickyhold", "stormdrain", "sturdy", "suctioncups", "superluck", "swarm", "swiftswim", "synchronize", "tangledfeet", "technician", "thickfat", "tintedlens", "torrent", "trace", "truant", "unaware", "unburden", "vitalspirit", "voltabsorb", "waterabsorb", "waterveil", "whitesmoke", "wonderguard"];
+
+/** Memoization of `getMove()`. */
+const moveMemo = new Map<dexutil.MoveData, Move>();
+
+/** Creates a `dexutil.MoveData` wrapper. */
+export function getMove(data: dexutil.MoveData): Move;
+/** Creates a `dexutil.MoveData` wrapper, or null if not found. */
+export function getMove(name: string): Move | null;
+export function getMove(name: string | dexutil.MoveData): Move | null
+{
+    if (typeof name === "string")
+    {
+        if (!moves.hasOwnProperty(name)) return null;
+        name = moves[name];
+    }
+    let result = moveMemo.get(name);
+    if (!result) moveMemo.set(name, result = new Move(name));
+    return result;
+}
 
 /** Contains info about each move. */
 export const moves: {readonly [name: string]: dexutil.MoveData} =
@@ -1273,6 +1318,25 @@ export const typeToMoves: {readonly [T in dexutil.Type]: readonly string[]} =
     steel: ["bulletpunch", "doomdesire", "flashcannon", "gyroball", "irondefense", "ironhead", "irontail", "magnetbomb", "metalburst", "metalclaw", "metalsound", "meteormash", "mirrorshot", "steelwing"],
     water: ["aquajet", "aquaring", "aquatail", "brine", "bubble", "bubblebeam", "clamp", "crabhammer", "dive", "hydrocannon", "hydropump", "muddywater", "octazooka", "raindance", "surf", "waterfall", "watergun", "waterpulse", "watersport", "waterspout", "whirlpool", "withdraw"]
 };
+
+/** Memoization of `getItem()`. */
+const itemMemo = new Map<dexutil.ItemData, Item>();
+
+/** Creates a `dexutil.ItemData` wrapper. */
+export function getItem(data: dexutil.ItemData): Item;
+/** Creates a `dexutil.ItemData` wrapper, or null if not found. */
+export function getItem(name: string): Item | null;
+export function getItem(name: string | dexutil.ItemData): Item | null
+{
+    if (typeof name === "string")
+    {
+        if (!items.hasOwnProperty(name)) return null;
+        name = items[name];
+    }
+    let result = itemMemo.get(name);
+    if (!result) itemMemo.set(name, result = new Item(name));
+    return result;
+}
 
 /** Contains info about each item. */
 export const items: {readonly [name: string]: dexutil.ItemData} =

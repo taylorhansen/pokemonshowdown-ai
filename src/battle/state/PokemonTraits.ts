@@ -9,6 +9,7 @@ export interface ReadonlyPokemonTraits
 {
     /** Species data. */
     readonly species: PokemonData;
+    // TODO: use dex.Ability wrappers instead of data
     /** Ability possibility. */
     readonly ability: ReadonlyPossibilityClass<string, dexutil.AbilityData>;
     /** Stat range possibilities. */

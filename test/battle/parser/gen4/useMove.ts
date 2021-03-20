@@ -41,10 +41,10 @@ export function testUseMove(ctxFunc: () => Context,
     const {handle, handleEnd, reject, exitParser} =
         createParserHelpers(() => parser);
 
-    it("Should throw if unsupported move", async function()
+    it("Should throw if unknown move", async function()
     {
         await expect(initParser("us", "invalid"))
-            .to.eventually.be.rejectedWith(Error, "Unsupported move 'invalid'");
+            .to.eventually.be.rejectedWith(Error, "Unknown move 'invalid'");
     });
 
     describe("called = false", function()
@@ -2034,7 +2034,7 @@ export function testUseMove(ctxFunc: () => Context,
                         await exitParser();
                     });
 
-                    it("Should throw if reject before 100% secondary effect ",
+                    it("Should throw if reject before 100% secondary effect",
                     async function()
                     {
                         // remove owntempo possibility from smeargle

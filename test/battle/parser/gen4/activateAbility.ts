@@ -8,7 +8,7 @@ import { ParserState, SubParser, SubParserResult } from
 import * as ability from "../../../../src/battle/parser/gen4/activateAbility";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
-import { Side } from "../../../../src/battle/state/Side";
+import { otherSide, Side } from "../../../../src/battle/state/Side";
 import { Context } from "./Context";
 import { createParserHelpers } from "./helpers";
 
@@ -64,9 +64,19 @@ export function testActivateAbility(f: () => Context,
             on: dexutil.AbilityOn | null = null,
             hitByMoveName?: string): Promise<SubParser>
         {
+            let hitBy: dexutil.MoveAndUserRef | undefined;
+            if (hitByMoveName)
+            {
+                hitBy =
+                {
+                    move: dex.getMove(hitByMoveName)!,
+                    userRef: otherSide(monRef)
+                };
+            }
+
             parser = ability.activateAbility(pstate,
                 {type: "activateAbility", monRef, ability: abilityName}, on,
-                hitByMoveName);
+                hitBy);
             // first yield doesn't return anything
             await expect(parser.next())
                 .to.eventually.become({value: undefined, done: false});
@@ -731,8 +741,8 @@ export function testActivateAbility(f: () => Context,
 
             initActive("us").setAbility("moldbreaker");
             await rejectParser<ability.ExpectAbilitiesResult>(
-                ability.onBlock(pstate, {them: true}, "us",
-                    dex.moves.thunderbolt),
+                ability.onBlock(pstate, {them: true},
+                    {move: dex.getMove(dex.moves.thunderbolt), userRef: "us"}),
                 {results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("voltabsorb", "illuminate");
@@ -746,8 +756,8 @@ export function testActivateAbility(f: () => Context,
                 .to.have.keys("voltabsorb", "illuminate");
 
             initActive("us");
-            await altParser(ability.onBlock(pstate, {them: true}, "us",
-                    dex.moves.thunderbolt));
+            await altParser(ability.onBlock(pstate, {them: true},
+                    {move: dex.getMove(dex.moves.thunderbolt), userRef: "us"}));
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("illuminate");
@@ -766,8 +776,8 @@ export function testActivateAbility(f: () => Context,
             expect(hpType.possibleValues).to.include("electric");
 
             // ability didn't activate, so hpType must not be electric
-            await altParser(ability.onBlock(pstate, {them: true}, "us",
-                    dex.moves.hiddenpower));
+            await altParser(ability.onBlock(pstate, {them: true},
+                    {move: dex.getMove(dex.moves.hiddenpower), userRef: "us"}));
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(hpType.possibleValues).to.not.include("electric");
         });
@@ -785,8 +795,8 @@ export function testActivateAbility(f: () => Context,
             expect(item.possibleValues).to.include("zapplate"); // electric
 
             // ability didn't activate, so plateType must not be electric
-            await altParser( ability.onBlock(pstate, {them: true}, "us",
-                    dex.moves.judgment));
+            await altParser( ability.onBlock(pstate, {them: true},
+                    {move: dex.getMove(dex.moves.judgment), userRef: "us"}));
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(item.possibleValues).to.not.include("zapplate");
         });
@@ -802,8 +812,8 @@ export function testActivateAbility(f: () => Context,
 
             initActive("us").setAbility("moldbreaker");
             await rejectParser<ability.ExpectAbilitiesResult>(
-                ability.onTryUnboost(pstate, {them: true}, "us",
-                    dex.moves.charm),
+                ability.onTryUnboost(pstate, {them: true},
+                    {move: dex.getMove(dex.moves.charm), userRef: "us"}),
                 {results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("clearbody", "liquidooze");
@@ -817,8 +827,8 @@ export function testActivateAbility(f: () => Context,
                 .to.have.keys("clearbody", "liquidooze");
 
             initActive("us");
-            await altParser(ability.onTryUnboost(pstate, {them: true}, "us",
-                    dex.moves.charm));
+            await altParser(ability.onTryUnboost(pstate, {them: true},
+                    {move: dex.getMove(dex.moves.charm), userRef: "us"}));
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("liquidooze");
@@ -833,9 +843,10 @@ export function testActivateAbility(f: () => Context,
             const mon = initActive("them", glameow);
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("limber", "owntempo");
+            mon.volatile.confusion.start();
 
             await altParser(ability.onStatus(pstate, {them: true}, "confusion",
-                    dex.moves.confuseray));
+                    {move: dex.getMove(dex.moves.confuseray), userRef: "us"}));
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("limber");
@@ -861,7 +872,8 @@ export function testActivateAbility(f: () => Context,
                     .to.have.keys("aftermath", "unburden");
 
                 await altParser(ability.onMoveDamage(pstate, {them: true},
-                        "contactKO", "us", dex.moves.tackle));
+                        "contactKO",
+                        {move: dex.getMove(dex.moves.tackle), userRef: "us"}));
                 await exitParser<ability.ExpectAbilitiesResult>({results: []});
                 expect(mon.traits.ability.possibleValues)
                     .to.have.keys("unburden");
@@ -878,7 +890,8 @@ export function testActivateAbility(f: () => Context,
                     .to.have.keys("roughskin");
 
                 await altParser(ability.onMoveDamage(pstate, {them: true},
-                        "contact", "us", dex.moves.tackle));
+                        "contact",
+                        {move: dex.getMove(dex.moves.tackle), userRef: "us"}));
                 await expect(exitParser<ability.ExpectAbilitiesResult>(
                         {results: []}))
                     .to.eventually.be.rejectedWith(
@@ -897,7 +910,10 @@ export function testActivateAbility(f: () => Context,
                     initActive("them");
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            "them", dex.moves.watergun));
+                            {
+                                move: dex.getMove(dex.moves.watergun),
+                                userRef: "them"
+                            }));
                     await handle(
                     {
                         type: "activateAbility", monRef: "us",
@@ -919,7 +935,10 @@ export function testActivateAbility(f: () => Context,
                     initActive("them");
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            "them", dex.moves.watergun));
+                            {
+                                move: dex.getMove(dex.moves.watergun),
+                                userRef: "them"
+                            }));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                 });
@@ -931,7 +950,10 @@ export function testActivateAbility(f: () => Context,
                     initActive("them");
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            "them", dex.moves.ember));
+                            {
+                                move: dex.getMove(dex.moves.ember),
+                                userRef: "them"
+                            }));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                 });
@@ -946,7 +968,10 @@ export function testActivateAbility(f: () => Context,
 
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            "them", dex.moves.hiddenpower));
+                            {
+                                move: dex.getMove(dex.moves.hiddenpower),
+                                userRef: "them"
+                            }));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                     expect(hpType.definiteValue).to.equal("ghost");
@@ -962,7 +987,10 @@ export function testActivateAbility(f: () => Context,
 
                     await altParser(
                         ability.onMoveDamage(pstate, {us: true}, "damage",
-                            "them", dex.moves.judgment));
+                            {
+                                move: dex.getMove(dex.moves.judgment),
+                                userRef: "them"
+                            }));
                     await exitParser<ability.ExpectAbilitiesResult>(
                         {results: []});
                     expect(item.definiteValue).to.equal("zapplate"); // electric
@@ -981,7 +1009,7 @@ export function testActivateAbility(f: () => Context,
                 .to.have.keys("clearbody", "liquidooze");
 
             await altParser(ability.onMoveDrain(pstate, {them: true},
-                    dex.moves.absorb));
+                {move: dex.getMove(dex.moves.absorb), userRef: "us"}));
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(mon.traits.ability.possibleValues)
                 .to.have.keys("clearbody");

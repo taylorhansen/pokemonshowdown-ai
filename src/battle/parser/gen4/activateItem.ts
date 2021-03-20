@@ -4,11 +4,9 @@ import { Pokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
 import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { matchPercentDamage } from "../helpers";
 import { createEventInference, EventInference, expectEvents, ExpectEventsResult,
     SubInference } from "./EventInference";
-import { cantHaveAbilities, getItems } from "./itemHelpers";
-import * as parsers from "./parsers";
+import { getItems } from "./itemHelpers";
 
 /** Result from `expectItems()` and variants like `onMovePostDamage()`. */
 export type ExpectItemsResult = ExpectEventsResult<ItemResult>;
@@ -22,38 +20,7 @@ export function onMovePostDamage(pstate: ParserState,
     SubParser<ExpectItemsResult>
 {
     const pendingItems = getItems(pstate, eligible,
-        function movePostDamageFilter(data, mon)
-        {
-            if (!data.on?.movePostDamage) return null;
-
-            const abilities = new Set(mon.traits.ability.possibleValues);
-            // if the effect is silent or nonexistent, leave it
-            const percent = data.on.movePostDamage.percentDamage;
-            if (percent &&
-                !matchPercentDamage(percent, mon.hp.current, mon.hp.max))
-            {
-                // filter ability possibilities that can block the remaining
-                //  effects
-                // if one effect can't be suppressed, then the item should
-                //  activate
-                if (mon.volatile.suppressAbility) return new Set();
-                for (const abilityName of abilities)
-                {
-                    const ability = mon.traits.ability.map[abilityName];
-                    if (ability.flags?.ignoreItem) continue;
-                    if (percent < 0 &&
-                        ability.flags?.noIndirectDamage === true)
-                    {
-                        continue;
-                    }
-                    abilities.delete(abilityName);
-                }
-                if (abilities.size <= 0) return new Set();
-            }
-            if (abilities.size <= 0) return new Set();
-            if (abilities.size >= mon.traits.ability.size) return null;
-            return new Set([cantHaveAbilities(mon, abilities)]);
-        });
+        (item, mon) => item.canMovePostDamage(mon));
 
     return expectItems(pstate, "movePostDamage", pendingItems, lastEvent);
 }
@@ -100,8 +67,8 @@ interface ItemContext
     readonly holder: Pokemon;
     /** Item holder Pokemon reference. */
     readonly holderRef: Side;
-    /** Item data. */
-    readonly item: dexutil.ItemData;
+    /** Item data wrapper. */
+    readonly item: dex.Item;
     /** Circumstances in which the item is activating. */
     readonly on: dexutil.ItemOn | null;
 }
@@ -118,141 +85,37 @@ export function activateItem(pstate: ParserState,
     initialEvent: events.ActivateItem, on: dexutil.ItemOn | null = null):
     SubParser<ItemResult>
 {
+    let item: dex.Item | null;
     if (initialEvent.item === "none" ||
-        !dex.items.hasOwnProperty(initialEvent.item))
+        !(item = dex.getItem(initialEvent.item)))
     {
         throw new Error(`Unknown item '${initialEvent.item}'`);
     }
     const holder = pstate.state.teams[initialEvent.monRef].active;
     const holderRef = initialEvent.monRef;
-    const data = dex.items[initialEvent.item];
 
     // after the item has been validated, we can infer it for the pokemon
-    holder.setItem(data.name);
+    holder.setItem(item.data.name);
 
-    const ctx: ItemContext = {pstate, holder, holderRef, item: data, on};
+    // dispatch item effects
+    const ctx: ItemContext = {pstate, holder, holderRef, item, on};
     return dispatchEffects(ctx);
 }
 
 /**
- * Dispatches the effects of an item. Assumes that the initial
- * activateItem event has already been handled.
+ * Dispatches the effects of an item. Assumes that the initial `activateItem`
+ * event has already been handled.
  * @param ctx Item SubParser context.
- * @param lastEvent Last unconsumed event if any.
  */
-async function* dispatchEffects(ctx: ItemContext, lastEvent?: events.Any):
-    SubParser<ItemResult>
+async function* dispatchEffects(ctx: ItemContext): SubParser<ItemResult>
 {
     switch (ctx.on)
     {
         case "movePostDamage":
-            if (!ctx.item.on?.movePostDamage)
-            {
-                throw new Error("On-movePostDamage effect shouldn't activate " +
-                    `for item '${ctx.item.name}'`);
-            }
-            return yield* movePostDamage(ctx,
-                ctx.item.on.movePostDamage.percentDamage, lastEvent);
+            return yield* ctx.item.onMovePostDamage(ctx.pstate, ctx.holderRef);
         case "turn":
-            if (!ctx.item.on?.turn)
-            {
-                throw new Error("On-turn effect shouldn't activate for item " +
-                    `'${ctx.item.name}'`);
-            }
-            if (ctx.item.on.turn.poisonDamage &&
-                ctx.holder.types.includes("poison"))
-            {
-                return yield* turn(ctx, ctx.item.on.turn.poisonDamage,
-                    lastEvent);
-            }
-            if (ctx.item.on.turn.noPoisonDamage &&
-                !ctx.holder.types.includes("poison"))
-            {
-                return yield* turn(ctx, ctx.item.on.turn.noPoisonDamage,
-                    lastEvent);
-            }
-            if (ctx.item.on.turn.status)
-            {
-                return yield* turn(ctx, ctx.item.on.turn.status, lastEvent);
-            }
-            // if nothing is set, then the item shouldn't have activated
-            throw new Error("On-turn effect shouldn't activate for item " +
-                `'${ctx.item.name}'`);
+            return yield* ctx.item.onTurn(ctx.pstate, ctx.holderRef);
+        default:
+            return {};
     }
-    return {...lastEvent && {event: lastEvent}};
-}
-
-// on-movePostDamage handlers
-
-/**
- * Handles events due to a movePostDamage item (e.g. Life Orb).
- * @param percentDamage Expected percent-damage effect.
- */
-async function* movePostDamage(ctx: ItemContext, percentDamage?: number,
-    lastEvent?: events.Any): SubParser<ItemResult>
-{
-    if (percentDamage)
-    {
-        const damageResult = yield* parsers.percentDamage(ctx.pstate,
-            ctx.holderRef, percentDamage, lastEvent);
-        // TODO: permHalt check?
-        lastEvent = damageResult.event;
-        if (damageResult.success === true)
-        {
-            indirectDamage(ctx);
-            lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
-        }
-    }
-    return {...lastEvent && {event: lastEvent}};
-}
-
-// on-turn handlers
-
-/**
- * Handles events due to a turn item (e.g. Leftovers).
- * @param itemEffect Expected effect, either percent-damage or self-inflicted
- * status.
- */
-async function* turn(ctx: ItemContext, itemEffect: number | dexutil.StatusType,
-    lastEvent?: events.Any): SubParser<ItemResult>
-{
-    if (typeof itemEffect === "number")
-    {
-        const damageResult = yield* parsers.percentDamage(ctx.pstate,
-            ctx.holderRef, itemEffect, lastEvent);
-        if (damageResult.success === true) indirectDamage(ctx);
-        // TODO: permHalt check?
-        lastEvent = damageResult.event;
-    }
-    else
-    {
-        const statusResult = yield* parsers.status(ctx.pstate,
-            ctx.holderRef, [itemEffect], lastEvent);
-        lastEvent = statusResult.event;
-    }
-    lastEvent = (yield* parsers.update(ctx.pstate, lastEvent)).event;
-    return {...lastEvent && {event: lastEvent}};
-}
-
-/**
- * Indicates that the item holder received indirect damage from the item, in
- * order to make ability inferences.
- */
-function indirectDamage(ctx: ItemContext): void
-{
-    if (ctx.holder.volatile.suppressAbility) return;
-
-    // can't have an ability that blocks indirect damage
-    const ability = ctx.holder.traits.ability;
-    const filteredAbilities =
-        [...ability.possibleValues]
-            .filter(n => ability.map[n].flags?.noIndirectDamage === true);
-    if (ability.size <= filteredAbilities.length)
-    {
-        throw new Error(`Pokemon '${ctx.holderRef}' received indirect damage ` +
-            `from item '${ctx.item.name}' even though its ability ` +
-            `[${[...ability.possibleValues].join(", ")}] suppresses that ` +
-            "damage");
-    }
-    ability.remove(filteredAbilities);
 }

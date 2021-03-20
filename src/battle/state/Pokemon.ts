@@ -41,6 +41,7 @@ export interface ReadonlyPokemon
     /** Current types for this Pokemon. */
     readonly types: readonly dexutil.Type[];
 
+    // TODO: use dex.Item wrappers instead of data
     /** Current reference to held item possibilities. */
     readonly item: ReadonlyPossibilityClass<string, dexutil.ItemData>;
     /** Current reference to last consumed item possibilities. */
