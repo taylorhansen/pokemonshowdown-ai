@@ -1326,20 +1326,24 @@ async function* handleStatus(ctx: MoveContext,
     status?: NonNullable<dexutil.MoveData["effects"]>["status"],
     lastEvent?: events.Any): SubParser
 {
-    // shouldn't activate if non-ghost type and ghost flag is set
-    if (!status || (status.ghost && !ctx.user.types.includes("ghost")))
-    {
-        return {...lastEvent && {event: lastEvent}};
-    }
     for (const tgt of ["self", "hit"] as dexutil.MoveEffectTarget[])
     {
-        // make sure the status isn't being blocked
-        const statusTypes = status[tgt]?.filter(s => !ctx.blockStatus?.[s]);
-        if (!statusTypes || statusTypes.length <= 0) continue;
+        // try to parse any possible status effect from the move
+        const statusTypes = ctx.move.getAllStatusEffects(tgt, ctx.user.types);
+        if (statusTypes.length <= 0) continue;
+
+        // status effect for target was blocked
+        if (tgt === "hit" && ctx.blockStatus &&
+            statusTypes.some(s => ctx.blockStatus![s]))
+        {
+            continue;
+        }
+
+        // can't inflict status if about to faint
         const targetRef = tgt === "self" ? ctx.userRef : otherSide(ctx.userRef);
         const target = ctx.pstate.state.teams[targetRef].active;
-        // can't inflict status if about to faint
         if (target.hp.current <= 0) continue;
+
         if (tgt === "hit")
         {
             // substitute blocks status conditions
@@ -1348,24 +1352,15 @@ async function* handleStatus(ctx: MoveContext,
                 continue;
             }
         }
+
+        // expect status effects
         const statusResult = yield* parsers.status(ctx.pstate, targetRef,
             statusTypes, lastEvent);
         lastEvent = statusResult.event;
-        if (!statusResult.success)
-        {
-            // status was the main effect of the move (e.g. thunderwave)
-            if (!status.chance && ctx.move.data.category === "status")
-            {
-                throw new Error("Expected effect that didn't happen: " +
-                    `${tgt} status [${statusTypes.join(", ")}]`);
-            }
-            // if it's not a status move but should've inflicted a
-            //  status, the opponent must have a status immunity
-            statusImmunity(ctx, targetRef);
-        }
-
+        // if no statuses happened, target must have an ability immunity
+        if (!statusResult.success) statusImmunity(ctx, targetRef);
         // verify if imprison was successful
-        if (statusResult.success === "imprison")
+        else if (statusResult.success === "imprison")
         {
             imprison(ctx, /*failed*/ false);
         }
@@ -1846,11 +1841,10 @@ function preHaltIgnoredEffects(ctx: MoveContext): void
  */
 function statusImmunity(ctx: MoveContext, targetRef: Side): void
 {
-    // status must have a 100% secondary chance
-    const status = ctx.move.data.effects?.status;
-    // TODO: what about self-status moves? e.g. locked move w/owntempo ability
-    if (!status?.hit) return;
-    if ((status.chance ?? 0) < 100) return;
+    // get guaranteed status effects
+    const tgt = targetRef === ctx.userRef ? "self" : "hit";
+    const statuses = ctx.move.getGuaranteedStatusEffects(tgt, ctx.user.types);
+    if (statuses.length <= 0) return;
 
     // moldbreaker check
     const user = ctx.user;
@@ -1862,7 +1856,7 @@ function statusImmunity(ctx: MoveContext, targetRef: Side): void
         throw new Error(`Move '${ctx.moveName}' user '${ctx.userRef}' has ` +
             "ability-ignoring ability " +
             `[${[...userAbility.possibleValues].join(", ")}] but status ` +
-            `[${status.hit.join(", ")}] was still blocked by target ` +
+            `[${statuses.join(", ")}] was still blocked by target ` +
             `'${targetRef}'`);
     }
 
@@ -1872,7 +1866,7 @@ function statusImmunity(ctx: MoveContext, targetRef: Side): void
     if (target.volatile.suppressAbility)
     {
         throw new Error(`Move '${ctx.moveName}' status ` +
-            `[${status.hit.join(", ")}] was blocked by target '${targetRef}' ` +
+            `[${statuses.join(", ")}] was blocked by target '${targetRef}' ` +
             "but target's ability is suppressed");
     }
 
@@ -1882,13 +1876,15 @@ function statusImmunity(ctx: MoveContext, targetRef: Side): void
     //  possible statuses to afflict
     // TODO: rework api to allow for custom overnarrowing errors/recovery
     const filteredAbilities = [...targetAbility.possibleValues]
-        .filter(n => status.hit!.some(s =>
-                dex.getAbility(targetAbility.map[n]).canBlockStatus(s)));
+        .filter(n => statuses.some(s =>
+                // TODO: some abilities distinguish between self/hit statuses
+                dex.getAbility(targetAbility.map[n]).canBlockStatus(s,
+                    ctx.pstate.state.status.weather.type)));
     if (filteredAbilities.length <= 0)
     {
         // overnarrowed error
         throw new Error(`Move '${ctx.moveName}' status ` +
-            `[${status.hit.join(", ")}] was blocked by target '${targetRef}' ` +
+            `[${statuses.join(", ")}] was blocked by target '${targetRef}' ` +
             "but target's ability " +
             `[${[...targetAbility.possibleValues].join(", ")}] can't block it`);
     }

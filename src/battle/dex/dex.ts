@@ -643,7 +643,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     ironfist: {uid: 43, name: "ironfist", display: "Iron Fist"},
     keeneye: {uid: 44, name: "keeneye", display: "Keen Eye", on: {tryUnboost: {block: {accuracy: true}}}},
     klutz: {uid: 45, name: "klutz", display: "Klutz", flags: {ignoreItem: true}},
-    leafguard: {uid: 46, name: "leafguard", display: "Leaf Guard"},
+    leafguard: {uid: 46, name: "leafguard", display: "Leaf Guard", on: {block: {status: "SunnyDay"}}, statusImmunity: {brn: "silent", par: "silent", psn: "silent", tox: "silent", slp: "silent", frz: "silent", yawn: true}},
     levitate: {uid: 47, name: "levitate", display: "Levitate", on: {block: {move: {type: "ground"}}}},
     lightningrod: {uid: 48, name: "lightningrod", display: "Lightning Rod"},
     limber: {uid: 49, name: "limber", display: "Limber", on: {start: {cure: true}, block: {status: true}, status: {cure: true}}, statusImmunity: {par: true}},

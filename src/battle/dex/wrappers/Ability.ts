@@ -279,7 +279,10 @@ export class Ability
                 (next.type === "immune" && next.monRef === holderRef))
             {
                 return {
-                    ...yield* dispatch(pstate, next), blockStatus: statuses
+                    ...yield* dispatch(pstate, next),
+                    // silent blocked statuses are handled by a different parser
+                    blockStatus: Object.fromEntries(Object.entries(statuses)
+                            .filter(([, v]) => v === true))
                 };
             }
         }
@@ -718,14 +721,18 @@ export class Ability
     /**
      * Checks whether the ability can activate on-`block` vs a status effect.
      * @param statuses Possible statuses to afflict.
+     * @param weather Current weather.
      * @returns A Set of SubReasons describing additional conditions of
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canBlockStatusEffect(statuses: readonly dexutil.StatusType[]):
+    public canBlockStatusEffect(statuses: readonly dexutil.StatusType[],
+        weather: dexutil.WeatherType | "none"):
         Set<SubReason> | null
     {
-        return statuses.some(s => this.canBlockStatus(s)) ? new Set() : null;
+        return statuses.some(
+                s => this.canBlockStatus(s, weather, /*allowSilent*/ false)) ?
+            new Set() : null;
     }
 
     /**
@@ -893,11 +900,21 @@ export class Ability
             hasStatus(mon, s));
     }
 
-    /** Checks whether the ability can block the given status. */
-    public canBlockStatus(status: dexutil.StatusType): boolean
+    /**
+     * Checks whether the ability can block the given status.
+     * @param status Status to check.
+     * @param weather Current weather if applicable.
+     * @param allowSilent Whether to allow silent activation. Default true.
+     */
+    public canBlockStatus(status: dexutil.StatusType,
+        weather: dexutil.WeatherType | "none", allowSilent = true): boolean
     {
-        return !!this.data.on?.block?.status &&
-            !!this.data.statusImmunity?.[status]
+        const condition = this.data.on?.block?.status;
+        return (condition === true || condition === weather) &&
+            !!this.data.statusImmunity &&
+            (allowSilent ?
+                !!this.data.statusImmunity[status]
+                : this.data.statusImmunity[status] === true);
     }
 
     // TODO: generalize for multiple immunities, e.g. wonderguard

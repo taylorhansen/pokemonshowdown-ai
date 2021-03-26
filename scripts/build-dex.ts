@@ -788,6 +788,18 @@ const abilityData:
     vitalspirit: {on: statusImmunityOn, statusImmunity: {slp: true}},
     waterveil: {on: statusImmunityOn, statusImmunity: {brn: true}},
 
+    leafguard:
+    {
+        // can block statuses during sun, but only when attempting to afflict
+        on: {block: {status: "SunnyDay"}},
+        statusImmunity:
+        {
+            // status is blocked silently (gen4) except for yawn
+            brn: "silent", par: "silent", psn: "silent", tox: "silent",
+            slp: "silent", frz: "silent", yawn: true
+        }
+    },
+
     trace: {on: {start: {copyFoeAbility: true}}},
     frisk: {on: {start: {revealItem: true}}},
     forewarn: {on: {start: {warnStrongestMove: true}}},

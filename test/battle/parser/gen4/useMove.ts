@@ -1136,7 +1136,7 @@ export function testUseMove(ctxFunc: () => Context,
                 "magicCoat status",
             async function()
             {
-                initActive("us");
+                initActive("us").setAbility("illuminate"); // no immunity
                 initActive("them");
                 // use reflectable move
                 await initParser("them", "yawn");
@@ -1144,15 +1144,18 @@ export function testUseMove(ctxFunc: () => Context,
                 await expect(reject(
                         {type: "block", monRef: "us", effect: "magicCoat"}))
                     .to.eventually.be.rejectedWith(Error,
-                        "Expected effect that didn't happen: " +
-                        "hit status [yawn]");
+                        "Move 'yawn' status [yawn] was blocked by target " +
+                        "'us' but target's ability [illuminate] can't block " +
+                        "it");
             });
 
             it("Should throw if reflecting an already reflected move",
             async function()
             {
                 initActive("us").volatile.magicCoat = true;
-                initActive("them").volatile.magicCoat = true;
+                const mon = initActive("them");
+                mon.volatile.magicCoat = true;
+                mon.setAbility("illuminate"); // no immunity
                 // use reflectable move
                 await initParser("them", "yawn");
                 // block and reflect the move
@@ -1163,14 +1166,17 @@ export function testUseMove(ctxFunc: () => Context,
                 await expect(handle(
                         {type: "block", monRef: "them", effect: "magicCoat"}))
                     .to.eventually.be.rejectedWith(Error,
-                        "Expected effect that didn't happen: " +
-                        "hit status [yawn]");
+                        "Move 'yawn' status [yawn] was blocked by target " +
+                        "'them' but target's ability [illuminate] can't " +
+                        "block it");
             });
 
             it("Should throw if reflecting unreflectable move",
             async function()
             {
-                initActive("us").volatile.magicCoat = true;
+                const mon = initActive("us");
+                mon.volatile.magicCoat = true;
+                mon.setAbility("illuminate"); // no immunity
                 initActive("them");
                 // use reflectable move
                 await initParser("them", "taunt");
@@ -1178,8 +1184,9 @@ export function testUseMove(ctxFunc: () => Context,
                 await expect(handle(
                         {type: "block", monRef: "us", effect: "magicCoat"}))
                     .to.eventually.be.rejectedWith(Error,
-                        "Expected effect that didn't happen: " +
-                        "hit status [taunt]");
+                        "Move 'taunt' status [taunt] was blocked by target " +
+                        "'us' but target's ability [illuminate] can't block " +
+                        "it");
             });
         }));
 
@@ -1817,24 +1824,39 @@ export function testUseMove(ctxFunc: () => Context,
             }));
         }
 
-        function testNonRemovable(ctg: "self" | "hit", name: string,
-            effect: dexutil.StatusType, move: string,
-            preEvents?: readonly events.Any[],
-            postEvents?: readonly events.Any[]): void
+        interface TestNonRemovableArgs
+        {
+            readonly ctg: dexutil.MoveEffectTarget;
+            readonly name: string;
+            readonly effect: dexutil.StatusType;
+            readonly move: string;
+            readonly preEvents?: readonly events.Any[];
+            readonly postEvents?: readonly events.Any[];
+            readonly abilityImmunity?: string;
+            readonly abilityCondition?: dexutil.WeatherType;
+        }
+
+        function testNonRemovable(
+            {
+                ctg, name, effect, move, preEvents, postEvents, abilityImmunity,
+                abilityCondition
+            }: TestNonRemovableArgs): void
         {
             // adjust perspective
-            const target = ctg === "self" ? "them" : "us";
+            const targetRef = ctg === "self" ? "them" : "us";
 
             statusTests[ctg].push(() => describe(name, function()
             {
+                let user: Pokemon;
+                let opp: Pokemon;
                 beforeEach("Initialize active", async function()
                 {
-                    const user = initActive("them");
+                    user = initActive("them");
                     user.hp.set(50); // for roost
 
-                    const tgt = initActive("us");
+                    opp = initActive("us");
                     // bypassing type effectiveness assertions
-                    tgt.volatile.changeTypes(["???", "???"]);
+                    opp.volatile.changeTypes(["???", "???"]);
                 });
 
                 it("Should pass if expected", async function()
@@ -1846,7 +1868,7 @@ export function testUseMove(ctxFunc: () => Context,
                     for (const event of preEvents ?? []) await handle(event);
                     await handle(
                     {
-                        type: "activateStatusEffect", monRef: target, effect,
+                        type: "activateStatusEffect", monRef: targetRef, effect,
                         start: true
                     });
                     for (const event of postEvents ?? []) await handle(event);
@@ -1859,19 +1881,33 @@ export function testUseMove(ctxFunc: () => Context,
                     for (const event of preEvents ?? []) await handle(event);
                     const statusEvent: events.ActivateStatusEffect =
                     {
-                        type: "activateStatusEffect", monRef: target, effect,
+                        type: "activateStatusEffect", monRef: targetRef, effect,
                         start: false
                     };
-                    // same condition in useMove for throwing this exception
-                    const data = dex.moves[move];
-                    if (!data.effects?.status?.chance &&
-                        data.category === "status")
+                    const statuses = dex.getMove(move)
+                        ?.getGuaranteedStatusEffects(ctg, user.types) ?? [];
+                    // throw from attempt to infer ability immunity
+                    if (statuses.length > 0)
                     {
-                        await expect(handle(statusEvent))
-                            .to.eventually.be.rejectedWith(Error,
-                                "Expected effect that didn't happen: " +
-                                `${ctg} status [${effect}]`);
+                        const targetAbilities = state.teams[targetRef].active
+                            .traits.ability.possibleValues;
+                        const errorMsg =
+                            `Move '${move}' status [${statuses.join(", ")}] ` +
+                            `was blocked by target '${targetRef}' but ` +
+                            "target's ability " +
+                            `[${[...targetAbilities].join(", ")}] can't ` +
+                            "block it";
+                        await expect(reject(statusEvent))
+                            .to.eventually.be.rejectedWith(Error, errorMsg);
                     }
+                    else if ((postEvents?.length ?? 0) > 0)
+                    {
+                        // throw from post event
+                        // TODO: specify postEvent error msg in args
+                        await expect(reject(statusEvent))
+                            .to.eventually.be.rejectedWith(Error);
+                    }
+                    // just reject the event and terminate the parser
                     else await reject(statusEvent);
                 });
 
@@ -1880,28 +1916,40 @@ export function testUseMove(ctxFunc: () => Context,
                     await initParser("them", "tackle");
                     await reject(
                     {
-                        type: "activateStatusEffect", monRef: target, effect,
+                        type: "activateStatusEffect", monRef: targetRef, effect,
                         start: true
                     });
                 });
 
-                // TODO: factor out into parameters
-                if (effect === "attract")
+                if (abilityImmunity)
                 {
                     it("Should cancel status move effects if ability immunity",
                     async function()
                     {
                         // setup ability so it can activate
                         const us = state.teams.us.active;
-                        us.setAbility("oblivious");
+                        us.setAbility(abilityImmunity);
+                        if (abilityCondition)
+                        {
+                            state.status.weather.start(/*source*/ null,
+                                abilityCondition);
+                        }
 
-                        await initParser("them", "attract");
+                        await initParser("them", move);
+                        for (const event of preEvents ?? [])
+                        {
+                            await handle(event);
+                        }
                         await handle(
                         {
                             type: "activateAbility", monRef: "us",
-                            ability: "oblivious"
+                            ability: abilityImmunity
                         });
                         await handle({type: "immune", monRef: "us"});
+                        for (const event of postEvents ?? [])
+                        {
+                            await handle(event);
+                        }
                         await exitParser();
                     });
                 }
@@ -2066,10 +2114,10 @@ export function testUseMove(ctxFunc: () => Context,
                     {
                         const mon = state.teams.us.active;
                         mon.setAbility(abilityImmunity, "illuminate");
-                        expect(mon.ability).to.be.empty;
                         await initParser("them", secondaryMove100);
                         await exitParser();
-                        expect(mon.ability).to.equal(abilityImmunity);
+                        expect(mon.traits.ability.possibleValues)
+                            .to.have.keys(abilityImmunity);
                     });
                 }
 
@@ -2086,10 +2134,20 @@ export function testUseMove(ctxFunc: () => Context,
             }));
         }
 
-        testNonRemovable("self", "Aqua Ring", "aquaRing", "aquaring");
-        testNonRemovable("hit", "Attract", "attract", "attract");
-        testNonRemovable("self", "Charge", "charge", "charge",
-            [{type: "boost", monRef: "them", stat: "spd", amount: 1}]);
+        testNonRemovable(
+        {
+            ctg: "self", name: "Aqua Ring", effect: "aquaRing", move: "aquaring"
+        });
+        testNonRemovable(
+        {
+            ctg: "hit", name: "Attract", effect: "attract", move: "attract",
+            abilityImmunity: "oblivious"
+        });
+        testNonRemovable(
+        {
+            ctg: "self", name: "Charge", effect: "charge", move: "charge",
+            preEvents: [{type: "boost", monRef: "them", stat: "spd", amount: 1}]
+        });
         statusTests.hit.push(() => describe("Curse (ghost)", function()
         {
             it("Should expect curse status", async function()
@@ -2120,8 +2178,10 @@ export function testUseMove(ctxFunc: () => Context,
                 });
             });
         }));
-        testNonRemovable("hit", "Embargo", "embargo", "embargo");
-        testNonRemovable("hit", "Encore", "encore", "encore");
+        testNonRemovable(
+            {ctg: "hit", name: "Embargo", effect: "embargo", move: "embargo"});
+        testNonRemovable(
+            {ctg: "hit", name: "Encore", effect: "encore", move: "encore"});
         statusTests.hit.push(() => describe("Flash Fire", function()
         {
             // can have flashfire
@@ -2152,9 +2212,21 @@ export function testUseMove(ctxFunc: () => Context,
                 await exitParser(); // shouldn't throw
             });
         }));
-        testNonRemovable("self", "Focus Energy", "focusEnergy", "focusenergy");
-        testNonRemovable("hit", "Foresight", "foresight", "foresight");
-        testNonRemovable("hit", "Heal Block", "healBlock", "healblock");
+        testNonRemovable(
+        {
+            ctg: "self", name: "Focus Energy", effect: "focusEnergy",
+            move: "focusenergy"
+        });
+        testNonRemovable(
+        {
+            ctg: "hit", name: "Foresight", effect: "foresight",
+            move: "foresight"
+        });
+        testNonRemovable(
+        {
+            ctg: "hit", name: "Heal Block", effect: "healBlock",
+            move: "healblock"
+        });
         // imprison
         statusTests.self.push(() => describe("Imprison", function()
         {
@@ -2266,17 +2338,37 @@ export function testUseMove(ctxFunc: () => Context,
                 });
             });
         }));
-        testNonRemovable("self", "Ingrain", "ingrain", "ingrain");
+        testNonRemovable(
+            {ctg: "self", name: "Ingrain", effect: "ingrain", move: "ingrain"});
         testRemovable(
         {
             ctg: "hit", name: "Leech Seed", effect: "leechSeed",
             move: "leechseed"
         });
-        testNonRemovable("self", "Magnet Rise", "magnetRise", "magnetrise");
-        testNonRemovable("hit", "Miracle Eye", "miracleEye", "miracleeye");
-        testNonRemovable("self", "Mud Sport", "mudSport", "mudsport");
-        testNonRemovable("hit", "Nightmare", "nightmare", "nightmare");
-        testNonRemovable("self", "Power Trick", "powerTrick", "powertrick");
+        testNonRemovable(
+        {
+            ctg: "self", name: "Magnet Rise", effect: "magnetRise",
+            move: "magnetrise"
+        });
+        testNonRemovable(
+        {
+            ctg: "hit", name: "Miracle Eye", effect: "miracleEye",
+            move: "miracleeye"
+        });
+        testNonRemovable(
+        {
+            ctg: "self", name: "Mud Sport", effect: "mudSport", move: "mudsport"
+        });
+        testNonRemovable(
+        {
+            ctg: "hit", name: "Nightmare", effect: "nightmare",
+            move: "nightmare"
+        });
+        testNonRemovable(
+        {
+            ctg: "self", name: "Power Trick", effect: "powerTrick",
+            move: "powertrick"
+        });
         // slowstart
         for (const ctg of ["self", "hit"] as const)
         {
@@ -2296,15 +2388,32 @@ export function testUseMove(ctxFunc: () => Context,
                 });
             }));
         }
-        testNonRemovable("self", "Substitute", "substitute", "substitute",
-            /*preEvents*/ undefined,
-            /*postEvents*/ [{type: "takeDamage", monRef: "them", hp: 50}]);
-        testNonRemovable("hit", "Suppress ability", "suppressAbility",
-            "gastroacid");
-        testNonRemovable("hit", "Taunt", "taunt", "taunt");
-        testNonRemovable("hit", "Torment", "torment", "torment");
-        testNonRemovable("self", "Water Sport", "waterSport", "watersport");
-        testNonRemovable("hit", "Yawn", "yawn", "yawn");
+        testNonRemovable(
+        {
+            ctg: "self", name: "Substitute", effect: "substitute",
+            move: "substitute",
+            postEvents: [{type: "takeDamage", monRef: "them", hp: 50}]
+        });
+        testNonRemovable(
+        {
+            ctg: "hit", name: "Suppress ability", effect: "suppressAbility",
+            move: "gastroacid"
+        });
+        testNonRemovable(
+            {ctg: "hit", name: "Taunt", effect: "taunt", move: "taunt"});
+        testNonRemovable(
+            {ctg: "hit", name: "Torment", effect: "torment", move: "torment"});
+        testNonRemovable(
+        {
+            ctg: "self", name: "Water Sport", effect: "waterSport",
+            move: "watersport"
+        });
+        // TODO: more dynamic way of adding tests
+        testNonRemovable(
+        {
+            ctg: "hit", name: "Yawn", effect: "yawn", move: "yawn",
+            abilityImmunity: "leafguard", abilityCondition: "SunnyDay"
+        });
 
         // updatable
         testRemovable(
@@ -2313,21 +2422,39 @@ export function testUseMove(ctxFunc: () => Context,
             move: "confuseray", secondaryMove: "psybeam",
             secondaryMove100: "dynamicpunch", abilityImmunity: "owntempo"
         });
-        testNonRemovable("self", "Bide", "bide", "bide");
-        testNonRemovable("self", "Uproar", "uproar", "uproar");
+        testNonRemovable(
+            {ctg: "self", name: "Bide", effect: "bide", move: "bide"});
+        testNonRemovable(
+            {ctg: "self", name: "Uproar", effect: "uproar", move: "uproar"});
 
         // singlemove
-        testNonRemovable("self", "Destiny Bond", "destinyBond", "destinybond");
-        testNonRemovable("self", "Grudge", "grudge", "grudge");
-        testNonRemovable("self", "Rage", "rage", "rage");
+        testNonRemovable(
+        {
+            ctg: "self", name: "Destiny Bond", effect: "destinyBond",
+            move: "destinybond"
+        });
+        testNonRemovable(
+            {ctg: "self", name: "Grudge", effect: "grudge", move: "grudge"});
+        testNonRemovable(
+            {ctg: "self", name: "Rage", effect: "rage", move: "rage"});
 
         // singleturn
-        testNonRemovable("self", "Endure", "endure", "endure");
-        testNonRemovable("self", "Magic Coat", "magicCoat", "magiccoat");
-        testNonRemovable("self", "Protect", "protect", "protect");
-        testNonRemovable("self", "Roost", "roost", "roost",
-            [{type: "takeDamage", monRef: "them", hp: 100}]);
-        testNonRemovable("self", "Snatch", "snatch", "snatch");
+        testNonRemovable(
+            {ctg: "self", name: "Endure", effect: "endure", move: "endure"});
+        testNonRemovable(
+        {
+            ctg: "self", name: "Magic Coat", effect: "magicCoat",
+            move: "magiccoat"
+        });
+        testNonRemovable(
+            {ctg: "self", name: "Protect", effect: "protect", move: "protect"});
+        testNonRemovable(
+        {
+            ctg: "self", name: "Roost", effect: "roost", move: "roost",
+            preEvents: [{type: "takeDamage", monRef: "them", hp: 100}]
+        });
+        testNonRemovable(
+            {ctg: "self", name: "Snatch", effect: "snatch", move: "snatch"});
         // stall
         statusTests.self.push(() => describe("Stall effect", function()
         {

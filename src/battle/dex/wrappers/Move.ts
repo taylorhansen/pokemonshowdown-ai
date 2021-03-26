@@ -155,17 +155,55 @@ export class Move
     }
 
     /**
-     * Gets the main (guaranteed) status effects of this move.
+     * Gets the main guaranteed status effects of this move.
      * @param tgt Target of the status effect
      * @param userTypes User's types, in order to handle Curse effect.
-     * @returns An array of statuses, one of which is guaranteed to afflict the
-     * `tgt` when the move is used.
+     * @returns An array of statuses, one of which will afflict the `tgt` when
+     * the move is used.
      */
-    public getStatusEffects(tgt: dexutil.MoveEffectTarget,
+    public getMainStatusEffects(tgt: dexutil.MoveEffectTarget,
+        userTypes: readonly dexutil.Type[]): readonly dexutil.StatusType[]
+    {
+        if (this.data.category !== "status") return [];
+        if (!this.data.effects?.status) return [];
+        if (this.data.effects.status.ghost && !userTypes.includes("ghost"))
+        {
+            return [];
+        }
+        if (this.data.effects.status.chance) return [];
+        return this.data.effects.status?.[tgt] ?? [];
+    }
+
+    /**
+     * Gets all guaranteed status effects of this move.
+     * @param tgt Target of the status effect
+     * @param userTypes User's types, in order to handle Curse effect.
+     * @returns An array of statuses, one of which will afflict the `tgt` when
+     * the move is used.
+     */
+    public getGuaranteedStatusEffects(tgt: dexutil.MoveEffectTarget,
         userTypes: readonly dexutil.Type[]): readonly dexutil.StatusType[]
     {
         if (!this.data.effects?.status) return [];
-        if (this.data.effects.status.chance) return [];
+        if (this.data.effects.status.ghost && !userTypes.includes("ghost"))
+        {
+            return [];
+        }
+        if ((this.data.effects.status.chance ?? 100) < 100) return [];
+        return this.data.effects.status?.[tgt] ?? [];
+    }
+
+    /**
+     * Gets all guaranteed or chance-based status effects of this move.
+     * @param tgt Target of the status effect
+     * @param userTypes User's types, in order to handle Curse effect.
+     * @returns An array of statuses, one of which may afflict the `tgt` when
+     * the move is used.
+     */
+    public getAllStatusEffects(tgt: dexutil.MoveEffectTarget,
+        userTypes: readonly dexutil.Type[]): readonly dexutil.StatusType[]
+    {
+        if (!this.data.effects?.status) return [];
         if (this.data.effects.status.ghost && !userTypes.includes("ghost"))
         {
             return [];

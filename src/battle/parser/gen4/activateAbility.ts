@@ -43,6 +43,7 @@ export async function* onStart(pstate: ParserState,
         /*hitBy*/ undefined, lastEvent);
 }
 
+// TODO: allow for other non-move effects (e.g. abilities/items)
 /**
  * Expects an on-`block` ability to activate on a certain blockable effect.
  * @param eligible Eligible pokemon.
@@ -62,11 +63,13 @@ export async function* onBlock(pstate: ParserState,
         return {...lastEvent && {event: lastEvent}, results: []};
     }
     const moveTypes = hitBy.move.getPossibleTypes(user);
-    const status = hitBy.move.getStatusEffects("hit", user.types);
+    // only the main status effects can be visibly blocked by an ability
+    const status = hitBy.move.getMainStatusEffects("hit", user.types);
 
     const pendingAbilities = getAbilities(pstate, eligible,
         // block move's main status effect
-        ability => ability.canBlockStatusEffect(status) ??
+        ability => ability.canBlockStatusEffect(status,
+                pstate.state.status.weather.type) ??
             // block move based on its type
             ability.canBlockMoveType(moveTypes, hitBy.move, user) ??
             // block move based on damp, etc

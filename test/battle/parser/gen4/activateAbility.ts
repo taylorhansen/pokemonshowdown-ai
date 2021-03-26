@@ -795,10 +795,61 @@ export function testActivateAbility(f: () => Context,
             expect(item.possibleValues).to.include("zapplate"); // electric
 
             // ability didn't activate, so plateType must not be electric
-            await altParser( ability.onBlock(pstate, {them: true},
+            await altParser(ability.onBlock(pstate, {them: true},
                     {move: dex.getMove(dex.moves.judgment), userRef: "us"}));
             await exitParser<ability.ExpectAbilitiesResult>({results: []});
             expect(item.possibleValues).to.not.include("zapplate");
+        });
+
+        // TODO: add separate test suites for each dex entry
+        describe("block.status = SunnyDay (leafguard)", function()
+        {
+            let mon: Pokemon;
+            beforeEach("Initialize pokemon", function()
+            {
+                mon = initActive("them");
+                mon.setAbility("leafguard");
+                initActive("us");
+            });
+
+            it("Should block yawn on sun", async function()
+            {
+                state.status.weather.start(/*source*/ null, "SunnyDay");
+                await altParser(ability.onBlock(pstate, {them: true},
+                        {move: dex.getMove(dex.moves.yawn), userRef: "us"}));
+                await handle(
+                {
+                    type: "activateAbility", monRef: "them",
+                    ability: "leafguard"
+                });
+                await handle({type: "immune", monRef: "them"});
+                await exitParser<ability.ExpectAbilitiesResult>(
+                {results: [{
+                    blockStatus: {yawn: true},
+                    event: {type: "halt", reason: "decide"}
+                }]});
+            });
+
+            it("Should not block yawn without sun", async function()
+            {
+                await altParser(ability.onBlock(pstate, {them: true},
+                        {move: dex.getMove(dex.moves.yawn), userRef: "us"}));
+                await exitParser<ability.ExpectAbilitiesResult>({results: []});
+                // shouldn't overnarrow
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("leafguard");
+            });
+
+            it("Should silently block major status on sun", async function()
+            {
+                state.status.weather.start(/*source*/ null, "SunnyDay");
+                await altParser(ability.onBlock(pstate, {them: true},
+                        {move: dex.getMove(dex.moves.toxic), userRef: "us"}));
+                await exitParser<ability.ExpectAbilitiesResult>({results: []});
+                // shouldn't overnarrow
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("leafguard");
+            });
         });
     });
 

@@ -227,8 +227,11 @@ export interface AbilityData extends DexData
          */
         readonly block?:
         {
-            /** Block certain statuses specified by `#statusImmunity`. */
-            readonly status?: true;
+            /**
+             * Block certain statuses specified by `#statusImmunity`, either
+             * unconditionally or if a certain weather is active.
+             */
+            readonly status?: true | WeatherType;
             /** Block certain moves. */
             readonly move?:
             {
@@ -311,10 +314,13 @@ export interface AbilityData extends DexData
         };
     };
 
-    /** Status immunities granted by this ability. */
-    readonly statusImmunity?: {readonly [T in StatusType]?: true};
+    /**
+     * Status immunities granted by this ability. Also specifies whether game
+     * events are emitted for these immunities.
+     */
+    readonly statusImmunity?: {readonly [T in StatusType]?: true | "silent"};
 
-    // TODO: rename to passive effects? or add a separate field?
+    // TODO: rename to passive
     /** Additional ability flags. */
     readonly flags?:
     {
@@ -472,9 +478,9 @@ export interface MoveData extends DexData
             {readonly [T in MoveEffectTarget]?: Partial<BoostTable>};
         /** Boosts to swap with the target. */
         readonly swapBoosts?: Partial<BoostTable<boolean>>;
-        // TODO: other boost effects
+        // TODO: other kinds of boost effects
 
-        // TODO: what about ending/curing statuses?
+        // TODO: what about ending/curing statuses or multiple effects?
         /** Possible status effects to start. */
         readonly status?:
         {
