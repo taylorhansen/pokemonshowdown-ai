@@ -577,18 +577,6 @@ export function testActivateAbility(f: () => Context,
                 });
             });
         });
-
-        describe("immune", function()
-        {
-            it("Should handle", async function()
-            {
-                initActive("us");
-                initActive("them");
-                await initParser("them", "wonderguard", null, "tackle");
-                await handle({type: "immune", monRef: "them"});
-                await exitParser({immune: true});
-            });
-        });
     });
 
     async function altParser<TParser extends SubParser>(gen: TParser):
@@ -849,6 +837,30 @@ export function testActivateAbility(f: () => Context,
                 // shouldn't overnarrow
                 expect(mon.traits.ability.possibleValues)
                     .to.have.keys("leafguard");
+            });
+        });
+
+        describe("block.move.type = nonSuper (wonderguard)", function()
+        {
+            it("Should block move", async function()
+            {
+                const mon = initActive("them");
+                mon.setAbility("wonderguard", "waterabsorb");
+                initActive("us");
+                await altParser(ability.onBlock(pstate, {them: true},
+                    {move: dex.getMove(dex.moves.bubble), userRef: "us"}));
+                await handle(
+                {
+                    type: "activateAbility", monRef: "them",
+                    ability: "wonderguard"
+                });
+                await handle({type: "immune", monRef: "them"});
+                await exitParser<ability.ExpectAbilitiesResult>(
+                {results: [{
+                    immune: true, event: {type: "halt", reason: "decide"}
+                }]});
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("wonderguard");
             });
         });
     });

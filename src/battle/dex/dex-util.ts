@@ -235,8 +235,11 @@ export interface AbilityData extends DexData
             /** Block certain moves. */
             readonly move?:
             {
-                /** Block moves of a specific type. */
-                readonly type: Type;
+                /**
+                 * Block moves of a specific type, or `"nonSuper"` to block all
+                 * non-super-effective attacks (wonderguard).
+                 */
+                readonly type: Type | "nonSuper";
                 /** Add a stat boost onto the holder. */
                 readonly boost?: Partial<BoostTable<number>>;
                 /** Percent damage dealt to holder. */

@@ -302,7 +302,11 @@ export class Ability
         // istanbul ignore next: should never happen
         if (!blockData) throw new Error("On-block move effect failed");
 
-        hitByMove.assertType(blockData.type, hitByUser);
+        // TODO: type effectiveness assertion
+        if (blockData.type !== "nonSuper")
+        {
+            hitByMove.assertType(blockData.type, hitByUser);
+        }
 
         let silent = true;
         let lastEvent: events.Any | undefined;
@@ -745,6 +749,11 @@ export class Ability
     public canBlockMoveType(types: ReadonlySet<dexutil.Type>, move: dex.Move,
         user: Pokemon): Set<SubReason> | null
     {
+        // TODO: type effectiveness assertions/subreasons
+        if (this.data.on?.block?.move?.type === "nonSuper")
+        {
+            return new Set([chanceReason]);
+        }
         // can't activate unless the ability could block one of the move's
         //  possible types
         const typeImmunity = this.getTypeImmunity();
@@ -921,7 +930,9 @@ export class Ability
     /** Gets the ability's move type immunity, or null if none found. */
     public getTypeImmunity(): dexutil.Type | null
     {
-        return this.data.on?.block?.move?.type ?? null;
+        const type = this.data.on?.block?.move?.type;
+        if (!type || type === "nonSuper") return null;
+        return type;
     }
 
     //#endregion

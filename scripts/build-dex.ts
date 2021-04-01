@@ -815,6 +815,8 @@ const abilityData:
     motordrive: {on: {block: {move: {type: "electric", boost: {spe: 1}}}}},
     voltabsorb: {on: {block: {move: {type: "electric", percentDamage: 25}}}},
     waterabsorb: {on: {block: {move: {type: "water", percentDamage: 25}}}},
+    // TODO(gen4 glitch): firefang move ignores this ability
+    wonderguard: {on: {block: {move: {type: "nonSuper"}}}},
 
     damp: {on: {block: {effect: {explosive: true}}}},
 

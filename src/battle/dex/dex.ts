@@ -719,7 +719,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     waterabsorb: {uid: 119, name: "waterabsorb", display: "Water Absorb", on: {block: {move: {type: "water", percentDamage: 25}}}},
     waterveil: {uid: 120, name: "waterveil", display: "Water Veil", on: {start: {cure: true}, block: {status: true}, status: {cure: true}}, statusImmunity: {brn: true}},
     whitesmoke: {uid: 121, name: "whitesmoke", display: "White Smoke", on: {tryUnboost: {block: {atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true, evasion: true}}}},
-    wonderguard: {uid: 122, name: "wonderguard", display: "Wonder Guard"}
+    wonderguard: {uid: 122, name: "wonderguard", display: "Wonder Guard", on: {block: {move: {type: "nonSuper"}}}}
 };
 
 /** Sorted array of all ability names. */

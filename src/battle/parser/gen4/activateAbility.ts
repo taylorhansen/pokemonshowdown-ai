@@ -347,11 +347,6 @@ export async function* activateAbility(pstate: ParserState,
                         ctx.holder, /*weatherInfinite*/ true);
                 }
                 break;
-            case "immune": // wonderguard
-                // TODO: check whether this is possible
-                if (event.monRef !== ctx.holderRef) break;
-                baseResult.immune = true;
-                return yield* base.immune(pstate, event);
         }
         return {event};
     }, baseResult.event);
