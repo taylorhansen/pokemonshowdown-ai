@@ -1,7 +1,6 @@
 import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
-import { canBlockStatus, Effectiveness, getAttackerTypes, getTypeEffectiveness }
-    from "../../dex/typechart";
+import { Effectiveness } from "../../dex/typechart";
 import { Move } from "../../state/Move";
 import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
@@ -1139,7 +1138,8 @@ async function* expectDelay(ctx: MoveContext, lastEvent?: events.Any):
 function handleTypeEffectiveness(ctx: MoveContext,
     effectiveness: Effectiveness): void
 {
-    // TODO(doubles): do this for each defender
+    // TODO: need to handle all corner cases
+    /*// TODO(doubles): do this for each defender
     const defender = ctx.pstate.state.teams[otherSide(ctx.userRef)].active;
 
     const binary = !ctx.move.canBeEffective;
@@ -1205,7 +1205,7 @@ function handleTypeEffectiveness(ctx: MoveContext,
 
         throw new Error(`Move effectiveness expected to be '${expectedEff}' ` +
             `but got '${effectiveness}'`);
-    }
+    }*/
 }
 
 /**

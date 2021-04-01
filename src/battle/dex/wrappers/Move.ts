@@ -336,6 +336,4 @@ export class Move
     }
 
     //#endregion
-
-
 }
