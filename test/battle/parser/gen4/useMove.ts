@@ -1616,6 +1616,26 @@ export function testUseMove(ctxFunc: () => Context,
                 });
                 await exitParser(); // shouldn't throw
             });
+
+            it("Should activate berry from bellydrum", async function()
+            {
+                const mon = initActive("us");
+                mon.item.narrow("sitrusberry");
+                initActive("them");
+                await initParser("us", "bellydrum");
+                await handle({type: "takeDamage", monRef: "us", hp: 50});
+                await handle(
+                {
+                    type: "boost", monRef: "us", stat: "atk", amount: 6,
+                    set: true
+                });
+                await handle(
+                {
+                    type: "removeItem", monRef: "us", consumed: "sitrusberry"
+                });
+                await handle({type: "takeDamage", monRef: "us", hp: 75});
+                await exitParser(); // shouldn't throw
+            });
         });
 
         function shouldHandlePartialBoost(ctg: "self" | "hit", move: string,

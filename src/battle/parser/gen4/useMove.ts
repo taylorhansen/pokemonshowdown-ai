@@ -1419,7 +1419,7 @@ async function* handlePercentDamage(ctx: MoveContext,
         throw new Error("Expected effect that didn't happen: " +
             `${effect.target} percentDamage ${effect.percent}%`);
     }
-    return yield* parsers.update(ctx.pstate, damageResult.event);
+    return damageResult;
 }
 
 /** Handles the boost effects of a move. */
