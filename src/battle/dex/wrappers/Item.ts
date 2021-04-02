@@ -643,6 +643,7 @@ export class Item
      */
     public canConsumeUpdate(mon: Pokemon): Set<SubReason> | null
     {
+        if (mon.fainted) return null;
         switch (this.data.consumeOn?.update?.condition)
         {
             case "hp":

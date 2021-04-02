@@ -395,6 +395,16 @@ export function testUseMove(ctxFunc: () => Context,
             await exitParser();
         });
 
+        it("Should cancel item update effects", async function()
+        {
+            initActive("us");
+            initActive("them").item.narrow("sitrusberry");
+            await initParser("us", "tackle");
+            await handle({type: "takeDamage", monRef: "them", hp: 0});
+            await handle({type: "faint", monRef: "them"});
+            await exitParser();
+        });
+
         describe("selfFaint", function()
         {
             it("Should pass self-faint move", async function()
