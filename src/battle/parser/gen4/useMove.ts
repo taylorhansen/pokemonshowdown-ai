@@ -1593,6 +1593,11 @@ async function* expectSelfSwitch(ctx: MoveContext,
         throw new Error("Expected effect that didn't happen: " +
             `selfSwitch '${effect}'`);
     }
+    if (haltEvent.reason === "gameOver")
+    {
+        // cancel self-switch effect due to game-over
+        return {event: haltEvent, permHalt: true};
+    }
     const expectedReason = ctx.userRef === "us" ? "switch" : "wait";
     if (haltEvent.reason !== expectedReason)
     {

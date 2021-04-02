@@ -3134,6 +3134,17 @@ export function testUseMove(ctxFunc: () => Context,
                 await handleEnd({type: "switchIn", monRef: "them", ...ditto});
             });
 
+            it("Should cancel effect if game-over", async function()
+            {
+                initActive("us");
+                initActive("them");
+                await initParser("them", "uturn");
+                await handle({type: "takeDamage", monRef: "us", hp: 0});
+                await handle({type: "faint", monRef: "us"});
+                await handleEnd({type: "halt", reason: "gameOver"},
+                    {event: {type: "halt", reason: "gameOver"}});
+            });
+
             it("Should throw if no self-switch expected", async function()
             {
                 initActive("us");
