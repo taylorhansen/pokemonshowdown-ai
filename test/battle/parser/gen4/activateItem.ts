@@ -22,7 +22,7 @@ export function testActivateItem(f: () => Context,
         ({pstate, parser} = f());
     });
 
-    const {handle, exitParser} = createParserHelpers(() => parser);
+    const {handle, handleEnd, exitParser} = createParserHelpers(() => parser);
 
     // can have cutecharm or magicguard
     const clefable: events.SwitchOptions =
@@ -140,21 +140,19 @@ export function testActivateItem(f: () => Context,
 
                 it("Should have poison effect if poison type", async function()
                 {
-                    initActive("us");
                     initActive("them", nidoqueen).hp.set(90);
                     await initParser("them", "blacksludge", "turn");
-                    await handle({type: "takeDamage", monRef: "them", hp: 100});
-                    await exitParser();
+                    await handleEnd(
+                        {type: "takeDamage", monRef: "them", hp: 100});
                 });
 
                 it("Should have noPoison effect if not poison type",
                     async function()
                 {
-                    initActive("us");
                     initActive("them");
                     await initParser("them", "blacksludge", "turn");
-                    await handle({type: "takeDamage", monRef: "them", hp: 0});
-                    await exitParser();
+                    await handleEnd(
+                        {type: "takeDamage", monRef: "them", hp: 0});
                 });
             });
 
@@ -163,23 +161,19 @@ export function testActivateItem(f: () => Context,
                 it("Should handle percentDamage effect", async function()
                 {
                     initActive("us").hp.set(50);
-                    initActive("them");
                     await initParser("us", "leftovers", "turn");
-                    await handle({type: "takeDamage", monRef: "us", hp: 56});
-                    await exitParser();
+                    await handleEnd({type: "takeDamage", monRef: "us", hp: 56});
                 });
 
                 it("Should handle status effect", async function()
                 {
-                    initActive("us");
                     initActive("them");
-                    await initParser("us", "toxicorb", "turn");
-                    await handle(
+                    await initParser("them", "toxicorb", "turn");
+                    await handleEnd(
                     {
-                        type: "activateStatusEffect", monRef: "us",
+                        type: "activateStatusEffect", monRef: "them",
                         effect: "tox", start: true
                     });
-                    await exitParser();
                 });
 
                 it("Should infer no magicguard if damaged", async function()
@@ -190,8 +184,8 @@ export function testActivateItem(f: () => Context,
                         .to.have.keys("cutecharm", "magicguard");
 
                     await initParser("them", "stickybarb", "turn");
-                    await handle({type: "takeDamage", monRef: "them", hp: 94});
-                    await exitParser();
+                    await handleEnd(
+                        {type: "takeDamage", monRef: "them", hp: 94});
                     expect(mon.traits.ability.possibleValues)
                         .to.have.keys("cutecharm");
                 });

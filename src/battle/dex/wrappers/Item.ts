@@ -88,8 +88,6 @@ export class Item
                 if (damageResult.success === true)
                 {
                     this.indirectDamage(pstate, holderRef);
-                    lastEvent = (yield* parsers.update(pstate, lastEvent))
-                        .event;
                     allSilent = false;
                 }
             }
@@ -102,8 +100,6 @@ export class Item
                 lastEvent = statusResult.event;
                 if (statusResult.success === this.data.on.turn.status)
                 {
-                    lastEvent = (yield* parsers.update(pstate, lastEvent))
-                        .event;
                     allSilent = false;
                 }
             }
