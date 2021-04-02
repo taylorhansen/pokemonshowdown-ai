@@ -10,10 +10,12 @@ describe("PSBattle", function()
 {
     const username = "username";
 
-    const sender: Sender = async function(...responses)
+    const sender: Sender = function(...responses)
     {
-        sentPromiseRes?.(responses);
+        if (!sentPromiseRes) return false;
+        sentPromiseRes(responses);
         initSentPromise(); // reinit
+        return true;
     };
     let sentPromiseRes: ((responses: string[]) => void) | null;
     /** Resolves on the next `sender` call. */

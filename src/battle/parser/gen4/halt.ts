@@ -43,6 +43,7 @@ async function decide(pstate: ParserState, switchOnly: boolean): Promise<void>
     {
         // remove invalid choice
         const lastChoice = choices.shift()!;
+        pstate.logger.debug(`Choice ${lastChoice} was rejected as '${result}'`);
 
         let newInfo = false;
         if (result === "disabled")
@@ -93,6 +94,7 @@ async function decide(pstate: ParserState, switchOnly: boolean): Promise<void>
             pstate.logger.debug(`Sorted choices: [${choices.join(", ")}]`);
         }
     }
+    pstate.logger.debug(`Choice ${choices[0]} was accepted`);
 }
 
 /** Gets the available choices for the current decision. */

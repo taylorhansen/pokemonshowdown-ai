@@ -16,8 +16,12 @@ export interface LoginOptions
     readonly loginServer: string;
 }
 
-/** Function type for sending responses to a server. */
-export type Sender = (...responses: string[]) => void;
+/**
+ * Function type for sending responses to a server.
+ * @param responses Messages to send.
+ * @returns False if the messages can't be sent, true otherwise.
+ */
+export type Sender = (...responses: string[]) => boolean;
 
 /**
  * Creates a RoomHandler for a room that the PSBot has joined.
@@ -176,11 +180,13 @@ export class PSBot
 
             this.sender = (...responses: string[]) =>
             {
+                if (!connection.connected) return false;
                 for (const response of responses)
                 {
                     connection.sendUTF(response);
                     this.logger.debug(`Sent: ${response}`);
                 }
+                return true;
             };
 
             connection.on("error", error =>
@@ -307,9 +313,10 @@ export class PSBot
      * @param room Room to send the response from. Can be empty if no room in
      * particular.
      * @param responses Responses to be sent to the server.
+     * @returns False if the messages can't be sent, true otherwise.
      */
-    private addResponses(room: string, ...responses: string[]): void
+    private addResponses(room: string, ...responses: string[]): boolean
     {
-        this.sender(...responses.map(res => room + res));
+        return this.sender(...responses.map(res => room + res));
     }
 }

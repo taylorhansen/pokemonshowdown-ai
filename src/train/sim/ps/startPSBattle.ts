@@ -79,12 +79,11 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         options.logPrefix ?? "Battle: ");
 
     // start simulating a battle
-    const battleStream = new s.BattleStream({keepAlive: true});
+    const battleStream = new s.BattleStream({keepAlive: false});
     const streams = s.getPlayerStreams(battleStream);
     streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
     const eventLoops: Promise<void>[] = [];
-    let done = false;
 
     let winner: PlayerID | undefined;
     for (const id of ["p1", "p2"] as PlayerID[])
@@ -92,7 +91,7 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         const innerLog = logger.addPrefix(`${id}: `);
 
         // sends player choices to the battle stream
-        function sender(...args: string[]): void
+        function sender(...args: string[]): boolean
         {
             for (const arg of args)
             {
@@ -102,9 +101,15 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 {
                     const choice = arg.substr("|/choose ".length);
                     innerLog.debug(`Sending choice '${choice}'`);
-                    streams[id].write(choice);
+                    if (!battleStream.atEOF) streams[id].write(choice);
+                    else
+                    {
+                        innerLog.error("Can't send: At end of stream");
+                        return false;
+                    }
                 }
             }
+            return true;
         }
 
         // additionally stop the battle once a game-over event is emitted
@@ -112,7 +117,6 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         let eventHandlerCtor: typeof PSEventHandler | undefined;
         if (id === "p1")
         {
-            let turns = 0;
             eventHandlerCtor = class extends PSEventHandler
             {
                 /** @override */
@@ -120,10 +124,11 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 {
                     const result = super.handleTurn(event);
                     // also make sure the battle doesn't go too long
-                    if (options.maxTurns && ++turns >= options.maxTurns)
+                    if (options.maxTurns && event.num >= options.maxTurns)
                     {
                         // tie
-                        result.push(...this.handleGameOver({type: "tie"}));
+                        innerLog.debug("Max turns reached, force tie");
+                        streams.omniscient.write(">forcetie");
                     }
                     return result;
                 }
@@ -133,7 +138,6 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                     events.Any[]
                 {
                     if (event.type === "win") winner = event.winner as PlayerID;
-                    done = true;
                     return super.handleGameOver(event);
                 }
             };
@@ -152,12 +156,11 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         const parserLog = innerLog.addPrefix("Parser: ");
         eventLoops.push(async function()
         {
-            let output: string;
-            while (!done && (output = await stream.read()))
+            try
             {
-                innerLog.debug(`received:\n${output}`);
-                try
+                for await (const output of stream)
                 {
+                    innerLog.debug(`Received:\n${output}`);
                     const {messages} = parsePSMessage(output, parserLog);
                     for (const msg of messages)
                     {
@@ -171,19 +174,22 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                             case "error": await battle.error(msg); break;
                         }
                     }
+                    innerLog.debug("Waiting for next input");
                 }
-                catch (e)
-                {
-                    // log game errors and leave a new exception specifying
-                    //  where to find it
-                    innerLog.error(e?.stack ? e.stack : e);
-                    done = true; // signal to other side to stop
-                    throw new Error("startPSBattle() encountered an error. " +
-                        `Check ${logPath} for details.`);
-                }
+                innerLog.debug("Finishing");
+                await battle.finish();
+                innerLog.debug("Done");
             }
-            // signal to other event loop of game over
-            done = true;
+            catch (e)
+            {
+                // log game errors and leave a new exception specifying
+                //  where to find it
+                innerLog.error(e?.stack ? e.stack : e);
+                innerLog.debug("Error encountered, discard game");
+                if (!battleStream.atEOF) battleStream.destroy();
+                throw new Error("startPSBattle() encountered an error. " +
+                    `Check ${logPath} for details.`);
+            }
         }());
     }
 
@@ -192,11 +198,21 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
     try { await Promise.all(eventLoops); }
     catch (e) { err = e; }
 
-    // make sure the game completely ends to make sure logs are complete
-    await Promise.allSettled(eventLoops);
-    battleStream.destroy();
+    // should probably never happen, but not a big deal if it does
+    if (!battleStream.atEOF)
+    {
+        logger.debug("Killing battle stream");
+        battleStream.destroy();
+    }
+    // make sure the game completely ends so that the logs are complete
+    if (err)
+    {
+        logger.debug("Finishing other side");
+        await Promise.allSettled(eventLoops);
+    }
 
-    // close the file and return
+    // close the log file and return
+    logger.debug("Closing file");
     await new Promise(res => file.end(res));
     return {winner, ...err && {err}};
 }

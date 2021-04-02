@@ -40,7 +40,7 @@ export class PSBattle implements RoomHandler
     private parserSendCallback: null | ((result?: SenderResult) => void) = null;
 
     /** Promise for the parser to finish handling a `halt` event. */
-    private haltPromise: Promise<any> | null = null;
+    private haltPromise: ReturnType<BattleParser["next"]> | null = null;
 
     /**
      * Creates a PSBattle.
@@ -63,7 +63,11 @@ export class PSBattle implements RoomHandler
                 new Promise<SenderResult>(res =>
                 {
                     this.parserSendCallback = res;
-                    this.sender(`|/choose ${choice}`);
+                    if (!this.sender(`|/choose ${choice}`))
+                    {
+                        logger.debug("Can't send Choice, force accept");
+                        res();
+                    }
                 })
                 .finally(() => this.parserSendCallback = null)
         });
@@ -154,6 +158,17 @@ export class PSBattle implements RoomHandler
     }
 
     /**
+     * Waits for the internal BattleParser to return after handling a game-over.
+     */
+    public async finish(): Promise<void>
+    {
+        if (!this.haltPromise) return;
+        const result = await this.haltPromise;
+        if (result.done) return;
+        throw new Error("Last halt should've ended the BattleParser");
+    }
+
+    /**
      * Indicates to the BattleParser that the stream of BattleEvents has
      * temporarily halted, awaiting a response from the user or opponent based
      * on `#lastRequest`.
@@ -193,7 +208,8 @@ export class PSBattle implements RoomHandler
                     active.moves[0].pp == null && active.moves[0].maxpp == null)
                 {
                     halt("wait");
-                    return this.sender("|/choose move 1");
+                    this.sender("|/choose move 1");
+                    return;
                 }
 
                 const event = this.eventHandler.updateMoves(lastRequest);

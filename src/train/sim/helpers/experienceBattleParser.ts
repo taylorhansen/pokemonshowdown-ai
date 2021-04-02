@@ -60,6 +60,7 @@ export function experienceBattleParser(parserFunc: BattleParserFunc,
                     const action = choiceIds[lastChoice];
                     expAgentData = null;
                     lastChoice = null;
+                    args.logger.debug(`Emitting experience, reward=${reward}`);
                     callback({...data, action, reward});
                 }
                 reward = 0;

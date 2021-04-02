@@ -73,7 +73,7 @@ export async function playGames(
     progress.render({wlt: "0-0-0"});
     const progressLogFunc: LogFunc = msg => progress.interrupt(msg);
     const progressLog = new Logger(progressLogFunc, progressLogFunc,
-        logger.prefix, "");
+        logger.prefix, logger.postfix);
 
     // iterator-like stream for piping GamePoolArgs to the GamePool stream
     const poolArgs = stream.Readable.from(function* generateArgs()

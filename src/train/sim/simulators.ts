@@ -87,11 +87,15 @@ const simulatorsImpl =
 
         // find generated experiences
         const experiences: Experience[][] = [];
-        if (splitExp.p1.length > 0) experiences.push(splitExp.p1);
-        if (splitExp.p2.length > 0) experiences.push(splitExp.p2);
+        // discard them if the game is errored
+        if (!err)
+        {
+            if (splitExp.p1.length > 0) experiences.push(splitExp.p1);
+            if (splitExp.p2.length > 0) experiences.push(splitExp.p2);
+        }
         return {
-            experiences, ...(winner && {winner: winner === "p1" ? 0 : 1}),
-            ...(err && {err})
+            experiences, ...winner && {winner: winner === "p1" ? 0 : 1},
+            ...err && {err}
         };
     }
 } as const;
