@@ -2745,6 +2745,7 @@ export function testUseMove(ctxFunc: () => Context,
                         type: "activateTeamEffect", teamRef: "us", effect,
                         start: true
                     });
+                    await exitParser();
                 });
 
                 // TODO: track moves that can do this
@@ -2758,6 +2759,7 @@ export function testUseMove(ctxFunc: () => Context,
                         type: "activateTeamEffect", teamRef: "them", effect,
                         start: false
                     });
+                    await exitParser();
                 });
 
                 it("Should reject if mismatched flags", async function()
@@ -2771,6 +2773,22 @@ export function testUseMove(ctxFunc: () => Context,
                         start: true
                     });
                 });
+
+                if (name === "Spikes") // ground move
+                {
+                    it("Should ignore ability type immunity", async function()
+                    {
+                        initActive("us").setAbility("levitate"); // ground
+                        initActive("them");
+                        await initParser("them", move);
+                        await handle(
+                        {
+                            type: "activateTeamEffect", teamRef: "us", effect,
+                            start: true
+                        });
+                        await exitParser();
+                    });
+                }
             }));
         }
 

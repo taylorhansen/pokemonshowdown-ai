@@ -754,6 +754,14 @@ export class Ability
         {
             return new Set([chanceReason]);
         }
+        // side/field status moves don't count
+        // TODO: what about moves with additional effects that target the
+        //  holder?
+        if (move.data.category === "status" &&
+            (move.data.effects?.team || move.data.effects?.field))
+        {
+            return null;
+        }
         // can't activate unless the ability could block one of the move's
         //  possible types
         const typeImmunity = this.getTypeImmunity();
