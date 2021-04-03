@@ -12,13 +12,13 @@ export function shuffle<T>(arr: T[]): void
 
 /**
  * Calculates the KL divergence of two discrete probability distributions.
- * @param logProbs1 Log-probabilities of the first distribution.
- * @param logProbs2 Log-probabilities of the second distribution. Must be the
- * same shape as `logProbs1`.
+ * @param p Probabilities of the first distribution.
+ * @param q Probabilities of the second distribution. Must be the same shape
+ * as `p`.
+ * @returns The KL divergence between the two distributions, as a Tensor 1 rank
+ * lower than the given ones.
  */
-export function klDivergence(logProbs1: tf.Tensor, logProbs2: tf.Tensor):
-    tf.Tensor
+export function klDivergence(p: tf.Tensor, q: tf.Tensor): tf.Tensor
 {
-    return tf.tidy(() =>
-        tf.exp(logProbs1).mul(tf.sub(logProbs1, logProbs2)).sum(-1));
+    return tf.tidy(() => tf.sum(tf.mul(p, tf.log(tf.div(p, q))), -1));
 }

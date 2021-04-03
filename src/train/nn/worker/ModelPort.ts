@@ -59,7 +59,7 @@ export class ModelPort extends
                 battleStateEncoder.encode(arr, state);
                 const result = await this.predict(arr, /*shared*/ true);
                 data = {...result, state: arr};
-                return result.logits;
+                return result.probs;
             },
             policy);
 
@@ -86,9 +86,12 @@ export class ModelPort extends
     {
         const msg: PredictMessage =
             {type: "predict", rid: this.generateRID(), state};
+        // SharedArrayBuffers can't be in the transfer list since they're
+        //  already accessible from both threads
+        const transferList = shared ? [] : [state.buffer];
 
         return new Promise((res, rej) =>
-            this.postMessage(msg, shared ? [] : [msg.state.buffer],
+            this.postMessage(msg, transferList,
                 result =>
                     result.type === "error" ? rej(result.err) : res(result)));
     }

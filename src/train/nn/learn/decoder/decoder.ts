@@ -86,7 +86,7 @@ parentPort.on("message", (msg: DecoderMessage) =>
             const result: DecodeResult =
                 {type: "decode", rid: msg.rid, done: true, aexp};
             parentPort!.postMessage(result,
-                aexp ? [aexp.logProbs.buffer, aexp.state.buffer] : undefined);
+                aexp ? [aexp.probs.buffer, aexp.state.buffer] : undefined);
         })
         .catch((err: Error) =>
         {

@@ -9,8 +9,8 @@ export type NetworkData =
 {
     /** State input as a column vector. */
     state: tf.Tensor2D;
-    /** Action-logit outputs. */
-    logits: tf.Tensor1D;
+    /** Action-probability outputs. */
+    probs: tf.Tensor1D;
     /** State-value output. */
     value: tf.Scalar;
 };
@@ -39,16 +39,16 @@ export function networkAgent(model: tf.LayersModel, policy: PolicyType,
             const stateTensor = tf.tensor2d(stateData,
                 [1, battleStateEncoder.size]);
 
-            const [logitsTensor, valueTensor] = tf.tidy(function()
+            const [probsTensor, valueTensor] = tf.tidy(function()
             {
-                const [actLogits, stateValue] =
+                const [actProbs, stateValue] =
                     model.predict(stateTensor) as tf.Tensor[];
-                return [actLogits.as1D(), stateValue.asScalar()];
+                return [actProbs.as1D(), stateValue.asScalar()];
             });
-            const logitsData = await logitsTensor.data() as Float32Array;
+            const probsData = await probsTensor.data() as Float32Array;
             callback(
-                {state: stateTensor, logits: logitsTensor, value: valueTensor});
-            return logitsData;
+                {state: stateTensor, probs: probsTensor, value: valueTensor});
+            return probsData;
         },
         policy);
 }

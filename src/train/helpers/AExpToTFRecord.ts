@@ -81,7 +81,7 @@ export class AExpToTFRecord extends Transform
     {
         this.builder.setInteger("action", aexp.action);
         this.builder.setFloat("advantage", aexp.advantage);
-        this.builder.setFloats("logProbs", Array.from(aexp.logProbs));
+        this.builder.setFloats("probs", Array.from(aexp.probs));
         this.builder.setFloat("returns", aexp.returns);
         this.builder.setFloats("state", Array.from(aexp.state));
         this.builder.setFloat("value", aexp.value);

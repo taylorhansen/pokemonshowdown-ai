@@ -15,7 +15,6 @@ export function weightedShuffle<T>(weights: number[], arr: T[]): void
         throw new Error(`Weights and shuffle array have mismatched lengths ` +
             `(weights: ${weights.length}, arr: ${arr.length})`);
     }
-
     const cw = weights.map((sum => (value: number) => sum += value)(0));
     const copy = [...arr];
     for (let i = 0; i < arr.length; ++i)

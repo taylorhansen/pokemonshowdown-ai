@@ -5,8 +5,8 @@ export interface ExperienceAgentData
 {
     /** State in which the action was taken. */
     state: Float32Array;
-    /** Logits data mapping to action-probabilities. */
-    logits: Float32Array;
+    /** Action probabilities. */
+    probs: Float32Array;
     /** State-value prediction. */
     value: number;
 }

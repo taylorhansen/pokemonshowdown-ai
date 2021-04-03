@@ -25,7 +25,7 @@ export function exampleToAExp(example: tfrecord.Example): AugmentedExperience
     return {
         action: getUint32(featureMap, "action"),
         advantage: getFloat(featureMap, "advantage"),
-        logProbs: getFloats(featureMap, "logProbs"),
+        probs: getFloats(featureMap, "probs"),
         returns: getFloat(featureMap, "returns"),
         state: getFloats(featureMap, "state"),
         value: getFloat(featureMap, "value")

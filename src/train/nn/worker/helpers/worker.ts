@@ -145,7 +145,7 @@ class NetworkRegistry
                 .then(result =>
                     port1.postMessage(result,
                         result.type === "predict" ?
-                            [result.logits.buffer] : [result.err.buffer])));
+                            [result.probs.buffer] : [result.err.buffer])));
         // remove this port from the recorded references after close
         port1.on("close", () => this.ports.delete(port1));
         return port2;
@@ -245,13 +245,13 @@ class NetworkRegistry
 
         // batch and execute model
 
-        const [batchedLogits, batchedValues] = tf.tidy(() =>
+        const [batchedProbs, batchedValues] = tf.tidy(() =>
         {
             const batchStates = tf.stack(batch.map(req => req.state));
-            const [batchLogits, batchValues] =
+            const [batchProbs, batchValues] =
                 this.model.predictOnBatch(batchStates) as tf.Tensor[];
             return [
-                batchLogits.as2D(batch.length, intToChoice.length)
+                batchProbs.as2D(batch.length, intToChoice.length)
                     .unstack<tf.Tensor1D>(),
                 batchValues.as1D()
             ];
@@ -259,18 +259,18 @@ class NetworkRegistry
 
         // unpack and distribute batch entries
 
-        const [logitsData, valueData] = await Promise.all(
+        const [probsData, valueData] = await Promise.all(
         [
-            Promise.all(batchedLogits.map(
+            Promise.all(batchedProbs.map(
                 t => t.data() as Promise<Float32Array>)),
             batchedValues.data() as Promise<Float32Array>
         ]);
-        batchedLogits.forEach(t => t.dispose())
+        batchedProbs.forEach(t => t.dispose())
         batchedValues.dispose();
 
         for (let i = 0; i < batch.length; ++i)
         {
-            batch[i].res({logits: logitsData[i], value: valueData[i]});
+            batch[i].res({probs: probsData[i], value: valueData[i]});
         }
     }
 }

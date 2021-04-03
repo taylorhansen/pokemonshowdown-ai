@@ -14,11 +14,11 @@ export function createModel(): tf.LayersModel
         kernelInitializer: "heNormal", biasInitializer: "heNormal"
     }).apply(state);
 
-    // action-logit and state-value outputs
-    const actionLogits = tf.layers.dense(
+    // action-prob and state-value outputs
+    const actionProbs = tf.layers.dense(
     {
-        name: "network/action-logits", units: intToChoice.length,
-        activation: "linear", kernelInitializer: "heNormal",
+        name: "network/action-probs", units: intToChoice.length,
+        activation: "softmax", kernelInitializer: "heNormal",
         biasInitializer: "heNormal"
     }).apply(fc1) as tf.SymbolicTensor;
     const stateValue = tf.layers.dense(
@@ -29,5 +29,5 @@ export function createModel(): tf.LayersModel
     }).apply(fc1) as tf.SymbolicTensor;
 
     return tf.model(
-        {name: "network", inputs: state, outputs: [actionLogits, stateValue]});
+        {name: "network", inputs: state, outputs: [actionProbs, stateValue]});
 }

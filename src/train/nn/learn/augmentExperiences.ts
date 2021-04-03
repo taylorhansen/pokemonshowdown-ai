@@ -3,19 +3,6 @@ import { AugmentedExperience } from "./AugmentedExperience";
 import { AdvantageConfig } from "./LearnArgs";
 
 /**
- * Computes `log(softmax(logits))` but with an optimization to help preserve
- * precision.
- */
-function logSoftmax(logits: Float32Array): Float32Array
-{
-    const max = Math.max(...logits);
-    const shifted = logits.map(n => n - max);
-    const shiftedLogSumExp =
-        Math.log(shifted.map(Math.exp).reduce((a, b) => a + b));
-    return shifted.map(n => n - shiftedLogSumExp);
-}
-
-/**
  * Processes a set of game Experience into a set of AugmentedExperiences
  * suitable for learning.
  * @param games Game to read from.
@@ -28,6 +15,8 @@ export function augmentExperiences(game: readonly Experience[],
     const samples: AugmentedExperience[] = [];
     let lastRet = 0;
     let lastAdv = 0;
+    // iterate backwards so we know the sum of the future rewards down to the
+    //  current experience
     for (let i = game.length - 1; i >= 0; --i)
     {
         const exp = game[i];
@@ -38,7 +27,7 @@ export function augmentExperiences(game: readonly Experience[],
         // estimate advantage
         switch (advantage.type)
         {
-            case "a2c": lastAdv = lastRet - exp.value, i; break;
+            case "a2c": lastAdv = lastRet - exp.value; break;
             case "generalized":
             {
                 // temporal difference residual
@@ -49,15 +38,15 @@ export function augmentExperiences(game: readonly Experience[],
                 // exponentially-decayed sum of residual terms
                 lastAdv = delta +
                     advantage.gamma * advantage.lambda * lastAdv;
+                break;
             }
             case "reinforce": lastAdv = lastRet; break;
         }
 
         samples.push(
         {
-            state: exp.state, value: exp.value, action: exp.action,
-            logProbs: logSoftmax(exp.logits),
-            returns: lastRet, advantage: lastAdv
+            state: exp.state, probs: exp.probs, value: exp.value,
+            action: exp.action, returns: lastRet, advantage: lastAdv
         });
     }
 
