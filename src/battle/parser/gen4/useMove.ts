@@ -927,7 +927,8 @@ async function* otherEffects(ctx: MoveContext, lastEvent?: events.Any):
     {
         const damageResult = yield* parsers.damage(ctx.pstate,
             ctx.userRef, "recoil", -1, lastEvent);
-        if (damageResult.success !== "silent")
+        if (damageResult.success !== "silent" &&
+            !ctx.move.data.effects?.recoil?.struggle)
         {
             recoil(ctx, /*consumed*/ !!damageResult.success);
         }

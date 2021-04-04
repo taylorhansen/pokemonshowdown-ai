@@ -3137,6 +3137,18 @@ export function testUseMove(ctxFunc: () => Context,
             testRecoil(
                 "Should throw if ability suppressed and no recoil event",
                 mon => mon.volatile.suppressAbility = true, false, "throw");
+
+            it("Should handle Struggle recoil", async function()
+            {
+                initActive("us").setAbility("rockhead");
+                initActive("them");
+                await initParser("us", "struggle");
+                await handle({type: "takeDamage", monRef: "them", hp: 50});
+                // recoil-blocking abilities don't work with struggle
+                await handle(
+                    {type: "takeDamage", monRef: "us", hp: 50, from: "recoil"});
+                await exitParser();
+            });
         });
 
         //#endregion
