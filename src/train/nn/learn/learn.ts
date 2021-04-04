@@ -234,12 +234,13 @@ export async function learn(
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
 
     callback?.({type: "start", numBatches: Math.ceil(numAExps / batchSize)});
-    callbacks.setModel(model);
     await callbacks.onTrainBegin();
 
     for (let i = 0; i < epochs; ++i)
     {
-        await callbacks.onEpochBegin(i);
+        const epochLogs:
+            {[name: string]: tf.Scalar | number, loss: tf.Scalar} = {} as any;
+        await callbacks.onEpochBegin(i, epochLogs);
 
         const metricsPerBatch:
             {[name: string]: tf.Scalar[], loss: tf.Scalar[]} = {loss: []};
@@ -251,8 +252,9 @@ export async function learn(
             // setup dataset loop
             .mapAsync(async function(batch: BatchedAExp)
             {
-                const batchBegin = callbacks.onBatchBegin(batchId,
-                    {batch: batchId, size: batch.state.shape[0]});
+                const batchLogs: {[name: string]: tf.Scalar | number} =
+                    {batch: batchId, size: batch.state.shape[0]};
+                await callbacks.onBatchBegin(batchId, batchLogs);
                 // create loss function that records the metrics data
                 let kl: tf.Scalar | undefined;
                 function f()
@@ -270,11 +272,16 @@ export async function learn(
                         const metric = result[name as keyof LossResult];
                         if (!metric) continue;
 
+                        // record metrics for epoch average later
                         if (!metricsPerBatch.hasOwnProperty(name))
                         {
                             metricsPerBatch[name] = [metric];
                         }
                         else metricsPerBatch[name].push(metric);
+
+                        // record metrics for batch summary
+                        // if using tensorboard, requires updateFreq=batch
+                        batchLogs[name] = tf.keep(metric.clone());
 
                         // record kl for adaptive penalty
                         if (name === "kl") kl = metric;
@@ -310,7 +317,7 @@ export async function learn(
 
                 await Promise.all(
                 [
-                    batchBegin.then(() => callbacks.onBatchEnd(batchId)),
+                    callbacks.onBatchEnd(batchId, batchLogs),
                     ...(callback ?
                         [cost.array().then(costData => callback(
                             {
@@ -318,6 +325,7 @@ export async function learn(
                                 loss: costData
                             }))] : [])
                 ]);
+                tf.dispose(batchLogs);
 
                 ++batchId;
             })
@@ -325,26 +333,24 @@ export async function learn(
             .forEachAsync(() => {});
 
         // average all batch metrics
-        const epochMetrics: {[name: string]: tf.Scalar, loss: tf.Scalar} =
-            {} as any;
         for (const name in metricsPerBatch)
         {
             if (!metricsPerBatch.hasOwnProperty(name)) continue;
-            epochMetrics[name] = tf.tidy(() =>
+            epochLogs[name] = tf.tidy(() =>
                 tf.mean(tf.stack(metricsPerBatch[name])).asScalar());
         }
 
         await Promise.all(
         [
-            callbacks.onEpochEnd(i, epochMetrics),
+            callbacks.onEpochEnd(i, epochLogs),
             ...(callback ?
             [
-                epochMetrics.loss.array()
+                epochLogs.loss.array()
                     .then(lossData =>
                         callback({type: "epoch", epoch: i + 1, loss: lossData}))
             ] : [])
         ]);
-        tf.dispose([metricsPerBatch, epochMetrics]);
+        tf.dispose([metricsPerBatch, epochLogs]);
     }
     await callbacks.onTrainEnd();
 

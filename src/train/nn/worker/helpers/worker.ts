@@ -167,7 +167,10 @@ class NetworkRegistry
         [
             this.inUse,
             ...(logPath ?
-                [ensureDir(logPath).then(() => tfn.node.tensorBoard(logPath))]
+                [ensureDir(logPath).then(
+                    // can change updateFreq to batch to track epoch progress,
+                    //  but will make the learning algorithm slower
+                    () => tfn.node.tensorBoard(logPath, {updateFreq: "epoch"}))]
                 : [])
         ])
             .then(([_, p]) =>
