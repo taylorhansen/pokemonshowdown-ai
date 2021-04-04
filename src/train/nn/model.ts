@@ -10,7 +10,7 @@ export function createModel(): tf.LayersModel
         {name: "network/state", shape: [battleStateEncoder.size]});
     const fc1 = tf.layers.dense(
     {
-        name: "network/fc1", units: 1000, activation: "relu",
+        name: "network/fc1", units: 1024, activation: "relu",
         kernelInitializer: "heNormal", biasInitializer: "heNormal"
     }).apply(state);
 
@@ -23,7 +23,7 @@ export function createModel(): tf.LayersModel
     }).apply(fc1) as tf.SymbolicTensor;
     const stateValue = tf.layers.dense(
     {
-        // training reward is max -1 to 1, so output should be bounded by it
+        // total reward is [-1, 1], so value func should be bounded by it
         name: "network/state-value", units: 1, activation: "tanh",
         kernelInitializer: "heNormal", biasInitializer: "heNormal"
     }).apply(fc1) as tf.SymbolicTensor;
