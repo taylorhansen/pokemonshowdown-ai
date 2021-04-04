@@ -224,12 +224,13 @@ export async function learn(
 {
     // setup training callbacks for metrics logging
     const callbacks = new tf.CallbackList();
+    // TODO: add early stopping?
     if (trainCallback) callbacks.append(trainCallback);
 
     // have to do this manually (instead of #compile()-ing the model and calling
     //  #fit()) since the loss function changes based on the advantage values
-    // TODO: tune optimizer hyperparams
-    const optimizer = tf.train.adam();
+    // TODO: hyperparameter tuning
+    const optimizer = tf.train.adam(1e-5);
     const variables = model.trainableWeights.map(w => w.read() as tf.Variable);
 
     callback?.({type: "start", numBatches: Math.ceil(numAExps / batchSize)});
