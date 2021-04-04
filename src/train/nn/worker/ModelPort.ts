@@ -2,6 +2,7 @@ import { MessagePort } from "worker_threads";
 import { alloc, battleStateEncoder } from "../../../ai/encoder/encoders";
 import { policyAgent, PolicyType } from "../../../ai/policyAgent";
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
+import { intToChoice } from "../../../battle/agent/Choice";
 import { ExperienceAgentData } from "../../sim/helpers/Experience";
 import { AsyncPort, PortRequestBase, PortResultBase } from
     "./helpers/AsyncPort";
@@ -57,7 +58,22 @@ export class ModelPort extends
             {
                 const arr = alloc(battleStateEncoder, /*shared*/ true);
                 battleStateEncoder.encode(arr, state);
+                let i = ModelPort.verifyInput(arr);
+                if (i >= 0)
+                {
+                    throw new Error("Neural network input contains an " +
+                        `invalid value (${arr[i]}) at index ${i}\n` +
+                        `State:\n${state.toString()}`);
+                }
+
                 const result = await this.predict(arr, /*shared*/ true);
+                i = ModelPort.verifyOutput(result.probs);
+                if (i >= 0)
+                {
+                    throw new Error("Neural network output contains an " +
+                        `invalid value at index ${i} (${intToChoice[i]})`);
+                }
+
                 data = {...result, state: arr};
                 return result.probs;
             },
@@ -75,6 +91,39 @@ export class ModelPort extends
             data = null;
             return result;
         };
+    }
+
+    /**
+     * Makes sure that the input doesn't contain invalid values, i.e. NaNs or
+     * values outside the range `[-1, 1]`.
+     * @param arr Array input.
+     * @returns The index of an invalid value, or -1 if none found.
+     */
+    private static verifyInput(arr: Float32Array): number
+    {
+        for (let i = 0; i < arr.length; ++i)
+        {
+            if (isNaN(arr[i])) return i;
+            if (Math.abs(arr[i]) > 1) return i;
+        }
+        return -1;
+    }
+
+    /**
+     * Makes sure that the output doesn't contain invalid values, i.e. NaNs or
+     * very small softmax outputs which tend to mess with `policyAgent`'s
+     * weighted shuffle algorithm.
+     * @param arr Array input.
+     * @returns The index of an invalid value, or -1 if none found.
+     */
+    private static verifyOutput(arr: Float32Array): number
+    {
+        for (let i = 0; i < arr.length; ++i)
+        {
+            if (isNaN(arr[i])) return i;
+            if (arr[i] < 1e-4) return i;
+        }
+        return -1;
     }
 
     /**
