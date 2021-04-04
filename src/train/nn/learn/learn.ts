@@ -84,9 +84,8 @@ function loss(
                             tf.greaterEqual(advantage, tf.zerosLike(advantage)),
                             tf.fill(advantage.shape, 1 + algorithm.epsilon),
                             tf.fill(advantage.shape, 1 - algorithm.epsilon));
-                    const clippedAdvantage = tf.mul(bounds, advantage);
-
-                    pgObjs = tf.minimum(ratio, clippedAdvantage);
+                    pgObjs = tf.minimum(tf.mul(ratio, advantage),
+                            tf.mul(bounds, advantage));
                     break;
                 }
                 case "klFixed":
@@ -100,6 +99,7 @@ function loss(
                     const beta = algorithm.beta ?? 1;
                     const klPenalty = tf.mul(beta, kl);
                     pgObjs = tf.sub(rScaled, klPenalty);
+                    break;
                 }
             }
         }
