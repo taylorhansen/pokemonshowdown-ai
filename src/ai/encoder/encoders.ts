@@ -259,6 +259,9 @@ export const moveStatusEncoder: Encoder<ReadonlyMoveStatus> =
             : {id: null},
         oneHotEncoder(dex.moveKeys.length));
 
+/** Maximum boost value. */
+const maxBoost = 6;
+
 /** Encoder for a VolatileStatus. */
 export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
     // passable
@@ -269,7 +272,7 @@ export const volatileStatusEncoder: Encoder<ReadonlyVolatileStatus> = concat(
             checkLength(arr, boostKeys.length);
             for (let i = 0; i < boostKeys.length; ++i)
             {
-                arr[i] = vs.boosts[boostKeys[i]];
+                arr[i] = vs.boosts[boostKeys[i]] / maxBoost;
             }
         },
         size: boostKeys.length
