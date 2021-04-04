@@ -128,7 +128,10 @@ function loss(
         //  it along with minimizing the other loss functions
         if (algorithm.entropyCoeff)
         {
-            const negEnt = tf.sum(tf.mul(probs, tf.log(probs))).asScalar();
+            // note: max possible entropy (where each action is equally likely)
+            //  is log(#probs) where #probs is the # of possible actions
+            const negEnt = tf.mean(tf.sum(tf.mul(probs, tf.log(probs)), -1))
+                .asScalar();
             result.entropy = tf.keep(tf.neg(negEnt));
             losses.push(tf.mul(negEnt, algorithm.entropyCoeff));
         }

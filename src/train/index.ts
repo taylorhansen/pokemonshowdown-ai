@@ -89,7 +89,7 @@ const batchOptions: BatchOptions =
                     type: "generalized", gamma: 0.99, lambda: 0.9,
                     standardize: true
                 },
-                valueCoeff: 0.55, entropyCoeff: 0.9
+                valueCoeff: 0.55, entropyCoeff: 0.1
             },
             epochs: 8, batchSize: 16,
             logger: episodeLog, logPath: join(logPath, `episode-${i + 1}`)
