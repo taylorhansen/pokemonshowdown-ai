@@ -12,11 +12,7 @@ export interface ReadonlyItemTempStatus<TStatusType extends string>
     readonly type: TStatusType | "none";
     /** The weather-causer's item if there is one. */
     readonly source: ReadonlyPossibilityClass<string, ItemData> | null;
-    /**
-     * Number of turns this status has been active. This is 0-based, so this
-     * will return 0 if the weather was started this turn, and 1 after the end
-     * of this turn.
-     */
+    /** Current number of `#tick()`s. */
     readonly turns: number;
     /**
      * The amount of `#tick()` calls this status will last. Null means infinite.
@@ -134,30 +130,28 @@ export class ItemTempStatus<TStatusType extends string> implements
     /** Indicates that the status lasted another turn. */
     public tick(): void
     {
-        // no need to increment turns if it's infinite or none
-        if (this._duration === null || this._type === "none") return;
-
+        // no need to check turns if it's none
+        if (this._type === "none") return;
         ++this._turns;
+        // went over duration
+        if (this._duration === null || this._turns < this._duration) return;
 
-        if (this._turns < this._duration) return;
-
-        // went over duration without reset()-ing, figure out why
-        let valid = false;
+        // should've reset() on last tick(), infer extension item if using the
+        //  short duration
         if (this._duration === this.durations[0])
         {
-            // currently using short duration, so we must have had the
+            // currently using short duration, so the source must've had the
             //  extension item all along
             if (this._source?.isSet(this.items[this._type]))
             {
                 this._source.narrow(this.items[this._type]);
                 this._duration = this.durations[1];
-                valid = true;
+                return;
             }
-            else; // went over short duration without item, should never happen
+            // went over short duration without item, should never happen
         }
-        else; // went over long duration, should never happen
+        // went over long duration, should never happen
 
-        if (valid) return;
         throw new Error(`Status '${this._type}' went longer than expected ` +
             `(duration=${this._duration}, turns=${this._turns})`);
     }

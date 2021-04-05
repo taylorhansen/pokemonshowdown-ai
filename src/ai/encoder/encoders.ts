@@ -69,7 +69,7 @@ export const tempStatusEncoder: Encoder<ReadonlyTempStatus> =
 /** Encodes TempStatus data into a number. */
 function tempStatusEncoderImpl(ts: ReadonlyTempStatus): number
 {
-    return limitedStatusTurns(ts.turns, ts.duration);
+    return limitedStatusTurns(ts.turns + (ts.isActive ? 1 : 0), ts.duration);
 }
 
 /**
@@ -353,9 +353,10 @@ export const majorStatusCounterEncoder: Encoder<ReadonlyMajorStatusCounter> =
     augment(msc =>
         ({
             id: msc.current && majorStatuses[msc.current],
-            // %hp that will be taken away at the end of the next turn by toxic
-            //  dmg
-            one: msc.current === "tox" ? Math.min(1, 0.0625 * msc.turns)
+            one: msc.current === "tox" ?
+                    // %hp taken by toxic damage next turn, capped at 15/16
+                    // TODO: damage is actually turns * max(1, floor(hp/16))
+                    Math.min(15/16, msc.turns / 16)
                 : msc.current === "slp" ?
                     // chance of staying asleep
                     limitedStatusTurns(msc.turns, msc.duration!)

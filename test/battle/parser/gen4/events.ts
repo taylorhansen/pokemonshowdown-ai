@@ -1353,13 +1353,13 @@ export function testEvents()
                 // first start the effect
                 v[effect].start();
                 expect(v[effect].isActive).to.be.true;
-                expect(v[effect].turns).to.equal(1);
+                expect(v[effect].turns).to.equal(0);
 
                 // then update it
                 await parser.next(
                     {type: "updateStatusEffect", monRef: "us", effect});
                 expect(v[effect].isActive).to.be.true;
-                expect(v[effect].turns).to.equal(2);
+                expect(v[effect].turns).to.equal(1);
             });
         }
 

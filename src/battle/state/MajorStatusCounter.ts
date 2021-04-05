@@ -12,7 +12,7 @@ export interface ReadonlyMajorStatusCounter
     readonly duration: number | null;
 }
 
-/** Mutually-exclusive-turn-counter manager for major status conditions. */
+/** Mutually-exclusive turn-counter manager for major status conditions. */
 export class MajorStatusCounter implements ReadonlyMajorStatusCounter
 {
     /** @override */
@@ -57,6 +57,7 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
                 `${pluralTurns(this._turns - 1, this._duration)})`);
         }
 
+        // TODO: implement in AbilityData/Ability wrapper
         if (ability === "earlybird" && this._current === "slp")
         {
             this._turns += 2;

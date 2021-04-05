@@ -7,12 +7,12 @@ export interface ReadonlyTempStatus
     readonly name: string;
     /** Whether the status is currently active. */
     readonly isActive: boolean;
-    /**
-     * The amount of turns this status has been active, including the current
-     * turn.
-     */
+    /** Current number of `#tick()`s. */
     readonly turns: number;
-    /** Amount of turns this status will last. */
+    /**
+     * Max amount of `#tick()`s the status will last. `#end()` should be called
+     * in place of the last `#tick()`.
+     */
     readonly duration: number;
 }
 
@@ -20,7 +20,9 @@ export interface ReadonlyTempStatus
 export class TempStatus implements ReadonlyTempStatus
 {
     /** @override */
-    public get isActive(): boolean { return this._turns > 0; }
+    public get isActive(): boolean { return this._isActive; }
+    private _isActive = false;
+
     /** @override */
     public get turns(): number { return this._turns; }
     private _turns = 0;
@@ -28,10 +30,10 @@ export class TempStatus implements ReadonlyTempStatus
     /**
      * Creates a TempStatus.
      * @param name Name of the status.
-     * @param duration Max amount of `#tick()`s the status will last. After the
-     * last tick, `#end()` should be called.
-     * @param silent Default false. Indicates whether the status can or should
-     * end silently once its duration is reached on the last `#tick()` call.
+     * @param duration Max amount of `#tick()`s the status will last. `#end()`
+     * should be called in place of the last `#tick()`.
+     * @param silent Whether `#tick()` will act as `#end()` if it hits the
+     * duration limit.
      */
     constructor(public readonly name: string, public readonly duration: number,
         public readonly silent = false)
@@ -41,12 +43,14 @@ export class TempStatus implements ReadonlyTempStatus
     /**
      * Starts the status' turn counter, restarting by default if not already
      * active.
-     * @param restart Default true. Whether the status should be restarted if
-     * called while active.
+     * @param restart Whether the status should be restarted if called while
+     * still active. Default true.
      */
     public start(restart = true): void
     {
-        if (restart || !this.isActive) this._turns = 1;
+        if (!restart && this._isActive) return;
+        this._isActive = true;
+        this._turns = 0;
     }
 
     /**
@@ -56,29 +60,23 @@ export class TempStatus implements ReadonlyTempStatus
      */
     public tick(): void
     {
-        if (!this.isActive) return;
-
-        if (!this.silent)
-        {
-            if (this._turns > this.duration)
-            {
-
-                throw new Error(
-                    `TempStatus '${this.name}' lasted longer than expected (` +
-                    `${pluralTurns(this._turns, this.duration)})`);
-            }
-        }
-        else if (this._turns + 1 > this.duration)
-        {
-            this.end();
-            return;
-        }
-
-        ++this._turns;
+        // inapplicable
+        if (!this._isActive) return;
+        // went over duration
+        if (++this._turns < this.duration) return;
+        // should've called end() on last tick() unless silent
+        if (this.silent) return this.end();
+        throw new Error(
+            `TempStatus '${this.name}' lasted longer than expected ` +
+            `(${pluralTurns(this._turns, this.duration)})`);
     }
 
     /** Ends this status. */
-    public end(): void { this._turns = 0; }
+    public end(): void
+    {
+        this._isActive = false;
+        this._turns = 0;
+    }
 
     /**
      * Copies turn data over to another TempStatus object, as long as the names
@@ -93,6 +91,7 @@ export class TempStatus implements ReadonlyTempStatus
                 `of duration ${ts.duration}`);
         }
 
+        ts._isActive = this._isActive;
         ts._turns = this._turns;
     }
 
@@ -100,6 +99,6 @@ export class TempStatus implements ReadonlyTempStatus
     /** Stringifies this TempStatus. */
     public toString(): string
     {
-        return pluralTurns(this.name, this._turns - 1, this.duration);
+        return pluralTurns(this.name, this._turns, this.duration);
     }
 }

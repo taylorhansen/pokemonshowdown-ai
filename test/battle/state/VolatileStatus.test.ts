@@ -101,10 +101,10 @@ describe("VolatileStatus", function()
             expect(volatile.aquaRing).to.be.true;
             expect(volatile.boosts.atk).to.equal(1);
             expect(volatile.confusion.isActive).to.be.true;
-            expect(volatile.confusion.turns).to.equal(1);
+            expect(volatile.confusion.turns).to.equal(0);
             expect(volatile.curse).to.be.true;
             expect(volatile.embargo.isActive).to.be.true;
-            expect(volatile.embargo.turns).to.equal(1);
+            expect(volatile.embargo.turns).to.equal(0);
             expect(volatile.focusEnergy).to.be.true;
             expect(volatile.ingrain).to.be.true;
             expect(volatile.leechSeed).to.be.true;
@@ -112,7 +112,7 @@ describe("VolatileStatus", function()
             expect(volatile.lockOnTarget).to.not.be.null;
             expect(volatile.lockOnTurns.isActive).to.be.true;
             expect(volatile.magnetRise.isActive).to.be.true;
-            expect(volatile.magnetRise.turns).to.equal(1);
+            expect(volatile.magnetRise.turns).to.equal(0);
             expect(volatile.nightmare).to.be.true;
             expect(volatile.perish).to.equal(3);
             expect(volatile.powerTrick).to.be.true;
@@ -184,8 +184,9 @@ describe("VolatileStatus", function()
         it("Should tick embargo on #postTurn()", function()
         {
             volatile.embargo.start();
+            expect(volatile.embargo.turns).to.equal(0);
             volatile.postTurn();
-            expect(volatile.embargo.turns).to.equal(2);
+            expect(volatile.embargo.turns).to.equal(1);
         });
     });
 
@@ -208,9 +209,10 @@ describe("VolatileStatus", function()
             const target = new VolatileStatus();
             volatile.lockOn(target);
             volatile.postTurn();
-            expect(volatile.lockOnTurns.turns).to.equal(2);
-            volatile.batonPass();
             expect(volatile.lockOnTurns.turns).to.equal(1);
+            volatile.batonPass();
+            expect(volatile.lockOnTurns.isActive).to.be.true;
+            expect(volatile.lockOnTurns.turns).to.equal(0);
         });
 
         it("Should tick on #postTurn()", function()
@@ -218,13 +220,13 @@ describe("VolatileStatus", function()
             const target = new VolatileStatus();
             volatile.lockOn(target);
             expect(volatile.lockOnTurns.isActive).to.be.true;
-            expect(volatile.lockOnTurns.turns).to.equal(1);
+            expect(volatile.lockOnTurns.turns).to.equal(0);
 
             volatile.postTurn();
             expect(volatile.lockedOnBy).to.be.null;
             expect(volatile.lockOnTarget).to.equal(target);
             expect(volatile.lockOnTurns.isActive).to.be.true;
-            expect(volatile.lockOnTurns.turns).to.equal(2);
+            expect(volatile.lockOnTurns.turns).to.equal(1);
             expect(target.lockedOnBy).to.equal(volatile);
             expect(target.lockOnTarget).to.be.null;
             expect(target.lockOnTurns.isActive).to.be.false;
@@ -277,8 +279,9 @@ describe("VolatileStatus", function()
         it("Should tick magnet rise on #postTurn()", function()
         {
             volatile.magnetRise.start();
+            expect(volatile.magnetRise.turns).to.equal(0);
             volatile.postTurn();
-            expect(volatile.magnetRise.turns).to.equal(2);
+            expect(volatile.magnetRise.turns).to.equal(1);
         });
     });
 
@@ -338,24 +341,22 @@ describe("VolatileStatus", function()
 
     describe("#charge", function()
     {
-        it("Should have silent=true", function()
-        {
-            expect(volatile.charge).to.have.property("silent", true);
-        });
-
         it("Should tick on #postTurn()", function()
         {
             volatile.charge.start();
+            expect(volatile.charge.turns).to.equal(0);
+            volatile.postTurn();
             expect(volatile.charge.turns).to.equal(1);
             volatile.postTurn();
-            expect(volatile.charge.turns).to.equal(2);
+            expect(volatile.charge.isActive).to.be.false;
+            expect(volatile.charge.turns).to.equal(0);
         });
     });
 
     for (const [field, set, reset] of
     [
         ["disabled", "disableMove", "enableMoves"],
-        ["encore", "encoreMove", "removeEncore"]
+        ["encore", "encoreMove", "removeEncore"],
     ] as const)
     {
         describe(`#${field}`, function()
@@ -369,9 +370,9 @@ describe("VolatileStatus", function()
             it("Should tick on #postTurn()", function()
             {
                 volatile[set]("splash");
-                expect(volatile[field].ts.turns).to.equal(1);
+                expect(volatile[field].ts.turns).to.equal(0);
                 volatile.postTurn();
-                expect(volatile[field].ts.turns).to.equal(2);
+                expect(volatile[field].ts.turns).to.equal(1);
             });
         });
 
@@ -509,6 +510,7 @@ describe("VolatileStatus", function()
             volatile.grudge = true;
             volatile.bide.start();
             volatile.lockedMove.start("thrash");
+            volatile.rollout.start("rollout");
             volatile.twoTurn.start("razorwind");
             volatile.stall(true);
 
@@ -518,6 +520,7 @@ describe("VolatileStatus", function()
             expect(volatile.grudge).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.lockedMove.isActive).to.be.false;
+            expect(volatile.rollout.isActive).to.be.false;
             expect(volatile.twoTurn.isActive).to.be.false;
             expect(volatile.stalling).to.be.false;
             expect(volatile.stallTurns).to.equal(0);

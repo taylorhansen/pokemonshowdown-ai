@@ -31,7 +31,7 @@ describe("VariableTempStatus", function()
 
     function setup(silent = false)
     {
-        beforeEach("Initialize VariableTempStatus with silent=${silent}",
+        beforeEach(`Initialize VariableTempStatus with silent=${silent}`,
             setupImpl.bind(undefined, silent));
     }
 
@@ -87,10 +87,10 @@ describe("VariableTempStatus", function()
         /** Ticks one less than the required duration. */
         function tickToDuration()
         {
-            for (let i = 0; i < vts.duration; ++i)
+            for (let i = vts.turns + 1; i < vts.duration; ++i)
             {
                 vts.tick();
-                check(vts.type, true, i + 1);
+                check(vts.type, true, i);
             }
         }
 
@@ -103,23 +103,23 @@ describe("VariableTempStatus", function()
             {
                 vts.start("a");
                 tickToDuration();
-                check("a", true, vts.duration);
+                check("a", true, vts.duration - 1);
                 expect(() => vts.tick()).to.throw(Error,
                     "Status 'a' went longer than expected " +
-                    `(duration=${vts.duration}, turns=${vts.duration + 1})`);
+                    `(duration=${vts.duration}, turns=${vts.duration})`);
             });
         });
 
         describe("silent = true", function()
         {
-            setup(true);
+            setup(/*silent*/ true);
             shouldIncTurns();
 
-            it("Should reset once over duration", function()
+            it("Should reset when at duration limit", function()
             {
                 vts.start("a");
                 tickToDuration();
-                check("a", true, vts.duration);
+                check("a", true, vts.duration - 1);
                 vts.tick();
                 check("none", false, 0);
             });

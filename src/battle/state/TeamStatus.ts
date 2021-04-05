@@ -1,8 +1,9 @@
-import { FutureMove, futureMoves } from "../dex/dex";
+import { FutureMove, futureMoveKeys } from "../dex/dex";
 import { SelfSwitchType } from "../dex/dex-util";
 import { ItemTempStatus, ReadonlyItemTempStatus } from "./ItemTempStatus";
 import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
 
+/** Readonly TeamStatus representation. */
 export interface ReadonlyTeamStatus
 {
     /** Turn counters for each type of future move. */
@@ -42,9 +43,20 @@ export interface ReadonlyTeamStatus
 export class TeamStatus implements ReadonlyTeamStatus
 {
     /** @override */
-    public readonly futureMoves: {readonly [id in FutureMove]: TempStatus};
+    public readonly futureMoves: {readonly [id in FutureMove]: TempStatus} =
+        (function()
+        {
+            const future = {} as {[id in FutureMove]: TempStatus};
+            for (const id of futureMoveKeys)
+            {
+                // 3 turns, end on last (can be silent)
+                future[id] = new TempStatus(id, 3, /*silent*/true);
+            }
+            return future;
+        })();
     /** @override */
     public healingWish = false;
+    // 5-8 turns, end on last
     /** @override */
     public readonly lightScreen = new ItemTempStatus([5, 8],
         {lightscreen: "lightclay"}, "lightscreen");
@@ -54,9 +66,11 @@ export class TeamStatus implements ReadonlyTeamStatus
     public lunarDance = false;
     /** @override */
     public readonly mist = new TempStatus("mist", 5);
+    // 5-8 turns, end on last
     /** @override */
     public readonly reflect = new ItemTempStatus([5, 8], {reflect: "lightclay"},
         "reflect");
+    // 5 turns, end on last
     /** @override */
     public readonly safeguard = new TempStatus("safeguard", 5);
     /** @override */
@@ -66,22 +80,12 @@ export class TeamStatus implements ReadonlyTeamStatus
     /** @override */
     public stealthRock = 0;
     /** @override */
-    public readonly tailwind = new TempStatus("tailwind", 2);
+    public readonly tailwind = new TempStatus("tailwind", 3);
     /** @override */
     public toxicSpikes = 0;
+    // ends next turn (can be silent)
     /** @override */
     public readonly wish = new TempStatus("wishing", 2, /*silent*/true);
-
-    /** Creates a TeamStatus. */
-    constructor()
-    {
-        const future = {} as {[id in FutureMove]: TempStatus};
-        for (const id of Object.keys(futureMoves) as FutureMove[])
-        {
-            future[id] = new TempStatus(id, 3, /*silent*/true);
-        }
-        this.futureMoves = future;
-    }
 
     /**
      * Called at the end of the turn, before a Choice has been sent to the
@@ -89,17 +93,13 @@ export class TeamStatus implements ReadonlyTeamStatus
      */
     public postTurn(): void
     {
-        for (const id of Object.keys(this.futureMoves) as FutureMove[])
-        {
-            this.futureMoves[id].tick();
-        }
-
+        for (const id of futureMoveKeys) this.futureMoves[id].tick();
         this.lightScreen.tick();
         this.luckyChant.tick();
         this.mist.tick();
         this.reflect.tick();
         this.safeguard.tick();
-        this.tailwind.tick(); // will end explicitly before the third tick
+        this.tailwind.tick();
         this.wish.tick();
     }
 

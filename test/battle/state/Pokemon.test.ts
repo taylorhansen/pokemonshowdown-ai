@@ -711,12 +711,12 @@ describe("Pokemon", function()
                 mon.volatile.lockOn(target.volatile);
                 mon.postTurn();
                 expect(mon.volatile.lockOnTurns.isActive).to.be.true;
-                expect(mon.volatile.lockOnTurns.turns).to.equal(2);
+                expect(mon.volatile.lockOnTurns.turns).to.equal(1);
 
                 const bench = new Pokemon("seaking", false);
                 bench.switchInto(mon, "copyvolatile");
                 expect(bench.volatile.lockOnTurns.isActive).to.be.true;
-                expect(bench.volatile.lockOnTurns.turns).to.equal(1);
+                expect(bench.volatile.lockOnTurns.turns).to.equal(0);
             });
 
             it("Should reset nightmare if recipient is not asleep", function()

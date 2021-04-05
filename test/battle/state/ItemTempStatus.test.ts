@@ -156,16 +156,6 @@ describe("ItemTempStatus", function()
             expect(its.turns).to.equal(0);
         });
 
-        it("Should do nothing if infinite", function()
-        {
-            its.start(source, "b", /*infinite*/true);
-            its.tick();
-            expect(its.type).to.equal("b");
-            expect(its.source).to.be.null;
-            expect(its.duration).to.be.null;
-            expect(its.turns).to.equal(0);
-        });
-
         it("Should increment turns", function()
         {
             its.start(source, "a");
@@ -174,6 +164,20 @@ describe("ItemTempStatus", function()
             expect(its.source).to.equal(source.item);
             expect(its.duration).to.equal(its.durations[0]);
             expect(its.turns).to.equal(1);
+        });
+
+        it("Should still increment turns if infinite", function()
+        {
+            its.start(source, "b", /*infinite*/ true);
+            // can count tick()s forever
+            for (let i = 1; i < 100; ++i)
+            {
+                its.tick();
+                expect(its.type).to.equal("b");
+                expect(its.source).to.be.null;
+                expect(its.duration).to.be.null;
+                expect(its.turns).to.equal(i);
+            }
         });
 
         it("Should infer extension item if kept past short duration", function()
@@ -187,9 +191,8 @@ describe("ItemTempStatus", function()
                 expect(its.duration).to.equal(its.durations[0]);
                 expect(its.turns).to.equal(i);
                 its.tick();
-                ++i;
             }
-            while (i < its.durations[0]);
+            while (++i < its.durations[0]);
 
             // at this point, the status has been kept past its normal duration
             expect(source.item.definiteValue).to.equal(its.items.b);

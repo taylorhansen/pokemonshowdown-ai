@@ -204,14 +204,15 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public get boosts(): Writable<BoostTable<number>> { return this._boosts; }
     private _boosts!: Writable<BoostTable<number>>;
 
+    // 2-5 move attempts, cure on last
     /** @override */
-    public readonly confusion = new TempStatus("confused", 4);
+    public readonly confusion = new TempStatus("confused", 5);
 
     /** @override */
     public curse!: boolean;
 
     /** @override */
-    public readonly embargo = new TempStatus("embargo", 3);
+    public readonly embargo = new TempStatus("embargo", 5);
 
     /** @override */
     public focusEnergy!: boolean;
@@ -233,6 +234,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     private _lockOnTarget!: VolatileStatus | null;
     /** @override */
     public get lockOnTurns(): ReadonlyTempStatus { return this._lockOnTurns; }
+    // ends next turn
     private readonly _lockOnTurns =
         new TempStatus("lock on", 2, /*silent*/true);
     /**
@@ -294,8 +296,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public attract!: boolean;
 
+    // 2 bide updates, end on last or if inactive
+    // TODO: this status isn't handled anywhere
     /** @override */
-    public readonly bide = new TempStatus("bide", 1);
+    public readonly bide = new TempStatus("bide", 2);
 
     /** @override */
     public choiceLock!: string | null;
@@ -303,6 +307,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public damaged!: boolean;
 
+    // ends next turn
     /** @override */
     public readonly charge = new TempStatus("charging", 2, /*silent*/true);
 
@@ -326,6 +331,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._disabled.move = null;
         this._disabled.ts.end();
     }
+    // 4-7 turns, cure on last
     private readonly _disabled: MoveStatus =
         {move: null, ts: new TempStatus("disabled", 7)};
 
@@ -347,6 +353,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._encore.move = null;
         this._encore.ts.end();
     }
+    // 3-7 turns, cure on last
     private readonly _encore: MoveStatus =
         {move: null, ts: new TempStatus("encored", 7)};
 
@@ -368,6 +375,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public imprison!: boolean;
 
+    // 2-3 move attempts (including first), end on last (can be silent) or if
+    //  inactive
+    // FIXME: ambiguity if there's no fatigue message to mark the end
     /** @override */
     public readonly lockedMove = new VariableTempStatus(lockedMoves, 2,
         /*silent*/true);
@@ -414,6 +424,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public rage!: boolean;
 
+    // 5 move attempts (including start), end on last or if inactive
     /** @override */
     public readonly rollout = new VariableTempStatus(rolloutMoves, 4,
         /*silent*/true);
@@ -451,6 +462,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     }
     private _stockpile!: number;
 
+    // 3-5 turns, cure on last
     /** @override */
     public readonly taunt = new TempStatus("taunt", 5);
 
@@ -460,13 +472,15 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public transformed!: boolean;
 
+    // ends next turn
     /** @override */
-    public readonly twoTurn = new VariableTempStatus(twoTurnMoves, 1,
+    public readonly twoTurn = new VariableTempStatus(twoTurnMoves, 2,
             /*silent*/true);
 
     /** @override */
     public unburden!: boolean;
 
+    // 2-5 turns, end on last
     /** @override */
     public readonly uproar = new TempStatus("uproar", 5);
 
@@ -490,6 +504,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     }
     private _willTruant!: boolean;
 
+    // ends next turn
     /** @override */
     public readonly yawn = new TempStatus("yawn", 2, /*silent*/true);
 
@@ -637,6 +652,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         //  from being attempted
         this.bide.end();
         this.lockedMove.reset();
+        this.rollout.reset();
         this.twoTurn.reset();
         // uproar doesn't end if prevented from using subsequent moves
 
@@ -678,8 +694,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.charge.tick();
         this._disabled.ts.tick();
         this._encore.ts.tick();
+        this.healBlock.tick();
         this.slowStart.tick();
         this.taunt.tick();
+        this.twoTurn.tick();
         this.yawn.tick();
 
         // handle lockon ending

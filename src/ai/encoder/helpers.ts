@@ -17,9 +17,10 @@ export function checkLength(arr: Readonly<ArrayLike<any>>, length: number): void
  * Interpolates max status duration and current number of turns. Use this when
  * the duration (or max possible duration) of a status is known.
  * @param turns Number of turns the status has been active (including current
- * turn). E.g. if the status started during this turn and the end of the current
- * turn hasn't been reached yet, `turns` should be 1, and should be incremented
- * at the end of each turn. Values higher than `duration` will return zero.
+ * turn), i.e., if the status started during this turn and the end of the
+ * current turn hasn't been reached yet, `turns` should be 1, and should be
+ * incremented at the end of each turn. Values higher than `duration` will
+ * return zero.
  * @param duration Maximum amount of turns the status will last. Should be the
  * maximum value of `turns`.
  * @returns Status turn data for encoder functions as a "likelihood" that the

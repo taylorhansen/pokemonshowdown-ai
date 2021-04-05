@@ -22,31 +22,38 @@ describe("TempStatus", function()
 
     describe("#start()", function()
     {
-        it("Should set turns to 1 and be active", function()
+        it("Should start with 0 turns", function()
         {
             const ts = new TempStatus("", 1);
             ts.start();
-            check(ts, true, 1);
+            check(ts, true, 0);
         });
 
         it("Should restart status", function()
         {
-            const ts = new TempStatus("", 1);
+            const ts = new TempStatus("", 2);
             ts.start();
             ts.tick();
             ts.start();
-            check(ts, true, 1);
+            check(ts, true, 0);
         });
 
         describe("restart = false", function()
         {
             it("Should not restart status", function()
             {
-                const ts = new TempStatus("", 1);
+                const ts = new TempStatus("", 2);
                 ts.start();
                 ts.tick();
                 ts.start(/*restart*/false);
-                check(ts, true, 2);
+                check(ts, true, 1);
+            });
+
+            it("Should start status if not already started", function()
+            {
+                const ts = new TempStatus("", 2);
+                ts.start(/*restart*/false);
+                check(ts, true, 0);
             });
         });
     });
@@ -55,10 +62,10 @@ describe("TempStatus", function()
     {
         it("Should increment turns if active", function()
         {
-            const ts = new TempStatus("", 1);
+            const ts = new TempStatus("", 2);
             ts.start();
             ts.tick();
-            check(ts, true, 2);
+            check(ts, true, 1);
         });
 
         it("Should not increment turns if not active", function()
@@ -68,17 +75,17 @@ describe("TempStatus", function()
             check(ts, false, 0);
         });
 
-        it("Should fail if ticked past max duration", function()
+        it("Should throw if ticked past max duration", function()
         {
-            const ts = new TempStatus("status", 3);
+            const ts = new TempStatus("status", 4);
             ts.start();
             for (let i = 0; i < 3; ++i)
             {
                 ts.tick();
-                check(ts, true, i + 2);
+                check(ts, true, i + 1);
             }
             expect(() => ts.tick()).to.throw(Error,
-                "TempStatus 'status' lasted longer than expected (4/3 turns)");
+                "TempStatus 'status' lasted longer than expected (4/4 turns)");
         });
 
         describe("#silent = true", function()
@@ -90,7 +97,7 @@ describe("TempStatus", function()
                 for (let i = 0; i < 2; ++i)
                 {
                     ts.tick();
-                    check(ts, true, i + 2);
+                    check(ts, true, i + 1);
                 }
                 ts.tick();
                 check(ts, false, 0);
@@ -102,7 +109,7 @@ describe("TempStatus", function()
     {
         it("Should set turns to 0 and not be active", function()
         {
-            const ts = new TempStatus("", 1);
+            const ts = new TempStatus("", 2);
             ts.start();
             ts.tick();
             ts.end();
@@ -114,9 +121,10 @@ describe("TempStatus", function()
     {
         it("Should copy turn data if name and duration match", function()
         {
-            const ts = new TempStatus("status", 1);
+            const ts = new TempStatus("status", 2);
             const ts2 = new TempStatus(ts.name, ts.duration);
             ts.start();
+            ts.tick();
             ts.copyTo(ts2);
             check(ts, true, 1);
             check(ts2, true, 1);
