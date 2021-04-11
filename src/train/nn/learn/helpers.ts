@@ -15,8 +15,8 @@ export function shuffle<T>(arr: T[]): void
  * @param p Probabilities of the first distribution.
  * @param q Probabilities of the second distribution. Must be the same shape
  * as `p`.
- * @returns The KL divergence between the two distributions, as a Tensor 1 rank
- * lower than the given ones.
+ * @returns A Tensor one rank lower than `p` containing `KL(P || Q)`, the KL
+ * divergence of `p` from `q`, in nats.
  */
 export function klDivergence(p: tf.Tensor, q: tf.Tensor): tf.Tensor
 {
