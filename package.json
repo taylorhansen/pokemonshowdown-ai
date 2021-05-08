@@ -8,9 +8,9 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "pretest": "tslint -c tslint.json -e src/battle/dex/dex.ts --project .",
-    "psbot": "node dist/psbot/index.js",
+    "psbot": "node -r source-map-support/register dist/psbot/index.js",
     "test": "nyc mocha",
-    "train": "node dist/train/index.js",
+    "train": "node -r source-map-support/register dist/train/index.js",
     "train:gpu": "npm run train -- --gpu"
   },
   "mocha": {
