@@ -5,7 +5,7 @@ import * as tmp from "tmp-promise";
 import s = require("../../../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
 import * as events from "../../../battle/parser/BattleEvent";
-import { BattleParserFunc } from "../../../battle/parser/BattleParser";
+import { BattleParser } from "../../../battle/parser/BattleParser";
 import { LogFunc, Logger } from "../../../Logger";
 import { PlayerID } from "../../../psbot/helpers";
 import { parsePSMessage } from "../../../psbot/parser/parsePSMessage";
@@ -15,21 +15,13 @@ import { PSEventHandler } from "../../../psbot/PSEventHandler";
 import { ensureDir } from "../../helpers/ensureDir";
 import { SimResult } from "../simulators";
 
-/** Player options for `startBattle()`. */
+/** Player options for `startPSBattle()`. */
 export interface PlayerOptions
 {
     /** Battle decision-maker. */
     readonly agent: BattleAgent;
-    /**
-     * Override PSBattle if needed. The subclass should not override
-     * PSEventHandler, since `startPSBattle()` already does that, so attempts to
-     * do so will be overridden.
-     *
-     * `username` parameter in constructor will always be the PlayerID.
-     */
-    readonly psBattleCtor?: typeof PSBattle;
     /** Override BattleParser if needed. */
-    readonly parserFunc?: BattleParserFunc;
+    readonly parser?: BattleParser;
 }
 
 type Players = {[P in PlayerID]: PlayerOptions};
@@ -126,7 +118,6 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                     // also make sure the battle doesn't go too long
                     if (options.maxTurns && event.num >= options.maxTurns)
                     {
-                        // tie
                         innerLog.debug("Max turns reached, force tie");
                         streams.omniscient.write(">forcetie");
                     }
@@ -143,12 +134,10 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
             };
         }
 
-        const psBattleCtor = options[id].psBattleCtor ?? PSBattle;
-        const parserFunc = options[id].parserFunc;
-
         // setup one side of the battle
-        const battle = new psBattleCtor(id, options[id].agent, sender,
-            innerLog.addPrefix("PSBattle: "), parserFunc, eventHandlerCtor);
+        const battle = new PSBattle(id, options[id].agent, sender,
+            innerLog.addPrefix("PSBattle: "), options[id].parser,
+            eventHandlerCtor);
         streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
 
         // start event loop for this side of the battle
@@ -156,6 +145,7 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         const parserLog = innerLog.addPrefix("Parser: ");
         eventLoops.push(async function()
         {
+            let loopErr: Error | undefined;
             try
             {
                 for await (const output of stream)
@@ -166,29 +156,48 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                     {
                         switch (msg.type)
                         {
-                            case "battleInit": await battle.init(msg); break;
+                            case "battleInit":
+                                await battle.init(msg);
+                                break;
                             case "battleProgress":
                                 await battle.progress(msg);
                                 break;
-                            case "request": await battle.request(msg); break;
-                            case "error": await battle.error(msg); break;
+                            case "request":
+                                await battle.request(msg);
+                                break;
+                            case "error":
+                                await battle.error(msg);
+                                break;
                         }
                     }
                     innerLog.debug("Waiting for next input");
                 }
-                innerLog.debug("Finishing");
-                await battle.finish();
-                innerLog.debug("Done");
             }
             catch (e)
             {
                 // log game errors and leave a new exception specifying
                 //  where to find it
-                innerLog.error(e?.stack ? e.stack : e);
-                innerLog.debug("Error encountered, discard game");
-                if (!battleStream.atEOF) battleStream.destroy();
-                throw new Error("startPSBattle() encountered an error. " +
-                    `Check ${logPath} for details.`);
+                logThrow(innerLog, battleStream, logPath, loopErr = e);
+            }
+            finally
+            {
+                innerLog.debug("Finishing");
+                try
+                {
+                    // TODO: is force-finish necessary anymore due to force-tie?
+                    if (loopErr) await battle.forceFinish();
+                    else await battle.finish();
+                }
+                catch (e)
+                {
+                    // notify caller of error if we didn't do so already from
+                    //  the earlier catch statement
+                    logThrow(innerLog, battleStream, logPath,
+                        // the BattleParser could've thrown earlier through its
+                        //  iterators, so the finish promise may contain the
+                        //  error again which we don't want duplicate logs for
+                        e && loopErr !== e ? e : undefined)
+                }
             }
         }());
     }
@@ -204,15 +213,28 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         logger.debug("Killing battle stream");
         battleStream.destroy();
     }
+
     // make sure the game completely ends so that the logs are complete
-    if (err)
-    {
-        logger.debug("Finishing other side");
-        await Promise.allSettled(eventLoops);
-    }
+    logger.debug("Settling");
+    await Promise.allSettled(eventLoops);
 
     // close the log file and return
     logger.debug("Closing file");
     await new Promise(res => file.end(res));
     return {winner, ...err && {err}};
+}
+
+/**
+ * Swallows an error into the logger, stops the BattleStream, then throws a
+ * display error pointing to the log file.
+ */
+function logThrow(logger: Logger, stream: s.BattleStream, logPath: string,
+    error?: Error): never
+{
+    if (error) logger.error(error.stack ?? error.toString());
+    logger.debug("Error encountered, force tie and discard game");
+    stream.write(">forcetie");
+    if (!stream.atEOF) stream.destroy();
+    throw new Error("startPSBattle() encountered an " +
+        `error. Check ${logPath} for details.`);
 }

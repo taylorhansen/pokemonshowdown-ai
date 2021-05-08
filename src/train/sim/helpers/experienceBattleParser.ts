@@ -1,72 +1,78 @@
 import { Choice, choiceIds } from "../../../battle/agent/Choice";
-import { BattleParser, BattleParserArgs, BattleParserFunc } from
+import { BattleParser, BattleParserConfig } from
     "../../../battle/parser/BattleParser";
-import { ReadonlyBattleState } from "../../../battle/state/BattleState";
+import { BattleState, ReadonlyBattleState } from
+    "../../../battle/state/BattleState";
 import { Experience, ExperienceAgent, ExperienceAgentData } from "./Experience";
 
 /**
- * Wraps a BattleParserFunc to track reward and emit Experience objects.
- * @param parserFunc Parser function to wrap.
+ * Wraps a BattleParser to track rewards/decisions and emit Experience objects.
+ * @param parser Parser function to wrap.
  * @param callback Callback for emitting Experience objs.
+ * @returns The wrapped BattleParser function.
  */
-export function experienceBattleParser(parserFunc: BattleParserFunc,
-    callback: (exp: Experience) => void):
-    BattleParserFunc<BattleParserArgs<ExperienceAgent>>
+export function experienceBattleParser(parser: BattleParser,
+    callback: (exp: Experience) => void): BattleParser<ExperienceAgent>
 {
-    return async function*(args: BattleParserArgs<ExperienceAgent>):
-        BattleParser
+    return async function _experienceBattleParser(
+        cfg: BattleParserConfig<ExperienceAgent>): Promise<BattleState>
     {
-        let lastChoice: Choice | null = null as any;
         let expAgentData: ExperienceAgentData | null = null as any;
-        const innerParser = parserFunc(
+        let lastChoice: Choice | null = null as any;
+        let reward = 0;
+        function emitExperience()
         {
-            logger: args.logger,
+            if (!expAgentData || !lastChoice) return;
+            // collect data to emit an experience
+            const action = choiceIds[lastChoice];
+            cfg.logger.debug(`Emitting experience, reward=${reward}`);
+            callback({...expAgentData, action, reward});
+            // reset collected data for the next decision
+            expAgentData = null;
+            lastChoice = null;
+            reward = 0;
+        }
+
+        // start tracking the game
+        const finished = await parser(
+        {
+            ...cfg,
             // extract additional info from the ExperienceAgent
-            agent: async (state, choices, logger) =>
-                expAgentData = await args.agent(state, choices, logger),
+            async agent(state, choices, logger)
+            {
+                emitExperience();
+                expAgentData = await cfg.agent(state, choices, logger);
+            },
+            iter:
+            {
+                ...cfg.iter,
+                async next(state: ReadonlyBattleState)
+                {
+                    // observe events before the parser consumes them
+                    const result = await cfg.iter.next(state);
+                    if (!result.done && result.value.type === "halt" &&
+                        result.value.reason === "gameOver")
+                    {
+                        // add win/loss reward
+                        reward += result.value.winner === "us" ? 1 : -1;
+                    }
+                    return result;
+                }
+            },
             // extract the last choice that was accepted
             async sender(choice)
             {
-                const result = await args.sender(choice);
+                const result = await cfg.sender(choice);
                 if (!result) lastChoice = choice;
                 return result;
             }
         });
 
-        // first yield should be the battlestate ref
-        const rbs = (await innerParser.next()).value as ReadonlyBattleState;
-        let event = yield rbs;
-
-        // track reward value
-        let reward = 0;
-        while (!(await innerParser.next(event)).done)
-        {
-            event = yield;
-
-            // process event before the wrapped parser handles it
-
-            if (event.type === "halt" && event.reason !== "wait")
-            {
-                // add win/loss reward
-                if (event.reason === "gameOver")
-                {
-                    reward += event.winner === "us" ? 1 : -1;
-                }
-
-                // process accumulated reward and emit an Experience
-                if (expAgentData && lastChoice)
-                {
-                    const data = expAgentData;
-                    const action = choiceIds[lastChoice];
-                    expAgentData = null;
-                    lastChoice = null;
-                    args.logger.debug(`Emitting experience, reward=${reward}`);
-                    callback({...data, action, reward});
-                }
-                reward = 0;
-            }
-        }
-        // pass return value
-        return yield* innerParser;
+        // emit final experience at the end of the game
+        // FIXME: in startPSBattle(), forcing a tie after reaching maxTurns will
+        //  cause an extra Experience to be emitted between the last decision
+        //  and the tie event
+        emitExperience();
+        return finished;
     };
 }

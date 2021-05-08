@@ -1,10 +1,9 @@
 import * as dexutil from "../../dex/dex-util";
 import { Pokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
-import * as events from "../BattleEvent";
-import { ParserState, SubParser } from "../BattleParser";
-import { baseHandler, EventHandler } from "../helpers";
-import * as ability from "./activateAbility";
+import { SubParserConfig, SubParserResult } from "../BattleParser";
+import { consume, createDispatcher, verify } from "../helpers";
+import { activateAbility } from "./activateAbility";
 import { activateItem } from "./activateItem";
 import { halt } from "./halt";
 import { removeItem } from "./removeItem";
@@ -14,46 +13,52 @@ import { useMove } from "./useMove";
 /** Base handlers for each event. */
 export const handlers =
 {
-    activateAbility(
-        ...[pstate, event, ...args]:
-            Parameters<typeof ability.activateAbility>):
-        ReturnType<typeof ability.activateAbility>
+    async activateAbility(...[cfg, ...args]:
+            Parameters<typeof activateAbility>):
+        ReturnType<typeof activateAbility>
     {
-        return ability.activateAbility(
+        const event = await verify(cfg, "activateAbility");
+        return await activateAbility(
         {
-            ...pstate,
-            logger: pstate.logger.addPrefix(`Ability(${event.monRef}, ` +
+            ...cfg,
+            // TODO: should these functions add their own prefixes instead?
+            logger: cfg.logger.addPrefix(`Ability(${event.monRef}, ` +
                 `${event.ability}): `)
         },
-            event, ...args);
+            ...args);
     },
-    async* activateFieldEffect(pstate: ParserState,
-        event: events.ActivateFieldEffect, weatherSource: Pokemon | null = null,
-        weatherInfinite?: boolean): SubParser
+    async activateFieldEffect(cfg: SubParserConfig,
+        weatherSource: Pokemon | null = null, weatherInfinite?: boolean):
+        Promise<SubParserResult>
     {
+        const event = await verify(cfg, "activateFieldEffect");
         if (dexutil.isWeatherType(event.effect))
         {
-            pstate.state.status.weather.start(weatherSource, event.effect,
+            cfg.state.status.weather.start(weatherSource, event.effect,
                 weatherInfinite);
         }
-        else pstate.state.status[event.effect][event.start ? "start" : "end"]();
+        else cfg.state.status[event.effect][event.start ? "start" : "end"]();
+        await consume(cfg);
         return {};
     },
-    activateItem(...[pstate, event, on = "turn", ...args]:
-        Parameters<typeof activateItem>): SubParser
+    async activateItem(...[cfg, on = "turn", ...args]:
+            Parameters<typeof activateItem>): ReturnType<typeof activateItem>
     {
-        return activateItem(
+        // if done, permHalt or reject
+        // if type doesn't match, throw or reject?
+        const event = await verify(cfg, "activateItem");
+        return await activateItem(
         {
-            ...pstate,
-            logger: pstate.logger.addPrefix(`Item(${event.monRef}, ` +
+            ...cfg,
+            logger: cfg.logger.addPrefix(`Item(${event.monRef}, ` +
                 `${event.item}, on-${on}): `)
         },
-            event, on, ...args);
+            on, ...args);
     },
-    async* activateStatusEffect(pstate: ParserState,
-        event: events.ActivateStatusEffect): SubParser
+    async activateStatusEffect(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const mon = pstate.state.teams[event.monRef].active;
+        const event = await verify(cfg, "activateStatusEffect");
+        const mon = cfg.state.teams[event.monRef].active;
         // TODO: some way to fully reduce this switch statement to indirection?
         switch (event.effect)
         {
@@ -106,21 +111,22 @@ export const handlers =
                         `start=${event.start}`);
                 }
         }
+        await consume(cfg);
         // see if the target pokemon can use its ability to cure itself
         // TODO: implement status berries and other on-status effects before
         //  handling onStatus abilities
         /*if (event.start)
         {
-            return yield* ability.onStatus(pstate, {[event.monRef]: true},
+            return await ability.onStatus(cfg, {[event.monRef]: true},
                 event.effect);
         }*/
         return {};
     },
-    async* activateTeamEffect(pstate: ParserState,
-        event: events.ActivateTeamEffect, source: Pokemon | null = null):
-        SubParser
+    async activateTeamEffect(cfg: SubParserConfig,
+        source: Pokemon | null = null): Promise<SubParserResult>
     {
-        const ts = pstate.state.teams[event.teamRef].status;
+        const event = await verify(cfg, "activateTeamEffect");
+        const ts = cfg.state.teams[event.teamRef].status;
         switch (event.effect)
         {
             case "healingWish": case "lunarDance":
@@ -141,156 +147,203 @@ export const handlers =
                 else ts[event.effect] = 0;
                 break;
         }
+        await consume(cfg);
         return {};
     },
-    async* block(pstate: ParserState, event: events.Block): SubParser
+    async block(cfg: SubParserConfig): Promise<SubParserResult>
     {
+        const event = await verify(cfg, "block");
         if (event.effect === "substitute" &&
-            !pstate.state.teams[event.monRef].active.volatile.substitute)
+            !cfg.state.teams[event.monRef].active.volatile.substitute)
         {
             throw new Error("Substitute blocked an effect but no Substitute " +
                 "exists");
         }
+        await consume(cfg);
         return {};
     },
-    async* boost(pstate: ParserState, event: events.Boost): SubParser
+    async boost(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const {boosts} = pstate.state.teams[event.monRef].active.volatile;
+        const event = await verify(cfg, "boost");
+        const {boosts} = cfg.state.teams[event.monRef].active.volatile;
         if (event.set) boosts[event.stat] = event.amount;
         else boosts[event.stat] += event.amount;
+        await consume(cfg);
         return {};
     },
-    async* changeType(pstate: ParserState, event: events.ChangeType): SubParser
+    async changeType(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile
+        const event = await verify(cfg, "changeType");
+        cfg.state.teams[event.monRef].active.volatile
             .changeTypes(event.newTypes);
+        await consume(cfg);
         return {};
     },
-    async* clause(pstate: ParserState, event: events.Clause): SubParser
+    async clause(cfg: SubParserConfig): Promise<SubParserResult>
     {
+        await verify(cfg, "clause");
+        await consume(cfg);
         return {};
     },
-    async* clearAllBoosts(pstate: ParserState, event: events.ClearAllBoosts):
-        SubParser
+    async clearAllBoosts(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        for (const side of Object.keys(pstate.state.teams) as Side[])
+        await verify(cfg, "clearAllBoosts");
+        for (const side of Object.keys(cfg.state.teams) as Side[])
         {
             for (const stat of dexutil.boostKeys)
             {
-                pstate.state.teams[side].active.volatile.boosts[stat] = 0;
+                cfg.state.teams[side].active.volatile.boosts[stat] = 0;
             }
         }
+        await consume(cfg);
         return {};
     },
-    async* clearNegativeBoosts(pstate: ParserState,
-        event: events.ClearNegativeBoosts): SubParser
+    async clearNegativeBoosts(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const boosts = pstate.state.teams[event.monRef].active.volatile.boosts;
+        const event = await verify(cfg, "clearNegativeBoosts");
+        const boosts = cfg.state.teams[event.monRef].active.volatile.boosts;
         for (const stat of dexutil.boostKeys)
         {
             if (boosts[stat] < 0) boosts[stat] = 0;
         }
+        await consume(cfg);
         return {};
     },
-    async* clearPositiveBoosts(pstate: ParserState,
-        event: events.ClearPositiveBoosts): SubParser
+    async clearPositiveBoosts(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const boosts = pstate.state.teams[event.monRef].active.volatile.boosts;
+        const event = await verify(cfg, "clearPositiveBoosts");
+        const boosts = cfg.state.teams[event.monRef].active.volatile.boosts;
         for (const stat of dexutil.boostKeys)
         {
             if (boosts[stat] > 0) boosts[stat] = 0;
         }
+        await consume(cfg);
         return {};
     },
-    async* copyBoosts(pstate: ParserState, event: events.CopyBoosts): SubParser
+    async copyBoosts(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const from = pstate.state.teams[event.from].active.volatile.boosts;
-        const to = pstate.state.teams[event.to].active.volatile.boosts;
+        const event = await verify(cfg, "copyBoosts");
+        const from = cfg.state.teams[event.from].active.volatile.boosts;
+        const to = cfg.state.teams[event.to].active.volatile.boosts;
         for (const stat of dexutil.boostKeys) to[stat] = from[stat];
+        await consume(cfg);
         return {};
     },
-    async* countStatusEffect(pstate: ParserState,
-        event: events.CountStatusEffect): SubParser
+    async countStatusEffect(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile[event.effect] =
+        const event = await verify(cfg, "countStatusEffect");
+        cfg.state.teams[event.monRef].active.volatile[event.effect] =
             event.amount;
+        await consume(cfg);
         return {};
     },
-    async* crit(pstate: ParserState, event: events.Crit): SubParser
-    { return {}; },
-    async* cureTeam(pstate: ParserState, event: events.CureTeam): SubParser
+    async crit(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.teamRef].cure();
+        await verify(cfg, "crit");
+        await consume(cfg);
         return {};
     },
-    async* disableMove(pstate: ParserState, event: events.DisableMove):
-        SubParser
+    async cureTeam(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile
+        const event = await verify(cfg, "cureTeam");
+        cfg.state.teams[event.teamRef].cure();
+        await consume(cfg);
+        return {};
+    },
+    async disableMove(cfg: SubParserConfig): Promise<SubParserResult>
+    {
+        const event = await verify(cfg, "disableMove");
+        cfg.state.teams[event.monRef].active.volatile
             .disableMove(event.move);
+        await consume(cfg);
         return {};
     },
-    async* fail(pstate: ParserState, event: events.Fail): SubParser
-    { return {}; },
-    async* faint(pstate: ParserState, event: events.Faint): SubParser
+    async fail(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.faint();
+        await verify(cfg, "fail");
+        await consume(cfg);
         return {};
     },
-    async* fatigue(pstate: ParserState, event: events.Fatigue): SubParser
+    async faint(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile.lockedMove.reset();
+        const event = await verify(cfg, "faint");
+        cfg.state.teams[event.monRef].active.faint();
+        await consume(cfg);
         return {};
     },
-    async* feint(pstate: ParserState, event: events.Feint): SubParser
+    async fatigue(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile.feint();
+        const event = await verify(cfg, "fatigue");
+        cfg.state.teams[event.monRef].active.volatile.lockedMove.reset();
+        await consume(cfg);
         return {};
     },
-    async* formChange(pstate: ParserState, event: events.FormChange): SubParser
+    async feint(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const mon = pstate.state.teams[event.monRef].active;
+        const event = await verify(cfg, "feint");
+        cfg.state.teams[event.monRef].active.volatile.feint();
+        await consume(cfg);
+        return {};
+    },
+    async formChange(cfg: SubParserConfig): Promise<SubParserResult>
+    {
+        const event = await verify(cfg, "formChange");
+        const mon = cfg.state.teams[event.monRef].active;
         mon.formChange(event.species, event.level, event.perm);
 
         // set other details just in case
         // TODO: should gender also be in the traits object?
         mon.gender = event.gender;
         mon.hp.set(event.hp, event.hpMax);
+        await consume(cfg);
         return {};
     },
-    async* futureMove(pstate: ParserState, event: events.FutureMove): SubParser
+    async futureMove(cfg: SubParserConfig): Promise<SubParserResult>
     {
+        const event = await verify(cfg, "futureMove");
         if (event.start)
         {
             // starting a future move mentions the user
-            pstate.state.teams[event.monRef].status
+            cfg.state.teams[event.monRef].status
                 .futureMoves[event.move].start(/*restart*/false);
         }
         else
         {
             // ending a future move mentions the target before
             //  taking damage
-            pstate.state.teams[otherSide(event.monRef)].status
+            cfg.state.teams[otherSide(event.monRef)].status
                 .futureMoves[event.move].end();
         }
+        await consume(cfg);
         return {};
     },
-    halt(pstate: ParserState, event: events.Halt): SubParser
+    async halt(...[cfg, ...args]: Parameters<typeof halt>):
+        ReturnType<typeof halt>
     {
-        return halt(
+        const event = await verify(cfg, "halt");
+        return await halt(
         {
-            ...pstate,
-            logger: pstate.logger.addPrefix(`Halt(${event.reason}): `)
+            ...cfg,
+            logger: cfg.logger.addPrefix(`Halt(${event.reason}): `)
         },
-            event);
+            ...args);
     },
-    async* hitCount(pstate: ParserState, event: events.HitCount): SubParser
-    { return {}; },
-    async* immune(pstate: ParserState, event: events.Immune): SubParser
-    { return {}; },
-    async* inactive(pstate: ParserState, event: events.Inactive): SubParser
+    async hitCount(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const mon = pstate.state.teams[event.monRef].active;
+        await verify(cfg, "hitCount");
+        await consume(cfg);
+        return {};
+    },
+    async immune(cfg: SubParserConfig): Promise<SubParserResult>
+    {
+        await verify(cfg, "immune");
+        await consume(cfg);
+        return {};
+    },
+    async inactive(cfg: SubParserConfig): Promise<SubParserResult>
+    {
+        const event = await verify(cfg, "inactive");
+        const mon = cfg.state.teams[event.monRef].active;
         if (event.move) mon.moveset.reveal(event.move);
 
         switch (event.reason)
@@ -299,7 +352,7 @@ export const handlers =
                 // opponent's imprison caused the pokemon to be prevented from
                 //  moving, so the revealed move can be revealed for both sides
                 if (!event.move) break;
-                pstate.state.teams[otherSide(event.monRef)].active.moveset
+                cfg.state.teams[otherSide(event.monRef)].active.moveset
                     .reveal(event.move);
                 break;
             case "truant":
@@ -315,17 +368,20 @@ export const handlers =
 
         // consumed an action this turn
         mon.inactive();
+        await consume(cfg);
         return {};
     },
-    async* initOtherTeamSize(pstate: ParserState,
-        event: events.InitOtherTeamSize): SubParser
+    async initOtherTeamSize(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams.them.size = event.size;
+        const event = await verify(cfg, "initOtherTeamSize");
+        cfg.state.teams.them.size = event.size;
+        await consume(cfg);
         return {};
     },
-    async* initTeam(pstate: ParserState, event: events.InitTeam): SubParser
+    async initTeam(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const team = pstate.state.teams.us;
+        const event = await verify(cfg, "initTeam");
+        const team = cfg.state.teams.us;
         team.size = event.team.length;
         for (const data of event.team)
         {
@@ -348,175 +404,226 @@ export const handlers =
             if (data.hpType) mon.hpType.narrow(data.hpType);
             if (data.happiness) mon.happiness = data.happiness;
         }
+        await consume(cfg);
         return {};
     },
-    async* invertBoosts(pstate: ParserState, event: events.InvertBoosts):
-        SubParser
+    async invertBoosts(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const boosts = pstate.state.teams[event.monRef].active.volatile.boosts;
+        const event = await verify(cfg, "invertBoosts");
+        const boosts = cfg.state.teams[event.monRef].active.volatile.boosts;
         for (const stat of dexutil.boostKeys) boosts[stat] = -boosts[stat];
+        await consume(cfg);
         return {};
     },
-    async* lockOn(pstate: ParserState, event: events.LockOn): SubParser
+    async lockOn(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile.lockOn(
-            pstate.state.teams[event.target].active.volatile);
+        const event = await verify(cfg, "lockOn");
+        cfg.state.teams[event.monRef].active.volatile.lockOn(
+            cfg.state.teams[event.target].active.volatile);
+        await consume(cfg);
         return {};
     },
-    async* mimic(pstate: ParserState, event: events.Mimic): SubParser
+    async mimic(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.mimic(event.move);
+        const event = await verify(cfg, "mimic");
+        cfg.state.teams[event.monRef].active.mimic(event.move);
+        await consume(cfg);
         return {};
     },
-    async* miss(pstate: ParserState, event: events.Miss): SubParser
-    { return {}; },
-    async* modifyPP(pstate: ParserState, event: events.ModifyPP): SubParser
+    async miss(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const move = pstate.state.teams[event.monRef].active.moveset.reveal(
+        await verify(cfg, "miss");
+        await consume(cfg);
+        return {};
+    },
+    async modifyPP(cfg: SubParserConfig): Promise<SubParserResult>
+    {
+        const event = await verify(cfg, "modifyPP");
+        const move = cfg.state.teams[event.monRef].active.moveset.reveal(
             event.move);
         if (event.amount === "deplete") move.pp = 0;
         else move.pp += event.amount;
+        await consume(cfg);
         return {};
     },
-    async* mustRecharge(pstate: ParserState, event: events.MustRecharge):
-        SubParser
+    async mustRecharge(cfg: SubParserConfig): Promise<SubParserResult>
     {
+        const event = await verify(cfg, "mustRecharge");
         // TODO: imply this in useMove event
-        pstate.state.teams[event.monRef].active.volatile.mustRecharge = true;
+        cfg.state.teams[event.monRef].active.volatile.mustRecharge = true;
+        await consume(cfg);
         return {};
     },
-    async* noTarget(pstate: ParserState, event: events.NoTarget): SubParser
-    { return {}; },
-    async* postTurn(pstate: ParserState, event: events.PostTurn): SubParser
+    async noTarget(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.postTurn();
+        await verify(cfg, "noTarget");
+        await consume(cfg);
         return {};
     },
-    async* prepareMove(pstate: ParserState, event: events.PrepareMove):
-        SubParser
+    async postTurn(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile.twoTurn
+        await verify(cfg, "postTurn");
+        cfg.state.postTurn();
+        await consume(cfg);
+        return {};
+    },
+    async prepareMove(cfg: SubParserConfig): Promise<SubParserResult>
+    {
+        const event = await verify(cfg, "prepareMove");
+        cfg.state.teams[event.monRef].active.volatile.twoTurn
             .start(event.move);
+        await consume(cfg);
         return {};
     },
-    async* preTurn(pstate: ParserState, event: events.PreTurn): SubParser
+    async preTurn(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.preTurn();
+        await verify(cfg, "preTurn");
+        cfg.state.preTurn();
+        await consume(cfg);
         return {};
     },
-    async* reenableMoves(pstate: ParserState, event: events.ReenableMoves):
-        SubParser
+    async reenableMoves(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile.enableMoves();
+        const event = await verify(cfg, "reenableMoves");
+        cfg.state.teams[event.monRef].active.volatile.enableMoves();
+        await consume(cfg);
         return {};
     },
-    removeItem(...[pstate, event, on = null, ...args]:
-        Parameters<typeof removeItem>): SubParser
+    async removeItem(...[cfg, on = null, ...args]:
+        Parameters<typeof removeItem>): ReturnType<typeof removeItem>
     {
-        return removeItem(
+        const event = await verify(cfg, "removeItem");
+        return await removeItem(
         {
-            ...pstate,
-            logger: pstate.logger.addPrefix(`RemoveItem(${event.monRef}, ` +
+            ...cfg,
+            logger: cfg.logger.addPrefix(`RemoveItem(${event.monRef}, ` +
                 `consumed=${event.consumed}, on-${on}): `)
         },
-            event, on, ...args);
+            on, ...args);
     },
-    async* resetWeather(pstate: ParserState, event: events.ResetWeather):
-        SubParser
+    async resetWeather(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.status.weather.reset();
+        await verify(cfg, "resetWeather");
+        cfg.state.status.weather.reset();
+        await consume(cfg);
         return {};
     },
-    async* resisted(pstate: ParserState, event: events.Resisted): SubParser
-    { return {}; },
-    async* restoreMoves(pstate: ParserState, event: events.RestoreMoves):
-        SubParser
+    async resisted(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const moveset = pstate.state.teams[event.monRef].active.moveset;
+        await verify(cfg, "resisted");
+        await consume(cfg);
+        return {};
+    },
+    async restoreMoves(cfg: SubParserConfig): Promise<SubParserResult>
+    {
+        const event = await verify(cfg, "restoreMoves");
+        const moveset = cfg.state.teams[event.monRef].active.moveset;
         for (const move of moveset.moves.values()) move.pp = move.maxpp;
+        await consume(cfg);
         return {};
     },
-    async* revealItem(pstate: ParserState, event: events.RevealItem): SubParser
+    async revealItem(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active
+        const event = await verify(cfg, "revealItem");
+        cfg.state.teams[event.monRef].active
             .setItem(event.item, event.gained);
+        await consume(cfg);
         return {};
     },
-    async* revealMove(pstate: ParserState, event: events.RevealMove): SubParser
+    async revealMove(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.moveset.reveal(event.move);
+        const event = await verify(cfg, "revealMove");
+        cfg.state.teams[event.monRef].active.moveset.reveal(event.move);
+        await consume(cfg);
         return {};
     },
-    async* setThirdType(pstate: ParserState, event: events.SetThirdType):
-        SubParser
+    async setThirdType(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile.addedType =
+        const event = await verify(cfg, "setThirdType");
+        cfg.state.teams[event.monRef].active.volatile.addedType =
             event.thirdType;
+        await consume(cfg);
         return {};
     },
-    async* sketch(pstate: ParserState, event: events.Sketch): SubParser
+    async sketch(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.sketch(event.move);
+        const event = await verify(cfg, "sketch");
+        cfg.state.teams[event.monRef].active.sketch(event.move);
+        await consume(cfg);
         return {};
     },
-    async* superEffective(pstate: ParserState, event: events.SuperEffective):
-        SubParser { return {}; },
-    async* swapBoosts(pstate: ParserState, event: events.SwapBoosts): SubParser
+    async superEffective(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const v1 = pstate.state.teams[event.monRef1].active.volatile.boosts;
-        const v2 = pstate.state.teams[event.monRef2].active.volatile.boosts;
+        await verify(cfg, "superEffective");
+        await consume(cfg);
+        return {};
+    },
+    async swapBoosts(cfg: SubParserConfig): Promise<SubParserResult>
+    {
+        const event = await verify(cfg, "swapBoosts");
+        const v1 = cfg.state.teams[event.monRef1].active.volatile.boosts;
+        const v2 = cfg.state.teams[event.monRef2].active.volatile.boosts;
         for (const stat of event.stats)
         {
             [v1[stat], v2[stat]] = [v2[stat], v1[stat]];
         }
+        await consume(cfg);
         return {};
     },
-    switchIn(...[pstate, event, ...args]: Parameters<typeof switchIn>):
-        SubParser
+    async switchIn(...[cfg, ...args]: Parameters<typeof switchIn>):
+        ReturnType<typeof switchIn>
     {
-        return switchIn(
+        const event = await verify(cfg, "switchIn");
+        return await switchIn(
         {
-            ...pstate,
+            ...cfg,
             // TODO: add log prefix indicator for drag/self-switch?
-            logger: pstate.logger.addPrefix(`Switch(${event.monRef}): `)
+            logger: cfg.logger.addPrefix(`Switch(${event.monRef}): `)
         },
-            event, ...args);
+            ...args);
     },
-    async* takeDamage(pstate: ParserState, event: events.TakeDamage): SubParser
+    async takeDamage(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const mon = pstate.state.teams[event.monRef].active;
+        const event = await verify(cfg, "takeDamage");
+        const mon = cfg.state.teams[event.monRef].active;
         mon.hp.set(event.hp);
+        await consume(cfg);
         return {};
     },
-    async* transform(pstate: ParserState, event: events.Transform): SubParser
+    async transform(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.source].active.transform(
-            pstate.state.teams[event.target].active);
+        const event = await verify(cfg, "transform");
+        cfg.state.teams[event.source].active.transform(
+            cfg.state.teams[event.target].active);
+        await consume(cfg);
         return {};
     },
-    async* trap(pstate: ParserState, event: events.Trap): SubParser
+    async trap(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.by].active.volatile.trap(
-            pstate.state.teams[event.target].active.volatile);
+        const event = await verify(cfg, "trap");
+        cfg.state.teams[event.by].active.volatile.trap(
+            cfg.state.teams[event.target].active.volatile);
+        await consume(cfg);
         return {};
     },
-    async* updateFieldEffect(pstate: ParserState,
-        event: events.UpdateFieldEffect): SubParser
+    async updateFieldEffect(cfg: SubParserConfig): Promise<SubParserResult>
     {
+        const event = await verify(cfg, "updateFieldEffect");
         // currently only applies to weather
-        const weather = pstate.state.status.weather;
+        const weather = cfg.state.status.weather;
         if (weather.type !== event.effect)
         {
             throw new Error(`Weather is '${weather.type}' but ticked ` +
                 `weather is '${event.effect}'`);
         }
         weather.tick();
+        await consume(cfg);
         return {};
     },
-    async* updateMoves(pstate: ParserState, event: events.UpdateMoves):
-        SubParser
+    async updateMoves(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        const mon = pstate.state.teams[event.monRef].active;
+        const event = await verify(cfg, "updateMoves");
+        const mon = cfg.state.teams[event.monRef].active;
 
         // infer moveset
         for (const data of event.moves)
@@ -524,30 +631,33 @@ export const handlers =
             const move = mon.moveset.reveal(data.id, data.maxpp);
             if (data.pp != null) move.pp = data.pp;
         }
+        await consume(cfg);
         return {};
     },
-    async* updateStatusEffect(pstate: ParserState,
-        event: events.UpdateStatusEffect): SubParser
+    async updateStatusEffect(cfg: SubParserConfig): Promise<SubParserResult>
     {
-        pstate.state.teams[event.monRef].active.volatile[event.effect].tick();
+        const event = await verify(cfg, "updateStatusEffect");
+        cfg.state.teams[event.monRef].active.volatile[event.effect].tick();
+        await consume(cfg);
         return {};
     },
-    useMove(...[pstate, event, called = false, ...args]:
-        Parameters<typeof useMove>): SubParser
+    async useMove(...[cfg, called = false, ...args]:
+            Parameters<typeof useMove>): ReturnType<typeof useMove>
     {
+        const event = await verify(cfg, "useMove");
         let calledStr = "";
         if (called === "bounced") calledStr = ", bounced";
         else if (called) calledStr = ", called";
 
-        return useMove(
+        return await useMove(
         {
-            ...pstate,
-            logger: pstate.logger.addPrefix(`Move(${event.monRef}, ` +
+            ...cfg,
+            logger: cfg.logger.addPrefix(`Move(${event.monRef}, ` +
                 `${event.move}${calledStr}): `)
         },
-            event, called, ...args);
+            called, ...args);
     }
 } as const;
 
 /** Dispatches event handler. */
-export const dispatch: EventHandler<events.Type> = baseHandler(handlers);
+export const dispatch = createDispatcher(handlers);

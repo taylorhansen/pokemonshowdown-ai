@@ -98,12 +98,12 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
         const closePromises: Promise<void>[] = [];
         for (let i = 0; i < this.numThreads; ++i)
         {
-            closePromises.push(this.takePort()
-                .then(async port =>
-                {
-                    this.ports.delete(port);
-                    await port.close();
-                }));
+            closePromises.push((async () =>
+            {
+                const port = await this.takePort();
+                this.ports.delete(port);
+                await port.close();
+            })());
         }
 
         await Promise.all(closePromises);
@@ -133,9 +133,13 @@ export abstract class ThreadPool<TWorker extends WorkerPort<TMap>,
             this.emit(ThreadPool.workerErrorEvent, err);
 
             // remove this worker and create a new one to replace it
-            this.ports.delete(port);
-            this.erroredPorts.add(port);
-            port.worker.terminate();
+            if (!this.freePorts.includes(port))
+            {
+                // port hasn't been returned yet, cache it in a special place so
+                //  that #givePort() doesn't throw once it does get returned
+                this.ports.delete(port);
+                this.erroredPorts.add(port);
+            }
             this.addWorker(workerData);
         });
 

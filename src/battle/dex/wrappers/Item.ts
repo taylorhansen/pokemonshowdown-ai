@@ -1,5 +1,4 @@
-import * as events from "../../parser/BattleEvent";
-import { ParserState, SubParser } from "../../parser/BattleParser";
+import { SubParserConfig, SubParserResult } from "../../parser/BattleParser";
 import { ItemResult } from "../../parser/gen4/activateItem";
 import { handlers as base } from "../../parser/gen4/base";
 import { SubReason } from "../../parser/gen4/EventInference";
@@ -7,7 +6,8 @@ import { cantHaveKlutz, checkKlutz, hasAbility, moveIsType } from
     "../../parser/gen4/helpers";
 import * as parsers from "../../parser/gen4/parsers";
 import { ItemConsumeResult } from "../../parser/gen4/removeItem";
-import { hasStatus, matchPercentDamage } from "../../parser/helpers";
+import { consume, hasStatus, matchPercentDamage, tryPeek, verify } from
+    "../../parser/helpers";
 import { Pokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as dexutil from "../dex-util";
@@ -25,30 +25,32 @@ export class Item
 
     //#region onX() effect parsers for main activateItem parser
 
+    // note: each of these parsers assumes that the initial activateItem event
+    //  hasn't been consumed/verified yet
+
     //#region on-movePostDamage parser
 
     /**
      * Activates an item on-`movePostDamage` (e.g. lifeorb).
      * @param holderRef Item holder reference.
      */
-    public async* onMovePostDamage(pstate: ParserState, holderRef: Side):
-        SubParser<ItemResult>
+    public async onMovePostDamage(cfg: SubParserConfig, holderRef: Side):
+        Promise<ItemResult>
     {
         if (this.data.on?.movePostDamage)
         {
             // self-damage
             if (this.data.on.movePostDamage.percentDamage)
             {
-                const damageResult = yield* parsers.percentDamage(pstate,
-                    holderRef, this.data.on.movePostDamage.percentDamage);
-                // TODO: permHalt check?
-                let lastEvent = damageResult.event;
+                this.indirectDamage(cfg, holderRef);
+                await this.verifyActivate(cfg, holderRef);
+
+                const damageResult = await parsers.percentDamage(cfg, holderRef,
+                        this.data.on.movePostDamage.percentDamage);
                 if (damageResult.success === true)
                 {
-                    this.indirectDamage(pstate, holderRef);
-                    lastEvent = (yield* parsers.update(pstate, lastEvent))
-                        .event;
-                    return {...lastEvent && {event: lastEvent}};
+                    await parsers.update(cfg);
+                    return {};
                 }
                 throw new Error("On-movePostDamage percentDamage effect " +
                     "failed");
@@ -66,13 +68,13 @@ export class Item
      * Handles events due to a turn item (e.g. leftovers).
      * @param holderRef Item holder reference.
      */
-    public async* onTurn(pstate: ParserState, holderRef: Side):
-        SubParser<ItemResult>
+    public async onTurn(cfg: SubParserConfig, holderRef: Side):
+        Promise<ItemResult>
     {
-        const holder = pstate.state.teams[holderRef].active;
+        const holder = cfg.state.teams[holderRef].active;
         if (this.data.on?.turn)
         {
-            let lastEvent: events.Any | undefined;
+            await this.verifyActivate(cfg, holderRef);
             let allSilent = true;
 
             // leftovers, blacksludge, etc
@@ -81,13 +83,11 @@ export class Item
                 this.data.on.turn[isPoison ? "poisonDamage" : "noPoisonDamage"];
             if (percentDamage)
             {
-                const damageResult = yield* parsers.percentDamage(pstate,
-                    holderRef, percentDamage, lastEvent);
-                // TODO: permHalt check?
-                lastEvent = damageResult.event;
+                const damageResult = await parsers.percentDamage(cfg, holderRef,
+                        percentDamage);
                 if (damageResult.success === true)
                 {
-                    this.indirectDamage(pstate, holderRef);
+                    this.indirectDamage(cfg, holderRef);
                     allSilent = false;
                 }
             }
@@ -95,16 +95,15 @@ export class Item
             // toxicorb, etc
             if (this.data.on.turn.status)
             {
-                const statusResult = yield* parsers.status(pstate,
-                    holderRef, [this.data.on.turn.status], lastEvent);
-                lastEvent = statusResult.event;
+                const statusResult = await parsers.status(cfg, holderRef,
+                        [this.data.on.turn.status]);
                 if (statusResult.success === this.data.on.turn.status)
                 {
                     allSilent = false;
                 }
             }
 
-            if (!allSilent) return {...lastEvent && {event: lastEvent}};
+            if (!allSilent) return {};
         }
         throw new Error("On-turn effect shouldn't activate for item " +
             `'${this.data.name}'`);
@@ -115,12 +114,34 @@ export class Item
     //#region onX() method helpers
 
     /**
+     * Verifies and consumes the initial activateItem event to verify that it
+     * may be relevant for this Item obj.
+     * @param holderRef Item holder reference.
+     */
+    private async verifyActivate(cfg: SubParserConfig, holderRef: Side):
+        Promise<void>
+    {
+        const event = await verify(cfg, "activateItem");
+        if (event.monRef !== holderRef)
+        {
+            throw new Error(`Mismatched monRef: expected '${holderRef}' but ` +
+                `got '${event.monRef}'`);
+        }
+        if (event.item !== this.data.name)
+        {
+            throw new Error("Mismatched item: expected " +
+                `'${this.data.name}' but got '${event.item}'`);
+        }
+        await consume(cfg);
+    }
+
+    /**
      * Indicates that the item holder received indirect damage from the item, in
      * order to make ability inferences.
      */
-    private indirectDamage(pstate: ParserState, holderRef: Side): void
+    private indirectDamage(cfg: SubParserConfig, holderRef: Side): void
     {
-        const holder = pstate.state.teams[holderRef].active;
+        const holder = cfg.state.teams[holderRef].active;
         if (holder.volatile.suppressAbility) return;
 
         // can't have an ability that blocks indirect damage
@@ -150,17 +171,18 @@ export class Item
      * Activates an item on-`preMove` (e.g. custapberry).
      * @param holderRef Item holder reference.
      */
-    public async* consumeOnPreMove(pstate: ParserState, holderRef: Side):
-        SubParser<ItemConsumeResult>
+    public async consumeOnPreMove(cfg: SubParserConfig, holderRef: Side):
+        Promise<ItemConsumeResult>
     {
         if (this.data.consumeOn?.preMove)
         {
             if (this.data.consumeOn.preMove.moveFirst &&
                 this.data.consumeOn.preMove.threshold)
             {
-                const holder = pstate.state.teams[holderRef].active;
+                const holder = cfg.state.teams[holderRef].active;
                 Item.assertHPThreshold(holder,
                     this.data.consumeOn.preMove.threshold);
+                await this.verifyConsume(cfg, holderRef);
                 return {moveFirst: true};
             }
         }
@@ -174,13 +196,16 @@ export class Item
 
     /**
      * Activates an item on-`moveCharge` (e.g. powerherb).
+     * @param holderRef Item holder reference.
      */
-    public async* consumeOnMoveCharge(): SubParser<ItemConsumeResult>
+    public async consumeOnMoveCharge(cfg: SubParserConfig, holderRef: Side):
+        Promise<ItemConsumeResult>
     {
         if (this.data.consumeOn?.moveCharge)
         {
             if (this.data.consumeOn.moveCharge === "shorten")
             {
+                await this.verifyConsume(cfg, holderRef);
                 return {shorten: true};
             }
         }
@@ -197,10 +222,10 @@ export class Item
      * @param holderRef Item holder reference.
      * @param hitBy Move+user the holder is being hit by.
      */
-    public async* consumeOnPreHit(pstate: ParserState, holderRef: Side,
-        hitBy: dexutil.MoveAndUser): SubParser<ItemConsumeResult>
+    public async consumeOnPreHit(cfg: SubParserConfig, holderRef: Side,
+        hitBy: dexutil.MoveAndUser): Promise<ItemConsumeResult>
     {
-        const holder = pstate.state.teams[holderRef].active;
+        const holder = cfg.state.teams[holderRef].active;
         if (this.data.consumeOn?.preHit)
         {
             const {resistSuper} = this.data.consumeOn.preHit;
@@ -219,6 +244,7 @@ export class Item
 
                 // infer move type based on resist berry type
                 hitBy.move.assertType(resistSuper, hitBy.user);
+                await this.verifyConsume(cfg, holderRef);
                 return {resistSuper};
             }
         }
@@ -234,14 +260,15 @@ export class Item
      * Activates an item on-`super` (e.g. enigmaberry).
      * @param holderRef Item holder reference.
      */
-    public async* consumeOnSuper(pstate: ParserState, holderRef: Side):
-        SubParser<ItemConsumeResult>
+    public async consumeOnSuper(cfg: SubParserConfig, holderRef: Side):
+        Promise<ItemConsumeResult>
     {
         if (this.data.consumeOn?.super)
         {
+            await this.verifyConsume(cfg, holderRef);
             const {heal} = this.data.consumeOn.super;
             // TODO: assert type effectiveness from hitby-move?
-            if (heal) return yield* Item.heal(pstate, "super", holderRef, heal);
+            if (heal) return await Item.heal(cfg, "super", holderRef, heal);
         }
         throw new Error(`ConsumeOn-super effect shouldn't activate for ` +
             `item '${this.data.name}'`);
@@ -256,8 +283,8 @@ export class Item
      * @param holderRef Item holder reference.
      * @param hitBy Move+user the holder is being hit by.
      */
-    public async* consumeOnPostHit(pstate: ParserState, holderRef: Side,
-        hitBy: dexutil.MoveAndUserRef): SubParser<ItemConsumeResult>
+    public async consumeOnPostHit(cfg: SubParserConfig, holderRef: Side,
+        hitBy: dexutil.MoveAndUserRef): Promise<ItemConsumeResult>
     {
         if (this.data.consumeOn?.postHit)
         {
@@ -269,9 +296,9 @@ export class Item
             }
             if (damage)
             {
-                const damageResult = yield* parsers.percentDamage(pstate,
+                await this.verifyConsume(cfg, holderRef);
+                const damageResult = await parsers.percentDamage(cfg,
                     hitBy.userRef, -damage);
-                let lastEvent = damageResult.event;
                 if (!damageResult.success)
                 {
                     throw new Error("ConsumeOn-postHit damage effect failed");
@@ -280,10 +307,9 @@ export class Item
                 {
                     // after taking damage, check if any other items need to
                     //  activate
-                    lastEvent = (yield* parsers.update(pstate, lastEvent))
-                        .event;
+                    await parsers.update(cfg);
                 }
-                return {...lastEvent && {event: lastEvent}};
+                return {};
             }
         }
         throw new Error(`ConsumeOn-postHit effect shouldn't activate for ` +
@@ -298,10 +324,10 @@ export class Item
      * Activates an item on-`update` (e.g. sitrusberry).
      * @param holderRef Item holder reference.
      */
-    public async* consumeOnUpdate(pstate: ParserState, holderRef: Side):
-        SubParser<ItemConsumeResult>
+    public async consumeOnUpdate(cfg: SubParserConfig, holderRef: Side):
+        Promise<ItemConsumeResult>
     {
-        const holder = pstate.state.teams[holderRef].active;
+        const holder = cfg.state.teams[holderRef].active;
         const data = this.data.consumeOn?.update;
         switch (data?.condition)
         {
@@ -311,43 +337,39 @@ export class Item
                 {
                     case "healPercent": case "healFixed":
                     {
-                        const healResult = yield* Item.heal(pstate, "update",
-                            holderRef, data.effect.heal);
-                        let lastEvent = healResult.event;
+                        await this.verifyConsume(cfg, holderRef);
+                        await Item.heal(cfg, "update", holderRef,
+                            data.effect.heal);
                         if (data.effect.dislike)
                         {
-                            // TODO: assert nature
-                            const statusResult = yield* parsers.status(pstate,
-                                holderRef, ["confusion"], lastEvent);
-                            lastEvent = statusResult.event;
+                            // TODO: assert dislike nature
+                            await parsers.status(cfg, holderRef, ["confusion"]);
                         }
-                        return {...lastEvent && {event: lastEvent}};
+                        return {};
                     }
                     case "boost":
                     {
-                        const boostResult = yield* parsers.boostOne(pstate,
+                        await this.verifyConsume(cfg, holderRef);
+                        const boostResult = await parsers.boostOne(cfg,
                             holderRef, data.effect.boostOne);
                         if (!boostResult.success)
                         {
                             throw new Error("ConsumeOn-update boost effect " +
                                 "failed");
                         }
-                        return {
-                            ...boostResult.event && {event: boostResult.event}
-                        };
+                        return {};
                     }
                     case "focusEnergy":
                     {
-                        const statusResult = yield* parsers.status(pstate,
+                        await this.verifyConsume(cfg, holderRef);
+                        const statusResult = await parsers.status(cfg,
                             holderRef, ["focusEnergy"]);
                         if (!statusResult.success)
                         {
                             throw new Error("ConsumeOn-update focusEnergy " +
                                 "effect failed");
                         }
-                        return {
-                            ...statusResult.event && {event: statusResult.event}
-                        };
+                        return {};
                     }
                     default:
                         // istanbul ignore next: should never happen
@@ -356,26 +378,28 @@ export class Item
                 }
             case "status":
             {
+                await this.verifyConsume(cfg, holderRef);
                 // cure all the relevant statuses
-                const statusResult = yield* parsers.cure(pstate, holderRef,
+                const statusResult = await parsers.cure(cfg, holderRef,
                     Object.keys(data.cure) as dexutil.StatusType[]);
                 if (statusResult.ret !== true && statusResult.ret !== "silent")
                 {
                     throw new Error("ConsumeOn-update cure effect failed");
                 }
-                return {...statusResult.event && {event: statusResult.event}};
+                return {};
             }
             case "depleted":
             {
+                await this.verifyConsume(cfg, holderRef);
                 // restore pp
-                const event = yield;
-                if (event.type !== "modifyPP" || event.monRef !== holderRef ||
+                const event = await tryPeek(cfg);
+                if (event?.type !== "modifyPP" || event.monRef !== holderRef ||
                     event.amount !== data.restore)
                 {
                     throw new Error("ConsumeOn-update restore effect failed");
                 }
-                const result = yield* base.modifyPP(pstate, event);
-                return {...result.event && {event: result.event}};
+                await base.modifyPP(cfg);
+                return {};
             }
         }
         // istanbul ignore next: should never happen
@@ -391,17 +415,18 @@ export class Item
      * Activates an item on-`residual` (e.g. micleberry).
      * @param holderRef Item holder reference.
      */
-    public async* consumeOnResidual(pstate: ParserState, holderRef: Side):
-        SubParser<ItemConsumeResult>
+    public async consumeOnResidual(cfg: SubParserConfig, holderRef: Side):
+        Promise<ItemConsumeResult>
     {
         if (this.data.consumeOn?.residual)
         {
-            const holder = pstate.state.teams[holderRef].active;
+            const holder = cfg.state.teams[holderRef].active;
             Item.assertHPThreshold(holder,
                 this.data.consumeOn.residual.threshold);
             if (this.data.consumeOn.residual.status === "micleberry")
             {
                 holder.volatile.micleberry = true;
+                await this.verifyConsume(cfg, holderRef);
                 return {};
             }
         }
@@ -412,6 +437,28 @@ export class Item
     //#endregion
 
     //#region consumeOnX() method helpers
+
+    /**
+     * Verifies and consumes the initial activateItem event to verify that it
+     * may be relevant for this Item obj.
+     * @param holderRef Item holder reference.
+     */
+    private async verifyConsume(cfg: SubParserConfig, holderRef: Side):
+        Promise<void>
+    {
+        const event = await verify(cfg, "removeItem");
+        if (event.monRef !== holderRef)
+        {
+            throw new Error(`Mismatched monRef: expected '${holderRef}' but ` +
+                `got '${event.monRef}'`);
+        }
+        if (event.consumed !== this.data.name)
+        {
+            throw new Error("Mismatched item: expected " +
+                `'${this.data.name}' but got '${event.consumed}'`);
+        }
+        await consume(cfg);
+    }
 
     /** Makes HP/ability assertions based on item activation HP threshold. */
     private static assertHPThreshold(holder: Pokemon, threshold: number): void
@@ -434,16 +481,16 @@ export class Item
     }
 
     /** Handles heal effect from items. */
-    private static async* heal(pstate: ParserState, on: dexutil.ItemConsumeOn,
-        holderRef: Side, percent: number): SubParser<ItemConsumeResult>
+    private static async heal(cfg: SubParserConfig, on: dexutil.ItemConsumeOn,
+        holderRef: Side, percent: number): Promise<SubParserResult>
     {
-        const healResult = yield* parsers.percentDamage(pstate, holderRef,
+        const healResult = await parsers.percentDamage(cfg, holderRef,
             percent);
         if (!healResult.success)
         {
             throw new Error(`ConsumeOn-${on} heal effect failed`);
         }
-        return {...healResult.event && {event: healResult.event}};
+        return {};
     }
 
     //#endregion

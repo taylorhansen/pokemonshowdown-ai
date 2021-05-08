@@ -24,9 +24,9 @@ export async function playGame(simName: SimName, args: SimArgs,
     const {experiences, winner, err} = await sim(args);
 
     const aexps: AugmentedExperience[] = [];
-    if (rollout)
+    if (rollout && !err)
     {
-        // process experiences
+        // process experiences as long as the game wasn't errored
         for (const batch of experiences)
         {
             aexps.push(...augmentExperiences(batch, rollout));
@@ -34,9 +34,7 @@ export async function playGame(simName: SimName, args: SimArgs,
     }
 
     return {
-        experiences: aexps, ...(winner === undefined ? {} : {winner}),
-        // even if there's an error in the game, we should still try to salvage
-        //  the experiences we had before it occurred
-        ...(err && {err})
+        experiences: aexps, ...winner === undefined ? {} : {winner},
+        ...err && {err}
     };
 }

@@ -98,5 +98,5 @@ parentPort.on("message", (msg: DecoderMessage) =>
                 err: errBuf
             };
             parentPort!.postMessage(result, [errBuf.buffer]);
-        })
+        });
 });

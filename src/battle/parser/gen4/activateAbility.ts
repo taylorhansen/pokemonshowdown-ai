@@ -2,9 +2,8 @@ import * as dex from "../../dex/dex";
 import * as dexutil from "../../dex/dex-util";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
-import * as events from "../BattleEvent";
-import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { eventLoop } from "../helpers";
+import { SubParserConfig, SubParserResult } from "../BattleParser";
+import { consume, eventLoop, peek, verify } from "../helpers";
 import { handlers as base } from "./base";
 import { createEventInference, EventInference, expectEvents, ExpectEventsResult,
     SubInference, SubReason } from "./EventInference";
@@ -17,30 +16,30 @@ export type ExpectAbilitiesResult = ExpectEventsResult<AbilityResult>;
  * Expects an on-`switchOut` ability to activate.
  * @param eligible Eligible pokemon.
  */
-export async function* onSwitchOut(pstate: ParserState,
-    eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
-    SubParser<ExpectAbilitiesResult>
+export async function onSwitchOut(cfg: SubParserConfig,
+    eligible: Partial<Readonly<Record<Side, true>>>):
+    Promise<ExpectAbilitiesResult>
 {
-    const pendingAbilities = getAbilities(pstate, eligible,
+    const pendingAbilities = getAbilities(cfg, eligible,
         (ability, mon) => ability.canSwitchOut(mon));
 
-    return yield* expectAbilities(pstate, "switchOut", pendingAbilities,
-        /*hitBy*/ undefined, lastEvent);
+    return await expectAbilities(cfg, "switchOut", pendingAbilities,
+        /*hitBy*/ undefined);
 }
 
 /**
  * Expects an on-`start` ability to activate.
  * @param eligible Eligible pokemon.
  */
-export async function* onStart(pstate: ParserState,
-    eligible: Partial<Readonly<Record<Side, true>>>, lastEvent?: events.Any):
-    SubParser<ExpectAbilitiesResult>
+export async function onStart(cfg: SubParserConfig,
+    eligible: Partial<Readonly<Record<Side, true>>>):
+    Promise<ExpectAbilitiesResult>
 {
-    const pendingAbilities = getAbilities(pstate, eligible,
+    const pendingAbilities = getAbilities(cfg, eligible,
         (ability, mon) => ability.canStart(mon));
 
-    return yield* expectAbilities(pstate, "start", pendingAbilities,
-        /*hitBy*/ undefined, lastEvent);
+    return await expectAbilities(cfg, "start", pendingAbilities,
+        /*hitBy*/ undefined);
 }
 
 // TODO: allow for other non-move effects (e.g. abilities/items)
@@ -50,64 +49,55 @@ export async function* onStart(pstate: ParserState,
  * @param userRef Pokemon reference using the `hitByMove`.
  * @param hitByMove Move by which the eligible pokemon are being hit.
  */
-export async function* onBlock(pstate: ParserState,
+export async function onBlock(cfg: SubParserConfig,
     eligible: Partial<Readonly<Record<Side, true>>>,
-    hitBy: dexutil.MoveAndUserRef, lastEvent?: events.Any):
-    SubParser<ExpectAbilitiesResult>
+    hitBy: dexutil.MoveAndUserRef): Promise<ExpectAbilitiesResult>
 {
     // if move user ignores the target's abilities, then this function can't be
     //  called
-    const user = pstate.state.teams[hitBy.userRef].active;
-    if (ignoresTargetAbility(user))
-    {
-        return {...lastEvent && {event: lastEvent}, results: []};
-    }
+    const user = cfg.state.teams[hitBy.userRef].active;
+    if (ignoresTargetAbility(user)) return {results: []};
+
     const moveTypes = hitBy.move.getPossibleTypes(user);
     // only the main status effects can be visibly blocked by an ability
     const status = hitBy.move.getMainStatusEffects("hit", user.types);
 
-    const pendingAbilities = getAbilities(pstate, eligible,
+    const pendingAbilities = getAbilities(cfg, eligible,
         // block move's main status effect
         ability => ability.canBlockStatusEffect(status,
-                pstate.state.status.weather.type) ??
+                cfg.state.status.weather.type) ??
             // block move based on its type
             ability.canBlockMoveType(moveTypes, hitBy.move, user) ??
             // block move based on damp, etc
             ability.canBlockEffect(hitBy.move.data.flags?.explosive));
 
-    return yield* expectAbilities(pstate, "block", pendingAbilities, hitBy,
-        lastEvent);
+    return await expectAbilities(cfg, "block", pendingAbilities, hitBy);
 }
 
-// TODO: refactor hitByMove to support other unboost effects, e.g. intimidate
+// TODO: refactor hitByMove to support other unboost sources, e.g. intimidate
 /**
  * Expects an on-`tryUnboost` ability to activate on a certain unboost effect.
  * @param eligible Eligible pokemon.
  * @param userRef Pokemon reference using the `hitByMove`.
  * @param hitByMove Move by which the eligible pokemon are being hit.
  */
-export async function* onTryUnboost(pstate: ParserState,
+export async function onTryUnboost(cfg: SubParserConfig,
     eligible: Partial<Readonly<Record<Side, true>>>,
-    hitBy: dexutil.MoveAndUserRef, lastEvent?: events.Any):
-    SubParser<ExpectAbilitiesResult>
+    hitBy: dexutil.MoveAndUserRef): Promise<ExpectAbilitiesResult>
 {
     // if move user ignores the target's abilities, then this function can't be
     //  called
-    const user = pstate.state.teams[hitBy.userRef].active;
-    if (ignoresTargetAbility(user))
-    {
-        return {...lastEvent && {event: lastEvent}, results: []};
-    }
+    const user = cfg.state.teams[hitBy.userRef].active;
+    if (ignoresTargetAbility(user)) return {results: []};
 
     const boostEffect = hitBy.move.getBoostEffects("hit", user.types);
     let {boosts} = boostEffect;
     if (boostEffect.set) boosts = {};
 
-    const pendingAbilities = getAbilities(pstate, eligible,
+    const pendingAbilities = getAbilities(cfg, eligible,
         ability => ability.canBlockUnboost(boosts));
 
-    return yield* expectAbilities(pstate, "tryUnboost", pendingAbilities,
-        hitBy, lastEvent);
+    return await expectAbilities(cfg, "tryUnboost", pendingAbilities, hitBy);
 }
 
 /** Checks if a pokemon's ability definitely ignores the target's abilities. */
@@ -132,16 +122,15 @@ function ignoresTargetAbility(mon: ReadonlyPokemon): boolean
  * @param statusType Status that was afflicted.
  * @param hitByMove Move by which the eligible pokemon are being hit.
  */
-export async function* onStatus(pstate: ParserState,
+export async function onStatus(cfg: SubParserConfig,
     eligible: Partial<Readonly<Record<Side, true>>>,
-    statusType: dexutil.StatusType, hitBy?: dexutil.MoveAndUserRef,
-    lastEvent?: events.Any): SubParser<ExpectAbilitiesResult>
+    statusType: dexutil.StatusType, hitBy?: dexutil.MoveAndUserRef):
+    Promise<ExpectAbilitiesResult>
 {
-    const pendingAbilities = getAbilities(pstate, eligible,
+    const pendingAbilities = getAbilities(cfg, eligible,
         (ability, mon) => ability.canStatus(mon, statusType));
 
-    return yield* expectAbilities(pstate, "status", pendingAbilities, hitBy,
-        lastEvent);
+    return await expectAbilities(cfg, "status", pendingAbilities, hitBy);
 }
 
 /**
@@ -152,11 +141,10 @@ export async function* onStatus(pstate: ParserState,
  * @param userRef Pokemon reference using the `hitByMove`.
  * @param hitByMove Move by which the eligible pokemon are being hit.
  */
-export async function* onMoveDamage(pstate: ParserState,
+export async function onMoveDamage(cfg: SubParserConfig,
     eligible: Partial<Readonly<Record<Side, true>>>,
     qualifier: "damage" | "contact" | "contactKO",
-    hitBy: dexutil.MoveAndUserRef, lastEvent?: events.Any):
-    SubParser<ExpectAbilitiesResult>
+    hitBy: dexutil.MoveAndUserRef): Promise<ExpectAbilitiesResult>
 {
     let on: dexutil.AbilityOn;
     switch (qualifier)
@@ -166,13 +154,12 @@ export async function* onMoveDamage(pstate: ParserState,
         case "contactKO": on = "moveContactKO"; break;
     }
 
-    const user = pstate.state.teams[hitBy.userRef].active;
+    const user = cfg.state.teams[hitBy.userRef].active;
     const hitByArg: dexutil.MoveAndUser = {move: hitBy.move, user};
-    const pendingAbilities = getAbilities(pstate, eligible,
+    const pendingAbilities = getAbilities(cfg, eligible,
         (ability, mon) => ability.canMoveDamage(mon, on, hitByArg));
 
-    return yield* expectAbilities(pstate, on, pendingAbilities,
-        hitBy, lastEvent);
+    return await expectAbilities(cfg, on, pendingAbilities, hitBy);
 }
 
 /**
@@ -180,16 +167,14 @@ export async function* onMoveDamage(pstate: ParserState,
  * @param eligible Eligible pokemon.
  * @param hitByMove Move by which the eligible pokemon are being hit.
  */
-export async function* onMoveDrain(pstate: ParserState,
+export async function onMoveDrain(cfg: SubParserConfig,
     eligible: Partial<Readonly<Record<Side, true>>>,
-    hitBy: dexutil.MoveAndUserRef, lastEvent?: events.Any):
-    SubParser<ExpectAbilitiesResult>
+    hitBy: dexutil.MoveAndUserRef): Promise<ExpectAbilitiesResult>
 {
-    const pendingAbilities = getAbilities(pstate, eligible,
+    const pendingAbilities = getAbilities(cfg, eligible,
         ability => ability.canMoveDrain());
 
-    return yield* expectAbilities(pstate, "moveDrain", pendingAbilities,
-        hitBy, lastEvent);
+    return await expectAbilities(cfg, "moveDrain", pendingAbilities, hitBy);
 }
 
 /**
@@ -202,7 +187,7 @@ export async function* onMoveDrain(pstate: ParserState,
  * possibility name to a SubInference modeling the restrictions on each ability
  * possibility.
  */
-function getAbilities(pstate: ParserState,
+function getAbilities(cfg: SubParserConfig,
     monRefs: {readonly [S in Side]?: any},
     f: (ability: dex.Ability, mon: Pokemon, monRef: Side) =>
         Set<SubReason> | null):
@@ -213,7 +198,7 @@ function getAbilities(pstate: ParserState,
     {
         if (!monRefs.hasOwnProperty(monRef)) continue;
         // can't activate ability if suppressed
-        const mon = pstate.state.teams[monRef as Side].active;
+        const mon = cfg.state.teams[monRef as Side].active;
         if (mon.volatile.suppressAbility) continue;
 
         // put the callback through each possible ability
@@ -238,11 +223,10 @@ function getAbilities(pstate: ParserState,
  * @param hitByMove Move that the eligible ability holders were hit by, if
  * applicable.
  */
-function expectAbilities(pstate: ParserState, on: dexutil.AbilityOn,
+async function expectAbilities(cfg: SubParserConfig, on: dexutil.AbilityOn,
     pendingAbilities:
         {readonly [S in Side]?: ReadonlyMap<string, SubInference>},
-    hitBy?: dexutil.MoveAndUserRef, lastEvent?: events.Any):
-    SubParser<ExpectAbilitiesResult>
+    hitBy?: dexutil.MoveAndUserRef): Promise<ExpectAbilitiesResult>
 {
     const inferences: EventInference<AbilityResult>[] = [];
     for (const monRef in pendingAbilities)
@@ -250,28 +234,29 @@ function expectAbilities(pstate: ParserState, on: dexutil.AbilityOn,
         if (!pendingAbilities.hasOwnProperty(monRef)) continue;
         const abilities = pendingAbilities[monRef as Side]!;
         inferences.push(createEventInference(new Set(abilities.values()),
-            async function* expectAbilitiesTaker(event, accept)
+            async function expectAbilitiesTaker(_cfg, accept)
             {
-                if (event.type !== "activateAbility") return {event};
-                if (event.monRef !== monRef) return {event};
+                const event = await peek(_cfg);
+                if (event.type !== "activateAbility") return {};
+                if (event.monRef !== monRef) return {};
 
                 // match pending ability possibilities with current item event
                 const inf = abilities.get(event.ability);
-                if (!inf) return {event};
+                if (!inf) return {};
 
                 // indicate accepted event
                 accept(inf);
-                return yield* activateAbility(pstate, event, on, hitBy);
+                return await activateAbility(cfg, on, hitBy);
             }));
     }
-    return expectEvents(inferences, lastEvent);
+    return await expectEvents(cfg, inferences);
 }
 
 /** Context for handling ability activation. */
 interface AbilityContext
 {
     /** Parser state. */
-    readonly pstate: ParserState;
+    readonly cfg: SubParserConfig;
     /** Ability holder. */
     readonly holder: Pokemon;
     /** Ability holder Pokemon reference. */
@@ -308,22 +293,26 @@ export interface AbilityResult extends SubParserResult
     invertDrain?: true;
 }
 
+// TODO: refactor MoveAndUserRef to be a generic effect source obj for handling
+//  other effect sources e.g. intimidate
 /**
  * Handles events within the context of an ability activation. Returns the last
  * event that it didn't handle.
  * @param on Context in which the ability is activating.
  * @param hitBy Move+user that the ability holder was hit by, if applicable.
  */
-export async function* activateAbility(pstate: ParserState,
-    initialEvent: events.ActivateAbility, on: dexutil.AbilityOn | null = null,
-    hitBy?: dexutil.MoveAndUserRef): SubParser<AbilityResult>
+export async function activateAbility(cfg: SubParserConfig,
+    on: dexutil.AbilityOn | null = null, hitBy?: dexutil.MoveAndUserRef):
+    Promise<AbilityResult>
 {
+    const initialEvent = await verify(cfg, "activateAbility");
+
     const ability = dex.getAbility(initialEvent.ability);
     if (!ability) throw new Error(`Unknown ability '${initialEvent.ability}'`);
 
     const ctx: AbilityContext =
     {
-        pstate, holder: pstate.state.teams[initialEvent.monRef].active,
+        cfg, holder: cfg.state.teams[initialEvent.monRef].active,
         holderRef: initialEvent.monRef, ability, on, ...hitBy && {hitBy}
     };
 
@@ -331,11 +320,12 @@ export async function* activateAbility(pstate: ParserState,
     ctx.holder.setAbility(ctx.ability.data.name);
 
     // handle supported ability effects
-    const baseResult = yield* dispatchEffects(ctx);
+    const baseResult = await dispatchEffects(ctx);
 
     // handle other ability effects (TODO: support)
-    const result = yield* eventLoop(async function* loop(event): SubParser
+    const result = await eventLoop(cfg, async function abilityLoop(_cfg)
     {
+        const event = await peek(_cfg);
         switch (event.type)
         {
             case "activateFieldEffect": // weather ability
@@ -343,44 +333,45 @@ export async function* activateAbility(pstate: ParserState,
                     weatherAbilities[event.effect] === ctx.ability.data.name)
                 {
                     // fill in infinite duration (gen3-4) and source
-                    return yield* base.activateFieldEffect(pstate, event,
-                        ctx.holder, /*weatherInfinite*/ true);
+                    return await base.activateFieldEffect(_cfg, ctx.holder,
+                        /*weatherInfinite*/ true);
                 }
                 break;
         }
-        return {event};
-    }, baseResult.event);
+        return {};
+    });
     return {...baseResult, ...result};
 }
 
 /**
  * Dispatches the effects of an ability. Assumes that the initial
- * activateAbility event has already been handled.
+ * activateAbility event hasn't been consumed or fully verified yet.
  * @param ctx Ability SubParser context.
  */
-async function* dispatchEffects(ctx: AbilityContext): SubParser<AbilityResult>
+async function dispatchEffects(ctx: AbilityContext): Promise<AbilityResult>
 {
     switch (ctx.on)
     {
         case "switchOut":
-            return yield* ctx.ability.onSwitchOut(ctx.pstate, ctx.holderRef);
+            return await ctx.ability.onSwitchOut(ctx.cfg, ctx.holderRef);
         case "start":
-            return yield* ctx.ability.onStart(ctx.pstate, ctx.holderRef);
+            return await ctx.ability.onStart(ctx.cfg, ctx.holderRef);
         case "block":
-            return yield* ctx.ability.onBlock(ctx.pstate, ctx.holderRef,
+            return await ctx.ability.onBlock(ctx.cfg, ctx.holderRef,
                 ctx.hitBy);
         case "tryUnboost":
-            return yield* ctx.ability.onTryUnboost(ctx.pstate);
+            return await ctx.ability.onTryUnboost(ctx.cfg, ctx.holderRef);
         case "status":
-            return yield* ctx.ability.onStatus(ctx.pstate, ctx.holderRef);
+            return await ctx.ability.onStatus(ctx.cfg, ctx.holderRef);
         case "moveContactKO": case "moveContact": case "moveDamage":
-            return yield* ctx.ability.onMoveDamage(ctx.pstate, ctx.on,
+            return await ctx.ability.onMoveDamage(ctx.cfg, ctx.on,
                 ctx.holderRef, ctx.hitBy);
         case "moveDrain":
-            return yield* ctx.ability.onMoveDrain(ctx.pstate,
+            return await ctx.ability.onMoveDrain(ctx.cfg, ctx.holderRef,
                 ctx.hitBy?.userRef);
         default:
             // TODO: throw once parsers can fully track ability activation
+            await consume(ctx.cfg);
             return {};
     }
 }

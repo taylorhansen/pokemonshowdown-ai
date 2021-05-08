@@ -28,4 +28,6 @@ export interface WorkerClosed extends PortResultBase<"close">
      * @override
      */
     done: true;
+    /** Pipeline error buffer. */
+    err?: Buffer;
 }

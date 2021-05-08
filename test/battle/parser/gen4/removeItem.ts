@@ -3,79 +3,88 @@ import "mocha";
 import * as dex from "../../../../src/battle/dex/dex";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
 import * as events from "../../../../src/battle/parser/BattleEvent";
-import { ParserState, SubParser } from
-    "../../../../src/battle/parser/BattleParser";
 import * as consumeItem from "../../../../src/battle/parser/gen4/removeItem";
+import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
 import { Side } from "../../../../src/battle/state/Side";
-import { Context } from "./Context";
-import { createParserHelpers } from "./helpers";
+import { InitialContext, ParserContext } from "./Context";
+import { ParserHelpers, setupSubParserPartial, StateHelpers } from "./helpers";
 
-export function testRemoveItem(f: () => Context,
-    initActive: (monRef: Side, options?: events.SwitchOptions) => Pokemon)
+export function testRemoveItem(ictx: InitialContext,
+    getState: () => BattleState, sh: StateHelpers)
 {
-    let pstate: ParserState;
-    let parser: SubParser;
-
-    beforeEach("Extract Context", function()
-    {
-        ({pstate, parser} = f());
-    });
-
-    const {handle, handleEnd, exitParser} = createParserHelpers(() => parser);
-
-    async function initParser(monRef: Side, consumed: string | boolean,
-        on: dexutil.ItemConsumeOn | null = null, hitByMove?: dexutil.MoveData,
-        userRef?: Side): Promise<SubParser>
-    {
-        let hitBy: dexutil.MoveAndUserRef | undefined;
-        if (hitByMove && userRef)
-        {
-            hitBy = {move: dex.getMove(hitByMove), userRef};
-        }
-
-        parser = consumeItem.removeItem(pstate,
-            {type: "removeItem", monRef, consumed}, on, hitBy);
-        // first yield doesn't return anything
-        await expect(parser.next())
-            .to.eventually.become({value: undefined, done: false});
-        return parser;
-    }
-
-    async function initReturn(monRef: Side, consumed: string | boolean,
-        on: dexutil.ItemConsumeOn | null = null, hitByMove?: dexutil.MoveData,
-        userRef?: Side, result: consumeItem.ItemConsumeResult = {}):
-        Promise<SubParser<consumeItem.ItemConsumeResult>>
-    {
-        let hitBy: dexutil.MoveAndUserRef | undefined;
-        if (hitByMove && userRef)
-        {
-            hitBy = {move: dex.getMove(hitByMove), userRef};
-        }
-
-        parser = consumeItem.removeItem(pstate,
-            {type: "removeItem", monRef, consumed}, on, hitBy);
-        await expect(parser.next())
-            .to.eventually.become({value: result, done: true});
-        return parser;
-    }
-
-    async function altParser<TParser extends SubParser>(gen: TParser):
-        Promise<TParser>
-    {
-        parser = gen;
-        // first yield doesn't return anything
-        await expect(parser.next())
-            .to.eventually.become({value: undefined, done: false});
-        return gen;
-    }
-
     // tests for removeItem()
     describe("Event", function()
     {
+        /** Initializes the removeItem parser. */
+        const init = setupSubParserPartial(ictx.startArgs, getState,
+            consumeItem.removeItem);
+
+        let pctx: ParserContext<consumeItem.ItemConsumeResult>;
+        const ph = new ParserHelpers(() => pctx, getState);
+
+        afterEach("Close ParserContext", async function()
+        {
+            await ph.close();
+        });
+
+        /** Initializes the removeItem parser with the initial event. */
+        async function initWithEvent(monRef: Side, consumed: string | boolean,
+            on: dexutil.ItemConsumeOn | null = null,
+            hitByMove?: dexutil.MoveData, userRef?: Side): Promise<void>
+        {
+            let hitBy: dexutil.MoveAndUserRef | undefined;
+            if (hitByMove && userRef)
+            {
+                hitBy = {move: dex.getMove(hitByMove), userRef};
+            }
+
+            pctx = init(on, hitBy);
+            await ph.handle({type: "removeItem", monRef, consumed});
+        }
+
+        /**
+         * Initializes the removeItem parser with the initial event and expects
+         * it to return immediately after.
+         */
+        async function initReturn(monRef: Side, consumed: string | boolean,
+            on: dexutil.ItemConsumeOn | null = null,
+            hitByMove?: dexutil.MoveData, userRef?: Side,
+            ret?: consumeItem.ItemConsumeResult): Promise<void>
+        {
+            let hitBy: dexutil.MoveAndUserRef | undefined;
+            if (hitByMove && userRef)
+            {
+                hitBy = {move: dex.getMove(hitByMove), userRef};
+            }
+
+            pctx = init(on, hitBy);
+            await ph.handleEnd({type: "removeItem", monRef, consumed}, ret);
+        }
+
+        /**
+         * Initializes the removeItem parser with the initial event and expects
+         * it to throw immediately after.
+         */
+        async function initError(errorCtor: ErrorConstructor, message: string,
+            monRef: Side, consumed: string | boolean,
+            on: dexutil.ItemConsumeOn | null = null,
+            hitByMove?: dexutil.MoveData, userRef?: Side): Promise<void>
+        {
+            let hitBy: dexutil.MoveAndUserRef | undefined;
+            if (hitByMove && userRef)
+            {
+                hitBy = {move: dex.getMove(hitByMove), userRef};
+            }
+
+            pctx = init(on, hitBy);
+            await ph.rejectError({type: "removeItem", monRef, consumed},
+                errorCtor, message);
+        }
+
         it("Should remove unknown item with consumed=false", async function()
         {
-            const mon = initActive("them");
+            const mon = sh.initActive("them");
             const oldItem = mon.item;
             expect(mon.item.definiteValue).to.be.null;
 
@@ -86,7 +95,7 @@ export function testRemoveItem(f: () => Context,
 
         it("Should consume item", async function()
         {
-            const mon = initActive("us");
+            const mon = sh.initActive("us");
             const oldItem = mon.item;
             expect(mon.item.definiteValue).to.be.null;
             await initReturn("us", "pokeball");
@@ -98,22 +107,20 @@ export function testRemoveItem(f: () => Context,
 
         it("Should throw if invalid item", async function()
         {
-            await expect(initParser("us", "invalid_item"))
-                .to.eventually.be.rejectedWith(Error,
-                    "Unknown item 'invalid_item'");
+            await initError(Error, "Unknown item 'invalid_item'",
+                "us", "invalid_item");
         });
 
         it("Should throw if none item", async function()
         {
-            await expect(initParser("us", "none"))
-                .to.eventually.be.rejectedWith(Error, "Unknown item 'none'");
+            await initError(Error, "Unknown item 'none'", "us", "none");
         });
 
         describe("ConsumeOn-preMove", function()
         {
             it("Should indicate increased fractional priority", async function()
             {
-                initActive("us").hp.set(1); // within berry threshold
+                sh.initActive("us").hp.set(1); // within berry threshold
                 await initReturn("us", "custapberry", "preMove",
                     /*hitByMove*/ undefined, /*userRef*/ undefined,
                     {moveFirst: true});
@@ -126,7 +133,7 @@ export function testRemoveItem(f: () => Context,
         {
             it("Should indicate shortened charge", async function()
             {
-                const mon = initActive("us");
+                const mon = sh.initActive("us");
                 mon.volatile.twoTurn.start("dig");
                 await initReturn("us", "powerherb", "moveCharge", undefined,
                     undefined, {shorten: true});
@@ -139,21 +146,20 @@ export function testRemoveItem(f: () => Context,
         {
             it("Should indicate resist berry effect", async function()
             {
-                initActive("us").volatile.addedType = "water";
-                initActive("them");
+                sh.initActive("us").volatile.addedType = "water";
+                sh.initActive("them");
                 await initReturn("us", "rindoberry", "preHit", dex.moves.absorb,
                     "them", {resistSuper: "grass"});
             });
 
             it("Should throw if not super-effective", async function()
             {
-                initActive("us");
-                initActive("them");
-                await expect(initParser("us", "rindoberry", "preHit",
-                        dex.moves.absorb, "them"))
-                    .to.eventually.be.rejectedWith(Error,
-                        "Expected type effectiveness to be 'super' but got " +
-                        "'regular' for ")
+                sh.initActive("us");
+                sh.initActive("them");
+                await initError(Error,
+                    "Expected type effectiveness to be 'super' but got " +
+                        "'regular' for ",
+                    "us", "rindoberry", "preHit", dex.moves.absorb, "them");
             });
 
             shouldRejectUnrelatedItem("preHit", "sitrusberry");
@@ -163,18 +169,18 @@ export function testRemoveItem(f: () => Context,
         {
             it("Should handle heal effect", async function()
             {
-                initActive("us").hp.set(99);
-                initActive("them");
-                await initParser("us", "enigmaberry", "super",
+                sh.initActive("us").hp.set(99);
+                sh.initActive("them");
+                await initWithEvent("us", "enigmaberry", "super",
                     dex.moves.drainpunch, "them");
-                await handleEnd(
+                await ph.handleEnd(
                     {type: "takeDamage", monRef: "us", hp: 100});
             });
 
             it("Should handle silent heal effect", async function()
             {
-                initActive("us");
-                initActive("them");
+                sh.initActive("us");
+                sh.initActive("them");
                 await initReturn("us", "enigmaberry", "super",
                     dex.moves.drainpunch, "them");
             });
@@ -196,18 +202,19 @@ export function testRemoveItem(f: () => Context,
                     it(`Should handle ${category} damage effect`,
                     async function()
                     {
-                        initActive("us");
-                        initActive("them");
-                        await initParser("us", item, "postHit", move, "them");
-                        await handle(
+                        sh.initActive("us");
+                        sh.initActive("them");
+                        await initWithEvent("us", item, "postHit", move,
+                            "them");
+                        await ph.handle(
                             {type: "takeDamage", monRef: "them", hp: 1});
-                        await exitParser();
+                        await ph.halt();
                     });
 
                     it("Should handle silent damage effect", async function()
                     {
-                        initActive("us");
-                        initActive("them").hp.set(0);
+                        sh.initActive("us");
+                        sh.initActive("them").hp.set(0);
                         await initReturn("us", item, "postHit", move, "them");
                     });
                 });
@@ -232,9 +239,9 @@ export function testRemoveItem(f: () => Context,
                     {
                         it("Should handle heal effect", async function()
                         {
-                            initActive("us").hp.set(1);
-                            await initParser("us", item, "update");
-                            await handleEnd(
+                            sh.initActive("us").hp.set(1);
+                            await initWithEvent("us", item, "update");
+                            await ph.handleEnd(
                                 {type: "takeDamage", monRef: "us", hp: 100});
                         });
 
@@ -242,9 +249,9 @@ export function testRemoveItem(f: () => Context,
 
                         it("Should throw if no heal effect", async function()
                         {
-                            initActive("us").hp.set(1);
-                            await initParser("us", item, "update");
-                            await expect(exitParser()).to.be.rejectedWith(Error,
+                            sh.initActive("us").hp.set(1);
+                            await initWithEvent("us", item, "update");
+                            await expect(ph.halt()).to.be.rejectedWith(Error,
                                 "ConsumeOn-update heal effect failed");
                         });
 
@@ -252,13 +259,13 @@ export function testRemoveItem(f: () => Context,
                         {
                             it("Should handle dislike berry", async function()
                             {
-                                initActive("us").hp.set(1);
-                                await initParser("us", dislike, "update");
-                                await handle(
+                                sh.initActive("us").hp.set(1);
+                                await initWithEvent("us", dislike, "update");
+                                await ph.handle(
                                 {
                                     type: "takeDamage", monRef: "us", hp: 100
                                 });
-                                await handleEnd(
+                                await ph.handleEnd(
                                 {
                                     type: "activateStatusEffect", monRef: "us",
                                     effect: "confusion", start: true
@@ -272,9 +279,9 @@ export function testRemoveItem(f: () => Context,
                 {
                     it("Should handle boost effect", async function()
                     {
-                        initActive("us").hp.set(1);
-                        await initParser("us", "starfberry", "update");
-                        await handleEnd(
+                        sh.initActive("us").hp.set(1);
+                        await initWithEvent("us", "starfberry", "update");
+                        await ph.handleEnd(
                         {
                             type: "boost", monRef: "us", stat: "atk", amount: 2
                         });
@@ -282,22 +289,21 @@ export function testRemoveItem(f: () => Context,
 
                     it("Should throw if invalid boost", async function()
                     {
-                        initActive("us").hp.set(1);
-                        await initParser("us", "starfberry", "update");
-                        await expect(handleEnd(
+                        sh.initActive("us").hp.set(1);
+                        await initWithEvent("us", "starfberry", "update");
+                        await ph.rejectError(
                             {
                                 type: "boost", monRef: "us", stat: "evasion",
                                 amount: 2
-                            }))
-                            .to.be.rejectedWith(Error,
-                                "ConsumeOn-update boost effect failed");
+                            },
+                            Error, "ConsumeOn-update boost effect failed");
                     });
 
                     it("Should throw if no boost effect", async function()
                     {
-                        initActive("us").hp.set(1);
-                        await initParser("us", "starfberry", "update");
-                        await expect(exitParser()).to.be.rejectedWith(Error,
+                        sh.initActive("us").hp.set(1);
+                        await initWithEvent("us", "starfberry", "update");
+                        await ph.haltError(Error,
                             "ConsumeOn-update boost effect failed");
                     });
                 });
@@ -306,9 +312,9 @@ export function testRemoveItem(f: () => Context,
                 {
                     it("Should handle focusEnergy effect", async function()
                     {
-                        initActive("us").hp.set(1);
-                        await initParser("us", "lansatberry", "update");
-                        await handleEnd(
+                        sh.initActive("us").hp.set(1);
+                        await initWithEvent("us", "lansatberry", "update");
+                        await ph.handleEnd(
                         {
                             type: "activateStatusEffect", monRef: "us",
                             effect: "focusEnergy", start: true
@@ -317,9 +323,9 @@ export function testRemoveItem(f: () => Context,
 
                     it("Should throw if no focusEnergy effect", async function()
                     {
-                        initActive("us").hp.set(1);
-                        await initParser("us", "lansatberry", "update");
-                        await expect(exitParser()).to.be.rejectedWith(Error,
+                        sh.initActive("us").hp.set(1);
+                        await initWithEvent("us", "lansatberry", "update");
+                        await ph.haltError(Error,
                             "ConsumeOn-update focusEnergy effect failed");
                     });
                 });
@@ -329,16 +335,16 @@ export function testRemoveItem(f: () => Context,
             {
                 it("Should handle cure effect", async function()
                 {
-                    const mon = initActive("us");
+                    const mon = sh.initActive("us");
                     mon.majorStatus.afflict("slp");
                     mon.volatile.confusion.start();
-                    await initParser("us", "lumberry", "update");
-                    await handle(
+                    await initWithEvent("us", "lumberry", "update");
+                    await ph.handle(
                     {
                         type: "activateStatusEffect", monRef: "us",
                         effect: "slp", start: false
                     });
-                    await handleEnd(
+                    await ph.handleEnd(
                     {
                         type: "activateStatusEffect", monRef: "us",
                         effect: "confusion", start: false
@@ -347,26 +353,26 @@ export function testRemoveItem(f: () => Context,
 
                 it("Should throw if no cure effect", async function()
                 {
-                    const mon = initActive("us");
+                    const mon = sh.initActive("us");
                     mon.majorStatus.afflict("slp");
                     mon.volatile.confusion.start();
-                    await initParser("us", "lumberry", "update");
-                    await expect(exitParser()).to.be.rejectedWith(Error,
+                    await initWithEvent("us", "lumberry", "update");
+                    await ph.haltError(Error,
                         "ConsumeOn-update cure effect failed");
                 });
 
                 it("Should throw if partial cure effect", async function()
                 {
-                    const mon = initActive("us");
+                    const mon = sh.initActive("us");
                     mon.majorStatus.afflict("slp");
                     mon.volatile.confusion.start();
-                    await initParser("us", "lumberry", "update");
-                    await handle(
+                    await initWithEvent("us", "lumberry", "update");
+                    await ph.handle(
                     {
                         type: "activateStatusEffect", monRef: "us",
                         effect: "slp", start: false
                     });
-                    await expect(exitParser()).to.be.rejectedWith(Error,
+                    await ph.haltError(Error,
                         "ConsumeOn-update cure effect failed");
                 });
             });
@@ -375,9 +381,9 @@ export function testRemoveItem(f: () => Context,
             {
                 it("Should handle restore effect", async function()
                 {
-                    initActive("us").moveset.reveal("tackle").pp = 0;
-                    await initParser("us", "leppaberry", "update");
-                    await handleEnd(
+                    sh.initActive("us").moveset.reveal("tackle").pp = 0;
+                    await initWithEvent("us", "leppaberry", "update");
+                    await ph.handleEnd(
                     {
                         type: "modifyPP", monRef: "us", move: "tackle",
                         amount: 10
@@ -387,9 +393,9 @@ export function testRemoveItem(f: () => Context,
                 it("Should still pass for unrevealed/undepleted moves",
                 async function()
                 {
-                    initActive("us");
-                    await initParser("us", "leppaberry", "update");
-                    await handleEnd(
+                    sh.initActive("us");
+                    await initWithEvent("us", "leppaberry", "update");
+                    await ph.handleEnd(
                     {
                         type: "modifyPP", monRef: "us", move: "splash",
                         amount: 10
@@ -398,22 +404,21 @@ export function testRemoveItem(f: () => Context,
 
                 it("Should throw if invalid restore effect", async function()
                 {
-                    initActive("us").moveset.reveal("tackle").pp = 0;
-                    await initParser("us", "leppaberry", "update");
-                    await expect(handleEnd(
+                    sh.initActive("us").moveset.reveal("tackle").pp = 0;
+                    await initWithEvent("us", "leppaberry", "update");
+                    await ph.rejectError(
                         {
                             type: "modifyPP", monRef: "us", move: "tackle",
                             amount: 5
-                        }))
-                        .to.be.rejectedWith(Error,
-                            "ConsumeOn-update restore effect failed");
+                        },
+                        Error, "ConsumeOn-update restore effect failed");
                 });
 
                 it("Should throw if no restore effect", async function()
                 {
-                    initActive("us").moveset.reveal("tackle").pp = 0;
-                    await initParser("us", "leppaberry", "update");
-                    await expect(exitParser()).to.be.rejectedWith(Error,
+                    sh.initActive("us").moveset.reveal("tackle").pp = 0;
+                    await initWithEvent("us", "leppaberry", "update");
+                    await ph.haltError(Error,
                         "ConsumeOn-update restore effect failed");
                 });
             });
@@ -423,7 +428,7 @@ export function testRemoveItem(f: () => Context,
         {
             it("Should handle implicit effect", async function()
             {
-                const mon = initActive("us");
+                const mon = sh.initActive("us");
                 mon.hp.set(1);
                 expect(mon.volatile.micleberry).to.be.false;
                 await initReturn("us", "micleberry", "residual");
@@ -438,577 +443,612 @@ export function testRemoveItem(f: () => Context,
         {
             it("Should reject unrelated item", async function()
             {
-                initActive("us");
-                await expect(initParser("us", itemName, consumeOn,
-                        dex.moves.tackle, "them"))
-                    .to.eventually.be.rejectedWith(Error,
-                        `ConsumeOn-${consumeOn} effect shouldn't activate ` +
-                        `for item '${itemName}'`);
+                sh.initActive("us");
+                await initError(Error,
+                    `ConsumeOn-${consumeOn} effect shouldn't activate ` +
+                        `for item '${itemName}'`,
+                    "us", itemName, consumeOn, dex.moves.tackle, "them");
             });
         }
     });
 
-    describe("consumeOnPreMove()", function()
+    describe("Expect functions", function()
     {
-        function preMoveSetup(lowHP?: boolean)
+        let pctx: ParserContext<consumeItem.ExpectConsumeItemsResult>;
+        const ph = new ParserHelpers(() => pctx, getState);
+
+        afterEach("Close ParserContext", async function()
         {
-            initActive("us");
-            const mon = initActive("them");
-            if (lowHP) mon.hp.set(1);
-            return mon;
-        }
-
-        async function preMoveTaken()
-        {
-            await altParser(consumeItem.consumeOnPreMove(pstate, {them: true}));
-            await handle(
-                {type: "removeItem", monRef: "them", consumed: "custapberry"});
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: [{moveFirst: true}]});
-        }
-
-        async function preMoveAbsent()
-        {
-            await altParser(consumeItem.consumeOnPreMove(pstate, {them: true}));
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: []});
-        }
-
-        testHasItem("custapberry", () => preMoveSetup(/*lowHP*/ true),
-            preMoveTaken, preMoveAbsent);
-        // TODO: additional tests for lowHP=false?
-
-        describe("HP threshold", () =>
-            testHPThreshold("custapberry", preMoveSetup, preMoveAbsent));
-
-        describe("Early-berry ability (gluttony)", () =>
-            testEarlyBerryAbilities("custapberry", ["gluttony"], preMoveSetup,
-                preMoveTaken, preMoveAbsent));
-
-        describe("Item-ignoring ability (klutz)", () =>
-            testBlockingAbilities("custapberry", ["klutz"],
-                () => preMoveSetup(/*lowHP*/ true),
-                preMoveTaken, preMoveAbsent));
-    });
-
-    describe("consumeOnMoveCharge()", function()
-    {
-        // TODO: add tests/options for other kinds of charging moves
-        function moveChargeSetup(charge?: boolean)
-        {
-            initActive("us");
-            const mon = initActive("them");
-            if (charge) mon.volatile.twoTurn.start("solarbeam");
-            return mon;
-        }
-
-        async function moveChargeTaken()
-        {
-            await altParser(consumeItem.consumeOnMoveCharge(pstate,
-                {them: true}));
-            await handle(
-                {type: "removeItem", monRef: "them", consumed: "powerherb"});
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: [{shorten: true}]});
-        }
-
-        async function moveChargeAbsent()
-        {
-            await altParser(consumeItem.consumeOnMoveCharge(pstate,
-                {them: true}));
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: []});
-        }
-
-        testHasItem("powerherb", () => moveChargeSetup(/*charge*/ true),
-            moveChargeTaken, moveChargeAbsent);
-        // TODO: additional tests for charge=false
-
-        it("Shouldn't infer no consumeOn-moveCharge item if it did not " +
-            "activate and the effect should've been silent",
-        async function()
-        {
-            const mon = moveChargeSetup();
-            mon.volatile.embargo.start();
-            expect(mon.item.possibleValues).to.include.keys("powerherb");
-            await moveChargeAbsent();
-            expect(mon.item.possibleValues).to.include.keys("powerherb");
+            await ph.close();
         });
 
-        describe("Item-ignoring ability (klutz)", () =>
-            testBlockingAbilities("powerherb", ["klutz"],
-                () => moveChargeSetup(/*charge*/ true),
-                moveChargeTaken, moveChargeAbsent));
-    });
-
-    describe("consumeOnPreHit()", function()
-    {
-        function preHitSetup(weak?: boolean)
+        describe("consumeOnPreMove()", function()
         {
-            initActive("us");
-            const mon = initActive("them");
-            if (weak) mon.volatile.addedType = "flying";
-            return mon;
-        }
+            /** Initializes the consumeOnPreMove parser. */
+            const init = setupSubParserPartial(ictx.startArgs, getState,
+                consumeItem.consumeOnPreMove);
 
-        async function preHitTaken()
-        {
-            await altParser(consumeItem.consumeOnPreHit(pstate, {them: true},
-                {move: dex.getMove(dex.moves.thunder), userRef: "us"}));
-            await handle(
-                {type: "removeItem", monRef: "them", consumed: "wacanberry"});
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: [{resistSuper: "electric"}]});
-        }
-
-        async function preHitAbsent()
-        {
-            await altParser(consumeItem.consumeOnPreHit(pstate, {them: true},
-                {move: dex.getMove(dex.moves.thunder), userRef: "us"}));
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: []});
-        }
-
-        testHasItem("wacanberry", () => preHitSetup(/*weak*/ true), preHitTaken,
-            preHitAbsent);
-        // TODO: additional tests for weak=false
-
-        // TODO: test moveIsType
-
-        describe("Item-ignoring ability (klutz)", () =>
-            testBlockingAbilities("wacanberry", ["klutz"],
-                () => preHitSetup(/*weak*/ true),
-                preHitTaken, preHitAbsent));
-    });
-
-    describe("consumeOnSuper()", function()
-    {
-        function superSetup(weak?: boolean)
-        {
-            initActive("us");
-            const mon = initActive("them");
-            if (weak)
+            function preMoveSetup(lowHP?: boolean)
             {
-                mon.volatile.addedType = "ice";
-                mon.hp.set(1);
-            }
-            return mon;
-        }
-
-        // TODO: options for silent, heal holder
-        async function superTaken()
-        {
-            await altParser(consumeItem.consumeOnSuper(pstate, {them: true},
-                {move: dex.getMove(dex.moves.lowkick), userRef: "us"}));
-            await handle(
-                {type: "removeItem", monRef: "them", consumed: "enigmaberry"});
-            // enigmaberry heals holder
-            await handle({type: "takeDamage", monRef: "them", hp: 100});
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: [{}]});
-        }
-
-        async function superAbsent()
-        {
-            await altParser(consumeItem.consumeOnSuper(pstate, {them: true},
-                {move: dex.getMove(dex.moves.lowkick), userRef: "us"}));
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: []});
-        }
-
-        testHasItem("enigmaberry", () => superSetup(/*weak*/ true),
-            superTaken, superAbsent);
-        // TODO: additional tests for weak=false
-
-        describe("Item-ignoring ability (klutz)", () =>
-            testBlockingAbilities("enigmaberry", ["klutz"],
-                () => superSetup(/*weak*/ true), superTaken, superAbsent));
-
-        // TODO: test moveIsType
-    });
-
-    describe("consumeOnHit()", function()
-    {
-        function postHitSetup()
-        {
-            initActive("us");
-            return initActive("them");
-        }
-
-        // TODO: options for silent, damage user, heal holder
-        async function postHitTaken(move: dexutil.MoveData, itemName: string)
-        {
-            await altParser(consumeItem.consumeOnPostHit(pstate, {them: true},
-                {move: dex.getMove(move), userRef: "us"}));
-            await handle(
-                {type: "removeItem", monRef: "them", consumed: itemName});
-            // jaboca/rowap berry damage user
-            await handle({type: "takeDamage", monRef: "us", hp: 1});
-            // since damage effect checks for an on-damage effect, it needs to
-            //  explicitly fail for the consumeOn-hit parser to return
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: [{event: {type: "halt", reason: "decide"}}]});
-        }
-
-        async function postHitAbsent(move: dexutil.MoveData)
-        {
-            await altParser(consumeItem.consumeOnPostHit(pstate, {them: true},
-                {move: dex.getMove(move), userRef: "us"}));
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: []});
-        }
-
-        describe("condition = physical (jabocaberry)", function()
-        {
-            const postHitTakenPhys =
-                () => postHitTaken(dex.moves.pound, "jabocaberry");
-            const postHitAbsentPhys = () => postHitAbsent(dex.moves.pound);
-
-            testHasItem("jabocaberry", postHitSetup, postHitTakenPhys,
-                postHitAbsentPhys);
-
-            describe("Item-ignoring ability (klutz)", () =>
-                testBlockingAbilities("jabocaberry", ["klutz"], postHitSetup,
-                    postHitTakenPhys, postHitAbsentPhys));
-        });
-
-        describe("condition = special (rowapberry)", function()
-        {
-            const postHitTakenSpec =
-                () => postHitTaken(dex.moves.ember, "rowapberry");
-            const postHitAbsentSpec = () => postHitAbsent(dex.moves.ember);
-
-            testHasItem("rowapberry", postHitSetup, postHitTakenSpec,
-                postHitAbsentSpec);
-
-            describe("Item-ignoring ability (klutz)", () =>
-                testBlockingAbilities("rowapberry", ["klutz"], postHitSetup,
-                    postHitTakenSpec, postHitAbsentSpec));
-        });
-    });
-
-    describe("consumeOnUpdate()", function()
-    {
-        function updateSetup()
-        {
-            initActive("us");
-            return initActive("them");
-        }
-
-        async function updateTaken(itemName: string,
-            effectEvents: readonly events.Any[] = [])
-        {
-            await altParser(consumeItem.consumeOnUpdate(pstate, {them: true}));
-            await handle(
-                {type: "removeItem", monRef: "them", consumed: itemName});
-            for (const event of effectEvents) await handle(event);
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: [{}]});
-        }
-
-        async function updateAbsent()
-        {
-            await altParser(consumeItem.consumeOnUpdate(pstate, {them: true}));
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: []});
-        }
-
-        describe("condition = hp", function()
-        {
-            function updateHPSetup(lowHP?: boolean)
-            {
-                const mon = updateSetup();
-                if (lowHP) mon.hp.set(1); // within hp threshold
+                sh.initActive("us");
+                const mon = sh.initActive("them");
+                if (lowHP) mon.hp.set(1);
                 return mon;
             }
 
-            // TODO: add tests/options to test each kind of consumeOn-update hp
-            //  effect/item
-            const updateHPTaken =
-                () => updateTaken("salacberry",
-                    [{type: "boost", monRef: "them", stat: "spe", amount: 1}]);
-            const updateHPAbsent = updateAbsent;
+            async function preMoveTaken()
+            {
+                pctx = init({them: true});
+                await ph.handle(
+                {
+                    type: "removeItem", monRef: "them", consumed: "custapberry"
+                });
+                await ph.halt({results: [{moveFirst: true}]});
+            }
 
-            testHasItem("salacberry", () => updateHPSetup(/*lowHP*/ true),
-                updateHPTaken, updateHPAbsent);
-            // TODO: additional tests for lowHP=false
+            async function preMoveAbsent()
+            {
+                pctx = init({them: true});
+                await ph.halt({results: []});
+            }
+
+            testHasItem("custapberry", () => preMoveSetup(/*lowHP*/ true),
+                preMoveTaken, preMoveAbsent);
+            // TODO: additional tests for lowHP=false?
 
             describe("HP threshold", () =>
-                testHPThreshold("salacberry",
-                    () => updateHPSetup(/*lowHP*/ true), updateHPAbsent));
+                testHPThreshold("custapberry", preMoveSetup, preMoveAbsent));
 
             describe("Early-berry ability (gluttony)", () =>
-                testEarlyBerryAbilities("salacberry", ["gluttony"],
-                    () => updateHPSetup(/*lowHP*/ true),
-                    updateHPTaken, updateHPAbsent));
+                testEarlyBerryAbilities("custapberry", ["gluttony"],
+                    preMoveSetup, preMoveTaken, preMoveAbsent));
 
             describe("Item-ignoring ability (klutz)", () =>
-                testBlockingAbilities("salacberry", ["klutz"],
-                    () => updateHPSetup(/*lowHP*/ true),
-                    updateHPTaken, updateHPAbsent));
+                testBlockingAbilities("custapberry", ["klutz"],
+                    () => preMoveSetup(/*lowHP*/ true),
+                    preMoveTaken, preMoveAbsent));
         });
 
-        describe("condition = status", function()
+        describe("consumeOnMoveCharge()", function()
         {
-            // TODO: add tests/options for each kind of consumeOn-status item
-            function updateStatusSetup(statused?: boolean)
+            /** Initializes the consumeOnMoveCharge parser. */
+            const init = setupSubParserPartial(ictx.startArgs, getState,
+                consumeItem.consumeOnMoveCharge);
+
+            // TODO: add tests/options for other kinds of charging moves
+            function moveChargeSetup(charge?: boolean)
             {
-                const mon = updateSetup();
-                if (statused) mon.majorStatus.afflict("par");
+                sh.initActive("us");
+                const mon = sh.initActive("them");
+                if (charge) mon.volatile.twoTurn.start("solarbeam");
                 return mon;
             }
 
-            // TODO: add tests/options to test each kind of consumeOn-update hp
-            //  effect/item
-            const updateStatusTaken =
-                () => updateTaken("cheriberry",
-                [{
-                    type: "activateStatusEffect", monRef: "them", effect: "par",
-                    start: false
-                }]);
-            const updateStatusAbsent = updateAbsent;
+            async function moveChargeTaken()
+            {
+                pctx = init({them: true});
+                await ph.handle(
+                {
+                    type: "removeItem", monRef: "them", consumed: "powerherb"
+                });
+                await ph.halt({results: [{shorten: true}]});
+            }
 
-            testHasItem("cheriberry",
-                () => updateStatusSetup(/*statused*/ true),
-                updateStatusTaken, updateStatusAbsent);
-            // TODO: additional tests for updateStatused=false
+            async function moveChargeAbsent()
+            {
+                pctx = init({them: true});
+                await ph.halt({results: []});
+            }
+
+            testHasItem("powerherb", () => moveChargeSetup(/*charge*/ true),
+                moveChargeTaken, moveChargeAbsent);
+            // TODO: additional tests for charge=false
+
+            it("Shouldn't infer no consumeOn-moveCharge item if it did not " +
+                "activate and the effect should've been silent",
+            async function()
+            {
+                const mon = moveChargeSetup();
+                mon.volatile.embargo.start();
+                expect(mon.item.possibleValues).to.include.keys("powerherb");
+                await moveChargeAbsent();
+                expect(mon.item.possibleValues).to.include.keys("powerherb");
+            });
 
             describe("Item-ignoring ability (klutz)", () =>
-                testBlockingAbilities("cheriberry", ["klutz"],
+                testBlockingAbilities("powerherb", ["klutz"],
+                    () => moveChargeSetup(/*charge*/ true),
+                    moveChargeTaken, moveChargeAbsent));
+        });
+
+        describe("consumeOnPreHit()", function()
+        {
+            /** Initializes the consumeOnPreHit parser. */
+            const init = setupSubParserPartial(ictx.startArgs, getState,
+                consumeItem.consumeOnPreHit);
+
+            function preHitSetup(weak?: boolean)
+            {
+                sh.initActive("us");
+                const mon = sh.initActive("them");
+                if (weak) mon.volatile.addedType = "flying";
+                return mon;
+            }
+
+            async function preHitTaken()
+            {
+                pctx = init({them: true},
+                    {move: dex.getMove(dex.moves.thunder), userRef: "us"});
+                await ph.handle(
+                {
+                    type: "removeItem", monRef: "them", consumed: "wacanberry"
+                });
+                await ph.halt({results: [{resistSuper: "electric"}]});
+            }
+
+            async function preHitAbsent()
+            {
+                pctx = init({them: true},
+                    {move: dex.getMove(dex.moves.thunder), userRef: "us"});
+                await ph.halt({results: []});
+            }
+
+            testHasItem("wacanberry", () => preHitSetup(/*weak*/ true),
+                preHitTaken, preHitAbsent);
+            // TODO: additional tests for weak=false
+
+            // TODO: test moveIsType
+
+            describe("Item-ignoring ability (klutz)", () =>
+                testBlockingAbilities("wacanberry", ["klutz"],
+                    () => preHitSetup(/*weak*/ true),
+                    preHitTaken, preHitAbsent));
+        });
+
+        describe("consumeOnSuper()", function()
+        {
+            /** Initializes the consumeOnSuper parser. */
+            const init = setupSubParserPartial(ictx.startArgs, getState,
+                consumeItem.consumeOnSuper);
+
+            function superSetup(weak?: boolean)
+            {
+                sh.initActive("us");
+                const mon = sh.initActive("them");
+                if (weak)
+                {
+                    mon.volatile.addedType = "ice";
+                    mon.hp.set(1);
+                }
+                return mon;
+            }
+
+            // TODO: options for silent, heal holder
+            async function superTaken()
+            {
+                pctx = init({them: true},
+                    {move: dex.getMove(dex.moves.lowkick), userRef: "us"});
+                await ph.handle(
+                {
+                    type: "removeItem", monRef: "them", consumed: "enigmaberry"
+                });
+                // enigmaberry heals holder
+                await ph.handle({type: "takeDamage", monRef: "them", hp: 100});
+                await ph.halt({results: [{}]});
+            }
+
+            async function superAbsent()
+            {
+                pctx = init({them: true},
+                    {move: dex.getMove(dex.moves.lowkick), userRef: "us"});
+                await ph.halt({results: []});
+            }
+
+            testHasItem("enigmaberry", () => superSetup(/*weak*/ true),
+                superTaken, superAbsent);
+            // TODO: additional tests for weak=false
+
+            describe("Item-ignoring ability (klutz)", () =>
+                testBlockingAbilities("enigmaberry", ["klutz"],
+                    () => superSetup(/*weak*/ true), superTaken, superAbsent));
+
+            // TODO: test moveIsType
+        });
+
+        describe("consumeOnPostHit()", function()
+        {
+            /** Initializes the consumeOnPostHit parser. */
+            const init = setupSubParserPartial(ictx.startArgs, getState,
+                consumeItem.consumeOnPostHit);
+
+            function postHitSetup()
+            {
+                sh.initActive("us");
+                return sh.initActive("them");
+            }
+
+            // TODO: options for silent, damage user, heal holder
+            async function postHitTaken(move: dexutil.MoveData,
+                itemName: string)
+            {
+                pctx = init({them: true},
+                    {move: dex.getMove(move), userRef: "us"});
+                await ph.handle(
+                    {type: "removeItem", monRef: "them", consumed: itemName});
+                // jaboca/rowap berry damage user
+                await ph.handle({type: "takeDamage", monRef: "us", hp: 1});
+                // since damage effect checks for any pending on-damage effects,
+                //  it needs to explicitly fail for the consumeOn-postHit parser
+                //  to return
+                await ph.halt({results: [{}]});
+            }
+
+            async function postHitAbsent(move: dexutil.MoveData)
+            {
+                pctx = init({them: true},
+                    {move: dex.getMove(move), userRef: "us"});
+                await ph.halt({results: []});
+            }
+
+            describe("condition = physical (jabocaberry)", function()
+            {
+                const postHitTakenPhys =
+                    () => postHitTaken(dex.moves.pound, "jabocaberry");
+                const postHitAbsentPhys = () => postHitAbsent(dex.moves.pound);
+
+                testHasItem("jabocaberry", postHitSetup, postHitTakenPhys,
+                    postHitAbsentPhys);
+
+                describe("Item-ignoring ability (klutz)", () =>
+                    testBlockingAbilities("jabocaberry", ["klutz"],
+                        postHitSetup, postHitTakenPhys, postHitAbsentPhys));
+            });
+
+            describe("condition = special (rowapberry)", function()
+            {
+                const postHitTakenSpec =
+                    () => postHitTaken(dex.moves.ember, "rowapberry");
+                const postHitAbsentSpec = () => postHitAbsent(dex.moves.ember);
+
+                testHasItem("rowapberry", postHitSetup, postHitTakenSpec,
+                    postHitAbsentSpec);
+
+                describe("Item-ignoring ability (klutz)", () =>
+                    testBlockingAbilities("rowapberry", ["klutz"], postHitSetup,
+                        postHitTakenSpec, postHitAbsentSpec));
+            });
+        });
+
+        describe("consumeOnUpdate()", function()
+        {
+            /** Initializes the consumeOnUpdate parser. */
+            const init = setupSubParserPartial(ictx.startArgs, getState,
+                consumeItem.consumeOnUpdate);
+
+            function updateSetup()
+            {
+                sh.initActive("us");
+                return sh.initActive("them");
+            }
+
+            async function updateTaken(itemName: string,
+                effectEvents: readonly events.Any[] = [])
+            {
+                pctx = init({them: true});
+                await ph.handle(
+                    {type: "removeItem", monRef: "them", consumed: itemName});
+                for (const event of effectEvents) await ph.handle(event);
+                await ph.halt({results: [{}]});
+            }
+
+            async function updateAbsent()
+            {
+                pctx = init({them: true});
+                await ph.halt({results: []});
+            }
+
+            describe("condition = hp", function()
+            {
+                function updateHPSetup(lowHP?: boolean)
+                {
+                    const mon = updateSetup();
+                    if (lowHP) mon.hp.set(1); // within hp threshold
+                    return mon;
+                }
+
+                // TODO: test each kind of consumeOn-update hp effect/item
+                const updateHPTaken =
+                    () => updateTaken("salacberry",
+                        [{
+                            type: "boost", monRef: "them", stat: "spe",
+                            amount: 1
+                        }]);
+                const updateHPAbsent = updateAbsent;
+
+                testHasItem("salacberry", () => updateHPSetup(/*lowHP*/ true),
+                    updateHPTaken, updateHPAbsent);
+                // TODO: additional tests for lowHP=false
+
+                describe("HP threshold", () =>
+                    testHPThreshold("salacberry",
+                        () => updateHPSetup(/*lowHP*/ true), updateHPAbsent));
+
+                describe("Early-berry ability (gluttony)", () =>
+                    testEarlyBerryAbilities("salacberry", ["gluttony"],
+                        () => updateHPSetup(/*lowHP*/ true),
+                        updateHPTaken, updateHPAbsent));
+
+                describe("Item-ignoring ability (klutz)", () =>
+                    testBlockingAbilities("salacberry", ["klutz"],
+                        () => updateHPSetup(/*lowHP*/ true),
+                        updateHPTaken, updateHPAbsent));
+            });
+
+            describe("condition = status", function()
+            {
+                // TODO: test each kind of consumeOn-status item
+                function updateStatusSetup(statused?: boolean)
+                {
+                    const mon = updateSetup();
+                    if (statused) mon.majorStatus.afflict("par");
+                    return mon;
+                }
+
+                // TODO: test each kind of consumeOn-update hp effect/item
+                const updateStatusTaken =
+                    () => updateTaken("cheriberry",
+                    [{
+                        type: "activateStatusEffect", monRef: "them",
+                        effect: "par", start: false
+                    }]);
+                const updateStatusAbsent = updateAbsent;
+
+                testHasItem("cheriberry",
                     () => updateStatusSetup(/*statused*/ true),
-                    updateStatusTaken, updateStatusAbsent));
+                    updateStatusTaken, updateStatusAbsent);
+                // TODO: additional tests for updateStatused=false
+
+                describe("Item-ignoring ability (klutz)", () =>
+                    testBlockingAbilities("cheriberry", ["klutz"],
+                        () => updateStatusSetup(/*statused*/ true),
+                        updateStatusTaken, updateStatusAbsent));
+            });
+
+            describe("condition = depleted", function()
+            {
+                function updateDepletedSetup(depleted?: boolean)
+                {
+                    const mon = updateSetup();
+                    const move = mon.moveset.reveal("tackle");
+                    if (depleted) move.pp = 0;
+                    return mon;
+                }
+
+                // TODO: add item effect events as parameter
+                const updateDepletedTaken =
+                    () => updateTaken("leppaberry",
+                    [{
+                        type: "modifyPP", monRef: "them", move: "tackle",
+                        amount: 10
+                    }]);
+                const updateDepletedAbsent = updateAbsent;
+
+                testHasItem("leppaberry",
+                    () => updateDepletedSetup(/*depleted*/ true),
+                    updateDepletedTaken, updateDepletedAbsent);
+                // TODO: additional tests for depleted=false
+
+                // TODO(later): handle move pp ambiguity corner cases
+
+                describe("Item-ignoring ability (klutz)", () =>
+                    testBlockingAbilities("leppaberry", ["klutz"],
+                        () => updateDepletedSetup(/*depleted*/ true),
+                        updateDepletedTaken, updateDepletedAbsent));
+            });
         });
 
-        describe("condition = depleted", function()
+        describe("consumeOnResidual()", function()
         {
-            function updateDepletedSetup(depleted?: boolean)
+            /** Initializes the consumeOnResidual parser. */
+            const init = setupSubParserPartial(ictx.startArgs, getState,
+                consumeItem.consumeOnResidual);
+
+            function residualSetup(weak?: boolean)
             {
-                const mon = updateSetup();
-                const move = mon.moveset.reveal("tackle");
-                if (depleted) move.pp = 0;
+                sh.initActive("us");
+                const mon = sh.initActive("them");
+                if (weak) mon.hp.set(1);
                 return mon;
             }
 
-            // TODO: add item effect events as parameter
-            const updateDepletedTaken =
-                () => updateTaken("leppaberry",
-                [{
-                    type: "modifyPP", monRef: "them", move: "tackle", amount: 10
-                }]);
-            const updateDepletedAbsent = updateAbsent;
+            async function residualTaken()
+            {
+                pctx = init({them: true});
+                await ph.handle(
+                {
+                    type: "removeItem", monRef: "them", consumed: "micleberry"
+                });
+                await ph.halt({results: [{}]});
+            }
 
-            testHasItem("leppaberry",
-                () => updateDepletedSetup(/*depleted*/ true),
-                updateDepletedTaken, updateDepletedAbsent);
-            // TODO: additional tests for depleted=false
+            async function residualAbsent()
+            {
+                pctx = init({them: true});
+                await ph.halt({results: []});
+            }
 
-            // TODO(later): handle move pp ambiguity corner cases
+            testHasItem("micleberry", () => residualSetup(/*weak*/ true),
+                residualTaken, residualAbsent);
+            // TODO: additional tests for noStatus=false
 
             describe("Item-ignoring ability (klutz)", () =>
-                testBlockingAbilities("leppaberry", ["klutz"],
-                    () => updateDepletedSetup(/*depleted*/ true),
-                    updateDepletedTaken, updateDepletedAbsent));
+                testBlockingAbilities("micleberry", ["klutz"],
+                    () => residualSetup(/*weak*/ true),
+                    residualTaken, residualAbsent));
         });
+
+        // basic test builders to verify consumeOnX() assertions
+
+        function testHasItem(itemName: string, setup: () => Pokemon,
+            taken: () => Promise<void>, absent: () => Promise<void>): void
+        {
+            it("Should handle item", async function()
+            {
+                setup();
+                await taken();
+            });
+
+            it("Should infer no item if it did not activate",
+            async function()
+            {
+                const mon = setup();
+                expect(mon.item.possibleValues).to.include.keys(itemName);
+                await absent();
+                expect(mon.item.possibleValues).to.not.have.keys(itemName);
+            });
+        }
+
+        // SubReason test builders to verify consumeOnX() assertions
+
+        function testHPThreshold(itemName: string, setup: () => Pokemon,
+            absent: () => Promise<void>): void
+        {
+            it("Shouldn't infer no item if above HP threshold and didn't " +
+                "activate",
+            async function()
+            {
+                const mon = setup();
+                expect(mon.item.possibleValues).to.include.keys(itemName);
+                mon.hp.set(mon.hp.max); // should be outside hp threshold
+                await absent();
+                expect(mon.item.possibleValues).to.include.keys(itemName);
+            });
+
+            it("Should infer no item if below HP threshold and didn't activate",
+            async function()
+            {
+                const mon = setup();
+                expect(mon.item.possibleValues).to.include.keys(itemName);
+                mon.hp.set(1); // should be below hp threshold
+                await absent();
+                expect(mon.item.possibleValues).to.not.include.keys(itemName);
+            });
+        }
+
+        // note: only works for threshold=25
+        function testEarlyBerryAbilities(itemName: string, abilities: string[],
+            setup: () => Pokemon, taken: () => Promise<void>,
+            absent: () => Promise<void>): void
+        {
+            it("Should infer early-berry ability if item activated within " +
+                "25-50% hp", async function()
+            {
+                const mon = setup();
+                mon.setAbility(...abilities, "illuminate");
+                // should be above 25% but at/below 50%
+                mon.hp.set(Math.floor(mon.hp.max / 2));
+                await taken();
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys(...abilities);
+            });
+
+            it("Should infer no early-berry ability if item confirmed but " +
+                "didn't activate within 25-50% hp", async function()
+            {
+                const mon = setup();
+                mon.setItem(itemName);
+                mon.setAbility(...abilities, "illuminate");
+                // should be above 25% but at/below 50%
+                mon.hp.set(Math.floor(mon.hp.max / 2));
+                await absent();
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("illuminate");
+            });
+
+            it("Shouldn't infer item if didn't activate within 25-50% " +
+                "threshold and ability suppressed", async function()
+            {
+                const mon = setup();
+                // should be above 25% but at/below 50%
+                mon.hp.set(Math.floor(mon.hp.max / 2));
+                mon.setAbility(...abilities);
+                mon.volatile.suppressAbility = true;
+                await absent();
+                expect(mon.item.possibleValues).to.include.keys(itemName);
+                expect(mon.item.definiteValue).to.be.null;
+            });
+
+            it("Shouldn't infer ability if item activated within original hp " +
+                "threshold", async function()
+            {
+                const mon = setup();
+                mon.setAbility(...abilities, "illuminate");
+                // should be below original 25% threshold
+                mon.hp.set(Math.floor(mon.hp.max / 4));
+                await taken();
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys(...abilities, "illuminate");
+            });
+
+            it("Shouldn't infer ability if item didn't activate within " +
+                "original hp threshold", async function()
+            {
+                const mon = setup();
+                mon.setAbility(...abilities, "illuminate");
+                // should be below original 25% threshold
+                mon.hp.set(Math.floor(mon.hp.max / 4));
+                await absent();
+                expect(mon.item.possibleValues).to.not.have.keys(itemName);
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys(...abilities, "illuminate");
+            });
+        }
+
+        function testBlockingAbilities(itemName: string, abilities: string[],
+            setup: () => Pokemon, taken: () => Promise<void>,
+            absent: () => Promise<void>): void
+        {
+            it(`Should infer no blocking ability if item activated`,
+            async function()
+            {
+                const mon = setup();
+                mon.setAbility(...abilities, "illuminate");
+                await taken();
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys("illuminate");
+            });
+
+            it("Should infer blocking ability if item is confirmed but " +
+                "didn't activate", async function()
+            {
+                const mon = setup();
+                mon.setAbility(...abilities, "illuminate");
+                mon.setItem(itemName);
+                await absent();
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys(...abilities);
+            });
+
+            it("Shouldn't infer blocking ability if suppressed and item " +
+                "activates", async function()
+            {
+                const mon = setup();
+                mon.setAbility(...abilities, "illuminate");
+                mon.volatile.suppressAbility = true;
+                await taken();
+                expect(mon.traits.ability.possibleValues)
+                    .to.have.keys(...abilities, "illuminate");
+            });
+
+            it("Should infer no item if blocking ability is suppressed and " +
+                "item doesn't activate", async function()
+            {
+                const mon = setup();
+                mon.setAbility(...abilities);
+                mon.volatile.suppressAbility = true;
+                await absent();
+                expect(mon.item.possibleValues).to.not.have.keys(itemName);
+            });
+        }
     });
-
-    describe("consumeOnResidual()", function()
-    {
-        function residualSetup(weak?: boolean)
-        {
-            initActive("us");
-            const mon = initActive("them");
-            if (weak) mon.hp.set(1);
-            return mon;
-        }
-
-        async function residualTaken()
-        {
-            await altParser(consumeItem.consumeOnResidual(pstate,
-                {them: true}));
-            await handle(
-                {type: "removeItem", monRef: "them", consumed: "micleberry"});
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: [{}]});
-        }
-
-        async function residualAbsent()
-        {
-            await altParser(consumeItem.consumeOnResidual(pstate,
-                {them: true}));
-            await exitParser<consumeItem.ExpectConsumeItemsResult>(
-                {results: []});
-        }
-
-        testHasItem("micleberry", () => residualSetup(/*weak*/ true),
-            residualTaken, residualAbsent);
-        // TODO: additional tests for noStatus=false
-
-        describe("Item-ignoring ability (klutz)", () =>
-            testBlockingAbilities("micleberry", ["klutz"],
-                () => residualSetup(/*weak*/ true),
-                residualTaken, residualAbsent));
-    });
-
-    // basic test builders to verify consumeOnX() assertions
-
-    function testHasItem(itemName: string, setup: () => Pokemon,
-        taken: () => Promise<void>, absent: () => Promise<void>): void
-    {
-        it("Should handle item", async function()
-        {
-            setup();
-            await taken();
-        });
-
-        it("Should infer no item if it did not activate",
-        async function()
-        {
-            const mon = setup();
-            expect(mon.item.possibleValues).to.include.keys(itemName);
-            await absent();
-            expect(mon.item.possibleValues).to.not.have.keys(itemName);
-        });
-    }
-
-    // SubReason test builders to verify consumeOnX() assertions
-
-    function testHPThreshold(itemName: string, setup: () => Pokemon,
-        absent: () => Promise<void>): void
-    {
-        it("Shouldn't infer no item if above HP threshold and didn't activate",
-        async function()
-        {
-            const mon = setup();
-            expect(mon.item.possibleValues).to.include.keys(itemName);
-            mon.hp.set(mon.hp.max); // should be outside hp threshold
-            await absent();
-            expect(mon.item.possibleValues).to.include.keys(itemName);
-        });
-
-        it("Should infer no item if below HP threshold and didn't activate",
-        async function()
-        {
-            const mon = setup();
-            expect(mon.item.possibleValues).to.include.keys(itemName);
-            mon.hp.set(1); // should be below hp threshold
-            await absent();
-            expect(mon.item.possibleValues).to.not.include.keys(itemName);
-        });
-    }
-
-    // note: only works for threshold=25
-    function testEarlyBerryAbilities(itemName: string, abilities: string[],
-        setup: () => Pokemon, taken: () => Promise<void>,
-        absent: () => Promise<void>): void
-    {
-        it("Should infer early-berry ability if item activated within 25-50% " +
-            "hp", async function()
-        {
-            const mon = setup();
-            mon.setAbility(...abilities, "illuminate");
-            // should be above 25% but at/below 50%
-            mon.hp.set(Math.floor(mon.hp.max / 2));
-            await taken();
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys(...abilities);
-        });
-
-        it("Should infer no early-berry ability if item confirmed but didn't " +
-            "activate within 25-50% hp", async function()
-        {
-            const mon = setup();
-            mon.setItem(itemName);
-            mon.setAbility(...abilities, "illuminate");
-            // should be above 25% but at/below 50%
-            mon.hp.set(Math.floor(mon.hp.max / 2));
-            await absent();
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys("illuminate");
-        });
-
-        it("Shouldn't infer item if didn't activate within 25-50% threshold " +
-            "and ability suppressed", async function()
-        {
-            const mon = setup();
-            // should be above 25% but at/below 50%
-            mon.hp.set(Math.floor(mon.hp.max / 2));
-            mon.setAbility(...abilities);
-            mon.volatile.suppressAbility = true;
-            await absent();
-            expect(mon.item.possibleValues).to.include.keys(itemName);
-            expect(mon.item.definiteValue).to.be.null;
-        });
-
-        it("Shouldn't infer ability if item activated within original hp " +
-            "threshold", async function()
-        {
-            const mon = setup();
-            mon.setAbility(...abilities, "illuminate");
-            // should be below original 25% threshold
-            mon.hp.set(Math.floor(mon.hp.max / 4));
-            await taken();
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys(...abilities, "illuminate");
-        });
-
-        it("Shouldn't infer ability if item didn't activate within original " +
-            "hp threshold", async function()
-        {
-            const mon = setup();
-            mon.setAbility(...abilities, "illuminate");
-            // should be below original 25% threshold
-            mon.hp.set(Math.floor(mon.hp.max / 4));
-            await absent();
-            expect(mon.item.possibleValues).to.not.have.keys(itemName);
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys(...abilities, "illuminate");
-        });
-    }
-
-    function testBlockingAbilities(itemName: string, abilities: string[],
-        setup: () => Pokemon, taken: () => Promise<void>,
-        absent: () => Promise<void>): void
-    {
-        it(`Should infer no blocking ability if item activated`,
-        async function()
-        {
-            const mon = setup();
-            mon.setAbility(...abilities, "illuminate");
-            await taken();
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys("illuminate");
-        });
-
-        it("Should infer blocking ability if item is confirmed but didn't " +
-            "activate", async function()
-        {
-            const mon = setup();
-            mon.setAbility(...abilities, "illuminate");
-            mon.setItem(itemName);
-            await absent();
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys(...abilities);
-        });
-
-        it("Shouldn't infer blocking ability if suppressed and item activates",
-        async function()
-        {
-            const mon = setup();
-            mon.setAbility(...abilities, "illuminate");
-            mon.volatile.suppressAbility = true;
-            await taken();
-            expect(mon.traits.ability.possibleValues)
-                .to.have.keys(...abilities, "illuminate");
-        });
-
-        it("Should infer no item if blocking ability is suppressed and item " +
-            "doesn't activate", async function()
-        {
-            const mon = setup();
-            mon.setAbility(...abilities);
-            mon.volatile.suppressAbility = true;
-            await absent();
-            expect(mon.item.possibleValues).to.not.have.keys(itemName);
-        });
-    }
 }

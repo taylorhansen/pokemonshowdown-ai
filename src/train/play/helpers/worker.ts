@@ -48,7 +48,7 @@ async function processMessage(msg: GameWorkerPlay):
             type: "play", rid: msg.rid, done: true,
             numAExps: gameResult.experiences.length,
             winner: gameResult.winner,
-            ...(gameResult.err && {err: serialize(gameResult.err)})
+            ...gameResult.err && {err: serialize(gameResult.err)}
         };
         // make sure the appropriate data is moved, not copied
         parentPort!.postMessage(result,
@@ -56,7 +56,9 @@ async function processMessage(msg: GameWorkerPlay):
 
         return gameResult.experiences;
     }
-    catch (err) { throw err; } // rethrow to stream handler for logging
+    // generally this should never happen since playGame() already returns any
+    //  caught Errors, so rethrow to propagate to the pipeline
+    catch (err) { throw err; }
     // make sure all ports are closed at the end
     finally { await Promise.all(modelPorts.map(p => p.close())); }
 }
@@ -74,10 +76,11 @@ const gameStream = new stream.Transform(
             .catch(err =>
             {
                 // transport error object to main thread for logging
-                const errBuf = serialize(err);
                 const result: RawPortResultError =
-                    {type: "error", rid: msg.rid, done: true, err: errBuf};
-                parentPort!.postMessage(result, [errBuf.buffer]);
+                {
+                    type: "error", rid: msg.rid, done: true, err: serialize(err)
+                };
+                parentPort!.postMessage(result, [result.err.buffer]);
                 return [];
             })
             .then(aexps =>
@@ -105,21 +108,27 @@ if (workerData?.expPath)
 }
 
 // setup pipeline
-
+// any errors that escape from the pipeline are propagated through the worker
+// generally the AsyncPort that wraps this Worker should be able to handle any
+//  unresolved requests
 let pipelinePromise = util.promisify(stream.pipeline)(
-    inputStream, gameStream, ...expStream);
+        inputStream, gameStream, ...expStream);
 
 parentPort.on("message", function handleMessage(msg: GameWorkerMessage)
 {
     if (msg.type === "play") inputStream.push(msg);
     else if (msg.type === "close")
     {
-        inputStream.push(null);
-        pipelinePromise = pipelinePromise.then(function onPipelineDone()
+        pipelinePromise = (async function()
         {
+            // wait for the stream to close
+            await pipelinePromise;
+            // indicate done
             const response: WorkerClosed =
-                {type: "close", rid: msg.rid, done: true}
-            parentPort?.postMessage(response);
-        });
+                {type: "close", rid: msg.rid, done: true};
+            parentPort!.postMessage(response);
+        })();
+        // signal end of stream
+        inputStream.push(null);
     }
 });

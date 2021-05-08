@@ -1,10 +1,10 @@
 import { inspect } from "util";
 import { BattleAgent } from "../battle/agent/BattleAgent";
 import { HaltReason } from "../battle/parser/BattleEvent";
-import { BattleParser, BattleParserFunc, SenderResult } from
+import { BattleIterator, SenderResult, startBattleParser } from
     "../battle/parser/BattleParser";
 import * as parsers from "../battle/parser/parsers";
-import { ReadonlyBattleState } from "../battle/state/BattleState";
+import { BattleState } from "../battle/state/BattleState";
 import { Logger } from "../Logger";
 import * as psmsg from "./parser/PSMessage";
 import { Sender } from "./PSBot";
@@ -14,17 +14,9 @@ import { RoomHandler } from "./RoomHandler";
 /** Translates server messages to PSEventHandler calls. */
 export class PSBattle implements RoomHandler
 {
-    /** Internal battle state. */
-    public get state(): ReadonlyBattleState
-    {
-        if (!this._state) throw new Error("State not yet initialized");
-        return this._state;
-    }
-    private _state: ReadonlyBattleState | null = null;
-
-    /** BattleEvent parser. */
-    protected readonly parser: BattleParser;
-    /** Manages the BattleState by processing events. */
+    /** Iterator for sending BattleEvents to the BattleParser. */
+    protected readonly iter: BattleIterator;
+    /** Translates game events to sim-agnostic BattleEvents. */
     protected readonly eventHandler: PSEventHandler;
     /** Pending Request message to process into an UpdateMoves event. */
     protected lastRequest: psmsg.Request | null = null;
@@ -39,8 +31,10 @@ export class PSBattle implements RoomHandler
     /** Used for controlling the BattleParser's ChoiceSender Promise. */
     private parserSendCallback: null | ((result?: SenderResult) => void) = null;
 
-    /** Promise for the parser to finish handling a `halt` event. */
-    private haltPromise: ReturnType<BattleParser["next"]> | null = null;
+    /** Promise for the BattleParser to finish handling a `halt` event. */
+    private haltPromise: ReturnType<BattleIterator["next"]> | null = null;
+    /** Promise for the entire BattleParser to finish. */
+    private readonly finishPromise: Promise<BattleState>;
 
     /**
      * Creates a PSBattle.
@@ -48,32 +42,33 @@ export class PSBattle implements RoomHandler
      * @param agent Makes the decisions for this battle.
      * @param sender Used to send messages to the server.
      * @param logger Logger object.
-     * @param parserFunc The type of BattleParser to use.
+     * @param parser BattleEvent handler.
      * @param eventHandlerCtor The type of PSEventHandler to use.
      */
     constructor(protected readonly username: string, agent: BattleAgent,
         private readonly sender: Sender, protected readonly logger: Logger,
-        parserFunc: BattleParserFunc = parsers.gen4,
-        eventHandlerCtor = PSEventHandler)
+        parser = parsers.gen4, eventHandlerCtor = PSEventHandler)
     {
-        this.parser = parserFunc(
-        {
-            agent, logger: logger.addPrefix("BattleParser: "),
-            sender: choice =>
-                new Promise<SenderResult>(res =>
-                {
-                    this.parserSendCallback = res;
-                    if (!this.sender(`|/choose ${choice}`))
+        const {iter, finish} = startBattleParser(
+            {
+                agent, logger: logger.addPrefix("BattleParser: "),
+                sender: choice =>
+                    new Promise<SenderResult>(res =>
                     {
-                        logger.debug("Can't send Choice, force accept");
-                        res();
-                    }
-                })
-                .finally(() => this.parserSendCallback = null)
-        });
-        // first iteration should give us the BattleState
-        this.parser.next()
-            .then(({value}) => this._state = value as ReadonlyBattleState);
+                        this.parserSendCallback = res;
+                        if (!this.sender(`|/choose ${choice}`))
+                        {
+                            logger.debug("Can't send Choice, force accept");
+                            res();
+                        }
+                    })
+                    .finally(() => this.parserSendCallback = null)
+            },
+            parser);
+        this.iter = iter;
+        this.finishPromise = finish;
+        // suppress unhandled rejection warnings until #finish() is called
+        finish.catch(() => {});
 
         this.eventHandler = new eventHandlerCtor(this.username,
             logger.addPrefix("PSEventHandler: "));
@@ -85,7 +80,10 @@ export class PSBattle implements RoomHandler
         const events = this.eventHandler.initBattle(msg);
         this.logger.debug("Init:\n" +
             inspect(events, {colors: false, depth: null}));
-        for (const event of events) await this.parser.next(event);
+        for (const event of events)
+        {
+            if ((await this.iter.next(event)).done) return await this.finish();
+        }
 
         // possibly send a response
         return this.haltParser();
@@ -96,12 +94,18 @@ export class PSBattle implements RoomHandler
     {
         // indicate that the last choice was accepted
         this.parserSendCallback?.();
-        if (this.haltPromise) await this.haltPromise;
+        if (this.haltPromise && (await this.haltPromise).done)
+        {
+            return await this.finish();
+        }
 
         const events = this.eventHandler.handleEvents(msg.events);
         this.logger.debug("Progress:\n" +
             inspect(events, {colors: false, depth: null}));
-        for (const event of events) await this.parser.next(event);
+        for (const event of events)
+        {
+            if ((await this.iter.next(event)).done) return await this.finish();
+        }
 
         // possibly send a response
         return this.haltParser();
@@ -135,7 +139,10 @@ export class PSBattle implements RoomHandler
         if (events.length <= 0) return;
         this.logger.debug("Request:\n" +
             inspect(events, {colors: false, depth: null}));
-        for (const event of events) await this.parser.next(event);
+        for (const event of events)
+        {
+            if ((await this.iter.next(event)).done) return await this.finish();
+        }
     }
 
     /** @override */
@@ -162,10 +169,22 @@ export class PSBattle implements RoomHandler
      */
     public async finish(): Promise<void>
     {
-        if (!this.haltPromise) return;
-        const result = await this.haltPromise;
-        if (result.done) return;
-        throw new Error("Last halt should've ended the BattleParser");
+        if (this.haltPromise)
+        {
+            const haltResult = await this.haltPromise;
+            if (!haltResult.done)
+            {
+                throw new Error("Last halt should've ended the BattleParser");
+            }
+        }
+        await this.finishPromise;
+    }
+
+    /** Forces the internal BattleParser to finish. */
+    public async forceFinish(): Promise<void>
+    {
+        await this.iter.return();
+        await this.finish();
     }
 
     /**
@@ -187,7 +206,7 @@ export class PSBattle implements RoomHandler
 
         // function that emits the halt event
         const halt = (reason: HaltReason) =>
-            this.haltPromise = this.parser.next({type: "halt", reason})
+            this.haltPromise = this.iter.next({type: "halt", reason})
                 .finally(() => this.haltPromise = null);
 
         // set haltPromise field to parser.next(halt)
@@ -215,7 +234,7 @@ export class PSBattle implements RoomHandler
                 const event = this.eventHandler.updateMoves(lastRequest);
                 this.logger.debug("Update moves:\n" +
                     inspect(event, {colors: false, depth: null}));
-                if (event) await this.parser.next(event);
+                if (event) await this.iter.next(event);
             }
             halt("decide");
         }

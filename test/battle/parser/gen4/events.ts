@@ -1,14 +1,8 @@
 import { expect } from "chai";
 import "mocha";
-import { BattleAgent } from "../../../../src/battle/agent/BattleAgent";
 import * as dexutil from "../../../../src/battle/dex/dex-util";
 import * as events from "../../../../src/battle/parser/BattleEvent";
-import { ChoiceSender, ParserState, SubParser, SubParserResult } from
-    "../../../../src/battle/parser/BattleParser";
-import { dispatch } from "../../../../src/battle/parser/gen4/base";
 import { BattleState } from "../../../../src/battle/state/BattleState";
-import { Pokemon } from "../../../../src/battle/state/Pokemon";
-import { Side } from "../../../../src/battle/state/Side";
 import { ReadonlyTeam } from "../../../../src/battle/state/Team";
 import { ReadonlyTeamStatus } from "../../../../src/battle/state/TeamStatus";
 import { ReadonlyVolatileStatus } from
@@ -17,118 +11,102 @@ import { Logger } from "../../../../src/Logger";
 import { ditto, smeargle } from "../../../helpers/switchOptions";
 import { testActivateAbility } from "./activateAbility";
 import { testActivateItem } from "./activateItem";
+import { InitialContext, ParserContext } from "./Context";
 import { testHalt } from "./halt";
+import { initParser, ParserHelpers, StateHelpers } from "./helpers";
 import { testRemoveItem } from "./removeItem";
 import { testSwitchIn } from "./switchIn";
 import { testUseMove } from "./useMove";
 
 export function testEvents()
 {
-    let state: BattleState;
-    let pstate: ParserState;
-    let parser: SubParser;
-    let agent: BattleAgent;
-    let sender: ChoiceSender;
+    //#region initial context
 
-    beforeEach("Initialize ParserState", function()
+    async function defaultAgent()
+    { throw new Error("BattleAgent expected to not be called"); }
+    // suppress logs
+    // TODO: should logs be tested?
+    const defaultLogger = Logger.null;
+    async function defaultSender()
+    { throw new Error("ChoiceSender expected to not be called"); }
+    const ictx: InitialContext =
     {
-        agent = async function()
-        { throw new Error("BattleAgent expected to not be called"); };
-        sender = async function()
-        { throw new Error("ChoiceSender expected to not be called"); };
-
-        ({state} = pstate =
+        startArgs:
         {
-            // use a level of indirection so the agent/sender can be modified
-            agent: (s, choices) => agent(s, choices),
-            sender: choices => sender(choices),
-            logger: Logger.null, state: new  BattleState()
-        });
+            // use a level of indirection so agent/sender can be modified
+            agent: (s, choices) => ictx.agent(s, choices),
+            logger: new Logger(msg => ictx.logger.debug(msg),
+                msg => ictx.logger.error(msg)),
+            sender: choices => ictx.sender(choices)
+        },
+        agent: defaultAgent, logger: defaultLogger, sender: defaultSender
+    };
+
+    beforeEach("Reset InitialContext", function()
+    {
+        ictx.agent = defaultAgent;
+        ictx.logger = defaultLogger;
+        ictx.sender = defaultSender;
     });
 
-    async function initParser(): Promise<SubParser>
-    {
-        // similar to baseEventLoop but for SubParsers
-        const p = async function*(): SubParser
-        {
-            let event: events.Any = yield;
-            let result: SubParserResult;
-            while (true)
-            {
-                result = yield* dispatch(pstate, event);
-                // permanent halt detected, stop loop
-                if (result.permHalt) return result;
-                // parser rejected an event
-                if (result.event)
-                {
-                    // event handler rejected the event it was initially given
-                    if (result.event === event)
-                    {
-                        throw new Error("SubParser rejected an event: " +
-                            `'${JSON.stringify(event)}'`);
-                    }
-                    event = result.event;
-                }
-                // continue
-                else event = yield;
-            }
-        }();
-        // first yield returns nothing
-        await p.next();
-        return p;
-    }
+    //#endregion
 
-    beforeEach("Initialize SubParser", async function()
+    //#region battle state
+
+    /**
+     * BattleState for use in `setupSubParserPartial()`. Should not be
+     * reassigned.
+     */
+    let state: BattleState;
+    const sh = new StateHelpers(() => state);
+
+    beforeEach("Initialize BattleState", function()
     {
-        parser = await initParser();
+        state = new BattleState();
+    });
+
+    //#endregion
+
+    //#region default parser context
+
+    let pctx: ParserContext;
+    const ph = new ParserHelpers(() => pctx, getState);
+
+    beforeEach("Initialize default BattleParser", async function()
+    {
+        pctx = initParser(ictx.startArgs, state);
     });
 
     afterEach("Close SubParser", async function()
     {
-        await parser.return({});
+        await ph.close();
     });
 
-    function initTeam(teamRef: Side, options: readonly events.SwitchOptions[]):
-        Pokemon[]
-    {
-        const team = state.teams[teamRef];
-        team.size = options.length;
-        return options.map(op => team.switchIn(op)!);
-    }
+    //#endregion
 
-    function initActive(monRef: Side, options = smeargle): Pokemon
-    {
-        return initTeam(monRef, [options])[0];
-    }
-
-    /** Used to delegate to test suites found in separate files. */
-    const contextFunc = () => ({state, pstate, parser});
+    function getState() { return state; }
 
     describe("activateAbility", function()
     {
-        testActivateAbility(contextFunc, initActive);
+        testActivateAbility(ictx, getState, sh);
     });
 
     describe("activateFieldEffect", function()
     {
-        function test(name: string, effect: dexutil.FieldEffectType)
+        function test(name: string,
+            effect: Exclude<dexutil.FieldEffectType, dexutil.WeatherType>)
         {
-            if (dexutil.isWeatherType(effect))
-            {
-                throw new Error("Weather not supported here");
-            }
-
             it(`Should activate ${name}`, async function()
             {
                 expect(state.status[effect].isActive).to.be.false;
 
                 // start the effect
-                await parser.next(
+                await ph.handle(
                     {type: "activateFieldEffect", effect, start: true});
                 expect(state.status[effect].isActive).to.be.true;
 
                 // end the effect
-                await parser.next(
+                await ph.handle(
                     {type: "activateFieldEffect", effect, start: false});
                 expect(state.status[effect].isActive).to.be.false;
             });
@@ -142,7 +120,7 @@ export function testEvents()
         {
             it("Should set weather", async function()
             {
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateFieldEffect", effect: "Sandstorm",
                     start: true
@@ -156,9 +134,8 @@ export function testEvents()
 
     describe("activateItem", function()
     {
-        testActivateItem(contextFunc, initActive);
+        testActivateItem(ictx, getState, sh);
     });
-
 
     describe("activateStatusEffect", function()
     {
@@ -167,11 +144,11 @@ export function testEvents()
         {
             it(`Should activate ${name}`, async function()
             {
-                const v = initActive("us").volatile;
+                const v = sh.initActive("us").volatile;
                 expect(getter(v)).to.be.false;
 
                 // start the status
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateStatusEffect", monRef: "us", effect,
                     start: true
@@ -179,7 +156,7 @@ export function testEvents()
                 expect(getter(v)).to.be.true;
 
                 // end the status
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateStatusEffect", monRef: "us", effect,
                     start: false
@@ -198,29 +175,29 @@ export function testEvents()
         // separate test case for encore
         it("Should activate Encore", async function()
         {
-            const v = initActive("us").volatile;
+            const v = sh.initActive("us").volatile;
             expect(v.encore.move).to.be.null;
             expect(v.encore.ts.isActive).to.be.false;
 
             // have to set lastMove first
-            await expect(parser.next(
+            await ph.rejectError(
                 {
                     type: "activateStatusEffect", monRef: "us",
                     effect: "encore", start: true
-                }))
-                .to.eventually.be.rejectedWith(Error,
-                    "Can't Encore if lastMove is null");
+                },
+                Error, "Can't Encore if lastMove is null");
             expect(v.encore.move).to.be.null;
             expect(v.encore.ts.isActive).to.be.false;
 
             // re-init parser after throw
-            parser = await initParser();
+            await ph.close();
+            pctx = initParser(ictx.startArgs, state);
 
             // set lastMove
             v.lastMove = "splash";
 
             // start the status
-            await parser.next(
+            await ph.handle(
             {
                 type: "activateStatusEffect", monRef: "us",
                 effect: "encore", start: true
@@ -229,7 +206,7 @@ export function testEvents()
             expect(v.encore.ts.isActive).to.be.true;
 
             // end the status
-            await parser.next(
+            await ph.handle(
             {
                 type: "activateStatusEffect", monRef: "us",
                 effect: "encore", start: false
@@ -277,24 +254,23 @@ export function testEvents()
             // the type system should guarantee that StateDriver handles
             //  all StatusEffectTypes, so we need to pass in an invalid one
             //  through an any assertion
-            await expect(parser.next(
+            await ph.rejectError(
                 {
                     type: "activateStatusEffect", monRef: "us",
                     effect: "invalid" as any, start: true
-                }))
-                .to.eventually.be.rejectedWith(Error,
-                    "Invalid status effect 'invalid'");
+                },
+                Error, "Invalid status effect 'invalid'");
         });
 
         describe("major status", function()
         {
             it("Should afflict major status", async function()
             {
-                const mon = initActive("us");
+                const mon = sh.initActive("us");
                 mon.majorStatus.afflict("brn"); // should make no difference
 
                 // start the status
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateStatusEffect", monRef: "us",
                     effect: "slp", start: true
@@ -302,7 +278,7 @@ export function testEvents()
                 expect(mon.majorStatus.current).to.equal("slp");
 
                 // end the status
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateStatusEffect", monRef: "us",
                     effect: "slp", start: false
@@ -313,16 +289,15 @@ export function testEvents()
             it("Should throw if curing but mentioned an unrelated status",
             async function()
             {
-                const mon = initActive("us");
+                const mon = sh.initActive("us");
                 mon.majorStatus.afflict("frz");
 
-                await expect(parser.next(
+                await ph.rejectError(
                     {
                         type: "activateStatusEffect", monRef: "us",
                         effect: "brn", start: false
-                    }))
-                    .to.eventually.be.rejectedWith(Error,
-                        "MajorStatus 'frz' was expected to be 'brn'");
+                    },
+                    Error, "MajorStatus 'frz' was expected to be 'brn'");
                 expect(mon.majorStatus.current).to.equal("frz");
             });
         });
@@ -339,7 +314,7 @@ export function testEvents()
                 expect(team.status[effect].isActive).to.be.false;
 
                 // start the effect
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateTeamEffect", teamRef: "them",
                     effect, start: true
@@ -348,7 +323,7 @@ export function testEvents()
                 expect(team.status[effect].source).to.be.null;
 
                 // end the effect
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateTeamEffect", teamRef: "them",
                     effect, start: false
@@ -369,7 +344,7 @@ export function testEvents()
                 expect(team.status[effect]).to.equal(0);
 
                 // start the effect
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateTeamEffect", teamRef: "us", effect,
                     start: true
@@ -377,7 +352,7 @@ export function testEvents()
                 expect(team.status[effect]).to.equal(1);
 
                 // end the effect
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateTeamEffect", teamRef: "us", effect,
                     start: false
@@ -400,7 +375,7 @@ export function testEvents()
                 expect(getter(ts)).to.be.false;
 
                 // start the effect
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateTeamEffect", teamRef: "us", effect,
                     start: true
@@ -408,7 +383,7 @@ export function testEvents()
                 expect(getter(ts)).to.be.true;
 
                 // end the effect
-                await parser.next(
+                await ph.handle(
                 {
                     type: "activateTeamEffect", teamRef: "us", effect,
                     start: false
@@ -431,7 +406,7 @@ export function testEvents()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "block", monRef: "us", effect: "protect"});
+            await ph.handle({type: "block", monRef: "us", effect: "protect"});
         });
 
         describe("Substitute", function()
@@ -439,20 +414,18 @@ export function testEvents()
             it("Should do nothing if mentioned Pokemon has a Substitute",
             async function()
             {
-                initActive("us").volatile.substitute = true;
-                await parser.next(
+                sh.initActive("us").volatile.substitute = true;
+                await ph.handle(
                     {type: "block", monRef: "us", effect: "substitute"});
             });
 
             it("Should throw if mentioned Pokemon doesn't have a Substitute",
             async function()
             {
-                initActive("us");
-                await expect(parser.next(
-                        {type: "block", monRef: "us", effect: "substitute"}))
-                    .to.eventually.be.rejectedWith(Error,
-                        "Substitute blocked an effect but no Substitute " +
-                        "exists");
+                sh.initActive("us");
+                await ph.rejectError(
+                    {type: "block", monRef: "us", effect: "substitute"}, Error,
+                    "Substitute blocked an effect but no Substitute exists");
             });
         });
     });
@@ -461,27 +434,27 @@ export function testEvents()
     {
         it("Should add boost", async function()
         {
-            const {boosts} = initActive("us").volatile;
+            const {boosts} = sh.initActive("us").volatile;
             boosts.atk = 1;
-            await parser.next(
+            await ph.handle(
                 {type: "boost", monRef: "us", stat: "atk", amount: 2});
             expect(boosts.atk).to.equal(3);
         });
 
         it("Should subtract boost", async function()
         {
-            const {boosts} = initActive("us").volatile;
+            const {boosts} = sh.initActive("us").volatile;
             boosts.spe = 6;
-            await parser.next(
+            await ph.handle(
                 {type: "boost", monRef: "us", stat: "spe", amount: -2});
             expect(boosts.spe).to.equal(4);
         });
 
         it("Should set boost", async function()
         {
-            const {boosts} = initActive("us").volatile;
+            const {boosts} = sh.initActive("us").volatile;
             boosts.evasion = -2;
-            await parser.next(
+            await ph.handle(
             {
                 type: "boost", monRef: "us", stat: "evasion", amount: 4,
                 set: true
@@ -494,19 +467,20 @@ export function testEvents()
     {
         it("Should change types", async function()
         {
-            const mon = initActive("us");
+            const mon = sh.initActive("us");
             const newTypes: [dexutil.Type, dexutil.Type] =
                 ["bug", "dragon"];
-            await parser.next({type: "changeType", monRef: "us", newTypes});
+            await ph.handle(
+                {type: "changeType", monRef: "us", newTypes});
             expect(mon.types).to.deep.equal(newTypes);
         });
 
         it("Should also reset third type", async function()
         {
-            const mon = initActive("us");
+            const mon = sh.initActive("us");
             mon.volatile.addedType = "ghost";
 
-            await parser.next(
+            await ph.handle(
                 {type: "changeType", monRef: "us", newTypes: ["fire", "???"]});
             expect(mon.volatile.addedType).to.equal("???");
         });
@@ -516,12 +490,12 @@ export function testEvents()
     {
         it("Should clear all boosts from both sides", async function()
         {
-            const us = initActive("us").volatile.boosts;
-            const them = initActive("them").volatile.boosts;
+            const us = sh.initActive("us").volatile.boosts;
+            const them = sh.initActive("them").volatile.boosts;
             us.accuracy = 2;
             them.spe = -2;
 
-            await parser.next({type: "clearAllBoosts"});
+            await ph.handle({type: "clearAllBoosts"});
             expect(us.accuracy).to.equal(0);
             expect(them.spe).to.equal(0);
         });
@@ -531,11 +505,12 @@ export function testEvents()
     {
         it("Should clear negative boosts", async function()
         {
-            const {boosts} = initActive("us").volatile;
+            const {boosts} = sh.initActive("us").volatile;
             boosts.evasion = 2;
             boosts.spa = -3;
 
-            await parser.next({type: "clearNegativeBoosts", monRef: "us"});
+            await ph.handle(
+                {type: "clearNegativeBoosts", monRef: "us"});
             expect(boosts.evasion).to.equal(2);
             expect(boosts.spa).to.equal(0);
         });
@@ -545,11 +520,12 @@ export function testEvents()
     {
         it("Should clear negative boosts", async function()
         {
-            const {boosts} = initActive("us").volatile;
+            const {boosts} = sh.initActive("us").volatile;
             boosts.spd = 3;
             boosts.def = -1;
 
-            await parser.next({type: "clearPositiveBoosts", monRef: "us"});
+            await ph.handle(
+                {type: "clearPositiveBoosts", monRef: "us"});
 
             expect(boosts.spd).to.equal(0);
             expect(boosts.def).to.equal(-1);
@@ -560,12 +536,13 @@ export function testEvents()
     {
         it("Should copy boosts", async function()
         {
-            const us = initActive("us").volatile.boosts;
-            const them = initActive("them").volatile.boosts;
+            const us = sh.initActive("us").volatile.boosts;
+            const them = sh.initActive("them").volatile.boosts;
             us.atk = 2;
             them.atk = -2;
 
-            await parser.next({type: "copyBoosts", from: "us", to: "them"});
+            await ph.handle(
+                {type: "copyBoosts", from: "us", to: "them"});
             expect(us.atk).to.equal(2);
             expect(them.atk).to.equal(2);
         });
@@ -578,9 +555,9 @@ export function testEvents()
         {
             it(`Should update ${name} count`, async function()
             {
-                const v = initActive("us").volatile;
+                const v = sh.initActive("us").volatile;
                 v[effect] = 1;
-                await parser.next(
+                await ph.handle(
                 {
                     type: "countStatusEffect", monRef: "us", effect,
                     amount: 2
@@ -597,7 +574,7 @@ export function testEvents()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "crit", monRef: "us"});
+            await ph.handle({type: "crit", monRef: "us"});
         });
     });
 
@@ -606,13 +583,13 @@ export function testEvents()
         it("Should cure team", async function()
         {
             state.teams.them.size = 2;
-            const [mon1, mon2] = initTeam("them", [smeargle, ditto]);
+            const [mon1, mon2] = sh.initTeam("them", [smeargle, ditto]);
             mon1.majorStatus.afflict("slp");
             mon2.majorStatus.afflict("frz");
 
             expect(mon1.majorStatus.current).to.equal("slp");
             expect(mon2.majorStatus.current).to.equal("frz");
-            await parser.next({type: "cureTeam", teamRef: "them"});
+            await ph.handle({type: "cureTeam", teamRef: "them"});
             expect(mon1.majorStatus.current).to.be.null;
             expect(mon2.majorStatus.current).to.be.null;
         });
@@ -622,8 +599,8 @@ export function testEvents()
     {
         it("Should disable move", async function()
         {
-            const mon = initActive("them");
-            await parser.next(
+            const mon = sh.initActive("them");
+            await ph.handle(
                 {type: "disableMove", monRef: "them", move: "tackle"});
             expect(mon.volatile.disabled.move).to.equal("tackle");
             expect(mon.volatile.disabled.ts.isActive).to.be.true;
@@ -634,7 +611,7 @@ export function testEvents()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "fail"});
+            await ph.handle({type: "fail"});
         });
     });
 
@@ -642,8 +619,8 @@ export function testEvents()
     {
         it("Should faint pokemon", async function()
         {
-            const mon = initActive("us");
-            await parser.next({type: "faint", monRef: "us"});
+            const mon = sh.initActive("us");
+            await ph.handle({type: "faint", monRef: "us"});
             expect(mon.fainted).to.be.true;
         });
     });
@@ -652,9 +629,9 @@ export function testEvents()
     {
         it("Should reset lockedMove status", async function()
         {
-            const v = initActive("them").volatile;
+            const v = sh.initActive("them").volatile;
             v.lockedMove.start("outrage");
-            await parser.next({type: "fatigue", monRef: "them"});
+            await ph.handle({type: "fatigue", monRef: "them"});
             expect(v.lockedMove.isActive).to.be.false;
         });
     });
@@ -663,13 +640,13 @@ export function testEvents()
     {
         it("Should break stall", async function()
         {
-            const v = initActive("them").volatile;
+            const v = sh.initActive("them").volatile;
             v.stall(true);
             expect(v.stalling).to.be.true;
             expect(v.stallTurns).to.equal(1);
 
             // assume "us" uses Feint
-            await parser.next({type: "feint", monRef: "them"});
+            await ph.handle({type: "feint", monRef: "them"});
             expect(v.stalling).to.be.false;
             // should not reset stall turns
             expect(v.stallTurns).to.equal(1);
@@ -680,10 +657,10 @@ export function testEvents()
     {
         it("Should change form", async function()
         {
-            const mon = initActive("us", smeargle);
+            const mon = sh.initActive("us", smeargle);
             expect(mon.species).to.equal("smeargle");
 
-            await parser.next(
+            await ph.handle(
             {
                 type: "formChange", monRef: "us", species: "gyarados",
                 // TODO: (how) would hp/level change?
@@ -700,7 +677,7 @@ export function testEvents()
         {
             const ts = state.teams.us.status;
             // prepare the move, mentioning the user
-            await parser.next(
+            await ph.handle(
             {
                 type: "futureMove", monRef: "us", move: "doomdesire",
                 start: true
@@ -708,7 +685,7 @@ export function testEvents()
             expect(ts.futureMoves.doomdesire.isActive).to.be.true;
 
             // release the move, mentioning the target
-            await parser.next(
+            await ph.handle(
             {
                 type: "futureMove", monRef: "them", move: "doomdesire",
                 start: false
@@ -719,14 +696,14 @@ export function testEvents()
 
     describe("halt", function()
     {
-        testHalt(contextFunc, a => agent = a, s => sender = s);
+        testHalt(ictx, getState, sh, () => pctx, ph);
     });
 
     describe("hitCount", function()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "hitCount", monRef: "us", count: 4});
+            await ph.handle({type: "hitCount", monRef: "us", count: 4});
         });
     });
 
@@ -734,7 +711,7 @@ export function testEvents()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "immune", monRef: "them"});
+            await ph.handle({type: "immune", monRef: "them"});
         });
     });
 
@@ -743,31 +720,30 @@ export function testEvents()
         it("Should reset single-move statuses as if a move was attempted",
         async function()
         {
-            const v = initActive("us").volatile;
+            const v = sh.initActive("us").volatile;
             v.destinyBond = true;
 
-            await parser.next({type: "inactive", monRef: "us"});
+            await ph.handle({type: "inactive", monRef: "us"});
             expect(v.destinyBond).to.be.false;
         });
 
         it("Should reveal move if provided", async function()
         {
-            const moveset = initActive("them").moveset;
+            const moveset = sh.initActive("them").moveset;
             expect(moveset.get("splash")).to.be.null;
 
-            await parser.next(
-                {type: "inactive", monRef: "them", move: "splash"});
+            await ph.handle({type: "inactive", monRef: "them", move: "splash"});
             expect(moveset.get("splash")).to.not.be.null;
         });
 
         it("Should reveal move for both sides if imprison", async function()
         {
-            const us = initActive("us").moveset;
-            const them = initActive("them").moveset;
+            const us = sh.initActive("us").moveset;
+            const them = sh.initActive("them").moveset;
             expect(us.get("splash")).to.be.null;
             expect(them.get("splash")).to.be.null;
 
-            await parser.next(
+            await ph.handle(
             {
                 type: "inactive", monRef: "them", reason: "imprison",
                 move: "splash"
@@ -778,22 +754,22 @@ export function testEvents()
 
         it("Should consume recharge turn", async function()
         {
-            const v = initActive("us").volatile;
+            const v = sh.initActive("us").volatile;
             v.mustRecharge = true;
 
-            await parser.next(
+            await ph.handle(
                 {type: "inactive", monRef: "us", reason: "recharge"});
             expect(v.mustRecharge).to.be.false;
         });
 
         it("Should tick sleep counter", async function()
         {
-            const ms = initActive("us").majorStatus;
+            const ms = sh.initActive("us").majorStatus;
             ms.afflict("slp");
             expect(ms.current).to.equal("slp");
             expect(ms.turns).to.equal(1);
 
-            await parser.next({type: "inactive", monRef: "us", reason: "slp"});
+            await ph.handle({type: "inactive", monRef: "us", reason: "slp"});
             expect(ms.turns).to.equal(2);
         });
 
@@ -802,12 +778,12 @@ export function testEvents()
             it("Should flip Truant state", async function()
             {
                 // first make sure the pokemon has truant
-                const mon = initActive("us");
+                const mon = sh.initActive("us");
                 mon.setAbility("truant");
                 expect(mon.volatile.willTruant).to.be.false;
 
                 // also flipped back on postTurn to sync with this event
-                await parser.next(
+                await ph.handle(
                     {type: "inactive", monRef: "us", reason: "truant"});
                 expect(mon.volatile.willTruant).to.be.true;
             });
@@ -815,14 +791,14 @@ export function testEvents()
             it("Should overlap truant turn with recharge turn", async function()
             {
                 // first make sure the pokemon has truant
-                const mon = initActive("us");
+                const mon = sh.initActive("us");
                 mon.setAbility("truant");
                 expect(mon.volatile.willTruant).to.be.false;
 
                 // indicate that the next turn is a recharge turn
                 mon.volatile.mustRecharge = true;
 
-                await parser.next(
+                await ph.handle(
                     {type: "inactive", monRef: "us", reason: "truant"});
                 expect(mon.volatile.willTruant).to.be.true;
                 expect(mon.volatile.mustRecharge).to.be.false;
@@ -833,7 +809,7 @@ export function testEvents()
         {
             it("Should init other team's size", async function()
             {
-                await parser.next({type: "initOtherTeamSize", size: 2});
+                await ph.handle({type: "initOtherTeamSize", size: 2});
                 expect(state.teams.them.size).to.equal(2);
             });
         });
@@ -921,7 +897,7 @@ export function testEvents()
 
             it("Should init our team", async function()
             {
-                await parser.next(initTeamEvent);
+                await ph.handle(initTeamEvent);
                 checkInitTeam(state.teams.us, initTeamEvent);
             });
 
@@ -940,7 +916,7 @@ export function testEvents()
                         ...initTeamEvent.team.slice(1)
                     ]
                 };
-                await parser.next(event);
+                await ph.handle(event);
                 checkInitTeam(state.teams.us, event);
             });
         });
@@ -950,11 +926,11 @@ export function testEvents()
     {
         it("Should invert boosts", async function()
         {
-            const {boosts} = initActive("us").volatile;
+            const {boosts} = sh.initActive("us").volatile;
             boosts.spe = 1;
             boosts.atk = -1;
 
-            await parser.next({type: "invertBoosts", monRef: "us"});
+            await ph.handle({type: "invertBoosts", monRef: "us"});
             expect(boosts.spe).to.equal(-1);
             expect(boosts.atk).to.equal(1);
         });
@@ -964,8 +940,8 @@ export function testEvents()
     {
         it("Should set Lock-On status", async function()
         {
-            const us = initActive("us").volatile;
-            const them = initActive("them").volatile;
+            const us = sh.initActive("us").volatile;
+            const them = sh.initActive("them").volatile;
             expect(us.lockedOnBy).to.be.null;
             expect(us.lockOnTarget).to.be.null;
             expect(us.lockOnTurns.isActive).to.be.false;
@@ -973,7 +949,7 @@ export function testEvents()
             expect(them.lockOnTarget).to.be.null;
             expect(them.lockOnTurns.isActive).to.be.false;
 
-            await parser.next({type: "lockOn", monRef: "us", target: "them"});
+            await ph.handle({type: "lockOn", monRef: "us", target: "them"});
             expect(us.lockedOnBy).to.be.null;
             expect(us.lockOnTarget).to.equal(them);
             expect(us.lockOnTurns.isActive).to.be.true;
@@ -987,10 +963,10 @@ export function testEvents()
     {
         it("Should Mimic move", async function()
         {
-            const mon = initActive("them");
+            const mon = sh.initActive("them");
             mon.moveset.reveal("mimic");
 
-            await parser.next({type: "mimic", monRef: "them", move: "splash"});
+            await ph.handle({type: "mimic", monRef: "them", move: "splash"});
             expect(mon.moveset.get("splash")).to.not.be.null;
             expect(mon.moveset.get("mimic")).to.be.null;
             expect(mon.baseMoveset.get("splash")).to.be.null;
@@ -1002,7 +978,7 @@ export function testEvents()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "miss", monRef: "them"});
+            await ph.handle({type: "miss", monRef: "them"});
         });
     });
 
@@ -1010,16 +986,16 @@ export function testEvents()
     {
         it("Should modify pp amount of move", async function()
         {
-            const {moveset} = initActive("them");
+            const {moveset} = sh.initActive("them");
 
-            await parser.next(
+            await ph.handle(
                 {type: "modifyPP", monRef: "them", move: "splash", amount: -4});
             const move = moveset.get("splash");
             expect(move).to.not.be.null;
             expect(move!.pp).to.equal(60);
             expect(move!.maxpp).to.equal(64);
 
-            await parser.next(
+            await ph.handle(
                 {type: "modifyPP", monRef: "them", move: "splash", amount: 3});
             expect(move!.pp).to.equal(63);
             expect(move!.maxpp).to.equal(64);
@@ -1029,8 +1005,8 @@ export function testEvents()
         {
             it("Should fully deplete pp", async function()
             {
-                const {moveset} = initActive("them");
-                await parser.next(
+                const {moveset} = sh.initActive("them");
+                await ph.handle(
                 {
                     type: "modifyPP", monRef: "them", move: "splash",
                     amount: "deplete"
@@ -1048,9 +1024,9 @@ export function testEvents()
     {
         it("Should indicate recharge", async function()
         {
-            const {volatile: v} = initActive("us");
+            const {volatile: v} = sh.initActive("us");
             expect(v.mustRecharge).to.be.false;
-            await parser.next({type: "mustRecharge", monRef: "us"});
+            await ph.handle({type: "mustRecharge", monRef: "us"});
             expect(v.mustRecharge).to.be.true;
         });
     });
@@ -1059,7 +1035,7 @@ export function testEvents()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "noTarget", monRef: "them"});
+            await ph.handle({type: "noTarget", monRef: "them"});
         });
     });
 
@@ -1068,7 +1044,7 @@ export function testEvents()
         it("TODO"); // mark test as pending
         it("TODO", async function()
         {
-            await parser.next({type: "preTurn"});
+            await ph.handle({type: "preTurn"});
         });
     });
 
@@ -1076,9 +1052,8 @@ export function testEvents()
     {
         it("Should prepare two-turn move", async function()
         {
-            const vts = initActive("them").volatile.twoTurn;
-            await parser.next(
-                {type: "prepareMove", monRef: "them",move: "dive"});
+            const vts = sh.initActive("them").volatile.twoTurn;
+            await ph.handle({type: "prepareMove", monRef: "them",move: "dive"});
             expect(vts.isActive).to.be.true;
             expect(vts.type).to.equal("dive");
         });
@@ -1089,7 +1064,7 @@ export function testEvents()
         it("TODO"); // mark test as pending
         it("TODO", async function()
         {
-            await parser.next({type: "postTurn"});
+            await ph.handle({type: "postTurn"});
         });
     });
 
@@ -1097,12 +1072,12 @@ export function testEvents()
     {
         it("Should re-enable disabled moves", async function()
         {
-            const v = initActive("them").volatile;
+            const v = sh.initActive("them").volatile;
             v.disableMove("tackle");
             expect(v.disabled.move).to.equal("tackle");
             expect(v.disabled.ts.isActive).to.be.true;
 
-            await parser.next({type: "reenableMoves", monRef: "them"});
+            await ph.handle({type: "reenableMoves", monRef: "them"});
             expect(v.disabled.move).to.be.null;
             expect(v.disabled.ts.isActive).to.be.false;
         });
@@ -1110,7 +1085,7 @@ export function testEvents()
 
     describe("removeItem", function()
     {
-        testRemoveItem(contextFunc, initActive);
+        testRemoveItem(ictx, getState, sh);
     });
 
     describe("resetWeather", function()
@@ -1122,7 +1097,7 @@ export function testEvents()
             expect(state.status.weather.type).to.equal("Hail");
 
             // set it back to normal
-            await parser.next({type: "resetWeather"});
+            await ph.handle({type: "resetWeather"});
             expect(state.status.weather.type).to.equal("none");
         });
     });
@@ -1131,7 +1106,7 @@ export function testEvents()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "resisted", monRef: "them"});
+            await ph.handle({type: "resisted", monRef: "them"});
         });
     });
 
@@ -1139,11 +1114,11 @@ export function testEvents()
     {
         it("Should restore all move's PP", async function()
         {
-            const {moveset} = initActive("them");
+            const {moveset} = sh.initActive("them");
             moveset.reveal("splash").pp -= 4;
             moveset.reveal("tackle").pp = 0;
 
-            await parser.next({type: "restoreMoves", monRef: "them"});
+            await ph.handle({type: "restoreMoves", monRef: "them"});
 
             const splash = moveset.get("splash");
             expect(splash).to.not.be.null;
@@ -1159,10 +1134,10 @@ export function testEvents()
     {
         it("Should reveal item", async function()
         {
-            const {item} = initActive("them");
+            const {item} = sh.initActive("them");
             expect(item.definiteValue).to.be.null;
 
-            await parser.next(
+            await ph.handle(
             {
                 type: "revealItem", monRef: "them", item: "leftovers",
                 gained: false
@@ -1175,10 +1150,10 @@ export function testEvents()
     {
         it("Should reveal move", async function()
         {
-            const {moveset} = initActive("them");
+            const {moveset} = sh.initActive("them");
             expect(moveset.get("tackle")).to.be.null;
 
-            await parser.next(
+            await ph.handle(
                 {type: "revealMove", monRef: "them", move: "tackle"});
             expect(moveset.get("tackle")).to.not.be.null;
         });
@@ -1188,8 +1163,8 @@ export function testEvents()
     {
         it("Should set third type", async function()
         {
-            const v = initActive("us").volatile;
-            await parser.next(
+            const v = sh.initActive("us").volatile;
+            await ph.handle(
                 {type: "setThirdType", monRef: "us", thirdType: "bug"});
             expect(v.addedType).to.equal("bug");
         });
@@ -1199,10 +1174,10 @@ export function testEvents()
     {
         it("Should Sketch move", async function()
         {
-            const mon = initActive("them");
+            const mon = sh.initActive("them");
             mon.moveset.reveal("sketch");
 
-            await parser.next({type: "sketch", monRef: "them", move: "tackle"});
+            await ph.handle({type: "sketch", monRef: "them", move: "tackle"});
             expect(mon.moveset.get("tackle")).to.not.be.null;
             expect(mon.moveset.get("sketch")).to.be.null;
             expect(mon.baseMoveset.get("tackle")).to.not.be.null;
@@ -1214,7 +1189,7 @@ export function testEvents()
     {
         it("Should do nothing", async function()
         {
-            await parser.next({type: "superEffective", monRef: "us"});
+            await ph.handle({type: "superEffective", monRef: "us"});
         });
     });
 
@@ -1222,12 +1197,12 @@ export function testEvents()
     {
         it("Should swap stat boosts", async function()
         {
-            const us = initActive("us").volatile.boosts;
-            const them = initActive("them").volatile.boosts;
+            const us = sh.initActive("us").volatile.boosts;
+            const them = sh.initActive("them").volatile.boosts;
             us.accuracy = 4;
             them.spd = -1;
 
-            await parser.next(
+            await ph.handle(
             {
                 type: "swapBoosts", monRef1: "us", monRef2: "them",
                 stats: ["accuracy", "spd"]
@@ -1241,17 +1216,17 @@ export function testEvents()
 
     describe("switchIn", function()
     {
-        testSwitchIn(contextFunc, initActive);
+        testSwitchIn(ictx, getState, sh);
     });
 
     describe("takeDamage", function()
     {
         it("Should change hp", async function()
         {
-            const mon = initActive("us", smeargle);
+            const mon = sh.initActive("us", smeargle);
             expect(mon.hp.current).to.equal(smeargle.hp);
 
-            await parser.next({type: "takeDamage", monRef: "us", hp: 50});
+            await ph.handle({type: "takeDamage", monRef: "us", hp: 50});
             expect(mon.hp.current).to.equal(50);
         });
     });
@@ -1260,11 +1235,10 @@ export function testEvents()
     {
         it("Should transform pokemon", async function()
         {
-            const us = initActive("us", smeargle);
-            const them = initActive("them", ditto);
+            const us = sh.initActive("us", smeargle);
+            const them = sh.initActive("them", ditto);
 
-            await parser.next(
-                {type: "transform", source: "them", target: "us"});
+            await ph.handle({type: "transform", source: "them", target: "us"});
             expect(them.volatile.transformed).to.be.true;
             expect(them.species).to.equal(us.species);
         });
@@ -1274,10 +1248,10 @@ export function testEvents()
     {
         it("Should trap pokemon", async function()
         {
-            const us = initActive("us").volatile;
-            const them = initActive("them").volatile;
+            const us = sh.initActive("us").volatile;
+            const them = sh.initActive("them").volatile;
 
-            await parser.next({type: "trap", target: "us", by: "them"});
+            await ph.handle({type: "trap", target: "us", by: "them"});
             expect(us.trapped).to.equal(them);
             expect(us.trapping).to.be.null;
             expect(them.trapped).to.be.null;
@@ -1290,32 +1264,29 @@ export function testEvents()
         it("Should tick weather", async function()
         {
             // first set the weather
-            await parser.next(
+            await ph.handle(
             {
-                type: "activateFieldEffect", effect: "Sandstorm",
-                start: true
+                type: "activateFieldEffect", effect: "Sandstorm", start: true
             });
             expect(state.status.weather.turns).to.equal(0);
 
-            await parser.next({type: "updateFieldEffect", effect: "Sandstorm"});
+            await ph.handle({type: "updateFieldEffect", effect: "Sandstorm"});
             expect(state.status.weather.turns).to.equal(1);
         });
 
         it("Should throw if a different weather is mentioned", async function()
         {
             // first set the weather
-            await parser.next(
+            await ph.handle(
             {
                 type: "activateFieldEffect", effect: "RainDance",
                 start: true
             });
             expect(state.status.weather.turns).to.equal(0);
 
-            await expect(parser.next(
-                    {type: "updateFieldEffect", effect: "Sandstorm"}))
-                .to.eventually.be.rejectedWith(Error,
-                    "Weather is 'RainDance' but ticked weather is " +
-                    "'Sandstorm'");
+            await ph.rejectError(
+                {type: "updateFieldEffect", effect: "Sandstorm"}, Error,
+                "Weather is 'RainDance' but ticked weather is 'Sandstorm'");
             expect(state.status.weather.type).to.equal("RainDance");
             expect(state.status.weather.turns).to.equal(0);
         });
@@ -1325,9 +1296,9 @@ export function testEvents()
     {
         it("Should update moves", async function()
         {
-            const mon = initActive("us");
+            const mon = sh.initActive("us");
             const tackle = mon.moveset.reveal("tackle");
-            await parser.next(
+            await ph.handle(
             {
                 type: "updateMoves", monRef: "us",
                 moves:
@@ -1347,7 +1318,7 @@ export function testEvents()
         {
             it(`Should update ${name}`, async function()
             {
-                const v = initActive("us").volatile;
+                const v = sh.initActive("us").volatile;
                 expect(v[effect].isActive).to.be.false;
 
                 // first start the effect
@@ -1356,7 +1327,7 @@ export function testEvents()
                 expect(v[effect].turns).to.equal(0);
 
                 // then update it
-                await parser.next(
+                await ph.handle(
                     {type: "updateStatusEffect", monRef: "us", effect});
                 expect(v[effect].isActive).to.be.true;
                 expect(v[effect].turns).to.equal(1);
@@ -1370,6 +1341,6 @@ export function testEvents()
 
     describe("useMove", function()
     {
-        testUseMove(contextFunc, initActive);
+        testUseMove(ictx, getState, sh);
     });
 }

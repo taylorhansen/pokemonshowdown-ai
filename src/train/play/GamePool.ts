@@ -75,7 +75,8 @@ export class GamePool extends ThreadPool<GamePort, GameWorkerRequestMap>
      * Queues a game to be played.
      * @param args Game args.
      * @param callback Called when a worker has been assigned to the game.
-     * @returns A Promise to get the results of the game.
+     * @returns A Promise to get the results of the game. Also returns any
+     * errors.
      */
     public async addGame(args: GamePoolArgs, callback?: () => void):
         Promise<GamePoolResult>
@@ -84,15 +85,20 @@ export class GamePool extends ThreadPool<GamePort, GameWorkerRequestMap>
         const port = await this.takePort();
         callback?.();
 
-        // queue the game and wait for it to complete, returning the port
-        //  afterwards
-        return port.playGame(args)
-            .catch(err => { throw err; })
-            .finally(() => this.givePort(port))
-            .catch((err: Error) =>
-            {
-                const result: GamePoolResult = {numAExps: 0, err};
-                return result;
-            });
+        try
+        {
+            // queue the game and wait for it to complete
+            try { return await port.playGame(args); }
+            // rethrow, let outer catch wrap it
+            catch (err) { throw err; }
+            // make sure the port is returned afterwards
+            // can technically throw as well, but should never happen
+            finally { this.givePort(port); }
+        }
+        catch (err)
+        {
+            const result: GamePoolResult = {numAExps: 0, err};
+            return result;
+        }
     }
 }

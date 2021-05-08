@@ -3,20 +3,18 @@ import * as dexutil from "../../dex/dex-util";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
 import * as events from "../BattleEvent";
-import { ParserState, SubParser, SubParserResult } from "../BattleParser";
-import { eventLoop, hasStatus, matchBoost, matchPercentDamage } from
-    "../helpers";
+import { SubParserConfig, SubParserResult } from "../BattleParser";
+import { eventLoop, hasStatus, matchBoost, matchPercentDamage, peek, tryPeek }
+    from "../helpers";
 import { handlers as base } from "./base";
 import { consumeOnUpdate } from "./removeItem";
 
 /** Checks if items should activate. */
-export async function* update(pstate: ParserState, lastEvent?: events.Any):
-    SubParser
+export async function update(cfg: SubParserConfig): Promise<SubParserResult>
 {
     // TODO: also check abilities? in what order?
-    const result = yield* consumeOnUpdate(pstate, {us: true, them: true},
-        lastEvent);
-    return {...result.event && {event: result.event}};
+    const updateResult = await consumeOnUpdate(cfg, {us: true, them: true});
+    return {...updateResult.permHalt && {permHalt: true}};
 }
 
 /** SubParserResult that includes a success indicator. */
@@ -57,33 +55,32 @@ export interface BoostResult extends SubParserResult
  * already at +6).
  * @param lastEvent Last unconsumed event if any.
  */
-export async function* boost(pstate: ParserState, targetRef: Side,
+export async function boost(cfg: SubParserConfig, targetRef: Side,
     boosts: Partial<dexutil.BoostTable<number>>, set?: boolean,
-    silent?: boolean, lastEvent?: events.Any):
-    SubParser<BoostResult>
+    silent?: boolean): Promise<BoostResult>
 {
-    const target = pstate.state.teams[targetRef].active;
+    const target = cfg.state.teams[targetRef].active;
     const table = {...boosts};
     let allSilent = true;
 
-    const result = yield* eventLoop(
-        async function* expectBoostLoop(event): SubParser
+    const result = await eventLoop(cfg,
+        async function expectBoostLoop(_cfg)
         {
-            if (event.type !== "boost") return {event};
-            if (event.monRef !== targetRef) return {event};
-            if (!event.set === set) return {event};
-            if (!table.hasOwnProperty(event.stat)) return {event};
+            const event = await peek(_cfg);
+            if (event.type !== "boost") return {};
+            if (event.monRef !== targetRef) return {};
+            if (!event.set === set) return {};
+            if (!table.hasOwnProperty(event.stat)) return {};
             if (!matchBoost(!!set, table[event.stat]!, event.amount,
                 ...set ? [] : [target.volatile.boosts[event.stat]]))
             {
-                return {event};
+                return {};
             }
 
             delete table[event.stat];
             allSilent = false;
-            return yield* base.boost(pstate, event);
-        },
-        lastEvent);
+            return await base.boost(_cfg);
+        });
 
     // remove boosts that can't be fulfilled due to saturation
     //  (e.g. boosting when already at at +6)
@@ -116,18 +113,18 @@ export interface BoostOneResult extends SubParserResult
  * @param targetRef Target pokemon reference.
  * @param possibleBoosts Table of possible boosts.
  */
-export async function* boostOne(pstate: ParserState, targetRef: Side,
-    possibleBoosts: Partial<dexutil.BoostTable<number>>,
-    lastEvent?: events.Any): SubParser<BoostOneResult>
+export async function boostOne(cfg: SubParserConfig, targetRef: Side,
+    possibleBoosts: Partial<dexutil.BoostTable<number>>):
+    Promise<BoostOneResult>
 {
-    const event = lastEvent ?? (yield);
-    if (event.type !== "boost" || event.monRef !== targetRef || event.set ||
-        possibleBoosts[event.stat] !== event.amount)
+    const next = await tryPeek(cfg);
+    if (next?.type !== "boost" || next.monRef !== targetRef || next.set ||
+        possibleBoosts[next.stat] !== next.amount)
     {
-        return {event}; // fail
+        return {}; // fail
     }
 
-    return {...yield* base.boost(pstate, event), success: event.stat};
+    return {...await base.boost(cfg), success: next.stat};
 }
 
 /**
@@ -135,9 +132,8 @@ export async function* boostOne(pstate: ParserState, targetRef: Side,
  * @param source Source Pokemon reference.
  * @param effectType Effect type being expected.
  */
-export async function* countStatus(pstate: ParserState, source: Side,
-    effectType: dexutil.CountableStatusType, lastEvent?: events.Any):
-    SubParser<SuccessResult>
+export async function countStatus(cfg: SubParserConfig, source: Side,
+    effectType: dexutil.CountableStatusType): Promise<SuccessResult>
 {
     switch (effectType)
     {
@@ -149,29 +145,28 @@ export async function* countStatus(pstate: ParserState, source: Side,
             //  countStatusEffect events (sent on PS only) pass through
             let success: boolean | undefined;
             const mentioned = new Set<Side>();
-            const result = yield* eventLoop(
-                async function* countStatusLoop(event): SubParser
+            const result = await eventLoop(cfg,
+                async function countStatusLoop(_cfg)
                 {
-                    if (event.type !== "countStatusEffect") return {event};
-                    if (event.effect !== effectType) return {event};
+                    const event = await peek(_cfg);
+                    if (event.type !== "countStatusEffect") return {};
+                    if (event.effect !== effectType) return {};
                     // if the pokemon was mentioned again, then we're getting
                     //  into end-of-turn events
-                    if (mentioned.has(event.monRef)) return {event};
+                    if (mentioned.has(event.monRef)) return {};
                     mentioned.add(event.monRef);
                     success ||= true;
-                    return yield* base.countStatusEffect(pstate, event);
-                }, lastEvent);
+                    return await base.countStatusEffect(_cfg);
+                });
             return {...result, ...success && {success}};
         }
         case "stockpile":
         {
-            const event = lastEvent ?? (yield);
-            if (event.type !== "countStatusEffect") return {event};
-            if (event.monRef !== source) return {event};
-            if (event.effect !== effectType) return {event};
-            return {
-                ...yield* base.countStatusEffect(pstate, event), success: true
-            };
+            const next = await tryPeek(cfg);
+            if (next?.type !== "countStatusEffect") return {};
+            if (next.monRef !== source) return {};
+            if (next.effect !== effectType) return {};
+            return {...await base.countStatusEffect(cfg), success: true};
         }
     }
 }
@@ -182,26 +177,26 @@ export async function* countStatus(pstate: ParserState, source: Side,
  * @param from Effect being referenced.
  * @param sign Sign of expected damage number.
  */
-export async function* damage(pstate: ParserState, monRef: Side,
-    from: events.TakeDamage["from"] | null, sign: number,
-    lastEvent?: events.Any): SubParser<SilentSuccessResult>
+export async function damage(cfg: SubParserConfig, monRef: Side,
+    from: events.TakeDamage["from"] | null, sign: number):
+    Promise<SilentSuccessResult>
 {
     // saturated hp can't be damaged/healed further
-    const mon = pstate.state.teams[monRef].active;
+    const mon = cfg.state.teams[monRef].active;
     if (mon.hp.current <= 0 && sign < 0 ||
         mon.hp.current >= mon.hp.max && sign > 0)
     {
-        return {...lastEvent && {event: lastEvent}, success: "silent"};
+        return {success: "silent"};
     }
 
-    const event = lastEvent ?? (yield);
-    if (event.type !== "takeDamage") return {event};
-    if (event.monRef !== monRef) return {event};
-    if ((event.from ?? null) !== (from ?? null)) return {event};
+    const next = await tryPeek(cfg);
+    if (next?.type !== "takeDamage") return {};
+    if (next.monRef !== monRef) return {};
+    if ((next.from ?? null) !== (from ?? null)) return {};
     // make sure damage matches sign
-    const diff = event.hp - mon.hp.current;
-    if (diff && Math.sign(diff) !== sign) return {event};
-    return {...yield* base.takeDamage(pstate, event), success: true};
+    const diff = next.hp - mon.hp.current;
+    if (diff && Math.sign(diff) !== sign) return {};
+    return {...await base.takeDamage(cfg), success: true};
 }
 
 /** Result from `faint()`. */
@@ -212,13 +207,13 @@ export interface FaintResult extends SubParserResult
 }
 
 /** Expects a faint event for the given pokemon reference. */
-export async function* faint(pstate: ParserState, monRef: Side,
-    lastEvent?: events.Any): SubParser<FaintResult>
+export async function faint(cfg: SubParserConfig, monRef: Side):
+    Promise<FaintResult>
 {
-    const event = lastEvent ?? (yield);
-    if (event.type !== "faint") return {event};
-    if (event.monRef !== monRef) return {event};
-    return {...yield* base.faint(pstate, event), success: true};
+    const next = await tryPeek(cfg);
+    if (next?.type !== "faint") return {};
+    if (next.monRef !== monRef) return {};
+    return {...await base.faint(cfg), success: true};
 }
 
 /**
@@ -227,18 +222,16 @@ export async function* faint(pstate: ParserState, monRef: Side,
  * @param effectType Effect type being expected.
  * @param toggle Whether the effect can be toggled.
  */
-export async function* fieldEffect(pstate: ParserState, source: Pokemon | null,
-    effectType: dexutil.FieldEffectType, toggle?: boolean,
-    lastEvent?: events.Any): SubParser<SuccessResult>
+export async function fieldEffect(cfg: SubParserConfig, source: Pokemon | null,
+    effectType: dexutil.FieldEffectType, toggle?: boolean):
+    Promise<SuccessResult>
 {
     // TODO: silently pass without event if effect already present
-    const event = lastEvent ?? (yield);
-    if (event.type !== "activateFieldEffect") return {event};
-    if (!event.start && !toggle) return {event};
-    if (event.effect !== effectType) return {event};
-    return {
-        ...yield* base.activateFieldEffect(pstate, event, source), success: true
-    };
+    const next = await tryPeek(cfg);
+    if (next?.type !== "activateFieldEffect") return {};
+    if (!next.start && !toggle) return {};
+    if (next.effect !== effectType) return {};
+    return {...await base.activateFieldEffect(cfg, source), success: true};
 }
 
 /**
@@ -246,35 +239,32 @@ export async function* fieldEffect(pstate: ParserState, source: Pokemon | null,
  * @param targetRef Target pokemon reference.
  * @param percent Percent damage to deal to the target. Positive heals, negative
  * damages.
- * @param lastEvent Last unconsumed event if any.
  */
-export async function* percentDamage(pstate: ParserState, targetRef: Side,
-    percent: number, lastEvent?: events.Any):
-    SubParser<SilentSuccessResult>
+export async function percentDamage(cfg: SubParserConfig, targetRef: Side,
+    percent: number): Promise<SilentSuccessResult>
 {
-    const target = pstate.state.teams[targetRef].active;
+    const target = cfg.state.teams[targetRef].active;
     // effect would do nothing
     if (matchPercentDamage(percent, target.hp.current, target.hp.max))
     {
-        return {...lastEvent && {event: lastEvent}, success: "silent"};
+        return {success: "silent"};
     }
 
-    const event = lastEvent ?? (yield);
-    if (event.type !== "takeDamage") return {event};
-    if (event.monRef !== targetRef) return {event};
-    if (event.from) return {event};
+    const next = await tryPeek(cfg);
+    if (next?.type !== "takeDamage") return {};
+    if (next.monRef !== targetRef) return {};
+    if (next.from) return {};
 
-    const e = event as events.TakeDamage;
-    async function* good(): SubParser<SilentSuccessResult>
+    async function good(): Promise<SilentSuccessResult>
     {
-        return {...yield* base.takeDamage(pstate, e), success: true};
+        return {...await base.takeDamage(cfg), success: true};
     }
 
-    if (percent < 0 && event.hp <= target.hp.current) return yield* good();
-    if (percent > 0 && event.hp >= target.hp.current) return yield* good();
-    // istanbul ignore next: should never happen, but shouldn't throw
-    if (percent === 0 && event.hp === target.hp.current) return yield* good();
-    return {event};
+    if (percent < 0 && next.hp <= target.hp.current) return await good();
+    if (percent > 0 && next.hp >= target.hp.current) return await good();
+    // istanbul ignore next: should never happen, but can recover
+    if (percent === 0 && next.hp === target.hp.current) return await good();
+    return {};
 }
 
 /** Result from `status()`. */
@@ -288,39 +278,58 @@ export interface StatusResult extends SubParserResult
  * Expects a status effect.
  * @param targetRef Target pokemon reference.
  * @param statusTypes Possible statuses to afflict.
- * @param lastEvent Last unconsumed event if any.
  */
-export async function* status(pstate: ParserState, targetRef: Side,
-    statusTypes: readonly dexutil.StatusType[], lastEvent?: events.Any):
-    SubParser<StatusResult>
+export async function status(cfg: SubParserConfig, targetRef: Side,
+    statusTypes: readonly dexutil.StatusType[]): Promise<StatusResult>
 {
-    const target = pstate.state.teams[targetRef].active;
-    // effect would do nothing
-    if (statusTypes.every(s => cantStatus(target, s)))
-    {
-        return {...lastEvent && {event: lastEvent}, success: true};
-    }
+    return await statusImpl(cfg, targetRef, statusTypes, /*consume*/ true);
+}
 
-    const event = lastEvent ?? (yield);
-    switch (event.type)
+/**
+ * Expects a status effect event but doesn't consume it. This is used when
+ * further verifications/assertions need to happen before the status event can
+ * be accepted.
+ * @param targetRef Target pokemon reference.
+ * @param statusTypes Possible statuses to afflict.
+ */
+export async function peekStatus(cfg: SubParserConfig, targetRef: Side,
+    statusTypes: readonly dexutil.StatusType[]): Promise<StatusResult>
+{
+    return await statusImpl(cfg, targetRef, statusTypes, /*consume*/ false);
+}
+
+/**
+ * Implementation of `status()`/`peekStatus()`.
+ * @param targetRef Target pokemon reference.
+ * @param statusTypes Possible statuses to afflict.
+ * @param consume Whether to handle/consume the event after verification within
+ * this call.
+ */
+async function statusImpl(cfg: SubParserConfig, targetRef: Side,
+    statusTypes: readonly dexutil.StatusType[], consume: boolean):
+    Promise<StatusResult>
+{
+    const target = cfg.state.teams[targetRef].active;
+    // effect would do nothing
+    if (statusTypes.every(s => cantStatus(target, s))) return {success: true};
+
+    const next = await tryPeek(cfg);
+    switch (next?.type)
     {
         case "activateStatusEffect":
-            if (!event.start) break;
-            if (event.monRef !== targetRef) break;
-            if (!statusTypes.includes(event.effect)) break;
+            if (!next.start) break;
+            if (next.monRef !== targetRef) break;
+            if (!statusTypes.includes(next.effect)) break;
             return {
-                ...yield* base.activateStatusEffect(pstate, event),
-                success: event.effect
+                ...consume && await base.activateStatusEffect(cfg),
+                success: next.effect
             };
         case "clause":
             // ps-specific clause mod is blocking an effect
-            if (!statusTypes.includes(event.clause)) break;
-            return {
-                ...yield* base.clause(pstate, event),
-                success: event.clause
-            };
+            if (!statusTypes.includes(next.clause)) break;
+            return {...consume && await base.clause(cfg), success: next.clause};
     }
-    return {event};
+    return {};
 }
 
 /** Checks whether the pokemon can't be afflicted by the given status. */
@@ -373,33 +382,29 @@ export interface CureResult extends SubParserResult
  * @param targetRef Target pokemon reference.
  * @param statuses Statuses to cure.
  */
-export async function* cure(pstate: ParserState, targetRef: Side,
-    statuses: readonly dexutil.StatusType[], lastEvent?: events.Any):
-    SubParser<CureResult>
+export async function cure(cfg: SubParserConfig, targetRef: Side,
+    statuses: readonly dexutil.StatusType[]): Promise<CureResult>
 {
     // only need to care about the curable statuses the target has
-    const target = pstate.state.teams[targetRef].active;
+    const target = cfg.state.teams[targetRef].active;
     statuses = statuses.filter(s => hasStatus(target, s));
 
     // no statuses to cure
-    if (statuses.length <= 0)
-    {
-        return {...lastEvent && {event: lastEvent}, ret: "silent"};
-    }
+    if (statuses.length <= 0) return {ret: "silent"};
 
     // look for cure events
     const pendingCures = new Set(statuses);
     while (pendingCures.size > 0)
     {
-        lastEvent ??= yield;
-        if (lastEvent.type !== "activateStatusEffect" || lastEvent.start ||
-            lastEvent.monRef !== targetRef ||
-            !pendingCures.has(lastEvent.effect))
+        const next = await tryPeek(cfg);
+        if (next?.type !== "activateStatusEffect" || next.start ||
+            next.monRef !== targetRef ||
+            !pendingCures.has(next.effect))
         {
-            return {event: lastEvent, ret: pendingCures}; // fail/partial
+            return {ret: pendingCures}; // fail/partial
         }
-        pendingCures.delete(lastEvent.effect);
-        lastEvent = (yield* base.activateStatusEffect(pstate, lastEvent)).event;
+        pendingCures.delete(next.effect);
+        await base.activateStatusEffect(cfg);
     }
     return {ret: true}; // success
 }
@@ -410,34 +415,34 @@ export async function* cure(pstate: ParserState, targetRef: Side,
  * @param target Target Pokemon reference.
  * @param boosts Boosts to swap.
  */
-export async function* swapBoosts(pstate: ParserState, source: Side,
-    target: Side, boosts: Partial<dexutil.BoostTable<boolean>>,
-    lastEvent?: events.Any): SubParser<SuccessResult>
+export async function swapBoosts(cfg: SubParserConfig, source: Side,
+    target: Side, boosts: Partial<dexutil.BoostTable<boolean>>):
+    Promise<SuccessResult>
 {
     // can't swap with self
-    if (source === target) return {...lastEvent && {event: lastEvent}};
+    if (source === target) return {};
 
     // expect swapBoosts event
-    const event = lastEvent ?? (yield);
-    if (event.type !== "swapBoosts") return {event};
-    if (((event.monRef1 !== source || event.monRef2 !== target) &&
-        (event.monRef1 !== target || event.monRef2 !== source)))
+    const next = await tryPeek(cfg);
+    if (next?.type !== "swapBoosts") return {};
+    if (((next.monRef1 !== source || next.monRef2 !== target) &&
+        (next.monRef1 !== target || next.monRef2 !== source)))
     {
-        return {event};
+        return {};
     }
 
     // make sure boosts match up
     const table = {...boosts};
-    for (const b of event.stats)
+    for (const b of next.stats)
     {
         // reject if too many stats
-        if (!table.hasOwnProperty(b)) return {event};
+        if (!table.hasOwnProperty(b)) return {};
         delete table[b];
     }
     // reject if not enough stats
-    if (Object.keys(table).length > 0) return {event};
+    if (Object.keys(table).length > 0) return {};
 
-    return {...yield* base.swapBoosts(pstate, event), success: true};
+    return {...await base.swapBoosts(cfg), success: true};
 }
 
 /**
@@ -446,17 +451,15 @@ export async function* swapBoosts(pstate: ParserState, source: Side,
  * @param teamRef Target team reference.
  * @param effectType Effect type being expected.
  */
-export async function* teamEffect(pstate: ParserState, source: Pokemon | null,
-    teamRef: Side, effectType: dexutil.TeamEffectType, lastEvent?: events.Any):
-    SubParser<SuccessResult>
+export async function teamEffect(cfg: SubParserConfig, source: Pokemon | null,
+    teamRef: Side, effectType: dexutil.TeamEffectType):
+    Promise<SuccessResult>
 {
     // TODO: silently pass without event if effect already present
-    const event = lastEvent ?? (yield);
-    if (event.type !== "activateTeamEffect") return {event};
-    if (!event.start) return {event};
-    if (event.teamRef !== teamRef) return {event};
-    if (event.effect !== effectType) return {event};
-    return {
-        ...yield* base.activateTeamEffect(pstate, event, source), success: true
-    };
+    const next = await tryPeek(cfg);
+    if (next?.type !== "activateTeamEffect") return {};
+    if (!next.start) return {};
+    if (next.teamRef !== teamRef) return {};
+    if (next.effect !== effectType) return {};
+    return {...await base.activateTeamEffect(cfg, source), success: true};
 }

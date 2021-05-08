@@ -3,7 +3,7 @@
 import * as dex from "../../dex/dex";
 import { Pokemon } from "../../state/Pokemon";
 import { Side } from "../../state/Side";
-import { ParserState } from "../BattleParser";
+import { SubParserConfig } from "../BattleParser";
 import { SubInference, SubReason } from "./EventInference";
 import { hasItem } from "./helpers";
 
@@ -17,7 +17,7 @@ import { hasItem } from "./helpers";
  * possibility name to a SubInference modeling the restrictions on each item
  * possibility.
  */
-export function getItems(pstate: ParserState,
+export function getItems(cfg: SubParserConfig,
     monRefs: Partial<Readonly<Record<Side, any>>>,
     f: (item: dex.Item, mon: Pokemon) => Set<SubReason> | null):
     {[S in Side]?: Map<string, SubInference>}
@@ -27,7 +27,7 @@ export function getItems(pstate: ParserState,
     {
         if (!monRefs.hasOwnProperty(monRef)) continue;
         // can't activate item if suppressed by embargo status
-        const mon = pstate.state.teams[monRef as Side].active;
+        const mon = cfg.state.teams[monRef as Side].active;
         if (mon.volatile.embargo.isActive) continue;
 
         const inferences = new Map<string, SubInference>();

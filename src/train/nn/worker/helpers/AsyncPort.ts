@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 import { deserialize } from "v8";
 import { MessagePort, TransferListItem } from "worker_threads";
+import { WrappedError } from "../../../helpers/WrappedError";
 
 /** Base type for AsyncPort request typings. */
 export type PortRequestMap<T extends string> =
@@ -122,15 +123,20 @@ export abstract class AsyncPort<TMap extends PortRequestMap<string>,
             }
             else callback(result);
         })
-        // this is to make sure that all currently pending callbacks get
-        //  resolved in the case of a worker error
         .on("error", err =>
         {
+            // make sure that all currently pending callbacks get resolved in
+            //  the case of a worker error
             const requests = [...this.requests];
             this.requests.clear();
             for (const [rid, callback] of requests)
             {
-                callback({type: "error", rid, done: true, err});
+                callback(
+                {
+                    type: "error", rid, done: true,
+                    err: new WrappedError(err,
+                        msg => "AsyncPort wrapped port threw an error: " + msg)
+                });
             }
         });
     }
@@ -143,7 +149,8 @@ export abstract class AsyncPort<TMap extends PortRequestMap<string>,
 
     /**
      * Sends and tracks a message through the port.
-     * @param msg Message to send. Should have a unique RID attached.
+     * @param msg Message to send. Should have a unique request id `#rid` field
+     * attached.
      * @param transferList Port/buffer transfer list.
      * @param callback Function to call when a reply is sent by the port. This
      * may be called multiple times until the `done` property of the argument is
@@ -164,15 +171,15 @@ export abstract class AsyncPort<TMap extends PortRequestMap<string>,
             // should never happen
             if (msg.rid !== result.rid)
             {
-                throw new Error(`Dispatched rid ${msg.rid} but got ` +
-                    `${result.rid} back`);
+                throw new Error(`Dispatched rid ${msg.rid} but got back rid ` +
+                    result.rid);
             }
 
             // should never happen
             if (msg.type !== result.type && result.type !== "error")
             {
-                throw new Error(`Message '${msg.type}' sent but got ` +
-                    `'${result.type}' back`);
+                throw new Error(`Message '${msg.type}' sent but got back ` +
+                    `'${result.type}'`);
             }
 
             callback(result as TResult<TMap, T>);

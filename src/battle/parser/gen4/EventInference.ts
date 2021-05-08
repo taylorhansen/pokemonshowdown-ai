@@ -1,6 +1,5 @@
-import * as events from "../BattleEvent";
-import { SubParser, SubParserResult } from "../BattleParser";
-import { eventLoop } from "../helpers";
+import { SubParser, SubParserConfig, SubParserResult } from "../BattleParser";
+import { eventLoop, peek, tryPeek } from "../helpers";
 
 // TODO: make this a class?
 /**
@@ -13,11 +12,8 @@ import { eventLoop } from "../helpers";
 export interface EventInference<
     TResult extends SubParserResult = SubParserResult>
 {
-    /**
-     * Parser for the event.
-     * @param event Initial event.
-     */
-    take(event: events.Any): SubParser<TResult>;
+    /** Parser for the event. */
+    readonly take: SubParser<TResult>;
     /**
      * Models the possible cases in which this inference can activate or
      * `#take()`.
@@ -30,18 +26,17 @@ export interface EventInference<
  * @template TResult Result type from parsing an event.
  * @param cases Possible cases in which this inference could accept an event.
  * @param taker Parser function that selects from the given cases. If it accepts
- * the given event, it should call the provided `accept` callback before parsing
- * to indicate which one it chose.
+ * the current event, it should call the provided `accept` callback before
+ * parsing to indicate which SubInference was chosen.
  */
 export function createEventInference<
-    TResult extends SubParserResult = SubParserResult>(
+        TResult extends SubParserResult = SubParserResult>(
     cases: ReadonlySet<SubInference>,
-    taker: (event: events.Any, accept: (inf: SubInference) => void) =>
-        SubParser<TResult>):
+    taker: SubParser<TResult, [accept: (inf: SubInference) => void]>):
     EventInference<TResult>
 {
     return {
-        take: event => taker(event,
+        take: cfg => taker(cfg,
             function accept(inf: SubInference)
             {
                 // istanbul ignore next: should never happen
@@ -99,31 +94,34 @@ export interface ExpectEventsResult<TResult = SubParserResult> extends
 }
 
 /** Evaluates a group of EventInferences in any order. */
-export async function* expectEvents<
-    TResult extends SubParserResult = SubParserResult>(
-    inferences: EventInference<TResult>[], lastEvent?: events.Any):
-    SubParser<ExpectEventsResult<TResult>>
+export async function expectEvents<
+        TResult extends SubParserResult = SubParserResult>(
+    cfg: SubParserConfig, inferences: EventInference<TResult>[]):
+    Promise<ExpectEventsResult<TResult>>
 {
     const results: TResult[] = [];
-    const result = yield* eventLoop(
-        async function* expectEventsLoop(event): SubParser
+    const result = await eventLoop(cfg,
+        async function expectEventsLoop(_cfg)
         {
+            const peek1 = await peek(_cfg);
             for (let i = 0; i < inferences.length; ++i)
             {
                 // see if the EventInference takes the event
                 const inf = inferences[i];
-                const infResult = yield* inf.take(event);
+                const infResult = await inf.take(_cfg);
+
                 // if it didn't, try a different EventInference
-                if (infResult.event === event) continue;
+                const peek2 = await tryPeek(_cfg);
+                if (peek1 === peek2) continue;
+
                 // if it did, we can move on to the next event
                 inferences.splice(i, 1);
                 results.push(infResult);
                 return infResult;
             }
             // if no EventInferences take the event, then stop the event loop
-            return {event};
-        },
-        lastEvent);
+            return {};
+        });
 
     // for the EventInferences that didn't take any events, reject each case
     for (const inf of inferences)

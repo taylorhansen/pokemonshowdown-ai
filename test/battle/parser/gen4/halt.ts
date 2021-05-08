@@ -1,33 +1,46 @@
 import { expect } from "chai";
 import "mocha";
-import { BattleAgent } from "../../../../src/battle/agent/BattleAgent";
 import { Choice } from "../../../../src/battle/agent/Choice";
 import * as events from "../../../../src/battle/parser/BattleEvent";
-import { ChoiceSender, SenderResult, SubParser } from
+import { SenderResult, SubParserResult } from
     "../../../../src/battle/parser/BattleParser";
-import { getChoices } from "../../../../src/battle/parser/gen4/halt";
+import { getChoices, halt } from "../../../../src/battle/parser/gen4/halt";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { ditto, smeargle } from "../../../helpers/switchOptions";
-import { Context } from "./Context";
+import { BattleParserContext, InitialContext, ParserContext } from "./Context";
+import { ParserHelpers, setupSubParserPartial, StateHelpers } from "./helpers";
 
-export function testHalt(f: () => Context,
-    setAgent: (agent: BattleAgent) => void,
-    setSender: (sender: ChoiceSender) => void)
+export function testHalt(ictx: InitialContext, getState: () => BattleState,
+    sh: StateHelpers, pctx2: () => BattleParserContext,
+    ph2 = new ParserHelpers(pctx2, getState))
 {
-    let state: BattleState;
-    let parser: SubParser;
+    /** Initializes the halt parser. */
+    const init = setupSubParserPartial(ictx.startArgs, getState, halt);
 
-    beforeEach("Extract Context", function()
+    // only use this for trivial cases to test return value
+    // the pctx2/ph2 are for tests that require the main parser loop
+    // TODO: remove need for pctx2/ph2
+    let pctx: ParserContext<SubParserResult>;
+    const ph = new ParserHelpers(() => pctx, getState);
+
+    afterEach("Close ParserContext", async function()
     {
-        ({state, parser} = f());
+        await ph.close();
+    });
+
+    let state: BattleState;
+
+    beforeEach("Extract BattleState", function()
+    {
+        state = getState();
     });
 
     describe("reason=wait", function()
     {
         it("Should do nothing", async function()
         {
-            await expect(parser.next({type: "halt", reason: "wait"}))
-                .to.eventually.become({value: undefined, done: false});
+            pctx = init();
+            await ph.handleEnd({type: "halt", reason: "wait"}, {});
         });
     });
 
@@ -35,8 +48,9 @@ export function testHalt(f: () => Context,
     {
         it("Should cause parser to return permHalt result", async function()
         {
-            await expect(parser.next({type: "halt", reason: "gameOver"}))
-                .to.eventually.become({value: {permHalt: true}, done: true});
+            pctx = init();
+            await ph.handleEnd({type: "halt", reason: "gameOver"},
+                {permHalt: true});
         });
     });
 
@@ -87,8 +101,8 @@ export function testHalt(f: () => Context,
         {
             initSentPromise();
             sendResolver = null;
-            setAgent(async function() {});
-            setSender(async function sender(choice)
+            ictx.agent = async function() {};
+            ictx.sender = async function sender(choice)
             {
                 const result = await new Promise<SenderResult>(res =>
                 {
@@ -98,13 +112,13 @@ export function testHalt(f: () => Context,
                 });
                 sendResolver = null;
                 return result;
-            });
+            };
         });
 
         it("Should handle rejected switch", async function()
         {
             // setup user's team with one benched mon
-            await parser.next(
+            await ph2.handle(
             {
                 type: "initTeam",
                 team:
@@ -134,13 +148,13 @@ export function testHalt(f: () => Context,
                 ]
             });
             // setup game and opponent
-            await parser.next({type: "initOtherTeamSize", size: 1});
-            await parser.next(
+            await ph2.handle({type: "initOtherTeamSize", size: 1});
+            await ph2.handle(
             {
                 type: "switchIn", monRef: "us", species: "magnezone",
                 level: 50, gender: null, hp: 150, hpMax: 150
             });
-            await parser.next(
+            await ph2.handle(
             {
                 // opponent can have magnetpull, which traps steel types
                 type: "switchIn", monRef: "them", species: "magnezone",
@@ -148,7 +162,7 @@ export function testHalt(f: () => Context,
             });
 
             // initially the agent should think we're able to switch
-            setAgent(async function(s, choices)
+            ictx.agent = async function(s, choices)
             {
                 expect(choices).to.have.members(["move 1", "switch 2"]);
 
@@ -157,19 +171,18 @@ export function testHalt(f: () => Context,
                 expect(i).to.be.gte(0);
                 if (i === 0) return;
                 [choices[0], choices[i]] = [choices[i], choices[0]];
-            });
+            };
 
             // driver makes a switch choice
-            const haltPromise =
-                parser.next({type: "halt", reason: "decide"});
+            const haltPromise = ph2.handle({type: "halt", reason: "decide"});
             expect(await sentPromise).to.equal("switch 2");
 
             // after handling the switch rejection, the available choices
             //  should be narrowed down
-            setAgent(async function(s, choices)
+            ictx.agent = async function(s, choices)
             {
                 expect(choices).to.have.members(["move 1"]);
-            });
+            };
 
             // reject the switch due to being trapped
             // should infer the trapping ability after handling the
@@ -192,9 +205,9 @@ export function testHalt(f: () => Context,
 
     describe("getChoice()", function()
     {
-        async function init(moves?: string[], item?: string)
+        async function setup(moves?: string[], item?: string)
         {
-            await parser.next(
+            await ph2.handle(
             {
                 ...initTeamEvent,
                 team:
@@ -206,8 +219,8 @@ export function testHalt(f: () => Context,
                     ...initTeamEvent.team.slice(1)
                 ]
             });
-            await parser.next(initOtherTeamSize);
-            for (const event of switchIns) await parser.next(event);
+            await ph2.handle(initOtherTeamSize);
+            for (const event of switchIns) await ph2.handle(event);
         }
 
         describe("switchOnly = false", function()
@@ -215,15 +228,15 @@ export function testHalt(f: () => Context,
             it("Should have move and switch choices normally",
             async function()
             {
-                await init(["splash", "tackle"]);
+                await setup(["splash", "tackle"]);
                 expect(getChoices(state, false))
                     .to.have.members(["move 1", "move 2", "switch 2"]);
             });
 
             it("Should omit move choice if no pp", async function()
             {
-                await init(["splash", "tackle"]);
-                await parser.next(
+                await setup(["splash", "tackle"]);
+                await ph2.handle(
                 {
                     type: "modifyPP", monRef: "us", move: "splash",
                     amount: "deplete"
@@ -234,8 +247,8 @@ export function testHalt(f: () => Context,
 
             it("Should omit move choice if Taunted", async function()
             {
-                await init(["substitute", "focuspunch", "spore"]);
-                await parser.next(
+                await setup(["substitute", "focuspunch", "spore"]);
+                await ph2.handle(
                 {
                     type: "activateStatusEffect", monRef: "us",
                     effect: "taunt", start: true
@@ -246,8 +259,8 @@ export function testHalt(f: () => Context,
 
             it("Should omit move choice if Disabled", async function()
             {
-                await init(["splash", "tackle"]);
-                await parser.next(
+                await setup(["splash", "tackle"]);
+                await ph2.handle(
                     {type: "disableMove", monRef: "us", move: "splash"});
                 expect(getChoices(state, false))
                     .to.have.members(["move 2", "switch 2"]);
@@ -255,13 +268,13 @@ export function testHalt(f: () => Context,
 
             it("Should omit move choice if known Imprison", async function()
             {
-                await init(["splash", "tackle"]);
-                await parser.next(
+                await setup(["splash", "tackle"]);
+                await ph2.handle(
                 {
                     type: "activateStatusEffect", monRef: "them",
                     effect: "imprison", start: true
                 });
-                await parser.next(
+                await ph2.handle(
                     {type: "revealMove", monRef: "them", move: "splash"});
                 expect(getChoices(state, false))
                     .to.have.members(["move 2", "switch 2"]);
@@ -270,14 +283,14 @@ export function testHalt(f: () => Context,
             it("Should omit all other move choices if Encored",
             async function()
             {
-                await init(["splash", "tackle", "toxic"]);
+                await setup(["splash", "tackle", "toxic"]);
 
                 // set last move to toxic
-                await parser.next(
+                await ph2.handle(
                     {type: "useMove", monRef: "us", move: "toxic"});
-                await parser.next({type: "fail"});
+                await ph2.handle({type: "fail"});
                 // start encore
-                await parser.next(
+                await ph2.handle(
                 {
                     type: "activateStatusEffect", monRef: "us",
                     effect: "encore", start: true
@@ -290,11 +303,11 @@ export function testHalt(f: () => Context,
             async function()
             {
                 // reveal choice item
-                await init(["splash", "tackle", "stoneedge"],
+                await setup(["splash", "tackle", "stoneedge"],
                     "choicespecs");
 
                 // lock choice
-                await parser.next(
+                await ph2.handle(
                     {type: "useMove", monRef: "us", move: "stoneedge"});
                 expect(getChoices(state, false))
                     .to.have.members(["move 3", "switch 2"]);
@@ -304,14 +317,14 @@ export function testHalt(f: () => Context,
                 "unavailable",
             async function()
             {
-                await init(["splash", "tackle"]);
+                await setup(["splash", "tackle"]);
 
-                await parser.next(
+                await ph2.handle(
                 {
                     type: "modifyPP", monRef: "us", move: "splash",
                     amount: "deplete"
                 });
-                await parser.next(
+                await ph2.handle(
                 {
                     type: "modifyPP", monRef: "us", move: "tackle",
                     amount: "deplete"
@@ -323,10 +336,10 @@ export function testHalt(f: () => Context,
             it("Should omit switch choice if switch-in is fainted",
             async function()
             {
-                await init(["splash"]);
+                await setup(["splash"]);
 
-                await parser.next({type: "faint", monRef: "us"});
-                await parser.next(
+                await ph2.handle({type: "faint", monRef: "us"});
+                await ph2.handle(
                     {type: "switchIn", monRef: "us", ...ditto});
                 expect(getChoices(state, false))
                     .to.have.members(["move 1"]);
@@ -336,7 +349,7 @@ export function testHalt(f: () => Context,
             {
                 beforeEach("Initialize", async function()
                 {
-                    await init(["splash"]);
+                    await setup(["splash"]);
                 });
 
                 function testTrapping()
@@ -350,7 +363,7 @@ export function testHalt(f: () => Context,
                     it("Should not omit switch choice if shed shell",
                     async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                         {
                             type: "revealItem", monRef: "us",
                             item: "shedshell", gained: true
@@ -364,7 +377,7 @@ export function testHalt(f: () => Context,
                 {
                     beforeEach("Set trap status", async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                             {type: "trap", target: "us", by: "them"});
                     });
 
@@ -376,7 +389,7 @@ export function testHalt(f: () => Context,
                     beforeEach("Initialize Shadow Tag opponent",
                     async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                         {
                             type: "activateAbility", monRef: "them",
                             ability: "shadowtag"
@@ -389,7 +402,7 @@ export function testHalt(f: () => Context,
                         "Shadow Tag",
                     async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                         {
                             type: "activateAbility", monRef: "us",
                             ability: "shadowtag"
@@ -404,7 +417,7 @@ export function testHalt(f: () => Context,
                     beforeEach("Initialize Magnet Pull opponent",
                     async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                         {
                             type: "activateAbility", monRef: "them",
                             ability: "magnetpull"
@@ -414,7 +427,7 @@ export function testHalt(f: () => Context,
                     beforeEach("Initialize steel type user",
                     async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                         {
                             type: "changeType", monRef: "us",
                             newTypes: ["steel", "???"]
@@ -427,7 +440,7 @@ export function testHalt(f: () => Context,
                         "steel type",
                     async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                         {
                             type: "changeType", monRef: "us",
                             newTypes: ["normal", "???"]
@@ -442,7 +455,7 @@ export function testHalt(f: () => Context,
                     beforeEach("Initialize Arena Trap opponent",
                     async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                         {
                             type: "activateAbility", monRef: "them",
                             ability: "arenatrap"
@@ -455,7 +468,7 @@ export function testHalt(f: () => Context,
                         "grounded ",
                     async function()
                     {
-                        await parser.next(
+                        await ph2.handle(
                         {
                             type: "changeType", monRef: "us",
                             newTypes: ["flying", "???"]
@@ -471,7 +484,7 @@ export function testHalt(f: () => Context,
         {
             it("Should omit move choices", async function()
             {
-                await init(["splash"]);
+                await setup(["splash"]);
                 expect(getChoices(state, /*switchOnly*/true))
                     .to.have.members(["switch 2"]);
             });

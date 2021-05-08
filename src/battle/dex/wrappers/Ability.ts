@@ -1,12 +1,11 @@
-import * as events from "../../parser/BattleEvent";
-import { ParserState, SubParser } from "../../parser/BattleParser";
+import { SubParserConfig } from "../../parser/BattleParser";
 import { AbilityResult } from "../../parser/gen4/activateAbility";
 import { dispatch, handlers as base } from "../../parser/gen4/base";
 import { SubReason } from "../../parser/gen4/EventInference";
 import { chanceReason, diffMoveType, moveIsType, opponentHasItem } from
     "../../parser/gen4/helpers";
 import * as parsers from "../../parser/gen4/parsers";
-import { hasStatus } from "../../parser/helpers";
+import { consume, hasStatus, tryPeek, verify } from "../../parser/helpers";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { otherSide, Side } from "../../state/Side";
 import * as dex from "../dex";
@@ -24,29 +23,33 @@ export class Ability
 
     //#region onX() effect parsers for main activateAbility parser
 
+    // note: each of these parsers assumes that the initial activateAbility
+    //  event hasn't been consumed/verified yet
+
     //#region on-switchOut parser
 
     /**
      * Activates an ability on-`switchOut`.
      * @param holderRef Ability holder reference.
      */
-    public async* onSwitchOut(pstate: ParserState, holderRef: Side):
-        SubParser<AbilityResult>
+    public async onSwitchOut(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
         if (this.data.on?.switchOut)
         {
             // cure major status
             if (this.data.on.switchOut.cure)
             {
-                const next = yield;
-                if (next.type !== "activateStatusEffect" || next.start ||
+                await this.verifyInitialEvent(cfg, holderRef);
+                const next = await tryPeek(cfg);
+                if (next?.type !== "activateStatusEffect" || next.start ||
                     next.monRef !== holderRef ||
                     !dexutil.isMajorStatus(next.effect))
                 {
                     // TODO: better error messages
                     throw new Error("On-switchOut cure effect failed");
                 }
-                return yield* base.activateStatusEffect(pstate, next);
+                return await base.activateStatusEffect(cfg);
             }
         }
         throw new Error("On-switchOut effect shouldn't activate for ability " +
@@ -61,30 +64,31 @@ export class Ability
      * Activates an ability on-`start`.
      * @param holderRef Ability holder reference.
      */
-    public async* onStart(pstate: ParserState, holderRef: Side):
-        SubParser<AbilityResult>
+    public async onStart(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
         if (this.data.on?.start)
         {
             // cure status immunity
             if (this.data.on.start.cure)
             {
-                return yield* this.cure(pstate, "start", holderRef);
+                await this.verifyInitialEvent(cfg, holderRef);
+                return await this.cure(cfg, "start", holderRef);
             }
             // trace
             if (this.data.on.start.copyFoeAbility)
             {
-                return yield* this.copyFoeAbility(pstate, holderRef);
+                return await this.copyFoeAbility(cfg, holderRef);
             }
             // frisk
             if (this.data.on.start.revealItem)
             {
-                return yield* this.revealItem(pstate, holderRef);
+                return await this.revealItem(cfg, holderRef);
             }
             // forewarn
             if (this.data.on.start.warnStrongestMove)
             {
-                return yield* this.warnStrongestMove(pstate, holderRef);
+                return await this.warnStrongestMove(cfg, holderRef);
             }
             // if nothing is set, then the ability just reveals itself
             // TODO: pressure/moldbreaker
@@ -102,98 +106,103 @@ export class Ability
      * @param on Circumstance under which the ability is activating.
      * @param holderRef Ability holder reference.
      */
-    private async* cure(pstate: ParserState, on: dexutil.AbilityOn,
-        holderRef: Side): SubParser<AbilityResult>
+    private async cure(cfg: SubParserConfig, on: dexutil.AbilityOn,
+        holderRef: Side): Promise<AbilityResult>
     {
-        const next = yield;
-        if (next.type !== "activateStatusEffect" || next.start ||
+        const next = await tryPeek(cfg);
+        if (next?.type !== "activateStatusEffect" || next.start ||
             next.monRef !== holderRef ||
             !this.data.statusImmunity?.[next.effect])
         {
             // TODO: better error messages
             throw new Error(`On-${on} cure effect failed`);
         }
-        return yield* base.activateStatusEffect(pstate, next);
+        return await base.activateStatusEffect(cfg);
     }
 
     /**
      * Handles events due to a copeFoeAbility ability (e.g. Trace).
      * @param holderRef Ability holder reference.
      */
-    private async* copyFoeAbility(pstate: ParserState, holderRef: Side):
-        SubParser<AbilityResult>
+    private async copyFoeAbility(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
+        await this.verifyInitialEvent(cfg, holderRef);
         // handle trace events
         // activateAbility holder <ability> (copied ability)
-        const next = yield;
-        if (next.type !== "activateAbility" || next.monRef !== holderRef)
+        const next = await tryPeek(cfg);
+        if (next?.type !== "activateAbility" || next.monRef !== holderRef)
         {
             throw new Error("On-start copyFoeAbility effect failed");
         }
-        const holder = pstate.state.teams[holderRef].active;
+        const holder = cfg.state.teams[holderRef].active;
         holder.volatile.overrideTraits =
             holder.baseTraits.divergeAbility(next.ability);
+        await consume(cfg);
 
         // TODO: these should be revealAbility events and delegated to base
         // activateAbility target <ability> (describe trace target)
-        const next2 = yield;
-        if (next2.type !== "activateAbility" || next2.monRef === holderRef ||
+        const next2 = await tryPeek(cfg);
+        if (next2?.type !== "activateAbility" || next2.monRef === holderRef ||
             next2.ability !== next.ability)
         {
             throw new Error("On-start copyFoeAbility effect failed");
         }
         const targetRef = next2.monRef;
-        const target = pstate.state.teams[targetRef].active;
+        const target = cfg.state.teams[targetRef].active;
         target.setAbility(next2.ability);
+        await consume(cfg);
 
         // possible on-start activation for holder's new ability
         // if no activation, don't need to consume anymore events
         // TODO: call onStart?
-        const next3 = yield;
-        if (next3.type !== "activateAbility") return {event: next3};
-        if (next3.monRef !== holderRef) return {event: next3};
-        if (next3.ability !== next.ability) return {event: next3};
+        const next3 = await tryPeek(cfg);
+        if (next3?.type !== "activateAbility") return {};
+        if (next3.monRef !== holderRef) return {};
+        if (next3.ability !== next.ability) return {};
         const traced = dex.getAbility(next3.ability);
-        if (!traced?.data.on?.start) return {event: next3};
-        return yield* base.activateAbility(pstate, next3, "start");
+        if (!traced?.data.on?.start) return {};
+        return await base.activateAbility(cfg, "start");
     }
 
     /**
      * Handles events due to a revealItem ability (e.g. Frisk).
      * @param holderRef Ability holder reference.
      */
-    private async* revealItem(pstate: ParserState, holderRef: Side):
-        SubParser<AbilityResult>
+    private async revealItem(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
+        await this.verifyInitialEvent(cfg, holderRef);
         // handle frisk events
         // revealItem target <item>
-        const next = yield;
-        if (next.type !== "revealItem" || next.monRef === holderRef ||
+        const next = await tryPeek(cfg);
+        if (next?.type !== "revealItem" || next.monRef === holderRef ||
             next.gained)
         {
             throw new Error("On-start revealItem effect failed");
         }
-        return yield* base.revealItem(pstate, next);
+        return await base.revealItem(cfg);
     }
 
     /**
      * Handles events due to a warnStrongestMove ability (e.g. Forewarn).
      * @param holderRef Ability holder reference.
      */
-    private async* warnStrongestMove(pstate: ParserState, holderRef: Side):
-        SubParser<AbilityResult>
+    private async warnStrongestMove(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
+        await this.verifyInitialEvent(cfg, holderRef);
         // handle forewarn events
         // revealMove target <move>
-        const next = yield;
-        if (next.type !== "revealMove" || next.monRef === holderRef)
+        const next = await tryPeek(cfg);
+        if (next?.type !== "revealMove" || next.monRef === holderRef)
         {
             throw new Error("On-start warnStrongestMove effect failed");
         }
-        const subResult = yield* base.revealMove(pstate, next);
+        const subResult = await base.revealMove(cfg);
 
         // rule out moves stronger than this one
-        const {moveset} = pstate.state.teams[next.monRef].active;
+        const {moveset} = cfg.state.teams[next.monRef].active;
         const bp = Ability.getForewarnPower(next.move);
         const strongerMoves = [...moveset.constraint]
             .filter(m => Ability.getForewarnPower(m) > bp);
@@ -232,8 +241,8 @@ export class Ability
      * @param holderRef Ability holder reference.
      * @param hitBy Move+user that the holder was hit by, if applicable.
      */
-    public onBlock(pstate: ParserState, holderRef: Side,
-        hitBy?: dexutil.MoveAndUserRef): SubParser<AbilityResult>
+    public async onBlock(cfg: SubParserConfig, holderRef: Side,
+        hitBy?: dexutil.MoveAndUserRef): Promise<AbilityResult>
     {
         // TODO: assert non-ignoreTargetAbility (moldbreaker) after handling
         if (this.data.on?.block)
@@ -241,7 +250,7 @@ export class Ability
             // block status
             if (this.data.on.block.status)
             {
-                return this.blockStatus(pstate, holderRef);
+                return await this.blockStatus(cfg, holderRef);
             }
             // block move type
             if (this.data.on.block.move)
@@ -251,11 +260,15 @@ export class Ability
                     throw new Error("On-block move effect failed: " +
                         "Attacking move not specified.");
                 }
-                const hitByUser = pstate.state.teams[hitBy.userRef].active;
-                return this.blockMove(pstate, holderRef, hitBy.move, hitByUser);
+                const hitByUser = cfg.state.teams[hitBy.userRef].active;
+                return await this.blockMove(cfg, holderRef, hitBy.move,
+                    hitByUser);
             }
             // block effect
-            if (this.data.on.block.effect) return this.blockEffect(pstate);
+            if (this.data.on.block.effect)
+            {
+                return await this.blockEffect(cfg, holderRef);
+            }
         }
         throw new Error("On-block effect shouldn't activate for ability " +
             `'${this.data.name}'`);
@@ -267,19 +280,21 @@ export class Ability
      * Handles events due to a status-blocking ability (e.g. Immunity).
      * @param holderRef Ability holder reference.
      */
-    private async* blockStatus(pstate: ParserState, holderRef: Side):
-        SubParser<AbilityResult>
+    private async blockStatus(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
         const statuses = this.data.statusImmunity;
         if (statuses)
         {
             // should have a fail or immune event
-            const next = yield;
-            if (next.type === "fail" ||
-                (next.type === "immune" && next.monRef === holderRef))
+            await this.verifyInitialEvent(cfg, holderRef);
+            const next = await tryPeek(cfg);
+            if (next &&
+                (next.type === "fail" ||
+                    (next.type === "immune" && next.monRef === holderRef)))
             {
                 return {
-                    ...yield* dispatch(pstate, next),
+                    ...await dispatch(cfg, next),
                     // silent blocked statuses are handled by a different parser
                     blockStatus: Object.fromEntries(Object.entries(statuses)
                             .filter(([, v]) => v === true))
@@ -295,8 +310,8 @@ export class Ability
      * @param hitByMove Move the holder will be hit by.
      * @param hitByUser User of the `hitByMove`.
      */
-    private async* blockMove(pstate: ParserState, holderRef: Side,
-        hitByMove: dex.Move, hitByUser: Pokemon): SubParser<AbilityResult>
+    private async blockMove(cfg: SubParserConfig, holderRef: Side,
+        hitByMove: dex.Move, hitByUser: Pokemon): Promise<AbilityResult>
     {
         const blockData = this.data.on?.block?.move;
         // istanbul ignore next: should never happen
@@ -308,44 +323,41 @@ export class Ability
             hitByMove.assertType(blockData.type, hitByUser);
         }
 
+        await this.verifyInitialEvent(cfg, holderRef);
+
         let silent = true;
-        let lastEvent: events.Any | undefined;
         // self-boost effect
         if (blockData.boost)
         {
-            const boostResult = yield* parsers.boost(pstate, holderRef,
-                blockData.boost, /*set*/ false, /*silent*/ true, lastEvent);
+            const boostResult = await parsers.boost(cfg, holderRef,
+                blockData.boost, /*set*/ false, /*silent*/ true);
             if (Object.keys(boostResult.remaining).length > 0)
             {
                 // TODO: specify errors
                 throw new Error("On-block move boost effect failed");
             }
-            // TODO: permHalt check?
-            lastEvent = boostResult.event;
             silent &&= !!boostResult.allSilent;
         }
         // self-damage/heal effect
         if (blockData.percentDamage)
         {
-            const damageResult = yield* parsers.percentDamage(pstate, holderRef,
-                blockData.percentDamage, lastEvent);
+            const damageResult = await parsers.percentDamage(cfg, holderRef,
+                blockData.percentDamage);
             if (!damageResult.success)
             {
                 throw new Error("On-block move percentDamage effect failed");
             }
-            lastEvent = damageResult.event;
             silent &&= damageResult.success === "silent";
         }
         // self-status effect
         if (blockData.status)
         {
-            const statusResult = yield* parsers.status(pstate, holderRef,
-                [blockData.status], lastEvent);
+            const statusResult = await parsers.status(cfg, holderRef,
+                [blockData.status]);
             if (!statusResult.success)
             {
                 throw new Error("On-block move status effect failed");
             }
-            lastEvent = statusResult.event;
             silent &&= statusResult.success === true;
         }
 
@@ -353,35 +365,36 @@ export class Ability
         //  least it can do is give an immune event
         if (silent)
         {
-            lastEvent ??= yield;
-            if (lastEvent.type !== "immune" || lastEvent.monRef !== holderRef)
+            const next = await tryPeek(cfg);
+            if (next?.type !== "immune" || next.monRef !== holderRef)
             {
                 throw new Error("On-block move effect failed");
             }
-            return {...yield* base.immune(pstate, lastEvent), immune: true};
+            return {...await base.immune(cfg), immune: true};
         }
 
-        return {...lastEvent && {event: lastEvent}, immune: true};
+        return {immune: true};
     }
 
     /**
      * Handles events due to a certain effect type being blocked (e.g. Damp vs
      * Explosion)
      */
-    private async* blockEffect(pstate: ParserState):
-        SubParser<AbilityResult>
+    private async blockEffect(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
         const explosive = this.data.on?.block?.effect?.explosive;
 
         // should see a fail event
-        const next = yield;
-        if (next.type !== "fail")
+        await this.verifyInitialEvent(cfg, holderRef);
+        const next = await tryPeek(cfg);
+        if (next?.type !== "fail")
         {
             throw new Error(`On-block effect${explosive ? " explosive" : ""} ` +
                 "failed");
         }
 
-        return {...yield* base.fail(pstate, next), failed: true};
+        return {...await base.fail(cfg), failed: true};
     }
 
     //#endregion
@@ -389,32 +402,38 @@ export class Ability
     //#region on-tryUnboost parser
 
     /** Activates an ability on-`tryUnboost`. */
-    public onTryUnboost(pstate: ParserState): SubParser<AbilityResult>
+    public async onTryUnboost(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
         // TODO: assert non-ignoreTargetAbility (moldbreaker) after handling if
         //  this is due to a move effect
         if (this.data.on?.tryUnboost)
         {
-            if (this.data.on.tryUnboost.block) return this.blockUnboost(pstate);
+            if (this.data.on.tryUnboost.block)
+            {
+                return await this.blockUnboost(cfg, holderRef);
+            }
         }
         throw new Error("On-tryUnboost effect shouldn't activate for ability " +
             `'${this.data.name}'`);
     }
 
     /** Handles events due to an unboost-blocking ability (e.g. Clear Body). */
-    private async* blockUnboost(pstate: ParserState): SubParser<AbilityResult>
+    private async blockUnboost(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
         const boosts = this.data.on?.tryUnboost?.block;
         // istanbul ignore next: should never happen
         if (!boosts) throw new Error("On-tryUnboost block effect failed");
 
         // should get a fail event
-        const next = yield;
-        if (next.type !== "fail")
+        await this.verifyInitialEvent(cfg, holderRef);
+        const next = await tryPeek(cfg);
+        if (next?.type !== "fail")
         {
             throw new Error("On-tryUnboost block effect failed");
         }
-        return {...yield* base.fail(pstate, next), blockUnboost: boosts};
+        return {...await base.fail(cfg), blockUnboost: boosts};
     }
 
     //#endregion
@@ -425,15 +444,16 @@ export class Ability
      * Activates an ability on-`status`.
      * @param holderRef Ability holder reference.
      */
-    public onStatus(pstate: ParserState, holderRef: Side):
-        SubParser<AbilityResult>
+    public async onStatus(cfg: SubParserConfig, holderRef: Side):
+        Promise<AbilityResult>
     {
         if (this.data.on?.status)
         {
             // cure status immunity
             if (this.data.on.status.cure)
             {
-                return this.cure(pstate, "status", holderRef);
+                await this.verifyInitialEvent(cfg, holderRef);
+                return await this.cure(cfg, "status", holderRef);
             }
         }
         throw new Error("On-status effect shouldn't activate for ability " +
@@ -450,9 +470,9 @@ export class Ability
      * @param holderRef Ability holder reference.
      * @param hitBy Move+user that the holder was hit by, if applicable.
      */
-    public onMoveDamage(pstate: ParserState, on: dexutil.AbilityOn,
+    public async onMoveDamage(cfg: SubParserConfig, on: dexutil.AbilityOn,
         holderRef: Side, hitBy?: dexutil.MoveAndUserRef):
-        SubParser<AbilityResult>
+        Promise<AbilityResult>
     {
         if (!hitBy)
         {
@@ -464,13 +484,15 @@ export class Ability
             case "moveContactKO":
                 if (this.data.on?.moveContactKO)
                 {
-                    return this.moveContactKO(pstate, hitBy.userRef);
+                    return await this.moveContactKO(cfg, holderRef,
+                        hitBy.userRef);
                 }
                 // fallthrough: `on` may be overqualified
             case "moveContact":
                 if (this.data.on?.moveContact)
                 {
-                    return this.moveContact(pstate, hitBy.userRef);
+                    return await this.moveContact(cfg, holderRef,
+                        hitBy.userRef);
                 }
                 // fallthrough: `on` may be overqualified
             case "moveDamage":
@@ -481,7 +503,8 @@ export class Ability
                         // this effect target's holder so can't activate if ko'd
                         on !== "moveContactKO")
                     {
-                        return this.changeToMoveType(pstate, holderRef, hitBy);
+                        return await this.changeToMoveType(cfg, holderRef,
+                            hitBy);
                     }
                 }
                 // fallthrough: no viable activation effects
@@ -496,19 +519,20 @@ export class Ability
      * @param hitByUserRef Pokemon reference to the user of the move by which
      * the ability holder was hit.
      */
-    private async* moveContactKO(pstate: ParserState, hitByUserRef: Side):
-        SubParser<AbilityResult>
+    private async moveContactKO(cfg: SubParserConfig, holderRef: Side,
+        hitByUserRef: Side): Promise<AbilityResult>
     {
         const effectData = this.data.on?.moveContactKO;
         // istanbul ignore next: should never happen
         if (!effectData) throw new Error("On-moveContactKO effect failed");
 
+        await this.verifyInitialEvent(cfg, holderRef);
+
         let silent = true;
-        let lastEvent: events.Any | undefined;
         if (effectData.percentDamage)
         {
-            const damageResult = yield* parsers.percentDamage(pstate,
-                hitByUserRef, effectData.percentDamage, lastEvent);
+            const damageResult = await parsers.percentDamage(cfg,
+                hitByUserRef, effectData.percentDamage);
             if (!damageResult.success)
             {
                 throw new Error("On-moveContactKO " +
@@ -516,10 +540,9 @@ export class Ability
                     "percentDamage effect failed");
             }
             // TODO: permHalt check?
-            lastEvent = damageResult.event;
             silent &&= damageResult.success === "silent";
             // update items
-            lastEvent = (yield* parsers.update(pstate, lastEvent)).event;
+            await parsers.update(cfg);
         }
 
         // if the ability effects can't cause an explicit game event, then it
@@ -529,7 +552,7 @@ export class Ability
         if (effectData.explosive)
         {
             // assert non-explosive-blocking ability (damp)
-            const hitByUser = pstate.state.teams[hitByUserRef].active;
+            const hitByUser = cfg.state.teams[hitByUserRef].active;
             if (!hitByUser.volatile.suppressAbility)
             {
                 hitByUser.traits.ability.remove(
@@ -537,7 +560,7 @@ export class Ability
             }
         }
 
-        return {...lastEvent && {event: lastEvent}};
+        return {};
     }
 
     /**
@@ -545,36 +568,35 @@ export class Ability
      * @param hitByUserRef Pokemon reference to the user of the move by which
      * the ability holder was hit.
      */
-    private async* moveContact(pstate: ParserState, hitByUserRef: Side):
-        SubParser<AbilityResult>
+    private async moveContact(cfg: SubParserConfig, holderRef: Side,
+        hitByUserRef: Side): Promise<AbilityResult>
     {
         const effectData = this.data.on?.moveContact;
         // istanbul ignore next: should never happen
         if (!effectData) throw new Error("On-moveContact effect failed");
 
+        await this.verifyInitialEvent(cfg, holderRef);
+
         let silent = true;
-        let lastEvent: events.Any | undefined;
         if (effectData.percentDamage)
         {
-            const damageResult = yield* parsers.percentDamage(pstate,
-                hitByUserRef, effectData.percentDamage, lastEvent);
+            const damageResult = await parsers.percentDamage(cfg,
+                hitByUserRef, effectData.percentDamage);
             if (!damageResult.success)
             {
                 throw new Error("On-moveContact percentDamage effect " +
                     "failed");
             }
-            lastEvent = damageResult.event;
             silent &&= damageResult.success === "silent";
         }
         if (effectData.status)
         {
-            const statusResult = yield* parsers.status(pstate, hitByUserRef,
-                effectData.status, lastEvent);
+            const statusResult = await parsers.status(cfg, hitByUserRef,
+                effectData.status);
             if (!statusResult.success)
             {
                 throw new Error("On-moveContact status effect failed");
             }
-            lastEvent = statusResult.event;
             silent &&= statusResult.success === true;
         }
 
@@ -582,18 +604,19 @@ export class Ability
         //  shouldn't have activated in the first place
         if (silent) throw new Error("On-moveContact effect failed");
 
-        return yield* parsers.update(pstate, lastEvent);
+        return await parsers.update(cfg);
     }
 
     /**
      * Handles events due to a changeMoveType ability (e.g. Color Change).
      * Always targets ability holder.
      */
-    private async* changeToMoveType(pstate: ParserState, holderRef: Side,
-        hitBy: dexutil.MoveAndUserRef): SubParser<AbilityResult>
+    private async changeToMoveType(cfg: SubParserConfig, holderRef: Side,
+        hitBy: dexutil.MoveAndUserRef): Promise<AbilityResult>
     {
-        const next = yield;
-        if (next.type !== "changeType" || next.monRef !== holderRef)
+        await this.verifyInitialEvent(cfg, holderRef);
+        const next = await tryPeek(cfg);
+        if (next?.type !== "changeType" || next.monRef !== holderRef)
         {
             throw new Error("On-moveDamage changeToMoveType effect failed");
         }
@@ -604,10 +627,10 @@ export class Ability
                 `(${next.newTypes.join(", ")})`);
         }
 
-        const user = pstate.state.teams[hitBy.userRef].active;
+        const user = cfg.state.teams[hitBy.userRef].active;
         hitBy.move.assertType(next.newTypes[0], user);
 
-        return yield* base.changeType(pstate, next);
+        return await base.changeType(cfg);
     }
 
     //#endregion
@@ -619,8 +642,8 @@ export class Ability
      * @param hitByUserRef Pokemon reference to the user of the draining move.
      * Throws an error if not specified
      */
-    public onMoveDrain(pstate: ParserState, hitByUserRef?: Side):
-        SubParser<AbilityResult>
+    public async onMoveDrain(cfg: SubParserConfig, holderRef: Side,
+        hitByUserRef?: Side): Promise<AbilityResult>
     {
         if (this.data.on?.moveDrain)
         {
@@ -632,7 +655,7 @@ export class Ability
                     throw new Error("On-moveDrain invert effect failed: " +
                         "Attacking move user not specified.");
                 }
-                return this.invertDrain(pstate, hitByUserRef);
+                return await this.invertDrain(cfg, holderRef, hitByUserRef);
             }
         }
         throw new Error("On-moveDrain effect shouldn't activate for ability " +
@@ -645,21 +668,47 @@ export class Ability
      * @param holderRef Ability holder reference.
      * @param hitByUserRef Pokemon reference to the user of the draining move.
      */
-    private async* invertDrain(pstate: ParserState, hitByUserRef: Side):
-        SubParser<AbilityResult>
+    private async invertDrain(cfg: SubParserConfig, holderRef: Side,
+        hitByUserRef: Side): Promise<AbilityResult>
     {
+        await this.verifyInitialEvent(cfg, holderRef);
         // expect the takeDamage event
-        const damageResult = yield* parsers.damage(pstate, hitByUserRef,
+        const damageResult = await parsers.damage(cfg, hitByUserRef,
             /*from*/ null, -1);
         if (!damageResult.success)
         {
             throw new Error("On-moveDrain invert effect failed");
         }
-        let lastEvent = damageResult.event;
-        lastEvent = (yield* parsers.update(pstate, lastEvent)).event;
+        await parsers.update(cfg);
 
         // TODO: include damage delta
-        return {...lastEvent && {event: lastEvent}, invertDrain: true};
+        return {invertDrain: true};
+    }
+
+    //#endregion
+
+    //#region on-X parser helpers
+
+    /**
+     * Verifies and consumes the initial activateAbility event to verify that
+     * it's relevant for this Ability obj.
+     * @param holderRef Ability holder reference.
+     */
+    private async verifyInitialEvent(cfg: SubParserConfig, holderRef: Side):
+        Promise<void>
+    {
+        const event = await verify(cfg, "activateAbility");
+        if (event.monRef !== holderRef)
+        {
+            throw new Error(`Mismatched monRef: expected '${holderRef}' but ` +
+                `got '${event.monRef}'`);
+        }
+        if (event.ability !== this.data.name)
+        {
+            throw new Error("Mismatched ability: expected " +
+                `'${this.data.name}' but got '${event.ability}'`);
+        }
+        await consume(cfg);
     }
 
     //#endregion

@@ -1,49 +1,52 @@
 import { Choice } from "../../agent/Choice";
 import { ReadonlyBattleState } from "../../state/BattleState";
-import * as events from "../BattleEvent";
-import { ParserState, SenderResult, SubParser } from "../BattleParser";
+import { SenderResult, SubParserConfig, SubParserResult } from
+    "../BattleParser";
+import { consume, verify } from "../helpers";
 
 /**
- * Handles a halt event. If the event requests a decision from the ParserState's
- * BattleAgent, this function will handle that logic.
+ * Handles a halt event. If the event requests a decision from the BattleAgent,
+ * this function will handle that logic.
  * @returns True if this is a game-over halt, falsy otherwise.
  */
-export async function* halt(pstate: ParserState, initialEvent: events.Halt):
-    SubParser
+export async function halt(cfg: SubParserConfig): Promise<SubParserResult>
 {
+    const initialEvent = await verify(cfg, "halt");
+    let permHalt: boolean | undefined;
     switch (initialEvent.reason)
     {
-        case "gameOver": return {permHalt: true}; // stop the parser
-        case "switch": await decide(pstate, /*switchOnly*/true); break;
-        case "decide": await decide(pstate, /*switchOnly*/false); break;
+        case "gameOver": permHalt = true; break; // stop the parser
+        case "switch": await decide(cfg, /*switchOnly*/ true); break;
+        case "decide": await decide(cfg, /*switchOnly*/ false); break;
     }
-    return {};
+    await consume(cfg);
+    return {...permHalt && {permHalt: true}};
 }
 
 /**
  * Asks the BattleAgent for a decision.
- * @param pstate Parser state.
+ * @param cfg Parser state.
  * @param switchOnly Whether we're being forced to switch out.
  */
-async function decide(pstate: ParserState, switchOnly: boolean): Promise<void>
+async function decide(cfg: SubParserConfig, switchOnly: boolean): Promise<void>
 {
     // go over what we can and can't do
-    let choices = getChoices(pstate.state, switchOnly);
-    pstate.logger.debug(`Choices: [${choices.join(", ")}]`);
+    let choices = getChoices(cfg.state, switchOnly);
+    cfg.logger.debug(`Choices: [${choices.join(", ")}]`);
     if (choices.length <= 0) throw new Error("Empty choices array on halt");
 
     // make a decision
-    const agentLogger = pstate.logger.addPrefix("BattleAgent: ");
-    await pstate.agent(pstate.state, choices, agentLogger);
-    pstate.logger.debug(`Sorted choices: [${choices.join(", ")}]`);
+    const agentLogger = cfg.logger.addPrefix("BattleAgent: ");
+    await cfg.agent(cfg.state, choices, agentLogger);
+    cfg.logger.debug(`Sorted choices: [${choices.join(", ")}]`);
 
     // keep retrying until valid
     let result: SenderResult;
-    while (result = await pstate.sender(choices[0]))
+    while (result = await cfg.sender(choices[0]))
     {
         // remove invalid choice
         const lastChoice = choices.shift()!;
-        pstate.logger.debug(`Choice ${lastChoice} was rejected as '${result}'`);
+        cfg.logger.debug(`Choice ${lastChoice} was rejected as '${result}'`);
 
         let newInfo = false;
         if (result === "disabled")
@@ -72,16 +75,16 @@ async function decide(pstate: ParserState, switchOnly: boolean): Promise<void>
             choices = choices.filter(c => !c.startsWith("switch"));
 
             // try to infer a trapping ability
-            rejectSwitchTrapped(pstate);
+            rejectSwitchTrapped(cfg);
             newInfo = true;
         }
         else
         {
-            pstate.logger.error(`Choice '${lastChoice}' rejected without a ` +
+            cfg.logger.error(`Choice '${lastChoice}' rejected without a ` +
                 "reason, BattleParser may be incomplete");
         }
 
-        pstate.logger.debug(`Revised choices: [${choices.join(", ")}]`);
+        cfg.logger.debug(`Revised choices: [${choices.join(", ")}]`);
         if (choices.length <= 0)
         {
             throw new Error("Empty choices array on reject");
@@ -90,11 +93,11 @@ async function decide(pstate: ParserState, switchOnly: boolean): Promise<void>
         if (newInfo)
         {
             // re-sort choices based on new info
-            await pstate.agent(pstate.state, choices, agentLogger);
-            pstate.logger.debug(`Sorted choices: [${choices.join(", ")}]`);
+            await cfg.agent(cfg.state, choices, agentLogger);
+            cfg.logger.debug(`Sorted choices: [${choices.join(", ")}]`);
         }
     }
-    pstate.logger.debug(`Choice ${choices[0]} was accepted`);
+    cfg.logger.debug(`Choice ${choices[0]} was accepted`);
 }
 
 /** Gets the available choices for the current decision. */
@@ -212,7 +215,7 @@ export function getChoices(state: ReadonlyBattleState, switchOnly: boolean):
 }
 
 /** Makes an inference if a switch choice was rejected. */
-function rejectSwitchTrapped(pstate: ParserState): void
+function rejectSwitchTrapped(cfg: SubParserConfig): void
 {
-    pstate.state.teams.us.active.trapped(pstate.state.teams.them.active);
+    cfg.state.teams.us.active.trapped(cfg.state.teams.them.active);
 }

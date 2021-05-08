@@ -109,6 +109,7 @@ export async function playGames(
 
             if (result.err)
             {
+                // TODO: specify opponent and game #
                 progressLog.error("Game threw an error: " +
                     (result.err.stack ?? result.err));
             }
