@@ -289,7 +289,7 @@ const typeToMoves: {[T in dexutil.Type]: string[]} =
 uid = 0;
 for (const move of
     Object.keys(dex.data.Moves)
-        .map(n => dex.getMove(n))
+        .map(n => dex.moves.get(n))
         .filter(isGen4Move)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
@@ -599,7 +599,7 @@ function composeMovepool(species: Species, restrict = false): Set<string>
 {
     let result = new Set<string>();
 
-    const learnset = dex.getLearnsetData(species.id).learnset;
+    const learnset = dex.species.getLearnsetData(species.id).learnset;
     if (learnset)
     {
         for (const moveName in learnset)
@@ -627,7 +627,7 @@ function composeMovepool(species: Species, restrict = false): Set<string>
         result = new Set(
         [
             ...result,
-            ...composeMovepool(dex.getSpecies(species.baseSpecies),
+            ...composeMovepool(dex.species.get(species.baseSpecies),
                 /*restrict*/true)
         ]);
     }
@@ -636,7 +636,7 @@ function composeMovepool(species: Species, restrict = false): Set<string>
         result = new Set(
         [
             ...result,
-            ...composeMovepool(dex.getSpecies(species.prevo),
+            ...composeMovepool(dex.species.get(species.prevo),
                 /*restrict*/true)
         ]);
     }
@@ -650,7 +650,7 @@ const abilityNames = new Set<string>();
 uid = 0;
 for (const mon of
     Object.keys(dex.data.Pokedex)
-        .map(n => dex.getSpecies(n))
+        .map(n => dex.species.get(n))
         .filter(m => m.num >= 1 && m.num <= 493 && isGen4(m.id) &&
             !m.isNonstandard)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
@@ -858,7 +858,7 @@ const abilities: (readonly [string, dexutil.AbilityData])[] = [];
 uid = 0;
 for (const ability of
     [...abilityNames]
-        .map(n => dex.getAbility(n))
+        .map(n => dex.abilities.get(n))
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
     abilities.push(
@@ -1032,7 +1032,7 @@ const berries: (readonly [string, dexutil.NaturalGiftData])[] = [];
 uid = 1;
 for (const item of
     Object.keys(dex.data.Items)
-        .map(n => dex.getItem(n))
+        .map(n => dex.items.get(n))
         // only gen4 and under items allowed
         .filter(i => i.gen <= 4 && !i.isNonstandard)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
