@@ -46,8 +46,13 @@ const request: psmsg.Request =
 /** Base BattleInitMessage for testing. */
 const battleInit: psmsg.BattleInit =
 {
-    type: "battleInit", id: "p1", username,
-    teamSizes: {p1: 1, p2: 2}, gameType: "singles", gen: 4,
+    type: "battleInit", id: "p1", username, teamSizes: {p1: 1, p2: 2}, gen: 4,
+    tier: "[Gen 4] Random Battle", rated: true,
+    rules:
+    [
+        "Sleep Clause Mod: Limit one foe put to sleep",
+        "HP Percentage Mod: HP is shown in percentages"
+    ],
     events: []
 };
 

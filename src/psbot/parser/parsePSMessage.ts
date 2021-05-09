@@ -249,8 +249,10 @@ function messageBattleInit(input: Input, info: Info):
     let id: PlayerID | undefined;
     let username: string | undefined;
     let teamSizes: {[P in PlayerID]: number} | undefined;
-    let gameType: string | undefined;
     let gen: number | undefined;
+    let tier: string | undefined;
+    let rated: boolean | undefined;
+    const rules: string[] = [];
     const events: psevent.Any[] = [];
 
     while (!input.done)
@@ -262,7 +264,6 @@ function messageBattleInit(input: Input, info: Info):
             {
                 const r = messageBattleInitPlayer(input, info);
                 ({id, username} = r.result);
-
                 input = r.remaining;
                 break;
             }
@@ -274,27 +275,26 @@ function messageBattleInit(input: Input, info: Info):
                     teamSizes = {} as psmsg.BattleInit["teamSizes"];
                 }
                 teamSizes[r.result.id] = r.result.size;
-
-                input = r.remaining;
-                break;
-            }
-            case "gametype":
-            {
-                const r = messageBattleInitGameType(input, info);
-                gameType = r.result;
-
                 input = r.remaining;
                 break;
             }
             case "gen":
-            {
-                const r = messageBattleInitGen(input, info);
-                gen = r.result;
-
-                input = r.remaining;
+                ({result: gen, remaining: input} =
+                    messageBattleInitGen(input, info));
                 break;
-            }
-                // TODO: team preview
+            case "tier":
+                ({result: tier, remaining: input} =
+                    messageBattleInitTier(input, info));
+                break;
+            case "rated":
+                ({result: rated, remaining: input} =
+                    messageBattleInitRated(input, info));
+                break;
+            case "rule":
+                ({result: rules[rules.length], remaining: input} =
+                    messageBattleInitRule(input, info));
+                break;
+            // TODO: team preview
             default:
                 if (psevent.isType(prefix))
                 {
@@ -311,18 +311,20 @@ function messageBattleInit(input: Input, info: Info):
     }
 
     // ignore invalid messages
-    if (!id || !username || !teamSizes ||
-        (!teamSizes.p1 || !teamSizes.p2) || !gameType || !gen)
+    if (!id || !username || !teamSizes || !teamSizes.p1 || !teamSizes.p2 ||
+        gen === undefined)
     {
-        // a single initial |player| message was probably sent, since that
-        //  usually happens before the full one
+        // a single initial |player| message was probably sent to identify the
+        //  opponent (before the full init message), which we don't really need
+        // TODO: support this and/or the separate gametype message?
         info.logger.debug("Ignoring invalid battleinit message");
-        return {result: null, remaining: input };
+        return {result: null, remaining: input};
     }
     return {
         result:
         {
-            type: "battleInit", id, username, teamSizes, gameType, gen, events
+            type: "battleInit", id, username, teamSizes, gen, ...tier && {tier},
+            ...rated && {rated}, rules, events
         },
         remaining: input
     };
@@ -336,11 +338,17 @@ const messageBattleInitTeamSize = transform(
     sequence(word("teamsize"), playerId, integer),
     ([_, id, size]) => ({id, size}));
 
-const messageBattleInitGameType = transform(sequence(word("gametype"), anyWord),
-        ([_, gameType]) => gameType);
-
 const messageBattleInitGen = transform(sequence(word("gen"), integer),
         ([_, gen]) => gen);
+
+const messageBattleInitTier = transform(sequence(word("tier"), restOfLine),
+        ([_, tier]) => tier);
+
+const messageBattleInitRated = transform(sequence(word("rated"), restOfLine),
+        () => true);
+
+const messageBattleInitRule = transform(sequence(word("rule"), restOfLine),
+        ([_, rule]) => rule);
 
 /** Parses a `battleprogress` multiline message */
 const messageBattleProgress: MessageParser<"battleProgress"> =

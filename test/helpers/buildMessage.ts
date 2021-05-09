@@ -48,10 +48,11 @@ export function composeBattleInit(args: psmsg.BattleInit): string[][]
         ["player", args.id, args.username],
         ["teamsize", "p1", args.teamSizes.p1.toString()],
         ["teamsize", "p2", args.teamSizes.p2.toString()],
-        ["gametype", args.gameType],
         ["gen", args.gen.toString()],
-        ...args.events
-            .map(composePSBattleEvent)
+        ...args.tier ? [["tier", args.tier]] : [],
+        ...args.rated ? [["rated"]] : [],
+        ...args.rules.map(rule => ["rule", rule]),
+        ...args.events.map(composePSBattleEvent)
     ];
     return result;
 }

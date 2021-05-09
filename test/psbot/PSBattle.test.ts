@@ -119,8 +119,8 @@ describe("PSBattle", function()
             let lastSentPromise = sentPromise;
             await battle.init(
             {
-                type: "battleInit", id: "p1", username, gameType: "singles",
-                gen: 4, teamSizes: {p1: 2, p2: 1},
+                type: "battleInit", id: "p1", username,
+                teamSizes: {p1: 2, p2: 1}, gen: 4, rules: [],
                 events:
                 [
                     {

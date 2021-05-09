@@ -165,17 +165,35 @@ export const battleInit: psmsg.BattleInit[] =
 [
     {
         type: "battleInit", id: "p1", username: username[0],
-        gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
+        teamSizes: {p1: 6, p2: 6}, gen: 4, tier: "[Gen 4] Random Battle",
+        rated: true,
+        rules:
+        [
+            "Sleep Clause Mod: Limit one foe put to sleep",
+            "HP Percentage Mod: HP is shown in percentages"
+        ],
         events: psEvents.slice(0, 6).concat(startTurn)
     },
     {
         type: "battleInit", id: "p1", username: username[0],
-        gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
+        teamSizes: {p1: 6, p2: 6}, gen: 4, tier: "[Gen 4] Random Battle",
+        rated: true,
+        rules:
+        [
+            "Sleep Clause Mod: Limit one foe put to sleep",
+            "HP Percentage Mod: HP is shown in percentages"
+        ],
         events: psEvents.slice(6, 10).concat(startTurn)
     },
     {
         type: "battleInit", id: "p2", username: username[1],
-        gameType: "singles", gen: 4, teamSizes: {p1: 6, p2: 6},
+        teamSizes: {p1: 6, p2: 6}, gen: 4, tier: "[Gen 4] Random Battle",
+        rated: true,
+        rules:
+        [
+            "Sleep Clause Mod: Limit one foe put to sleep",
+            "HP Percentage Mod: HP is shown in percentages"
+        ],
         events: psEvents.slice(10, 14).concat(startTurn)
     }
 ];

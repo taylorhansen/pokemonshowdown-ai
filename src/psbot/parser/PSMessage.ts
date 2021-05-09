@@ -68,10 +68,14 @@ export interface BattleInit extends MessageBase<"battleInit">
     readonly username: string;
     /** Fixed size of each team. */
     readonly teamSizes: {readonly [P in PlayerID]: number};
-    /** Game type, e.g. `singles`. */
-    readonly gameType: string;
     /** Cartridge generation. */
     readonly gen: number;
+    /** Current game format. */
+    readonly tier?: string;
+    /** Whether we're playing on the ranked ladder. */
+    readonly rated?: boolean;
+    /** List of additional rules/clauses in effect for this game. */
+    readonly rules: string[];
     /** Initial events. */
     readonly events: readonly psevent.Any[];
 }
