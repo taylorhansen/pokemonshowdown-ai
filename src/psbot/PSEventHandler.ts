@@ -144,6 +144,12 @@ export class PSEventHandler
     {
         const result: events.Any[] = [];
 
+        if (psEvents.length === 1 && psEvents[0].type === "-activate" &&
+            psEvents[0].volatile === "move: Struggle")
+        {
+            return [];
+        }
+
         // starting a new turn
         if (this.newTurn) result.push({type: "preTurn"});
 

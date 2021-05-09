@@ -100,6 +100,7 @@ export class PSBattle implements RoomHandler
         }
 
         const events = this.eventHandler.handleEvents(msg.events);
+        if (events.length <= 0) return;
         this.logger.debug("Progress:\n" +
             inspect(events, {colors: false, depth: null}));
         for (const event of events)

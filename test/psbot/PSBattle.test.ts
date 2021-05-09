@@ -44,6 +44,22 @@ describe("PSBattle", function()
         battle = new PSBattle(username, agent, sender, Logger.null);
     });
 
+    it("Should not call BattleAgent if PSEventHandler gives no events",
+    async function()
+    {
+        innerAgent = async () => { throw new Error("BattleAgent was called"); };
+        await battle.progress(
+        {
+            type: "battleProgress",
+            events:
+            [{
+                type: "-activate", id: {owner: "p1", nickname: "x"},
+                volatile: "move: Struggle", otherArgs: []
+            }]
+        });
+        await battle.forceFinish();
+    });
+
     describe("ability trapping", function()
     {
         it("Should handle unavailable choice", async function()
@@ -152,6 +168,7 @@ describe("PSBattle", function()
 
             // indicate choice was accepted
             await battle.progress({type: "battleProgress", events: []});
+            await battle.forceFinish();
         });
     });
 });

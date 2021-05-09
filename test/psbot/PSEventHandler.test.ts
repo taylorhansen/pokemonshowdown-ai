@@ -594,6 +594,13 @@ describe("PSEventHandler", function()
                 [{type: "-activate", id: us, volatile: "x", otherArgs: []}],
                 []);
 
+            test("Should not emit if struggle",
+            [{
+                type: "-activate", id: us, volatile: "move: Struggle",
+                otherArgs: []
+            }],
+                []);
+
             describe("ability: Forewarn", function()
             {
                 test("Should emit activateAbility with revealMove using [of]",
