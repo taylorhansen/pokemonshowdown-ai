@@ -353,9 +353,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._encore.move = null;
         this._encore.ts.end();
     }
-    // 3-7 turns, cure on last
+    // 4-8 turns, cure on last
     private readonly _encore: MoveStatus =
-        {move: null, ts: new TempStatus("encored", 7)};
+        {move: null, ts: new TempStatus("encored", 8)};
 
     /** @override */
     public flashFire!: boolean;
