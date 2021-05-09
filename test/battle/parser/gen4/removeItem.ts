@@ -251,7 +251,7 @@ export function testRemoveItem(ictx: InitialContext,
                         {
                             sh.initActive("us").hp.set(1);
                             await initWithEvent("us", item, "update");
-                            await expect(ph.halt()).to.be.rejectedWith(Error,
+                            await ph.haltError(Error,
                                 "ConsumeOn-update heal effect failed");
                         });
 
