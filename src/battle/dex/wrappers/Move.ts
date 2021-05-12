@@ -45,6 +45,12 @@ export class Move
         return this.data.category !== "status" && !this.data.damage;
     }
 
+    /** Whether this move deals damage based on base power. */
+    public get dealsBPDamage(): boolean
+    {
+        return this.data.category !== "status" && !this.data.damage;
+    }
+
     //#endregion
 
     // TODO: eventually make #data inaccessible apart from internal dex

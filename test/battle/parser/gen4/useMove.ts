@@ -294,7 +294,8 @@ export function testUseMove(ictx: InitialContext, getState: () => BattleState,
         {
             sh.initActive("us");
             sh.initActive("them");
-            await initWithEvent("us", "splash");
+            await initWithEvent("us", "seismictoss");
+            await ph.handle({type: "takeDamage", monRef: "them", hp: 50});
             await ph.reject(
                 {type: "activateItem", monRef: "us", item: "lifeorb"});
         });

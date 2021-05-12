@@ -918,7 +918,7 @@ async function otherEffects(ctx: MoveContext): Promise<SubParserResult>
     });
     // item effect after damaging move effects
     // TODO(gen5): properly handle selfFaint e.g. for finalgambit move
-    if (ctx.move.data.category !== "status" &&
+    if (ctx.move.dealsBPDamage &&
         [...ctx.mentionedTargets].some(([, flags]) => flags.damaged) &&
         !ctx.user.fainted && !moveEffects?.selfFaint)
     {
