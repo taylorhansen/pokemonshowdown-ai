@@ -7,6 +7,8 @@ import * as consumeItem from "../../../../src/battle/parser/gen4/removeItem";
 import { BattleState } from "../../../../src/battle/state/BattleState";
 import { Pokemon } from "../../../../src/battle/state/Pokemon";
 import { Side } from "../../../../src/battle/state/Side";
+import { StatRange } from "../../../../src/battle/state/StatRange";
+import { smeargle } from "../../../helpers/switchOptions";
 import { InitialContext, ParserContext } from "./Context";
 import { ParserHelpers, setupSubParserPartial, StateHelpers } from "./helpers";
 
@@ -163,6 +165,18 @@ export function testRemoveItem(ictx: InitialContext,
             });
 
             shouldRejectUnrelatedItem("preHit", "sitrusberry");
+        });
+
+        describe("ConsumeOn-tryOHKO", function()
+        {
+            it("Should activate item", async function()
+            {
+                sh.initActive("us").hp.set(1);
+                await initReturn("us", "focussash", "tryOHKO",
+                    /*hitByMove*/ undefined, /*userRef*/ undefined, {});
+            });
+
+            shouldRejectUnrelatedItem("tryOHKO", "sitrusberry");
         });
 
         describe("ConsumeOn-super (enigmaberry)", function()
@@ -603,6 +617,230 @@ export function testRemoveItem(ictx: InitialContext,
                 testBlockingAbilities("wacanberry", ["klutz"],
                     () => preHitSetup(/*weak*/ true),
                     preHitTaken, preHitAbsent));
+        });
+
+        describe("consumeOnTryOHKO()", function()
+        {
+            /** Initializes the consumeOnTryOHKO parser. */
+            const init = setupSubParserPartial(ictx.startArgs, getState,
+                consumeItem.consumeOnTryOHKO);
+
+            function tryOHKOSetup(hp = 1, maxhp = 100, percent?: boolean)
+            {
+                const monRef = percent ? "them" : "us";
+                const mon = sh.initActive(monRef);
+                mon.hp.set(hp, maxhp);
+                return mon;
+            }
+
+            async function tryOHKOTaken(percent?: boolean)
+            {
+                const monRef = percent ? "them" : "us";
+                pctx = init({[monRef]: true});
+                await ph.handle(
+                    {type: "removeItem", monRef, consumed: "focussash"});
+                await ph.halt({results: [{}]});
+            }
+
+            async function tryOHKOAbsent(percent?: boolean)
+            {
+                const monRef = percent ? "them" : "us";
+                pctx = init({[monRef]: true});
+                await ph.halt({results: []});
+            }
+
+            testHasItem("focussash", tryOHKOSetup, tryOHKOTaken, tryOHKOAbsent);
+
+            describe("Item-ignoring ability (klutz)", () =>
+                testBlockingAbilities("focussash", ["klutz"],
+                    () => tryOHKOSetup(), tryOHKOTaken, tryOHKOAbsent));
+
+            describe("HP % rounding", function()
+            {
+                async function shouldReject(percent?: boolean)
+                {
+                    const monRef = percent ? "them" : "us";
+                    pctx = init({[monRef]: true});
+                    await ph.return({results: []});
+                }
+
+                async function shouldAcceptTaken(mon: Pokemon)
+                {
+                    const item = mon.item.possibleValues;
+                    expect(item).to.include.keys("focussash");
+                    await tryOHKOTaken(mon.hp.isPercent);
+                    expect(item).to.equal(mon.lastItem.possibleValues)
+                        .and.to.have.keys("focussash");
+                }
+
+                async function shouldAcceptAbsent(mon: Pokemon)
+                {
+                    const item = mon.item.possibleValues;
+                    expect(item).to.include.keys("focussash");
+                    await tryOHKOAbsent(mon.hp.isPercent);
+                    expect(item).to.equal(mon.item.possibleValues)
+                        .and.to.not.have.keys("focussash");
+                }
+
+                it("Should reject if hp = 0", async function()
+                {
+                    tryOHKOSetup(0);
+                    await shouldReject();
+                });
+
+                it("Should reject if hp values known and hp > 1",
+                async function()
+                {
+                    tryOHKOSetup(2);
+                    await shouldReject();
+                });
+
+                it("Should accept if hp known and hp = 1", async function()
+                {
+                    // taken case
+                    await shouldAcceptTaken(tryOHKOSetup(1));
+                    // absent case
+                    await shouldAcceptAbsent(tryOHKOSetup(1));
+                });
+
+                describe("Unknown hp", function()
+                {
+                    function setup(opts: events.SwitchOptions,
+                        hpDisplay: number)
+                    {
+                        const mon = sh.initActive("them", opts);
+                        mon.hp.set(hpDisplay)
+                        return mon;
+                    }
+
+                    function test(opts: events.SwitchOptions,
+                        actualMaxHP: number)
+                    {
+                        // max hp under 100 but can be over 100:
+                        const actualPercent = Math.ceil(100 / actualMaxHP);
+
+                        const {min: minPossibleHP} =
+                            new StatRange(
+                                dex.pokemon[opts.species].baseStats.hp,
+                                opts.level, /*hp*/ true);
+                        // 1hp percentage with min possible hp stat
+                        // this is the highest possible hp display value at 1hp
+                        const minPercent = Math.ceil(100 / minPossibleHP);
+
+                        it("Should handle item", async function()
+                        {
+                            setup(opts, actualPercent);
+                            await tryOHKOTaken(true);
+                        });
+
+                        if (minPercent <= 50)
+                        {
+                            it("Should reject if definitely over 1 hp (e.g. " +
+                                `${minPercent + 1}%)`, async function()
+                            {
+                                setup(opts, minPercent + 1);
+                                await shouldReject(true);
+                            });
+                        }
+                    }
+
+                    function shouldRuleOut(opts: events.SwitchOptions,
+                        hpDisplay: number, comment?: string)
+                    {
+                        it("Should rule out item if it did not activate at " +
+                            `${hpDisplay}%${comment}`, async function()
+                        {
+                            const mon = setup(opts, hpDisplay);
+                            expect(mon.item.possibleValues)
+                                .to.include.keys("focussash");
+                            await tryOHKOAbsent(true);
+                            expect(mon.item.possibleValues)
+                                .to.not.include.keys("focussash");
+                        });
+                    }
+
+                    function shouldNotRuleOut(opts: events.SwitchOptions,
+                        hpDisplay: number, comment?: string)
+                    {
+                        it("Should not rule out item if it did not activate " +
+                            `at ${hpDisplay}%${comment}`, async function()
+                        {
+                            const mon = setup(opts, hpDisplay);
+                            expect(mon.item.possibleValues)
+                                .to.include.keys("focussash");
+                            await tryOHKOAbsent(true);
+                            expect(mon.item.possibleValues)
+                                .to.include.keys("focussash");
+                        });
+                    }
+
+                    describe("Max hp = 1", async function()
+                    {
+                        const shedinja: events.SwitchOptions =
+                        {
+                            species: "shedinja", gender: null, level: 50,
+                            hp: 100, hpMax: 100
+                        };
+                        test(shedinja, 1);
+                        shouldRuleOut(shedinja, 100);
+                   });
+
+                    describe("Max hp under 100", async function()
+                    {
+                        const opts = {...smeargle, level: 10}; // 31-40
+                        test(opts, 35);
+                        shouldRuleOut(opts, 3, " (1hp)");
+                    });
+
+                    describe("Max hp under 100 but can be over 100",
+                    async function()
+                    {
+                        const opts = {...smeargle, level: 40}; // 94-131
+                        test(opts, 95);
+                        shouldNotRuleOut(opts, 2, " (can be 1hp)");
+                    });
+
+                    describe("Max hp over 100 but can be under 100",
+                    async function()
+                    {
+                        const opts = {...smeargle, level: 40}; // 94-131
+                        test(opts, 105);
+                        shouldRuleOut(opts, 1);
+                        shouldNotRuleOut(opts, 2, " (can be 1hp)");
+                    });
+
+                    describe("Max hp between 100 and 200 exclusive",
+                    async function()
+                    {
+                        const opts = {...smeargle, level: 50}; // 115-162
+                        test(opts, 120);
+                        shouldRuleOut(opts, 1);
+                    });
+
+                    describe("Max hp under 200 but can be over 200",
+                    async function()
+                    {
+                        const opts = {...smeargle, level: 75}; // 167-238
+                        test(opts, 195);
+                        shouldNotRuleOut(opts, 1, " (can be 1hp)");
+                    });
+
+                    describe("Max hp over 200 but can be under 200",
+                    async function()
+                    {
+                        const opts = {...smeargle, level: 75}; // 167-238
+                        test(opts, 205);
+                        shouldNotRuleOut(opts, 1, " (can be 1hp)");
+                    });
+
+                    describe("Max hp over 200", async function()
+                    {
+                        const opts = {...smeargle, level: 100}; // 220-314
+                        test(opts, 250);
+                        shouldNotRuleOut(opts, 1, " (can be 1hp)");
+                    });
+                });
+            });
         });
 
         describe("consumeOnSuper()", function()

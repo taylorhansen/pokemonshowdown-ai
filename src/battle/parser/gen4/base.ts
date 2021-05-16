@@ -638,6 +638,8 @@ export const handlers =
     {
         const event = await verify(cfg, "updateStatusEffect");
         cfg.state.teams[event.monRef].active.volatile[event.effect].tick();
+        // TODO: if confusion, be sure to handle inactivity properly if damaged,
+        //  as well as handle focussash interactions with that
         await consume(cfg);
         return {};
     },

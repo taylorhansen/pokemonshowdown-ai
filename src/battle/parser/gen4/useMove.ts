@@ -663,6 +663,7 @@ async function hit(ctx: MoveContext): Promise<HitResult>
                 effectiveness = "super";
                 return await base.superEffective(cfg);
             case "takeDamage":
+            {
                 // main move damage
                 if (event.from || _ctx.userRef === event.monRef) break;
                 if (damaged) break;
@@ -671,8 +672,19 @@ async function hit(ctx: MoveContext): Promise<HitResult>
                 {
                     break;
                 }
+                const mon = cfg.state.teams[event.monRef].active;
+                const fullHP = mon.hp.current >= mon.hp.max;
                 damaged = true;
-                return await base.takeDamage(cfg);
+                await base.takeDamage(cfg);
+                // if the target was at full hp before being deducted, we should
+                //  check for focussash-like items that activate on one-hit KOs
+                if (fullHP)
+                {
+                    await consumeItem.consumeOnTryOHKO(cfg,
+                        {[event.monRef]: true});
+                }
+                return {};
+            }
         }
         return {};
     });
@@ -773,6 +785,7 @@ async function postHit(ctx: MoveContext): Promise<SubParserResult>
 
             if (!blocked)
             {
+                // TODO: no drain msg if attack did 0 damage
                 const damageResult = await parsers.damage(ctx.cfg,
                     ctx.userRef, "drain", /*sign*/ 1);
                 if (!damageResult.success)

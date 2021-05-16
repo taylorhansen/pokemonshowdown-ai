@@ -99,6 +99,8 @@ export async function expectEvents<
     cfg: SubParserConfig, inferences: EventInference<TResult>[]):
     Promise<ExpectEventsResult<TResult>>
 {
+    if (inferences.length <= 0) return {results: []};
+
     const results: TResult[] = [];
     const result = await eventLoop(cfg,
         async function expectEventsLoop(_cfg)

@@ -2,7 +2,7 @@ import { SubParserConfig, SubParserResult } from "../../parser/BattleParser";
 import { ItemResult } from "../../parser/gen4/activateItem";
 import { handlers as base } from "../../parser/gen4/base";
 import { SubReason } from "../../parser/gen4/EventInference";
-import { cantHaveKlutz, checkKlutz, hasAbility, moveIsType } from
+import { cantHaveKlutz, checkKlutz, hasAbility, isAt1HP, moveIsType } from
     "../../parser/gen4/helpers";
 import * as parsers from "../../parser/gen4/parsers";
 import { ItemConsumeResult } from "../../parser/gen4/removeItem";
@@ -249,6 +249,30 @@ export class Item
             }
         }
         throw new Error(`ConsumeOn-preHit effect shouldn't activate for ` +
+            `item '${this.data.name}'`);
+    }
+
+    //#endregion
+
+    //#region consumeOn-tryOHKO parser
+
+    /**
+     * Activates an item on-`tryOHKO` (e.g. focussash).
+     * @param holderRef Item holder reference.
+     */
+    public async consumeOnTryOHKO(cfg: SubParserConfig, holderRef: Side):
+        Promise<ItemConsumeResult>
+    {
+        const tryOHKO = this.data.consumeOn?.tryOHKO;
+        if (tryOHKO)
+        {
+            if (tryOHKO === "block")
+            {
+                await this.verifyConsume(cfg, holderRef);
+                return {};
+            }
+        }
+        throw new Error(`ConsumeOn-tryOHKO effect shouldn't activate for ` +
             `item '${this.data.name}'`);
     }
 
@@ -615,13 +639,40 @@ export class Item
             {
                 return null;
             }
-            // can't activate for status/fixed-damage moves
+            // can't activate for moves that can never be super-effective
             if (!hitBy.move.canBeEffective) return null;
             // will only work then if the move type is the protected type
             // TODO: don't add if already proven/disproven
             result.add(moveIsType(hitBy.move, hitBy.user,
                 new Set([resistSuper])));
         }
+        return result;
+    }
+
+    //#endregion
+
+    //#region consumeOn-tryOHKO reason
+
+    /**
+     * Checks whether the item can activate consumeOn-`tryOHKO`.
+     * @param mon Potential item holder.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canConsumeTryOHKO(mon: Pokemon): Set<SubReason> | null
+    {
+        if (!this.data.consumeOn?.tryOHKO) return null;
+        const {tryOHKO} = this.data.consumeOn;
+        if (tryOHKO !== "block") return null;
+
+        const result = cantHaveKlutz(mon);
+        if (!result) return null;
+
+        const activate = isAt1HP(mon);
+        if (!activate) return null;
+        for (const reason of activate) result.add(reason);
+
         return result;
     }
 

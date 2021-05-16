@@ -1398,7 +1398,7 @@ export const items: {readonly [name: string]: dexutil.ItemData} =
     flameorb: {uid: 54, name: "flameorb", display: "Flame Orb", on: {turn: {status: "brn"}}},
     flameplate: {uid: 55, name: "flameplate", display: "Flame Plate", plateType: "fire"},
     focusband: {uid: 56, name: "focusband", display: "Focus Band"},
-    focussash: {uid: 57, name: "focussash", display: "Focus Sash"},
+    focussash: {uid: 57, name: "focussash", display: "Focus Sash", consumeOn: {tryOHKO: "block"}},
     friendball: {uid: 58, name: "friendball", display: "Friend Ball"},
     fullincense: {uid: 59, name: "fullincense", display: "Full Incense"},
     ganlonberry: {uid: 60, name: "ganlonberry", display: "Ganlon Berry", isBerry: true, consumeOn: {update: {condition: "hp", threshold: 25, effect: {type: "boost", boostOne: {def: 1}}}}},

@@ -557,6 +557,46 @@ export function testUseMove(ictx: InitialContext, getState: () => BattleState,
         // TODO: implement type effectiveness assertions then test this further
     });
 
+    describe("ConsumeOn-tryOHKO items (focussash)", function()
+    {
+        it("Should handle ohko-blocking item", async function()
+        {
+            sh.initActive("us");
+            sh.initActive("them");
+            await initWithEvent("them", "brickbreak");
+            await ph.handle({type: "superEffective", monRef: "us"});
+            await ph.handle({type: "takeDamage", monRef: "us", hp: 1});
+            await ph.handle(
+                {type: "removeItem", monRef: "us", consumed: "focussash"});
+            await ph.halt({});
+        });
+
+        it("Should reject if not an ohko (not at full hp initially)",
+        async function()
+        {
+            sh.initActive("us");
+            sh.initActive("them").hp.set(99);
+            await initWithEvent("us", "brickbreak");
+            await ph.handle({type: "superEffective", monRef: "them"});
+            await ph.handle({type: "takeDamage", monRef: "them", hp: 1});
+            await ph.reject(
+                {type: "removeItem", monRef: "them", consumed: "focussash"},
+                {});
+        });
+
+        it("Should reject if not an ohko (not at 1hp)", async function()
+        {
+            sh.initActive("us");
+            sh.initActive("them");
+            await initWithEvent("us", "brickbreak");
+            await ph.handle({type: "superEffective", monRef: "them"});
+            await ph.handle({type: "takeDamage", monRef: "them", hp: 3});
+            await ph.reject(
+                {type: "removeItem", monRef: "them", consumed: "focussash"},
+                {});
+        });
+    });
+
     describe("ConsumeOn-super items (enigmaberry)", function()
     {
         it("Should handle enigmaberry", async function()

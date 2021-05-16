@@ -46,8 +46,7 @@ export async function consumeOnMoveCharge(cfg: SubParserConfig,
 /**
  * Expects a consumeOn-`preHit` item to activate.
  * @param eligible Eligible holders.
- * @param hitByMove Move the holder is being hit by.
- * @param hitByUserRef Pokemon reference to the user of the `hitByMove`.
+ * @param hitBy Move and user the holder is being hit by.
  */
 export async function consumeOnPreHit(cfg: SubParserConfig,
     eligible: Partial<Readonly<Record<Side, true>>>,
@@ -59,6 +58,21 @@ export async function consumeOnPreHit(cfg: SubParserConfig,
         (item, mon) => item.canConsumePreHit(mon, hitBy2));
 
     return await expectConsumeItems(cfg, "preHit", pendingItems, hitBy);
+}
+
+/**
+ * Expects a consumeOn-`tryOHKO` item to activate.
+ * @param eligible Eligible holders. It's assumed that the eligible holders were
+ * at full hp before being deducted just now.
+ */
+export async function consumeOnTryOHKO(cfg: SubParserConfig,
+    eligible: Partial<Readonly<Record<Side, true>>>):
+    Promise<ExpectConsumeItemsResult>
+{
+    const pendingItems = getItems(cfg, eligible,
+        (item, mon) => item.canConsumeTryOHKO(mon));
+
+    return await expectConsumeItems(cfg, "tryOHKO", pendingItems);
 }
 
 /**
@@ -251,6 +265,8 @@ async function dispatchEffects(ctx: RemoveItemContext):
             if (!ctx.hitBy) throw new Error("Incomplete hitBy args");
             return await ctx.item.consumeOnPreHit(ctx.cfg, ctx.holderRef,
                 ctx.hitBy);
+        case "tryOHKO":
+            return await ctx.item.consumeOnTryOHKO(ctx.cfg, ctx.holderRef);
         case "super":
             return await ctx.item.consumeOnSuper(ctx.cfg, ctx.holderRef);
         case "postHit":

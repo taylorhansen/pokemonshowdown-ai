@@ -915,6 +915,9 @@ const itemConsumeOnMap:
     babiriberry: {preHit: {resistSuper: "steel"}},
     passhoberry: {preHit: {resistSuper: "water"}},
 
+    // focus sash
+    focussash: {tryOHKO: "block"},
+
     // on-hit berries
     enigmaberry: {super: {heal: 25}},
     jabocaberry: {postHit: {condition: "physical", damage: 12.5}},

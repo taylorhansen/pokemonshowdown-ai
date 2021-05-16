@@ -723,6 +723,8 @@ export interface ItemData extends DexData
              */
             readonly resistSuper: Type;
         };
+        /** Whether this item can block a one-hit KOs. */
+        readonly tryOHKO?: "block";
         /**
          * Activates after being hit by a super-effective move (before ability's
          * on-`moveDamage` effects but after drain effect).
