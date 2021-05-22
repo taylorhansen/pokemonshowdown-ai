@@ -128,29 +128,29 @@ export function baseEventLoop(parser: SubParser, stateCtor: () => BattleState):
 }
 
 /**
- * Loops a SubParser until it rejects, returning the last result. This function
- * always checks for an event before calling the parser.
+ * Keeps calling a SubParser with the given args until it doesn't consume an
+ * event or until the end of the event stream.
  */
-export async function eventLoop(cfg: SubParserConfig, parser: SubParser):
+export async function eventLoop<TArgs extends any[]>(cfg: SubParserConfig,
+    parser: SubParser<SubParserResult, TArgs>, ...args: TArgs):
     Promise<SubParserResult>
 {
-    let result: SubParserResult | undefined;
     while (true)
     {
-        // already at end of event stream
+        // "reject" in this case means the parser doesn't consume an event
+        // TODO: should each (or the last?) SubParserResult be returned at the
+        //  end of the eventLoop?
         const peek1 = await tryPeek(cfg);
-        if (!peek1) break;
+        if (!peek1) return {permHalt: true};
 
-        result = await parser(cfg);
-        if (result.permHalt) break;
+        const result = await parser(cfg, ...args);
+        if (result.permHalt) return {permHalt: true};
 
-        // didn't accept an event
         const peek2 = await tryPeek(cfg);
-        if (!peek2) break;
-        if (peek1 === peek2) break;
+        if (!peek2) return {permHalt: true};
+
+        if (peek1 === peek2) return {};
     }
-    if (!result) return {permHalt: true};
-    return result;
 }
 
 /** Peeks at the next BattleEvent. Throws if there are none left. */

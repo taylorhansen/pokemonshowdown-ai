@@ -447,8 +447,7 @@ async function checkBlock(ctx: MoveContext): Promise<parsers.SuccessResult>
             handleBlock(ctx);
             await base.block(ctx.cfg);
             return {
-                ...await expectCalledMove(ctx, next.monRef,
-                        ctx.moveName, /*bounced*/ true),
+                ...await expectBouncedMove(ctx, next.monRef),
                 success: true
             };
         }
@@ -908,19 +907,6 @@ async function otherEffects(ctx: MoveContext): Promise<SubParserResult>
         await expectChangeType(ctx, moveEffects.changeType);
     }
     if (moveEffects?.disableMove) await expectDisable(ctx);
-    // recoil
-    if (moveEffects?.recoil)
-    {
-        const damageResult = await parsers.damage(ctx.cfg, ctx.userRef,
-            "recoil", /*sign*/ -1);
-        if (damageResult.success !== "silent" &&
-            !ctx.move.data.effects?.recoil?.struggle)
-        {
-            recoil(ctx, /*consumed*/ !!damageResult.success);
-        }
-        await parsers.update(ctx.cfg);
-    }
-    // TODO: focussash
     // TODO: item removal effects
     await eventLoop(ctx.cfg, async function removeItemLoop(cfg)
     {
@@ -929,14 +915,6 @@ async function otherEffects(ctx: MoveContext): Promise<SubParserResult>
         if (event.type !== "removeItem" || event.consumed !== false) return {};
         return await base.removeItem(cfg);
     });
-    // item effect after damaging move effects
-    // TODO(gen5): properly handle selfFaint e.g. for finalgambit move
-    if (ctx.move.dealsBPDamage &&
-        [...ctx.mentionedTargets].some(([, flags]) => flags.damaged) &&
-        !ctx.user.fainted && !moveEffects?.selfFaint)
-    {
-        await item.onMovePostDamage(ctx.cfg, {[ctx.userRef]: true});
-    }
 
     return {};
 }
@@ -950,56 +928,262 @@ async function otherEffects(ctx: MoveContext): Promise<SubParserResult>
 async function handleFaint(ctx: MoveContext, miss?: boolean):
     Promise<SubParserResult>
 {
-    const moveEffects = ctx.move.data.effects;
-    const selfFaint = moveEffects?.selfFaint === "always" ||
-        (moveEffects?.selfFaint === "ifHit" && !miss);
     const faintCandidates = new Set<Side>();
-
-    // see if the move directly KO'd a target
     for (const [monRef, flags] of ctx.mentionedTargets)
     {
         if (flags.damaged !== "ko") continue;
         faintCandidates.add(monRef);
     }
-    // see if self-damage or self-faint effect would cause the user to faint
-    if (ctx.user.fainted || selfFaint) faintCandidates.add(ctx.userRef);
-    if (faintCandidates.size > 0)
+    const selfFaint = ctx.move.data.effects?.selfFaint;
+    if (ctx.user.fainted || selfFaint === "always" ||
+        (selfFaint === "ifHit" && !miss))
     {
-        await eventLoop(ctx.cfg, async function faintLoop(cfg)
-        {
-            const event = await peek(cfg);
-            if (event.type !== "faint") return {};
-            if (!faintCandidates.delete(event.monRef)) return {}
-            return await base.faint(ctx.cfg);
-        });
-        if (faintCandidates.size > 0)
-        {
-            throw new Error(`Pokemon [${[...faintCandidates].join(", ")}] ` +
-                "haven't fainted yet");
-        }
+        faintCandidates.add(ctx.userRef);
+    }
+
+    return await expectFaints(ctx, faintCandidates);
+}
+
+/**
+ * Expects a set of faint messages.
+ * @param monRefs Pokemon references that should faint. These are removed from
+ * the Set whenever this function handles a faint event.
+ */
+async function expectFaints(ctx: MoveContext, monRefs: Set<Side>):
+    Promise<SubParserResult>
+{
+    if (monRefs.size <= 0) return {};
+    await eventLoop(ctx.cfg, async function faintLoop(cfg)
+    {
+        const event = await peek(cfg);
+        if (event.type !== "faint") return {};
+        if (!monRefs.has(event.monRef)) return {}
+        await base.faint(ctx.cfg);
+        monRefs.delete(event.monRef);
+        return {};
+    });
+    if (monRefs.size > 0)
+    {
+        throw new Error(`Pokemon [${[...monRefs].join(", ")}] haven't ` +
+            "fainted yet");
     }
     return {};
 }
 
-/** Handles terminating move effects, e.g. self-switch, called moves, etc. */
+/**
+ * Handles terminating move effects that happen after handling initial faint
+ * checks.
+ */
 async function handleFinalEffects(ctx: MoveContext): Promise<SubParserResult>
 {
-    const moveEffects = ctx.move.data.effects;
-    // TODO: should transform be moved out?
-    if (moveEffects?.transform) return await expectTransform(ctx);
-    if (moveEffects?.selfSwitch &&
-        // if last mon remaining, self-switch effects should either fail or be
-        //  ignored
-        !ctx.cfg.state.teams[ctx.userRef].pokemon.every(
-            (mon, i) => i === 0 || mon?.fainted))
+    if ((await handleRecoil(ctx)).permHalt) return {permHalt: true};
+    if ((await handleItemMovePostDamage(ctx)).permHalt) return {permHalt: true};
+    if ((await handleTransform(ctx)).permHalt) return {permHalt: true};
+    if ((await handleSelfSwitch(ctx)).permHalt) return {permHalt: true};
+    if ((await handleMoveCall(ctx)).permHalt) return {permHalt: true};
+    return {};
+}
+
+async function handleRecoil(ctx: MoveContext): Promise<SubParserResult>
+{
+    // TODO: faint between each of these
+    const data = ctx.move.data.effects?.recoil;
+    if (!data) return {};
+    const damageResult = await parsers.damage(ctx.cfg, ctx.userRef, "recoil",
+        /*sign*/ -1);
+    if (damageResult.success !== "silent" && !data.struggle)
     {
-        return await expectSelfSwitch(ctx, moveEffects.selfSwitch);
+        recoil(ctx, /*consumed*/ !!damageResult.success);
     }
-    if (moveEffects?.call)
+    if (damageResult.permHalt) return {permHalt: true};
+    if (damageResult.success === true)
     {
-        return await expectCalledMove(ctx, ctx.userRef, moveEffects.call);
+        let result: SubParserResult;
+        // berries can activate directly after receiving recoil damage
+        if (!ctx.user.fainted) result = await parsers.update(ctx.cfg);
+        // could also faint instead
+        else result = await expectFaints(ctx, new Set([ctx.userRef]));
+        if (result.permHalt) return {permHalt: true};
     }
     return {};
+}
+
+async function handleItemMovePostDamage(ctx: MoveContext):
+    Promise<SubParserResult>
+{
+    if (!ctx.move.dealsBPDamage) return {};
+    if (![...ctx.mentionedTargets.values()].some(f => f.damaged)) return {};
+    if (ctx.user.fainted) return {};
+    if ((await item.onMovePostDamage(ctx.cfg, {[ctx.userRef]: true})).permHalt)
+    {
+        return {permHalt: true};
+    }
+    if (ctx.user.fainted &&
+        (await expectFaints(ctx, new Set([ctx.userRef]))).permHalt)
+    {
+        return {permHalt: true};
+    }
+    return {};
+}
+
+async function handleTransform(ctx: MoveContext): Promise<SubParserResult>
+{
+    if (!ctx.move.data.effects?.transform || ctx.user.fainted) return {};
+
+    const next = await tryPeek(ctx.cfg);
+    if (next?.type !== "transform")
+    {
+        throw new Error("Expected effect that didn't happen: transform");
+    }
+    if (next.source !== ctx.userRef)
+    {
+        throw new Error("Transform effect failed: " +
+            `Expected source '${ctx.userRef}' but got '${next.source}'`);
+    }
+    if (!addTarget(ctx, next.target))
+    {
+        throw new Error("Transform effect failed");
+    }
+    return await base.transform(ctx.cfg);
+}
+
+async function handleSelfSwitch(ctx: MoveContext): Promise<SubParserResult>
+{
+    const effect = ctx.move.data.effects?.selfSwitch;
+    if (!effect) return {};
+    if (ctx.cfg.state.teams[ctx.userRef].pokemon.every(
+            (mon, i) => i === 0 || mon?.fainted))
+    {
+        return {};
+    }
+
+    // gen4: self-faint self-switch moves (e.g. healingwish) send out the
+    //  replacement immediately rather than waiting until the end of the turn
+    if (ctx.user.fainted && !ctx.move.data.effects?.selfFaint) return {};
+
+    const team = ctx.cfg.state.teams[ctx.userRef];
+    team.status.selfSwitch = effect;
+
+    const next = await tryPeek(ctx.cfg);
+    if (next?.type !== "halt")
+    {
+        throw new Error("Expected effect that didn't happen: " +
+            `selfSwitch '${effect}'`);
+    }
+
+    // if a self-switch move wins the game before switching, the game ends
+    //  immediately while ignoring the self-switch effect
+    if (next.reason === "gameOver") return {permHalt: true};
+
+    const expectedReason = ctx.userRef === "us" ? "switch" : "wait";
+    if (next.reason !== expectedReason)
+    {
+        throw new Error(`SelfSwitch effect '${effect}' failed: ` +
+            `Expected halt reason '${expectedReason}' but got ` +
+            `'${next.reason}'`);
+    }
+
+    // make sure all information is up to date before possibly
+    //  requesting a decision
+    preHaltIgnoredEffects(ctx);
+    await base.halt(ctx.cfg);
+
+    // TODO: communicate self-switch/healingwish effects to the function we're
+    //  calling
+    const switchResult = await expectSwitch(ctx.cfg, ctx.userRef);
+    if (!switchResult.success)
+    {
+        throw new Error(`SelfSwitch effect '${effect}' failed`);
+    }
+    return switchResult;
+}
+
+async function handleMoveCall(ctx: MoveContext): Promise<SubParserResult>
+{
+    const call = ctx.move.data.effects?.call;
+    if (!call) return {};
+    if (!(await verifyCalledMove(ctx, ctx.userRef, call)).success) return {};
+    return await base.useMove(ctx.cfg, /*called*/ true);
+}
+
+/**
+ * Verifies a `useMove` BattleEvent in the context of a called move.
+ * @param userRef User of the called move.
+ * @param callEffect Rule string for how the move should be selected.
+ */
+async function verifyCalledMove(ctx: MoveContext, userRef: Side,
+    callEffect: dexutil.CallType): Promise<parsers.SuccessResult>
+{
+    // can't do anything if fainted
+    if (ctx.cfg.state.teams[userRef].active.fainted) return {};
+
+    const next = await tryPeek(ctx.cfg);
+    if (next?.type !== "useMove")
+    {
+        throw new Error("Expected effect that didn't happen: " +
+            `call '${callEffect}'`);
+    }
+    if (next.monRef !== userRef)
+    {
+        throw new Error(`Call effect '${callEffect}' failed: ` +
+            `Expected '${userRef}' but got '${next.monRef}'`);
+    }
+
+    switch (callEffect)
+    {
+        case true: break; // nondeterministic call
+        case "copycat":
+            if (ctx.lastMove !== next.move)
+            {
+                throw new Error("Call effect 'copycat' failed: " +
+                    `Should've called '${ctx.lastMove}' but got ` +
+                    `'${next.move}'`);
+            }
+            if (dex.moves[ctx.lastMove].flags?.noCopycat)
+            {
+                throw new Error("Call effect 'copycat' failed: " +
+                    `Can't call move '${ctx.lastMove}' with flag ` +
+                    "noCopycat=true");
+            }
+            break;
+        case "mirror":
+            if (ctx.user.volatile.mirrorMove !== next.move)
+            {
+                throw new Error("Call effect 'mirror' failed: Should've " +
+                    `called '${ctx.user.volatile.mirrorMove}' but got ` +
+                    `'${next.move}'`);
+            }
+            break;
+        case "self":
+            // calling a move that is part of the user's moveset
+            if (!addTarget(ctx, userRef))
+            {
+                throw new Error("Call effect 'self' failed");
+            }
+            ctx.user.moveset.reveal(next.move);
+            break;
+        case "target":
+        {
+            // TODO: track actual target
+            const targetRef = otherSide(userRef);
+            if (!addTarget(ctx, targetRef))
+            {
+                throw new Error("Call effect 'target' failed");
+            }
+            ctx.cfg.state.teams[targetRef].active.moveset.reveal(next.move);
+            break;
+        }
+        default:
+            // regular string specifies the move that should be
+            //  called
+            // TODO: what if copycat is supposed to be called rather
+            //  than the copycat effect?
+            if (next.move !== callEffect)
+            {
+                throw new Error(`Call effect '${callEffect}' failed`);
+            }
+    }
+    return {success: true};
 }
 
 /** Result from `expectDelay()`. */
@@ -1113,113 +1297,6 @@ function handleTypeEffectiveness(ctx: MoveContext,
     // TODO: need to handle all corner cases
     // TODO(doubles): do this for each defender
     void ctx, effectiveness;
-}
-
-/**
- * Expects a called move effect.
- * @param userRef User of the called move.
- * @param callEffect Call effect.
- * @param bounced Whether the is move was reflected by an effect (e.g. Magic
- * Coat). Default false.
- */
-async function expectCalledMove(ctx: MoveContext, userRef: Side,
-    callEffect: dexutil.CallType, bounced?: boolean): Promise<SubParserResult>
-{
-    // can't do anything if fainted
-    if (ctx.cfg.state.teams[userRef].active.fainted) return {};
-
-    const next = await tryPeek(ctx.cfg);
-    if (next?.type !== "useMove")
-    {
-        throw new Error("Expected effect that didn't happen: " +
-            `call '${callEffect}'`);
-    }
-    if (next.monRef !== userRef)
-    {
-        throw new Error(`Call effect '${callEffect}' failed: ` +
-            `Expected '${userRef}' but got '${next.monRef}'`);
-    }
-
-    switch (callEffect)
-    {
-        case true: break; // nondeterministic call
-        case "copycat":
-            if (ctx.lastMove !== next.move)
-            {
-                throw new Error("Call effect 'copycat' failed: " +
-                    `Should've called '${ctx.lastMove}' but got ` +
-                    `'${next.move}'`);
-            }
-            if (dex.moves[ctx.lastMove].flags?.noCopycat)
-            {
-                throw new Error("Call effect 'copycat' failed: " +
-                    `Can't call move '${ctx.lastMove}' with flag ` +
-                    "noCopycat=true");
-            }
-            break;
-        case "mirror":
-            if (ctx.user.volatile.mirrorMove !== next.move)
-            {
-                throw new Error("Call effect 'mirror' failed: Should've " +
-                    `called '${ctx.user.volatile.mirrorMove}' but got ` +
-                    `'${next.move}'`);
-            }
-            break;
-        case "self":
-            // calling a move that is part of the user's moveset
-            if (!addTarget(ctx, userRef))
-            {
-                throw new Error("Call effect 'self' failed");
-            }
-            ctx.user.moveset.reveal(next.move);
-            break;
-        case "target":
-        {
-            // TODO: track actual target
-            const targetRef = otherSide(userRef);
-            if (!addTarget(ctx, targetRef))
-            {
-                throw new Error("Call effect 'target' failed");
-            }
-            ctx.cfg.state.teams[targetRef].active.moveset.reveal(next.move);
-            break;
-        }
-        default:
-            // regular string specifies the move that should be
-            //  called
-            // TODO: what if copycat is supposed to be called rather
-            //  than the copycat effect?
-            if (next.move !== callEffect)
-            {
-                throw new Error(`Call effect '${callEffect}' failed`);
-            }
-    }
-
-    // make sure this is handled like a called move
-    return await base.useMove(ctx.cfg, /*called*/ bounced ? "bounced" : true);
-}
-
-/** Expects a transform effect. */
-async function expectTransform(ctx: MoveContext): Promise<SubParserResult>
-{
-    // can't do anything if fainted
-    if (ctx.user.fainted) return {};
-
-    const next = await tryPeek(ctx.cfg);
-    if (next?.type !== "transform")
-    {
-        throw new Error("Expected effect that didn't happen: transform");
-    }
-    if (next.source !== ctx.userRef)
-    {
-        throw new Error("Transform effect failed: " +
-            `Expected source '${ctx.userRef}' but got '${next.source}'`);
-    }
-    if (!addTarget(ctx, next.target))
-    {
-        throw new Error("Transform effect failed");
-    }
-    return await base.transform(ctx.cfg);
 }
 
 /** Handles the status effects of a move. */
@@ -1459,50 +1536,17 @@ async function expectDisable(ctx: MoveContext): Promise<SubParserResult>
 }
 
 /**
- * Expects a selfSwitch effect.
- * @param effect Type of effect.
+ * Expects the move to be reflected onto the user by the opponent.
+ * @param userRef New move user.
  */
-async function expectSelfSwitch(ctx: MoveContext,
-    effect: dexutil.SelfSwitchType): Promise<SubParserResult>
+async function expectBouncedMove(ctx: MoveContext, userRef: Side):
+    Promise<SubParserResult>
 {
-    // can't do anything if fainted, unless this was intended like with
-    //  healingwish/lunardance moves (gen4: replacement is sent out immediately)
-    if (ctx.user.fainted && !ctx.move.data.effects?.selfFaint) return {};
-
-    const team = ctx.cfg.state.teams[ctx.userRef];
-    team.status.selfSwitch = effect;
-
-    // expect a halt event requesting a switch choice
-    const next = await tryPeek(ctx.cfg);
-    if (next?.type !== "halt")
+    if ((await verifyCalledMove(ctx, userRef, ctx.moveName)).success)
     {
-        throw new Error("Expected effect that didn't happen: " +
-            `selfSwitch '${effect}'`);
+        return await base.useMove(ctx.cfg, /*called*/ "bounced");
     }
-    // cancel self-switch effect due to game-over
-    if (next.reason === "gameOver") return {permHalt: true};
-    // should have the expected reason to halt
-    const expectedReason = ctx.userRef === "us" ? "switch" : "wait";
-    if (next.reason !== expectedReason)
-    {
-        throw new Error(`SelfSwitch effect '${effect}' failed: ` +
-            `Expected halt reason '${expectedReason}' but got ` +
-            `'${next.reason}'`);
-    }
-    // make sure all information is up to date before possibly
-    //  requesting a decision
-    preHaltIgnoredEffects(ctx);
-    ctx.cfg.state.teams[ctx.userRef].status.selfSwitch = effect;
-    await base.halt(ctx.cfg);
-
-    // expect the subsequent switch event
-    // TODO: communicate self-switch/healingwish effects
-    const switchResult = await expectSwitch(ctx.cfg, ctx.userRef);
-    if (!switchResult.success)
-    {
-        throw new Error(`SelfSwitch effect '${effect}' failed`);
-    }
-    return switchResult;
+    return {};
 }
 
 // inference helper functions

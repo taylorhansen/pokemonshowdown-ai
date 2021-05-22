@@ -657,6 +657,23 @@ export function testUseMove(ictx: InitialContext, getState: () => BattleState,
         });
     });
 
+    describe("On-movePostDamage items (lifeorb)", function()
+    {
+        it("Should faint user after target", async function()
+        {
+            sh.initActive("us");
+            sh.initActive("them");
+            await initWithEvent("them", "ember");
+            await ph.handle({type: "takeDamage", monRef: "us", hp: 0});
+            await ph.handle({type: "faint", monRef: "us"});
+            await ph.handle(
+                {type: "activateItem", monRef: "them", item: "lifeorb"});
+            await ph.handle({type: "takeDamage", monRef: "them", hp: 0});
+            await ph.handle({type: "faint", monRef: "them"});
+            await ph.halt({});
+        });
+    });
+
     describe("Multi-hit", function()
     {
         it("Should handle multi-hit move", async function()
@@ -3184,6 +3201,21 @@ export function testUseMove(ictx: InitialContext, getState: () => BattleState,
                 // recoil-blocking abilities don't work with struggle
                 await ph.handle(
                     {type: "takeDamage", monRef: "us", hp: 50, from: "recoil"});
+                await ph.halt({});
+            });
+
+            it("Should faint user after target", async function()
+            {
+                sh.initActive("us");
+                sh.initActive("them");
+                await initWithEvent("them", "doubleedge");
+                await ph.handle({type: "takeDamage", monRef: "us", hp: 0});
+                await ph.handle({type: "faint", monRef: "us"});
+                await ph.handle(
+                {
+                    type: "takeDamage", monRef: "them", hp: 0, from: "recoil"
+                });
+                await ph.handle({type: "faint", monRef: "them"});
                 await ph.halt({});
             });
         });
