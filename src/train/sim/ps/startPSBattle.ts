@@ -177,7 +177,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
             {
                 // log game errors and leave a new exception specifying
                 //  where to find it
-                logThrow(innerLog, battleStream, logPath, loopErr = e);
+                logError(innerLog, battleStream, loopErr = e);
+                throwLog(logPath);
             }
             finally
             {
@@ -190,13 +191,9 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 }
                 catch (e)
                 {
-                    // notify caller of error if we didn't do so already from
-                    //  the earlier catch statement
-                    logThrow(innerLog, battleStream, logPath,
-                        // the BattleParser could've thrown earlier through its
-                        //  iterators, so the finish promise may contain the
-                        //  error again which we don't want duplicate logs for
-                        e && loopErr !== e ? e : undefined)
+                    if (loopErr !== e) logError(innerLog, battleStream, e);
+                    else logger.debug("Same error encountered while finishing");
+                    if (!loopErr) throwLog(logPath);
                 }
             }
         }());
@@ -228,13 +225,16 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
  * Swallows an error into the logger, stops the BattleStream, then throws a
  * display error pointing to the log file.
  */
-function logThrow(logger: Logger, stream: s.BattleStream, logPath: string,
-    error?: Error): never
+function logError(logger: Logger, stream: s.BattleStream, error?: Error): void
 {
     if (error) logger.error(error.stack ?? error.toString());
     logger.debug("Error encountered, force tie and discard game");
     stream.write(">forcetie");
     if (!stream.atEOF) stream.destroy();
+}
+
+function throwLog(logPath: string): never
+{
     throw new Error("startPSBattle() encountered an " +
         `error. Check ${logPath} for details.`);
 }
