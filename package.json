@@ -47,6 +47,8 @@
   "author": "Taylor Hansen (taylorhansen)",
   "license": "MIT",
   "dependencies": {
+    "@pkmn/randoms": "^0.4.5",
+    "@pkmn/sim": "^0.4.5",
     "@tensorflow/tfjs": "^3.6.0",
     "@tensorflow/tfjs-node": "^3.6.1",
     "@tensorflow/tfjs-node-gpu": "^3.6.1",
@@ -59,6 +61,9 @@
     "websocket": "^1.0.34"
   },
   "devDependencies": {
+    "@pkmn/data": "^0.4.5",
+    "@pkmn/dex": "^0.4.5",
+    "@pkmn/dex-types": "^0.4.5",
     "@types/chai": "^4.2.18",
     "@types/chai-as-promised": "^7.1.4",
     "@types/long": "^4.0.1",

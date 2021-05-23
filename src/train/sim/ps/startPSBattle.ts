@@ -1,8 +1,8 @@
+import { TeamGenerators } from "@pkmn/randoms";
+import { BattleStreams, Teams } from "@pkmn/sim";
 import * as fs from "fs";
 import * as path from "path";
 import * as tmp from "tmp-promise";
-// @ts-ignore
-import s = require("../../../../pokemon-showdown/.sim-dist/battle-stream");
 import { BattleAgent } from "../../../battle/agent/BattleAgent";
 import * as events from "../../../battle/parser/BattleEvent";
 import { BattleParser } from "../../../battle/parser/BattleParser";
@@ -14,6 +14,8 @@ import { PSBattle } from "../../../psbot/PSBattle";
 import { PSEventHandler } from "../../../psbot/PSEventHandler";
 import { ensureDir } from "../../helpers/ensureDir";
 import { SimResult } from "../simulators";
+
+Teams.setGeneratorFactory(TeamGenerators);
 
 /** Player options for `startPSBattle()`. */
 export interface PlayerOptions
@@ -71,8 +73,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         options.logPrefix ?? "Battle: ");
 
     // start simulating a battle
-    const battleStream = new s.BattleStream({keepAlive: false});
-    const streams = s.getPlayerStreams(battleStream);
+    const battleStream = new BattleStreams.BattleStream({keepAlive: false});
+    const streams = BattleStreams.getPlayerStreams(battleStream);
     streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
     const eventLoops: Promise<void>[] = [];
@@ -225,7 +227,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
  * Swallows an error into the logger, stops the BattleStream, then throws a
  * display error pointing to the log file.
  */
-function logError(logger: Logger, stream: s.BattleStream, error?: Error): void
+function logError(logger: Logger, stream: BattleStreams.BattleStream,
+    error?: Error): void
 {
     if (error) logger.error(error.stack ?? error.toString());
     logger.debug("Error encountered, force tie and discard game");
