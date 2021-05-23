@@ -680,15 +680,17 @@ for (const mon of
 
     const stats = mon.baseStats;
 
-    // include refs to other forms if there are any
+    const movepool = [...composeMovepool(mon)].sort();
+
+    const baseSpecies = mon.baseSpecies && toIdName(mon.baseSpecies);
+    const baseForm = mon.baseForme && toIdName(mon.baseForme);
+    const form = mon.forme && toIdName(mon.forme);
     let otherForms: string[] | undefined;
     if (mon.otherFormes)
     {
         const tmp = mon.otherFormes.map(toIdName).filter(isGen4);
         if (tmp.length > 0) otherForms = tmp.sort();
     }
-
-    const movepool = [...composeMovepool(mon)].sort();
 
     const entry: [string, dexutil.PokemonData] =
     [
@@ -697,68 +699,41 @@ for (const mon of
             id: mon.num, uid, name: mon.id, display: mon.name,
             abilities: baseAbilities, types, baseStats: stats,
             weightkg: mon.weightkg, movepool,
-            ...(mon.baseSpecies !== mon.name &&
-                {baseSpecies: toIdName(mon.baseSpecies)}),
-            ...(mon.baseForme && {baseForm: toIdName(mon.baseForme)}),
-            ...(mon.forme && {form: toIdName(mon.forme)}),
-            ...(otherForms && {otherForms})
+            ...baseSpecies && baseSpecies !== mon.id && {baseSpecies},
+            ...baseForm && {baseForm}, ...form && {form},
+            ...otherForms && {otherForms}
         }
     ];
     pokemon.push(entry);
 
-    if (mon.name === "Gastrodon")
+    // cosmetic forms have different names but are functionally identical
+    for (const cform of mon.cosmeticFormes ?? [])
     {
-        // add missing gastrodon-east form
-        const {baseForm: _, ...data2} = entry[1]; // omit baseForm from data2
+        const mon2 = dex.species.get(cform);
+        if (!mon2) continue;
+        const {baseForm: _, otherForms: __, ...data} = entry[1];
+        const name = toIdName(cform);
         pokemon.push(
         [
-            "gastrodoneast",
+            name,
             {
-                ...data2, name: "gastrodoneast", display: "Gastrodon-East",
-                baseSpecies: "gastrodon", form: "east"
+                ...data, name, display: cform, ...baseSpecies && {baseSpecies},
+                form: toIdName(mon2.forme)
             }
         ]);
 
-        // add alt form to list
-        entry[1] = {...entry[1], otherForms: ["gastrodoneast"]};
-    }
-    else if (mon.name === "Unown")
-    {
-        // add forms for all the other letters
-        const letters =
-        [
-            "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",
-            "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-            "Exclamation", "Question"
-        ];
-        const {baseForm: _, ...data2} = entry[1]; // omit baseForm from data2
-
-        for (const letter of letters)
-        {
-            const lower = letter.toLowerCase();
-            const name = `unown${lower}`;
-            pokemon.push(
-            [
-                name,
-                {
-                    ...data2, name, display: `Unown-${letter}`,
-                    baseSpecies: "unown", form: lower
-                }
-            ]);
-        }
-
-        // add alt forms to list
-        // TODO: if other forms are treated as separate species, should forms
-        //  even be mentioned?
         entry[1] =
         {
             ...entry[1],
-            otherForms: letters.map(letter => `unown${letter.toLowerCase()}`)
-        };
+            otherForms: [...entry[1].otherForms ?? [], name].sort()
+        }
     }
 
-    // make sure the next entry, cherrim-sunshine, receives the same uid since
-    //  the two forms are functionally identical
+    // cherrimsunshine is technically a "cosmetic" form but it changes to it
+    //  during battle, so keep the same uid for that form
+    // since the array we're iterating over is pre-sorted, the next entry would
+    //  be guaranteed to be that cherrim form
+    // otherwise we increment the uid counter as normal
     if (mon.name !== "Cherrim") ++uid;
 }
 
