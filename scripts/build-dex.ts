@@ -555,12 +555,22 @@ moveCallers.sort((a, b) => a[0] < b[0] ? -1 : +(a[0] > b[0]));
 
 // pokemon and abilities
 
-function isLegalSource(source: MoveSource, restrict?: boolean)
+const gen3HMs = new Set(
+[
+    "cut", "fly", "surf", "strength", "flash", "rocksmash", "waterfall", "dive"
+]);
+
+function isLegalSource(moveId: string, source: MoveSource, restrict?: boolean)
 {
+    const learnedGen = parseInt(source.charAt(0), 10);
+    const sourceId = source.charAt(1);
+
     // must be learnable in gen 4 or earlier
-    return parseInt(source.charAt(0), 10) <= gen &&
+    return learnedGen <= gen &&
         // include restricted moves unless told not to
-        (!restrict || source.charAt(1) !== "R");
+        (!restrict || sourceId !== "R") &&
+        // HM moves can't be transfered from gen3 -> 4
+        (learnedGen > 3 || !gen3HMs.has(moveId));
 }
 
 /**
@@ -581,7 +591,9 @@ function composeMovepool(species: Species, restrict = false): Set<string>
         {
             if (!learnset.hasOwnProperty(moveName)) continue;
 
-            if (learnset[moveName].some(s => isLegalSource(s, restrict)))
+            const moveId = toIdName(moveName);
+            if (learnset[moveName].some(
+                s => isLegalSource(moveId, s, restrict)))
             {
                 result.add(moveName);
                 if (moveName === "sketch")
