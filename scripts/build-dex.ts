@@ -14,35 +14,9 @@ import { toIdName } from "../src/psbot/helpers";
 type Writable<T> = {-readonly [K in keyof T]: T[K]};
 
 // TODO: support other gens?
-const dex = new psDex.ModdedDex("gen4").includeData();
-
-/**
- * Regex for checking whether a pokemon id name is not supported by gen4 (e.g.
- * megas, regional variants, etc). Actual pokedex differences, however, must be
- * handled separately.
- */
-const nonGen4Regex =
-    /(^(arceusfairy|((pikachu|eevee).+))$)|(((?<!yan)mega[xy]?)|primal|alola|totem|galar|gmax)$/;
-
-/**
- * Checks whether a pokemon id name is not from gen4.
- * @param name Pokemon name.
- * @returns True if the id is not from gen4 or below.
- */
-function isNonGen4(name: string): boolean
-{
-    return nonGen4Regex.test(name);
-}
-
-/**
- * Checks whether a pokemon id name is from gen4.
- * @param name Pokemon name.
- * @returns True if the id is from gen4 or below.
- */
-function isGen4(name: string): boolean
-{
-    return !isNonGen4(name);
-}
+const gen = 4;
+const dex = new psDex.ModdedDex(`gen${gen}`).includeData() as
+    unknown as ModdedDex;
 
 /**
  * Wraps a string in quotes.
@@ -64,14 +38,6 @@ function quote(str: string): string
 function maybeQuote(str: string): string
 {
     return /[^a-zA-Z0-9]/.test(str) ? quote(str) : str;
-}
-
-/** Checks if a Movedex value is valid for gen4. */
-function isGen4Move(move: Move): boolean
-{
-    return move.gen > 0 && move.gen <= 4 && !move.isNonstandard &&
-        // hidden power moves can have any type, but only one move really exists
-        (move.id !== "hiddenpower" || move.type === "Normal");
 }
 
 // counter for the unique identifier of a pokemon, move, etc.
@@ -288,9 +254,10 @@ const typeToMoves: {[T in dexutil.Type]: string[]} =
 
 uid = 0;
 for (const move of
-    Object.keys(dex.data.Moves)
-        .map(n => dex.moves.get(n))
-        .filter(isGen4Move)
+    (dex.moves.all() as Move[])
+        .filter(m => m.gen <= gen && !m.isNonstandard &&
+            // hiddenpower can have any type, but only one entry really exists
+            (m.id !== "hiddenpower" || m.type === "Normal"))
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
     if (!move.noSketch) sketchableMoves.push(move.id);
@@ -588,6 +555,14 @@ moveCallers.sort((a, b) => a[0] < b[0] ? -1 : +(a[0] > b[0]));
 
 // pokemon and abilities
 
+function isLegalSource(source: MoveSource, restrict?: boolean)
+{
+    // must be learnable in gen 4 or earlier
+    return parseInt(source.charAt(0), 10) <= gen &&
+        // include restricted moves unless told not to
+        (!restrict || source.charAt(1) !== "R");
+}
+
 /**
  * Gets the complete movepool of a pokemon.
  * @param species Species object created by `dex.getSpecies()`.
@@ -599,22 +574,16 @@ function composeMovepool(species: Species, restrict = false): Set<string>
 {
     let result = new Set<string>();
 
-    const learnset = dex.species.getLearnsetData(species.id).learnset;
+    const learnset = dex.species.getLearnset(species.id);
     if (learnset)
     {
         for (const moveName in learnset)
         {
             if (!learnset.hasOwnProperty(moveName)) continue;
 
-            if (learnset[moveName].some((source: string) =>
-                    // must be learnable in gen 4 or earlier
-                    parseInt(source.charAt(0), 10) <= 4 &&
-                    // include restricted moves unless told not to
-                    (!restrict || source.charAt(1) !== "R")))
+            if (learnset[moveName].some(s => isLegalSource(s, restrict)))
             {
                 result.add(moveName);
-                // if the movepool contains Sketch, all Sketchable moves have to
-                //  be included
                 if (moveName === "sketch")
                 {
                     for (const sketch of sketchableMoves) result.add(sketch);
@@ -649,10 +618,8 @@ const abilityNames = new Set<string>();
 
 uid = 0;
 for (const mon of
-    Object.keys(dex.data.Pokedex)
-        .map(n => dex.species.get(n))
-        .filter(m => m.num >= 1 && m.num <= 493 && isGen4(m.id) &&
-            !m.isNonstandard)
+    dex.species.all()
+        .filter(m => m.exists && m.gen <= gen && !m.isNonstandard)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
     // don't sort base abilities, since the 3rd one is a hidden ability (gen5)
@@ -660,7 +627,7 @@ for (const mon of
     for (const index in mon.abilities)
     {
         if (!mon.abilities.hasOwnProperty(index)) continue;
-        const abilityName = mon.abilities[index as keyof Species["abilities"]];
+        const abilityName = mon.abilities[index as keyof typeof mon.abilities];
         if (!abilityName) continue;
         const abilityId = toIdName(abilityName);
         baseAbilities.push(abilityId);
@@ -688,8 +655,13 @@ for (const mon of
     let otherForms: string[] | undefined;
     if (mon.otherFormes)
     {
-        const tmp = mon.otherFormes.map(toIdName).filter(isGen4);
-        if (tmp.length > 0) otherForms = tmp.sort();
+        const tmp = mon.otherFormes
+            .filter(f =>
+            {
+                const m = dex.species.get(f);
+                return m.exists && m.gen <= gen && !m.isNonstandard;
+            });
+        if (tmp.length > 0) otherForms = tmp.map(toIdName).sort();
     }
 
     const entry: [string, dexutil.PokemonData] =
@@ -706,7 +678,8 @@ for (const mon of
     ];
     pokemon.push(entry);
 
-    // cosmetic forms have different names but are functionally identical
+    // cosmetic forms have different names (but are functionally identical) and
+    //  don't have their own dex entries in PS
     for (const cform of mon.cosmeticFormes ?? [])
     {
         const mon2 = dex.species.get(cform);
@@ -832,8 +805,8 @@ const abilities: (readonly [string, dexutil.AbilityData])[] = [];
 
 uid = 0;
 for (const ability of
-    [...abilityNames]
-        .map(n => dex.abilities.get(n))
+    dex.abilities.all()
+        .filter(a => a.exists && a.gen <= gen && !a.isNonstandard)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
     abilities.push(
@@ -1009,10 +982,8 @@ const berries: (readonly [string, dexutil.NaturalGiftData])[] = [];
 
 uid = 1;
 for (const item of
-    Object.keys(dex.data.Items)
-        .map(n => dex.items.get(n))
-        // only gen4 and under items allowed
-        .filter(i => i.gen <= 4 && !i.isNonstandard)
+    dex.items.all()
+        .filter(i => i.exists && i.gen <= gen && !i.isNonstandard)
         .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
 {
     if (item.isBerry && item.naturalGift)
