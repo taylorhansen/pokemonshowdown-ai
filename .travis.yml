@@ -1,8 +1,8 @@
 language: node_js
-node_js: 10
+node_js: 14
 install:
-  - npm i
-  - npm i -g codecov
+  - npm install
+  - npm install -g codecov
   - cp src/config.example.ts src/config.ts
 script:
   - npm run build
