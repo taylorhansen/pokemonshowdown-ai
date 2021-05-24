@@ -194,7 +194,11 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 catch (e)
                 {
                     if (loopErr !== e) logError(innerLog, battleStream, e);
-                    else logger.debug("Same error encountered while finishing");
+                    else
+                    {
+                        innerLog.debug(
+                            "Same error encountered while finishing");
+                    }
                     if (!loopErr) throwLog(logPath);
                 }
             }
