@@ -13,10 +13,11 @@ import { updateItems } from "../../parser/effect/item";
 import { cure, hasStatus, status, StatusEventType } from
     "../../parser/effect/status";
 import { abilityCantIgnoreItem, doesntHaveAbility, isAt1HP,
-    itemIgnoringAbilities, moveIsType } from "../../parser/reason";
+    itemIgnoringAbilities, moveIsEffective, moveIsType } from
+    "../../parser/reason";
 import { Pokemon } from "../../state/Pokemon";
 import { ItemData, StatusType } from "../dex-util";
-import { getAttackerTypes, getTypeEffectiveness } from "../typechart";
+import { getTypeEffectiveness } from "../typechart";
 import { MoveAndUser, MoveAndUserRef } from "./Move";
 
 /** Result of `Item#consumeOnPreHit()`. */
@@ -499,9 +500,7 @@ export class Item
             return new Set(
             [
                 abilityCantIgnoreItem(mon),
-                // move must be super-effective
-                moveIsType(hitBy.move, hitBy.user,
-                    getAttackerTypes(mon.types, "super"))
+                moveIsEffective(hitBy.move, hitBy.user, mon, "super")
             ]);
         }
         return null;
@@ -516,7 +515,6 @@ export class Item
         accept: unordered.AcceptCallback, side: SideID): Promise<void>
     {
         if (!this.data.consumeOn?.super) return;
-        // TODO: assert type effectiveness from hitby-move?
         if (this.data.consumeOn.super.heal)
         {
             await this.consumeItem(ctx, accept, side);
@@ -564,7 +562,7 @@ export class Item
      * Activates an item on-`postHit` (e.g. jabocaberry/rowapberry).
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
-     * @param hitBy Move+user the holder is being hit by.
+     * @param hitBy Move+user ref the holder is being hit by.
      */
     public async consumeOnPostHit(ctx: BattleParserContext<"gen4">,
         accept: unordered.AcceptCallback, side: SideID, hitBy: MoveAndUserRef):

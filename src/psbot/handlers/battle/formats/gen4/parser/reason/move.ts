@@ -3,6 +3,10 @@ import { inference } from "../../../../parser";
 import * as dex from "../../dex";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 
+// TODO: this should also account for other move-type-changing effects, e.g.
+//  normalize ability
+// TODO(gen6): also account for typechart-modifying moves, e.g. freezedry
+
 /**
  * Creates a SubReason that asserts that the pokemon isn't the same type as the
  * move being used against it. Inference applies to the move/user.
@@ -13,6 +17,21 @@ export function diffMoveType(mon: ReadonlyPokemon, hitBy: dex.MoveAndUser):
     inference.SubReason
 {
     return moveIsntType(hitBy.move, hitBy.user, new Set(mon.types));
+}
+
+/**
+ * Creates a SubReason that asserts that the move has a certain effectiveness.
+ * @param move Move to track.
+ * @param user Move user to track.
+ * @param target Target pokemon.
+ * @param effectiveness Expected move effectiveness vs the target.
+ */
+export function moveIsEffective(move: dex.Move, user: Pokemon,
+    target: ReadonlyPokemon, effectiveness: dex.Effectiveness):
+    inference.SubReason
+{
+    return moveIsType(move, user,
+        dex.getAttackerTypes(target.types, effectiveness))
 }
 
 /**
