@@ -630,12 +630,12 @@ export type SingleTurnType = "endure" | "focus" | "magiccoat" | "protect" |
     "roost" | "snatch";
 
 /** Team status effects that are explicitly started/ended in game events. */
-export type TeamEffectType = "lightScreen" | "luckyChant" | "mist" | "reflect" |
-    "safeguard" | "spikes" | "stealthRock" | "tailwind" | "toxicSpikes";
+export type TeamEffectType = "lightscreen" | "luckychant" | "mist" | "reflect" |
+    "safeguard" | "spikes" | "stealthrock" | "tailwind" | "toxicspikes";
 
 /** Status effects that are explicitly started/ended in game events. */
 export type FieldEffectType = UpdatableFieldEffectType | "gravity" |
-    "trickRoom";
+    "trickroom";
 
 /**
  * Field effects that are explicitly updated throughout their duration in game
@@ -660,14 +660,14 @@ export type SelfSwitchType = true | "copyvolatile";
 
 // TODO: add rollout
 /** Status effects that are implied by the successful use of a move. */
-export type ImplicitStatusType = "defenseCurl" | "lockedMove" | "minimize" |
+export type ImplicitStatusType = "defensecurl" | "lockedMove" | "minimize" |
     "mustRecharge";
 
 /**
  * Team effects that are implied by the successful use of a move, but events may
  * still mention them based on specific circumstances.
  */
-export type ImplicitTeamEffectType = "healingWish" | "lunarDance" | "wish";
+export type ImplicitTeamEffectType = "healingwish" | "lunardance" | "wish";
 
 /** Format for each item entry in the dex. */
 export interface ItemData extends DexData

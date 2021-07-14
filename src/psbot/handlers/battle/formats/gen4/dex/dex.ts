@@ -2,13 +2,13 @@
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import * as dexutil from "./dex-util";
+import * as dex from "./dex-util";
 import * as wrappers from "./wrappers";
 
 /**
  * Contains info about each pokemon, with alternate forms as separate entries.
  */
-export const pokemon: {readonly [name: string]: dexutil.PokemonData} =
+export const pokemon: {readonly [name: string]: dex.PokemonData} =
 {
     abomasnow: {id: 460, uid: 0, name: "abomasnow", display: "Abomasnow", abilities: ["snowwarning"], types: ["grass", "ice"], baseStats: {hp: 90, atk: 92, def: 75, spa: 92, spd: 85, spe: 60}, weightkg: 135.5, movepool: ["attract", "avalanche", "blizzard", "block", "brickbreak", "bulletseed", "captivate", "doubleedge", "doubleteam", "earthquake", "endure", "energyball", "facade", "flash", "fling", "focusblast", "focuspunch", "frustration", "gigadrain", "gigaimpact", "grassknot", "grasswhistle", "growth", "hail", "headbutt", "hiddenpower", "hyperbeam", "icebeam", "icepunch", "iceshard", "icywind", "ingrain", "irontail", "leechseed", "leer", "lightscreen", "magicalleaf", "mist", "mudslap", "naturalgift", "outrage", "powdersnow", "protect", "raindance", "razorleaf", "rest", "return", "rockclimb", "rockslide", "rocksmash", "rocktomb", "roleplay", "safeguard", "secretpower", "seedbomb", "shadowball", "sheercold", "skullbash", "sleeptalk", "snore", "solarbeam", "stomp", "strength", "substitute", "swagger", "swordsdance", "synthesis", "toxic", "waterpulse", "woodhammer", "worryseed"]},
     abra: {id: 63, uid: 1, name: "abra", display: "Abra", abilities: ["synchronize", "innerfocus"], types: ["psychic", "???"], baseStats: {hp: 25, atk: 20, def: 15, spa: 105, spd: 55, spe: 90}, weightkg: 19.5, movepool: ["attract", "barrier", "bodyslam", "calmmind", "captivate", "chargebeam", "counter", "doubleedge", "doubleteam", "drainpunch", "dreameater", "dynamicpunch", "embargo", "encore", "endure", "energyball", "facade", "firepunch", "flash", "fling", "focuspunch", "frustration", "grassknot", "gravity", "guardswap", "headbutt", "hiddenpower", "icepunch", "irontail", "knockoff", "lightscreen", "magiccoat", "megakick", "megapunch", "metronome", "mimic", "naturalgift", "nightmare", "powertrick", "protect", "psychic", "psychup", "raindance", "recycle", "reflect", "rest", "return", "roleplay", "safeguard", "secretpower", "seismictoss", "shadowball", "shockwave", "signalbeam", "skillswap", "sleeptalk", "snatch", "snore", "substitute", "sunnyday", "swagger", "taunt", "teleport", "thief", "thunderpunch", "thunderwave", "torment", "toxic", "trick", "trickroom", "zenheadbutt"]},
@@ -573,13 +573,13 @@ export const pokemon: {readonly [name: string]: dexutil.PokemonData} =
 export const pokemonKeys: readonly string[] = ["abomasnow", "abra", "absol", "aerodactyl", "aggron", "aipom", "alakazam", "altaria", "ambipom", "ampharos", "anorith", "arbok", "arcanine", "arceus", "arceusbug", "arceusdark", "arceusdragon", "arceuselectric", "arceusfighting", "arceusfire", "arceusflying", "arceusghost", "arceusgrass", "arceusground", "arceusice", "arceuspoison", "arceuspsychic", "arceusrock", "arceussteel", "arceuswater", "ariados", "armaldo", "aron", "articuno", "azelf", "azumarill", "azurill", "bagon", "baltoy", "banette", "barboach", "bastiodon", "bayleef", "beautifly", "beedrill", "beldum", "bellossom", "bellsprout", "bibarel", "bidoof", "blastoise", "blaziken", "blissey", "bonsly", "breloom", "bronzong", "bronzor", "budew", "buizel", "bulbasaur", "buneary", "burmy", "burmysandy", "burmytrash", "butterfree", "cacnea", "cacturne", "camerupt", "carnivine", "carvanha", "cascoon", "castform", "castformrainy", "castformsnowy", "castformsunny", "caterpie", "celebi", "chansey", "charizard", "charmander", "charmeleon", "chatot", "cherrim", "cherrimsunshine", "cherubi", "chikorita", "chimchar", "chimecho", "chinchou", "chingling", "clamperl", "claydol", "clefable", "clefairy", "cleffa", "cloyster", "combee", "combusken", "corphish", "corsola", "cradily", "cranidos", "crawdaunt", "cresselia", "croagunk", "crobat", "croconaw", "cubone", "cyndaquil", "darkrai", "delcatty", "delibird", "deoxys", "deoxysattack", "deoxysdefense", "deoxysspeed", "dewgong", "dialga", "diglett", "ditto", "dodrio", "doduo", "donphan", "dragonair", "dragonite", "drapion", "dratini", "drifblim", "drifloon", "drowzee", "dugtrio", "dunsparce", "dusclops", "dusknoir", "duskull", "dustox", "eevee", "ekans", "electabuzz", "electivire", "electrike", "electrode", "elekid", "empoleon", "entei", "espeon", "exeggcute", "exeggutor", "exploud", "farfetchd", "fearow", "feebas", "feraligatr", "finneon", "flaaffy", "flareon", "floatzel", "flygon", "forretress", "froslass", "furret", "gabite", "gallade", "garchomp", "gardevoir", "gastly", "gastrodon", "gastrodoneast", "gengar", "geodude", "gible", "girafarig", "giratina", "giratinaorigin", "glaceon", "glalie", "glameow", "gligar", "gliscor", "gloom", "golbat", "goldeen", "golduck", "golem", "gorebyss", "granbull", "graveler", "grimer", "grotle", "groudon", "grovyle", "growlithe", "grumpig", "gulpin", "gyarados", "happiny", "hariyama", "haunter", "heatran", "heracross", "hippopotas", "hippowdon", "hitmonchan", "hitmonlee", "hitmontop", "honchkrow", "hooh", "hoothoot", "hoppip", "horsea", "houndoom", "houndour", "huntail", "hypno", "igglybuff", "illumise", "infernape", "ivysaur", "jigglypuff", "jirachi", "jolteon", "jumpluff", "jynx", "kabuto", "kabutops", "kadabra", "kakuna", "kangaskhan", "kecleon", "kingdra", "kingler", "kirlia", "koffing", "krabby", "kricketot", "kricketune", "kyogre", "lairon", "lanturn", "lapras", "larvitar", "latias", "latios", "leafeon", "ledian", "ledyba", "lickilicky", "lickitung", "lileep", "linoone", "lombre", "lopunny", "lotad", "loudred", "lucario", "ludicolo", "lugia", "lumineon", "lunatone", "luvdisc", "luxio", "luxray", "machamp", "machoke", "machop", "magby", "magcargo", "magikarp", "magmar", "magmortar", "magnemite", "magneton", "magnezone", "makuhita", "mamoswine", "manaphy", "manectric", "mankey", "mantine", "mantyke", "mareep", "marill", "marowak", "marshtomp", "masquerain", "mawile", "medicham", "meditite", "meganium", "meowth", "mesprit", "metagross", "metang", "metapod", "mew", "mewtwo", "mightyena", "milotic", "miltank", "mimejr", "minun", "misdreavus", "mismagius", "moltres", "monferno", "mothim", "mrmime", "mudkip", "muk", "munchlax", "murkrow", "natu", "nidoking", "nidoqueen", "nidoranf", "nidoranm", "nidorina", "nidorino", "nincada", "ninetales", "ninjask", "noctowl", "nosepass", "numel", "nuzleaf", "octillery", "oddish", "omanyte", "omastar", "onix", "pachirisu", "palkia", "paras", "parasect", "pelipper", "persian", "phanpy", "phione", "pichu", "pichuspikyeared", "pidgeot", "pidgeotto", "pidgey", "pikachu", "piloswine", "pineco", "pinsir", "piplup", "plusle", "politoed", "poliwag", "poliwhirl", "poliwrath", "ponyta", "poochyena", "porygon", "porygon2", "porygonz", "primeape", "prinplup", "probopass", "psyduck", "pupitar", "purugly", "quagsire", "quilava", "qwilfish", "raichu", "raikou", "ralts", "rampardos", "rapidash", "raticate", "rattata", "rayquaza", "regice", "regigigas", "regirock", "registeel", "relicanth", "remoraid", "rhydon", "rhyhorn", "rhyperior", "riolu", "roselia", "roserade", "rotom", "rotomfan", "rotomfrost", "rotomheat", "rotommow", "rotomwash", "sableye", "salamence", "sandshrew", "sandslash", "sceptile", "scizor", "scyther", "seadra", "seaking", "sealeo", "seedot", "seel", "sentret", "seviper", "sharpedo", "shaymin", "shayminsky", "shedinja", "shelgon", "shellder", "shellos", "shelloseast", "shieldon", "shiftry", "shinx", "shroomish", "shuckle", "shuppet", "silcoon", "skarmory", "skiploom", "skitty", "skorupi", "skuntank", "slaking", "slakoth", "slowbro", "slowking", "slowpoke", "slugma", "smeargle", "smoochum", "sneasel", "snorlax", "snorunt", "snover", "snubbull", "solrock", "spearow", "spheal", "spinarak", "spinda", "spiritomb", "spoink", "squirtle", "stantler", "staraptor", "staravia", "starly", "starmie", "staryu", "steelix", "stunky", "sudowoodo", "suicune", "sunflora", "sunkern", "surskit", "swablu", "swalot", "swampert", "swellow", "swinub", "taillow", "tangela", "tangrowth", "tauros", "teddiursa", "tentacool", "tentacruel", "togekiss", "togepi", "togetic", "torchic", "torkoal", "torterra", "totodile", "toxicroak", "trapinch", "treecko", "tropius", "turtwig", "typhlosion", "tyranitar", "tyrogue", "umbreon", "unown", "unownb", "unownc", "unownd", "unowne", "unownf", "unowng", "unownh", "unowni", "unownj", "unownk", "unownl", "unownm", "unownn", "unowno", "unownp", "unownq", "unownr", "unowns", "unownt", "unownu", "unownv", "unownw", "unownx", "unowny", "unownz", "unownexclamation", "unownquestion", "ursaring", "uxie", "vaporeon", "venomoth", "venonat", "venusaur", "vespiquen", "vibrava", "victreebel", "vigoroth", "vileplume", "volbeat", "voltorb", "vulpix", "wailmer", "wailord", "walrein", "wartortle", "weavile", "weedle", "weepinbell", "weezing", "whiscash", "whismur", "wigglytuff", "wingull", "wobbuffet", "wooper", "wormadam", "wormadamsandy", "wormadamtrash", "wurmple", "wynaut", "xatu", "yanma", "yanmega", "zangoose", "zapdos", "zigzagoon", "zubat"];
 
 /** Memoization of `getAbility()`. */
-const abilityMemo = new Map<dexutil.AbilityData, wrappers.Ability>();
+const abilityMemo = new Map<dex.AbilityData, wrappers.Ability>();
 
-/** Creates a `dexutil.AbilityData` wrapper. */
-export function getAbility(data: dexutil.AbilityData): wrappers.Ability;
-/** Creates a `dexutil.AbilityData` wrapper, or null if not found. */
+/** Creates a `dex.AbilityData` wrapper. */
+export function getAbility(data: dex.AbilityData): wrappers.Ability;
+/** Creates a `dex.AbilityData` wrapper, or null if not found. */
 export function getAbility(name: string): wrappers.Ability | null;
-export function getAbility(name: string | dexutil.AbilityData): wrappers.Ability | null
+export function getAbility(name: string | dex.AbilityData): wrappers.Ability | null
 {
     if (typeof name === "string")
     {
@@ -592,7 +592,7 @@ export function getAbility(name: string | dexutil.AbilityData): wrappers.Ability
 }
 
 /** Contains info about each ability. */
-export const abilities: {readonly [name: string]: dexutil.AbilityData} =
+export const abilities: {readonly [name: string]: dex.AbilityData} =
 {
     adaptability: {uid: 0, name: "adaptability", display: "Adaptability"},
     aftermath: {uid: 1, name: "aftermath", display: "Aftermath", on: {moveContactKO: {explosive: true, percentDamage: -25}}},
@@ -618,7 +618,7 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
     effectspore: {uid: 21, name: "effectspore", display: "Effect Spore", on: {moveContact: {chance: 30, status: ["par", "psn", "slp"]}}},
     filter: {uid: 22, name: "filter", display: "Filter"},
     flamebody: {uid: 23, name: "flamebody", display: "Flame Body", on: {moveContact: {chance: 30, status: ["brn"]}}},
-    flashfire: {uid: 24, name: "flashfire", display: "Flash Fire", on: {block: {move: {type: "fire", status: "flashFire"}}}},
+    flashfire: {uid: 24, name: "flashfire", display: "Flash Fire", on: {block: {move: {type: "fire", status: "flashfire"}}}},
     flowergift: {uid: 25, name: "flowergift", display: "Flower Gift"},
     forecast: {uid: 26, name: "forecast", display: "Forecast"},
     forewarn: {uid: 27, name: "forewarn", display: "Forewarn", on: {start: {warnStrongestMove: true}}},
@@ -723,13 +723,13 @@ export const abilities: {readonly [name: string]: dexutil.AbilityData} =
 export const abilityKeys: readonly string[] = ["adaptability", "aftermath", "airlock", "angerpoint", "anticipation", "arenatrap", "baddreams", "battlearmor", "blaze", "chlorophyll", "clearbody", "cloudnine", "colorchange", "compoundeyes", "cutecharm", "damp", "download", "drizzle", "drought", "dryskin", "earlybird", "effectspore", "filter", "flamebody", "flashfire", "flowergift", "forecast", "forewarn", "frisk", "gluttony", "guts", "heatproof", "honeygather", "hugepower", "hustle", "hydration", "hypercutter", "icebody", "illuminate", "immunity", "innerfocus", "insomnia", "intimidate", "ironfist", "keeneye", "klutz", "leafguard", "levitate", "lightningrod", "limber", "liquidooze", "magicguard", "magmaarmor", "magnetpull", "marvelscale", "minus", "moldbreaker", "motordrive", "multitype", "naturalcure", "noguard", "normalize", "oblivious", "overgrow", "owntempo", "pickup", "plus", "poisonheal", "poisonpoint", "pressure", "purepower", "quickfeet", "raindish", "reckless", "rivalry", "rockhead", "roughskin", "runaway", "sandstream", "sandveil", "scrappy", "serenegrace", "shadowtag", "shedskin", "shellarmor", "shielddust", "simple", "skilllink", "slowstart", "sniper", "snowcloak", "snowwarning", "solarpower", "solidrock", "soundproof", "speedboost", "stall", "static", "steadfast", "stench", "stickyhold", "stormdrain", "sturdy", "suctioncups", "superluck", "swarm", "swiftswim", "synchronize", "tangledfeet", "technician", "thickfat", "tintedlens", "torrent", "trace", "truant", "unaware", "unburden", "vitalspirit", "voltabsorb", "waterabsorb", "waterveil", "whitesmoke", "wonderguard"];
 
 /** Memoization of `getMove()`. */
-const moveMemo = new Map<dexutil.MoveData, wrappers.Move>();
+const moveMemo = new Map<dex.MoveData, wrappers.Move>();
 
-/** Creates a `dexutil.MoveData` wrapper. */
-export function getMove(data: dexutil.MoveData): wrappers.Move;
-/** Creates a `dexutil.MoveData` wrapper, or null if not found. */
+/** Creates a `dex.MoveData` wrapper. */
+export function getMove(data: dex.MoveData): wrappers.Move;
+/** Creates a `dex.MoveData` wrapper, or null if not found. */
 export function getMove(name: string): wrappers.Move | null;
-export function getMove(name: string | dexutil.MoveData): wrappers.Move | null
+export function getMove(name: string | dex.MoveData): wrappers.Move | null
 {
     if (typeof name === "string")
     {
@@ -742,7 +742,7 @@ export function getMove(name: string | dexutil.MoveData): wrappers.Move | null
 }
 
 /** Contains info about each move. */
-export const moves: {readonly [name: string]: dexutil.MoveData} =
+export const moves: {readonly [name: string]: dex.MoveData} =
 {
     absorb: {uid: 0, name: "absorb", display: "Absorb", category: "special", basePower: 20, type: "grass", target: "normal", pp: [25, 40], effects: {drain: [1, 2]}},
     acid: {uid: 1, name: "acid", display: "Acid", category: "special", basePower: 40, type: "poison", target: "allAdjacentFoes", pp: [30, 48], effects: {boost: {chance: 10, hit: {spd: -1}}}},
@@ -756,7 +756,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     amnesia: {uid: 9, name: "amnesia", display: "Amnesia", category: "status", basePower: 0, type: "psychic", target: "self", pp: [20, 32], effects: {boost: {self: {spd: 2}}}},
     ancientpower: {uid: 10, name: "ancientpower", display: "Ancient Power", category: "special", basePower: 60, type: "rock", target: "normal", pp: [5, 8], effects: {boost: {chance: 10, self: {atk: 1, def: 1, spa: 1, spd: 1, spe: 1}}}},
     aquajet: {uid: 11, name: "aquajet", display: "Aqua Jet", category: "physical", basePower: 40, type: "water", target: "normal", pp: [20, 32], flags: {contact: true}},
-    aquaring: {uid: 12, name: "aquaring", display: "Aqua Ring", category: "status", basePower: 0, type: "water", target: "self", pp: [20, 32], effects: {status: {self: ["aquaRing"]}}},
+    aquaring: {uid: 12, name: "aquaring", display: "Aqua Ring", category: "status", basePower: 0, type: "water", target: "self", pp: [20, 32], effects: {status: {self: ["aquaring"]}}},
     aquatail: {uid: 13, name: "aquatail", display: "Aqua Tail", category: "physical", basePower: 90, type: "water", target: "normal", pp: [10, 16], flags: {contact: true}},
     armthrust: {uid: 14, name: "armthrust", display: "Arm Thrust", category: "physical", basePower: 15, type: "fighting", target: "normal", pp: [20, 32], multihit: [2, 5], flags: {contact: true}},
     aromatherapy: {uid: 15, name: "aromatherapy", display: "Aromatherapy", category: "status", basePower: 0, type: "grass", target: "allyTeam", pp: [5, 8], flags: {noMirror: true}},
@@ -826,9 +826,9 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     darkpulse: {uid: 79, name: "darkpulse", display: "Dark Pulse", category: "special", basePower: 80, type: "dark", target: "any", pp: [15, 24]},
     darkvoid: {uid: 80, name: "darkvoid", display: "Dark Void", category: "status", basePower: 0, type: "dark", target: "allAdjacentFoes", pp: [10, 16], flags: {reflectable: true}, effects: {status: {hit: ["slp"]}}},
     defendorder: {uid: 81, name: "defendorder", display: "Defend Order", category: "status", basePower: 0, type: "bug", target: "self", pp: [10, 16], effects: {boost: {self: {def: 1, spd: 1}}}},
-    defensecurl: {uid: 82, name: "defensecurl", display: "Defense Curl", category: "status", basePower: 0, type: "normal", target: "self", pp: [40, 64], effects: {boost: {self: {def: 1}}}, implicit: {status: "defenseCurl"}},
+    defensecurl: {uid: 82, name: "defensecurl", display: "Defense Curl", category: "status", basePower: 0, type: "normal", target: "self", pp: [40, 64], effects: {boost: {self: {def: 1}}}, implicit: {status: "defensecurl"}},
     defog: {uid: 83, name: "defog", display: "Defog", category: "status", basePower: 0, type: "flying", target: "normal", pp: [15, 24], flags: {ignoreSub: true}},
-    destinybond: {uid: 84, name: "destinybond", display: "Destiny Bond", category: "status", basePower: 0, type: "ghost", target: "self", pp: [5, 8], flags: {ignoreSub: true, noCopycat: true}, effects: {status: {self: ["destinyBond"]}}},
+    destinybond: {uid: 84, name: "destinybond", display: "Destiny Bond", category: "status", basePower: 0, type: "ghost", target: "self", pp: [5, 8], flags: {ignoreSub: true, noCopycat: true}, effects: {status: {self: ["destinybond"]}}},
     detect: {uid: 85, name: "detect", display: "Detect", category: "status", basePower: 0, type: "fighting", target: "self", pp: [5, 8], flags: {noCopycat: true}, effects: {status: {self: ["protect"]}}},
     dig: {uid: 86, name: "dig", display: "Dig", category: "physical", basePower: 80, type: "ground", target: "normal", pp: [10, 16], flags: {contact: true}, effects: {delay: {type: "twoTurn"}}},
     disable: {uid: 87, name: "disable", display: "Disable", category: "status", basePower: 0, type: "normal", target: "normal", pp: [20, 32], flags: {ignoreSub: true}, effects: {disableMove: true}},
@@ -887,7 +887,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     fling: {uid: 140, name: "fling", display: "Fling", category: "physical", basePower: 0, type: "dark", target: "normal", pp: [10, 16]},
     fly: {uid: 141, name: "fly", display: "Fly", category: "physical", basePower: 90, type: "flying", target: "any", pp: [15, 24], flags: {contact: true}, effects: {delay: {type: "twoTurn"}}},
     focusblast: {uid: 142, name: "focusblast", display: "Focus Blast", category: "special", basePower: 120, type: "fighting", target: "normal", pp: [5, 8], effects: {boost: {chance: 10, hit: {spd: -1}}}},
-    focusenergy: {uid: 143, name: "focusenergy", display: "Focus Energy", category: "status", basePower: 0, type: "normal", target: "self", pp: [30, 48], effects: {status: {self: ["focusEnergy"]}}},
+    focusenergy: {uid: 143, name: "focusenergy", display: "Focus Energy", category: "status", basePower: 0, type: "normal", target: "self", pp: [30, 48], effects: {status: {self: ["focusenergy"]}}},
     focuspunch: {uid: 144, name: "focuspunch", display: "Focus Punch", category: "physical", basePower: 150, type: "fighting", target: "normal", pp: [20, 32], flags: {contact: true, focus: true, noMirror: true, noCopycat: true}},
     followme: {uid: 145, name: "followme", display: "Follow Me", category: "status", basePower: 0, type: "normal", target: "self", pp: [20, 32], flags: {noCopycat: true}},
     forcepalm: {uid: 146, name: "forcepalm", display: "Force Palm", category: "physical", basePower: 60, type: "fighting", target: "normal", pp: [10, 16], flags: {contact: true}, effects: {status: {chance: 30, hit: ["par"]}}},
@@ -920,8 +920,8 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     headbutt: {uid: 173, name: "headbutt", display: "Headbutt", category: "physical", basePower: 70, type: "normal", target: "normal", pp: [15, 24], flags: {contact: true}},
     headsmash: {uid: 174, name: "headsmash", display: "Head Smash", category: "physical", basePower: 150, type: "rock", target: "normal", pp: [5, 8], flags: {contact: true}, effects: {recoil: {ratio: [1, 2]}}},
     healbell: {uid: 175, name: "healbell", display: "Heal Bell", category: "status", basePower: 0, type: "normal", target: "allyTeam", pp: [5, 8], flags: {noMirror: true}},
-    healblock: {uid: 176, name: "healblock", display: "Heal Block", category: "status", basePower: 0, type: "psychic", target: "allAdjacentFoes", pp: [15, 24], effects: {status: {hit: ["healBlock"]}}},
-    healingwish: {uid: 177, name: "healingwish", display: "Healing Wish", category: "status", basePower: 0, type: "psychic", target: "self", pp: [10, 16], effects: {selfFaint: "ifHit", selfSwitch: true}, implicit: {team: "healingWish"}},
+    healblock: {uid: 176, name: "healblock", display: "Heal Block", category: "status", basePower: 0, type: "psychic", target: "allAdjacentFoes", pp: [15, 24], effects: {status: {hit: ["healblock"]}}},
+    healingwish: {uid: 177, name: "healingwish", display: "Healing Wish", category: "status", basePower: 0, type: "psychic", target: "self", pp: [10, 16], effects: {selfFaint: "ifHit", selfSwitch: true}, implicit: {team: "healingwish"}},
     healorder: {uid: 178, name: "healorder", display: "Heal Order", category: "status", basePower: 0, type: "bug", target: "self", pp: [10, 16], effects: {damage: {type: "percent", target: "self", percent: 50}}},
     heartswap: {uid: 179, name: "heartswap", display: "Heart Swap", category: "status", basePower: 0, type: "psychic", target: "normal", pp: [10, 16], flags: {ignoreSub: true}, effects: {swapBoosts: {atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true, evasion: true}}},
     heatwave: {uid: 180, name: "heatwave", display: "Heat Wave", category: "special", basePower: 100, type: "fire", target: "allAdjacentFoes", pp: [10, 16], effects: {status: {chance: 10, hit: ["brn"]}}},
@@ -959,22 +959,22 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     leafblade: {uid: 212, name: "leafblade", display: "Leaf Blade", category: "physical", basePower: 90, type: "grass", target: "normal", pp: [15, 24], flags: {contact: true}},
     leafstorm: {uid: 213, name: "leafstorm", display: "Leaf Storm", category: "special", basePower: 140, type: "grass", target: "normal", pp: [5, 8], effects: {boost: {self: {spa: -2}}}},
     leechlife: {uid: 214, name: "leechlife", display: "Leech Life", category: "physical", basePower: 20, type: "bug", target: "normal", pp: [15, 24], flags: {contact: true}, effects: {drain: [1, 2]}},
-    leechseed: {uid: 215, name: "leechseed", display: "Leech Seed", category: "status", basePower: 0, type: "grass", target: "normal", pp: [10, 16], flags: {reflectable: true}, effects: {status: {hit: ["leechSeed"]}}},
+    leechseed: {uid: 215, name: "leechseed", display: "Leech Seed", category: "status", basePower: 0, type: "grass", target: "normal", pp: [10, 16], flags: {reflectable: true}, effects: {status: {hit: ["leechseed"]}}},
     leer: {uid: 216, name: "leer", display: "Leer", category: "status", basePower: 0, type: "normal", target: "allAdjacentFoes", pp: [30, 48], flags: {reflectable: true}, effects: {boost: {hit: {def: -1}}}},
     lick: {uid: 217, name: "lick", display: "Lick", category: "physical", basePower: 20, type: "ghost", target: "normal", pp: [30, 48], flags: {contact: true}, effects: {status: {chance: 30, hit: ["par"]}}},
-    lightscreen: {uid: 218, name: "lightscreen", display: "Light Screen", category: "status", basePower: 0, type: "psychic", target: "allySide", pp: [30, 48], flags: {noMirror: true}, effects: {team: {self: "lightScreen"}}},
+    lightscreen: {uid: 218, name: "lightscreen", display: "Light Screen", category: "status", basePower: 0, type: "psychic", target: "allySide", pp: [30, 48], flags: {noMirror: true}, effects: {team: {self: "lightscreen"}}},
     lockon: {uid: 219, name: "lockon", display: "Lock-On", category: "status", basePower: 0, type: "normal", target: "normal", pp: [5, 8]},
     lovelykiss: {uid: 220, name: "lovelykiss", display: "Lovely Kiss", category: "status", basePower: 0, type: "normal", target: "normal", pp: [10, 16], flags: {reflectable: true}, effects: {status: {hit: ["slp"]}}},
     lowkick: {uid: 221, name: "lowkick", display: "Low Kick", category: "physical", basePower: 0, type: "fighting", target: "normal", pp: [20, 32], flags: {contact: true}},
-    luckychant: {uid: 222, name: "luckychant", display: "Lucky Chant", category: "status", basePower: 0, type: "normal", target: "allySide", pp: [30, 48], flags: {noMirror: true}, effects: {team: {self: "luckyChant"}}},
-    lunardance: {uid: 223, name: "lunardance", display: "Lunar Dance", category: "status", basePower: 0, type: "psychic", target: "self", pp: [10, 16], effects: {selfFaint: "ifHit", selfSwitch: true}, implicit: {team: "lunarDance"}},
+    luckychant: {uid: 222, name: "luckychant", display: "Lucky Chant", category: "status", basePower: 0, type: "normal", target: "allySide", pp: [30, 48], flags: {noMirror: true}, effects: {team: {self: "luckychant"}}},
+    lunardance: {uid: 223, name: "lunardance", display: "Lunar Dance", category: "status", basePower: 0, type: "psychic", target: "self", pp: [10, 16], effects: {selfFaint: "ifHit", selfSwitch: true}, implicit: {team: "lunardance"}},
     lusterpurge: {uid: 224, name: "lusterpurge", display: "Luster Purge", category: "special", basePower: 70, type: "psychic", target: "normal", pp: [5, 8], effects: {boost: {chance: 50, hit: {spd: -1}}}},
     machpunch: {uid: 225, name: "machpunch", display: "Mach Punch", category: "physical", basePower: 40, type: "fighting", target: "normal", pp: [30, 48], flags: {contact: true}},
     magicalleaf: {uid: 226, name: "magicalleaf", display: "Magical Leaf", category: "special", basePower: 60, type: "grass", target: "normal", pp: [20, 32]},
-    magiccoat: {uid: 227, name: "magiccoat", display: "Magic Coat", category: "status", basePower: 0, type: "psychic", target: "self", pp: [15, 24], flags: {noMirror: true}, effects: {status: {self: ["magicCoat"]}}},
+    magiccoat: {uid: 227, name: "magiccoat", display: "Magic Coat", category: "status", basePower: 0, type: "psychic", target: "self", pp: [15, 24], flags: {noMirror: true}, effects: {status: {self: ["magiccoat"]}}},
     magmastorm: {uid: 228, name: "magmastorm", display: "Magma Storm", category: "special", basePower: 120, type: "fire", target: "normal", pp: [5, 8]},
     magnetbomb: {uid: 229, name: "magnetbomb", display: "Magnet Bomb", category: "physical", basePower: 60, type: "steel", target: "normal", pp: [20, 32]},
-    magnetrise: {uid: 230, name: "magnetrise", display: "Magnet Rise", category: "status", basePower: 0, type: "electric", target: "self", pp: [10, 16], effects: {status: {self: ["magnetRise"]}}},
+    magnetrise: {uid: 230, name: "magnetrise", display: "Magnet Rise", category: "status", basePower: 0, type: "electric", target: "self", pp: [10, 16], effects: {status: {self: ["magnetrise"]}}},
     magnitude: {uid: 231, name: "magnitude", display: "Magnitude", category: "physical", basePower: 0, type: "ground", target: "allAdjacent", pp: [30, 48]},
     meanlook: {uid: 232, name: "meanlook", display: "Mean Look", category: "status", basePower: 0, type: "normal", target: "normal", pp: [5, 8], flags: {reflectable: true}},
     meditate: {uid: 233, name: "meditate", display: "Meditate", category: "status", basePower: 0, type: "psychic", target: "self", pp: [40, 64], effects: {boost: {self: {atk: 1}}}},
@@ -993,7 +993,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     mimic: {uid: 246, name: "mimic", display: "Mimic", category: "status", basePower: 0, type: "normal", target: "normal", pp: [10, 16], flags: {ignoreSub: true, noMirror: true, noCopycat: true}},
     mindreader: {uid: 247, name: "mindreader", display: "Mind Reader", category: "status", basePower: 0, type: "normal", target: "normal", pp: [5, 8]},
     minimize: {uid: 248, name: "minimize", display: "Minimize", category: "status", basePower: 0, type: "normal", target: "self", pp: [20, 32], effects: {boost: {self: {evasion: 1}}}, implicit: {status: "minimize"}},
-    miracleeye: {uid: 249, name: "miracleeye", display: "Miracle Eye", category: "status", basePower: 0, type: "psychic", target: "normal", pp: [40, 64], flags: {ignoreSub: true}, effects: {status: {hit: ["miracleEye"]}}},
+    miracleeye: {uid: 249, name: "miracleeye", display: "Miracle Eye", category: "status", basePower: 0, type: "psychic", target: "normal", pp: [40, 64], flags: {ignoreSub: true}, effects: {status: {hit: ["miracleeye"]}}},
     mirrorcoat: {uid: 250, name: "mirrorcoat", display: "Mirror Coat", category: "special", basePower: 0, damage: "counter", type: "psychic", target: "scripted", pp: [20, 32], flags: {noMirror: true, noCopycat: true}},
     mirrormove: {uid: 251, name: "mirrormove", display: "Mirror Move", category: "status", basePower: 0, type: "flying", target: "self", pp: [20, 32], flags: {noMirror: true, noCopycat: true}, effects: {call: "mirror"}},
     mirrorshot: {uid: 252, name: "mirrorshot", display: "Mirror Shot", category: "special", basePower: 65, type: "steel", target: "normal", pp: [10, 16], effects: {boost: {chance: 30, hit: {accuracy: -1}}}},
@@ -1005,7 +1005,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     muddywater: {uid: 258, name: "muddywater", display: "Muddy Water", category: "special", basePower: 95, type: "water", target: "allAdjacentFoes", pp: [10, 16], effects: {boost: {chance: 30, hit: {accuracy: -1}}}},
     mudshot: {uid: 259, name: "mudshot", display: "Mud Shot", category: "special", basePower: 55, type: "ground", target: "normal", pp: [15, 24], effects: {boost: {chance: 100, hit: {spe: -1}}}},
     mudslap: {uid: 260, name: "mudslap", display: "Mud-Slap", category: "special", basePower: 20, type: "ground", target: "normal", pp: [10, 16], effects: {boost: {chance: 100, hit: {accuracy: -1}}}},
-    mudsport: {uid: 261, name: "mudsport", display: "Mud Sport", category: "status", basePower: 0, type: "ground", target: "all", pp: [15, 24], flags: {noMirror: true}, effects: {status: {self: ["mudSport"]}}},
+    mudsport: {uid: 261, name: "mudsport", display: "Mud Sport", category: "status", basePower: 0, type: "ground", target: "all", pp: [15, 24], flags: {noMirror: true}, effects: {status: {self: ["mudsport"]}}},
     nastyplot: {uid: 262, name: "nastyplot", display: "Nasty Plot", category: "status", basePower: 0, type: "dark", target: "self", pp: [20, 32], effects: {boost: {self: {spa: 2}}}},
     naturalgift: {uid: 263, name: "naturalgift", display: "Natural Gift", category: "physical", basePower: 0, type: "normal", target: "normal", pp: [15, 24]},
     naturepower: {uid: 264, name: "naturepower", display: "Nature Power", category: "status", basePower: 0, type: "normal", target: "self", pp: [20, 32], flags: {noMirror: true}, effects: {call: true}},
@@ -1036,7 +1036,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     powdersnow: {uid: 289, name: "powdersnow", display: "Powder Snow", category: "special", basePower: 40, type: "ice", target: "allAdjacentFoes", pp: [25, 40], effects: {status: {chance: 10, hit: ["frz"]}}},
     powergem: {uid: 290, name: "powergem", display: "Power Gem", category: "special", basePower: 70, type: "rock", target: "normal", pp: [20, 32]},
     powerswap: {uid: 291, name: "powerswap", display: "Power Swap", category: "status", basePower: 0, type: "psychic", target: "normal", pp: [10, 16], flags: {ignoreSub: true}, effects: {swapBoosts: {atk: true, spa: true}}},
-    powertrick: {uid: 292, name: "powertrick", display: "Power Trick", category: "status", basePower: 0, type: "psychic", target: "self", pp: [10, 16], effects: {status: {self: ["powerTrick"]}}},
+    powertrick: {uid: 292, name: "powertrick", display: "Power Trick", category: "status", basePower: 0, type: "psychic", target: "self", pp: [10, 16], effects: {status: {self: ["powertrick"]}}},
     powerwhip: {uid: 293, name: "powerwhip", display: "Power Whip", category: "physical", basePower: 120, type: "grass", target: "normal", pp: [10, 16], flags: {contact: true}},
     present: {uid: 294, name: "present", display: "Present", category: "physical", basePower: 0, type: "normal", target: "normal", pp: [15, 24]},
     protect: {uid: 295, name: "protect", display: "Protect", category: "status", basePower: 0, type: "normal", target: "self", pp: [10, 16], flags: {noCopycat: true}, effects: {status: {self: ["protect"]}}},
@@ -1130,7 +1130,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     spitup: {uid: 383, name: "spitup", display: "Spit Up", category: "special", basePower: 0, type: "normal", target: "normal", pp: [10, 16], flags: {noMirror: true}},
     splash: {uid: 384, name: "splash", display: "Splash", category: "status", basePower: 0, type: "normal", target: "self", pp: [40, 64]},
     spore: {uid: 385, name: "spore", display: "Spore", category: "status", basePower: 0, type: "grass", target: "normal", pp: [15, 24], flags: {reflectable: true}, effects: {status: {hit: ["slp"]}}},
-    stealthrock: {uid: 386, name: "stealthrock", display: "Stealth Rock", category: "status", basePower: 0, type: "rock", target: "foeSide", pp: [20, 32], flags: {noMirror: true}, effects: {team: {hit: "stealthRock"}}},
+    stealthrock: {uid: 386, name: "stealthrock", display: "Stealth Rock", category: "status", basePower: 0, type: "rock", target: "foeSide", pp: [20, 32], flags: {noMirror: true}, effects: {team: {hit: "stealthrock"}}},
     steelwing: {uid: 387, name: "steelwing", display: "Steel Wing", category: "physical", basePower: 70, type: "steel", target: "normal", pp: [25, 40], flags: {contact: true}, effects: {boost: {chance: 10, self: {def: 1}}}},
     stockpile: {uid: 388, name: "stockpile", display: "Stockpile", category: "status", basePower: 0, type: "normal", target: "self", pp: [20, 32], effects: {count: "stockpile"}},
     stomp: {uid: 389, name: "stomp", display: "Stomp", category: "physical", basePower: 65, type: "normal", target: "normal", pp: [20, 32], flags: {contact: true}},
@@ -1174,11 +1174,11 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     tickle: {uid: 427, name: "tickle", display: "Tickle", category: "status", basePower: 0, type: "normal", target: "normal", pp: [20, 32], flags: {reflectable: true}, effects: {boost: {hit: {atk: -1, def: -1}}}},
     torment: {uid: 428, name: "torment", display: "Torment", category: "status", basePower: 0, type: "dark", target: "normal", pp: [15, 24], flags: {ignoreSub: true}, effects: {status: {hit: ["torment"]}}},
     toxic: {uid: 429, name: "toxic", display: "Toxic", category: "status", basePower: 0, type: "poison", target: "normal", pp: [10, 16], flags: {reflectable: true}, effects: {status: {hit: ["tox"]}}},
-    toxicspikes: {uid: 430, name: "toxicspikes", display: "Toxic Spikes", category: "status", basePower: 0, type: "poison", target: "foeSide", pp: [20, 32], flags: {noMirror: true}, effects: {team: {hit: "toxicSpikes"}}},
+    toxicspikes: {uid: 430, name: "toxicspikes", display: "Toxic Spikes", category: "status", basePower: 0, type: "poison", target: "foeSide", pp: [20, 32], flags: {noMirror: true}, effects: {team: {hit: "toxicspikes"}}},
     transform: {uid: 431, name: "transform", display: "Transform", category: "status", basePower: 0, type: "normal", target: "normal", pp: [10, 16], flags: {ignoreSub: true, noMirror: true}, effects: {transform: true}},
     triattack: {uid: 432, name: "triattack", display: "Tri Attack", category: "special", basePower: 80, type: "normal", target: "normal", pp: [10, 16], effects: {status: {chance: 20, hit: ["brn", "frz", "par"]}}},
     trick: {uid: 433, name: "trick", display: "Trick", category: "status", basePower: 0, type: "psychic", target: "normal", pp: [10, 16], flags: {noCopycat: true}},
-    trickroom: {uid: 434, name: "trickroom", display: "Trick Room", category: "status", basePower: 0, type: "psychic", target: "all", pp: [5, 8], effects: {field: {effect: "trickRoom", toggle: true}}},
+    trickroom: {uid: 434, name: "trickroom", display: "Trick Room", category: "status", basePower: 0, type: "psychic", target: "all", pp: [5, 8], effects: {field: {effect: "trickroom", toggle: true}}},
     triplekick: {uid: 435, name: "triplekick", display: "Triple Kick", category: "physical", basePower: 10, type: "fighting", target: "normal", pp: [10, 16], multihit: [3, 3], flags: {contact: true}},
     trumpcard: {uid: 436, name: "trumpcard", display: "Trump Card", category: "special", basePower: 0, type: "normal", target: "normal", pp: [5, 5], flags: {contact: true}},
     twineedle: {uid: 437, name: "twineedle", display: "Twineedle", category: "physical", basePower: 25, type: "bug", target: "normal", pp: [20, 32], multihit: [2, 2], effects: {status: {chance: 20, hit: ["psn"]}}},
@@ -1194,7 +1194,7 @@ export const moves: {readonly [name: string]: dexutil.MoveData} =
     waterfall: {uid: 447, name: "waterfall", display: "Waterfall", category: "physical", basePower: 80, type: "water", target: "normal", pp: [15, 24], flags: {contact: true}},
     watergun: {uid: 448, name: "watergun", display: "Water Gun", category: "special", basePower: 40, type: "water", target: "normal", pp: [25, 40]},
     waterpulse: {uid: 449, name: "waterpulse", display: "Water Pulse", category: "special", basePower: 60, type: "water", target: "any", pp: [20, 32], effects: {status: {chance: 20, hit: ["confusion"]}}},
-    watersport: {uid: 450, name: "watersport", display: "Water Sport", category: "status", basePower: 0, type: "water", target: "all", pp: [15, 24], flags: {noMirror: true}, effects: {status: {self: ["waterSport"]}}},
+    watersport: {uid: 450, name: "watersport", display: "Water Sport", category: "status", basePower: 0, type: "water", target: "all", pp: [15, 24], flags: {noMirror: true}, effects: {status: {self: ["watersport"]}}},
     waterspout: {uid: 451, name: "waterspout", display: "Water Spout", category: "special", basePower: 150, type: "water", target: "allAdjacentFoes", pp: [5, 8]},
     weatherball: {uid: 452, name: "weatherball", display: "Weather Ball", category: "special", basePower: 50, type: "normal", target: "normal", pp: [10, 16]},
     whirlpool: {uid: 453, name: "whirlpool", display: "Whirlpool", category: "special", basePower: 15, type: "water", target: "normal", pp: [15, 24]},
@@ -1282,7 +1282,7 @@ export function isTwoTurnMove(value: any): value is TwoTurnMove
 }
 
 /** Maps move name to its CallType, if any. Primarily used for easy testing. */
-export const moveCallers: {readonly [name: string]: dexutil.CallType} =
+export const moveCallers: {readonly [name: string]: dex.CallType} =
 {
     assist: true,
     copycat: "copycat",
@@ -1294,7 +1294,7 @@ export const moveCallers: {readonly [name: string]: dexutil.CallType} =
 };
 
 /** Maps move type to each move of that type. */
-export const typeToMoves: {readonly [T in dexutil.Type]: readonly string[]} =
+export const typeToMoves: {readonly [T in dex.Type]: readonly string[]} =
 {
     "???": ["curse"],
     bug: ["attackorder", "bugbite", "bugbuzz", "defendorder", "furycutter", "healorder", "leechlife", "megahorn", "pinmissile", "signalbeam", "silverwind", "spiderweb", "stringshot", "tailglow", "twineedle", "uturn", "xscissor"],
@@ -1317,13 +1317,13 @@ export const typeToMoves: {readonly [T in dexutil.Type]: readonly string[]} =
 };
 
 /** Memoization of `getItem()`. */
-const itemMemo = new Map<dexutil.ItemData, wrappers.Item>();
+const itemMemo = new Map<dex.ItemData, wrappers.Item>();
 
-/** Creates a `dexutil.ItemData` wrapper. */
-export function getItem(data: dexutil.ItemData): wrappers.Item;
-/** Creates a `dexutil.ItemData` wrapper, or null if not found. */
+/** Creates a `dex.ItemData` wrapper. */
+export function getItem(data: dex.ItemData): wrappers.Item;
+/** Creates a `dex.ItemData` wrapper, or null if not found. */
 export function getItem(name: string): wrappers.Item | null;
-export function getItem(name: string | dexutil.ItemData): wrappers.Item | null
+export function getItem(name: string | dex.ItemData): wrappers.Item | null
 {
     if (typeof name === "string")
     {
@@ -1336,7 +1336,7 @@ export function getItem(name: string | dexutil.ItemData): wrappers.Item | null
 }
 
 /** Contains info about each item. */
-export const items: {readonly [name: string]: dexutil.ItemData} =
+export const items: {readonly [name: string]: dex.ItemData} =
 {
     none: {uid: 0, name: "none", display: "None"},
     adamantorb: {uid: 1, name: "adamantorb", display: "Adamant Orb"},
@@ -1559,7 +1559,7 @@ export const items: {readonly [name: string]: dexutil.ItemData} =
 export const itemKeys: readonly string[] = ["none", "adamantorb", "aguavberry", "apicotberry", "armorfossil", "aspearberry", "babiriberry", "belueberry", "berryjuice", "bigroot", "blackbelt", "blackglasses", "blacksludge", "blukberry", "brightpowder", "charcoal", "chartiberry", "cheriberry", "cherishball", "chestoberry", "chilanberry", "choiceband", "choicescarf", "choicespecs", "chopleberry", "clawfossil", "cobaberry", "colburberry", "cornnberry", "custapberry", "damprock", "dawnstone", "deepseascale", "deepseatooth", "destinyknot", "diveball", "domefossil", "dracoplate", "dragonfang", "dragonscale", "dreadplate", "dubiousdisc", "durinberry", "duskball", "duskstone", "earthplate", "electirizer", "energypowder", "enigmaberry", "expertbelt", "fastball", "figyberry", "firestone", "fistplate", "flameorb", "flameplate", "focusband", "focussash", "friendball", "fullincense", "ganlonberry", "greatball", "grepaberry", "gripclaw", "griseousorb", "habanberry", "hardstone", "healball", "heatrock", "heavyball", "helixfossil", "hondewberry", "iapapaberry", "icicleplate", "icyrock", "insectplate", "ironball", "ironplate", "jabocaberry", "kasibberry", "kebiaberry", "kelpsyberry", "kingsrock", "laggingtail", "lansatberry", "laxincense", "leafstone", "leftovers", "leppaberry", "levelball", "liechiberry", "lifeorb", "lightball", "lightclay", "loveball", "luckypunch", "lumberry", "lureball", "lustrousorb", "luxuryball", "machobrace", "magmarizer", "magnet", "magoberry", "magostberry", "mail", "masterball", "meadowplate", "mentalherb", "metalcoat", "metalpowder", "metronome", "micleberry", "mindplate", "miracleseed", "moonball", "moonstone", "muscleband", "mysticwater", "nanabberry", "nestball", "netball", "nevermeltice", "nomelberry", "occaberry", "oddincense", "oldamber", "oranberry", "ovalstone", "pamtreberry", "parkball", "passhoberry", "payapaberry", "pechaberry", "persimberry", "petayaberry", "pinapberry", "poisonbarb", "pokeball", "pomegberry", "poweranklet", "powerband", "powerbelt", "powerbracer", "powerherb", "powerlens", "powerweight", "premierball", "protector", "qualotberry", "quickball", "quickclaw", "quickpowder", "rabutaberry", "rarebone", "rawstberry", "razorclaw", "razorfang", "razzberry", "reapercloth", "repeatball", "rindoberry", "rockincense", "rootfossil", "roseincense", "rowapberry", "safariball", "salacberry", "scopelens", "seaincense", "sharpbeak", "shedshell", "shellbell", "shinystone", "shucaberry", "silkscarf", "silverpowder", "sitrusberry", "skullfossil", "skyplate", "smoothrock", "softsand", "souldew", "spelltag", "spelonberry", "splashplate", "spookyplate", "sportball", "starfberry", "stick", "stickybarb", "stoneplate", "sunstone", "tamatoberry", "tangaberry", "thickclub", "thunderstone", "timerball", "toxicorb", "toxicplate", "twistedspoon", "ultraball", "upgrade", "wacanberry", "waterstone", "watmelberry", "waveincense", "wepearberry", "whiteherb", "widelens", "wikiberry", "wiseglasses", "yacheberry", "zapplate", "zoomlens"];
 
 /** Contains info about each berry item. */
-export const berries: {readonly [name: string]: dexutil.NaturalGiftData} =
+export const berries: {readonly [name: string]: dex.NaturalGiftData} =
 {
     aguavberry: {basePower: 60, type: "dragon"},
     apicotberry: {basePower: 80, type: "ground"},

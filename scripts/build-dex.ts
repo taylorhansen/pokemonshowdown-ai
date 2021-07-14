@@ -5,8 +5,7 @@
 import { Generations } from "@pkmn/data";
 import { Dex } from "@pkmn/dex";
 import { SpeciesAbility } from "@pkmn/dex-types";
-import * as dexutil from
-    "../src/psbot/handlers/battle/formats/gen4/dex/dex-util";
+import * as dex from "../src/psbot/handlers/battle/formats/gen4/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
 
 (async function buildDex()
@@ -43,7 +42,7 @@ import { toIdName } from "../src/psbot/helpers";
 
     // moves
 
-    const moves: (readonly [string, dexutil.MoveData])[] = [];
+    const moves: (readonly [string, dex.MoveData])[] = [];
 
     // adapted from pokemon-showdown/data
 
@@ -85,7 +84,7 @@ import { toIdName } from "../src/psbot/helpers";
     const transformMap: {readonly [move: string]: boolean} = {transform: true};
 
     /** Maps some move names to CallTypes. */
-    const callTypeMap: {readonly [move: string]: dexutil.CallType} =
+    const callTypeMap: {readonly [move: string]: dex.CallType} =
     {
         assist: true, copycat: "copycat", mefirst: "target", metronome: true,
         mirrormove: "mirror", naturepower: true, sleeptalk: "self"
@@ -94,15 +93,14 @@ import { toIdName } from "../src/psbot/helpers";
     /** Moves that have special damage effects. */
     const customDamageMap:
     {
-        readonly [move: string]:
-            NonNullable<dexutil.MoveData["effects"]>["damage"]
+        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["damage"]
     } =
     {
         bellydrum: {type: "percent", target: "self", percent: -50},
         curse: {type: "percent", target: "self", percent: -50, ghost: true},
         substitute: {type: "percent", target: "self", percent: -25},
 
-        // TODO: weather changes this amount (same for all 3)
+        // TODO: weather can change this amount
         moonlight: {type: "percent", target: "self", percent: 50},
         morningsun: {type: "percent", target: "self", percent: 50},
         synthesis: {type: "percent", target: "self", percent: 50},
@@ -112,7 +110,7 @@ import { toIdName } from "../src/psbot/helpers";
 
     /** Maps some move names to swap-boost effects. */
     const swapBoostMap:
-        {readonly [move: string]: Partial<dexutil.BoostTable<true>>} =
+        {readonly [move: string]: Partial<dex.BoostTable<true>>} =
     {
         // swapboost moves
         guardswap: {def: true, spd: true},
@@ -126,14 +124,13 @@ import { toIdName } from "../src/psbot/helpers";
 
     /** Maps some move names to CountableStatusTypes. */
     const countableStatusTypeMap:
-        {readonly [move: string]: dexutil.CountableStatusType} =
+        {readonly [move: string]: dex.CountableStatusType} =
         {perishsong: "perish", stockpile: "stockpile"};
 
     /** Maps some move names to FieldTypes. */
     const fieldTypeMap:
     {
-        readonly [move: string]:
-            NonNullable<dexutil.MoveData["effects"]>["field"]
+        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["field"]
     } =
     {
         // weathers
@@ -141,30 +138,30 @@ import { toIdName } from "../src/psbot/helpers";
         sandstorm: {effect: "Sandstorm"}, hail: {effect: "Hail"},
         // pseudo-weathers
         gravity: {effect: "gravity"},
-        trickroom: {effect: "trickRoom", toggle: true}
+        trickroom: {effect: "trickroom", toggle: true}
     };
 
     /** Maps some move names or effects to StatusTypes. */
     const statusTypeMap:
-        {readonly [move: string]: readonly dexutil.StatusType[]} =
+        {readonly [move: string]: readonly dex.StatusType[]} =
     {
         // TODO: followme, helpinghand, partiallytrapped, telekinesis (gen5)
         // normal statuses
-        aquaring: ["aquaRing"], attract: ["attract"], charge: ["charge"],
-        embargo: ["embargo"], encore: ["encore"], focusenergy: ["focusEnergy"],
-        foresight: ["foresight"], healblock: ["healBlock"],
-        imprison: ["imprison"], ingrain: ["ingrain"], leechseed: ["leechSeed"],
-        magnetrise: ["magnetRise"], miracleeye: ["miracleEye"],
-        mudsport: ["mudSport"], nightmare: ["nightmare"],
-        powertrick: ["powerTrick"], substitute: ["substitute"],
+        aquaring: ["aquaring"], attract: ["attract"], charge: ["charge"],
+        embargo: ["embargo"], encore: ["encore"], focusenergy: ["focusenergy"],
+        foresight: ["foresight"], healblock: ["healblock"],
+        imprison: ["imprison"], ingrain: ["ingrain"], leechseed: ["leechseed"],
+        magnetrise: ["magnetrise"], miracleeye: ["miracleeye"],
+        mudsport: ["mudsport"], nightmare: ["nightmare"],
+        powertrick: ["powertrick"], substitute: ["substitute"],
         gastroacid: ["suppressAbility"], taunt: ["taunt"], torment: ["torment"],
-        watersport: ["waterSport"], yawn: ["yawn"],
+        watersport: ["watersport"], yawn: ["yawn"],
         // updatable
         confusion: ["confusion"], bide: ["bide"], uproar: ["uproar"],
         // singlemove
-        destinybond: ["destinyBond"], grudge: ["grudge"], rage: ["rage"],
+        destinybond: ["destinybond"], grudge: ["grudge"], rage: ["rage"],
         // singleturn
-        endure: ["endure"], magiccoat: ["magicCoat"], protect: ["protect"],
+        endure: ["endure"], magiccoat: ["magiccoat"], protect: ["protect"],
         roost: ["roost"], snatch: ["snatch"],
         // major status
         brn: ["brn"],  frz: ["frz"], par: ["par"], psn: ["psn"], slp: ["slp"],
@@ -183,8 +180,7 @@ import { toIdName } from "../src/psbot/helpers";
     /** Moves that have special status effects. */
     const customStatusMap:
     {
-        readonly [move: string]:
-            NonNullable<dexutil.MoveData["effects"]>["status"]
+        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["status"]
     } =
     {
         curse: {ghost: true, hit: ["curse"]},
@@ -193,15 +189,15 @@ import { toIdName } from "../src/psbot/helpers";
 
     /** Maps some move names to ImplicitStatusTypes. */
     const implicitStatusTypeMap:
-        {readonly [move: string]: dexutil.ImplicitStatusType} =
+        {readonly [move: string]: dex.ImplicitStatusType} =
     {
-        defensecurl: "defenseCurl", lockedmove: "lockedMove",
+        defensecurl: "defensecurl", lockedmove: "lockedMove",
         minimize: "minimize", mustrecharge: "mustRecharge"
     };
 
     /** Maps some move names to set-boost effects. */
     const setBoostMap:
-        {readonly [move: string]: Partial<dexutil.BoostTable<number>>} =
+        {readonly [move: string]: Partial<dex.BoostTable<number>>} =
     {
         // setboost moves
         bellydrum: {atk: 6}
@@ -210,25 +206,24 @@ import { toIdName } from "../src/psbot/helpers";
     /** Moves that have special boost effects. */
     const customBoostMap:
     {
-        readonly [move: string]:
-            NonNullable<dexutil.MoveData["effects"]>["boost"]
+        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["boost"]
     } =
         {curse: {noGhost: true, self: {atk: 1, def: 1, spe: -1}}};
 
     /** Maps some move names to TeamEffects. */
-    const teamStatusTypeMap: {readonly [move: string]: dexutil.TeamEffectType} =
+    const teamStatusTypeMap: {readonly [move: string]: dex.TeamEffectType} =
     {
-        lightscreen: "lightScreen", luckychant: "luckyChant", mist: "mist",
+        lightscreen: "lightscreen", luckychant: "luckychant", mist: "mist",
         reflect: "reflect", safeguard: "safeguard", spikes: "spikes",
-        stealthrock: "stealthRock", tailwind: "tailwind",
-        toxicspikes: "toxicSpikes"
+        stealthrock: "stealthrock", tailwind: "tailwind",
+        toxicspikes: "toxicspikes"
         // TODO: auroraveil (gen6), stickyweb (gen6)
     };
 
     /** Maps some move names to ImplicitTeamTypes. */
     const implicitTeamTypeMap:
-        {readonly [move: string]: dexutil.ImplicitTeamEffectType} =
-        {healingwish: "healingWish", lunardance: "lunarDance", wish: "wish"};
+        {readonly [move: string]: dex.ImplicitTeamEffectType} =
+        {healingwish: "healingwish", lunardance: "lunardance", wish: "wish"};
 
     /** Maps move name to how/whether it changes the target's type. */
     const changeTypeMap: {readonly [move: string]: "conversion"} =
@@ -240,17 +235,17 @@ import { toIdName } from "../src/psbot/helpers";
     // NOTE(gen4): healingwish-like moves send in a replacement immediately
     //  after self-faint
     /** Secondary map for move name to self-switch effect. */
-    const selfSwitchMap: {readonly [move: string]: dexutil.SelfSwitchType} =
+    const selfSwitchMap: {readonly [move: string]: dex.SelfSwitchType} =
         {healingwish: true, lunardance: true}
 
     const futureMoves: string[] = [];
     const lockedMoves: string[] = []; // TODO: rename to rampage moves
     const twoTurnMoves: string[] = [];
-    const moveCallers: [string, dexutil.CallType][] = [];
+    const moveCallers: [string, dex.CallType][] = [];
 
     const sketchableMoves: string[] = [];
 
-    const typeToMoves: {[T in dexutil.Type]: string[]} =
+    const typeToMoves: {[T in dex.Type]: string[]} =
     {
         bug: [], dark: [], dragon: [], fire: [], flying: [], ghost: [],
         electric: [], fighting: [], grass: [], ground: [], ice: [], normal: [],
@@ -265,10 +260,10 @@ import { toIdName } from "../src/psbot/helpers";
 
         if (!move.noSketch) sketchableMoves.push(move.id);
 
-        const category = move.category.toLowerCase() as dexutil.MoveCategory;
+        const category = move.category.toLowerCase() as dex.MoveCategory;
         const basePower = move.basePower;
 
-        let damage: dexutil.MoveDamage | undefined;
+        let damage: dex.MoveDamage | undefined;
         if (move.ohko) damage = "ohko";
         else if (move.damage) damage = move.damage;
         else
@@ -284,8 +279,8 @@ import { toIdName } from "../src/psbot/helpers";
             }
         }
 
-        const type = move.type.toLowerCase() as dexutil.Type;
-        let modifyType: dexutil.MoveData["modifyType"];
+        const type = move.type.toLowerCase() as dex.Type;
+        let modifyType: dex.MoveData["modifyType"];
         switch (move.id)
         {
             case "hiddenpower": modifyType = "hpType"; break;
@@ -295,7 +290,7 @@ import { toIdName } from "../src/psbot/helpers";
         typeToMoves[type].push(move.id);
 
         const target = move.target;
-        const nonGhostTarget = move.nonGhostTarget as dexutil.MoveTarget;
+        const nonGhostTarget = move.nonGhostTarget as dex.MoveTarget;
 
         const maxpp = move.noPPBoosts ? move.pp : Math.floor(move.pp * 8 / 5);
         const pp = [move.pp, maxpp] as const;
@@ -308,7 +303,7 @@ import { toIdName } from "../src/psbot/helpers";
                 `[${multihit.join(", ")}]`);
         }
 
-        const flags: NonNullable<dexutil.MoveData["flags"]> =
+        const flags: NonNullable<dex.MoveData["flags"]> =
         {
             ...!!move.flags.contact && {contact: true},
             ...explosive.hasOwnProperty(move.id) && {explosive: true},
@@ -326,11 +321,11 @@ import { toIdName } from "../src/psbot/helpers";
 
         // setup move effects
 
-        const self: dexutil.MoveEffectTarget = "self";
-        const hit: dexutil.MoveEffectTarget =
+        const self: dex.MoveEffectTarget = "self";
+        const hit: dex.MoveEffectTarget =
             ["all", "allySide", "self"].includes(target) ? self : "hit";
 
-        type MoveEffects = Writable<NonNullable<dexutil.MoveData["effects"]>>;
+        type MoveEffects = Writable<NonNullable<dex.MoveData["effects"]>>;
 
         // boost
         let boost: Writable<NonNullable<MoveEffects["boost"]>> =
@@ -479,10 +474,10 @@ import { toIdName } from "../src/psbot/helpers";
             : {},
 
             ...move.selfdestruct &&
-                {selfFaint: move.selfdestruct as dexutil.MoveSelfFaint},
+                {selfFaint: move.selfdestruct as dex.MoveSelfFaint},
 
             ...move.selfSwitch &&
-                {selfSwitch: move.selfSwitch as dexutil.SelfSwitchType},
+                {selfSwitch: move.selfSwitch as dex.SelfSwitchType},
             ...selfSwitchMap.hasOwnProperty(move.id) &&
                 {selfSwitch: selfSwitchMap[move.id]}
         };
@@ -497,7 +492,7 @@ import { toIdName } from "../src/psbot/helpers";
         }
 
         // implicit
-        const implicit: Writable<dexutil.MoveData["implicit"]> =
+        const implicit: Writable<dex.MoveData["implicit"]> =
         {
             ...implicitStatusTypeMap.hasOwnProperty(move.id) ?
                 {status: implicitStatusTypeMap[move.id]}
@@ -562,7 +557,7 @@ import { toIdName } from "../src/psbot/helpers";
 
     // pokemon and abilities
 
-    const pokemon: (readonly [string, dexutil.PokemonData])[] = []
+    const pokemon: (readonly [string, dex.PokemonData])[] = [];
 
     const abilityNames = new Set<string>();
 
@@ -581,14 +576,14 @@ import { toIdName } from "../src/psbot/helpers";
             if (!abilityNames.has(abilityId)) abilityNames.add(abilityId);
         }
 
-        let types: [dexutil.Type, dexutil.Type];
-        const typeArr = mon.types.map(s => s.toLowerCase()) as dexutil.Type[];
+        let types: [dex.Type, dex.Type];
+        const typeArr = mon.types.map(s => s.toLowerCase()) as dex.Type[];
         if (typeArr.length > 2)
         {
             console.error(`Error: Too many types for species '${mon.id}'`);
         }
         else if (typeArr.length === 1) typeArr.push("???");
-        types = typeArr as [dexutil.Type, dexutil.Type];
+        types = typeArr as [dex.Type, dex.Type];
 
         const stats = mon.baseStats;
 
@@ -618,7 +613,7 @@ import { toIdName } from "../src/psbot/helpers";
             if (tmp.length > 0) otherForms = tmp.sort();
         }
 
-        const entry: [string, dexutil.PokemonData] =
+        const entry: [string, dex.PokemonData] =
         [
             mon.id,
             {
@@ -665,14 +660,14 @@ import { toIdName } from "../src/psbot/helpers";
 
     // ability data
 
-    const statusImmunityOn: dexutil.AbilityData["on"] =
+    const statusImmunityOn: dex.AbilityData["on"] =
         {start: {cure: true}, block: {status: true}, status: {cure: true}};
 
     /** Maps ability name to data. */
     const abilityData:
     {
         readonly [ability: string]:
-            Pick<dexutil.AbilityData, "on" | "statusImmunity" | "flags">
+            Pick<dex.AbilityData, "on" | "statusImmunity" | "flags">
     } =
     {
         naturalcure: {on: {switchOut: {cure: true}}},
@@ -713,7 +708,7 @@ import { toIdName } from "../src/psbot/helpers";
         // TODO(dryskin): sun/fire weakness
         dryskin: {on: {block: {move: {type: "water", percentDamage: 25}}}},
         // TODO(gen3-4): doesn't work while frozen
-        flashfire: {on: {block: {move: {type: "fire", status: "flashFire"}}}},
+        flashfire: {on: {block: {move: {type: "fire", status: "flashfire"}}}},
         levitate: {on: {block: {move: {type: "ground"}}}},
         motordrive: {on: {block: {move: {type: "electric", boost: {spe: 1}}}}},
         voltabsorb:
@@ -724,10 +719,10 @@ import { toIdName } from "../src/psbot/helpers";
 
         damp: {on: {block: {effect: {explosive: true}}}},
 
-        clearbody: {on: {tryUnboost: {block: dexutil.boostNames}}},
+        clearbody: {on: {tryUnboost: {block: dex.boostNames}}},
         hypercutter: {on: {tryUnboost: {block: {atk: true}}}},
         keeneye: {on: {tryUnboost: {block: {accuracy: true}}}},
-        whitesmoke: {on: {tryUnboost: {block: dexutil.boostNames}}},
+        whitesmoke: {on: {tryUnboost: {block: dex.boostNames}}},
 
         aftermath: {on: {moveContactKO: {explosive: true, percentDamage: -25}}},
 
@@ -757,7 +752,7 @@ import { toIdName } from "../src/psbot/helpers";
         rockhead: {flags: {noIndirectDamage: "recoil"}}
     };
 
-    const abilities: (readonly [string, dexutil.AbilityData])[] = [];
+    const abilities: (readonly [string, dex.AbilityData])[] = [];
 
     uid = 0;
     for (const ability of [...gen.abilities]
@@ -778,7 +773,7 @@ import { toIdName } from "../src/psbot/helpers";
 
     /** Maps some item names to item effects. */
     const itemOnMap:
-        {readonly [item: string]: NonNullable<dexutil.ItemData["on"]>} =
+        {readonly [item: string]: NonNullable<dex.ItemData["on"]>} =
     {
         lifeorb: {movePostDamage: {percentDamage: -10}},
 
@@ -792,7 +787,7 @@ import { toIdName } from "../src/psbot/helpers";
 
     /** Maps some item names to consume effects. */
     const itemConsumeOnMap:
-        {readonly [item: string]: NonNullable<dexutil.ItemData["consumeOn"]>} =
+        {readonly [item: string]: NonNullable<dex.ItemData["consumeOn"]>} =
     {
         custapberry: {preMove: {threshold: 25, moveFirst: true}},
 
@@ -938,9 +933,9 @@ import { toIdName } from "../src/psbot/helpers";
     };
 
     // make sure that having no item is possible
-    const items: (readonly [string, dexutil.ItemData])[] =
+    const items: (readonly [string, dex.ItemData])[] =
         [["none", {uid: 0, name: "none", display: "None"}]];
-    const berries: (readonly [string, dexutil.NaturalGiftData])[] = [];
+    const berries: (readonly [string, dex.NaturalGiftData])[] = [];
 
     uid = 1;
     for (const item of [...gen.items]
@@ -953,7 +948,7 @@ import { toIdName } from "../src/psbot/helpers";
                 item.id,
                 {
                     basePower: item.naturalGift.basePower,
-                    type: item.naturalGift.type.toLowerCase() as dexutil.Type
+                    type: item.naturalGift.type.toLowerCase() as dex.Type
                 }
             ]);
         }
@@ -966,7 +961,7 @@ import { toIdName } from "../src/psbot/helpers";
                 ...item.isChoice && {isChoice: true},
                 ...item.isBerry && {isBerry: true},
                 ...item.onPlate &&
-                    {plateType: item.onPlate.toLowerCase() as dexutil.Type},
+                    {plateType: item.onPlate.toLowerCase() as dex.Type},
                 ...itemOnMap.hasOwnProperty(item.id) &&
                     {on: itemOnMap[item.id]},
                 ...itemConsumeOnMap.hasOwnProperty(item.id) &&
@@ -1146,11 +1141,11 @@ export function is${cap}Move(value: any): value is ${cap}Move
     }
 
     /**
-     * Creates an exported memoized function for wrapping mapped `dexutil`
+     * Creates an exported memoized function for wrapping mapped `dex`
      * structures.
      * @param name Name of the wrapper class.
-     * @param dataName Name of the `dexutil` wrapped type.
-     * @param mapName Name of the `dexutil` type map.
+     * @param dataName Name of the `dex` wrapped type.
+     * @param mapName Name of the `dex` type map.
      */
     function exportDataWrapper(name: string, dataName: string, mapName: string):
         string
@@ -1182,32 +1177,32 @@ export function get${name}(name: string | ${dataName}): wrappers.${name} | null
 /**
  * @file Generated file containing all the dex data taken from Pokemon Showdown.
  */
-import * as dexutil from "./dex-util";
+import * as dex from "./dex-util";
 import * as wrappers from "./wrappers";
 
 /**
  * Contains info about each pokemon, with alternate forms as separate entries.
  */
-${exportEntriesToDict(pokemon, "pokemon", "dexutil.PokemonData",
+${exportEntriesToDict(pokemon, "pokemon", "dex.PokemonData",
     p => deepStringifyDict(p, v => typeof v === "string" ? quote(v) : v))}
 
 /** Sorted array of all pokemon names. */
 ${exportArray(pokemon, "pokemonKeys", "string", ([name]) => quote(name))}
 
-${exportDataWrapper("Ability", "dexutil.AbilityData", "abilities")}
+${exportDataWrapper("Ability", "dex.AbilityData", "abilities")}
 
 /** Contains info about each ability. */
-${exportEntriesToDict(abilities, "abilities", "dexutil.AbilityData",
+${exportEntriesToDict(abilities, "abilities", "dex.AbilityData",
     a => deepStringifyDict(a, v => typeof v === "string" ? quote(v) : v))}
 
 /** Sorted array of all ability names. */
 ${exportArray(abilities, "abilityKeys", "string", ([name]) => quote(name))}
 
-${exportDataWrapper("Move", "dexutil.MoveData", "moves")}
+${exportDataWrapper("Move", "dex.MoveData", "moves")}
 
 /** Contains info about each move. */
-${exportEntriesToDict(moves, "moves", "dexutil.MoveData", m =>
-    deepStringifyDict(m, v => typeof v === "string" ? quote(v) : v))}
+${exportEntriesToDict(moves, "moves", "dex.MoveData",
+    m => deepStringifyDict(m, v => typeof v === "string" ? quote(v) : v))}
 
 /** Sorted array of all move names. */
 ${exportArray(moves, "moveKeys", "string", ([name]) => quote(name))}
@@ -1219,24 +1214,24 @@ ${exportSpecificMoves(lockedMoves, "locked")}
 ${exportSpecificMoves(twoTurnMoves, "twoTurn", "two-turn")}
 
 /** Maps move name to its CallType, if any. Primarily used for easy testing. */
-${exportEntriesToDict(moveCallers, "moveCallers", "dexutil.CallType",
+${exportEntriesToDict(moveCallers, "moveCallers", "dex.CallType",
     v => typeof v === "string" ? quote(v) : v.toString())}
 
 /** Maps move type to each move of that type. */
 ${exportDict(typeToMoves, "typeToMoves",
-    "{readonly [T in dexutil.Type]: readonly string[]}",
+    "{readonly [T in dex.Type]: readonly string[]}",
     a => `[${a.map(quote).join(", ")}]`)}
 
-${exportDataWrapper("Item", "dexutil.ItemData", "items")}
+${exportDataWrapper("Item", "dex.ItemData", "items")}
 
 /** Contains info about each item. */
-${exportEntriesToDict(items, "items", "dexutil.ItemData", i =>
-    deepStringifyDict(i, v => typeof v === "string" ? quote(v) : v))}
+${exportEntriesToDict(items, "items", "dex.ItemData",
+    i => deepStringifyDict(i, v => typeof v === "string" ? quote(v) : v))}
 
 /** Sorted array of all item names, except with \`none\` at position 0. */
 ${exportArray(items, "itemKeys", "string", i => quote(i[0]))}
 
 /** Contains info about each berry item. */
-${exportEntriesToDict(berries, "berries", "dexutil.NaturalGiftData",
+${exportEntriesToDict(berries, "berries", "dex.NaturalGiftData",
     b => stringifyDict(b, v => typeof v === "string" ? quote(v) : v))}`);
 })();
