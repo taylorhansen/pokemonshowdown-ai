@@ -610,9 +610,10 @@ handlersImpl["|-enditem|"] = async function(ctx: BattleParserContext<"gen4">)
     // in most other(?) cases the item can be restored via Recycle
     else consumed = itemId;
 
-    // likely consuming the status, not the actual berry
+    // consuming the status, not the actual berry
     if (itemId === "micleberry" && !event.kwArgs.eat)
     {
+        mon.volatile.micleberry = false;
         await consume(ctx);
         return;
     }

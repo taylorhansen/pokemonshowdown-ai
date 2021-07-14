@@ -45,8 +45,8 @@ export async function percentDamage(ctx: BattleParserContext<"gen4">,
  * @param hp Current hp.
  * @param hpMax Max hp.
  */
-function isPercentDamageSilent(percent: number, hp: number, hpMax: number):
-    boolean
+export function isPercentDamageSilent(percent: number, hp: number,
+    hpMax: number): boolean
 {
     // can't heal when full or damage when fainted
     return (percent > 0 && hp >= hpMax) || (percent < 0 && hp <= 0);

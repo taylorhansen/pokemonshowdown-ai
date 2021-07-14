@@ -1,22 +1,23 @@
 import { Protocol } from "@pkmn/protocol";
-import { BoostID, SideID } from "@pkmn/types";
-import { Type, WeatherType } from "..";
+import { SideID } from "@pkmn/types";
+import { Type } from "..";
 import { toIdName } from "../../../../../../helpers";
 import { Event } from "../../../../../../parser";
-import { BattleParserContext, consume, eventLoop, inference, tryPeek, tryVerify,
-    unordered, verify } from "../../../../parser";
-import { dispatch, handlers as base } from "../../parser/base";
-import { boost } from "../../parser/effect/boost";
-import { percentDamage } from "../../parser/effect/damage";
+import { BattleParserContext, consume, inference, tryVerify, unordered } from
+    "../../../../parser";
+import { handlers as base } from "../../parser/base";
+import { boostOne } from "../../parser/effect/boost";
+import { isPercentDamageSilent, percentDamage } from
+    "../../parser/effect/damage";
 import { updateItems } from "../../parser/effect/item";
-import { hasStatus, status, StatusEventType } from "../../parser/effect/status";
-import { chance, diffMoveType, hasAnItem, moveIsType } from
-    "../../parser/reason";
-import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
-import { getMove } from "../dex";
-import { BoostTable, ItemData, ItemOn, StatusType } from "../dex-util";
-import { getTypeEffectiveness } from "../typechart";
-import { Move, MoveAndUser, MoveAndUserRef } from "./Move";
+import { cure, hasStatus, status, StatusEventType } from
+    "../../parser/effect/status";
+import { abilityCantIgnoreItem, doesntHaveAbility, isAt1HP,
+    itemIgnoringAbilities, moveIsType } from "../../parser/reason";
+import { Pokemon } from "../../state/Pokemon";
+import { ItemData, StatusType } from "../dex-util";
+import { getAttackerTypes, getTypeEffectiveness } from "../typechart";
+import { MoveAndUser, MoveAndUserRef } from "./Move";
 
 /** Result of `Item#consumeOnPreHit()`. */
 export interface ItemConsumePreHitResult
@@ -38,6 +39,49 @@ export class Item
     //#region canX() SubReasons and onX() item effect parsers
 
     //#region on-movePostDamage
+
+    /**
+     * Checks whether the item can activate on-`movePostDamage`.
+     * @param mon Potential item holder.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canMovePostDamage(mon: Pokemon): Set<inference.SubReason> | null
+    {
+        if (!this.data.on?.movePostDamage) return null;
+
+        // check for abilities that would block the item
+        // can't be blocked if ability is suppressed
+        if (mon.volatile.suppressAbility) return new Set();
+
+        const abilities = new Set(mon.traits.ability.possibleValues);
+        // check if the item could actually activate
+        const percent = this.data.on.movePostDamage.percentDamage;
+        if (percent &&
+            !isPercentDamageSilent(percent, mon.hp.current, mon.hp.max))
+        {
+            // filter ability possibilities that can block the remaining effects
+            // if one effect can't be suppressed, then the item should activate
+            for (const abilityName of abilities)
+            {
+                const ability = mon.traits.ability.map[abilityName];
+                if (ability.flags?.ignoreItem) continue;
+                if (percent < 0 &&
+                    ability.flags?.noIndirectDamage === true)
+                {
+                    continue;
+                }
+                abilities.delete(abilityName);
+            }
+        }
+        else return null;
+        // no abilities block this item
+        if (abilities.size <= 0) return new Set();
+        // all possible abilities block this item
+        if (abilities.size >= mon.traits.ability.size) return null;
+        return new Set([doesntHaveAbility(mon, abilities)]);
+    }
 
     /**
      * Activates an item on-`movePostDamage` (e.g. lifeorb).
@@ -65,6 +109,76 @@ export class Item
     //#region on-turn
 
     /**
+     * Checks whether the item can activate on-`turn`.
+     * @param mon Potential item holder.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canTurn(mon: Pokemon): Set<inference.SubReason> | null
+    {
+        const data = this.data.on?.turn;
+        if (!data) return null;
+
+        // check for abilities that would block the item
+        // can't be blocked if ability is suppressed
+        if (mon.volatile.suppressAbility) return new Set();
+
+        // check for percent-damage effect
+        const isPoison = mon.types.includes("poison");
+        let percent = data[isPoison ? "poisonDamage" : "noPoisonDamage"];
+        if (percent &&
+            isPercentDamageSilent(percent, mon.hp.current, mon.hp.max))
+        {
+            // effect would be silent so don't mention it here
+            percent = undefined;
+        }
+
+        // no item effects to activate
+        if (!percent && !data.status) return null;
+
+        // get a list of all the possible abilities that could block the item
+        //  effects
+        // start from the list of all possible abilities then prune the ones
+        //  that are irrelevant for this item
+        const abilities = new Set(mon.traits.ability.possibleValues);
+        for (const abilityName of abilities)
+        {
+            const ability = mon.traits.ability.map[abilityName];
+            // ability can ignore item
+            if (ability.flags?.ignoreItem) continue;
+            // indirect damage doesn't apply when healing
+            if (percent && percent < 0 &&
+                ability.flags?.noIndirectDamage === true)
+            {
+                continue;
+            }
+            // if there's a status immunity (even a silent one), then the item
+            //  can't activate
+            if (data.status && !ability.statusImmunity?.[data.status])
+            {
+                const blockCondition = ability.on?.block?.status;
+                if (blockCondition === true) continue;
+                if (blockCondition &&
+                    mon.team?.state?.status.weather.type === blockCondition)
+                {
+                    continue;
+                }
+            }
+
+            // ability can't block the item
+            abilities.delete(abilityName);
+        }
+
+        // none of the possible abilities can block this item
+        if (abilities.size <= 0) return new Set();
+        // all of the possible abilities can block this item
+        if (abilities.size >= mon.traits.ability.size) return null;
+        // some can block, setup an inference that will make this decision later
+        return new Set([doesntHaveAbility(mon, abilities)]);
+    }
+
+    /**
      * Handles events due to a turn item (e.g. leftovers).
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
@@ -81,7 +195,7 @@ export class Item
         if (percent)
         {
             const damageResult = await this.percentDamage(ctx, accept, side,
-                    percent);
+                percent);
             if (damageResult !== true) return;
             this.indirectDamage(ctx, side);
         }
@@ -95,13 +209,55 @@ export class Item
 
     //#endregion
 
+    //#region on-x helper methods
+
+    /**
+     * Indicates that the item holder received indirect damage from the item, in
+     * order to make ability inferences.
+     */
+    private indirectDamage(ctx: BattleParserContext<"gen4">, side: SideID): void
+    {
+        const holder = ctx.state.getTeam(side).active;
+        if (holder.volatile.suppressAbility) return;
+
+        // can't have an ability that blocks indirect damage
+        const ability = holder.traits.ability;
+        const filteredAbilities =
+            [...ability.possibleValues]
+                .filter(n => ability.map[n].flags?.noIndirectDamage === true);
+        if (filteredAbilities.length >= ability.size)
+        {
+            throw new Error(`Pokemon '${side}' received indirect damage ` +
+                `from item '${this.data.name}' even though its ability ` +
+                `[${[...ability.possibleValues].join(", ")}] suppresses that ` +
+                "damage");
+        }
+        ability.remove(filteredAbilities);
+    }
+
+    //#endregion
+
     //#endregion
 
     //#region canConsumeX() SubReasons and onConsumeX() item effect parsers
 
     //#region consumeOn-preMove
 
-    // TODO: custap hp check happens on pre-turn
+    // TODO: verify that custap hp check happens on pre-turn
+    /**
+     * Checks whether the item can activate consumeOn-`preMove`.
+     * @param mon Potential item holder.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canConsumePreMove(mon: Pokemon): Set<inference.SubReason> | null
+    {
+        if (!this.data.consumeOn?.preMove) return null;
+        return this.checkHPThreshold(mon,
+            this.data.consumeOn.preMove.threshold);
+    }
+
     /**
      * Activates an item on-`preMove` (e.g. custapberry).
      * @param accept Callback to accept this pathway.
@@ -131,6 +287,23 @@ export class Item
     //#region consumeOn-moveCharge
 
     /**
+     * Checks whether the item can activate consumeOn-`moveCharge`.
+     * @param mon Potential item holder.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canConsumeMoveCharge(mon: Pokemon): Set<inference.SubReason> | null
+    {
+        if (!this.data.consumeOn?.moveCharge) return null;
+        if (this.data.consumeOn.moveCharge === "shorten")
+        {
+            return new Set([abilityCantIgnoreItem(mon)]);
+        }
+        return null;
+    }
+
+    /**
      * Activates an item on-`moveCharge` (e.g. powerherb).
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
@@ -152,6 +325,41 @@ export class Item
     //#endregion
 
     //#region consumeOn-preHit
+
+    /**
+     * Checks whether the item can activate consumeOn-`preHit`.
+     * @param mon Potential item holder.
+     * @param hitBy Move+user the holder was hit by.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canConsumePreHit(mon: Pokemon, hitBy: MoveAndUser):
+        Set<inference.SubReason> | null
+    {
+        if (!this.data.consumeOn?.preHit) return null;
+
+        const result = new Set([abilityCantIgnoreItem(mon)]);
+
+        const {resistSuper} = this.data.consumeOn.preHit;
+        if (resistSuper)
+        {
+            // can't activate if holder isn't weak to the type this item
+            //  protects against (unless normal)
+            if (resistSuper !== "normal" &&
+                getTypeEffectiveness(mon.types, resistSuper) !== "super")
+            {
+                return null;
+            }
+            // can't activate for moves that can never be super-effective
+            if (!hitBy.move.canBeEffective) return null;
+            // will only work then if the move type is the protected type
+            // TODO: don't add if already proven/disproven
+            result.add(moveIsType(hitBy.move, hitBy.user,
+                new Set([resistSuper])));
+        }
+        return result;
+    }
 
     /**
      * Activates an item on-`preHit` (e.g. resist berries).
@@ -222,6 +430,30 @@ export class Item
     //#region consumeOn-tryOHKO
 
     /**
+     * Checks whether the item can activate consumeOn-`tryOHKO`.
+     * @param mon Potential item holder.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canConsumeTryOHKO(mon: Pokemon): Set<inference.SubReason> | null
+    {
+        const data = this.data.consumeOn?.tryOHKO;
+        if (!data) return null;
+        if (data === "block")
+        {
+            const result = new Set([abilityCantIgnoreItem(mon)]);
+
+            const activate = isAt1HP(mon);
+            if (!activate) return null;
+            for (const reason of activate) result.add(reason);
+
+            return result;
+        }
+        return null;
+    }
+
+    /**
      * Activates an item on-`tryOHKO` (e.g. focussash).
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
@@ -240,6 +472,40 @@ export class Item
     //#endregion
 
     //#region consumeOn-super
+
+    /**
+     * Checks whether the item can activate consumeOn-`super`.
+     * @param mon Potential item holder.
+     * @param hitBy Move+user the holder was hit by.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canConsumeSuper(mon: Pokemon, hitBy: MoveAndUser):
+        Set<inference.SubReason> | null
+    {
+        const data = this.data.consumeOn?.super;
+        if (!data) return null;
+        if (!hitBy.move.canBeEffective) return null;
+
+        if (data.heal)
+        {
+            // must be able to heal
+            if (isPercentDamageSilent(data.heal, mon.hp.current, mon.hp.max))
+            {
+                return null;
+            }
+
+            return new Set(
+            [
+                abilityCantIgnoreItem(mon),
+                // move must be super-effective
+                moveIsType(hitBy.move, hitBy.user,
+                    getAttackerTypes(mon.types, "super"))
+            ]);
+        }
+        return null;
+    }
 
     /**
      * Activates an item on-`super` (e.g. enigmaberry).
@@ -266,7 +532,33 @@ export class Item
 
     //#endregion
 
-    //#region consumeOn-postHit parser
+    //#region consumeOn-postHit
+
+    /**
+     * Checks whether the item can activate consumeOn-`postHit`.
+     * @param mon Potential item holder.
+     * @param hitBy Move+user the holder was hit by.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canConsumePostHit(mon: Pokemon, hitBy: MoveAndUser):
+        Set<inference.SubReason> | null
+    {
+        const data = this.data.consumeOn?.postHit;
+        if (!data) return null;
+        if (data.condition !== hitBy.move.data.category)
+        {
+            return null;
+        }
+
+        if (data.damage)
+        {
+            // note: even if effect is a no-op, this item still activates
+            return new Set([abilityCantIgnoreItem(mon)]);
+        }
+        return null;
+    }
 
     /**
      * Activates an item on-`postHit` (e.g. jabocaberry/rowapberry).
@@ -285,20 +577,65 @@ export class Item
         {
             await this.consumeItem(ctx, accept, side);
             let accepted = false;
+            // note: even if effect is a no-op, this item still activates
             const damageResult = await this.percentDamage(ctx,
                 () => accepted = true, hitBy.userRef, -damage);
-            if (damageResult !== true || !accepted)
+            if (damageResult === true && accepted)
             {
-                throw new Error("ConsumeOn-postHit damage effect failed");
+                // after dealing damage, check if any other items need to
+                //  activate
+                await updateItems(ctx);
             }
-            // after taking damage, check if any other items need to activate
-            await updateItems(ctx);
         }
     }
 
     //#endregion
 
-    //#region consumeOn-update parser
+    //#region consumeOn-update
+
+    /**
+     * Checks whether the item can activate consumeOn-`update`.
+     * @param mon Potential item holder.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or null if it cannot
+     * activate.
+     */
+    public canConsumeUpdate(mon: Pokemon): Set<inference.SubReason> | null
+    {
+        if (mon.fainted) return null;
+        const data = this.data.consumeOn?.update;
+        if (!data) return null;
+        switch (data.condition)
+        {
+            case "hp":
+                return this.checkHPThreshold(mon, data.threshold);
+            case "status":
+            {
+                let canCure = false;
+                for (const statusType in data.cure)
+                {
+                    if (!cure.hasOwnProperty(statusType)) continue;
+                    if (canCure ||= hasStatus(mon, statusType as StatusType))
+                    {
+                        break;
+                    }
+                }
+                if (!canCure) return null;
+                return new Set([abilityCantIgnoreItem(mon)]);
+            }
+            case "depleted":
+                for (const move of mon.moveset.moves.values())
+                {
+                    // TODO: pp may be uncertain in corner cases, handle these
+                    //  then add a SubReason to support this later
+                    if (move.pp > 0) continue;
+                    return new Set([abilityCantIgnoreItem(mon)]);
+                }
+                // fallthrough
+            default:
+                return null;
+        }
+    }
 
     /**
      * Activates an item on-`update` (e.g. sitrusberry).
@@ -308,69 +645,103 @@ export class Item
     public async consumeOnUpdate(ctx: BattleParserContext<"gen4">,
         accept: unordered.AcceptCallback, side: SideID): Promise<void>
     {
-        const holder = ctx.state.getTeam(side).active;
         const data = this.data.consumeOn?.update;
         switch (data?.condition)
         {
             case "hp":
-                Item.assertHPThreshold(holder, data.threshold);
-                switch (data.effect.type)
-                {
-                    case "healPercent": case "healFixed":
-                    {
-                        await this.verifyConsume(ctx, side);
-                        await Item.heal(ctx, "update", side,
-                            data.effect.heal);
-                        if (data.effect.dislike)
-                        {
-                            // TODO: assert dislike nature
-                            await parsers.status(ctx, side, ["confusion"]);
-                        }
-                        return {};
-                    }
-                    case "boost":
-                    {
-                        await this.verifyConsume(ctx, side);
-                        const boostResult = await parsers.boostOne(ctx,
-                            side, data.effect.boostOne);
-                        if (!boostResult.success)
-                        {
-                            throw new Error("ConsumeOn-update boost effect " +
-                                "failed");
-                        }
-                        return {};
-                    }
-                    case "focusEnergy":
-                    {
-                        await this.verifyConsume(ctx, side);
-                        const statusResult = await parsers.status(ctx,
-                            side, ["focusEnergy"]);
-                        if (!statusResult.success)
-                        {
-                            throw new Error("ConsumeOn-update focusEnergy " +
-                                "effect failed");
-                        }
-                        return {};
-                    }
-                    default:
-                        // istanbul ignore next: should never happen
-                        throw new Error("ConsumeOn-update effect failed: " +
-                            `Unknown effect type '${data.effect!.type}'`);
-                }
+                return await this.updateHP(ctx, accept, side);
             case "status":
+                return await this.updateStatus(ctx, accept, side);
+            case "depleted":
+                return await this.updateDepleted(ctx, accept, side);
+        }
+    }
+
+    /**
+     * Activates an item on-`update` for condition=hp (e.g. sitrusberry).
+     * @param accept Callback to accept this pathway.
+     * @param side Item holder reference.
+     */
+    private async updateHP(ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback, side: SideID): Promise<void>
+    {
+        const data = this.data.consumeOn?.update;
+        if (data?.condition !== "hp") return;
+        await this.consumeItem(ctx, accept, side);
+
+        const mon = ctx.state.getTeam(side).active;
+        Item.assertHPThreshold(mon, data.threshold);
+
+        const failName = `hp ${data.effect.type}`;
+        const fail = (reason?: string) => this.updateFailed(failName, reason);
+        switch (data.effect.type)
+        {
+            case "healPercent": case "healFixed":
             {
-                await this.verifyConsume(ctx, side);
-                // cure all the relevant statuses
-                const statusResult = await parsers.cure(ctx, side,
-                    Object.keys(data.cure) as dexutil.StatusType[]);
-                if (statusResult.ret !== true && statusResult.ret !== "silent")
+                let accepted = true;
+                const damageResult = await this.percentDamage(ctx,
+                    () => accepted = true, side, data.effect.heal);
+                if (damageResult !== true || !accepted) return fail();
+                if (data.effect.dislike)
                 {
-                    throw new Error("ConsumeOn-update cure effect failed");
+                    // TODO: assert dislike nature
+                    // TODO: handle status immunity/errors?
+                    await status(ctx, side, ["confusion"]);
                 }
                 break;
             }
-            case "depleted":
-                return await this.updateDepleted(ctx, accept, side);
+            case "boost":
+            {
+                // note: for starfberry (boosts a random stat), if all boosts
+                //  are maxed out, no events are emitted
+                const boostResult = await boostOne(ctx,
+                    {
+                        side, table: data.effect.boostOne,
+                        silent: Object.keys(data.effect.boostOne).length > 1
+                    },
+                    event => this.isEventFromItem(event));
+                if (!boostResult) return fail();
+                break;
+            }
+            case "focusEnergy":
+            {
+                // note: effect can be silent if already afflicted
+                const statusResult = await status(ctx, side, ["focusenergy"]);
+                if (!statusResult) return fail();
+                break;
+            }
+            // istanbul ignore next: should never happen
+            default:
+                const unhandled: never = data.effect;
+                throw new Error("ConsumeOn-update effect failed: " +
+                    `Unknown effect type '${(unhandled as any).type}'`);
+        }
+    }
+
+    /**
+     * Activates an item on-`update` for condition=status (e.g. lumberry).
+     * @param accept Callback to accept this pathway.
+     * @param side Item holder reference.
+     */
+    private async updateStatus(ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback, side: SideID): Promise<void>
+    {
+        const data = this.data.consumeOn?.update;
+        if (data?.condition !== "status") return;
+        if (data.cure)
+        {
+            await this.consumeItem(ctx, accept, side);
+            const fail =
+                (reason?: string) => this.updateFailed("status cure", reason);
+            // cure all the relevant statuses
+            const cureResult = await cure(ctx, side,
+                Object.keys(data.cure) as StatusType[]);
+            if (cureResult === "silent") return fail("Cure effect was a no-op");
+            if (cureResult.size > 0)
+            {
+                return fail("Missing cure events: " +
+                    `[${[...cureResult].join(", ")}]`);
+            }
         }
     }
 
@@ -454,352 +825,7 @@ export class Item
 
     //#endregion
 
-    //#region consumeOn-residual parser
-
-    /**
-     * Activates an item on-`residual` (e.g. micleberry).
-     * @param side Item holder reference.
-     */
-    public async consumeOnResidual(ctx: BattleParserContext<"gen4">, side: SideID):
-        Promise<ItemConsumeResult>
-    {
-        if (this.data.consumeOn?.residual)
-        {
-            const holder = ctx.state.teams[side].active;
-            Item.assertHPThreshold(holder,
-                this.data.consumeOn.residual.threshold);
-            if (this.data.consumeOn.residual.status === "micleberry")
-            {
-                holder.volatile.micleberry = true;
-                await this.verifyConsume(ctx, side);
-                return {};
-            }
-        }
-        throw new Error(`ConsumeOn-residual effect shouldn't activate for ` +
-            `item '${this.data.name}'`);
-    }
-
-    //#endregion
-
-    //#region consumeOnX() method helpers
-
-    /**
-     * Verifies and consumes the initial activateItem event to verify that it
-     * may be relevant for this Item obj.
-     * @param side Item holder reference.
-     */
-    private async verifyConsume(ctx: BattleParserContext<"gen4">, side: SideID):
-        Promise<void>
-    {
-        const event = await verify(ctx, "removeItem");
-        if (event.monRef !== side)
-        {
-            throw new Error(`Mismatched monRef: expected '${side}' but ` +
-                `got '${event.monRef}'`);
-        }
-        if (event.consumed !== this.data.name)
-        {
-            throw new Error("Mismatched item: expected " +
-                `'${this.data.name}' but got '${event.consumed}'`);
-        }
-        await consume(ctx);
-    }
-
-    /** Makes HP/ability assertions based on item activation HP threshold. */
-    private static assertHPThreshold(holder: Pokemon, threshold: number): void
-    {
-        const percentHP = 100 * holder.hp.current / holder.hp.max;
-        if (threshold === 25 && percentHP > 25 && percentHP <= 50)
-        {
-            if (holder.volatile.suppressAbility)
-            {
-                throw new Error("Holder must have early-berry (gluttony) " +
-                    "ability but ability is suppressed");
-            }
-            holder.traits.ability.narrow((_, a) => !!a.flags?.earlyBerry);
-        }
-        else if (percentHP > threshold)
-        {
-            throw new Error(`Holder expected to have HP (${percentHP}%) to ` +
-                `be below the item's activation threshold of ${threshold}%`);
-        }
-    }
-
-    /** Handles heal effect from items. */
-    private static async heal(ctx: BattleParserContext<"gen4">, on: dexutil.ItemConsumeOn,
-        side: SideID, percent: number): Promise<SubParserResult>
-    {
-        const healResult = await parsers.percentDamage(ctx, side,
-            percent);
-        if (!healResult.success)
-        {
-            throw new Error(`ConsumeOn-${on} heal effect failed`);
-        }
-        return {};
-    }
-
-    //#endregion
-
-    //#endregion
-
-    //#region canX() SubReason builders for onX() activateItem parsers
-
-    //#region on-movePostDamage reason
-
-    /**
-     * Checks whether the item can activate on-`movePostDamage`.
-     * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canMovePostDamage(mon: Pokemon): Set<SubReason> | null
-    {
-        if (!this.data.on?.movePostDamage) return null;
-
-        // check for abilities that would block the item
-        // can't be blocked if ability is suppressed
-        if (mon.volatile.suppressAbility) return new Set();
-
-        const abilities = new Set(mon.traits.ability.possibleValues);
-        // if the effect is silent or nonexistent, leave it
-        const percent = this.data.on.movePostDamage.percentDamage;
-        if (percent && !matchPercentDamage(percent, mon.hp.current, mon.hp.max))
-        {
-            // filter ability possibilities that can block the remaining effects
-            // if one effect can't be suppressed, then the item should activate
-            for (const abilityName of abilities)
-            {
-                const ability = mon.traits.ability.map[abilityName];
-                if (ability.flags?.ignoreItem) continue;
-                if (percent < 0 &&
-                    ability.flags?.noIndirectDamage === true)
-                {
-                    continue;
-                }
-                abilities.delete(abilityName);
-            }
-        }
-        else return null;
-        if (abilities.size <= 0) return new Set();
-        if (abilities.size >= mon.traits.ability.size) return null;
-        return new Set([hasAbility(mon, abilities, /*negative*/ true)]);
-    }
-
-    //#endregion
-
-    //#endregion
-
-    //#region canConsumeX() SubReason builders for consumeOnX() removeItem
-    //  parsers
-
-    //#region consumeOn-preMove reason
-
-    /**
-     * Checks whether the item can activate consumeOn-`preMove`.
-     * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canConsumePreMove(mon: Pokemon): Set<SubReason> | null
-    {
-        if (!this.data.consumeOn?.preMove) return null;
-        return this.checkHPThreshold(mon,
-            this.data.consumeOn.preMove.threshold);
-    }
-
-    //#endregion
-
-    //#region consumeOn-moveCharge reason
-
-    /**
-     * Checks whether the item can activate consumeOn-`moveCharge`.
-     * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canConsumeMoveCharge(mon: Pokemon): Set<SubReason> | null
-    {
-        if (!this.data.consumeOn?.moveCharge) return null;
-        if (this.data.consumeOn.moveCharge === "shorten")
-        {
-            return cantHaveKlutz(mon);
-        }
-        return null;
-    }
-
-    //#endregion
-
-    //#region consumeOn-preHit reason
-
-    /**
-     * Checks whether the item can activate consumeOn-`preHit`.
-     * @param mon Potential item holder.
-     * @param hitBy Move+user the holder was hit by.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canConsumePreHit(mon: Pokemon, hitBy: dexutil.MoveAndUser):
-        Set<SubReason> | null
-    {
-        if (!this.data.consumeOn?.preHit) return null;
-
-        const result = cantHaveKlutz(mon);
-        if (!result) return null;
-
-        const {resistSuper} = this.data.consumeOn.preHit;
-        if (resistSuper)
-        {
-            // can't activate if holder isn't weak to the type this item
-            //  protects against (unless normal)
-            if (resistSuper !== "normal" &&
-                getTypeEffectiveness(mon.types, resistSuper) !== "super")
-            {
-                return null;
-            }
-            // can't activate for moves that can never be super-effective
-            if (!hitBy.move.canBeEffective) return null;
-            // will only work then if the move type is the protected type
-            // TODO: don't add if already proven/disproven
-            result.add(moveIsType(hitBy.move, hitBy.user,
-                new Set([resistSuper])));
-        }
-        return result;
-    }
-
-    //#endregion
-
-    //#region consumeOn-tryOHKO reason
-
-    /**
-     * Checks whether the item can activate consumeOn-`tryOHKO`.
-     * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canConsumeTryOHKO(mon: Pokemon): Set<SubReason> | null
-    {
-        if (!this.data.consumeOn?.tryOHKO) return null;
-        const {tryOHKO} = this.data.consumeOn;
-        if (tryOHKO !== "block") return null;
-
-        const result = cantHaveKlutz(mon);
-        if (!result) return null;
-
-        const activate = isAt1HP(mon);
-        if (!activate) return null;
-        for (const reason of activate) result.add(reason);
-
-        return result;
-    }
-
-    //#endregion
-
-    //#region consumeOn-super reason
-
-    /**
-     * Checks whether the item can activate consumeOn-`super`.
-     * @param mon Potential item holder.
-     * @param hitBy Move+user the holder was hit by.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canConsumeSuper(mon: Pokemon, hitBy: dexutil.MoveAndUser):
-        Set<SubReason> | null
-    {
-        if (!this.data.consumeOn?.super) return null;
-
-        const result = cantHaveKlutz(mon);
-        if (!result || !hitBy.move.canBeEffective) return null;
-        // move must be super-effective
-        result.add(moveIsType(hitBy.move, hitBy.user,
-                getAttackerTypes(mon.types, "super")))
-        return result;
-    }
-
-    //#endregion
-
-    //#region consumeOn-postHit reason
-
-    /**
-     * Checks whether the item can activate consumeOn-`postHit`.
-     * @param mon Potential item holder.
-     * @param hitBy Move+user the holder was hit by.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canConsumePostHit(mon: Pokemon, hitBy: dexutil.MoveAndUser):
-        Set<SubReason> | null
-    {
-        if (!this.data.consumeOn?.postHit) return null;
-
-        if (this.data.consumeOn.postHit.condition === hitBy.move.data.category)
-        {
-            // items with -damage will activate even if opponent's hp = 0
-            // can likely assume the same for +damage items, but such a case
-            //  would be harder to test
-            return cantHaveKlutz(mon);
-        }
-        return null;
-    }
-
-    //#endregion
-
-    //#region consumeOn-update reason
-
-    /**
-     * Checks whether the item can activate consumeOn-`update`.
-     * @param mon Potential item holder.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canConsumeUpdate(mon: Pokemon): Set<SubReason> | null
-    {
-        if (mon.fainted) return null;
-        switch (this.data.consumeOn?.update?.condition)
-        {
-            case "hp":
-                return this.checkHPThreshold(mon,
-                        this.data.consumeOn.update.threshold);
-            case "status":
-            {
-                const {cure} = this.data.consumeOn.update;
-                let canCure = false;
-                for (const status in cure)
-                {
-                    if (!cure.hasOwnProperty(status)) continue;
-                    if (canCure ||=
-                        hasStatus(mon, status as dexutil.StatusType))
-                    {
-                        break;
-                    }
-                }
-                if (!canCure) return null;
-                return cantHaveKlutz(mon);
-            }
-            case "depleted":
-                for (const move of mon.moveset.moves.values())
-                {
-                    // TODO: pp may be uncertain in corner cases, handle
-                    //  these then add a SubReason to support this later
-                    if (move.pp > 0) continue;
-                    return cantHaveKlutz(mon);
-                }
-                // fallthrough
-            default: return null;
-        }
-    }
-
-    //#endregion
-
-    //#region consumeOn-residual reason
+    //#region consumeOn-residual
 
     /**
      * Checks whether the item can activate consumeOn-`residual`.
@@ -808,16 +834,35 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canConsumeResidual(mon: Pokemon): Set<SubReason> | null
+    public canConsumeResidual(mon: Pokemon): Set<inference.SubReason> | null
     {
         if (!this.data.consumeOn?.residual) return null;
         return this.checkHPThreshold(mon,
             this.data.consumeOn.residual.threshold);
     }
 
+    /**
+     * Activates an item on-`residual` (e.g. micleberry).
+     * @param accept Callback to accept this pathway.
+     * @param side Item holder reference.
+     */
+    public async consumeOnResidual(ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback, side: SideID): Promise<void>
+    {
+        if (!this.data.consumeOn?.residual) return;
+        await this.consumeItem(ctx, accept, side);
+
+        const holder = ctx.state.getTeam(side).active;
+        Item.assertHPThreshold(holder, this.data.consumeOn.residual.threshold);
+        if (this.data.consumeOn.residual.status === "micleberry")
+        {
+            holder.volatile.micleberry = true;
+        }
+    }
+
     //#endregion
 
-    //#region consumeOn-x helper methods
+    //#region consumeOn-x helper methdos
 
     /**
      * Expects the initial `|-enditem|<holder>|<item>` event for consuming an
@@ -873,7 +918,7 @@ export class Item
 
         const {ability} = mon.traits; // shorthand
 
-        const blockingAbilities = checkKlutz(mon);
+        const blockingAbilities = itemIgnoringAbilities(mon);
         if (blockingAbilities.size >= ability.size) return null;
 
         // hp is between 25-50% so the 25% berry can't activate on it's own, but
@@ -896,7 +941,27 @@ export class Item
 
         if (blockingAbilities.size <= 0) return new Set();
         if (blockingAbilities.size >= ability.size) return null;
-        return new Set([hasAbility(mon, blockingAbilities, /*negative*/ true)]);
+        return new Set([doesntHaveAbility(mon, blockingAbilities)]);
+    }
+
+    /** Makes HP/ability assertions based on item activation HP threshold. */
+    private static assertHPThreshold(holder: Pokemon, threshold: number): void
+    {
+        const percentHP = 100 * holder.hp.current / holder.hp.max;
+        if (threshold === 25 && percentHP > 25 && percentHP <= 50)
+        {
+            if (holder.volatile.suppressAbility)
+            {
+                throw new Error("Holder must have early-berry (gluttony) " +
+                    "ability but ability is suppressed");
+            }
+            holder.traits.ability.narrow((_, a) => !!a.flags?.earlyBerry);
+        }
+        else if (percentHP > threshold)
+        {
+            throw new Error(`Holder expected to have HP (${percentHP}%) to ` +
+                `be below the item's activation threshold of ${threshold}%`);
+        }
     }
 
     //#endregion
@@ -987,30 +1052,6 @@ export class Item
     {
         return (!effect.type || effect.type === "item") &&
             effect.name === this.data.name;
-    }
-
-    /**
-     * Indicates that the item holder received indirect damage from the item, in
-     * order to make ability inferences.
-     */
-    private indirectDamage(ctx: BattleParserContext<"gen4">, side: SideID): void
-    {
-        const holder = ctx.state.getTeam(side).active;
-        if (holder.volatile.suppressAbility) return;
-
-        // can't have an ability that blocks indirect damage
-        const ability = holder.traits.ability;
-        const filteredAbilities =
-            [...ability.possibleValues]
-                .filter(n => ability.map[n].flags?.noIndirectDamage === true);
-        if (filteredAbilities.length >= ability.size)
-        {
-            throw new Error(`Pokemon '${side}' received indirect damage ` +
-                `from item '${this.data.name}' even though its ability ` +
-                `[${[...ability.possibleValues].join(", ")}] suppresses that ` +
-                "damage");
-        }
-        ability.remove(filteredAbilities);
     }
 
     //#endregion
