@@ -279,10 +279,6 @@ export class Item
         {
             if (!await this.consumeItem(ctx, accept, side)) return;
 
-            const holder = ctx.state.getTeam(side).active;
-            Item.assertHPThreshold(holder?.team?.preTurnSnapshotPokemon ?? holder,
-                this.data.consumeOn.preMove.threshold);
-
             const event = await tryVerify(ctx, "|-message|");
             if (!event)
             {
@@ -684,9 +680,6 @@ export class Item
         if (data?.condition !== "hp") return;
         await this.consumeItem(ctx, accept, side);
 
-        const mon = ctx.state.getTeam(side).active;
-        Item.assertHPThreshold(mon, data.threshold);
-
         const failName = `hp ${data.effect.type}`;
         const fail = (reason?: string) => this.updateFailed(failName, reason);
         switch (data.effect.type)
@@ -868,7 +861,6 @@ export class Item
         await this.consumeItem(ctx, accept, side);
 
         const holder = ctx.state.getTeam(side).active;
-        Item.assertHPThreshold(holder, this.data.consumeOn.residual.threshold);
         if (this.data.consumeOn.residual.status === "micleberry")
         {
             holder.volatile.micleberry = true;
@@ -954,26 +946,6 @@ export class Item
         if (blockingAbilities.size <= 0) return new Set();
         if (blockingAbilities.size >= ability.size) return null;
         return new Set([doesntHaveAbility(mon, blockingAbilities)]);
-    }
-
-    /** Makes HP/ability assertions based on item activation HP threshold. */
-    private static assertHPThreshold(holder: Pokemon, threshold: number): void
-    {
-        const percentHP = 100 * holder.hp.current / holder.hp.max;
-        if (threshold === 25 && percentHP > 25 && percentHP <= 50)
-        {
-            if (holder.volatile.suppressAbility)
-            {
-                throw new Error("Holder must have early-berry (gluttony) " +
-                    "ability but ability is suppressed");
-            }
-            holder.traits.ability.narrow((_, a) => !!a.flags?.earlyBerry);
-        }
-        else if (percentHP > threshold)
-        {
-            throw new Error(`Holder expected to have HP (${percentHP}%) to ` +
-                `be below the item's activation threshold of ${threshold}%`);
-        }
     }
 
     //#endregion
