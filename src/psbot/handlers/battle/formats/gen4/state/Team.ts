@@ -48,6 +48,13 @@ export interface TeamRevealOptions extends SwitchOptions
     readonly moves?: readonly string[];
 }
 
+/** Partial snapshot of the active pokemon at the start of the turn. */
+export interface PreTurnSnapshotPokemon extends Pick<Pokemon, "item" | "traits">
+{
+    readonly hp: {readonly current: number, readonly max: number};
+    readonly volatile: {readonly suppressAbility: boolean};
+}
+
 /** Team state. */
 export class Team implements ReadonlyTeam
 {
@@ -99,6 +106,13 @@ export class Team implements ReadonlyTeam
      */
     private unrevealed = 0;
 
+    /** Used for custapberry check at the beginning of the turn. */
+    public get preTurnSnapshotPokemon(): PreTurnSnapshotPokemon | null
+    {
+        return this._preTurnSnapshotPokemon;
+    }
+    private _preTurnSnapshotPokemon: PreTurnSnapshotPokemon | null = null;
+
     /**
      * Creates a Team object.
      * @param side The Side this Team is on.
@@ -117,12 +131,21 @@ export class Team implements ReadonlyTeam
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void
     {
+        const m = this.active;
+        this._preTurnSnapshotPokemon =
+        {
+            item: m.item, traits: m.traits,
+            hp: {current: m.hp.current, max: m.hp.max},
+            volatile: {suppressAbility: m.volatile.suppressAbility}
+        };
+
         for (const mon of this._pokemon) mon?.preTurn();
     }
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
+        this._preTurnSnapshotPokemon = null;
         this.status.postTurn();
         for (const mon of this._pokemon) mon?.postTurn();
     }

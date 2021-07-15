@@ -16,6 +16,7 @@ import { abilityCantIgnoreItem, doesntHaveAbility, isAt1HP,
     itemIgnoringAbilities, moveIsEffective, moveIsType } from
     "../../parser/reason";
 import { Pokemon } from "../../state/Pokemon";
+import { PreTurnSnapshotPokemon } from "../../state/Team";
 import { ItemData, StatusType } from "../dex-util";
 import { getTypeEffectiveness } from "../typechart";
 import { MoveAndUser, MoveAndUserRef } from "./Move";
@@ -27,6 +28,7 @@ export interface ItemConsumePreHitResult
     resistSuper?: Type;
 }
 
+// TODO: consumeOn effects for eating in general (e.g. stealeat moves)
 /** Encapsulates item properties. */
 export class Item
 {
@@ -244,7 +246,7 @@ export class Item
 
     //#region consumeOn-preMove
 
-    // TODO: verify that custap hp check happens on pre-turn
+    // TODO: custap hp check happens on pre-turn
     /**
      * Checks whether the item can activate consumeOn-`preMove`.
      * @param mon Potential item holder.
@@ -255,7 +257,9 @@ export class Item
     public canConsumePreMove(mon: Pokemon): Set<inference.SubReason> | null
     {
         if (!this.data.consumeOn?.preMove) return null;
-        return this.checkHPThreshold(mon,
+        // NOTE(gen4): custapberry check happens on pre-turn but is consumed on
+        //  pre-move
+        return this.checkHPThreshold(mon.team?.preTurnSnapshotPokemon ?? mon,
             this.data.consumeOn.preMove.threshold);
     }
 
@@ -279,6 +283,20 @@ export class Item
             const holder = ctx.state.getTeam(side).active;
             Item.assertHPThreshold(holder,
                 this.data.consumeOn.preMove.threshold);
+
+            const event = await tryVerify(ctx, "|-message|");
+            if (!event)
+            {
+                throw new Error("ConsumeOn-preMove moveFirst effect failed: " +
+                    "Missing custapberry message");
+            }
+            if (event.args[1] !== "Custap Berry activated.")
+            {
+                throw new Error("ConsumeOn-preMove moveFirst effect failed: " +
+                    `Expected custapberry message but got '${event.args[1]}'`);
+            }
+            await base["|-message|"](ctx);
+
             return "moveFirst";
         }
     }
@@ -901,8 +919,8 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    private checkHPThreshold(mon: Pokemon, threshold: number):
-        Set<inference.SubReason> | null
+    private checkHPThreshold(mon: Pokemon | PreTurnSnapshotPokemon,
+        threshold: number): Set<inference.SubReason> | null
     {
         // TODO: is percentHP reliable? how does PS/cart handle rounding?
         const percentHP = 100 * mon.hp.current / mon.hp.max;

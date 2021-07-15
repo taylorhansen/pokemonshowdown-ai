@@ -3,8 +3,14 @@ import { inference } from "../../../../parser";
 import { Pokemon } from "../../state/Pokemon";
 import { PossibilityClass } from "../../state/PossibilityClass";
 
+/** Reduced interface type for ability inference helpers. */
+export interface PokemonAbilitySnapshot extends Pick<Pokemon, "traits">
+{
+    readonly volatile: {readonly suppressAbility: boolean};
+}
+
 /** Creates a SubReason that asserts that the pokemon has the given ability. */
-export function hasAbility(mon: Pokemon, abilities: Set<string>):
+export function hasAbility(mon: PokemonAbilitySnapshot, abilities: Set<string>):
     inference.SubReason
 {
     return new HasAbility(mon, abilities, /*negative*/ false);
@@ -14,8 +20,8 @@ export function hasAbility(mon: Pokemon, abilities: Set<string>):
  * Creates a SubReason that asserts that the pokemon doesn't have the given
  * ability.
  */
-export function doesntHaveAbility(mon: Pokemon, abilities: Set<string>):
-    inference.SubReason
+export function doesntHaveAbility(mon: PokemonAbilitySnapshot,
+    abilities: Set<string>): inference.SubReason
 {
     return new HasAbility(mon, abilities, /*negative*/ true);
 }
@@ -23,7 +29,8 @@ export function doesntHaveAbility(mon: Pokemon, abilities: Set<string>):
 /**
  * Creates a SubReason that asserts that the pokemon's ability ignores items.
  */
-export function abilityCanIgnoreItem(mon: Pokemon): inference.SubReason
+export function abilityCanIgnoreItem(mon: PokemonAbilitySnapshot):
+    inference.SubReason
 {
     const abilities = itemIgnoringAbilities(mon);
     return hasAbility(mon, abilities);
@@ -32,7 +39,8 @@ export function abilityCanIgnoreItem(mon: Pokemon): inference.SubReason
 /**
  * Creates a SubReason that asserts that the pokemon's ability ignores items.
  */
-export function abilityCantIgnoreItem(mon: Pokemon): inference.SubReason
+export function abilityCantIgnoreItem(mon: PokemonAbilitySnapshot):
+    inference.SubReason
 {
     const abilities = itemIgnoringAbilities(mon);
     return doesntHaveAbility(mon, abilities);
@@ -42,7 +50,7 @@ export function abilityCantIgnoreItem(mon: Pokemon): inference.SubReason
  * Gets the possible item-ignoring abilities that the pokemon can have, if
  * they're able to activate.
  */
-export function itemIgnoringAbilities(mon: Pokemon): Set<string>
+export function itemIgnoringAbilities(mon: PokemonAbilitySnapshot): Set<string>
 {
     if (mon.volatile.suppressAbility) return new Set();
 
@@ -60,7 +68,8 @@ class HasAbility extends inference.SubReason
     /** Ability snapshot for making inferences in retrospect. */
     private readonly ability: PossibilityClass<string>;
 
-    constructor(mon: Pokemon, private readonly abilities: Set<string>,
+    constructor(mon: PokemonAbilitySnapshot,
+        private readonly abilities: Set<string>,
         private readonly negative: boolean)
     {
         super();
