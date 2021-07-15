@@ -11,8 +11,8 @@ import { percentDamage } from "../../parser/effect/damage";
 import { updateItems } from "../../parser/effect/item";
 import { cure, hasStatus, status, StatusEventType } from
     "../../parser/effect/status";
-import { chance, diffMoveType, hasAnItem, moveIsType } from
-    "../../parser/reason";
+import { abilityCantIgnoreTarget, chance, diffMoveType, hasAnItem, moveIsType }
+    from "../../parser/reason";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { getMove } from "../dex";
 import { AbilityData, AbilityOn, BoostTable, StatusType } from "../dex-util";
@@ -295,19 +295,60 @@ export class Ability
     //#region on-block
 
     /**
-     * Checks whether the ability can activate on-`block` vs a status effect.
-     * @param statuses Possible statuses to afflict.
+     * Checks whether the ability can activate on-`block` to block some of a
+     * move's effects
      * @param weather Current weather.
+     * @param hitBy Move+user that the holder is being hit by.
      * @returns A Set of SubReasons describing additional conditions of
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canBlockStatusEffect(statuses: readonly StatusType[],
-        weather: WeatherType | "none"): Set<inference.SubReason> | null
+    public canBlock(weather: WeatherType | "none",
+        hitBy: MoveAndUser): Set<inference.SubReason> | null
     {
-        return statuses.some(
-                s => this.canBlockStatus(s, weather, /*allowSilent*/ false)) ?
-            new Set() : null;
+        let res: Set<inference.SubReason> | null = null;
+
+        // block status due to ability immunity
+        // note: only the main status effects can be visibly blocked
+        const statuses = hitBy.move.getMainStatusEffects("hit",
+            hitBy.user.types);
+        if (statuses.some(
+                s => this.canBlockStatus(s, weather, /*allowSilent*/ false)))
+        {
+            res ??= new Set();
+        }
+
+        // block move due to ability type immunity
+        if (this.data.on?.block?.move?.type === "nonSuper")
+        {
+            // TODO: type effectiveness assertions/SubReasons
+            (res ??= new Set()).add(chance);
+        }
+        // side/field status moves don't count
+        // TODO: what about moves with additional effects that target the
+        //  holder?
+        else if (hitBy.move.data.category !== "status" ||
+            (!hitBy.move.data.effects?.team && !hitBy.move.data.effects?.field))
+        {
+            // can't activate unless the ability could block one of the move's
+            //  possible types
+            const moveTypes = hitBy.move.getPossibleTypes(hitBy.user);
+            const typeImmunity = this.getTypeImmunity();
+            if (!typeImmunity || !moveTypes.has(typeImmunity)) return null;
+            (res ??= new Set()).add(
+                moveIsType(hitBy.move, hitBy.user, new Set([typeImmunity])));
+        }
+
+        // damp check
+        if (hitBy.move.data.flags?.explosive &&
+            this.data.on?.block?.effect?.explosive)
+        {
+            res ??= new Set();
+        }
+
+        // moldbreaker check
+        res?.add(abilityCantIgnoreTarget(hitBy.user));
+        return res;
     }
 
     /**
@@ -325,49 +366,6 @@ export class Ability
             (allowSilent ?
                 !!this.data.statusImmunity[statusType]
                 : this.data.statusImmunity[statusType] === true);
-    }
-
-    /**
-     * Checks whether the ability can activate on-`block` vs a move's type.
-     * @param types Possible move types.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canBlockMoveType(types: ReadonlySet<Type>, move: Move,
-        user: Pokemon): Set<inference.SubReason> | null
-    {
-        // TODO: type effectiveness assertions/SubReasons
-        if (this.data.on?.block?.move?.type === "nonSuper")
-        {
-            return new Set([chance]);
-        }
-        // side/field status moves don't count
-        // TODO: what about moves with additional effects that target the
-        //  holder?
-        if (move.data.category === "status" &&
-            (move.data.effects?.team || move.data.effects?.field))
-        {
-            return null;
-        }
-        // can't activate unless the ability could block one of the move's
-        //  possible types
-        const typeImmunity = this.getTypeImmunity();
-        if (!typeImmunity || !types.has(typeImmunity)) return null;
-        return new Set([moveIsType(move, user, new Set([typeImmunity]))]);
-    }
-
-    /**
-     * Checks whether the ability can activate on-`block` vs some effect.
-     * @param explosive Explosive flag for damp check.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canBlockEffect(explosive?: boolean): Set<inference.SubReason> | null
-    {
-        return explosive && this.data.on?.block?.effect?.explosive ?
-            new Set() : null;
     }
 
     /**
@@ -622,19 +620,27 @@ export class Ability
     /**
      * Checks whether the ability can activate on-`tryUnboost` to block an
      * unboost effect.
-     * @param boosts Boosts that could be blocked.
+     * @param hitBy Move+user that the holder is being hit by.
      * @returns A Set of SubReasons describing additional conditions of
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canBlockUnboost(boosts: Partial<BoostTable<number>>):
-        Set<inference.SubReason> | null
+    public canBlockUnboost(hitBy: MoveAndUser): Set<inference.SubReason> | null
     {
         if (!this.data.on?.tryUnboost?.block) return null;
         const blockUnboost = this.data.on.tryUnboost.block;
-        return (Object.keys(boosts) as BoostID[]).some(
+
+        const boostEffect = hitBy.move.getBoostEffects("hit", hitBy.user.types);
+        let {boosts} = boostEffect;
+        if (boostEffect.set) boosts = {};
+
+        const res = (Object.keys(boosts) as BoostID[]).some(
                 b => boosts[b]! < 0 && blockUnboost[b]) ?
-            new Set() : null;
+            new Set<inference.SubReason>() : null;
+
+        // moldbreaker check
+        res?.add(abilityCantIgnoreTarget(hitBy.user))
+        return res;
     }
 
     /**
@@ -767,12 +773,12 @@ export class Ability
     /**
      * Activates an ability on-`moveContactKO`/`moveContact`/`moveDamage`.
      * @param accept Callback to accept this pathway.
-     * @param on Which on-`X` we're talking about.
      * @param side Ability holder reference.
+     * @param on Which on-`X` we're talking about.
      * @param hitBy Move+user ref that the holder was hit by.
      */
     public async onMoveDamage(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, on: AbilityOn, side: SideID,
+        accept: unordered.AcceptCallback, side: SideID, on: AbilityOn,
         hitBy: MoveAndUserRef): Promise<void>
     {
         if (!this.data.on) return;

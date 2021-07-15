@@ -83,6 +83,7 @@ export class Move
             case "hpType": return new Set(user.hpType.possibleValues);
             case "plateType":
             {
+                // TODO: embargo negates plate
                 const result = new Set<dexutil.Type>();
                 for (const n of user.item.possibleValues)
                 {
@@ -248,6 +249,7 @@ export class Move
             case "hpType": user.hpType.narrow(type); break;
             // asserted type is the type of plate the user is holding
             case "plateType":
+                // TODO: embargo negates plate
                 user.item.narrow((_, i) =>
                         type === (i.plateType ?? this.data.type));
                 break;

@@ -15,164 +15,61 @@ import { hasAbility } from "../reason/ability";
 type AbilityParser<TResult = dex.Ability> =
     unordered.UnorderedDeadline<"gen4", BattleAgent<"gen4">, TResult>;
 
-// TODO: refactor/move to separate helper files?
 /**
  * Creates an EventInference parser that expects an on-`switchOut` ability to
  * activate if possible.
  * @param side Pokemon reference who could have such an ability.
+ * @returns An EventInference for handling ability possibilities.
  */
-export function onSwitchOut(ctx: BattleParserContext<"gen4">, side: SideID)
-{
-    const mon = ctx.state.getTeam(side).active;
-    const abilities = getAbilities(mon, ability => ability.canSwitchOut(mon))
-    return new inference.EventInference(new Set(abilities.values()),
-        onSwitchOutImpl, side, abilities);
-}
-
-async function onSwitchOutImpl(ctx: BattleParserContext<"gen4">,
-    accept: inference.AcceptCallback, side: SideID,
-    abilities: Map<dex.Ability, inference.SubInference>)
-{
-    const parsers: AbilityParser[] = [];
-    for (const ability of abilities.keys())
+export const onSwitchOut = onX("onSwitchOut",
+    (ctx, side) =>
     {
-        parsers.push(unordered.createUnorderedDeadline(onSwitchOutUnordered,
-                /*reject*/ undefined, ability, side));
-    }
-
-    const [ok, acceptedAbility] = await unordered.oneOf(ctx, parsers);
-    if (ok) accept(abilities.get(acceptedAbility!)!);
-}
-
-async function onSwitchOutUnordered(ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID):
-    Promise<dex.Ability>
-{
-    await ability.onSwitchOut(ctx, accept, side);
-    return ability;
-}
+        const mon = ctx.state.getTeam(side).active;
+        return getAbilities(mon, ability => ability.canSwitchOut(mon));
+    },
+    onXInferenceParser("onSwitchOutInference",
+        onXUnorderedParser("onSwitchOutUnordered",
+            async (ctx, accept, ability, side) =>
+                await ability.onSwitchOut(ctx, accept, side))));
 
 /**
  * Creates an EventInference parser that expects an on-`start` ability to
  * activate if possible.
  * @param side Pokemon reference who could have such an ability.
+ * @returns An EventInference for handling ability possibilities.
  */
-export function onStart(ctx: BattleParserContext<"gen4">, side: SideID)
-{
-    const mon = ctx.state.getTeam(side).active;
-    const abilities = getAbilities(mon, ability => ability.canStart(mon))
-    return new inference.EventInference(new Set(abilities.values()),
-        onStartImpl, side, abilities);
-}
-
-async function onStartImpl(ctx: BattleParserContext<"gen4">,
-    accept: inference.AcceptCallback, side: SideID,
-    abilities: Map<dex.Ability, inference.SubInference>): Promise<void>
-{
-    const parsers: AbilityParser[] = [];
-    let trace: dex.Ability | undefined;
-    for (const ability of abilities.keys())
+export const onStart = onX("onStart",
+    (ctx, side) =>
     {
-        if (ability.data.on?.start?.copyFoeAbility) // trace ability
-        {
-            // NOTE(gen4): traced ability is shown before trace ability itself
-            // parse the possibly-traced ability first before seeing if it was
-            //  traced
-            // this handles ambiguous cases where a traced ability may be one of
-            //  the holder's possible abilities that could activate on-start
-            trace = ability;
-            continue;
-        }
-        parsers.push(unordered.createUnorderedDeadline(onStartUnordered,
-                /*reject*/ undefined, ability, side));
-    }
-
-    const [ok, acceptedAbility] = await unordered.oneOf(ctx, parsers);
-    if (!ok) return;
-
-    if (trace)
-    {
-        const traced = await trace.copyFoeAbility(ctx, side);
-        if (traced)
-        {
-            ctx.state.getTeam(traced.side).active.setAbility(traced.ability);
-            accept(abilities.get(trace)!);
-            return;
-        }
-    }
-
-    accept(abilities.get(acceptedAbility!)!);
-}
-
-async function onStartUnordered(ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID):
-    Promise<dex.Ability>
-{
-    await ability.onStart(ctx, accept, side);
-    return ability;
-}
+        const mon = ctx.state.getTeam(side).active;
+        return getAbilities(mon, ability => ability.canStart(mon));
+    },
+    // note: this function internally handles the special trace ability logic
+    onXInferenceParser("onStartInference",
+        onXUnorderedParser("onStartUnordered",
+            async (ctx, accept, ability, side) =>
+                await ability.onStart(ctx, accept, side))));
 
 /**
  * Creates an EventInference parser that expects an on-`block` ability to
  * activate if possible.
  * @param side Pokemon reference who could have such an ability.
  * @param hitBy Move+user ref that the holder is being hit by.
+ * @returns An EventInference that returns info about any blocked effects.
  */
-export function onBlock(ctx: BattleParserContext<"gen4">, side: SideID,
-    hitBy: dex.MoveAndUserRef)
-{
-    // if move user ignores the target's abilities, then this function can't be
-    //  called
-    // note: these types of abilities are always(?) made known when they're in
-    //  effect
-    // TODO: add a SubReason for this as a consistency check?
-    const hitByUser = ctx.state.getTeam(hitBy.userRef).active;
-    if (ignoresTargetAbility(hitByUser)) return null;
-
-    const moveTypes = hitBy.move.getPossibleTypes(hitByUser);
-    // only the main status effects can be visibly blocked by an ability
-    const status = hitBy.move.getMainStatusEffects("hit", hitByUser.types);
-
-    const mon = ctx.state.getTeam(side).active;
-    const abilities = getAbilities(mon,
-        // block move's main status effect
-        ability => ability.canBlockStatusEffect(status,
-                ctx.state.status.weather.type) ??
-            // block move based on its type
-            ability.canBlockMoveType(moveTypes, hitBy.move, hitByUser) ??
-            // block move based on damp, etc
-            ability.canBlockEffect(hitBy.move.data.flags?.explosive));
-    return new inference.EventInference(new Set(abilities.values()),
-        onBlockImpl, side, abilities, hitBy);
-}
-
-async function onBlockImpl(ctx: BattleParserContext<"gen4">,
-    accept: inference.AcceptCallback, side: SideID,
-    abilities: Map<dex.Ability, inference.SubInference>,
-    hitBy: dex.MoveAndUserRef): Promise<AbilityBlockResult | undefined>
-{
-    const parsers: AbilityParser<[dex.Ability, AbilityBlockResult]>[] = [];
-    for (const ability of abilities.keys())
+export const onBlock = onX("onBlock",
+    (ctx, side, hitBy: dex.MoveAndUserRef) =>
     {
-        parsers.push(unordered.createUnorderedDeadline(onBlockUnordered,
-                /*reject*/ undefined, ability, side, hitBy));
-    }
-
-    const oneOfRes = await unordered.oneOf(ctx, parsers);
-    if (oneOfRes[0])
-    {
-        const [acceptedAbility, blockResult] = oneOfRes[1];
-        accept(abilities.get(acceptedAbility!)!);
-        return blockResult;
-    }
-}
-
-async function onBlockUnordered(ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID,
-    hitBy: dex.MoveAndUserRef): Promise<[dex.Ability, AbilityBlockResult]>
-{
-    return [ability, await ability.onBlock(ctx, accept, side, hitBy)];
-}
+        const mon = ctx.state.getTeam(side).active;
+        const hitBy2: dex.MoveAndUser =
+            {move: hitBy.move, user: ctx.state.getTeam(hitBy.userRef).active};
+        return getAbilities(mon,
+            ability => ability.canBlock(ctx.state.status.weather.type, hitBy2));
+    },
+    onXInferenceParser("onBlockInference",
+        onXUnorderedParser("onBlockUnordered",
+            async (ctx, accept, ability, side, hitBy) =>
+                await ability.onBlock(ctx, accept, side, hitBy))));
 
 // TODO: refactor hitBy to include other unboost effect sources, e.g. intimidate
 /**
@@ -180,111 +77,40 @@ async function onBlockUnordered(ctx: BattleParserContext<"gen4">,
  * activate if possible.
  * @param side Pokemon reference who could have such an ability.
  * @param hitBy Move+user ref that the holder is being hit by.
+ * @returns An EventInference that returns the boosts that were blocked.
  */
-export function onTryUnboost(ctx: BattleParserContext<"gen4">, side: SideID,
-    hitBy: dex.MoveAndUserRef)
-{
-    // if move user ignores the target's abilities, then this function can't be
-    //  called
-    // note: these types of abilities are always(?) made known when they're in
-    //  effect
-    // TODO: add a SubReason for this as a consistency check?
-    const hitByUser = ctx.state.getTeam(hitBy.userRef).active;
-    if (ignoresTargetAbility(hitByUser)) return null;
-
-    const boostEffect = hitBy.move.getBoostEffects("hit", hitByUser.types);
-    let {boosts} = boostEffect;
-    if (boostEffect.set) boosts = {};
-
-    const mon = ctx.state.getTeam(side).active;
-    const abilities = getAbilities(mon,
-        ability => ability.canBlockUnboost(boosts));
-    return new inference.EventInference(new Set(abilities.values()),
-        onTryUnboostImpl, side, abilities);
-}
-
-async function onTryUnboostImpl(ctx: BattleParserContext<"gen4">,
-    accept: inference.AcceptCallback, side: SideID,
-    abilities: Map<dex.Ability, inference.SubInference>):
-    Promise<Partial<dex.BoostTable<true>> | undefined>
-{
-    const parsers:
-        AbilityParser<[dex.Ability, Partial<dex.BoostTable<true>>]>[] = [];
-    for (const ability of abilities.keys())
+export const onTryUnboost = onX("onTryUnboost",
+    (ctx, side, hitBy: dex.MoveAndUserRef) =>
     {
-        parsers.push(unordered.createUnorderedDeadline(onTryUnboostUnordered,
-                /*reject*/ undefined, ability, side));
-    }
-
-    const oneOfRes = await unordered.oneOf(ctx, parsers);
-    if (oneOfRes[0])
-    {
-        const [acceptedAbility, blockResult] = oneOfRes[1];
-        accept(abilities.get(acceptedAbility!)!);
-        return blockResult;
-    }
-}
-
-async function onTryUnboostUnordered(ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID):
-    Promise<[dex.Ability, Partial<dex.BoostTable<true>>]>
-{
-    return [ability, await ability.onTryUnboost(ctx, accept, side)];
-}
-
-/** Checks if a pokemon's ability definitely ignores the target's abilities. */
-function ignoresTargetAbility(mon: ReadonlyPokemon): boolean
-{
-    if (!mon.volatile.suppressAbility)
-    {
-        const userAbility = mon.traits.ability;
-        if ([...userAbility.possibleValues]
-            .every(n => userAbility.map[n].flags?.ignoreTargetAbility))
-        {
-            return true;
-        }
-    }
-    return false;
-}
+        const mon = ctx.state.getTeam(side).active;
+        const hitBy2: dex.MoveAndUser =
+            {move: hitBy.move, user: ctx.state.getTeam(hitBy.userRef).active};
+        return getAbilities(mon, ability => ability.canBlockUnboost(hitBy2));
+    },
+    onXInferenceParser("onTryUnboostInference",
+        onXUnorderedParser("onTryUnboostUnordered",
+            async (ctx, accept, ability, side) =>
+                await ability.onTryUnboost(ctx, accept, side))));
 
 /**
  * Creates an EventInference parser that expects an on-`status` ability to
  * activate if possible.
  * @param side Pokemon reference who could have such an ability.
+ * @param statusType Status that was afflicted.
+ * @returns An EventInference for handling ability possibilities.
  */
-export function onStatus(ctx: BattleParserContext<"gen4">, side: SideID,
-    statusType: dex.StatusType)
-{
-    const mon = ctx.state.getTeam(side).active;
-    const abilities = getAbilities(mon,
-        ability => ability.canStatus(mon, statusType));
-    return new inference.EventInference(new Set(abilities.values()),
-        onStatusImpl, side, abilities);
-}
-
-async function onStatusImpl(ctx: BattleParserContext<"gen4">,
-    accept: inference.AcceptCallback, side: SideID,
-    abilities: Map<dex.Ability, inference.SubInference>):
-    Promise<void>
-{
-    const parsers: AbilityParser[] = [];
-    for (const ability of abilities.keys())
+export const onStatus = onX("onStatus",
+    (ctx, side, statusType: dex.StatusType) =>
     {
-        parsers.push(unordered.createUnorderedDeadline(onStatusUnordered,
-                /*reject*/ undefined, ability, side));
-    }
+        const mon = ctx.state.getTeam(side).active;
+        return getAbilities(mon, ability => ability.canStatus(mon, statusType));
+    },
+    onXInferenceParser("onStatusInference",
+        onXUnorderedParser("onStatusUnordered",
+            async (ctx, accept, ability, side) =>
+                await ability.onStatus(ctx, accept, side))));
 
-    const [ok, acceptedAbility] = await unordered.oneOf(ctx, parsers);
-    if (ok) accept(abilities.get(acceptedAbility!)!);
-}
-
-async function onStatusUnordered(ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID):
-    Promise<dex.Ability>
-{
-    await ability.onStatus(ctx, accept, side);
-    return ability;
-}
+export type MoveDamageQualifier = "damage" | "contact" | "contactKO";
 
 /**
  * Creates an EventInference parser that expects an on-`moveDamage` ability or
@@ -292,99 +118,46 @@ async function onStatusUnordered(ctx: BattleParserContext<"gen4">,
  * @param side Pokemon reference who could have such an ability.
  * @param qualifier The qualifier of which effects the ability may activate.
  * @param hitBy Move+user ref the holder was hit by.
+ * @returns An EventInference for handling ability possibilities.
  */
-export function onMoveDamage(ctx: BattleParserContext<"gen4">, side: SideID,
-    qualifier: "damage" | "contact" | "contactKO", hitBy: dex.MoveAndUserRef)
-{
-    let on: dex.AbilityOn;
-    switch (qualifier)
+export const onMoveDamage = onX("onMoveDamage",
+    (ctx, side, qualifier: MoveDamageQualifier, hitBy: dex.MoveAndUserRef) =>
     {
-        case "damage": on = "moveDamage"; break;
-        case "contact": on = "moveContact"; break;
-        case "contactKO": on = "moveContactKO"; break;
-    }
+        const mon = ctx.state.getTeam(side).active;
+        const on = qualifierToOn[qualifier];
+        const hitBy2: dex.MoveAndUser =
+            {move: hitBy.move, user: ctx.state.getTeam(hitBy.userRef).active};
+        return getAbilities(mon, ability =>
+            ability.canMoveDamage(mon, on, hitBy2));
+    },
+    onXInferenceParser("onMoveDamageInference",
+        onXUnorderedParser("onMoveDamageUnordered",
+            async (ctx, accept, ability, side, qualifier, hitBy) =>
+                await ability.onMoveDamage(ctx, accept, side,
+                    qualifierToOn[qualifier], hitBy))));
 
-    const mon = ctx.state.getTeam(side).active;
-    const hitByUser = ctx.state.getTeam(hitBy.userRef).active;
-    const hitByArg: dex.MoveAndUser = {move: hitBy.move, user: hitByUser};
-    const abilities = getAbilities(mon,
-        ability => ability.canMoveDamage(mon, on, hitByArg));
-
-    return new inference.EventInference(new Set(abilities.values()),
-        onMoveDamageImpl, abilities, on, side, hitBy);
-}
-
-async function onMoveDamageImpl(ctx: BattleParserContext<"gen4">,
-    accept: inference.AcceptCallback,
-    abilities: Map<dex.Ability, inference.SubInference>, on: dex.AbilityOn,
-    side: SideID, hitBy: dex.MoveAndUserRef): Promise<void>
-{
-    const parsers: AbilityParser[] = [];
-    for (const ability of abilities.keys())
-    {
-        parsers.push(unordered.createUnorderedDeadline(onMoveDamageUnordered,
-                /*reject*/ undefined, ability, on, side, hitBy));
-    }
-
-    const [ok, acceptedAbility] = await unordered.oneOf(ctx, parsers);
-    if (ok) accept(abilities.get(acceptedAbility!)!);
-}
-
-async function onMoveDamageUnordered(ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback, ability: dex.Ability, on: dex.AbilityOn,
-    side: SideID, hitBy: dex.MoveAndUserRef):
-    Promise<dex.Ability>
-{
-    await ability.onMoveDamage(ctx, accept, on, side, hitBy);
-    return ability;
-}
+const qualifierToOn: {readonly [T in MoveDamageQualifier]: dex.AbilityOn} =
+    {damage: "moveDamage", contact: "moveContact", contactKO: "moveContactKO"};
 
 // TODO: refactor hitBy to support non-move drain effects, e.g. leechseed
 /**
  * Creates an EventInference parser that expects an on-`moveDrain` ability to
  * activate if possible (e.g. Liquid Ooze).
  * @param side Pokemon reference who could have such an ability.
- * @param hitBy Move+user ref the holder was hit by.
+ * @param hitByUserRef Pokemon reference to the user of the draining move.
+ * @returns An EventInference that returns whether drain damage was deducted
+ * instead of healed.
  */
-export function onMoveDrain(ctx: BattleParserContext<"gen4">, side: SideID,
-    hitBy: dex.MoveAndUserRef)
-{
-    const mon = ctx.state.getTeam(side).active;
-    const abilities = getAbilities(mon, ability => ability.canMoveDrain());
-
-    return new inference.EventInference(new Set(abilities.values()),
-        onMoveDrainImpl, abilities, side, hitBy);
-}
-
-async function onMoveDrainImpl(ctx: BattleParserContext<"gen4">,
-    accept: inference.AcceptCallback,
-    abilities: Map<dex.Ability, inference.SubInference>, side: SideID,
-    hitBy: dex.MoveAndUserRef): Promise<"invert" | undefined>
-{
-    const parsers: AbilityParser<[dex.Ability, "invert" | undefined]>[] = [];
-    for (const ability of abilities.keys())
+export const onMoveDrain = onX("onMoveDrain",
+    (ctx, side, hitByUserRef: SideID) =>
     {
-        parsers.push(unordered.createUnorderedDeadline(onMoveDrainUnordered,
-                /*reject*/ undefined, ability, side, hitBy));
-    }
-
-    const oneOfRes = await unordered.oneOf(ctx, parsers);
-    if (oneOfRes[0])
-    {
-        const [acceptedAbility, res] = oneOfRes[1];
-        accept(abilities.get(acceptedAbility!)!);
-        return res;
-    }
-}
-
-async function onMoveDrainUnordered(ctx: BattleParserContext<"gen4">,
-    accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID,
-    hitBy: dex.MoveAndUserRef): Promise<[dex.Ability, "invert" | undefined]>
-{
-    return [
-        ability, await ability.onMoveDrain(ctx, accept, side, hitBy.userRef)
-    ];
-}
+        const mon = ctx.state.getTeam(side).active;
+        return getAbilities(mon, ability => ability.canMoveDrain());
+    },
+    onXInferenceParser("onStatusInference",
+        onXUnorderedParser("onStatusUnordered",
+            async (ctx, accept, ability, side, hitByUserRef) =>
+                await ability.onMoveDrain(ctx, accept, side, hitByUserRef))));
 
 /**
  * Searches for possible ability pathways based on the given predicate.
@@ -411,6 +184,105 @@ function getAbilities(mon: Pokemon,
         res.set(ability, new inference.SubInference(reasons));
     }
     return res;
+}
+
+function onX<TArgs extends unknown[] = [], TResult = unknown>(name: string,
+    f: (ctx: BattleParserContext<"gen4">, side: SideID, ...args: TArgs) =>
+        Map<dex.Ability, inference.SubInference>,
+    inferenceParser:
+        inference.InferenceParser<"gen4", BattleAgent<"gen4">,
+            [
+                side: SideID,
+                abilities: Map<dex.Ability, inference.SubInference>,
+                ...args: TArgs
+            ],
+            TResult>)
+{
+    // force named function so that stack traces make sense
+    return {[name](ctx: BattleParserContext<"gen4">, side: SideID,
+        ...args: TArgs)
+    {
+        const abilities = f(ctx, side, ...args);
+        return new inference.EventInference(new Set(abilities.values()),
+            inferenceParser, side, abilities, ...args);
+    }}[name];
+}
+
+function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
+    name: string,
+    unorderedParser:
+        unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
+            [ability: dex.Ability, side: SideID, ...args: TArgs],
+            [ability: dex.Ability, res: TResult]>)
+{
+    // used in trace check special logic
+    const isOnStart = name === "onStartInference";
+
+    // force named function so that stack traces make sense
+    return {async [name](ctx: BattleParserContext<"gen4">,
+        accept: inference.AcceptCallback, side: SideID,
+        abilities: Map<dex.Ability, inference.SubInference>, ...args: TArgs):
+        Promise<TResult | undefined>
+    {
+        const parsers:
+            unordered.UnorderedDeadline<"gen4", BattleAgent<"gen4">,
+                [ability: dex.Ability, res: TResult]>[] = [];
+        let trace: dex.Ability | undefined;
+        for (const ability of abilities.keys())
+        {
+            if (isOnStart && ability.data.on?.start?.copyFoeAbility)
+            {
+                // NOTE(gen4): traced ability is shown before trace effect
+                // parse the possibly-traced ability first before seeing if it
+                //  was traced
+                // this handles ambiguous cases where a traced ability may be
+                //  one of the holder's possible abilities that could activate
+                //  on-start
+                trace = ability;
+                continue;
+            }
+            parsers.push(unordered.createUnorderedDeadline(
+                unorderedParser, /*reject*/ undefined, ability, side, ...args));
+        }
+
+        const oneOfRes = await unordered.oneOf(ctx, parsers);
+        if (!oneOfRes[0]) return;
+
+        if (trace)
+        {
+            // now we can check if the ability originally came from trace
+            // TODO: unorderedParser already narrowed ability incorrectly
+            const traced = await trace.copyFoeAbility(ctx, side);
+            if (traced)
+            {
+                ctx.state.getTeam(traced.side).active
+                    .setAbility(traced.ability);
+                accept(abilities.get(trace)!);
+                return;
+            }
+        }
+
+        const [acceptedAbility, result] = oneOfRes[1];
+        accept(abilities.get(acceptedAbility)!);
+        return result;
+    }}[name];
+}
+
+function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
+    name: string,
+    parser: unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
+        [ability: dex.Ability, side: SideID, ...args: TArgs], TResult>):
+    unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
+        [ability: dex.Ability, side: SideID, ...args: TArgs],
+        [ability: dex.Ability, res: TResult]>
+{
+    return {async [name](ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID,
+        ...args: TArgs):
+        Promise<[ability: dex.Ability, res: TResult]>
+    {
+        return [ability, await parser(ctx, accept, ability, side, ...args)];
+    }}[name];
 }
 
 /**

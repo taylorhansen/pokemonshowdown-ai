@@ -37,7 +37,8 @@ export function abilityCanIgnoreItem(mon: PokemonAbilitySnapshot):
 }
 
 /**
- * Creates a SubReason that asserts that the pokemon's ability ignores items.
+ * Creates a SubReason that asserts that the pokemon's ability doesn't ignore
+ * items.
  */
 export function abilityCantIgnoreItem(mon: PokemonAbilitySnapshot):
     inference.SubReason
@@ -59,6 +60,35 @@ export function itemIgnoringAbilities(mon: PokemonAbilitySnapshot): Set<string>
     for (const name of ability.possibleValues)
     {
         if (ability.map[name].flags?.ignoreItem) abilities.add(name);
+    }
+    return abilities;
+}
+
+/**
+ * Creates a SubReason that asserts that the pokemon's ability doesn't ignore
+ * other abilities.
+ */
+export function abilityCantIgnoreTarget(mon: PokemonAbilitySnapshot):
+    inference.SubReason
+{
+    const abilities = targetIgnoringAbilities(mon);
+    return doesntHaveAbility(mon, abilities);
+}
+
+/**
+ * Gets the possible abilities from the pokemon that can ignore other abilities,
+ * if they're able to activate.
+ */
+export function targetIgnoringAbilities(mon: PokemonAbilitySnapshot):
+    Set<string>
+{
+    if (mon.volatile.suppressAbility) return new Set();
+
+    const {ability} = mon.traits;
+    const abilities = new Set<string>();
+    for (const name of ability.possibleValues)
+    {
+        if (ability.map[name].flags?.ignoreTargetAbility) abilities.add(name);
     }
     return abilities;
 }

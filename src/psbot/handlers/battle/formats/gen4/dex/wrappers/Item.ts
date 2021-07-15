@@ -246,7 +246,6 @@ export class Item
 
     //#region consumeOn-preMove
 
-    // TODO: custap hp check happens on pre-turn
     /**
      * Checks whether the item can activate consumeOn-`preMove`.
      * @param mon Potential item holder.
@@ -281,7 +280,7 @@ export class Item
             if (!await this.consumeItem(ctx, accept, side)) return;
 
             const holder = ctx.state.getTeam(side).active;
-            Item.assertHPThreshold(holder,
+            Item.assertHPThreshold(holder?.team?.preTurnSnapshotPokemon ?? holder,
                 this.data.consumeOn.preMove.threshold);
 
             const event = await tryVerify(ctx, "|-message|");
@@ -937,20 +936,17 @@ export class Item
         const blockingAbilities = itemIgnoringAbilities(mon);
         if (blockingAbilities.size >= ability.size) return null;
 
-        // hp is between 25-50% so the 25% berry can't activate on it's own, but
-        //  it can if the holder has gluttony ability
+        // check if gluttony may be relevant if it's possible to have it
+        const nonEarlyBerryAbilities = [...ability.possibleValues]
+            .filter(n => !ability.map[n].flags?.earlyBerry)
+        // if we're in range for gluttony but not for normal berry activation,
+        //  gluttony may be the deciding factor here
         if (this.data.isBerry && threshold === 25 && percentHP > 25 &&
             percentHP <= 50 &&
-            [...ability.possibleValues].some(n =>
-                ability.map[n].flags?.earlyBerry))
+            nonEarlyBerryAbilities.length < ability.size)
         {
-            // TODO: PossibilityClass methods that abstract away #possibleValues
-            //  set manipulations
-            // all other non-gluttony abilities therefore block the activation
-            //  of this item
-            const abilities = [...ability.possibleValues].filter(
-                n => !ability.map[n].flags?.earlyBerry);
-            for (const n of abilities) blockingAbilities.add(n);
+            // abilities must have earlyBerry flag
+            for (const n of nonEarlyBerryAbilities) blockingAbilities.add(n);
         }
         // gluttony isn't applicable, just do regular hp check
         else if (percentHP > threshold) return null;
