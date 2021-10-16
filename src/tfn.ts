@@ -1,12 +1,14 @@
 /** @file Imports `tfjs-node` or `tfjs-node-gpu` based on argument. */
+
 /** TF library import type for type checking. */
 export type TFN = typeof import("@tensorflow/tfjs-node-gpu") |
     typeof import("@tensorflow/tfjs-node");
 
-/** Previous importTfn() argument. */
+/** Previous {@link importTfn} argument. */
 let importGpu: boolean | undefined;
+
 /**
- * Imports the appropriate tfjs-node library.
+ * Imports the appropriate `tfjs-node[-gpu]` library.
  * @param gpu Whether to enable GPU support. If called multiple times, this
  * parameter must not change from the first call.
  */

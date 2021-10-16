@@ -1,18 +1,16 @@
 import { join } from "path";
 import ProgressBar from "progress";
 import * as stream from "stream";
-import * as util from "util";
+import { pipeline } from "stream/promises";
 import { LogFunc, Logger } from "../../Logger";
-import { AdvantageConfig } from "../nn/learn/LearnArgs";
-import { NetworkProcessor } from "../nn/worker/NetworkProcessor";
-import { SimName } from "../sim/simulators";
+import { formats } from "../../psbot/handlers/battle";
+import { AdvantageConfig } from "../learn";
+import { ModelWorker } from "../model/worker";
 import { GamePool, GamePoolAgentConfig, GamePoolArgs, GamePoolResult } from
-    "./GamePool";
-import { GamePoolStream } from "./GamePoolStream";
+    "./pool/GamePool";
+import { GamePoolStream } from "./pool/GamePoolStream";
 
-const pipeline = util.promisify(stream.pipeline);
-
-/** Opponent data for `playGames()`. */
+/** Opponent data for {@link playGames}. */
 export interface Opponent
 {
     /**
@@ -25,17 +23,19 @@ export interface Opponent
     readonly numGames: number;
 }
 
-/** Args for `playGames()`. */
+/** Args for {@link playGames}. */
 export interface PlayGamesArgs
 {
-    /** Used to request game worker ports from the neural networks. */
-    readonly processor: NetworkProcessor;
+    /** Used to request model ports for the game workers. */
+    readonly models: ModelWorker;
     /** Config for the BattleAgent that will participate in each game. */
     readonly agentConfig: GamePoolAgentConfig;
     /** Opponents to play against. */
     readonly opponents: readonly Opponent[];
-    /** Simulator to use during training. */
-    readonly simName: SimName;
+    /** Game format type. */
+    readonly format: formats.FormatType;
+    /** Number of games to play in parallel. */
+    readonly numThreads: number;
     /** Number of turns before a game is considered a tie. */
     readonly maxTurns: number;
     /** Logger object. */
@@ -58,8 +58,8 @@ export interface PlayGamesArgs
  */
 export async function playGames(
     {
-        processor, agentConfig, opponents, simName, maxTurns, logger, logPath,
-        rollout, getExpPath
+        models, agentConfig, opponents, format, numThreads, maxTurns, logger,
+        logPath, rollout, getExpPath
     }:
         PlayGamesArgs): Promise<number>
 {
@@ -86,8 +86,8 @@ export async function playGames(
                     join(logPath, `${opponent.name}/game-${i + 1}`)
                 const args: GamePoolArgs =
                 {
-                    simName, maxTurns, logPath: gameLogPath, rollout,
-                    agents: [agentConfig, opponent.agentConfig], processor
+                    id: i + 1, format, maxTurns, logPath: gameLogPath, rollout,
+                    agents: [agentConfig, opponent.agentConfig], models
                 }
                 yield args;
             }
@@ -103,14 +103,13 @@ export async function playGames(
     {
         objectMode: true,
         write(result: GamePoolResult, encoding: BufferEncoding,
-            callback: (error?: Error | null) => void): void
+            callback: stream.TransformCallback): void
         {
             numAExps += result.numAExps;
 
             if (result.err)
             {
-                // TODO: specify opponent and game #
-                progressLog.error("Game threw an error: " +
+                progressLog.error(`Game ${result.id} threw an error: ` +
                     (result.err.stack ?? result.err));
             }
 
@@ -124,8 +123,8 @@ export async function playGames(
         }
     });
 
-    // TODO: move pool to index.ts for reuse
-    const pool = new GamePool(getExpPath);
+    // TODO: move pool outside for reuse?
+    const pool = new GamePool(numThreads, getExpPath);
     await pipeline(
         poolArgs,
         new GamePoolStream(pool),
@@ -134,7 +133,7 @@ export async function playGames(
 
     progress.terminate();
     // TODO: also display separate records for each opponent
-    logger.debug(`Record: ${wins}-${losses}-${ties}`)
+    logger.debug(`Record: ${wins}-${losses}-${ties}`);
 
     return numAExps;
 }

@@ -1,9 +1,9 @@
+import { Protocol } from "@pkmn/protocol";
 import fetch, { RequestInit } from "node-fetch";
 import { client as WSClient } from "websocket";
 import { Logger } from "../Logger";
-import { parsePSMessage } from "./parser/parsePSMessage";
-import * as psmsg from "./parser/PSMessage";
-import { RoomHandler } from "./RoomHandler";
+import * as handlers from "./handlers";
+import { HaltEvent, MessageParser, RoomEvent } from "./parser";
 
 /** Options for login. */
 export interface LoginOptions
@@ -30,26 +30,37 @@ export type Sender = (...responses: string[]) => boolean;
  * @param sender The function that will be used for sending responses.
  */
 export type HandlerFactory = (room: string, username: string, sender: Sender) =>
-    RoomHandler;
+    handlers.RoomHandler;
 
 /** Manages the connection to a PokemonShowdown server. */
 export class PSBot
 {
     /** Websocket client. Used for connecting to the server. */
     private readonly client = new WSClient();
-    /** Tracks current room handlers. */
-    private readonly rooms: {[room: string]: RoomHandler} = {};
+    /** Current active rooms. */
+    private readonly rooms = new Map<Protocol.RoomID, handlers.RoomHandler>();
     /** Dictionary of accepted formats for battle challenges. */
-    private readonly formats: {[format: string]: HandlerFactory} = {};
-    /** Username of the client. */
+    private readonly formats = new Map<string, HandlerFactory>();
+
+    /** Whether we've already logged in. */
+    private loggedIn = false;
+    /** Username of the client. Initialized on login. */
     private username?: string;
-    /** Callback for when the challstr is received. */
-    private challstr: (challstr: string) => Promise<void> = async function() {};
+
     /** Sends a response to the server. */
     private sender: Sender =
         () => { throw new Error("Sender not initialized"); }
-    /** Function to call to resolve the `#connect()` Promise. */
-    private connected: (err?: Error) => void = () => {};
+
+    /** Promise that resolves once we've connected to the server. */
+    private readonly connected: Promise<void>;
+    /** Callback to resolve the `#connected` Promise. */
+    private connectedRes: (err?: Error) => void = () => {};
+
+    /** Used for handling global PS messages. */
+    private readonly globalHandler = new handlers.global.GlobalHandler();
+    /** Stream used for parsing PS protocol messages. */
+    private readonly parser =
+        new MessageParser(this.logger.addPrefix("MessageParser: "));
 
     /**
      * Creates a PSBot.
@@ -57,112 +68,133 @@ export class PSBot
      */
     constructor(private readonly logger = Logger.stderr)
     {
+        this.connected = new Promise<void>((res, rej) =>
+            this.connectedRes = err =>
+            {
+                this.connectedRes = () => {};
+                if (!err) res();
+                else rej(err);
+            });
+
+        this.addHandler("" as Protocol.RoomID, this.globalHandler);
         this.initClient();
+        this.globalHandler.updateUser = username => this.updateUser(username);
+        this.globalHandler.respondToChallenge =
+            (user, format) => this.respondToChallenge(user, format);
+
+        // async
+        // TODO: tie this to a method that can be awaited after setting up the
+        //  PSBot
+        this.parserReadLoop();
     }
 
     /**
      * Allows the PSBot to accept battle challenges for the given format.
      * @param format Name of the format to use.
-     * @param fn RoomHandler factory function.
+     * @param f Room handler factory function.
      */
-    public acceptChallenges(format: string, fn: HandlerFactory): void
+    public acceptChallenges(format: string, f: HandlerFactory): void
     {
-        this.formats[format] = fn;
+        this.formats.set(format, f);
+        this.logger.debug(`Registered format '${format}'`);
     }
 
+    /**
+     * Adds a handler for a room.
+     * @param roomid Room id.
+     * @param handler Object that handles messages coming from the given room.
+     */
+    public addHandler(roomid: Protocol.RoomID, handler: handlers.RoomHandler):
+        void
+    {
+        if (this.rooms.has(roomid))
+        {
+            throw new Error(`Already have a handler for room '${roomid}'`);
+        }
+        this.rooms.set(roomid, handler);
+    }
+
+    // TODO: support reconnects/disconnects
     /** Connects to the server and starts handling messages. */
-    public connect(url: string): Promise<void>
+    public async connect(url: string): Promise<void>
     {
         this.client.connect(url);
-        return new Promise((res, rej) =>
-        {
-            this.connected = err =>
-            {
-                // reset connected callback, since the promise is now resolved
-                this.connected = () => {};
-
-                if (!err) res();
-                else rej(err);
-            };
-        });
+        return await this.connected;
     }
 
-    /** Sets up this PSBot to login once connected. */
-    public login(options: LoginOptions): Promise<void>
+    /**
+     * Sets up this PSBot to login once connected.
+     * @param options Login options.
+     * @returns A Promise that resolves once logged in.
+     */
+    public async login(options: LoginOptions): Promise<void>
     {
-        return new Promise((res, rej) =>
+        if (this.loggedIn)
         {
-            this.challstr = async challstr =>
+            // TODO: add logout functionality?
+            return this.logger.error("Already logged in");
+        }
+
+        this.logger.debug("Configured to login under username " +
+            `'${options.username}'`);
+
+        const challstr = await this.globalHandler.challstr;
+
+        const init: RequestInit =
+        {
+            method: "POST",
+            headers: {"Content-Type": "application/x-www-form-urlencoded"}
+        };
+
+        // get the assertion string used to confirm login
+        let assertion: string;
+
+        if (!options.password)
+        {
+            // login without password
+            init.body = `act=getassertion&userid=${options.username}` +
+                `&challstr=${challstr}`;
+            const result = await fetch(options.loginServer, init);
+            assertion = await result.text();
+
+            if (assertion.startsWith(";"))
             {
-                // challstr callback consumed, no need to call again
-                this.challstr = async function() {};
-
-                const init: RequestInit =
+                // login attempt was rejected
+                if (assertion.startsWith(";;"))
                 {
-                    method: "POST",
-                    headers:
-                    {
-                        "Content-Type": "application/x-www-form-urlencoded"
-                    }
-                };
-
-                // get the assertion string used to confirm login
-                let assertion: string;
-
-                if (!options.password)
-                {
-                    // login without password
-                    init.body = `act=getassertion&userid=${options.username}` +
-                        `&challstr=${challstr}`;
-                    const result = await fetch(options.loginServer, init);
-                    assertion = await result.text();
-
-                    if (assertion.startsWith(";"))
-                    {
-                        // login attempt was rejected
-                        if (assertion.startsWith(";;"))
-                        {
-                            // error message was provided
-                            rej(new Error(assertion.substr(2)));
-                        }
-                        else
-                        {
-                            rej(new Error(
-                                    "A password is required for this account"));
-                        }
-                        return;
-                    }
+                    // error message was provided
+                    throw new Error(assertion.substr(2));
                 }
-                else
+                throw new Error("A password is required for user " +
+                    `'${options.username}'`);
+            }
+        }
+        else
+        {
+            // login with password
+            init.body = `act=login&name=${options.username}` +
+                `&pass=${options.password}&challstr=${challstr}`;
+            const result = await fetch(options.loginServer, init);
+            const text = await result.text();
+            // response text returns "]" followed by json
+            const json = JSON.parse(text.substr(1));
+
+            assertion = json.assertion;
+            if (!json.actionsuccess)
+            {
+                // login attempt was rejected
+                if (assertion.startsWith(";;"))
                 {
-                    // login with password
-                    init.body = `act=login&name=${options.username}` +
-                        `&pass=${options.password}&challstr=${challstr}`;
-                    const result = await fetch(options.loginServer, init);
-                    const text = await result.text();
-                    // response text returns "]" followed by json
-                    const json = JSON.parse(text.substr(1));
-
-                    assertion = json.assertion;
-                    if (!json.actionsuccess)
-                    {
-                        // login attempt was rejected
-                        if (assertion.startsWith(";;"))
-                        {
-                            // error message was provided
-                            rej(new Error(assertion.substr(2)));
-                        }
-                        else rej(new Error("Invalid password"));
-                        return;
-                    }
+                    // error message was provided
+                    throw new Error(assertion.substr(2));
                 }
+                throw new Error("Invalid password");
+            }
+        }
 
-                // complete the login
-                this.addResponses("",
-                    `|/trn ${options.username},0,${assertion}`);
-                res();
-            };
-        });
+        // complete the login
+        this.loggedIn =
+            this.addResponses("", `|/trn ${options.username},0,${assertion}`);
     }
 
     /** Sets avatar id. */
@@ -171,7 +203,6 @@ export class PSBot
         this.addResponses("", `|/avatar ${avatar}`);
     }
 
-    /** Initializes websocket client. */
     private initClient(): void
     {
         this.client.on("connect", connection =>
@@ -197,114 +228,107 @@ export class PSBot
             {
                 if (data.type === "utf8" && data.utf8Data)
                 {
-                    this.logger.debug(`Received:\n${data.utf8Data}`);
-                    const {room, messages} = parsePSMessage(data.utf8Data,
-                        this.logger.addPrefix("Parser: "));
-                    // TODO: ensure promises resolve?
-                    return this.handleMessages(room, messages);
+                    this.parser.write(data.utf8Data);
                 }
             });
 
-            this.connected();
+            this.connectedRes();
         });
         this.client.on("connectFailed", err =>
         {
-            this.logger.error(`Failed to connect: ${err}`);
-            this.connected(err);
+            this.logger.error(`Failed to connect: ${err.stack ?? err}`);
+            this.connectedRes(err);
         });
     }
 
-    /** Handles parsed Messages received from the PS serer. */
-    private async handleMessages(room: string, messages: psmsg.Any[]):
-        Promise<void>
+    private updateUser(username: string): void
     {
-        for (const msg of messages) await this.handleMessage(room, msg);
+        this.username = username;
     }
 
-    /** Handles a parsed Message received from the PS serer. */
-    private async handleMessage(room: string, msg: psmsg.Any): Promise<void>
+    private respondToChallenge(user: string, format: string): void
     {
-        switch (msg.type)
+        this.logger.debug(`Received challenge from ${user}: ${format}`);
+        if (this.formats.has(format)) this.addResponses("", `|/accept ${user}`);
+        else
         {
-            case "challstr":
-                return this.challstr(msg.challstr);
-            case "init":
-            {
-                // room already initialized
-                if (this.rooms.hasOwnProperty(room) ||
-                    // or we don't need to bother with a non-battle room
-                    msg.roomType !== "battle")
-                {
-                    break;
-                }
+            this.logger.debug("Unknown format");
+            this.logger.debug("Supported formats: " +
+                [...this.formats.keys()].join(", "));
+            this.addResponses("", `|/reject ${user}`);
+        }
+    }
 
-                // joining a new battle
-                // room names follow the format battle-<format>-<id>
-                const format = room.split("-")[1];
-                if (this.formats.hasOwnProperty(format))
+    /**
+     * Sets up a read loop from the MessageParser stream and dispatches parsed
+     * messages to their respective room handlers.
+     */
+    private async parserReadLoop(): Promise<void>
+    {
+        for await (const msg of this.parser)
+        {
+            const pmsg = msg as RoomEvent | HaltEvent;
+            await this.dispatch(pmsg);
+        }
+    }
+
+    /** Handles parsed protocol messages received from the PS serer. */
+    private async dispatch(
+        {roomid, args, kwArgs}: RoomEvent<Protocol.ArgName> | HaltEvent):
+        Promise<void>
+    {
+        let handler = this.rooms.get(roomid);
+        if (!handler)
+        {
+            // first msg when joining a battle room must be |init|battle
+            if (args[0] === "init" && args[1] === "battle")
+            {
+                // battle rooms follow a naming convention: battle-<format>-<id>
+                const format = roomid.split("-")[1];
+                const f = this.formats.get(format);
+                if (f)
                 {
-                    // lookup registered BattleAgent
                     if (!this.username)
                     {
-                        throw new Error("Username not initialized");
+                        this.logger.error("Could not join battle room " +
+                            `'${roomid}': Username not initialized`);
+                        return;
                     }
-                    const sender = (...responses: string[]) =>
-                        this.addResponses(room, ...responses);
+                    const sender: Sender = (...responses: string[]) =>
+                        this.addResponses(roomid, ...responses);
 
-                    this.rooms[room] =
-                        this.formats[format](room, this.username, sender);
+                    handler = f(roomid, this.username, sender);
+                    this.addHandler(roomid, handler);
                 }
                 else
                 {
-                    this.logger.error(`Unsupported format ${format}`);
-                    this.addResponses(room, "|/leave");
+                    this.logger.error("Could not join battle room " +
+                        `'${roomid}': Format '${format}' not supported`);
+                    return;
                 }
-
-                break;
             }
-            case "updateChallenges":
-                for (const user in msg.challengesFrom)
-                {
-                    // istanbul ignore next: trivial for object key iteration
-                    if (!msg.challengesFrom.hasOwnProperty(user)) continue;
+            else
+            {
+                this.logger.error(`Could not join chat room '${roomid}': ` +
+                    "No handlers found");
+                return;
+            }
+        }
 
-                    if (this.formats.hasOwnProperty(msg.challengesFrom[user]))
-                    {
-                        this.addResponses("", `|/accept ${user}`);
-                    }
-                    else this.addResponses("", `|/reject ${user}`);
-                }
-                break;
-            case "updateUser":
-                this.username = msg.username;
-                break;
-            case "deinit":
-                // cleanup after leaving a room
-                delete this.rooms[room];
-                break;
+        // dispatch special 'halt' event or regular event from MessageParser
+        if (args[0] === "halt") await handler.halt();
+        else await handler.handle({args, kwArgs});
 
-            // delegate battle-related messages to their appropriate PSBattle
-            case "battleInit":
-                if (!this.rooms.hasOwnProperty(room)) break;
-                return this.rooms[room].init(msg);
-            case "battleProgress":
-                if (!this.rooms.hasOwnProperty(room)) break;
-                // leave respectfully if the battle ended
-                // TODO: make this into a registered callback
-                for (const event of msg.events)
-                {
-                    if (event.type === "tie" || event.type === "win")
-                    {
-                        this.addResponses(room, "|gg", "|/leave");
-                    }
-                }
-                return this.rooms[room].progress(msg);
-            case "request":
-                if (!this.rooms.hasOwnProperty(room)) break;
-                return this.rooms[room].request(msg);
-            case "error":
-                if (!this.rooms.hasOwnProperty(room)) break;
-                return this.rooms[room].error(msg);
+        if (args[0] === "deinit")
+        {
+            // roomid defaults to lobby if deinit didn't come from a room
+            this.rooms.delete(roomid || "lobby" as Protocol.RoomID);
+        }
+        // leave respectfully once the battle ends
+        // TODO: move this to BattleHandler
+        else if (args[0] === "tie" || args[0] === "win")
+        {
+            this.addResponses(roomid, "|gg", "|/leave");
         }
     }
 

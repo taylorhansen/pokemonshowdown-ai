@@ -1,0 +1,157 @@
+import { MessagePort } from "worker_threads";
+import { alloc } from "../../../buf";
+import { formats } from "../../../psbot/handlers/battle";
+import { intToChoice } from "../../../psbot/handlers/battle/agent";
+import { Encoder } from "../../../psbot/handlers/battle/ai/encoder/Encoder";
+import { policyAgent, PolicyType } from
+    "../../../psbot/handlers/battle/ai/policyAgent";
+import { WrappedError } from "../../helpers/WrappedError";
+import { ExperienceAgent, ExperienceAgentData } from
+    "../../play/experience/Experience";
+import { AsyncPort } from "../../port/AsyncPort";
+import { ModelPortProtocol, PredictMessage, PredictResult } from
+    "./ModelPortProtocol";
+
+/**
+ * Abstracts the interface between a game worker and the main NetworkProcessor
+ * worker. Intended to be used by only one BattleAgent within a game worker that
+ * received a port to connect to a neural network.
+ *
+ * @template TFormatType Game format type.
+ */
+export class ModelPort
+<
+    TFormatType extends formats.FormatType = formats.FormatType
+>
+{
+    /** Port wrapper. */
+    private readonly asyncPort:
+        AsyncPort<MessagePort, ModelPortProtocol, keyof ModelPortProtocol>;
+
+    /**
+     * Creates a ModelPort.
+     *
+     * @param port Message port.
+     * @param format Game format type that the message port supports.
+     */
+    constructor(port: MessagePort, public readonly format: TFormatType)
+    {
+        this.asyncPort = new AsyncPort(port);
+        port.on("message", res => this.asyncPort.receiveMessage(res));
+        port.on("error",
+            err => this.asyncPort.receiveError(
+                new WrappedError(err,
+                    msg => "ModelPort encountered an unhandled exception: " +
+                        msg)));
+    }
+
+    /** Closes the connection. */
+    public close(): void { this.asyncPort.port.close(); }
+
+    /**
+     * Creates a BattleAgent from this port.
+     *
+     * @param policy Action selection method.
+     * @see {@link policyAgent}
+     */
+    public getAgent(policy: PolicyType): ExperienceAgent<TFormatType>
+    {
+        let data: ExperienceAgentData | null = null;
+
+        const innerAgent = policyAgent<TFormatType>(
+            async state =>
+            {
+                const encoder: Encoder<formats.ReadonlyState<TFormatType>> =
+                    formats.encoder[this.format];
+                const arr = alloc(encoder.size, /*shared*/ true);
+                encoder.encode(arr, state);
+                let i = ModelPort.verifyInput(arr);
+                if (i >= 0)
+                {
+                    throw new Error("Neural network input contains an " +
+                        `invalid value (${arr[i]}) at index ${i}\n` +
+                        `State:\n${state.toString()}`);
+                }
+
+                const result = await this.predict(arr, /*shared*/ true);
+                i = ModelPort.verifyOutput(result.probs);
+                if (i >= 0)
+                {
+                    throw new Error("Neural network output contains an " +
+                        `invalid value at index ${i} (${intToChoice[i]})`);
+                }
+
+                data = {...result, state: arr};
+                return result.probs;
+            },
+            policy);
+
+        return async function portAgent(state, choices, logger)
+        {
+            await innerAgent(state, choices, logger);
+            if (!data)
+            {
+                throw new Error("ModelPort agent didn't collect experience " +
+                    "data");
+            }
+            const result = data;
+            data = null;
+            return result;
+        };
+    }
+
+    /**
+     * Makes sure that the input doesn't contain invalid values, i.e. NaNs or
+     * values outside the range `[-1, 1]`.
+     *
+     * @param arr Array input.
+     * @returns The index of an invalid value, or -1 if none found.
+     */
+    private static verifyInput(arr: Float32Array): number
+    {
+        for (let i = 0; i < arr.length; ++i)
+        {
+            if (isNaN(arr[i])) return i;
+            if (Math.abs(arr[i]) > 1) return i;
+        }
+        return -1;
+    }
+
+    /**
+     * Makes sure that the output doesn't contain invalid values, i.e. NaNs or
+     * very small softmax outputs which tend to mess with `policyAgent`'s
+     * weighted shuffle algorithm.
+     *
+     * @param arr Array input.
+     * @returns The index of an invalid value, or -1 if none found.
+     */
+    private static verifyOutput(arr: Float32Array): number
+    {
+        for (let i = 0; i < arr.length; ++i)
+        {
+            if (isNaN(arr[i])) return i;
+            if (arr[i] < 1e-4) return i;
+        }
+        return -1;
+    }
+
+    /**
+     * Requests a prediction from the neural network.
+     *
+     * @param state State data.
+     * @param shared Whether the array uses a SharedArrayBuffer.
+     */
+    public predict(state: Float32Array, shared = false): Promise<PredictResult>
+    {
+        const msg: PredictMessage =
+            {type: "predict", rid: this.asyncPort.nextRid(), state};
+        // SharedArrayBuffers can't be in the transfer list since they're
+        //  already accessible from both threads
+        const transferList = shared ? [] : [state.buffer];
+
+        return new Promise((res, rej) =>
+            this.asyncPort.postMessage(msg, transferList,
+                result =>
+                    result.type === "error" ? rej(result.err) : res(result)));
+    }
+}

@@ -7,8 +7,8 @@ The code is pretty unstable right now so I wouldn't recommend trying to use it o
 
 This project has three parts:
 * [PSBot](/src/psbot) framework for creating a general Pokemon Showdown bot and setting up the battle interface.
-* [Battle](/src/battle) state tracker, able to make logical deductions about the opponent's team by observing the events that happen in each turn.
-* Neural network [management](/src/ai) and [training](/src/train) scripts.
+* [Battle](/src/psbot/handlers/battle) state tracker, able to make logical deductions about the opponent's team by observing the events that happen in each turn.
+* Neural network [management](/src/psbot/handlers/battle/ai) and [training](/src/train) scripts.
 
 ## Compiling/running
 Before running the main client, create a `src/config.ts` file using [`src/config.example.ts`](/src/config.example.ts) as a guide.
@@ -19,24 +19,26 @@ git clone --recursive https://github.com/taylorhansen/pokemonshowdown-ai
 cd pokemonshowdown-ai
 npm install
 
-# compile submodules
-scripts/init-ps.sh
+# init config
+cp src/config.example.ts src/config.ts
 
-# compile codebase
+# compile
 npm run build
-
-# train a neural network
-# can also ctrl-c out once the test battles start to leave an untrained network on disk
-# add "-- --gpu" to enable GPU acceleration
-npm run train
-
-# connect to the server specified in config.ts and start accepting challenges
-# add "-- --gpu" to enable GPU acceleration
-npm run psbot
 
 # lint and run tests
 npm test
+
+# train a neural network
+# WARNING: requires a powerful computer, may take several hours
+npm run train
+# or to enable GPU acceleration:
+npm run train:gpu
+
+# connect to the server specified in config.ts and start accepting challenges
+npm run psbot
+# or to enable GPU acceleration:
+npm run psbot:gpu
 ```
 
 ## License
-MIT.
+See [LICENSE](/LICENSE).

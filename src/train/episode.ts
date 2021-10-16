@@ -2,16 +2,16 @@ import { join } from "path";
 import ProgressBar from "progress";
 import * as tmp from "tmp-promise";
 import { Logger } from "../Logger";
-import { AlgorithmArgs } from "./nn/learn/LearnArgs";
-import { NetworkProcessor } from "./nn/worker/NetworkProcessor";
-import { Opponent, playGames } from "./play/playGames";
-import { SimName } from "./sim/simulators";
+import { formats } from "../psbot/handlers/battle";
+import { AlgorithmArgs } from "./learn";
+import { ModelWorker } from "./model/worker";
+import { Opponent, playGames } from "./play";
 
 /** Args for `episode()`. */
 export interface EpisodeArgs
 {
-    /** Used to request game worker ports from the neural networks. */
-    readonly processor: NetworkProcessor;
+    /** Used to request model ports for the game workers. */
+    readonly models: ModelWorker;
     /** ID of the model to train. */
     readonly model: number;
     /** Opponent data for training the model. */
@@ -19,15 +19,21 @@ export interface EpisodeArgs
     /** Opponent data for evaluating the model. */
     readonly evalOpponents: readonly Opponent[];
     /** Name of the simulator to use for each game. */
-    readonly simName: SimName;
+    readonly format: formats.FormatType;
+    /** Number of games to play in parallel. */
+    readonly numThreads: number;
     /** Number of turns before a game is considered a tie. */
     readonly maxTurns: number;
     /** Learning algorithm config. */
     readonly algorithm: AlgorithmArgs;
     /** Number of epochs to run training. */
     readonly epochs: number;
+    /** Number of experience file decoders to run in parallel. */
+    readonly numDecoderThreads: number;
     /** Mini-batch size. */
     readonly batchSize: number;
+    /** Prefetch buffer size for shuffling during training. */
+    readonly shufflePrefetch: number;
     /** Logger object. */
     readonly logger: Logger;
     /** Path to the folder to store episode logs in. Omit to not store logs. */
@@ -37,8 +43,9 @@ export interface EpisodeArgs
 /** Runs a training episode. */
 export async function episode(
     {
-        processor, model, trainOpponents, evalOpponents, simName, maxTurns,
-        algorithm, epochs, batchSize, logger, logPath
+        models, model, trainOpponents, evalOpponents, format, numThreads,
+        maxTurns, algorithm, epochs, numDecoderThreads, batchSize,
+        shufflePrefetch, logger, logPath
     }: EpisodeArgs): Promise<void>
 {
     // play some games semi-randomly, building batches of Experience for each
@@ -55,8 +62,8 @@ export async function episode(
 
     const numAExps = await playGames(
     {
-        processor, agentConfig: {model, exp: true}, opponents: trainOpponents,
-        simName, maxTurns, logger: logger.addPrefix("Rollout: "),
+        models, agentConfig: {model, exp: true}, opponents: trainOpponents,
+        format, numThreads, maxTurns, logger: logger.addPrefix("Rollout: "),
         ...(logPath && {logPath: join(logPath, "rollout")}),
         rollout: algorithm.advantage, getExpPath
     });
@@ -88,10 +95,10 @@ export async function episode(
             });
         progress.render({loss: "n/a"});
     }
-    await processor.learn(model,
+    await models.learn(model,
         {
             aexpPaths: expFiles.map(f => f.path), numAExps, algorithm, epochs,
-            batchSize, logPath
+            numDecoderThreads, batchSize, shufflePrefetch, logPath
         },
         function(data)
         {
@@ -123,8 +130,8 @@ export async function episode(
     logger.debug("Evaluating new network against benchmarks");
     const evalPromise = playGames(
     {
-        processor, agentConfig: {model, exp: false}, opponents: evalOpponents,
-        simName, maxTurns, logger: logger.addPrefix("Eval: "),
+        models, agentConfig: {model, exp: false}, opponents: evalOpponents,
+        format, numThreads, maxTurns, logger: logger.addPrefix("Eval: "),
         ...(logPath && {logPath: join(logPath, "eval")})
     });
 
