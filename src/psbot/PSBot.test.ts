@@ -96,8 +96,14 @@ export const test = () => describe("PSBot", function()
             await promise;
 
             const msg = await server.nextMessage();
-            expect(server.lastQuery).to.deep.equal(
-                {act: "getassertion", userid: username, challstr});
+            expect(server.lastQuery).to.not.be.null;
+            expect([...server.lastQuery!.entries()])
+                .to.have.deep.members(
+                [
+                    ["act", "getassertion"],
+                    ["userid", username],
+                    ["challstr", challstr]
+                ]);
             expect(msg.type).to.equal("utf8");
             expect((msg as IUtf8Message).utf8Data)
                 .to.equal(`|/trn ${username},0,${assertion}`);
@@ -129,8 +135,15 @@ export const test = () => describe("PSBot", function()
             await promise;
 
             const msg = await server.nextMessage();
-            expect(server.lastQuery).to.deep.equal(
-                {act: "login", name: username, pass: password, challstr});
+            expect(server.lastQuery).to.not.be.null;
+            expect([...server.lastQuery!.entries()])
+                .to.have.deep.members(
+                [
+                    ["act", "login"],
+                    ["name", username],
+                    ["pass", password],
+                    ["challstr", challstr]
+                ]);
             expect(msg.type).to.equal("utf8");
             expect((msg as IUtf8Message).utf8Data)
                 .to.equal(`|/trn ${username},0,${assertion}`);

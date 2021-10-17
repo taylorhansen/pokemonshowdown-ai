@@ -1,5 +1,4 @@
 import { createServer, Server } from "http";
-import * as querystring from "querystring";
 import * as url from "url";
 import { connection as WSConnection, Message, server as WSServer } from
     "websocket";
@@ -14,11 +13,11 @@ export class MockPSServer
     }
 
     /** Query string from the last HTTP request. */
-    public get lastQuery(): querystring.ParsedUrlQuery
+    public get lastQuery(): url.URLSearchParams | null
     {
         return this._lastQuery;
     }
-    private _lastQuery: querystring.ParsedUrlQuery = {};
+    private _lastQuery: url.URLSearchParams | null = null;
 
     /** Username required for login. */
     public username = "";
@@ -60,16 +59,16 @@ export class MockPSServer
                 req.on("data", chunk => body += chunk);
                 req.on("end", () =>
                 {
-                    this._lastQuery = querystring.parse(body);
-                    switch (this._lastQuery["act"])
+                    this._lastQuery = new url.URLSearchParams(body);
+                    switch (this._lastQuery.get("act"))
                     {
                         case "getassertion":
                             if (this.password) res.end(";");
                             else res.end(this.assertion);
                             break;
                         case "login":
-                            if (this.username === this._lastQuery["name"] &&
-                                this.password === this._lastQuery["pass"])
+                            if (this.username === this._lastQuery.get("name") &&
+                                this.password === this._lastQuery.get("pass"))
                             {
                                 res.end(`]{"actionsuccess":true,` +
                                     `"assertion":"${this.assertion}"}`);
@@ -137,7 +136,7 @@ export class MockPSServer
         this.connection = undefined;
 
         // reset other public properties
-        this._lastQuery = {};
+        this._lastQuery = null;
     }
 
     /** Shuts down server. */
