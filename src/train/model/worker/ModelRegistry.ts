@@ -1,6 +1,6 @@
 import * as tf from "@tensorflow/tfjs";
 import { EventEmitter } from "stream";
-import { TypedEmitter } from "tiny-typed-emitter";
+import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 import { serialize } from "v8";
 import { MessageChannel, MessagePort, workerData } from "worker_threads";
 import { formats } from "../../../psbot/handlers/battle";
@@ -33,7 +33,7 @@ interface BatchEntry
 const batchExecute = Symbol("batchExecute");
 
 /** Describes the events emitted by {@link ModelRegistry.batchEvents}. */
-interface BatchEvents
+interface BatchEvents extends ListenerSignature<{[batchExecute]: true}>
 {
     [batchExecute](): void;
 }

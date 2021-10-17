@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import "mocha";
+import { IUtf8Message } from "websocket";
 import { Logger } from "../../src/Logger";
 import { PSBot } from "../../src/psbot/PSBot";
 import { FakeRoomHandler } from "./FakeRoomHandler.test";
@@ -55,7 +56,8 @@ export const test = () => describe("PSBot", function()
 
             const msg = await server.nextMessage();
             expect(msg.type).to.equal("utf8");
-            expect(msg.utf8Data).to.equal(`|/accept ${username}`);
+            expect((msg as IUtf8Message).utf8Data)
+                .to.equal(`|/accept ${username}`);
         });
 
         it(`Should not accept unsupported challenges`, async function()
@@ -65,7 +67,8 @@ export const test = () => describe("PSBot", function()
 
             const msg = await server.nextMessage();
             expect(msg.type).to.equal("utf8");
-            expect(msg.utf8Data).to.equal(`|/reject ${username}`);
+            expect((msg as IUtf8Message).utf8Data)
+                .to.equal(`|/reject ${username}`);
         });
     });
 
@@ -77,7 +80,8 @@ export const test = () => describe("PSBot", function()
             bot.setAvatar(avatar);
             const msg = await server.nextMessage();
             expect(msg.type).to.equal("utf8");
-            expect(msg.utf8Data).to.equal(`|/avatar ${avatar}`);
+            expect((msg as IUtf8Message).utf8Data)
+                .to.equal(`|/avatar ${avatar}`);
         });
     });
 
@@ -95,7 +99,8 @@ export const test = () => describe("PSBot", function()
             expect(server.lastQuery).to.deep.equal(
                 {act: "getassertion", userid: username, challstr});
             expect(msg.type).to.equal("utf8");
-            expect(msg.utf8Data).to.equal(`|/trn ${username},0,${assertion}`);
+            expect((msg as IUtf8Message).utf8Data)
+                .to.equal(`|/trn ${username},0,${assertion}`);
         });
 
         it("Should reject login without password if registered",
@@ -127,7 +132,8 @@ export const test = () => describe("PSBot", function()
             expect(server.lastQuery).to.deep.equal(
                 {act: "login", name: username, pass: password, challstr});
             expect(msg.type).to.equal("utf8");
-            expect(msg.utf8Data).to.equal(`|/trn ${username},0,${assertion}`);
+            expect((msg as IUtf8Message).utf8Data)
+                .to.equal(`|/trn ${username},0,${assertion}`);
         });
 
         it("Should reject login with invalid password", async function()

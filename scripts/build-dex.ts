@@ -316,7 +316,7 @@ import { toIdName } from "../src/psbot/helpers";
             // TODO(gen6): support type-based ignoreImmunity flag
             ...category !== "status" && move.ignoreImmunity &&
                 {ignoreImmunity: true},
-            ...!!move.flags.authentic && {ignoreSub: true},
+            ...!!move.flags.bypasssub && {ignoreSub: true},
             ...interceptSwitch.hasOwnProperty(move.id) &&
                 {interceptSwitch: true},
             ...noMirror.hasOwnProperty(move.id) && {noMirror: true},

@@ -1,4 +1,4 @@
-import { TypedEmitter } from "tiny-typed-emitter";
+import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 import { Worker } from "worker_threads";
 import { WorkerPort } from "../port/WorkerPort";
 import { WorkerProtocol } from "../port/WorkerProtocol";
@@ -16,8 +16,8 @@ import { WorkerProtocol } from "../port/WorkerProtocol";
 export type WorkerPortLike
 <
     TProtocol extends WorkerProtocol<TTypes>, TTypes extends string
->
-    = Pick<WorkerPort<TProtocol, TTypes>, "close">;
+> =
+    Pick<WorkerPort<TProtocol, TTypes>, "close">;
 
 /** Event for when a WorkerPort is free. */
 const workerFree = Symbol("workerFree");
@@ -25,7 +25,8 @@ const workerFree = Symbol("workerFree");
 const workerError = Symbol("workerError");
 
 /** Defines events that the ThreadPool implements. */
-interface WorkerEvents
+interface WorkerEvents extends
+    ListenerSignature<{[workerFree]: true, [workerError]: true}>
 {
     /** When a worker is free. */
     [workerFree](): void;

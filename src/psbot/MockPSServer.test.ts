@@ -1,7 +1,7 @@
 import { createServer, Server } from "http";
 import * as querystring from "querystring";
 import * as url from "url";
-import { connection as WSConnection, IMessage, server as WSServer } from
+import { connection as WSConnection, Message, server as WSServer } from
     "websocket";
 
 /** Mocks the server's http and websocket APIs for PSBot testing. */
@@ -105,7 +105,7 @@ export class MockPSServer
     }
 
     /** Promise to get the next message from the current connection. */
-    public nextMessage(): Promise<IMessage>
+    public nextMessage(): Promise<Message>
     {
         return new Promise(res =>
         {
