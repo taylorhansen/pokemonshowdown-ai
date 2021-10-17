@@ -250,9 +250,12 @@ export async function learn(
                     // record new coefficient value
                     if (!metricsPerBatch.hasOwnProperty("beta"))
                     {
-                        metricsPerBatch.beta = [tf.scalar(algorithm.beta)];
+                        metricsPerBatch["beta"] = [tf.scalar(algorithm.beta)];
                     }
-                    else metricsPerBatch.beta.push(tf.scalar(algorithm.beta));
+                    else
+                    {
+                        metricsPerBatch["beta"].push(tf.scalar(algorithm.beta));
+                    }
                 }
 
                 await Promise.all(

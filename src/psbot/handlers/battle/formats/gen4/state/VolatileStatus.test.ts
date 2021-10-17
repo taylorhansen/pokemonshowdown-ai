@@ -470,7 +470,7 @@ export const test = () => describe("VolatileStatus", function()
         it("Should set #willTruant if ability is truant", function()
         {
             volatile.overrideTraits =
-                PokemonTraits.base(dex.pokemon.slaking, 100);
+                PokemonTraits.base(dex.pokemon["slaking"], 100);
             volatile.activateTruant();
             expect(volatile.willTruant).to.be.true;
         });
@@ -484,7 +484,7 @@ export const test = () => describe("VolatileStatus", function()
         it("Should toggle on #postTurn() if ability is truant", function()
         {
             volatile.overrideTraits =
-                PokemonTraits.base(dex.pokemon.slaking, 100);
+                PokemonTraits.base(dex.pokemon["slaking"], 100);
             volatile.activateTruant();
             volatile.postTurn();
             expect(volatile.willTruant).to.be.false;
@@ -600,7 +600,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.mustRecharge = true;
     // TODO: test private moveset link
     // has truant ability
-    volatile.overrideTraits = PokemonTraits.base(dex.pokemon.slaking, 100);
+    volatile.overrideTraits = PokemonTraits.base(dex.pokemon["slaking"], 100);
     volatile.addedType = "ice";
     volatile.rage = true;
     volatile.rollout.start("iceball");

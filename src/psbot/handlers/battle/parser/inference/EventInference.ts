@@ -114,8 +114,7 @@ export class EventInference
         for (const c of this.cases) c.resolve(/*held*/ c === inf);
     }
 
-    /** @override */
-    public toString(indentInner = 4, indentOuter = 0): string
+    public override toString(indentInner = 4, indentOuter = 0): string
     {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);

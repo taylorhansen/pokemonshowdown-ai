@@ -14,8 +14,7 @@ export class MessageParser extends Transform
         super({objectMode: true});
     }
 
-    /** @override */
-    _transform(chunk: string, encoding: BufferEncoding,
+    public override _transform(chunk: string, encoding: BufferEncoding,
         callback: TransformCallback): void
     {
         try

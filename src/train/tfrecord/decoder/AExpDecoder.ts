@@ -71,8 +71,7 @@ export class AExpDecoder extends Transform
         this.recordLoopPromise = this.recordLoop();
     }
 
-    /** @override */
-    public _transform(chunk: Buffer, encoding: BufferEncoding,
+    public override _transform(chunk: Buffer, encoding: BufferEncoding,
         callback: TransformCallback): void
     {
         if (!this.nextChunk)
@@ -90,8 +89,7 @@ export class AExpDecoder extends Transform
         }
     }
 
-    /** @override */
-    public _flush(callback: (err?: Error | null) => void): void
+    public override _flush(callback: (err?: Error | null) => void): void
     {
         if (this.listenerCount(AExpDecoder.chunkConsumed) > 0)
         {

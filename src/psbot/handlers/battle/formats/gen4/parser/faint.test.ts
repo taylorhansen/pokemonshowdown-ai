@@ -6,8 +6,8 @@ import { benchInfo, ditto, eevee, requestEvent, smeargle } from
 import { createInitialContext, ParserContext, setupOverrideSender } from
     "./Context.test";
 import * as faint from "./faint";
-import { ParserHelpers, setupBattleParser, toDetails, toEffectName, toHPStatus,
-    toIdent, toMoveName, toRequestJSON, toUsername } from "./helpers.test";
+import { ParserHelpers, setupBattleParser, toDetails, toHPStatus, toIdent,
+    toMoveName, toRequestJSON, toUsername } from "./helpers.test";
 
 export const test = () => describe("faint", function()
 {

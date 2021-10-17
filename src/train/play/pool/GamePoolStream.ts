@@ -23,8 +23,7 @@ export class GamePoolStream extends Transform
         super({objectMode: true, highWaterMark: pool.numThreads});
     }
 
-    /** @override */
-    public _transform(args: GamePoolArgs, encoding: BufferEncoding,
+    public override _transform(args: GamePoolArgs, encoding: BufferEncoding,
         callback: TransformCallback): void
     {
         // queue a game, passing errors and queueing the next one once a port
@@ -42,8 +41,7 @@ export class GamePoolStream extends Transform
         gamePromise.finally(() => this.gamePromises.delete(gamePromise));
     }
 
-    /** @override */
-    public _flush(callback: TransformCallback): void
+    public override _flush(callback: TransformCallback): void
     {
         // wait for all queued games to finish, then the stream can safely close
         (async () =>

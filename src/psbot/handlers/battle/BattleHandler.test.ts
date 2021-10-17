@@ -38,6 +38,7 @@ export const test = () => describe("BattleHandler", function()
             // fake BattleState for demonstration
             stateCtor: class
             {
+                // @ts-expect-error
                 private requested = false;
                 constructor(public readonly username: string) {}
             } as any as formats.StateConstructor<"gen4">,

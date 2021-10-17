@@ -77,8 +77,7 @@ class MoveIsType extends inference.SubReason
         this.partialUser = {hpType: user.hpType, item: user.item};
     }
 
-    /** @override */
-    public canHold(): boolean | null
+    public override canHold(): boolean | null
     {
         // if all of the move's possible types are contained by our given types,
         //  then the assertion holds
@@ -86,27 +85,24 @@ class MoveIsType extends inference.SubReason
             this.move.getPossibleTypes(this.partialUser), this.negative);
     }
 
-    /** @override */
-    public assert(): void
+    public override assert(): void
     {
         this.move.assertTypes(this.types, this.partialUser, this.negative)
     }
 
-    /** @override */
-    public reject(): void
+    public override reject(): void
     {
         this.move.assertTypes(this.types, this.partialUser, !this.negative)
     }
 
-    /** @override */
-    protected delayImpl(cb: inference.DelayCallback): inference.CancelCallback
+    protected override delayImpl(cb: inference.DelayCallback):
+        inference.CancelCallback
     {
         return this.move.onUpdateTypes(this.types, this.partialUser,
             this.negative ? held => cb(!held) : cb);
     }
 
-    /** @override */
-    public toString(indentInner = 4, indentOuter = 0): string
+    public override toString(indentInner = 4, indentOuter = 0): string
     {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);

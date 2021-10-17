@@ -503,7 +503,7 @@ export const test = () => describe("ability", function()
                 .to.have.keys("voltabsorb", "illuminate");
 
             pctx = init("p2",
-                {userRef: "p1", move: dex.getMove(dex.moves.thunder)});
+                {userRef: "p1", move: dex.getMove(dex.moves["thunder"])});
             await ph.halt();
             await ph.return([]);
             expect(mon.traits.ability.possibleValues)
@@ -520,7 +520,7 @@ export const test = () => describe("ability", function()
                 .to.have.keys("voltabsorb", "illuminate");
 
             pctx = init("p2",
-                {userRef: "p1", move: dex.getMove(dex.moves.thunder)});
+                {userRef: "p1", move: dex.getMove(dex.moves["thunder"])});
             await ph.halt();
             await ph.return([]);
             expect(mon.traits.ability.possibleValues)
@@ -535,7 +535,7 @@ export const test = () => describe("ability", function()
             sh.initActive("p1").setAbility("moldbreaker");
 
             pctx = init("p2",
-                {userRef: "p1", move: dex.getMove(dex.moves.thunder)});
+                {userRef: "p1", move: dex.getMove(dex.moves["thunder"])});
             await ph.halt();
             await ph.return([]);
             expect(mon.traits.ability.possibleValues)
@@ -556,7 +556,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", snorlax);
 
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.toxic), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["toxic"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args: ["-immune", toIdent("p2", snorlax)],
@@ -583,7 +583,7 @@ export const test = () => describe("ability", function()
                         "SunnyDay");
 
                     pctx = init("p2",
-                        {move: dex.getMove(dex.moves.yawn), userRef: "p1"});
+                        {move: dex.getMove(dex.moves["yawn"]), userRef: "p1"});
                     await ph.handle(
                     {
                         args: ["-immune", toIdent("p2", smeargle)],
@@ -596,7 +596,7 @@ export const test = () => describe("ability", function()
                 it("Should not block yawn without sun", async function()
                 {
                     pctx = init("p2",
-                        {move: dex.getMove(dex.moves.yawn), userRef: "p1"});
+                        {move: dex.getMove(dex.moves["yawn"]), userRef: "p1"});
                     await ph.halt();
                     await ph.return([]);
                     // shouldn't overnarrow
@@ -610,7 +610,7 @@ export const test = () => describe("ability", function()
                         "SunnyDay");
 
                     pctx = init("p2",
-                        {move: dex.getMove(dex.moves.toxic), userRef: "p1"});
+                        {move: dex.getMove(dex.moves["toxic"]), userRef: "p1"});
                     await ph.halt();
                     await ph.return([]);
                     // shouldn't overnarrow
@@ -634,7 +634,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", bronzong);
 
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.mudshot), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["mudshot"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args: ["-immune", toIdent("p2", bronzong)],
@@ -656,7 +656,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", electivire);
 
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.thunder), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["thunder"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args:
@@ -689,7 +689,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", quagsire).hp.set(1);
 
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.bubble), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["bubble"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args:
@@ -712,7 +712,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", quagsire);
 
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.bubble), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["bubble"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args: ["-immune", toIdent("p2", quagsire)],
@@ -734,7 +734,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", arcanine);
 
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.ember), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["ember"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args:
@@ -755,7 +755,9 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", quagsire);
 
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.hiddenpower), userRef: "p1"});
+                {
+                    move: dex.getMove(dex.moves["hiddenpower"]), userRef: "p1"
+                });
                 await ph.handle(
                 {
                     args: ["-immune", toIdent("p2", quagsire)],
@@ -773,7 +775,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", quagsire);
 
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.judgment), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["judgment"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args: ["-immune", toIdent("p2", quagsire)],
@@ -798,7 +800,9 @@ export const test = () => describe("ability", function()
 
                 // ability didn't activate, so hpType must not be electric
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.hiddenpower), userRef: "p1"});
+                {
+                    move: dex.getMove(dex.moves["hiddenpower"]), userRef: "p1"
+                });
                 await ph.halt();
                 await ph.return([]);
                 expect(hpType.possibleValues).to.not.include("electric");
@@ -818,7 +822,7 @@ export const test = () => describe("ability", function()
 
                 // ability didn't activate, so plateType must not be electric
                 pctx = init("p2",
-                    {move: dex.getMove(dex.moves.judgment), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["judgment"]), userRef: "p1"});
                 await ph.halt();
                 await ph.return([]);
                 expect(item.possibleValues).to.not.include("zapplate");
@@ -833,7 +837,9 @@ export const test = () => describe("ability", function()
                     mon.setAbility("wonderguard", "waterabsorb");
 
                     pctx = init("p2",
-                        {move: dex.getMove(dex.moves.bubble), userRef: "p1"});
+                    {
+                        move: dex.getMove(dex.moves["bubble"]), userRef: "p1"
+                    });
                     await ph.handle(
                     {
                         args: ["-immune", toIdent("p2")],
@@ -858,7 +864,7 @@ export const test = () => describe("ability", function()
 
                     pctx = init("p2",
                     {
-                        move: dex.getMove(dex.moves.explosion), userRef: "p1"
+                        move: dex.getMove(dex.moves["explosion"]), userRef: "p1"
                     });
                     await ph.handle(
                     {
@@ -904,7 +910,7 @@ export const test = () => describe("ability", function()
             sh.initActive("p2", metagross);
 
             pctx = init("p2",
-                {move: dex.getMove(dex.moves.charm), userRef: "p1"});
+                {move: dex.getMove(dex.moves["charm"]), userRef: "p1"});
             await ph.handle(
             {
                 args:
@@ -929,7 +935,7 @@ export const test = () => describe("ability", function()
 
             sh.initActive("p1").setAbility("moldbreaker");
             pctx = init("p2",
-                {move: dex.getMove(dex.moves.charm), userRef: "p1"});
+                {move: dex.getMove(dex.moves["charm"]), userRef: "p1"});
             await ph.halt();
             await ph.return([]);
             expect(mon.traits.ability.possibleValues)
@@ -945,7 +951,7 @@ export const test = () => describe("ability", function()
                 .to.have.keys("clearbody", "liquidooze");
 
             pctx = init("p2",
-                {move: dex.getMove(dex.moves.charm), userRef: "p1"});
+                {move: dex.getMove(dex.moves["charm"]), userRef: "p1"});
             await ph.halt();
             await ph.return([]);
             expect(mon.traits.ability.possibleValues)
@@ -962,7 +968,7 @@ export const test = () => describe("ability", function()
                 .to.have.keys("clearbody", "liquidooze");
 
             pctx = init("p2",
-                {move: dex.getMove(dex.moves.charm), userRef: "p1"});
+                {move: dex.getMove(dex.moves["charm"]), userRef: "p1"});
             await ph.halt();
             await ph.return([]);
             expect(mon.traits.ability.possibleValues)
@@ -1061,7 +1067,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2");
 
                 pctx = init("p1", "contactKO",
-                    {move: dex.getMove(dex.moves.tackle), userRef: "p2"});
+                    {move: dex.getMove(dex.moves["tackle"]), userRef: "p2"});
                 await ph.handle(
                 {
                     args: ["-damage", toIdent("p2"), toHPStatus(75, 100)],
@@ -1092,7 +1098,7 @@ export const test = () => describe("ability", function()
                     .to.have.keys("aftermath", "unburden");
 
                 pctx = init("p2", "contactKO",
-                    {move: dex.getMove(dex.moves.tackle), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["tackle"]), userRef: "p1"});
                 await ph.halt();
                 await ph.return([]);
                 expect(mon.traits.ability.possibleValues)
@@ -1109,7 +1115,7 @@ export const test = () => describe("ability", function()
                     .to.have.keys("aftermath", "unburden");
 
                 pctx = init("p2", "contactKO",
-                    {move: dex.getMove(dex.moves.tackle), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["tackle"]), userRef: "p1"});
                 await ph.halt();
                 await ph.return([]);
                 expect(mon.traits.ability.possibleValues)
@@ -1129,7 +1135,9 @@ export const test = () => describe("ability", function()
                     // activate explosive effect, meaning other side doesn't
                     //  have damp
                     pctx = init("p1", "contactKO",
-                        {move: dex.getMove(dex.moves.tackle), userRef: "p2"});
+                    {
+                        move: dex.getMove(dex.moves["tackle"]), userRef: "p2"
+                    });
                     await ph.handle(
                     {
                         args: ["-damage", toIdent("p2"), toHPStatus(75, 100)],
@@ -1167,7 +1175,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", magmar);
 
                 pctx = init("p2", "contact",
-                    {move: dex.getMove(dex.moves.tackle), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["tackle"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args: ["-status", toIdent("p1"), "brn"],
@@ -1187,7 +1195,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", sharpedo);
 
                 pctx = init("p2", "contact",
-                    {move: dex.getMove(dex.moves.tackle), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["tackle"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args: ["-damage", toIdent("p1"), toHPStatus(94, 100)],
@@ -1208,7 +1216,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", magmar);
 
                 pctx = init("p2", "contactKO",
-                    {move: dex.getMove(dex.moves.tackle), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["tackle"]), userRef: "p1"});
                 await ph.handle(
                 {
                     args: ["-status", toIdent("p1"), "brn"],
@@ -1228,7 +1236,7 @@ export const test = () => describe("ability", function()
                 sh.initActive("p2", magmar);
 
                 pctx = init("p2", "damage",
-                    {move: dex.getMove(dex.moves.watergun), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["watergun"]), userRef: "p1"});
                 await ph.halt();
                 await ph.return([]);
             });
@@ -1241,7 +1249,7 @@ export const test = () => describe("ability", function()
                 mon.setAbility("roughskin", "illuminate");
 
                 pctx = init("p2", "contact",
-                    {move: dex.getMove(dex.moves.tackle), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["tackle"]), userRef: "p1"});
                 await ph.halt();
                 await ph.return([]);
                 expect(mon.traits.ability.possibleValues)
@@ -1257,7 +1265,7 @@ export const test = () => describe("ability", function()
                 mon.setAbility("roughskin", "illuminate");
 
                 pctx = init("p2", "contact",
-                    {move: dex.getMove(dex.moves.tackle), userRef: "p1"});
+                    {move: dex.getMove(dex.moves["tackle"]), userRef: "p1"});
                 await ph.halt();
                 await ph.return([]);
                 expect(mon.traits.ability.possibleValues)
@@ -1276,7 +1284,7 @@ export const test = () => describe("ability", function()
 
                 pctx = init("p1", "damage",
                 {
-                    move: dex.getMove(dex.moves.watergun),
+                    move: dex.getMove(dex.moves["watergun"]),
                     userRef: "p2"
                 });
                 await ph.halt();
@@ -1295,7 +1303,7 @@ export const test = () => describe("ability", function()
 
                 pctx = init("p1", "damage",
                 {
-                    move: dex.getMove(dex.moves.watergun),
+                    move: dex.getMove(dex.moves["watergun"]),
                     userRef: "p2"
                 });
                 await ph.halt();
@@ -1320,7 +1328,7 @@ export const test = () => describe("ability", function()
 
                     pctx = init("p1", "damage",
                     {
-                        move: dex.getMove(dex.moves.watergun),
+                        move: dex.getMove(dex.moves["watergun"]),
                         userRef: "p2"
                     });
                     await ph.handle(
@@ -1344,7 +1352,9 @@ export const test = () => describe("ability", function()
                     sh.initActive("p2");
 
                     pctx = init("p1", "damage",
-                        {move: dex.getMove(dex.moves.watergun), userRef: "p2"});
+                    {
+                        move: dex.getMove(dex.moves["watergun"]), userRef: "p2"
+                    });
                     await ph.halt();
                     await ph.return([]);
                 });
@@ -1356,7 +1366,7 @@ export const test = () => describe("ability", function()
                     sh.initActive("p2");
 
                     pctx = init("p1", "damage",
-                        {move: dex.getMove(dex.moves.ember), userRef: "p2"});
+                        {move: dex.getMove(dex.moves["ember"]), userRef: "p2"});
                     await ph.halt();
                     await ph.return([]);
                 });
@@ -1369,7 +1379,8 @@ export const test = () => describe("ability", function()
 
                     pctx = init("p2", "damage",
                     {
-                        move: dex.getMove(dex.moves.hiddenpower), userRef: "p1"
+                        move: dex.getMove(dex.moves["hiddenpower"]),
+                        userRef: "p1"
                     });
                     await ph.handle(
                     {
@@ -1395,7 +1406,8 @@ export const test = () => describe("ability", function()
 
                     pctx = init("p1", "damage",
                     {
-                        move: dex.getMove(dex.moves.hiddenpower), userRef: "p2"
+                        move: dex.getMove(dex.moves["hiddenpower"]),
+                        userRef: "p2"
                     });
                     await ph.halt();
                     await ph.return([]);
@@ -1409,7 +1421,9 @@ export const test = () => describe("ability", function()
                     sh.initActive("p2", kecleon);
 
                     pctx = init("p2", "damage",
-                        {move: dex.getMove(dex.moves.judgment), userRef: "p1"});
+                    {
+                        move: dex.getMove(dex.moves["judgment"]), userRef: "p1"
+                    });
                     await ph.handle(
                     {
                         args:
@@ -1433,7 +1447,9 @@ export const test = () => describe("ability", function()
                     expect(item.definiteValue).to.be.null;
 
                     pctx = init("p1", "damage",
-                        {move: dex.getMove(dex.moves.judgment), userRef: "p2"});
+                    {
+                        move: dex.getMove(dex.moves["judgment"]), userRef: "p2"
+                    });
                     await ph.halt();
                     await ph.return([]);
                     expect(item.definiteValue).to.equal("zapplate"); // electric

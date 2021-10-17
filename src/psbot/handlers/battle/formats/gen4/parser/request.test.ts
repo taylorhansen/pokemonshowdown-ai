@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import "mocha";
-import { BattleState } from "../state";
 import { benchInfo, ditto, eevee, requestEvent, smeargle } from
     "../state/switchOptions.test";
 import { createInitialContext, ParserContext, setupOverrideAgent,
@@ -13,13 +12,6 @@ export const test = () => describe("request", function()
 {
     const ictx = createInitialContext();
     const {sh} = ictx;
-
-    let state: BattleState;
-
-    beforeEach("Extract BattleState", function()
-    {
-        state = ictx.getState();
-    });
 
     let pctx: ParserContext<void> | undefined;
     const ph = new ParserHelpers(() => pctx);

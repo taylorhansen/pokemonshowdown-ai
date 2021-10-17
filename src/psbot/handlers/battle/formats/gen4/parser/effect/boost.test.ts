@@ -2,7 +2,6 @@ import { BoostID } from "@pkmn/types";
 import { expect } from "chai";
 import "mocha";
 import * as dex from "../../dex";
-import { smeargle } from "../../state/switchOptions.test";
 import { ParserContext } from "../Context.test";
 import { createInitialContext } from "../Context.test";
 import { ParserHelpers, setupBattleParser, toIdent, toNum } from

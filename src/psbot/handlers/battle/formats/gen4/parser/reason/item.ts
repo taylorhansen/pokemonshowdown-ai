@@ -38,22 +38,19 @@ class HasItem extends inference.SubReason
         this.item = mon.item;
     }
 
-    /** @override */
-    public canHold(): boolean | null
+    public override canHold(): boolean | null
     {
         return subsetOrIndependent(this.items, this.item.possibleValues,
             this.negative);
     }
 
-    /** @override */
-    public assert(): void
+    public override assert(): void
     {
         if (this.negative) this.rejectImpl();
         else this.acceptImpl();
     }
 
-    /** @override */
-    public reject(): void
+    public override reject(): void
     {
         if (this.negative) this.acceptImpl();
         else this.rejectImpl();
@@ -71,15 +68,14 @@ class HasItem extends inference.SubReason
         this.item.remove(this.items);
     }
 
-    /** @override */
-    protected delayImpl(cb: inference.DelayCallback): inference.CancelCallback
+    protected override delayImpl(cb: inference.DelayCallback):
+        inference.CancelCallback
     {
         return this.item.onUpdate(this.items,
             this.negative ? kept => cb(!kept) : cb);
     }
 
-    /** @override */
-    public toString(indentInner = 4, indentOuter = 0): string
+    public override toString(indentInner = 4, indentOuter = 0): string
     {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);

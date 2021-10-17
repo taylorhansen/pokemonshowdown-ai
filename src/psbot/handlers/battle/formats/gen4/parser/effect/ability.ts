@@ -1,10 +1,7 @@
 /** @file Parsers related to ability activations. */
-import { Protocol } from "@pkmn/protocol";
 import { SideID } from "@pkmn/types";
-import { toIdName } from "../../../../../../helpers";
 import { BattleAgent } from "../../../../agent";
-import { BattleParserContext, consume, inference, unordered, verify } from
-    "../../../../parser";
+import { BattleParserContext, inference, unordered } from "../../../../parser";
 import * as dex from "../../dex";
 import { Pokemon } from "../../state/Pokemon";
 import * as reason from "../reason";

@@ -269,7 +269,7 @@ export const test = () => describe("encoders", function()
     {
         name: "Fully Initialized",
         encoder: encoders.statTableEncoder,
-        init: () => StatTable.base(dex.pokemon.magikarp, 100)
+        init: () => StatTable.base(dex.pokemon["magikarp"], 100)
     },
     {
         name: "Unrevealed",
@@ -286,14 +286,14 @@ export const test = () => describe("encoders", function()
     {
         name: "Fully Initialized",
         encoder: encoders.pokemonTraitsEncoder,
-        init: () => ({traits: PokemonTraits.base(dex.pokemon.magikarp, 100)})
+        init: () => ({traits: PokemonTraits.base(dex.pokemon["magikarp"], 100)})
     },
     {
         name: "Added Type",
         encoder: encoders.pokemonTraitsEncoder,
         init: () =>
         ({
-            traits: PokemonTraits.base(dex.pokemon.magikarp, 100),
+            traits: PokemonTraits.base(dex.pokemon["magikarp"], 100),
             addedType: "fire" as const
         })
     },
@@ -315,7 +315,7 @@ export const test = () => describe("encoders", function()
         init()
         {
             const v = new VolatileStatus();
-            v.overrideTraits = PokemonTraits.base(dex.pokemon.magikarp, 100);
+            v.overrideTraits = PokemonTraits.base(dex.pokemon["magikarp"], 100);
             return v;
         }
     },

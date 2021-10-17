@@ -11,7 +11,7 @@ export const test = () => describe("StatTable", function()
         it("Should initialize StatRanges", function()
         {
             // all base 100 stats
-            const stats = StatTable.base(dex.pokemon.mew, 100);
+            const stats = StatTable.base(dex.pokemon["mew"], 100);
             for (const stat in dex.statNames)
             {
                 if (!dex.statNames.hasOwnProperty(stat)) continue;
@@ -33,25 +33,25 @@ export const test = () => describe("StatTable", function()
         {
             it("Should be 1 if set to 0", function()
             {
-                const stats = StatTable.base(dex.pokemon.mew, 0);
+                const stats = StatTable.base(dex.pokemon["mew"], 0);
                 expect(stats.level).to.equal(1);
             });
 
             it("Should be 1 if set to a negative number", function()
             {
-                const stats = StatTable.base(dex.pokemon.mew, -50);
+                const stats = StatTable.base(dex.pokemon["mew"], -50);
                 expect(stats.level).to.equal(1);
             });
 
             it("Should be 100 if set to a larger number", function()
             {
-                const stats = StatTable.base(dex.pokemon.mew, 105);
+                const stats = StatTable.base(dex.pokemon["mew"], 105);
                 expect(stats.level).to.equal(100);
             });
 
             it("Should set normally if between 1 and 100", function()
             {
-                const stats = StatTable.base(dex.pokemon.mew, 50);
+                const stats = StatTable.base(dex.pokemon["mew"], 50);
                 expect(stats.level).to.equal(50);
             });
         });
@@ -61,7 +61,7 @@ export const test = () => describe("StatTable", function()
     {
         it("Should create partial shallow copy", function()
         {
-            const stats = StatTable.base(dex.pokemon.mew, 100);
+            const stats = StatTable.base(dex.pokemon["mew"], 100);
             const overrideHP = new StatRange(50, 100, /*hp*/ true);
             const dstats = stats.transform(overrideHP);
 

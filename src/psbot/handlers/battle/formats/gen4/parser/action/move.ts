@@ -534,7 +534,7 @@ function revealMoveSlot(ctx: BattleParserContext<"gen4">, user: Pokemon,
     user.volatile.lastMove = move.data.name;
     // only struggle can be selected without being a part of the user's
     //  moveset
-    if (move.data === dex.moves.struggle) return;
+    if (move.data === dex.moves["struggle"]) return;
     // deduct pp
     // record move state in case it needs to be used later
     const moveSlot = user.moveset.reveal(move.data.name);

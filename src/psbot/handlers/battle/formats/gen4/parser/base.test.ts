@@ -504,8 +504,8 @@ export const test = () => describe("base", function()
 
         it("Should throw if first health number is invalid", async function()
         {
-            const mon1 = sh.initActive("p1");
-            const mon2 = sh.initActive("p2");
+            sh.initActive("p1");
+            sh.initActive("p2");
 
             await ph.rejectError(
             {
@@ -521,8 +521,8 @@ export const test = () => describe("base", function()
 
         it("Should throw if second health number is invalid", async function()
         {
-            const mon1 = sh.initActive("p1");
-            const mon2 = sh.initActive("p2");
+            sh.initActive("p1");
+            sh.initActive("p2");
 
             await ph.rejectError(
             {

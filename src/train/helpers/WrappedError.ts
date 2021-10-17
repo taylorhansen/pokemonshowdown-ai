@@ -19,8 +19,7 @@ export class WrappedError extends Error
         }
     }
 
-    /** @override */
-    public toString(): string
+    public override toString(): string
     {
         return `${this.name}: ${this.message}`;
     }

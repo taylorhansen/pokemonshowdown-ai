@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import "mocha";
-import { smeargle } from "../../state/switchOptions.test";
 import { ParserContext } from "../Context.test";
 import { createInitialContext } from "../Context.test";
 import { ParserHelpers, setupBattleParser, toHPStatus, toIdent } from

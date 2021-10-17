@@ -61,15 +61,15 @@ export class MockPSServer
                 req.on("end", () =>
                 {
                     this._lastQuery = querystring.parse(body);
-                    switch (this._lastQuery.act)
+                    switch (this._lastQuery["act"])
                     {
                         case "getassertion":
                             if (this.password) res.end(";");
                             else res.end(this.assertion);
                             break;
                         case "login":
-                            if (this.username === this._lastQuery.name &&
-                                this.password === this._lastQuery.pass)
+                            if (this.username === this._lastQuery["name"] &&
+                                this.password === this._lastQuery["pass"])
                             {
                                 res.end(`]{"actionsuccess":true,` +
                                     `"assertion":"${this.assertion}"}`);

@@ -11,24 +11,28 @@ export class ChanceReason extends inference.SubReason
     /** Callback from {@link ChanceReason.delayImpl}. */
     private delayCb: inference.DelayCallback | null = null;
 
-    /** @override */
-    public canHold(): boolean | null { return this.held; }
+    public override canHold(): boolean | null { return this.held; }
 
-    /** @override */
-    public assert(): void { this.held = true; this.delayCb?.(/*held*/ true); }
+    public override assert(): void
+    {
+        this.held = true;
+        this.delayCb?.(/*held*/ true);
+    }
 
-    /** @override */
-    public reject(): void { this.held = false; this.delayCb?.(/*held*/ false); }
+    public override reject(): void
+    {
+        this.held = false;
+        this.delayCb?.(/*held*/ false);
+    }
 
-    /** @override */
-    protected delayImpl(cb: inference.DelayCallback): inference.CancelCallback
+    protected override delayImpl(cb: inference.DelayCallback):
+        inference.CancelCallback
     {
         this.delayCb = cb;
         return () => this.delayCb = null;
     }
 
-    /** @override */
-    public toString(indentInner = 4, indentOuter = 0): string
+    public override toString(indentInner = 4, indentOuter = 0): string
     {
         const s = " ".repeat(indentOuter);
         return `${s}ChanceReason()`;

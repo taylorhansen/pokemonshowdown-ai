@@ -122,7 +122,7 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 class<T extends FormatType, TAgent extends BattleAgent<T>>
                 extends BattleHandler<T, TAgent>
             {
-                async handle(event: Event): Promise<void>
+                public override async handle(event: Event): Promise<void>
                 {
                     try { return await super.handle(event); }
                     catch (e) { throw e; }

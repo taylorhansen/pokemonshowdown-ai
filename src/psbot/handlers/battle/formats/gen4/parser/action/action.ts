@@ -1,7 +1,6 @@
 /** @file Handles parsing a player's main action. */
-import { Protocol } from "@pkmn/protocol";
 import { SideID } from "@pkmn/types";
-import { BattleParserContext, consume, eventLoop, peek, unordered } from
+import { BattleParserContext, eventLoop, peek, unordered } from
     "../../../../parser";
 import { ignoredEvents } from "../base";
 import { moveAction, MoveActionResult } from "./move";

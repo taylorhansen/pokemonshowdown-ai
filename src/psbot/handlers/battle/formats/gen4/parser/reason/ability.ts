@@ -104,22 +104,19 @@ class HasAbility extends inference.SubReason
         this.ability = mon.traits.ability;
     }
 
-    /** @override */
-    public canHold(): boolean | null
+    public override canHold(): boolean | null
     {
         return subsetOrIndependent(this.abilities, this.ability.possibleValues,
             this.negative);
     }
 
-    /** @override */
-    public assert(): void
+    public override assert(): void
     {
         if (this.negative) this.rejectImpl();
         else this.acceptImpl();
     }
 
-    /** @override */
-    public reject(): void
+    public override reject(): void
     {
         if (this.negative) this.acceptImpl();
         else this.rejectImpl();
@@ -137,15 +134,14 @@ class HasAbility extends inference.SubReason
         this.ability.remove(this.abilities);
     }
 
-    /** @override */
-    protected delayImpl(cb: inference.DelayCallback): inference.CancelCallback
+    protected override delayImpl(cb: inference.DelayCallback):
+        inference.CancelCallback
     {
         return this.ability.onUpdate(this.abilities,
             this.negative ? kept => cb(!kept) : cb);
     }
 
-    /** @override */
-    public toString(indentInner = 4, indentOuter = 0): string
+    public override toString(indentInner = 4, indentOuter = 0): string
     {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);

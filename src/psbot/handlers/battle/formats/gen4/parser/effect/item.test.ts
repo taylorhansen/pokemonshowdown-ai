@@ -394,7 +394,7 @@ export const test = () => describe("item", function()
         {
             pctx = init("p2",
             {
-                move: dex.getMove(dex.moves.thunder),
+                move: dex.getMove(dex.moves["thunder"]),
                 user: state.getTeam("p1").active
             });
             await ph.handle(
@@ -415,7 +415,7 @@ export const test = () => describe("item", function()
         {
             pctx = init("p2",
             {
-                move: dex.getMove(dex.moves.thunder),
+                move: dex.getMove(dex.moves["thunder"]),
                 user: state.getTeam("p1").active
             });
             await ph.halt();
@@ -435,7 +435,7 @@ export const test = () => describe("item", function()
 
             pctx = init("p2",
             {
-                move: dex.getMove(dex.moves.thunder),
+                move: dex.getMove(dex.moves["thunder"]),
                 user: state.getTeam("p1").active
             });
             await ph.reject(
@@ -708,7 +708,7 @@ export const test = () => describe("item", function()
         {
             pctx = init("p2",
             {
-                move: dex.getMove(dex.moves.lowkick),
+                move: dex.getMove(dex.moves["lowkick"]),
                 user: state.getTeam("p1").active
             });
             await ph.handle(
@@ -729,7 +729,7 @@ export const test = () => describe("item", function()
         {
             pctx = init("p2",
             {
-                move: dex.getMove(dex.moves.lowkick),
+                move: dex.getMove(dex.moves["lowkick"]),
                 user: state.getTeam("p1").active
             });
             await ph.halt();
@@ -747,7 +747,7 @@ export const test = () => describe("item", function()
 
             pctx = init("p2",
             {
-                move: dex.getMove(dex.moves.lowkick),
+                move: dex.getMove(dex.moves["lowkick"]),
                 user: state.getTeam("p1").active
             });
             await ph.halt();

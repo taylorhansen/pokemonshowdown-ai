@@ -755,8 +755,8 @@ handlersImpl["|-activate|"] = async function(ctx: BattleParserContext<"gen4">)
             ctx.logger.error("Forewarn should've been handled by Ability " +
                 "context");
             let accepted = false;
-            await dex.getAbility(dex.abilities.forewarn).warnStrongestMove(ctx,
-                () => accepted = true, ident.player)
+            await dex.getAbility(dex.abilities["forewarn"])
+                .warnStrongestMove(ctx, () => accepted = true, ident.player);
             if (accepted) return;
             // break to consume the event even if it wasn't successfully parsed,
             //  so it doesn't mess with other parsers
@@ -831,7 +831,7 @@ handlersImpl["|-fieldactivate|"] = async function(
     ctx: BattleParserContext<"gen4">)
 {
     const event = await verify(ctx, "|-fieldactivate|");
-    // TODO
+    void event; // TODO
     await consume(ctx);
 };
 handlersImpl["|-center|"] = "unsupported";

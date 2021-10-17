@@ -52,8 +52,6 @@ export class BattleHandler
 {
     /** Battle format for this room. */
     public readonly format: T;
-    /** Client's username. */
-    private readonly username: string;
     /** Used for sending messages to the assigned server room. */
     private readonly sender: Sender;
     /** Logger object. */
@@ -107,7 +105,6 @@ export class BattleHandler
         BattleHandlerArgs<T, TAgent>)
     {
         this.format = format;
-        this.username = username;
         this.sender = sender;
         this.logger = logger;
 

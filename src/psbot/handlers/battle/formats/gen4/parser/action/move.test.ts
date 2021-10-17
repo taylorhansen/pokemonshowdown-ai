@@ -39,6 +39,7 @@ export const test = () => describe("move", function()
             await ph.close().finally(() => pctx = undefined);
         });
 
+        void init;
         it("TODO");
         // pre-move effects, verify that move is handled normally, etc
     });
@@ -146,7 +147,7 @@ export const test = () => describe("move", function()
                 sh.initActive("p1");
                 sh.initActive("p2");
 
-                pctx = init("p1", dex.getMove(dex.moves.tackle));
+                pctx = init("p1", dex.getMove(dex.moves["tackle"]));
                 await ph.handle(
                 {
                     args: ["move", toIdent("p1"), toMoveName("tackle")],
@@ -164,7 +165,7 @@ export const test = () => describe("move", function()
             it("Should throw if unexpected move", async function()
             {
                 sh.initActive("p1");
-                pctx = init("p1", dex.getMove(dex.moves.ember));
+                pctx = init("p1", dex.getMove(dex.moves["ember"]));
                 await ph.rejectError(
                 {
                     args: ["move", toIdent("p1"), toMoveName("watergun")],
@@ -1583,7 +1584,8 @@ export const test = () => describe("move", function()
                     const target = ctg === "self" ? "p1" : "p2"
                     boostTests[ctg].push(function()
                     {
-                        it("Should allow partial boost if maxing out", async function()
+                        it("Should allow partial boost if maxing out",
+                        async function()
                         {
                             let mon = sh.initActive("p1");
                             if (target === "p2") mon = sh.initActive("p2");
@@ -1749,9 +1751,6 @@ export const test = () => describe("move", function()
                         postEvents, abilityImmunity, abilityCondition
                     }: TestNonRemovableArgs): void
                 {
-                    // adjust perspective
-                    const targetRef = ctg === "self" ? "p2" : "p1";
-
                     statusTests[ctg].push(() => describe(name, function()
                     {
                         let user: Pokemon;

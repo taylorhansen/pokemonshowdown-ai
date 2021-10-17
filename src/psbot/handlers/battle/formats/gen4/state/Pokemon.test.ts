@@ -347,7 +347,7 @@ export const test = () => describe("Pokemon", function()
             {
                 // if the moves argument wasn't provided, the moves would've
                 //  been inserted in the default movepool's order
-                const moves = [...dex.pokemon.magikarp.movepool].reverse();
+                const moves = [...dex.pokemon["magikarp"].movepool].reverse();
                 expect(moves).to.have.lengthOf(4);
                 const mon = new Pokemon("magikarp", 100, moves);
                 expect([...mon.moveset.moves].map(m => m[0]))
@@ -830,9 +830,9 @@ export const test = () => describe("Pokemon", function()
             expect(mon1.hpType).to.equal(mon2.hpType);
 
             // should still keep base traits
-            expect(mon1.baseTraits.species).to.equal(dex.pokemon.smeargle);
+            expect(mon1.baseTraits.species).to.equal(dex.pokemon["smeargle"]);
             expect(mon1.baseTraits.ability.possibleValues)
-                .to.have.keys(dex.pokemon.smeargle.abilities);
+                .to.have.keys(dex.pokemon["smeargle"].abilities);
             expect(mon1.baseTraits.stats.hpType.possibleValues)
                 .to.have.keys("fire");
         });

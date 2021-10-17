@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Logger } from "../../../../../../Logger";
 import { BattleAgent, Choice } from "../../../agent";
-import { BattleIterator, BattleParser, ChoiceSender, SenderResult, StartBattleParserArgs }
+import { BattleIterator, ChoiceSender, SenderResult, StartBattleParserArgs }
     from "../../../parser";
 import { BattleState } from "../state";
 import { StateHelpers } from "./helpers.test";

@@ -47,9 +47,8 @@ export class AExpEncoder extends Transform
         this.lengthAndCrc.setUint32(4, 0, /*littleEndian*/ true);
     }
 
-    /** @override */
-    public _transform(aexp: AugmentedExperience, encoding: BufferEncoding,
-        callback: TransformCallback): void
+    public override _transform(aexp: AugmentedExperience,
+        encoding: BufferEncoding, callback: TransformCallback): void
     {
         // serialize Example
         const example = this.aexpToExample(aexp);
