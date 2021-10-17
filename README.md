@@ -1,6 +1,6 @@
 # Pokemon Showdown AI
-[![Build Status](https://travis-ci.org/taylorhansen/pokemonshowdown-ai.svg?branch=master)](https://travis-ci.org/taylorhansen/pokemonshowdown-ai)
-[![codecov](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai/branch/master/graph/badge.svg)](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai)
+[![Build Status](https://app.travis-ci.com/taylorhansen/pokemonshowdown-ai.svg?branch=main)](https://app.travis-ci.com/taylorhansen/pokemonshowdown-ai)
+[![codecov](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai/branch/main/graph/badge.svg?token=qRdGD5oRzd)](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai)
 
 For this project I plan on making and training a neural network to play in a Pokemon gen-4 random battle.
 The code is pretty unstable right now so I wouldn't recommend trying to use it out of the box.
