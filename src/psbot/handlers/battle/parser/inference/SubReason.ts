@@ -4,34 +4,25 @@
  */
 export type DelayCallback = (held: boolean) => void;
 
-/** Callback type to cancel a `SubReason#delay()` call. */
+/** Callback type to cancel a {@link SubReason.delay} call. */
 export type CancelCallback = () => void;
 
 // TODO: rename to assumption or premise?
-// TODO: make this an abstract class?
 /** Reason for a SubInference to activate. */
-export class SubReason
+export abstract class SubReason
 {
-    /**
-     * Checks whether the reason currently holds. Returns null if unknown.
-     * @virtual
-     */
-    public canHold(): boolean | null { return null; }
+    /** Checks whether the reason currently holds. Returns null if unknown. */
+    public abstract canHold(): boolean | null;
 
-    /**
-     * Asserts that the reason holds. Requires `#canHold()=true`.
-     * @virtual
-     */
-    public assert(): void {}
+    /** Asserts that the reason holds. */
+    public abstract assert(): void;
 
-    /**
-     * Asserts that the reason cannot hold.
-     * @virtual
-     */
-    public reject(): void {}
+    /** Asserts that the reason cannot hold. */
+    public abstract reject(): void;
 
     /**
      * Sets up callbacks to wait for more information before asserting.
+     *
      * @param cb Callback for when the reason has been proven or disproven. Can
      * be called immediately.
      * @returns A callback to cancel this call. Should be already canceled
@@ -50,13 +41,13 @@ export class SubReason
 
     /**
      * Sets up callbacks to wait for more information before asserting.
+     *
      * @param cb Callback for when the reason has been proven or disproven. Can
      * be called immediately.
      * @returns A callback to cancel this call. Should be called automatically
      * when this function calls `cb`. Should do nothing if called again.
-     * @virtual
      */
-    protected delayImpl(cb: DelayCallback): CancelCallback { return () => {}; }
+    protected abstract delayImpl(cb: DelayCallback): CancelCallback;
 
     /** @override */
     public toString(indentInner = 4, indentOuter = 0): string
