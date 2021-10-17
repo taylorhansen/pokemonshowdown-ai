@@ -3,7 +3,7 @@ import { BattleStreams, Teams } from "@pkmn/sim";
 import { SideID } from "@pkmn/types";
 import * as fs from "fs";
 import * as path from "path";
-import { pipeline } from "stream/promises";
+import * as stream from "stream";
 import * as tmp from "tmp-promise";
 import { LogFunc, Logger } from "../../../../Logger";
 import { BattleHandler } from "../../../../psbot/handlers/battle";
@@ -160,7 +160,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         const messageParser =
             new MessageParser(innerLog.addPrefix("MessageParser: "));
 
-        eventLoops.push(pipeline(battleTextStream, messageParser));
+        eventLoops.push(
+            stream.promises.pipeline(battleTextStream, messageParser));
 
         // start event loop for this side of the battle
         // note: keep this separate from the pipeline streams since for some

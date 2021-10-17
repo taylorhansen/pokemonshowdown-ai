@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { isSet } from "util/types";
+import * as util from "util";
 import { Event } from "../../../../../../parser";
 import * as dex from "../../dex";
 import { ParserContext } from "../Context.test";
@@ -279,7 +279,7 @@ export const test = () => describe("status", function()
                 kwArgs: {}
             });
             await ph.return(
-                ret => expect(ret).to.eventually.satisfy(isSet)
+                ret => expect(ret).to.eventually.satisfy(util.types.isSet)
                     .and.to.be.empty);
             expect(mon.volatile.aquaring).to.be.false;
         });
@@ -297,7 +297,7 @@ export const test = () => describe("status", function()
                 kwArgs: {}
             });
             await ph.return(
-                ret => expect(ret).to.eventually.satisfy(isSet)
+                ret => expect(ret).to.eventually.satisfy(util.types.isSet)
                     .and.to.have.keys("bide"));
             expect(mon.volatile.bide.isActive).to.be.true;
         });
@@ -315,7 +315,7 @@ export const test = () => describe("status", function()
                 kwArgs: {}
             });
             await ph.return(
-                ret => expect(ret).to.eventually.satisfy(isSet)
+                ret => expect(ret).to.eventually.satisfy(util.types.isSet)
                     .and.to.have.keys("confusion"));
             expect(mon.volatile.confusion.isActive).to.be.true;
         });
@@ -335,7 +335,7 @@ export const test = () => describe("status", function()
                 kwArgs: {}
             });
             await ph.return(
-                ret => expect(ret).to.eventually.satisfy(isSet)
+                ret => expect(ret).to.eventually.satisfy(util.types.isSet)
                     .and.to.have.keys("confusion"));
             expect(mon.volatile.confusion.isActive).to.be.true;
             expect(mon.volatile.aquaring).to.be.true;
@@ -365,7 +365,7 @@ export const test = () => describe("status", function()
                 kwArgs: {}
             });
             await ph.return(
-                ret => expect(ret).to.eventually.satisfy(isSet)
+                ret => expect(ret).to.eventually.satisfy(util.types.isSet)
                     .and.to.be.empty);
             expect(mon.volatile.stalling).to.be.false;
             expect(mon.volatile.identified).to.be.null;
@@ -384,7 +384,7 @@ export const test = () => describe("status", function()
                 kwArgs: {from: "x"}
             });
             await ph.return(
-                ret => expect(ret).to.eventually.satisfy(isSet)
+                ret => expect(ret).to.eventually.satisfy(util.types.isSet)
                     .and.to.be.empty);
             expect(mon.volatile.encore.ts.isActive).to.be.false;
         });
@@ -404,7 +404,7 @@ export const test = () => describe("status", function()
                 kwArgs: {}
             });
             await ph.return(
-                ret => expect(ret).to.eventually.satisfy(isSet)
+                ret => expect(ret).to.eventually.satisfy(util.types.isSet)
                     .and.to.have.keys("confusion"));
             expect(mon.volatile.confusion.isActive).to.be.true;
             expect(mon.majorStatus.current).to.be.null;
@@ -428,7 +428,7 @@ export const test = () => describe("status", function()
                 kwArgs: {}
             });
             await ph.return(
-                ret => expect(ret).to.eventually.satisfy(isSet)
+                ret => expect(ret).to.eventually.satisfy(util.types.isSet)
                     .and.to.be.empty);
             expect(mon.majorStatus.current).to.be.null;
             expect(mon.volatile.nightmare).to.be.false;

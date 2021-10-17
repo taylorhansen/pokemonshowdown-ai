@@ -1,7 +1,6 @@
 /** Worker thread script for the AExpDecoderPool, managed by a DecoderPort. */
 import * as fs from "fs";
 import * as stream from "stream";
-import * as util from "util";
 import { serialize } from "v8";
 import { parentPort } from "worker_threads";
 import { AugmentedExperience } from "../../../../play/experience";
@@ -9,8 +8,6 @@ import { RawPortResultError } from "../../../../port/PortProtocol";
 import { WorkerClosed } from "../../../../port/WorkerProtocol";
 import { AExpDecoder } from "../../AExpDecoder";
 import { DecodeResult, DecoderMessage } from "./DecoderProtocol";
-
-const pipeline = util.promisify(stream.pipeline);
 
 if (!parentPort) throw new Error("No parent port!");
 
@@ -53,7 +50,8 @@ parentPort.on("message", (msg: DecoderMessage) =>
         const decoderStream = new AExpDecoder(/*read 512kb*/ 512 * 1024,
             /*emit aexps*/ 4);
 
-        const pipelinePromise = pipeline(fileStream, decoderStream);
+        const pipelinePromise = stream.promises.pipeline(fileStream,
+            decoderStream);
 
         // use an async generator IIFE to emit AugmentedExperiences
         const gen = async function*(): AsyncGenerator<AugmentedExperience, null>

@@ -1,7 +1,6 @@
 import { join } from "path";
 import ProgressBar from "progress";
 import * as stream from "stream";
-import { pipeline } from "stream/promises";
 import { LogFunc, Logger } from "../../Logger";
 import { formats } from "../../psbot/handlers/battle";
 import { AdvantageConfig } from "../learn";
@@ -125,7 +124,7 @@ export async function playGames(
 
     // TODO: move pool outside for reuse?
     const pool = new GamePool(numThreads, getExpPath);
-    await pipeline(
+    await stream.promises.pipeline(
         poolArgs,
         new GamePoolStream(pool),
         processResults);
