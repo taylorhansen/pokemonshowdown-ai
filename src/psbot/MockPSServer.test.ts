@@ -27,9 +27,9 @@ export class MockPSServer
     /** Assertion string used for login testing. */
     private assertion: string;
     /** HTTP server. */
-    private http?: Server;
+    private http: Server;
     /** Websocket server. */
-    private ws?: WSServer;
+    private ws: WSServer;
     /** Current connection from server to client. */
     private connection?: WSConnection;
 
@@ -41,55 +41,44 @@ export class MockPSServer
     constructor(assertion: string, port = 8000)
     {
         this.assertion = assertion;
-        this.init(port);
-    }
 
-    /**
-     * Initializes the server to listen to the specified port. Called
-     * automatically by constructor.
-     */
-    public init(port: number): void
-    {
         this.http = createServer((req, res) =>
         {
-            const parsedUrl = url.parse(req.url || "");
-            if (parsedUrl.pathname === "/~~showdown/action.php")
-            {
-                let body = "";
-                req.on("data", chunk => body += chunk);
-                req.on("end", () =>
-                {
-                    this._lastQuery = new url.URLSearchParams(body);
-                    switch (this._lastQuery.get("act"))
-                    {
-                        case "getassertion":
-                            if (this.password) res.end(";");
-                            else res.end(this.assertion);
-                            break;
-                        case "login":
-                            if (this.username === this._lastQuery.get("name") &&
-                                this.password === this._lastQuery.get("pass"))
-                            {
-                                res.end(`]{"actionsuccess":true,` +
-                                    `"assertion":"${this.assertion}"}`);
-                            }
-                            else
-                            {
-                                res.end(`]{"actionsuccess":false,` +
-                                    `"assertion":";"}`);
-                            }
-                            break;
-                        default:
-                            res.writeHead(404);
-                            res.end();
-                    }
-                });
-            }
-            else
+            if (req.url !== "/~~showdown/action.php")
             {
                 res.writeHead(404);
                 res.end();
+                return;
             }
+            let body = "";
+            req.on("data", chunk => body += chunk);
+            req.on("end", () =>
+            {
+                this._lastQuery = new url.URLSearchParams(body);
+                switch (this._lastQuery.get("act"))
+                {
+                    case "getassertion":
+                        if (this.password) res.end(";");
+                        else res.end(this.assertion);
+                        break;
+                    case "login":
+                        if (this.username === this._lastQuery.get("name") &&
+                            this.password === this._lastQuery.get("pass"))
+                        {
+                            res.end(`]{"actionsuccess":true,` +
+                                `"assertion":"${this.assertion}"}`);
+                        }
+                        else
+                        {
+                            res.end(`]{"actionsuccess":false,` +
+                                `"assertion":";"}`);
+                        }
+                        break;
+                    default:
+                        res.writeHead(404);
+                        res.end();
+                }
+            });
         });
         this.http.listen(port);
 
@@ -147,14 +136,12 @@ export class MockPSServer
         if (this.http)
         {
             this.http.close();
-            this.http = undefined;
         }
 
         if (this.ws)
         {
             this.ws.removeAllListeners();
             this.ws.shutDown();
-            this.ws = undefined;
         }
     }
 }
