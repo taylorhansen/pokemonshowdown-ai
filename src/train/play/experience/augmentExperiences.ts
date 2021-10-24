@@ -1,4 +1,3 @@
-/* eslint-disable no-mixed-operators */
 import {AdvantageConfig} from "../../learn";
 import {AugmentedExperience} from "./AugmentedExperience";
 import {Experience} from "./Experience";
@@ -23,7 +22,7 @@ export function augmentExperiences(
     for (let i = game.length - 1; i >= 0; --i) {
         const exp = game[i];
 
-        // Calculate discounted summed rewards
+        // Calculate discounted summed rewards.
         lastRet = exp.reward + advantage.gamma * lastRet;
 
         // Estimate advantage.
@@ -76,5 +75,3 @@ export function augmentExperiences(
 
     return samples;
 }
-
-/* eslint-enable no-mixed-operators */

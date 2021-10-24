@@ -154,8 +154,7 @@ export class SubInference {
     public toString(indentInner = 4, indentOuter = 0): string {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);
-        const indentInner2 = 2 * indentInner;
-        const indentReasonOuter = indentOuter + indentInner2;
+        const indentReasonOuter = indentOuter + 2 * indentInner;
         return `\
 ${outer}SubInference(
 ${outer}${inner}pending = [${

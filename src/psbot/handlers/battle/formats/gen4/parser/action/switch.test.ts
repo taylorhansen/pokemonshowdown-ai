@@ -726,7 +726,6 @@ export const test = () =>
             let pctx: ParserContext<[side: SideID, mon: Pokemon][]> | undefined;
             const ph = new ParserHelpers(() => pctx);
 
-            // eslint-disable-next-line mocha/no-hooks-for-single-case
             afterEach("Close ParserContext", async function () {
                 await ph.close().finally(() => (pctx = undefined));
             });

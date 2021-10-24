@@ -80,7 +80,6 @@ export class StatRange implements ReadonlyStatRange {
         ivs: number,
         nature: 0.9 | 1 | 1.1,
     ): number {
-        /* eslint-disable no-mixed-operators */
         if (hp && base === 1) return 1; // Shedinja.
 
         const x = Math.floor(2 * base + ivs + Math.floor(evs / 4));
@@ -90,7 +89,6 @@ export class StatRange implements ReadonlyStatRange {
         else result = Math.floor((x * level) / 100 + 5);
 
         return hp ? result : Math.floor(result * nature);
-        /* eslint-enable no-mixed-operators */
     }
 
     // istanbul ignore next: Only used in logging.

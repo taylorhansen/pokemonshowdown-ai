@@ -111,8 +111,8 @@ export class EventInference<
     private accept(inf: SubInference): void {
         if (!this.cases.has(inf)) {
             throw new Error(
-                "BattleParser didn't provide accept callback " +
-                    "with a valid SubInference",
+                "BattleParser didn't provide accept callback with a valid " +
+                    "SubInference",
             );
         }
         // Assert the case that was accepted, and reject all the other cases
@@ -131,8 +131,7 @@ export class EventInference<
     public override toString(indentInner = 4, indentOuter = 0): string {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);
-        const indentInner2 = 2 * indentInner;
-        const indentInferenceOuter = indentOuter + indentInner2;
+        const indentInferenceOuter = indentOuter + 2 * indentInner;
         return `\
 ${outer}EventInference(
 ${outer}${inner}${this.name},
