@@ -1,10 +1,9 @@
-import { FutureMove, futureMoveKeys, SelfSwitchType } from "../dex";
-import { ItemTempStatus, ReadonlyItemTempStatus } from "./ItemTempStatus";
-import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
+import {FutureMove, futureMoveKeys, SelfSwitchType} from "../dex";
+import {ItemTempStatus, ReadonlyItemTempStatus} from "./ItemTempStatus";
+import {ReadonlyTempStatus, TempStatus} from "./TempStatus";
 
 /** Readonly {@link TeamStatus} representation. */
-export interface ReadonlyTeamStatus
-{
+export interface ReadonlyTeamStatus {
     /** Turn counters for each type of future move. */
     readonly futureMoves: {readonly [id in FutureMove]: ReadonlyTempStatus};
     /** Healing Wish status. */
@@ -39,37 +38,40 @@ export interface ReadonlyTeamStatus
 }
 
 /** Temporary status conditions for a certain team. */
-export class TeamStatus implements ReadonlyTeamStatus
-{
+export class TeamStatus implements ReadonlyTeamStatus {
     /** @override */
     public readonly futureMoves: {readonly [id in FutureMove]: TempStatus} =
-        (function()
-        {
+        (function () {
             const future = {} as {[id in FutureMove]: TempStatus};
-            for (const id of futureMoveKeys)
-            {
-                // 3 turns, end on last (can be silent)
+            for (const id of futureMoveKeys) {
+                // 3 turns, end on last (can be silent).
                 future[id] = new TempStatus(id, 3, true /*silent*/);
             }
             return future;
         })();
     /** @override */
     public healingwish = false;
-    // 5-8 turns, end on last
+    // 5-8 turns, end on last.
     /** @override */
-    public readonly lightscreen = new ItemTempStatus([5, 8],
-        {lightscreen: "lightclay"}, "lightscreen");
+    public readonly lightscreen = new ItemTempStatus(
+        [5, 8],
+        {lightscreen: "lightclay"},
+        "lightscreen",
+    );
     /** @override */
     public readonly luckychant = new TempStatus("lucky chant", 5);
     /** @override */
     public lunardance = false;
     /** @override */
     public readonly mist = new TempStatus("mist", 5);
-    // 5-8 turns, end on last
+    // 5-8 turns, end on last.
     /** @override */
-    public readonly reflect = new ItemTempStatus([5, 8], {reflect: "lightclay"},
-        "reflect");
-    // 5 turns, end on last
+    public readonly reflect = new ItemTempStatus(
+        [5, 8],
+        {reflect: "lightclay"},
+        "reflect",
+    );
+    // 5 turns, end on last.
     /** @override */
     public readonly safeguard = new TempStatus("safeguard", 5);
     /** @override */
@@ -90,8 +92,7 @@ export class TeamStatus implements ReadonlyTeamStatus
      * Called at the end of the turn, before a Choice has been sent to the
      * server.
      */
-    public postTurn(): void
-    {
+    public postTurn(): void {
         for (const id of futureMoveKeys) this.futureMoves[id].tick();
         this.lightscreen.tick();
         this.luckychant.tick();
@@ -108,9 +109,9 @@ export class TeamStatus implements ReadonlyTeamStatus
      *
      * @returns The TeamStatus in string form.
      */
-    public toString(): string
-    {
-        return `[${([] as string[]).concat(
+    public toString(): string {
+        return `[${([] as string[])
+            .concat(
                 Object.entries(this.futureMoves)
                     .filter(([, counter]) => counter.isActive)
                     .map(([, counter]) => counter.toString()),
@@ -126,7 +127,8 @@ export class TeamStatus implements ReadonlyTeamStatus
                 this.stealthrock ? [`stealth rock ${this.stealthrock}`] : [],
                 this.tailwind.isActive ? [this.tailwind.toString()] : [],
                 this.toxicspikes ? [`toxic spikes ${this.toxicspikes}`] : [],
-                this.wish.isActive ? [this.wish.toString()] : [])
+                this.wish.isActive ? [this.wish.toString()] : [],
+            )
             .join(", ")}]`;
     }
 }

@@ -7,14 +7,15 @@
  * @returns `true` if `y` is a subset of `x`, or `false` if `x` and `y` are
  * independent, otherwise `null`.
  */
-export function subsetOrIndependent(x: Set<string>, y: Iterable<string>,
-    negative: boolean): boolean | null
-{
+export function subsetOrIndependent(
+    x: Set<string>,
+    y: Iterable<string>,
+    negative: boolean,
+): boolean | null {
     if (x.size <= 0) return negative;
     let subset = true;
     let independent = true;
-    for (const z of y)
-    {
+    for (const z of y) {
         if (x.has(z)) independent = false;
         else subset = false;
     }

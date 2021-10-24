@@ -1,10 +1,9 @@
 import * as tf from "@tensorflow/tfjs";
-import { intToChoice } from "../../psbot/handlers/battle/agent";
-import { AlgorithmArgs } from "./learn";
+import {intToChoice} from "../../psbot/handlers/battle/agent";
+import {AlgorithmArgs} from "./learn";
 
 /** Parameters for policy gradient loss function. */
-export interface LossArgs
-{
+export interface LossArgs {
     /** Model that will be trained. */
     readonly model: tf.LayersModel;
     /** States for each sample. */
@@ -22,8 +21,7 @@ export interface LossArgs
 }
 
 /** Metrics data for the loss function. */
-export type LossResult =
-{
+export type LossResult = {
     /** Total mean loss for this batch. */
     loss: tf.Scalar;
     /** Policy gradient loss. */
@@ -39,12 +37,16 @@ export type LossResult =
 };
 
 /** Policy gradient loss function. */
-export function loss(
-    {model, state, oldProbs, action, returns, advantage, algorithm}:
-        LossArgs): LossResult
-{
-    return tf.tidy("loss", function lossImpl()
-    {
+export function loss({
+    model,
+    state,
+    oldProbs,
+    action,
+    returns,
+    advantage,
+    algorithm,
+}: LossArgs): LossResult {
+    return tf.tidy("loss", function lossImpl() {
         // Get initial prediction.
         const [probs, stateValue] = model.predictOnBatch(state) as tf.Tensor[];
 
@@ -58,8 +60,7 @@ export function loss(
 
         // Calculate policy gradient objective function.
         let pgObjs: tf.Tensor;
-        if (algorithm.type === "ppo")
-        {
+        if (algorithm.type === "ppo") {
             // Mask baseline prob distribution.
             const oldActProbs = tf.sum(tf.mul(mask, oldProbs), 1);
 
@@ -67,25 +68,26 @@ export function loss(
             const ratio = tf.div(actProbs, oldActProbs);
             result.ratio = tf.keep(tf.mean(ratio).asScalar());
 
-            switch (algorithm.variant)
-            {
-                case "clipped":
-                {
+            switch (algorithm.variant) {
+                case "clipped": {
                     // Simplified version of the PPO clipped loss function.
                     const bounds = tf.where(
-                            tf.greaterEqual(advantage, tf.zerosLike(advantage)),
-                            tf.fill(advantage.shape, 1 + algorithm.epsilon),
-                            tf.fill(advantage.shape, 1 - algorithm.epsilon));
-                    pgObjs = tf.minimum(tf.mul(ratio, advantage),
-                            tf.mul(bounds, advantage));
+                        tf.greaterEqual(advantage, tf.zerosLike(advantage)),
+                        tf.fill(advantage.shape, 1 + algorithm.epsilon),
+                        tf.fill(advantage.shape, 1 - algorithm.epsilon),
+                    );
+                    pgObjs = tf.minimum(
+                        tf.mul(ratio, advantage),
+                        tf.mul(bounds, advantage),
+                    );
                     break;
                 }
                 case "klFixed":
-                case "klAdaptive":
-                {
+                case "klAdaptive": {
                     const rScaled = tf.mul(ratio, advantage);
                     const kl = tf.keep(
-                        tf.mean(klDivergence(oldProbs, probs)).asScalar());
+                        tf.mean(klDivergence(oldProbs, probs)).asScalar(),
+                    );
                     result.kl = kl;
 
                     const beta = algorithm.beta ?? 1;
@@ -107,21 +109,22 @@ export function loss(
 
         // Calc state-value loss using mse.
         // Assumes the value function shares weights with the policy.
-        if (algorithm.valueCoeff)
-        {
+        if (algorithm.valueCoeff) {
             result.vLoss = tf.keep(
-                tf.losses.meanSquaredError(returns,
-                    stateValue.reshapeAs(returns)).asScalar());
+                tf.losses
+                    .meanSquaredError(returns, stateValue.reshapeAs(returns))
+                    .asScalar(),
+            );
             losses.push(tf.mul(result.vLoss, algorithm.valueCoeff));
         }
 
         // Subtract an entropy bonus from the loss function in order to maximize
         // it along with minimizing the other loss functions.
-        if (algorithm.entropyCoeff)
-        {
+        if (algorithm.entropyCoeff) {
             // Note: Max possible entropy (where each action is equally likely)
             // is log(#probs) where #probs is the # of possible actions.
-            const negEnt = tf.mean(tf.sum(tf.mul(probs, tf.log(probs)), -1))
+            const negEnt = tf
+                .mean(tf.sum(tf.mul(probs, tf.log(probs)), -1))
                 .asScalar();
             result.entropy = tf.keep(tf.neg(negEnt));
             losses.push(tf.mul(negEnt, algorithm.entropyCoeff));
@@ -143,7 +146,6 @@ export function loss(
  * @returns A Tensor one rank lower than `p` containing `KL(P || Q)`, the KL
  * divergence of `p` from `q`, in nats.
  */
-export function klDivergence(p: tf.Tensor, q: tf.Tensor): tf.Tensor
-{
+export function klDivergence(p: tf.Tensor, q: tf.Tensor): tf.Tensor {
     return tf.tidy(() => tf.sum(tf.mul(p, tf.log(tf.div(p, q))), -1));
 }

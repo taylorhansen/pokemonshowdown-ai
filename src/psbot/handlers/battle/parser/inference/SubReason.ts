@@ -10,8 +10,7 @@ export type CancelCallback = () => void;
 
 // TODO: Rename to assumption or premise?
 /** Reason for a SubInference to activate. */
-export abstract class SubReason
-{
+export abstract class SubReason {
     /**
      * Checks whether the reason currently holds.
      *
@@ -34,11 +33,9 @@ export abstract class SubReason
      * @returns A callback to cancel this call. Should be already canceled
      * when this function calls `cb`. Should do nothing if called again.
      */
-    public delay(cb: DelayCallback): CancelCallback
-    {
+    public delay(cb: DelayCallback): CancelCallback {
         const holds = this.canHold();
-        if (holds !== null)
-        {
+        if (holds !== null) {
             cb(holds);
             return () => {};
         }
@@ -63,8 +60,7 @@ export abstract class SubReason
      * @param indentOuter Number of spaces for the indent of the current line.
      * @override
      */
-    public toString(indentInner = 4, indentOuter = 0): string
-    {
+    public toString(indentInner = 4, indentOuter = 0): string {
         void indentInner;
         const s = " ".repeat(indentOuter);
         return `${s}SubReason()`;

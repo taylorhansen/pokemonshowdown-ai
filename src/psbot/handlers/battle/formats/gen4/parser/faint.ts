@@ -1,14 +1,15 @@
-import { Protocol } from "@pkmn/protocol";
-import { SideID } from "@pkmn/types";
-import { BattleParserContext, verify } from "../../../parser";
+import {Protocol} from "@pkmn/protocol";
+import {SideID} from "@pkmn/types";
+import {BattleParserContext, verify} from "../../../parser";
 import * as actionSwitch from "./action/switch";
-import { handlers as base } from "./base";
-import { request } from "./request";
+import {handlers as base} from "./base";
+import {request} from "./request";
 
-/** Expects a faint event if pokemon's hp is 0. */
-export async function event(ctx: BattleParserContext<"gen4">,
-    side: SideID): Promise<void>
-{
+/** Expects a faint event if pokemon's hp is `0`. */
+export async function event(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+): Promise<void> {
     const mon = ctx.state.getTeam(side).active;
     if (mon.hp.current > 0) return;
 
@@ -22,21 +23,24 @@ export async function event(ctx: BattleParserContext<"gen4">,
 /**
  * Checks for fainted pokemon that need to be replaced.
  *
- * @param sides Sides to check. Default p1 and p2.
+ * @param sides Sides to check. Default `"p1"` and `"p2"`.
  */
-export async function replacements(ctx: BattleParserContext<"gen4">,
-    sides: readonly SideID[] = ["p1", "p2"]): Promise<void>
-{
+export async function replacements(
+    ctx: BattleParserContext<"gen4">,
+    sides: readonly SideID[] = ["p1", "p2"],
+): Promise<void> {
     sides = sides.filter(side => ctx.state.getTeam(side).active.fainted);
     if (sides.length <= 0) return;
 
     // Detect game-over state.
     const losingSides = sides.filter(
-        side => !ctx.state.getTeam(side).pokemon.some(
-            // Still unrevealed/un-fainted pokemon left.
-            mon => mon === null || (mon && !mon.fainted)))
-    if (losingSides.length > 0)
-    {
+        side =>
+            !ctx.state.getTeam(side).pokemon.some(
+                // Still unrevealed/un-fainted pokemon left.
+                mon => mon === null || (mon && !mon.fainted),
+            ),
+    );
+    if (losingSides.length > 0) {
         // Only the top-level parser is allowed to consume the ending event.
         await verify(ctx, "|win|");
         return;

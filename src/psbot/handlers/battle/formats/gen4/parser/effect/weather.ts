@@ -1,7 +1,7 @@
-import { Event } from "../../../../../../parser";
-import { BattleParserContext, consume, tryVerify } from "../../../../parser";
+import {Event} from "../../../../../../parser";
+import {BattleParserContext, consume, tryVerify} from "../../../../parser";
 import * as dex from "../../dex";
-import { Pokemon } from "../../state/Pokemon";
+import {Pokemon} from "../../state/Pokemon";
 
 /**
  * Expects a weather effect.
@@ -15,11 +15,12 @@ import { Pokemon } from "../../state/Pokemon";
  * @returns `true` if the effect was parsed, `"silent"` if the effect is a
  * no-op, or `undefined` if the effect wasn't parsed.
  */
-export async function weather(ctx: BattleParserContext<"gen4">,
-    source: Pokemon | null, type: dex.WeatherType | "none",
-    pred?: (event: Event<"|-weather|">) => boolean | "infinite"):
-    Promise<true | "silent" | undefined>
-{
+export async function weather(
+    ctx: BattleParserContext<"gen4">,
+    source: Pokemon | null,
+    type: dex.WeatherType | "none",
+    pred?: (event: Event<"|-weather|">) => boolean | "infinite",
+): Promise<true | "silent" | undefined> {
     const rs = ctx.state.status;
     // Effect would do nothing.
     if (rs.weather.isActive === (type !== "none")) return "silent";
@@ -35,9 +36,11 @@ export async function weather(ctx: BattleParserContext<"gen4">,
 
     // Note that this is the base implementation for a weather-starting event,
     // factored out here in order to be able to take additional parameters.
-    ctx.state.status.weather.start(source,
+    ctx.state.status.weather.start(
+        source,
         weatherStr as dex.WeatherType | "none",
-        predRes === "infinite" /*infinite*/);
+        predRes === "infinite" /*infinite*/,
+    );
     await consume(ctx);
     return true;
 }

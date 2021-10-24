@@ -1,13 +1,12 @@
 /** @file Parsers and helper functions related to stat boost events. */
-import { Protocol } from "@pkmn/protocol";
-import { BoostID, SideID } from "@pkmn/types";
-import { Event } from "../../../../../../parser";
-import { BattleParserContext, eventLoop, tryVerify } from "../../../../parser";
-import { dispatch, handlers as base } from "../base";
+import {Protocol} from "@pkmn/protocol";
+import {BoostID, SideID} from "@pkmn/types";
+import {Event} from "../../../../../../parser";
+import {BattleParserContext, eventLoop, tryVerify} from "../../../../parser";
+import {dispatch, handlers as base} from "../base";
 
 /** Args for {@link boost}. */
-export interface BoostArgs
-{
+export interface BoostArgs {
     /** Pokemon reference receiving the boosts. */
     readonly side: SideID;
     /** Boosts to apply. This is the same object that gets returned. */
@@ -17,10 +16,11 @@ export interface BoostArgs
     /**
      * Optional additional custom check on the event before it can be parsed.
      *
-     * @returns `false` if the event shouldn't be parsed.
+     * @returns `false` if the event shouldn't be parsed, `true` otherwise.
      */
-    readonly pred?:
-        (event: Event<"|-boost|" | "|-unboost|" | "|-setboost|">) => boolean;
+    readonly pred?: (
+        event: Event<"|-boost|" | "|-unboost|" | "|-setboost|">,
+    ) => boolean;
 }
 
 /**
@@ -29,39 +29,44 @@ export interface BoostArgs
  * @param args Information about the boosts to apply.
  * @returns The boosts that weren't parsed.
  */
-export async function boost(ctx: BattleParserContext<"gen4">, args: BoostArgs):
-    Promise<Map<BoostID, number>>
-{
+export async function boost(
+    ctx: BattleParserContext<"gen4">,
+    args: BoostArgs,
+): Promise<Map<BoostID, number>> {
     const mon = ctx.state.getTeam(args.side).active;
 
-    await eventLoop(ctx,
-        async function boostLoop(_ctx)
-        {
-            const event = await tryVerify(_ctx, "|-boost|", "|-unboost|");
-            if (!event) return;
-            const [, identStr, boostId, boostAmountStr] = event.args;
-            const ident = Protocol.parsePokemonIdent(identStr);
-            if (ident.player !== args.side) return;
-            if (!args.table.has(boostId)) return;
-            let boostAmount = Number(boostAmountStr);
-            if (event.args[0] === "-unboost") boostAmount = -boostAmount;
-            if (!matchBoost(args.table.get(boostId)!, boostAmount,
-                mon.volatile.boosts[boostId]))
-            {
-                return;
-            }
-            if (args.pred && !args.pred(event)) return;
-            args.table.delete(boostId);
-            await dispatch(ctx);
-        });
+    await eventLoop(ctx, async function boostLoop(_ctx) {
+        const event = await tryVerify(_ctx, "|-boost|", "|-unboost|");
+        if (!event) return;
+        const [, identStr, boostId, boostAmountStr] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        if (ident.player !== args.side) return;
+        if (!args.table.has(boostId)) return;
+        let boostAmount = Number(boostAmountStr);
+        if (event.args[0] === "-unboost") boostAmount = -boostAmount;
+        if (
+            !matchBoost(
+                args.table.get(boostId)!,
+                boostAmount,
+                mon.volatile.boosts[boostId],
+            )
+        ) {
+            return;
+        }
+        if (args.pred && !args.pred(event)) return;
+        args.table.delete(boostId);
+        await dispatch(ctx);
+    });
 
-    if (args.silent)
-    {
+    if (args.silent) {
         // Remove boosts that were already at their limit.
-        consumeBoosts(args.table,
-            boostId =>
-                matchBoost(args.table.get(boostId)!, 0,
-                    mon.volatile.boosts[boostId]));
+        consumeBoosts(args.table, boostId =>
+            matchBoost(
+                args.table.get(boostId)!,
+                0,
+                mon.volatile.boosts[boostId],
+            ),
+        );
     }
 
     return args.table;
@@ -74,9 +79,11 @@ export async function boost(ctx: BattleParserContext<"gen4">, args: BoostArgs):
  * @param given Given boost amount from a `|-boost|`/`|-unboost|` event.
  * @param current Pokemon's current boost amount.
  */
-export function matchBoost(pending: number, given: number, current: number):
-    boolean
-{
+export function matchBoost(
+    pending: number,
+    given: number,
+    current: number,
+): boolean {
     // Boost amount that will be set.
     const next = Math.max(-6, Math.min(current + given, 6));
     // Boost amount that we expected.
@@ -90,44 +97,43 @@ export function matchBoost(pending: number, given: number, current: number):
  * @param args Information about the boosts to apply.
  * @returns The boosts that weren't parsed.
  */
-export async function setBoost(ctx: BattleParserContext<"gen4">,
-    args: BoostArgs): Promise<Map<BoostID, number>>
-{
+export async function setBoost(
+    ctx: BattleParserContext<"gen4">,
+    args: BoostArgs,
+): Promise<Map<BoostID, number>> {
     const mon = ctx.state.getTeam(args.side).active;
 
-    await eventLoop(ctx,
-        async function setBoostLoop(_ctx)
-        {
-            const event = await tryVerify(_ctx, "|-setboost|");
-            if (!event) return;
-            const [, identStr, boostId, boostAmountStr] = event.args;
-            const ident = Protocol.parsePokemonIdent(identStr);
-            if (ident.player !== args.side) return;
-            if (!args.table.has(boostId)) return;
-            const boostAmount = Number(boostAmountStr);
-            if (args.table.get(boostId)! !== boostAmount) return;
-            if (args.pred && !args.pred(event)) return;
-            args.table.delete(boostId);
-            await base["|-setboost|"](_ctx);
-        });
+    await eventLoop(ctx, async function setBoostLoop(_ctx) {
+        const event = await tryVerify(_ctx, "|-setboost|");
+        if (!event) return;
+        const [, identStr, boostId, boostAmountStr] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        if (ident.player !== args.side) return;
+        if (!args.table.has(boostId)) return;
+        const boostAmount = Number(boostAmountStr);
+        if (args.table.get(boostId)! !== boostAmount) return;
+        if (args.pred && !args.pred(event)) return;
+        args.table.delete(boostId);
+        await base["|-setboost|"](_ctx);
+    });
 
-    if (args.silent)
-    {
+    if (args.silent) {
         // Remove boosts that were already set to the expected amount.
-        consumeBoosts(args.table,
-            boostId =>
-                args.table.get(boostId) === mon.volatile.boosts[boostId]);
+        consumeBoosts(
+            args.table,
+            boostId => args.table.get(boostId) === mon.volatile.boosts[boostId],
+        );
     }
 
     return args.table;
 }
 
 /** Removes keys that satisfy the predicate. */
-function consumeBoosts(table: Map<BoostID, number>,
-    pred: (boostId: BoostID) => boolean): void
-{
-    for (const boostId of table.keys())
-    {
+function consumeBoosts(
+    table: Map<BoostID, number>,
+    pred: (boostId: BoostID) => boolean,
+): void {
+    for (const boostId of table.keys()) {
         if (!pred(boostId)) continue;
         table.delete(boostId);
     }
@@ -141,19 +147,22 @@ function consumeBoosts(table: Map<BoostID, number>,
  * applied and `args.silent=true`. Otherwise `undefined` if the next event is
  * invalid.
  */
-export async function boostOne(ctx: BattleParserContext<"gen4">,
-    args: BoostArgs): Promise<"silent" | BoostID | undefined>
-{
+export async function boostOne(
+    ctx: BattleParserContext<"gen4">,
+    args: BoostArgs,
+): Promise<"silent" | BoostID | undefined> {
     const mon = ctx.state.getTeam(args.side).active;
-    if (args.silent)
-    {
+    if (args.silent) {
         // Verify that all the possible boosts were already maxed out.
         let allMaxed = true;
-        for (const possibleBoostId of args.table.keys())
-        {
-            if (!matchBoost(args.table.get(possibleBoostId)!, 0,
-                    mon.volatile.boosts[possibleBoostId]))
-            {
+        for (const possibleBoostId of args.table.keys()) {
+            if (
+                !matchBoost(
+                    args.table.get(possibleBoostId)!,
+                    0,
+                    mon.volatile.boosts[possibleBoostId],
+                )
+            ) {
                 allMaxed = false;
                 break;
             }
@@ -170,9 +179,13 @@ export async function boostOne(ctx: BattleParserContext<"gen4">,
     if (!args.table.has(boostId)) return;
     let boostAmount = Number(boostAmountStr);
     if (event.args[0] === "-unboost") boostAmount = -boostAmount;
-    if (!matchBoost(args.table.get(boostId)!, boostAmount,
-            mon.volatile.boosts[boostId]))
-    {
+    if (
+        !matchBoost(
+            args.table.get(boostId)!,
+            boostAmount,
+            mon.volatile.boosts[boostId],
+        )
+    ) {
         return;
     }
     if (args.pred && !args.pred(event)) return;

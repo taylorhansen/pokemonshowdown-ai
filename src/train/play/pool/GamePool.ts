@@ -1,15 +1,14 @@
-import { resolve } from "path";
-import { formats } from "../../../psbot/handlers/battle";
-import { AdvantageConfig } from "../../learn";
-import { ModelWorker } from "../../model/worker";
-import { ThreadPool } from "../../pool";
-import { SimResult } from "../sim/playGame";
-import { GameProtocol, GameWorkerData } from "./worker/GameProtocol";
-import { GameWorker } from "./worker/GameWorker";
+import {resolve} from "path";
+import {formats} from "../../../psbot/handlers/battle";
+import {AdvantageConfig} from "../../learn";
+import {ModelWorker} from "../../model/worker";
+import {ThreadPool} from "../../pool";
+import {SimResult} from "../sim/playGame";
+import {GameProtocol, GameWorkerData} from "./worker/GameProtocol";
+import {GameWorker} from "./worker/GameWorker";
 
 /** Config for starting a game. */
-export interface GameConfig
-{
+export interface GameConfig {
     /** Game format type. */
     readonly format: formats.FormatType;
     /**
@@ -27,8 +26,7 @@ export interface GameConfig
 }
 
 /** Config for {@link GamePool.addGame} agents. */
-export interface GamePoolAgentConfig
-{
+export interface GamePoolAgentConfig {
     /** Model id from the ModelWorker. */
     readonly model: number;
     /** Whether to process Experiences emitted by the network. */
@@ -36,8 +34,7 @@ export interface GamePoolAgentConfig
 }
 
 /** Args for {@link GamePool.addGame}. */
-export interface GamePoolArgs extends GameConfig
-{
+export interface GamePoolArgs extends GameConfig {
     /** Unique identifier for logging. */
     readonly id: number;
     /** Config for the models that will play against each other. */
@@ -47,8 +44,7 @@ export interface GamePoolArgs extends GameConfig
 }
 
 /** {@link GamePool} stream output type. */
-export interface GamePoolResult extends SimResult
-{
+export interface GamePoolResult extends SimResult {
     /** Unique identifier for logging. */
     readonly id: number;
     /** Number of AugmentedExperience objects saved, if enabled. Otherwise 0. */
@@ -59,15 +55,19 @@ export interface GamePoolResult extends SimResult
 const workerScriptPath = resolve(__dirname, "worker", "worker.js");
 
 /** Uses a thread pool to dispatch parallel games. */
-export class GamePool
-{
+export class GamePool {
     /** Number of threads in the thread pool. */
-    public get numThreads(): number { return this.pool.numThreads; }
+    public get numThreads(): number {
+        return this.pool.numThreads;
+    }
 
     /** Wrapped thread pool for managing game workers. */
-    private readonly pool:
-        ThreadPool<GameWorker, GameProtocol, keyof GameProtocol,
-            GameWorkerData>;
+    private readonly pool: ThreadPool<
+        GameWorker,
+        GameProtocol,
+        keyof GameProtocol,
+        GameWorkerData
+    >;
 
     /**
      * Creates a GamePool.
@@ -76,10 +76,13 @@ export class GamePool
      * @param getExpPath Optional getter function for experience files. Called
      * once per worker.
      */
-    public constructor(numThreads: number, getExpPath?: () => Promise<string>)
-    {
-        this.pool = new ThreadPool(numThreads, workerScriptPath, GameWorker,
-                async () => ({expPath: await getExpPath?.()}) /*workerData*/);
+    public constructor(numThreads: number, getExpPath?: () => Promise<string>) {
+        this.pool = new ThreadPool(
+            numThreads,
+            workerScriptPath,
+            GameWorker,
+            async () => ({expPath: await getExpPath?.()}) /*workerData*/,
+        );
     }
 
     /**
@@ -90,29 +93,30 @@ export class GamePool
      * @returns A Promise to get the results of the game. Also returns any
      * errors.
      */
-    public async addGame(args: GamePoolArgs, callback?: () => void):
-        Promise<GamePoolResult>
-    {
+    public async addGame(
+        args: GamePoolArgs,
+        callback?: () => void,
+    ): Promise<GamePoolResult> {
         // Grab a free worker.
         const port = await this.pool.takePort();
 
-        try
-        {
+        try {
             callback?.();
             return await port.playGame(args);
-        }
-        catch (e)
-        {
-            const result: GamePoolResult =
-                {id: args.id, numAExps: 0, err: e as Error};
+        } catch (e) {
+            const result: GamePoolResult = {
+                id: args.id,
+                numAExps: 0,
+                err: e as Error,
+            };
             return result;
+        } finally {
+            this.pool.givePort(port);
         }
-        finally { this.pool.givePort(port); }
     }
 
     /** Closes the thread pool. */
-    public async close(): Promise<void>
-    {
+    public async close(): Promise<void> {
         return await this.pool.close();
     }
 }

@@ -1,8 +1,8 @@
-import { Protocol } from "@pkmn/protocol";
-import { expect } from "chai";
-import { Event } from "../../../../../parser";
-import { BattleIterator } from "../../../parser";
-import { ParserContext } from "./Context.test";
+import {Protocol} from "@pkmn/protocol";
+import {expect} from "chai";
+import {Event} from "../../../../../parser";
+import {BattleIterator} from "../../../parser";
+import {ParserContext} from "./Context.test";
 
 // TODO: Should this be merged with ParserContext?
 /**
@@ -10,8 +10,7 @@ import { ParserContext } from "./Context.test";
  *
  * @template TResult Return type of the BattleParser/SubParser.
  */
-export class ParserHelpers<TResult = unknown>
-{
+export class ParserHelpers<TResult = unknown> {
     /**
      * Whether the BattleParser threw an exception and it has already been
      * handled or tested. This is so that {@link ParserHelpers.close} doesn't
@@ -29,8 +28,8 @@ export class ParserHelpers<TResult = unknown>
      * test.
      */
     public constructor(
-        private readonly pctx: () => ParserContext<TResult> | undefined)
-    {}
+        private readonly pctx: () => ParserContext<TResult> | undefined,
+    ) {}
 
     /**
      * Fully closes the current BattleParser and resets the state for the next
@@ -38,23 +37,21 @@ export class ParserHelpers<TResult = unknown>
      *
      * Should be invoked at the end of a test or in an {@link afterEach} block.
      */
-    public async close(): Promise<void>
-    {
-        try
-        {
+    public async close(): Promise<void> {
+        try {
             await this.pctx()?.battleIt.return?.();
             // The only way for the finish Promise to reject would be if the
             // underlying BattleIterators also threw, and so they should've
             // been handled via expect() by the time we get to this point.
             if (!this.handledError) await this.pctx()?.finish;
-            else
-            {
-                await expect(this.guaranteePctx().finish)
-                    .to.eventually.be.rejected;
+            else {
+                await expect(this.guaranteePctx().finish).to.eventually.be
+                    .rejected;
             }
+        } finally {
+            // Reset error state for the next test.
+            this.handledError = false;
         }
-        // Reset error state for the next test.
-        finally { this.handledError = false; }
     }
 
     /**
@@ -62,8 +59,7 @@ export class ParserHelpers<TResult = unknown>
      *
      * @param event Event to handle.
      */
-    public async handle(event: Event): Promise<void>
-    {
+    public async handle(event: Event): Promise<void> {
         const result = await this.next(event);
         expect(result).to.not.have.property("done", true);
         expect(result).to.have.property("value", undefined);
@@ -75,8 +71,7 @@ export class ParserHelpers<TResult = unknown>
      *
      * @param event Event to handle.
      */
-    public async reject(event: Event): Promise<void>
-    {
+    public async reject(event: Event): Promise<void> {
         const result = await this.next(event);
         expect(result).to.have.property("done", true);
         expect(result).to.have.property("value", undefined);
@@ -89,14 +84,20 @@ export class ParserHelpers<TResult = unknown>
      * @param errorCtor Error type.
      * @param message Optional error message.
      */
-    public async rejectError(event: Event, errorCtor: ErrorConstructor,
-        message?: string): Promise<void>
-    {
-        await expect(this.next(event))
-            .to.eventually.be.rejectedWith(errorCtor, message);
+    public async rejectError(
+        event: Event,
+        errorCtor: ErrorConstructor,
+        message?: string,
+    ): Promise<void> {
+        await expect(this.next(event)).to.eventually.be.rejectedWith(
+            errorCtor,
+            message,
+        );
         // Exception should propagate to the finish promise as well.
-        await expect(this.guaranteePctx().finish)
-            .to.eventually.be.rejectedWith(errorCtor, message);
+        await expect(this.guaranteePctx().finish).to.eventually.be.rejectedWith(
+            errorCtor,
+            message,
+        );
     }
 
     /**
@@ -104,10 +105,11 @@ export class ParserHelpers<TResult = unknown>
      *
      * @param event Event to handle.
      */
-    public async halt(): Promise<void>
-    {
-        await this.reject(
-            {args: ["request", "{}" as Protocol.RequestJSON], kwArgs: {}});
+    public async halt(): Promise<void> {
+        await this.reject({
+            args: ["request", "{}" as Protocol.RequestJSON],
+            kwArgs: {},
+        });
     }
 
     /**
@@ -116,12 +118,15 @@ export class ParserHelpers<TResult = unknown>
      * @param errorCtor Error type.
      * @param message Optional error message.
      */
-    public async haltError(errorCtor: ErrorConstructor, message?: string):
-        Promise<void>
-    {
+    public async haltError(
+        errorCtor: ErrorConstructor,
+        message?: string,
+    ): Promise<void> {
         await this.rejectError(
             {args: ["request", "{}" as Protocol.RequestJSON], kwArgs: {}},
-            errorCtor, message);
+            errorCtor,
+            message,
+        );
     }
 
     // TODO: Why not just return TResult and let the caller make its own
@@ -133,16 +138,12 @@ export class ParserHelpers<TResult = unknown>
      * @param ret Return value to compare, or a callback to verify it.
      */
     public async return(
-        ret: TResult | ((ret: Promise<TResult>) => PromiseLike<unknown>)):
-        Promise<void>
-    {
-        if (typeof ret === "function")
-        {
+        ret: TResult | ((ret: Promise<TResult>) => PromiseLike<unknown>),
+    ): Promise<void> {
+        if (typeof ret === "function") {
             const f = ret as (ret: Promise<TResult>) => PromiseLike<unknown>;
             await f(this.guaranteePctx().finish);
-        }
-        else
-        {
+        } else {
             await expect(this.guaranteePctx().finish).to.eventually.become(ret);
         }
     }
@@ -151,18 +152,20 @@ export class ParserHelpers<TResult = unknown>
      * Calls the ParserContext's {@link BattleIterator.next} while checking for
      * errors.
      */
-    private async next(event: Event): ReturnType<BattleIterator["next"]>
-    {
-        try { return await this.guaranteePctx().battleIt.next(event); }
-        // Rethrow while setting error state.
-        // If the caller expected this and handled it, we'll be able to continue
-        // as normal with #close() expecting the same error.
-        catch (e) { this.handledError = true; throw e; }
+    private async next(event: Event): ReturnType<BattleIterator["next"]> {
+        try {
+            return await this.guaranteePctx().battleIt.next(event);
+        } catch (e) {
+            // Rethrow while setting error state.
+            // If the caller expected this and handled it, we'll be able to
+            // continue as normal with #close() expecting the same error.
+            this.handledError = true;
+            throw e;
+        }
     }
 
     /** Wraps an assertion around the ParserContext getter function. */
-    private guaranteePctx(): ParserContext<TResult>
-    {
+    private guaranteePctx(): ParserContext<TResult> {
         const pctx = this.pctx();
         if (!pctx) throw new Error("ParserContext not initialized");
         return pctx;

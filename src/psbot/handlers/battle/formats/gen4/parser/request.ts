@@ -1,10 +1,14 @@
 /** @file Specifies how to handle `|request|` events to call the BattleAgent. */
-import { Protocol } from "@pkmn/protocol";
-import { SideID } from "@pkmn/types";
-import { Choice } from "../../../agent";
-import { BattleParserContext, consume, SenderResult, verify } from
-    "../../../parser";
-import { sanitizeMoveId } from "./init";
+import {Protocol} from "@pkmn/protocol";
+import {SideID} from "@pkmn/types";
+import {Choice} from "../../../agent";
+import {
+    BattleParserContext,
+    consume,
+    SenderResult,
+    verify,
+} from "../../../parser";
+import {sanitizeMoveId} from "./init";
 
 // Note: usually the |request| event is displayed before the game events that
 // lead up to the state described by the |request| JSON object, but some logic
@@ -18,31 +22,30 @@ import { sanitizeMoveId } from "./init";
  *
  * @param type Optional expected request type.
  */
-export async function request(ctx: BattleParserContext<"gen4">,
-    type?: Protocol.Request["requestType"]): Promise<void>
-{
+export async function request(
+    ctx: BattleParserContext<"gen4">,
+    type?: Protocol.Request["requestType"],
+): Promise<void> {
     const event = await verify(ctx, "|request|");
     const [, json] = event.args;
     const req = Protocol.parseRequest(json);
 
-    if (type && req.requestType !== type)
-    {
-        throw new Error(`Expected |request| type '${type}' but got ` +
-            `'${req.requestType}'`);
+    if (type && req.requestType !== type) {
+        throw new Error(
+            `Expected |request| type '${type}' but got ` +
+                `'${req.requestType}'`,
+        );
     }
 
-    switch (req.requestType)
-    {
+    switch (req.requestType) {
         case "team":
             // TODO
             throw new Error("Team preview not supported");
-        case "move":
-        {
+        case "move": {
             // Making a normal move/switch decision between turns.
             // First verify move slots.
             const mon = ctx.state.getTeam(req.side.id).active;
-            for (const moveData of req.active[0]!.moves)
-            {
+            for (const moveData of req.active[0]!.moves) {
                 // Sanitize variable-type moves.
                 let {id}: {id: string} = moveData;
                 ({id} = sanitizeMoveId(id));
@@ -59,12 +62,13 @@ export async function request(ctx: BattleParserContext<"gen4">,
             // needed.
             break;
         // istanbul ignore next: Should never happen.
-        default:
-        {
+        default: {
             // Force compile error if not all cases were covered.
             const unsupported: never = req;
-            throw new Error("Unknown |request| type " +
-                `'${(unsupported as {requestType: string}).requestType}'`);
+            throw new Error(
+                "Unknown |request| type " +
+                    `'${(unsupported as {requestType: string}).requestType}'`,
+            );
         }
     }
 
@@ -77,11 +81,14 @@ export async function request(ctx: BattleParserContext<"gen4">,
  * @param choices Currently available choices. Can be narrowed down by this
  * function if some turn out to be invalid.
  */
-async function decide(ctx: BattleParserContext<"gen4">,
-    req: Protocol.MoveRequest | Protocol.SwitchRequest): Promise<void>
-{
-    ctx =
-        {...ctx, logger: ctx.logger.addPrefix(`Decide(${req.requestType}): `)};
+async function decide(
+    ctx: BattleParserContext<"gen4">,
+    req: Protocol.MoveRequest | Protocol.SwitchRequest,
+): Promise<void> {
+    ctx = {
+        ...ctx,
+        logger: ctx.logger.addPrefix(`Decide(${req.requestType}): `),
+    };
 
     const choices = getChoices(req);
     ctx.logger.debug(`Choices: [${choices.join(", ")}]`);
@@ -111,9 +118,11 @@ async function decide(ctx: BattleParserContext<"gen4">,
  * @param choices Currently available choices. Can be narrowed down by this
  * function if some turn out to be invalid.
  */
-async function evaluateChoices(ctx: BattleParserContext<"gen4">, side: SideID,
-    choices: Choice[]): Promise<void>
-{
+async function evaluateChoices(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
+    choices: Choice[],
+): Promise<void> {
     const agentLogger = ctx.logger.addPrefix("BattleAgent: ");
     await ctx.agent(ctx.state, choices, agentLogger);
     ctx.logger.debug(`Sorted choices: [${choices.join(", ")}]`);
@@ -123,8 +132,7 @@ async function evaluateChoices(ctx: BattleParserContext<"gen4">, side: SideID,
     // Most of the rest of the logic here handles corner cases where a choice is
     // invalid, usually due to unknown information where the state has to be
     // updated and the choices re-evaluated.
-    while (result = await ctx.sender(choices[0]))
-    {
+    while ((result = await ctx.sender(choices[0]))) {
         // A truthy result here means that the choice was rejected.
         // Handle the returned information and re-evaluate.
 
@@ -138,28 +146,26 @@ async function evaluateChoices(ctx: BattleParserContext<"gen4">, side: SideID,
          * remaining choices.
          */
         let newInfo = false;
-        if (result === "disabled")
-        {
+        if (result === "disabled") {
             // Move is disabled by a previously-unknown effect.
-            if (!lastChoice.startsWith("move"))
-            {
-                throw new Error(`Non-move Choice '${lastChoice}' rejected ` +
-                    `as '${result}'`);
+            if (!lastChoice.startsWith("move")) {
+                throw new Error(
+                    `Non-move Choice '${lastChoice}' rejected ` +
+                        `as '${result}'`,
+                );
             }
             // TODO: Imprison check.
-        }
-        else if (result === "trapped")
-        {
+        } else if (result === "trapped") {
             // Pokemon is trapped by a previously-unknown effect.
-            if (!lastChoice.startsWith("switch"))
-            {
-                throw new Error(`Non-switch Choice ${lastChoice} ` +
-                    "rejected as 'trapped'");
+            if (!lastChoice.startsWith("switch")) {
+                throw new Error(
+                    `Non-switch Choice ${lastChoice} ` +
+                        "rejected as 'trapped'",
+                );
             }
             // Now known to be trapped by the opponent, all other switch choices
             // are therefore invalid.
-            for (let i = 0; i < choices.length; ++i)
-            {
+            for (let i = 0; i < choices.length; ++i) {
                 if (choices[i].startsWith("switch")) choices.splice(i--, 1);
             }
             // Try to infer a trapping ability.
@@ -171,13 +177,12 @@ async function evaluateChoices(ctx: BattleParserContext<"gen4">, side: SideID,
 
         // Before possibly querying the BattleAgent/loop again, make sure we
         // haven't fallen back to the base case in decide().
-        if (choices.length <= 0)
-        {
-            throw new Error(`Last choice '${lastChoice}' rejected as ` +
-                `'${result}'`);
+        if (choices.length <= 0) {
+            throw new Error(
+                `Last choice '${lastChoice}' rejected as ` + `'${result}'`,
+            );
         }
-        if (choices.length === 1)
-        {
+        if (choices.length === 1) {
             await sendLastchoice(ctx, lastChoice);
             break;
         }
@@ -191,9 +196,10 @@ async function evaluateChoices(ctx: BattleParserContext<"gen4">, side: SideID,
     }
 }
 
-async function sendLastchoice(ctx: BattleParserContext<"gen4">, choice: Choice):
-    Promise<void>
-{
+async function sendLastchoice(
+    ctx: BattleParserContext<"gen4">,
+    choice: Choice,
+): Promise<void> {
     const res = await ctx.sender(choice);
     if (!res) return;
     ctx.logger.debug(`Choice ${choice} was rejected as '${res}'`);
@@ -201,12 +207,10 @@ async function sendLastchoice(ctx: BattleParserContext<"gen4">, choice: Choice):
 }
 
 /** Gets the available choices for this decision request. */
-function getChoices(req: Protocol.Request): Choice[]
-{
+function getChoices(req: Protocol.Request): Choice[] {
     const result: Choice[] = [];
     let trapped: boolean | undefined;
-    if (req.requestType === "move")
-    {
+    if (req.requestType === "move") {
         result.push(...getMoveChoices(req));
         trapped = req.active[0]?.trapped;
     }
@@ -215,18 +219,15 @@ function getChoices(req: Protocol.Request): Choice[]
 }
 
 /** Gets the available move choices. */
-function getMoveChoices(req: Protocol.MoveRequest): Choice[]
-{
+function getMoveChoices(req: Protocol.MoveRequest): Choice[] {
     const result: Choice[] = [];
 
     const moves = req.active[0]?.moves;
     if (!moves) return result;
-    for (let i = 0; i < moves.length; ++i)
-    {
+    for (let i = 0; i < moves.length; ++i) {
         const move = moves[i];
         // Struggle can always be selected.
-        if (move.id !== "struggle")
-        {
+        if (move.id !== "struggle") {
             // Depleted moves can no longer be selected.
             if (move.pp <= 0) continue;
             // Disabled by a known effect.
@@ -240,14 +241,12 @@ function getMoveChoices(req: Protocol.MoveRequest): Choice[]
 }
 
 /** Gets the available switch choices. */
-function getSwitchChoices(req: Protocol.Request): Choice[]
-{
+function getSwitchChoices(req: Protocol.Request): Choice[] {
     const result: Choice[] = [];
 
     const pokemon = req.side?.pokemon;
     if (!pokemon) return result;
-    for (let i = 0; i < pokemon.length; ++i)
-    {
+    for (let i = 0; i < pokemon.length; ++i) {
         const data = pokemon[i];
         // Can't select other active pokemon.
         if (data.active) continue;

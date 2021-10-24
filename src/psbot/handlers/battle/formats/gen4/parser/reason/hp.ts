@@ -1,6 +1,6 @@
 /** @file SubReason helpers related to abilities. */
-import { inference } from "../../../../parser";
-import { Pokemon } from "../../state/Pokemon";
+import {inference} from "../../../../parser";
+import {Pokemon} from "../../state/Pokemon";
 import * as chance from "./chance";
 
 /**
@@ -9,15 +9,13 @@ import * as chance from "./chance";
  * @returns A Set of assertions if it's possible to be at 1hp, or null if
  * it's not possible.
  */
-export function isAt1(mon: Pokemon): Set<inference.SubReason> | null
-{
+export function isAt1(mon: Pokemon): Set<inference.SubReason> | null {
     const hpDisplay = mon.hp.current;
 
     // 0 hp.
     if (hpDisplay <= 0) return null;
     // Known hp.
-    if (mon.team?.state?.ourSide && mon.team.side === mon.team.state.ourSide)
-    {
+    if (mon.team?.state?.ourSide && mon.team.side === mon.team.state.ourSide) {
         return hpDisplay === 1 ? new Set() : null;
     }
 
@@ -31,8 +29,7 @@ export function isAt1(mon: Pokemon): Set<inference.SubReason> | null
     let result: Set<inference.SubReason> | null = null;
     let guaranteed = true;
     const {max: maxhpHi, min: maxhpLo} = mon.traits.stats.hp;
-    for (let i = maxhpLo; i <= maxhpHi; ++i)
-    {
+    for (let i = maxhpLo; i <= maxhpHi; ++i) {
         // Note: according to PS, percentage = ceil(hp/maxhp * 100), with an
         // additional check to force percentage=99 if hp < maxhp but the
         // percentage rounds up to 100.

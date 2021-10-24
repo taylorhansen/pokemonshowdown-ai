@@ -1,6 +1,6 @@
 // TODO: Is there a better algorithm that doesn't need a softmax precondition?
 // FIXME: If the softmax from policyAgent gives very small values (e.g. 1e-15)
-// compared to one big 0.99 entry, this can put undefined into the array.
+// compared to one big 0.99 entry, this can put undefined values into the array.
 /**
  * Randomly shuffles the given array according to their corresponding
  * probabilities.
@@ -8,18 +8,22 @@
  * @param weights A probability distribution for each corresponding index.
  * @param arr Array to sort.
  */
-export function weightedShuffle<T>(weights: number[], arr: T[]): void
-{
+export function weightedShuffle<T>(weights: number[], arr: T[]): void {
     // Perform a weighted shuffle of the choices, O(n^2*logn).
-    if (weights.length !== arr.length)
-    {
-        throw new Error(`Weights and shuffle array have mismatched lengths ` +
-            `(weights: ${weights.length}, arr: ${arr.length})`);
+    if (weights.length !== arr.length) {
+        throw new Error(
+            `Weights and shuffle array have mismatched lengths ` +
+                `(weights: ${weights.length}, arr: ${arr.length})`,
+        );
     }
-    const cw = weights.map((sum => (value: number) => sum += value)(0));
+    const cw = weights.map(
+        (
+            sum => (value: number) =>
+                (sum += value)
+        )(0),
+    );
     const copy = [...arr];
-    for (let i = 0; i < arr.length; ++i)
-    {
+    for (let i = 0; i < arr.length; ++i) {
         // Get a random number between 0 and the sum of all the weights.
         // On the first iteration, this is between 0 and 1 approx.
         const rand = Math.random() * cw[cw.length - 1];
@@ -44,15 +48,16 @@ export function weightedShuffle<T>(weights: number[], arr: T[]): void
 }
 
 /**
- * Searches a sorted list `a` for an insertion index for the given number
- * `n`. If there are any duplicates, the right-most insertion index is
- * chosen.
+ * Searches a sorted array `a` for an insertion index for the given number
+ * `n`. If there are any duplicates, the right-most insertion index is chosen.
  */
-export function bisectRight(a: readonly number[], n: number, beg = 0,
-    end = a.length): number
-{
-    while (beg < end)
-    {
+export function bisectRight(
+    a: readonly number[],
+    n: number,
+    beg = 0,
+    end = a.length,
+): number {
+    while (beg < end) {
         const mid = Math.floor((beg + end) / 2);
         if (a[mid] > n) end = mid;
         else beg = mid + 1;

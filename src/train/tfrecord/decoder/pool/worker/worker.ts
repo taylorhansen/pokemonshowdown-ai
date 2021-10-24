@@ -1,19 +1,18 @@
 /** Worker thread script for the AExpDecoderPool, managed by a DecoderPort. */
 import * as fs from "fs";
 import * as stream from "stream";
-import { serialize } from "v8";
-import { parentPort } from "worker_threads";
-import { AugmentedExperience } from "../../../../play/experience";
-import { RawPortResultError } from "../../../../port/PortProtocol";
-import { WorkerClosed } from "../../../../port/WorkerProtocol";
-import { AExpDecoder } from "../../AExpDecoder";
-import { DecodeResult, DecoderMessage } from "./DecoderProtocol";
+import {serialize} from "v8";
+import {parentPort} from "worker_threads";
+import {AugmentedExperience} from "../../../../play/experience";
+import {RawPortResultError} from "../../../../port/PortProtocol";
+import {WorkerClosed} from "../../../../port/WorkerProtocol";
+import {AExpDecoder} from "../../AExpDecoder";
+import {DecodeResult, DecoderMessage} from "./DecoderProtocol";
 
 if (!parentPort) throw new Error("No parent port!");
 
 /** Manages a decoder instance. */
-interface DecoderRegistry
-{
+interface DecoderRegistry {
     /** AugmentedExperience generator. */
     readonly gen: AsyncGenerator<AugmentedExperience, null>;
     /** Promise that's currently using the generator. */
@@ -23,19 +22,17 @@ interface DecoderRegistry
 /** Tracks all currently active decoders. */
 const decoders = new Map<string, DecoderRegistry>();
 
-parentPort.on("message", (msg: DecoderMessage) =>
-{
-    if (msg.type === "close")
-    {
+parentPort.on("message", (msg: DecoderMessage) => {
+    if (msg.type === "close") {
         // Close all decoder streams.
         const closePromises: Promise<void>[] = [];
-        for (const {gen} of decoders.values())
-        {
-            closePromises.push(async function()
-            {
-                // Indicate that the stream needs to close prematurely.
-                while (!(await gen.next(true)).done);
-            }());
+        for (const {gen} of decoders.values()) {
+            closePromises.push(
+                (async function () {
+                    // Indicate that the stream needs to close prematurely.
+                    while (!(await gen.next(true)).done);
+                })(),
+            );
         }
 
         const result: WorkerClosed = {type: "close", rid: msg.rid, done: true};
@@ -43,22 +40,26 @@ parentPort.on("message", (msg: DecoderMessage) =>
         return;
     }
 
-    if (!decoders.has(msg.path))
-    {
+    if (!decoders.has(msg.path)) {
         // Setup decoder stream pipeline.
         const fileStream = fs.createReadStream(msg.path);
-        const decoderStream = new AExpDecoder(512 * 1024 /*read 512kb*/,
-                4 /*emit aexps*/);
+        const decoderStream = new AExpDecoder(
+            512 * 1024 /*read 512kb*/,
+            4 /*emit aexps*/,
+        );
 
-        const pipelinePromise = stream.promises.pipeline(fileStream,
-            decoderStream);
+        const pipelinePromise = stream.promises.pipeline(
+            fileStream,
+            decoderStream,
+        );
 
         // Use an async generator IIFE to emit AugmentedExperiences.
-        const gen = async function*(): AsyncGenerator<AugmentedExperience, null>
-        {
+        const gen = (async function* (): AsyncGenerator<
+            AugmentedExperience,
+            null
+        > {
             // Continuously read aexps from decoder unless signaled to stop.
-            for await (const aexp of decoderStream)
-            {
+            for await (const aexp of decoderStream) {
                 if (yield aexp as AugmentedExperience) break;
             }
 
@@ -71,7 +72,7 @@ parentPort.on("message", (msg: DecoderMessage) =>
 
             // Indicate that the file was exhausted.
             return null;
-        }();
+        })();
         decoders.set(msg.path, {gen, inUse: Promise.resolve()});
     }
 
@@ -79,23 +80,28 @@ parentPort.on("message", (msg: DecoderMessage) =>
     const decoder = decoders.get(msg.path)!;
 
     decoder.inUse = decoder.inUse
-        .then(async function nextAExp()
-        {
+        .then(async function nextAExp() {
             // Get the next aexp (or null if file exhausted).
             const aexp = (await decoder.gen.next()).value;
-            const result: DecodeResult =
-                {type: "decode", rid: msg.rid, done: true, aexp};
-            parentPort!.postMessage(result,
-                aexp ? [aexp.probs.buffer, aexp.state.buffer] : undefined);
+            const result: DecodeResult = {
+                type: "decode",
+                rid: msg.rid,
+                done: true,
+                aexp,
+            };
+            parentPort!.postMessage(
+                result,
+                aexp ? [aexp.probs.buffer, aexp.state.buffer] : undefined,
+            );
         })
-        .catch((err: Error) =>
-        {
+        .catch((err: Error) => {
             // Pass error for logging.
             const errBuf = serialize(err);
-            const result: RawPortResultError =
-            {
-                type: "error", rid: msg.rid, done: true,
-                err: errBuf
+            const result: RawPortResultError = {
+                type: "error",
+                rid: msg.rid,
+                done: true,
+                err: errBuf,
             };
             parentPort!.postMessage(result, [errBuf.buffer]);
         });

@@ -1,6 +1,6 @@
 // istanbul ignore file
 /** @file Contains config info. */
-import { join } from "path";
+import {join} from "path";
 
 // Neural network files.
 

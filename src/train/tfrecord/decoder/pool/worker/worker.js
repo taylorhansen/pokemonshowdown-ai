@@ -3,6 +3,6 @@
  *
  * This file shouldn't be compiled or included in the actual build.
  */
-const { resolve } = require("path");
+const {resolve} = require("path");
 require("ts-node").register();
 require(resolve(__dirname, "./decoder.ts"));

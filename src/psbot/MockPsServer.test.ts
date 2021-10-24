@@ -1,20 +1,20 @@
-import { createServer, Server } from "http";
+import {createServer, Server} from "http";
 import * as url from "url";
-import { connection as WSConnection, Message, server as WSServer } from
-    "websocket";
+import {
+    connection as WSConnection,
+    Message,
+    server as WSServer,
+} from "websocket";
 
 /** Mocks the server's http and websocket APIs for PSBot testing. */
-export class MockPsServer
-{
+export class MockPsServer {
     /** Whether this server is connected to a client. */
-    public get isConnected(): boolean
-    {
+    public get isConnected(): boolean {
         return this.connection?.connected ?? false;
     }
 
     /** Query string from the last HTTP request. */
-    public get lastQuery(): url.URLSearchParams | null
-    {
+    public get lastQuery(): url.URLSearchParams | null {
         return this._lastQuery;
     }
     private _lastQuery: url.URLSearchParams | null = null;
@@ -39,40 +39,37 @@ export class MockPsServer
      * @param assertion Assertion string used for login testing.
      * @param port Port to listen to. Default 8000.
      */
-    public constructor(assertion: string, port = 8000)
-    {
+    public constructor(assertion: string, port = 8000) {
         this.assertion = assertion;
 
-        this.http = createServer((req, res) =>
-        {
-            if (req.url !== "/~~showdown/action.php")
-            {
+        this.http = createServer((req, res) => {
+            if (req.url !== "/~~showdown/action.php") {
                 res.writeHead(404);
                 res.end();
                 return;
             }
             let body = "";
-            req.on("data", chunk => body += `${chunk}`);
-            req.on("end", () =>
-            {
+            req.on("data", chunk => (body += `${chunk}`));
+            req.on("end", () => {
                 this._lastQuery = new url.URLSearchParams(body);
-                switch (this._lastQuery.get("act"))
-                {
+                switch (this._lastQuery.get("act")) {
                     case "getassertion":
                         if (this.password) res.end(";");
                         else res.end(this.assertion);
                         break;
                     case "login":
-                        if (this.username === this._lastQuery.get("name") &&
-                            this.password === this._lastQuery.get("pass"))
-                        {
-                            res.end(`]{"actionsuccess":true,` +
-                                `"assertion":"${this.assertion}"}`);
-                        }
-                        else
-                        {
-                            res.end(`]{"actionsuccess":false,` +
-                                `"assertion":";"}`);
+                        if (
+                            this.username === this._lastQuery.get("name") &&
+                            this.password === this._lastQuery.get("pass")
+                        ) {
+                            res.end(
+                                `]{"actionsuccess":true,` +
+                                    `"assertion":"${this.assertion}"}`,
+                            );
+                        } else {
+                            res.end(
+                                `]{"actionsuccess":false,` + `"assertion":";"}`,
+                            );
                         }
                         break;
                     default:
@@ -84,22 +81,17 @@ export class MockPsServer
         this.http.listen(port);
 
         this.ws = new WSServer({httpServer: this.http});
-        this.ws.on("request", req =>
-        {
-            if (req.httpRequest.url === "/showdown/websocket")
-            {
+        this.ws.on("request", req => {
+            if (req.httpRequest.url === "/showdown/websocket") {
                 this.connection = req.accept();
             }
         });
     }
 
     /** Promise to get the next message from the current connection. */
-    public async nextMessage(): Promise<Message>
-    {
-        return await new Promise((res, rej) =>
-        {
-            if (!this.connection?.connected)
-            {
+    public async nextMessage(): Promise<Message> {
+        return await new Promise((res, rej) => {
+            if (!this.connection?.connected) {
                 return rej(new Error("Not connected to client"));
             }
             this.connection.once("message", res);
@@ -107,18 +99,15 @@ export class MockPsServer
     }
 
     /** Sends a message to the client. */
-    public sendToClient(message: string): void
-    {
-        if (!this.connection?.connected)
-        {
+    public sendToClient(message: string): void {
+        if (!this.connection?.connected) {
             throw new Error("Not connected to client");
         }
         this.connection.sendUTF(message);
     }
 
     /** Disconnects from current client. */
-    public disconnect(): void
-    {
+    public disconnect(): void {
         if (!this.connection) return;
 
         this.connection.removeAllListeners();
@@ -130,17 +119,14 @@ export class MockPsServer
     }
 
     /** Shuts down server. */
-    public shutdown(): void
-    {
+    public shutdown(): void {
         this.disconnect();
 
-        if (this.http)
-        {
+        if (this.http) {
             this.http.close();
         }
 
-        if (this.ws)
-        {
+        if (this.ws) {
             this.ws.removeAllListeners();
             this.ws.shutDown();
         }

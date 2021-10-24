@@ -1,8 +1,7 @@
-import { pluralTurns } from "./utility";
+import {pluralTurns} from "./utility";
 
 /** Readonly {@link TempStatus} representation. */
-export interface ReadonlyTempStatus
-{
+export interface ReadonlyTempStatus {
     /** Name of the status. */
     readonly name: string;
     /** Whether the status is currently active. */
@@ -18,14 +17,17 @@ export interface ReadonlyTempStatus
 }
 
 /** Counts turns for a temporary status condition. */
-export class TempStatus implements ReadonlyTempStatus
-{
+export class TempStatus implements ReadonlyTempStatus {
     /** @override */
-    public get isActive(): boolean { return this._isActive; }
+    public get isActive(): boolean {
+        return this._isActive;
+    }
     private _isActive = false;
 
     /** @override */
-    public get turns(): number { return this._turns; }
+    public get turns(): number {
+        return this._turns;
+    }
     private _turns = 0;
 
     /**
@@ -37,9 +39,11 @@ export class TempStatus implements ReadonlyTempStatus
      * @param silent Whether {@link tick} will call {@link end} if it hits the
      * duration limit.
      */
-    public constructor(public readonly name: string,
-        public readonly duration: number, public readonly silent = false)
-    {}
+    public constructor(
+        public readonly name: string,
+        public readonly duration: number,
+        public readonly silent = false,
+    ) {}
 
     /**
      * Starts the status' turn counter, restarting by default if not already
@@ -48,8 +52,7 @@ export class TempStatus implements ReadonlyTempStatus
      * @param restart Whether the status should be restarted if called while
      * still active. Default `true`.
      */
-    public start(restart = true): void
-    {
+    public start(restart = true): void {
         if (!restart && this._isActive) return;
         this._isActive = true;
         this._turns = 0;
@@ -58,13 +61,13 @@ export class TempStatus implements ReadonlyTempStatus
     /**
      * Increments turn counter if active.
      *
-     * If {@link silent} is "true", this will call {@link end} if the duration
+     * If {@link silent} is `true`, this will call {@link end} if the duration
      * was reached, rather than throwing an error on the next call.
+     *
      * @throws Error if {@link silent} is false and the duration was reached
      * without instead calling {@link end}.
      */
-    public tick(): void
-    {
+    public tick(): void {
         // Inapplicable.
         if (!this._isActive) return;
         // Went over duration.
@@ -73,12 +76,12 @@ export class TempStatus implements ReadonlyTempStatus
         if (this.silent) return this.end();
         throw new Error(
             `TempStatus '${this.name}' lasted longer than expected ` +
-            `(${pluralTurns(this._turns, this.duration)})`);
+                `(${pluralTurns(this._turns, this.duration)})`,
+        );
     }
 
     /** Ends this status. */
-    public end(): void
-    {
+    public end(): void {
         this._isActive = false;
         this._turns = 0;
     }
@@ -87,13 +90,13 @@ export class TempStatus implements ReadonlyTempStatus
      * Copies turn data over to another TempStatus object, as long as the names
      * and durations match.
      */
-    public copyTo(ts: this): void
-    {
-        if (this.name !== ts.name || this.duration !== ts.duration)
-        {
-            throw new Error(`TempStatus '${this.name}' of duration ` +
-                `${this.duration} can't be copied to TempStatus '${ts.name}' ` +
-                `of duration ${ts.duration}`);
+    public copyTo(ts: this): void {
+        if (this.name !== ts.name || this.duration !== ts.duration) {
+            throw new Error(
+                `TempStatus '${this.name}' of duration ${this.duration} ` +
+                    `can't be copied to TempStatus '${ts.name}' of duration ` +
+                    `${ts.duration}`,
+            );
         }
 
         ts._isActive = this._isActive;
@@ -102,8 +105,7 @@ export class TempStatus implements ReadonlyTempStatus
 
     // istanbul ignore next: Only used in logging.
     /** Stringifies this TempStatus. */
-    public toString(): string
-    {
+    public toString(): string {
         return pluralTurns(this.name, this._turns, this.duration);
     }
 }

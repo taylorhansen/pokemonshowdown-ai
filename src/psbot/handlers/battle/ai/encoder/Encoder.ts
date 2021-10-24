@@ -1,9 +1,8 @@
 /** @file Encoder combinators. */
-import { checkLength } from "./helpers";
+import {checkLength} from "./helpers";
 
 /** Describes a state object encoder. */
-export interface Encoder<TState>
-{
+export interface Encoder<TState> {
     /**
      * Encoder function.
      *
@@ -22,17 +21,16 @@ export interface Encoder<TState>
  * @param assertion Assertion function to call. This function may throw if a
  * precondition about its input was violated.
  */
-export function assertEncoder<TState>(assertion: (state: TState) => void):
-    Encoder<TState>
-{
+export function assertEncoder<TState>(
+    assertion: (state: TState) => void,
+): Encoder<TState> {
     return {
-        encode(arr, state)
-        {
+        encode(arr, state) {
             checkLength(arr, 0);
             assertion(state);
         },
-        size: 0
-    }
+        size: 0,
+    };
 }
 
 /**
@@ -41,12 +39,15 @@ export function assertEncoder<TState>(assertion: (state: TState) => void):
  * @param getter Function to transform the new input type into the old one.
  * @param encoder Encoder that works with the old input type.
  */
-export function augment<TState1, TState2>(getter: (args: TState1) => TState2,
-    encoder: Encoder<TState2>): Encoder<TState1>
-{
+export function augment<TState1, TState2>(
+    getter: (args: TState1) => TState2,
+    encoder: Encoder<TState2>,
+): Encoder<TState1> {
     return {
-        encode(arr, args) { encoder.encode(arr, getter(args)); },
-        size: encoder.size
+        encode(arr, args) {
+            encoder.encode(arr, getter(args));
+        },
+        size: encoder.size,
     };
 }
 
@@ -57,38 +58,40 @@ export function augment<TState1, TState2>(getter: (args: TState1) => TState2,
  * Since all the results are concatenated, the returned Encoder will require an
  * array that spans the sum of each Encoder's required array size.
  */
-export function concat<TState>(...encoders: Encoder<TState>[]):
-    Encoder<TState>
-{
-    const size = encoders.reduce((a, b) => a + b.size, 0)
+export function concat<TState>(
+    ...encoders: Encoder<TState>[]
+): Encoder<TState> {
     return {
-        encode(arr, args)
-        {
+        encode(arr, args) {
             checkLength(arr, this.size);
             let nextByteOffset = arr.byteOffset;
             const maxByteOffset = arr.byteLength + arr.byteOffset;
-            for (const encoder of encoders)
-            {
+            for (const encoder of encoders) {
                 const byteOffset = nextByteOffset;
                 nextByteOffset += encoder.size * arr.BYTES_PER_ELEMENT;
-                if (nextByteOffset > maxByteOffset)
-                {
-                    throw new Error("concat() encoder array was too small " +
-                        `for the given encoders (${arr.byteLength} bytes vs ` +
-                        `at least ${nextByteOffset - arr.byteOffset})`);
+                if (nextByteOffset > maxByteOffset) {
+                    throw new Error(
+                        "concat() encoder array was too small for the given " +
+                            `encoders (${arr.byteLength} bytes vs at least` +
+                            `${nextByteOffset - arr.byteOffset})`,
+                    );
                 }
-                const a = new Float32Array(arr.buffer, byteOffset,
-                    encoder.size);
+                const a = new Float32Array(
+                    arr.buffer,
+                    byteOffset,
+                    encoder.size,
+                );
                 encoder.encode(a, args);
             }
-            if (nextByteOffset !== maxByteOffset)
-            {
-                throw new Error("concat() encoder didn't fill the given " +
-                    `array (filled ${nextByteOffset - arr.byteOffset} bytes, ` +
-                    `given ${arr.byteLength})`);
+            if (nextByteOffset !== maxByteOffset) {
+                throw new Error(
+                    "concat() encoder didn't fill the given array (filled " +
+                        `${nextByteOffset - arr.byteOffset} bytes, given ` +
+                        `${arr.byteLength})`,
+                );
             }
         },
-        size
+        size: encoders.reduce((a, b) => a + b.size, 0),
     };
 }
 
@@ -98,13 +101,16 @@ export function concat<TState>(...encoders: Encoder<TState>[]):
  * @param length Number of state objects to encode.
  * @param encoder Encoder to use for each state object.
  */
-export function map<TState>(length: number, encoder: Encoder<TState>):
-    Encoder<ArrayLike<TState>>
-{
+export function map<TState>(
+    length: number,
+    encoder: Encoder<TState>,
+): Encoder<ArrayLike<TState>> {
     return concat(
         assertEncoder(states => checkLength(states, length)),
         ...Array.from({length}, (_, i) =>
-            augment((states: ArrayLike<TState>) => states[i], encoder)));
+            augment((states: ArrayLike<TState>) => states[i], encoder),
+        ),
+    );
 }
 
 /**
@@ -113,21 +119,22 @@ export function map<TState>(length: number, encoder: Encoder<TState>):
  * @param encoder Encoder when the state is defined.
  * @param alt Encoder when the state input is null.
  */
-export function nullable<TState>(encoder: Encoder<TState>,
-    alt: Encoder<undefined>): Encoder<TState | undefined>
-{
-    if (encoder.size !== alt.size)
-    {
-        throw new Error("nullable() encoders do not have the same size " +
-            `(${encoder.size} vs ${alt.size})`);
+export function nullable<TState>(
+    encoder: Encoder<TState>,
+    alt: Encoder<undefined>,
+): Encoder<TState | undefined> {
+    if (encoder.size !== alt.size) {
+        throw new Error(
+            "nullable() encoder arguments do not have the same size " +
+                `(${encoder.size} vs ${alt.size})`,
+        );
     }
     return {
-        encode(arr, state)
-        {
+        encode(arr, state) {
             if (!state) alt.encode(arr, undefined);
             else encoder.encode(arr, state);
         },
-        size: encoder.size
+        size: encoder.size,
     };
 }
 
@@ -139,22 +146,23 @@ export function nullable<TState>(encoder: Encoder<TState>,
  * @param unknown Encoder when the input is `null`.
  * @param empty Encoder when the input is `undefined`.
  */
-export function optional<TState>(defined: Encoder<TState>,
-    unknown: Encoder<null>, empty: Encoder<undefined>):
-    Encoder<TState | null | undefined>
-{
-    if (defined.size !== unknown.size || defined.size !== empty.size)
-    {
-        throw new Error("optional() encoders do not have the same size " +
-            `(${defined.size} vs ${unknown.size} vs ${empty.size})`);
+export function optional<TState>(
+    defined: Encoder<TState>,
+    unknown: Encoder<null>,
+    empty: Encoder<undefined>,
+): Encoder<TState | null | undefined> {
+    if (defined.size !== unknown.size || defined.size !== empty.size) {
+        throw new Error(
+            "optional() encoder arguments do not have the same size " +
+                `(${defined.size} vs ${unknown.size} vs ${empty.size})`,
+        );
     }
     return {
-        encode(arr, state)
-        {
-            if (state === null) unknown.encode(arr, null);
-            else if (!state) empty.encode(arr, undefined);
+        encode(arr, state) {
+            if (state === undefined) empty.encode(arr, undefined);
+            else if (state === null) unknown.encode(arr, null);
             else defined.encode(arr, state);
         },
-        size: defined.size
+        size: defined.size,
     };
 }

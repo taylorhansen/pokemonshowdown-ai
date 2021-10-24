@@ -1,11 +1,10 @@
-import { GenderName, SideID } from "@pkmn/types";
-import { BattleState, ReadonlyBattleState } from "./BattleState";
-import { Pokemon, ReadonlyPokemon } from "./Pokemon";
-import { ReadonlyTeamStatus, TeamStatus } from "./TeamStatus";
+import {GenderName, SideID} from "@pkmn/types";
+import {BattleState, ReadonlyBattleState} from "./BattleState";
+import {Pokemon, ReadonlyPokemon} from "./Pokemon";
+import {ReadonlyTeamStatus, TeamStatus} from "./TeamStatus";
 
 /** Readonly {@link Team} representation. */
-export interface ReadonlyTeam
-{
+export interface ReadonlyTeam {
     /** Reference to the parent BattleState. */
     readonly state?: ReadonlyBattleState;
     /** Which side this Team is on. */
@@ -27,8 +26,7 @@ export interface ReadonlyTeam
 }
 
 /** Data for handling a switch-in. */
-export interface SwitchOptions
-{
+export interface SwitchOptions {
     /** Species id name. */
     readonly species: string;
     /** Level between 1 and 100. */
@@ -42,22 +40,20 @@ export interface SwitchOptions
 }
 
 /** Options for {@link Team.reveal}. */
-export interface TeamRevealOptions extends SwitchOptions
-{
+export interface TeamRevealOptions extends SwitchOptions {
     /** Moveset to fill in. */
     readonly moves?: readonly string[];
 }
 
 /** Partial snapshot of the active pokemon at the start of the turn. */
-export interface PreTurnSnapshotPokemon extends Pick<Pokemon, "item" | "traits">
-{
-    readonly hp: {readonly current: number, readonly max: number};
+export interface PreTurnSnapshotPokemon
+    extends Pick<Pokemon, "item" | "traits"> {
+    readonly hp: {readonly current: number; readonly max: number};
     readonly volatile: {readonly suppressAbility: boolean};
 }
 
 /** Team state. */
-export class Team implements ReadonlyTeam
-{
+export class Team implements ReadonlyTeam {
     /** Maximum team size. */
     public static readonly maxSize = 6;
 
@@ -68,15 +64,18 @@ export class Team implements ReadonlyTeam
 
     // As long as at least one pokemon was revealed, this will be valid.
     /** @override */
-    public get active(): Pokemon { return this._pokemon[0]!; }
+    public get active(): Pokemon {
+        return this._pokemon[0]!;
+    }
 
     /**
      * Size of the team. This should be set before the battle officially starts,
      * or the entire list of pokemon will be cleared.
      */
-    public get size(): number { return this._size; }
-    public set size(size: number)
-    {
+    public get size(): number {
+        return this._size;
+    }
+    public set size(size: number) {
         this._size = Math.max(1, Math.min(size, Team.maxSize));
 
         // Clear pokemon array.
@@ -87,12 +86,12 @@ export class Team implements ReadonlyTeam
     }
 
     /** @override */
-    public get pokemon(): readonly (Pokemon | null | undefined)[]
-    {
+    public get pokemon(): readonly (Pokemon | null | undefined)[] {
         return this._pokemon;
     }
-    private readonly _pokemon =
-        new Array<Pokemon | null | undefined>(Team.maxSize);
+    private readonly _pokemon = new Array<Pokemon | null | undefined>(
+        Team.maxSize,
+    );
     /** Team size for this battle. */
     private _size = 0;
 
@@ -107,8 +106,7 @@ export class Team implements ReadonlyTeam
     private unrevealed = 0;
 
     /** Used for custapberry check at the beginning of the turn. */
-    public get preTurnSnapshotPokemon(): PreTurnSnapshotPokemon | null
-    {
+    public get preTurnSnapshotPokemon(): PreTurnSnapshotPokemon | null {
         return this._preTurnSnapshotPokemon;
     }
     private _preTurnSnapshotPokemon: PreTurnSnapshotPokemon | null = null;
@@ -120,8 +118,7 @@ export class Team implements ReadonlyTeam
      * @param state Reference to the parent BattleState.
      * @param size Total known size of team.
      */
-    public constructor(side: SideID, state?: BattleState, size = Team.maxSize)
-    {
+    public constructor(side: SideID, state?: BattleState, size = Team.maxSize) {
         this.state = state;
         this.side = side;
 
@@ -130,22 +127,20 @@ export class Team implements ReadonlyTeam
     }
 
     /** Called at the beginning of every turn to update temp statuses. */
-    public preTurn(): void
-    {
+    public preTurn(): void {
         const m = this.active;
-        this._preTurnSnapshotPokemon =
-        {
-            item: m.item, traits: m.traits,
+        this._preTurnSnapshotPokemon = {
+            item: m.item,
+            traits: m.traits,
             hp: {current: m.hp.current, max: m.hp.max},
-            volatile: {suppressAbility: m.volatile.suppressAbility}
+            volatile: {suppressAbility: m.volatile.suppressAbility},
         };
 
         for (const mon of this._pokemon) mon?.preTurn();
     }
 
     /** Called at the end of every turn to update temp statuses. */
-    public postTurn(): void
-    {
+    public postTurn(): void {
         this._preTurnSnapshotPokemon = null;
         this.status.postTurn();
         for (const mon of this._pokemon) mon?.postTurn();
@@ -157,16 +152,13 @@ export class Team implements ReadonlyTeam
      *
      * @returns The new active pokemon, or `null` if invalid.
      */
-    public switchIn(options: SwitchOptions): Pokemon | null
-    {
+    public switchIn(options: SwitchOptions): Pokemon | null {
         // See if we already know this pokemon.
         let index = -1;
-        for (let i = 0; i < this.unrevealed; ++i)
-        {
+        for (let i = 0; i < this.unrevealed; ++i) {
             const m = this._pokemon[i];
             // TODO(gen5): Check everything since it could be Illusion.
-            if (m?.baseTraits.species.name === options.species)
-            {
+            if (m?.baseTraits.species.name === options.species) {
                 index = i;
                 break;
             }
@@ -181,21 +173,25 @@ export class Team implements ReadonlyTeam
         const mon = this._pokemon[index];
         if (!mon) throw new Error(`Uninitialized pokemon slot ${index}`);
 
-        if (mon.active)
-        {
-            throw new Error(`Switching active pokemon '${options.species}' ` +
-                "into itself");
+        if (mon.active) {
+            throw new Error(
+                `Switching active pokemon '${options.species}' into itself`,
+            );
         }
 
         // Switch active status.
-        mon.switchInto(index === 0 ? null : this._pokemon[0],
-            this.status.selfSwitch);
+        mon.switchInto(
+            index === 0 ? null : this._pokemon[0],
+            this.status.selfSwitch,
+        );
         // Consume pending self-switch/copyvolatile flag.
         this.status.selfSwitch = null;
 
         // Swap active slot with new pokemon.
-        [this._pokemon[0], this._pokemon[index]] =
-            [this._pokemon[index], this._pokemon[0]];
+        [this._pokemon[0], this._pokemon[index]] = [
+            this._pokemon[index],
+            this._pokemon[0],
+        ];
         return this.active;
     }
 
@@ -205,8 +201,7 @@ export class Team implements ReadonlyTeam
      * @returns The new pokemon, or `null` if the operation would overflow the
      * current team size.
      */
-    public reveal(options: TeamRevealOptions): Pokemon | null
-    {
+    public reveal(options: TeamRevealOptions): Pokemon | null {
         const index = this.revealIndex(options);
         if (index < 0) return null;
         return this._pokemon[index] ?? null;
@@ -218,9 +213,14 @@ export class Team implements ReadonlyTeam
      * @returns The index of the new pokemon, or `-1` if the operation would
      * overflow the current team size.
      */
-    private revealIndex({species, level, gender, hp, hpMax, moves}:
-        TeamRevealOptions): number
-    {
+    private revealIndex({
+        species,
+        level,
+        gender,
+        hp,
+        hpMax,
+        moves,
+    }: TeamRevealOptions): number {
         // Team already full.
         if (this.unrevealed === this._size) return -1;
 
@@ -237,8 +237,7 @@ export class Team implements ReadonlyTeam
     }
 
     /** Cures all pokemon of any major status conditions. */
-    public cure(): void
-    {
+    public cure(): void {
         for (const mon of this._pokemon) mon?.majorStatus.cure();
     }
 
@@ -249,18 +248,15 @@ export class Team implements ReadonlyTeam
      * @param indent Indentation level to use.
      * @returns The Team in string form.
      */
-    public toString(indent = 0): string
-    {
+    public toString(indent = 0): string {
         const s = " ".repeat(indent);
         let res = `${s}status: ${this.status.toString()}`;
-        for (let i = 0; i < this._pokemon.length; ++i)
-        {
+        for (let i = 0; i < this._pokemon.length; ++i) {
             const mon = this._pokemon[i];
             res += `\n${s}mon${i + 1}:`;
             if (mon === null) res += " <unrevealed>";
             else if (!mon) res += " <empty>";
-            else
-            {
+            else {
                 const isOurSide = this.state?.ourSide === this.side;
                 res += "\n" + mon.toString(indent + 4, !isOurSide);
             }

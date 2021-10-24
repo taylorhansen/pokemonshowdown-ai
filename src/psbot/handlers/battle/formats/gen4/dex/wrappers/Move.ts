@@ -1,6 +1,6 @@
-import { SideID } from "@pkmn/types";
-import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
-import { ReadonlyPossibilityClass } from "../../state/PossibilityClass";
+import {SideID} from "@pkmn/types";
+import {Pokemon, ReadonlyPokemon} from "../../state/Pokemon";
+import {ReadonlyPossibilityClass} from "../../state/PossibilityClass";
 import * as dexutil from "../dex-util";
 
 /** Limited form of the {@link ReadonlyPokemon} interface. */
@@ -10,8 +10,7 @@ export type ReadonlyMoveUserSnapshot = Pick<ReadonlyPokemon, "hpType" | "item">;
 export type MoveUserSnapshot = Readonly<Pick<Pokemon, "hpType" | "item">>;
 
 /** Pairs a {@link Move} with its {@link SideID user-ref}. */
-export interface MoveAndUserRef
-{
+export interface MoveAndUserRef {
     /** Move object. */
     readonly move: Move;
     /** Pokemon reference to the move's user. */
@@ -19,8 +18,7 @@ export interface MoveAndUserRef
 }
 
 /** Readonly form of {@link MoveAndUser}. */
-export interface ReadonlyMoveAndUser
-{
+export interface ReadonlyMoveAndUser {
     /** Move object. */
     readonly move: Move;
     /** Move user. */
@@ -28,26 +26,22 @@ export interface ReadonlyMoveAndUser
 }
 
 /** Pairs a {@link Move} with its {@link Pokemon user}. */
-export interface MoveAndUser extends ReadonlyMoveAndUser
-{
+export interface MoveAndUser extends ReadonlyMoveAndUser {
     /** @override */
     readonly user: Pokemon;
 }
 
 /** Encapsulates move properties. */
-export class Move
-{
+export class Move {
     //#region Properties interpreted from MoveData.
 
     /** Whether this move is affected by type effectiveness multipliers. */
-    public get canBeEffective(): boolean
-    {
+    public get canBeEffective(): boolean {
         return this.data.category !== "status" && !this.data.damage;
     }
 
     /** Whether this move deals damage based on base power. */
-    public get dealsBpDamage(): boolean
-    {
+    public get dealsBpDamage(): boolean {
         return this.data.category !== "status" && !this.data.damage;
     }
 
@@ -68,33 +62,32 @@ export class Move
      *
      * @param user User of the move (To handle ghost-type Curse).
      */
-    public getTarget(user: ReadonlyPokemon): dexutil.MoveTarget
-    {
+    public getTarget(user: ReadonlyPokemon): dexutil.MoveTarget {
         // TODO(gen6): nonGhostTarget interactions with protean ability.
-        return this.data.nonGhostTarget && !user.types.includes("ghost") ?
-            this.data.nonGhostTarget : this.data.target;
+        return this.data.nonGhostTarget && !user.types.includes("ghost")
+            ? this.data.nonGhostTarget
+            : this.data.target;
     }
 
     // TODO: Encapsulate type-related methods into a PossibilityClass-like api.
     /** Gets all the possible effective types of a move based on its user. */
-    public getPossibleTypes(user: ReadonlyMoveUserSnapshot): Set<dexutil.Type>
-    {
+    public getPossibleTypes(user: ReadonlyMoveUserSnapshot): Set<dexutil.Type> {
         // TODO: Also include naturalgift and others.
-        switch (this.data.modifyType)
-        {
-            case "hpType": return new Set(user.hpType.possibleValues);
-            case "plateType":
-            {
+        switch (this.data.modifyType) {
+            case "hpType":
+                return new Set(user.hpType.possibleValues);
+            case "plateType": {
                 // TODO: Embargo negates plate.
                 const result = new Set<dexutil.Type>();
-                for (const n of user.item.possibleValues)
-                {
+                for (const n of user.item.possibleValues) {
                     result.add(user.item.map[n].plateType ?? this.data.type);
                 }
                 return result;
             }
-            case "???": return new Set(["???"]);
-            default: return new Set([this.data.type]);
+            case "???":
+                return new Set(["???"]);
+            default:
+                return new Set([this.data.type]);
         }
     }
 
@@ -112,32 +105,33 @@ export class Move
      * @param hpType HpType of the user.
      * @param item User's item.
      */
-    public getDefiniteType(hpType: ReadonlyPossibilityClass<dexutil.HpType>,
-        item: ReadonlyPossibilityClass<string, dexutil.ItemData>):
-        dexutil.Type | null;
+    public getDefiniteType(
+        hpType: ReadonlyPossibilityClass<dexutil.HpType>,
+        item: ReadonlyPossibilityClass<string, dexutil.ItemData>,
+    ): dexutil.Type | null;
     public getDefiniteType(
         userOrHpType:
-            ReadonlyMoveUserSnapshot | ReadonlyPossibilityClass<dexutil.HpType>,
-        item?: ReadonlyPossibilityClass<string, dexutil.ItemData>):
-        dexutil.Type | null
-    {
+            | ReadonlyMoveUserSnapshot
+            | ReadonlyPossibilityClass<dexutil.HpType>,
+        item?: ReadonlyPossibilityClass<string, dexutil.ItemData>,
+    ): dexutil.Type | null {
         let hpType: ReadonlyPossibilityClass<dexutil.HpType>;
-        if (item)
-        {
+        if (item) {
             hpType = userOrHpType as ReadonlyPossibilityClass<dexutil.HpType>;
-        }
-        else ({hpType, item} = userOrHpType as ReadonlyPokemon);
+        } else ({hpType, item} = userOrHpType as ReadonlyPokemon);
 
-        switch (this.data.modifyType)
-        {
+        switch (this.data.modifyType) {
             // TODO: Also include naturalgift and others.
-            case "hpType": return hpType.definiteValue;
+            case "hpType":
+                return hpType.definiteValue;
             case "plateType":
                 // TODO: Include item-blocking effects.
                 if (!item.definiteValue) return null;
                 return item.map[item.definiteValue].plateType ?? this.data.type;
-            case "???": return "???";
-            default: return this.data.type;
+            case "???":
+                return "???";
+            default:
+                return this.data.type;
         }
     }
 
@@ -149,19 +143,18 @@ export class Move
      * @returns A table of boost values which are guaranteed to apply to the
      * `tgt` when the move is used.
      */
-    public getBoostEffects(tgt: dexutil.MoveEffectTarget,
-        userTypes: readonly dexutil.Type[]):
-        {boosts: Partial<dexutil.BoostTable>, set?: true}
-    {
+    public getBoostEffects(
+        tgt: dexutil.MoveEffectTarget,
+        userTypes: readonly dexutil.Type[],
+    ): {boosts: Partial<dexutil.BoostTable>; set?: true} {
         if (!this.data.effects?.boost) return {boosts: {}};
         if (this.data.effects.boost.chance) return {boosts: {}};
-        if (this.data.effects.boost.noGhost && userTypes.includes("ghost"))
-        {
+        if (this.data.effects.boost.noGhost && userTypes.includes("ghost")) {
             return {boosts: {}};
         }
         return {
             boosts: this.data.effects.boost[tgt] ?? {},
-            ...this.data.effects.boost.set && {set: true}
+            ...(this.data.effects.boost.set && {set: true}),
         };
     }
 
@@ -173,13 +166,13 @@ export class Move
      * @returns An array of statuses, one of which will afflict the `tgt` when
      * the move is used.
      */
-    public getMainStatusEffects(tgt: dexutil.MoveEffectTarget,
-        userTypes: readonly dexutil.Type[]): readonly dexutil.StatusType[]
-    {
+    public getMainStatusEffects(
+        tgt: dexutil.MoveEffectTarget,
+        userTypes: readonly dexutil.Type[],
+    ): readonly dexutil.StatusType[] {
         if (this.data.category !== "status") return [];
         if (!this.data.effects?.status) return [];
-        if (this.data.effects.status.ghost && !userTypes.includes("ghost"))
-        {
+        if (this.data.effects.status.ghost && !userTypes.includes("ghost")) {
             return [];
         }
         if (this.data.effects.status.chance) return [];
@@ -194,12 +187,12 @@ export class Move
      * @returns An array of statuses, one of which will afflict the `tgt` when
      * the move is used.
      */
-    public getGuaranteedStatusEffects(tgt: dexutil.MoveEffectTarget,
-        userTypes: readonly dexutil.Type[]): readonly dexutil.StatusType[]
-    {
+    public getGuaranteedStatusEffects(
+        tgt: dexutil.MoveEffectTarget,
+        userTypes: readonly dexutil.Type[],
+    ): readonly dexutil.StatusType[] {
         if (!this.data.effects?.status) return [];
-        if (this.data.effects.status.ghost && !userTypes.includes("ghost"))
-        {
+        if (this.data.effects.status.ghost && !userTypes.includes("ghost")) {
             return [];
         }
         if ((this.data.effects.status.chance ?? 100) < 100) return [];
@@ -217,23 +210,22 @@ export class Move
      * @param type Expected move type
      * @param user User of the move.
      */
-    public assertType(type: dexutil.Type, user: MoveUserSnapshot): void
-    {
+    public assertType(type: dexutil.Type, user: MoveUserSnapshot): void {
         // Assert move type if known.
         const moveType = this.getDefiniteType(user);
-        if (moveType)
-        {
-            if (type !== moveType)
-            {
-                throw new Error("Move type assertion failed: " +
-                    `Expected type-change to '${moveType}' but got '${type}'`);
+        if (moveType) {
+            if (type !== moveType) {
+                throw new Error(
+                    "Move type assertion failed: " +
+                        `Expected type-change to '${moveType}' but got ` +
+                        `'${type}'`,
+                );
             }
             return;
         }
 
         // If move type is unknown, reverse the assertion into an inference.
-        switch (this.data.modifyType)
-        {
+        switch (this.data.modifyType) {
             // Asserted type is the user's hiddenpower type.
             case "hpType":
                 user.hpType.narrow(type);
@@ -241,8 +233,9 @@ export class Move
             // Asserted type is the type of plate the user is holding.
             case "plateType":
                 // TODO: Embargo negates plate.
-                user.item.narrow((_, i) =>
-                        type === (i.plateType ?? this.data.type));
+                user.item.narrow(
+                    (_, i) => type === (i.plateType ?? this.data.type),
+                );
                 break;
             default:
         }
@@ -258,29 +251,32 @@ export class Move
      * @param user Move user.
      * @param negative Whether to flip the assertion.
      */
-    public assertTypes(types: ReadonlySet<dexutil.Type>, user: MoveUserSnapshot,
-        negative?: boolean): void
-    {
+    public assertTypes(
+        types: ReadonlySet<dexutil.Type>,
+        user: MoveUserSnapshot,
+        negative?: boolean,
+    ): void {
         const method = negative ? "remove" : "narrow";
         let defaultType = this.data.type;
-        switch (this.data.modifyType)
-        {
+        switch (this.data.modifyType) {
             case "hpType":
                 user.hpType[method](types);
                 break;
             case "plateType":
                 user.item[method]((_, i) =>
-                    types.has(i.plateType ?? this.data.type));
+                    types.has(i.plateType ?? this.data.type),
+                );
                 break;
             case "???":
                 defaultType = "???";
-                // Fallthrough.
+            // Fallthrough.
             default:
-                if (!!negative === types.has(defaultType))
-                {
-                    throw new Error(`Move of type '${defaultType}' cannot be ` +
-                        `asserted to${negative ? " not" : ""} be of type ` +
-                        `[${[...types].join(", ")}]`);
+                if (!!negative === types.has(defaultType)) {
+                    throw new Error(
+                        `Move of type '${defaultType}' cannot be ` +
+                            `asserted to${negative ? " not" : ""} be of type ` +
+                            `[${[...types].join(", ")}]`,
+                    );
                 }
         }
     }
@@ -296,19 +292,19 @@ export class Move
      * holds, or `held=false` if it doesn't.
      * @returns A callback to deregister the given callback.
      */
-    public onUpdateTypes(types: Set<dexutil.Type>, user: MoveUserSnapshot,
-        cb: (held: boolean) => void): () => void
-    {
+    public onUpdateTypes(
+        types: Set<dexutil.Type>,
+        user: MoveUserSnapshot,
+        cb: (held: boolean) => void,
+    ): () => void {
         // Move type already known.
         const moveType = this.getDefiniteType(user);
-        if (moveType)
-        {
+        if (moveType) {
             cb(types.has(moveType) /*held*/);
             return () => {};
         }
 
-        switch (this.data.modifyType)
-        {
+        switch (this.data.modifyType) {
             case "hpType":
                 // Types must be shared by hpType.
                 return user.hpType.onUpdate(types, cb);
@@ -316,27 +312,29 @@ export class Move
                 // Item must cause the move to become one of the types.
                 // Optimization: Keep subsets small since only a couple items
                 // have a plateType.
-                if (types.has(this.data.type))
-                {
+                if (types.has(this.data.type)) {
                     // Kept=false iff the user has a plate item that isn't of
                     // the possible types.
                     // TODO: Replace predicate with set of plate items.
                     return user.item.onUpdate(
                         (_, i) => !!i.plateType && !types.has(i.plateType),
-                        kept => cb(!kept));
+                        kept => cb(!kept),
+                    );
                 }
                 // Kept=true iff the user has a plate item that is of the
                 // possible types (equivalent to above case).
                 return user.item.onUpdate(
                     (_, i) => !!i.plateType && types.has(i.plateType),
-                    cb);
+                    cb,
+                );
             case "???":
-                // Should've been handled by `#getDefiniteType()`.
-                // Fallthrough.
+            // Should've been handled by `#getDefiniteType()`.
+            // Fallthrough.
             default:
                 // istanbul ignore next: Should never happen.
-                throw new Error(`Unsupported modifyType string ` +
-                    `'${this.data.modifyType}'`);
+                throw new Error(
+                    `Unsupported modifyType string '${this.data.modifyType}'`,
+                );
         }
     }
 

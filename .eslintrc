@@ -56,14 +56,10 @@
     "@typescript-eslint/ban-tslint-comment": "error",
     "@typescript-eslint/consistent-type-assertions": "error",
     "@typescript-eslint/explicit-member-accessibility": "warn",
-    "@typescript-eslint/member-delimiter-style": ["warn", {
-      "singleline": {
-        "delimiter": "comma",
-        "requireLast": false
-      }
-    }],
+    "@typescript-eslint/member-delimiter-style": "warn",
     "@typescript-eslint/method-signature-style": "warn",
-    "@typescript-eslint/naming-convention": ["warn",
+    "@typescript-eslint/naming-convention": [
+      "warn",
       {
         "selector": "default",
         "filter": {
@@ -90,9 +86,12 @@
         "format": ["StrictPascalCase"]
       }
     ],
-    "@typescript-eslint/no-base-to-string": ["error", {
-      "ignoredTypeNames": ["Error"]
-    }],
+    "@typescript-eslint/no-base-to-string": [
+      "error",
+      {
+        "ignoredTypeNames": ["Error"]
+      }
+    ],
     "@typescript-eslint/no-dynamic-delete": "warn",
     "@typescript-eslint/no-extraneous-class": "warn",
     "@typescript-eslint/no-invalid-void-type": "warn",
@@ -100,17 +99,23 @@
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/no-non-null-asserted-nullish-coalescing": "warn",
     "@typescript-eslint/no-require-imports": "error",
-    "@typescript-eslint/no-unnecessary-boolean-literal-compare": ["warn", {
-      "allowComparingNullableBooleansToTrue": true,
-      "allowComparingNullableBooleansToFalse": true
-    }],
+    "@typescript-eslint/no-unnecessary-boolean-literal-compare": [
+      "warn",
+      {
+        "allowComparingNullableBooleansToTrue": true,
+        "allowComparingNullableBooleansToFalse": true
+      }
+    ],
     "@typescript-eslint/no-unnecessary-qualifier": "warn",
     "@typescript-eslint/no-unnecessary-type-arguments": "warn",
     // Already covered by @typescript-eslint/no-require-imports (recommended).
     "@typescript-eslint/no-var-requires": "off",
-    "@typescript-eslint/restrict-plus-operands": ["error", {
-      "checkCompoundAssignments": true
-    }],
+    "@typescript-eslint/restrict-plus-operands": [
+      "error",
+      {
+        "checkCompoundAssignments": true
+      }
+    ],
     "@typescript-eslint/non-nullable-type-assertion-style": "warn",
     "@typescript-eslint/prefer-for-of": "warn",
     "@typescript-eslint/prefer-includes": "warn",
@@ -122,9 +127,12 @@
     "@typescript-eslint/prefer-string-starts-ends-with": "warn",
     "@typescript-eslint/prefer-ts-expect-error": "error",
     "@typescript-eslint/promise-function-async": "error",
-    "@typescript-eslint/require-array-sort-compare": ["error", {
-      "ignoreStringArrays": true
-    }],
+    "@typescript-eslint/require-array-sort-compare": [
+      "error",
+      {
+        "ignoreStringArrays": true
+      }
+    ],
     "@typescript-eslint/restrict-template-expressions": "off",
     "@typescript-eslint/switch-exhaustiveness-check": "error",
     "@typescript-eslint/type-annotation-spacing": "warn",
@@ -133,18 +141,23 @@
     "arrow-body-style": ["warn", "as-needed"],
     "block-scoped-var": "error",
     "camelcase": "warn",
-    "capitalized-comments": ["warn", "always", {
-      "line": {
-        "ignoreConsecutiveComments": true
-      },
-      "block": {
-        "ignoreInlineComments": true
+    "capitalized-comments": [
+      "warn",
+      "always",
+      {
+        "line": {
+          "ignoreConsecutiveComments": true
+        },
+        "block": {
+          "ignoreInlineComments": true
+        }
       }
-    }],
+    ],
     "consistent-this": "warn",
     "eqeqeq": "warn",
     "grouped-accessor-pairs": ["warn", "getBeforeSet"],
     "guard-for-in": "error",
+    "import/first": "error",
     // Already checked by typescript.
     "import/namespace": "off",
     "import/order": ["warn", {"alphabetize": {"order": "asc"}}],
@@ -201,19 +214,33 @@
     "@typescript-eslint/no-useless-constructor": "error",
     "no-useless-rename": "warn",
     "no-useless-return": "warn",
-    "node/no-unsupported-features/es-syntax": ["error", {
-      "ignores": ["modules"]
-    }],
+    "node/no-unsupported-features/es-syntax": [
+      "error",
+      {
+        "ignores": ["modules"]
+      }
+    ],
     "no-var": "error",
+    "max-len": [
+      "warn",
+      {
+        "code": 80,
+        // Allow eslint comments, mocha blocks, and long import paths.
+        "ignorePattern": "(^ *((// eslint-(disable|enable)-)|((describe|it|((before|after)(Each)?))\\()))|(from \"[^\"\\n]*\";$)"
+      }
+    ],
     "object-shorthand": ["error", "always"],
     "one-var": ["error", "never"],
     "operator-assignment": "warn",
-    "prefer-arrow/prefer-arrow-functions": ["warn", {
-      "disallowPrototype": false,
-      "singleReturnOnly": true,
-      "classPropertiesAllowed": false,
-      "allowStandaloneDeclarations": true
-    }],
+    "prefer-arrow/prefer-arrow-functions": [
+      "warn",
+      {
+        "disallowPrototype": false,
+        "singleReturnOnly": true,
+        "classPropertiesAllowed": false,
+        "allowStandaloneDeclarations": true
+      }
+    ],
     "prefer-const": ["warn", {"destructuring": "any"}],
     "prefer-destructuring": "warn",
     "prefer-exponentiation-operator": "warn",
@@ -227,15 +254,20 @@
     "radix": "warn",
     "symbol-description": "error"
   },
-  "overrides": [{
-    "files": ["scripts/**/*", "src/**/*.test.ts", "test/**/*"],
-    "rules": {
-      // Allow dev dependencies in helper scripts/test files that don't go into
-      // production.
-      "node/no-missing-import": ["error", {
-        "allowModules": ["chai", "mocha", "websocket"]
-      }],
-      "node/no-unpublished-import": "off"
+  "overrides": [
+    {
+      "files": ["scripts/**/*", "src/**/*.test.ts", "test/**/*"],
+      "rules": {
+        // Allow dev dependencies in helper scripts/test files that don't go
+        // into production.
+        "node/no-missing-import": [
+          "error",
+          {
+            "allowModules": ["chai", "mocha", "websocket"]
+          }
+        ],
+        "node/no-unpublished-import": "off"
+      }
     }
-  }]
+  ]
 }

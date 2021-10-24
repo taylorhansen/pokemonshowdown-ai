@@ -1,12 +1,11 @@
 /** @file Defines iterator types used by BattleParsers. */
-import { Event } from "../../../parser";
+import {Event} from "../../../parser";
 
 /**
  * Holds two corresponding iterators, one for sending BattleEvents and the
  * other for receiving them.
  */
-export class IteratorPair
-{
+export class IteratorPair {
     /** Event iterator for receiving events in a BattleParserContext. */
     public readonly eventIt: EventIterator;
     /** Battle iterator for sending events to the BattleParser. */
@@ -20,8 +19,8 @@ export class IteratorPair
     private nextEventRej: ((reason?: unknown) => void) | null = null;
 
     private battlePromise: Promise<boolean> | null = null;
-    private battleRes:
-        ((done: boolean | PromiseLike<boolean>) => void) | null = null;
+    private battleRes: ((done: boolean | PromiseLike<boolean>) => void) | null =
+        null;
     private battleRej: ((reason?: unknown) => void) | null = null;
 
     /**
@@ -32,60 +31,60 @@ export class IteratorPair
      * Note that `#next()` or `#peek()` cannot be called on a single iterator
      * more than once if the first call hadn't resolved yet.
      */
-    public constructor()
-    {
-        this.eventIt =
-        {
+    public constructor() {
+        this.eventIt = {
             next: async () => await this.eventNext(),
             peek: async () => await this.eventPeek(),
             return: async () => await this.eventReturn(),
-            throw: async e => await this.eventThrow(e)
+            throw: async e => await this.eventThrow(e),
         };
-        this.battleIt =
-        {
+        this.battleIt = {
             next: async (...args) => await this.battleNext(...args),
             return: async () => await this.battleReturn(),
-            throw: async e => await this.battleThrow(e)
+            throw: async e => await this.battleThrow(e),
         };
     }
 
     /** Implementation for {@link EventIterator.next}. */
-    private async eventNext(): Promise<IteratorResult<Event, void>>
-    {
+    private async eventNext(): Promise<IteratorResult<Event, void>> {
         // Indicate that we're receiving the next event
         if (this.battleRes) this.battleRes(false /*done*/);
         else this.battlePromise = Promise.resolve(false);
 
         // Wait for a response or consume the cached response
         this.nextEventPromise ??= new Promise(
-            (res, rej) => [this.nextEventRes, this.nextEventRej] = [res, rej]);
+            (res, rej) => ([this.nextEventRes, this.nextEventRej] = [res, rej]),
+        );
         if (this.hasError) this.nextEventRej!(this.error);
-        const event = await this.nextEventPromise
-            .finally(() =>
-                this.nextEventPromise = this.nextEventRes = this.nextEventRej =
-                    null);
+        const event = await this.nextEventPromise.finally(
+            () =>
+                (this.nextEventPromise =
+                    this.nextEventRes =
+                    this.nextEventRej =
+                        null),
+        );
 
         if (!event) return {value: undefined, done: true};
         return {value: event};
     }
 
     /** Implementation for {@link EventIterator.peek}. */
-    private async eventPeek(): Promise<IteratorResult<Event, void>>
-    {
+    private async eventPeek(): Promise<IteratorResult<Event, void>> {
         // Wait for a response and cache it, or get the cached response.
         this.nextEventPromise ??= new Promise(
-            (res, rej) => [this.nextEventRes, this.nextEventRej] = [res, rej]);
+            (res, rej) => ([this.nextEventRes, this.nextEventRej] = [res, rej]),
+        );
         if (this.hasError) this.nextEventRej!(this.error);
-        const event = await this.nextEventPromise
-            .finally(() => this.nextEventRes = this.nextEventRej = null);
+        const event = await this.nextEventPromise.finally(
+            () => (this.nextEventRes = this.nextEventRej = null),
+        );
 
         if (!event) return {value: undefined, done: true};
         return {value: event};
     }
 
     /** Implementation for {@link EventIterator.return}. */
-    private async eventReturn(): Promise<IteratorReturnResult<void>>
-    {
+    private async eventReturn(): Promise<IteratorReturnResult<void>> {
         this.disableEvent();
 
         // Resolve any pending iterator calls so they don't hang.
@@ -96,8 +95,7 @@ export class IteratorPair
     }
 
     /** Implementation for {@link EventIterator.throw}. */
-    private async eventThrow(e?: unknown): Promise<IteratorReturnResult<void>>
-    {
+    private async eventThrow(e?: unknown): Promise<IteratorReturnResult<void>> {
         this.disableEvent();
 
         this.error = e;
@@ -111,39 +109,41 @@ export class IteratorPair
     }
 
     /** Disables the EventIterator and activates cleanup. */
-    private disableEvent()
-    {
-        this.eventIt.next = this.eventIt.peek = this.eventIt.return =
-                this.eventIt.throw =
-            async () => await Promise.resolve({value: undefined, done: true});
+    private disableEvent() {
+        this.eventIt.next =
+            this.eventIt.peek =
+            this.eventIt.return =
+            this.eventIt.throw =
+                async () =>
+                    await Promise.resolve({value: undefined, done: true});
     }
 
     /** Implementation for {@link BattleIterator.next}. */
-    private async battleNext(event?: Event): Promise<IteratorResult<void, void>>
-    {
+    private async battleNext(
+        event?: Event,
+    ): Promise<IteratorResult<void, void>> {
         // Send the next event.
         if (this.nextEventRes) this.nextEventRes(event);
         else this.nextEventPromise = Promise.resolve(event);
 
         // Wait for a response or consume the cached response.
         this.battlePromise ??= new Promise(
-                (res, rej) => [this.battleRes, this.battleRej] = [res, rej]);
+            (res, rej) => ([this.battleRes, this.battleRej] = [res, rej]),
+        );
         if (this.error) this.battleRej!(this.error);
-        const done = await this.battlePromise
-            .finally(
-                () => this.battlePromise = this.battleRes = this.battleRej =
-                    null);
+        const done = await this.battlePromise.finally(
+            () => (this.battlePromise = this.battleRes = this.battleRej = null),
+        );
 
         return {value: undefined, done};
     }
 
     /** Implementation for {@link BattleIterator.return}. */
-    private async battleReturn(): Promise<IteratorReturnResult<void>>
-    {
+    private async battleReturn(): Promise<IteratorReturnResult<void>> {
         this.disableBattle();
 
         // Resolve any pending battleIt.next() calls.
-        this.battleRes?.(/*Done*/ true);
+        this.battleRes?.(true /*done*/);
 
         // Make sure the corresponding iterator doesn't hang.
         await this.eventIt.return?.();
@@ -152,8 +152,9 @@ export class IteratorPair
     }
 
     /** Implementation for {@link BattleIterator.throw}. */
-    private async battleThrow(e?: unknown): Promise<IteratorReturnResult<void>>
-    {
+    private async battleThrow(
+        e?: unknown,
+    ): Promise<IteratorReturnResult<void>> {
         this.disableBattle();
         this.error = e;
         this.hasError = true;
@@ -168,10 +169,12 @@ export class IteratorPair
     }
 
     /** Disables the BattleIterator and activates cleanup. */
-    private disableBattle()
-    {
-        this.battleIt.next = this.battleIt.return = this.battleIt.throw =
-            async () => await Promise.resolve({value: undefined, done: true});
+    private disableBattle() {
+        this.battleIt.next =
+            this.battleIt.return =
+            this.battleIt.throw =
+                async () =>
+                    await Promise.resolve({value: undefined, done: true});
     }
 }
 
@@ -182,8 +185,8 @@ export class IteratorPair
  * of the corresponding {@link BattleIterator} and resolve/reject any pending
  * {@link next}/{@link peek} promises.
  */
-export interface EventIterator extends PeekableAsyncIterator<Event, void, void>
-{
+export interface EventIterator
+    extends PeekableAsyncIterator<Event, void, void> {
     /**
      * Peeks at the next event.
      *
@@ -206,8 +209,7 @@ export type BattleIterator = AsyncIterator<void, void, Event>;
 
 /** AsyncIterator with peek operation. */
 interface PeekableAsyncIterator<T, TReturn = unknown, TNext = unknown>
-    extends AsyncIterator<T, TReturn, TNext>
-{
-    /** Gets the next T/TReturn without consuming it. */
+    extends AsyncIterator<T, TReturn, TNext> {
+    /** Gets the next `T`/`TReturn` without consuming it. */
     peek: () => Promise<IteratorResult<T, TReturn>>;
 }

@@ -1,1 +1,1 @@
-export { BattleState, ReadonlyBattleState } from "./BattleState";
+export {BattleState, ReadonlyBattleState} from "./BattleState";

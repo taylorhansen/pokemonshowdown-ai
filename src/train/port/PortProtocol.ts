@@ -5,14 +5,12 @@
  *
  * @template T String union of request types.
  */
-export type PortProtocol<T extends string> =
-{
-    [U in T]: {message: PortMessageBase<U>, result: PortResultBase<U>}
+export type PortProtocol<T extends string> = {
+    [U in T]: {message: PortMessageBase<U>; result: PortResultBase<U>};
 };
 
 /** Base interface for {@link PortProtocol} messages and results. */
-export interface PortRequestBase<T extends string>
-{
+export interface PortRequestBase<T extends string> {
     /** Request type. */
     type: T;
     /** Request id. */
@@ -23,8 +21,7 @@ export interface PortRequestBase<T extends string>
 export type PortMessageBase<T extends string> = PortRequestBase<T>;
 
 /** Base interface for port responses. */
-export interface PortResultBase<T extends string> extends PortRequestBase<T>
-{
+export interface PortResultBase<T extends string> extends PortRequestBase<T> {
     /**
      * Whether this is the last reply to the message that was sent using the
      * mentioned rid.
@@ -36,8 +33,7 @@ export interface PortResultBase<T extends string> extends PortRequestBase<T>
 }
 
 /** Contains an error encountered in a request. */
-export interface PortResultError extends PortResultBase<"error">
-{
+export interface PortResultError extends PortResultBase<"error"> {
     /** @override */
     done: true;
     /** Exception that was thrown by the port. */
@@ -45,8 +41,7 @@ export interface PortResultError extends PortResultBase<"error">
 }
 
 /** Contains an unprocessed error encountered in a request. */
-export interface RawPortResultError extends Omit<PortResultError, "err">
-{
+export interface RawPortResultError extends Omit<PortResultError, "err"> {
     /** Contains the serialized Error object. */
     err: Buffer;
 }

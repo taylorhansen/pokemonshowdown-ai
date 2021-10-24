@@ -22,22 +22,25 @@ export function pluralTurns(turns: number, limit?: number | null): string;
  * @param turns Number of turns.
  * @param limit Max number of turns. Omit or pass `null` to not have a fraction.
  */
-export function pluralTurns(name: string, turns: number, limit?: number | null):
-    string;
-export function pluralTurns(name: string | number, turns?: number | null,
-    limit?: number | null): string
-{
+export function pluralTurns(
+    name: string,
+    turns: number,
+    limit?: number | null,
+): string;
+export function pluralTurns(
+    name: string | number,
+    turns?: number | null,
+    limit?: number | null,
+): string {
     let prefix = "";
     if (typeof name === "string") prefix = `${name} for `;
-    else
-    {
+    else {
         // Name is omitted, shift args to match first overload.
         limit = turns;
         turns = name;
     }
 
-    if (limit)
-    {
+    if (limit) {
         // Add numerator.
         prefix += `${turns}/`;
         // "turns" will bind to the denominator now.
@@ -51,7 +54,6 @@ export function pluralTurns(name: string | number, turns?: number | null,
  * Converts a number to a string where positive numbers are preceded by a `+`
  * symbol.
  */
-export function plus(n: number): string
-{
+export function plus(n: number): string {
     return (n > 0 ? "+" : "") + `${n}`;
 }

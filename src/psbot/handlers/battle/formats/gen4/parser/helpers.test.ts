@@ -1,17 +1,25 @@
 /** @file Helpers for unit testing BattleParsers. */
-import { Protocol } from "@pkmn/protocol";
-import { FieldCondition, ID, SideCondition, SideID, TypeName, Weather } from
-    "@pkmn/types";
-import { toIdName } from "../../../../../helpers";
-import { BattleAgent } from "../../../agent";
-import { BattleParser, BattleParserContext } from "../../../parser";
-import { startBattleParser, StartBattleParserArgs } from
-    "../../../parser/helpers";
+import {Protocol} from "@pkmn/protocol";
+import {
+    FieldCondition,
+    ID,
+    SideCondition,
+    SideID,
+    TypeName,
+    Weather,
+} from "@pkmn/types";
+import {toIdName} from "../../../../../helpers";
+import {BattleAgent} from "../../../agent";
+import {BattleParser, BattleParserContext} from "../../../parser";
+import {
+    startBattleParser,
+    StartBattleParserArgs,
+} from "../../../parser/helpers";
 import * as unordered from "../../../parser/unordered";
-import { FormatType } from "../../formats";
+import {FormatType} from "../../formats";
 import * as dex from "../dex";
-import { smeargle } from "../state/switchOptions.test";
-import { ParserContext } from "./Context.test";
+import {smeargle} from "../state/switchOptions.test";
+import {ParserContext} from "./Context.test";
 
 /**
  * Starts a {@link BattleParser}.
@@ -22,17 +30,15 @@ import { ParserContext } from "./Context.test";
  * @returns An appropriate {@link ParserContext} for the constructed
  * BattleParser.
  */
-export function initParser
-<
+export function initParser<
     T extends FormatType = FormatType,
     TArgs extends unknown[] = unknown[],
-    TResult = unknown
+    TResult = unknown,
 >(
     startArgs: StartBattleParserArgs<T>,
     parser: BattleParser<T, BattleAgent<T>, TArgs, TResult>,
-    ...args: TArgs):
-    ParserContext<TResult>
-{
+    ...args: TArgs
+): ParserContext<TResult> {
     const {iter, finish} = startBattleParser(startArgs, parser, ...args);
     return {battleIt: iter, finish};
 }
@@ -52,15 +58,14 @@ export function initParser
  * @returns A function that takes the rest of the BattleParser's custom `TArgs`
  * before calling `initParser()`.
  */
-export function setupBattleParser
-<
+export function setupBattleParser<
     T extends FormatType = FormatType,
-    TArgs extends unknown[] = unknown[], TResult = unknown
+    TArgs extends unknown[] = unknown[],
+    TResult = unknown,
 >(
     startArgs: StartBattleParserArgs<T>,
-    parser: BattleParser<T, BattleAgent<T>, TArgs, TResult>):
-    (...args: TArgs) => ParserContext<TResult>
-{
+    parser: BattleParser<T, BattleAgent<T>, TArgs, TResult>,
+): (...args: TArgs) => ParserContext<TResult> {
     return (...args: TArgs): ParserContext<TResult> =>
         initParser(startArgs, parser, ...args);
 }
@@ -79,22 +84,23 @@ export function setupBattleParser
  * @returns A function that initializes a {@link BattleParser} to evaluate the
  * UnorderedDeadline, returning the parser's ParserContext.
  */
-export function setupUnorderedDeadline
-<
+export function setupUnorderedDeadline<
     T extends FormatType = FormatType,
     TArgs extends unknown[] = unknown[],
-    TResult = unknown
+    TResult = unknown,
 >(
     startArgs: StartBattleParserArgs<T>,
-    parserCtor:
-        (ctx: BattleParserContext<T>, ...args: TArgs) =>
-            unordered.UnorderedDeadline<T, BattleAgent<T>, TResult>):
-    (...args: TArgs) => ParserContext<[] | [TResult]>
-{
-    return setupBattleParser(startArgs,
-        // Create a BattleParser that evaluates the UnorderedDeadline.a
+    parserCtor: (
+        ctx: BattleParserContext<T>,
+        ...args: TArgs
+    ) => unordered.UnorderedDeadline<T, BattleAgent<T>, TResult>,
+): (...args: TArgs) => ParserContext<[] | [TResult]> {
+    return setupBattleParser(
+        startArgs,
+        // Create a BattleParser that evaluates the UnorderedDeadline.
         async (ctx, ...args) =>
-            await unordered.parse(ctx, parserCtor(ctx, ...args)));
+            await unordered.parse(ctx, parserCtor(ctx, ...args)),
+    );
 }
 
 //#region Protocol helpers.
@@ -102,16 +108,18 @@ export function setupUnorderedDeadline
 // Match with protocol type names.
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export function toIdent(side: SideID, opt = smeargle,
-    pos: Protocol.PositionLetter = "a"): Protocol.PokemonIdent
-{
+export function toIdent(
+    side: SideID,
+    opt = smeargle,
+    pos: Protocol.PositionLetter = "a",
+): Protocol.PokemonIdent {
     const species = dex.pokemon[opt.species];
-    return `${side}${pos}: ${species?.display ?? opt.species}` as
-        Protocol.PokemonIdent;
+    return `${side}${pos}: ${
+        species?.display ?? opt.species
+    }` as Protocol.PokemonIdent;
 }
 
-export function toDetails(opt = smeargle): Protocol.PokemonDetails
-{
+export function toDetails(opt = smeargle): Protocol.PokemonDetails {
     const words = [dex.pokemon[opt.species]?.display ?? opt.species];
     if (opt.level !== 100) words.push(`L${opt.level}`);
     if (opt.gender !== "N") words.push(opt.gender);
@@ -119,135 +127,135 @@ export function toDetails(opt = smeargle): Protocol.PokemonDetails
 }
 
 export function toHPStatus(faint: "faint"): Protocol.PokemonHPStatus;
-export function toHPStatus(hp: number, maxhp?: number, status?: string):
-    Protocol.PokemonHPStatus;
-export function toHPStatus(hp: number | "faint", maxhp = 100,
-    status?: string): Protocol.PokemonHPStatus
-{
+export function toHPStatus(
+    hp: number,
+    maxhp?: number,
+    status?: string,
+): Protocol.PokemonHPStatus;
+export function toHPStatus(
+    hp: number | "faint",
+    maxhp = 100,
+    status?: string,
+): Protocol.PokemonHPStatus {
     if (hp === "faint") return "0 fnt" as Protocol.PokemonHPStatus;
     let s = `${hp}/${maxhp}`;
-    if (status) s += " " + status
+    if (status) s += " " + status;
     return s as Protocol.PokemonHPStatus;
 }
 
 export function toEffectName(name: string): Protocol.EffectName;
-export function toEffectName(id: string, type: "ability" | "item" | "move"):
-    Protocol.EffectName;
-export function toEffectName(id: string, type?: "ability" | "item" | "move"):
-    Protocol.EffectName
-{
+export function toEffectName(
+    id: string,
+    type: "ability" | "item" | "move",
+): Protocol.EffectName;
+export function toEffectName(
+    id: string,
+    type?: "ability" | "item" | "move",
+): Protocol.EffectName {
     let name: string;
-    switch (type)
-    {
-        case "ability": name = toAbilityName(id); break;
-        case "item": name = toItemName(id); break;
-        case "move": name = toMoveName(id); break;
-        default: return id as Protocol.EffectName;
+    switch (type) {
+        case "ability":
+            name = toAbilityName(id);
+            break;
+        case "item":
+            name = toItemName(id);
+            break;
+        case "move":
+            name = toMoveName(id);
+            break;
+        default:
+            return id as Protocol.EffectName;
     }
     return `${type}: ${name}` as Protocol.EffectName;
 }
 
-export function toAbilityName(id: string): Protocol.AbilityName
-{
+export function toAbilityName(id: string): Protocol.AbilityName {
     return (dex.abilities[id]?.display ?? id) as Protocol.AbilityName;
 }
 
-export function toItemName(id: string): Protocol.ItemName
-{
+export function toItemName(id: string): Protocol.ItemName {
     return (dex.items[id]?.display ?? id) as Protocol.ItemName;
 }
 
-export function toMoveName(id: string): Protocol.MoveName
-{
+export function toMoveName(id: string): Protocol.MoveName {
     return (dex.moves[id]?.display ?? id) as Protocol.MoveName;
 }
 
-export function toSpeciesName(id: string): Protocol.SpeciesName
-{
+export function toSpeciesName(id: string): Protocol.SpeciesName {
     return (dex.pokemon[id]?.display ?? id) as Protocol.SpeciesName;
 }
 
-export function toNum(num: number): Protocol.Num
-{
+export function toNum(num: number): Protocol.Num {
     return num.toString() as Protocol.Num;
 }
 
-export function toTypes(...types: dex.Type[]): Protocol.Types
-{
+export function toTypes(...types: dex.Type[]): Protocol.Types {
     return types.map(toTypeName).join("/") as Protocol.Types;
 }
 
-export function toTypeName(type: dex.Type): TypeName
-{
+export function toTypeName(type: dex.Type): TypeName {
     return (type[0].toUpperCase() + type.substr(1)) as Capitalize<dex.Type>;
 }
 
-export function toMessage(msg: string): Protocol.Message
-{
+export function toMessage(msg: string): Protocol.Message {
     return msg as Protocol.Message;
 }
 
-export function toWeather(weather: dex.WeatherType): Weather
-{
+export function toWeather(weather: dex.WeatherType): Weather {
     return weather as Weather;
 }
 
 export function toFieldCondition(
-    effect: Exclude<dex.FieldEffectType, dex.WeatherType>): FieldCondition
-{
+    effect: Exclude<dex.FieldEffectType, dex.WeatherType>,
+): FieldCondition {
     return toMoveName(effect) as unknown as FieldCondition;
 }
 
 export function toSideCondition(
-    effect: dex.TeamEffectType | dex.ImplicitTeamEffectType): SideCondition
-{
+    effect: dex.TeamEffectType | dex.ImplicitTeamEffectType,
+): SideCondition {
     return toMoveName(effect) as unknown as SideCondition;
 }
 
-export function toBoostIDs(...boosts: dex.BoostName[]): Protocol.BoostIDs
-{
+export function toBoostIDs(...boosts: dex.BoostName[]): Protocol.BoostIDs {
     return boosts.join(", ") as Protocol.BoostIDs;
 }
 
-export function toSide(side: SideID, username: string): Protocol.Side
-{
+export function toSide(side: SideID, username: string): Protocol.Side {
     return `${side}: ${username}` as Protocol.Side;
 }
 
-export function toRequestJSON(obj: Protocol.Request): Protocol.RequestJSON
-{
+export function toRequestJSON(obj: Protocol.Request): Protocol.RequestJSON {
     return JSON.stringify(obj) as Protocol.RequestJSON;
 }
 
-export function toUsername(username: string): Protocol.Username
-{
+export function toUsername(username: string): Protocol.Username {
     return username as Protocol.Username;
 }
 
-export function toID(name: string): ID
-{
+export function toID(name: string): ID {
     return toIdName(name) as ID;
 }
 
-export function toSearchID(side: SideID, opt = smeargle,
-    pos: Protocol.PositionLetter = "a"): Protocol.PokemonSearchID
-{
-    return `${toIdent(side, opt, pos)}|${toDetails(opt)}` as
-        Protocol.PokemonSearchID;
+export function toSearchID(
+    side: SideID,
+    opt = smeargle,
+    pos: Protocol.PositionLetter = "a",
+): Protocol.PokemonSearchID {
+    return `${toIdent(side, opt, pos)}|${toDetails(
+        opt,
+    )}` as Protocol.PokemonSearchID;
 }
 
-export function toFormatName(name: string): Protocol.FormatName
-{
+export function toFormatName(name: string): Protocol.FormatName {
     return name as Protocol.FormatName;
 }
 
-export function toRule(name: string): Protocol.Rule
-{
+export function toRule(name: string): Protocol.Rule {
     return name as Protocol.Rule;
 }
 
-export function toNickname(name: string): Protocol.Nickname
-{
+export function toNickname(name: string): Protocol.Nickname {
     return name as Protocol.Nickname;
 }
 

@@ -1,15 +1,14 @@
 /** @file Defines the protocol typings for DecoderWorkers. */
-import { AugmentedExperience } from "../../../../play/experience";
-import { PortMessageBase, PortResultBase } from "../../../../port/PortProtocol";
-import { WorkerProtocol } from "../../../../port/WorkerProtocol";
+import {AugmentedExperience} from "../../../../play/experience";
+import {PortMessageBase, PortResultBase} from "../../../../port/PortProtocol";
+import {WorkerProtocol} from "../../../../port/WorkerProtocol";
 
 /** Typings for the `workerData` object given to the DecoderWorker. */
 export type DecoderWorkerData = undefined;
 
 /** DecoderWorker request protocol typings. */
-export interface DecoderProtocol extends WorkerProtocol<"decode">
-{
-    decode: {message: DecodeMessage, result: DecodeResult};
+export interface DecoderProtocol extends WorkerProtocol<"decode"> {
+    decode: {message: DecodeMessage; result: DecodeResult};
 }
 
 /** Types of decoder requests. */
@@ -22,8 +21,7 @@ export type DecoderMessage = DecoderProtocol[DecoderRequestType]["message"];
 type DecoderMessageBase<T extends DecoderRequestType> = PortMessageBase<T>;
 
 /** Asks for the next AugmentedExperience from the tfrecord file. */
-export interface DecodeMessage extends DecoderMessageBase<"decode">
-{
+export interface DecodeMessage extends DecoderMessageBase<"decode"> {
     /** Path to the file to decode. */
     readonly path: string;
 }
@@ -35,8 +33,7 @@ export type DecoderResult = DecoderProtocol[DecoderRequestType]["result"];
 type DecoderResultBase<T extends DecoderRequestType> = PortResultBase<T>;
 
 /** Result of the decode op. */
-export interface DecodeResult extends DecoderResultBase<"decode">
-{
+export interface DecodeResult extends DecoderResultBase<"decode"> {
     /** Decoded experience object, or null if EOF. */
     aexp: AugmentedExperience | null;
     /** @override */

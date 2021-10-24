@@ -16,6 +16,8 @@
     "psbot:gpu": "npm run psbot -- --gpu",
     "lint": "eslint .",
     "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "pretest": "npm run lint",
     "pretest:nocov": "npm run pretest",
     "test": "npm run test:unit",

@@ -2,16 +2,15 @@
  * @file Generates `dex.ts` through stdout. This should be called from
  * `build-dex.sh`.
  */
-import { Generations } from "@pkmn/data";
-import { Dex } from "@pkmn/dex";
-import { SpeciesAbility } from "@pkmn/dex-types";
+import {Generations} from "@pkmn/data";
+import {Dex} from "@pkmn/dex";
+import {SpeciesAbility} from "@pkmn/dex-types";
 import * as dex from "../src/psbot/handlers/battle/formats/gen4/dex/dex-util";
-import { toIdName } from "../src/psbot/helpers";
+import {toIdName} from "../src/psbot/helpers";
 
 // TODO: Split into multiple scripts with separate dex output files?
 
-void (async function buildDex(): Promise<void>
-{
+void (async function buildDex(): Promise<void> {
     const gen = new Generations(Dex).get(4);
 
     /** Helper type for converting readonly containers to writable versions. */
@@ -46,55 +45,110 @@ void (async function buildDex(): Promise<void>
     // Adapted from pokemon-showdown/data.
 
     /** Moves that are blocked by Damp-like abilities. */
-    const explosive: {readonly [move: string]: boolean} =
-        {explosion: true, selfdestruct: true};
+    const explosive: {readonly [move: string]: boolean} = {
+        explosion: true,
+        selfdestruct: true,
+    };
 
     /** Moves that intercept switch-ins. */
     const interceptSwitch: {readonly [move: string]: boolean} = {pursuit: true};
 
     /** Moves that can't be copied by Mirror Move. */
-    const noMirror: {readonly [move: string]: boolean} =
-    {
-        acupressure: true, aromatherapy: true, assist: true, chatter: true,
-        copycat: true, counter: true, curse: true, doomdesire: true,
-        feint: true, focuspunch: true, futuresight: true, gravity: true,
-        hail: true, haze: true, healbell: true, helpinghand: true,
-        lightscreen: true, luckychant: true, magiccoat: true, mefirst: true,
-        metronome: true, mimic: true, mirrorcoat: true, mirrormove: true,
-        mist: true, mudsport: true, naturepower: true, perishsong: true,
-        psychup: true, raindance: true, reflect: true, roleplay: true,
-        safeguard: true, sandstorm: true, sketch: true, sleeptalk: true,
-        snatch: true, spikes: true, spitup: true, stealthrock: true,
-        struggle: true, sunnyday: true, tailwind: true, toxicspikes: true,
-        transform: true, watersport: true
+    const noMirror: {readonly [move: string]: boolean} = {
+        acupressure: true,
+        aromatherapy: true,
+        assist: true,
+        chatter: true,
+        copycat: true,
+        counter: true,
+        curse: true,
+        doomdesire: true,
+        feint: true,
+        focuspunch: true,
+        futuresight: true,
+        gravity: true,
+        hail: true,
+        haze: true,
+        healbell: true,
+        helpinghand: true,
+        lightscreen: true,
+        luckychant: true,
+        magiccoat: true,
+        mefirst: true,
+        metronome: true,
+        mimic: true,
+        mirrorcoat: true,
+        mirrormove: true,
+        mist: true,
+        mudsport: true,
+        naturepower: true,
+        perishsong: true,
+        psychup: true,
+        raindance: true,
+        reflect: true,
+        roleplay: true,
+        safeguard: true,
+        sandstorm: true,
+        sketch: true,
+        sleeptalk: true,
+        snatch: true,
+        spikes: true,
+        spitup: true,
+        stealthrock: true,
+        struggle: true,
+        sunnyday: true,
+        tailwind: true,
+        toxicspikes: true,
+        transform: true,
+        watersport: true,
     };
     /** Moves that can't be copied by Copycat. */
-    const noCopycat: {readonly [move: string]: boolean} =
-    {
-        assist: true, chatter: true, copycat: true, counter: true, covet: true,
-        destinybond: true, detect: true, endure: true, feint: true,
-        focuspunch: true, followme: true, helpinghand: true, mefirst: true,
-        metronome: true, mimic: true, mirrorcoat: true, mirrormove: true,
-        protect: true, sketch: true, sleeptalk: true, snatch: true,
-        struggle: true, switcheroo: true, thief: true, trick: true
+    const noCopycat: {readonly [move: string]: boolean} = {
+        assist: true,
+        chatter: true,
+        copycat: true,
+        counter: true,
+        covet: true,
+        destinybond: true,
+        detect: true,
+        endure: true,
+        feint: true,
+        focuspunch: true,
+        followme: true,
+        helpinghand: true,
+        mefirst: true,
+        metronome: true,
+        mimic: true,
+        mirrorcoat: true,
+        mirrormove: true,
+        protect: true,
+        sketch: true,
+        sleeptalk: true,
+        snatch: true,
+        struggle: true,
+        switcheroo: true,
+        thief: true,
+        trick: true,
     };
 
     /** Maps move name to whether it transforms the user into the target. */
     const transformMap: {readonly [move: string]: boolean} = {transform: true};
 
     /** Maps some move names to CallTypes. */
-    const callTypeMap: {readonly [move: string]: dex.CallType} =
-    {
-        assist: true, copycat: "copycat", mefirst: "target", metronome: true,
-        mirrormove: "mirror", naturepower: true, sleeptalk: "self"
+    const callTypeMap: {readonly [move: string]: dex.CallType} = {
+        assist: true,
+        copycat: "copycat",
+        mefirst: "target",
+        metronome: true,
+        mirrormove: "mirror",
+        naturepower: true,
+        sleeptalk: "self",
     };
 
     /** Moves that have special damage effects. */
-    const customDamageMap:
-    {
+    const customDamageMap: {
         readonly [move: string]: NonNullable<dex.MoveData["effects"]>["damage"];
-    } =
-    {
+    } = {
         bellydrum: {type: "percent", target: "self", percent: -50},
         curse: {type: "percent", target: "self", percent: -50, ghost: true},
         substitute: {type: "percent", target: "self", percent: -25},
@@ -104,69 +158,96 @@ void (async function buildDex(): Promise<void>
         morningsun: {type: "percent", target: "self", percent: 50},
         synthesis: {type: "percent", target: "self", percent: 50},
 
-        painsplit: {type: "split"}
+        painsplit: {type: "split"},
     };
 
     /** Maps some move names to swap-boost effects. */
-    const swapBoostMap:
-        {readonly [move: string]: Partial<dex.BoostTable<true>>} =
-    {
-        // Swapboost moves.
+    const swapBoostMap: {
+        readonly [move: string]: Partial<dex.BoostTable<true>>;
+    } = {
         guardswap: {def: true, spd: true},
-        heartswap:
-        {
-            atk: true, def: true, spa: true, spd: true, spe: true,
-            accuracy: true, evasion: true
+        heartswap: {
+            atk: true,
+            def: true,
+            spa: true,
+            spd: true,
+            spe: true,
+            accuracy: true,
+            evasion: true,
         },
-        powerswap: {atk: true, spa: true}
+        powerswap: {atk: true, spa: true},
     };
 
     /** Maps some move names to CountableStatusTypes. */
-    const countableStatusTypeMap:
-        {readonly [move: string]: dex.CountableStatusType} =
-        {perishsong: "perish", stockpile: "stockpile"};
+    const countableStatusTypeMap: {
+        readonly [move: string]: dex.CountableStatusType;
+    } = {perishsong: "perish", stockpile: "stockpile"};
 
     /** Maps some move names to FieldTypes. */
-    const fieldTypeMap:
-    {
+    const fieldTypeMap: {
         readonly [move: string]: NonNullable<dex.MoveData["effects"]>["field"];
-    } =
-    {
+    } = {
         // Weathers.
-        sunnyday: {effect: "SunnyDay"}, raindance: {effect: "RainDance"},
-        sandstorm: {effect: "Sandstorm"}, hail: {effect: "Hail"},
+        sunnyday: {effect: "SunnyDay"},
+        raindance: {effect: "RainDance"},
+        sandstorm: {effect: "Sandstorm"},
+        hail: {effect: "Hail"},
         // Pseudo-weathers.
         gravity: {effect: "gravity"},
-        trickroom: {effect: "trickroom", toggle: true}
+        trickroom: {effect: "trickroom", toggle: true},
     };
 
     /** Maps some move names or effects to StatusTypes. */
-    const statusTypeMap:
-        {readonly [move: string]: readonly (dex.StatusType | "splash")[]} =
-    {
+    const statusTypeMap: {
+        readonly [move: string]: readonly (dex.StatusType | "splash")[];
+    } = {
         // TODO: followme, helpinghand, partiallytrapped, telekinesis (gen5).
         // Normal statuses.
-        aquaring: ["aquaring"], attract: ["attract"], charge: ["charge"],
-        embargo: ["embargo"], encore: ["encore"], focusenergy: ["focusenergy"],
-        foresight: ["foresight"], healblock: ["healblock"],
-        imprison: ["imprison"], ingrain: ["ingrain"], leechseed: ["leechseed"],
-        magnetrise: ["magnetrise"], miracleeye: ["miracleeye"],
-        mudsport: ["mudsport"], nightmare: ["nightmare"],
-        powertrick: ["powertrick"], substitute: ["substitute"],
-        gastroacid: ["suppressAbility"], taunt: ["taunt"], torment: ["torment"],
-        watersport: ["watersport"], yawn: ["yawn"],
+        aquaring: ["aquaring"],
+        attract: ["attract"],
+        charge: ["charge"],
+        embargo: ["embargo"],
+        encore: ["encore"],
+        focusenergy: ["focusenergy"],
+        foresight: ["foresight"],
+        healblock: ["healblock"],
+        imprison: ["imprison"],
+        ingrain: ["ingrain"],
+        leechseed: ["leechseed"],
+        magnetrise: ["magnetrise"],
+        miracleeye: ["miracleeye"],
+        mudsport: ["mudsport"],
+        nightmare: ["nightmare"],
+        powertrick: ["powertrick"],
+        substitute: ["substitute"],
+        gastroacid: ["suppressAbility"],
+        taunt: ["taunt"],
+        torment: ["torment"],
+        watersport: ["watersport"],
+        yawn: ["yawn"],
         // Updatable.
-        confusion: ["confusion"], bide: ["bide"], uproar: ["uproar"],
+        confusion: ["confusion"],
+        bide: ["bide"],
+        uproar: ["uproar"],
         // Single-move.
-        destinybond: ["destinybond"], grudge: ["grudge"], rage: ["rage"],
+        destinybond: ["destinybond"],
+        grudge: ["grudge"],
+        rage: ["rage"],
         // Single-turn.
-        endure: ["endure"], magiccoat: ["magiccoat"], protect: ["protect"],
-        roost: ["roost"], snatch: ["snatch"],
+        endure: ["endure"],
+        magiccoat: ["magiccoat"],
+        protect: ["protect"],
+        roost: ["roost"],
+        snatch: ["snatch"],
         // Major status.
-        brn: ["brn"], frz: ["frz"], par: ["par"], psn: ["psn"], slp: ["slp"],
+        brn: ["brn"],
+        frz: ["frz"],
+        par: ["par"],
+        psn: ["psn"],
+        slp: ["slp"],
         tox: ["tox"],
         // Nothing.
-        splash: ["splash"]
+        splash: ["splash"],
     };
 
     /**
@@ -175,62 +256,66 @@ void (async function buildDex(): Promise<void>
      * user (e.g. rage), or doesn't have the same name as the status it inflicts
      * (e.g. confusion).
      */
-    const explicitMoveEffect: {readonly [move: string]: boolean} =
-        {confusion: true, rage: true, uproar: true};
+    const explicitMoveEffect: {readonly [move: string]: boolean} = {
+        confusion: true,
+        rage: true,
+        uproar: true,
+    };
 
     /** Moves that have special status effects. */
-    const customStatusMap:
-    {
+    const customStatusMap: {
         readonly [move: string]: NonNullable<dex.MoveData["effects"]>["status"];
-    } =
-    {
+    } = {
         curse: {ghost: true, hit: ["curse"]},
-        triattack: {chance: 20, hit: ["brn", "frz", "par"]}
+        triattack: {chance: 20, hit: ["brn", "frz", "par"]},
     };
 
     /** Maps some move names to ImplicitStatusTypes. */
-    const implicitStatusTypeMap:
-        {readonly [move: string]: dex.ImplicitStatusType} =
-    {
-        defensecurl: "defensecurl", lockedmove: "lockedMove",
-        minimize: "minimize", mustrecharge: "mustRecharge"
+    const implicitStatusTypeMap: {
+        readonly [move: string]: dex.ImplicitStatusType;
+    } = {
+        defensecurl: "defensecurl",
+        lockedmove: "lockedMove",
+        minimize: "minimize",
+        mustrecharge: "mustRecharge",
     };
 
     /** Maps some move names to set-boost effects. */
-    const setBoostMap: {readonly [move: string]: Partial<dex.BoostTable>} =
-    {
-        // Setboost moves.
-        bellydrum: {atk: 6}
+    const setBoostMap: {readonly [move: string]: Partial<dex.BoostTable>} = {
+        bellydrum: {atk: 6},
     };
 
     /** Moves that have special boost effects. */
-    const customBoostMap:
-    {
+    const customBoostMap: {
         readonly [move: string]: NonNullable<dex.MoveData["effects"]>["boost"];
-    } =
-    {
+    } = {
         curse: {noGhost: true, self: {atk: 1, def: 1, spe: -1}},
-        stockpile: {self: {def: 1, spd: 1}}
+        stockpile: {self: {def: 1, spd: 1}},
     };
 
-    /** Maps some move names to TeamEffects. */
-    const teamStatusTypeMap: {readonly [move: string]: dex.TeamEffectType} =
-    {
-        lightscreen: "lightscreen", luckychant: "luckychant", mist: "mist",
-        reflect: "reflect", safeguard: "safeguard", spikes: "spikes",
-        stealthrock: "stealthrock", tailwind: "tailwind",
-        toxicspikes: "toxicspikes"
-        // TODO: auroraveil (gen6), stickyweb (gen6)
+    /** Maps some move names to TeamEffectTypes. */
+    const teamStatusTypeMap: {readonly [move: string]: dex.TeamEffectType} = {
+        lightscreen: "lightscreen",
+        luckychant: "luckychant",
+        mist: "mist",
+        reflect: "reflect",
+        safeguard: "safeguard",
+        spikes: "spikes",
+        stealthrock: "stealthrock",
+        tailwind: "tailwind",
+        toxicspikes: "toxicspikes",
+        // TODO(gen6): auroraveil, stickyweb
     };
 
-    /** Maps some move names to ImplicitTeamTypes. */
-    const implicitTeamTypeMap:
-        {readonly [move: string]: dex.ImplicitTeamEffectType} =
-        {healingwish: "healingwish", lunardance: "lunardance", wish: "wish"};
+    /** Maps some move names to ImplicitTeamEffectTypes. */
+    const implicitTeamTypeMap: {
+        readonly [move: string]: dex.ImplicitTeamEffectType;
+    } = {healingwish: "healingwish", lunardance: "lunardance", wish: "wish"};
 
     /** Maps move name to how/whether it changes the target's type. */
-    const changeTypeMap: {readonly [move: string]: "conversion"} =
-        {conversion: "conversion"};
+    const changeTypeMap: {readonly [move: string]: "conversion"} = {
+        conversion: "conversion",
+    };
 
     /** Maps move name to whether it disables moves. */
     const disableMoveMap: {readonly [move: string]: boolean} = {disable: true};
@@ -238,8 +323,10 @@ void (async function buildDex(): Promise<void>
     // Note(gen4): healingwish-like moves send in a replacement immediately
     // after self-faint.
     /** Secondary map for move name to self-switch effect. */
-    const selfSwitchMap: {readonly [move: string]: dex.SelfSwitchType} =
-        {healingwish: true, lunardance: true}
+    const selfSwitchMap: {readonly [move: string]: dex.SelfSwitchType} = {
+        healingwish: true,
+        lunardance: true,
+    };
 
     const futureMoves: string[] = [];
     const lockedMoves: string[] = []; // TODO: Rename to rampage moves.
@@ -248,17 +335,31 @@ void (async function buildDex(): Promise<void>
 
     const sketchableMoves: string[] = [];
 
-    const typeToMoves: {[T in dex.Type]: string[]} =
-    {
-        bug: [], dark: [], dragon: [], fire: [], flying: [], ghost: [],
-        electric: [], fighting: [], grass: [], ground: [], ice: [], normal: [],
-        poison: [], psychic: [], rock: [], steel: [], water: [], "???": []
+    const typeToMoves: {[T in dex.Type]: string[]} = {
+        bug: [],
+        dark: [],
+        dragon: [],
+        fire: [],
+        flying: [],
+        ghost: [],
+        electric: [],
+        fighting: [],
+        grass: [],
+        ground: [],
+        ice: [],
+        normal: [],
+        poison: [],
+        psychic: [],
+        rock: [],
+        steel: [],
+        water: [],
+        "???": [],
     };
 
     uid = 0;
-    for (const move of [...gen.moves]
-            .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
-    {
+    for (const move of [...gen.moves].sort((a, b) =>
+        a.id < b.id ? -1 : +(a.id > b.id),
+    )) {
         if (move.realMove || move.isNonstandard) continue;
 
         if (!move.noSketch) sketchableMoves.push(move.id);
@@ -269,297 +370,390 @@ void (async function buildDex(): Promise<void>
         let damage: dex.MoveDamage | undefined;
         if (move.ohko) damage = "ohko";
         else if (move.damage) ({damage} = move);
-        else
-        {
-            switch (move.id)
-            {
-                case "superfang": damage = "half"; break;
-                case "bide": damage = "bide"; break;
-                case "counter": case "mirrorcoat": damage = "counter"; break;
-                case "metalburst": damage = "metalburst"; break;
-                case "psywave": damage = "psywave"; break;
-                case "endeavor": damage = "hpdiff"; break;
+        else {
+            switch (move.id) {
+                case "superfang":
+                    damage = "half";
+                    break;
+                case "bide":
+                    damage = "bide";
+                    break;
+                case "counter":
+                case "mirrorcoat":
+                    damage = "counter";
+                    break;
+                case "metalburst":
+                    damage = "metalburst";
+                    break;
+                case "psywave":
+                    damage = "psywave";
+                    break;
+                case "endeavor":
+                    damage = "hpdiff";
+                    break;
                 default:
             }
         }
 
         const type = move.type.toLowerCase() as dex.Type;
         let modifyType: dex.MoveData["modifyType"];
-        switch (move.id)
-        {
-            case "hiddenpower": modifyType = "hpType"; break;
-            case "judgment": modifyType = "plateType"; break;
-            case "struggle": modifyType = "???"; break;
+        switch (move.id) {
+            case "hiddenpower":
+                modifyType = "hpType";
+                break;
+            case "judgment":
+                modifyType = "plateType";
+                break;
+            case "struggle":
+                modifyType = "???";
+                break;
             default:
         }
         typeToMoves[type].push(move.id);
 
         const {target, nonGhostTarget} = move;
 
-        const maxpp = move.noPPBoosts ? move.pp : Math.floor(move.pp * 8 / 5);
+        const maxpp = move.noPPBoosts ? move.pp : Math.floor((move.pp * 8) / 5);
         const pp = [move.pp, maxpp] as const;
 
         let multihit: [number, number] | undefined;
-        if (typeof move.multihit === "number")
-        {
+        if (typeof move.multihit === "number") {
             multihit = [move.multihit, move.multihit];
-        }
-        else if (move.multihit)
-        {
-            if (move.multihit.length !== 2)
-            {
-                throw new Error(`Move '${move.id}': Invalid multihit array ` +
-                    `[${move.multihit.join(", ")}]`);
+        } else if (move.multihit) {
+            if (move.multihit.length !== 2) {
+                throw new Error(
+                    `Move '${move.id}': Invalid multihit array ` +
+                        `[${move.multihit.join(", ")}]`,
+                );
             }
             multihit = move.multihit as [number, number];
         }
 
-        const flags: NonNullable<dex.MoveData["flags"]> =
-        {
-            ...!!move.flags.contact && {contact: true},
-            ...Object.hasOwnProperty.call(explosive, move.id) &&
-                {explosive: true},
-            ...move.id === "focuspunch" && {focus: true},
+        const flags: NonNullable<dex.MoveData["flags"]> = {
+            ...(!!move.flags.contact && {contact: true}),
+            ...(Object.hasOwnProperty.call(explosive, move.id) && {
+                explosive: true,
+            }),
+            ...(move.id === "focuspunch" && {focus: true}),
             // TODO(gen6): Support type-based ignoreImmunity flag.
-            ...category !== "status" && move.ignoreImmunity &&
-                {ignoreImmunity: true},
-            ...!!move.flags.bypasssub && {ignoreSub: true},
-            ...Object.hasOwnProperty.call(interceptSwitch, move.id) &&
-                {interceptSwitch: true},
-            ...Object.hasOwnProperty.call(noMirror, move.id) &&
-                {noMirror: true},
-            ...Object.hasOwnProperty.call(noCopycat, move.id) &&
-                {noCopycat: true},
-            ...!!move.flags.reflectable && {reflectable: true}
+            ...(category !== "status" &&
+                move.ignoreImmunity && {ignoreImmunity: true}),
+            ...(!!move.flags.bypasssub && {ignoreSub: true}),
+            ...(Object.hasOwnProperty.call(interceptSwitch, move.id) && {
+                interceptSwitch: true,
+            }),
+            ...(Object.hasOwnProperty.call(noMirror, move.id) && {
+                noMirror: true,
+            }),
+            ...(Object.hasOwnProperty.call(noCopycat, move.id) && {
+                noCopycat: true,
+            }),
+            ...(!!move.flags.reflectable && {reflectable: true}),
         };
 
         // Setup move effects.
 
         const self: dex.MoveEffectTarget = "self";
-        const hit: dex.MoveEffectTarget =
-            ["all", "allySide", "self"].includes(target) ? self : "hit";
+        const hit: dex.MoveEffectTarget = ["all", "allySide", "self"].includes(
+            target,
+        )
+            ? self
+            : "hit";
 
         type MoveEffects = Writable<NonNullable<dex.MoveData["effects"]>>;
 
         // Boost.
         let boost: Writable<NonNullable<MoveEffects["boost"]>> =
-            Object.hasOwnProperty.call(setBoostMap, move.id) ?
-                {set: true, [hit]: setBoostMap[move.id]}
-            :
-            {
-                ...move.boosts && {[hit]: move.boosts},
-                ...move.self?.boosts && {[self]: move.self.boosts},
-                ...Object.hasOwnProperty.call(customBoostMap, move.id) ?
-                    customBoostMap[move.id] : {}
-            };
+            Object.hasOwnProperty.call(setBoostMap, move.id)
+                ? {set: true, [hit]: setBoostMap[move.id]}
+                : {
+                      ...(move.boosts && {[hit]: move.boosts}),
+                      ...(move.self?.boosts && {[self]: move.self.boosts}),
+                      ...(Object.hasOwnProperty.call(customBoostMap, move.id)
+                          ? customBoostMap[move.id]
+                          : {}),
+                  };
 
         // Status.
-        let status: Writable<MoveEffects["status"]> =
-        {
-            ...Object.hasOwnProperty.call(statusTypeMap, move.id) &&
-                !Object.hasOwnProperty.call(explicitMoveEffect, move.id) ?
-                {[hit]: statusTypeMap[move.id]}
-            : move.volatileStatus &&
-                Object.hasOwnProperty.call(statusTypeMap, move.volatileStatus) ?
-                {[hit]: statusTypeMap[move.volatileStatus]}
-            : move.status && Object.hasOwnProperty.call(statusTypeMap, move.status) ?
-                {[hit]: statusTypeMap[move.status]}
-            : {},
-            ...move.self?.volatileStatus &&
-                Object.hasOwnProperty.call(statusTypeMap, move.self.volatileStatus) ?
-                {[self]: statusTypeMap[move.self.volatileStatus]}
-            : move.self?.status &&
-                Object.hasOwnProperty.call(statusTypeMap, move.self.status) ?
-                {[self]: statusTypeMap[move.self.status]}
-            : {},
-            ...Object.hasOwnProperty.call(customStatusMap, move.id) ?
-                customStatusMap[move.id] : {}
+        let status: Writable<MoveEffects["status"]> = {
+            ...(Object.hasOwnProperty.call(statusTypeMap, move.id) &&
+            !Object.hasOwnProperty.call(explicitMoveEffect, move.id)
+                ? {[hit]: statusTypeMap[move.id]}
+                : move.volatileStatus &&
+                  Object.hasOwnProperty.call(statusTypeMap, move.volatileStatus)
+                ? {[hit]: statusTypeMap[move.volatileStatus]}
+                : move.status &&
+                  Object.hasOwnProperty.call(statusTypeMap, move.status)
+                ? {[hit]: statusTypeMap[move.status]}
+                : {}),
+            ...(move.self?.volatileStatus &&
+            Object.hasOwnProperty.call(statusTypeMap, move.self.volatileStatus)
+                ? {[self]: statusTypeMap[move.self.volatileStatus]}
+                : move.self?.status &&
+                  Object.hasOwnProperty.call(statusTypeMap, move.self.status)
+                ? {[self]: statusTypeMap[move.self.status]}
+                : {}),
+            ...(Object.hasOwnProperty.call(customStatusMap, move.id)
+                ? customStatusMap[move.id]
+                : {}),
         };
 
         // Add boost/status secondary effects.
-        const psSecondaries = move.secondaries ??
-            (move.secondary && [move.secondary]) ?? [];
-        for (const psSecondary of psSecondaries)
-        {
+        const psSecondaries =
+            move.secondaries ?? (move.secondary && [move.secondary]) ?? [];
+        for (const psSecondary of psSecondaries) {
             const tgt = psSecondary.self ? self : hit;
-            const psHitEffect =
-                psSecondary.self ? psSecondary.self : psSecondary;
+            const psHitEffect = psSecondary.self
+                ? psSecondary.self
+                : psSecondary;
             const chance = psSecondary.chance ?? 100;
 
             if (psHitEffect.boosts) boost = {chance, [tgt]: psHitEffect.boosts};
-            if (psHitEffect.volatileStatus)
-            {
+            if (psHitEffect.volatileStatus) {
                 // TODO: Support flinching.
-                if (Object.hasOwnProperty.call(statusTypeMap, psHitEffect.volatileStatus))
-                {
-                    status =
-                    {
-                        chance, [tgt]: statusTypeMap[psHitEffect.volatileStatus]
+                if (
+                    Object.hasOwnProperty.call(
+                        statusTypeMap,
+                        psHitEffect.volatileStatus,
+                    )
+                ) {
+                    status = {
+                        chance,
+                        [tgt]: statusTypeMap[psHitEffect.volatileStatus],
                     };
                 }
             }
-            if (psHitEffect.status &&
-                Object.hasOwnProperty.call(statusTypeMap, psHitEffect.status))
-            {
+            if (
+                psHitEffect.status &&
+                Object.hasOwnProperty.call(statusTypeMap, psHitEffect.status)
+            ) {
                 status = {chance, [tgt]: statusTypeMap[psHitEffect.status]};
             }
         }
 
         // Team.
-        const team: Writable<MoveEffects["team"]> =
-        {
-            ...Object.hasOwnProperty.call(teamStatusTypeMap, move.id) ?
-                {[hit]: teamStatusTypeMap[move.id]}
-            : move.sideCondition &&
-                Object.hasOwnProperty.call(teamStatusTypeMap, move.sideCondition) ?
-                {[hit]: teamStatusTypeMap[move.sideCondition]}
-            : move.slotCondition &&
-                Object.hasOwnProperty.call(teamStatusTypeMap, move.slotCondition) ?
-                {[hit]: teamStatusTypeMap[move.slotCondition]}
-            : {},
-            ...move.self?.sideCondition &&
-                Object.hasOwnProperty.call(teamStatusTypeMap, move.self.sideCondition) ?
-                {[self]: teamStatusTypeMap[move.self.sideCondition]}
-            : move.self?.slotCondition &&
-                Object.hasOwnProperty.call(teamStatusTypeMap, move.self.slotCondition) ?
-                {[self]: teamStatusTypeMap[move.self.slotCondition]}
-            : {}
+        const team: Writable<MoveEffects["team"]> = {
+            ...(Object.hasOwnProperty.call(teamStatusTypeMap, move.id)
+                ? {[hit]: teamStatusTypeMap[move.id]}
+                : move.sideCondition &&
+                  Object.hasOwnProperty.call(
+                      teamStatusTypeMap,
+                      move.sideCondition,
+                  )
+                ? {[hit]: teamStatusTypeMap[move.sideCondition]}
+                : move.slotCondition &&
+                  Object.hasOwnProperty.call(
+                      teamStatusTypeMap,
+                      move.slotCondition,
+                  )
+                ? {[hit]: teamStatusTypeMap[move.slotCondition]}
+                : {}),
+            ...(move.self?.sideCondition &&
+            Object.hasOwnProperty.call(
+                teamStatusTypeMap,
+                move.self.sideCondition,
+            )
+                ? {[self]: teamStatusTypeMap[move.self.sideCondition]}
+                : move.self?.slotCondition &&
+                  Object.hasOwnProperty.call(
+                      teamStatusTypeMap,
+                      move.self.slotCondition,
+                  )
+                ? {[self]: teamStatusTypeMap[move.self.slotCondition]}
+                : {}),
         };
 
-        const moveEffects: MoveEffects =
-        {
-            ...Object.hasOwnProperty.call(transformMap, move.id) &&
-                {transform: true},
+        const moveEffects: MoveEffects = {
+            ...(Object.hasOwnProperty.call(transformMap, move.id) && {
+                transform: true,
+            }),
 
-            ...Object.hasOwnProperty.call(callTypeMap, move.id) &&
-                {call: callTypeMap[move.id]},
+            ...(Object.hasOwnProperty.call(callTypeMap, move.id) && {
+                call: callTypeMap[move.id],
+            }),
 
-            ...move.isFutureMove ? {delay: {type: "future"}}
-            : move.flags.charge ?
-            {delay: {
-                // TODO: Add effect for skullbash raising def on prepare.
-                type: "twoTurn", ...move.id === "solarbeam" && {solar: true}
-            }}
-            : {},
+            ...(move.isFutureMove
+                ? {delay: {type: "future"}}
+                : move.flags.charge
+                ? {
+                      delay: {
+                          // TODO: Add effect for skullbash raising def on
+                          // prepare.
+                          type: "twoTurn",
+                          ...(move.id === "solarbeam" && {solar: true}),
+                      },
+                  }
+                : {}),
 
-            ...move.heal ?
-            {damage: {
-                type: "percent", target: self,
-                // TODO: Should the fraction tuple be preserved in the MoveData?
-                percent: 100 * move.heal[0] / move.heal[1]}
-            }
-            : Object.hasOwnProperty.call(customDamageMap, move.id) ?
-                {damage: customDamageMap[move.id]}
-            : {},
+            ...(move.heal
+                ? {
+                      damage: {
+                          type: "percent",
+                          target: self,
+                          // TODO: Should the fraction tuple be preserved in the
+                          // MoveData?
+                          percent: (100 * move.heal[0]) / move.heal[1],
+                      },
+                  }
+                : Object.hasOwnProperty.call(customDamageMap, move.id)
+                ? {damage: customDamageMap[move.id]}
+                : {}),
 
-            ...Object.hasOwnProperty.call(countableStatusTypeMap, move.id) &&
-                {count: countableStatusTypeMap[move.id]},
+            ...(Object.hasOwnProperty.call(countableStatusTypeMap, move.id) && {
+                count: countableStatusTypeMap[move.id],
+            }),
 
-            ...Object.keys(boost).length > 0 && {boost},
+            ...(Object.keys(boost).length > 0 && {boost}),
 
-            ...Object.hasOwnProperty.call(swapBoostMap, move.id) &&
-                {swapBoosts: swapBoostMap[move.id]},
+            ...(Object.hasOwnProperty.call(swapBoostMap, move.id) && {
+                swapBoosts: swapBoostMap[move.id],
+            }),
 
-            ...Object.keys(status).length > 0 && {status},
+            ...(Object.keys(status).length > 0 && {status}),
 
-            ...Object.keys(team).length > 0 && {team},
+            ...(Object.keys(team).length > 0 && {team}),
 
-            ...Object.hasOwnProperty.call(fieldTypeMap, move.id) ?
-                {field: fieldTypeMap[move.id]}
-            : move.weather && Object.hasOwnProperty.call(fieldTypeMap, move.weather) ?
-                {field: fieldTypeMap[move.weather]}
-            : move.pseudoWeather &&
-                Object.hasOwnProperty.call(fieldTypeMap, move.pseudoWeather) ?
-                {field: fieldTypeMap[move.pseudoWeather]}
-            : {},
+            ...(Object.hasOwnProperty.call(fieldTypeMap, move.id)
+                ? {field: fieldTypeMap[move.id]}
+                : move.weather &&
+                  Object.hasOwnProperty.call(fieldTypeMap, move.weather)
+                ? {field: fieldTypeMap[move.weather]}
+                : move.pseudoWeather &&
+                  Object.hasOwnProperty.call(fieldTypeMap, move.pseudoWeather)
+                ? {field: fieldTypeMap[move.pseudoWeather]}
+                : {}),
 
-            ...Object.hasOwnProperty.call(changeTypeMap, move.id) &&
-                {changeType: changeTypeMap[move.id]},
+            ...(Object.hasOwnProperty.call(changeTypeMap, move.id) && {
+                changeType: changeTypeMap[move.id],
+            }),
 
-            ...Object.hasOwnProperty.call(disableMoveMap, move.id) && {disableMove: true},
+            ...(Object.hasOwnProperty.call(disableMoveMap, move.id) && {
+                disableMove: true,
+            }),
 
-            ...move.drain && {drain: move.drain},
+            ...(move.drain && {drain: move.drain}),
 
-            ...move.recoil ?
-            {recoil: {
-                ratio: move.recoil, ...move.struggleRecoil && {struggle: true}
-            }}
-            : move.struggleRecoil ? {recoil: {ratio: [1, 4], struggle: true}}
-            : {},
+            ...(move.recoil
+                ? {
+                      recoil: {
+                          ratio: move.recoil,
+                          ...(move.struggleRecoil && {struggle: true}),
+                      },
+                  }
+                : move.struggleRecoil
+                ? {recoil: {ratio: [1, 4], struggle: true}}
+                : {}),
 
-            ...move.selfdestruct &&
-                {selfFaint: move.selfdestruct as dex.MoveSelfFaint},
+            ...(move.selfdestruct && {
+                selfFaint: move.selfdestruct as dex.MoveSelfFaint,
+            }),
 
-            ...move.selfSwitch &&
-                {selfSwitch: move.selfSwitch as dex.SelfSwitchType},
-            ...Object.hasOwnProperty.call(selfSwitchMap, move.id) &&
-                {selfSwitch: selfSwitchMap[move.id]}
+            ...(move.selfSwitch && {
+                selfSwitch: move.selfSwitch as dex.SelfSwitchType,
+            }),
+            ...(Object.hasOwnProperty.call(selfSwitchMap, move.id) && {
+                selfSwitch: selfSwitchMap[move.id],
+            }),
         };
 
         if (moveEffects.call) moveCallers.push([move.id, moveEffects.call]);
 
         // Two turn/future moves are also recorded in a different object.
-        switch (moveEffects.delay?.type)
-        {
-            case "future": futureMoves.push(move.id); break;
-            case "twoTurn": twoTurnMoves.push(move.id); break;
+        switch (moveEffects.delay?.type) {
+            case "future":
+                futureMoves.push(move.id);
+                break;
+            case "twoTurn":
+                twoTurnMoves.push(move.id);
+                break;
             default:
         }
 
         // Implicit.
-        const implicit: Writable<dex.MoveData["implicit"]> =
-        {
-            ...Object.hasOwnProperty.call(implicitStatusTypeMap, move.id) ?
-                {status: implicitStatusTypeMap[move.id]}
-            : move.volatileStatus &&
-                Object.hasOwnProperty.call(implicitStatusTypeMap, move.volatileStatus) ?
-                {status: implicitStatusTypeMap[move.volatileStatus]}
-            : move.status && Object.hasOwnProperty.call(implicitStatusTypeMap, move.status) ?
-                {status: implicitStatusTypeMap[move.status]}
-            : move.self?.volatileStatus &&
-                Object.hasOwnProperty.call(implicitStatusTypeMap, move.self.volatileStatus) ?
-                {status: implicitStatusTypeMap[move.self.volatileStatus]}
-            : move.self?.status &&
-                Object.hasOwnProperty.call(implicitStatusTypeMap, move.self.status) ?
-                {status: implicitStatusTypeMap[move.self.status]}
-            : {},
+        const implicit: Writable<dex.MoveData["implicit"]> = {
+            ...(Object.hasOwnProperty.call(implicitStatusTypeMap, move.id)
+                ? {status: implicitStatusTypeMap[move.id]}
+                : move.volatileStatus &&
+                  Object.hasOwnProperty.call(
+                      implicitStatusTypeMap,
+                      move.volatileStatus,
+                  )
+                ? {status: implicitStatusTypeMap[move.volatileStatus]}
+                : move.status &&
+                  Object.hasOwnProperty.call(implicitStatusTypeMap, move.status)
+                ? {status: implicitStatusTypeMap[move.status]}
+                : move.self?.volatileStatus &&
+                  Object.hasOwnProperty.call(
+                      implicitStatusTypeMap,
+                      move.self.volatileStatus,
+                  )
+                ? {status: implicitStatusTypeMap[move.self.volatileStatus]}
+                : move.self?.status &&
+                  Object.hasOwnProperty.call(
+                      implicitStatusTypeMap,
+                      move.self.status,
+                  )
+                ? {status: implicitStatusTypeMap[move.self.status]}
+                : {}),
 
-            ...Object.hasOwnProperty.call(implicitTeamTypeMap, move.id) ?
-                {team: implicitTeamTypeMap[move.id]}
-            : move.sideCondition &&
-                Object.hasOwnProperty.call(implicitTeamTypeMap, move.sideCondition) ?
-                {team: implicitTeamTypeMap[move.sideCondition]}
-            : move.slotCondition &&
-                Object.hasOwnProperty.call(implicitTeamTypeMap, move.slotCondition) ?
-                {team: implicitTeamTypeMap[move.slotCondition]}
-            : move.self?.sideCondition &&
-                Object.hasOwnProperty.call(implicitTeamTypeMap, move.self.sideCondition) ?
-                {team: implicitTeamTypeMap[move.self.sideCondition]}
-            : move.self?.slotCondition &&
-                Object.hasOwnProperty.call(implicitTeamTypeMap, move.self.slotCondition) ?
-                {team: implicitTeamTypeMap[move.self.slotCondition]}
-            : {}
+            ...(Object.hasOwnProperty.call(implicitTeamTypeMap, move.id)
+                ? {team: implicitTeamTypeMap[move.id]}
+                : move.sideCondition &&
+                  Object.hasOwnProperty.call(
+                      implicitTeamTypeMap,
+                      move.sideCondition,
+                  )
+                ? {team: implicitTeamTypeMap[move.sideCondition]}
+                : move.slotCondition &&
+                  Object.hasOwnProperty.call(
+                      implicitTeamTypeMap,
+                      move.slotCondition,
+                  )
+                ? {team: implicitTeamTypeMap[move.slotCondition]}
+                : move.self?.sideCondition &&
+                  Object.hasOwnProperty.call(
+                      implicitTeamTypeMap,
+                      move.self.sideCondition,
+                  )
+                ? {team: implicitTeamTypeMap[move.self.sideCondition]}
+                : move.self?.slotCondition &&
+                  Object.hasOwnProperty.call(
+                      implicitTeamTypeMap,
+                      move.self.slotCondition,
+                  )
+                ? {team: implicitTeamTypeMap[move.self.slotCondition]}
+                : {}),
         };
 
         // Add to lockedmove dict.
-        if (implicit.status === "lockedMove" && !lockedMoves.includes(move.id))
-        {
+        if (
+            implicit.status === "lockedMove" &&
+            !lockedMoves.includes(move.id)
+        ) {
             lockedMoves.push(move.id);
         }
 
-        moves[uid] =
-        [
+        moves[uid] = [
             move.id,
             {
-                uid, name: move.id, display: move.name, category, basePower,
-                ...damage && {damage}, type, ...modifyType && {modifyType},
-                target, ...nonGhostTarget && {nonGhostTarget}, pp,
-                ...multihit && {multihit},
-                ...Object.keys(flags).length > 0 && {flags},
-                ...Object.keys(moveEffects).length > 0 &&
-                    {effects: moveEffects},
-                ...Object.keys(implicit).length > 0 && {implicit}
-            }
+                uid,
+                name: move.id,
+                display: move.name,
+                category,
+                basePower,
+                ...(damage && {damage}),
+                type,
+                ...(modifyType && {modifyType}),
+                target,
+                ...(nonGhostTarget && {nonGhostTarget}),
+                pp,
+                ...(multihit && {multihit}),
+                ...(Object.keys(flags).length > 0 && {flags}),
+                ...(Object.keys(moveEffects).length > 0 && {
+                    effects: moveEffects,
+                }),
+                ...(Object.keys(implicit).length > 0 && {implicit}),
+            },
         ];
         ++uid;
     }
@@ -568,7 +762,7 @@ void (async function buildDex(): Promise<void>
     futureMoves.sort();
     lockedMoves.sort();
     twoTurnMoves.sort();
-    moveCallers.sort((a, b) => a[0] < b[0] ? -1 : +(a[0] > b[0]));
+    moveCallers.sort((a, b) => (a[0] < b[0] ? -1 : +(a[0] > b[0])));
 
     //#endregion
 
@@ -579,12 +773,11 @@ void (async function buildDex(): Promise<void>
     const abilityNames = new Set<string>();
 
     uid = 0;
-    for (const mon of [...gen.species]
-            .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
-    {
+    for (const mon of [...gen.species].sort((a, b) =>
+        a.id < b.id ? -1 : +(a.id > b.id),
+    )) {
         const baseAbilities: string[] = [];
-        for (const index in mon.abilities)
-        {
+        for (const index in mon.abilities) {
             if (!Object.hasOwnProperty.call(mon.abilities, index)) continue;
             const abilityName = mon.abilities[index as keyof SpeciesAbility];
             if (!abilityName) continue;
@@ -594,11 +787,9 @@ void (async function buildDex(): Promise<void>
         }
 
         const typeArr = mon.types.map(s => s.toLowerCase()) as dex.Type[];
-        if (typeArr.length > 2)
-        {
+        if (typeArr.length > 2) {
             console.error(`Error: Too many types for species '${mon.id}'`);
-        }
-        else if (typeArr.length === 1) typeArr.push("???");
+        } else if (typeArr.length === 1) typeArr.push("???");
         else if (typeArr.length <= 0) typeArr.push("???", "???");
         const types = typeArr as [dex.Type, dex.Type];
 
@@ -606,15 +797,13 @@ void (async function buildDex(): Promise<void>
 
         let movepool: string[] = [];
         const learnset = await gen.learnsets.learnable(mon.id);
-        for (const moveName in learnset)
-        {
+        for (const moveName in learnset) {
             if (!Object.hasOwnProperty.call(learnset, moveName)) continue;
             const sources = learnset[moveName];
             if (!sources || sources.length <= 0) continue;
             movepool.push(moveName);
 
-            if (moveName === "sketch")
-            {
+            if (moveName === "sketch") {
                 movepool = [...new Set([...movepool, ...sketchableMoves])];
             }
         }
@@ -624,54 +813,62 @@ void (async function buildDex(): Promise<void>
         const baseForm = mon.baseForme && toIdName(mon.baseForme);
         const form = mon.forme && toIdName(mon.forme);
         let otherForms: string[] | undefined;
-        if (mon.otherFormes)
-        {
+        if (mon.otherFormes) {
             const tmp = mon.otherFormes.map(toIdName);
             if (tmp.length > 0) otherForms = tmp.sort();
         }
 
-        const entry: [string, dex.PokemonData] =
-        [
+        const entry: [string, dex.PokemonData] = [
             mon.id,
             {
-                id: mon.num, uid, name: mon.id, display: mon.name,
-                abilities: baseAbilities, types, baseStats: stats,
-                weightkg: mon.weightkg, movepool,
-                ...baseSpecies && baseSpecies !== mon.id && {baseSpecies},
-                ...baseForm && {baseForm},
-                ...form && {form}, ...otherForms && {otherForms}
-            }
+                uid,
+                id: mon.num,
+                name: mon.id,
+                display: mon.name,
+                abilities: baseAbilities,
+                types,
+                baseStats: stats,
+                weightkg: mon.weightkg,
+                movepool,
+                ...(baseSpecies && baseSpecies !== mon.id && {baseSpecies}),
+                ...(baseForm && {baseForm}),
+                ...(form && {form}),
+                ...(otherForms && {otherForms}),
+            },
         ];
         pokemon.push(entry);
 
         // Also add cosmetic forms.
         // These should have the same uids as the original since they are
         // functionally identical.
-        for (const forme of mon.cosmeticFormes ?? [])
-        {
+        for (const forme of mon.cosmeticFormes ?? []) {
             const mon2 = gen.species.get(forme);
             if (!mon2) continue;
-            const [/*id*/, entryData] = entry;
+            const [, entryData] = entry;
             // Omit baseForm/otherForms since that's part of the base form entry
             //  But here we're adding a derived form
-            const {baseForm: _baseForm, otherForms: _otherForms, ...data} =
-                entryData;
+            const {
+                baseForm: _baseForm,
+                otherForms: _otherForms,
+                ...data
+            } = entryData;
             void _baseForm, _otherForms;
             const name = toIdName(forme);
-            pokemon.push(
-            [
+            pokemon.push([
                 name,
                 {
-                    ...data, name, display: forme,
-                    ...baseSpecies && {baseSpecies}, form: toIdName(mon2.forme)
-                }
+                    ...data,
+                    name,
+                    display: forme,
+                    ...(baseSpecies && {baseSpecies}),
+                    form: toIdName(mon2.forme),
+                },
             ]);
 
             // Add alt form to list.
-            entry[1] =
-            {
+            entry[1] = {
                 ...entry[1],
-                otherForms: [...entry[1].otherForms ?? [], name].sort()
+                otherForms: [...(entry[1].otherForms ?? []), name].sort(),
             };
         }
 
@@ -684,22 +881,27 @@ void (async function buildDex(): Promise<void>
 
     //#region Ability data.
 
-    const statusImmunityOn: dex.AbilityData["on"] =
-        {start: {cure: true}, block: {status: true}, status: {cure: true}};
+    const statusImmunityOn: dex.AbilityData["on"] = {
+        start: {cure: true},
+        block: {status: true},
+        status: {cure: true},
+    };
 
     /** Maps ability name to data. */
-    const abilityData:
-    {
-        readonly [ability: string]:
-            Pick<dex.AbilityData, "on" | "statusImmunity" | "flags">;
-    } =
-    {
+    const abilityData: {
+        readonly [ability: string]: Pick<
+            dex.AbilityData,
+            "on" | "statusImmunity" | "flags"
+        >;
+    } = {
         naturalcure: {on: {switchOut: {cure: true}}},
 
         // TODO(insomnia/vitalspirit): when using rest, ability causes it to
         // fail if hp not full (`|-fail|mon|heal`).
-        immunity:
-            {on: statusImmunityOn, statusImmunity: {psn: true, tox: true}},
+        immunity: {
+            on: statusImmunityOn,
+            statusImmunity: {psn: true, tox: true},
+        },
         insomnia: {on: statusImmunityOn, statusImmunity: {slp: true}},
         limber: {on: statusImmunityOn, statusImmunity: {par: true}},
         magmaarmor: {on: statusImmunityOn, statusImmunity: {frz: true}},
@@ -709,17 +911,20 @@ void (async function buildDex(): Promise<void>
         vitalspirit: {on: statusImmunityOn, statusImmunity: {slp: true}},
         waterveil: {on: statusImmunityOn, statusImmunity: {brn: true}},
 
-        leafguard:
-        {
+        leafguard: {
             // Can block statuses during sun, but only when attempting to
             // afflict them.
             on: {block: {status: "SunnyDay"}},
-            statusImmunity:
-            {
+            statusImmunity: {
                 // Status is blocked silently (gen4) except for yawn.
-                brn: "silent", par: "silent", psn: "silent", tox: "silent",
-                slp: "silent", frz: "silent", yawn: true
-            }
+                brn: "silent",
+                par: "silent",
+                psn: "silent",
+                tox: "silent",
+                slp: "silent",
+                frz: "silent",
+                yawn: true,
+            },
         },
 
         trace: {on: {start: {copyFoeAbility: true}}},
@@ -734,8 +939,9 @@ void (async function buildDex(): Promise<void>
         flashfire: {on: {block: {move: {type: "fire", status: "flashfire"}}}},
         levitate: {on: {block: {move: {type: "ground"}}}},
         motordrive: {on: {block: {move: {type: "electric", boost: {spe: 1}}}}},
-        voltabsorb:
-            {on: {block: {move: {type: "electric", percentDamage: 25}}}},
+        voltabsorb: {
+            on: {block: {move: {type: "electric", percentDamage: 25}}},
+        },
         waterabsorb: {on: {block: {move: {type: "water", percentDamage: 25}}}},
         // TODO(gen4 glitch): Firefang move ignores this ability.
         wonderguard: {on: {block: {move: {type: "nonSuper"}}}},
@@ -750,8 +956,9 @@ void (async function buildDex(): Promise<void>
         aftermath: {on: {moveContactKo: {explosive: true, percentDamage: -25}}},
 
         cutecharm: {on: {moveContact: {chance: 30, status: ["attract"]}}},
-        effectspore:
-            {on: {moveContact: {chance: 30, status: ["par", "psn", "slp"]}}},
+        effectspore: {
+            on: {moveContact: {chance: 30, status: ["par", "psn", "slp"]}},
+        },
         flamebody: {on: {moveContact: {chance: 30, status: ["brn"]}}},
         poisonpoint: {on: {moveContact: {chance: 30, status: ["psn"]}}},
         roughskin: {on: {moveContact: {percentDamage: -6.25}}},
@@ -772,22 +979,23 @@ void (async function buildDex(): Promise<void>
         skilllink: {flags: {maxMultihit: true}},
 
         magicguard: {flags: {noIndirectDamage: true}},
-        rockhead: {flags: {noIndirectDamage: "recoil"}}
+        rockhead: {flags: {noIndirectDamage: "recoil"}},
     };
 
     const abilities: (readonly [string, dex.AbilityData])[] = [];
 
     uid = 0;
-    for (const ability of [...gen.abilities]
-        .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
-    {
-        abilities.push(
-        [
+    for (const ability of [...gen.abilities].sort((a, b) =>
+        a.id < b.id ? -1 : +(a.id > b.id),
+    )) {
+        abilities.push([
             ability.id,
             {
-                uid, name: ability.id, display: ability.name,
-                ...abilityData[ability.id]
-            }
+                uid,
+                name: ability.id,
+                display: ability.name,
+                ...abilityData[ability.id],
+            },
         ]);
         ++uid;
     }
@@ -797,9 +1005,9 @@ void (async function buildDex(): Promise<void>
     //#region Items and berries.
 
     /** Maps some item names to item effects. */
-    const itemOnMap:
-        {readonly [item: string]: NonNullable<dex.ItemData["on"]>} =
-    {
+    const itemOnMap: {
+        readonly [item: string]: NonNullable<dex.ItemData["on"]>;
+    } = {
         custapberry: {preMove: {threshold: 25, moveFirst: true}},
 
         powerherb: {moveCharge: {shorten: true, consume: true}},
@@ -834,198 +1042,185 @@ void (async function buildDex(): Promise<void>
         lifeorb: {movePostDamage: {percentDamage: -10}},
 
         // Fixed-heal berries.
-        oranberry:
-        {
+        oranberry: {
             update: {condition: "hp", threshold: 50},
-            eat: {type: "healFixed", heal: 10}
+            eat: {type: "healFixed", heal: 10},
         },
-        berryjuice:
-        {
+        berryjuice: {
             update: {condition: "hp", threshold: 50},
-            eat: {type: "healFixed", heal: 20}
+            eat: {type: "healFixed", heal: 20},
         },
         // Percent-heal berries.
-        sitrusberry:
-        {
+        sitrusberry: {
             update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 25}
+            eat: {type: "healPercent", heal: 25},
         },
-        figyberry:
-        {
+        figyberry: {
             update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "atk"}
+            eat: {type: "healPercent", heal: 12.5, dislike: "atk"},
         },
-        iapapaberry:
-        {
+        iapapaberry: {
             update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "def"}
+            eat: {type: "healPercent", heal: 12.5, dislike: "def"},
         },
-        wikiberry:
-        {
+        wikiberry: {
             update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "spa"}
+            eat: {type: "healPercent", heal: 12.5, dislike: "spa"},
         },
-        aguavberry:
-        {
+        aguavberry: {
             update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "spd"}
+            eat: {type: "healPercent", heal: 12.5, dislike: "spd"},
         },
-        magoberry:
-        {
+        magoberry: {
             update: {condition: "hp", threshold: 50},
-            eat: {type: "healPercent", heal: 12.5, dislike: "spe"}
+            eat: {type: "healPercent", heal: 12.5, dislike: "spe"},
         },
         // Stat-boost berries.
-        liechiberry:
-        {
+        liechiberry: {
             update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {atk: 1}}
+            eat: {type: "boost", boostOne: {atk: 1}},
         },
-        ganlonberry:
-        {
+        ganlonberry: {
             update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {def: 1}}
+            eat: {type: "boost", boostOne: {def: 1}},
         },
-        petayaberry:
-        {
+        petayaberry: {
             update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {spa: 1}}
+            eat: {type: "boost", boostOne: {spa: 1}},
         },
-        apicotberry:
-        {
+        apicotberry: {
             update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {spd: 1}}
+            eat: {type: "boost", boostOne: {spd: 1}},
         },
-        salacberry:
-        {
+        salacberry: {
             update: {condition: "hp", threshold: 25},
-            eat: {type: "boost", boostOne: {spe: 1}}
+            eat: {type: "boost", boostOne: {spe: 1}},
         },
-        starfberry:
-        {
+        starfberry: {
             update: {condition: "hp", threshold: 25},
-            eat:
-            {
+            eat: {
                 type: "boost",
-                boostOne: {atk: 2, def: 2, spa: 2, spd: 2, spe: 2}
-            }
+                boostOne: {atk: 2, def: 2, spa: 2, spd: 2, spe: 2},
+            },
         },
         // Focusenergy berry.
-        lansatberry:
-        {
-            update: {condition: "hp", threshold: 25}, eat: {type: "focusenergy"}
+        lansatberry: {
+            update: {condition: "hp", threshold: 25},
+            eat: {type: "focusenergy"},
         },
         // TODO: White herb.
         // Status items/berries.
-        rawstberry:
-        {
+        rawstberry: {
             update: {condition: "status", status: {brn: true}},
-            eat: {type: "cure", cure: {brn: true}}
+            eat: {type: "cure", cure: {brn: true}},
         },
-        cheriberry:
-        {
+        cheriberry: {
             update: {condition: "status", status: {par: true}},
-            eat: {type: "cure", cure: {par: true}}
+            eat: {type: "cure", cure: {par: true}},
         },
-        pechaberry:
-        {
+        pechaberry: {
             update: {condition: "status", status: {psn: true, tox: true}},
-            eat: {type: "cure", cure: {psn: true, tox: true}}
+            eat: {type: "cure", cure: {psn: true, tox: true}},
         },
-        chestoberry:
-        {
+        chestoberry: {
             update: {condition: "status", status: {slp: true}},
-            eat: {type: "cure", cure: {slp: true}}
+            eat: {type: "cure", cure: {slp: true}},
         },
-        aspearberry:
-        {
+        aspearberry: {
             update: {condition: "status", status: {frz: true}},
-            eat: {type: "cure", cure: {frz: true}}
+            eat: {type: "cure", cure: {frz: true}},
         },
-        persimberry:
-        {
+        persimberry: {
             update: {condition: "status", status: {confusion: true}},
-            eat: {type: "cure", cure: {confusion: true}}
+            eat: {type: "cure", cure: {confusion: true}},
         },
-        lumberry:
-        {
-            update:
-            {
+        lumberry: {
+            update: {
                 condition: "status",
-                status:
-                {
-                    brn: true, par: true, psn: true, tox: true, slp: true,
-                    frz: true, confusion: true
-                }
+                status: {
+                    brn: true,
+                    par: true,
+                    psn: true,
+                    tox: true,
+                    slp: true,
+                    frz: true,
+                    confusion: true,
+                },
             },
-            eat:
-            {
+            eat: {
                 type: "cure",
-                cure:
-                {
-                    brn: true, par: true, psn: true, tox: true, slp: true,
-                    frz: true, confusion: true
-                }
-            }
+                cure: {
+                    brn: true,
+                    par: true,
+                    psn: true,
+                    tox: true,
+                    slp: true,
+                    frz: true,
+                    confusion: true,
+                },
+            },
         },
         // Note(gen4): only cures attract.
-        mentalherb:
-        {update: {
-            condition: "status", status: {attract: true}, cure: true,
-            consume: true
-        }},
+        mentalherb: {
+            update: {
+                condition: "status",
+                status: {attract: true},
+                cure: true,
+                consume: true,
+            },
+        },
         // Move-restoring berries.
-        leppaberry:
-        {
+        leppaberry: {
             update: {condition: "depleted"},
-            eat: {type: "restore", restore: 10}
+            eat: {type: "restore", restore: 10},
         },
 
         blacksludge: {residual: {poisonDamage: 6.25, noPoisonDamage: -12.5}},
         leftovers: {residual: {poisonDamage: 6.25, noPoisonDamage: 6.25}},
-        stickybarb: {residual: {poisonDamage:-12.5, noPoisonDamage: -12.5}},
+        stickybarb: {residual: {poisonDamage: -12.5, noPoisonDamage: -12.5}},
         flameorb: {residual: {status: "brn"}},
         toxicorb: {residual: {status: "tox"}},
-        micleberry:
-        {
+        micleberry: {
             residual: {threshold: 25},
-            eat: {type: "status", status: "micleberry"}
-        }
+            eat: {type: "status", status: "micleberry"},
+        },
     };
 
-    // Make sure that having no item is possible.
-    const items: (readonly [string, dex.ItemData])[] =
-        [["none", {uid: 0, name: "none", display: "None"}]];
+    const items: (readonly [string, dex.ItemData])[] = [
+        // Make sure that having no item is possible.
+        ["none", {uid: 0, name: "none", display: "None"}],
+    ];
     const berries: (readonly [string, dex.NaturalGiftData])[] = [];
 
     uid = 1;
-    for (const item of [...gen.items]
-        .sort((a, b) => a.id < b.id ? -1 : +(a.id > b.id)))
-    {
-        if (item.isBerry && item.naturalGift)
-        {
-            berries.push(
-            [
+    for (const item of [...gen.items].sort((a, b) =>
+        a.id < b.id ? -1 : +(a.id > b.id),
+    )) {
+        if (item.isBerry && item.naturalGift) {
+            berries.push([
                 item.id,
                 {
                     basePower: item.naturalGift.basePower,
-                    type: item.naturalGift.type.toLowerCase() as dex.Type
-                }
+                    type: item.naturalGift.type.toLowerCase() as dex.Type,
+                },
             ]);
         }
 
-        items.push(
-        [
+        items.push([
             item.id,
             {
-                uid, name: item.id, display: item.name,
-                ...item.isChoice && {isChoice: true},
-                ...item.isBerry && {isBerry: true},
-                ...item.onPlate &&
-                    {plateType: item.onPlate.toLowerCase() as dex.Type},
-                ...Object.hasOwnProperty.call(itemOnMap, item.id) &&
-                    {on: itemOnMap[item.id]}
-            }
+                uid,
+                name: item.id,
+                display: item.name,
+                ...(item.isChoice && {isChoice: true}),
+                ...(item.isBerry && {isBerry: true}),
+                ...(item.onPlate && {
+                    plateType: item.onPlate.toLowerCase() as dex.Type,
+                }),
+                ...(Object.hasOwnProperty.call(itemOnMap, item.id) && {
+                    on: itemOnMap[item.id],
+                }),
+            },
         ]);
         ++uid;
     }
@@ -1043,16 +1238,19 @@ void (async function buildDex(): Promise<void>
      * @param converter Stringifier for dictionary values.
      * @param indent Number of indent spaces. Default 4.
      */
-    function exportEntriesToDict<T>(entries: (readonly [string, T])[],
-        name: string, typeName: string, converter: (t: T) => string,
-        indent = 4): string
-    {
-        let result = `export const ${name}: ` +
-            `{readonly [name: string]: ${typeName}} =\n{`;
+    function exportEntriesToDict<T>(
+        entries: (readonly [string, T])[],
+        name: string,
+        typeName: string,
+        converter: (t: T) => string,
+        indent = 4,
+    ): string {
+        let result =
+            `export const ${name}: {readonly [name: string]: ` +
+            `${typeName}} = {`;
         const s = " ".repeat(indent);
 
-        for (const [key, value] of entries)
-        {
+        for (const [key, value] of entries) {
             result += `\n${s}${maybeQuote(key)}: ${converter(value)},`;
         }
         return result + "\n};";
@@ -1068,17 +1266,24 @@ void (async function buildDex(): Promise<void>
      * @param converter Stringifier for dictionary keys.
      * @param indent Number of indent spaces. Default 4.
      */
-    function exportDict<T>(dict: {readonly [name: string]: T},
-        name: string, typeName: string,
-        converter: (value: T) => string, indent = 4): string
-    {
+    function exportDict<T>(
+        dict: {readonly [name: string]: T},
+        name: string,
+        typeName: string,
+        converter: (value: T) => string,
+        indent = 4,
+    ): string {
         const s = " ".repeat(indent);
-        return Object.keys(dict).sort()
-            .reduce(
-                (prev, key) =>
-                    prev + `\n${s}${maybeQuote(key)}: ${converter(dict[key])},`,
-                `export const ${name}: ${typeName} =\n{`) +
-            "\n};";
+        return (
+            Object.keys(dict)
+                .sort()
+                .reduce(
+                    (prev, key) =>
+                        prev +
+                        `\n${s}${maybeQuote(key)}: ${converter(dict[key])},`,
+                    `export const ${name}: ${typeName} = {`,
+                ) + "\n};"
+        );
     }
 
     /**
@@ -1087,12 +1292,12 @@ void (async function buildDex(): Promise<void>
      * @param dict Dictionary to stringify.
      * @param converter Stringifier for dictionary values.
      */
-    function stringifyDict(dict: {readonly [name: string]: unknown},
-        converter: (value: unknown) => string): string
-    {
+    function stringifyDict(
+        dict: {readonly [name: string]: unknown},
+        converter: (value: unknown) => string,
+    ): string {
         const entries: string[] = [];
-        for (const key in dict)
-        {
+        for (const key in dict) {
             if (!Object.hasOwnProperty.call(dict, key)) continue;
             entries.push(`${maybeQuote(key)}: ${converter(dict[key])}`);
         }
@@ -1105,32 +1310,29 @@ void (async function buildDex(): Promise<void>
      * @param dict Dictionary to stringify.
      * @param converter Stringifier for dictionary values.
      */
-    function deepStringifyDict(dict: Record<string, unknown>,
-        converter: (value: unknown) => string): string
-    {
+    function deepStringifyDict(
+        dict: Record<string, unknown>,
+        converter: (value: unknown) => string,
+    ): string {
         const entries: string[] = [];
-        for (const key in dict)
-        {
+        for (const key in dict) {
             if (!Object.hasOwnProperty.call(dict, key)) continue;
 
             let str: string;
             const value = dict[key];
-            if (Array.isArray(value))
-            {
+            if (Array.isArray(value)) {
                 str = deepStringifyArray(value, converter);
-            }
-            else if (typeof value === "object" && value)
-            {
-                str = deepStringifyDict(value as
-                        {[name: string]: unknown}, converter);
-            }
-            else str = converter(value);
+            } else if (typeof value === "object" && value) {
+                str = deepStringifyDict(
+                    value as {[name: string]: unknown},
+                    converter,
+                );
+            } else str = converter(value);
 
             entries.push(`${maybeQuote(key)}: ${str}`);
         }
         return "{" + entries.join(", ") + "}";
     }
-
 
     /**
      * Recursively stringifies an array.
@@ -1138,23 +1340,21 @@ void (async function buildDex(): Promise<void>
      * @param arr Array to stringify.
      * @param converter Stringifier for array values.
      */
-    function deepStringifyArray(arr: unknown[],
-        converter: (value: unknown) => string): string
-    {
+    function deepStringifyArray(
+        arr: unknown[],
+        converter: (value: unknown) => string,
+    ): string {
         const values: string[] = [];
-        for (const value of arr)
-        {
+        for (const value of arr) {
             let str: string;
-            if (Array.isArray(value))
-            {
+            if (Array.isArray(value)) {
                 str = deepStringifyArray(value, converter);
-            }
-            else if (typeof value === "object" && value)
-            {
+            } else if (typeof value === "object" && value) {
                 str = deepStringifyDict(
-                        value as {[name: string]: unknown}, converter);
-            }
-            else str = converter(value);
+                    value as {[name: string]: unknown},
+                    converter,
+                );
+            } else str = converter(value);
 
             values.push(str);
         }
@@ -1169,10 +1369,15 @@ void (async function buildDex(): Promise<void>
      * @param typeName Type name for the array values.
      * @param converter Stringifier for array values.
      */
-    const exportArray = <T>(arr: readonly T[], name: string, typeName: string,
-            converter: (t: T) => string): string =>
+    const exportArray = <T>(
+        arr: readonly T[],
+        name: string,
+        typeName: string,
+        converter: (t: T) => string,
+    ): string =>
         `export const ${name}: readonly ${typeName}[] = [` +
-            arr.map(converter).join(", ") + "];";
+        arr.map(converter).join(", ") +
+        "];";
 
     /**
      * Creates an export dictionary, string union, etc. for a specific set of
@@ -1182,30 +1387,36 @@ void (async function buildDex(): Promise<void>
      * @param name Name for the variable.
      * @param display Name in the docs. Omit to assume `name` argument.
      */
-    function exportSpecificMoves(moveNames: readonly string[], name: string,
-        display = name, indent = 4): string
-    {
+    function exportSpecificMoves(
+        moveNames: readonly string[],
+        name: string,
+        display = name,
+        indent = 4,
+    ): string {
         const s = " ".repeat(indent);
         const cap = name.slice(0, 1).toUpperCase() + name.slice(1);
 
         // Build set of all moves of this specific type.
-        return moveNames.reduce(
+        return (
+            moveNames.reduce(
                 (prev, moveName, i) => prev + `\n${s}${moveName}: ${i},`,
-                `/** Set of all ${display} moves. Maps move name to its id ` +
-                    `within this object. */\nexport const ${name}Moves =\n{`) +
+                `/**\n * Set of all {@link ${cap}Move ${display}} moves.` +
+                    "\n *\n * Maps move name to its id within this object." +
+                    `\n */\nexport const ${name}Moves = {`,
+            ) +
             `\n} as const;
 
 /** Types of ${display} moves. */
 export type ${cap}Move = keyof typeof ${name}Moves;
 
-/** Sorted array of all ${display} moves. */
+/** Sorted array of all {@link ${cap}Move ${display}} moves. */
 ${exportArray(moveNames, `${name}MoveKeys`, `${cap}Move`, quote)}
 
-/** Checks if a value is a ${cap}Move. */
-export function is${cap}Move(value: unknown): value is ${cap}Move
-{
+/** Checks if a value is a {@link ${cap}Move}. */
+export function is${cap}Move(value: unknown): value is ${cap}Move {
     return Object.hasOwnProperty.call(${name}Moves, value as PropertyKey);
-}`;
+}`
+        );
     }
 
     /**
@@ -1216,27 +1427,39 @@ export function is${cap}Move(value: unknown): value is ${cap}Move
      * @param dataName Name of the `dex` wrapped type.
      * @param mapName Name of the `dex` type map.
      */
-    function exportDataWrapper(name: string, dataName: string, mapName: string):
-        string
-    {
+    function exportDataWrapper(
+        name: string,
+        dataName: string,
+        mapName: string,
+    ): string {
         const lower = name.charAt(0).toLowerCase() + name.substr(1);
         return `\
-/** Memoization of \`get${name}()\`. */
+/** Memoization of {@link get${name}}. */
 const ${lower}Memo = new Map<${dataName}, wrappers.${name}>();
 
-/** Creates a \`${dataName}\` wrapper. */
+/**
+ * Gets or creates a {@link ${dataName}} wrapper.
+ *
+ * @param data Data to wrap.
+ * @returns The wrapper.
+ */
 export function get${name}(data: ${dataName}): wrappers.${name};
-/** Creates a \`${dataName}\` wrapper, or null if not found. */
+/**
+ * Gets or creates a {@link ${dataName}} wrapper.
+ *
+ * @param name Name of the {@link ${dataName}}.
+ * @returns A {@link ${dataName}} wrapper, or \`null\` if not found in
+ * {@link ${mapName}}.
+ */
 export function get${name}(name: string): wrappers.${name} | null;
 export function get${name}(name: string | ${dataName}): wrappers.${name} | null
 {
-    if (typeof name === "string")
-    {
+    if (typeof name === "string") {
         if (!Object.hasOwnProperty.call(${mapName}, name)) return null;
         name = ${mapName}[name];
     }
     let result = ${lower}Memo.get(name);
-    if (!result) ${lower}Memo.set(name, result = new wrappers.${name}(name));
+    if (!result) ${lower}Memo.set(name, (result = new wrappers.${name}(name)));
     return result;
 }`;
     }
@@ -1250,31 +1473,32 @@ import * as dex from "./dex-util";
 import * as wrappers from "./wrappers";
 
 /**
- * Contains info about each pokemon, with alternate forms as separate entries.
+ * Contains {@link dex.PokemonData info} about each species, with alternate
+ * forms as separate entries.
  */
-${exportEntriesToDict(pokemon, "pokemon", "dex.PokemonData",
-    p => deepStringifyDict({...p},
-        v => typeof v === "string" ? quote(v) : `${v}`))}
+${exportEntriesToDict(pokemon, "pokemon", "dex.PokemonData", p =>
+    deepStringifyDict({...p}, v => (typeof v === "string" ? quote(v) : `${v}`)),
+)}
 
 /** Sorted array of all pokemon names. */
 ${exportArray(pokemon, "pokemonKeys", "string", ([name]) => quote(name))}
 
 ${exportDataWrapper("Ability", "dex.AbilityData", "abilities")}
 
-/** Contains info about each ability. */
-${exportEntriesToDict(abilities, "abilities", "dex.AbilityData",
-    a => deepStringifyDict({...a},
-        v => typeof v === "string" ? quote(v) : `${v}`))}
+/** Contains {@link dex.AbilityData info} about each ability. */
+${exportEntriesToDict(abilities, "abilities", "dex.AbilityData", a =>
+    deepStringifyDict({...a}, v => (typeof v === "string" ? quote(v) : `${v}`)),
+)}
 
 /** Sorted array of all ability names. */
 ${exportArray(abilities, "abilityKeys", "string", ([name]) => quote(name))}
 
 ${exportDataWrapper("Move", "dex.MoveData", "moves")}
 
-/** Contains info about each move. */
-${exportEntriesToDict(moves, "moves", "dex.MoveData",
-    m => deepStringifyDict({...m},
-        v => typeof v === "string" ? quote(v) : `${v}`))}
+/** Contains {@link dex.MoveData info} about each move. */
+${exportEntriesToDict(moves, "moves", "dex.MoveData", m =>
+    deepStringifyDict({...m}, v => (typeof v === "string" ? quote(v) : `${v}`)),
+)}
 
 /** Sorted array of all move names. */
 ${exportArray(moves, "moveKeys", "string", ([name]) => quote(name))}
@@ -1285,29 +1509,35 @@ ${exportSpecificMoves(lockedMoves, "locked")}
 
 ${exportSpecificMoves(twoTurnMoves, "twoTurn", "two-turn")}
 
-/** Maps move name to its CallType, if any. Primarily used for easy testing. */
-${exportEntriesToDict(moveCallers, "moveCallers", "dex.CallType",
-    v => typeof v === "string" ? quote(v) : v.toString())}
+/** Maps a move name to its {@link dex.CallType}, if any. */
+${exportEntriesToDict(moveCallers, "moveCallers", "dex.CallType", v =>
+    typeof v === "string" ? quote(v) : v.toString(),
+)}
 
 /** Maps move type to each move of that type. */
-${exportDict(typeToMoves, "typeToMoves",
+${exportDict(
+    typeToMoves,
+    "typeToMoves",
     "{readonly [T in dex.Type]: readonly string[]}",
-    a => `[${a.map(quote).join(", ")}]`)}
+    a => `[${a.map(quote).join(", ")}]`,
+)}
 
 ${exportDataWrapper("Item", "dex.ItemData", "items")}
 
-/** Contains info about each item. */
-${exportEntriesToDict(items, "items", "dex.ItemData",
-    i => deepStringifyDict({...i},
-        v => typeof v === "string" ? quote(v) : `${v}`))}
+/** Contains {@link dex.ItemData info} about each item. */
+${exportEntriesToDict(items, "items", "dex.ItemData", i =>
+    deepStringifyDict({...i}, v => (typeof v === "string" ? quote(v) : `${v}`)),
+)}
 
 /** Sorted array of all item names, except with \`none\` at position 0. */
 ${exportArray(items, "itemKeys", "string", i => quote(i[0]))}
 
-/** Contains info about each berry item. */
-${exportEntriesToDict(berries, "berries", "dex.NaturalGiftData",
-    b => stringifyDict({...b},
-        v => typeof v === "string" ? quote(v) : `${v}`))}`);
+/**
+ * Contains {@link dex.NaturalGiftData additional info} about each berry item.
+ */
+${exportEntriesToDict(berries, "berries", "dex.NaturalGiftData", b =>
+    stringifyDict({...b}, v => (typeof v === "string" ? quote(v) : `${v}`)),
+)}`);
 
     //#endregion
 })();

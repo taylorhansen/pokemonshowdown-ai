@@ -1,16 +1,23 @@
-import { MessagePort } from "worker_threads";
-import { alloc } from "../../../buf";
-import { formats } from "../../../psbot/handlers/battle";
-import { intToChoice } from "../../../psbot/handlers/battle/agent";
-import { Encoder } from "../../../psbot/handlers/battle/ai/encoder/Encoder";
-import { policyAgent, PolicyType } from
-    "../../../psbot/handlers/battle/ai/policyAgent";
-import { WrappedError } from "../../helpers/WrappedError";
-import { ExperienceAgent, ExperienceAgentData } from
-    "../../play/experience/Experience";
-import { AsyncPort, ProtocolResultRaw } from "../../port/AsyncPort";
-import { ModelPortProtocol, PredictMessage, PredictResult } from
-    "./ModelPortProtocol";
+import {MessagePort} from "worker_threads";
+import {alloc} from "../../../buf";
+import {formats} from "../../../psbot/handlers/battle";
+import {intToChoice} from "../../../psbot/handlers/battle/agent";
+import {Encoder} from "../../../psbot/handlers/battle/ai/encoder/Encoder";
+import {
+    policyAgent,
+    PolicyType,
+} from "../../../psbot/handlers/battle/ai/policyAgent";
+import {WrappedError} from "../../helpers/WrappedError";
+import {
+    ExperienceAgent,
+    ExperienceAgentData,
+} from "../../play/experience/Experience";
+import {AsyncPort, ProtocolResultRaw} from "../../port/AsyncPort";
+import {
+    ModelPortProtocol,
+    PredictMessage,
+    PredictResult,
+} from "./ModelPortProtocol";
 
 /**
  * Abstracts the interface between a game worker and the main NetworkProcessor
@@ -21,14 +28,15 @@ import { ModelPortProtocol, PredictMessage, PredictResult } from
  *
  * @template TFormatType Game format type.
  */
-export class ModelPort
-<
-    TFormatType extends formats.FormatType = formats.FormatType
->
-{
+export class ModelPort<
+    TFormatType extends formats.FormatType = formats.FormatType,
+> {
     /** Port wrapper. */
-    private readonly asyncPort:
-        AsyncPort<MessagePort, ModelPortProtocol, keyof ModelPortProtocol>;
+    private readonly asyncPort: AsyncPort<
+        MessagePort,
+        ModelPortProtocol,
+        keyof ModelPortProtocol
+    >;
 
     /**
      * Creates a ModelPort.
@@ -36,22 +44,32 @@ export class ModelPort
      * @param port Message port.
      * @param format Game format type that the message port supports.
      */
-    public constructor(port: MessagePort, public readonly format: TFormatType)
-    {
+    public constructor(port: MessagePort, public readonly format: TFormatType) {
         this.asyncPort = new AsyncPort(port);
-        port.on("message",
-            (res: ProtocolResultRaw<ModelPortProtocol,
-                    keyof ModelPortProtocol>) =>
-                this.asyncPort.receiveMessage(res));
-        port.on("error",
-            (err: Error) => this.asyncPort.receiveError(
-                new WrappedError(err,
-                    msg => "ModelPort encountered an unhandled exception: " +
-                        msg)));
+        port.on(
+            "message",
+            (
+                res: ProtocolResultRaw<
+                    ModelPortProtocol,
+                    keyof ModelPortProtocol
+                >,
+            ) => this.asyncPort.receiveMessage(res),
+        );
+        port.on("error", (err: Error) =>
+            this.asyncPort.receiveError(
+                new WrappedError(
+                    err,
+                    msg =>
+                        "ModelPort encountered an unhandled exception: " + msg,
+                ),
+            ),
+        );
     }
 
     /** Closes the connection. */
-    public close(): void { this.asyncPort.port.close(); }
+    public close(): void {
+        this.asyncPort.port.close();
+    }
 
     /**
      * Creates a BattleAgent from this port.
@@ -59,45 +77,43 @@ export class ModelPort
      * @param policy Action selection method.
      * @see {@link policyAgent}
      */
-    public getAgent(policy: PolicyType): ExperienceAgent<TFormatType>
-    {
+    public getAgent(policy: PolicyType): ExperienceAgent<TFormatType> {
         let data: ExperienceAgentData | null = null;
 
-        const innerAgent = policyAgent<TFormatType>(
-            async state =>
-            {
-                const encoder = formats.encoder[this.format] as
-                    Encoder<formats.ReadonlyState<TFormatType>>;
-                const arr = alloc(encoder.size, true /*shared*/);
-                encoder.encode(arr, state);
-                let i = ModelPort.verifyInput(arr);
-                if (i >= 0)
-                {
-                    throw new Error("Neural network input contains an " +
+        const innerAgent = policyAgent<TFormatType>(async state => {
+            const encoder = formats.encoder[this.format] as Encoder<
+                formats.ReadonlyState<TFormatType>
+            >;
+            const arr = alloc(encoder.size, true /*shared*/);
+            encoder.encode(arr, state);
+            let i = ModelPort.verifyInput(arr);
+            if (i >= 0) {
+                throw new Error(
+                    "Neural network input contains an " +
                         `invalid value (${arr[i]}) at index ${i}\n` +
-                        `State:\n${state.toString()}`);
-                }
+                        `State:\n${state.toString()}`,
+                );
+            }
 
-                const result = await this.predict(arr, true /*shared*/);
-                i = ModelPort.verifyOutput(result.probs);
-                if (i >= 0)
-                {
-                    throw new Error("Neural network output contains an " +
-                        `invalid value at index ${i} (${intToChoice[i]})`);
-                }
+            const result = await this.predict(arr, true /*shared*/);
+            i = ModelPort.verifyOutput(result.probs);
+            if (i >= 0) {
+                throw new Error(
+                    "Neural network output contains an " +
+                        `invalid value at index ${i} (${intToChoice[i]})`,
+                );
+            }
 
-                data = {...result, state: arr};
-                return result.probs;
-            },
-            policy);
+            data = {...result, state: arr};
+            return result.probs;
+        }, policy);
 
-        return async function portAgent(state, choices, logger)
-        {
+        return async function portAgent(state, choices, logger) {
             await innerAgent(state, choices, logger);
-            if (!data)
-            {
-                throw new Error("ModelPort agent didn't collect experience " +
-                    "data");
+            if (!data) {
+                throw new Error(
+                    "ModelPort agent didn't collect experience " + "data",
+                );
             }
             const result = data;
             data = null;
@@ -112,10 +128,8 @@ export class ModelPort
      * @param arr Array input.
      * @returns The index of an invalid value, or -1 if none found.
      */
-    private static verifyInput(arr: Float32Array): number
-    {
-        for (let i = 0; i < arr.length; ++i)
-        {
+    private static verifyInput(arr: Float32Array): number {
+        for (let i = 0; i < arr.length; ++i) {
             if (isNaN(arr[i])) return i;
             if (Math.abs(arr[i]) > 1) return i;
         }
@@ -130,10 +144,8 @@ export class ModelPort
      * @param arr Array input.
      * @returns The index of an invalid value, or -1 if none found.
      */
-    private static verifyOutput(arr: Float32Array): number
-    {
-        for (let i = 0; i < arr.length; ++i)
-        {
+    private static verifyOutput(arr: Float32Array): number {
+        for (let i = 0; i < arr.length; ++i) {
             if (isNaN(arr[i])) return i;
             if (arr[i] < 1e-4) return i;
         }
@@ -146,18 +158,23 @@ export class ModelPort
      * @param state State data.
      * @param shared Whether the array uses a SharedArrayBuffer.
      */
-    public async predict(state: Float32Array, shared = false):
-        Promise<PredictResult>
-    {
-        const msg: PredictMessage =
-            {type: "predict", rid: this.asyncPort.nextRid(), state};
+    public async predict(
+        state: Float32Array,
+        shared = false,
+    ): Promise<PredictResult> {
+        const msg: PredictMessage = {
+            type: "predict",
+            rid: this.asyncPort.nextRid(),
+            state,
+        };
         // SharedArrayBuffers can't be in the transfer list since they're
-        //  Already accessible from both threads
+        // already accessible from both threads.
         const transferList = shared ? [] : [state.buffer];
 
         return await new Promise((res, rej) =>
-            this.asyncPort.postMessage(msg, transferList,
-                result =>
-                    result.type === "error" ? rej(result.err) : res(result)));
+            this.asyncPort.postMessage(msg, transferList, result =>
+                result.type === "error" ? rej(result.err) : res(result),
+            ),
+        );
     }
 }

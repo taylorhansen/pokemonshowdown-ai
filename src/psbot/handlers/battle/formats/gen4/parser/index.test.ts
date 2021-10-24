@@ -9,16 +9,16 @@ import * as reason from "./reason/index.test";
 import * as request from "./request.test";
 import * as turnLoop from "./turnLoop.test";
 
-export const test = () => describe("parser", function()
-{
-    // Directory structure order.
-    action.test();
-    effect.test();
-    reason.test();
-    base.test();
-    faint.test();
-    init.test();
-    main.test();
-    request.test();
-    turnLoop.test();
-});
+export const test = () =>
+    describe("parser", function () {
+        // Directory structure order.
+        action.test();
+        effect.test();
+        reason.test();
+        base.test();
+        faint.test();
+        init.test();
+        main.test();
+        request.test();
+        turnLoop.test();
+    });

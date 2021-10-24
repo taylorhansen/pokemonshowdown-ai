@@ -1,16 +1,13 @@
 /** Readonly {@link BattleState} representation. */
-export interface ReadonlyBattleState
-{
+export interface ReadonlyBattleState {
     /** @override */
     readonly toString: () => string;
 }
 
 /** Gen8 battle state stub. */
-export class BattleState implements ReadonlyBattleState
-{
+export class BattleState implements ReadonlyBattleState {
     /** @override */
-    public toString()
-    {
+    public toString() {
         return "<gen8 not implemented>";
     }
 }

@@ -17,23 +17,23 @@ import * as VariableTempStatus from "./VariableTempStatus.test";
 import * as VolatileStatus from "./VolatileStatus.test";
 import * as utility from "./utility.test";
 
-export const test = () => describe("state", function()
-{
-    Hp.test();
-    ItemTempStatus.test();
-    MajorStatusCounter.test();
-    Move.test();
-    Moveset.test();
-    Pokemon.test();
-    PokemonTraits.test();
-    PossibilityClass.test();
-    RoomStatus.test();
-    StatRange.test();
-    StatTable.test();
-    Team.test();
-    TeamStatus.test();
-    TempStatus.test();
-    utility.test();
-    VariableTempStatus.test();
-    VolatileStatus.test();
-});
+export const test = () =>
+    describe("state", function () {
+        Hp.test();
+        ItemTempStatus.test();
+        MajorStatusCounter.test();
+        Move.test();
+        Moveset.test();
+        Pokemon.test();
+        PokemonTraits.test();
+        PossibilityClass.test();
+        RoomStatus.test();
+        StatRange.test();
+        StatTable.test();
+        Team.test();
+        TeamStatus.test();
+        TempStatus.test();
+        utility.test();
+        VariableTempStatus.test();
+        VolatileStatus.test();
+    });

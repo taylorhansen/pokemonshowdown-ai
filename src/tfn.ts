@@ -14,17 +14,17 @@ let importGpu: boolean | undefined;
  * @param gpu Whether to enable GPU support. If called multiple times, this
  * parameter must not change from the first call.
  */
-export function importTfn(gpu = false): Tfn
-{
+export function importTfn(gpu = false): Tfn {
     if (importGpu === undefined) importGpu = gpu;
-    else if (importGpu !== gpu)
-    {
-        throw new Error("tfImport was previously called with " +
-            `gpu=${importGpu} but is now being called with gpu=${gpu}`)
+    else if (importGpu !== gpu) {
+        throw new Error(
+            `tfImport was previously called with gpu=${importGpu} but is ` +
+                `now being called with gpu=${gpu}`,
+        );
     }
     /* eslint-disable @typescript-eslint/no-require-imports */
-    return gpu ?
-        require("@tensorflow/tfjs-node-gpu") as TfjsNodeGpu
-        : require("@tensorflow/tfjs-node") as TfjsNode;
+    return gpu
+        ? (require("@tensorflow/tfjs-node-gpu") as TfjsNodeGpu)
+        : (require("@tensorflow/tfjs-node") as TfjsNode);
     /* eslint-enable @typescript-eslint/no-require-imports */
 }

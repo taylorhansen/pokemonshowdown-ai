@@ -1,8 +1,7 @@
 import * as dex from "../dex";
 
 /** Readonly {@link Move} representation. */
-export interface ReadonlyMove
-{
+export interface ReadonlyMove {
     /** Move name. */
     readonly name: string;
     // TODO: Use dex.Move wrapper instead of data.
@@ -15,17 +14,17 @@ export interface ReadonlyMove
 }
 
 /** Information about a certain move. */
-export class Move implements ReadonlyMove
-{
+export class Move implements ReadonlyMove {
     /** @override */
     public readonly name: string;
     /** @override */
     public readonly data: dex.MoveData;
 
     /** @override */
-    public get pp(): number { return this._pp; }
-    public set pp(pp: number)
-    {
+    public get pp(): number {
+        return this._pp;
+    }
+    public set pp(pp: number) {
         this._pp = Math.max(0, Math.min(pp, this.maxpp));
     }
     private _pp = 0;
@@ -42,11 +41,12 @@ export class Move implements ReadonlyMove
      * `"max"`.
      * @param pp Initial PP value. Set to maxpp by default.
      */
-    public constructor(name: string, maxpp: "min" | "max" | number = "max",
-        pp?: number)
-    {
-        if (!Object.hasOwnProperty.call(dex.moves, name))
-        {
+    public constructor(
+        name: string,
+        maxpp: "min" | "max" | number = "max",
+        pp?: number,
+    ) {
+        if (!Object.hasOwnProperty.call(dex.moves, name)) {
             throw new Error(`Invalid move name '${name}'`);
         }
 
@@ -67,9 +67,10 @@ export class Move implements ReadonlyMove
      * @param info Optional. Extra info about this move that should be
      * displayed.
      */
-    public toString(info = ""): string
-    {
-        return `${this.name}${info ? ` <${info}>` : ""} ` +
-            `(${this._pp}/${this.maxpp})`;
+    public toString(info = ""): string {
+        return (
+            `${this.name}${info ? ` <${info}>` : ""} ` +
+            `(${this._pp}/${this.maxpp})`
+        );
     }
 }

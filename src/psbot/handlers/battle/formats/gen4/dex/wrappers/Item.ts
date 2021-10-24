@@ -1,34 +1,40 @@
-import { Protocol } from "@pkmn/protocol";
-import { SideID } from "@pkmn/types";
-import { BoostName, Type } from "..";
-import { toIdName } from "../../../../../../helpers";
-import { Event } from "../../../../../../parser";
-import { BattleParserContext, consume, inference, tryVerify, unordered } from
-    "../../../../parser";
-import { handlers as base } from "../../parser/base";
-import { boostOne } from "../../parser/effect/boost";
-import { isPercentDamageSilent, percentDamage } from
-    "../../parser/effect/damage";
-import { updateItems } from "../../parser/effect/item";
-import { cure, hasStatus, status, StatusEventType } from
-    "../../parser/effect/status";
+import {Protocol} from "@pkmn/protocol";
+import {SideID} from "@pkmn/types";
+import {BoostName, Type} from "..";
+import {toIdName} from "../../../../../../helpers";
+import {Event} from "../../../../../../parser";
+import {
+    BattleParserContext,
+    consume,
+    inference,
+    tryVerify,
+    unordered,
+} from "../../../../parser";
+import {handlers as base} from "../../parser/base";
+import {boostOne} from "../../parser/effect/boost";
+import {isPercentDamageSilent, percentDamage} from "../../parser/effect/damage";
+import {updateItems} from "../../parser/effect/item";
+import {
+    cure,
+    hasStatus,
+    status,
+    StatusEventType,
+} from "../../parser/effect/status";
 import * as reason from "../../parser/reason";
-import { Pokemon } from "../../state/Pokemon";
-import { PreTurnSnapshotPokemon } from "../../state/Team";
-import { ItemData, ItemOn, StatusType } from "../dex-util";
-import { getTypeEffectiveness } from "../typechart";
-import { MoveAndUser, MoveAndUserRef } from "./Move";
+import {Pokemon} from "../../state/Pokemon";
+import {PreTurnSnapshotPokemon} from "../../state/Team";
+import {ItemData, ItemOn, StatusType} from "../dex-util";
+import {getTypeEffectiveness} from "../typechart";
+import {MoveAndUser, MoveAndUserRef} from "./Move";
 
 /** Result of {@link Item.onPreHit}. */
-export interface ItemPreHitResult
-{
+export interface ItemPreHitResult {
     /** Resist berry type if applicable. */
     resistSuper?: Type;
 }
 
 /** Encapsulates item properties. */
-export class Item
-{
+export class Item {
     // TODO: Eventually make #data inaccessible apart from internal dex?
     /**
      * Creates an Item data wrapper.
@@ -47,14 +53,18 @@ export class Item
      * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
-    public canPreMove(mon: Pokemon): Set<inference.SubReason> | null
-    {
+    public canPreMove(mon: Pokemon): Set<inference.SubReason> | null {
         if (!this.data.on?.preMove) return null;
         // Note(gen4): Custapberry check happens on pre-turn but is only ever
         // shown/acknowledged on pre-move.
-        return this.checkHpThreshold(mon.team?.preTurnSnapshotPokemon ?? mon,
-            this.data.on.preMove.threshold);
+        return this.checkHpThreshold(
+            mon.team?.preTurnSnapshotPokemon ?? mon,
+            this.data.on.preMove.threshold,
+        );
     }
+
+    /** Custapberry message. */
+    private static readonly custapMessage = "Custap Berry activated.";
 
     /**
      * Activates an item on-`preMove` (e.g. custapberry).
@@ -64,26 +74,28 @@ export class Item
      * @returns `"moveFirst"` if the holder is moving first in its priority
      * bracket due to the item. Otherwise `undefined`.
      */
-    public async onPreMove(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID):
-        Promise<"moveFirst" | undefined>
-    {
+    public async onPreMove(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<"moveFirst" | undefined> {
         if (!this.data.on?.preMove) return;
-        if (this.data.on.preMove.moveFirst &&
-            this.data.on.preMove.threshold)
-        {
-            if (!await this.onEat(ctx, accept, side)) return;
+        if (this.data.on.preMove.moveFirst && this.data.on.preMove.threshold) {
+            if (!(await this.onEat(ctx, accept, side))) return;
 
             const event = await tryVerify(ctx, "|-message|");
-            if (!event)
-            {
-                throw new Error("On-preMove moveFirst effect failed: " +
-                    "Missing custapberry message");
+            if (!event) {
+                throw new Error(
+                    "On-preMove moveFirst effect failed: " +
+                        "Missing custapberry message",
+                );
             }
-            if (event.args[1] !== "Custap Berry activated.")
-            {
-                throw new Error("On-preMove moveFirst effect failed: " +
-                    `Expected custapberry message but got '${event.args[1]}'`);
+            if (event.args[1] !== Item.custapMessage) {
+                throw new Error(
+                    "On-preMove moveFirst effect failed: " +
+                        "Expected custapberry message " +
+                        `'${Item.custapMessage}' but got '${event.args[1]}'`,
+                );
             }
             await base["|-message|"](ctx);
 
@@ -103,11 +115,9 @@ export class Item
      * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
-    public canMoveCharge(mon: Pokemon): Set<inference.SubReason> | null
-    {
+    public canMoveCharge(mon: Pokemon): Set<inference.SubReason> | null {
         if (!this.data.on?.moveCharge) return null;
-        if (this.data.on.moveCharge.shorten)
-        {
+        if (this.data.on.moveCharge.shorten) {
             return new Set([reason.ability.cantIgnoreItem(mon)]);
         }
         return null;
@@ -121,15 +131,15 @@ export class Item
      * @returns `"shorten"` if the holder's two-turn move is being shortend to
      * one due to the item. Otherwise `undefined`.
      */
-    public async onMoveCharge(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID):
-        Promise<"shorten" | undefined>
-    {
+    public async onMoveCharge(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<"shorten" | undefined> {
         const data = this.data.on?.moveCharge;
         if (!data) return;
-        if (data.shorten && data.consume)
-        {
-            if (!await this.consumeItem(ctx, accept, side)) return;
+        if (data.shorten && data.consume) {
+            if (!(await this.consumeItem(ctx, accept, side))) return;
             return "shorten";
         }
     }
@@ -147,29 +157,35 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canPreHit(mon: Pokemon, hitBy: MoveAndUser):
-        Set<inference.SubReason> | null
-    {
-        const data = this.data.on?.preHit
+    public canPreHit(
+        mon: Pokemon,
+        hitBy: MoveAndUser,
+    ): Set<inference.SubReason> | null {
+        const data = this.data.on?.preHit;
         if (!data) return null;
 
         const result = new Set([reason.ability.cantIgnoreItem(mon)]);
 
-        if (data.resistSuper)
-        {
+        if (data.resistSuper) {
             // Can't activate if holder isn't weak to the type this item
             // protects against (unless normal).
-            if (data.resistSuper !== "normal" &&
-                getTypeEffectiveness(mon.types, data.resistSuper) !== "super")
-            {
+            if (
+                data.resistSuper !== "normal" &&
+                getTypeEffectiveness(mon.types, data.resistSuper) !== "super"
+            ) {
                 return null;
             }
             // Can't activate for moves that can never be super-effective.
             if (!hitBy.move.canBeEffective) return null;
             // Will only work then if the move type is the protected type.
             // TODO: Don't add if already proven/disproven.
-            result.add(reason.move.isType(hitBy.move, hitBy.user,
-                    new Set([data.resistSuper])));
+            result.add(
+                reason.move.isType(
+                    hitBy.move,
+                    hitBy.user,
+                    new Set([data.resistSuper]),
+                ),
+            );
         }
         return result;
     }
@@ -180,17 +196,25 @@ export class Item
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
      * @param hitBy Move+user the holder is being hit by.
+     * @returns Result of the item activation which can modify the current hit
+     * in progress.
      */
-    public async onPreHit(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID, hitBy: MoveAndUser):
-        Promise<ItemPreHitResult>
-    {
+    public async onPreHit(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        hitBy: MoveAndUser,
+    ): Promise<ItemPreHitResult> {
         const data = this.data.on?.preHit;
         if (!data) return {};
-        if (data.resistSuper)
-        {
-            return await this.resistSuper(ctx, accept, side, hitBy,
-                data.resistSuper);
+        if (data.resistSuper) {
+            return await this.resistSuper(
+                ctx,
+                accept,
+                side,
+                hitBy,
+                data.resistSuper,
+            );
         }
         return {};
     }
@@ -203,12 +227,17 @@ export class Item
      * @param hitBy Move+user the holder is being hit by.
      * @param moveType Resist berry type, which must match the `hitBy.move`
      * type.
+     * @returns Result of the item activation which can modify the current hit
+     * in progress.
      */
-    private async resistSuper(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID, hitBy: MoveAndUser,
-        moveType: Type): Promise<ItemPreHitResult>
-    {
-        if (!await this.onEat(ctx, accept, side)) return {};
+    private async resistSuper(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        hitBy: MoveAndUser,
+        moveType: Type,
+    ): Promise<ItemPreHitResult> {
+        if (!(await this.onEat(ctx, accept, side))) return {};
 
         // Item effect event is similar to the initial parsed onEat() event but
         // with a [weaken] suffix instead of [eat].
@@ -229,11 +258,12 @@ export class Item
         const holder = ctx.state.getTeam(side).active;
         const {types} = holder;
         const eff = getTypeEffectiveness(types, moveType);
-        if (eff !== "super")
-        {
+        if (eff !== "super") {
             // TODO: Log error instead of throw?
-            throw new Error("Expected type effectiveness to be 'super' but " +
-                `got '${eff}' for '${moveType}' vs [${types.join(", ")}]`);
+            throw new Error(
+                "Expected type effectiveness to be 'super' but " +
+                    `got '${eff}' for '${moveType}' vs [${types.join(", ")}]`,
+            );
         }
 
         // Infer move type based on resist berry type.
@@ -253,12 +283,10 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canTryOhko(mon: Pokemon): Set<inference.SubReason> | null
-    {
+    public canTryOhko(mon: Pokemon): Set<inference.SubReason> | null {
         const data = this.data.on?.tryOhko;
         if (!data) return null;
-        if (data.block && data.consume)
-        {
+        if (data.block && data.consume) {
             const result = new Set([reason.ability.cantIgnoreItem(mon)]);
 
             const activate = reason.hp.isAt1(mon);
@@ -277,14 +305,14 @@ export class Item
      * @param side Item holder reference.
      * @returns Whether the item activated to prevent an OHKO.
      */
-    public async onTryOhko(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID):
-        Promise<boolean | undefined>
-    {
+    public async onTryOhko(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<boolean | undefined> {
         const data = this.data.on?.tryOhko;
         if (!data) return;
-        if (data.block && data.consume)
-        {
+        if (data.block && data.consume) {
             return await this.consumeItem(ctx, accept, side);
         }
     }
@@ -302,26 +330,24 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canSuper(mon: Pokemon, hitBy: MoveAndUser):
-        Set<inference.SubReason> | null
-    {
+    public canSuper(
+        mon: Pokemon,
+        hitBy: MoveAndUser,
+    ): Set<inference.SubReason> | null {
         const data = this.data.on?.super;
         if (!data) return null;
         if (!hitBy.move.canBeEffective) return null;
 
-        if (data.heal)
-        {
+        if (data.heal) {
             // Must be able to heal.
             if (mon.fainted) return null;
-            if (isPercentDamageSilent(data.heal, mon.hp.current, mon.hp.max))
-            {
+            if (isPercentDamageSilent(data.heal, mon.hp.current, mon.hp.max)) {
                 return null;
             }
 
-            return new Set(
-            [
+            return new Set([
                 reason.ability.cantIgnoreItem(mon),
-                reason.move.isEffective(hitBy.move, hitBy.user, mon, "super")
+                reason.move.isEffective(hitBy.move, hitBy.user, mon, "super"),
             ]);
         }
         return null;
@@ -333,19 +359,23 @@ export class Item
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
      */
-    public async onSuper(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID): Promise<void>
-    {
+    public async onSuper(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
         const data = this.data.on?.super;
         if (!data) return;
-        if (data.heal)
-        {
-            if (!await this.onEat(ctx, accept, side)) return;
+        if (data.heal) {
+            if (!(await this.onEat(ctx, accept, side))) return;
             let accepted = false;
-            const damageResult = await this.percentDamage(ctx,
-                () => accepted = true, side, data.heal);
-            if (damageResult !== true || !accepted)
-            {
+            const damageResult = await this.percentDamage(
+                ctx,
+                () => (accepted = true),
+                side,
+                data.heal,
+            );
+            if (damageResult !== true || !accepted) {
                 throw new Error("ConsumeOn-super heal effect failed");
             }
         }
@@ -364,18 +394,17 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canPostHit(mon: Pokemon, hitBy: MoveAndUser):
-        Set<inference.SubReason> | null
-    {
+    public canPostHit(
+        mon: Pokemon,
+        hitBy: MoveAndUser,
+    ): Set<inference.SubReason> | null {
         const data = this.data.on?.postHit;
         if (!data) return null;
-        if (data.condition !== hitBy.move.data.category)
-        {
+        if (data.condition !== hitBy.move.data.category) {
             return null;
         }
 
-        if (data.damage)
-        {
+        if (data.damage) {
             // Note: Even if effect is a no-op, this item still activates.
             return new Set([reason.ability.cantIgnoreItem(mon)]);
         }
@@ -389,22 +418,26 @@ export class Item
      * @param side Item holder reference.
      * @param hitBy Move+user ref the holder is being hit by.
      */
-    public async onPostHit(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID, hitBy: MoveAndUserRef):
-        Promise<void>
-    {
+    public async onPostHit(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        hitBy: MoveAndUserRef,
+    ): Promise<void> {
         const data = this.data.on?.postHit;
         if (!data) return;
         if (hitBy.move.data.category !== data.condition) return;
-        if (data.damage)
-        {
-            if (!await this.onEat(ctx, accept, side)) return;
+        if (data.damage) {
+            if (!(await this.onEat(ctx, accept, side))) return;
             let accepted = false;
             // Note: Even if effect is a no-op, this item still activates.
-            const damageResult = await this.percentDamage(ctx,
-                () => accepted = true, hitBy.userRef, -data.damage);
-            if (damageResult === true && accepted)
-            {
+            const damageResult = await this.percentDamage(
+                ctx,
+                () => (accepted = true),
+                hitBy.userRef,
+                -data.damage,
+            );
+            if (damageResult === true && accepted) {
                 // After dealing damage, check if any other items need to
                 // activate.
                 await updateItems(ctx);
@@ -424,8 +457,7 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canMovePostDamage(mon: Pokemon): Set<inference.SubReason> | null
-    {
+    public canMovePostDamage(mon: Pokemon): Set<inference.SubReason> | null {
         if (!this.data.on?.movePostDamage) return null;
 
         // Check for abilities that would block the item.
@@ -435,25 +467,22 @@ export class Item
         const abilities = new Set(mon.traits.ability.possibleValues);
         // Check if the item could actually activate.
         const percent = this.data.on.movePostDamage.percentDamage;
-        if (percent &&
-            !isPercentDamageSilent(percent, mon.hp.current, mon.hp.max))
-        {
+        if (
+            percent &&
+            !isPercentDamageSilent(percent, mon.hp.current, mon.hp.max)
+        ) {
             // Filter ability possibilities that can block the remaining
             // effects.
             // If one effect can't be suppressed, then the item should activate.
-            for (const abilityName of abilities)
-            {
+            for (const abilityName of abilities) {
                 const ability = mon.traits.ability.map[abilityName];
                 if (ability.flags?.ignoreItem) continue;
-                if (percent < 0 &&
-                    ability.flags?.noIndirectDamage === true)
-                {
+                if (percent < 0 && ability.flags?.noIndirectDamage === true) {
                     continue;
                 }
                 abilities.delete(abilityName);
             }
-        }
-        else return null;
+        } else return null;
         // No abilities block this item.
         if (abilities.size <= 0) return new Set();
         // All possible abilities block this item.
@@ -467,15 +496,20 @@ export class Item
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
      */
-    public async onMovePostDamage(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID): Promise<void>
-    {
+    public async onMovePostDamage(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
         if (!this.data.on?.movePostDamage) return;
         // Self-damage.
-        if (this.data.on.movePostDamage.percentDamage)
-        {
-            const damageResult = await this.percentDamage(ctx, accept, side,
-                this.data.on.movePostDamage.percentDamage);
+        if (this.data.on.movePostDamage.percentDamage) {
+            const damageResult = await this.percentDamage(
+                ctx,
+                accept,
+                side,
+                this.data.on.movePostDamage.percentDamage,
+            );
             if (damageResult !== true) return;
             // This counts as indirect damage (blocked by magicguard).
             // TODO: Make this a SubReason in #canMovePostDamage().
@@ -495,26 +529,22 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canUpdate(mon: Pokemon): Set<inference.SubReason> | null
-    {
+    public canUpdate(mon: Pokemon): Set<inference.SubReason> | null {
         if (mon.fainted) return null;
         const data = this.data.on?.update;
         if (!data) return null;
-        switch (data.condition)
-        {
+        switch (data.condition) {
             case "hp":
                 return this.checkHpThreshold(mon, data.threshold);
-            case "status":
-            {
+            case "status": {
                 let activate = false;
-                for (const statusType in data.status)
-                {
-                    if (!Object.hasOwnProperty.call(data.status, statusType))
-                    {
+                for (const statusType in data.status) {
+                    if (!Object.hasOwnProperty.call(data.status, statusType)) {
                         continue;
                     }
-                    if (activate ||= hasStatus(mon, statusType as StatusType))
-                    {
+                    if (
+                        (activate ||= hasStatus(mon, statusType as StatusType))
+                    ) {
                         break;
                     }
                 }
@@ -522,15 +552,14 @@ export class Item
                 return new Set([reason.ability.cantIgnoreItem(mon)]);
             }
             case "depleted":
-                for (const move of mon.moveset.moves.values())
-                {
+                for (const move of mon.moveset.moves.values()) {
                     // TODO: Pp may be uncertain in certain corner cases
                     // (e.g. pressure), handle these then add a SubReason to
                     // support this later.
                     if (move.pp > 0) continue;
                     return new Set([reason.ability.cantIgnoreItem(mon)]);
                 }
-                // Fallthrough.
+            // Fallthrough.
             default:
                 return null;
         }
@@ -542,12 +571,13 @@ export class Item
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
      */
-    public async onUpdate(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID): Promise<void>
-    {
+    public async onUpdate(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
         const data = this.data.on?.update;
-        switch (data?.condition)
-        {
+        switch (data?.condition) {
             case "hp":
                 return await this.updateHp(ctx, accept, side);
             case "status":
@@ -564,9 +594,11 @@ export class Item
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
      */
-    private async updateHp(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID): Promise<void>
-    {
+    private async updateHp(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
         const data = this.data.on?.update;
         if (data?.condition !== "hp") return;
         await this.onEat(ctx, accept, side);
@@ -578,25 +610,29 @@ export class Item
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
      */
-    private async updateStatus(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID): Promise<void>
-    {
+    private async updateStatus(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
         const data = this.data.on?.update;
         if (data?.condition !== "status") return;
         // Mentalherb.
-        if (data.cure && data.consume)
-        {
-            if (!await this.consumeItem(ctx, accept, side)) return;
+        if (data.cure && data.consume) {
+            if (!(await this.consumeItem(ctx, accept, side))) return;
             const fail = (reasonStr?: string) =>
                 Item.effectFailed("update", "status cure", reasonStr);
             // Cure all the relevant statuses.
-            const cureResult = await cure(ctx, side,
-                Object.keys(data.status) as StatusType[]);
+            const cureResult = await cure(
+                ctx,
+                side,
+                Object.keys(data.status) as StatusType[],
+            );
             if (cureResult === "silent") return fail("Cure effect was a no-op");
-            if (cureResult.size > 0)
-            {
-                return fail("Missing cure events: " +
-                    `[${[...cureResult].join(", ")}]`);
+            if (cureResult.size > 0) {
+                return fail(
+                    "Missing cure events: " + `[${[...cureResult].join(", ")}]`,
+                );
             }
         }
         // Status berries.
@@ -609,9 +645,11 @@ export class Item
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
      */
-    private async updateDepleted(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID): Promise<void>
-    {
+    private async updateDepleted(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
         const data = this.data.on?.update;
         if (data?.condition !== "depleted") return;
         await this.onEat(ctx, accept, side);
@@ -629,8 +667,7 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    public canResidual(mon: Pokemon): Set<inference.SubReason> | null
-    {
+    public canResidual(mon: Pokemon): Set<inference.SubReason> | null {
         const data = this.data.on?.residual;
         if (!data) return null;
 
@@ -644,9 +681,10 @@ export class Item
         // Check for percent-damage effect.
         const isPoison = mon.types.includes("poison");
         let percent = data[isPoison ? "poisonDamage" : "noPoisonDamage"];
-        if (percent &&
-            isPercentDamageSilent(percent, mon.hp.current, mon.hp.max))
-        {
+        if (
+            percent &&
+            isPercentDamageSilent(percent, mon.hp.current, mon.hp.max)
+        ) {
             // Effect would be silent so don't mention it here.
             percent = undefined;
         }
@@ -659,26 +697,27 @@ export class Item
         // Start from the list of all possible abilities then prune the ones
         // that are irrelevant for this item.
         const abilities = new Set(mon.traits.ability.possibleValues);
-        for (const abilityName of abilities)
-        {
+        for (const abilityName of abilities) {
             const ability = mon.traits.ability.map[abilityName];
             // Ability can ignore item.
             if (ability.flags?.ignoreItem) continue;
             // Indirect damage doesn't apply when healing.
-            if (percent && percent < 0 &&
-                ability.flags?.noIndirectDamage === true)
-            {
+            if (
+                percent &&
+                percent < 0 &&
+                ability.flags?.noIndirectDamage === true
+            ) {
                 continue;
             }
             // If there's a status immunity (even a silent one), then the item
             // can't activate.
-            if (data.status && !ability.statusImmunity?.[data.status])
-            {
+            if (data.status && !ability.statusImmunity?.[data.status]) {
                 const blockCondition = ability.on?.block?.status;
                 if (blockCondition === true) continue;
-                if (blockCondition &&
-                    mon.team?.state?.status.weather.type === blockCondition)
-                {
+                if (
+                    blockCondition &&
+                    mon.team?.state?.status.weather.type === blockCondition
+                ) {
                     continue;
                 }
             }
@@ -702,17 +741,17 @@ export class Item
      * @param accept Callback to accept this pathway.
      * @param side Item holder reference.
      */
-    public async onResidual(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID): Promise<void>
-    {
-        const data = this.data.on?.residual
+    public async onResidual(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
+        const data = this.data.on?.residual;
         if (!data) return;
 
         // Micleberry.
-        if (data.threshold)
-        {
-            if (await this.onEat(ctx, accept, side))
-            {
+        if (data.threshold) {
+            if (await this.onEat(ctx, accept, side)) {
                 ctx.state.getTeam(side).active.volatile.micleberry = true;
             }
             return;
@@ -721,18 +760,19 @@ export class Item
         // Self-damage from leftovers, blacksludge, etc.
         const holder = ctx.state.getTeam(side).active;
         const isPoison = holder.types.includes("poison");
-        const percent =
-            data[isPoison ? "poisonDamage" : "noPoisonDamage"];
-        if (percent)
-        {
-            const damageResult = await this.percentDamage(ctx, accept, side,
-                percent);
+        const percent = data[isPoison ? "poisonDamage" : "noPoisonDamage"];
+        if (percent) {
+            const damageResult = await this.percentDamage(
+                ctx,
+                accept,
+                side,
+                percent,
+            );
             if (damageResult !== true) return;
             this.indirectDamage(ctx, side);
         }
         // Self-status from toxicorb, flameorb, etc.
-        else if (data.status)
-        {
+        else if (data.status) {
             await this.status(ctx, accept, side, [data.status]);
         }
     }
@@ -750,10 +790,12 @@ export class Item
      * will gain the item's effects.
      * @returns `true` if parsed, `undefined` otherwise.
      */
-    private async onEat(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID, stealeat?: SideID):
-        Promise<true | undefined>
-    {
+    private async onEat(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        stealeat?: SideID,
+    ): Promise<true | undefined> {
         if (!this.data.isBerry) return;
 
         // Recipient of the item effects.
@@ -767,16 +809,14 @@ export class Item
         if (ident.player !== side) return;
         const itemId = toIdName(itemName);
         if (itemId !== this.data.name) return;
-        if (stealeat)
-        {
+        if (stealeat) {
             if (event.kwArgs.from !== "stealeat") return;
             if (!event.kwArgs.move) return;
             if (!event.kwArgs.of) return;
             const ofIdent = Protocol.parsePokemonIdent(event.kwArgs.of);
             if (ofIdent.player !== stealeat) return;
             recipient = stealeat;
-        }
-        else if (!event.kwArgs.eat) return;
+        } else if (!event.kwArgs.eat) return;
         else recipient = side;
         accept();
         await base["|-enditem|"](ctx);
@@ -790,66 +830,69 @@ export class Item
      *
      * @param side Pokemon reference receiving the effects.
      */
-    private async onEatImpl(ctx: BattleParserContext<"gen4">, side: SideID):
-        Promise<void>
-    {
+    private async onEatImpl(
+        ctx: BattleParserContext<"gen4">,
+        side: SideID,
+    ): Promise<void> {
         const data = this.data.on?.eat;
         if (!data) return;
 
         const mon = ctx.state.getTeam(side).active;
         const fail = (reasonStr?: string) =>
             Item.effectFailed("eat", data.type, reasonStr);
-        switch (data.type)
-        {
-            case "healPercent": case "healFixed":
-            {
+        switch (data.type) {
+            case "healPercent":
+            case "healFixed": {
                 let accepted = true;
-                const damageResult = await this.percentDamage(ctx,
-                    () => accepted = true, side, data.heal);
+                const damageResult = await this.percentDamage(
+                    ctx,
+                    () => (accepted = true),
+                    side,
+                    data.heal,
+                );
                 if (damageResult !== true || !accepted) return fail();
-                if (data.dislike)
-                {
+                if (data.dislike) {
                     // TODO: Assert dislike nature.
                     // TODO: Handle status immunity/errors?
-                    void await status(ctx, side, ["confusion"]);
+                    void (await status(ctx, side, ["confusion"]));
                 }
                 break;
             }
-            case "boost":
-            {
+            case "boost": {
                 // Note: for starfberry (boosts a random stat), if all boosts
                 // are maxed out, no events are emitted.
-                const boostResult = await boostOne(ctx,
-                    {
-                        side,
-                        table: new Map(Object.entries(data.boostOne) as
-                                [BoostName, number][]),
-                        silent: Object.keys(data.boostOne).length > 1,
-                        pred: event => this.isEventFromItem(event)
-                    });
+                const boostResult = await boostOne(ctx, {
+                    side,
+                    table: new Map(
+                        Object.entries(data.boostOne) as [BoostName, number][],
+                    ),
+                    silent: Object.keys(data.boostOne).length > 1,
+                    pred: event => this.isEventFromItem(event),
+                });
                 if (!boostResult) return fail();
                 break;
             }
-            case "focusenergy":
-            {
+            case "focusenergy": {
                 // Note: Effect can be silent if already afflicted.
                 const statusResult = await status(ctx, side, ["focusenergy"]);
                 if (!statusResult) return fail();
                 break;
             }
-            case "cure":
-            {
+            case "cure": {
                 // Cure all the relevant statuses.
-                const cureResult = await cure(ctx, side,
-                    Object.keys(data.cure) as StatusType[]);
-                if (cureResult === "silent")
-                {
+                const cureResult = await cure(
+                    ctx,
+                    side,
+                    Object.keys(data.cure) as StatusType[],
+                );
+                if (cureResult === "silent") {
                     return fail("Cure effect was a no-op");
                 }
-                if (cureResult.size > 0)
-                {
-                    return fail("Missing cure events: " +
-                        `[${[...cureResult].join(", ")}]`);
+                if (cureResult.size > 0) {
+                    return fail(
+                        "Missing cure events: " +
+                            `[${[...cureResult].join(", ")}]`,
+                    );
                 }
                 break;
             }
@@ -857,8 +900,7 @@ export class Item
                 if (data.status !== "micleberry") break;
                 mon.volatile.micleberry = true;
                 break;
-            case "restore":
-            {
+            case "restore": {
                 const event = await tryVerify(ctx, "|-activate|");
                 if (!event) return fail("Missing |-activate| event");
                 const [, identStr, effectStr, moveName] = event.args;
@@ -866,8 +908,7 @@ export class Item
                 this.requireEffectFromItem(effectStr, fail);
                 Item.requireString(moveName, "move", fail);
                 const moveId = toIdName(moveName);
-                if (!event.kwArgs.consumed)
-                {
+                if (!event.kwArgs.consumed) {
                     return fail("Missing [consume] suffix");
                 }
 
@@ -877,8 +918,7 @@ export class Item
                 break;
             }
             // istanbul ignore next: Should never happen.
-            default:
-            {
+            default: {
                 const unhandled: never = data;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
                 return fail(`Unknown effect type '${(unhandled as any).type}'`);
@@ -894,64 +934,78 @@ export class Item
      * Indicates that the item holder received indirect damage from the item, in
      * order to make ability inferences.
      */
-    private indirectDamage(ctx: BattleParserContext<"gen4">, side: SideID): void
-    {
+    private indirectDamage(
+        ctx: BattleParserContext<"gen4">,
+        side: SideID,
+    ): void {
         const holder = ctx.state.getTeam(side).active;
         if (holder.volatile.suppressAbility) return;
 
         // Can't have an ability that blocks indirect damage.
         const {ability} = holder.traits;
-        const filteredAbilities =
-            [...ability.possibleValues]
-                .filter(n => ability.map[n].flags?.noIndirectDamage === true);
-        if (filteredAbilities.length >= ability.size)
-        {
-            throw new Error(`Pokemon '${side}' received indirect damage ` +
-                `from item '${this.data.name}' even though its ability ` +
-                `[${[...ability.possibleValues].join(", ")}] suppresses that ` +
-                "damage");
+        const filteredAbilities = [...ability.possibleValues].filter(
+            n => ability.map[n].flags?.noIndirectDamage === true,
+        );
+        if (filteredAbilities.length >= ability.size) {
+            throw new Error(
+                `Pokemon '${side}' received indirect damage ` +
+                    `from item '${this.data.name}' even though its ability ` +
+                    `[${[...ability.possibleValues].join(
+                        ", ",
+                    )}] suppresses that ` +
+                    "damage",
+            );
         }
         ability.remove(filteredAbilities);
     }
 
     // TODO: Replace fail cb pattern with aggregate errors?
-    private static requireIdent(str?: string, side?: SideID,
-        fail = (reasonStr: string) => { throw new Error(reasonStr); }):
-        ReturnType<typeof Protocol["parsePokemonIdent"]>
-    {
+    private static requireIdent(
+        str?: string,
+        side?: SideID,
+        fail = (reasonStr: string) => {
+            throw new Error(reasonStr);
+        },
+    ): ReturnType<typeof Protocol["parsePokemonIdent"]> {
         Item.requireString(str, "ident", fail);
         const ident = Protocol.parsePokemonIdent(str as Protocol.PokemonIdent);
-        if (side && ident.player !== side)
-        {
+        if (side && ident.player !== side) {
             return fail(`Expected ident '${side}' but got '${ident.player}'`);
         }
         return ident;
     }
 
-    private requireEffectFromItem(str?: string,
-        fail = (reasonStr: string) => { throw new Error(reasonStr); }):
-        ReturnType<typeof Protocol["parseEffect"]>
-    {
+    private requireEffectFromItem(
+        str?: string,
+        fail = (reasonStr: string) => {
+            throw new Error(reasonStr);
+        },
+    ): ReturnType<typeof Protocol["parseEffect"]> {
         if (!str) return fail("Missing effect");
         const effect = Protocol.parseEffect(str, toIdName);
-        if (!this.isEffectFromItem(effect))
-        {
+        if (!this.isEffectFromItem(effect)) {
             return fail(
-                `Expected item '${this.data.name}' but got '${effect?.name}'`);
+                `Expected item '${this.data.name}' but got '${effect?.name}'`,
+            );
         }
         return effect;
     }
 
-    private static requireString(str?: string, name = "string",
-        fail = (reasonStr: string) => { throw new Error(reasonStr); }):
-        asserts str is string
-    {
+    private static requireString(
+        str?: string,
+        name = "string",
+        fail = (reasonStr: string) => {
+            throw new Error(reasonStr);
+        },
+    ): asserts str is string {
         if (!str) return fail(`Missing ${name}`);
     }
 
-    private static effectFailed(on: ItemOn, effectName?: string,
-        reasonStr?: string): never
-    {
+    private static effectFailed(
+        on: ItemOn,
+        effectName?: string,
+        reasonStr?: string,
+    ): never {
         let s = `On-${on}`;
         if (effectName) s += ` ${effectName}`;
         s += " effect failed";
@@ -967,10 +1021,11 @@ export class Item
      * @param side Item holder reference.
      * @returns `true` if parsed, `undefined` otherwise.
      */
-    private async consumeItem(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID):
-        Promise<true | undefined>
-    {
+    private async consumeItem(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<true | undefined> {
         const event = await tryVerify(ctx, "|-enditem|");
         if (!event) return;
         const [, identStr, itemName] = event.args;
@@ -1000,15 +1055,15 @@ export class Item
      * activation, or the empty set if there are none, or null if it cannot
      * activate.
      */
-    private checkHpThreshold(mon: Pokemon | PreTurnSnapshotPokemon,
-        threshold: number): Set<inference.SubReason> | null
-    {
+    private checkHpThreshold(
+        mon: Pokemon | PreTurnSnapshotPokemon,
+        threshold: number,
+    ): Set<inference.SubReason> | null {
         // TODO: Is percentHP reliable? how does PS/cart handle rounding?
-        const percentHp = 100 * mon.hp.current / mon.hp.max;
+        const percentHp = (100 * mon.hp.current) / mon.hp.max;
 
         // Can't infer abilities.
-        if (mon.volatile.suppressAbility)
-        {
+        if (mon.volatile.suppressAbility) {
             if (percentHp <= threshold) return new Set();
             return null;
         }
@@ -1019,13 +1074,18 @@ export class Item
         if (blockingAbilities.size >= ability.size) return null;
 
         // Check if gluttony may be relevant if it's possible to have it.
-        const nonEarlyBerryAbilities = [...ability.possibleValues]
-            .filter(n => !ability.map[n].flags?.earlyBerry)
+        const nonEarlyBerryAbilities = [...ability.possibleValues].filter(
+            n => !ability.map[n].flags?.earlyBerry,
+        );
         // If we're in range for gluttony but not for normal berry activation,
         // gluttony may be the deciding factor here.
-        if (this.data.isBerry && threshold === 25 && percentHp > 25 &&
-            percentHp <= 50 && nonEarlyBerryAbilities.length < ability.size)
-        {
+        if (
+            this.data.isBerry &&
+            threshold === 25 &&
+            percentHp > 25 &&
+            percentHp <= 50 &&
+            nonEarlyBerryAbilities.length < ability.size
+        ) {
             // Abilities must have earlyBerry flag.
             for (const n of nonEarlyBerryAbilities) blockingAbilities.add(n);
         }
@@ -1050,23 +1110,23 @@ export class Item
      * no-op, or `undefined` if the effect wasn't parsed.
      * @see {@link percentDamage}
      */
-    private async percentDamage(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID, percent: number,
-        of?: SideID): ReturnType<typeof percentDamage>
-    {
-        return await percentDamage(ctx, side, percent,
-            event =>
-            {
-                if (!this.isEventFromItem(event)) return false;
-                if (of)
-                {
-                    if (!event.kwArgs.of) return false;
-                    const identOf = Protocol.parsePokemonIdent(event.kwArgs.of);
-                    if (identOf.player !== of) return false;
-                }
-                accept();
-                return true;
-            });
+    private async percentDamage(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        percent: number,
+        of?: SideID,
+    ): ReturnType<typeof percentDamage> {
+        return await percentDamage(ctx, side, percent, event => {
+            if (!this.isEventFromItem(event)) return false;
+            if (of) {
+                if (!event.kwArgs.of) return false;
+                const identOf = Protocol.parsePokemonIdent(event.kwArgs.of);
+                if (identOf.player !== of) return false;
+            }
+            accept();
+            return true;
+        });
     }
 
     /**
@@ -1082,46 +1142,49 @@ export class Item
      * found.
      * @see {@link status}
      */
-    private async status(ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, side: SideID,
-        statusTypes: readonly StatusType[], of?: SideID):
-        ReturnType<typeof status>
-    {
-        return await status(ctx, side, statusTypes,
-            event =>
-            {
-                if (event.args[0] !== "-message")
-                {
-                    const e = event as
-                        Event<Exclude<StatusEventType, "|-message|">>;
-                    if (!this.isEventFromItem(e)) return false;
-                    if (of)
-                    {
-                        if (!e.kwArgs.of) return false;
-                        const identOf = Protocol.parsePokemonIdent(e.kwArgs.of);
-                        if (identOf.player !== of) return false;
-                    }
+    private async status(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        statusTypes: readonly StatusType[],
+        of?: SideID,
+    ): ReturnType<typeof status> {
+        return await status(ctx, side, statusTypes, event => {
+            if (event.args[0] !== "-message") {
+                const e = event as Event<
+                    Exclude<StatusEventType, "|-message|">
+                >;
+                if (!this.isEventFromItem(e)) return false;
+                if (of) {
+                    if (!e.kwArgs.of) return false;
+                    const identOf = Protocol.parsePokemonIdent(e.kwArgs.of);
+                    if (identOf.player !== of) return false;
                 }
-                accept();
-                return true;
-            });
+            }
+            accept();
+            return true;
+        });
     }
 
     /** Verifies that the event's `[from]` effect suffix matches this Item. */
-    private isEventFromItem(event: Event<Protocol.BattleArgsWithKWArgName>):
-        boolean
-    {
+    private isEventFromItem(
+        event: Event<Protocol.BattleArgsWithKWArgName>,
+    ): boolean {
         const from = Protocol.parseEffect(
-            (event.kwArgs as {from?: string}).from, toIdName);
+            (event.kwArgs as {from?: string}).from,
+            toIdName,
+        );
         return this.isEffectFromItem(from);
     }
 
     /** Verifies that a parsed effect string matches this Item. */
     private isEffectFromItem(
-        effect: ReturnType<typeof Protocol["parseEffect"]>): boolean
-    {
-        return (!effect.type || effect.type === "item") &&
-            effect.name === this.data.name;
+        effect: ReturnType<typeof Protocol["parseEffect"]>,
+    ): boolean {
+        return (
+            (!effect.type || effect.type === "item") &&
+            effect.name === this.data.name
+        );
     }
 
     //#endregion

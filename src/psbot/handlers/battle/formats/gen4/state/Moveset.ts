@@ -1,9 +1,8 @@
 import * as dex from "../dex";
-import { Move, ReadonlyMove } from "./Move";
+import {Move, ReadonlyMove} from "./Move";
 
 /** Readonly {@link Moveset} representation. */
-export interface ReadonlyMoveset
-{
+export interface ReadonlyMoveset {
     /** Contained moves, indexed by name. */
     readonly moves: ReadonlyMap<string, ReadonlyMove>;
 
@@ -29,40 +28,45 @@ export interface ReadonlyMoveset
  * Tracks the moves of a {@link Pokemon}, with mechanisms to infer revealing
  * {@link Move}s of linked Movesets.
  */
-export class Moveset implements ReadonlyMoveset
-{
+export class Moveset implements ReadonlyMoveset {
     /** Maximum moveset size. */
     public static readonly maxSize = 4;
 
     /** @override */
-    public get moves(): ReadonlyMap<string, Move> { return this._moves; }
+    public get moves(): ReadonlyMap<string, Move> {
+        return this._moves;
+    }
     private _moves: Map<string, Move>;
 
     /** @override */
-    public get constraint(): ReadonlySet<string> { return this._constraint; }
+    public get constraint(): ReadonlySet<string> {
+        return this._constraint;
+    }
     private _constraint: Set<string>;
 
     // TODO: Bind with size/constraint into one object?
     /** @override */
-    public get moveSlotConstraints(): readonly ReadonlySet<string>[]
-    {
+    public get moveSlotConstraints(): readonly ReadonlySet<string>[] {
         return this._moveSlotConstraints;
     }
     private _moveSlotConstraints: ReadonlySet<string>[] = [];
 
     /** @override */
-    public get size(): number { return this._size; }
-    public set size(value: number)
-    {
-        if (value < this._moves.size)
-        {
-            throw new Error(`Requested Moveset size ${value} is smaller than ` +
-                `current size ${this._moves.size}`);
+    public get size(): number {
+        return this._size;
+    }
+    public set size(value: number) {
+        if (value < this._moves.size) {
+            throw new Error(
+                `Requested Moveset size ${value} is smaller than current ` +
+                    `size ${this._moves.size}`,
+            );
         }
-        if (value > Moveset.maxSize)
-        {
-            throw new Error(`Requested Moveset size ${value} is bigger than ` +
-                `maximum size ${Moveset.maxSize}`);
+        if (value > Moveset.maxSize) {
+            throw new Error(
+                `Requested Moveset size ${value} is bigger than maximum size ` +
+                    `${Moveset.maxSize}`,
+            );
         }
         this._size = value;
         this.checkConstraints();
@@ -83,8 +87,7 @@ export class Moveset implements ReadonlyMoveset
     public constructor(size?: number);
     /** Creates a Moveset of specified movepool and size. */
     public constructor(movepool: readonly string[], size?: number);
-    public constructor(movepool?: readonly string[] | number, size?: number)
-    {
+    public constructor(movepool?: readonly string[] | number, size?: number) {
         if (typeof movepool === "number") size = movepool;
         // Fill in default size.
         size = size ?? Moveset.maxSize;
@@ -92,22 +95,17 @@ export class Moveset implements ReadonlyMoveset
         this._size = Math.max(1, Math.min(size, Moveset.maxSize));
 
         // Fill in default movepool.
-        if (typeof movepool === "number" || !movepool || movepool.length < 1)
-        {
+        if (typeof movepool === "number" || !movepool || movepool.length < 1) {
             movepool = dex.moveKeys;
         }
 
         // Movepool constructor.
         // Edge case: Infer movesets with very small movepools.
-        if (movepool.length <= this._size)
-        {
-            this._moves =
-                new Map(movepool.map(name => [name, new Move(name)]));
+        if (movepool.length <= this._size) {
+            this._moves = new Map(movepool.map(name => [name, new Move(name)]));
             this._constraint = new Set();
             this._size = this._moves.size;
-        }
-        else
-        {
+        } else {
             // Initialize movepool constraint.
             this._moves = new Map();
             this._constraint = new Set(movepool);
@@ -124,27 +122,22 @@ export class Moveset implements ReadonlyMoveset
      * `"transform"`, moves are deep copied and set to 5 pp as if the moves
      * were gained via the Transform move.
      */
-    public link(moveset: Moveset, info: "base" | "transform"): void
-    {
+    public link(moveset: Moveset, info: "base" | "transform"): void {
         // Clear previous subscriptions if any.
         this.isolate();
 
         // Calls to reveal() are propagated differently for base than others.
-        if (info === "base")
-        {
-            if (moveset.base)
-            {
+        if (info === "base") {
+            if (moveset.base) {
                 throw new Error("Base Moveset can't also have a base Moveset");
             }
 
             const linkData = moveset.linked.get(moveset);
-            if (linkData === true)
-            {
+            if (linkData === true) {
                 throw new Error("Transform user can't be a base Moveset");
             }
             // istanbul ignore if: Should never happen, can't reproduce.
-            if (linkData === undefined)
-            {
+            if (linkData === undefined) {
                 throw new Error("Base Moveset not linked to itself");
             }
 
@@ -159,9 +152,7 @@ export class Moveset implements ReadonlyMoveset
             this.linked.set(this, false);
 
             this.base = moveset;
-        }
-        else
-        {
+        } else {
             // Future inferences have to be manually propagated to all other
             // linked Movesets since pp values are different.
             // Add to target Moveset's shared linked map.
@@ -170,8 +161,11 @@ export class Moveset implements ReadonlyMoveset
 
             // Deep copy known moves due to transform (pp=5).
             this._moves = new Map(
-                [...moveset._moves]
-                    .map(([name, m]) => [name, new Move(m.name, m.maxpp, 5)]));
+                [...moveset._moves].map(([name, m]) => [
+                    name,
+                    new Move(m.name, m.maxpp, 5),
+                ]),
+            );
         }
 
         // Copy unknown moves.
@@ -181,11 +175,9 @@ export class Moveset implements ReadonlyMoveset
     }
 
     /** Isolates this Moveset and removes its shared link to other Movesets. */
-    public isolate(): void
-    {
+    public isolate(): void {
         // Preserve Move inference for other linked Movesets.
-        if (this.base)
-        {
+        if (this.base) {
             this.linked.set(this.base, false);
             this.base = null;
         }
@@ -200,8 +192,7 @@ export class Moveset implements ReadonlyMoveset
     }
 
     /** @override */
-    public get(name: string): Move | null
-    {
+    public get(name: string): Move | null {
         return this._moves.get(name) ?? null;
     }
 
@@ -214,26 +205,25 @@ export class Moveset implements ReadonlyMoveset
      * @param maxpp Max PP value of the move. Default maxed.
      * @throws Error if already full.
      */
-    public reveal(name: string, maxpp?: "min" | "max" | number): Move
-    {
+    public reveal(name: string, maxpp?: "min" | "max" | number): Move {
         // Already have the move.
         const m = this.get(name);
         if (m) return m;
 
-        if (this._moves.size >= this._size)
-        {
-            throw new Error(`Rejected reveal() with name=${name} and ` +
-                `maxpp=${maxpp}: Moveset is already full ` +
-                `(moves: ${[...this._moves.keys()].join(", ")})`);
+        if (this._moves.size >= this._size) {
+            throw new Error(
+                `Rejected reveal() with name=${name} and maxpp=${maxpp}: ` +
+                    "Moveset is already full " +
+                    `(moves: ${[...this._moves.keys()].join(", ")})`,
+            );
         }
 
         let result: Move | undefined;
-        this.propagateReveal(name, maxpp, (moveset, move) =>
-        {
+        this.propagateReveal(name, maxpp, (moveset, move) => {
             if (moveset === this) result = move;
         });
 
-        // istanbul ignore next: can't reproduce
+        // istanbul ignore next: Can't reproduce.
         if (!result) throw new Error("Moveset not linked to itself");
 
         this.satisfyMoveSlotConstraint(name);
@@ -242,35 +232,35 @@ export class Moveset implements ReadonlyMoveset
     }
 
     /** Factored-out code of {@link reveal} with a custom callback param. */
-    private propagateReveal(name: string, maxpp?: "min" | "max" | number,
-        callback: (moveset: Moveset, move: Move) => void = () => {}): void
-    {
-        for (const [moveset, transformed] of this.linked)
-        {
+    private propagateReveal(
+        name: string,
+        maxpp?: "min" | "max" | number,
+        callback: (moveset: Moveset, move: Move) => void = () => {},
+    ): void {
+        for (const [moveset, transformed] of this.linked) {
             // istanbul ignore next: Can't reproduce.
-            if (this._constraint !== moveset._constraint)
-            {
+            if (this._constraint !== moveset._constraint) {
                 throw new Error(
-                    "Linked moveset does not have the same " +
-                    "constraints");
+                    "Linked moveset does not have the same " + "constraints",
+                );
             }
             callback(moveset, moveset.revealImpl(name, maxpp, transformed));
         }
     }
 
     /** Factored-out code of {@link reveal}. */
-    private revealImpl(name: string, maxpp?: "min" | "max" | number,
-        transformed?: boolean): Move
-    {
+    private revealImpl(
+        name: string,
+        maxpp?: "min" | "max" | number,
+        transformed?: boolean,
+    ): Move {
         // Transform users have pp (Note(gen>=5): And maxpp) set to 5.
         const pp = transformed ? 5 : undefined;
         const move = new Move(name, maxpp, pp);
 
         // Propagate to base moveset first.
-        if (this.base)
-        {
-            if (this._moves.size !== this.base._moves.size)
-            {
+        if (this.base) {
+            if (this._moves.size !== this.base._moves.size) {
                 throw new Error("Base Moveset expected to not change");
             }
             this.base._moves.set(name, move);
@@ -287,8 +277,7 @@ export class Moveset implements ReadonlyMoveset
      * @param move New replacement Move.
      * @param base Whether to propagate this call to the base Moveset.
      */
-    public replace(name: string, move: Move, base?: boolean): void
-    {
+    public replace(name: string, move: Move, base?: boolean): void {
         this.replaceImpl(name, move, base);
         // Since the replace call succeeded, this must mean that this Moveset
         // does not have the move that is replacing the old one.
@@ -299,14 +288,11 @@ export class Moveset implements ReadonlyMoveset
     }
 
     /** Factored-out code for {@link replace}. */
-    private replaceImpl(name: string, move: Move, base?: boolean): void
-    {
-        if (!this._moves.has(name))
-        {
+    private replaceImpl(name: string, move: Move, base?: boolean): void {
+        if (!this._moves.has(name)) {
             throw new Error(`Moveset does not contain '${name}'`);
         }
-        if (this._moves.has(move.name))
-        {
+        if (this._moves.has(move.name)) {
             throw new Error(`Moveset cannot contain two '${move.name}' moves`);
         }
 
@@ -317,8 +303,7 @@ export class Moveset implements ReadonlyMoveset
     }
 
     /** Adds a constraint for a single move slot. */
-    public addMoveSlotConstraint(moves: readonly string[]): void
-    {
+    public addMoveSlotConstraint(moves: readonly string[]): void {
         // Already satisfied by a known move.
         if (moves.some(move => this._moves.has(move))) return;
 
@@ -326,16 +311,16 @@ export class Moveset implements ReadonlyMoveset
         const arr = moves.filter(move => this._constraint.has(move));
 
         // Over-constrained.
-        if (arr.length === 0)
-        {
-            throw new Error(`Move slot constraint [${moves.join(", ")}] ` +
-                "cannot exist for this Moveset");
+        if (arr.length === 0) {
+            throw new Error(
+                `Move slot constraint [${moves.join(", ")}] cannot exist for ` +
+                    "this Moveset",
+            );
         }
         // Constrained enough to instead reveal a move.
         if (arr.length === 1) this.reveal(arr[0]);
         // Add to shared move slot constraints list.
-        else
-        {
+        else {
             this._moveSlotConstraints.push(new Set(arr));
             this.checkConstraints();
         }
@@ -344,12 +329,9 @@ export class Moveset implements ReadonlyMoveset
     /**
      * Removes move slot constraints that would be satisfied by the given move.
      */
-    private satisfyMoveSlotConstraint(name: string): void
-    {
-        for (let i = 0; i < this._moveSlotConstraints.length; ++i)
-        {
-            if (this._moveSlotConstraints[i].has(name))
-            {
+    private satisfyMoveSlotConstraint(name: string): void {
+        for (let i = 0; i < this._moveSlotConstraints.length; ++i) {
+            if (this._moveSlotConstraints[i].has(name)) {
                 this._moveSlotConstraints.splice(i--, 1);
             }
         }
@@ -361,31 +343,29 @@ export class Moveset implements ReadonlyMoveset
      * If the movepool gets constrained enough due to this call, the remaining
      * moves will be inferred. Propagates to base and linked Movesets.
      */
-    public inferDoesntHave(moves: readonly string[]): void
-    {
+    public inferDoesntHave(moves: readonly string[]): void {
         for (const move of moves) this._constraint.delete(move);
 
         // Update move constraints.
         const moveSet = new Set(moves);
         const toReveal: string[] = [];
-        for (let i = 0; i < this._moveSlotConstraints.length; ++i)
-        {
+        for (let i = 0; i < this._moveSlotConstraints.length; ++i) {
             const constraint = this._moveSlotConstraints[i];
-            const newConstraintArr = [...constraint]
-                .filter(move => !moveSet.has(move));
-            if (newConstraintArr.length <= 0)
-            {
-                throw new Error("Rejected Moveset#inferDoesntHave() with " +
-                    `moves=[${moves.join(", ")}] since the Moveset's slot ` +
-                    `constraint [${[...constraint].join(", ")}] would be ` +
-                    "invalidated");
+            const newConstraintArr = [...constraint].filter(
+                move => !moveSet.has(move),
+            );
+            if (newConstraintArr.length <= 0) {
+                throw new Error(
+                    "Rejected Moveset#inferDoesntHave() with " +
+                        `moves=[${moves.join(", ")}] since the Moveset's ` +
+                        `slot constraint [${[...constraint].join(", ")}] ` +
+                        "would be invalidated",
+                );
             }
             // Can infer a move now.
-            if (newConstraintArr.length === 1)
-            {
+            if (newConstraintArr.length === 1) {
                 toReveal.push(newConstraintArr[0]);
-            }
-            else this._moveSlotConstraints[i] = new Set(newConstraintArr);
+            } else this._moveSlotConstraints[i] = new Set(newConstraintArr);
         }
 
         if (toReveal.length > 0) for (const name of toReveal) this.reveal(name);
@@ -398,8 +378,7 @@ export class Moveset implements ReadonlyMoveset
      *
      * Propagates to base and linked Movesets.
      */
-    private addConstraint(name: string): void
-    {
+    private addConstraint(name: string): void {
         this._constraint.delete(name);
         this.checkConstraints();
     }
@@ -410,28 +389,24 @@ export class Moveset implements ReadonlyMoveset
      *
      * Propagates to base and linked Movesets.
      */
-    private checkConstraints(): void
-    {
+    private checkConstraints(): void {
         // See how many move slots are left to fill.
         const numUnknown = this._size - this._moves.size;
 
         // No more moves can be inferred so clear all constraints.
-        if (numUnknown <= 0)
-        {
+        if (numUnknown <= 0) {
             this._moveSlotConstraints.length = 0;
             this._constraint.clear();
             return;
         }
 
         // One move left, intersect all constraints.
-        if (numUnknown === 1 && this._moveSlotConstraints.length > 0)
-        {
+        if (numUnknown === 1 && this._moveSlotConstraints.length > 0) {
             const [first] = this._moveSlotConstraints;
             const rest = this._moveSlotConstraints.slice(1);
             const result = [...first].filter(n => rest.every(s => s.has(n)));
 
-            if (result.length <= 0)
-            {
+            if (result.length <= 0) {
                 throw new Error("Move slot constraints can't intersect");
             }
 
@@ -445,11 +420,9 @@ export class Moveset implements ReadonlyMoveset
 
         // Constraints narrowed enough to infer the rest of the moveset.
         const constraintsArr = [...this._constraint];
-        for (let i = 0; i < constraintsArr.length; ++i)
-        {
+        for (let i = 0; i < constraintsArr.length; ++i) {
             const move = constraintsArr[i];
-            this.propagateReveal(move, "max", moveset =>
-            {
+            this.propagateReveal(move, "max", moveset => {
                 // Update size for itself and base on the last iteration.
                 if (i + 1 < constraintsArr.length) return;
                 moveset._size = moveset._moves.size;
@@ -468,37 +441,36 @@ export class Moveset implements ReadonlyMoveset
      * Return/Frustration power.
      * @param hpType Optional Hidden Power type.
      */
-    public toString(indent = 0, happiness?: number | null,
-        hpType?: string): string
-    {
+    public toString(
+        indent = 0,
+        happiness?: number | null,
+        hpType?: string,
+    ): string {
         // Stringify move slots.
         const moves: string[] = [];
         // Known moves.
-        for (const move of this._moves.values())
-        {
+        for (const move of this._moves.values()) {
             moves.push(this.stringifyMove(move, happiness, hpType));
         }
         // Unknown moves.
-        for (let i = this._moves.size; i < this._size; ++i)
-        {
+        for (let i = this._moves.size; i < this._size; ++i) {
             moves.push("<unrevealed>");
         }
 
         const s = " ".repeat(indent);
         let result = `${s}moves: ${moves.join(", ")}`;
-        if (this._moveSlotConstraints.length > 0)
-        {
+        if (this._moveSlotConstraints.length > 0) {
             // Stringify move slot constraints.
             const ss = " ".repeat(indent + 4);
-            const slotConstraints = this._moveSlotConstraints.map(msc =>
-                    `${ss}[${[...msc].join(", ")}]`)
+            const slotConstraints = this._moveSlotConstraints
+                .map(msc => `${ss}[${[...msc].join(", ")}]`)
                 .join("\n");
             result += `\n${s}slot constraints:\n${slotConstraints}`;
         }
-        if (this._constraint.size > 0)
-        {
+        if (this._constraint.size > 0) {
             // Stringify movepool constraint.
-            result += `\n${s}remaining movepool: ` +
+            result +=
+                `\n${s}remaining movepool: ` +
                 `[${[...this._constraint].join(", ")}]`;
         }
 
@@ -507,25 +479,28 @@ export class Moveset implements ReadonlyMoveset
 
     // istanbul ignore next: Only used for logging.
     /** Stringifies a Move, inserting additional info if needed. */
-    private stringifyMove(move: Move | null | undefined,
-        happiness: number | null = null, hpType?: string): string
-    {
+    private stringifyMove(
+        move: Move | null | undefined,
+        happiness: number | null = null,
+        hpType?: string,
+    ): string {
         if (move === null) return "<unrevealed>";
         if (!move) return "<empty>";
 
         let info: string | undefined;
         if (move.name === "hiddenpower") info = hpType;
-        else if (move.name === "return")
-        {
+        else if (move.name === "return") {
             // Calculate power from happiness value.
-            info = happiness !== null ?
-                Math.max(1, happiness / 2.5).toString() : "1-102";
-        }
-        else if (move.name === "frustration")
-        {
+            info =
+                happiness !== null
+                    ? Math.max(1, happiness / 2.5).toString()
+                    : "1-102";
+        } else if (move.name === "frustration") {
             // Calculate power from happiness value.
-            info = happiness !== null ?
-                Math.max(1, (255 - happiness) / 2.5).toString() : "1-102";
+            info =
+                happiness !== null
+                    ? Math.max(1, (255 - happiness) / 2.5).toString()
+                    : "1-102";
         }
 
         return move.toString(info);

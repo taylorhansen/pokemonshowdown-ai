@@ -1,8 +1,8 @@
-import { BattleAgent } from "../../agent";
-import { FormatType } from "../../formats";
-import { BattleParser, BattleParserContext } from "../BattleParser";
+import {BattleAgent} from "../../agent";
+import {FormatType} from "../../formats";
+import {BattleParser, BattleParserContext} from "../BattleParser";
 import * as unordered from "../unordered";
-import { SubInference } from "./SubInference";
+import {SubInference} from "./SubInference";
 
 /**
  * {@link BattleParser} type that {@link EventInference}s can wrap.
@@ -15,15 +15,12 @@ import { SubInference } from "./SubInference";
  * reason for being able to parse an event. Must be called after verifying the
  * first event but before consuming it.
  */
-export type InferenceParser
-<
+export type InferenceParser<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
     TArgs extends unknown[] = unknown[],
-    TResult = unknown
-> =
-    BattleParser<T, TAgent, [accept: AcceptCallback, ...args: TArgs],
-        TResult>;
+    TResult = unknown,
+> = BattleParser<T, TAgent, [accept: AcceptCallback, ...args: TArgs], TResult>;
 
 /**
  * Callback type for {@link BattleParser}s provided to the
@@ -46,15 +43,12 @@ export type AcceptCallback = (inf: SubInference) => void;
  * @template TArgs BattleParser's additional parameter types.
  * @template TResult BattleParser's result type.
  */
-export class EventInference
-<
+export class EventInference<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
     TArgs extends unknown[] = unknown[],
-    TResult = unknown
->
-    extends unordered.UnorderedDeadline<T, TAgent, TResult>
-{
+    TResult = unknown,
+> extends unordered.UnorderedDeadline<T, TAgent, TResult> {
     /** Args to supply to the wrapped parser. */
     private readonly innerParserArgs: TArgs;
 
@@ -69,36 +63,44 @@ export class EventInference
      * callback before parsing to indicate which SubInference was chosen.
      * @param innerParserArgs Additional parser arguments.
      */
-    public constructor(name: string,
+    public constructor(
+        name: string,
         private readonly cases: ReadonlySet<SubInference>,
-        private readonly innerParser:
-            InferenceParser<T, TAgent, TArgs, TResult>,
-        ...innerParserArgs: TArgs)
-    {
-        super(name,
+        private readonly innerParser: InferenceParser<
+            T,
+            TAgent,
+            TArgs,
+            TResult
+        >,
+        ...innerParserArgs: TArgs
+    ) {
+        super(
+            name,
             async (ctx, accept) => await this.parseImpl(ctx, accept),
-            () => this.rejectImpl());
+            () => this.rejectImpl(),
+        );
 
         this.innerParserArgs = innerParserArgs;
     }
 
     /** Parser implementation. */
-    private async parseImpl(ctx: BattleParserContext<T, TAgent>,
-        accept: unordered.AcceptCallback): Promise<TResult>
-    {
-        const result = await this.innerParser(ctx,
-            inf =>
-            {
+    private async parseImpl(
+        ctx: BattleParserContext<T, TAgent>,
+        accept: unordered.AcceptCallback,
+    ): Promise<TResult> {
+        const result = await this.innerParser(
+            ctx,
+            inf => {
                 this.accept(inf);
                 accept();
             },
-            ...this.innerParserArgs);
+            ...this.innerParserArgs,
+        );
         return result;
     }
 
     /** Reject implementation. */
-    private rejectImpl(): void
-    {
+    private rejectImpl(): void {
         for (const subInf of this.cases) subInf.resolve(false /*held*/);
     }
 
@@ -106,16 +108,16 @@ export class EventInference
      * Indicates that this EventInference is about to parse an event, and that
      * the SubInference provided is accepted as the sole reason for that.
      */
-    private accept(inf: SubInference): void
-    {
-        if (!this.cases.has(inf))
-        {
-            throw new Error("BattleParser didn't provide accept callback " +
-                "with a valid SubInference");
+    private accept(inf: SubInference): void {
+        if (!this.cases.has(inf)) {
+            throw new Error(
+                "BattleParser didn't provide accept callback " +
+                    "with a valid SubInference",
+            );
         }
-        // Assert the case that was accepted, and reject all the other
-        // cases that weren't.
-        for (const c of this.cases) c.resolve(/*Held*/ c === inf);
+        // Assert the case that was accepted, and reject all the other cases
+        // that weren't.
+        for (const c of this.cases) c.resolve(c === inf /*held*/);
     }
 
     /**
@@ -126,17 +128,22 @@ export class EventInference
      * @param indentOuter Number of spaces for the indent of the current line.
      * @override
      */
-    public override toString(indentInner = 4, indentOuter = 0): string
-    {
+    public override toString(indentInner = 4, indentOuter = 0): string {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);
+        const indentInner2 = 2 * indentInner;
+        const indentInferenceOuter = indentOuter + indentInner2;
         return `\
 ${outer}EventInference(
 ${outer}${inner}${this.name},
 ${outer}${inner}cases = [${
-    [...this.cases].map(inf => "\n" +
-        inf.toString(indentInner, indentOuter + (2 * indentInner))).join(",") +
-    (this.cases.size > 0 ? "\n" + outer + inner : "")}]
+            [...this.cases]
+                .map(
+                    inf =>
+                        "\n" + inf.toString(indentInner, indentInferenceOuter),
+                )
+                .join(",") + (this.cases.size > 0 ? "\n" + outer + inner : "")
+        }]
 ${outer})`;
     }
 }

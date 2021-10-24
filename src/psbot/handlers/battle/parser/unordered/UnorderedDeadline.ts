@@ -1,6 +1,6 @@
-import { BattleAgent } from "../../agent";
-import { FormatType } from "../../formats";
-import { UnorderedParser } from "./UnorderedParser";
+import {BattleAgent} from "../../agent";
+import {FormatType} from "../../formats";
+import {UnorderedParser} from "./UnorderedParser";
 
 /**
  * Callback to reject an {@link UnorderedDeadline} pathway.
@@ -16,16 +16,13 @@ export type RejectCallback = (name: string) => void;
  * @template TAgent Battle agent type.
  * @template TResult Result type.
  */
-export class UnorderedDeadline
-<
+export class UnorderedDeadline<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
-    TResult = unknown
->
-{
+    TResult = unknown,
+> {
     /** Name for logging/debugging. */
-    public get name(): string
-    {
+    public get name(): string {
         return typeof this._name === "string" ? this._name : this._name();
     }
 
@@ -39,8 +36,8 @@ export class UnorderedDeadline
     protected constructor(
         private readonly _name: string | (() => string),
         public readonly parse: UnorderedParser<T, TAgent, [], TResult>,
-        private readonly _reject?: RejectCallback)
-    {}
+        private readonly _reject?: RejectCallback,
+    ) {}
 
     /**
      * Creates an UnorderedDeadline.
@@ -56,27 +53,28 @@ export class UnorderedDeadline
      * @param args Additional arguments to supply to the parser. This parameter
      * is provided for convenience.
      */
-    public static create
-    <
+    public static create<
         T extends FormatType = FormatType,
         TAgent extends BattleAgent<T> = BattleAgent<T>,
         TArgs extends unknown[] = unknown[],
-        TResult = unknown
+        TResult = unknown,
     >(
         name: string | (() => string),
         parser: UnorderedParser<T, TAgent, TArgs, TResult>,
-        reject?: RejectCallback, ...args: TArgs):
-        UnorderedDeadline<T, TAgent, TResult>
-    {
-        return new UnorderedDeadline(name,
-            async (ctx, accept) => await parser(ctx, accept, ...args), reject);
+        reject?: RejectCallback,
+        ...args: TArgs
+    ): UnorderedDeadline<T, TAgent, TResult> {
+        return new UnorderedDeadline(
+            name,
+            async (ctx, accept) => await parser(ctx, accept, ...args),
+            reject,
+        );
     }
 
     /**
      * Method to call when the parser never accepts an event by some deadline.
      */
-    public reject(): void
-    {
+    public reject(): void {
         this._reject?.(this.name);
     }
 
@@ -87,15 +85,16 @@ export class UnorderedDeadline
      * @param f Result transform function.
      * @returns An UnorderedDeadline that applies `f` to `this` parser's result.
      */
-    public transform<TResult2 = unknown>(f: (result: TResult) => TResult2):
-        UnorderedDeadline<T, TAgent, TResult2>
-    {
+    public transform<TResult2 = unknown>(
+        f: (result: TResult) => TResult2,
+    ): UnorderedDeadline<T, TAgent, TResult2> {
         return new UnorderedDeadline(
-            typeof this._name === "string" ?
-                `transform ${this._name}`
+            typeof this._name === "string"
+                ? `transform ${this._name}`
                 : () => `transform ${(this._name as () => string)()}`,
             async (ctx, accept) => f(await this.parse(ctx, accept)),
-            this._reject);
+            this._reject,
+        );
     }
 
     /**
@@ -106,8 +105,7 @@ export class UnorderedDeadline
      * @param indentOuter Number of spaces for the indent of the current line.
      * @override
      */
-    public toString(indentInner = 4, indentOuter = 0): string
-    {
+    public toString(indentInner = 4, indentOuter = 0): string {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);
         return `\

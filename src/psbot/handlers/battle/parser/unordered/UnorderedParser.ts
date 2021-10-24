@@ -1,6 +1,6 @@
-import { BattleAgent } from "../../agent";
-import { FormatType } from "../../formats";
-import { BattleParser } from "../BattleParser";
+import {BattleAgent} from "../../agent";
+import {FormatType} from "../../formats";
+import {BattleParser} from "../BattleParser";
 
 /**
  * Function type for tentatively parsing battle events.
@@ -17,14 +17,12 @@ import { BattleParser } from "../BattleParser";
  * @param args Additional args.
  * @returns A custom result value to be handled by the caller.
  */
-export type UnorderedParser
-<
+export type UnorderedParser<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
     TArgs extends unknown[] = unknown[],
-    TResult = unknown
-> =
-    BattleParser<T, TAgent, [accept: AcceptCallback, ...args: TArgs], TResult>;
+    TResult = unknown,
+> = BattleParser<T, TAgent, [accept: AcceptCallback, ...args: TArgs], TResult>;
 
 /** Callback to accept an {@link UnorderedParser} pathway. */
 export type AcceptCallback = () => void;

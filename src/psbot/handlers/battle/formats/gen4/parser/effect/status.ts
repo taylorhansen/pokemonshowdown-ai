@@ -1,20 +1,25 @@
 /** @file Parsers and helper functions related to status effects. */
-import { Protocol } from "@pkmn/protocol";
-import { SideID } from "@pkmn/types";
-import { toIdName } from "../../../../../../helpers";
-import { Event } from "../../../../../../parser";
-import { BattleParserContext, tryVerify } from "../../../../parser";
+import {Protocol} from "@pkmn/protocol";
+import {SideID} from "@pkmn/types";
+import {toIdName} from "../../../../../../helpers";
+import {Event} from "../../../../../../parser";
+import {BattleParserContext, tryVerify} from "../../../../parser";
 import * as dex from "../../dex";
-import { ReadonlyPokemon } from "../../state/Pokemon";
-import { dispatch } from "../base";
+import {ReadonlyPokemon} from "../../state/Pokemon";
+import {dispatch} from "../base";
 
 /**
  * Event types that could contain information about statuses.
  *
  * @see {@link status}
  */
-export type StatusEventType = "|-start|" | "|-status|" | "|-singlemove|" |
-    "|-singleturn|" | "|-message|" | "|-activate|";
+export type StatusEventType =
+    | "|-start|"
+    | "|-status|"
+    | "|-singlemove|"
+    | "|-singleturn|"
+    | "|-message|"
+    | "|-activate|";
 
 /**
  * Expects a status effect.
@@ -26,17 +31,25 @@ export type StatusEventType = "|-start|" | "|-status|" | "|-singlemove|" |
  * @returns The status type that was consumed, or `true` if the effect couldn't
  * be applied and was a no-op, or `undefined` if no valid event was found.
  */
-export async function status(ctx: BattleParserContext<"gen4">, side: SideID,
+export async function status(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
     statusTypes: readonly dex.StatusType[],
-    pred?: (event: Event<StatusEventType>) => boolean):
-    Promise<true | dex.StatusType | undefined>
-{
+    pred?: (event: Event<StatusEventType>) => boolean,
+): Promise<true | dex.StatusType | undefined> {
     const mon = ctx.state.getTeam(side).active;
     // Effect would do nothing.
     if (isStatusSilent(mon, statusTypes)) return true;
 
-    const event = await tryVerify(ctx, "|-start|", "|-status|", "|-singlemove|",
-        "|-singleturn|", "|-message|", "|-activate|");
+    const event = await tryVerify(
+        ctx,
+        "|-start|",
+        "|-status|",
+        "|-singlemove|",
+        "|-singleturn|",
+        "|-message|",
+        "|-activate|",
+    );
     if (!event) return;
     const res = verifyStatus(event, side, statusTypes);
     if (!res) return;
@@ -52,9 +65,10 @@ export async function status(ctx: BattleParserContext<"gen4">, side: SideID,
  * @param mon Target pokemon.
  * @param statusTypes Possible statuses to afflict.
  */
-function isStatusSilent(mon: ReadonlyPokemon,
-    statusTypes: readonly dex.StatusType[]): boolean
-{
+function isStatusSilent(
+    mon: ReadonlyPokemon,
+    statusTypes: readonly dex.StatusType[],
+): boolean {
     return statusTypes.every(s => cantStatus(mon, s));
 }
 
@@ -66,13 +80,13 @@ function isStatusSilent(mon: ReadonlyPokemon,
  * @param statusTypes Possible statuses to afflict.
  * @returns Whether the event matches one of the `statusTypes`.
  */
-function verifyStatus(event: Event<StatusEventType>, side: SideID,
-    statusTypes: readonly dex.StatusType[]): dex.StatusType | undefined
-{
-    if (event.args[0] === "-message")
-    {
-        if (event.args[1] === "Sleep Clause Mod activated.")
-        {
+function verifyStatus(
+    event: Event<StatusEventType>,
+    side: SideID,
+    statusTypes: readonly dex.StatusType[],
+): dex.StatusType | undefined {
+    if (event.args[0] === "-message") {
+        if (event.args[1] === "Sleep Clause Mod activated.") {
             if (statusTypes.includes("slp")) return "slp";
         }
         return;
@@ -82,8 +96,7 @@ function verifyStatus(event: Event<StatusEventType>, side: SideID,
     const effect = Protocol.parseEffect(effectStr, toIdName);
     if (!statusTypes.includes(effect.name as dex.StatusType)) return;
     // Only splash effect allows for |-activate| with no ident.
-    if (t === "-activate")
-    {
+    if (t === "-activate") {
         if (effect.name !== "splash") return;
         return "splash";
     }
@@ -96,28 +109,53 @@ function verifyStatus(event: Event<StatusEventType>, side: SideID,
 
 // TODO: Factor out status handlers for each status type?
 /** Checks whether the pokemon can't be afflicted by the given status. */
-export function cantStatus(mon: ReadonlyPokemon, statusType: dex.StatusType):
-    boolean
-{
-    switch (statusType)
-    {
-        case "aquaring": case "attract": case "curse": case "flashfire":
-        case "focus": case "focusenergy": case "imprison": case "ingrain":
-        case "leechseed": case "mudsport": case "nightmare": case "powertrick":
-        case "substitute": case "suppressAbility": case "torment":
+export function cantStatus(
+    mon: ReadonlyPokemon,
+    statusType: dex.StatusType,
+): boolean {
+    switch (statusType) {
+        case "aquaring": // Regular status.
+        case "attract":
+        case "curse":
+        case "flashfire":
+        case "focus":
+        case "focusenergy":
+        case "imprison":
+        case "ingrain":
+        case "leechseed":
+        case "mudsport":
+        case "nightmare":
+        case "powertrick":
+        case "substitute":
+        case "suppressAbility":
+        case "torment":
         case "watersport":
-        case "destinybond": case "grudge": case "rage": // Single-move.
-        case "magiccoat": case "roost": case "snatch": // Single-turn.
+        case "destinybond": // Single-move.
+        case "grudge":
+        case "rage":
+        case "magiccoat": // Single-turn.
+        case "roost":
+        case "snatch":
             return mon.volatile[statusType];
-        case "bide": case "confusion": case "charge": case "magnetrise":
-        case "embargo": case "healblock": case "slowstart": case "taunt":
-        case "uproar": case "yawn":
+        case "bide":
+        case "confusion":
+        case "charge":
+        case "magnetrise":
+        case "embargo":
+        case "healblock":
+        case "slowstart":
+        case "taunt":
+        case "uproar":
+        case "yawn":
             return mon.volatile[statusType].isActive;
         case "encore":
             return mon.volatile[statusType].ts.isActive;
-        case "endure": case "protect": // Stall.
+        // Stall.
+        case "endure":
+        case "protect":
             return mon.volatile.stalling;
-        case "foresight": case "miracleeye":
+        case "foresight":
+        case "miracleeye":
             return mon.volatile.identified === statusType;
         case "splash":
             return false;
@@ -147,27 +185,25 @@ export type CureEventType = "|-end|" | "|-curestatus|";
  * the remaining StatusTypes that weren't parsed or elided due to not actually
  * having the status.
  */
-export async function cure(ctx: BattleParserContext<"gen4">, side: SideID,
+export async function cure(
+    ctx: BattleParserContext<"gen4">,
+    side: SideID,
     statusTypes: readonly dex.StatusType[],
-    pred?: (event: Event<CureEventType>) => boolean):
-    Promise<"silent" | Set<dex.StatusType>>
-{
+    pred?: (event: Event<CureEventType>) => boolean,
+): Promise<"silent" | Set<dex.StatusType>> {
     const mon = ctx.state.getTeam(side).active;
     const res = new Set<dex.StatusType>();
-    for (const statusType of statusTypes)
-    {
+    for (const statusType of statusTypes) {
         if (!hasStatus(mon, statusType)) continue;
         res.add(statusType);
         // Curing slp also cures nightmare if applicable.
-        if (statusType === "slp" && hasStatus(mon, "nightmare"))
-        {
+        if (statusType === "slp" && hasStatus(mon, "nightmare")) {
             res.add("nightmare");
         }
     }
     if (res.size <= 0) return "silent";
 
-    while (res.size > 0)
-    {
+    while (res.size > 0) {
         const event = await tryVerify(ctx, "|-end|", "|-curestatus|");
         if (!event) break;
         const [, identStr, effectStr] = event.args;
@@ -184,33 +220,56 @@ export async function cure(ctx: BattleParserContext<"gen4">, side: SideID,
 }
 
 /** Checks whether the pokemon has the given status. */
-export function hasStatus(mon: ReadonlyPokemon, statusType: dex.StatusType):
-    boolean
-{
-    switch (statusType)
-    {
-        case "aquaring": case "attract": case "curse": case "flashfire":
-        case "focusenergy": case "imprison": case "ingrain":
-        case "leechseed": case "mudsport": case "nightmare":
-        case "powertrick": case "substitute": case "suppressAbility":
-        case "torment": case "watersport":
-        case "destinybond": case "grudge": case "rage": // Single-move.
-        case "magiccoat": case "roost": case "snatch": // Single-turn.
+export function hasStatus(
+    mon: ReadonlyPokemon,
+    statusType: dex.StatusType,
+): boolean {
+    switch (statusType) {
+        case "aquaring":
+        case "attract":
+        case "curse":
+        case "flashfire":
+        case "focusenergy":
+        case "imprison":
+        case "ingrain":
+        case "leechseed":
+        case "mudsport":
+        case "nightmare":
+        case "powertrick":
+        case "substitute":
+        case "suppressAbility":
+        case "torment":
+        case "watersport":
+        case "destinybond": // Single-move.
+        case "grudge":
+        case "rage":
+        case "magiccoat": // Single-turn.
+        case "roost":
+        case "snatch":
             return mon.volatile[statusType];
-        case "bide": case "confusion": case "charge": case "magnetrise":
-        case "embargo": case "healblock": case "slowstart": case "taunt":
-        case "uproar": case "yawn":
+        case "bide":
+        case "confusion":
+        case "charge":
+        case "magnetrise":
+        case "embargo":
+        case "healblock":
+        case "slowstart":
+        case "taunt":
+        case "uproar":
+        case "yawn":
             return mon.volatile[statusType].isActive;
         case "encore":
             return mon.volatile[statusType].ts.isActive;
-        case "endure": case "protect": // Stall.
+        // Stall.
+        case "endure":
+        case "protect":
             return mon.volatile.stalling;
-        case "foresight": case "miracleeye":
+        case "foresight":
+        case "miracleeye":
             return mon.volatile.identified === statusType;
         default:
             // istanbul ignore else: Should never happen.
-            if (dex.isMajorStatus(statusType))
-            {
+            if (dex.isMajorStatus(statusType)) {
                 return mon.majorStatus.current === statusType;
             }
             // istanbul ignore next: Should never happen.

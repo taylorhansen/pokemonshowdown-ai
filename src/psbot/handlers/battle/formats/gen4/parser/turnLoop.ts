@@ -1,16 +1,16 @@
-import { SideID } from "@pkmn/types";
-import { BattleParserContext, consume, unordered, verify } from
-    "../../../parser";
-import { playerActions } from "./action/action";
-import { multipleSwitchIns } from "./action/switch";
-import { ignoredEvents } from "./base";
+import {SideID} from "@pkmn/types";
+import {BattleParserContext, consume, unordered, verify} from "../../../parser";
+import {playerActions} from "./action/action";
+import {multipleSwitchIns} from "./action/switch";
+import {ignoredEvents} from "./base";
 import * as effectItem from "./effect/item";
 import * as faint from "./faint";
-import { request } from "./request";
+import {request} from "./request";
 
 /** Parses each turn of the battle until game over.  */
-export async function turnLoop(ctx: BattleParserContext<"gen4">): Promise<void>
-{
+export async function turnLoop(
+    ctx: BattleParserContext<"gen4">,
+): Promise<void> {
     // Initial switch-ins happen on turn 1.
     await turn1(ctx);
 
@@ -20,17 +20,17 @@ export async function turnLoop(ctx: BattleParserContext<"gen4">): Promise<void>
 }
 
 /** Parses the first turn with its initial switch-ins. */
-async function turn1(ctx: BattleParserContext<"gen4">): Promise<void>
-{
+async function turn1(ctx: BattleParserContext<"gen4">): Promise<void> {
     await multipleSwitchIns(ctx);
     await ignoredEvents(ctx);
     await postTurn(ctx, 1);
 }
 
 /** Parses a full turn. Returns `true` on game over. */
-async function turn(ctx: BattleParserContext<"gen4">, num: number):
-    Promise<boolean>
-{
+async function turn(
+    ctx: BattleParserContext<"gen4">,
+    num: number,
+): Promise<boolean> {
     await ignoredEvents(ctx);
     await preTurn(ctx);
 
@@ -47,8 +47,7 @@ async function turn(ctx: BattleParserContext<"gen4">, num: number):
 }
 
 /** Handles pre-turn effects before any actions are taken. */
-async function preTurn(ctx: BattleParserContext<"gen4">): Promise<void>
-{
+async function preTurn(ctx: BattleParserContext<"gen4">): Promise<void> {
     ctx.state.preTurn();
     // TODO: quickclaw, custap, others?
     await Promise.resolve();
@@ -56,13 +55,14 @@ async function preTurn(ctx: BattleParserContext<"gen4">): Promise<void>
 
 // TODO: Move to separate file?
 /** Handles residual effects at the end of the turn. */
-async function residual(ctx: BattleParserContext<"gen4">): Promise<void>
-{
+async function residual(ctx: BattleParserContext<"gen4">): Promise<void> {
     // TODO: wish.
-    await unordered.all(ctx,
+    await unordered.all(
+        ctx,
         (["p1", "p2"] as SideID[])
             .filter(side => !ctx.state.getTeam(side).active.fainted)
-            .map(side => effectItem.onResidual(ctx, side)));
+            .map(side => effectItem.onResidual(ctx, side)),
+    );
 }
 
 /**
@@ -72,20 +72,20 @@ async function residual(ctx: BattleParserContext<"gen4">): Promise<void>
  * @param num Turn number to check.
  * @returns Whether to continue the game.
  */
-async function postTurn(ctx: BattleParserContext<"gen4">, num: number):
-    Promise<boolean>
-{
+async function postTurn(
+    ctx: BattleParserContext<"gen4">,
+    num: number,
+): Promise<boolean> {
     const event = await verify(ctx, "|turn|", "|win|");
-    if (event.args[0] === "win")
-    {
+    if (event.args[0] === "win") {
         // Game over.
         await consume(ctx);
         return false;
     }
-    if (Number(event.args[1]) !== num)
-    {
-        throw new Error(`Expected |turn|${num} event but got ` +
-            `'${event.args[1]}'`);
+    if (Number(event.args[1]) !== num) {
+        throw new Error(
+            `Expected |turn|${num} event but got ` + `'${event.args[1]}'`,
+        );
     }
     await consume(ctx);
 

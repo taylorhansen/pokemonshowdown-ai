@@ -1,9 +1,9 @@
 /** @file Defines the core BattleParser function type. */
-import { Logger } from "../../../../Logger";
-import { Event } from "../../../parser";
-import { BattleAgent, Choice } from "../agent";
-import { FormatType, State } from "../formats";
-import { EventIterator } from "./iterators";
+import {Logger} from "../../../../Logger";
+import {Event} from "../../../parser";
+import {BattleAgent, Choice} from "../agent";
+import {FormatType, State} from "../formats";
+import {EventIterator} from "./iterators";
 
 /**
  * Function type for parsing battle events.
@@ -16,14 +16,12 @@ import { EventIterator } from "./iterators";
  * @param args Additional args.
  * @returns A custom result value to be handled by the caller.
  */
-export type BattleParser
-<
+export type BattleParser<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
     TArgs extends unknown[] = unknown[],
     TResult = unknown,
-> =
-    (ctx: BattleParserContext<T, TAgent>, ...args: TArgs) => Promise<TResult>;
+> = (ctx: BattleParserContext<T, TAgent>, ...args: TArgs) => Promise<TResult>;
 
 /**
  * Context container needed to call a BattleParser.
@@ -33,12 +31,10 @@ export type BattleParser
  * @template TRState Readonly battle state type.
  * @template TAgent Battle agent type.
  */
-export interface BattleParserContext
-<
+export interface BattleParserContext<
     T extends FormatType = FormatType,
-    TAgent extends BattleAgent<T> = BattleAgent<T>
->
-{
+    TAgent extends BattleAgent<T> = BattleAgent<T>,
+> {
     /** Function that makes the decisions for this battle. */
     readonly agent: TAgent;
     /** Iterator for getting the next event.  */
@@ -56,15 +52,15 @@ export interface BattleParserContext
 /** Function type for sending a Choice to the game. */
 export type ChoiceSender = (choice: Choice) => Promise<SenderResult>;
 
-// TODO: make this into a proper enum
+// TODO: Make this into a proper enum?
 /**
  * Result after sending a Choice to the game.
  *
- * * `<falsy>` - Choice was accepted.
- * * `true` - Choice was rejected for an unknown reason.
- * * `"disabled"` - Choice was rejected because the chosen move is disabled by
+ * - `<falsy>` - Choice was accepted.
+ * - `true` - Choice was rejected for an unknown reason.
+ * - `"disabled"` - Choice was rejected because the chosen move is disabled by
  *   some effect.
- * * `"trapped"` - Choice was rejected because the client's pokemon is trapped
+ * - `"trapped"` - Choice was rejected because the client's pokemon is trapped
  *   by some effect.
  */
 export type SenderResult = undefined | null | boolean | "disabled" | "trapped";

@@ -1,21 +1,19 @@
 /** @file Defines the protocol typings for GameWorkers. */
-import { MessagePort } from "worker_threads";
-import { PortMessageBase, PortResultBase } from "../../../port/PortProtocol";
-import { WorkerProtocol } from "../../../port/WorkerProtocol";
-import { SimResult } from "../../sim/playGame";
-import { GameConfig } from "../GamePool";
+import {MessagePort} from "worker_threads";
+import {PortMessageBase, PortResultBase} from "../../../port/PortProtocol";
+import {WorkerProtocol} from "../../../port/WorkerProtocol";
+import {SimResult} from "../../sim/playGame";
+import {GameConfig} from "../GamePool";
 
 /** Typings for the `workerData` object given to the GameWorker. */
-export interface GameWorkerData
-{
+export interface GameWorkerData {
     /** Path to store experience files as tfrecords. */
     expPath?: string;
 }
 
 /** GameWorker request protocol typings. */
-export interface GameProtocol extends WorkerProtocol<"play">
-{
-    play: {message: GamePlay, result: GamePlayResult};
+export interface GameProtocol extends WorkerProtocol<"play"> {
+    play: {message: GamePlay; result: GamePlayResult};
 }
 
 /** The types of requests that can be made to the game worker. */
@@ -28,9 +26,7 @@ export type GameMessage = GameProtocol[GameRequestType]["message"];
 type GameMessageBase<T extends GameRequestType> = PortMessageBase<T>;
 
 /** Game request message format. */
-export interface GamePlay extends GameMessageBase<"play">,
-    GameConfig
-{
+export interface GamePlay extends GameMessageBase<"play">, GameConfig {
     /** Model ports that will play against each other. */
     readonly agents: [GameAgentConfig, GameAgentConfig];
     /**
@@ -41,8 +37,7 @@ export interface GamePlay extends GameMessageBase<"play">,
 }
 
 /** Config for game worker agents. */
-export interface GameAgentConfig
-{
+export interface GameAgentConfig {
     /**
      * Port that uses the `model/ModelPort` protocol for interfacing with a
      * model.
@@ -59,9 +54,9 @@ export type GameResult = GameProtocol[GameRequestType]["result"];
 type GameResultBase<T extends GameRequestType> = PortResultBase<T>;
 
 /** Result of a game after it has been completed and processed by the worker. */
-export interface GamePlayResult extends GameResultBase<"play">,
-    Omit<SimResult, "err">
-{
+export interface GamePlayResult
+    extends GameResultBase<"play">,
+        Omit<SimResult, "err"> {
     /** Number of AugmentedExperience objects saved, if enabled. Otherwise 0. */
     numAExps: number;
     /**

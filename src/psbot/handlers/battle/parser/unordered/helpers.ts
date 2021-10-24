@@ -1,9 +1,9 @@
-import { BattleAgent } from "../../agent";
-import { FormatType } from "../../formats";
-import { BattleParserContext } from "../BattleParser";
-import { tryPeek } from "../helpers";
-import { UnorderedDeadline } from "./UnorderedDeadline";
-import { AcceptCallback, UnorderedParser } from "./UnorderedParser";
+import {BattleAgent} from "../../agent";
+import {FormatType} from "../../formats";
+import {BattleParserContext} from "../BattleParser";
+import {tryPeek} from "../helpers";
+import {UnorderedDeadline} from "./UnorderedDeadline";
+import {AcceptCallback, UnorderedParser} from "./UnorderedParser";
 
 /**
  * Invokes a group of {@link UnorderedDeadline} parsers in any order.
@@ -22,17 +22,16 @@ import { AcceptCallback, UnorderedParser } from "./UnorderedParser";
  * @returns The results of the successful BattleParsers that were able to
  * consume an event, in the order that they were parsed.
  */
-export async function all
-<
+export async function all<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
-    TResult = unknown
+    TResult = unknown,
 >(
     ctx: BattleParserContext<T, TAgent>,
     parsers: UnorderedDeadline<T, TAgent, TResult>[],
     filter?: UnorderedParser<T, TAgent, []>,
-    accept?: AcceptCallback): Promise<TResult[]>
-{
+    accept?: AcceptCallback,
+): Promise<TResult[]> {
     const results: TResult[] = [];
     if (parsers.length <= 0) return results;
 
@@ -43,22 +42,19 @@ export async function all
     // Note: Even if done=true (i.e., no parsers accepted), we should still
     // continue if one of the parsers (excluding the filter) consumed an event
     // in the last iteration, since that could've unblocked them.
-    while (parsers.length > 0 && (!done || consumed))
-    {
+    while (parsers.length > 0 && (!done || consumed)) {
         // Make sure we still have events to parse.
-        if (!await tryPeek(ctx)) break;
+        if (!(await tryPeek(ctx))) break;
 
         done = true;
         consumed = false;
         let filterDone = false;
-        for (let i = 0; i < parsers.length; ++i)
-        {
+        for (let i = 0; i < parsers.length; ++i) {
             // We call the filter before testing each parser since the parser
             // could still consume events but not accept, leaving events that
             // might need to be filtered again before testing the next parser.
-            if (filter)
-            {
-                await filter(ctx, () => filterDone = true);
+            if (filter) {
+                await filter(ctx, () => (filterDone = true));
                 // If the filter called its accept cb, break out of the loop and
                 // immediately reject pending parsers.
                 if (filterDone) break;
@@ -69,21 +65,17 @@ export async function all
 
             const parser = parsers[i];
             let accepted = false;
-            const result = await parser.parse(ctx,
-                function allAccept()
-                {
-                    accepted = true;
-                    if (accept)
-                    {
-                        const a = accept;
-                        accept = undefined;
-                        a();
-                    }
-                });
+            const result = await parser.parse(ctx, function allAccept() {
+                accepted = true;
+                if (accept) {
+                    const a = accept;
+                    accept = undefined;
+                    a();
+                }
+            });
 
             // Consume parser that accepted.
-            if (accepted)
-            {
+            if (accepted) {
                 // Reset done so that we can test the next pending parser.
                 done = false;
                 parsers.splice(i--, 1);
@@ -93,8 +85,7 @@ export async function all
             // At the end, make sure we actually parsed any events.
             // We only really need to check this if done=true since that would
             // cancel the outer while loop.
-            if (done)
-            {
+            if (done) {
                 const postParse = await tryPeek(ctx);
                 if (preParse !== postParse) consumed = true;
             }
@@ -104,8 +95,7 @@ export async function all
     }
 
     // Reject parsers that never got to accept an event.
-    for (let i = 0; i < parsers.length; ++i)
-    {
+    for (let i = 0; i < parsers.length; ++i) {
         parsers[i].reject();
         parsers.splice(i--, 1);
     }
@@ -126,30 +116,25 @@ export async function all
  * @param args Additional args to supply to each parser.
  * @returns The result of the parser that accepted an event, if any.
  */
-export async function oneOf
-<
+export async function oneOf<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
-    TResult = unknown
+    TResult = unknown,
 >(
     ctx: BattleParserContext<T, TAgent>,
-    parsers: UnorderedDeadline<T, TAgent, TResult>[]):
-    Promise<[] | [TResult]>
-{
+    parsers: UnorderedDeadline<T, TAgent, TResult>[],
+): Promise<[] | [TResult]> {
     let result: [] | [TResult] = [];
     let done: UnorderedDeadline<T, TAgent, TResult> | undefined;
-    while (!done)
-    {
+    while (!done) {
         // No events to parse.
         const preParse = await tryPeek(ctx);
         if (!preParse) break;
 
-        for (const parser of parsers)
-        {
+        for (const parser of parsers) {
             let accepted = false;
-            const res = await parser.parse(ctx, () => accepted = true);
-            if (accepted)
-            {
+            const res = await parser.parse(ctx, () => (accepted = true));
+            if (accepted) {
                 result = [res];
                 done = parser;
                 break;
@@ -178,20 +163,18 @@ export async function oneOf
  * @param accept Optional callback to accept this pathway.
  * @returns The result of the parser if it accepted an event.
  */
-export async function parse
-<
+export async function parse<
     T extends FormatType = FormatType,
     TAgent extends BattleAgent<T> = BattleAgent<T>,
-    TResult = unknown
+    TResult = unknown,
 >(
     ctx: BattleParserContext<T, TAgent>,
-    parser: UnorderedDeadline<T, TAgent, TResult>, accept?: AcceptCallback):
-    Promise<[] | [TResult]>
-{
+    parser: UnorderedDeadline<T, TAgent, TResult>,
+    accept?: AcceptCallback,
+): Promise<[] | [TResult]> {
     const a = accept;
     let accepted = false;
-    accept = function parseAccept()
-    {
+    accept = function parseAccept() {
         a?.();
         accepted = true;
     };

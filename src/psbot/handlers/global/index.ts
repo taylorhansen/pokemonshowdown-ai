@@ -1,1 +1,1 @@
-export { GlobalHandler } from "./GlobalHandler";
+export {GlobalHandler} from "./GlobalHandler";

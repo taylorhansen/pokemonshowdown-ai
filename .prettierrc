@@ -1,4 +1,17 @@
 {
+  "arrowParens": "avoid",
+  "bracketSameLine": false,
+  "bracketSpacing": false,
   "printWidth": 80,
-  "singleQuote": false
+  "proseWrap": "always",
+  "semi": true,
+  "singleQuote": false,
+  "tabWidth": 4,
+  "trailingComma": "all",
+  "overrides": [
+    {
+      "files": [".eslintrc", ".prettierrc", "**/*.json", "**/*.yml"],
+      "options": {"tabWidth": 2}
+    }
+  ]
 }

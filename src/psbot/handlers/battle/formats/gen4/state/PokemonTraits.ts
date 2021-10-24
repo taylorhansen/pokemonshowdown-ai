@@ -1,10 +1,9 @@
 import * as dex from "../dex";
-import { PossibilityClass, ReadonlyPossibilityClass } from "./PossibilityClass";
-import { ReadonlyStatTable, StatTable } from "./StatTable";
+import {PossibilityClass, ReadonlyPossibilityClass} from "./PossibilityClass";
+import {ReadonlyStatTable, StatTable} from "./StatTable";
 
 /** Readonly {@link PokemonTraits} representation. */
-export interface ReadonlyPokemonTraits
-{
+export interface ReadonlyPokemonTraits {
     /** Species data. */
     readonly species: dex.PokemonData;
     // TODO: Use dex.Ability wrappers instead of data.
@@ -20,8 +19,7 @@ export interface ReadonlyPokemonTraits
  * Tracks the overridable traits of a Pokemon that are directly tied to its
  * species.
  */
-export class PokemonTraits implements ReadonlyPokemonTraits
-{
+export class PokemonTraits implements ReadonlyPokemonTraits {
     /** @override */
     public readonly species: dex.PokemonData;
     /** @override */
@@ -38,8 +36,7 @@ export class PokemonTraits implements ReadonlyPokemonTraits
      * @param species Species data.
      * @param level Pokemon's level for stat calcs.
      */
-    public static base(species: dex.PokemonData, level: number): PokemonTraits
-    {
+    public static base(species: dex.PokemonData, level: number): PokemonTraits {
         return new PokemonTraits(species, level);
     }
 
@@ -52,12 +49,16 @@ export class PokemonTraits implements ReadonlyPokemonTraits
      * @param stats Override stats.
      * @param types Override types.
      */
-    private constructor(species: dex.PokemonData, level: number,
-        ability?: PossibilityClass<string, dex.AbilityData>, stats?: StatTable,
-        types?: readonly [dex.Type, dex.Type])
-    {
+    private constructor(
+        species: dex.PokemonData,
+        level: number,
+        ability?: PossibilityClass<string, dex.AbilityData>,
+        stats?: StatTable,
+        types?: readonly [dex.Type, dex.Type],
+    ) {
         this.species = species;
-        this.ability = ability ??
+        this.ability =
+            ability ??
             new PossibilityClass(dex.abilities, ...this.species.abilities);
         this.stats = stats ?? StatTable.base(this.species, level);
         this.types = types ?? this.species.types;
@@ -67,10 +68,14 @@ export class PokemonTraits implements ReadonlyPokemonTraits
      * Creates a shallow copy suitable for a VolatileStatus object, assuming
      * `this` comes from the base traits.
      */
-    public volatile(): PokemonTraits
-    {
-        return new PokemonTraits(this.species, this.stats.level, this.ability,
-            this.stats, this.types);
+    public volatile(): PokemonTraits {
+        return new PokemonTraits(
+            this.species,
+            this.stats.level,
+            this.ability,
+            this.stats,
+            this.types,
+        );
     }
 
     /**
@@ -79,25 +84,37 @@ export class PokemonTraits implements ReadonlyPokemonTraits
      * @param source Transform source containing certain traits that should be
      * preserved.
      */
-    public transform(source: PokemonTraits): PokemonTraits
-    {
+    public transform(source: PokemonTraits): PokemonTraits {
         // TODO(gen>4): Transform doesn't copy hpType, override from source mon.
-        return new PokemonTraits(this.species, this.stats.level, this.ability,
-            this.stats.transform(source.stats.hp), this.types);
+        return new PokemonTraits(
+            this.species,
+            this.stats.level,
+            this.ability,
+            this.stats.transform(source.stats.hp),
+            this.types,
+        );
     }
 
     /** Creates a partial shallow copy for ability changes. */
-    public divergeAbility(...ability: string[]): PokemonTraits
-    {
+    public divergeAbility(...ability: string[]): PokemonTraits {
         const pc = new PossibilityClass(dex.abilities, ...ability);
-        return new PokemonTraits(this.species, this.stats.level, pc,
-            this.stats, this.types);
+        return new PokemonTraits(
+            this.species,
+            this.stats.level,
+            pc,
+            this.stats,
+            this.types,
+        );
     }
 
     /** Creates a partial shallow copy for type changes. */
-    public divergeTypes(types: readonly [dex.Type, dex.Type]): PokemonTraits
-    {
-        return new PokemonTraits(this.species, this.stats.level, this.ability,
-            this.stats, types);
+    public divergeTypes(types: readonly [dex.Type, dex.Type]): PokemonTraits {
+        return new PokemonTraits(
+            this.species,
+            this.stats.level,
+            this.ability,
+            this.stats,
+            types,
+        );
     }
 }

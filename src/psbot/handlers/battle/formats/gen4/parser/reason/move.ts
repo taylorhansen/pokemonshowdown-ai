@@ -1,8 +1,8 @@
 /** @file SubReason helpers related to moves. */
-import { inference } from "../../../../parser";
+import {inference} from "../../../../parser";
 import * as dex from "../../dex";
-import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
-import { subsetOrIndependent } from "./helpers";
+import {Pokemon, ReadonlyPokemon} from "../../state/Pokemon";
+import {subsetOrIndependent} from "./helpers";
 
 // TODO: Account for other move-type-changing effects, e.g. normalize ability.
 // TODO(gen6): Also account for typechart-modifying moves, e.g. freezedry.
@@ -14,9 +14,10 @@ import { subsetOrIndependent } from "./helpers";
  * @param mon Pokemon to track.
  * @param hitBy Move+user that the pokemon is being hit by.
  */
-export function diffType(mon: ReadonlyPokemon, hitBy: dex.MoveAndUser):
-    inference.SubReason
-{
+export function diffType(
+    mon: ReadonlyPokemon,
+    hitBy: dex.MoveAndUser,
+): inference.SubReason {
     return isntType(hitBy.move, hitBy.user, new Set(mon.types));
 }
 
@@ -28,12 +29,17 @@ export function diffType(mon: ReadonlyPokemon, hitBy: dex.MoveAndUser):
  * @param target Target pokemon.
  * @param effectiveness Expected move effectiveness vs the target.
  */
-export function isEffective(move: dex.Move, user: Pokemon,
-    target: ReadonlyPokemon, effectiveness: dex.Effectiveness):
-    inference.SubReason
-{
-    return isType(move, user,
-        dex.getAttackerTypes(target.types, effectiveness))
+export function isEffective(
+    move: dex.Move,
+    user: Pokemon,
+    target: ReadonlyPokemon,
+    effectiveness: dex.Effectiveness,
+): inference.SubReason {
+    return isType(
+        move,
+        user,
+        dex.getAttackerTypes(target.types, effectiveness),
+    );
 }
 
 /**
@@ -45,9 +51,11 @@ export function isEffective(move: dex.Move, user: Pokemon,
  * @param types Set of possible move types. Will be owned by the returned
  * SubReason.
  */
-export function isType(move: dex.Move, user: Pokemon, types: Set<dex.Type>):
-    inference.SubReason
-{
+export function isType(
+    move: dex.Move,
+    user: Pokemon,
+    types: Set<dex.Type>,
+): inference.SubReason {
     return new MoveIsType(move, user, types, false /*negative*/);
 }
 
@@ -60,54 +68,59 @@ export function isType(move: dex.Move, user: Pokemon, types: Set<dex.Type>):
  * @param types Set of possible move types. Will be owned by the returned
  * SubReason.
  */
-export function isntType(move: dex.Move, user: Pokemon, types: Set<dex.Type>):
-    inference.SubReason
-{
+export function isntType(
+    move: dex.Move,
+    user: Pokemon,
+    types: Set<dex.Type>,
+): inference.SubReason {
     return new MoveIsType(move, user, types, true /*negative*/);
 }
 
-class MoveIsType extends inference.SubReason
-{
+class MoveIsType extends inference.SubReason {
     /**
      * Hidden Power type and item snapshots for making inferences in retrospect.
      */
     private readonly partialUser: dex.MoveUserSnapshot;
 
-    public constructor(private readonly move: dex.Move, user: Pokemon,
+    public constructor(
+        private readonly move: dex.Move,
+        user: Pokemon,
         private readonly types: Set<dex.Type>,
-        private readonly negative: boolean)
-    {
+        private readonly negative: boolean,
+    ) {
         super();
         this.partialUser = {hpType: user.hpType, item: user.item};
     }
 
-    public override canHold(): boolean | null
-    {
+    public override canHold(): boolean | null {
         // If all of the move's possible types are contained by our given types,
         // then the assertion holds.
-        return subsetOrIndependent(this.types,
-            this.move.getPossibleTypes(this.partialUser), this.negative);
+        return subsetOrIndependent(
+            this.types,
+            this.move.getPossibleTypes(this.partialUser),
+            this.negative,
+        );
     }
 
-    public override assert(): void
-    {
-        this.move.assertTypes(this.types, this.partialUser, this.negative)
+    public override assert(): void {
+        this.move.assertTypes(this.types, this.partialUser, this.negative);
     }
 
-    public override reject(): void
-    {
-        this.move.assertTypes(this.types, this.partialUser, !this.negative)
+    public override reject(): void {
+        this.move.assertTypes(this.types, this.partialUser, !this.negative);
     }
 
-    protected override delayImpl(cb: inference.DelayCallback):
-        inference.CancelCallback
-    {
-        return this.move.onUpdateTypes(this.types, this.partialUser,
-            this.negative ? held => cb(!held) : cb);
+    protected override delayImpl(
+        cb: inference.DelayCallback,
+    ): inference.CancelCallback {
+        return this.move.onUpdateTypes(
+            this.types,
+            this.partialUser,
+            this.negative ? held => cb(!held) : cb,
+        );
     }
 
-    public override toString(indentInner = 4, indentOuter = 0): string
-    {
+    public override toString(indentInner = 4, indentOuter = 0): string {
         const inner = " ".repeat(indentInner);
         const outer = " ".repeat(indentOuter);
         return `\

@@ -1,10 +1,18 @@
-import { formats } from "../../../../psbot/handlers/battle";
-import { BattleAgent, Choice, choiceIds } from
-    "../../../../psbot/handlers/battle/agent";
-import { BattleParser, BattleParserContext } from
-    "../../../../psbot/handlers/battle/parser";
-import { Experience, ExperienceAgent, ExperienceAgentData } from
-    "../../experience/Experience";
+import {formats} from "../../../../psbot/handlers/battle";
+import {
+    BattleAgent,
+    Choice,
+    choiceIds,
+} from "../../../../psbot/handlers/battle/agent";
+import {
+    BattleParser,
+    BattleParserContext,
+} from "../../../../psbot/handlers/battle/parser";
+import {
+    Experience,
+    ExperienceAgent,
+    ExperienceAgentData,
+} from "../../experience/Experience";
 
 /**
  * Wraps a BattleParser to track rewards/decisions and emit Experience objects.
@@ -19,25 +27,23 @@ import { Experience, ExperienceAgent, ExperienceAgentData } from
  * @param username Client's username to parse game-over reward.
  * @returns The wrapped BattleParser function.
  */
-export function experienceBattleParser
-<
+export function experienceBattleParser<
     T extends formats.FormatType = formats.FormatType,
     TArgs extends unknown[] = unknown[],
-    TResult = unknown
+    TResult = unknown,
 >(
     parser: BattleParser<T, BattleAgent<T>, TArgs, TResult>,
-    callback: (exp: Experience) => void, username: string):
-    BattleParser<T, ExperienceAgent<T>, TArgs, TResult>
-{
+    callback: (exp: Experience) => void,
+    username: string,
+): BattleParser<T, ExperienceAgent<T>, TArgs, TResult> {
     return async function _experienceBattleParser(
-        ctx: BattleParserContext<T, ExperienceAgent<T>>, ...args: TArgs):
-        Promise<TResult>
-    {
+        ctx: BattleParserContext<T, ExperienceAgent<T>>,
+        ...args: TArgs
+    ): Promise<TResult> {
         let expAgentData: ExperienceAgentData | null = null;
         let lastChoice: Choice | null = null;
         let reward = 0;
-        function emitExperience()
-        {
+        function emitExperience() {
             if (!expAgentData || !lastChoice) return;
             // Collect data to emit an experience.
             const action = choiceIds[lastChoice];
@@ -51,39 +57,37 @@ export function experienceBattleParser
 
         // Start tracking the game.
         const result = await parser(
-        {
-            ...ctx,
-            // Extract additional info from the ExperienceAgent.
-            async agent(state, choices, logger)
             {
-                emitExperience();
-                expAgentData = await ctx.agent(state, choices, logger);
-            },
-            iter:
-            {
-                ...ctx.iter,
-                async next()
-                {
-                    // Observe events before the parser consumes them.
-                    const r = await ctx.iter.next();
-                    if (!r.done &&
-                        ["win", "tie"].includes(r.value.args[0]))
-                    {
-                        // Add win/loss reward.
-                        reward += r.value.args[1] === username ? 1 : -1;
-                    }
+                ...ctx,
+                // Extract additional info from the ExperienceAgent.
+                async agent(state, choices, logger) {
+                    emitExperience();
+                    expAgentData = await ctx.agent(state, choices, logger);
+                },
+                iter: {
+                    ...ctx.iter,
+                    async next() {
+                        // Observe events before the parser consumes them.
+                        const r = await ctx.iter.next();
+                        if (
+                            !r.done &&
+                            ["win", "tie"].includes(r.value.args[0])
+                        ) {
+                            // Add win/loss reward.
+                            reward += r.value.args[1] === username ? 1 : -1;
+                        }
+                        return r;
+                    },
+                },
+                // Extract the last choice that was accepted.
+                async sender(choice) {
+                    const r = await ctx.sender(choice);
+                    if (!r) lastChoice = choice;
                     return r;
-                }
+                },
             },
-            // Extract the last choice that was accepted.
-            async sender(choice)
-            {
-                const r = await ctx.sender(choice);
-                if (!r) lastChoice = choice;
-                return r;
-            }
-        },
-            ...args);
+            ...args,
+        );
 
         // Emit final experience at the end of the game.
         // FIXME: In startPSBattle(), forcing a tie after reaching maxTurns will
