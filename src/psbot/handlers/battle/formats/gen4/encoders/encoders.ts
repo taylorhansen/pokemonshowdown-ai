@@ -370,7 +370,7 @@ export const majorStatusCounterEncoder: Encoder<ReadonlyMajorStatusCounter> =
             id: msc.current && majorStatuses[msc.current],
             one: msc.current === "tox" ?
                     // %hp taken by toxic damage next turn, capped at 15/16.
-                    // TODO: Damage is actually turns * max(1, floor(hp/16)).
+                    // Note: Damage is actually turns * max(1, floor(hp/16)).
                     Math.min(15/16, msc.turns / 16)
                 : msc.current === "slp" ?
                     // Chance of staying asleep.
