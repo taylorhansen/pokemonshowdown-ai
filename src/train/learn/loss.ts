@@ -37,7 +37,7 @@ export type LossResult = {
 };
 
 /** Policy gradient loss function. */
-export function loss({
+export const loss = ({
     model,
     state,
     oldProbs,
@@ -45,8 +45,8 @@ export function loss({
     returns,
     advantage,
     algorithm,
-}: LossArgs): LossResult {
-    return tf.tidy("loss", function lossImpl() {
+}: LossArgs): LossResult =>
+    tf.tidy("loss", function lossImpl() {
         // Get initial prediction.
         const [probs, stateValue] = model.predictOnBatch(state) as tf.Tensor[];
 
@@ -135,7 +135,6 @@ export function loss({
 
         return result;
     });
-}
 
 /**
  * Calculates the KL divergence of two discrete probability distributions.
@@ -146,6 +145,5 @@ export function loss({
  * @returns A Tensor one rank lower than `p` containing `KL(P || Q)`, the KL
  * divergence of `p` from `q`, in nats.
  */
-export function klDivergence(p: tf.Tensor, q: tf.Tensor): tf.Tensor {
-    return tf.tidy(() => tf.sum(tf.mul(p, tf.log(tf.div(p, q))), -1));
-}
+const klDivergence = (p: tf.Tensor, q: tf.Tensor): tf.Tensor =>
+    tf.tidy(() => tf.sum(tf.mul(p, tf.log(tf.div(p, q))), -1));
