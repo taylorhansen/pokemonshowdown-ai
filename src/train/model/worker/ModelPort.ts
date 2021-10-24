@@ -8,13 +8,15 @@ import { policyAgent, PolicyType } from
 import { WrappedError } from "../../helpers/WrappedError";
 import { ExperienceAgent, ExperienceAgentData } from
     "../../play/experience/Experience";
-import { AsyncPort } from "../../port/AsyncPort";
+import { AsyncPort, ProtocolResultRaw } from "../../port/AsyncPort";
 import { ModelPortProtocol, PredictMessage, PredictResult } from
     "./ModelPortProtocol";
 
 /**
  * Abstracts the interface between a game worker and the main NetworkProcessor
- * worker. Intended to be used by only one BattleAgent within a game worker that
+ * worker.
+ *
+ * Intended to be used by only one BattleAgent within a game worker that
  * received a port to connect to a neural network.
  *
  * @template TFormatType Game format type.
@@ -34,12 +36,15 @@ export class ModelPort
      * @param port Message port.
      * @param format Game format type that the message port supports.
      */
-    constructor(port: MessagePort, public readonly format: TFormatType)
+    public constructor(port: MessagePort, public readonly format: TFormatType)
     {
         this.asyncPort = new AsyncPort(port);
-        port.on("message", res => this.asyncPort.receiveMessage(res));
+        port.on("message",
+            (res: ProtocolResultRaw<ModelPortProtocol,
+                    keyof ModelPortProtocol>) =>
+                this.asyncPort.receiveMessage(res));
         port.on("error",
-            err => this.asyncPort.receiveError(
+            (err: Error) => this.asyncPort.receiveError(
                 new WrappedError(err,
                     msg => "ModelPort encountered an unhandled exception: " +
                         msg)));
@@ -61,9 +66,9 @@ export class ModelPort
         const innerAgent = policyAgent<TFormatType>(
             async state =>
             {
-                const encoder: Encoder<formats.ReadonlyState<TFormatType>> =
-                    formats.encoder[this.format];
-                const arr = alloc(encoder.size, /*shared*/ true);
+                const encoder = formats.encoder[this.format] as
+                    Encoder<formats.ReadonlyState<TFormatType>>;
+                const arr = alloc(encoder.size, true /*shared*/);
                 encoder.encode(arr, state);
                 let i = ModelPort.verifyInput(arr);
                 if (i >= 0)
@@ -73,7 +78,7 @@ export class ModelPort
                         `State:\n${state.toString()}`);
                 }
 
-                const result = await this.predict(arr, /*shared*/ true);
+                const result = await this.predict(arr, true /*shared*/);
                 i = ModelPort.verifyOutput(result.probs);
                 if (i >= 0)
                 {
@@ -141,15 +146,16 @@ export class ModelPort
      * @param state State data.
      * @param shared Whether the array uses a SharedArrayBuffer.
      */
-    public predict(state: Float32Array, shared = false): Promise<PredictResult>
+    public async predict(state: Float32Array, shared = false):
+        Promise<PredictResult>
     {
         const msg: PredictMessage =
             {type: "predict", rid: this.asyncPort.nextRid(), state};
         // SharedArrayBuffers can't be in the transfer list since they're
-        //  already accessible from both threads
+        //  Already accessible from both threads
         const transferList = shared ? [] : [state.buffer];
 
-        return new Promise((res, rej) =>
+        return await new Promise((res, rej) =>
             this.asyncPort.postMessage(msg, transferList,
                 result =>
                     result.type === "error" ? rej(result.err) : res(result)));

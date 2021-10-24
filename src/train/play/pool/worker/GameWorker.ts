@@ -2,8 +2,7 @@ import { deserialize } from "v8";
 import { Worker } from "worker_threads";
 import { WorkerPort } from "../../../port/WorkerPort";
 import { GamePoolArgs, GamePoolResult } from "../GamePool";
-import { GameProtocol, GameWorkerAgentConfig, GameWorkerPlay } from
-    "./GameProtocol";
+import { GameProtocol, GameAgentConfig, GamePlay } from "./GameProtocol";
 
 /** Wraps a GamePool worker to provide Promise functionality. */
 export class GameWorker
@@ -16,7 +15,7 @@ export class GameWorker
      *
      * @param worker `worker_threads` Worker object.
      */
-    constructor(worker: Worker)
+    public constructor(worker: Worker)
     {
         this.workerPort = new WorkerPort(worker);
     }
@@ -27,7 +26,7 @@ export class GameWorker
     /** Queues a game for the worker. */
     public async playGame(args: GamePoolArgs): Promise<GamePoolResult>
     {
-        // request neural network ports
+        // Request neural network ports.
         const agentsPromise = Promise.all(
             args.agents.map(
                 async config =>
@@ -35,9 +34,9 @@ export class GameWorker
                     port: await args.models.subscribe(config.model),
                     exp: config.exp
                 }))) as
-                    Promise<[GameWorkerAgentConfig, GameWorkerAgentConfig]>;
+                    Promise<[GameAgentConfig, GameAgentConfig]>;
 
-        const msg: GameWorkerPlay =
+        const msg: GamePlay =
         {
             type: "play", rid: this.workerPort.nextRid(), format: args.format,
             agents: await agentsPromise,
@@ -46,7 +45,7 @@ export class GameWorker
             ...args.rollout && {rollout: args.rollout}
         };
 
-        return new Promise(res =>
+        return await new Promise(res =>
             this.workerPort.postMessage<"play">(msg,
                 msg.agents.map(config => config.port),
                 workerResult =>
@@ -59,9 +58,9 @@ export class GameWorker
                             id: args.id, numAExps: workerResult.numAExps,
                             winner: workerResult.winner,
                             // GamePort doesn't automatically deserialize errors
-                            //  outside of PortResultError (where type=error)
+                            // outside of PortResultError (where type=error).
                             ...workerResult.err &&
-                                {err: deserialize(workerResult.err)}
+                                {err: deserialize(workerResult.err) as Error}
                         };
                     }
                     else

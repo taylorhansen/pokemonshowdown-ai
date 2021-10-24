@@ -1,5 +1,6 @@
 /**
- * Callback type for when the status of a SubReason is known.
+ * Callback type for when the status of a {@link SubReason} is known.
+ *
  * @param held Whether the SubReason held or if it was disproven.
  */
 export type DelayCallback = (held: boolean) => void;
@@ -7,11 +8,16 @@ export type DelayCallback = (held: boolean) => void;
 /** Callback type to cancel a {@link SubReason.delay} call. */
 export type CancelCallback = () => void;
 
-// TODO: rename to assumption or premise?
+// TODO: Rename to assumption or premise?
 /** Reason for a SubInference to activate. */
 export abstract class SubReason
 {
-    /** Checks whether the reason currently holds. Returns null if unknown. */
+    /**
+     * Checks whether the reason currently holds.
+     *
+     * @returns A boolean if the reason definitely can('t) hold, or `null` if
+     * currently unknown.
+     */
     public abstract canHold(): boolean | null;
 
     /** Asserts that the reason holds. */
@@ -24,7 +30,7 @@ export abstract class SubReason
      * Sets up callbacks to wait for more information before asserting.
      *
      * @param cb Callback for when the reason has been proven or disproven. Can
-     * be called immediately.
+     * be called immediately if {@link canHold} is non-`null`.
      * @returns A callback to cancel this call. Should be already canceled
      * when this function calls `cb`. Should do nothing if called again.
      */
@@ -49,9 +55,17 @@ export abstract class SubReason
      */
     protected abstract delayImpl(cb: DelayCallback): CancelCallback;
 
-    /** @override */
+    /**
+     * Stringifier with indent options.
+     *
+     * @param indentInner Number of spaces for additional indents beyond the
+     * current line.
+     * @param indentOuter Number of spaces for the indent of the current line.
+     * @override
+     */
     public toString(indentInner = 4, indentOuter = 0): string
     {
+        void indentInner;
         const s = " ".repeat(indentOuter);
         return `${s}SubReason()`;
     }

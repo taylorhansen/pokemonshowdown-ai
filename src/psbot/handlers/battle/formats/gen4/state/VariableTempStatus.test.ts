@@ -28,7 +28,7 @@ export const test = () => describe("VariableTempStatus", function()
         vts = new VariableTempStatus(map, 4, silent);
     }
 
-    function setup(silent = false)
+    function setupVts(silent = false)
     {
         beforeEach(`Initialize VariableTempStatus with silent=${silent}`,
             setupImpl.bind(undefined, silent));
@@ -36,7 +36,7 @@ export const test = () => describe("VariableTempStatus", function()
 
     describe("#reset()", function()
     {
-        setup();
+        setupVts();
 
         it("Should reset status", function()
         {
@@ -49,7 +49,7 @@ export const test = () => describe("VariableTempStatus", function()
 
     describe("#start()", function()
     {
-        setup();
+        setupVts();
 
         it("Should start a status", function()
         {
@@ -59,8 +59,8 @@ export const test = () => describe("VariableTempStatus", function()
 
         it("Should start a called status", function()
         {
-            vts.start("a", /*called*/ true);
-            check("a", true, 0, /*called*/ true);
+            vts.start("a", true /*called*/);
+            check("a", true, 0, true /*called*/);
         });
     });
 
@@ -95,7 +95,7 @@ export const test = () => describe("VariableTempStatus", function()
 
         describe("silent = false", function()
         {
-            setup();
+            setupVts();
             shouldIncTurns();
 
             it("Should throw once over duration", function()
@@ -111,7 +111,7 @@ export const test = () => describe("VariableTempStatus", function()
 
         describe("silent = true", function()
         {
-            setup(/*silent*/ true);
+            setupVts(true /*silent*/);
             shouldIncTurns();
 
             it("Should reset when at duration limit", function()

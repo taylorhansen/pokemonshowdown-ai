@@ -7,7 +7,7 @@ import { subsetOrIndependent } from "./helpers";
 /** Creates a SubReason that asserts that the pokemon has the given item. */
 export function has(mon: Pokemon, items: Set<string>): inference.SubReason
 {
-    return new HasItem(mon, items, /*negative*/ false);
+    return new HasItem(mon, items, false /*negative*/);
 }
 
 /**
@@ -17,7 +17,7 @@ export function has(mon: Pokemon, items: Set<string>): inference.SubReason
 export function doesntHave(mon: Pokemon, items: Set<string>):
     inference.SubReason
 {
-    return new HasItem(mon, items, /*negative*/ true);
+    return new HasItem(mon, items, true /*negative*/);
 }
 
 /** Creates a SubReason that asserts that the pokemon has an unknown item. */
@@ -31,11 +31,11 @@ class HasItem extends inference.SubReason
     /** Item snapshot for making inferences in retrospect. */
     private readonly item: PossibilityClass<string>;
 
-    constructor(mon: Pokemon, private readonly items: Set<string>,
+    public constructor(mon: Pokemon, private readonly items: Set<string>,
         private readonly negative: boolean)
     {
         super();
-        this.item = mon.item;
+        this.item = mon.item as PossibilityClass<string>;
     }
 
     public override canHold(): boolean | null
@@ -58,8 +58,8 @@ class HasItem extends inference.SubReason
 
     private acceptImpl(): void
     {
-        // TODO: guard against overnarrowing?
-        // may need a better framework for error handling/logging
+        // TODO: Guard against overnarrowing?
+        // May need a better framework for error handling/logging.
         this.item.narrow(this.items);
     }
 

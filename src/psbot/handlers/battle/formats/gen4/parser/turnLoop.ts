@@ -11,10 +11,10 @@ import { request } from "./request";
 /** Parses each turn of the battle until game over.  */
 export async function turnLoop(ctx: BattleParserContext<"gen4">): Promise<void>
 {
-    // initial switch-ins happen on turn 1
+    // Initial switch-ins happen on turn 1.
     await turn1(ctx);
 
-    // actual turn loop
+    // Actual turn loop.
     let num = 1;
     while (await turn(ctx, ++num));
 }
@@ -31,8 +31,6 @@ async function turn1(ctx: BattleParserContext<"gen4">): Promise<void>
 async function turn(ctx: BattleParserContext<"gen4">, num: number):
     Promise<boolean>
 {
-    // TODO: game-over detection
-
     await ignoredEvents(ctx);
     await preTurn(ctx);
 
@@ -53,13 +51,14 @@ async function preTurn(ctx: BattleParserContext<"gen4">): Promise<void>
 {
     ctx.state.preTurn();
     // TODO: quickclaw, custap, others?
+    await Promise.resolve();
 }
 
-// TODO: move to separate file?
+// TODO: Move to separate file?
 /** Handles residual effects at the end of the turn. */
 async function residual(ctx: BattleParserContext<"gen4">): Promise<void>
 {
-    // TODO: wish
+    // TODO: wish.
     await unordered.all(ctx,
         (["p1", "p2"] as SideID[])
             .filter(side => !ctx.state.getTeam(side).active.fainted)
@@ -79,7 +78,7 @@ async function postTurn(ctx: BattleParserContext<"gen4">, num: number):
     const event = await verify(ctx, "|turn|", "|win|");
     if (event.args[0] === "win")
     {
-        // game over
+        // Game over.
         await consume(ctx);
         return false;
     }

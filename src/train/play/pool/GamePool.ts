@@ -4,14 +4,14 @@ import { AdvantageConfig } from "../../learn";
 import { ModelWorker } from "../../model/worker";
 import { ThreadPool } from "../../pool";
 import { SimResult } from "../sim/playGame";
-import { GameProtocol } from "./worker/GameProtocol";
+import { GameProtocol, GameWorkerData } from "./worker/GameProtocol";
 import { GameWorker } from "./worker/GameWorker";
 
 /** Config for starting a game. */
 export interface GameConfig
 {
     /** Game format type. */
-    readonly format: formats.FormatType,
+    readonly format: formats.FormatType;
     /**
      * Maximum amount of turns until the game is considered a tie. Games can go
      * on forever if this is not set and both agents only decide to switch.
@@ -23,7 +23,7 @@ export interface GameConfig
      * Advantage estimation config. If defined, AugmentedExperiences will be
      * generated from any Experience batches that are found.
      */
-    readonly rollout?: AdvantageConfig
+    readonly rollout?: AdvantageConfig;
 }
 
 /** Config for {@link GamePool.addGame} agents. */
@@ -46,7 +46,7 @@ export interface GamePoolArgs extends GameConfig
     readonly models: ModelWorker;
 }
 
-/** GamePool stream output type. */
+/** {@link GamePool} stream output type. */
 export interface GamePoolResult extends SimResult
 {
     /** Unique identifier for logging. */
@@ -66,7 +66,8 @@ export class GamePool
 
     /** Wrapped thread pool for managing game workers. */
     private readonly pool:
-        ThreadPool<GameWorker, GameProtocol, keyof GameProtocol>;
+        ThreadPool<GameWorker, GameProtocol, keyof GameProtocol,
+            GameWorkerData>;
 
     /**
      * Creates a GamePool.
@@ -75,10 +76,10 @@ export class GamePool
      * @param getExpPath Optional getter function for experience files. Called
      * once per worker.
      */
-    constructor(numThreads: number, getExpPath?: () => Promise<string>)
+    public constructor(numThreads: number, getExpPath?: () => Promise<string>)
     {
         this.pool = new ThreadPool(numThreads, workerScriptPath, GameWorker,
-            getExpPath && (async () => ({expPath: await getExpPath()})));
+                async () => ({expPath: await getExpPath?.()}) /*workerData*/);
     }
 
     /**
@@ -92,20 +93,21 @@ export class GamePool
     public async addGame(args: GamePoolArgs, callback?: () => void):
         Promise<GamePoolResult>
     {
-        // grab a free worker
+        // Grab a free worker.
         const port = await this.pool.takePort();
-        callback?.();
 
         try
         {
-            try { return await port.playGame(args); }
-            finally { this.pool.givePort(port); }
+            callback?.();
+            return await port.playGame(args);
         }
-        catch (err: any)
+        catch (e)
         {
-            const result: GamePoolResult = {id: args.id, numAExps: 0, err};
+            const result: GamePoolResult =
+                {id: args.id, numAExps: 0, err: e as Error};
             return result;
         }
+        finally { this.pool.givePort(port); }
     }
 
     /** Closes the thread pool. */

@@ -5,6 +5,7 @@ import { Pokemon } from "../../state/Pokemon";
 
 /**
  * Expects a weather effect.
+ *
  * @param source Pokemon source of effect.
  * @param type Type of weather to start, or `"none"` to end current weather.
  * @param pred Optional additional custom check on the event before it can be
@@ -20,23 +21,23 @@ export async function weather(ctx: BattleParserContext<"gen4">,
     Promise<true | "silent" | undefined>
 {
     const rs = ctx.state.status;
-    // effect would do nothing
+    // Effect would do nothing.
     if (rs.weather.isActive === (type !== "none")) return "silent";
 
-    // parse event
+    // Parse event.
     const event = await tryVerify(ctx, "|-weather|");
     if (!event) return;
     if (event.kwArgs.upkeep) return;
     const [, weatherStr] = event.args;
     if (weatherStr !== type) return;
-    const predRes = pred && pred(event);
+    const predRes = pred?.(event);
     if (predRes === false) return;
 
-    // note that this is the base implementation for a weather-starting event,
-    //  factored out here in order to be able to take additional parameters
+    // Note that this is the base implementation for a weather-starting event,
+    // factored out here in order to be able to take additional parameters.
     ctx.state.status.weather.start(source,
         weatherStr as dex.WeatherType | "none",
-        /*infinite*/ predRes === "infinite");
+        predRes === "infinite" /*infinite*/);
     await consume(ctx);
     return true;
 }

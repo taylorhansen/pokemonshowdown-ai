@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import "mocha";
 import { BattleState } from "../../state";
-import { smeargle } from "../../state/switchOptions.test";
 import { SwitchOptions } from "../../state/Team";
-import { StateHelpers } from "../helpers.test";
+import { smeargle } from "../../state/switchOptions.test";
+import { StateHelpers } from "../StateHelpers.test";
 import * as reasonHp from "./hp";
 
 export const test = () => describe("hp", function()

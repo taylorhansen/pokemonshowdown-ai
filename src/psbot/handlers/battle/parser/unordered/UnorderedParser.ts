@@ -4,6 +4,7 @@ import { BattleParser } from "../BattleParser";
 
 /**
  * Function type for tentatively parsing battle events.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.

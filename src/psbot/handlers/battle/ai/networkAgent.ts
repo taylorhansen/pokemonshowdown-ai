@@ -17,8 +17,9 @@ export type NetworkData =
 };
 
 /**
- * Creates a BattleAgent that uses a neural network for choice selection. Uses
- * `policyAgent()` for configuring action selection.
+ * Creates a BattleAgent (via {@link policyAgent}) that uses a neural network
+ * for choice selection.
+ *
  * @template T format type.
  * @param model The neural network.
  * @param policy Action selection method. See {@link policyAgent} for details.
@@ -56,12 +57,14 @@ export function networkAgent<T extends FormatType = FormatType>(
 }
 
 /**
- * Verifies a neural network model to make sure its input and output shapes
- * are acceptable for constructing a `networkAgent()` with. Throws if invalid.
+ * Verifies a neural network model to make sure it's acceptable for constructing
+ * a {@link networkAgent} with.
+ *
+ * @throws Error if invalid input/output shapes.
  */
 export function verifyModel(model: tf.LayersModel, size: number): void
 {
-    // loaded models must have the correct input/output shape
+    // Loaded models must have the correct input/output shape.
     if (Array.isArray(model.input))
     {
         throw new Error("Loaded LayersModel should have only one input " +
@@ -93,7 +96,7 @@ export function verifyModel(model: tf.LayersModel, size: number): void
 /** Ensures that a network input shape is valid. */
 function isValidInput(input: tf.SymbolicTensor, size: number): boolean
 {
-    const shape = input.shape;
+    const {shape} = input;
     return shape.length === 2 && shape[0] === null && shape[1] === size;
 }
 
@@ -103,10 +106,10 @@ function isValidOutput(output: tf.SymbolicTensor[]): boolean
     if (output.length !== 2) return false;
     const actionShape = output[0].shape;
     const valueShape = output[1].shape;
-    // actionShape should be [null, intToChoice.length]
+    // Action output shape should be [null, intToChoice.length].
     return actionShape.length === 2 && actionShape[0] === null &&
         actionShape[1] === intToChoice.length &&
-        // valueShape should be [null, 1]
+        // Value output shape should be [null, 1].
         valueShape.length === 2 && valueShape[0] === null &&
             valueShape[1] === 1;
 }

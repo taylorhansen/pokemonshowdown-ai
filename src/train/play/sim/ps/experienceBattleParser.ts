@@ -9,6 +9,8 @@ import { Experience, ExperienceAgent, ExperienceAgentData } from
 /**
  * Wraps a BattleParser to track rewards/decisions and emit Experience objects.
  *
+ * Returned wrapper requires an {@link ExperienceAgent}.
+ *
  * @template T Game format type.
  * @template TArgs Parser arguments.
  * @template TResult Parser return type.
@@ -31,27 +33,27 @@ export function experienceBattleParser
         ctx: BattleParserContext<T, ExperienceAgent<T>>, ...args: TArgs):
         Promise<TResult>
     {
-        let expAgentData: ExperienceAgentData | null = null as any;
-        let lastChoice: Choice | null = null as any;
+        let expAgentData: ExperienceAgentData | null = null;
+        let lastChoice: Choice | null = null;
         let reward = 0;
         function emitExperience()
         {
             if (!expAgentData || !lastChoice) return;
-            // collect data to emit an experience
+            // Collect data to emit an experience.
             const action = choiceIds[lastChoice];
             ctx.logger.debug(`Emitting experience, reward=${reward}`);
             callback({...expAgentData, action, reward});
-            // reset collected data for the next decision
+            // Reset collected data for the next decision.
             expAgentData = null;
             lastChoice = null;
             reward = 0;
         }
 
-        // start tracking the game
+        // Start tracking the game.
         const result = await parser(
         {
             ...ctx,
-            // extract additional info from the ExperienceAgent
+            // Extract additional info from the ExperienceAgent.
             async agent(state, choices, logger)
             {
                 emitExperience();
@@ -62,18 +64,18 @@ export function experienceBattleParser
                 ...ctx.iter,
                 async next()
                 {
-                    // observe events before the parser consumes them
+                    // Observe events before the parser consumes them.
                     const r = await ctx.iter.next();
                     if (!r.done &&
                         ["win", "tie"].includes(r.value.args[0]))
                     {
-                        // add win/loss reward
+                        // Add win/loss reward.
                         reward += r.value.args[1] === username ? 1 : -1;
                     }
                     return r;
                 }
             },
-            // extract the last choice that was accepted
+            // Extract the last choice that was accepted.
             async sender(choice)
             {
                 const r = await ctx.sender(choice);
@@ -83,10 +85,10 @@ export function experienceBattleParser
         },
             ...args);
 
-        // emit final experience at the end of the game
-        // FIXME: in startPSBattle(), forcing a tie after reaching maxTurns will
-        //  cause an extra Experience to be emitted between the last decision
-        //  and the tie event
+        // Emit final experience at the end of the game.
+        // FIXME: In startPSBattle(), forcing a tie after reaching maxTurns will
+        // cause an extra Experience to be emitted between the last decision and
+        // the |tie event.
         emitExperience();
         return result;
     };

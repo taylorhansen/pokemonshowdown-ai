@@ -5,9 +5,10 @@ import { benchInfo, ditto, eevee, requestEvent, smeargle } from
     "../state/switchOptions.test";
 import { createInitialContext, ParserContext, setupOverrideSender } from
     "./Context.test";
+import { ParserHelpers } from "./ParserHelpers.test";
 import * as faint from "./faint";
-import { ParserHelpers, setupBattleParser, toDetails, toHPStatus, toIdent,
-    toMoveName, toRequestJSON, toUsername } from "./helpers.test";
+import { setupBattleParser, toDetails, toHPStatus, toIdent, toMoveName,
+    toRequestJSON, toUsername } from "./helpers.test";
 
 export const test = () => describe("faint", function()
 {
@@ -21,8 +22,7 @@ export const test = () => describe("faint", function()
         state = ictx.getState();
     });
 
-    const {sent: sentPromise, resolve: sendResolver} =
-        setupOverrideSender(ictx);
+    const sender = setupOverrideSender(ictx);
 
     describe("event()", function()
     {
@@ -112,9 +112,9 @@ export const test = () => describe("faint", function()
             [
                 {...benchInfo[0], condition: toHPStatus("faint")}, benchInfo[1]
             ]));
-            // only 1 choice is available so no need to call agent
-            await expect(sentPromise()).to.eventually.equal("switch 2");
-            sendResolver();
+            // Only 1 choice is available so no need to call agent.
+            await expect(sender.sent()).to.eventually.equal("switch 2");
+            sender.resolve(false /*i.e., accept the choice*/);
             await p;
             await ph.handle(
             {
@@ -140,9 +140,9 @@ export const test = () => describe("faint", function()
             [
                 {...benchInfo[0], condition: toHPStatus("faint")}, benchInfo[1]
             ]));
-            // only 1 choice is available so no need to call agent
-            await expect(sentPromise()).to.eventually.equal("switch 2");
-            sendResolver();
+            // Only 1 choice is available so no need to call agent.
+            await expect(sender.sent()).to.eventually.equal("switch 2");
+            sender.resolve(false /*i.e., accept the choice*/);
             await p;
             await ph.handle(
             {
@@ -197,7 +197,7 @@ export const test = () => describe("faint", function()
             team.status.spikes = 3;
 
             pctx = init();
-            // first replacement sent in
+            // First replacement sent in.
             await ph.handle(
             {
                 args:
@@ -217,7 +217,7 @@ export const test = () => describe("faint", function()
                 ],
                 kwArgs: {}
             });
-            // first replacement faints
+            // First replacement faints.
             await ph.handle(
             {
                 args: ["-damage", toIdent("p2", ditto), toHPStatus("faint")],
@@ -225,7 +225,7 @@ export const test = () => describe("faint", function()
             });
             await ph.handle(
                 {args: ["faint", toIdent("p2", ditto)], kwArgs: {}});
-            // second replacement sent in
+            // Second replacement sent in.
             await ph.handle(
             {
                 args:
@@ -245,7 +245,7 @@ export const test = () => describe("faint", function()
                 ],
                 kwArgs: {}
             });
-            // second replacement faints
+            // Second replacement faints.
             await ph.handle(
             {
                 args: ["-damage", toIdent("p2", eevee), toHPStatus("faint")],
@@ -253,10 +253,10 @@ export const test = () => describe("faint", function()
             });
             await ph.handle(
                 {args: ["faint", toIdent("p2", eevee)], kwArgs: {}});
-            // game-over state detected
-            // this parser doesn't actually consume the event though, it just
-            //  verifies it and leaves it to the top-level turnLoop parser to
-            //  officially handle
+            // Game-over state detected.
+            // This parser doesn't actually consume the event, it just verifies
+            // it and leaves it to the top-level turnLoop parser to officially
+            // handle.
             await ph.reject(
                 {args: ["win", toUsername("username")], kwArgs: {}});
             await ph.return();

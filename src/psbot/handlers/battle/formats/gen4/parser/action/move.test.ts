@@ -5,16 +5,17 @@ import { Event } from "../../../../../../parser";
 import * as dex from "../../dex";
 import { BattleState } from "../../state";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
-import { ditto, smeargle } from "../../state/switchOptions.test";
 import { ReadonlyTeam, SwitchOptions } from "../../state/Team";
 import { ReadonlyVariableTempStatus } from "../../state/VariableTempStatus";
-import { createInitialContext, ParserContext } from "../Context.test";
-import { ParserHelpers, setupBattleParser, toBoostIDs, toDetails, toEffectName,
-    toHPStatus, toIdent, toItemName, toMessage, toMoveName, toNum,
-    toRequestJSON, toSide, toTypes, toUsername } from "../helpers.test";
+import { ditto, smeargle } from "../../state/switchOptions.test";
+import { createInitialContext } from "../Context.test";
+import { ParserHelpers } from "../ParserHelpers.test";
+import { setupBattleParser, toBoostIDs, toDetails, toEffectName, toHPStatus,
+    toIdent, toItemName, toMessage, toMoveName, toNum, toRequestJSON, toSide,
+    toTypes, toUsername } from "../helpers.test";
 import * as actionMove from "./move";
 
-export const test = () => describe("move", function()
+export const test = (): void => void describe("move", function()
 {
     const ictx = createInitialContext();
     const {sh} = ictx;
@@ -30,25 +31,25 @@ export const test = () => describe("move", function()
     {
         const init = setupBattleParser(ictx.startArgs,
             actionMove.moveAction);
-        let pctx: ParserContext<actionMove.MoveActionResult> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
         void init;
         it("TODO");
-        // pre-move effects, verify that move is handled normally, etc
+        // Pre-move effects, verify that move is handled normally, etc.
     });
 
     describe("interceptSwitch()", function()
     {
         const init = setupBattleParser(ictx.startArgs,
             actionMove.interceptSwitch);
-        let pctx: ParserContext<actionMove.MoveActionResult> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -61,7 +62,7 @@ export const test = () => describe("move", function()
             sh.initActive("p1");
             sh.initActive("p2");
 
-            pctx = init("p2", "p1"); // p2 is interrupting p1's switch-out
+            pctx = init("p2", "p1"); // P2 is interrupting p1's switch-out.
             await ph.handle(
             {
                 args:
@@ -81,19 +82,19 @@ export const test = () => describe("move", function()
                 kwArgs: {}
             });
             await ph.halt();
-            // should indicate that p2 spent its action interrupting the switch
+            // Should indicate that p2 spent its action interrupting the switch.
             await ph.return({actioned: {p2: true}});
         });
 
         it("TODO");
-        // pre-move effects, verify that move is handled normally, etc
+        // Pre-move effects, verify that move is handled normally, etc.
     });
 
     describe("useMove()", function()
     {
         const init = setupBattleParser(ictx.startArgs,
             actionMove.useMove);
-        let pctx: ParserContext<actionMove.MoveActionResult> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -293,16 +294,16 @@ export const test = () => describe("move", function()
             {
                 sh.initActive("p2");
                 const {moveset, volatile} = sh.initActive("p1");
-                // assume pp was already deducted by preparing the move
+                // Assume pp was already deducted by preparing the move.
                 volatile.twoTurn.start("fly");
                 expect(moveset.get("fly")).to.be.null;
                 expect(volatile.lastMove).to.be.null;
 
-                // start a new turn
+                // Start a new turn.
                 state.postTurn();
                 state.preTurn();
 
-                // indicate that the two-turn move is being released
+                // Indicate that the two-turn move is being released.
                 pctx = init("p1");
                 await moveEvent("p1", "fly",
                     {from: toEffectName("lockedmove")});
@@ -310,10 +311,10 @@ export const test = () => describe("move", function()
                 await ph.halt();
                 await ph.return({});
                 expect(volatile.twoTurn.isActive).to.be.false;
-                // should not deduct pp or even reveal the move, since the start
-                //  turn could've been called by an effect earlier
+                // Should not deduct pp or even reveal the move, since the start
+                // turn could've been called by an effect earlier.
                 expect(moveset.get("fly")).to.be.null;
-                // shouldn't set when releasing two-turn move
+                // Shouldn't set when releasing two-turn move.
                 expect(volatile.lastMove).to.be.null;
             });
 
@@ -322,10 +323,10 @@ export const test = () => describe("move", function()
             {
                 sh.initActive("p2");
                 const {moveset, volatile} = sh.initActive("p1");
-                // assume pp was already deducted by starting the move
+                // Assume pp was already deducted by starting the move.
                 volatile.lockedMove.start("thrash");
 
-                // indicate that the locked move is continuing
+                // Indicate that the locked move is continuing.
                 pctx = init("p1");
                 await moveEvent("p1", "thrash",
                     {from: toEffectName("lockedmove")});
@@ -342,10 +343,10 @@ export const test = () => describe("move", function()
             {
                 sh.initActive("p2");
                 const {moveset, volatile} = sh.initActive("p1");
-                // assume pp was already deducted by starting the move
+                // Assume pp was already deducted by starting the move.
                 volatile.rollout.start("iceball");
 
-                // indicate that the rollout move is continuing
+                // Indicate that the rollout move is continuing.
                 pctx = init("p1");
                 await moveEvent("p1", "iceball",
                     {from: toEffectName("lockedmove")});
@@ -370,7 +371,7 @@ export const test = () => describe("move", function()
                 await ph.halt();
                 await ph.return({});
                 expect(moveset.get("struggle")).to.be.null;
-                // should still set last move though
+                // Should still set last move though.
                 expect(volatile.lastMove).to.equal("struggle");
             });
 
@@ -581,7 +582,7 @@ export const test = () => describe("move", function()
                     const move = mon.moveset.reveal("fly");
                     expect(move.pp).to.equal(move.maxpp);
 
-                    // prepare turn
+                    // Prepare turn.
                     pctx = init("p2");
                     await moveEvent("p2", "fly", {still: true});
                     await prepareEvent("p2", "fly");
@@ -591,7 +592,7 @@ export const test = () => describe("move", function()
                     expect(mon.volatile.twoTurn.isActive).to.be.true;
                     expect(mon.volatile.twoTurn.type).to.equal("fly");
 
-                    // release turn
+                    // Release turn.
                     pctx = init("p2");
                     await moveEvent("p2", "fly",
                         {from: toEffectName("lockedmove")});
@@ -609,13 +610,13 @@ export const test = () => describe("move", function()
                     const move = mon.moveset.reveal("solarbeam");
                     expect(move.pp).to.equal(move.maxpp);
                     sh.initActive("p2");
-                    state.status.weather.start(/*source*/ null, "SunnyDay");
+                    state.status.weather.start(null /*source*/, "SunnyDay");
 
-                    // prepare initially
+                    // Prepare initially.
                     pctx = init("p1");
                     await moveEvent("p1", "solarbeam", {still: true});
                     await prepareEvent("p1", "solarbeam");
-                    // release in same turn via special |-anim| event
+                    // Release in same turn via special |-anim| event.
                     await animEvent("p1", "solarbeam", "p2");
                     await moveDamage("p2", 80);
                     await ph.halt();
@@ -633,11 +634,11 @@ export const test = () => describe("move", function()
                     mon.setItem("powerherb");
                     sh.initActive("p1");
 
-                    // prepare
+                    // Prepare.
                     pctx = init("p2");
                     await moveEvent("p2", "dig", {still: true});
                     await prepareEvent("p2", "dig");
-                    // consume item to shorten delay
+                    // Consume item to shorten delay.
                     await ph.handle(
                     {
                         args:
@@ -646,7 +647,7 @@ export const test = () => describe("move", function()
                         ],
                         kwArgs: {}
                     });
-                    // release in same turn via special |-anim| event
+                    // Release in same turn via special |-anim| event.
                     await animEvent("p2", "dig", "p1");
                     await moveDamage("p1", 70);
                     await ph.halt();
@@ -723,7 +724,7 @@ export const test = () => describe("move", function()
                 const mon = sh.initActive("p2");
                 mon.volatile.micleberry = true;
 
-                // prepare turn shouldn't reset
+                // Prepare turn shouldn't reset.
                 pctx = init("p2");
                 await moveEvent("p2", "bounce", {still: true});
                 await prepareEvent("p2", "bounce");
@@ -731,7 +732,7 @@ export const test = () => describe("move", function()
                 await ph.return({});
                 expect(mon.volatile.micleberry).to.be.true;
 
-                // should only reset once the move hits on the release turn
+                // Should only reset once the move hits on the release turn.
                 pctx = init("p2");
                 await moveEvent("p2", "bounce",
                     {from: toEffectName("lockedmove")});
@@ -814,10 +815,10 @@ export const test = () => describe("move", function()
                     sh.initActive("p1").volatile.magiccoat = true;
                     sh.initActive("p2");
 
-                    // use reflectable move
+                    // Use reflectable move.
                     pctx = init("p2");
                     await moveEvent("p2", "yawn");
-                    // block and reflect the move
+                    // Block and reflect the move.
                     await moveEvent("p1", "yawn",
                         {from: toEffectName("magiccoat", "move")});
                     await ph.handle(
@@ -830,21 +831,22 @@ export const test = () => describe("move", function()
                     "magiccoat status",
                 async function()
                 {
-                    sh.initActive("p1").setAbility("illuminate"); // no immunity
+                    // P1 has no immunity.
+                    sh.initActive("p1").setAbility("illuminate");
                     sh.initActive("p2");
 
-                    // use reflectable move
+                    // Use reflectable move.
                     pctx = init("p2");
                     await moveEvent("p2", "yawn");
-                    // try to block and reflect the move
+                    // Try to block and reflect the move.
                     await ph.rejectError(
                     {
                         args: ["move", toIdent("p1"), toMoveName("yawn")],
                         kwArgs: {from: toEffectName("magiccoat", "move")}
                     },
                         Error,
-                        // since there's no yawn effect, the parser thinks it
-                        //  was blocked by a different effect, e.g. ability
+                        // Since there's no yawn effect, the parser thinks it
+                        // was blocked by a different effect, e.g. ability.
                         "Move 'yawn' status [yawn] was blocked by target " +
                             "'p1' but target's ability [illuminate] can't " +
                             "block it");
@@ -856,23 +858,23 @@ export const test = () => describe("move", function()
                     sh.initActive("p1").volatile.magiccoat = true;
                     const mon = sh.initActive("p2");
                     mon.volatile.magiccoat = true;
-                    mon.setAbility("illuminate"); // no immunity
+                    mon.setAbility("illuminate"); // No immunity.
 
-                    // use reflectable move
+                    // Use reflectable move.
                     pctx = init("p2")
                     await moveEvent("p2", "yawn");
-                    // block and reflect the move
+                    // Block and reflect the move.
                     await moveEvent("p1", "yawn",
                         {from: toEffectName("magiccoat", "move")});
-                    // try to block and reflect the move again
+                    // Try to block and reflect the move again.
                     await ph.rejectError(
                     {
                         args: ["move", toIdent("p2"), toMoveName("yawn")],
                         kwArgs: {from: toEffectName("magiccoat", "move")}
                     },
                         Error,
-                        // since there's no yawn effect, the parser thinks it
-                        //  was blocked by a different effect, e.g. ability
+                        // Since there's no yawn effect, the parser thinks it
+                        // was blocked by a different effect, e.g. ability.
                         "Move 'yawn' status [yawn] was blocked by target " +
                             "'p2' but target's ability [illuminate] can't " +
                             "block it");
@@ -883,32 +885,32 @@ export const test = () => describe("move", function()
                 {
                     const mon = sh.initActive("p1");
                     mon.volatile.magiccoat = true;
-                    mon.setAbility("illuminate"); // no immunity
+                    mon.setAbility("illuminate"); // No immunity.
                     sh.initActive("p2");
 
-                    // use reflectable move
+                    // Use reflectable move.
                     pctx = init("p2");
                     await moveEvent("p2", "taunt");
-                    // try to block and reflect the move
+                    // Try to block and reflect the move.
                     await ph.rejectError(
                     {
                         args: ["move", toIdent("p1"), toMoveName("yawn")],
                         kwArgs: {from: toEffectName("magiccoat", "move")}
                     },
                         Error,
-                        // since there's no taunt effect, the parser thinks it
-                        //  was blocked by a different effect, e.g. ability
+                        // Since there's no taunt effect, the parser thinks it
+                        // was blocked by a different effect, e.g. ability.
                         "Move 'taunt' status [taunt] was blocked by target " +
                             "'p1' but target's ability [illuminate] can't " +
                             "block it");
                 });
             });
 
-            // TODO: type assertions once handleTypeEffectiveness() is
-            //  implemented
+            // TODO: Type assertions once handleTypeEffectiveness() is
+            // implemented.
         });
 
-        describe("pre-hit effects", async function()
+        describe("pre-hit effects", function()
         {
             describe("on-preHit items (resist berries)", function()
             {
@@ -942,8 +944,8 @@ export const test = () => describe("move", function()
                     await ph.return({});
                 });
 
-                // TODO: implement type effectiveness assertions then add more
-                //  tests
+                // TODO: Implement type effectiveness assertions then add more
+                // tests.
             });
         });
 
@@ -1004,8 +1006,8 @@ export const test = () => describe("move", function()
                     await ph.return({});
                 });
 
-                // TODO: type assertions once handleTypeEffectiveness() is
-                //  implemented
+                // TODO: Type assertions once handleTypeEffectiveness() is
+                // implemented.
             });
 
             describe("Substitute", function()
@@ -1016,31 +1018,27 @@ export const test = () => describe("move", function()
                     sh.initActive("p2").volatile.substitute = true;
                 });
 
-                function subBlockedEvent(side: SideID, opt = smeargle):
-                    Event<"|-activate|">
-                {
-                    return {
-                        args:
-                        [
-                            "-activate", toIdent(side, opt),
-                            toEffectName("substitute", "move")
-                        ],
-                        kwArgs: {}
-                    };
-                }
+                const subBlockedEvent = (side: SideID, opt = smeargle):
+                    Event<"|-activate|"> =>
+                ({
+                    args:
+                    [
+                        "-activate", toIdent(side, opt),
+                        toEffectName("substitute", "move")
+                    ],
+                    kwArgs: {}
+                });
 
-                function subBrokenEvent(side: SideID, opt = smeargle):
-                    Event<"|-end|">
-                {
-                    return {
-                        args:
-                        [
-                            "-end", toIdent(side, opt),
-                            toEffectName("substitute", "move")
-                        ],
-                        kwArgs: {}
-                    };
-                }
+                const subBrokenEvent = (side: SideID, opt = smeargle):
+                    Event<"|-end|"> =>
+                ({
+                    args:
+                    [
+                        "-end", toIdent(side, opt),
+                        toEffectName("substitute", "move")
+                    ],
+                    kwArgs: {}
+                });
 
                 it("Should not throw if sub-ignoring move", async function()
                 {
@@ -1062,8 +1060,8 @@ export const test = () => describe("move", function()
                 it("Should block hit status effects", async function()
                 {
                     pctx = init("p1");
-                    // note: status moves should fail so we're testing a
-                    //  damaging+status move here
+                    // Note: Status moves should fail so we're testing a
+                    // damaging+status move here.
                     await moveEvent("p1", "zapcannon");
                     await ph.handle(subBlockedEvent("p2"));
                     await ph.halt();
@@ -1135,18 +1133,15 @@ export const test = () => describe("move", function()
 
             describe("item on-tryOHKO (focussash)", function()
             {
-                function focussashEvent(side: SideID, opt = smeargle):
-                    Event<"|-enditem|">
-                {
-                    return {
-                        args:
-                        [
-                            "-enditem", toIdent(side, opt),
-                            toItemName("focussash")
-                        ],
-                        kwArgs: {}
-                    };
-                }
+                const focussashEvent = (side: SideID, opt = smeargle):
+                    Event<"|-enditem|"> =>
+                ({
+                    args:
+                    [
+                        "-enditem", toIdent(side, opt), toItemName("focussash")
+                    ],
+                    kwArgs: {}
+                });
 
                 it("Should handle ohko-blocking item", async function()
                 {
@@ -1198,7 +1193,7 @@ export const test = () => describe("move", function()
         {
             describe("damage", function()
             {
-                // TODO(gen5): self/hit distinction, e.g. healpulse
+                // TODO(gen5): Self/hit distinction, e.g. healpulse.
                 it("Should handle heal effect", async function()
                 {
                     sh.initActive("p1");
@@ -1247,7 +1242,7 @@ export const test = () => describe("move", function()
 
                     pctx = init("p1");
                     await moveEvent("p1", "perishsong");
-                    // note: the actual non-silent |-start| events happen later
+                    // Note: The actual non-silent |-start| events happen later.
                     await ph.handle(
                     {
                         args:
@@ -1308,21 +1303,18 @@ export const test = () => describe("move", function()
                     TPos extends true ? Event<"|-boost|">
                     : TPos extends false ? Event<"|-unboost|">
                     : never;
-                function boostEvent<TPos extends boolean = true>(pos: TPos,
+                const boostEvent = <TPos extends boolean = true>(pos: TPos,
                     side: SideID, stat: dex.BoostName, amount: number,
-                    kwArgs: BoostEvent<TPos>["kwArgs"] = {},
-                    opt = smeargle):
-                    BoostEvent<TPos>
-                {
-                    return {
-                        args:
-                        [
-                            pos ? "-boost" : "-unboost", toIdent(side, opt),
-                            stat, toNum(amount)
-                        ],
-                        kwArgs
-                    } as any as BoostEvent<TPos>;
-                }
+                    kwArgs: BoostEvent<TPos>["kwArgs"] = {}, opt = smeargle):
+                    BoostEvent<TPos> =>
+                ({
+                    args:
+                    [
+                        pos ? "-boost" : "-unboost", toIdent(side, opt),
+                        stat, toNum(amount)
+                    ],
+                    kwArgs
+                } as unknown as BoostEvent<TPos>);
 
                 const boostTests:
                     {[T in dex.MoveEffectTarget]: (() => void)[]} =
@@ -1454,8 +1446,8 @@ export const test = () => describe("move", function()
 
                             pctx = init("p1");
                             await moveEvent("p1", move);
-                            // move parser context should reject this event and
-                            //  attempt to exit
+                            // Move parser context should reject this event and
+                            // attempt to exit.
                             await ph.rejectError(
                             {
                                 args:
@@ -1481,7 +1473,7 @@ export const test = () => describe("move", function()
                         async function()
                         {
                             sh.initActive("p1");
-                            // blocking ability or useless ability (illuminate)
+                            // Blocking ability or useless ability (illuminate).
                             const mon = sh.initActive("p2");
                             mon.setAbility(abilityImmunity, "illuminate");
                             expect(mon.traits.ability.possibleValues)
@@ -1515,17 +1507,17 @@ export const test = () => describe("move", function()
                     });
                 }
                 shouldHandleBoost("self", "leafstorm", "spa",
-                    /*posBoost*/ false, 2);
-                // can have hypercutter
+                    false /*posBoost*/, 2);
+                // Can have hypercutter
                 const pinsir: SwitchOptions =
                 {
                     species: "pinsir", gender: "M", level: 100, hp: 100,
                     hpMax: 100
                 };
-                shouldHandleBoost("hit", "charm", "atk", /*posBoost*/ false, 2,
+                shouldHandleBoost("hit", "charm", "atk", false /*posBoost*/, 2,
                     "hypercutter", pinsir);
 
-                // set boost
+                // Set boost.
                 boostTests.self.push(() => describe("set-boost", function()
                 {
                     it("Should handle set boost", async function()
@@ -1595,7 +1587,7 @@ export const test = () => describe("move", function()
                             pctx = init("p1");
                             await moveEvent("p1", move);
                             await ph.handle(
-                                boostEvent(/*pos*/ amount > 0, target, stat,
+                                boostEvent(amount > 0 /*pos*/, target, stat,
                                     amount));
                             await ph.halt();
                             await ph.return({});
@@ -1611,7 +1603,7 @@ export const test = () => describe("move", function()
                             pctx = init("p1");
                             await moveEvent("p1", move);
                             await ph.handle(
-                                boostEvent(/*pos*/ amount > 0, target, stat,
+                                boostEvent(amount > 0 /*pos*/, target, stat,
                                     0));
                             await ph.halt();
                         });
@@ -1655,9 +1647,9 @@ export const test = () => describe("move", function()
                     });
                 }
                 shouldHandleSecondaryBoost("self", "chargebeam", "spa",
-                    /*posBoost*/ true, 1);
+                    true /*posBoost*/, 1);
                 shouldHandleSecondaryBoost("hit", "psychic", "spd",
-                    /*posBoost*/ false, -1);
+                    false /*PosBoost*/, -1);
 
                 function shouldHandle100SecondaryBoost(ctg: "self" | "hit",
                     move: string, stat: dex.BoostName, amount: number): void
@@ -1707,11 +1699,11 @@ export const test = () => describe("move", function()
                         pctx = init("p2");
                         await moveEvent("p2", "curse");
                         await ph.handle(
-                            boostEvent(/*pos*/ false, "p2", "spe", 1));
+                            boostEvent(false /*pos*/, "p2", "spe", 1));
                         await ph.handle(
-                            boostEvent(/*pos*/ true, "p2", "atk", 1));
+                            boostEvent(true /*pos*/, "p2", "atk", 1));
                         await ph.handle(
-                            boostEvent(/*pos*/ true, "p2", "def", 1));
+                            boostEvent(true /*pos*/, "p2", "def", 1));
                         await ph.halt();
                         await ph.return({});
                     });
@@ -1720,8 +1712,6 @@ export const test = () => describe("move", function()
 
             describe("status", function()
             {
-                //#region status
-
                 const statusTests:
                     {[T in dex.MoveEffectTarget]: (() => void)[]} =
                     {self: [], hit: []};
@@ -1755,19 +1745,20 @@ export const test = () => describe("move", function()
                     {
                         let user: Pokemon;
                         let opp: Pokemon;
-                        beforeEach("Initialize active", async function()
+
+                        beforeEach("Initialize active", function()
                         {
                             user = sh.initActive("p2");
-                            user.hp.set(50); // for roost
+                            user.hp.set(50); // For roost.
 
                             opp = sh.initActive("p1");
-                            // bypassing type effectiveness assertions
+                            // Bypassing type effectiveness assertions.
                             opp.volatile.changeTypes(["???", "???"]);
                         });
 
                         it("Should pass if expected", async function()
                         {
-                            // set last move in case of encore
+                            // Set last move in case of encore.
                             state.getTeam("p1").active.volatile.lastMove =
                                 "splash";
 
@@ -1800,12 +1791,12 @@ export const test = () => describe("move", function()
                                 "immunity",
                             async function()
                             {
-                                // setup ability so it can activate
+                                // Setup ability so it can activate.
                                 const us = state.getTeam("p1").active;
                                 us.setAbility(abilityImmunity);
                                 if (abilityCondition)
                                 {
-                                    state.status.weather.start(/*source*/ null,
+                                    state.status.weather.start(null /*source*/,
                                         abilityCondition);
                                 }
 
@@ -1856,14 +1847,14 @@ export const test = () => describe("move", function()
                         clauseEvent
                     }: TestRemovableArgs): void
                 {
-                    // adjust perspective
+                    // Adjust perspective.
                     const target = ctg === "self" ? "p2" : "p1";
 
                     statusTests[ctg].push(() => describe(name, function()
                     {
                         beforeEach("Initialize active", function()
                         {
-                            // bypassing type effectiveness assertions
+                            // Bypassing type effectiveness assertions.
                             sh.initActive("p1").volatile.changeTypes(
                                 ["???", "???"]);
                             sh.initActive("p2");
@@ -1887,7 +1878,7 @@ export const test = () => describe("move", function()
                                 "immunity",
                             async function()
                             {
-                                // setup ability so it can activate
+                                // Setup ability so it can activate.
                                 const us = state.getTeam("p1").active;
                                 us.setAbility(abilityImmunity);
 
@@ -1913,14 +1904,14 @@ export const test = () => describe("move", function()
                         {
                             if (dex.isMajorStatus(effect))
                             {
-                                // make sure majorstatus assertion passes
+                                // Make sure majorstatus assertion passes.
                                 state.getTeam(target).active.majorStatus
                                     .afflict(effect);
                             }
 
                             pctx = init("p2");
                             await moveEvent("p2", "tackle");
-                            // TODO: track moves that can do this
+                            // TODO: Track moves that can do this.
                             await ph.handle(endEvent);
                             await ph.halt();
                             await ph.return({});
@@ -1978,7 +1969,7 @@ export const test = () => describe("move", function()
                                 "effect",
                             async function()
                             {
-                                // remove owntempo possibility from smeargle
+                                // Remove owntempo possibility from smeargle.
                                 state.getTeam("p1").active
                                     .setAbility("technician");
 
@@ -2156,7 +2147,7 @@ export const test = () => describe("move", function()
                 });
                 statusTests.hit.push(() => describe("Flash Fire", function()
                 {
-                    // can have flashfire
+                    // Can have flashfire.
                     const arcanine: SwitchOptions =
                     {
                         species: "arcanine", gender: "F", level: 100, hp: 100,
@@ -2168,7 +2159,7 @@ export const test = () => describe("move", function()
                         sh.initActive("p1");
                         sh.initActive("p2", arcanine);
 
-                        // fire-type move with guaranteed brn effect
+                        // Fire-type move with guaranteed brn effect.
                         pctx = init("p1");
                         await moveEvent("p1", "willowisp");
                         await ph.handle(
@@ -2223,7 +2214,7 @@ export const test = () => describe("move", function()
                         kwArgs: {}
                     }
                 });
-                // imprison
+                // Imprison.
                 statusTests.self.push(() => describe("imprison", function()
                 {
                     let us: Pokemon;
@@ -2255,10 +2246,10 @@ export const test = () => describe("move", function()
                         us.moveset.reveal("tailwhip");
                         us.moveset.reveal("disable");
 
-                        // switch in a similar pokemon
+                        // Switch in a similar pokemon.
                         if (sameOpponent)
                         {
-                            // opponent should be able to have our moveset
+                            // Opponent should be able to have our moveset.
                             them = sh.initActive("p2", themVulpix);
                             expect(them.moveset.constraint)
                                 .to.include.all.keys(
@@ -2266,7 +2257,7 @@ export const test = () => describe("move", function()
                         }
                         else
                         {
-                            // opponent should not be able to have our moveset
+                            // Opponent should not be able to have our moveset.
                             them = sh.initActive("p2", themBulbasaur);
                             expect(them.moveset.constraint)
                                 .to.not.include.any.keys(
@@ -2283,8 +2274,8 @@ export const test = () => describe("move", function()
                             {
                                 setup(id);
 
-                                // if imprison fails, then the opponent
-                                //  shouldn't be able to have any of our moves
+                                // If imprison fails, then the opponent
+                                // shouldn't be able to have any of our moves.
                                 pctx = init(id);
                                 await moveEvent(id, "imprison");
                                 await ph.handle(
@@ -2331,8 +2322,8 @@ export const test = () => describe("move", function()
                             {
                                 setup(id);
 
-                                // if imprison succeeds, then the opponent
-                                //  should be able to have one of our moves
+                                // If imprison succeeds, then the opponent
+                                // should be able to have one of our moves.
                                 pctx = init(id);
                                 await moveEvent(id, "imprison");
                                 await ph.handle(
@@ -2358,7 +2349,7 @@ export const test = () => describe("move", function()
 
                         it("Should throw if no shared moves", async function()
                         {
-                            setup("p1", /*sameOpponent*/false);
+                            setup("p1", false /*sameOpponent*/);
 
                             pctx = init("p1");
                             await moveEvent("p1", "imprison");
@@ -2478,7 +2469,7 @@ export const test = () => describe("move", function()
                         kwArgs: {}
                     }
                 });
-                // slowstart (ability-only effect)
+                // Slowstart (ability-only effect).
                 for (const ctg of ["self", "hit"] as const)
                 {
                     const target = ctg === "self" ? "p2" : "p1";
@@ -2567,7 +2558,7 @@ export const test = () => describe("move", function()
                         kwArgs: {}
                     }
                 });
-                // TODO: more dynamic way of adding/generating tests
+                // TODO: More dynamic way of adding/generating tests.
                 testNonRemovable(
                 {
                     ctg: "hit", name: "yawn", moveId: "yawn",
@@ -2583,7 +2574,7 @@ export const test = () => describe("move", function()
                     abilityImmunity: "leafguard", abilityCondition: "SunnyDay"
                 });
 
-                // updatable
+                // Updatable.
                 testRemovable(
                 {
                     ctg: "hit", name: "confusion", effect: "confusion",
@@ -2632,7 +2623,7 @@ export const test = () => describe("move", function()
                     }
                 });
 
-                // singlemove
+                // Singlemove.
                 testNonRemovable(
                 {
                     ctg: "self", name: "destinybond", moveId: "destinybond",
@@ -2669,7 +2660,7 @@ export const test = () => describe("move", function()
                     }
                 });
 
-                // singleturn
+                // Singleturn.
                 testNonRemovable(
                 {
                     ctg: "self", name: "endure", moveId: "endure",
@@ -2734,7 +2725,7 @@ export const test = () => describe("move", function()
                         kwArgs: {}
                     }
                 });
-                // stall
+                // Stall.
                 statusTests.self.push(() => describe("stall effect", function()
                 {
                     it("Should count stall turns then reset if failed",
@@ -2788,14 +2779,14 @@ export const test = () => describe("move", function()
                         sh.initActive("p1");
                         const mon = sh.initActive("p2");
 
-                        // stall effect is put in place
+                        // Stall effect is put in place.
                         state.preTurn();
                         mon.volatile.stall(true);
                         state.postTurn();
                         expect(mon.volatile.stalling).to.be.false;
                         expect(mon.volatile.stallTurns).to.equal(1);
 
-                        // some other move is used next turn
+                        // Some other move is used next turn.
                         state.preTurn();
 
                         pctx = init("p2");
@@ -2813,7 +2804,7 @@ export const test = () => describe("move", function()
 
                         pctx = init("p2");
                         await moveEvent("p2", "endure");
-                        // stall effect is put in place
+                        // Stall effect is put in place.
                         await ph.handle(
                         {
                             args:
@@ -2826,8 +2817,8 @@ export const test = () => describe("move", function()
                         await ph.halt();
                         await ph.return({});
 
-                        // somehow the pokemon moves again in the same turn via
-                        //  call effect
+                        // Somehow the pokemon moves again in the same turn via
+                        // call effect.
                         await moveEvent("p2", "metronome");
                         await moveEvent("p2", "endure",
                             {from: toMoveName("metronome")});
@@ -2840,8 +2831,8 @@ export const test = () => describe("move", function()
                     });
                 }));
 
-                // major status
-                // TODO: search for these moves automatically in dex
+                // Major status.
+                // TODO: Search for these moves automatically in dex.
                 testRemovable(
                 {
                     ctg: "hit", name: "brn", effect: "brn", moveId: "willowisp",
@@ -2919,7 +2910,7 @@ export const test = () => describe("move", function()
                     secondaryMove: "poisonfang", abilityImmunity: "immunity"
                 });
 
-                // TODO: move to target category
+                // TODO: Move to target category.
                 statusTests.hit.push(() => describe("ability on-blockStatus",
                 function()
                 {
@@ -2930,7 +2921,7 @@ export const test = () => describe("move", function()
                         sh.initActive("p2").setAbility("owntempo");
 
                         pctx = init("p1");
-                        await moveEvent("p1", "swagger"); // atk+2, confusion
+                        await moveEvent("p1", "swagger"); // Atk+2, confusion.
                         await ph.handle(
                         {
                             args: ["-boost", toIdent("p2"), "atk", toNum(1)],
@@ -2980,7 +2971,7 @@ export const test = () => describe("move", function()
 
                 describe("ability on-moveDrain (liquidooze)", function()
                 {
-                    // can have clearbody or liquidooze
+                    // Can have clearbody or liquidooze.
                     const tentacruel: SwitchOptions =
                     {
                         species: "tentacruel", level: 100, gender: "M", hp: 364,
@@ -3045,7 +3036,7 @@ export const test = () => describe("move", function()
                         args: ["-heal", toIdent("p2"), toHPStatus(100)],
                         kwArgs: {from: toEffectName("drain")}
                     });
-                    // item activates after drain effect
+                    // Item activates after drain effect.
                     await ph.handle(
                     {
                         args:
@@ -3079,7 +3070,7 @@ export const test = () => describe("move", function()
                         args: ["-damage", toIdent("p1"), toHPStatus("faint")],
                         kwArgs: {}
                     });
-                    // berry doesn't activate because hp=0
+                    // Berry doesn't activate because hp=0.
                     await ph.handle(
                         {args: ["faint", toIdent("p1")], kwArgs: {}});
                     await ph.halt();
@@ -3407,7 +3398,7 @@ export const test = () => describe("move", function()
                     pctx = init("p2")
                     await moveEvent("p2", "powerswap");
 
-                    // shouldn't handle
+                    // Shouldn't handle.
                     await ph.rejectError(
                     {
                         args:
@@ -3443,7 +3434,7 @@ export const test = () => describe("move", function()
                     sh.initActive("p1");
                     sh.initActive("p2");
 
-                    // TODO: support/test these effects
+                    // TODO: Support/test these effects.
                     pctx = init("p2");
                     await moveEvent("p2", "rapidspin");
                     await ph.handle(
@@ -3459,7 +3450,7 @@ export const test = () => describe("move", function()
                     await ph.return({});
                 });
 
-                // screen move self team effects
+                // Screen move self team effects.
                 const screenMoves =
                 [
                     ["Light Screen", "lightscreen", "lightscreen"],
@@ -3522,7 +3513,7 @@ export const test = () => describe("move", function()
                     }));
                 }
 
-                // other non-screen self team effects
+                // Other non-screen self team effects.
                 const otherMoves =
                 [
                     ["Lucky Chant", "luckychant", "luckychant"],
@@ -3556,7 +3547,7 @@ export const test = () => describe("move", function()
                     }));
                 }
 
-                // hazard move hit team effects
+                // Hazard move hit team effects.
                 const hazardMoves =
                 [
                     ["Spikes", "spikes", "spikes"],
@@ -3587,7 +3578,7 @@ export const test = () => describe("move", function()
                             await ph.return({});
                         });
 
-                        if (move === "spikes") // ground move
+                        if (move === "spikes") // Ground move.
                         {
                             it("Should ignore ability type immunity",
                             async function()
@@ -3686,12 +3677,12 @@ export const test = () => describe("move", function()
                             kwArgs: {}
                         });
 
-                        const weather = state.status.weather;
+                        const {weather} = state.status;
                         expect(weather.type).to.equal("RainDance");
                         expect(weather.duration).to.not.be.null;
                         expect(weather.source).to.equal(item);
 
-                        // tick 5 times to infer item
+                        // Tick 5 times to infer item.
                         for (let i = 0; i < 5; ++i)
                         {
                             expect(item.definiteValue).to.be.null;
@@ -3727,8 +3718,8 @@ export const test = () => describe("move", function()
 
                         pctx = init("p2")
                         await moveEvent("p2", "conversion");
-                        // changes into a water type, meaning the pokemon must
-                        //  have a water type move
+                        // Changes into a water type, meaning the pokemon must
+                        // have a water type move.
                         await ph.handle(
                         {
                             args:
@@ -3739,16 +3730,16 @@ export const test = () => describe("move", function()
                             kwArgs: {}
                         });
 
-                        // one move slot left to infer after conversion
+                        // One move slot left to infer after conversion.
                         mon.moveset.reveal("tackle");
                         mon.moveset.reveal("takedown");
 
-                        // one of the moves can be either fire or water type
+                        // One of the moves can be either fire or water type.
                         expect(mon.moveset.get("ember")).to.be.null;
                         expect(mon.moveset.get("watergun")).to.be.null;
 
-                        // add another constraint to consume the conversion
-                        //  constrain
+                        // Add another constraint to consume the conversion
+                        // constraint.
                         mon.moveset.addMoveSlotConstraint(
                             ["ember", "watergun"]);
                         expect(mon.moveset.moveSlotConstraints).to.be.empty;
@@ -3805,14 +3796,14 @@ export const test = () => describe("move", function()
 
         describe("implicit effects", function()
         {
-            // TODO: track in dex.MoveData
-            describe("naturalgift move", async function()
+            // TODO: Track in dex.MoveData.
+            describe("naturalgift move", function()
             {
                 it("Should infer berry if successful", async function()
                 {
-                    sh.initActive("p1"); // to appease pressure check
+                    sh.initActive("p1"); // To appease pressure check.
                     const mon = sh.initActive("p2");
-                    const item = mon.item;
+                    const {item} = mon;
 
                     pctx = init("p2");
                     await moveEvent("p2", "naturalgift");
@@ -3829,7 +3820,7 @@ export const test = () => describe("move", function()
                 {
                     sh.initActive("p1");
                     const mon = sh.initActive("p2");
-                    const item = mon.item;
+                    const {item} = mon;
 
                     pctx = init("p2")
                     await moveEvent("p2", "naturalgift");
@@ -3903,14 +3894,15 @@ export const test = () => describe("move", function()
                         (mon: ReadonlyPokemon) => ReadonlyVariableTempStatus<T>,
                     resetOnMiss?: boolean): void
                 {
-                    describe(name,
-                        () => keys.forEach(move => describe(move, function()
+                    describe(name, function()
+                    {
+                        keys.forEach(move => describe(move, function()
                         {
                             async function initLock():
                                 Promise<ReadonlyVariableTempStatus<T>>
                             {
-                                // execute the move once to set lockedmove
-                                //  status
+                                // Execute the move once to set lockedmove
+                                // status.
                                 sh.initActive("p1");
                                 const vts = getter(sh.initActive("p2"));
                                 expect(vts.isActive).to.be.false;
@@ -4009,15 +4001,13 @@ export const test = () => describe("move", function()
                                 expect(m).to.not.be.null;
                                 expect(m.pp).to.equal(m.maxpp - 1);
                             });
-                        })));
+                        }));
+                    });
                 }
-                // TODO: rename to rampage move
                 testLockingMoves("rampage moves", dex.lockedMoveKeys,
                     mon => mon.volatile.lockedMove);
-                // TODO: add rollout moves to dex and MoveData
-                // TODO: rename to momentum move
                 testLockingMoves("momentum moves", dex.rolloutKeys,
-                    mon => mon.volatile.rollout, /*resetOnMiss*/ true);
+                    mon => mon.volatile.rollout, true /*resetOnMiss*/);
             });
 
             describe("team", function()
@@ -4058,7 +4048,7 @@ export const test = () => describe("move", function()
                 testImplicitTeamEffect("wish", "wish",
                     team => team.status.wish.isActive)
 
-                // healingwish/lunardance
+                // Healingwish/lunardance.
                 const faintWishMoves =
                 [
                     ["healingwish", "healingwish"], ["lunardance", "lunardance"]
@@ -4071,16 +4061,16 @@ export const test = () => describe("move", function()
                         async function()
                         {
                             sh.initActive("p1");
-                            sh.initActive("p2", undefined, /*size*/ 2);
+                            sh.initActive("p2", undefined, 2 /*size*/);
                             const team = state.getTeam("p2");
 
-                            // use wishing move to faint user
+                            // Use wishing move to faint user.
                             pctx = init("p2");
                             await moveEvent("p2", move);
                             await ph.handle(
                                 {args: ["faint", toIdent("p2")], kwArgs: {}});
-                            // wait for opponent to choose replacement
-                            // gen4: replacement is sent out immediately
+                            // Wait for opponent to choose replacement.
+                            // Note(gen4): Replacement is sent out immediately.
                             await ph.handle(
                             {
                                 args:
@@ -4096,7 +4086,7 @@ export const test = () => describe("move", function()
                             });
                             expect(team.status[effect]).to.be.true;
 
-                            // replacement is sent
+                            // Replacement is sent.
                             await ph.handle(
                             {
                                 args:
@@ -4106,8 +4096,9 @@ export const test = () => describe("move", function()
                                 ],
                                 kwArgs: {}
                             });
-                            // replacement is healed
-                            // gen4: this happens even if recipient has full hp
+                            // Replacement is healed.
+                            // Note (gen4): Healing effect happens even if the
+                            // recipient has full hp.
                             await ph.handle(
                             {
                                 args:
@@ -4147,10 +4138,10 @@ export const test = () => describe("move", function()
                 sh.initActive("p1");
                 sh.initActive("p2");
 
-                // 100% unboost chance
+                // 100% unboost chance.
                 pctx = init("p2")
                 await moveEvent("p2", "rocktomb");
-                // target fainted before we could apply the effect
+                // Target fainted before we could apply the effect.
                 await ph.handle(
                 {
                     args: ["-damage", toIdent("p1"), toHPStatus("faint")],
@@ -4244,7 +4235,7 @@ export const test = () => describe("move", function()
         {
             describe("recoil", function()
             {
-                // can have swiftswim or rockhead
+                // Can have swiftswim or rockhead.
                 const relicanth: SwitchOptions =
                 {
                     species: "relicanth", level: 83, gender: "F", hp: 302,
@@ -4273,7 +4264,7 @@ export const test = () => describe("move", function()
                     pctx = init("p2");
                     await moveEvent("p2", "bravebird");
                     await moveDamage("p1", 1);
-                    // corner case for certain recoil damage calcs
+                    // Corner case for certain recoil damage calcs.
                     await moveDamage("p2", 100, 100,
                         {from: toEffectName("recoil")});
                     await ph.halt();
@@ -4371,7 +4362,7 @@ export const test = () => describe("move", function()
                     pctx = init("p1");
                     await moveEvent("p1", "struggle");
                     await moveDamage("p2", 50);
-                    // recoil-blocking abilities don't work with struggle
+                    // Recoil-blocking abilities don't work with struggle.
                     await moveDamage("p1", 50, undefined,
                         {from: toEffectName("recoil")});
                     await ph.halt();
@@ -4425,7 +4416,7 @@ export const test = () => describe("move", function()
                     sh.initActive("p1");
                     sh.initActive("p2");
 
-                    // fixed-damage moves don't activate lifeorb
+                    // Fixed-damage moves don't activate lifeorb.
                     pctx = init("p1")
                     await moveEvent("p1", "seismictoss");
                     await moveDamage("p2", 50);
@@ -4503,12 +4494,12 @@ export const test = () => describe("move", function()
 
             describe("self-switch", function()
             {
-                // TODO: track phazing moves
-                // TODO: handle all throw cases
+                // TODO: Track phazing moves.
+                // TODO: Handle all throw cases.
                 it("Should accept if self-switch expected", async function()
                 {
                     sh.initActive("p1");
-                    sh.initActive("p2", undefined, /*size*/ 2);
+                    sh.initActive("p2", undefined, 2 /*size*/);
 
                     pctx = init("p2");
                     await moveEvent("p2", "batonpass");
@@ -4611,18 +4602,18 @@ export const test = () => describe("move", function()
                         Error, "Expected switch-in for 'p2' but got 'p1'");
                 });
 
-                // note: other effects (e.g. naturalcure) including this one
-                //  should already be covered by switch tests
-                // this is just an example of how one of these cases could be
-                //  composed
+                // Note: other effects (e.g. naturalcure) including this one
+                // should already be covered by switch tests.
+                // This is just an example of how one of these cases could be
+                // composed.
                 it("Should handle switch intercept (pursuit)", async function()
                 {
                     sh.initActive("p1");
-                    sh.initActive("p2", undefined, /*size*/ 2);
+                    sh.initActive("p2", undefined, /*Size*/ 2);
 
                     pctx = init("p2");
                     await moveEvent("p2", "uturn");
-                    // wait for opponent to choose switch-in...
+                    // Wait for opponent to choose switch-in.
                     await ph.handle(
                     {
                         args:
@@ -4633,7 +4624,7 @@ export const test = () => describe("move", function()
                         ],
                         kwArgs: {}
                     });
-                    // pursuit activates before switching
+                    // Pursuit activates before switching.
                     await ph.handle(
                     {
                         args:
@@ -4646,7 +4637,7 @@ export const test = () => describe("move", function()
                     await moveEvent("p1", "pursuit",
                         {from: toMoveName("pursuit")});
                     await moveDamage("p2", 60);
-                    // actual switch happens afterwards
+                    // Actual switch happens afterwards.
                     await ph.handle(
                     {
                         args:
@@ -4657,15 +4648,15 @@ export const test = () => describe("move", function()
                         kwArgs: {}
                     });
                     await ph.halt();
-                    // should indicate that p1 spent its action interrupting the
-                    //  self-switch
+                    // Should indicate that p1 spent its action interrupting the
+                    // self-switch.
                     await ph.return({actioned: {p1: true}});
                 });
             });
 
             describe("call", function()
             {
-                /** Tackle from `p2` side. */
+                /** Tackle event from `p2` side. */
                 const tackle: Event<"|move|"> =
                 {
                     args: ["move", toIdent("p2"), toMoveName("tackle")],
@@ -4683,7 +4674,7 @@ export const test = () => describe("move", function()
                     await ph.return({});
                 });
 
-                // extract self+target move-callers
+                // Extract self+target move-callers.
                 const copycatCallers: string[] = [];
                 const mirrorCallers: string[] = [];
                 const selfMoveCallers: string[] = [];
@@ -4805,28 +4796,28 @@ export const test = () => describe("move", function()
                     {
                         const us = sh.initActive("p1");
                         sh.initActive("p2");
-                        us.volatile.mirrormove = "previous"; // test value
+                        us.volatile.mirrormove = "previous"; // Test value.
 
-                        // start a two-turn move
+                        // Start a two-turn move.
                         pctx = init("p2");
                         await moveEvent("p2", "fly", {still: true});
                         await prepareEvent("p2", "fly");
                         await ph.halt();
                         await ph.return({});
-                        // shouldn't count the charging turn
+                        // Shouldn't count the charging turn.
                         expect(us.volatile.mirrormove).to.equal("previous");
 
                         state.postTurn();
                         state.preTurn();
 
-                        // release the two-turn move
+                        // Release the two-turn move.
                         expect(us.volatile.mirrormove).to.equal("previous");
                         pctx = init("p2");
                         await moveEvent("p2", "fly",
                             {from: toEffectName("lockedmove")});
                         await ph.halt();
                         await ph.return({});
-                        // shouldn't count on the release turn
+                        // Shouldn't count on the release turn.
                         expect(us.volatile.mirrormove).to.equal("fly");
                     });
 
@@ -4835,9 +4826,9 @@ export const test = () => describe("move", function()
                     {
                         const us = sh.initActive("p1");
                         sh.initActive("p2");
-                        us.volatile.mirrormove = "previous"; // test value
+                        us.volatile.mirrormove = "previous"; // Test value.
 
-                        // call a two-turn move to prepare it
+                        // Call a two-turn move to prepare it.
                         pctx = init("p2");
                         await moveEvent("p2", otherCallers[0]);
                         await moveEvent("p2", "fly",
@@ -4847,7 +4838,7 @@ export const test = () => describe("move", function()
                         await ph.return({});
                         expect(us.volatile.mirrormove).to.equal("previous");
 
-                        // release the called two-turn move
+                        // Release the called two-turn move.
                         pctx = init("p2");
                         await moveEvent("p2", "fly",
                             {from: toEffectName("lockedmove")});
@@ -4860,9 +4851,9 @@ export const test = () => describe("move", function()
                     {
                         const us = sh.initActive("p1");
                         sh.initActive("p2");
-                        us.volatile.mirrormove = "previous"; // test value
+                        us.volatile.mirrormove = "previous"; // Test value.
 
-                        // move that can't target opponent
+                        // Move that can't target opponent.
                         await moveSplash("p2")
                         expect(us.volatile.mirrormove).to.equal("previous");
                     });
@@ -4872,9 +4863,9 @@ export const test = () => describe("move", function()
                     {
                         const us = sh.initActive("p1");
                         sh.initActive("p2");
-                        us.volatile.mirrormove = "previous"; // test value
+                        us.volatile.mirrormove = "previous"; // Test value.
 
-                        // move that can't be mirrored but targets opponent
+                        // Move that can't be mirrored but targets opponent.
                         pctx = init("p2");
                         await moveEvent("p2", "feint");
                         await ph.halt();
@@ -4887,9 +4878,9 @@ export const test = () => describe("move", function()
                     {
                         const us = sh.initActive("p1");
                         sh.initActive("p2");
-                        us.volatile.mirrormove = "previous"; // test value
+                        us.volatile.mirrormove = "previous"; // Test value.
 
-                        // call a move
+                        // Call a move.
                         pctx = init("p2");
                         await moveEvent("p2", otherCallers[0]);
                         await ph.handle(
@@ -4911,9 +4902,9 @@ export const test = () => describe("move", function()
                         {
                             const us = sh.initActive("p1");
                             const them = sh.initActive("p2");
-                            us.volatile.mirrormove = "previous"; // test value
+                            us.volatile.mirrormove = "previous"; // Test value.
 
-                            // call a move
+                            // Call a move.
                             pctx = init("p2");
                             await moveEvent("p2", otherCallers[0]);
                             await moveEvent("p2", moveId,
@@ -4923,13 +4914,13 @@ export const test = () => describe("move", function()
                             expect(them.volatile[name].isActive).to.be.true;
                             expect(them.volatile[name].type).to.equal(moveId);
                             expect(them.volatile[name].called).to.be.true;
-                            // shouldn't update
+                            // Shouldn't update.
                             expect(us.volatile.mirrormove).to.equal("previous");
 
                             state.postTurn();
                             state.preTurn();
 
-                            // continue the rampage/momentum on the next turn
+                            // Continue the rampage/momentum on the next turn.
                             pctx = init("p2");
                             await moveEvent("p2", moveId,
                                 {from: toEffectName("lockedmove")});
@@ -4938,7 +4929,7 @@ export const test = () => describe("move", function()
                             expect(them.volatile[name].isActive).to.be.true;
                             expect(them.volatile[name].type).to.equal(moveId);
                             expect(them.volatile[name].called).to.be.true;
-                            // still shouldn't update
+                            // Still shouldn't update.
                             expect(us.volatile.mirrormove).to.equal("previous");
                         });
                     }
@@ -4989,17 +4980,17 @@ export const test = () => describe("move", function()
                             sh.initActive("p1");
                             const them = sh.initActive("p2");
 
-                            // use the move-caller
+                            // Use the move-caller.
                             pctx = init("p2");
                             await moveEvent("p2", caller);
-                            // call the move
+                            // Call the move.
                             await ph.handle(
                             {
                                 ...tackle, kwArgs: {from: toMoveName(caller)}
                             });
                             await ph.halt();
                             await ph.return({});
-                            // shouldn't consume pp for the called move
+                            // Shouldn't consume pp for the called move.
                             expect(them.moveset.get("tackle")).to.not.be.null;
                             expect(them.moveset.get("tackle")!.pp).to.equal(56);
                         });
@@ -5035,11 +5026,11 @@ export const test = () => describe("move", function()
                         it(`Should infer target's move when using ${caller}`,
                         async function()
                         {
-                            // switch in a pokemon that has the move-caller
+                            // Switch in a pokemon that has the move-caller.
                             const us = sh.initActive("p1");
                             const them = sh.initActive("p2");
 
-                            // use the move-caller
+                            // Use the move-caller.
                             pctx = init("p1");
                             await moveEvent("p1", caller);
                             await ph.handle(
@@ -5054,7 +5045,7 @@ export const test = () => describe("move", function()
                             await ph.return({});
                             expect(us.moveset.get("tackle")).to.be.null;
                             expect(them.moveset.get("tackle")).to.not.be.null;
-                            // shouldn't consume pp for the called move
+                            // Shouldn't consume pp for the called move.
                             expect(them.moveset.get("tackle")!.pp).to.equal(56);
                         });
                     }
@@ -5081,8 +5072,8 @@ export const test = () => describe("move", function()
             });
         });
 
-        // TODO: track ally move effects in dex.MoveData
-        describe("ally moves", async function()
+        // TODO: Track ally move effects in dex.MoveData.
+        describe("ally moves", function()
         {
             it("Should fail", async function()
             {
@@ -5096,11 +5087,11 @@ export const test = () => describe("move", function()
             });
         });
 
-        describe("pressure ability handling", async function()
+        describe("pressure ability handling", function()
         {
             let us: Pokemon;
 
-            beforeEach("Setup pressure mon", async function()
+            beforeEach("Setup pressure mon", function()
             {
                 us = sh.initActive("p1");
                 us.setAbility("pressure");
@@ -5110,8 +5101,8 @@ export const test = () => describe("move", function()
             {
                 const {moveset} = sh.initActive("p2");
 
-                // since "p1" wasn't mentioned, it will be inferred due to the
-                //  targeting behavior of the move being used
+                // Since "p1" wasn't mentioned, it will be inferred due to the
+                // targeting behavior of the move being used.
                 pctx = init("p2");
                 await moveEvent("p2", "tackle");
                 await ph.halt();

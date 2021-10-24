@@ -3,15 +3,18 @@ import { CancelCallback, SubReason } from "./SubReason";
 /** A possible candidate for a parent EventInference. */
 export class SubInference
 {
-    /** Whether all of the SubReasons held, or null if currently unknown. */
+    /**
+     * Whether all of the {@link SubReason}s held, or `null` if currently
+     * unknown.
+     */
     private allHeld: boolean | null = null;
     /**
-     * Whether this SubInference has to be rejected, and so must reject one of
-     * its SubReasons.
+     * Whether this SubInference has to be rejected, and so must
+     * {@link SubReason.reject reject} one of its {@link SubReason}s.
      */
     private rejectOne = false;
 
-    /** Tracks the cancel callbacks of any unresolved SubReasons. */
+    /** Tracks the cancel callbacks of any unresolved {@link SubReason}s. */
     private readonly cancelCbs = new Set<CancelCallback>();
 
     private readonly accepted = new Set<SubReason>();
@@ -19,6 +22,7 @@ export class SubInference
 
     /**
      * Creates a SubInference.
+     *
      * @param reasons Currently unproven reasons why this SubInference should be
      * the one that is accepted by the parent EventInference. If all of them are
      * proven, the entire SubInference is proven. Otherwise if one of them is
@@ -26,7 +30,7 @@ export class SubInference
      * be emptied as SubReasons get resolved in the future, and so shouldn't be
      * modified outside this class.
      */
-    constructor(private readonly reasons: Set<SubReason>)
+    public constructor(private readonly reasons: Set<SubReason>)
     {
         this.queueAll();
     }
@@ -43,15 +47,15 @@ export class SubInference
      */
     public resolve(accept: boolean): void
     {
-        // accepted case: prove all (remaining) SubReasons
+        // Accepted case: Prove all (remaining) SubReasons.
         if (accept)
         {
             for (const reason of this.reasons) reason.assert();
-            // should already be empty due to previous delay() cbs
+            // Should already be empty due to previous delay() callbacks.
             this.reasons.clear();
 
-            // note: if allHeld=null then all of the SubReasons were pending (if
-            //  any), and we just asserted them here
+            // Note: If allHeld=null then all of the SubReasons were pending (if
+            // any), and we just asserted them here.
             if (!this.allHeld)
             {
                 throw new Error("Supposed to assert all SubReasons but some " +
@@ -60,7 +64,7 @@ export class SubInference
             return;
         }
 
-        // rejected case: start actively searching for a SubReason to reject
+        // Rejected case: Start actively searching for a SubReason to reject.
         this.rejectOne = true;
         this.checkRejectOne();
     }
@@ -68,7 +72,7 @@ export class SubInference
     /** Queues all the SubReasons to track accepts/rejects. */
     private queueAll(): void
     {
-        // queue up unresolved SubReasons
+        // Queue up unresolved SubReasons.
         for (const reason of this.reasons)
         {
             let called = false;
@@ -83,20 +87,21 @@ export class SubInference
             });
 
             // SubReason is unresolved, queue its cancel callback in case one of
-            //  the others rejects
+            // the others rejects.
             if (!called)
             {
                 this.cancelCbs.add(cancel);
                 calledImmediately = false;
             }
-            // one of the SubReasons was already disproven, don't bother with
-            //  evaluating the rest
+            // One of the SubReasons was already disproven, don't bother with
+            // evaluating the rest.
             else if (this.allHeld === false) break;
         }
     }
 
     /**
      * Updates the state of this SubInference after a SubReason resolves.
+     *
      * @param held Whether the SubReason in question held.
      */
     private update(held: boolean): void
@@ -119,23 +124,22 @@ export class SubInference
      */
     private checkRejectOne(): void
     {
-        // unsure if we should actively search for rejects yet
+        // Unsure if we should actively search for rejects yet.
         if (!this.rejectOne) return;
-        // already rejected one
+        // Already rejected one.
         if (this.allHeld === false) return;
-        // should've rejected one by now
+        // Should've rejected one by now.
         if (this.allHeld === true)
         {
-            // TODO: show accepted SubReasons (add metadata?)
             throw new Error("Supposed to reject one SubReason but all of " +
-                `them held; info = ${this.toString()}`);
+                `them held.\nthis = ${this.toString()}`);
         }
 
-        // if all the other SubReasons accepted, then this last one must reject
+        // If all the other SubReasons accepted, then this last one must reject.
         if (this.reasons.size === 1)
         {
             for (const reason of this.reasons) reason.reject();
-            // should already be empty due to previous delay() cbs
+            // Should already be empty due to previous delay() callbacks.
             this.reasons.clear();
             return;
         }
@@ -145,12 +149,20 @@ export class SubInference
             throw new Error("All SubReasons should've been resolved by " +
                 "now (should never happen)");
         }
-        // in this case, not enough SubReasons have been resolved to be able to
-        //  make any further inferences yet
-        // once another SubReason gets resolved, this will be called again
+        // In this case, not enough SubReasons have been resolved to be able to
+        // make any further inferences yet.
+        // Once another SubReason gets resolved, this method will be called
+        // again to do another check.
     }
 
-    /** @override */
+    /**
+     * Stringifier with indent options.
+     *
+     * @param indentInner Number of spaces for additional indents beyond the
+     * current line.
+     * @param indentOuter Number of spaces for the indent of the current line.
+     * @override
+     */
     public toString(indentInner = 4, indentOuter = 0): string
     {
         const inner = " ".repeat(indentInner);
@@ -158,16 +170,16 @@ export class SubInference
         return `\
 ${outer}SubInference(
 ${outer}${inner}pending = [${
-    [...this.reasons].map(r =>
-        "\n" + r.toString(indentInner, indentOuter + 2 * indentInner)) +
+    [...this.reasons].map(r => "\n" +
+        r.toString(indentInner, indentOuter + (2 * indentInner))).join(",") +
     (this.reasons.size > 0 ? "\n" + outer + inner : "")}],
 ${outer}${inner}accepted = [${
-    [...this.accepted].map(r =>
-        "\n" + r.toString(indentInner, indentOuter + 2 * indentInner)) +
+    [...this.accepted].map(r => "\n" +
+        r.toString(indentInner, indentOuter + (2 * indentInner))).join(",") +
     (this.accepted.size > 0 ? "\n" + outer + inner : "")}],
 ${outer}${inner}rejected = [${
-        [...this.rejected].map(r =>
-            "\n" + r.toString(indentInner, indentOuter + 2 * indentInner)) +
+        [...this.rejected].map(r => "\n" +
+            r.toString(indentInner, indentOuter + (2 * indentInner))).join(",") +
     (this.rejected.size > 0 ? "\n" + outer + inner : "")}]
 ${outer})`;
     }

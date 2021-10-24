@@ -1,5 +1,6 @@
-/** Readonly PossibilityClass representation. */
-export interface ReadonlyPossibilityClass<TKey extends string, TData = any>
+/* eslint-disable max-classes-per-file */
+/** Readonly {@link PossibilityClass} representation. */
+export interface ReadonlyPossibilityClass<TKey extends string, TData = unknown>
 {
     /** Maps key name to data value. */
     readonly map: {readonly [K in TKey]: TData};
@@ -11,55 +12,61 @@ export interface ReadonlyPossibilityClass<TKey extends string, TData = any>
     readonly definiteValue: TKey | null;
 
     /**
-     * Adds a listener for when this object gets fully narrowed. The provided
-     * function can be immediately called if this PossibilityClass is already
-     * narrowed. These callbacks are guaranteed to be called after `onUpdate()`
-     * callbacks, and are called in FIFO order.
+     * Adds a listener for when this object gets fully narrowed.
+     *
+     * The provided function can be immediately called if this PossibilityClass
+     * is already narrowed. These callbacks will be called after
+     * {@link onUpdate} callbacks, and are called in FIFO order.
+     *
      * @returns `this` for chaining.
      */
-    onNarrow(cb: (key: TKey, data: TData) => void): this;
+    onNarrow: (cb: (key: TKey, data: TData) => void) => this;
 
     /**
      * Adds a listener for when either this object narrows down to a subset of
-     * the provided keys, or it rules them out.
+     * the provided keys, or all of the keys are ruled out.
+     *
      * @param keys Keys to track. Will be owned by this object after calling.
-     * @param cb Callback to execute when narrowed (kept=true) or fully ruled
-     * out (kept=false). Called in FIFO order for multiple callbacks.
+     * @param cb Callback to execute when narrowed (kept=`true`) or fully ruled
+     * out (kept=`false`). Called in FIFO order for multiple callbacks.
      * @returns A callback to cancel the newly-registered callback.
      */
+    // eslint-disable-next-line @typescript-eslint/method-signature-style
     onUpdate(keys: Set<string>, cb: (kept: boolean) => void): () => void;
     /**
      * Adds a listener for when either this object narrows down to a subset of
-     * the keys defined by the predicate, or it rules them out.
+     * the keys defined by the predicate, or all of the keys are ruled out.
+     *
      * @param pred Filter predicate for subset.
      * @param cb Callback to execute when narrowed (kept=true) or fully ruled
      * out (kept=false). Called in FIFO order for multiple callbacks.
      * @returns A callback to cancel the newly-registered callback.
      */
-    // tslint:disable-next-line: unified-signatures
+    // eslint-disable-next-line @typescript-eslint/method-signature-style
     onUpdate(pred: (key: TKey, data: TData) => boolean,
         cb: (kept: boolean) => void): () => void;
 
     /** Checks if a value is in the data possibility. */
-    isSet(name: TKey): boolean;
+    isSet: (name: TKey) => boolean;
 }
 
 /** Represents a subset callback. */
 interface Subset<TKey extends string>
 {
     /** Subset of possible values. */
-    readonly set: Set<TKey>
+    readonly set: Set<TKey>;
     /**
-     * Callback for when the subset is empty (kept=false) or is equal to the
-     * main possible values set (kept=true).
+     * Callback for when the subset is empty (kept=`false`) or is equal to the
+     * main possible values set (kept=`true`).
      */
-    update(kept: boolean): void;
+    update: (kept: boolean) => void;
     /** Whether to cancel the update callback. */
-    cancel?: true;
+    cancel?: boolean;
 }
 
+// TODO: Remove.
 /** Doubly linked list helper type for constant-time insertion/deletion. */
-class LinkedList<T = any>
+class LinkedList<T = unknown>
 {
     /** Beginning of the list. */
     public head: LinkedListNode<T> | null = null;
@@ -85,10 +92,10 @@ class LinkedList<T = any>
 
             if (!node.next)
             {
-                // next node was removed
+                // Next node was removed.
                 if (node === this.tail) break;
-                // current node was removed, restore previous node.next
-                // note: undefined behavior if both of the above cases are true
+                // Current node was removed, restore previous node.next.
+                // Note: Undefined behavior if both of the above cases are true.
                 node = next;
             }
             else node = node.next;
@@ -110,19 +117,19 @@ class LinkedList<T = any>
     {
         if (!node.prev)
         {
-            // update head ptr
+            // Update head ptr
             if (this.head === node) this.head = node.next;
         }
         else node.prev.next = node.next;
 
         if (!node.next)
         {
-            // update tail ptr
+            // Update tail ptr.
             if (this.tail === node) this.tail = node.prev;
         }
         else node.next.prev = node.prev;
 
-        // delete node
+        // Delete node.
         node.prev = null;
         node.next = null;
         return node.value;
@@ -142,7 +149,7 @@ class LinkedList<T = any>
 }
 
 /** Linked list node. */
-interface LinkedListNode<T = any>
+interface LinkedListNode<T = unknown>
 {
     /** Contained value. */
     value: T;
@@ -152,18 +159,20 @@ interface LinkedListNode<T = any>
     next: LinkedListNode<T> | null;
 }
 
+// TODO: Rename to Uncertain? Better name?
 /**
- * Represents a set of possible values. This can be used in place of the actual
- * value when the actual value can be one of many possible values.
+ * Represents a set of possible values to handle uncertainties.
+ *
+ * This can be used in place of the actual value when the actual value can be
+ * one of many possible values.
  */
-// tslint:disable-next-line: max-classes-per-file
-export class PossibilityClass<TKey extends string, TData = any> implements
+export class PossibilityClass<TKey extends string, TData = unknown> implements
     ReadonlyPossibilityClass<TKey, TData>
 {
     /** @override */
     public readonly map: {readonly [T in TKey]: TData};
 
-    // TODO: add probability weights
+    // TODO: Add probability weights, support Bayesian inference.
     /** @override */
     public get possibleValues(): Iterable<TKey> { return this._possibleValues; }
     /** Keeps track of all the possible values. */
@@ -174,12 +183,12 @@ export class PossibilityClass<TKey extends string, TData = any> implements
 
     /**
      * Gets the class name and data if narrowed down sufficiently, otherwise
-     * null.
+     * `null`.
      */
     public get definiteValue(): TKey | null { return this._definiteValue; }
     private _definiteValue: TKey | null = null;
 
-    /** `#onNarrow()` listeners. */
+    /** {@link onNarrow} listeners. */
     private readonly listeners: ((key: TKey, data: TData) => void)[] = [];
 
     /** Keeps track of subset callbacks. */
@@ -187,22 +196,24 @@ export class PossibilityClass<TKey extends string, TData = any> implements
 
     /**
      * Creates a PossibilityClass.
+     *
      * @param map Base dictionary object. Should not change during the lifetime
      * of this object.
      * @param values Optional values to immediately narrow to. Defaults to all
      * possible values given by the `map`.
      */
-    constructor(map: {readonly [T in TKey]: TData}, ...values: string[]);
+    public constructor(map: {readonly [T in TKey]: TData}, ...values: string[]);
     /**
      * Creates a PossibilityClass.
+     *
      * @param map Base dictionary object. Should not change during the lifetime
      * of this object.
      * @param values Optional values to immediately narrow to if not empty.
      * Defaults to all possible values given by the `map`.
      */
-    constructor(map: {readonly [T in TKey]: TData},
+    public constructor(map: {readonly [T in TKey]: TData},
         values: readonly string[] | ReadonlySet<string>);
-    constructor(map: {readonly [T in TKey]: TData},
+    public constructor(map: {readonly [T in TKey]: TData},
         arg1?: string | readonly string[] | ReadonlySet<string>,
         ...values: string[])
     {
@@ -231,7 +242,7 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     /** Checks that a given name is part of this object's map. */
     private check(name: string): asserts name is TKey
     {
-        if (!this.map.hasOwnProperty(name))
+        if (!Object.hasOwnProperty.call(this.map, name))
         {
             throw new Error(`PossibilityClass has no value name '${name}'`);
         }
@@ -252,7 +263,7 @@ export class PossibilityClass<TKey extends string, TData = any> implements
         let keys: Set<TKey>;
         if (typeof arg0 === "function")
         {
-            // build keys set based on the predicate
+            // Build keys set based on the predicate.
             keys = new Set();
             for (const key of this._possibleValues)
             {
@@ -261,26 +272,24 @@ export class PossibilityClass<TKey extends string, TData = any> implements
         }
         else
         {
-            // remove non-keys from provided subset
+            // Remove non-keys from provided subset.
             for (const key of arg0)
             {
-                if (!this._possibleValues.has(key as any)) arg0.delete(key);
+                if (!this._possibleValues.has(key as TKey)) arg0.delete(key);
             }
             keys = arg0 as Set<TKey>;
         }
 
-        // subset over-narrowed, not kept
-        if (keys.size <= 0) cb(/*kept*/ false);
-        // set is actually equal/superset, kept
-        else if (keys.size >= this._possibleValues.size) cb(/*kept*/ true);
-        // unknown, register subset callback
+        // Subset over-narrowed, not kept.
+        if (keys.size <= 0) cb(/*Kept*/ false);
+        // Set is actually equal/superset, kept.
+        else if (keys.size >= this._possibleValues.size) cb(true /*kept*/);
+        // Unknown, register subset callback.
         else
         {
             const subset: Subset<TKey> =
-            {
-                set: keys as Set<TKey>,
-                update: kept => subset.cancel || cb(kept)
-            };
+                // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+                {set: keys, update: kept => subset.cancel || cb(kept)};
             this.subsets.push(subset);
             return () => subset.cancel = true;
         }
@@ -298,7 +307,6 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     /** Removes keys that are not in the given Set/array. */
     public narrow(values: Iterable<string> | ReadonlySet<string>): void;
     /** Removes keys that don't satisfy the given predicate. */
-    // tslint:disable-next-line: unified-signatures
     public narrow(pred: (key: TKey, data: TData) => boolean): void;
     public narrow(
         arg0?: string | Iterable<string> | ReadonlySet<string> |
@@ -307,26 +315,26 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     {
         if (typeof arg0 === "undefined")
         {
-            // over-narrow to 0 keys
+            // Over-narrow to 0 keys.
             this._possibleValues.clear();
             for (const subset of this.subsets)
             {
                 subset.set.clear();
-                subset.update(/*kept*/ false);
+                subset.update(false /*kept*/);
             }
             this.subsets.clear();
             return this.checkNarrowed();
         }
         if (typeof arg0 === "string")
         {
-            // create set from spread array
+            // Create set from spread array.
             values.push(arg0);
             return this.narrow(new Set(values));
         }
         if (arg0 instanceof Set) return this.remove(n => !arg0.has(n));
         if (typeof arg0 !== "function") return this.narrow(new Set(arg0));
 
-        // filter based on predicate
+        // Filter based on predicate.
         const pred = arg0 as (key: TKey, data: TData) => boolean;
         return this.remove((key, data) => !pred(key, data));
     }
@@ -336,7 +344,6 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     /** Removes keys if they are included in the given Set/array. */
     public remove(values: Iterable<string> | ReadonlySet<string>): void
     /** Removes keys if they satisfy the predicate. */
-    // tslint:disable-next-line: unified-signatures
     public remove(pred: (key: TKey, data: TData) => boolean): void;
     public remove(
         arg0?: string | Iterable<string> | ReadonlySet<string> |
@@ -346,18 +353,18 @@ export class PossibilityClass<TKey extends string, TData = any> implements
         if (typeof arg0 === "undefined") return;
         if (typeof arg0 === "string")
         {
-            // remove all keys in the provided spread array
-            this.removeKey(arg0 as any);
-            for (const key of values) this.removeKey(key as any);
+            // Remove all keys in the provided spread array.
+            this.removeKey(arg0 as TKey);
+            for (const key of values) this.removeKey(key as TKey);
         }
         else if (typeof arg0 !== "function")
         {
-            // remove all keys in the provided set/iterable
-            for (const key of arg0) this.removeKey(key as any);
+            // Remove all keys in the provided set/iterable.
+            for (const key of arg0) this.removeKey(key as TKey);
         }
         else
         {
-            // filter based on predicate
+            // Filter based on predicate.
             for (const key of this._possibleValues)
             {
                 if (arg0(key, this.map[key])) this.removeKey(key);
@@ -371,7 +378,7 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     {
         if (!this._possibleValues.delete(key)) return;
 
-        // update subset listeners
+        // Update subset listeners.
         for (const node of this.subsets.nodes())
         {
             const subset = node.value;
@@ -380,37 +387,40 @@ export class PossibilityClass<TKey extends string, TData = any> implements
                 this.subsets.remove(node);
                 continue;
             }
-            // see if subset conditions are now satisfied after deleting
+            // See if subset conditions are now satisfied after deleting.
             if (subset.set.delete(key) && subset.set.size <= 0)
             {
-                subset.update(/*kept*/ false);
+                subset.update(false /*kept*/);
                 this.subsets.remove(node);
             }
             else if (subset.set.size >= this._possibleValues.size)
             {
-                subset.update(/*kept*/ true);
+                subset.update(true /*kept*/);
                 this.subsets.remove(node);
             }
         }
     }
 
     /**
-     * Handles setting `#definiteValue` and calling on-narrow listeners whenever
-     * the base `#possibleValues` set changes.
+     * Handles setting {@link definiteValue} and calling on-narrow listeners
+     * whenever the base {@link possibleValues} set changes.
      */
     private checkNarrowed(): void
     {
-        const size = this._possibleValues.size;
+        const {size} = this._possibleValues;
         if (size === 1)
         {
-            // don't set more than once
+            // Don't set more than once.
             if (this._definiteValue === null)
             {
-                this._definiteValue = this._possibleValues.keys().next().value;
+                const res = this._possibleValues.keys().next();
+                // istanbul ignore next: Should never happen.
+                if (res.done) throw new Error("no keys but size=1");
+                this._definiteValue = res.value;
 
-                // execute on-narrow callbacks in fifo order
-                const data = this.map[this._definiteValue!];
-                for (const cb of this.listeners) cb(this._definiteValue!, data);
+                // Execute on-narrow callbacks in fifo order.
+                const data = this.map[this._definiteValue];
+                for (const cb of this.listeners) cb(this._definiteValue, data);
                 this.listeners.length = 0;
             }
         }
@@ -424,6 +434,7 @@ export class PossibilityClass<TKey extends string, TData = any> implements
     // istanbul ignore next: only used for logging
     /**
      * Returns a comma-separated list of each possible value.
+     *
      * @override
      */
     public toString(): string
@@ -431,3 +442,5 @@ export class PossibilityClass<TKey extends string, TData = any> implements
         return [...this._possibleValues].join(", ");
     }
 }
+
+/* eslint-enable max-classes-per-file */

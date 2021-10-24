@@ -45,25 +45,25 @@ export function loss(
 {
     return tf.tidy("loss", function lossImpl()
     {
-        // get initial prediction
+        // Get initial prediction.
         const [probs, stateValue] = model.predictOnBatch(state) as tf.Tensor[];
 
-        // isolate the probability for the action we took in each sample
+        // Isolate the probability for the action we took in each sample.
         const mask = tf.oneHot(action, intToChoice.length);
         const probsMasked = tf.mul(mask, probs);
         const actProbs = tf.sum(probsMasked, 1);
 
-        // loss needs a placeholder value so the typings work out
+        // Loss needs a placeholder value so the typings work out.
         const result: LossResult = {loss: tf.scalar(0)};
 
-        // calculate policy gradient objective function
+        // Calculate policy gradient objective function.
         let pgObjs: tf.Tensor;
         if (algorithm.type === "ppo")
         {
-            // mask baseline prob distribution
+            // Mask baseline prob distribution.
             const oldActProbs = tf.sum(tf.mul(mask, oldProbs), 1);
 
-            // calc probability ratio between current and old policy
+            // Calc probability ratio between current and old policy.
             const ratio = tf.div(actProbs, oldActProbs);
             result.ratio = tf.keep(tf.mean(ratio).asScalar());
 
@@ -71,7 +71,7 @@ export function loss(
             {
                 case "clipped":
                 {
-                    // simplified version of the PPO clipped loss function
+                    // Simplified version of the PPO clipped loss function.
                     const bounds = tf.where(
                             tf.greaterEqual(advantage, tf.zerosLike(advantage)),
                             tf.fill(advantage.shape, 1 + algorithm.epsilon),
@@ -95,18 +95,18 @@ export function loss(
                 }
             }
         }
-        // vanilla policy gradient
+        // Vanilla policy gradient.
         else pgObjs = tf.mul(tf.log(actProbs), advantage);
 
-        // calculate main policy gradient loss
-        // by minimizing loss, we maximize the objective
+        // Calculate main policy gradient loss.
+        // By minimizing loss, we maximize the objective.
         const pgLoss = tf.keep(tf.neg(tf.mean(pgObjs)).asScalar());
         result.loss = result.pgLoss = pgLoss;
 
         const losses: tf.Scalar[] = [pgLoss];
 
-        // calc state-value loss using mse
-        // assumes the value function shares weights with the policy
+        // Calc state-value loss using mse.
+        // Assumes the value function shares weights with the policy.
         if (algorithm.valueCoeff)
         {
             result.vLoss = tf.keep(
@@ -115,19 +115,19 @@ export function loss(
             losses.push(tf.mul(result.vLoss, algorithm.valueCoeff));
         }
 
-        // subtract an entropy bonus from the loss function in order to maximize
-        //  it along with minimizing the other loss functions
+        // Subtract an entropy bonus from the loss function in order to maximize
+        // it along with minimizing the other loss functions.
         if (algorithm.entropyCoeff)
         {
-            // note: max possible entropy (where each action is equally likely)
-            //  is log(#probs) where #probs is the # of possible actions
+            // Note: Max possible entropy (where each action is equally likely)
+            // is log(#probs) where #probs is the # of possible actions.
             const negEnt = tf.mean(tf.sum(tf.mul(probs, tf.log(probs)), -1))
                 .asScalar();
             result.entropy = tf.keep(tf.neg(negEnt));
             losses.push(tf.mul(negEnt, algorithm.entropyCoeff));
         }
 
-        // sum all the losses together
+        // Sum all the losses together.
         if (losses.length > 1) result.loss = tf.keep(tf.addN(losses));
 
         return result;

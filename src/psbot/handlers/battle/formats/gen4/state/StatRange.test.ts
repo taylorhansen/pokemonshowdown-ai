@@ -15,14 +15,14 @@ export const test = () => describe("StatRange", function()
 
         it("Should calculate #min and #max stats with hp", function()
         {
-            const stat = new StatRange(100, 100, /*hp*/true);
+            const stat = new StatRange(100, 100, true /*hp*/);
             expect(stat.min).to.equal(310);
             expect(stat.max).to.equal(404);
         });
 
         it("Should be 1 if base hp is 1", function()
         {
-            const stat = new StatRange(1, 100, /*hp*/true);
+            const stat = new StatRange(1, 100, true /*hp*/);
             expect(stat.min).to.equal(1);
             expect(stat.max).to.equal(1);
         });

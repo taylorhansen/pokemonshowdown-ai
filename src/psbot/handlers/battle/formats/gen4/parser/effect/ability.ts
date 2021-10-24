@@ -6,14 +6,17 @@ import * as dex from "../../dex";
 import { Pokemon } from "../../state/Pokemon";
 import * as reason from "../reason";
 
-// TODO: getAbilities should be called within the UnorderedParser, in case
-//  conditions change later when awaiting via unordered.all()
-//  e.g. during move effects in action/move.ts:postHit()
-// same as above for item.ts
+// TODO: getAbilities() should be called within the UnorderedParser, in case
+// conditions change later when awaiting via unordered.all(), e.g. during move
+// effect parsing in action/move.ts:postHit().
+// Same as above for item.ts.
+
+//#region on-x EventInference functions.
 
 /**
  * Creates an EventInference parser that expects an on-`switchOut` ability to
  * activate if possible.
+ *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @returns An EventInference for handling ability possibilities.
@@ -32,6 +35,7 @@ export const onSwitchOut = onX("onSwitchOut",
 /**
  * Creates an EventInference parser that expects an on-`start` ability to
  * activate if possible.
+ *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @returns An EventInference for handling ability possibilities.
@@ -42,7 +46,7 @@ export const onStart = onX("onStart",
         const mon = ctx.state.getTeam(side).active;
         return getAbilities(mon, ability => ability.canStart(mon));
     },
-    // note: this function internally handles the special trace ability logic
+    // Note: This function internally handles the special trace ability logic.
     onXInferenceParser("onStartInference",
         onXUnorderedParser("onStartUnordered",
             async (ctx, accept, ability, side) =>
@@ -51,6 +55,7 @@ export const onStart = onX("onStart",
 /**
  * Creates an EventInference parser that expects an on-`block` ability to
  * activate if possible.
+ *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param hitBy Move+user ref that the holder is being hit by.
@@ -70,10 +75,12 @@ export const onBlock = onX("onBlock",
             async (ctx, accept, ability, side, hitBy) =>
                 await ability.onBlock(ctx, accept, side, hitBy))));
 
-// TODO: refactor hitBy to include other unboost effect sources, e.g. intimidate
+// TODO: Refactor hitBy to include other unboost effect sources, e.g.
+// intimidate.
 /**
  * Creates an EventInference parser that expects an on-`tryUnboost` ability to
  * activate if possible.
+ *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param hitBy Move+user ref that the holder is being hit by.
@@ -95,6 +102,7 @@ export const onTryUnboost = onX("onTryUnboost",
 /**
  * Creates an EventInference parser that expects an on-`status` ability to
  * activate if possible.
+ *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param statusType Status that was afflicted.
@@ -112,11 +120,12 @@ export const onStatus = onX("onStatus",
                 await ability.onStatus(ctx, accept, side))));
 
 /** Damage qualifier type for {@link onMoveDamage}. */
-export type MoveDamageQualifier = "damage" | "contact" | "contactKO";
+export type MoveDamageQualifier = "damage" | "contact" | "contactKo";
 
 /**
  * Creates an EventInference parser that expects an on-`moveDamage` ability or
  * its variants to activate if possible.
+ *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param qualifier The qualifier of which effects the ability may activate.
@@ -140,12 +149,13 @@ export const onMoveDamage = onX("onMoveDamage",
                     qualifierToOn[qualifier], hitBy))));
 
 const qualifierToOn: {readonly [T in MoveDamageQualifier]: dex.AbilityOn} =
-    {damage: "moveDamage", contact: "moveContact", contactKO: "moveContactKO"};
+    {damage: "moveDamage", contact: "moveContact", contactKo: "moveContactKo"};
 
-// TODO: refactor hitBy to support non-move drain effects, e.g. leechseed
+// TODO: Refactor hitBy to support non-move drain effects, e.g. leechseed.
 /**
  * Creates an EventInference parser that expects an on-`moveDrain` ability to
  * activate if possible (e.g. Liquid Ooze).
+ *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
  * @param hitByUserRef Pokemon reference to the user of the draining move.
@@ -155,6 +165,8 @@ const qualifierToOn: {readonly [T in MoveDamageQualifier]: dex.AbilityOn} =
 export const onMoveDrain = onX("onMoveDrain",
     (ctx, side, hitByUserRef: SideID) =>
     {
+        // Unused arg only here to enforce typing of Ability#onMoveDrain call.
+        void hitByUserRef;
         const mon = ctx.state.getTeam(side).active;
         return getAbilities(mon, ability => ability.canMoveDrain());
     },
@@ -163,8 +175,165 @@ export const onMoveDrain = onX("onMoveDrain",
             async (ctx, accept, ability, side, hitByUserRef) =>
                 await ability.onMoveDrain(ctx, accept, side, hitByUserRef))));
 
+//#endregion
+
+//#region on-x EventInference helpers.
+
+function onX<TArgs extends unknown[] = [], TResult = unknown>(name: string,
+    f: (ctx: BattleParserContext<"gen4">, side: SideID, ...args: TArgs) =>
+        Map<dex.Ability, inference.SubInference>,
+    inferenceParser:
+        inference.InferenceParser<"gen4", BattleAgent<"gen4">,
+            [
+                side: SideID,
+                abilities: Map<dex.Ability, inference.SubInference>,
+                ...args: TArgs
+            ],
+            TResult>)
+{
+    const onString = name.substr(2, 1).toLowerCase() + name.substr(3);
+
+    // Force named function so that stack traces make sense.
+    return {[name](ctx: BattleParserContext<"gen4">, side: SideID,
+        ...args: TArgs)
+    {
+        const abilities = f(ctx, side, ...args);
+        return new inference.EventInference(`${side} ability on-${onString}`,
+            new Set(abilities.values()), inferenceParser, side, abilities,
+            ...args);
+    }}[name];
+}
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
+    name: string,
+    unorderedParser:
+        unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
+            [ability: dex.Ability, side: SideID, ...args: TArgs],
+            [ability: dex.Ability, res: TResult]>):
+    inference.InferenceParser<"gen4", BattleAgent<"gen4">,
+        [
+            side: SideID, abilities: Map<dex.Ability, inference.SubInference>,
+            ...args: TArgs
+        ],
+        TResult | undefined>
+{
+    // Used in trace check special logic.
+    const isOnStart = name === "onStartInference";
+
+    const i = name.indexOf("Inference");
+    if (i <= 3) throw new Error(`Invalid inference parser name '${name}'`);
+    const onString = name.substr(2, 1).toLowerCase() + name.substr(3, i - 3);
+
+    // Use computed property to force function name in stack trace.
+    return {async [name](ctx: BattleParserContext<"gen4">,
+        accept: inference.AcceptCallback, side: SideID,
+        abilities: Map<dex.Ability, inference.SubInference>, ...args: TArgs):
+        Promise<TResult | undefined>
+    {
+        const parsers:
+            unordered.UnorderedDeadline<"gen4", BattleAgent<"gen4">,
+                [ability: dex.Ability, res: TResult]>[] = [];
+        let trace: dex.Ability | undefined;
+        for (const ability of abilities.keys())
+        {
+            if (isOnStart &&
+                // istanbul ignore next: Tedious to reproduce each ?. branch.
+                ability.data.on?.start?.copyFoeAbility)
+            {
+                // Note(gen4): Traced ability is shown before trace effect.
+                // Parse the possibly-traced ability first before seeing if it
+                // was traced.
+                // This also handles ambiguous cases where a traced ability may
+                // be one of the holder's possible abilities that could activate
+                // on-start.
+                trace = ability;
+                continue;
+            }
+            parsers.push(unordered.UnorderedDeadline.create(
+                `ability on-${onString} inference`,
+                unorderedParser, undefined /*reject*/, ability, side, ...args));
+        }
+
+        let oppAbilities: Map<dex.Ability, inference.SubInference> | undefined;
+        if (trace)
+        {
+            // Speculatively parse opponent's possible on-start abilities as if
+            // the current trace ability holder now has it.
+            const otherSide = side === "p1" ? "p2" : "p1";
+            const opp = ctx.state.getTeam(otherSide).active;
+            oppAbilities = getAbilities(opp, a => a.canStart(opp));
+            for (const oppAbility of oppAbilities.keys())
+            {
+                if (abilities.has(oppAbility)) continue;
+                parsers.push(unordered.UnorderedDeadline.create(
+                    `ability on-${onString} inference speculative trace ` +
+                        "opponent",
+                    unorderedParser, undefined /*reject*/, oppAbility, side,
+                    ...args));
+            }
+        }
+
+        const [oneOfRes] = await unordered.oneOf(ctx, parsers);
+
+        if (trace)
+        {
+            // Now we can check if the ability originally came from trace by
+            // checking for a trace indicator event afterwards.
+            const traced = await trace.copyFoeAbility(ctx, side);
+            if (traced)
+            {
+                const holder = ctx.state.getTeam(side).active;
+                // Infer trace ability.
+                accept(abilities.get(trace)!);
+                // Set overridden (traced) ability.
+                holder.setAbility(traced.ability);
+                // Infer traced ability for target.
+                ctx.state.getTeam(traced.side).active
+                    .setAbility(traced.ability);
+                return;
+            }
+            if (oneOfRes && !abilities.has(oneOfRes[0]) &&
+                oppAbilities!.has(oneOfRes[0]))
+            {
+                throw new Error("Traced opponent's ability " +
+                    `'${oneOfRes[0].data.name}' but no trace indicator event ` +
+                    "found");
+            }
+        }
+
+        // No abilities activated.
+        if (!oneOfRes) return;
+
+        const [acceptedAbility, result] = oneOfRes;
+        accept(abilities.get(acceptedAbility)!);
+        return result;
+    }}[name];
+}
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
+    name: string,
+    parser: unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
+        [ability: dex.Ability, side: SideID, ...args: TArgs], TResult>):
+    unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
+        [ability: dex.Ability, side: SideID, ...args: TArgs],
+        [ability: dex.Ability, res: TResult]>
+{
+    // Use computed property to force function name in stack trace.
+    // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
+    return {async [name](ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID,
+        ...args: TArgs):
+        Promise<[ability: dex.Ability, res: TResult]>
+    {
+        return [ability, await parser(ctx, accept, ability, side, ...args)];
+    }}[name];
+}
+
 /**
  * Searches for possible ability pathways based on the given predicate.
+ *
  * @param mon Pokemon to search.
  * @param prove Callback for filtering eligible abilities. Should return a set
  * of {@link inference.SubReason reasons} that would prove that the ability
@@ -190,150 +359,4 @@ function getAbilities(mon: Pokemon,
     return res;
 }
 
-function onX<TArgs extends unknown[] = [], TResult = unknown>(name: string,
-    f: (ctx: BattleParserContext<"gen4">, side: SideID, ...args: TArgs) =>
-        Map<dex.Ability, inference.SubInference>,
-    inferenceParser:
-        inference.InferenceParser<"gen4", BattleAgent<"gen4">,
-            [
-                side: SideID,
-                abilities: Map<dex.Ability, inference.SubInference>,
-                ...args: TArgs
-            ],
-            TResult>)
-{
-    const onString = name.substr(2, 1).toLowerCase() + name.substr(3);
-
-    // force named function so that stack traces make sense
-    return {[name](ctx: BattleParserContext<"gen4">, side: SideID,
-        ...args: TArgs)
-    {
-        const abilities = f(ctx, side, ...args);
-        return new inference.EventInference(`${side} ability on-${onString}`,
-            new Set(abilities.values()), inferenceParser, side, abilities,
-            ...args);
-    }}[name];
-}
-
-function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
-    name: string,
-    unorderedParser:
-        unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
-            [ability: dex.Ability, side: SideID, ...args: TArgs],
-            [ability: dex.Ability, res: TResult]>):
-    inference.InferenceParser<"gen4", BattleAgent<"gen4">,
-        [
-            side: SideID, abilities: Map<dex.Ability, inference.SubInference>,
-            ...args: TArgs
-        ],
-        TResult | undefined>
-{
-    // used in trace check special logic
-    const isOnStart = name === "onStartInference";
-
-    const i = name.indexOf("Inference");
-    if (i <= 3) throw new Error(`Invalid inference parser name '${name}'`);
-    const onString = name.substr(2, 1).toLowerCase() + name.substr(3, i - 3);
-
-    // force named function so that stack traces make sense
-    return {async [name](ctx: BattleParserContext<"gen4">,
-        accept: inference.AcceptCallback, side: SideID,
-        abilities: Map<dex.Ability, inference.SubInference>, ...args: TArgs):
-        Promise<TResult | undefined>
-    {
-        const parsers:
-            unordered.UnorderedDeadline<"gen4", BattleAgent<"gen4">,
-                [ability: dex.Ability, res: TResult]>[] = [];
-        let trace: dex.Ability | undefined;
-        for (const ability of abilities.keys())
-        {
-            if (isOnStart &&
-                // istanbul ignore next: tedious to reproduce each ?. branch
-                ability.data.on?.start?.copyFoeAbility)
-            {
-                // NOTE(gen4): traced ability is shown before trace effect
-                // parse the possibly-traced ability first before seeing if it
-                //  was traced
-                // this also handles ambiguous cases where a traced ability may
-                //  be one of the holder's possible abilities that could
-                //  activate on-start
-                trace = ability;
-                continue;
-            }
-            parsers.push(unordered.UnorderedDeadline.create(
-                `ability on-${onString} inference`,
-                unorderedParser, /*reject*/ undefined, ability, side, ...args));
-        }
-
-        let oppAbilities: Map<dex.Ability, inference.SubInference> | undefined;
-        if (trace)
-        {
-            // speculatively parse opponent's possible on-start abilities as if
-            //  the current trace ability holder now has it
-            const otherSide = side === "p1" ? "p2" : "p1";
-            const opp = ctx.state.getTeam(otherSide).active;
-            oppAbilities = getAbilities(opp, a => a.canStart(opp));
-            for (const oppAbility of oppAbilities.keys())
-            {
-                if (abilities.has(oppAbility)) continue;
-                parsers.push(unordered.UnorderedDeadline.create(
-                    `ability on-${onString} inference speculative trace ` +
-                        "opponent",
-                    unorderedParser, /*reject*/ undefined, oppAbility, side,
-                    ...args));
-            }
-        }
-
-        const [oneOfRes] = await unordered.oneOf(ctx, parsers);
-
-        if (trace)
-        {
-            // now we can check if the ability originally came from trace
-            // if a trace indicator event happens after handling the ability,
-            const traced = await trace.copyFoeAbility(ctx, side);
-            if (traced)
-            {
-                const holder = ctx.state.getTeam(side).active;
-                // infer trace ability
-                accept(abilities.get(trace)!);
-                // set overridden (traced) ability
-                holder.setAbility(traced.ability);
-                // infer traced ability for target
-                ctx.state.getTeam(traced.side).active
-                    .setAbility(traced.ability);
-                return;
-            }
-            if (oneOfRes && !abilities.has(oneOfRes[0]) &&
-                oppAbilities!.has(oneOfRes[0]))
-            {
-                throw new Error("Traced opponent's ability " +
-                    `'${oneOfRes[0].data.name}' but no trace indicator event ` +
-                    "found");
-            }
-        }
-
-        // no abilities activated
-        if (!oneOfRes) return;
-
-        const [acceptedAbility, result] = oneOfRes;
-        accept(abilities.get(acceptedAbility)!);
-        return result;
-    }}[name];
-}
-
-function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
-    name: string,
-    parser: unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
-        [ability: dex.Ability, side: SideID, ...args: TArgs], TResult>):
-    unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
-        [ability: dex.Ability, side: SideID, ...args: TArgs],
-        [ability: dex.Ability, res: TResult]>
-{
-    return {async [name](ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback, ability: dex.Ability, side: SideID,
-        ...args: TArgs):
-        Promise<[ability: dex.Ability, res: TResult]>
-    {
-        return [ability, await parser(ctx, accept, ability, side, ...args)];
-    }}[name];
-}
+//#endregion

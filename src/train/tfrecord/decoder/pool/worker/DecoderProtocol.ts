@@ -3,10 +3,13 @@ import { AugmentedExperience } from "../../../../play/experience";
 import { PortMessageBase, PortResultBase } from "../../../../port/PortProtocol";
 import { WorkerProtocol } from "../../../../port/WorkerProtocol";
 
+/** Typings for the `workerData` object given to the DecoderWorker. */
+export type DecoderWorkerData = undefined;
+
 /** DecoderWorker request protocol typings. */
 export interface DecoderProtocol extends WorkerProtocol<"decode">
 {
-    decode: {message: DecodeMessage, result: DecodeResult}
+    decode: {message: DecodeMessage, result: DecodeResult};
 }
 
 /** Types of decoder requests. */

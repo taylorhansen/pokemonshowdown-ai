@@ -11,7 +11,7 @@ export const test = () => describe("Move", function()
             const move = new Move("splash");
             expect(move.name).to.equal("splash");
             expect(move.pp).to.equal(64);
-            expect(move.maxpp).to.equal(64); // default max value
+            expect(move.maxpp).to.equal(64); // Default max value.
         });
 
         it("Should throw if invalid move name", function()

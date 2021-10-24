@@ -4,7 +4,7 @@ import * as dex from "../../dex";
 import { BattleState } from "../../state";
 import { Pokemon } from "../../state/Pokemon";
 import { smeargle } from "../../state/switchOptions.test";
-import { StateHelpers } from "../helpers.test";
+import { StateHelpers } from "../StateHelpers.test";
 import * as reasonMove from "./move";
 
 export const test = () => describe("move", function()
@@ -24,7 +24,7 @@ export const test = () => describe("move", function()
         let user: Pokemon;
         beforeEach("Initialize pokemon", function()
         {
-            mon = sh.initActive("p1", smeargle); // normal type
+            mon = sh.initActive("p1", smeargle); // Normal type.
             user = sh.initActive("p2", smeargle);
         });
 
@@ -98,7 +98,7 @@ export const test = () => describe("move", function()
 
                 const reason = init(move);
                 expect(() => reason.assert()).to.throw(Error,
-                    // TODO: more descriptive error message?
+                    // TODO: More descriptive error message?
                     "All possibilities have been ruled out " +
                         "(should never happen)");
             });
@@ -151,7 +151,7 @@ export const test = () => describe("move", function()
 
                 const reason = init(move);
                 expect(() => reason.reject()).to.throw(Error,
-                    // TODO: more descriptive error message?
+                    // TODO: More descriptive error message?
                     "All possibilities have been ruled out " +
                         "(should never happen)");
             });

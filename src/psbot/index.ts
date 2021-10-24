@@ -1,33 +1,35 @@
-// istanbul ignore file
-import * as tf from "@tensorflow/tfjs";
+// istanbul ignore file: demo
 import { join } from "path";
-import { avatar, latestModelFolder, loginServer, password, playServer,
-    username } from "../config";
+import * as tf from "@tensorflow/tfjs";
 import { Logger } from "../Logger";
+import { avatar, latestModelFolder, loginServer, password, playServer,
+    // For some reason the linter doesn't like gitignored source files.
+    // eslint-disable-next-line node/no-unpublished-import
+    username } from "../config";
 import { importTfn } from "../tfn";
+import { PsBot } from "./PsBot";
 import * as handlers from "./handlers"
 import { networkAgent } from "./handlers/battle/ai/networkAgent";
 import { battleStateEncoder } from
     "./handlers/battle/formats/gen4/encoders/encoders";
-import { PSBot } from "./PSBot";
 
-// select native backend
-importTfn(/*gpu*/ process.argv[2] === "--gpu");
+// Select native backend
+importTfn(process.argv[2] === "--gpu" /*use gpu*/);
 
-// load neural network from disk in the background while connecting
+// Load neural network from disk in the background while connecting.
 const modelPromise = tf.loadLayersModel(
     `file://${join(latestModelFolder, "model.json")}`);
 
 const logger = Logger.stderr;
 
-(async function()
+void (async function()
 {
-    const bot = new PSBot(logger.addPrefix("PSBot: "));
+    const bot = new PsBot(logger.addPrefix("PSBot: "));
 
     try { await bot.connect(playServer); }
     catch (e)
     {
-        logger.error("Connection error: " + ((e as Error)?.stack ?? e));
+        logger.error(`Connection error: ${(e as Error)?.stack ?? e}`);
         return;
     }
 
@@ -35,7 +37,8 @@ const logger = Logger.stderr;
     if (avatar !== null) bot.setAvatar(avatar);
 
     const model = await modelPromise;
-    const agent = networkAgent(model, "deterministic", battleStateEncoder);
+    const agent = networkAgent<"gen4">(model, "deterministic",
+            battleStateEncoder);
 
     bot.acceptChallenges("gen4randombattle",
         (room, user, sender) =>

@@ -18,22 +18,24 @@ export interface LoginOptions
 
 /**
  * Function type for sending responses to a server.
+ *
  * @param responses Messages to send.
  * @returns False if the messages can't be sent, true otherwise.
  */
 export type Sender = (...responses: string[]) => boolean;
 
 /**
- * Creates a RoomHandler for a room that the PSBot has joined.
+ * Creates a RoomHandler for a room that the PsBot has joined.
+ *
  * @param room Room name.
- * @param username Username of the PSBot.
+ * @param username Username of the PsBot.
  * @param sender The function that will be used for sending responses.
  */
 export type HandlerFactory = (room: string, username: string, sender: Sender) =>
     handlers.RoomHandler;
 
 /** Manages the connection to a PokemonShowdown server. */
-export class PSBot
+export class PsBot
 {
     /** Websocket client. Used for connecting to the server. */
     private readonly client = new WSClient();
@@ -53,7 +55,7 @@ export class PSBot
 
     /** Promise that resolves once we've connected to the server. */
     private readonly connected: Promise<void>;
-    /** Callback to resolve the `#connected` Promise. */
+    /** Callback to resolve the {@link connected} Promise. */
     private connectedRes: (err?: Error) => void = () => {};
 
     /** Used for handling global PS messages. */
@@ -63,10 +65,11 @@ export class PSBot
         new MessageParser(this.logger.addPrefix("MessageParser: "));
 
     /**
-     * Creates a PSBot.
+     * Creates a PsBot.
+     *
      * @param logger Used to log debug info.
      */
-    constructor(private readonly logger = Logger.stderr)
+    public constructor(private readonly logger = Logger.stderr)
     {
         this.connected = new Promise<void>((res, rej) =>
             this.connectedRes = err =>
@@ -82,14 +85,15 @@ export class PSBot
         this.globalHandler.respondToChallenge =
             (user, format) => this.respondToChallenge(user, format);
 
-        // async
+        // Setup async message parser.
         // TODO: tie this to a method that can be awaited after setting up the
-        //  PSBot
-        this.parserReadLoop();
+        // PsBot.
+        void this.parserReadLoop();
     }
 
     /**
-     * Allows the PSBot to accept battle challenges for the given format.
+     * Allows the PsBot to accept battle challenges for the given format.
+     *
      * @param format Name of the format to use.
      * @param f Room handler factory function.
      */
@@ -101,6 +105,7 @@ export class PSBot
 
     /**
      * Adds a handler for a room.
+     *
      * @param roomid Room id.
      * @param handler Object that handles messages coming from the given room.
      */
@@ -123,7 +128,8 @@ export class PSBot
     }
 
     /**
-     * Sets up this PSBot to login once connected.
+     * Sets up this PsBot to login once connected.
+     *
      * @param options Login options.
      * @returns A Promise that resolves once logged in.
      */
@@ -131,7 +137,7 @@ export class PSBot
     {
         if (this.loggedIn)
         {
-            // TODO: add logout functionality?
+            // TODO: Add logout functionality?
             return this.logger.error("Already logged in");
         }
 
@@ -143,15 +149,16 @@ export class PSBot
         const init: RequestInit =
         {
             method: "POST",
+            // eslint-disable-next-line @typescript-eslint/naming-convention
             headers: {"Content-Type": "application/x-www-form-urlencoded"}
         };
 
-        // get the assertion string used to confirm login
+        // Get the assertion string used to confirm login.
         let assertion: string;
 
         if (!options.password)
         {
-            // login without password
+            // Login without password.
             init.body = `act=getassertion&userid=${options.username}` +
                 `&challstr=${challstr}`;
             const result = await fetch(options.loginServer, init);
@@ -159,10 +166,10 @@ export class PSBot
 
             if (assertion.startsWith(";"))
             {
-                // login attempt was rejected
+                // Login attempt was rejected.
                 if (assertion.startsWith(";;"))
                 {
-                    // error message was provided
+                    // Error message was provided.
                     throw new Error(assertion.substr(2));
                 }
                 throw new Error("A password is required for user " +
@@ -171,28 +178,29 @@ export class PSBot
         }
         else
         {
-            // login with password
+            // Login with password.
             init.body = `act=login&name=${options.username}` +
                 `&pass=${options.password}&challstr=${challstr}`;
             const result = await fetch(options.loginServer, init);
             const text = await result.text();
-            // response text returns "]" followed by json
-            const json = JSON.parse(text.substr(1));
+            // Response text returns "]" followed by json.
+            const json = JSON.parse(text.substr(1)) as
+                {assertion: string, actionsuccess: string};
 
-            assertion = json.assertion;
+            ({assertion} = json);
             if (!json.actionsuccess)
             {
-                // login attempt was rejected
+                // Login attempt was rejected.
                 if (assertion.startsWith(";;"))
                 {
-                    // error message was provided
+                    // Error message was provided.
                     throw new Error(assertion.substr(2));
                 }
                 throw new Error("Invalid password");
             }
         }
 
-        // complete the login
+        // Complete the login.
         this.loggedIn =
             this.addResponses("", `|/trn ${options.username},0,${assertion}`);
     }
@@ -273,18 +281,18 @@ export class PSBot
     }
 
     /** Handles parsed protocol messages received from the PS serer. */
-    private async dispatch(
-        {roomid, args, kwArgs}: RoomEvent<Protocol.ArgName> | HaltEvent):
+    private async dispatch({roomid, args, kwArgs}: RoomEvent | HaltEvent):
         Promise<void>
     {
         let handler = this.rooms.get(roomid);
         if (!handler)
         {
-            // first msg when joining a battle room must be |init|battle
+            // First msg when joining a battle room must be an |init|battle
+            // event.
             if (args[0] === "init" && args[1] === "battle")
             {
-                // battle rooms follow a naming convention: battle-<format>-<id>
-                const format = roomid.split("-")[1];
+                // Battle room naming convention is "battle-<format>-<id>".
+                const [, format] = roomid.split("-");
                 const f = this.formats.get(format);
                 if (f)
                 {
@@ -315,17 +323,18 @@ export class PSBot
             }
         }
 
-        // dispatch special 'halt' event or regular event from MessageParser
+        // Dispatch special 'halt' event or regular event from MessageParser
         if (args[0] === "halt") await handler.halt();
         else await handler.handle({args, kwArgs});
 
         if (args[0] === "deinit")
         {
-            // roomid defaults to lobby if deinit didn't come from a room
+            // The roomid defaults to lobby if the |deinit event didn't come
+            // from a room.
             this.rooms.delete(roomid || "lobby" as Protocol.RoomID);
         }
-        // leave respectfully once the battle ends
-        // TODO: move this to BattleHandler
+        // Leave respectfully once the battle ends.
+        // TODO: Move this to BattleHandler.
         else if (args[0] === "tie" || args[0] === "win")
         {
             this.addResponses(roomid, "|gg", "|/leave");
@@ -334,6 +343,7 @@ export class PSBot
 
     /**
      * Sends a list of responses to the server.
+     *
      * @param room Room to send the response from. Can be empty if no room in
      * particular.
      * @param responses Responses to be sent to the server.

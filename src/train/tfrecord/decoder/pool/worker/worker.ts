@@ -15,7 +15,7 @@ if (!parentPort) throw new Error("No parent port!");
 interface DecoderRegistry
 {
     /** AugmentedExperience generator. */
-    readonly gen: AsyncGenerator<AugmentedExperience, null>
+    readonly gen: AsyncGenerator<AugmentedExperience, null>;
     /** Promise that's currently using the generator. */
     inUse: Promise<void>;
 }
@@ -27,13 +27,13 @@ parentPort.on("message", (msg: DecoderMessage) =>
 {
     if (msg.type === "close")
     {
-        // close all decoder streams
+        // Close all decoder streams.
         const closePromises: Promise<void>[] = [];
         for (const {gen} of decoders.values())
         {
             closePromises.push(async function()
             {
-                // indicate that the stream needs to close prematurely
+                // Indicate that the stream needs to close prematurely.
                 while (!(await gen.next(true)).done);
             }());
         }
@@ -45,18 +45,18 @@ parentPort.on("message", (msg: DecoderMessage) =>
 
     if (!decoders.has(msg.path))
     {
-        // setup decoder stream pipeline
+        // Setup decoder stream pipeline.
         const fileStream = fs.createReadStream(msg.path);
-        const decoderStream = new AExpDecoder(/*read 512kb*/ 512 * 1024,
-            /*emit aexps*/ 4);
+        const decoderStream = new AExpDecoder(512 * 1024 /*read 512kb*/,
+                4 /*emit aexps*/);
 
         const pipelinePromise = stream.promises.pipeline(fileStream,
             decoderStream);
 
-        // use an async generator IIFE to emit AugmentedExperiences
+        // Use an async generator IIFE to emit AugmentedExperiences.
         const gen = async function*(): AsyncGenerator<AugmentedExperience, null>
         {
-            // continuously read aexps from decoder unless signaled to stop
+            // Continuously read aexps from decoder unless signaled to stop.
             for await (const aexp of decoderStream)
             {
                 if (yield aexp as AugmentedExperience) break;
@@ -66,22 +66,22 @@ parentPort.on("message", (msg: DecoderMessage) =>
             decoderStream.destroy();
             decoders.delete(msg.path);
 
-            // wait for the stream to fully close
+            // Wait for the stream to fully close.
             await pipelinePromise;
 
-            // indicate that the file was exhausted
+            // Indicate that the file was exhausted.
             return null;
         }();
         decoders.set(msg.path, {gen, inUse: Promise.resolve()});
     }
 
-    // get the registered decoder
+    // Get the registered decoder.
     const decoder = decoders.get(msg.path)!;
 
     decoder.inUse = decoder.inUse
         .then(async function nextAExp()
         {
-            // get the next aexp (or null if file exhausted)
+            // Get the next aexp (or null if file exhausted).
             const aexp = (await decoder.gen.next()).value;
             const result: DecodeResult =
                 {type: "decode", rid: msg.rid, done: true, aexp};
@@ -90,7 +90,7 @@ parentPort.on("message", (msg: DecoderMessage) =>
         })
         .catch((err: Error) =>
         {
-            // pass error for logging
+            // Pass error for logging.
             const errBuf = serialize(err);
             const result: RawPortResultError =
             {

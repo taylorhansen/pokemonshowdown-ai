@@ -1,12 +1,12 @@
 import { expect } from "chai";
 import "mocha";
 import { IUtf8Message } from "websocket";
-import { Logger } from "../../src/Logger";
-import { PSBot } from "../../src/psbot/PSBot";
+import { PsBot } from "../../src/psbot/PsBot";
+import { Logger } from "../Logger";
 import { FakeRoomHandler } from "./FakeRoomHandler.test";
-import { MockPSServer } from "./MockPSServer.test";
+import { MockPsServer } from "./MockPsServer.test";
 
-export const test = () => describe("PSBot", function()
+export const test = () => describe("PsBot", function()
 {
     const username = "someuser";
     const password = "somepassword";
@@ -17,22 +17,22 @@ export const test = () => describe("PSBot", function()
     const loginServer = `http://localhost:${port}/~~showdown/action.php`;
     const playServer = `ws://localhost:${port}/showdown/websocket`;
 
-    let bot: PSBot;
-    let server: MockPSServer;
+    let bot: PsBot;
+    let server: MockPsServer;
 
     before("Initialize mock server", function()
     {
-        server = new MockPSServer(assertion, port);
+        server = new MockPsServer(assertion, port);
     });
 
-    beforeEach("Initialize and connect PSBot", async function()
+    beforeEach("Initialize and connect PsBot", async function()
     {
-        bot = new PSBot(Logger.null);
+        bot = new PsBot(Logger.null);
         await bot.connect(playServer);
         expect(server.isConnected).to.be.true;
     });
 
-    afterEach("Disconnect PSBot from server", function()
+    afterEach("Disconnect PsBot from server", function()
     {
         server.disconnect();
     });

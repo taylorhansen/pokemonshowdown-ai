@@ -1,19 +1,25 @@
 import { Protocol } from "@pkmn/protocol";
 import { expect } from "chai";
 import "mocha";
-import { formats } from ".";
-import { Choice } from "./agent";
 import { BattleHandler } from "./BattleHandler";
+import { Choice } from "./agent";
+import * as formats from "./formats";
 import { consume, verify } from "./parser";
 
 export const test = () => describe("BattleHandler", function()
 {
+    class FakeState
+    {
+        public requested = false;
+        public constructor(public readonly username: string) {}
+    }
+
     it("Should correctly manage underlying BattleParser", async function()
     {
         const bh = new BattleHandler(
         {
             format: "gen4", username: "username",
-            // fake BattleParser for demonstration
+            // Fake BattleParser for demonstration.
             async parser(ctx)
             {
                 await verify(ctx, "|start|");
@@ -23,10 +29,10 @@ export const test = () => describe("BattleHandler", function()
                 await consume(ctx);
 
                 await verify(ctx, "|request|");
-                (ctx.state as any).requested = true;
+                (ctx.state as unknown as FakeState).requested = true;
                 const choices: Choice[] = ["move 1", "move 2"];
                 await ctx.agent(ctx.state, choices);
-                await expect(ctx.sender(choices[0])).to.eventually.be.undefined;
+                await expect(ctx.sender(choices[0])).to.eventually.be.false;
                 await consume(ctx);
 
                 await verify(ctx, "|turn|");
@@ -35,30 +41,26 @@ export const test = () => describe("BattleHandler", function()
                 await verify(ctx, "|tie|");
                 await consume(ctx);
             },
-            // fake BattleState for demonstration
-            stateCtor: class
+            // Fake BattleState for demonstration.
+            stateCtor: FakeState as unknown as formats.StateConstructor<"gen4">,
+            // Fake BattleAgent for demonstration.
+            agent: async (state, choices) =>
             {
-                // @ts-expect-error
-                private requested = false;
-                constructor(public readonly username: string) {}
-            } as any as formats.StateConstructor<"gen4">,
-            // fake BattleAgent for demonstration
-            async agent(state, choices)
-            {
-                if ((state as any).requested)
+                if ((state as unknown as FakeState).requested)
                 {
                     [choices[0], choices[1]] = [choices[1], choices[0]];
                 }
+                return await Promise.resolve();
             },
-            // fake Sender for demonstration
-            sender(msg)
+            // Fake Sender for demonstration.
+            sender: msg =>
             {
                 expect(msg).to.equal("|/choose move 2");
                 return true;
             }
         });
 
-        // turn 1
+        // Turn 1.
         await bh.handle({args: ["start"], kwArgs: {}});
         await bh.handle(
         {
@@ -73,10 +75,10 @@ export const test = () => describe("BattleHandler", function()
         });
         await bh.handle({args: ["turn", "1" as Protocol.Num], kwArgs: {}});
         bh.halt();
-        // wait an extra tick to allow for the choice to be sent and verified
+        // Wait an extra tick to allow for the choice to be sent and verified.
         await new Promise<void>(res => setImmediate(res));
 
-        // turn 2: game-over
+        // Turn 2: Game-over.
         await bh.handle({args: ["turn", "2" as Protocol.Num], kwArgs: {}});
         await bh.handle({args: ["tie"], kwArgs: {}});
         bh.halt();
@@ -99,20 +101,20 @@ export const test = () => describe("BattleHandler", function()
                 const choices: Choice[] = ["move 1", "move 2"];
                 await ctx.agent(ctx.state, choices);
                 await expect(ctx.sender(choices[0])).to.eventually.be.true;
-                await expect(ctx.sender(choices[1])).to.eventually.be.undefined;
+                await expect(ctx.sender(choices[1])).to.eventually.be.false;
                 await consume(ctx);
 
                 await verify(ctx, "|tie|");
                 await consume(ctx);
             },
-            stateCtor:
-                class { constructor(public readonly username: string) {} } as
-                    any as formats.StateConstructor<"gen4">,
-            async agent(state, choices)
+            // Fake BattleState for demonstration.
+            stateCtor: FakeState as unknown as formats.StateConstructor<"gen4">,
+            agent: async (state, choices) =>
             {
                 [choices[0], choices[1]] = [choices[1], choices[0]];
+                return await Promise.resolve();
             },
-            sender(msg)
+            sender: msg =>
             {
                 if (senderState === 0) expect(msg).to.equal("|/choose move 2");
                 else expect(msg).to.equal("|/choose move 1");
@@ -121,7 +123,7 @@ export const test = () => describe("BattleHandler", function()
             }
         });
 
-        // turn 1
+        // Turn 1.
         await bh.handle({args: ["start"], kwArgs: {}});
         await bh.handle(
         {
@@ -135,17 +137,17 @@ export const test = () => describe("BattleHandler", function()
             kwArgs: {}
         });
         bh.halt();
-        // wait an extra tick to allow for the choice to be sent and verified
+        // Wait an extra tick to allow for the choice to be sent and verified.
         await new Promise<void>(res => setImmediate(res));
 
-        // first choice is rejected
+        // First choice is rejected.
         await bh.handle(
         {
             args: ["error", "[Invalid choice]" as Protocol.Message], kwArgs: {}
         });
         await new Promise<void>(res => setImmediate(res));
 
-        // turn 2: game-over
+        // Turn 2: Game-over.
         await bh.handle({args: ["tie"], kwArgs: {}});
         bh.halt();
         await bh.finish();
@@ -170,20 +172,20 @@ export const test = () => describe("BattleHandler", function()
                 await expect(ctx.sender(choices[0]))
                     .to.eventually.equal("disabled");
                 await ctx.agent(ctx.state, choices);
-                await expect(ctx.sender(choices[0])).to.eventually.be.undefined;
+                await expect(ctx.sender(choices[0])).to.eventually.be.false;
                 await consume(ctx);
 
                 await verify(ctx, "|tie|");
                 await consume(ctx);
             },
-            stateCtor:
-                class { constructor(public readonly username: string) {} } as
-                    any as formats.StateConstructor<"gen4">,
-            async agent(state, choices)
+            // Fake BattleState for demonstration.
+            stateCtor: FakeState as unknown as formats.StateConstructor<"gen4">,
+            agent: async (state, choices) =>
             {
                 [choices[0], choices[1]] = [choices[1], choices[0]];
+                return await Promise.resolve();
             },
-            sender(msg)
+            sender: msg =>
             {
                 if (senderState === 0) expect(msg).to.equal("|/choose move 2");
                 else expect(msg).to.equal("|/choose move 1");
@@ -192,7 +194,7 @@ export const test = () => describe("BattleHandler", function()
             }
         });
 
-        // turn 1
+        // Turn 1.
         await bh.handle({args: ["start"], kwArgs: {}});
         await bh.handle(
         {
@@ -206,10 +208,10 @@ export const test = () => describe("BattleHandler", function()
             kwArgs: {}
         });
         bh.halt();
-        // wait an extra tick to allow for the choice to be sent and verified
+        // Wait an extra tick to allow for the choice to be sent and verified.
         await new Promise<void>(res => setImmediate(res));
 
-        // first choice is rejected
+        // First choice is rejected.
         await bh.handle(
         {
             args:
@@ -218,13 +220,13 @@ export const test = () => describe("BattleHandler", function()
             ],
             kwArgs: {}
         });
-        // agent makes new choice using updated info
+        // Agent makes new choice using updated info.
         await bh.handle(
         {
             args:
             [
                 "request",
-                // minimal json to get the test to run
+                // Minimal json to get the test to run.
                 JSON.stringify(
                 {
                     requestType: "move", active: [{moves: [{}]}],
@@ -240,7 +242,7 @@ export const test = () => describe("BattleHandler", function()
         });
         await new Promise<void>(res => setImmediate(res));
 
-        // turn 2: game-over
+        // Turn 2: Game-over.
         await bh.handle({args: ["tie"], kwArgs: {}});
         bh.halt();
         await bh.finish();

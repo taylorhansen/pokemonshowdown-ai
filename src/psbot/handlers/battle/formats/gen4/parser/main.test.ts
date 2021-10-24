@@ -5,9 +5,10 @@ import { benchInfo, ditto, requestEvent, smeargle } from
     "../state/switchOptions.test";
 import { createInitialContext, ParserContext, setupOverrideAgent,
     setupOverrideSender } from "./Context.test";
-import { initParser, ParserHelpers, toDetails, toEffectName, toFormatName,
-    toHPStatus, toID, toIdent, toMoveName, toNum, toRequestJSON, toRule,
-    toUsername } from "./helpers.test";
+import { ParserHelpers } from "./ParserHelpers.test";
+import { initParser, toDetails, toEffectName, toFormatName, toHPStatus, toID,
+    toIdent, toMoveName, toNum, toRequestJSON, toRule, toUsername } from
+    "./helpers.test";
 import { main } from "./main";
 
 export const test = () => describe("main", function()
@@ -24,7 +25,7 @@ export const test = () => describe("main", function()
     let pctx: ParserContext<void> | undefined;
     const ph = new ParserHelpers(() => pctx);
 
-    beforeEach("Initialize main BattleParser", async function()
+    beforeEach("Initialize main BattleParser", function()
     {
         pctx = initParser(ictx.startArgs, main);
     });
@@ -34,19 +35,17 @@ export const test = () => describe("main", function()
         await ph.close().finally(() => pctx = undefined);
     });
 
-    const {choices: agentChoices, resolve: agentResolver} =
-        setupOverrideAgent(ictx);
+    const agent = setupOverrideAgent(ictx);
 
-    const {sent: sentPromise, resolve: sendResolver} =
-        setupOverrideSender(ictx);
+    const sender = setupOverrideSender(ictx);
 
-    // this is more of an integration test but hard to setup DI/mocking
+    // This is more of an integration test but hard to setup DI/mocking.
     it("Should handle init/1st turn and subsequent turns until game-over",
     async function()
     {
-        // note: the initial |request| event is repeated, once to initialize the
-        //  team during init(), and another as the actual request for a decision
-        //  after the initial switch-ins
+        // Note: the initial |request| event is repeated, once to initialize the
+        // team during init(), and another as the actual request for a decision
+        // after the initial switch-ins.
         const req1Event = requestEvent("move", benchInfo.slice(0, 2),
         {moves: [
             {
@@ -59,7 +58,8 @@ export const test = () => describe("main", function()
             }
         ]});
 
-        // init phase
+        // Init phase.
+
         const team1 = state.getTeam("p1");
         expect(team1.size).to.equal(0);
         const team2 = state.getTeam("p2");
@@ -78,7 +78,7 @@ export const test = () => describe("main", function()
         await ph.handle({args: ["teamsize", "p1", toNum(2)], kwArgs: {}});
         await ph.handle({args: ["teamsize", "p2", toNum(2)], kwArgs: {}});
         await ph.handle({args: ["gen", 4], kwArgs: {}});
-        await ph.handle({args: ["rated"], kwArgs: {}}); // ignored
+        await ph.handle({args: ["rated"], kwArgs: {}}); // Ignored
         await ph.handle(
         {
             args: ["tier", toFormatName("[Gen 4] Random Battle")], kwArgs: {}
@@ -92,8 +92,7 @@ export const test = () => describe("main", function()
         expect(team1.size).to.equal(2);
         expect(team2.size).to.equal(2);
 
-        // turn 1: switch in smeargle on both sides
-        // this is after the initial |start event parsed by init.ts
+        // Turn 1: Switch in smeargle on both sides.
 
         await ph.handle(
         {
@@ -115,16 +114,16 @@ export const test = () => describe("main", function()
         });
         await ph.handle({args: ["turn", toNum(1)], kwArgs: {}});
 
-        // p1 move request
+        // P1 move request.
         const req1 = ph.handle(req1Event);
-        await expect(agentChoices())
+        await expect(agent.choices())
             .to.eventually.have.members(["move 1", "move 2", "switch 2"]);
-        agentResolver();
-        await expect(sentPromise()).to.eventually.equal("move 1");
-        sendResolver();
+        agent.resolve();
+        await expect(sender.sent()).to.eventually.equal("move 1");
+        sender.resolve(false /*i.e., accept the choice*/);
         await req1;
 
-        // turn 2: p2 switches out, p1 attacks
+        // Turn 2: P2 switches out, p1 attacks.
 
         await ph.handle(
         {
@@ -145,7 +144,7 @@ export const test = () => describe("main", function()
             args: ["-damage", toIdent("p2", ditto), toHPStatus(50, 100)],
             kwArgs: {}
         });
-        // residual
+        // Residual.
         await ph.handle(
         {
             args: ["-heal", toIdent("p2", ditto), toHPStatus(56, 100)],
@@ -153,7 +152,7 @@ export const test = () => describe("main", function()
         });
         await ph.handle({args: ["turn", toNum(2)], kwArgs: {}});
 
-        // p1 move request
+        // P1 move request.
         const req2 = ph.handle(requestEvent("move", benchInfo.slice(0, 2),
         {moves: [
             {
@@ -165,14 +164,14 @@ export const test = () => describe("main", function()
                 target: "normal"
             }
         ]}));
-        await expect(agentChoices())
+        await expect(agent.choices())
             .to.eventually.have.members(["move 1", "move 2", "switch 2"]);
-        agentResolver();
-        await expect(sentPromise()).to.eventually.equal("move 1");
-        sendResolver();
+        agent.resolve();
+        await expect(sender.sent()).to.eventually.equal("move 1");
+        sender.resolve(false /*i.e., accept the choice*/);
         await req2;
 
-        // turn 3: p1 attacks, p2 faints and is forced to switch
+        // Turn 3: P1 attacks, p2 faints and is forced to switch.
 
         await ph.handle(
         {
@@ -185,7 +184,7 @@ export const test = () => describe("main", function()
             kwArgs: {}
         });
         await ph.handle({args: ["faint", toIdent("p2", ditto)], kwArgs: {}});
-        // p1 wait request as p2 chooses switch-in
+        // P1 wait request as p2 chooses switch-in.
         await ph.handle({args: ["upkeep"], kwArgs: {}});
         await ph.handle(
         {
@@ -196,7 +195,7 @@ export const test = () => describe("main", function()
             ],
             kwArgs: {}
         });
-        // p2 chose switch-in
+        // P2 chose switch-in.
         await ph.handle(
         {
             args:
@@ -208,7 +207,7 @@ export const test = () => describe("main", function()
         });
         await ph.handle({args: ["turn", toNum(3)], kwArgs: {}});
 
-        // p1 move request
+        // P1 move request.
         const req3 = ph.handle(requestEvent("move", benchInfo.slice(0, 2),
         {moves: [
             {
@@ -220,14 +219,14 @@ export const test = () => describe("main", function()
                 target: "normal"
             }
         ]}));
-        await expect(agentChoices())
+        await expect(agent.choices())
             .to.eventually.have.members(["move 1", "move 2", "switch 2"]);
-        agentResolver();
-        await expect(sentPromise()).to.eventually.equal("move 1");
-        sendResolver();
+        agent.resolve();
+        await expect(sender.sent()).to.eventually.equal("move 1");
+        sender.resolve(false /*i.e., accept the choice*/);
         await req3;
 
-        // turn 4: p2 attacks, p1 faints and is forced to switch
+        // Turn 4: P2 attacks, p1 faints and is forced to switch.
 
         await ph.handle(
         {
@@ -240,18 +239,18 @@ export const test = () => describe("main", function()
             kwArgs: {}
         });
         await ph.handle({args: ["faint", toIdent("p1", smeargle)], kwArgs: {}});
-        // p1 chooses switch-in
+        // P1 chooses switch-in.
         await ph.handle({args: ["upkeep"], kwArgs: {}});
 
-        // p1 switch request
+        // P1 switch request.
         const req4s = ph.handle(requestEvent("switch",
             [{...benchInfo[0], condition: toHPStatus("faint")}, benchInfo[1]]));
-        // note: BattleAgent isn't invoked since there's only 1 switch choice
-        await expect(sentPromise()).to.eventually.equal("switch 2");
-        sendResolver();
+        // Note: BattleAgent isn't invoked since there's only 1 switch choice.
+        await expect(sender.sent()).to.eventually.equal("switch 2");
+        sender.resolve(false /*i.e., accept the choice*/);
         await req4s;
 
-        // p1 chose switch-in
+        // P1 chose switch-in.
         await ph.handle(
         {
             args:
@@ -263,7 +262,7 @@ export const test = () => describe("main", function()
         });
         await ph.handle({args: ["turn", toNum(4)], kwArgs: {}});
 
-        // p1 move request
+        // P1 move request.
         const req4 = ph.handle(requestEvent("move",
         [
             {...benchInfo[1], active: true},
@@ -275,12 +274,12 @@ export const test = () => describe("main", function()
                 maxpp: 32, target: "normal"
             }
         ]}));
-        // note: BattleAgent isn't invoked since there's only 1 move choice
-        await expect(sentPromise()).to.eventually.equal("move 1");
-        sendResolver();
+        // Note: BattleAgent isn't invoked since there's only 1 move choice.
+        await expect(sender.sent()).to.eventually.equal("move 1");
+        sender.resolve(false); // I.e., accept the choice
         await req4;
 
-        // turn 5: p2 attacks again, p1 faints again, game over
+        // Turn 5: P2 attacks again, p1 faints again, game over.
 
         await ph.handle(
         {

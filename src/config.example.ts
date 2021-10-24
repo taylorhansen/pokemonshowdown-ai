@@ -2,19 +2,19 @@
 /** @file Contains config info. */
 import { join } from "path";
 
-// neural network files
+// Neural network files.
 
 /** Default path for the neural network models folder. */
 export const modelsFolder = join(__dirname, "../models/");
 /** Default path for the latest neural network model folder. */
 export const latestModelFolder = join(modelsFolder, "latest/");
 
-// sim logs from training
+// Sim logs from training.
 
 /** Path to the folder to store training battle logs in. */
 export const logPath = join(__dirname, "../logs/");
 
-// login info
+// Login info.
 
 /** Account username. Set to the empty string to use a default guest account. */
 export const username = "";

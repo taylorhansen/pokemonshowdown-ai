@@ -5,13 +5,12 @@ import "mocha";
 import { Event } from "../../../../../../parser";
 import { BattleState } from "../../state";
 import { Pokemon } from "../../state/Pokemon";
-import { ditto, smeargle } from "../../state/switchOptions.test";
 import { SwitchOptions } from "../../state/Team";
-import { ParserContext } from "../Context.test";
-import { createInitialContext } from "../Context.test";
-import { ParserHelpers, setupBattleParser, toAbilityName, toDetails,
-    toEffectName, toHPStatus, toIdent, toItemName, toMoveName, toSide } from
-    "../helpers.test";
+import { ditto, smeargle } from "../../state/switchOptions.test";
+import { ParserContext , createInitialContext } from "../Context.test";
+import { ParserHelpers } from "../ParserHelpers.test";
+import { setupBattleParser, toAbilityName, toDetails, toEffectName, toHPStatus,
+    toIdent, toItemName, toMoveName, toSide } from "../helpers.test";
 import * as actionSwitch from "./switch";
 
 export const test = () => describe("switch", function()
@@ -26,18 +25,16 @@ export const test = () => describe("switch", function()
         state = ictx.getState();
     });
 
-    function switchEvent(side: SideID, opt = smeargle,
-        pos: Protocol.PositionLetter = "a"): Event<"|switch|">
-    {
-        return {
+    const switchEvent = (side: SideID, opt = smeargle,
+        pos: Protocol.PositionLetter = "a"): Event<"|switch|"> =>
+    ({
             args:
             [
                 "switch", toIdent(side, opt, pos), toDetails(opt),
                 toHPStatus(100, 100)
             ],
             kwArgs: {}
-        };
-    }
+    });
 
     describe("switchAction()", function()
     {
@@ -48,7 +45,7 @@ export const test = () => describe("switch", function()
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
@@ -85,7 +82,7 @@ export const test = () => describe("switch", function()
                 sh.initActive("p2");
 
                 pctx = init("p1");
-                // pursuit indicator event
+                // Pursuit indicator event.
                 await ph.handle(
                 {
                     args:
@@ -95,7 +92,7 @@ export const test = () => describe("switch", function()
                     ],
                     kwArgs: {}
                 });
-                // move event and effects
+                // Move event and effects.
                 await ph.handle(
                 {
                     args: ["move", toIdent("p2"), toMoveName("pursuit")],
@@ -106,7 +103,7 @@ export const test = () => describe("switch", function()
                     args: ["-damage", toIdent("p1"), toHPStatus(90, 100)],
                     kwArgs: {}
                 });
-                // actual switch event
+                // Actual switch event.
                 await ph.handle(switchEvent("p1", ditto));
                 await ph.halt();
                 await ph.return(
@@ -153,7 +150,7 @@ export const test = () => describe("switch", function()
                 },
                     Error,
                     "Invalid event: Expected type ['|switch|', '|drag|'] but " +
-                    "got '|-activate|'");
+                        "got '|-activate|'");
             });
         });
 
@@ -170,7 +167,7 @@ export const test = () => describe("switch", function()
                 await ph.handle(
                 {
                     args: ["-curestatus", toIdent("p1"), "frz"],
-                    kwArgs: {from: "ability: Natural Cure"}
+                    kwArgs: {from: toEffectName("naturalcure", "ability")}
                 });
                 await ph.handle(switchEvent("p1", ditto));
                 await ph.halt();
@@ -181,7 +178,7 @@ export const test = () => describe("switch", function()
 
         describe("switch effects", function()
         {
-            // pressure ability
+            // Pressure ability
             const entei: SwitchOptions =
                 {species: "entei", level: 25, gender: "M", hp: 100, hpMax: 100};
 
@@ -229,30 +226,30 @@ export const test = () => describe("switch", function()
                 await ph.return({mon, actioned: {p1: true}});
             });
 
-            describe("hazards", async function()
+            describe("hazards", function()
             {
-                // can have magicguard
+                // Can have magicguard.
                 const clefable: SwitchOptions =
                 {
                     species: "clefable", level: 30, gender: "F",
                     hp: 100, hpMax: 100
                 };
 
-                // ungrounded
+                // Ungrounded.
                 const pidgey: SwitchOptions =
                 {
                     species: "pidgey", level: 50, gender: "M",
                     hp: 100, hpMax: 100
                 };
 
-                // steel type
+                // Steel type.
                 const aron: SwitchOptions =
                 {
                     species: "aron", level: 40, gender: "F",
                     hp: 100, hpMax: 100
                 };
 
-                // immunity ability
+                // Immunity ability.
                 const snorlax: SwitchOptions =
                 {
                     species: "snorlax", level: 20, gender: "M",
@@ -427,7 +424,7 @@ export const test = () => describe("switch", function()
                         name: string;
                         response?: "status" | "remove";
                         layers?: 1 | 2;
-                        otherHazard?: "spikes" | "stealthrock",
+                        otherHazard?: "spikes" | "stealthrock";
                         opt?: SwitchOptions;
                         substitute?: boolean;
                         otherEvents?: readonly Event[];
@@ -448,7 +445,7 @@ export const test = () => describe("switch", function()
                             if  (otherHazard) team.status[otherHazard] = 1;
                             if (substitute)
                             {
-                                // pass substitute onto switch-in
+                                // Pass substitute onto switch-in.
                                 team.status.selfSwitch = "copyvolatile";
                                 old.volatile.substitute = true;
                             }
@@ -476,7 +473,7 @@ export const test = () => describe("switch", function()
                                     [
                                         "-sideend", toSide("p1", "username"),
                                         toEffectName("toxicspikes", "move") as
-                                            any as SideCondition
+                                            unknown as SideCondition
                                     ],
                                     kwArgs: {of: toIdent("p1", opt)}
                                 });
@@ -563,7 +560,7 @@ export const test = () => describe("switch", function()
                 });
             });
 
-            describe("healingwish", async function()
+            describe("healingwish", function()
             {
                 for (const effect of ["healingwish", "lunardance"] as const)
                 {
@@ -627,7 +624,7 @@ export const test = () => describe("switch", function()
                 }
             });
 
-            describe("on-start abilities", async function()
+            describe("on-start abilities", function()
             {
                 it("Should handle pressure", async function()
                 {
@@ -687,6 +684,7 @@ export const test = () => describe("switch", function()
         let pctx: ParserContext<[side: SideID, mon: Pokemon][]> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
+        // eslint-disable-next-line mocha/no-hooks-for-single-case
         afterEach("Close ParserContext", async function()
         {
             await ph.close().finally(() => pctx = undefined);

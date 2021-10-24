@@ -1,23 +1,26 @@
-import { TeamGenerators } from "@pkmn/randoms";
-import { BattleStreams, Teams } from "@pkmn/sim";
-import { SideID } from "@pkmn/types";
 import * as fs from "fs";
 import * as path from "path";
 import * as stream from "stream";
+import { TeamGenerators } from "@pkmn/randoms";
+import { BattleStreams, Teams } from "@pkmn/sim";
+import { SideID } from "@pkmn/types";
 import * as tmp from "tmp-promise";
 import { LogFunc, Logger } from "../../../../Logger";
+import { Sender } from "../../../../psbot/PsBot";
 import { BattleHandler } from "../../../../psbot/handlers/battle";
 import { BattleAgent } from "../../../../psbot/handlers/battle/agent";
 import { FormatType } from "../../../../psbot/handlers/battle/formats";
 import { BattleParser } from "../../../../psbot/handlers/battle/parser";
-import { Event, MessageParser } from "../../../../psbot/parser";
+import { Event, HaltEvent, MessageParser, RoomEvent } from
+    "../../../../psbot/parser";
 import { ensureDir } from "../../../helpers/ensureDir";
 import { SimResult } from "../playGame";
 
 Teams.setGeneratorFactory(TeamGenerators);
 
 /**
- * Player options for `startPSBattle()`.
+ * Player options for {@link startPSBattle}.
+ *
  * @template T Game format type.
  */
 export interface PlayerOptions<T extends FormatType = FormatType>
@@ -29,7 +32,8 @@ export interface PlayerOptions<T extends FormatType = FormatType>
 }
 
 /**
- * Options for `startBattle()`.
+ * Options for {@link startBattle}.
+ *
  * @template T Game format type.
  */
 export interface GameOptions<T extends FormatType = FormatType>
@@ -51,39 +55,39 @@ export interface GameOptions<T extends FormatType = FormatType>
 }
 
 /** Result from playing a PS game. */
-export interface PSGameResult extends Omit<SimResult, "winner">
+export interface PsGameResult extends Omit<SimResult, "winner">
 {
     /** ID of the winner if it's not a tie. */
     winner?: SideID;
 }
 
 /** Runs a simulated PS battle. */
-export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
+export async function startPsBattle(options: GameOptions): Promise<PsGameResult>
 {
-    // setup logfile
+    // Setup logfile.
     let logPath: string;
     if (options.logPath)
     {
         await ensureDir(path.dirname(options.logPath));
-        logPath = options.logPath
+        ({logPath} = options);
     }
     else
     {
-        // create a temp file so logs can still be recovered
+        // Create a temp file so logs can still be recovered.
         logPath = (await tmp.file(
             {template: "psbattle-XXXXXX", keep: true})).path;
     }
     const file = fs.createWriteStream(logPath);
 
-    // setup logger
+    // Setup logger.
     const logFunc: LogFunc = msg => file.write(msg);
     const logger = new Logger(logFunc, logFunc,
         options.logPrefix ?? "Battle: ");
 
-    // start simulating a battle
+    // Start simulating a battle.
     const battleStream = new BattleStreams.BattleStream({keepAlive: false});
     const streams = BattleStreams.getPlayerStreams(battleStream);
-    streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
+    void streams.omniscient.write(`>start {"formatid":"gen4randombattle"}`);
 
     const eventLoops: Promise<void>[] = [];
 
@@ -92,18 +96,19 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
     {
         const innerLog = logger.addPrefix(`${id}: `);
 
-        // sends player choices to the battle stream
-        function sender(...args: string[]): boolean
+        // Setup BattleHandler.
+
+        const sender: Sender = (...args) =>
         {
             for (const arg of args)
             {
-                // extract choice from args
-                // format: |/choose <choice>
+                // Extract choice from args.
+                // Format: |/choose <choice>
                 if (arg.startsWith("|/choose "))
                 {
                     const choice = arg.substr("|/choose ".length);
                     innerLog.debug(`Sending choice '${choice}'`);
-                    if (!battleStream.atEOF) streams[id].write(choice);
+                    if (!battleStream.atEOF) void streams[id].write(choice);
                     else
                     {
                         innerLog.error("Can't send: At end of stream");
@@ -112,10 +117,10 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 }
             }
             return true;
-        }
+        };
 
         let handlerCtor: typeof BattleHandler;
-        // add game-over checks to one side
+        // Add game-over checks to one side.
         if (id === "p1")
         {
             handlerCtor =
@@ -125,7 +130,6 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                 public override async handle(event: Event): Promise<void>
                 {
                     try { return await super.handle(event); }
-                    catch (e) { throw e; }
                     finally
                     {
                         if (event.args[0] === "turn")
@@ -135,7 +139,7 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                             {
                                 innerLog.debug(
                                     "Max turns reached, force tie");
-                                streams.omniscient.write(">forcetie");
+                                void streams.omniscient.write(">forcetie");
                             }
                         }
                         else if (event.args[0] === "win")
@@ -155,7 +159,8 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
             logger: innerLog.addPrefix("BattleHandler: ")
         });
 
-        // setup battle event pipeline
+        // Setup battle event pipeline.
+
         const battleTextStream = streams[id];
         const messageParser =
             new MessageParser(innerLog.addPrefix("MessageParser: "));
@@ -163,11 +168,12 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
         eventLoops.push(
             stream.promises.pipeline(battleTextStream, messageParser));
 
-        // start event loop for this side of the battle
-        // note: keep this separate from the pipeline streams since for some
-        //  reason it causes the whole worker process to crash when an error is
-        //  encountered due to the underlying handler.finish() promise rejecting
-        //  before the method itself can be called/caught
+        // Start event loop for this side of the battle.
+
+        // Note: keep this separate from the above pipeline streams since for
+        // some reason it causes the whole worker process to crash when an
+        // error is encountered due to the underlying handler.finish() promise
+        // rejecting before the method itself can be called/caught.
         eventLoops.push(async function()
         {
             let loopErr: Error | undefined;
@@ -175,15 +181,16 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
             {
                 for await (const event of messageParser)
                 {
-                    if (event.args[0] === "halt" as any) handler.halt();
-                    else await handler.handle(event);
+                    const e = event as RoomEvent | HaltEvent;
+                    if (e.args[0] === "halt") handler.halt();
+                    else await handler.handle(e as RoomEvent);
                 }
             }
-            catch (e: any)
+            catch (e)
             {
-                // log game errors and leave a new exception specifying
-                //  where to find it
-                logError(innerLog, battleStream, loopErr = e);
+                // Log game errors and leave a new exception specifying
+                // where to find it.
+                logError(innerLog, battleStream, loopErr = e as Error);
                 throwLog(logPath);
             }
             finally
@@ -194,9 +201,12 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
                     if (loopErr) await handler.forceFinish();
                     else await handler.finish();
                 }
-                catch (e: any)
+                catch (e)
                 {
-                    if (loopErr !== e) logError(innerLog, battleStream, e);
+                    if (loopErr !== e)
+                    {
+                        logError(innerLog, battleStream, e as Error);
+                    }
                     else
                     {
                         innerLog.debug(
@@ -207,40 +217,37 @@ export async function startPSBattle(options: GameOptions): Promise<PSGameResult>
             }
         }());
 
-        streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
+        void streams.omniscient.write(`>player ${id} {"name":"${id}"}`);
     }
 
-    // don't let game errors propagate, instead capture it for logging later
+    // Don't let game errors propagate, instead capture it for logging later.
     let err: Error | undefined;
     try { await Promise.all(eventLoops); }
-    catch (e: any) { err = e; }
+    catch (e) { err = e as Error; }
 
-    // should probably never happen, but not a big deal if it does
+    // Should probably never happen, but not a big deal if it does.
     if (!battleStream.atEOF)
     {
         logger.debug("Killing battle stream");
         battleStream.destroy();
     }
 
-    // make sure the game completely ends so that the logs are complete
+    // Make sure the game completely ends so that the logs are complete.
     logger.debug("Settling");
     await Promise.allSettled(eventLoops);
 
-    // close the log file and return
+    // Close the log file and return.
     await new Promise<void>(res => file.end("Done\n", "utf8", res));
     return {winner, ...err && {err}};
 }
 
-/**
- * Swallows an error into the logger, stops the BattleStream, then throws a
- * display error pointing to the log file.
- */
+/** Swallows an error into the logger then stops the BattleStream. */
 function logError(logger: Logger, battleStream: BattleStreams.BattleStream,
-    error?: Error): void
+    err?: Error): void
 {
-    if (error) logger.error(error.stack ?? error.toString());
+    if (err) logger.error(err.stack ?? err.toString());
     logger.debug("Error encountered, force tie and discard game");
-    battleStream.write(">forcetie");
+    void battleStream.write(">forcetie");
     if (!battleStream.atEOF) battleStream.destroy();
 }
 

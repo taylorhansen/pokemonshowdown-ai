@@ -18,7 +18,9 @@ import * as effectWeather from "../effect/weather";
 import { ActionResult } from "./action";
 import * as actionSwitch from "./switch";
 
-//#region main action parser
+// TODO: Split into multiple modules?
+
+//#region Main action parser.
 
 /** Result of {@link moveAction} and {@link interceptSwitch}. */
 export type MoveActionResult = ActionResult;
@@ -26,6 +28,7 @@ export type MoveActionResult = ActionResult;
 /**
  * Parses a possible move action by player choice. Includes effects that could
  * happen before the main `|move|` event.
+ *
  * @param side Player id.
  */
 export async function moveAction(ctx: BattleParserContext<"gen4">,
@@ -37,6 +40,7 @@ export async function moveAction(ctx: BattleParserContext<"gen4">,
 
 /**
  * Parses a possible move action that would interrupt a switch-in, e.g. pursuit.
+ *
  * @param intercepting Pokemon reference who is doing the interruption.
  * @param intercepted Pokemon reference who was trying to switch out.
  * @param accept Callback to accept this pathway. If omitted, then we are
@@ -50,8 +54,10 @@ export async function interceptSwitch(ctx: BattleParserContext<"gen4">,
 }
 
 /**
- * Parses a move action by player choice. Includes effects that could happen
- * before the main `|move|` event.
+ * Parses a move action by player choice.
+ *
+ * Includes effects that could happen before the main `|move|` event.
+ *
  * @param side Player that should be making the move action.
  * @param accept Callback to accept this pathway.
  * @param intercept If this move choice is intercepting a switch, specifies the
@@ -62,9 +68,9 @@ async function moveActionImpl(ctx: BattleParserContext<"gen4">,
     Promise<MoveActionResult>
 {
     const res: MoveActionResult = {};
-    // accept cb gets consumed if one of the optional pre-move effects accept
-    // once it gets called the first time, subsequent uses of this value should
-    //  be ignored since we'd now be committing to this pathway
+    // Accept cb gets consumed if one of the optional pre-move effects accept.
+    // Once it gets called the first time, subsequent uses of this value should
+    // be ignored since we'd now be committing to this pathway.
     const a = accept;
     accept &&= function moveActionAccept()
     {
@@ -72,18 +78,18 @@ async function moveActionImpl(ctx: BattleParserContext<"gen4">,
         a!();
     };
 
-    // expect any pre-move effects, e.g. pursuit or statuses
+    // Expect any pre-move effects, e.g. pursuit or statuses.
     const preMoveRes = await preMove(ctx, side, accept, intercept);
     if (!preMoveRes)
     {
         if (accept) return res;
-        // should never happen
+        // Should never happen.
         throw new Error("Expected pre-move effects but they didn't happen");
     }
     res.actioned = {[side]: true};
     if (preMoveRes !== "inactive")
     {
-        // parse the actual move
+        // Parse the actual move.
         const move = preMoveRes === "move" ? undefined : preMoveRes;
         Object.assign(res.actioned, await useMove(ctx, side, move, accept));
     }
@@ -92,10 +98,11 @@ async function moveActionImpl(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region pre-move effects
+//#region Pre-move effects.
 
 /**
  * Parses any pre-move effects.
+ *
  * @param side Pokemon reference who is using the move.
  * @param accept Callback to accept this pathway.
  * @param intercept If this move choice is intercepting a switch, specifies the
@@ -119,30 +126,30 @@ async function preMove(ctx: BattleParserContext<"gen4">, side: SideID,
 
     const cantReasons: string[] = [];
 
-    // expect switch interception effect if we're allowed to
+    // Expect switch interception effect if we're allowed to.
     if (intercept)
     {
-        // this event must be present if we're in a pre-switch context, which
-        //  certain moves can intercept
+        // This event must be present if we're in a pre-switch context, which
+        // certain moves can intercept.
         res = await interceptSwitchEvent(ctx, intercept, accept);
         if (!res)
         {
             if (accept) return;
-            // istanbul ignore next: should never happen?
+            // istanbul ignore next: Should never happen?
             throw new Error("Expected event to interrupt switch-in for " +
                 intercept);
         }
     }
     else
     {
-        // custapberry can only activate if we're not intercepting a switch
-        // this can still activate if any of the below inactive effects were
-        //  going to activate
+        // Custapberry can only activate if we're not intercepting a switch.
+        // This can still activate if any of the below inactive effects were
+        // going to activate.
         await unordered.parse(ctx, effectItem.onPreMove(ctx, side));
-        // recharge is its own type of action so it can never be shown in an
-        //  intercept context
-        // flinch is in a similar case, since no flinch-inducing effect exists
-        //  that can happen before intercept
+        // Recharge is its own type of action so it can never be shown in an
+        // intercept context.
+        // Flinch is in a similar case, since no flinch-inducing effect exists
+        // that can happen before intercept.
         cantReasons.push("recharge", "flinch");
     }
 
@@ -150,7 +157,7 @@ async function preMove(ctx: BattleParserContext<"gen4">, side: SideID,
 
     const [inactive] = await unordered.oneOf(ctx,
         [cantEvent(side, cantReasons), attract(side), confusion(side)]);
-    // specify slp inactive reason in case of sleeptalk/snore
+    // Specify slp inactive reason in case of sleeptalk/snore.
     if (inactive) return inactive === true ? "inactive" : inactive;
     return res ?? "move";
 }
@@ -158,7 +165,7 @@ async function preMove(ctx: BattleParserContext<"gen4">, side: SideID,
 const cantEvent = (side: SideID, reasons: readonly string[]) =>
     unordered.UnorderedDeadline.create(
         `${side} pre-move inactive [${reasons.join(", ")}]`,
-        cantEventImpl, /*reject*/ undefined, side, reasons);
+        cantEventImpl, undefined /*reject*/, side, reasons);
 
 async function cantEventImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID, reasons: readonly string[]):
@@ -172,19 +179,19 @@ async function cantEventImpl(ctx: BattleParserContext<"gen4">,
     if (!reasons.includes(reason)) return;
     accept();
     await base["|cant|"](ctx);
-    // specify slp inactive reason in case of sleeptalk/snore
+    // Specify slp inactive reason in case of sleeptalk/snore.
     return reason === "slp" ? "slp" : true;
 }
 
 const attract = (side: SideID) =>
     unordered.UnorderedDeadline.create(`${side} pre-move attract`, attractImpl,
-        /*reject*/ undefined, side);
+        undefined /*reject*/, side);
 
 async function attractImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID):
     Promise<true | undefined>
 {
-    // always activates before move
+    // Always activates before move.
     const event = await tryVerify(ctx, "|-activate|");
     if (!event) return;
     const [, identStr, effectStr] = event.args;
@@ -195,7 +202,7 @@ async function attractImpl(ctx: BattleParserContext<"gen4">,
     if (effect.type !== "move" || effect.name !== "attract") return;
     await base["|-activate|"](ctx);
 
-    // 50% chance to cause inactivity
+    // 50% chance to cause inactivity.
     const event2 = await tryVerify(ctx, "|cant|");
     if (!event2) return;
     const [, ident2Str, reason] = event2.args;
@@ -208,13 +215,13 @@ async function attractImpl(ctx: BattleParserContext<"gen4">,
 
 const confusion = (side: SideID) =>
     unordered.UnorderedDeadline.create(`${side} pre-move confusion`,
-        confusionImpl, /*reject*/ undefined, side);
+        confusionImpl, undefined /*reject*/, side);
 
 async function confusionImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID):
     Promise<true | undefined>
 {
-    // can end or continue confusion status
+    // Can end or continue confusion status.
     const event = await tryVerify(ctx, "|-end|", "|-activate|");
     if (!event) return;
     const [type, identStr, effectStr] = event.args;
@@ -229,7 +236,7 @@ async function confusionImpl(ctx: BattleParserContext<"gen4">,
     }
     await base["|-activate|"](ctx);
 
-    // 50% chance to cause inactivity and self-damage
+    // 50% chance to cause inactivity and self-damage.
     const event2 = await tryVerify(ctx, "|-damage|");
     if (!event2) return;
     const [, ident2Str] = event2.args;
@@ -243,6 +250,7 @@ async function confusionImpl(ctx: BattleParserContext<"gen4">,
 
 /**
  * Parses an event that signals a switch interruption, e.g. pursuit.
+ *
  * @param intercept Pokemon reference whose switch action is being interrupted.
  * @param accept Callback to accept this pathway.
  * @returns The {@link dex.Move} that's being used, or undefined if the event
@@ -273,13 +281,14 @@ async function interceptSwitchEvent(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region main move event and effects
+//#region Main move event and effects.
 
 /**
  * Parses a single `|move|` event and its implications.
+ *
  * @param side Pokemon reference that should be using the move.
- * @param move Optional move to expect. If `"slp"` expects a slp move to be used
- * if at all.
+ * @param move Optional move to expect. If `"slp"`, expects a slp move to be
+ * used if at all.
  * @param accept Optional callback to accept this pathway.
  * @param called Optional call effect that the move event should mention.
  * @returns A MoveActionResult detailing any extra action consumptions other
@@ -313,7 +322,7 @@ export async function useMove(ctx: BattleParserContext<"gen4">, side?: SideID,
 
     if (move)
     {
-        // TODO: add slp-based move indicator to dex data
+        // TODO: Add slp-based move indicator to dex data.
         const cmp = move === "slp" ? ["sleeptalk", "snore"] : [move.data.name];
         if (!cmp.includes(moveId))
         {
@@ -323,7 +332,7 @@ export async function useMove(ctx: BattleParserContext<"gen4">, side?: SideID,
         }
     }
 
-    // fill in missing move arg
+    // Fill in missing move arg.
     if (!move || move === "slp")
     {
         const m = dex.getMove(moveId);
@@ -350,12 +359,12 @@ async function moveEffects(ctx: BattleParserContext<"gen4">, side: SideID,
     const {user, moveSlot, targets, called, releasedTwoTurn, mirror, lastMove} =
         moveSetup(ctx, side, move, target, kwArgs);
 
-    // look for move interruptions
+    // Look for move interruptions.
     const tryResult = await tryExecute(ctx,
         {user, side, move, moveSlot, targets, called, releasedTwoTurn, mirror});
     if (tryResult !== "fail")
     {
-        // execute move effects
+        // Execute move effects.
         res = await execute(ctx,
         {
             user, side, move, targets, called, releasedTwoTurn, mirror,
@@ -363,9 +372,9 @@ async function moveEffects(ctx: BattleParserContext<"gen4">, side: SideID,
         });
     }
 
-    // reset stall counter if it wasn't updated this turn
-    // note that after execute(), the user may not be active due to possible
-    //  self-switch effects
+    // Reset stall counter if it wasn't updated this turn.
+    // Note that after execute(), the user may not be active due to possible
+    // self-switch effects.
     if (!called && user.active && !user.volatile.stalling)
     {
         user.volatile.stall(false);
@@ -374,7 +383,7 @@ async function moveEffects(ctx: BattleParserContext<"gen4">, side: SideID,
     return res;
 }
 
-//#region setup
+//#region Setup.
 
 /** Result from {@link moveSetup}. */
 interface SetupResult
@@ -388,7 +397,7 @@ interface SetupResult
     /** Whether the move was called. */
     called: "bounced" | boolean;
     /** Whether we're in the release turn of a two-turn move. */
-    releasedTwoTurn: boolean
+    releasedTwoTurn: boolean;
     /** Whether the move can update Mirror Move status for targets. */
     mirror: boolean;
     /** Global last-move state for Copycat. */
@@ -399,21 +408,24 @@ function moveSetup(ctx: BattleParserContext<"gen4">, side: SideID,
     move: dex.Move, target?: SideID, kwArgs?: Event<"|move|">["kwArgs"]):
     SetupResult
 {
-    // set last move (copycat)
-    const lastMove = ctx.state.status.lastMove;
+    // Set last move (copycat).
+    const {lastMove} = ctx.state.status;
     ctx.state.status.lastMove = move.data.name;
 
     const user = ctx.state.getTeam(side).active;
 
     let called: "bounced" | boolean;
-    // TODO: use lockedmove suffix as an indicator for twoturn/locked-move
-    //  statuses being continued or ended
+    // TODO: Use lockedmove suffix as an indicator for twoturn/locked-move
+    // statuses being continued or ended.
     let lockedmove: boolean | undefined;
     if (kwArgs?.from)
     {
         const from = Protocol.parseEffect(kwArgs?.from, toIdName);
         if (from.name === "magiccoat") called = "bounced";
-        else if (dex.moveCallers.hasOwnProperty(from.name)) called = true;
+        else if (Object.hasOwnProperty.call(dex.moveCallers, from.name))
+        {
+            called = true;
+        }
         else
         {
             called = false;
@@ -432,7 +444,7 @@ function moveSetup(ctx: BattleParserContext<"gen4">, side: SideID,
         !continueRollout;
     const moveSlot = revealMoveSlot(ctx, user, move, couldReveal, called);
 
-    // infer initial targets
+    // Infer initial targets.
     const targetOpts: TargetOptions =
         {user, move, side, targets, mirror, moveSlot};
     if (target)
@@ -465,9 +477,9 @@ function collectTargets(user: ReadonlyPokemon, move: dex.Move, side: SideID):
     const targetStr = move.getTarget(user);
     switch (targetStr)
     {
-        // TODO: support non-single battles
+        // TODO: Support non-single battles.
         case "adjacentAlly":
-            // these moves should always fail in singles
+            // These moves should always fail in singles.
             break;
         case "adjacentAllyOrSelf": case "allies": case "allySide":
         case "allyTeam": case "self":
@@ -486,8 +498,10 @@ function collectTargets(user: ReadonlyPokemon, move: dex.Move, side: SideID):
             result.total = 1;
             break;
         default:
+        {
             const unsupportedTarget: never = targetStr;
             throw new Error(`Unsupported move target '${unsupportedTarget}'`);
+        }
     }
     return result;
 }
@@ -496,7 +510,7 @@ function releaseTwoTurn(user: Pokemon, move: dex.Move): boolean
 {
     if (user.volatile.twoTurn.type !== move.data.name) return false;
     user.volatile.twoTurn.reset();
-    // istanbul ignore if: should never happen
+    // istanbul ignore if: Should never happen.
     if (move.data.effects?.delay?.type !== "twoTurn")
     {
         throw new Error(`Two-turn move '${move.data.name}' does not have ` +
@@ -509,15 +523,15 @@ function canMirror(user: ReadonlyPokemon, move: dex.Move,
     releasedTwoTurn: boolean, called: "bounced" | boolean,
     continueLock: boolean, continueRollout: boolean): boolean
 {
-    // can't mirror what's expected to be a charging turn
+    // Can't mirror what's expected to be a charging turn.
     return (move.data.effects?.delay?.type !== "twoTurn" || releasedTwoTurn) &&
-        // can't mirror called moves
+        // Can't mirror called moves.
         !called &&
-        // can't mirror called rampage moves
+        // Can't mirror called rampage moves.
         (!continueLock || !user.volatile.lockedMove.called) &&
         (!continueRollout || !user.volatile.rollout.called) &&
-        // default to mirror move flag
-        // TODO: should called+released two-turn count? (unique to PS?)
+        // Default to mirror move flag.
+        // TODO: Should called+released two-turn count? Unique to PS?
         !move.data.flags?.noMirror;
 }
 
@@ -525,38 +539,37 @@ function revealMoveSlot(ctx: BattleParserContext<"gen4">, user: Pokemon,
     move: dex.Move, couldReveal: boolean, called: "bounced" | boolean):
     Move | undefined
 {
-    // if this isn't a called move, then the user must have this move in its
-    //  moveset (i.e., it's an actual move selection by the player)
+    // If this isn't a called move, then the user must have this move in its
+    // moveset (i.e., it's an actual move selection by the player).
     if (called) return;
     user.volatile.resetSingleMove();
     if (!couldReveal) return;
-    // set last move (encore)
+    // Set last move (encore).
     user.volatile.lastMove = move.data.name;
-    // only struggle can be selected without being a part of the user's
-    //  moveset
+    // Only struggle can be selected without being a part of the user's moveset.
     if (move.data === dex.moves["struggle"]) return;
-    // deduct pp
-    // record move state in case it needs to be used later
+    // Deduct pp.
+    // Record move state in case it needs to be used later.
     const moveSlot = user.moveset.reveal(move.data.name);
     --moveSlot.pp;
 
-    // activate choice item lock
-    // TODO: handle item possibilities and retroactive inferences
-    //   for this status
+    // Activate choice item lock.
+    // TODO: Handle item possibilities and retroactive inferences for this
+    // status.
     if (user.item.definiteValue &&
         user.item.map[user.item.definiteValue].isChoice)
     {
         user.volatile.choiceLock = move.data.name;
     }
 
-    // taunt assertion
+    // Taunt assertion.
     if (move.data.category === "status" && user.volatile.taunt.isActive)
     {
         ctx.logger.error(`Using status move '${move.data.name}' but ` +
             "should've been Taunted");
     }
 
-    // focuspunch assertion
+    // Focuspunch assertion.
     if (move.data.flags?.focus && !user.volatile.focus &&
         !user.volatile.encore.ts.isActive)
     {
@@ -568,7 +581,7 @@ function revealMoveSlot(ctx: BattleParserContext<"gen4">, user: Pokemon,
 
 //#endregion
 
-//#region try-execute parsers (failure/delay/block checks)
+//#region Try-execute parsers (failure/delay/block checks).
 
 /** Arguments for {@link tryExecute}. */
 interface TryExecuteArgs
@@ -586,13 +599,14 @@ interface TryExecuteArgs
     /** Whether the move was called. */
     readonly called: "bounced" | boolean;
     /** Whether we're in the release turn of a two-turn move. */
-    readonly releasedTwoTurn: boolean
+    readonly releasedTwoTurn: boolean;
     /** Whether the move can update Mirror Move status for targets. */
     readonly mirror: boolean;
 }
 
 /**
  * Checks if the move can be executed normally.
+ *
  * @returns `"fail"` if the move failed on its own, `"miss"` if it missed, or
  * `undefined` if the move should still execute normally. Can also return an
  * object indicating which of the move's status effects were blocked, if any.
@@ -601,29 +615,29 @@ async function tryExecute(ctx: BattleParserContext<"gen4">,
     args: TryExecuteArgs):
     Promise<"fail" | "miss" | {[T in dex.StatusType]?: true} | undefined>
 {
-    // see if the move failed on its own
+    // See if the move failed on its own.
     const failed = await checkFail(ctx, args);
-    // TODO: separate implicit effects
+    // TODO: Separate implicit effects.
     if (failed) return "fail";
 
-    // check for delayed move
+    // Check for delayed move.
     const delayResult = await checkDelay(ctx, args);
-    // set fail marker here so the caller short-circuits
+    // Set fail marker here so the caller short-circuits.
     if (delayResult) return "fail";
 
-    // accuracy calculations start here, consume micleberry status
-    // TODO(later): accuracy calcs and probablistic inductions
+    // Accuracy calculations start here, consume micleberry status.
+    // TODO(later): Accuracy calcs and probablistic inferences.
     args.user.volatile.micleberry = false;
 
-    // check for other effects/abilities blocking this move
-    // TODO(doubles): allow move to execute with fewer targets if only one of
-    //  them blocks it
+    // Check for other effects/abilities blocking this move.
+    // TODO(doubles): Allow move to execute with fewer targets if only one of
+    // them blocks it.
     const blockResult = await checkBlock(ctx, args);
     if (blockResult === true) return "miss";
     if (blockResult) return blockResult;
 }
 
-//#region fail check
+//#region Fail check.
 
 /** Checks if the move failed on its own. */
 async function checkFail(ctx: BattleParserContext<"gen4">,
@@ -635,15 +649,15 @@ async function checkFail(ctx: BattleParserContext<"gen4">,
     switch (event.args[0])
     {
         case "-fail":
-            // move couldn't be used
-            // TODO: assertions on why the move could fail?
+            // Move couldn't be used.
+            // TODO: Assertions on why the move could fail?
             failed = true;
             handleFail(ctx, args);
             await base["|-fail|"](ctx);
             break;
         case "-notarget":
         {
-            // no opponent to target
+            // No opponent to target.
             const otherSide = args.side === "p1" ? "p2" : "p1";
             if (!ctx.state.getTeam(otherSide).active.fainted)
             {
@@ -656,7 +670,7 @@ async function checkFail(ctx: BattleParserContext<"gen4">,
         }
     }
 
-    // focuspunch assertion
+    // Focuspunch assertion.
     if (!failed && args.move.data.flags?.focus && args.user.volatile.damaged)
     {
         ctx.logger.error("User has damaged=true yet focus move didn't fail");
@@ -669,27 +683,27 @@ async function checkFail(ctx: BattleParserContext<"gen4">,
 function handleFail(ctx: BattleParserContext<"gen4">,
     {user, move, called}: TryExecuteArgs): void
 {
-    // TODO: add MoveData field to support this move
-    if (move.data.name === "naturalgift") naturalGift(user, /*failed*/ true);
+    // TODO: Add MoveData field to support this move.
+    if (move.data.name === "naturalgift") naturalGift(user, true /*failed*/);
 
-    // imprison move failed, make inferences based on fail conditions
+    // Imprison move failed, make inferences based on fail conditions.
     if (move.data.effects?.status?.self?.includes("imprison") &&
         !move.data.effects.status.chance)
     {
-        imprison(ctx, /*failed*/ true);
+        imprison(ctx, true /*failed*/);
     }
 
-    // non-called moves affect the stall counter
-    if (!called) user.volatile.stall(false);
+    // Non-called moves affect the stall counter.
+    if (!called) user.volatile.stall(false /*flag*/);
 
-    // clear continuous moves
+    // Clear continuous moves.
     user.volatile.lockedMove.reset();
     user.volatile.rollout.reset();
 
-    // when the move fails, micleberry status is silently ended
+    // When the move fails, micleberry status is silently ended.
     user.volatile.micleberry = false;
 
-    // focuspunch assertion
+    // Focuspunch assertion.
     if (move.data.flags?.focus && !user.volatile.damaged)
     {
         ctx.logger.error("User has damaged=false yet focus move failed");
@@ -699,18 +713,18 @@ function handleFail(ctx: BattleParserContext<"gen4">,
 /** Handles the implications of a move lacking a target. */
 function handleNoTarget({user, called}: TryExecuteArgs): void
 {
-    // non-called moves affect the stall counter
+    // Non-called moves affect the stall counter.
     if (!called) user.volatile.stall(false);
 
-    // clear continuous moves
+    // Clear continuous moves.
     user.volatile.lockedMove.reset();
     user.volatile.rollout.reset();
 
-    // when the move fails, micleberry status is silently ended
-    // TODO: verify
+    // When the move fails, micleberry status is silently ended.
+    // TODO: Verify.
     user.volatile.micleberry = false;
 
-    // TODO: verify other implications?
+    // TODO: Verify other implications?
 }
 
 //#endregion
@@ -725,7 +739,7 @@ async function checkDelay(ctx: BattleParserContext<"gen4">,
     const delayResult = await expectDelay(ctx, args);
     if (delayResult === "shorten")
     {
-        // expect informational event for move animation
+        // Expect informational event for move animation
         const event = await tryVerify(ctx, "|-anim|");
         if (!event) return;
         const [, ident1Str, moveStr, ident2Str] = event.args;
@@ -738,12 +752,12 @@ async function checkDelay(ctx: BattleParserContext<"gen4">,
         if (!addTarget(ctx, {...args, side: ident2.player})) return;
         await base["|-anim|"](ctx);
 
-        // execute event again to handle shortened release turn
-        // this makes it easier to handle effects that were already checked for
-        //  in the initial moveEffects() step, e.g. mirrormove tracking on
-        //  the release turn
-        // this is an inexact recreation of the event, but should be good
-        //  enough for our purposes
+        // Execute event again to handle shortened release turn
+        // This makes it easier to handle effects that were already checked for
+        //  In the initial moveEffects() step, e.g. mirrormove tracking on
+        //  The release turn
+        // This is an inexact recreation of the event, but should be good
+        //  Enough for our purposes
         const repeatEvent: Event<"|move|"> =
         {
             args:
@@ -752,27 +766,24 @@ async function checkDelay(ctx: BattleParserContext<"gen4">,
                 `${args.side}a: ${args.user.species}` as Protocol.PokemonIdent,
                 args.move.data.display as Protocol.MoveName
             ],
-            // release event includes lockedmove effect
+            // Release event includes lockedmove effect
             kwArgs: {from: "lockedmove" as Protocol.EffectName}
         };
         await useMove(
         {
             ...ctx,
-            // override EventIterator to "unget" the current |move| event
+            // Override EventIterator to "unget" the current |move| event
             iter:
             {
                 ...ctx.iter,
                 async next()
                 {
-                    // restore overridden method
-                    this.next = ctx.iter.next;
-                    this.peek = ctx.iter.peek;
-                    return {value: repeatEvent};
+                    // Restore overridden method
+                    this.next = async () => await ctx.iter.next();
+                    this.peek = async () => await ctx.iter.peek();
+                    return await Promise.resolve({value: repeatEvent});
                 },
-                async peek()
-                {
-                    return {value: repeatEvent};
-                }
+                peek: async () => await Promise.resolve({value: repeatEvent})
             }
         });
         return true;
@@ -789,8 +800,8 @@ async function expectDelay(ctx: BattleParserContext<"gen4">,
     {
         case "twoTurn":
         {
-            // can't expect event if releasing two-turn move, should instead get
-            //  the damage()/postDamage() events
+            // Can't expect event if releasing two-turn move, should instead get
+            //  The damage()/postDamage() events
             if (releasedTwoTurn) break;
 
             const event = await verify(ctx, "|-prepare|");
@@ -810,13 +821,13 @@ async function expectDelay(ctx: BattleParserContext<"gen4">,
 
             // TODO: move shorten logic to base prepareMove handler?
 
-            // check solar move (suppressed by airlock/cloudnine)
+            // Check solar move (suppressed by airlock/cloudnine)
             let suppressWeather: boolean | undefined;
             for (const teamSide in ctx.state.teams)
             {
-                if (!ctx.state.teams.hasOwnProperty(teamSide)) continue;
+                if (!Object.hasOwnProperty.call(ctx.state.teams, teamSide)) continue;
                 const mon = ctx.state.getTeam(teamSide as SideID).active;
-                // note: airlock/cloudnine abilities reveal on-start
+                // Note: airlock/cloudnine abilities reveal on-start
                 // TODO: enforce this in dex data on-start effect?
                 if (dex.abilities[mon.ability]?.flags?.suppressWeather)
                 {
@@ -826,10 +837,10 @@ async function expectDelay(ctx: BattleParserContext<"gen4">,
             }
             let shorten = !suppressWeather && move.data.effects?.delay.solar &&
                 ctx.state.status.weather.type === "SunnyDay";
-            // powerherb check
+            // Powerherb check
             if (!shorten)
             {
-                // expect on-moveCharge item
+                // Expect on-moveCharge item
                 const [chargeResult] = await unordered.parse(ctx,
                     effectItem.onMoveCharge(ctx, side));
                 shorten = chargeResult === "shorten";
@@ -839,8 +850,8 @@ async function expectDelay(ctx: BattleParserContext<"gen4">,
         }
         case "future":
         {
-            // can't expect event if future move already active, should instead
-            //  fail the move
+            // Can't expect event if future move already active, should instead
+            //  Fail the move
             if (ctx.state.getTeam(side).status
                 .futureMoves[move.data.name as dex.FutureMove].isActive)
             {
@@ -863,6 +874,7 @@ async function expectDelay(ctx: BattleParserContext<"gen4">,
             await base["|-start|"](ctx);
             return true;
         }
+        default:
     }
 }
 
@@ -876,7 +888,7 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
     {user, side, move, moveSlot, targets, called, mirror}: TryExecuteArgs):
     Promise<{[T in dex.StatusType]?: true} | boolean | undefined>
 {
-    // check for a block event due to an effect
+    // Check for a block event due to an effect
     const event = await tryVerify(ctx, "|move|", "|-activate|", "|-miss|",
         "|-immune|");
     const targetOpts: TargetOptions =
@@ -885,7 +897,7 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
     {
         case "move":
         {
-            // magiccoat bounce effect
+            // Magiccoat bounce effect
             const e = event as Event<"|move|">;
             const [, identStr, moveName] = e.args;
             const ident = Protocol.parsePokemonIdent(identStr);
@@ -897,22 +909,22 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
             if (from.name !== "magiccoat") break;
 
             const mon = ctx.state.getTeam(ident.player).active;
-            // verify flags
+            // Verify flags
             if (!mon.volatile.magiccoat || !move.data.flags?.reflectable ||
                 called === "bounced")
             {
                 break;
             }
 
-            // verify target
+            // Verify target
             if (!addTarget(ctx, {...targetOpts, side: ident.player})) break;
 
-            // handle bounced move
+            // Handle bounced move
             handleBlock(user, called);
             await useMove(ctx, ident.player, move);
             return true;
         }
-        // block effect (safeguard, protect, etc)
+        // Block effect (safeguard, protect, etc)
         case "-activate":
         {
             const e = event as Event<"|-activate|">;
@@ -921,12 +933,12 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
             const ident = Protocol.parsePokemonIdent(identStr);
             if (ident.player === side) break;
             const effect = Protocol.parseEffect(effectStr, toIdName);
-            // substitute only blocks damage and is handled later
+            // Substitute only blocks damage and is handled later
             if (effect.name === "substitute") break;
-            // verify target
+            // Verify target
             if (!addTarget(ctx, {...targetOpts, side: ident.player})) break;
-            // endure only blocks damage and is handled here due to weird PS
-            //  ordering
+            // Endure only blocks damage and is handled here due to weird PS
+            //  Ordering
             let res: boolean | undefined;
             if (effect.name !== "endure")
             {
@@ -938,7 +950,7 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
         }
         case "-miss":
         {
-            // check miss chance
+            // Check miss chance
             // TODO: bayesian inferences on accuracy?
             const e = event as Event<"|-miss|">;
             const [, userIdentStr, targetIdentStr] = e.args;
@@ -959,12 +971,12 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
         }
         case "-immune":
         {
-            // check type/ohko immunity
+            // Check type/ohko immunity
             const e = event as Event<"|-immune|">;
             const [, identStr, effect] = e.args;
             if (effect) break;
-            // code for handling ability immunities (via the [from] suffix) is
-            //  located below
+            // Code for handling ability immunities (via the [from] suffix) is
+            //  Located below
             if (e.kwArgs.from) break;
             const ident = Protocol.parsePokemonIdent(identStr);
             if (ident.player === side) break;
@@ -978,12 +990,13 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
             await base["|-immune|"](ctx);
             return true;
         }
+        default:
     }
 
-    // check for a blocking ability
+    // Check for a blocking ability
     // TODO(doubles): multiple eligible targets
     // TODO: sometimes this can happen after other move effects later down the
-    //  line (e.g. owntempo vs swagger)
+    //  Line (e.g. owntempo vs swagger)
     let blocked: {[T in dex.StatusType]?: true} | boolean | undefined;
     const otherSide = side === "p1" ? "p2" : "p1";
     if (addTarget(ctx, {...targetOpts, side: otherSide}))
@@ -992,10 +1005,10 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
             effectAbility.onBlock(ctx, otherSide, {userRef: side, move}));
         if (r)
         {
-           // handle block results
+           // Handle block results
             // TODO: if wonderguard, assert type effectiveness
-            // if the move couldn't be fully blocked, block parts of the move
-            //  that the ability takes issue with
+            // If the move couldn't be fully blocked, block parts of the move
+            //  That the ability takes issue with
             if (!(blocked = r.immune || r.failed)) blocked = r.blockStatus;
         }
         if (blocked === true) handleBlock(user, called);
@@ -1006,10 +1019,10 @@ async function checkBlock(ctx: BattleParserContext<"gen4">,
 /** Handles the implications of a move being blocked by an effect. */
 function handleBlock(user: Pokemon, called: "bounced" | boolean): void
 {
-    // non-called moves affect the stall counter
+    // Non-called moves affect the stall counter
     if (!called) user.volatile.stall(false);
 
-    // interrupted momentum move
+    // Interrupted momentum move
     // TODO(gen>=5): also reset rampage move
     user.volatile.rollout.reset();
 }
@@ -1018,7 +1031,7 @@ function handleBlock(user: Pokemon, called: "bounced" | boolean): void
 
 //#endregion
 
-//#region on-execute parsers (move effects)
+//#region On-execute parsers (move effects).
 
 interface ExecuteArgs
 {
@@ -1035,7 +1048,7 @@ interface ExecuteArgs
     /** Whether the move was called. */
     readonly called: "bounced" | boolean;
     /** Whether we're in the release turn of a two-turn move. */
-    readonly releasedTwoTurn: boolean
+    readonly releasedTwoTurn: boolean;
     /** Whether the move can update Mirror Move status for targets. */
     readonly mirror: boolean;
     /**
@@ -1063,17 +1076,18 @@ async function execute(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     return res;
 }
 
-//#region hit-loop
+//#region Hit effects loop.
 
 /** Handles the possibly-multiple hits from a move. */
 async function hitLoop(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<void>
 {
     const maxHits = args.move.data.multihit?.[1] ?? 1;
-    let multihitEnded: boolean | undefined; // presence of hitcount event
+    /** Presence of the `|hitcount|` event. */
+    let multihitEnded: boolean | undefined;
     for (let i = 0; i < maxHits; ++i)
     {
-        // handle pre-hit, hit, and post-hit move effects
+        // Handle pre-hit, hit, and post-hit move effects.
         if (args.move.data.category !== "status")
         {
             const preHitResult = await preHit(ctx, args);
@@ -1081,7 +1095,7 @@ async function hitLoop(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
         }
         await postHit(ctx, args);
 
-        // check for hitcount event to terminate hit loop
+        // Check for hitcount event to terminate hit loop.
         if (await checkHitCount(ctx, args, i + 1))
         {
             multihitEnded = true;
@@ -1097,6 +1111,7 @@ async function hitLoop(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
 
 /**
  * Checks for a valid `|-hitcount|` event.
+ *
  * @param hits Current number of hits.
  * @returns Whether a valid `|-hitcount|` event was parsed.
  */
@@ -1123,7 +1138,7 @@ async function checkHitCount(ctx: BattleParserContext<"gen4">,
     return true;
 }
 
-//#region pre-hit
+//#region Pre-hit effects.
 
 /** Result of {@link preHit}. */
 interface PreHitResult
@@ -1136,7 +1151,7 @@ interface PreHitResult
 async function preHit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<PreHitResult>
 {
-    // check for resist berry effect
+    // Check for resist berry effect.
     const [itemPreHitResult] = await unordered.parse(ctx,
         effectItem.onPreHit(ctx, args.side === "p1" ? "p2" : "p1", args));
     return itemPreHitResult ?? {};
@@ -1144,7 +1159,7 @@ async function preHit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
 
 //#endregion
 
-//#region hit
+//#region On-hit effects.
 
 /** Handles move damage modifier events, e.g. crits and type effectiveness. */
 async function hit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
@@ -1160,7 +1175,7 @@ async function hit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
         {
             case "-end": case "-activate":
             {
-                // substitute (breaking while) blocking
+                // Substitute (breaking while) blocking
                 const [, identStr, effectStr] = event.args;
                 if (!identStr) break;
                 const effect = Protocol.parseEffect(effectStr, toIdName);
@@ -1175,10 +1190,10 @@ async function hit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
                 damaged = "substitute";
                 if (args.move.data.flags?.ignoreSub)
                 {
-                    // istanbul ignore next: can't reproduce until gen5 with
-                    //  damaging sub-ignoring moves since the non-damaging ones
-                    //  should just fail outright
-                    // TODO: for now custom dex mods in order to test this?
+                    // istanbul ignore next: Can't reproduce until gen5 with
+                    // damaging sub-ignoring moves since the non-damaging ones
+                    // should just fail outright.
+                    // TODO: For now custom dex mods in order to test this?
                     throw new Error("Substitute-ignoring move shouldn't have " +
                         "been blocked by Substitute");
                 }
@@ -1196,7 +1211,7 @@ async function hit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
             }
             case "-resisted": case "-supereffective":
             {
-                // type effectiveness modifiers
+                // Type effectiveness modifiers.
                 if (effectiveness !== "regular") break;
                 const [, identStr] = event.args;
                 const ident = Protocol.parsePokemonIdent(identStr);
@@ -1208,7 +1223,7 @@ async function hit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
             }
             case "-damage":
             {
-                // main move damage
+                // Main move damage.
                 if (damaged) break;
                 const e = event as Event<"|-damage|">;
                 const [, identStr, healthStr] = e.args;
@@ -1227,18 +1242,19 @@ async function hit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
                 }
 
                 const mon = _ctx.state.getTeam(ident.player).active;
-                const fullHP = mon.hp.current >= mon.hp.max;
+                const fullHp = mon.hp.current >= mon.hp.max;
                 damaged = true;
                 await base["|-damage|"](_ctx);
-                // if the target was at full hp before being deducted, we should
-                //  check for focussash-like items that activate on one-hit KOs
-                if (fullHP)
+                // If the target was at full hp before being deducted, we should
+                // check for focussash-like items that activate on one-hit KOs.
+                if (fullHp)
                 {
                     await unordered.parse(_ctx,
-                        effectItem.onTryOHKO(_ctx, ident.player));
+                        effectItem.onTryOhko(_ctx, ident.player));
                 }
                 break;
             }
+            default:
         }
     });
 
@@ -1253,14 +1269,14 @@ async function hit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
 
 //#endregion
 
-//#region post-hit
+//#region Post-hit effects.
 
 /** Handles move effects after the move officially hits. */
 async function postHit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<void>
 {
     const parsers: unordered.UnorderedDeadline<"gen4">[] = [];
-    // TODO(doubles): actually track targets
+    // TODO(doubles): Actually track targets.
     const otherSide = args.side === "p1" ? "p2" : "p1";
     const {effects} = args.move.data;
     if (effects)
@@ -1283,11 +1299,13 @@ async function postHit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
                 parsers.push(
                     splitDamage(args.side, otherSide, args.move.data.name));
                 break;
+            default:
         }
         switch (effects.count)
         {
             case "perish": parsers.push(perish(args.side)); break;
             case "stockpile": parsers.push(stockpile(args.side)); break;
+            default:
         }
         if (effects.boost &&
             (!effects.boost.noGhost || !args.user.types.includes("ghost")))
@@ -1303,16 +1321,16 @@ async function postHit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     }
     if (args.move.data.category !== "status")
     {
-        // item on-super (enigmaberry)
+        // Item on-super (enigmaberry).
         parsers.push(effectItem.onSuper(ctx, otherSide, args));
 
-        // ability on-moveDamage variant (e.g. colorchange)
+        // Ability on-moveDamage variant (e.g. colorchange).
         const flags = args.targets.mentioned.get(otherSide);
-        // choose category with highest precedence
-        let qualifier: "damage" | "contact" | "contactKO" | undefined;
+        // Choose category with highest precedence.
+        let qualifier: effectAbility.MoveDamageQualifier | undefined;
         if (args.move.data.flags?.contact)
         {
-            if (flags?.damaged === "ko") qualifier = "contactKO";
+            if (flags?.damaged === "ko") qualifier = "contactKo";
             else if (flags?.damaged) qualifier = "contact";
         }
         else if (flags?.damaged) qualifier = "damage";
@@ -1323,22 +1341,22 @@ async function postHit(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
                     {userRef: args.side, move: args.move}));
         }
 
-        // item on-postHit (e.g. jabocaberry)
+        // Item on-postHit (e.g. jabocaberry).
         parsers.push(
             effectItem.onPostHit(ctx, otherSide,
                 {userRef: args.side, move: args.move}));
     }
-    // item on-update (e.g. sitrusberry)
+    // Item on-update (e.g. sitrusberry).
     parsers.push(
         effectItem.onUpdate(ctx, args.side),
         effectItem.onUpdate(ctx, otherSide));
 
-    // parse untracked effects even if move has no tracked effects
+    // Parse untracked effects even if move has no tracked effects.
     if (parsers.length <= 0) await eventLoop(ctx, postHitFilter);
     else await unordered.all(ctx, parsers, postHitFilter);
 }
 
-//#region count-status effect
+//#region Count-status effect.
 
 const perish = (side: SideID) =>
     unordered.UnorderedDeadline.create(`${side} move countStatus all perish`,
@@ -1347,7 +1365,7 @@ const perish = (side: SideID) =>
 async function perishImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback): Promise<void>
 {
-    // parse perish start events
+    // Parse perish start events.
     const mentioned = new Set<SideID>();
     let accepted = false;
     await eventLoop(ctx, async function countStatusPerishLoop(_ctx)
@@ -1363,7 +1381,7 @@ async function perishImpl(ctx: BattleParserContext<"gen4">,
         accepted = true;
         await base["|-start|"](_ctx);
     });
-    // parse terminator
+    // Parse terminator.
     let event2: Event<"|-fieldactivate|">;
     if (accepted) event2 = await verify(ctx, "|-fieldactivate|");
     else
@@ -1404,7 +1422,7 @@ async function stockpileImpl(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region damage effect
+//#region Damage effect.
 
 const percentDamage = (side: SideID, targetSide: SideID, percent: number) =>
     unordered.UnorderedDeadline.create(
@@ -1465,7 +1483,7 @@ async function splitDamageImpl(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region boost effect
+//#region Boost effect.
 
 function boost(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     unordered.UnorderedDeadline<"gen4">[]
@@ -1478,46 +1496,55 @@ function boost(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     {
         const t = effect[tgt];
         if (!t) continue;
-        const table = {...t};
+        const table = new Map(Object.entries(t) as [dex.BoostName, number][]);
         const targetSide = tgt === "self" ?
             args.side : (args.side === "p1" ? "p2" : "p1");
         const target = ctx.state.getTeam(targetSide).active;
-        // can't boost if about to faint
+        // Can't boost if about to faint.
         if (target.fainted) continue;
-        // substitute blocks boost effects
+        // Substitute blocks boost effects.
         if (tgt === "hit" &&
             args.targets.mentioned.get(targetSide)?.damaged === "substitute")
         {
             continue;
         }
 
-        // check for ability on-tryUnboost effect first
+        // Check for ability on-tryUnboost effect first.
         if (!effect.set && tgt === "hit")
         {
             result.push(
                 effectAbility.onTryUnboost(ctx, targetSide,
                         {userRef: args.side, move: args.move})
-                    // modify in-progress boost table as this effect gets parsed
+                    // Modify in-progress boost table when this effect gets
+                    // parsed.
                     .transform(
                         blockUnboost =>
                         {
                             if (!blockUnboost) return;
                             for (const b in blockUnboost)
                             {
-                                if (!blockUnboost.hasOwnProperty(b)) continue;
-                                if (!table.hasOwnProperty(b)) continue;
-                                delete table[b as dex.BoostName];
+                                if (!Object.hasOwnProperty.call(blockUnboost,
+                                        b))
+                                {
+                                    continue;
+                                }
+                                if (!table.has(b as dex.BoostName)) continue;
+                                table.delete(b as dex.BoostName);
                             }
                         }));
         }
+        const tableSnapshot = new Map(table);
         result.push(
             unordered.UnorderedDeadline.create<"gen4">(
                 () => `${args.side} move boost ${targetSide} ` +
-                    `${effect.set ? "set": "add"} ` + JSON.stringify(table),
+                    `${effect.set ? "set": "add"} ` +
+                    `${JSON.stringify(Object.fromEntries(tableSnapshot))} ` +
+                    `(remaining: ${JSON.stringify(Object.fromEntries(table))})`,
                 async function boostImpl(_ctx, accept)
                 {
-                    // no more boosts to parse, or can't boost if about to faint
-                    if (Object.keys(table).length <= 0 || target.fainted)
+                    // No more boosts to parse, or can't boost if about to
+                    // faint.
+                    if (table.size <= 0 || target.fainted)
                     {
                         accept();
                         return;
@@ -1543,7 +1570,7 @@ function boost(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
 
 //#endregion
 
-//#region status effect
+//#region Status effect.
 
 function status(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     unordered.UnorderedDeadline<"gen4">[]
@@ -1556,11 +1583,11 @@ function status(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
         const statusTypes = effect[tgt];
         if (!statusTypes || statusTypes.length <= 0) continue;
 
-        // status effect for target was blocked
+        // Status effect for target was blocked.
         const blockStatus: {readonly [T in dex.StatusType]?: true} | undefined =
             args.miss !== true ? args.miss : undefined;
         if (tgt === "hit" && blockStatus &&
-            statusTypes.some(s => blockStatus![s]))
+            statusTypes.some(s => blockStatus[s]))
         {
             continue;
         }
@@ -1569,10 +1596,10 @@ function status(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
             args.side : (args.side === "p1" ? "p2" : "p1");
         const target = ctx.state.getTeam(targetSide).active;
 
-        // can't afflict status if about to faint
+        // Can't afflict status if about to faint.
         if (target.fainted) continue;
 
-        // substitute blocks status conditions
+        // Substitute blocks status conditions.
         if (tgt === "hit" &&
             args.targets.mentioned.get(targetSide)?.damaged === "substitute")
         {
@@ -1595,7 +1622,7 @@ async function statusImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, targetRef: SideID,
     statusTypes: readonly dex.StatusType[]): Promise<void>
 {
-    // can't afflict status if about to faint
+    // Can't afflict status if about to faint.
     const target = ctx.state.getTeam(targetRef).active;
     if (target.fainted)
     {
@@ -1606,25 +1633,25 @@ async function statusImpl(ctx: BattleParserContext<"gen4">,
     const res = await effectStatus.status(ctx, targetRef, statusTypes,
         event =>
         {
-            if ((event.kwArgs as any).from) return false;
+            if (event.kwArgs.from) return false;
             accept();
             return true;
         });
-    // allow silent status
+    // Allow silent status.
     if (res === true) accept();
-    // handle imprison assertions
-    else if (res === "imprison") imprison(ctx, /*failed*/ false);
+    // Handle imprison assertions.
+    else if (res === "imprison") imprison(ctx, false /*failed*/);
 }
 
 function statusReject(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
     tgt: dex.MoveEffectTarget, statusTypes: readonly dex.StatusType[]): void
 {
-    // target must have an ability immunity
+    // Target must have an ability immunity.
     const targetRef = tgt === "self" ?
         args.side : (args.side === "p1" ? "p2" : "p1");
 
-    // moldbreaker check
-    const user = args.user;
+    // Moldbreaker check.
+    const {user} = args;
     const userAbility = user.traits.ability;
     if (!user.volatile.suppressAbility &&
         [...userAbility.possibleValues].every(
@@ -1637,8 +1664,8 @@ function statusReject(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
             `'${targetRef}'`);
     }
 
-    // the target must have a status immunity ability, so it should've been
-    //  active here and not suppressed
+    // The target must have a status immunity ability, so it should've been
+    // active here and not suppressed.
     const target = ctx.state.getTeam(targetRef).active;
     if (target.volatile.suppressAbility)
     {
@@ -1647,19 +1674,19 @@ function statusReject(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
             `'${targetRef}' but target's ability is suppressed`);
     }
 
-    // find abilities that grant applicable status immunities
+    // Find abilities that grant applicable status immunities.
     const targetAbility = target.traits.ability;
-    // note: can consider immunities to either status if there are multiple
-    //  possible statuses to afflict
-    // TODO: rework api to allow for custom overnarrowing errors/recovery
+    // Note: Can consider immunities to either status if there are multiple
+    // possible statuses to afflict.
+    // TODO: Rework api to allow for custom overnarrowing errors/recovery.
     const filteredAbilities = [...targetAbility.possibleValues]
         .filter(n => statusTypes.some(s =>
-                // TODO: some abilities distinguish between self/hit statuses
+                // TODO: Some abilities distinguish between self/hit statuses.
                 dex.getAbility(targetAbility.map[n]).canBlockStatus(s,
                     ctx.state.status.weather.type)));
     if (filteredAbilities.length <= 0)
     {
-        // overnarrowed error
+        // Overnarrowed error.
         throw new Error(`Move '${args.move.data.name}' status ` +
             `[${statusTypes.join(", ")}] was blocked by target ` +
             `'${targetRef}' but target's ability ` +
@@ -1670,12 +1697,12 @@ function statusReject(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
 
 //#endregion
 
-//#region drain effect
+//#region Drain effect.
 
 function drain(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
     targetRef: SideID): unordered.UnorderedDeadline<"gen4">[]
 {
-    // drain effect could either be handled normally or by ability on-moveDrain
+    // Drain effect could either be handled normally or by ability on-moveDrain.
     let handled = false;
     return [
         effectAbility.onMoveDrain(ctx, targetRef, args.side)
@@ -1698,7 +1725,7 @@ function drain(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
                     return;
                 }
                 const damageRes = await effectDamage.percentDamage(_ctx,
-                    args.side, /*heal*/ 1,
+                    args.side, 1 /*i.e., heal*/,
                     event => event.kwArgs.from === "drain");
                 if (!damageRes) return;
                 handled = true;
@@ -1713,15 +1740,15 @@ function drain(ctx: BattleParserContext<"gen4">, args: ExecuteArgs,
 
 //#endregion
 
-//#region untracked effects
+//#region Untracked effects.
 
 async function postHitFilter(ctx: BattleParserContext<"gen4">): Promise<void>
 {
-    // untracked status effects
-    // TODO: support curing/rapidspin effects in status() or separate section?
+    // Untracked status effects.
+    // TODO: Support curing/rapidspin effects in status() or separate section?
     const event = await tryVerify(ctx, "|-end|");
     if (!event) return;
-    // distinguish from ability/item effects
+    // Distinguish from ability/item effects.
     const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
     if (from.type === "ability" || from.type === "item") return;
 
@@ -1741,13 +1768,13 @@ async function postHitFilter(ctx: BattleParserContext<"gen4">): Promise<void>
 
 //#endregion
 
-//#region other move effects
+//#region Other move effects.
 
 async function otherEffects(ctx: BattleParserContext<"gen4">,
     args: ExecuteArgs): Promise<void>
 {
     const parsers: unordered.UnorderedDeadline<"gen4">[] = [];
-    // TODO(doubles): actually track targets
+    // TODO(doubles): Actually track targets.
     const otherSide = args.side === "p1" ? "p2" : "p1";
     const {effects} = args.move.data;
     if (effects)
@@ -1772,13 +1799,13 @@ async function otherEffects(ctx: BattleParserContext<"gen4">,
         if (effects.disableMove) parsers.push(disableMove(otherSide));
     }
 
-    // parse untracked effects even if current move doesn't have any
-    //  other-effects
+    // Parse untracked effects even if current move doesn't have any
+    // other-effects.
     if (parsers.length <= 0) await eventLoop(ctx, otherEffectsFilter);
     else await unordered.all(ctx, parsers, otherEffectsFilter);
 }
 
-//#region swap-boost effect
+//#region Swap-boost effect.
 
 const swapBoosts = (move: dex.Move, side1: SideID, side2: SideID,
         boosts: Partial<dex.BoostTable<true>>) =>
@@ -1798,15 +1825,14 @@ async function swapBoostsImpl(ctx: BattleParserContext<"gen4">,
     if (ident1.player !== side1) return;
     const ident2 = Protocol.parsePokemonIdent(ident2Str);
     if (ident2.player !== side2) return;
-    // get list of boosts
-    // default to all boosts
+    // Get list of boosts, or default to all boosts.
     const boosts2 = boostsStr?.split(", ") as dex.BoostName[] ?? dex.boostKeys;
-    // intersect boosts and boosts2 to see if they have the same elements
-    // TODO: move to lib/utility function?
+    // Intersect boosts and boosts2 to see if they have the same elements.
+    // TODO: Move set intersection logic to a lib/utility function?
     const superset = new Map<dex.BoostName, boolean>();
     for (const b in boosts)
     {
-        if (!boosts.hasOwnProperty(b)) continue;
+        if (!Object.hasOwnProperty.call(boosts, b)) continue;
         superset.set(b as dex.BoostName, true);
     }
     for (const b of boosts2)
@@ -1815,7 +1841,7 @@ async function swapBoostsImpl(ctx: BattleParserContext<"gen4">,
         superset.set(b, false);
     }
     for (const [, v] of superset) if (v) return;
-    // verify suffix
+    // Verify suffix.
     const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
     if (from.type && from.type !== "move") return;
     if (from.name !== move.data.name) return;
@@ -1826,7 +1852,7 @@ async function swapBoostsImpl(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region team effect
+//#region Team effects.
 
 function teamEffect(args: ExecuteArgs, otherSide: SideID):
     unordered.UnorderedDeadline<"gen4">[]
@@ -1851,12 +1877,12 @@ async function teamEffectImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID, effect: dex.TeamEffectType):
     Promise<void>
 {
-    // silently consume effect if already present
-    // usually the move should fail, but some gen8 moves require this behavior
+    // Silently consume effect if already present.
+    // Usually the move should fail, but some gen8 moves require this behavior.
     const ts = ctx.state.getTeam(side).status;
     switch (effect)
     {
-        // TODO: lightscreen/reflect should set source pokemon
+        // TODO: Lightscreen/reflect should set source pokemon.
         case "lightscreen": case "luckychant": case "mist": case "reflect":
         case "safeguard": case "tailwind":
             if (!ts[effect].isActive) break;
@@ -1879,10 +1905,10 @@ async function teamEffectImpl(ctx: BattleParserContext<"gen4">,
     const event = await tryVerify(ctx, "|-sidestart|");
     if (!event) return;
     const [, sideStr, effectStr] = event.args;
-    // note: Protocol.Side is in a similar format to Protocol.PokemonIdent, just
-    //  without the position letter and with the nickname replaced with username
+    // Note: Protocol.Side is in a similar format to Protocol.PokemonIdent, just
+    // without the position letter and with the nickname replaced with username.
     const sideObj =
-        Protocol.parsePokemonIdent(sideStr as any as Protocol.PokemonIdent);
+        Protocol.parsePokemonIdent(sideStr as unknown as Protocol.PokemonIdent);
     if (sideObj.player !== side) return;
     const effectObj = Protocol.parseEffect(effectStr, toIdName);
     if (effectObj.name !== effect) return;
@@ -1893,7 +1919,7 @@ async function teamEffectImpl(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region field effect
+//#region Field effects.
 
 const fieldEffect = (side: SideID, source: Pokemon, effect: dex.FieldEffectType,
         toggle?: boolean) =>
@@ -1905,9 +1931,9 @@ async function fieldEffectImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, source: Pokemon,
     effect: dex.FieldEffectType, toggle?: boolean): Promise<void>
 {
-    // silently consume effect if already present
-    // usually the move should fail, but some gen8 moves require this behavior
-    // note that weather can't be toggled
+    // Silently consume effect if already present.
+    // Usually the move should fail, but some gen8 moves require this behavior.
+    // Note that weather can't be toggled.
     const rs = ctx.state.status;
     switch (effect)
     {
@@ -1927,7 +1953,7 @@ async function fieldEffectImpl(ctx: BattleParserContext<"gen4">,
             const [, effectStr] = event.args;
             const effectObj = Protocol.parseEffect(effectStr, toIdName);
             if (effectObj.name !== effect) break;
-            // distinguish from ability/item effect
+            // Distinguish from ability/item effect.
             const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
             if (from.type === "ability" || from.type === "item") break;
             accept();
@@ -1935,6 +1961,7 @@ async function fieldEffectImpl(ctx: BattleParserContext<"gen4">,
             break;
         }
         default:
+        {
             if (dex.isWeatherType(effect))
             {
                 await effectWeather.weather(ctx, source, effect,
@@ -1948,12 +1975,13 @@ async function fieldEffectImpl(ctx: BattleParserContext<"gen4">,
             }
             const invalid: never = effect;
             throw new Error(`Unknown field effect '${invalid}'`);
+        }
     }
 }
 
 //#endregion
 
-//#region change-type effect
+//#region Change-type effects.
 
 const changeType = (side: SideID, effect: "conversion") =>
     unordered.UnorderedDeadline.create(`${side} move change-type ${effect}`,
@@ -1963,7 +1991,7 @@ async function changeTypeImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID, effect: "conversion"):
     Promise<void>
 {
-    // can't do anything if fainted
+    // Can't do anything if fainted.
     const mon = ctx.state.getTeam(side).active;
     if (mon.fainted)
     {
@@ -1981,18 +2009,20 @@ async function changeTypeImpl(ctx: BattleParserContext<"gen4">,
     const types = typesStr.split("/").map(toIdName) as dex.Type[];
     if (types.length <= 0) return;
 
-    // TODO: track type change effects: camouflage, conversion2
+    // TODO: Track type change effects: camouflage, conversion2.
     switch (effect)
     {
         case "conversion":
-            // change user's type to that of a known move
-            // note: treat modifyType moves as their default type
+            // Change user's type to that of a known move.
+            // Note: Treat modifyType moves as their default type.
             mon.moveset.addMoveSlotConstraint(dex.typeToMoves[types[0]]);
             break;
-        // istanbul ignore next: should never happen
+        // istanbul ignore next: Should never happen.
         default:
+        {
             const invalid: never = effect;
             throw new Error(`Invalid change-type move effect '${invalid}'`);
+        }
     }
 
     accept();
@@ -2001,7 +2031,7 @@ async function changeTypeImpl(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region disable-move effect
+//#region Disable-move effect.
 
 const disableMove = (side: SideID) =>
     unordered.UnorderedDeadline.create(`${side} move disable`, disableMoveImpl,
@@ -2025,24 +2055,25 @@ async function disableMoveImpl(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region untracked effects
+//#region Untracked effects.
 
 async function otherEffectsFilter(ctx: BattleParserContext<"gen4">):
     Promise<void>
 {
-    // unsupported team effects and item-removal effects
+    // Unsupported team effects and item-removal effects.
     const event = await tryVerify(ctx, "|-sideend|", "|-enditem|");
     if (!event) return;
     if (event.args[0] === "-sideend")
     {
-        // team effect
+        // Team effects.
         const [, , effectStr] = event.args;
         const effect = Protocol.parseEffect(effectStr, toIdName);
         switch (effect.name)
         {
-            // TODO: support rapidspin
+            // TODO: Support rapidspin.
             case "spikes": case "stealthrock": case "toxicspikes":
-            // TODO: support brickbreak
+            // TODO: Support brickbreak.
+            // Fallthrough.
             case "lightscreen": case "reflect":
                 break;
             default: return;
@@ -2050,18 +2081,18 @@ async function otherEffectsFilter(ctx: BattleParserContext<"gen4">):
         await base["|-sideend|"](ctx);
         return;
     }
-    // item-removal effect
+    // Item-removal effects.
     const e = event as Event<"|-enditem|">;
     const [, , itemStr] = e.args;
     const itemId = toIdName(itemStr);
     const from = Protocol.parseEffect(e.kwArgs.from, toIdName);
-    // ignore micleberry eat event but handle non-eat (effect) event for it
-    // TODO: support micleberry effect
+    // Ignore micleberry eat event but handle non-eat (effect) event for it.
+    // TODO: Support micleberry effect.
     if (itemId === "micleberry")
     {
         if (e.kwArgs.eat) return;
     }
-    // TODO: support bugbite, knockoff, etc
+    // TODO: Support bugbite, knockoff, etc.
     else if (from.name !== "stealeat" &&
         !dex.itemRemovalMoves.includes(from.name))
     {
@@ -2074,15 +2105,15 @@ async function otherEffectsFilter(ctx: BattleParserContext<"gen4">):
 
 //#endregion
 
-//#region implicit effects
+//#region Implicit effects.
 
 function implicitEffects(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     void
 {
-    // infer naturalgift move effect
+    // Infer naturalgift move effect.
     if (args.move.data.name === "naturalgift")
     {
-        naturalGift(args.user, /*failed*/ false);
+        naturalGift(args.user, false /*failed*/);
     }
 
     const {implicit} = args.move.data;
@@ -2097,37 +2128,38 @@ function implicitEffects(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
         case "lockedMove":
             if (!dex.isLockedMove(args.move.data.name))
             {
-                // istanbul ignore next: should never happen
+                // istanbul ignore next: Should never happen.
                 throw new Error(`Invalid locked move '${args.move.data.name}'`);
             }
-            // continue locked status
-            // already prevented from consuming pp in constructor
+            // Continue locked status.
+            // Already prevented from consuming pp in constructor.
             if (lock.type === args.move.data.name) lock.tick();
-            // start locked status
+            // Start locked status.
             else lock.start(args.move.data.name, !!args.called);
             lockedMove = true;
             break;
+        default:
     }
-    // if the locked move was called by an effect, then this current context is
-    //  the one that called the move so we shouldn't reset it
+    // If the locked move was called by an effect, then this current context is
+    // the one that called the move so we shouldn't reset it.
     if (!lockedMove && (lock.turns !== 0 || !lock.called)) lock.reset();
 
-    // TODO: add rollout to implicit status above
+    // TODO: Add rollout to implicit status above.
     const {rollout} = args.user.volatile;
     if (dex.isRolloutMove(args.move.data.name))
     {
-        // TODO: add rollout moves to ImplicitStatusEffect
-        // start/continue rollout status
-        // already prevented from consuming pp in constructor if continuing
+        // TODO: Add rollout moves to ImplicitStatusEffect.
+        // Start/continue rollout status.
+        // Already prevented from consuming pp in constructor if continuing.
         if (rollout.type === args.move.data.name) rollout.tick();
         else rollout.start(args.move.data.name, !!args.called);
     }
-    // must've missed the status ending
-    // if the rollout move was called, then this current context is the one that
-    //  called the move so we shouldn't reset it
+    // Must've missed the status ending.
+    // If the rollout move was called, then this current context is the one that
+    // called the move so we shouldn't reset it.
     else if (rollout.turns !== 0 || !rollout.called) rollout.reset();
 
-    // team effects
+    // Team effects.
 
     const team = ctx.state.getTeam(args.side);
     switch (implicit?.team)
@@ -2135,16 +2167,17 @@ function implicitEffects(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
         case "healingwish": case "lunardance":
             team.status[implicit.team] = true;
             break;
-        // wish can be used consecutively, but only the first use counts
+        // Wish can be used consecutively, but only the first use counts.
         case "wish":
-            team.status.wish.start(/*restart*/false);
+            team.status.wish.start(false /*restart*/);
             break;
+        default:
     }
 }
 
 //#endregion
 
-//#region faint event handlers
+//#region Faint event handlers.
 
 async function faints(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<void>
@@ -2166,12 +2199,12 @@ async function faints(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
 
 //#endregion
 
-//#region final move effects
+//#region Final move effects.
 
 async function finalEffects(ctx: BattleParserContext<"gen4">,
     args: ExecuteArgs): Promise<MoveActionResult>
 {
-    // TODO: item-transfer moves
+    // TODO: Support item-transfer/removal moves.
     await recoil(ctx, args);
     await postDamage(ctx, args);
     await transform(ctx, args);
@@ -2180,7 +2213,7 @@ async function finalEffects(ctx: BattleParserContext<"gen4">,
     return res;
 }
 
-//#region recoil effect
+//#region Recoil effect.
 
 async function recoil(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<void>
@@ -2195,12 +2228,12 @@ async function recoil(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
         });
     if (damageResult !== "silent" && !data.struggle)
     {
-        inferRecoil(args, /*consumed*/ !!damageResult);
+        inferRecoil(args, !!damageResult /*consumed*/);
     }
     if (damageResult === true)
     {
-        // berries can activate directly after receiving recoil damage, and/or
-        //  just faint instead
+        // Berries can activate directly after receiving recoil damage, and/or
+        // just faint instead.
         if (args.user.fainted) await expectFaints(ctx, new Set([args.side]));
         else await unordered.parse(ctx, effectItem.onUpdate(ctx, args.side));
     }
@@ -2220,15 +2253,15 @@ function inferRecoil(args: ExecuteArgs, consumed: boolean): void
                 "suppressed recoil through an ability but ability is " +
                 "suppressed");
         }
-        // can't make any meaningful inferences here
+        // Can't make any meaningful inferences here.
     }
     else
     {
-        // get possible recoil-canceling abilities
+        // Get possible recoil-canceling abilities.
         const userAbility = args.user.traits.ability;
         const noRecoilAbilities = [...userAbility.possibleValues]
             .filter(n => userAbility.map[n].flags?.noIndirectDamage);
-        // can't have recoil-canceling abilities
+        // Can't have recoil-canceling abilities.
         if (consumed)
         {
             if (noRecoilAbilities.length === userAbility.size)
@@ -2240,7 +2273,7 @@ function inferRecoil(args: ExecuteArgs, consumed: boolean): void
             }
             userAbility.remove(noRecoilAbilities);
         }
-        // must have a recoil-canceling ability
+        // Must have a recoil-canceling ability.
         else if (noRecoilAbilities.length <= 0)
         {
             throw new Error(`Move ${args.move.data.name} user '${args.side}' ` +
@@ -2253,13 +2286,13 @@ function inferRecoil(args: ExecuteArgs, consumed: boolean): void
 
 //#endregion
 
-//#region item on-movePostDamage effect
+//#region Item on-movePostDamage effect.
 
 async function postDamage(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<void>
 {
-    // lifeorb
-    if (!args.move.dealsBPDamage) return;
+    // Lifeorb
+    if (!args.move.dealsBpDamage) return;
     if (![...args.targets.mentioned.values()].some(f => f.damaged)) return;
     if (args.user.fainted) return;
 
@@ -2269,7 +2302,7 @@ async function postDamage(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
 
 //#endregion
 
-//#region transform effect
+//#region Transform move effect.
 
 async function transform(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<void>
@@ -2295,7 +2328,7 @@ async function transform(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
 
 //#endregion
 
-//#region self-switch effect
+//#region Self-switch effects.
 
 async function selfSwitch(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<MoveActionResult>
@@ -2303,21 +2336,21 @@ async function selfSwitch(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     const effect = args.move.data.effects?.selfSwitch;
     if (!effect) return {};
     const team = ctx.state.getTeam(args.side);
-    // no one left to switch into
+    // No one left to switch into.
     if (team.pokemon.every((mon, i) => i === 0 || mon?.fainted)) return {};
 
-    // gen4: self-faint self-switch moves (e.g. healingwish) send out the
-    //  replacement immediately rather than waiting until the end of the turn
+    // Note(gen4): Self-faint self-switch moves (e.g. healingwish) send out the
+    // replacement immediately rather than waiting until the end of the turn.
     if (args.user.fainted && !args.move.data.effects?.selfFaint) return {};
 
     team.status.selfSwitch = effect;
 
-    // view last |request| event
-    // see BattleHandler#halt()
+    // View last |request| event.
+    // Note: See BattleHandler#halt() for request re-ordering logic.
     const event = await tryVerify(ctx, "|request|", "|win|", "|tie|");
     if (!event) return effectDidntHappen(`move self-switch ${effect}`);
-    // if a self-switch move wins the game before switching, the game ends
-    //  immediately while ignoring the self-switch effect
+    // If a self-switch move wins the game before switching, the game ends
+    // immediately while ignoring the self-switch effect.
     if (event.args[0] !== "request") return {};
     const [, reqStr] = event.args;
     const req = Protocol.parseRequest(reqStr);
@@ -2330,38 +2363,41 @@ async function selfSwitch(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
             `'${req.requestType}'`);
     }
 
-    // make sure all information is up to date before possibly
-    //  requesting a decision
+    // Make sure all information is up to date before possibly requesting a
+    // decision.
     if (!args.called && !args.user.volatile.stalling)
     {
         args.user.volatile.stall(false);
     }
 
-    // make the decision
+    // Make the decision.
     await base["|request|"](ctx);
 
-    // TODO: communicate self-switch/healingwish effects to the function we're
-    //  calling
+    // TODO: Communicate self-switch/healingwish effects to the function we're
+    // calling.
     let sres: actionSwitch.SwitchActionResult;
     if (!(sres = await actionSwitch.selfSwitch(ctx, args.side)))
     {
         return effectDidntHappen(`move self-switch ${effect}`);
     }
-    // communicate action consumption in case of pursuit interactions
+    // Communicate action consumption in case of pursuit interactions.
     const mres: MoveActionResult = {};
-    for (const side in sres.actioned ?? {})
+    if (sres.actioned)
     {
-        if (!sres.actioned!.hasOwnProperty(side)) continue;
-        // exclude move user since moveAction() caller already includes it
-        if (side === args.side) continue;
-        (mres.actioned ??= {})[side as SideID] = true;
+        for (const side in sres.actioned)
+        {
+            if (!Object.hasOwnProperty.call(sres.actioned, side)) continue;
+            // Exclude move user since moveAction() caller already includes it.
+            if (side === args.side) continue;
+            (mres.actioned ??= {})[side as SideID] = true;
+        }
     }
     return mres;
 }
 
 //#endregion
 
-//#region move-call effect
+//#region Move-calling effects.
 
 async function moveCall(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     Promise<void>
@@ -2369,7 +2405,7 @@ async function moveCall(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
     const call = args.move.data.effects?.call;
     if (!call) return;
 
-    // can't do anything if fainted
+    // Can't do anything if fainted.
     if (args.user.fainted) return;
 
     const event = await tryVerify(ctx, "|move|");
@@ -2385,7 +2421,7 @@ async function moveCall(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
 
     switch (call)
     {
-        case true: break; // nondeterministic call
+        case true: break; // Nondeterministic call. could be anything.
         case "copycat":
             if (args.lastMove !== moveId)
             {
@@ -2409,7 +2445,7 @@ async function moveCall(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
             }
             break;
         case "self":
-            // calling a move that is part of the user's moveset
+            // Calling a move that is part of the user's moveset.
             if (!addTarget(ctx, args))
             {
                 throw new Error("Call effect 'self' failed");
@@ -2418,7 +2454,7 @@ async function moveCall(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
             break;
         case "target":
         {
-            // TODO: track actual target
+            // TODO: Track actual target.
             const otherSide = args.side === "p1" ? "p2" : "p1";
             if (!addTarget(ctx, {...args, side: otherSide}))
             {
@@ -2428,10 +2464,9 @@ async function moveCall(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
             break;
         }
         default:
-            // regular string specifies the move that should be
-            //  called
-            // TODO: what if copycat is supposed to be called rather
-            //  than the copycat effect?
+            // Regular string specifies the move that should be called.
+            // TODO: What if the copycat move itself is supposed to be called
+            // rather than the copycat effect?
             if (moveId !== call)
             {
                 throw new Error(`Call effect '${call}' failed`);
@@ -2447,10 +2482,11 @@ async function moveCall(ctx: BattleParserContext<"gen4">, args: ExecuteArgs):
 
 //#endregion
 
-//#region event parsing helpers
+//#region Event parsing helpers.
 
 /**
  * Expects a set of faint messages.
+ *
  * @param candidates Pokemon references that should faint. These are removed
  * from the Set whenever this function handles a `|faint|` event.
  */
@@ -2477,29 +2513,29 @@ async function expectFaints(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region inference helpers
+//#region Inference helpers.
 
 /** Handles the implications of the Natural Gift move succeeding or failing. */
 function naturalGift(user: Pokemon, failed: boolean): void
 {
-    // naturalgift only succeeds if the user has a berry, and implicitly
-    //  consumes it
+    // Naturalgift only succeeds if the user has a berry, and implicitly
+    // consumes it.
     if (!failed)
     {
-        // TODO: narrow further based on perceived power and type
+        // TODO: Narrow further based on perceived power and possible types.
         user.item.narrow(Object.keys(dex.berries));
-        user.removeItem(/*consumed*/ true);
+        user.removeItem(true /*consumed*/);
     }
-    // fails if the user doesn't have a berry
-    // TODO: also check for klutz/embargo blocking the berry from being used
+    // Fails if the user doesn't have a berry.
+    // TODO: Also check for klutz/embargo blocking the berry from being used.
     else user.item.remove(Object.keys(dex.berries));
 }
 
 /** Handles the implications of an Imprison effect succeeding or failing. */
 function imprison(ctx: BattleParserContext<"gen4">, failed: boolean): void
 {
-    // assume client's side is fully known, while opponent is unknown
-    // TODO: what if both are known/unknown?
+    // Assume client's side is fully known, while opponent is unknown.
+    // TODO: What if both are known/unknown?
     if (!ctx.state.ourSide) return;
     const us = ctx.state.getTeam(ctx.state.ourSide).active.moveset;
     const usMoves = [...us.moves.keys()];
@@ -2508,31 +2544,31 @@ function imprison(ctx: BattleParserContext<"gen4">, failed: boolean): void
 
     if (failed)
     {
-        // imprison failed, which means both active pokemon don't have each
-        //  other's moves
-        // infer that the opponent doesn't have any of our moves
+        // Imprison failed, which means both active pokemon don't have each
+        // other's moves.
+        // Infer that the opponent doesn't have any of our moves.
 
-        // sanity check: opponent should not already have one of our moves
+        // Consistency check: Opponent should not already have one of our moves.
         const commonMoves = usMoves.filter(
             name => them.moves.has(name));
         if (commonMoves.length > 0)
         {
-            throw new Error("Imprison failed but both Pokemon have " +
-                `common moves: ${commonMoves.join(", ")}`);
+            throw new Error("Imprison failed but both Pokemon have common " +
+                `moves: ${commonMoves.join(", ")}`);
         }
 
-        // remove our moves from their move possibilities
+        // Remove our moves from their move possibilities.
         them.inferDoesntHave(usMoves);
     }
     else
     {
-        // imprison succeeded, which means both active pokemon have at least one
-        //  common move
-        // infer that one of our moves has to be contained by the opponent's
-        //  moveset
+        // Imprison succeeded, which means both active pokemon have at least one
+        // common move.
+        // Infer that one of our moves has to be contained by the opponent's
+        // moveset.
 
-        // sanity check: opponent should have or be able to have at least one of
-        //  our moves
+        // Consistency check: Opponent should have or be able to have at least
+        // one of our moves.
         if (usMoves.every(name =>
             !them.moves.has(name) && !them.constraint.has(name)))
         {
@@ -2551,15 +2587,15 @@ function imprison(ctx: BattleParserContext<"gen4">, failed: boolean): void
 function handleTypeEffectiveness(user: Pokemon, move: dex.Move, target: Pokemon,
     effectiveness: dex.Effectiveness): void
 {
-    // TODO: need to be able to handle all corner cases first, specifically
-    //  things like type-changing moves and abilities (e.g. normalize)
-    // TODO(doubles): do this for each defender
+    // TODO: Need to be able to handle all corner cases first, specifically
+    // things like type-changing moves and abilities (e.g. normalize).
+    // TODO(doubles): Do this for each defender.
     void user, move, target, effectiveness;
 }
 
 //#endregion
 
-//#region target helpers
+//#region Move target helpers.
 
 /** State of a move's pending targets. */
 interface PendingTargets
@@ -2598,7 +2634,7 @@ interface TargetOptions
     /** Target ref. */
     readonly side: SideID;
     /** Currently pending targets state. */
-    readonly targets: PendingTargets,
+    readonly targets: PendingTargets;
     /** Whether the move can be mirrored via Mirror Move. */
     readonly mirror: boolean;
     /**
@@ -2611,6 +2647,7 @@ interface TargetOptions
 
 /**
  * Indicates that the BattleEvents mentioned a target for the current move.
+ *
  * @returns False on error, true otherwise.
  */
 function addTarget(ctx: BattleParserContext<"gen4">,
@@ -2618,10 +2655,10 @@ function addTarget(ctx: BattleParserContext<"gen4">,
     boolean
 {
     let flags = targets.mentioned.get(side);
-    // already mentioned target earlier
+    // Already mentioned target earlier.
     if (flags)
     {
-        // update damaged status if higher precedence (ko > true > sub > false)
+        // Update damaged status if higher precedence (ko > true > sub > false).
         if (damaged === "ko" ||
             (damaged === true && flags.damaged !== "ko") ||
             (damaged === "substitute" && !flags.damaged))
@@ -2631,7 +2668,7 @@ function addTarget(ctx: BattleParserContext<"gen4">,
     }
     else
     {
-        // assertions about the move target
+        // Assertions about the move target.
         if (!targets.pending[side])
         {
             ctx.logger.error(`Mentioned target '${side}' but the ` +
@@ -2651,8 +2688,8 @@ function addTarget(ctx: BattleParserContext<"gen4">,
         targets.mentioned.set(side, flags = {...(!!damaged && {damaged})});
     }
 
-    // TODO: make it so that fainting prior to the move should cause active to
-    //  be null so this check won't be as complicated
+    // TODO: Make it so that fainting prior to the move should cause active to
+    // be null so this check won't be as complicated.
     const target = ctx.state.getTeam(side).active;
     if (flags.damaged && flags.damaged !== "substitute")
     {
@@ -2660,16 +2697,16 @@ function addTarget(ctx: BattleParserContext<"gen4">,
     }
     if (user !== target && (!target.fainted || flags.damaged === "ko"))
     {
-        // update opponent's mirror move tracker
+        // Update opponent's mirror move tracker.
         if (mirror) target.volatile.mirrormove = move.data.name;
 
-        // deduct an extra pp if the target has pressure
-        // TODO(gen>=5): don't count allies
+        // Deduct an extra pp if the target has pressure.
+        // TODO(gen>=5): Don't count allies.
         if (!flags.pressured && moveSlot &&
             !target.volatile.suppressAbility && target.ability === "pressure" &&
-            // only ability that can cancel pressure
-            // TODO: use ignoreTargetAbility flag
-            user.ability !== "moldbreaker")
+            // Keep 1 pp deduction if the user's ability ignores pressure.
+            [...user.traits.ability.possibleValues].some(a =>
+                    !dex.abilities[a].flags?.ignoreTargetAbility))
         {
             moveSlot.pp -= 1;
             flags.pressured = true;
@@ -2688,7 +2725,7 @@ function addTarget(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region other helpers
+//#region Other helpers.
 
 function effectDidntHappen(name: string): never
 {

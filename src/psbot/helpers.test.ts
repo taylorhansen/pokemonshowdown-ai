@@ -4,27 +4,29 @@ import { toIdName } from "../../src/psbot/helpers";
 
 /**
  * Describes a test case given to a function.
+ *
  * @template T Function's return type.
  * @template Args Argument types of the function.
  */
-interface TestCase<T, Args extends any[]>
+interface TestCase<T, TArgs extends unknown[]>
 {
     /** Description of the test case. */
     desc: string;
     /** Expected return value. */
     expected: T;
     /** Arguments to be given to the function. */
-    args: Args;
+    args: TArgs;
 }
 
 /**
  * Defines a test suite for a function.
+ *
  * @param name Name of the function being tested.
  * @param func The function being tested.
  * @param testCases List of test cases to be given to the function.
  */
-function testFunc<T, Args extends any[]>(name: string,
-    func: (...args: Args) => T, testCases: TestCase<T, Args>[]): void
+function testFunc<T, TArgs extends unknown[]>(name: string,
+    func: (...args: TArgs) => T, testCases: TestCase<T, TArgs>[]): void
 {
     describe(name, function()
     {

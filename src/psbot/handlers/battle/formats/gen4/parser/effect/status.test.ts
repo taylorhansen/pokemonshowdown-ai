@@ -1,12 +1,11 @@
+import * as util from "util";
 import { expect } from "chai";
 import "mocha";
-import * as util from "util";
 import { Event } from "../../../../../../parser";
-import * as dex from "../../dex";
-import { ParserContext } from "../Context.test";
 import { createInitialContext } from "../Context.test";
-import { ParserHelpers, setupBattleParser, toEffectName, toIdent, toMessage,
-    toMoveName } from "../helpers.test";
+import { ParserHelpers } from "../ParserHelpers.test";
+import { setupBattleParser, toEffectName, toIdent, toMessage, toMoveName } from
+    "../helpers.test";
 import * as effectStatus from "./status";
 
 export const test = () => describe("status", function()
@@ -17,7 +16,7 @@ export const test = () => describe("status", function()
     describe("status()", function()
     {
         const init = setupBattleParser(ictx.startArgs, effectStatus.status);
-        let pctx: ParserContext<true | dex.StatusType | undefined> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -142,7 +141,7 @@ export const test = () => describe("status", function()
             await ph.handle(
             {
                 args: ["-start", toIdent("p1"), toEffectName("confusion")],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.return("confusion");
             expect(mon.volatile.confusion.isActive).to.be.true;
@@ -255,10 +254,10 @@ export const test = () => describe("status", function()
         });
     });
 
-    describe("cure()", async function()
+    describe("cure()", function()
     {
         const init = setupBattleParser(ictx.startArgs, effectStatus.cure);
-        let pctx: ParserContext<"silent" | Set<dex.StatusType>> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -381,7 +380,7 @@ export const test = () => describe("status", function()
             await ph.handle(
             {
                 args: ["-end", toIdent("p1"), toEffectName("encore", "move")],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.return(
                 ret => expect(ret).to.eventually.satisfy(util.types.isSet)

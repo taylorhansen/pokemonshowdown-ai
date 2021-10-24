@@ -4,12 +4,14 @@ import { UnorderedParser } from "./UnorderedParser";
 
 /**
  * Callback to reject an {@link UnorderedDeadline} pathway.
+ *
  * @param name UnorderedDeadline's name for logging/debugging.
  */
 export type RejectCallback = (name: string) => void;
 
 /**
  * BattleParser wrapper that can be put on an event-based deadline.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TResult Result type.
@@ -29,6 +31,7 @@ export class UnorderedDeadline
 
     /**
      * Creates an UnorderedDeadline.
+     *
      * @param name Name for logging/debugging.
      * @param parser Parser function to wrap.
      * @param _reject Callback if the parser never accepts an event.
@@ -40,7 +43,8 @@ export class UnorderedDeadline
     {}
 
     /**
-     * Creates an UnorderedDeadline obj.
+     * Creates an UnorderedDeadline.
+     *
      * @template T Format type.
      * @template TAgent Battle agent type.
      * @template TArgs BattleParser's additional parameter types.
@@ -65,7 +69,7 @@ export class UnorderedDeadline
         UnorderedDeadline<T, TAgent, TResult>
     {
         return new UnorderedDeadline(name,
-            (ctx, accept) => parser(ctx, accept, ...args), reject);
+            async (ctx, accept) => await parser(ctx, accept, ...args), reject);
     }
 
     /**
@@ -78,6 +82,7 @@ export class UnorderedDeadline
 
     /**
      * Wraps this UnorderedDeadline to transform its parser result.
+     *
      * @template TResult2 Transformed result type.
      * @param f Result transform function.
      * @returns An UnorderedDeadline that applies `f` to `this` parser's result.
@@ -93,7 +98,14 @@ export class UnorderedDeadline
             this._reject);
     }
 
-    /** @override */
+    /**
+     * Stringifier with indent options.
+     *
+     * @param indentInner Number of spaces for additional indents beyond the
+     * current line.
+     * @param indentOuter Number of spaces for the indent of the current line.
+     * @override
+     */
     public toString(indentInner = 4, indentOuter = 0): string
     {
         const inner = " ".repeat(indentInner);

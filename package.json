@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "AI project for Pokemon Showdown",
   "private": true,
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "main": "dist/psbot/index.js",
   "scripts": {
     "build": "tsc",
@@ -11,7 +14,8 @@
     "train:gpu": "npm run train -- --gpu",
     "psbot": "node -r source-map-support/register dist/psbot/index.js",
     "psbot:gpu": "npm run psbot -- --gpu",
-    "lint": "tslint -c tslint.json -e src/**/dex.ts --project .",
+    "lint": "eslint .",
+    "lint:fix": "npm run lint -- --fix",
     "pretest": "npm run lint",
     "pretest:nocov": "npm run pretest",
     "test": "npm run test:unit",
@@ -80,6 +84,7 @@
     "@pkmn/data": "^0.4.19",
     "@pkmn/dex": "^0.4.19",
     "@pkmn/dex-types": "^0.4.19",
+    "@pkmn/types": "^2.0.0",
     "@types/chai": "^4.2.22",
     "@types/chai-as-promised": "^7.1.4",
     "@types/long": "^4.0.1",
@@ -88,13 +93,23 @@
     "@types/node-fetch": "^2.5.12",
     "@types/progress": "^2.0.5",
     "@types/websocket": "^1.0.4",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
+    "eslint": "^8.0.1",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-import-resolver-typescript": "^2.5.0",
+    "eslint-plugin-eslint-comments": "^3.2.0",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-mocha": "^9.0.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prefer-arrow": "^1.2.3",
     "mocha": "^9.1.3",
     "nyc": "^15.1.0",
+    "prettier": "^2.4.1",
     "source-map-support": "^0.5.20",
     "ts-node": "^10.3.0",
-    "tslint": "^6.1.3",
     "typescript": "^4.4.4"
   }
 }

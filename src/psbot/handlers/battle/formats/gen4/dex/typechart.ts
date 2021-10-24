@@ -5,6 +5,7 @@ export type Effectiveness = "immune" | "resist" | "regular" | "super";
 
 /**
  * Gets the type effectiveness multiplier.
+ *
  * @param defender Defender types.
  * @param attacker Attacking move type.
  */
@@ -16,6 +17,7 @@ export function getTypeMultiplier(defender: readonly dexutil.Type[],
 
 /**
  * Gets the type effectiveness string.
+ *
  * @param defender Defender types.
  * @param attacker Attacking move type.
  * @param binary Whether this move can only be immune or regular.
@@ -27,10 +29,11 @@ export function getTypeEffectiveness(defender: readonly dexutil.Type[],
         binary);
 }
 
-// TODO(gen6): won't work for typechart-modifying moves
+// TODO(gen6): Won't work for typechart-modifying moves.
 /**
  * Gets the attacking types that match the given effectiveness against the
  * defender.
+ *
  * @param defender Defender types.
  * @param effectiveness Target effectiveness.
  * @param binary Whether the move can only be immune/regular.
@@ -52,6 +55,7 @@ export function getAttackerTypes(defender: readonly dexutil.Type[],
 
 /**
  * Gets an effectiveness string from a type effectiveness multiplier.
+ *
  * @param multiplier Damage multiplier.
  * @param binary Whether the move can only be immune/regular.
  */
@@ -75,18 +79,16 @@ export function canBlockStatus(defender: readonly dexutil.Type[],
 type AttackerMap = {readonly [TAttacker in dexutil.Type]: number};
 type StatusMap = {readonly [TStatus in dexutil.StatusType]?: boolean};
 
-// TODO: include TDefender's weather immunity, groundedness, etc
-// tslint:disable: no-trailing-whitespace (force newline in doc)
+// TODO: Include TDefender's weather immunity, groundedness, etc.
 /**
  * Type effectiveness chart for gen4.
  *
- * Usage:  
- * `typechart[defender][attacker]` - Maps defender and attacker types to the
- * appropriate damage multiplier.  
- * `typechart[defender][status]` - Maps to whether the defender is immune to the
- * given status.
+ * Usage:
+ * * `typechart[defender][attacker]` - Maps defender and attacker types to the
+ *   appropriate damage multiplier.
+ * * `typechart[defender][status]` - Maps to whether the defender is immune to
+ *   the given status.
  */
-// tslint:enable: no-trailing-whitespace
 export const typechart:
     {readonly [TDefender in dexutil.Type]: AttackerMap & StatusMap} =
 {

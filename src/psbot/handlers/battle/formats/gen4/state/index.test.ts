@@ -1,5 +1,5 @@
 import "mocha";
-import * as HP from "./HP.test";
+import * as Hp from "./Hp.test";
 import * as ItemTempStatus from "./ItemTempStatus.test";
 import * as MajorStatusCounter from "./MajorStatusCounter.test";
 import * as Move from "./Move.test";
@@ -13,13 +13,13 @@ import * as StatTable from "./StatTable.test";
 import * as Team from "./Team.test";
 import * as TeamStatus from "./TeamStatus.test";
 import * as TempStatus from "./TempStatus.test";
-import * as utility from "./utility.test";
 import * as VariableTempStatus from "./VariableTempStatus.test";
 import * as VolatileStatus from "./VolatileStatus.test";
+import * as utility from "./utility.test";
 
 export const test = () => describe("state", function()
 {
-    HP.test();
+    Hp.test();
     ItemTempStatus.test();
     MajorStatusCounter.test();
     Move.test();

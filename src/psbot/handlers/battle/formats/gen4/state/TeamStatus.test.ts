@@ -64,7 +64,7 @@ export const test = () => describe("TeamStatus", function()
         {
             it(`Should tick ${type} turns`, function()
             {
-                status[type].start(/*source*/null);
+                status[type].start(null /*source*/);
                 expect(status[type].turns).to.equal(0);
 
                 status.postTurn();

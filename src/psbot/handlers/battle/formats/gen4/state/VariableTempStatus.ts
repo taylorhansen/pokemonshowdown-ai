@@ -1,6 +1,6 @@
 import { pluralTurns } from "./utility";
 
-/** Readonly VariableTempStatus representation. */
+/** Readonly {@link VariableTempStatus} representation. */
 export interface ReadonlyVariableTempStatus<TStatusType extends string>
 {
     /** Whether this status is currently active and not `"none"`. */
@@ -12,17 +12,21 @@ export interface ReadonlyVariableTempStatus<TStatusType extends string>
     /** Current number of `#tick()`s. */
     readonly turns: number;
     /**
-     * Max amount of `#tick()`s the status will last. `#reset()` should be
-     * called in place of the last `#tick()`.
+     * Max amount of {@link VariableTempStatus.tick tick} calls the status will
+     * last. {@link VariableTempStatus.reset reset} should be called in place of
+     * the last {@link VariableTempStatus.tick tick} call.
      */
     readonly duration: number;
     /** Stores all the `TStatusType` keys for iterating. */
-    readonly map: {readonly [T in TStatusType]: any};
+    readonly map: {readonly [T in TStatusType]: unknown};
 }
 
 /**
  * TempStatus whose duration depends on the type of status that's currently
- * active. Similar to a set of mutually exclusive TempStatuses.
+ * active.
+ *
+ * Similar to a set of mutually exclusive TempStatuses.
+ *
  * @template TStatusType String union of status types that this object can
  * represent. This excludes the `"none"` type, which is automatically added.
  */
@@ -46,18 +50,19 @@ export class VariableTempStatus<TStatusType extends string> implements
 
     /**
      * Creates a VariableTempStatus.
+     *
      * @param map Used to provide type info.
-     * @param duration Max amount of `#tick()`s the status will last. `#reset()`
-     * should be called in place of the last `#tick()`.
-     * @param silent Whether `#tick()` will act as `#reset()` if it hits the
+     * @param duration Max amount of {@link tick} calls the status will last.
+     * {@link reset} should be called in place of the last {@link tick} call.
+     * @param silent Whether {@link tick} will call {@link reset} if it hits the
      * duration limit.
      */
-    constructor(public readonly map: {readonly [T in TStatusType]: any},
+    public constructor(
+        public readonly map: {readonly [T in TStatusType]: unknown},
         public readonly duration: number, public readonly silent = false)
-    {
-    }
+    {}
 
-    /** Resets status to `none`. */
+    /** Resets status to `"none"`. */
     public reset(): void
     {
         this._type = "none";
@@ -76,17 +81,17 @@ export class VariableTempStatus<TStatusType extends string> implements
     /** Indicates that the status lasted another turn. */
     public tick(): void
     {
-        // no need to increment turns if it's none
+        // No need to increment turns if it's none.
         if (this._type === "none") return;
-        // went over duration
+        // Went over duration.
         if (++this._turns < this.duration) return;
-        // should've reset() on last tick() unless silent
+        // Should've reset() on last tick() unless silent.
         if (this.silent) return this.reset();
         throw new Error(`Status '${this._type}' went longer than expected ` +
             `(duration=${this.duration}, turns=${this._turns})`);
     }
 
-    // istanbul ignore next: only used in logging
+    // istanbul ignore next: Only used in logging.
     /** Encodes status data into a log string. */
     public toString(): string
     {

@@ -7,7 +7,7 @@ export interface HaltEvent
     /** Room that the event originated from. */
     readonly roomid: Protocol.RoomID;
     readonly args: ["halt"];
-    readonly kwArgs: {};
+    readonly kwArgs: Record<string, never>;
 }
 
 /** PS protocol event type with room id. */
@@ -25,5 +25,5 @@ export interface Event<TName extends Protocol.ArgName = Protocol.ArgName>
     readonly args: Protocol.Args[TName];
     /** Keyword arguments. */
     readonly kwArgs: TName extends Protocol.ArgsWithKWArgName ?
-        Protocol.KWArgs[TName] : {};
+        Protocol.KWArgs[TName] : Record<string, never>;
 }

@@ -3,7 +3,7 @@ import * as fs from "fs";
 /** Ensures that a folder exists, creating intermediate folders if needed. */
 export async function ensureDir(path: fs.PathLike): Promise<void>
 {
-    if (!await isDir(path)) return mkdirRecursive(path);
+    if (!await isDir(path)) return await mkdirRecursive(path);
 }
 
 /** Checks if given path is an existing directory. */
@@ -16,9 +16,9 @@ async function isDir(url: fs.PathLike): Promise<boolean>
 }
 
 /** Async recursive mkdir, similar to `mkdir -p`. */
-function mkdirRecursive(path: fs.PathLike): Promise<void>
+async function mkdirRecursive(path: fs.PathLike): Promise<void>
 {
-    return new Promise((res, rej) =>
+    return await new Promise((res, rej) =>
     {
         fs.mkdir(path, {recursive: true}, err => err ? rej(err) : res());
     });

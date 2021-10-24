@@ -566,7 +566,7 @@ export const pokemon: {readonly [name: string]: dex.PokemonData} =
     zangoose: {id: 335, uid: 521, name: "zangoose", display: "Zangoose", abilities: ["immunity"], types: ["normal", "???"], baseStats: {hp: 73, atk: 115, def: 60, spa: 60, spd: 60, spe: 90}, weightkg: 40.3, movepool: ["aerialace", "attract", "blizzard", "bodyslam", "brickbreak", "captivate", "closecombat", "counter", "crushclaw", "curse", "defensecurl", "detect", "dig", "disable", "doubleedge", "doublehit", "doublekick", "doubleteam", "dynamicpunch", "embargo", "endeavor", "endure", "facade", "falseswipe", "fireblast", "firepunch", "flail", "flamethrower", "fling", "focusblast", "focuspunch", "frustration", "furycutter", "furyswipes", "gigadrain", "headbutt", "hiddenpower", "icebeam", "icepunch", "icywind", "irontail", "knockoff", "lastresort", "leer", "lowkick", "megakick", "megapunch", "metalclaw", "mimic", "mudslap", "naturalgift", "nightslash", "payback", "poisonjab", "protect", "pursuit", "quickattack", "raindance", "razorwind", "refresh", "rest", "return", "roar", "rockclimb", "rockslide", "rocksmash", "rocktomb", "rollout", "scratch", "secretpower", "seismictoss", "shadowball", "shadowclaw", "shockwave", "slash", "sleeptalk", "snore", "solarbeam", "strength", "substitute", "sunnyday", "swagger", "swift", "swordsdance", "taunt", "thief", "thunder", "thunderbolt", "thunderpunch", "thunderwave", "toxic", "waterpulse", "xscissor"]},
     zapdos: {id: 145, uid: 522, name: "zapdos", display: "Zapdos", abilities: ["pressure"], types: ["electric", "flying"], baseStats: {hp: 90, atk: 90, def: 85, spa: 125, spd: 90, spe: 100}, weightkg: 52.6, movepool: ["aerialace", "agility", "aircutter", "ancientpower", "batonpass", "charge", "chargebeam", "defog", "detect", "discharge", "doubleedge", "doubleteam", "drillpeck", "endure", "extrasensory", "facade", "flash", "fly", "frustration", "gigaimpact", "heatwave", "hiddenpower", "hyperbeam", "lightscreen", "metalsound", "mimic", "mudslap", "naturalgift", "ominouswind", "peck", "pluck", "protect", "raindance", "rest", "return", "roar", "rocksmash", "roost", "sandstorm", "secretpower", "shockwave", "signalbeam", "skyattack", "sleeptalk", "snore", "steelwing", "substitute", "sunnyday", "swagger", "swift", "tailwind", "thunder", "thunderbolt", "thundershock", "thunderwave", "toxic", "twister", "uturn"]},
     zigzagoon: {id: 263, uid: 523, name: "zigzagoon", display: "Zigzagoon", abilities: ["pickup", "gluttony"], types: ["normal", "???"], baseStats: {hp: 38, atk: 30, def: 41, spa: 30, spd: 41, spe: 60}, weightkg: 17.5, movepool: ["attract", "bellydrum", "blizzard", "bodyslam", "captivate", "chargebeam", "charm", "covet", "cut", "defensecurl", "dig", "doubleedge", "doubleteam", "endure", "extremespeed", "facade", "flail", "fling", "frustration", "furycutter", "grassknot", "growl", "gunkshot", "headbutt", "helpinghand", "hiddenpower", "icebeam", "icywind", "irontail", "lastresort", "mimic", "mudslap", "mudsport", "naturalgift", "odorsleuth", "pinmissile", "protect", "pursuit", "raindance", "rest", "return", "rocksmash", "rollout", "sandattack", "secretpower", "seedbomb", "shadowball", "shockwave", "sleeptalk", "snore", "substitute", "sunnyday", "superfang", "surf", "swagger", "swift", "tackle", "tailwhip", "thief", "thunder", "thunderbolt", "thunderwave", "tickle", "toxic", "trick", "waterpulse", "whirlpool"]},
-    zubat: {id: 41, uid: 524, name: "zubat", display: "Zubat", abilities: ["innerfocus"], types: ["poison", "flying"], baseStats: {hp: 40, atk: 45, def: 35, spa: 30, spd: 40, spe: 55}, weightkg: 7.5, movepool: ["aerialace", "aircutter", "airslash", "astonish", "attract", "bite", "bravebird", "captivate", "confuseray", "curse", "defog", "doubleedge", "doubleteam", "endure", "facade", "feintattack", "fly", "frustration", "gigadrain", "gust", "haze", "heatwave", "hiddenpower", "hypnosis", "leechlife", "meanlook", "mimic", "nastyplot", "naturalgift", "ominouswind", "payback", "pluck", "poisonfang", "protect", "pursuit", "quickattack", "raindance", "rest", "return", "roost", "secretpower", "shadowball", "sleeptalk", "sludgebomb", "snatch", "snore", "steelwing", "substitute", "sunnyday", "superfang", "supersonic", "swagger", "swift", "tailwind", "taunt", "thief", "torment", "toxic", "twister", "uproar", "uturn", "whirlwind", "wingattack", "zenheadbutt"]}
+    zubat: {id: 41, uid: 524, name: "zubat", display: "Zubat", abilities: ["innerfocus"], types: ["poison", "flying"], baseStats: {hp: 40, atk: 45, def: 35, spa: 30, spd: 40, spe: 55}, weightkg: 7.5, movepool: ["aerialace", "aircutter", "airslash", "astonish", "attract", "bite", "bravebird", "captivate", "confuseray", "curse", "defog", "doubleedge", "doubleteam", "endure", "facade", "feintattack", "fly", "frustration", "gigadrain", "gust", "haze", "heatwave", "hiddenpower", "hypnosis", "leechlife", "meanlook", "mimic", "nastyplot", "naturalgift", "ominouswind", "payback", "pluck", "poisonfang", "protect", "pursuit", "quickattack", "raindance", "rest", "return", "roost", "secretpower", "shadowball", "sleeptalk", "sludgebomb", "snatch", "snore", "steelwing", "substitute", "sunnyday", "superfang", "supersonic", "swagger", "swift", "tailwind", "taunt", "thief", "torment", "toxic", "twister", "uproar", "uturn", "whirlwind", "wingattack", "zenheadbutt"]},
 };
 
 /** Sorted array of all pokemon names. */
@@ -583,7 +583,7 @@ export function getAbility(name: string | dex.AbilityData): wrappers.Ability | n
 {
     if (typeof name === "string")
     {
-        if (!abilities.hasOwnProperty(name)) return null;
+        if (!Object.hasOwnProperty.call(abilities, name)) return null;
         name = abilities[name];
     }
     let result = abilityMemo.get(name);
@@ -595,7 +595,7 @@ export function getAbility(name: string | dex.AbilityData): wrappers.Ability | n
 export const abilities: {readonly [name: string]: dex.AbilityData} =
 {
     adaptability: {uid: 0, name: "adaptability", display: "Adaptability"},
-    aftermath: {uid: 1, name: "aftermath", display: "Aftermath", on: {moveContactKO: {explosive: true, percentDamage: -25}}},
+    aftermath: {uid: 1, name: "aftermath", display: "Aftermath", on: {moveContactKo: {explosive: true, percentDamage: -25}}},
     airlock: {uid: 2, name: "airlock", display: "Air Lock", flags: {suppressWeather: true}},
     angerpoint: {uid: 3, name: "angerpoint", display: "Anger Point"},
     anticipation: {uid: 4, name: "anticipation", display: "Anticipation"},
@@ -716,7 +716,7 @@ export const abilities: {readonly [name: string]: dex.AbilityData} =
     waterabsorb: {uid: 119, name: "waterabsorb", display: "Water Absorb", on: {block: {move: {type: "water", percentDamage: 25}}}},
     waterveil: {uid: 120, name: "waterveil", display: "Water Veil", on: {start: {cure: true}, block: {status: true}, status: {cure: true}}, statusImmunity: {brn: true}},
     whitesmoke: {uid: 121, name: "whitesmoke", display: "White Smoke", on: {tryUnboost: {block: {atk: true, def: true, spa: true, spd: true, spe: true, accuracy: true, evasion: true}}}},
-    wonderguard: {uid: 122, name: "wonderguard", display: "Wonder Guard", on: {block: {move: {type: "nonSuper"}}}}
+    wonderguard: {uid: 122, name: "wonderguard", display: "Wonder Guard", on: {block: {move: {type: "nonSuper"}}}},
 };
 
 /** Sorted array of all ability names. */
@@ -733,7 +733,7 @@ export function getMove(name: string | dex.MoveData): wrappers.Move | null
 {
     if (typeof name === "string")
     {
-        if (!moves.hasOwnProperty(name)) return null;
+        if (!Object.hasOwnProperty.call(moves, name)) return null;
         name = moves[name];
     }
     let result = moveMemo.get(name);
@@ -1210,7 +1210,7 @@ export const moves: {readonly [name: string]: dex.MoveData} =
     xscissor: {uid: 463, name: "xscissor", display: "X-Scissor", category: "physical", basePower: 80, type: "bug", target: "normal", pp: [15, 24], flags: {contact: true}},
     yawn: {uid: 464, name: "yawn", display: "Yawn", category: "status", basePower: 0, type: "normal", target: "normal", pp: [10, 16], flags: {reflectable: true}, effects: {status: {hit: ["yawn"]}}},
     zapcannon: {uid: 465, name: "zapcannon", display: "Zap Cannon", category: "special", basePower: 120, type: "electric", target: "normal", pp: [5, 8], effects: {status: {chance: 100, hit: ["par"]}}},
-    zenheadbutt: {uid: 466, name: "zenheadbutt", display: "Zen Headbutt", category: "physical", basePower: 80, type: "psychic", target: "normal", pp: [15, 24], flags: {contact: true}}
+    zenheadbutt: {uid: 466, name: "zenheadbutt", display: "Zen Headbutt", category: "physical", basePower: 80, type: "psychic", target: "normal", pp: [15, 24], flags: {contact: true}},
 };
 
 /** Sorted array of all move names. */
@@ -1220,7 +1220,7 @@ export const moveKeys: readonly string[] = ["absorb", "acid", "acidarmor", "acup
 export const futureMoves =
 {
     doomdesire: 0,
-    futuresight: 1
+    futuresight: 1,
 } as const;
 
 /** Types of future moves. */
@@ -1230,9 +1230,9 @@ export type FutureMove = keyof typeof futureMoves;
 export const futureMoveKeys: readonly FutureMove[] = ["doomdesire", "futuresight"];
 
 /** Checks if a value is a FutureMove. */
-export function isFutureMove(value: any): value is FutureMove
+export function isFutureMove(value: unknown): value is FutureMove
 {
-    return futureMoves.hasOwnProperty(value);
+    return Object.hasOwnProperty.call(futureMoves, value as PropertyKey);
 }
 
 /** Set of all locked moves. Maps move name to its id within this object. */
@@ -1240,7 +1240,7 @@ export const lockedMoves =
 {
     outrage: 0,
     petaldance: 1,
-    thrash: 2
+    thrash: 2,
 } as const;
 
 /** Types of locked moves. */
@@ -1250,9 +1250,9 @@ export type LockedMove = keyof typeof lockedMoves;
 export const lockedMoveKeys: readonly LockedMove[] = ["outrage", "petaldance", "thrash"];
 
 /** Checks if a value is a LockedMove. */
-export function isLockedMove(value: any): value is LockedMove
+export function isLockedMove(value: unknown): value is LockedMove
 {
-    return lockedMoves.hasOwnProperty(value);
+    return Object.hasOwnProperty.call(lockedMoves, value as PropertyKey);
 }
 
 /** Set of all two-turn moves. Maps move name to its id within this object. */
@@ -1266,7 +1266,7 @@ export const twoTurnMoves =
     shadowforce: 5,
     skullbash: 6,
     skyattack: 7,
-    solarbeam: 8
+    solarbeam: 8,
 } as const;
 
 /** Types of two-turn moves. */
@@ -1276,9 +1276,9 @@ export type TwoTurnMove = keyof typeof twoTurnMoves;
 export const twoTurnMoveKeys: readonly TwoTurnMove[] = ["bounce", "dig", "dive", "fly", "razorwind", "shadowforce", "skullbash", "skyattack", "solarbeam"];
 
 /** Checks if a value is a TwoTurnMove. */
-export function isTwoTurnMove(value: any): value is TwoTurnMove
+export function isTwoTurnMove(value: unknown): value is TwoTurnMove
 {
-    return twoTurnMoves.hasOwnProperty(value);
+    return Object.hasOwnProperty.call(twoTurnMoves, value as PropertyKey);
 }
 
 /** Maps move name to its CallType, if any. Primarily used for easy testing. */
@@ -1290,7 +1290,7 @@ export const moveCallers: {readonly [name: string]: dex.CallType} =
     metronome: true,
     mirrormove: "mirror",
     naturepower: true,
-    sleeptalk: "self"
+    sleeptalk: "self",
 };
 
 /** Maps move type to each move of that type. */
@@ -1313,7 +1313,7 @@ export const typeToMoves: {readonly [T in dex.Type]: readonly string[]} =
     psychic: ["agility", "amnesia", "barrier", "calmmind", "confusion", "cosmicpower", "dreameater", "extrasensory", "futuresight", "gravity", "guardswap", "healblock", "healingwish", "heartswap", "hypnosis", "imprison", "kinesis", "lightscreen", "lunardance", "lusterpurge", "magiccoat", "meditate", "miracleeye", "mirrorcoat", "mistball", "powerswap", "powertrick", "psybeam", "psychic", "psychoboost", "psychocut", "psychoshift", "psywave", "reflect", "rest", "roleplay", "skillswap", "teleport", "trick", "trickroom", "zenheadbutt"],
     rock: ["ancientpower", "headsmash", "powergem", "rockblast", "rockpolish", "rockslide", "rockthrow", "rocktomb", "rockwrecker", "rollout", "sandstorm", "stealthrock", "stoneedge"],
     steel: ["bulletpunch", "doomdesire", "flashcannon", "gyroball", "irondefense", "ironhead", "irontail", "magnetbomb", "metalburst", "metalclaw", "metalsound", "meteormash", "mirrorshot", "steelwing"],
-    water: ["aquajet", "aquaring", "aquatail", "brine", "bubble", "bubblebeam", "clamp", "crabhammer", "dive", "hydrocannon", "hydropump", "muddywater", "octazooka", "raindance", "surf", "waterfall", "watergun", "waterpulse", "watersport", "waterspout", "whirlpool", "withdraw"]
+    water: ["aquajet", "aquaring", "aquatail", "brine", "bubble", "bubblebeam", "clamp", "crabhammer", "dive", "hydrocannon", "hydropump", "muddywater", "octazooka", "raindance", "surf", "waterfall", "watergun", "waterpulse", "watersport", "waterspout", "whirlpool", "withdraw"],
 };
 
 /** Memoization of `getItem()`. */
@@ -1327,7 +1327,7 @@ export function getItem(name: string | dex.ItemData): wrappers.Item | null
 {
     if (typeof name === "string")
     {
-        if (!items.hasOwnProperty(name)) return null;
+        if (!Object.hasOwnProperty.call(items, name)) return null;
         name = items[name];
     }
     let result = itemMemo.get(name);
@@ -1395,7 +1395,7 @@ export const items: {readonly [name: string]: dex.ItemData} =
     flameorb: {uid: 54, name: "flameorb", display: "Flame Orb", on: {residual: {status: "brn"}}},
     flameplate: {uid: 55, name: "flameplate", display: "Flame Plate", plateType: "fire"},
     focusband: {uid: 56, name: "focusband", display: "Focus Band"},
-    focussash: {uid: 57, name: "focussash", display: "Focus Sash", on: {tryOHKO: {block: true, consume: true}}},
+    focussash: {uid: 57, name: "focussash", display: "Focus Sash", on: {tryOhko: {block: true, consume: true}}},
     friendball: {uid: 58, name: "friendball", display: "Friend Ball"},
     fullincense: {uid: 59, name: "fullincense", display: "Full Incense"},
     ganlonberry: {uid: 60, name: "ganlonberry", display: "Ganlon Berry", isBerry: true, on: {update: {condition: "hp", threshold: 25}, eat: {type: "boost", boostOne: {def: 1}}}},
@@ -1552,7 +1552,7 @@ export const items: {readonly [name: string]: dex.ItemData} =
     wiseglasses: {uid: 211, name: "wiseglasses", display: "Wise Glasses"},
     yacheberry: {uid: 212, name: "yacheberry", display: "Yache Berry", isBerry: true, on: {preHit: {resistSuper: "ice"}}},
     zapplate: {uid: 213, name: "zapplate", display: "Zap Plate", plateType: "electric"},
-    zoomlens: {uid: 214, name: "zoomlens", display: "Zoom Lens"}
+    zoomlens: {uid: 214, name: "zoomlens", display: "Zoom Lens"},
 };
 
 /** Sorted array of all item names, except with `none` at position 0. */
@@ -1624,5 +1624,5 @@ export const berries: {readonly [name: string]: dex.NaturalGiftData} =
     watmelberry: {basePower: 80, type: "fire"},
     wepearberry: {basePower: 70, type: "electric"},
     wikiberry: {basePower: 60, type: "rock"},
-    yacheberry: {basePower: 60, type: "ice"}
+    yacheberry: {basePower: 60, type: "ice"},
 };

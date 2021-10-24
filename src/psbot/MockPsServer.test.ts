@@ -4,7 +4,7 @@ import { connection as WSConnection, Message, server as WSServer } from
     "websocket";
 
 /** Mocks the server's http and websocket APIs for PSBot testing. */
-export class MockPSServer
+export class MockPsServer
 {
     /** Whether this server is connected to a client. */
     public get isConnected(): boolean
@@ -25,20 +25,21 @@ export class MockPSServer
     public password?: string;
 
     /** Assertion string used for login testing. */
-    private assertion: string;
+    private readonly assertion: string;
     /** HTTP server. */
-    private http: Server;
+    private readonly http: Server;
     /** Websocket server. */
-    private ws: WSServer;
+    private readonly ws: WSServer;
     /** Current connection from server to client. */
     private connection?: WSConnection;
 
     /**
      * Creates a MockPSServer.
+     *
      * @param assertion Assertion string used for login testing.
      * @param port Port to listen to. Default 8000.
      */
-    constructor(assertion: string, port = 8000)
+    public constructor(assertion: string, port = 8000)
     {
         this.assertion = assertion;
 
@@ -51,7 +52,7 @@ export class MockPSServer
                 return;
             }
             let body = "";
-            req.on("data", chunk => body += chunk);
+            req.on("data", chunk => body += `${chunk}`);
             req.on("end", () =>
             {
                 this._lastQuery = new url.URLSearchParams(body);
@@ -93,13 +94,13 @@ export class MockPSServer
     }
 
     /** Promise to get the next message from the current connection. */
-    public nextMessage(): Promise<Message>
+    public async nextMessage(): Promise<Message>
     {
-        return new Promise(res =>
+        return await new Promise((res, rej) =>
         {
             if (!this.connection?.connected)
             {
-                throw new Error("Not connected to client");
+                return rej(new Error("Not connected to client"));
             }
             this.connection.once("message", res);
         });
@@ -124,7 +125,7 @@ export class MockPSServer
         this.connection.close();
         this.connection = undefined;
 
-        // reset other public properties
+        // Reset other public properties
         this._lastQuery = null;
     }
 

@@ -7,7 +7,8 @@ import { ReadonlyPokemon } from "../../state/Pokemon";
 import { dispatch } from "../base";
 
 /**
- * Expects a percentDamage effect.
+ * Expects a percent-damage effect.
+ *
  * @param side Target pokemon reference.
  * @param percent Percent damage to deal to the target. Positive heals, negative
  * damages.
@@ -23,17 +24,17 @@ export async function percentDamage(ctx: BattleParserContext<"gen4">,
     noSilent?: boolean): Promise<true | "silent" | undefined>
 {
     const mon = ctx.state.getTeam(side).active;
-    // effect would do nothing
+    // Effect would do nothing.
     if (!noSilent && isPercentDamageSilent(percent, mon.hp.current, mon.hp.max))
     {
         return "silent";
     }
 
-    // parse event
+    // Parse event.
     const event = await tryVerify(ctx, "|-damage|", "|-heal|");
     if (!event) return;
     if (!verifyPercentDamage(event, mon, side, percent)) return;
-    // TODO: also pass info that was parsed from the event?
+    // TODO: Also pass info that was parsed from the event?
     if (pred && !pred(event)) return;
 
     await dispatch(ctx);
@@ -42,6 +43,7 @@ export async function percentDamage(ctx: BattleParserContext<"gen4">,
 
 /**
  * Checks whether a percent-damage effect would be silent.
+ *
  * @param percent Percent damage.
  * @param hp Current hp.
  * @param hpMax Max hp.
@@ -49,12 +51,13 @@ export async function percentDamage(ctx: BattleParserContext<"gen4">,
 export function isPercentDamageSilent(percent: number, hp: number,
     hpMax: number): boolean
 {
-    // can't heal when full or damage when fainted
+    // Can't heal when full or damage when fainted.
     return (percent > 0 && hp >= hpMax) || (percent < 0 && hp <= 0);
 }
 
 /**
- * Verifies a percentDamage event.
+ * Verifies a percent-damage effect event.
+ *
  * @param event Event to verify.
  * @param mon Pokemon receiving the damage.
  * @param side Pokemon reference that should receive the damage.
@@ -75,7 +78,8 @@ function verifyPercentDamage(event: Event<"|-damage|" | "|-heal|">,
 }
 
 /**
- * Verifies a percentDamage effect.
+ * Verifies a percent-damage effect.
+ *
  * @param mon Target pokemon to receive the damage.
  * @param percent Percent damage to deal to the target. Positive heals, negative
  * damages.
@@ -86,12 +90,12 @@ function verifyPercentDamage(event: Event<"|-damage|" | "|-heal|">,
 function checkPercentDamage(mon: ReadonlyPokemon, percent: number,
     newHp: number): boolean
 {
-    // verify hp difference with respect to the sign of the percentage
-    // could do actual percentage check with hp stat range, but not worth the
-    //  effort due to all the corner cases that could come up and how few
-    //  effects actually need to differentiate based on the percentage
+    // Verify hp difference with respect to the sign of the percentage.
+    // Could do actual percentage check with hp stat range, but not worth the
+    // effort due to all the corner cases that could come up and how few
+    // effects actually need to differentiate based on the percentage.
     return (percent < 0 && newHp <= mon.hp.current) ||
         (percent > 0 && newHp >= mon.hp.current) ||
-        // istanbul ignore next: should never happen, but can recover from it
+        // istanbul ignore next: Should never happen but ok if it does.
         (percent === 0 && newHp === mon.hp.current);
 }

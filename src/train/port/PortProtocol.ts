@@ -29,8 +29,8 @@ export interface PortResultBase<T extends string> extends PortRequestBase<T>
      * Whether this is the last reply to the message that was sent using the
      * mentioned rid.
      *
-     * If false, another message of the same `#type` (or could be `"error"`) and
-     * `#rid` can be expected.
+     * If false, another message of the same {@link type} (or `"error"`) and
+     * {@link rid} can be expected.
      */
     done: boolean;
 }

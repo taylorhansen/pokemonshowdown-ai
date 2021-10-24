@@ -58,7 +58,7 @@ handlersImpl["|detailschange|"] = async function(
 
     const formeId = toIdName(details.speciesForme);
     const mon = ctx.state.getTeam(ident.player).active;
-    mon.formChange(formeId, details.level, /*perm*/ true);
+    mon.formChange(formeId, details.level, true /*perm*/);
     mon.gender = details.gender;
 
     await consume(ctx);
@@ -70,7 +70,7 @@ handlersImpl["|cant|"] = async function(ctx: BattleParserContext<"gen4">)
 
     const reason = Protocol.parseEffect(reasonStr, toIdName);
 
-    // should already be handled by previous |move| event
+    // Should already be handled by previous |move| event.
     if (reason.name === "focuspunch") return;
 
     const ident = Protocol.parsePokemonIdent(identStr);
@@ -80,16 +80,16 @@ handlersImpl["|cant|"] = async function(ctx: BattleParserContext<"gen4">)
     switch (reason.name)
     {
         case "imprison":
-            // opponent's imprison caused the pokemon to be prevented from
-            //  moving, so the revealed move can be revealed for both sides
+            // Opponent's imprison caused the pokemon to be prevented from
+            // moving, so the revealed move can be revealed for both sides.
             if (!moveName) break;
             ctx.state.getTeam(ident.player === "p1" ? "p2" : "p1").active
                 .moveset.reveal(moveName);
             break;
         case "truant":
             mon.volatile.activateTruant();
-            // fallthrough: truant/recharge turns overlap but only truant event
-            //  is displayed
+            // Truant/recharge turns overlap but only truant event is displayed.
+            // Fallthrough.
         case "recharge":
             mon.volatile.mustRecharge = false;
             break;
@@ -122,12 +122,12 @@ handlersImpl["|-formechange|"] = async function(
 
     const formeId = toIdName(speciesForme);
     const mon = ctx.state.getTeam(ident.player).active;
-    mon.formChange(formeId, mon.traits.stats.level, /*perm*/ false);
+    mon.formChange(formeId, mon.traits.stats.level);
 
     await consume(ctx);
 };
 handlersImpl["|-fail|"] = "default";
-handlersImpl["|-block|"] = "unsupported"; // TODO?
+handlersImpl["|-block|"] = "unsupported";
 handlersImpl["|-notarget|"] = "default";
 handlersImpl["|-damage|"] = async function(ctx: BattleParserContext<"gen4">)
 {
@@ -135,7 +135,7 @@ handlersImpl["|-damage|"] = async function(ctx: BattleParserContext<"gen4">)
 };
 handlersImpl["|-heal|"] = async function(ctx: BattleParserContext<"gen4">)
 {
-    await handleDamage(ctx, /*heal*/ true);
+    await handleDamage(ctx, true /*heal*/);
 };
 async function handleDamage(ctx: BattleParserContext<"gen4">,
     heal?: boolean)
@@ -153,7 +153,7 @@ async function handleDamage(ctx: BattleParserContext<"gen4">,
     {
         case "lunardance":
             for (const move of mon.moveset.moves.values()) move.pp = move.maxpp;
-            // fallthrough
+            // Fallthrough.
         case "healingwish":
             mon.majorStatus.cure();
             team.status[from.name] = false;
@@ -175,14 +175,15 @@ handlersImpl["|-sethp|"] = async function(ctx: BattleParserContext<"gen4">)
 
     if (!identStr2 || !healthNumStr2)
     {
-        // only one hp to set, so healthStr1 is an HPStatus strr
+        // Only one hp to set, so healthStr1 is just a normal PokemonHPStatus
+        // string.
         const health1 = Protocol.parseHealth(
                 healthStr1 as Protocol.PokemonHPStatus);
         mon1.hp.set(health1?.hp ?? 0, health1?.maxhp ?? 0);
     }
     else
     {
-        // two hp numbers to set
+        // Two hp numbers to set.
         const healthNum1 = Number(healthStr1);
         if (isNaN(healthNum1))
         {
@@ -233,7 +234,7 @@ handlersImpl["|-boost|"] = async function(ctx: BattleParserContext<"gen4">)
 };
 handlersImpl["|-unboost|"] = async function(ctx: BattleParserContext<"gen4">)
 {
-    await handleBoost(ctx, /*flip*/ true);
+    await handleBoost(ctx, true /*flip*/);
 };
 async function handleBoost(ctx: BattleParserContext<"gen4">, flip?: boolean)
 {
@@ -248,7 +249,7 @@ async function handleBoost(ctx: BattleParserContext<"gen4">, flip?: boolean)
     const mon = ctx.state.getTeam(ident.player).active;
     const oldBoost = mon.volatile.boosts[stat];
     const newBoost = oldBoost + (flip ? -num : num);
-    // boost is capped at 6
+    // Boost is capped at 6.
     mon.volatile.boosts[stat] = Math.max(-6, Math.min(newBoost, 6));
     await consume(ctx);
 }
@@ -290,7 +291,7 @@ handlersImpl["|-invertboost|"] = async function(
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
 
-    const boosts = ctx.state.getTeam(ident.player).active.volatile.boosts;
+    const {boosts} = ctx.state.getTeam(ident.player).active.volatile;
     for (const stat of dex.boostKeys) boosts[stat] = -boosts[stat];
 
     await consume(ctx);
@@ -301,7 +302,7 @@ handlersImpl["|-clearboost|"] = async function(ctx: BattleParserContext<"gen4">)
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
 
-    const boosts = ctx.state.getTeam(ident.player).active.volatile.boosts;
+    const {boosts} = ctx.state.getTeam(ident.player).active.volatile;
     for (const stat of dex.boostKeys) boosts[stat] = 0;
 
     await consume(ctx);
@@ -313,10 +314,10 @@ handlersImpl["|-clearallboost|"] = async function(
 
     for (const sideId in ctx.state.teams)
     {
-        if (!ctx.state.teams.hasOwnProperty(sideId)) continue;
+        if (!Object.hasOwnProperty.call(ctx.state.teams, sideId)) continue;
         const team = ctx.state.teams[sideId as SideID];
         if (!team) continue;
-        const boosts = team.active.volatile.boosts;
+        const {boosts} = team.active.volatile;
         for (const stat of dex.boostKeys) boosts[stat] = 0;
     }
 
@@ -329,7 +330,7 @@ handlersImpl["|-clearpositiveboost|"] = async function(
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
 
-    const boosts = ctx.state.getTeam(ident.player).active.volatile.boosts;
+    const {boosts} = ctx.state.getTeam(ident.player).active.volatile;
     for (const stat of dex.boostKeys) if (boosts[stat] > 0) boosts[stat] = 0;
 
     await consume(ctx);
@@ -341,7 +342,7 @@ handlersImpl["|-clearnegativeboost|"] = async function(
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
 
-    const boosts = ctx.state.getTeam(ident.player).active.volatile.boosts;
+    const {boosts} = ctx.state.getTeam(ident.player).active.volatile;
     for (const stat of dex.boostKeys) if (boosts[stat] < 0) boosts[stat] = 0;
 
     await consume(ctx);
@@ -377,19 +378,19 @@ handlersImpl["|-weather|"] = async function(ctx: BattleParserContext<"gen4">)
     }
     else
     {
-        // defer to custom weather effect handler, which can take additional
-        //  context parameters when called by other modules, e.g. action/move
-        const res = await effectWeather.weather(ctx, /*source*/ null,
+        // Defer to custom weather effect handler, which can take additional
+        // context parameters when called by other modules, e.g. action/move.
+        const res = await effectWeather.weather(ctx, null /*source*/,
             weatherStr as dex.WeatherType | "none",
             e =>
             {
-                // infer infinite duration for weather ability
+                // Infer infinite duration for weather ability.
                 const effect = Protocol.parseEffect(e.kwArgs.from,
                     toIdName);
                 if (effect.type === "ability" &&
                     weatherAbilities[effect.name] === weatherStr)
                 {
-                    // infer ability
+                    // Infer ability.
                     if (e.kwArgs.of)
                     {
                         const of = Protocol.parsePokemonIdent(e.kwArgs.of);
@@ -400,11 +401,11 @@ handlersImpl["|-weather|"] = async function(ctx: BattleParserContext<"gen4">)
                 }
                 return true;
             });
-        // istanbul ignore next: should never happen
+        // istanbul ignore next: Should never happen.
         if (res !== true) throw new Error("Mismatched weather event");
     }
 };
-// TODO: support in dex data/ability effects
+// TODO: Support in dex data/ability effects.
 const weatherAbilities: {readonly [name: string]: dex.WeatherType} =
 {
     drizzle: "RainDance", drought: "SunnyDay", sandstream: "Sandstorm",
@@ -412,11 +413,11 @@ const weatherAbilities: {readonly [name: string]: dex.WeatherType} =
 }
 handlersImpl["|-fieldstart|"] = async function(ctx: BattleParserContext<"gen4">)
 {
-    await updateFieldEffect(ctx, /*start*/ true);
+    await updateFieldEffect(ctx, true /*start*/);
 };
 handlersImpl["|-fieldend|"] = async function(ctx: BattleParserContext<"gen4">)
 {
-    await updateFieldEffect(ctx, /*start*/ false);
+    await updateFieldEffect(ctx, false /*Start*/);
 };
 async function updateFieldEffect(ctx: BattleParserContext<"gen4">,
     start: boolean)
@@ -438,20 +439,20 @@ async function updateFieldEffect(ctx: BattleParserContext<"gen4">,
 }
 handlersImpl["|-sidestart|"] = async function(ctx: BattleParserContext<"gen4">)
 {
-    await handleSideCondition(ctx, /*start*/ true);
+    await handleSideCondition(ctx, true /*start*/);
 };
 handlersImpl["|-sideend|"] = async function(ctx: BattleParserContext<"gen4">)
 {
-    await handleSideCondition(ctx, /*start*/ false);
+    await handleSideCondition(ctx, false /*start*/);
 };
 async function handleSideCondition(ctx: BattleParserContext<"gen4">,
     start: boolean)
 {
     const event = await verify(ctx, start ? "|-sidestart|" : "|-sideend|");
     const [, sideStr, effectStr] = event.args;
-    // parsePokemonIdent supports side identifiers
+    // Note: parsePokemonIdent() supports side identifiers.
     const side = Protocol.parsePokemonIdent(
-        sideStr as any as Protocol.PokemonIdent).player;
+        sideStr as unknown as Protocol.PokemonIdent).player;
     const effect = Protocol.parseEffect(effectStr, toIdName);
     const ts = ctx.state.getTeam(side).status;
     switch (effect.name)
@@ -498,14 +499,14 @@ handlersImpl["|-start|"] = async function(ctx: BattleParserContext<"gen4">)
             mon.volatile.addedType = other?.toLowerCase() as dex.Type ?? "???";
             break;
         case "typechange":
-            // set types
-            // format: |-start|<ident>|typechange|Type1/Type2
+            // Set types.
+            // Format: |-start|<ident>|typechange|Type1/Type2
             if (other)
             {
                 const types = other.split("/").map(toIdName) as dex.Type[];
                 if (types.length > 2)
                 {
-                    // TODO: throw?
+                    // TODO: Throw?
                     ctx.logger.error(`Too many types given: '${other}'`);
                     types.splice(2);
                 }
@@ -617,11 +618,11 @@ function handleStartEndTrivial(ctx: BattleParserContext<"gen4">,
             {
                 if (start)
                 {
-                    team.status.futureMoves[effectId].start(/*restart*/ false);
+                    team.status.futureMoves[effectId].start(false /*restart*/);
                 }
                 else
                 {
-                    // target is mentioned on -end
+                    // Target is mentioned on -end.
                     const sourceTeam = ctx.state.getTeam(
                         side === "p1" ? "p2" : "p1");
                     sourceTeam.status.futureMoves[effectId].end();
@@ -646,13 +647,13 @@ handlersImpl["|-item|"] = async function(ctx: BattleParserContext<"gen4">)
     const itemId = toIdName(itemName);
 
     const mon = ctx.state.getTeam(ident.player).active;
-    // TODO: move recycle handling to move effects/dex
+    // TODO: Move recycle handling to move effects/dex.
     const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
     const recycle = from.name === "recycle";
 
-    // TODO: handle airballoon reveal effect (gained=false, no [from] suffix)
-    // most other unsupported effects are handled as if gained=true
-    mon.setItem(itemId, /*gained*/ recycle ? "recycle" : !!event.kwArgs.from);
+    // TODO: Handle airballoon reveal effect (gained=false, no [from] suffix).
+    // Most other unsupported effects are handled as if gained=true.
+    mon.setItem(itemId, recycle ? "recycle" : !!event.kwArgs.from /*gained*/);
     await consume(ctx);
 };
 handlersImpl["|-enditem|"] = async function(ctx: BattleParserContext<"gen4">)
@@ -665,20 +666,20 @@ handlersImpl["|-enditem|"] = async function(ctx: BattleParserContext<"gen4">)
     const mon = ctx.state.getTeam(ident.player).active;
     const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
 
-    // reveal item being removed
-    mon.setItem(itemId, /*gained*/ false);
+    // Reveal item being removed.
+    mon.setItem(itemId, false /*gained*/);
 
-    // item-removal and steal-eat moves effectively delete the item
-    // TODO: dispatch item on-eat handler in the case of stealeat?
+    // Item-removal and steal-eat moves effectively delete the item.
+    // TODO: Dispatch item on-eat handler in the case of stealeat?
     let consumed: boolean | string;
     if (from.name === "stealeat" || dex.itemRemovalMoves.includes(from.name))
     {
         consumed = false;
     }
-    // in most other cases(TODO?) the item can be restored via recycle move
+    // In most other cases(TODO?) the item can be restored via recycle move.
     else consumed = itemId;
 
-    // consuming the status, not the actual berry
+    // Consuming the status, not the actual berry.
     if (itemId === "micleberry" && !event.kwArgs.eat && consumed)
     {
         mon.volatile.micleberry = false;
@@ -695,7 +696,7 @@ handlersImpl["|-ability|"] = async function(ctx: BattleParserContext<"gen4">)
     const [, identStr, abilityStr] = event.args;
     const abilityId = toIdName(abilityStr);
     const ability = dex.getAbility(abilityId);
-    // istanbul ignore if: should never happen
+    // istanbul ignore if: Should never happen.
     if (!ability) throw new Error(`Unknown ability '${abilityId}'`);
     const ident = Protocol.parsePokemonIdent(identStr);
     const holder = ctx.state.getTeam(ident.player).active;
@@ -708,12 +709,12 @@ handlersImpl["|-endability|"] = async function(ctx: BattleParserContext<"gen4">)
     const [, identStr, abilityName] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
     const mon = ctx.state.getTeam(ident.player).active;
-    // reveal ability if specified
+    // Reveal ability if specified.
     if (abilityName && abilityName !== "none")
     {
         mon.setAbility(toIdName(abilityName));
     }
-    // event typically caused by gastro acid move
+    // Event typically caused by gastroacid move.
     mon.volatile.suppressAbility = true;
     await consume(ctx);
 };
@@ -747,9 +748,8 @@ handlersImpl["|-activate|"] = async function(ctx: BattleParserContext<"gen4">)
     const v = mon.volatile;
     switch (effect.name)
     {
-        // TODO: delegate to Ability/Item wrappers and effect handlers?
-        // may not want to do this at the event level due to lost context
-        // istanbul ignore next: should never happen but fine if it does
+        // May not want to do this at the base level due to lost context.
+        // istanbul ignore next: Should never happen but fine if it does.
         case "forewarn":
         {
             ctx.logger.error("Forewarn should've been handled by Ability " +
@@ -758,14 +758,14 @@ handlersImpl["|-activate|"] = async function(ctx: BattleParserContext<"gen4">)
             await dex.getAbility(dex.abilities["forewarn"])
                 .warnStrongestMove(ctx, () => accepted = true, ident.player);
             if (accepted) return;
-            // break to consume the event even if it wasn't successfully parsed,
-            //  so it doesn't mess with other parsers
+            // Break to consume the event even if it wasn't successfully parsed,
+            // so it doesn't mess with other parsers.
             break;
         }
         case "bide": v.bide.tick(); break;
         case "charge": v.charge.start(); break;
         case "confusion": v.confusion.tick(); break;
-        // effect was used to block another effect, no further action needed
+        // Effect was used to block another effect, no further action needed.
         case "endure": case "mist": case "protect": case "safeguard": break;
         case "feint": v.feint(); break;
         case "grudge":
@@ -776,7 +776,7 @@ handlersImpl["|-activate|"] = async function(ctx: BattleParserContext<"gen4">)
             break;
         case "lockon": case "mindreader":
         {
-            // activate effect from other side or specified target
+            // Activate effect from other side or specified target.
             const targetSide = event.kwArgs.of ?
                 Protocol.parsePokemonIdent(event.kwArgs.of).player
                 : ident.player === "p1" ? "p2" : "p1";
@@ -786,9 +786,10 @@ handlersImpl["|-activate|"] = async function(ctx: BattleParserContext<"gen4">)
         case "mimic":
         {
             if (!other1) break;
-            // NOTE(gen4): sketch/mimic effect events are identical on PS
-            // get source's last move to see if this was sketch or mimic
-            // TODO: this should be handled in action/move.ts effects/dex data
+            // Note(gen4): Sketch/mimic effect events are identical on PS.
+            // Get source's last move to see if this was sketch or mimic.
+            // TODO: This should be handled in action/move.ts effects and/or dex
+            // data instead of here.
             if (!v.lastMove)
             {
                 throw new Error("Don't know how Mimic/Sketch was caused");
@@ -812,11 +813,12 @@ handlersImpl["|-activate|"] = async function(ctx: BattleParserContext<"gen4">)
         case "substitute":
             if (!v.substitute)
             {
-                // TODO: log?
+                // TODO: Log?
                 throw new Error("Substitute blocked an effect but no " +
                     "Substitute exists");
             }
-            // effect was used to block another effect, no further action needed
+            // Effect was used to block another effect, no further action
+            // needed.
             break;
         case "trapped":
             ctx.state.getTeam(ident.player === "p1" ? "p2" : "p1").active
@@ -856,7 +858,7 @@ handlersImpl["|-mustrecharge|"] = async function(
     const event = await verify(ctx, "|-mustrecharge|");
     const [, identStr] = event.args;
     const ident = Protocol.parsePokemonIdent(identStr);
-    // TODO: this should already be implied by |move| effects
+    // TODO: This should already be implied by |move| effects.
     ctx.state.getTeam(ident.player).active.volatile.mustRecharge = true;
     await consume(ctx);
 };
@@ -884,7 +886,7 @@ handlersImpl["|-singleturn|"] = async function(ctx: BattleParserContext<"gen4">)
     const v = ctx.state.getTeam(ident.player).active.volatile;
     switch (effect.name)
     {
-        case "endure": case "protect": v.stall(/*flag*/ true); break;
+        case "endure": case "protect": v.stall(true /*flag*/); break;
         case "focuspunch": v.focus = true; break;
         case "magiccoat": v.magiccoat = true; break;
         case "roost": v.roost = true; break;
@@ -903,7 +905,7 @@ async function ignoredEvent(ctx: BattleParserContext<"gen4">)
     const event = await tryPeek(ctx);
     if (!event) return;
     const key = Protocol.key(event.args);
-    if (key && handlersImpl.hasOwnProperty(key)) return;
+    if (key && Object.hasOwnProperty.call(handlersImpl, key)) return;
     await consume(ctx);
 }
 
@@ -914,19 +916,19 @@ async function ignoredEvent(ctx: BattleParserContext<"gen4">)
 export const ignoredEvents = baseEventLoop(ignoredEvent);
 
 /** Handlers for all {@link Protocol.ArgName event types}. */
-export const handlers: Required<HandlerMap> =
-    // this Object.assign expression is so that the function names appear as if
-    //  they were defined directly as properties of this object so that stack
-    //  traces make more sense
+export const handlers =
+    // This Object.assign expression is so that the function names appear as if
+    // they were defined directly as properties of this object so that stack
+    // traces make more sense.
     Object.assign({},
         handlersImpl,
-        // fill in unimplemented handlers
+        // Fill in unimplemented handlers.
         ...(Object.keys(Protocol.ARGS) as Protocol.ArgName[])
             .map(key =>
-                !handlersImpl.hasOwnProperty(key) ||
+                !Object.hasOwnProperty.call(handlersImpl, key) ||
                     handlersImpl[key] === "default" ?
                 {
-                    // default parser just consumes the event
+                    // Default parser just consumes the event.
                     async [key](ctx: BattleParserContext<"gen4">)
                     {
                         await defaultParser(ctx, key);
@@ -934,14 +936,14 @@ export const handlers: Required<HandlerMap> =
                 }
                 : handlersImpl[key] === "unsupported" ?
                 {
-                    // unsupported parser throws an error
+                    // Unsupported parser throws an error.
                     async [key](ctx: BattleParserContext<"gen4">)
                     {
                         await unsupportedParser(ctx, key);
                     }
                 }
-                // handler already implemented, don't override it
-                : undefined));
+                // Handler already implemented, don't override it.
+                : undefined)) as Required<HandlerMap>;
 
 async function defaultParser(ctx: BattleParserContext<"gen4">,
     key: Protocol.ArgName)
@@ -953,7 +955,8 @@ async function defaultParser(ctx: BattleParserContext<"gen4">,
 async function unsupportedParser(ctx: BattleParserContext<"gen4">,
     key: Protocol.ArgName)
 {
-    throw new Error(`Unsupported event type ${key}`);
+    void ctx;
+    await Promise.reject(new Error(`Unsupported event type ${key}`));
 }
 
 /** Dispatches base event handler. */

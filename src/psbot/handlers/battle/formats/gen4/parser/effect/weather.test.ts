@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import "mocha";
 import { BattleState } from "../../state";
-import { ParserContext } from "../Context.test";
 import { createInitialContext } from "../Context.test";
-import { ParserHelpers, setupBattleParser, toWeather } from "../helpers.test";
+import { ParserHelpers } from "../ParserHelpers.test";
+import { setupBattleParser, toEffectName, toWeather } from "../helpers.test";
 import * as effectWeather from "./weather";
 
 export const test = () => describe("weather", function()
@@ -18,15 +18,15 @@ export const test = () => describe("weather", function()
         state = ictx.getState();
     })
 
-    describe("weather()", async function()
+    describe("weather()", function()
     {
         const init = setupBattleParser(ictx.startArgs, effectWeather.weather);
-        let pctx: ParserContext<true | "silent" | undefined> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
@@ -117,7 +117,10 @@ export const test = () => describe("weather", function()
 
             pctx = init(null, "Hail", event => event.kwArgs.from === "x");
             await ph.handle(
-                {args: ["-weather", toWeather("Hail")], kwArgs: {from: "x"}});
+            {
+                args: ["-weather", toWeather("Hail")],
+                kwArgs: {from: toEffectName("x")}
+            });
             await ph.return(true);
             expect(state.status.weather.type).to.equal("Hail");
             expect(state.status.weather.source).to.be.null;

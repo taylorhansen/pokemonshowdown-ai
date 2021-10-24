@@ -18,7 +18,7 @@ export const test = () => describe("Team", function()
 
     describe("#size", function()
     {
-        // TODO: test size clearing behavior
+        // TODO: Test size clearing behavior.
 
         it("Should be 1 if set to 0", function()
         {
@@ -47,17 +47,17 @@ export const test = () => describe("Team", function()
 
             expect(team.switchIn(options1)).to.not.equal(null);
 
-            // after the team is full, subsequent switch-ins will be rejected
+            // After the team is full, subsequent switch-ins will be rejected.
             expect(team.switchIn(options2)).to.equal(null);
         });
 
         it("Should switch", function()
         {
             team.size = 2;
-            // switch in/out
+            // Switch in/out.
             const mon1 = team.switchIn(options1)!;
             const mon2 = team.switchIn(options2)!;
-            // switch back in
+            // Switch back in.
             const mon3 = team.switchIn(options1)!;
             expect(mon1).to.equal(mon3);
             expect(mon1.active).to.equal(true);

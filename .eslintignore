@@ -1,0 +1,5 @@
+/coverage/
+/dist/
+/logs/
+/models/
+**/*.js

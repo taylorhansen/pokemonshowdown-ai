@@ -100,7 +100,7 @@ export const test = () => describe("MajorStatusCounter", function()
 
         it("Should not update other status turns", function()
         {
-            // should be updated explicitly by inactive events
+            // Should be updated explicitly by inactive events.
             ms.afflict("slp");
             expect(ms.turns).to.equal(1);
             ms.postTurn();

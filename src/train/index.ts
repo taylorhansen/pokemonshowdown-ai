@@ -2,14 +2,16 @@
 import * as os from "os";
 import { join } from "path";
 import { setGracefulCleanup } from "tmp-promise";
-import { latestModelFolder, logPath, modelsFolder } from "../config";
 import { Logger } from "../Logger";
+// For some reason it doesn't like gitignored source files.
+// eslint-disable-next-line node/no-unpublished-import
+import { latestModelFolder, logPath, modelsFolder } from "../config";
 import { episode } from "./episode";
 import { ensureDir } from "./helpers/ensureDir";
 import { BatchPredictOptions, ModelWorker } from "./model/worker";
 import { Opponent } from "./play";
 
-setGracefulCleanup();
+(setGracefulCleanup as () => void)();
 
 /** Number of training episodes to complete. */
 const numEpisodes = 4;
@@ -22,44 +24,43 @@ const logger = Logger.stderr.addPrefix("Train: ");
 const format = "gen4";
 
 /** Manages the worker thread for Tensorflow ops. */
-const models = new ModelWorker(format,
-    /*gpu*/ process.argv[2] === "--gpu");
+const models = new ModelWorker(/*Gpu*/ process.argv[2] === "--gpu");
 /** Options for predict batching. */
 const batchOptions: BatchPredictOptions =
 {
-    // when running games on multiple threads, the GamePool workers can tend to
-    //  "spam" the TF worker with messages, forcing the worker to queue them all
-    //  into a batch before the timer has a chance to update
-    // waiting for the next "wave" of messages could take several ms, around the
-    //  time it would take to execute the currently sitting batch (assuming
-    //  gpu, most likely), so it's best to cut it off nearly as soon as the
-    //  timer updates
+    // When running games on multiple threads, the GamePool workers can tend to
+    // "spam" the TF worker with messages, forcing the worker to queue them all
+    // into a batch before the timer has a chance to update.
+    // Waiting for the next "wave" of messages could take several ms, around the
+    // time it would take to execute the currently sitting batch (assuming gpu,
+    // most likely), so it's best to cut it off nearly as soon as the timer
+    // updates.
     // TODO: tuning
-    maxSize: os.cpus().length * 2, timeoutNs: /*50us*/ 50000
+    maxSize: os.cpus().length * 2, timeoutNs: /*50us*/ 50000n
 };
 
 (async function()
 {
-    // create or load neural network
+    // Create or load neural network.
     let model: number;
     const latestModelUrl = `file://${latestModelFolder}`;
     const loadUrl = `file://${join(latestModelFolder, "model.json")}`;
     logger.debug("Loading latest model");
-    try { model = await models.load(batchOptions, loadUrl); }
+    try { model = await models.load(batchOptions, format, loadUrl); }
     catch (e)
     {
-        logger.error(`Error opening model: ${(e as Error)?.stack ?? e}`);
+        logger.error(`Error opening model: ${e}`);
         logger.debug("Creating default model instead");
-        model = await models.load(batchOptions);
+        model = await models.load(batchOptions, format);
 
         logger.debug("Saving");
         await ensureDir(latestModelFolder);
         await models.save(model, latestModelUrl);
     }
 
-    // save a copy of the original model for evaluating the trained model later
+    // Save a copy of the original model for evaluating the trained model later.
     logger.debug("Saving copy of original for reference");
-    const originalModel = await models.load(batchOptions, loadUrl);
+    const originalModel = await models.load(batchOptions, format, loadUrl);
     const originalModelFolder = join(modelsFolder, "original");
     await models.save(originalModel, `file://${originalModelFolder}`);
 
@@ -70,13 +71,13 @@ const batchOptions: BatchPredictOptions =
         numGames: numEvalGames
     }];
 
-    // train network
+    // Train network.
     for (let i = 0; i < numEpisodes; ++i)
     {
         const episodeLog = logger.addPrefix(
             `Episode(${i + 1}/${numEpisodes}): `);
 
-        // TODO: should opponents be stored as file urls to conserve memory?
+        // TODO: Should opponents be stored as file urls to conserve memory?
         await episode(
         {
             models, model,
@@ -100,14 +101,14 @@ const batchOptions: BatchPredictOptions =
             logPath: join(logPath, `episode-${i + 1}`)
         });
 
-        // save the model for evaluation at the end of the next episode
+        // Save the model for evaluation at the end of the next episode.
         episodeLog.debug("Saving");
         const episodeFolderName = `episode-${i + 1}`;
         const episodeModelFolder = join(modelsFolder, episodeFolderName);
         await models.save(model, `file://${episodeModelFolder}`);
 
-        // re-load it so we have a copy
-        const modelCopy = await models.load(batchOptions,
+        // Re-load it so we have a copy.
+        const modelCopy = await models.load(batchOptions, format,
             `file://${join(episodeModelFolder, "model.json")}`);
         evalOpponents.push(
         {
@@ -119,7 +120,7 @@ const batchOptions: BatchPredictOptions =
     logger.debug("Saving latest model");
     await models.save(model, latestModelUrl);
 
-    // unload all the models and the NetworkProcessosr
+    // Unload all the models and then the ModelWorker itself.
     const promises = [models.unload(model)];
     for (const opponent of evalOpponents)
     {
@@ -131,4 +132,4 @@ const batchOptions: BatchPredictOptions =
     .catch((e: Error) =>
         console.log("\nTraining script threw an error: " +
             (e.stack ?? e.toString())))
-    .finally(() => models.close());
+    .finally(() => void models.close());

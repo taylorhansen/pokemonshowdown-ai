@@ -3,7 +3,7 @@ import { BattleState, ReadonlyBattleState } from "./BattleState";
 import { Pokemon, ReadonlyPokemon } from "./Pokemon";
 import { ReadonlyTeamStatus, TeamStatus } from "./TeamStatus";
 
-/** Readonly Team representation. */
+/** Readonly {@link Team} representation. */
 export interface ReadonlyTeam
 {
     /** Reference to the parent BattleState. */
@@ -41,7 +41,7 @@ export interface SwitchOptions
     readonly hpMax: number;
 }
 
-/** Options for `Team#reveal()`. */
+/** Options for {@link Team.reveal}. */
 export interface TeamRevealOptions extends SwitchOptions
 {
     /** Moveset to fill in. */
@@ -66,7 +66,7 @@ export class Team implements ReadonlyTeam
     /** @override */
     public readonly side: SideID;
 
-    // as long as at least one pokemon was revealed, this will be valid
+    // As long as at least one pokemon was revealed, this will be valid.
     /** @override */
     public get active(): Pokemon { return this._pokemon[0]!; }
 
@@ -79,8 +79,8 @@ export class Team implements ReadonlyTeam
     {
         this._size = Math.max(1, Math.min(size, Team.maxSize));
 
-        // clear pokemon array
-        // team has `size` unrevealed pokemon and `maxSize - size` nonexistent
+        // Clear pokemon array.
+        // Team has `size` unrevealed pokemon and `maxSize - size` nonexistent.
         this._pokemon.fill(null, 0, this._size);
         this._pokemon.fill(undefined, this._size);
         this.unrevealed = 0;
@@ -101,8 +101,8 @@ export class Team implements ReadonlyTeam
 
     /**
      * Index of the next pokemon that hasn't been revealed to the user yet.
-     * Indexes to the `pokemon` field after or equal to this value point to
-     * unrevealed or nonexistent slots.
+     * Indexes to the {@link pokemon} field after or equal to this value point
+     * to unrevealed or nonexistent slots.
      */
     private unrevealed = 0;
 
@@ -115,11 +115,12 @@ export class Team implements ReadonlyTeam
 
     /**
      * Creates a Team object.
+     *
      * @param side The Side this Team is on.
      * @param state Reference to the parent BattleState.
      * @param size Total known size of team.
      */
-    constructor(side: SideID, state?: BattleState, size = Team.maxSize)
+    public constructor(side: SideID, state?: BattleState, size = Team.maxSize)
     {
         this.state = state;
         this.side = side;
@@ -153,16 +154,17 @@ export class Team implements ReadonlyTeam
     /**
      * Indicates that a new pokemon has been switched in and will replace the
      * current active pokemon.
-     * @returns The new active pokemon, or null if invalid.
+     *
+     * @returns The new active pokemon, or `null` if invalid.
      */
     public switchIn(options: SwitchOptions): Pokemon | null
     {
-        // see if we already know this pokemon
+        // See if we already know this pokemon.
         let index = -1;
         for (let i = 0; i < this.unrevealed; ++i)
         {
             const m = this._pokemon[i];
-            // TODO: in gen5 check everything since it could be illusion
+            // TODO(gen5): Check everything since it could be Illusion.
             if (m?.baseTraits.species.name === options.species)
             {
                 index = i;
@@ -170,10 +172,10 @@ export class Team implements ReadonlyTeam
             }
         }
 
-        // revealing a new pokemon
+        // Revealing a new pokemon.
         if (index < 0) index = this.revealIndex(options);
 
-        // trying to access an invalid pokemon
+        // Trying to access an invalid pokemon.
         if (index < 0 || index >= this.unrevealed) return null;
 
         const mon = this._pokemon[index];
@@ -185,13 +187,13 @@ export class Team implements ReadonlyTeam
                 "into itself");
         }
 
-        // switch active status
+        // Switch active status.
         mon.switchInto(index === 0 ? null : this._pokemon[0],
             this.status.selfSwitch);
-        // consume pending self-switch/copyvolatile flag
+        // Consume pending self-switch/copyvolatile flag.
         this.status.selfSwitch = null;
 
-        // swap active slot with new pokemon
+        // Swap active slot with new pokemon.
         [this._pokemon[0], this._pokemon[index]] =
             [this._pokemon[index], this._pokemon[0]];
         return this.active;
@@ -199,31 +201,33 @@ export class Team implements ReadonlyTeam
 
     /**
      * Indicates that a new pokemon has been revealed.
-     * @returns The new pokemon, or null if the operation would overflow the
+     *
+     * @returns The new pokemon, or `null` if the operation would overflow the
      * current team size.
      */
     public reveal(options: TeamRevealOptions): Pokemon | null
     {
         const index = this.revealIndex(options);
         if (index < 0) return null;
-        return this._pokemon[index] || null;
+        return this._pokemon[index] ?? null;
     }
 
     /**
      * Indicates that a new pokemon has been revealed.
-     * @returns The index of the new pokemon, or -1 if the operation would
+     *
+     * @returns The index of the new pokemon, or `-1` if the operation would
      * overflow the current team size.
      */
     private revealIndex({species, level, gender, hp, hpMax, moves}:
         TeamRevealOptions): number
     {
-        // team already full
+        // Team already full.
         if (this.unrevealed === this._size) return -1;
 
         const newMon = new Pokemon(species, level, moves, this);
         this._pokemon[this.unrevealed] = newMon;
 
-        // initialize new pokemon
+        // Initialize new pokemon.
         newMon.gender = gender;
         newMon.hp.set(hp, hpMax);
         const isOurSide = this.state?.ourSide === this.side;
@@ -238,9 +242,10 @@ export class Team implements ReadonlyTeam
         for (const mon of this._pokemon) mon?.majorStatus.cure();
     }
 
-    // istanbul ignore next: only used for logging
+    // istanbul ignore next: Only used for logging.
     /**
      * Encodes all team data into a string.
+     *
      * @param indent Indentation level to use.
      * @returns The Team in string form.
      */

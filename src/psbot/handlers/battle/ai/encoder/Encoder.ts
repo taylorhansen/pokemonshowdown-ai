@@ -6,17 +6,19 @@ export interface Encoder<TState>
 {
     /**
      * Encoder function.
+     *
      * @param arr Array to fill with the encoded data. Length should be at least
-     * `#size`.
+     * {@link size}.
      * @param args Data to encode.
      */
-    encode(arr: Float32Array, args: TState): void;
+    readonly encode: (arr: Float32Array, args: TState) => void;
     /** Minimum size of data required for `#encode()` array. */
     readonly size: number;
 }
 
 /**
  * Creates a no-op Encoder in order to make an assertion.
+ *
  * @param assertion Assertion function to call. This function may throw if a
  * precondition about its input was violated.
  */
@@ -35,6 +37,7 @@ export function assertEncoder<TState>(assertion: (state: TState) => void):
 
 /**
  * Augments an encoder to become compatible with a different input type.
+ *
  * @param getter Function to transform the new input type into the old one.
  * @param encoder Encoder that works with the old input type.
  */
@@ -49,9 +52,10 @@ export function augment<TState1, TState2>(getter: (args: TState1) => TState2,
 
 /**
  * Creates an Encoder that concatenates the results of each of the given
- * Encoders using the same original input state. Since all the results are
- * concatenated, the returned Encoder will require an array that spans the sum
- * of each Encoder's required array size.
+ * Encoders using the same original input state.
+ *
+ * Since all the results are concatenated, the returned Encoder will require an
+ * array that spans the sum of each Encoder's required array size.
  */
 export function concat<TState>(...encoders: Encoder<TState>[]):
     Encoder<TState>
@@ -60,7 +64,7 @@ export function concat<TState>(...encoders: Encoder<TState>[]):
     return {
         encode(arr, args)
         {
-            checkLength(arr, size);
+            checkLength(arr, this.size);
             let nextByteOffset = arr.byteOffset;
             const maxByteOffset = arr.byteLength + arr.byteOffset;
             for (const encoder of encoders)
@@ -90,6 +94,7 @@ export function concat<TState>(...encoders: Encoder<TState>[]):
 
 /**
  * Creates an Encoder that maps over a collection of states.
+ *
  * @param length Number of state objects to encode.
  * @param encoder Encoder to use for each state object.
  */
@@ -104,6 +109,7 @@ export function map<TState>(length: number, encoder: Encoder<TState>):
 
 /**
  * Creates an encoder that defaults to another if the state input is null.
+ *
  * @param encoder Encoder when the state is defined.
  * @param alt Encoder when the state input is null.
  */
@@ -128,6 +134,7 @@ export function nullable<TState>(encoder: Encoder<TState>,
 /**
  * Creates an Encoder that selects one of three given Encoders depending on
  * whether the input is defined, `null`, or `undefined`.
+ *
  * @param defined Encoder when the input is defined.
  * @param unknown Encoder when the input is `null`.
  * @param empty Encoder when the input is `undefined`.

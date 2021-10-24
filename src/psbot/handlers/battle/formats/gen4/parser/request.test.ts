@@ -4,8 +4,9 @@ import { benchInfo, ditto, eevee, requestEvent, smeargle } from
     "../state/switchOptions.test";
 import { createInitialContext, ParserContext, setupOverrideAgent,
     setupOverrideSender } from "./Context.test";
-import { initParser, ParserHelpers, toID, toMoveName, toRequestJSON,
-    toUsername } from "./helpers.test";
+import { ParserHelpers } from "./ParserHelpers.test";
+import { initParser, toID, toMoveName, toRequestJSON, toUsername } from
+    "./helpers.test";
 import { request } from "./request";
 
 export const test = () => describe("request", function()
@@ -16,7 +17,7 @@ export const test = () => describe("request", function()
     let pctx: ParserContext<void> | undefined;
     const ph = new ParserHelpers(() => pctx);
 
-    beforeEach("Initialize request BattleParser", async function()
+    beforeEach("Initialize request BattleParser", function()
     {
         pctx = initParser(ictx.startArgs, request);
     });
@@ -26,11 +27,8 @@ export const test = () => describe("request", function()
         await ph.close().finally(() => pctx = undefined);
     });
 
-    const {choices: agentChoices, resolve: agentResolver} =
-        setupOverrideAgent(ictx);
-
-    const {sent: sentPromise, resolve: sendResolver} =
-        setupOverrideSender(ictx);
+    const agent = setupOverrideAgent(ictx);
+    const sender = setupOverrideSender(ictx);
 
     describe("requestType = team", function()
     {
@@ -81,11 +79,11 @@ export const test = () => describe("request", function()
                 }
             ]}));
 
-            await expect(agentChoices()).to.eventually.have.members(
+            await expect(agent.choices()).to.eventually.have.members(
                 ["move 1", "move 2", "switch 2", "switch 3"]);
-            agentResolver();
-            await expect(sentPromise()).to.eventually.equal("move 1");
-            sendResolver();
+            agent.resolve();
+            await expect(sender.sent()).to.eventually.equal("move 1");
+            sender.resolve(false /*i.e., accept the choice*/);
 
             await p;
             await ph.return();
@@ -113,26 +111,26 @@ export const test = () => describe("request", function()
                 }
             ]}));
 
-            // make a switch choice
-            const c = await agentChoices();
+            // Make a switch choice.
+            const c = await agent.choices();
             expect(c).to.have.members(
                 ["move 1", "move 2", "switch 2", "switch 3"]);
             [c[2], c[0]] = [c[0], c[2]];
             expect(c).to.have.members(
                 ["switch 2", "move 2", "move 1", "switch 3"]);
-            expect(agentResolver).to.not.be.null;
-            agentResolver!();
-            // switch choice was rejected due to a trapping ability
-            await expect(sentPromise()).to.eventually.equal("switch 2");
-            sendResolver("trapped");
+            expect(agent.resolve).to.not.be.null;
+            agent.resolve();
+            // Switch choice was rejected due to a trapping ability.
+            await expect(sender.sent()).to.eventually.equal("switch 2");
+            sender.resolve("trapped");
 
-            // make a new choice
-            await expect(agentChoices()).to.eventually.have.members(
+            // Make a new choice.
+            await expect(agent.choices()).to.eventually.have.members(
                 ["move 2", "move 1"]);
-            agentResolver();
-            // switch choice was accepted now
-            await expect(sentPromise()).to.eventually.equal("move 2");
-            sendResolver();
+            agent.resolve();
+            // Switch choice was accepted now.
+            await expect(sender.sent()).to.eventually.equal("move 2");
+            sender.resolve(false /*i.e., accept the choice*/);
 
             await p;
             await ph.return();
@@ -148,11 +146,11 @@ export const test = () => describe("request", function()
 
             const p = ph.handle(requestEvent("switch", benchInfo));
 
-            await expect(agentChoices()).to.eventually.have.members(
+            await expect(agent.choices()).to.eventually.have.members(
                 ["switch 2", "switch 3"]);
-            agentResolver();
-            await expect(sentPromise()).to.eventually.equal("switch 2");
-            sendResolver();
+            agent.resolve();
+            await expect(sender.sent()).to.eventually.equal("switch 2");
+            sender.resolve(false /*i.e., accept the choice*/);
 
             await p;
             await ph.return();

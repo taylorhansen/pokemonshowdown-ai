@@ -1,7 +1,7 @@
 import { Protocol } from "@pkmn/protocol";
 import { Logger } from "../../../Logger";
+import { Sender } from "../../PsBot";
 import { Event } from "../../parser";
-import { Sender } from "../../PSBot";
 import { RoomHandler } from "../RoomHandler";
 import { BattleAgent } from "./agent";
 import * as formats from "./formats";
@@ -9,7 +9,8 @@ import { BattleIterator, BattleParser, ChoiceSender, SenderResult,
     startBattleParser, StartBattleParserArgs } from "./parser";
 
 /**
- * Args for BattleHandler constructor.
+ * Args for the {@link BattleHandler} constructor.
+ *
  * @template T Battle format for this room.
  * @template TAgent Battle agent type.
  */
@@ -28,7 +29,10 @@ export interface BattleHandlerArgs
      * format default.
      */
     readonly parser?: BattleParser<T, TAgent, [], void>;
-    /** BattleState constructor function. Defaults to format default. */
+    /**
+     * {@link formats.State BattleState} constructor function. Defaults to
+     * format default.
+     */
     readonly stateCtor?: formats.StateConstructor<T>;
     /** Function for deciding what to do. */
     readonly agent: TAgent;
@@ -40,6 +44,7 @@ export interface BattleHandlerArgs
 
 /**
  * Base handler for battle rooms.
+ *
  * @template T Battle format for this room.
  * @template TAgent Battle agent type.
  */
@@ -57,47 +62,48 @@ export class BattleHandler
     /** Logger object. */
     private readonly logger: Logger;
 
-    /** Last received `|request|` event for ChoiceSender handling. */
+    /** Last received `|request|` event for {@link ChoiceSender} handling. */
     private lastRequestEvent: Event<"|request|"> | null = null;
     /** Last unactioned `|request|` event for reordering. */
     private pendingRequest: Event<"|request|"> | null = null;
 
     /**
-     * Callback to resolve the BattleParser's last ChoiceSender call. The next
-     * event received after that last call is treated as a response to it.
+     * Callback to resolve the {@link BattleParser}'s last {@link ChoiceSender}
+     * call. The next event received after that last call is treated as a
+     * response to it.
      */
     private choiceSenderRes: ((result: SenderResult) => void) | null = null;
     /**
      * If the last unhandled `|error|` message indicated an unavailable
-     * choice, this field describes the type of rejected Choice, and the next
-     * message should be a `|request|` to reveal new info.
+     * choice, this field describes the type of rejected {@link Choice}, and the
+     * next message should be a `|request|` to reveal new info.
      */
     private unavailableChoice: "move" | "switch" | null = null;
 
-    /** Iterator for sending PS Events to the BattleParser. */
+    /** Iterator for sending PS Events to the {@link BattleParser}. */
     private readonly iter: BattleIterator;
     /**
-     * Promise for the BattleParser to finish making a decision after parsing a
-     * `|request|` event.
+     * Promise for the {@link BattleParser} to finish making a decision after
+     * parsing a `|request|` event.
      */
     private decisionPromise: ReturnType<BattleIterator["next"]> | null = null;
-    /** Promise for the entire BattleParser to finish. */
+    /** Promise for the entire {@link BattleParser} to finish. */
     private readonly finishPromise: Promise<unknown>;
 
     /** Whether the game has been fully initialized. */
     private battling = false;
     /**
-     * Whether `#handle()` has parsed any relevant game events since the last
-     * `#halt()`. When this and `#battling` are true, then we should expect a
-     * `|request|` event on the next `#halt()`.
+     * Whether {@link handle} has parsed any relevant game events since the last
+     * {@link halt} call. When this and {@link battling} are true, then we
+     * should expect a `|request|` event on the next {@link halt} call.
      */
     private progress = false;
 
     /** Creates a BattleHandler. */
-    constructor(
+    public constructor(
         {
             format, username,
-            parser = formats.parser[format] as any as
+            parser = formats.parser[format] as unknown as
                 BattleParser<T, TAgent, [], void>,
             stateCtor = formats.state[format], agent, sender,
             logger = Logger.stderr
@@ -109,14 +115,14 @@ export class BattleHandler
         this.logger = logger;
 
         const choiceSender: ChoiceSender =
-            choice =>
-                new Promise<SenderResult>(res =>
+            async choice =>
+                await new Promise<SenderResult>(res =>
                 {
                     this.choiceSenderRes = res;
                     if (!this.sender(`|/choose ${choice}`))
                     {
                         this.logger.debug("Can't send Choice, force accept");
-                        res();
+                        res(false);
                     }
                 })
                 .finally(() => this.choiceSenderRes = null);
@@ -136,24 +142,24 @@ export class BattleHandler
     /** @override */
     public async handle(event: Event): Promise<void>
     {
-        // filter out irrelevant/non-battle events
-        // TODO: should be gen-specific
+        // Filter out irrelevant/non-battle events.
+        // TODO: Should be gen-specific.
         if (!BattleHandler.filter(event)) return;
 
-        // game start
+        // Game start.
         if (event.args[0] === "start") this.battling = true;
-        // game over
+        // Game over.
         else if (["win", "tie"].includes(event.args[0])) this.battling = false;
 
-        // the next event we receive is treated as a response to the last call
-        //  to the choice sender function
+        // The next event we receive is treated as a response to the last call
+        // to the choice sender function.
         if (event.args[0] === "request")
         {
-            // empty |request| event should be ignored
+            // Empty |request| event should be ignored.
             if (!event.args[1]) return;
             this.handleRequest(event as Event<"|request|">);
-            // use the first valid |request| event to also initialize during the
-            //  init phase of parsing
+            // Use the first valid |request| event to also initialize during the
+            // init phase of parsing.
             if (this.battling) return;
         }
         if (event.args[0] === "error")
@@ -162,17 +168,17 @@ export class BattleHandler
             return;
         }
 
-        // after verifying that this is a relevant game event that progresses
-        //  the battle, we can safely assume that this means that our last sent
-        //  decision from the last |request| event was accepted
-        this.choiceSenderRes?.();
+        // After verifying that this is a relevant game event that progresses
+        // the battle, we can safely assume that this means that our last sent
+        // decision from the last |request| event was accepted.
+        this.choiceSenderRes?.(false);
         if (this.decisionPromise && (await this.decisionPromise).done)
         {
             await this.finish();
             return;
         }
 
-        // process the game event normally
+        // Process the game event normally.
         this.progress = true;
         if ((await this.iter.next(event)).done) await this.finish();
     }
@@ -180,9 +186,8 @@ export class BattleHandler
     /** @override */
     public halt(): void
     {
-        // after parsing a non-terminating block of game-progressing events,
-        //  we should've expected a |request| event to have come before that
-        //  block
+        // After parsing a non-terminating block of game-progressing events, we
+        // should've expected a |request| event to have come before that block.
         if (!this.battling || !this.progress) return;
         if (!this.pendingRequest)
         {
@@ -190,21 +195,22 @@ export class BattleHandler
         }
         if (this.decisionPromise) throw new Error("Already halted");
 
-        // send the last saved |request| event to the BattleParser here
-        // this reordering allows us to treat |request| as an actual request for
-        //  a decision _after_ handling all of the relevant game events
-        // however, we can't await here since the ChoiceSender can only resolve
-        //  once it has seen game-progressing events to confirm its response
+        // Send the last saved |request| event to the BattleParser here.
+        // This reordering allows us to treat |request| as an actual request for
+        // a decision _after_ handling all of the relevant game events.
+        // However, we can't await here since the ChoiceSender can only resolve
+        // once it has seen game-progressing events to confirm its response.
         this.decisionPromise = this.iter.next(this.pendingRequest)
             .finally(() => this.decisionPromise = null);
-        // reset for the next |request| event and the next block of
-        //  game-progressing events
+        // Reset for the next |request| event and the next block of
+        // game-progressing events.
         this.pendingRequest = null;
         this.progress = false;
     }
 
     /**
-     * Waits for the internal BattleParser to return after handling a game-over.
+     * Waits for the internal {@link BattleParser} to return after handling a
+     * game-over.
      */
     public async finish(): Promise<void>
     {
@@ -212,10 +218,10 @@ export class BattleHandler
         await this.finishPromise;
     }
 
-    /** Forces the internal BattleParser to finish. */
+    /** Forces the internal {@link BattleParser} to finish. */
     public async forceFinish(): Promise<void>
     {
-        await this.iter.return();
+        await this.iter.return?.();
         await this.finish();
     }
 
@@ -224,25 +230,25 @@ export class BattleHandler
         if (this.pendingRequest) throw new Error("Unhandled |request| event");
         this.pendingRequest = event;
 
-        const lastRequestEvent = this.lastRequestEvent;
+        const {lastRequestEvent} = this;
         this.lastRequestEvent = event;
 
         if (!this.unavailableChoice)
         {
-            // last sent choice was accepted, so this is the next request
-            //  containing the state after handling our choice
-            // the request state json provided always reflects the results of
-            //  the next block of game events coming after this event
-            this.choiceSenderRes?.();
+            // Last sent choice was accepted, so this is the next request
+            // containing the state after handling our choice.
+            // The request state json provided always reflects the results of
+            // the next block of game events coming after this event.
+            this.choiceSenderRes?.(false);
             return;
         }
 
-        // consume unavailableChoice error from last |error| event
+        // Consume unavailableChoice error from last |error| event.
         const lastRequest = lastRequestEvent &&
             Protocol.parseRequest(lastRequestEvent.args[1]);
         const request = Protocol.parseRequest(event.args[1]);
 
-        // new info may be revealed
+        // New info may be revealed.
         if (this.unavailableChoice === "switch" &&
             lastRequest?.requestType === "move" &&
             lastRequest.active[0] && !lastRequest.active[0].trapped &&
@@ -265,18 +271,18 @@ export class BattleHandler
         const [, reason] = event.args;
         if (reason.startsWith("[Unavailable choice] Can't "))
         {
-            // rejected last choice based on unknown info
-            // wait for another (guaranteed) request message before proceeding
+            // Rejected last choice based on unknown info.
+            // Wait for another (guaranteed) request message before proceeding.
             const s = reason.substr("[Unavailable choice] Can't ".length);
-            // TODO: does this distinction matter?
+            // TODO: Does this distinction matter?
             if (s.startsWith("move")) this.unavailableChoice = "move";
             else if (s.startsWith("switch")) this.unavailableChoice = "switch";
-            // note: now that this info has been revealed, we should get an
-            //  updated |request| message
+            // Note: now that this info has been revealed, we should get an
+            // updated |request| message.
         }
         else if (reason.startsWith("[Invalid choice]"))
         {
-            // rejected last choice based on unrevealed or already-known info
+            // Rejected last choice based on unrevealed or already-known info.
             this.choiceSenderRes?.(true);
         }
     }
@@ -286,7 +292,10 @@ export class BattleHandler
     {
         const key = Protocol.key(event.args);
         if (key === "|error|") return true;
-        if (!key || !allowedBattleArgs.hasOwnProperty(key)) return false;
+        if (!key || !Object.hasOwnProperty.call(allowedBattleArgs, key))
+        {
+            return false;
+        }
         const pred = allowedBattleArgs[key as Protocol.BattleArgName];
         if (typeof pred === "function")
         {
@@ -330,19 +339,13 @@ const allowedBattleArgs:
     "|-immune|": true, "|-item|": true, "|-enditem|": true, "|-ability|": true,
     "|-endability|": true, "|-transform|": true, "|-mega|": true,
     "|-primal|": true, "|-burst|": true, "|-zpower|": true, "|-zbroken|": true,
-    "|-activate|"(event)
-    {
-        // sometimes comes out as its own message which can confuse the
-        //  BattleHandler
-        return event.args[2] !== "move: Struggle";
-    },
+    // Sometimes comes out as its own message which can confuse the
+    // BattleHandler.
+    "|-activate|": event => event.args[2] !== "move: Struggle",
     "|-fieldactivate|": true,
     "|-hint|": false, "|-center|": true,
-    "|-message|"(event)
-    {
-        // only accept messages that are actually parsed
-        return allowedMinorMessages.includes(event.args[1]);
-    },
+    // Only accept messages that are actually parsed.
+    "|-message|": event => allowedMinorMessages.includes(event.args[1]),
     "|-combine|": true, "|-waiting|": true, "|-prepare|": true,
     "|-mustrecharge|": true, "|-hitcount|": true, "|-singlemove|": true,
     "|-singleturn|": true, "|-anim|": false, "|-ohko|": true,

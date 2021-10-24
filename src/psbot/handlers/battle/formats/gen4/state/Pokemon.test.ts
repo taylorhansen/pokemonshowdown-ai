@@ -9,7 +9,7 @@ export const test = () => describe("Pokemon", function()
 {
     function switchOut(mon: Pokemon)
     {
-        // create a different Pokemon that will replace the given one
+        // Create a different Pokemon that will replace the given one.
         const other = new Pokemon("smeargle");
         other.switchInto(mon);
     }
@@ -89,7 +89,7 @@ export const test = () => describe("Pokemon", function()
             it("Should narrow ability if not already", function()
             {
                 const mon = new Pokemon("magikarp");
-                const ability = mon.traits.ability;
+                const {ability} = mon.traits;
 
                 mon.setAbility("swiftswim");
                 expect(ability).to.equal(mon.traits.ability);
@@ -100,7 +100,7 @@ export const test = () => describe("Pokemon", function()
             {
                 const mon = new Pokemon("smeargle");
                 mon.switchInto();
-                const ability = mon.traits.ability;
+                const {ability} = mon.traits;
                 ability.remove("technician");
 
                 mon.setAbility("technician");
@@ -140,7 +140,7 @@ export const test = () => describe("Pokemon", function()
     {
         it("Should narrow item", function()
         {
-            const mon = new Pokemon("magikarp"); // opponent
+            const mon = new Pokemon("magikarp"); // Opponent.
             expect(mon.item.definiteValue).to.be.null;
 
             mon.setItem("lifeorb");
@@ -150,13 +150,13 @@ export const test = () => describe("Pokemon", function()
         it("Should re-narrow item if gained", function()
         {
             const mon = new Pokemon("magikarp");
-            const item = mon.item;
+            const {item} = mon;
             item.narrow("leftovers");
 
-            mon.setItem("lifeorb", /*gained*/true);
-            // old item reference stays the same
+            mon.setItem("lifeorb", true /*gained*/);
+            // Old item reference stays the same.
             expect(item.definiteValue).to.equal("leftovers");
-            // new item reference gets created
+            // New item reference gets created.
             expect(mon.item).to.not.equal(item);
             expect(mon.item.definiteValue).to.equal("lifeorb");
         });
@@ -168,28 +168,28 @@ export const test = () => describe("Pokemon", function()
             {
                 const mon = new Pokemon("magikarp");
 
-                // indicate that an item was consumed
-                mon.removeItem(/*consumed*/true);
-                const item = mon.item;
-                const lastItem = mon.lastItem;
+                // Indicate that an item was consumed.
+                mon.removeItem(true /*consumed*/);
+                const {item} = mon;
+                const {lastItem} = mon;
 
-                // old item being brought back via recycle
-                mon.setItem("sitrusberry", /*gained*/"recycle");
+                // Old item being brought back via recycle.
+                mon.setItem("sitrusberry", "recycle" /*gained*/);
 
-                // original #lastItem ref should be moved to #item
+                // Original #lastItem ref should be moved to #item.
                 expect(mon.item).to.equal(lastItem,
                     "#lastItem reference was not moved to #item");
 
-                // new #item ref should also be narrowed to the parameter
+                // New #item ref should also be narrowed to the parameter.
                 expect(mon.item.definiteValue).to.equal("sitrusberry");
 
-                // original #item ref should become garbage
+                // Original #item ref should become garbage.
                 expect(mon.item).to.not.equal(item,
                     "#item still has its original reference");
                 expect(mon.lastItem).to.not.equal(item,
                     "#lastItem was set to the original #item reference");
 
-                // original #lastItem ref should be replaced by a new obj
+                // Original #lastItem ref should be replaced by a new obj
                 expect(mon.lastItem).to.not.equal(lastItem,
                     "#lastItem was not reset");
                 expect(mon.lastItem.definiteValue).to.equal("none");
@@ -199,11 +199,11 @@ export const test = () => describe("Pokemon", function()
             {
                 const mon = new Pokemon("magikarp");
 
-                // consumed item is unknown but is definitely not lifeorb
+                // Consumed item is unknown but is definitely not lifeorb.
                 mon.item.remove("lifeorb");
-                mon.removeItem(/*consumed*/true);
+                mon.removeItem(true /*consumed*/);
 
-                expect(() => mon.setItem("lifeorb", /*gained*/"recycle"))
+                expect(() => mon.setItem("lifeorb", "recycle" /*gained*/))
                     .to.throw(Error,
                         "Pokemon gained 'lifeorb' via Recycle but last item " +
                         "was '<unknown>'");
@@ -212,10 +212,10 @@ export const test = () => describe("Pokemon", function()
             it("Should throw if recycled item mismatches", function()
             {
                 const mon = new Pokemon("magikarp");
-                // indicate that an item was consumed
+                // Indicate that an item was consumed.
                 mon.setItem("sitrusberry");
                 mon.removeItem("sitrusberry");
-                expect(() => mon.setItem("lifeorb", /*gained*/"recycle"))
+                expect(() => mon.setItem("lifeorb", "recycle" /*gained*/))
                     .to.throw(Error,
                         "Pokemon gained 'lifeorb' via Recycle but last item " +
                         "was 'sitrusberry'");
@@ -247,7 +247,7 @@ export const test = () => describe("Pokemon", function()
                 const mon = new Pokemon("magikarp");
                 mon.switchInto();
 
-                mon.setItem("none", /*gained*/true);
+                mon.setItem("none", true /*gained*/);
                 expect(mon.volatile.unburden).to.be.true;
             });
         });
@@ -281,13 +281,13 @@ export const test = () => describe("Pokemon", function()
         it("Should remove item", function()
         {
             const mon = new Pokemon("magikarp");
-            const item = mon.item;
+            const {item} = mon;
             item.narrow("focussash");
 
-            mon.removeItem(/*consumed*/false);
-            // old item reference stays the same
+            mon.removeItem(false /*consumed*/);
+            // Old item reference stays the same.
             expect(item.definiteValue).to.equal("focussash");
-            // new item reference gets created
+            // New item reference gets created.
             expect(mon.item).to.not.equal(item);
             expect(mon.item.definiteValue).to.equal("none");
         });
@@ -299,7 +299,7 @@ export const test = () => describe("Pokemon", function()
                 const mon = new Pokemon("magikarp");
                 mon.switchInto();
 
-                mon.removeItem(/*consumed*/false);
+                mon.removeItem(false /*consumed*/);
                 expect(mon.volatile.unburden).to.be.true;
             });
         });
@@ -311,13 +311,13 @@ export const test = () => describe("Pokemon", function()
                 const mon = new Pokemon("magikarp");
                 mon.switchInto();
                 mon.setItem("leftovers");
-                const item = mon.item;
+                const {item} = mon;
 
-                mon.removeItem(/*consumed*/false);
-                // current item reference is gone
+                mon.removeItem(false /*consumed*/);
+                // Current item reference is gone.
                 expect(mon.item.definiteValue).to.equal("none");
 
-                // old item reference is not moved to lastItem
+                // Old item reference is not moved to lastItem.
                 expect(mon.lastItem).to.not.equal(item);
                 expect(mon.lastItem.definiteValue).to.equal("none");
             });
@@ -326,13 +326,13 @@ export const test = () => describe("Pokemon", function()
             function()
             {
                 const mon = new Pokemon("magikarp");
-                const item = mon.item;
+                const {item} = mon;
                 mon.switchInto();
                 mon.setItem("leftovers");
                 expect(mon.lastItem.definiteValue).to.equal("none");
 
                 mon.removeItem("leftovers");
-                // current held item possibility gets reassigned to lastItem
+                // Current held item possibility gets reassigned to lastItem.
                 expect(mon.lastItem).to.equal(item);
                 expect(mon.lastItem.definiteValue).to.equal("leftovers");
             });
@@ -345,8 +345,8 @@ export const test = () => describe("Pokemon", function()
         {
             it("Should override movepool", function()
             {
-                // if the moves argument wasn't provided, the moves would've
-                //  been inserted in the default movepool's order
+                // If the moves argument wasn't provided, the moves would've
+                // been inserted in the default movepool's order.
                 const moves = [...dex.pokemon["magikarp"].movepool].reverse();
                 expect(moves).to.have.lengthOf(4);
                 const mon = new Pokemon("magikarp", 100, moves);
@@ -362,7 +362,7 @@ export const test = () => describe("Pokemon", function()
                 const mon = new Pokemon("smeargle");
                 mon.switchInto();
                 mon.moveset.reveal("mimic");
-                mon.volatile.choiceLock = "test"; // also test choice lock
+                mon.volatile.choiceLock = "test"; // Also test choice lock.
 
                 mon.mimic("tackle");
                 expect(mon.moveset.get("mimic")).to.be.null;
@@ -378,7 +378,7 @@ export const test = () => describe("Pokemon", function()
                 mon.moveset.reveal("mimic");
 
                 mon.mimic("tackle");
-                // switch-out should revert
+                // Switch-out should revert.
                 switchOut(mon);
                 expect(mon.moveset.get("tackle")).to.be.null;
                 expect(mon.moveset.get("mimic")).to.not.be.null;
@@ -392,11 +392,11 @@ export const test = () => describe("Pokemon", function()
                 const mon = new Pokemon("smeargle");
                 mon.switchInto();
                 mon.moveset.reveal("sketch");
-                mon.volatile.choiceLock = "test"; // also test choice lock
+                mon.volatile.choiceLock = "test"; // Also test choice lock.
 
                 mon.sketch("tackle");
                 expect(mon.volatile.choiceLock).to.be.null;
-                // switch-out should not matter
+                // Switch-out should not matter
                 switchOut(mon);
                 expect(mon.moveset.get("sketch")).to.be.null;
                 expect(mon.moveset.get("tackle")).to.not.be.null;
@@ -427,7 +427,7 @@ export const test = () => describe("Pokemon", function()
             expect(mon).to.have.property("happiness", 0);
         });
 
-        // TODO: is this necessary?
+        // TODO: Is this necessary?
         it("Should be resettable", function()
         {
             const mon = new Pokemon("magikarp");
@@ -456,8 +456,7 @@ export const test = () => describe("Pokemon", function()
         it("Should not be grounded if flying type", function()
         {
             const mon = new Pokemon("pidgey");
-            // remove iron ball possibility
-            mon.item.narrow("lifeorb");
+            mon.item.remove("ironball");
             expect(mon.grounded).to.be.false;
         });
 
@@ -512,7 +511,7 @@ export const test = () => describe("Pokemon", function()
 
         it("Should ignore ironball if klutz", function()
         {
-            const mon = new Pokemon("pidgey"); // flying type
+            const mon = new Pokemon("pidgey"); // Flying type.
             mon.switchInto();
             mon.setAbility("klutz");
             mon.item.narrow("ironball");
@@ -521,7 +520,7 @@ export const test = () => describe("Pokemon", function()
 
         it("Should ignore klutz if ability suppressed", function()
         {
-            const mon = new Pokemon("pidgey"); // flying type
+            const mon = new Pokemon("pidgey"); // Flying type.
             mon.switchInto();
             mon.setAbility("klutz");
             mon.item.narrow("ironball");
@@ -533,8 +532,7 @@ export const test = () => describe("Pokemon", function()
         {
             const mon = new Pokemon("magikarp");
             mon.switchInto();
-            // remove iron ball possibility
-            mon.item.narrow("leftovers");
+            mon.item.remove("ironball");
             mon.volatile.magnetrise.start();
             expect(mon.grounded).to.be.false;
         });
@@ -552,27 +550,35 @@ export const test = () => describe("Pokemon", function()
             const mon = new Pokemon("bronzong");
             mon.switchInto();
             mon.setAbility("levitate");
-            // remove iron ball possibility
-            mon.item.narrow("leftovers");
+            mon.item.remove("ironball");
             expect(mon.grounded).to.be.false;
         });
 
         it("Should possibly be grounded if able to not have levitate ability",
         function()
         {
-            // can have levitate or heatproof
+            // Can have Levitate or Heatproof.
             const mon = new Pokemon("bronzong");
-            // remove iron ball possibility
-            mon.item.narrow("leftovers");
+            mon.item.remove("ironball");
             mon.switchInto();
             expect(mon.grounded).to.be.null;
         });
     });
 
-    // TODO
-    describe("#inactive()", function() {});
-    describe("#preTurn()", function() {});
-    describe("#postTurn()", function() {});
+    describe("#inactive()", function()
+    {
+        it("TODO");
+    });
+
+    describe("#preTurn()", function()
+    {
+        it("TODO");
+    });
+
+    describe("#postTurn()", function()
+    {
+        it("TODO");
+    });
 
     describe("#switchInto()", function()
     {
@@ -648,13 +654,13 @@ export const test = () => describe("Pokemon", function()
             const team = state.getTeam("p1");
             team.size = 1;
             const opp = team.switchIn(smeargle)!;
-            opp.volatile.mirrormove = "tackle"; // p2 used tackle on p1
+            opp.volatile.mirrormove = "tackle"; // P2 used tackle on p1.
 
             const team2 = state.getTeam("p2");
             team2.size = 2;
             team2.switchIn(smeargle)!;
 
-            // p2 switches out, so mirrormove entry is no longer valid
+            // P2 switches out, so Mirror Move entry is no longer valid.
             team2.switchIn(ditto);
             expect(opp.volatile.mirrormove).to.be.null;
         });
@@ -679,7 +685,7 @@ export const test = () => describe("Pokemon", function()
                 mon.volatile.lastMove = "tackle";
 
                 const mon2 = new Pokemon("smeargle");
-                mon2.switchInto(mon, /*selfSwitch*/ true);
+                mon2.switchInto(mon, true /*selfSwitch*/);
                 expect(mon2.volatile.lastMove).to.equal("tackle");
             });
 
@@ -692,7 +698,7 @@ export const test = () => describe("Pokemon", function()
 
                 const mon2 = new Pokemon("smeargle");
                 mon2.moveset.inferDoesntHave(["tackle"]);
-                mon2.switchInto(mon, /*selfSwitch*/ true);
+                mon2.switchInto(mon, true /*selfSwitch*/);
                 expect(mon2.volatile.lastMove).to.be.null;
             });
         });
@@ -785,8 +791,10 @@ export const test = () => describe("Pokemon", function()
         });
     });
 
-    // TODO
-    describe("#trapped()", function() { it("TODO"); });
+    describe("#trapped()", function()
+    {
+        it("TODO");
+});
 
     describe("#transform()", function()
     {
@@ -829,7 +837,7 @@ export const test = () => describe("Pokemon", function()
             expect(mon1.moveset.get("splash")).to.not.be.null;
             expect(mon1.hpType).to.equal(mon2.hpType);
 
-            // should still keep base traits
+            // Should still keep base traits.
             expect(mon1.baseTraits.species).to.equal(dex.pokemon["smeargle"]);
             expect(mon1.baseTraits.ability.possibleValues)
                 .to.have.keys(dex.pokemon["smeargle"].abilities);
@@ -879,7 +887,7 @@ export const test = () => describe("Pokemon", function()
             expect(mon2.traits.stats.hp.max).to.equal(338);
 
             mon1.transform(mon2);
-            mon1.traits.stats.hp.set(200); // shouldn't transfer
+            mon1.traits.stats.hp.set(200); // Shouldn't transfer.
             mon1.traits.stats.atk.set(200);
             mon2.traits.stats.spe.set(100);
 

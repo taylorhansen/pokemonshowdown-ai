@@ -8,7 +8,9 @@ import { SpeciesAbility } from "@pkmn/dex-types";
 import * as dex from "../src/psbot/handlers/battle/formats/gen4/dex/dex-util";
 import { toIdName } from "../src/psbot/helpers";
 
-(async function buildDex()
+// TODO: Split into multiple scripts with separate dex output files?
+
+void (async function buildDex(): Promise<void>
 {
     const gen = new Generations(Dex).get(4);
 
@@ -17,34 +19,31 @@ import { toIdName } from "../src/psbot/helpers";
 
     /**
      * Wraps a string in quotes.
+     *
      * @param str String to quote.
      * @returns The given string in quotes.
      */
-    function quote(str: string): string
-    {
-        return `"${str}"`;
-    }
+    const quote = (s: unknown) => `"${s}"`;
 
     /**
      * Wraps a string in quotes if it is an invalid identifier (i.e. it contains
      * dashes, spaces, or quotes).
+     *
      * @param str String to quote.
      * @returns The given string if it's a valid identifier, otherwise the
      * string wrapped in quotes.
      */
-    function maybeQuote(str: string): string
-    {
-        return /[^a-zA-Z0-9]/.test(str) ? quote(str) : str;
-    }
+    const maybeQuote = (s: unknown) =>
+        /[^a-zA-Z0-9]/.test(`${s}`) ? quote(s) : `${s}`;
 
-    // counter for the unique identifier of a pokemon, move, etc.
+    // Counter for the unique identifier of a pokemon, move, etc.
     let uid = 0;
 
-    // moves
+    //#region Moves.
 
     const moves: (readonly [string, dex.MoveData])[] = [];
 
-    // adapted from pokemon-showdown/data
+    // Adapted from pokemon-showdown/data.
 
     /** Moves that are blocked by Damp-like abilities. */
     const explosive: {readonly [move: string]: boolean} =
@@ -93,14 +92,14 @@ import { toIdName } from "../src/psbot/helpers";
     /** Moves that have special damage effects. */
     const customDamageMap:
     {
-        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["damage"]
+        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["damage"];
     } =
     {
         bellydrum: {type: "percent", target: "self", percent: -50},
         curse: {type: "percent", target: "self", percent: -50, ghost: true},
         substitute: {type: "percent", target: "self", percent: -25},
 
-        // TODO: weather can change this amount
+        // TODO: Weather can change this amount.
         moonlight: {type: "percent", target: "self", percent: 50},
         morningsun: {type: "percent", target: "self", percent: 50},
         synthesis: {type: "percent", target: "self", percent: 50},
@@ -112,7 +111,7 @@ import { toIdName } from "../src/psbot/helpers";
     const swapBoostMap:
         {readonly [move: string]: Partial<dex.BoostTable<true>>} =
     {
-        // swapboost moves
+        // Swapboost moves.
         guardswap: {def: true, spd: true},
         heartswap:
         {
@@ -130,13 +129,13 @@ import { toIdName } from "../src/psbot/helpers";
     /** Maps some move names to FieldTypes. */
     const fieldTypeMap:
     {
-        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["field"]
+        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["field"];
     } =
     {
-        // weathers
+        // Weathers.
         sunnyday: {effect: "SunnyDay"}, raindance: {effect: "RainDance"},
         sandstorm: {effect: "Sandstorm"}, hail: {effect: "Hail"},
-        // pseudo-weathers
+        // Pseudo-weathers.
         gravity: {effect: "gravity"},
         trickroom: {effect: "trickroom", toggle: true}
     };
@@ -145,8 +144,8 @@ import { toIdName } from "../src/psbot/helpers";
     const statusTypeMap:
         {readonly [move: string]: readonly (dex.StatusType | "splash")[]} =
     {
-        // TODO: followme, helpinghand, partiallytrapped, telekinesis (gen5)
-        // normal statuses
+        // TODO: followme, helpinghand, partiallytrapped, telekinesis (gen5).
+        // Normal statuses.
         aquaring: ["aquaring"], attract: ["attract"], charge: ["charge"],
         embargo: ["embargo"], encore: ["encore"], focusenergy: ["focusenergy"],
         foresight: ["foresight"], healblock: ["healblock"],
@@ -156,17 +155,17 @@ import { toIdName } from "../src/psbot/helpers";
         powertrick: ["powertrick"], substitute: ["substitute"],
         gastroacid: ["suppressAbility"], taunt: ["taunt"], torment: ["torment"],
         watersport: ["watersport"], yawn: ["yawn"],
-        // updatable
+        // Updatable.
         confusion: ["confusion"], bide: ["bide"], uproar: ["uproar"],
-        // singlemove
+        // Single-move.
         destinybond: ["destinybond"], grudge: ["grudge"], rage: ["rage"],
-        // singleturn
+        // Single-turn.
         endure: ["endure"], magiccoat: ["magiccoat"], protect: ["protect"],
         roost: ["roost"], snatch: ["snatch"],
-        // major status
+        // Major status.
         brn: ["brn"], frz: ["frz"], par: ["par"], psn: ["psn"], slp: ["slp"],
         tox: ["tox"],
-        // nothing
+        // Nothing.
         splash: ["splash"]
     };
 
@@ -182,7 +181,7 @@ import { toIdName } from "../src/psbot/helpers";
     /** Moves that have special status effects. */
     const customStatusMap:
     {
-        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["status"]
+        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["status"];
     } =
     {
         curse: {ghost: true, hit: ["curse"]},
@@ -198,17 +197,16 @@ import { toIdName } from "../src/psbot/helpers";
     };
 
     /** Maps some move names to set-boost effects. */
-    const setBoostMap:
-        {readonly [move: string]: Partial<dex.BoostTable<number>>} =
+    const setBoostMap: {readonly [move: string]: Partial<dex.BoostTable>} =
     {
-        // setboost moves
+        // Setboost moves.
         bellydrum: {atk: 6}
     };
 
     /** Moves that have special boost effects. */
     const customBoostMap:
     {
-        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["boost"]
+        readonly [move: string]: NonNullable<dex.MoveData["effects"]>["boost"];
     } =
     {
         curse: {noGhost: true, self: {atk: 1, def: 1, spe: -1}},
@@ -237,14 +235,14 @@ import { toIdName } from "../src/psbot/helpers";
     /** Maps move name to whether it disables moves. */
     const disableMoveMap: {readonly [move: string]: boolean} = {disable: true};
 
-    // NOTE(gen4): healingwish-like moves send in a replacement immediately
-    //  after self-faint
+    // Note(gen4): healingwish-like moves send in a replacement immediately
+    // after self-faint.
     /** Secondary map for move name to self-switch effect. */
     const selfSwitchMap: {readonly [move: string]: dex.SelfSwitchType} =
         {healingwish: true, lunardance: true}
 
     const futureMoves: string[] = [];
-    const lockedMoves: string[] = []; // TODO: rename to rampage moves
+    const lockedMoves: string[] = []; // TODO: Rename to rampage moves.
     const twoTurnMoves: string[] = [];
     const moveCallers: [string, dex.CallType][] = [];
 
@@ -266,11 +264,11 @@ import { toIdName } from "../src/psbot/helpers";
         if (!move.noSketch) sketchableMoves.push(move.id);
 
         const category = move.category.toLowerCase() as dex.MoveCategory;
-        const basePower = move.basePower;
+        const {basePower} = move;
 
         let damage: dex.MoveDamage | undefined;
         if (move.ohko) damage = "ohko";
-        else if (move.damage) damage = move.damage;
+        else if (move.damage) ({damage} = move);
         else
         {
             switch (move.id)
@@ -280,7 +278,8 @@ import { toIdName } from "../src/psbot/helpers";
                 case "counter": case "mirrorcoat": damage = "counter"; break;
                 case "metalburst": damage = "metalburst"; break;
                 case "psywave": damage = "psywave"; break;
-                case "endeavor": damage = "hpdiff";
+                case "endeavor": damage = "hpdiff"; break;
+                default:
             }
         }
 
@@ -291,40 +290,50 @@ import { toIdName } from "../src/psbot/helpers";
             case "hiddenpower": modifyType = "hpType"; break;
             case "judgment": modifyType = "plateType"; break;
             case "struggle": modifyType = "???"; break;
+            default:
         }
         typeToMoves[type].push(move.id);
 
-        const target = move.target;
-        const nonGhostTarget = move.nonGhostTarget as dex.MoveTarget;
+        const {target, nonGhostTarget} = move;
 
         const maxpp = move.noPPBoosts ? move.pp : Math.floor(move.pp * 8 / 5);
         const pp = [move.pp, maxpp] as const;
 
-        let multihit = move.multihit as number | [number, number] | undefined;
-        if (typeof multihit === "number") multihit = [multihit, multihit];
-        else if (multihit && multihit.length !== 2)
+        let multihit: [number, number] | undefined;
+        if (typeof move.multihit === "number")
         {
-            throw new Error(`Move '${move.id}': Invalid multihit array ` +
-                `[${multihit.join(", ")}]`);
+            multihit = [move.multihit, move.multihit];
+        }
+        else if (move.multihit)
+        {
+            if (move.multihit.length !== 2)
+            {
+                throw new Error(`Move '${move.id}': Invalid multihit array ` +
+                    `[${move.multihit.join(", ")}]`);
+            }
+            multihit = move.multihit as [number, number];
         }
 
         const flags: NonNullable<dex.MoveData["flags"]> =
         {
             ...!!move.flags.contact && {contact: true},
-            ...explosive.hasOwnProperty(move.id) && {explosive: true},
+            ...Object.hasOwnProperty.call(explosive, move.id) &&
+                {explosive: true},
             ...move.id === "focuspunch" && {focus: true},
-            // TODO(gen6): support type-based ignoreImmunity flag
+            // TODO(gen6): Support type-based ignoreImmunity flag.
             ...category !== "status" && move.ignoreImmunity &&
                 {ignoreImmunity: true},
             ...!!move.flags.bypasssub && {ignoreSub: true},
-            ...interceptSwitch.hasOwnProperty(move.id) &&
+            ...Object.hasOwnProperty.call(interceptSwitch, move.id) &&
                 {interceptSwitch: true},
-            ...noMirror.hasOwnProperty(move.id) && {noMirror: true},
-            ...noCopycat.hasOwnProperty(move.id) && {noCopycat: true},
+            ...Object.hasOwnProperty.call(noMirror, move.id) &&
+                {noMirror: true},
+            ...Object.hasOwnProperty.call(noCopycat, move.id) &&
+                {noCopycat: true},
             ...!!move.flags.reflectable && {reflectable: true}
         };
 
-        // setup move effects
+        // Setup move effects.
 
         const self: dex.MoveEffectTarget = "self";
         const hit: dex.MoveEffectTarget =
@@ -332,44 +341,44 @@ import { toIdName } from "../src/psbot/helpers";
 
         type MoveEffects = Writable<NonNullable<dex.MoveData["effects"]>>;
 
-        // boost
+        // Boost.
         let boost: Writable<NonNullable<MoveEffects["boost"]>> =
-            setBoostMap.hasOwnProperty(move.id) ?
+            Object.hasOwnProperty.call(setBoostMap, move.id) ?
                 {set: true, [hit]: setBoostMap[move.id]}
             :
             {
                 ...move.boosts && {[hit]: move.boosts},
                 ...move.self?.boosts && {[self]: move.self.boosts},
-                ...customBoostMap.hasOwnProperty(move.id) ?
+                ...Object.hasOwnProperty.call(customBoostMap, move.id) ?
                     customBoostMap[move.id] : {}
             };
 
-        // status
+        // Status.
         let status: Writable<MoveEffects["status"]> =
         {
-            ...statusTypeMap.hasOwnProperty(move.id) &&
-                !explicitMoveEffect.hasOwnProperty(move.id) ?
+            ...Object.hasOwnProperty.call(statusTypeMap, move.id) &&
+                !Object.hasOwnProperty.call(explicitMoveEffect, move.id) ?
                 {[hit]: statusTypeMap[move.id]}
             : move.volatileStatus &&
-                statusTypeMap.hasOwnProperty(move.volatileStatus) ?
+                Object.hasOwnProperty.call(statusTypeMap, move.volatileStatus) ?
                 {[hit]: statusTypeMap[move.volatileStatus]}
-            : move.status && statusTypeMap.hasOwnProperty(move.status) ?
+            : move.status && Object.hasOwnProperty.call(statusTypeMap, move.status) ?
                 {[hit]: statusTypeMap[move.status]}
             : {},
             ...move.self?.volatileStatus &&
-                statusTypeMap.hasOwnProperty(move.self.volatileStatus) ?
+                Object.hasOwnProperty.call(statusTypeMap, move.self.volatileStatus) ?
                 {[self]: statusTypeMap[move.self.volatileStatus]}
             : move.self?.status &&
-                statusTypeMap.hasOwnProperty(move.self.status) ?
+                Object.hasOwnProperty.call(statusTypeMap, move.self.status) ?
                 {[self]: statusTypeMap[move.self.status]}
             : {},
-            ...customStatusMap.hasOwnProperty(move.id) ?
+            ...Object.hasOwnProperty.call(customStatusMap, move.id) ?
                 customStatusMap[move.id] : {}
         };
 
-        // add boost/status secondary effects
+        // Add boost/status secondary effects.
         const psSecondaries = move.secondaries ??
-            (move.secondary && [move.secondary] || []);
+            (move.secondary && [move.secondary]) ?? [];
         for (const psSecondary of psSecondaries)
         {
             const tgt = psSecondary.self ? self : hit;
@@ -380,9 +389,8 @@ import { toIdName } from "../src/psbot/helpers";
             if (psHitEffect.boosts) boost = {chance, [tgt]: psHitEffect.boosts};
             if (psHitEffect.volatileStatus)
             {
-                // TODO: support flinching
-                // if (psHitEffect.volatileStatus === "flinch")
-                if (statusTypeMap.hasOwnProperty(psHitEffect.volatileStatus))
+                // TODO: Support flinching.
+                if (Object.hasOwnProperty.call(statusTypeMap, psHitEffect.volatileStatus))
                 {
                     status =
                     {
@@ -391,44 +399,45 @@ import { toIdName } from "../src/psbot/helpers";
                 }
             }
             if (psHitEffect.status &&
-                statusTypeMap.hasOwnProperty(psHitEffect.status))
+                Object.hasOwnProperty.call(statusTypeMap, psHitEffect.status))
             {
                 status = {chance, [tgt]: statusTypeMap[psHitEffect.status]};
             }
         }
 
-        // team
+        // Team.
         const team: Writable<MoveEffects["team"]> =
         {
-            ...teamStatusTypeMap.hasOwnProperty(move.id) ?
+            ...Object.hasOwnProperty.call(teamStatusTypeMap, move.id) ?
                 {[hit]: teamStatusTypeMap[move.id]}
             : move.sideCondition &&
-                teamStatusTypeMap.hasOwnProperty(move.sideCondition) ?
+                Object.hasOwnProperty.call(teamStatusTypeMap, move.sideCondition) ?
                 {[hit]: teamStatusTypeMap[move.sideCondition]}
             : move.slotCondition &&
-                teamStatusTypeMap.hasOwnProperty(move.slotCondition) ?
+                Object.hasOwnProperty.call(teamStatusTypeMap, move.slotCondition) ?
                 {[hit]: teamStatusTypeMap[move.slotCondition]}
             : {},
             ...move.self?.sideCondition &&
-                teamStatusTypeMap.hasOwnProperty(move.self.sideCondition) ?
+                Object.hasOwnProperty.call(teamStatusTypeMap, move.self.sideCondition) ?
                 {[self]: teamStatusTypeMap[move.self.sideCondition]}
             : move.self?.slotCondition &&
-                teamStatusTypeMap.hasOwnProperty(move.self.slotCondition) ?
+                Object.hasOwnProperty.call(teamStatusTypeMap, move.self.slotCondition) ?
                 {[self]: teamStatusTypeMap[move.self.slotCondition]}
             : {}
         };
 
         const moveEffects: MoveEffects =
         {
-            ...transformMap.hasOwnProperty(move.id) && {transform: true},
+            ...Object.hasOwnProperty.call(transformMap, move.id) &&
+                {transform: true},
 
-            ...callTypeMap.hasOwnProperty(move.id) &&
+            ...Object.hasOwnProperty.call(callTypeMap, move.id) &&
                 {call: callTypeMap[move.id]},
 
             ...move.isFutureMove ? {delay: {type: "future"}}
             : move.flags.charge ?
             {delay: {
-                // TODO: add effect for skullbash raising def on prepare
+                // TODO: Add effect for skullbash raising def on prepare.
                 type: "twoTurn", ...move.id === "solarbeam" && {solar: true}
             }}
             : {},
@@ -436,38 +445,38 @@ import { toIdName } from "../src/psbot/helpers";
             ...move.heal ?
             {damage: {
                 type: "percent", target: self,
-                // TODO: should the fraction tuple be preserved in the MoveData?
+                // TODO: Should the fraction tuple be preserved in the MoveData?
                 percent: 100 * move.heal[0] / move.heal[1]}
             }
-            : customDamageMap.hasOwnProperty(move.id) ?
+            : Object.hasOwnProperty.call(customDamageMap, move.id) ?
                 {damage: customDamageMap[move.id]}
             : {},
 
-            ...countableStatusTypeMap.hasOwnProperty(move.id) &&
+            ...Object.hasOwnProperty.call(countableStatusTypeMap, move.id) &&
                 {count: countableStatusTypeMap[move.id]},
 
             ...Object.keys(boost).length > 0 && {boost},
 
-            ...swapBoostMap.hasOwnProperty(move.id) &&
+            ...Object.hasOwnProperty.call(swapBoostMap, move.id) &&
                 {swapBoosts: swapBoostMap[move.id]},
 
             ...Object.keys(status).length > 0 && {status},
 
             ...Object.keys(team).length > 0 && {team},
 
-            ...fieldTypeMap.hasOwnProperty(move.id) ?
+            ...Object.hasOwnProperty.call(fieldTypeMap, move.id) ?
                 {field: fieldTypeMap[move.id]}
-            : move.weather && fieldTypeMap.hasOwnProperty(move.weather) ?
+            : move.weather && Object.hasOwnProperty.call(fieldTypeMap, move.weather) ?
                 {field: fieldTypeMap[move.weather]}
             : move.pseudoWeather &&
-                fieldTypeMap.hasOwnProperty(move.pseudoWeather) ?
+                Object.hasOwnProperty.call(fieldTypeMap, move.pseudoWeather) ?
                 {field: fieldTypeMap[move.pseudoWeather]}
             : {},
 
-            ...changeTypeMap.hasOwnProperty(move.id) &&
+            ...Object.hasOwnProperty.call(changeTypeMap, move.id) &&
                 {changeType: changeTypeMap[move.id]},
 
-            ...disableMoveMap.hasOwnProperty(move.id) && {disableMove: true},
+            ...Object.hasOwnProperty.call(disableMoveMap, move.id) && {disableMove: true},
 
             ...move.drain && {drain: move.drain},
 
@@ -483,55 +492,56 @@ import { toIdName } from "../src/psbot/helpers";
 
             ...move.selfSwitch &&
                 {selfSwitch: move.selfSwitch as dex.SelfSwitchType},
-            ...selfSwitchMap.hasOwnProperty(move.id) &&
+            ...Object.hasOwnProperty.call(selfSwitchMap, move.id) &&
                 {selfSwitch: selfSwitchMap[move.id]}
         };
 
         if (moveEffects.call) moveCallers.push([move.id, moveEffects.call]);
 
-        // two turn/future moves are also recorded in a different object
+        // Two turn/future moves are also recorded in a different object.
         switch (moveEffects.delay?.type)
         {
             case "future": futureMoves.push(move.id); break;
             case "twoTurn": twoTurnMoves.push(move.id); break;
+            default:
         }
 
-        // implicit
+        // Implicit.
         const implicit: Writable<dex.MoveData["implicit"]> =
         {
-            ...implicitStatusTypeMap.hasOwnProperty(move.id) ?
+            ...Object.hasOwnProperty.call(implicitStatusTypeMap, move.id) ?
                 {status: implicitStatusTypeMap[move.id]}
             : move.volatileStatus &&
-                implicitStatusTypeMap.hasOwnProperty(move.volatileStatus) ?
+                Object.hasOwnProperty.call(implicitStatusTypeMap, move.volatileStatus) ?
                 {status: implicitStatusTypeMap[move.volatileStatus]}
-            : move.status && implicitStatusTypeMap.hasOwnProperty(move.status) ?
+            : move.status && Object.hasOwnProperty.call(implicitStatusTypeMap, move.status) ?
                 {status: implicitStatusTypeMap[move.status]}
             : move.self?.volatileStatus &&
-                implicitStatusTypeMap.hasOwnProperty(move.self.volatileStatus) ?
+                Object.hasOwnProperty.call(implicitStatusTypeMap, move.self.volatileStatus) ?
                 {status: implicitStatusTypeMap[move.self.volatileStatus]}
             : move.self?.status &&
-                implicitStatusTypeMap.hasOwnProperty(move.self.status) ?
+                Object.hasOwnProperty.call(implicitStatusTypeMap, move.self.status) ?
                 {status: implicitStatusTypeMap[move.self.status]}
             : {},
 
-            ...implicitTeamTypeMap.hasOwnProperty(move.id) ?
+            ...Object.hasOwnProperty.call(implicitTeamTypeMap, move.id) ?
                 {team: implicitTeamTypeMap[move.id]}
             : move.sideCondition &&
-                implicitTeamTypeMap.hasOwnProperty(move.sideCondition) ?
+                Object.hasOwnProperty.call(implicitTeamTypeMap, move.sideCondition) ?
                 {team: implicitTeamTypeMap[move.sideCondition]}
             : move.slotCondition &&
-                implicitTeamTypeMap.hasOwnProperty(move.slotCondition) ?
+                Object.hasOwnProperty.call(implicitTeamTypeMap, move.slotCondition) ?
                 {team: implicitTeamTypeMap[move.slotCondition]}
             : move.self?.sideCondition &&
-                implicitTeamTypeMap.hasOwnProperty(move.self.sideCondition) ?
+                Object.hasOwnProperty.call(implicitTeamTypeMap, move.self.sideCondition) ?
                 {team: implicitTeamTypeMap[move.self.sideCondition]}
             : move.self?.slotCondition &&
-                implicitTeamTypeMap.hasOwnProperty(move.self.slotCondition) ?
+                Object.hasOwnProperty.call(implicitTeamTypeMap, move.self.slotCondition) ?
                 {team: implicitTeamTypeMap[move.self.slotCondition]}
             : {}
         };
 
-        // add to lockedmove dict
+        // Add to lockedmove dict.
         if (implicit.status === "lockedMove" && !lockedMoves.includes(move.id))
         {
             lockedMoves.push(move.id);
@@ -554,13 +564,15 @@ import { toIdName } from "../src/psbot/helpers";
         ++uid;
     }
 
-    // guarantee order
+    // Guarantee order.
     futureMoves.sort();
     lockedMoves.sort();
     twoTurnMoves.sort();
     moveCallers.sort((a, b) => a[0] < b[0] ? -1 : +(a[0] > b[0]));
 
-    // pokemon and abilities
+    //#endregion
+
+    //#region Pokemon data and abilities.
 
     const pokemon: (readonly [string, dex.PokemonData])[] = [];
 
@@ -573,7 +585,7 @@ import { toIdName } from "../src/psbot/helpers";
         const baseAbilities: string[] = [];
         for (const index in mon.abilities)
         {
-            if (!mon.abilities.hasOwnProperty(index)) continue;
+            if (!Object.hasOwnProperty.call(mon.abilities, index)) continue;
             const abilityName = mon.abilities[index as keyof SpeciesAbility];
             if (!abilityName) continue;
             const abilityId = toIdName(abilityName);
@@ -581,14 +593,14 @@ import { toIdName } from "../src/psbot/helpers";
             if (!abilityNames.has(abilityId)) abilityNames.add(abilityId);
         }
 
-        let types: [dex.Type, dex.Type];
         const typeArr = mon.types.map(s => s.toLowerCase()) as dex.Type[];
         if (typeArr.length > 2)
         {
             console.error(`Error: Too many types for species '${mon.id}'`);
         }
         else if (typeArr.length === 1) typeArr.push("???");
-        types = typeArr as [dex.Type, dex.Type];
+        else if (typeArr.length <= 0) typeArr.push("???", "???");
+        const types = typeArr as [dex.Type, dex.Type];
 
         const stats = mon.baseStats;
 
@@ -596,7 +608,7 @@ import { toIdName } from "../src/psbot/helpers";
         const learnset = await gen.learnsets.learnable(mon.id);
         for (const moveName in learnset)
         {
-            if (!learnset.hasOwnProperty(moveName)) continue;
+            if (!Object.hasOwnProperty.call(learnset, moveName)) continue;
             const sources = learnset[moveName];
             if (!sources || sources.length <= 0) continue;
             movepool.push(moveName);
@@ -632,14 +644,19 @@ import { toIdName } from "../src/psbot/helpers";
         ];
         pokemon.push(entry);
 
-        // also add cosmetic forms
-        // these should have the same uids as the original since they are
-        //  functionally identical
+        // Also add cosmetic forms.
+        // These should have the same uids as the original since they are
+        // functionally identical.
         for (const forme of mon.cosmeticFormes ?? [])
         {
             const mon2 = gen.species.get(forme);
             if (!mon2) continue;
-            const {baseForm: _, otherForms: __, ...data} = entry[1];
+            const [/*id*/, entryData] = entry;
+            // Omit baseForm/otherForms since that's part of the base form entry
+            //  But here we're adding a derived form
+            const {baseForm: _baseForm, otherForms: _otherForms, ...data} =
+                entryData;
+            void _baseForm, _otherForms;
             const name = toIdName(forme);
             pokemon.push(
             [
@@ -650,7 +667,7 @@ import { toIdName } from "../src/psbot/helpers";
                 }
             ]);
 
-            // add alt form to list
+            // Add alt form to list.
             entry[1] =
             {
                 ...entry[1],
@@ -658,12 +675,14 @@ import { toIdName } from "../src/psbot/helpers";
             };
         }
 
-        // cherrimsunshine is technically a "cosmetic" form but it changes to it
-        //  during battle, so keep the same uid for that form
+        // Cherrimsunshine is technically a "cosmetic" form but it changes to it
+        // during battle, so keep the same uid for that form.
         if (mon.name !== "Cherrim") ++uid;
     }
 
-    // ability data
+    //#endregion
+
+    //#region Ability data.
 
     const statusImmunityOn: dex.AbilityData["on"] =
         {start: {cure: true}, block: {status: true}, status: {cure: true}};
@@ -672,19 +691,19 @@ import { toIdName } from "../src/psbot/helpers";
     const abilityData:
     {
         readonly [ability: string]:
-            Pick<dex.AbilityData, "on" | "statusImmunity" | "flags">
+            Pick<dex.AbilityData, "on" | "statusImmunity" | "flags">;
     } =
     {
         naturalcure: {on: {switchOut: {cure: true}}},
 
         // TODO(insomnia/vitalspirit): when using rest, ability causes it to
-        //  fail if hp not full (`|-fail|mon|heal`)
+        // fail if hp not full (`|-fail|mon|heal`).
         immunity:
             {on: statusImmunityOn, statusImmunity: {psn: true, tox: true}},
         insomnia: {on: statusImmunityOn, statusImmunity: {slp: true}},
         limber: {on: statusImmunityOn, statusImmunity: {par: true}},
         magmaarmor: {on: statusImmunityOn, statusImmunity: {frz: true}},
-        // TODO: oblivious should also be immune to captivate
+        // TODO: Oblivious should also be immune to captivate.
         oblivious: {on: statusImmunityOn, statusImmunity: {attract: true}},
         owntempo: {on: statusImmunityOn, statusImmunity: {confusion: true}},
         vitalspirit: {on: statusImmunityOn, statusImmunity: {slp: true}},
@@ -692,12 +711,12 @@ import { toIdName } from "../src/psbot/helpers";
 
         leafguard:
         {
-            // can block statuses during sun, but only when attempting to
-            //  afflict them
+            // Can block statuses during sun, but only when attempting to
+            // afflict them.
             on: {block: {status: "SunnyDay"}},
             statusImmunity:
             {
-                // status is blocked silently (gen4) except for yawn
+                // Status is blocked silently (gen4) except for yawn.
                 brn: "silent", par: "silent", psn: "silent", tox: "silent",
                 slp: "silent", frz: "silent", yawn: true
             }
@@ -709,16 +728,16 @@ import { toIdName } from "../src/psbot/helpers";
         moldbreaker: {on: {start: {}}, flags: {ignoreTargetAbility: true}},
         pressure: {on: {start: {}}},
 
-        // TODO(dryskin): sun/fire weakness
+        // TODO(dryskin): Sun/fire weakness.
         dryskin: {on: {block: {move: {type: "water", percentDamage: 25}}}},
-        // TODO(gen3-4): doesn't work while frozen
+        // TODO(gen3-4): Doesn't work while frozen.
         flashfire: {on: {block: {move: {type: "fire", status: "flashfire"}}}},
         levitate: {on: {block: {move: {type: "ground"}}}},
         motordrive: {on: {block: {move: {type: "electric", boost: {spe: 1}}}}},
         voltabsorb:
             {on: {block: {move: {type: "electric", percentDamage: 25}}}},
         waterabsorb: {on: {block: {move: {type: "water", percentDamage: 25}}}},
-        // TODO(gen4 glitch): firefang move ignores this ability
+        // TODO(gen4 glitch): Firefang move ignores this ability.
         wonderguard: {on: {block: {move: {type: "nonSuper"}}}},
 
         damp: {on: {block: {effect: {explosive: true}}}},
@@ -728,7 +747,7 @@ import { toIdName } from "../src/psbot/helpers";
         keeneye: {on: {tryUnboost: {block: {accuracy: true}}}},
         whitesmoke: {on: {tryUnboost: {block: dex.boostNames}}},
 
-        aftermath: {on: {moveContactKO: {explosive: true, percentDamage: -25}}},
+        aftermath: {on: {moveContactKo: {explosive: true, percentDamage: -25}}},
 
         cutecharm: {on: {moveContact: {chance: 30, status: ["attract"]}}},
         effectspore:
@@ -744,7 +763,7 @@ import { toIdName } from "../src/psbot/helpers";
 
         gluttony: {flags: {earlyBerry: true}},
 
-        // gen3-4: no on-switchIn msg
+        // Note(gen3-4): No on-switchIn msg.
         airlock: {flags: {suppressWeather: true}},
         cloudnine: {flags: {suppressWeather: true}},
 
@@ -773,7 +792,9 @@ import { toIdName } from "../src/psbot/helpers";
         ++uid;
     }
 
-    // items and berries
+    //#endregion
+
+    //#region Items and berries.
 
     /** Maps some item names to item effects. */
     const itemOnMap:
@@ -783,7 +804,7 @@ import { toIdName } from "../src/psbot/helpers";
 
         powerherb: {moveCharge: {shorten: true, consume: true}},
 
-        // resist berries
+        // Resist berries.
         tangaberry: {preHit: {resistSuper: "bug"}},
         colburberry: {preHit: {resistSuper: "dark"}},
         habanberry: {preHit: {resistSuper: "dragon"}},
@@ -802,8 +823,8 @@ import { toIdName } from "../src/psbot/helpers";
         babiriberry: {preHit: {resistSuper: "steel"}},
         passhoberry: {preHit: {resistSuper: "water"}},
 
-        // TODO: focusband
-        focussash: {tryOHKO: {block: true, consume: true}},
+        // TODO: Focusband.
+        focussash: {tryOhko: {block: true, consume: true}},
 
         enigmaberry: {super: {heal: 25}},
 
@@ -812,7 +833,7 @@ import { toIdName } from "../src/psbot/helpers";
 
         lifeorb: {movePostDamage: {percentDamage: -10}},
 
-        // fixed-heal berries
+        // Fixed-heal berries.
         oranberry:
         {
             update: {condition: "hp", threshold: 50},
@@ -823,7 +844,7 @@ import { toIdName } from "../src/psbot/helpers";
             update: {condition: "hp", threshold: 50},
             eat: {type: "healFixed", heal: 20}
         },
-        // percent-heal berries
+        // Percent-heal berries.
         sitrusberry:
         {
             update: {condition: "hp", threshold: 50},
@@ -854,7 +875,7 @@ import { toIdName } from "../src/psbot/helpers";
             update: {condition: "hp", threshold: 50},
             eat: {type: "healPercent", heal: 12.5, dislike: "spe"}
         },
-        // stat-boost berries
+        // Stat-boost berries.
         liechiberry:
         {
             update: {condition: "hp", threshold: 25},
@@ -889,13 +910,13 @@ import { toIdName } from "../src/psbot/helpers";
                 boostOne: {atk: 2, def: 2, spa: 2, spd: 2, spe: 2}
             }
         },
-        // focusenergy berry
+        // Focusenergy berry.
         lansatberry:
         {
             update: {condition: "hp", threshold: 25}, eat: {type: "focusenergy"}
         },
-        // TODO: white herb
-        // status items/berries
+        // TODO: White herb.
+        // Status items/berries.
         rawstberry:
         {
             update: {condition: "status", status: {brn: true}},
@@ -947,13 +968,13 @@ import { toIdName } from "../src/psbot/helpers";
                 }
             }
         },
-        // gen4: only cures attract
+        // Note(gen4): only cures attract.
         mentalherb:
         {update: {
             condition: "status", status: {attract: true}, cure: true,
             consume: true
         }},
-        // move-restoring berries
+        // Move-restoring berries.
         leppaberry:
         {
             update: {condition: "depleted"},
@@ -972,7 +993,7 @@ import { toIdName } from "../src/psbot/helpers";
         }
     };
 
-    // make sure that having no item is possible
+    // Make sure that having no item is possible.
     const items: (readonly [string, dex.ItemData])[] =
         [["none", {uid: 0, name: "none", display: "None"}]];
     const berries: (readonly [string, dex.NaturalGiftData])[] = [];
@@ -1002,17 +1023,20 @@ import { toIdName } from "../src/psbot/helpers";
                 ...item.isBerry && {isBerry: true},
                 ...item.onPlate &&
                     {plateType: item.onPlate.toLowerCase() as dex.Type},
-                ...itemOnMap.hasOwnProperty(item.id) &&
+                ...Object.hasOwnProperty.call(itemOnMap, item.id) &&
                     {on: itemOnMap[item.id]}
             }
         ]);
         ++uid;
     }
 
-    // print data
+    //#endregion
+
+    //#region Print data.
 
     /**
      * Creates an export dictionary for an array of dictionary entries.
+     *
      * @param entries Array to stringify.
      * @param name Name of the dictionary.
      * @param typeName Type name for the dictionary values.
@@ -1037,15 +1061,16 @@ import { toIdName } from "../src/psbot/helpers";
     /**
      * Creates an export dictionary for a dictionary, sorting the keys in
      * alphabetic order.
+     *
      * @param dict Dictionary to stringify.
      * @param name Name of the dictionary.
      * @param typeName Type name for the dictionary.
      * @param converter Stringifier for dictionary keys.
      * @param indent Number of indent spaces. Default 4.
      */
-    function exportDict(dict: {readonly [name: string]: any},
+    function exportDict<T>(dict: {readonly [name: string]: T},
         name: string, typeName: string,
-        converter: (value: any) => string, indent = 4): string
+        converter: (value: T) => string, indent = 4): string
     {
         const s = " ".repeat(indent);
         return Object.keys(dict).sort()
@@ -1058,16 +1083,17 @@ import { toIdName } from "../src/psbot/helpers";
 
     /**
      * Stringifies a dictionary.
+     *
      * @param dict Dictionary to stringify.
      * @param converter Stringifier for dictionary values.
      */
-    function stringifyDict(dict: {readonly [name: string]: any},
-        converter: (value: any) => string): string
+    function stringifyDict(dict: {readonly [name: string]: unknown},
+        converter: (value: unknown) => string): string
     {
         const entries: string[] = [];
         for (const key in dict)
         {
-            if (!dict.hasOwnProperty(key)) continue;
+            if (!Object.hasOwnProperty.call(dict, key)) continue;
             entries.push(`${maybeQuote(key)}: ${converter(dict[key])}`);
         }
         return "{" + entries.join(", ") + "}";
@@ -1075,16 +1101,17 @@ import { toIdName } from "../src/psbot/helpers";
 
     /**
      * Recursively stringifies a dictionary.
+     *
      * @param dict Dictionary to stringify.
      * @param converter Stringifier for dictionary values.
      */
-    function deepStringifyDict(dict: {readonly [name: string]: any},
-        converter: (value: any) => string): string
+    function deepStringifyDict(dict: Record<string, unknown>,
+        converter: (value: unknown) => string): string
     {
         const entries: string[] = [];
         for (const key in dict)
         {
-            if (!dict.hasOwnProperty(key)) continue;
+            if (!Object.hasOwnProperty.call(dict, key)) continue;
 
             let str: string;
             const value = dict[key];
@@ -1092,9 +1119,10 @@ import { toIdName } from "../src/psbot/helpers";
             {
                 str = deepStringifyArray(value, converter);
             }
-            else if (typeof value === "object")
+            else if (typeof value === "object" && value)
             {
-                str = deepStringifyDict(value, converter);
+                str = deepStringifyDict(value as
+                        {[name: string]: unknown}, converter);
             }
             else str = converter(value);
 
@@ -1106,11 +1134,12 @@ import { toIdName } from "../src/psbot/helpers";
 
     /**
      * Recursively stringifies an array.
+     *
      * @param arr Array to stringify.
      * @param converter Stringifier for array values.
      */
-    function deepStringifyArray(arr: any[], converter: (value: any) => string):
-        string
+    function deepStringifyArray(arr: unknown[],
+        converter: (value: unknown) => string): string
     {
         const values: string[] = [];
         for (const value of arr)
@@ -1120,9 +1149,10 @@ import { toIdName } from "../src/psbot/helpers";
             {
                 str = deepStringifyArray(value, converter);
             }
-            else if (typeof value === "object")
+            else if (typeof value === "object" && value)
             {
-                str = deepStringifyDict(value, converter);
+                str = deepStringifyDict(
+                        value as {[name: string]: unknown}, converter);
             }
             else str = converter(value);
 
@@ -1133,21 +1163,21 @@ import { toIdName } from "../src/psbot/helpers";
 
     /**
      * Creates an export array.
+     *
      * @param arr Array to stringify.
      * @param name Name of the dictionary.
      * @param typeName Type name for the array values.
      * @param converter Stringifier for array values.
      */
-    function exportArray<T>(arr: readonly T[], name: string, typeName: string,
-        converter: (t: T) => string): string
-    {
-        return `export const ${name}: readonly ${typeName}[] = [` +
+    const exportArray = <T>(arr: readonly T[], name: string, typeName: string,
+            converter: (t: T) => string): string =>
+        `export const ${name}: readonly ${typeName}[] = [` +
             arr.map(converter).join(", ") + "];";
-    }
 
     /**
      * Creates an export dictionary, string union, etc. for a specific set of
      * moves.
+     *
      * @param moves Array of the move names.
      * @param name Name for the variable.
      * @param display Name in the docs. Omit to assume `name` argument.
@@ -1158,7 +1188,7 @@ import { toIdName } from "../src/psbot/helpers";
         const s = " ".repeat(indent);
         const cap = name.slice(0, 1).toUpperCase() + name.slice(1);
 
-        // build set of all moves of this specific type
+        // Build set of all moves of this specific type.
         return moveNames.reduce(
                 (prev, moveName, i) => prev + `\n${s}${moveName}: ${i},`,
                 `/** Set of all ${display} moves. Maps move name to its id ` +
@@ -1172,15 +1202,16 @@ export type ${cap}Move = keyof typeof ${name}Moves;
 ${exportArray(moveNames, `${name}MoveKeys`, `${cap}Move`, quote)}
 
 /** Checks if a value is a ${cap}Move. */
-export function is${cap}Move(value: any): value is ${cap}Move
+export function is${cap}Move(value: unknown): value is ${cap}Move
 {
-    return ${name}Moves.hasOwnProperty(value);
+    return Object.hasOwnProperty.call(${name}Moves, value as PropertyKey);
 }`;
     }
 
     /**
      * Creates an exported memoized function for wrapping mapped `dex`
      * structures.
+     *
      * @param name Name of the wrapper class.
      * @param dataName Name of the `dex` wrapped type.
      * @param mapName Name of the `dex` type map.
@@ -1201,7 +1232,7 @@ export function get${name}(name: string | ${dataName}): wrappers.${name} | null
 {
     if (typeof name === "string")
     {
-        if (!${mapName}.hasOwnProperty(name)) return null;
+        if (!Object.hasOwnProperty.call(${mapName}, name)) return null;
         name = ${mapName}[name];
     }
     let result = ${lower}Memo.get(name);
@@ -1222,7 +1253,8 @@ import * as wrappers from "./wrappers";
  * Contains info about each pokemon, with alternate forms as separate entries.
  */
 ${exportEntriesToDict(pokemon, "pokemon", "dex.PokemonData",
-    p => deepStringifyDict(p, v => typeof v === "string" ? quote(v) : v))}
+    p => deepStringifyDict({...p},
+        v => typeof v === "string" ? quote(v) : `${v}`))}
 
 /** Sorted array of all pokemon names. */
 ${exportArray(pokemon, "pokemonKeys", "string", ([name]) => quote(name))}
@@ -1231,7 +1263,8 @@ ${exportDataWrapper("Ability", "dex.AbilityData", "abilities")}
 
 /** Contains info about each ability. */
 ${exportEntriesToDict(abilities, "abilities", "dex.AbilityData",
-    a => deepStringifyDict(a, v => typeof v === "string" ? quote(v) : v))}
+    a => deepStringifyDict({...a},
+        v => typeof v === "string" ? quote(v) : `${v}`))}
 
 /** Sorted array of all ability names. */
 ${exportArray(abilities, "abilityKeys", "string", ([name]) => quote(name))}
@@ -1240,7 +1273,8 @@ ${exportDataWrapper("Move", "dex.MoveData", "moves")}
 
 /** Contains info about each move. */
 ${exportEntriesToDict(moves, "moves", "dex.MoveData",
-    m => deepStringifyDict(m, v => typeof v === "string" ? quote(v) : v))}
+    m => deepStringifyDict({...m},
+        v => typeof v === "string" ? quote(v) : `${v}`))}
 
 /** Sorted array of all move names. */
 ${exportArray(moves, "moveKeys", "string", ([name]) => quote(name))}
@@ -1264,12 +1298,16 @@ ${exportDataWrapper("Item", "dex.ItemData", "items")}
 
 /** Contains info about each item. */
 ${exportEntriesToDict(items, "items", "dex.ItemData",
-    i => deepStringifyDict(i, v => typeof v === "string" ? quote(v) : v))}
+    i => deepStringifyDict({...i},
+        v => typeof v === "string" ? quote(v) : `${v}`))}
 
 /** Sorted array of all item names, except with \`none\` at position 0. */
 ${exportArray(items, "itemKeys", "string", i => quote(i[0]))}
 
 /** Contains info about each berry item. */
 ${exportEntriesToDict(berries, "berries", "dex.NaturalGiftData",
-    b => stringifyDict(b, v => typeof v === "string" ? quote(v) : v))}`);
+    b => stringifyDict({...b},
+        v => typeof v === "string" ? quote(v) : `${v}`))}`);
+
+    //#endregion
 })();

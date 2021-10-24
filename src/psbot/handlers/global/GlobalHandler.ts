@@ -19,7 +19,8 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler
 
     private username: Protocol.Username | null = null;
 
-    constructor()
+    /** Creates a GlobalHandler. */
+    public constructor()
     {
         this.challstr = new Promise<string>(res => this.challstrRes = res)
             .finally(() => this.challstrRes = null);
@@ -30,25 +31,27 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler
     {
         const key = Protocol.key(event.args);
         if (!key) return;
-        ((this as Protocol.Handler)[key] as any)?.(event.args, event.kwArgs);
+        ((this as Protocol.Handler)[key] as
+                (args: Event["args"], kwArgs: Event["kwArgs"]) => void)?.(
+            event.args, event.kwArgs);
     }
 
     /** @override */
     public halt(): void {}
 
-    // list taken from Protocol.GlobalArgs
+    // List taken from Protocol.GlobalArgs.
 
-    "|popup|"(args: Args["|popup|"]) {}
-    "|pm|"(args: Args["|pm|"])
+    public "|popup|"(args: Args["|popup|"]) { void args; }
+    public "|pm|"(args: Args["|pm|"])
     {
         const [, sender, recipient, msg] = args;
         if (msg.startsWith("/challenge"))
         {
             if (!this.respondToChallenge) return;
             if (!this.username) return;
-            const r = recipient.trim() as any;
+            const r = recipient.trim() as Protocol.Username;
             if (r !== this.username) return;
-            const s = sender.trim() as any;
+            const s = sender.trim() as Protocol.Username;
             if (s === this.username) return;
             const i = msg.indexOf("|");
             if (i < 0) return;
@@ -56,21 +59,21 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler
             this.respondToChallenge(s, format);
         }
     }
-    "|usercount|"(args: Args["|usercount|"]) {}
-    "|nametaken|"(args: Args["|nametaken|"]) {}
-    "|challstr|"(args: Args["|challstr|"])
+    public "|usercount|"(args: Args["|usercount|"]) { void args; }
+    public "|nametaken|"(args: Args["|nametaken|"]) { void args; }
+    public "|challstr|"(args: Args["|challstr|"])
     {
         if (!this.challstrRes) throw new Error("Received a second challstr");
         this.challstrRes(args[1]);
     }
-    "|updateuser|"(args: Args["|updateuser|"])
+    public "|updateuser|"(args: Args["|updateuser|"])
     {
         this.username = args[1].trim() as Protocol.Username;
         this.updateUser?.(this.username);
     }
-    "|formats|"(args: Args["|formats|"]) {}
-    "|updatesearch|"(args: Args["|updatesearch|"]) {}
-    "|updatechallenges|"(args: Args["|updatechallenges|"])
+    public "|formats|"(args: Args["|formats|"]) { void args; }
+    public "|updatesearch|"(args: Args["|updatesearch|"]) { void args; }
+    public "|updatechallenges|"(args: Args["|updatechallenges|"])
     {
         if (!this.respondToChallenge) return;
 
@@ -80,5 +83,5 @@ export class GlobalHandler implements RoomHandler, Protocol.Handler
             this.respondToChallenge(user, format);
         }
     }
-    "|queryresponse|"(args: Args["|queryresponse|"]) {}
+    public "|queryresponse|"(args: Args["|queryresponse|"]) { void args; }
 }

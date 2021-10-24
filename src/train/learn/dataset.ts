@@ -28,6 +28,19 @@ export type BatchedAExp =
         : never;
 };
 
+/** Converts AugmentedExperience fields to tensors. */
+function aexpToTensor(aexp: AugmentedExperience): TensorAExp
+{
+    return {
+        probs: tf.tensor1d(aexp.probs, "float32"),
+        value: tf.scalar(aexp.value, "float32"),
+        state: tf.tensor1d(aexp.state, "float32"),
+        action: tf.scalar(aexp.action, "int32"),
+        returns: tf.scalar(aexp.returns, "float32"),
+        advantage: tf.scalar(aexp.advantage, "float32")
+    };
+}
+
 /**
  * Wraps a set of `.tfrecord` files as a TensorFlow
  * {@link tf.data.Dataset Dataset}, parsing each file in parallel and shuffling
@@ -48,15 +61,19 @@ export function createAExpDataset(aexpPaths: readonly string[],
     const pool = new AExpDecoderPool(numThreads);
 
     return tf.data.generator<TensorAExp>(
-            // tensorflow supports async generators, but the typings don't
-            () => pool.decode(aexpPaths, prefetch) as any)
+            // Note: Yhis still works with async generators even though the
+            // typings don't explicitly support it.
+            async function*()
+            {
+                const gen = pool.decode(aexpPaths, prefetch /*highWaterMark*/);
+                for await (const aexp of gen)
+                {
+                    yield aexpToTensor(aexp);
+                }
+            } as unknown as () => Generator<TensorAExp>)
         .prefetch(prefetch)
         .shuffle(prefetch)
-        // after the batch operation, each entry of a generated AExp will
-        //  contain stacked tensors according to the batch size
-        .batch(batchSize)
-        // make sure action indexes are integers
-        .map(((batch: BatchedAExp) =>
-            ({...batch, action: batch.action.cast("int32")})) as any) as
-                tf.data.Dataset<BatchedAExp>;
+        // After the batch operation, each entry of a generated AExp will
+        // contain stacked tensors according to the batch size.
+        .batch(batchSize) as tf.data.Dataset<BatchedAExp>;
 }

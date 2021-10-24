@@ -1,32 +1,31 @@
 /** @file Type definitions and helper functions for dealing with the dex. */
-export { MoveAndUser, MoveAndUserRef, MoveUserSnapshot, ReadonlyMoveAndUser,
-    ReadonlyMoveUserSnapshot } from "./wrappers/Move";
 
-// TODO: split into multiple files
+// TODO: Split into multiple files.
+// TODO: Replace some types with aliases from @pkmn/types instead.
 
-/** Set of Type names. Each type has a 0-based unique index. */
+/** Set of {@link Type} names. Each type has a 0-based unique index. */
 export const types =
 {
     bug: 0, dark: 1, dragon: 2, fire: 3, flying: 4, ghost: 5, electric: 6,
     fighting: 7, grass: 8, ground: 9, ice: 10, normal: 11, poison: 12,
     psychic: 13, rock: 14, steel: 15, water: 16, "???": 17
 } as const;
-/** Sorted array of all types. */
+/** Sorted array of all {@link Type} names. */
 export const typeKeys = Object.keys(types).sort() as readonly Type[];
 /** The different types a pokemon can have. */
 export type Type = keyof typeof types;
 
-/** Set of HPType names. Each type has a 0-based unique index. */
+/** Set of {@link HpType} names. Each type has a 0-based unique index. */
 export const hpTypes =
 {
     bug: 0, dark: 1, dragon: 2, fire: 3, flying: 4, ghost: 5, electric: 6,
     fighting: 7, grass: 8, ground: 9, ice: 10, poison: 11, psychic: 12,
     rock: 13, steel: 14, water: 15
 } as const;
-/** Sorted array of all hidden power types. */
-export const hpTypeKeys = Object.keys(hpTypes).sort() as readonly HPType[];
+/** Sorted array of all {@link HpType} names. */
+export const hpTypeKeys = Object.keys(hpTypes).sort() as readonly HpType[];
 /** The different hidden power types a pokemon can have. */
-export type HPType = keyof typeof hpTypes;
+export type HpType = keyof typeof hpTypes;
 
 /** Data for the Natural Gift move. */
 export interface NaturalGiftData
@@ -57,23 +56,24 @@ export const majorStatusKeys = Object.keys(majorStatuses).sort() as
 export type MajorStatus = keyof typeof majorStatuses;
 /**
  * Checks if a value matches a major status.
+ *
  * @param status Value to be checked.
  * @returns True if the name matches, false otherwise.
  */
-export function isMajorStatus(status: any): status is MajorStatus
+export function isMajorStatus(status: unknown): status is MajorStatus
 {
-    return majorStatuses.hasOwnProperty(status);
+    return Object.hasOwnProperty.call(majorStatuses, status as PropertyKey);
 }
 
-/** Holds the set of all stat names except HP. */
-export const statsExceptHP =
+/** Holds the set of all stat names except Hp. */
+export const statsExceptHp =
     {atk: true, def: true, spa: true, spd: true, spe: true} as const;
-/** Names of pokemon stats except HP. */
-export type StatExceptHP = keyof typeof statsExceptHP;
+/** Names of pokemon stats except Hp. */
+export type StatExceptHp = keyof typeof statsExceptHp;
 
 /** Holds the set of all stat names. */
 export const statNames =
-    {hp: true, ...statsExceptHP} as const;
+    {hp: true, ...statsExceptHp} as const;
 /** Sorted array of all stat names. */
 export const statKeys = Object.keys(statNames).sort() as readonly StatName[]
 /** Names of pokemon stats. */
@@ -81,61 +81,66 @@ export type StatName = keyof typeof statNames;
 
 /** Holds the set of all boostable stat names. */
 export const boostNames =
-    {...statsExceptHP, accuracy: true, evasion: true} as const;
+    {...statsExceptHp, accuracy: true, evasion: true} as const;
 /** Sorted array of all boost names. */
 export const boostKeys = Object.keys(boostNames).sort() as readonly BoostName[];
 /** Names of pokemon stats that can be boosted. */
 export type BoostName = keyof typeof boostNames;
 /**
  * Checks if a value matches a boost name.
+ *
  * @param stat Value to be checked.
  * @returns True if the name matches, false otherwise.
  */
-export function isBoostName(stat: any): stat is BoostName
+export function isBoostName(stat: unknown): stat is BoostName
 {
-    return boostNames.hasOwnProperty(stat);
+    return Object.hasOwnProperty.call(boostNames, stat as PropertyKey);
 }
 /** Boost table mapped type. */
 export type BoostTable<T = number> = {readonly [U in BoostName]: T};
 
-// TODO: make weather types lowercase, shorten
-/** Holds the set of all weather types, mapping to its extension item. */
+/**
+ * Holds the set of all {@link WeatherType} names, mapping to the name of its
+ * extension item.
+ */
 export const weatherItems =
 {
     SunnyDay: "heatrock", RainDance: "damprock", Sandstorm: "smoothrock",
     Hail: "icyrock"
 } as const;
-/** Sorted array of all weather types. */
+/** Sorted array of all {@link WeatherType} names. */
 export const weatherKeys = Object.keys(weatherItems).sort() as
     readonly WeatherType[];
 /** Types of weather conditions. */
 export type WeatherType = keyof typeof weatherItems;
 /**
  * Checks if a value matches a weather type.
+ *
  * @param type Value to be checked.
  * @returns True if the name matches, false otherwise.
  */
-export function isWeatherType(type: any): type is WeatherType
+export function isWeatherType(type: unknown): type is WeatherType
 {
-    return weatherItems.hasOwnProperty(type);
+    return Object.hasOwnProperty.call(weatherItems, type as PropertyKey);
 }
 
-// TODO: move to dex, rename to momentum moves
+// TODO: Move to dex, rename to momentum moves.
 /** Moves similar to Rollout. */
 export const rolloutMoves = {rollout: true, iceball: true} as const;
-/** Sorted array of all rollout moves. */
+/** Sorted array of all {@link RolloutMove} names. */
 export const rolloutKeys = Object.keys(rolloutMoves).sort() as
     readonly RolloutMove[];
 /** Moves that are similar to Rollout. */
 export type RolloutMove = keyof typeof rolloutMoves;
 /**
  * Checks if a value matches a Rollout-like move.
+ *
  * @param type Value to be checked.
  * @returns True if the name matches, false otherwise.
  */
-export function isRolloutMove(type: any): type is RolloutMove
+export function isRolloutMove(type: unknown): type is RolloutMove
 {
-    return rolloutMoves.hasOwnProperty(type);
+    return Object.hasOwnProperty.call(rolloutMoves, type as PropertyKey);
 }
 
 /** Base interface for dex data entries. */
@@ -177,7 +182,7 @@ export interface PokemonData extends DexData
 /** Format for each ability entry in the dex. */
 export interface AbilityData extends DexData
 {
-    // TODO: make these effects mutually exclusive within each `on` obj
+    // TODO: Make these effects mutually exclusive within each `on` obj.
     /**
      * Specifies conditions for activating this ability to describe or interrupt
      * an effect.
@@ -193,7 +198,7 @@ export interface AbilityData extends DexData
              * PS makes the ability known to both players in most cases.
              */
             readonly cure?: true;
-        }
+        };
         /**
          * Whenever the holder switches in or gains the ability. Leaving this
          * field defined but empty means it will reveal itself with no
@@ -201,8 +206,8 @@ export interface AbilityData extends DexData
          */
         readonly start?:
         {
-            // TODO: document/handle conditions to not activate
-            // TODO: weather abilities
+            // TODO: Document/handle conditions to not activate.
+            // TODO: Weather abilities.
             /**
              * Whether this ability cures statuses specified by
              * `#statusImmunity`.
@@ -242,7 +247,7 @@ export interface AbilityData extends DexData
                  */
                 readonly type: Type | "nonSuper";
                 /** Add a stat boost onto the holder. */
-                readonly boost?: Partial<BoostTable<number>>;
+                readonly boost?: Partial<BoostTable>;
                 /** Percent damage dealt to holder. */
                 readonly percentDamage?: number;
                 /** Inflict a status on the holder. */
@@ -252,7 +257,7 @@ export interface AbilityData extends DexData
             readonly effect?:
             {
                 /** Block explosive effects (e.g. Aftermath, Explosion, etc). */
-                readonly explosive?: true
+                readonly explosive?: true;
             };
         };
         /**
@@ -276,7 +281,7 @@ export interface AbilityData extends DexData
         /**
          * Whenever a damaging move makes contact and KOs the ability holder.
          */
-        readonly moveContactKO?:
+        readonly moveContactKo?:
         {
             /** Whether this is an explosive effect (i.e., blocked by Damp). */
             readonly explosive?: true;
@@ -285,7 +290,7 @@ export interface AbilityData extends DexData
         };
         /**
          * Whenver a damaging move makes contact with the ability holder. Also
-         * applies to `#moveContactKO`.
+         * applies to `#on.moveContactKo`.
          */
         readonly moveContact?:
         {
@@ -301,7 +306,7 @@ export interface AbilityData extends DexData
         };
         /**
          * Whenever a move deals damage to the ability holder. Also applies to
-         * `#moveContact`.
+         * `#on.moveContact`.
          */
         readonly moveDamage?:
         {
@@ -324,12 +329,12 @@ export interface AbilityData extends DexData
      */
     readonly statusImmunity?: {readonly [T in StatusType]?: true | "silent"};
 
-    // TODO: rename to passive
+    // TODO: Rename to passive?
     /** Additional ability flags. */
     readonly flags?:
     {
-        // TODO: pressure, normalize
-        /** Eat 25% HP berries early at 50%. */
+        // TODO: pressure, normalize.
+        /** Eat 25% Hp berries early at 50%. */
         readonly earlyBerry?: true;
         /** Whether this ability suppresses all weather effects. */
         readonly suppressWeather?: true;
@@ -339,7 +344,7 @@ export interface AbilityData extends DexData
          * Whether this ability ignores the target's ability when using a move.
          */
         readonly ignoreTargetAbility?: true;
-        // TODO: support inferences for this
+        // TODO: Support inferences for this.
         /**
          * Whether to make multi-hit moves used by the holder hit for the max
          * amount of times.
@@ -353,7 +358,7 @@ export interface AbilityData extends DexData
     };
 }
 
-/** Ability "callback" object types. */
+/** Ability effect object types. */
 export type AbilityOn = keyof NonNullable<AbilityData["on"]>;
 
 /** Format for each move entry in the dex. */
@@ -367,15 +372,14 @@ export interface MoveData extends DexData
     readonly damage?: MoveDamage;
     /** Type of move. */
     readonly type: Type;
-    // tslint:disable: no-trailing-whitespace (force newline in doc)
     /**
-     * Type modification when used in battle.  
-     * `"hpType"` - User's base hiddenpower type (pre-Transform).  
-     * `"plateType"` - Type of held plate item, if any. Defaults to the original
-     * move type if no plate.
-     * `"???"` - Move is treated as typeless when used.
+     * Type modification when used in battle.
+     *
+     * * `"hpType"` - User's base hiddenpower type (pre-Transform).
+     * * `"plateType"` - Type of held plate item, if any. Defaults to the
+     *   original move type if no plate.
+     * * `"???"` - Move is treated as typeless when used.
      */
-    // tslint:enable: no-trailing-whitespace
     readonly modifyType?: "hpType" | "plateType" | "???";
     /** Target of the move. */
     readonly target: MoveTarget;
@@ -438,11 +442,10 @@ export interface MoveData extends DexData
             readonly solar?: true;
         };
 
-        // TODO: verify order
         /** Damage effects in addition to main move damage (not recoil). */
         readonly damage?:
         {
-            /** Damage dealt as a percentage of max HP. */
+            /** Damage dealt as a percentage of max Hp. */
             readonly type: "percent";
             /** Pokemon receiving the damage. */
             readonly target: MoveEffectTarget;
@@ -458,14 +461,14 @@ export interface MoveData extends DexData
              * The user's and opponent's current HP stats are averaged and set
              * to the result (limited by max HP).
              */
-            readonly type: "split"
+            readonly type: "split";
         };
 
-        // TODO: separate stockpile from perish?
+        // TODO: Separate stockpile from perish?
         /** Status effect to count. */
         readonly count?: CountableStatusType;
 
-        // TODO: should these boost effects be mutually exclusive?
+        // TODO: Should these boost effects be mutually exclusive?
         /** Boost effects. */
         readonly boost?:
         {
@@ -482,9 +485,9 @@ export interface MoveData extends DexData
             {readonly [T in MoveEffectTarget]?: Partial<BoostTable>};
         /** Boosts to swap with the target. */
         readonly swapBoosts?: Partial<BoostTable<true>>;
-        // TODO: other kinds of boost effects
+        // TODO: Other kinds of boost effects.
 
-        // TODO: what about ending/curing statuses or multiple effects?
+        // TODO: What about ending/curing statuses or multiple effects?
         /** Possible status effects to start. */
         readonly status?:
         {
@@ -507,7 +510,7 @@ export interface MoveData extends DexData
             readonly effect: FieldEffectType;
             /** Whether this move can toggle the effect. */
             readonly toggle?: true;
-        }
+        };
 
         /**
          * Change the target's type to the type of one of the target's known
@@ -521,8 +524,6 @@ export interface MoveData extends DexData
         /** Fraction of move damage being healed by the user. */
         readonly drain?: readonly [number, number];
 
-        // ability on-moveDamage, etc
-
         /** Self-inflicted damage. */
         readonly recoil?:
         {
@@ -533,12 +534,9 @@ export interface MoveData extends DexData
              * the user's max HP rather than damage dealt.
              */
             readonly struggle?: true;
-        }
+        };
 
-        // TODO: item removal (trick, knockoff, covet, etc)
-
-        // item on-postMoveDamage
-        // faint event if applicable
+        // TODO: Item removal (trick, knockoff, covet, etc).
 
         /** Whether the user will faint after using the move. */
         readonly selfFaint?: MoveSelfFaint;
@@ -560,21 +558,20 @@ export interface MoveData extends DexData
 /** Types of categories for a move. */
 export type MoveCategory = "physical" | "special" | "status";
 
-// tslint:disable: no-trailing-whitespace (force newline in doc)
 /**
- * Fixed damage move specification.  
- * `number` - Damage amount.  
- * `"ohko"` - OHKO move.  
- * `"level"` - User's level.  
- * `"half"` - Half of target's remaining HP.  
- * `"bide"` - Double the damage accumulated during Bide status.  
- * `"counter"` - Double damage received from the last attack matching this
- * move's category this turn.  
- * `"metalburst"` - 1.5x damage received from the last attack this turn.  
- * `"psywave"` - Random, 0.5x to 1.5x the user's level.  
- * `"hpdiff"` - Difference between target's hp and user's hp.
+ * Fixed damage move specification.
+ *
+ * * `number` - Damage amount.
+ * * `"ohko"` - OHKO move.
+ * * `"level"` - User's level.
+ * * `"half"` - Half of target's remaining HP.
+ * * `"bide"` - Double the damage accumulated during Bide status.
+ * * `"counter"` - Double damage received from the last attack matching this
+ *   move's category this turn.
+ * * `"metalburst"` - 1.5x damage received from the last attack this turn.
+ * * `"psywave"` - Random, 0.5x to 1.5x the user's level.
+ * * `"hpdiff"` - Difference between target's hp and user's hp.
  */
-// tslint:enable: no-trailing-whitespace
 export type MoveDamage = number | "ohko" | "level" | "half" | "bide" |
     "counter" | "metalburst" | "psywave" | "hpdiff";
 
@@ -588,21 +585,19 @@ export type MoveTarget = "adjacentAlly" | "adjacentAllyOrSelf" | "adjacentFoe" |
 /** Target of move effect. */
 export type MoveEffectTarget = "self" | "hit";
 
-// tslint:disable: no-trailing-whitespace (force newlines in doc)
 /**
  * Specifies how this move can call another move.
  *
- * `true` - Calls a move normally.  
- * `"copycat"` - Called move must match the RoomStatus' `#lastMove` field and
- * not have the `noCopycat` flag set, else this effect should fail.  
- * `"mirror"` - Mirror move. Called move should match the user's `mirrorMove`
- * VolatileStatus field, or fail if null.  
- * `"self"` - Calls a move from the user's moveset.  
- * `"target"` - Calls a move from the target's moveset (caller must have only
- * one target).  
- * `string` - Specifies the move that will be called.
+ * * `true` - Calls a move normally.
+ * * `"copycat"` - Called move must match the RoomStatus' `#lastMove` field and
+ *   not have the `noCopycat` flag set, else this effect should fail.
+ * * `"mirror"` - Mirror move. Called move should match the user's `mirrorMove`
+ *   VolatileStatus field, or fail if null.
+ * * `"self"` - Calls a move from the user's moveset.
+ * * `"target"` - Calls a move from the target's moveset (caller must have only
+ *   one target).
+ * * `string` - Specifies the move that will be called.
  */
-// tslint:enable: no-trailing-whitespace
 export type CallType = true | "copycat" | "mirror" | "self" | "target" | string;
 
 /** Status effects that are explicitly counted in game events. */
@@ -650,13 +645,12 @@ export type FieldEffectType = UpdatableFieldEffectType | "gravity" |
  */
 export type UpdatableFieldEffectType = WeatherType;
 
-// tslint:disable: no-trailing-whitespace (force newline in doc)
 /**
- * Move self-faint description.  
- * `"always"` - Immediately on move use, unless the move fails.  
- * `"ifHit"` - Like `"always"` but also includes misses.
+ * Move self-faint description.
+ *
+ * * `"always"` - Immediately on move use, unless the move fails.
+ * * `"ifHit"` - Like `"always"` but also includes misses.
  */
-// tslint:enable: no-trailing-whitespace
 export type MoveSelfFaint = "always" | "ifHit";
 
 /**
@@ -665,7 +659,7 @@ export type MoveSelfFaint = "always" | "ifHit";
  */
 export type SelfSwitchType = true | "copyvolatile";
 
-// TODO: add rollout
+// TODO: Add momentum move, rename lockedMove to rampage.
 /** Status effects that are implied by the successful use of a move. */
 export type ImplicitStatusType = "defensecurl" | "lockedMove" | "minimize" |
     "mustRecharge";
@@ -717,7 +711,7 @@ export interface ItemData extends DexData
             readonly resistSuper: Type;
         };
         /** After a move deals damage to the holder and would've OHKO'd it. */
-        readonly tryOHKO?:
+        readonly tryOhko?:
         {
             /** Whether leave the holder at 1hp. */
             readonly block: true;
@@ -798,7 +792,7 @@ export interface ItemData extends DexData
              * The stat that, if the holder's nature reduces it, will also cause
              * the holder to become confused.
              */
-            readonly dislike?: StatExceptHP;
+            readonly dislike?: StatExceptHp;
         } |
         {
             /** Effect boosts the holder's stats. */
@@ -832,8 +826,8 @@ export interface ItemData extends DexData
             readonly restore: number;
         };
     };
-    // TODO: passive effects
+    // TODO: Passive effects/flags.
 }
 
-/** Item "callback" object types. */
+/** Item effect object types. */
 export type ItemOn = keyof NonNullable<ItemData["on"]>;

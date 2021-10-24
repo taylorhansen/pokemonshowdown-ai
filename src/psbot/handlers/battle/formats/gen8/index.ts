@@ -1,8 +1,9 @@
 /** @file TODO. Stub. Currently only supporting gen4 for now. */
 import { Encoder } from "../../ai/encoder/Encoder";
 import { BattleParserContext } from "../../parser";
+import { ReadonlyBattleState } from "./state";
 
-export const encoder: Encoder<state.ReadonlyBattleState> =
+export const encoder: Encoder<ReadonlyBattleState> =
 {
     encode()
     {
@@ -13,12 +14,8 @@ export const encoder: Encoder<state.ReadonlyBattleState> =
 
 export async function parser(ctx: BattleParserContext<"gen8">): Promise<void>
 {
-    throw new Error("gen8 parser not implemented");
+    void ctx;
+    return await Promise.reject(new Error("gen8 parser not implemented"));
 }
 
-// tslint:disable-next-line: no-namespace
-export namespace state
-{
-    export interface ReadonlyBattleState {}
-    export class BattleState implements ReadonlyBattleState {}
-}
+export * as state from "./state";

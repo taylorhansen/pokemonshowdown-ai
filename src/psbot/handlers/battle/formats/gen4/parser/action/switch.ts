@@ -25,8 +25,10 @@ export interface SwitchActionResult extends ActionResult
 }
 
 /**
- * Parses a switch-in action by player choice. Includes effects that could
- * happen before the main `|switch|` event.
+ * Parses a switch-in action by player choice.
+ *
+ * Includes effects that could happen before the main `|switch|` event.
+ *
  * @param side Player that should be making the switch action.
  * @param accept Callback to accept this pathway.
  */
@@ -38,8 +40,10 @@ export async function switchAction(ctx: BattleParserContext<"gen4">,
 }
 
 /**
- * Parses a switch-in action by self-switch. Includes effects that could happen
- * before the main `|switch|` event.
+ * Parses a switch-in action by self-switch.
+ *
+ * Includes effects that could happen before the main `|switch|` event.
+ *
  * @param side Player that should be making the switch action.
  */
 export async function selfSwitch(ctx: BattleParserContext<"gen4">,
@@ -51,6 +55,7 @@ export async function selfSwitch(ctx: BattleParserContext<"gen4">,
 /**
  * Parses multiple switch-ins, handling their effects after both sides have sent
  * out a switch-in.
+ *
  * @param sides Sides to switch-in. Default p1 and p2.
  * @returns The Pokemon that were switched in, in the order that they appear.
  */
@@ -58,13 +63,13 @@ export async function multipleSwitchIns(ctx: BattleParserContext<"gen4">,
     sides: readonly SideID[] = ["p1", "p2"]):
     Promise<[side: SideID, mon: Pokemon][]>
 {
-    // parse |switch| events
+    // Parse |switch| events.
     const results = await multipleSwitchEvents(ctx, sides);
-    // parse switch effects
-    sides = results.map(([side, mon]) => side);
+    // Parse switch effects.
+    sides = results.map(([side]) => side);
     await multipleSwitchEffects(ctx, sides);
-    // replace fainted pokemon until stable
-    // note: mutually recursive
+    // Replace fainted pokemon until stable.
+    // Note: Mutually recursive.
     await faint.replacements(ctx, sides);
     return results;
 }
@@ -74,14 +79,15 @@ async function multipleSwitchEvents(ctx: BattleParserContext<"gen4">,
     sides: readonly SideID[]): Promise<[side: SideID, mon: Pokemon][]>
 {
     return (await unordered.all(ctx, sides.map(unorderedSwitchEvent)))
-        // extract switched-in pokemon, removing null/rejected results
+        // Extract switched-in pokemon, removing null/rejected results.
         .filter(res => res) as [side: SideID, mon: Pokemon][];
 }
 
 const unorderedSwitchEvent = (side: SideID) =>
     unordered.UnorderedDeadline.create(`${side} switch`,
-        (ctx: BattleParserContext<"gen4">, accept: unordered.AcceptCallback) =>
-            switchEvent(ctx, side, accept),
+        async (ctx: BattleParserContext<"gen4">,
+                accept: unordered.AcceptCallback) =>
+            await switchEvent(ctx, side, accept),
         () => { throw new Error(`Expected |switch| event for ${side}`); });
 
 /** Parses switch effects for multiple switch-ins. */
@@ -92,17 +98,21 @@ async function multipleSwitchEffects(ctx: BattleParserContext<"gen4">,
 }
 
 const unorderedSwitchEffects = (side: SideID) =>
-    unordered.UnorderedDeadline.create<"gen4">(`${side} switch effects`,
-        async function unorderedSwitchEffectsImpl(ctx, accept)
-        {
-            // note: faint/win happens independently for each call
-            return await switchEffects(ctx, side, accept);
-        },
-        effectDidntHappen);
+    unordered.UnorderedDeadline.create(`${side} switch effects`,
+        unorderedSwitchEffectsImpl, effectDidntHappen, side);
+
+async function unorderedSwitchEffectsImpl(ctx: BattleParserContext<"gen4">,
+    accept: unordered.AcceptCallback, side: SideID)
+{
+    // Note: Faint/win happens independently for each call.
+    return await switchEffects(ctx, side, accept);
+}
 
 /**
  * Parses a switch-in action, either by player choice or by self-switch.
+ *
  * Includes effects that could happen before the main `|switch|` event.
+ *
  * @param side Player that should be making the switch action.
  * @param accept Callback to accept this pathway.
  */
@@ -110,9 +120,9 @@ async function switchActionImpl(ctx: BattleParserContext<"gen4">, side: SideID,
     accept?: unordered.AcceptCallback): Promise<SwitchActionResult>
 {
     const res: SwitchActionResult = {};
-    // accept cb gets consumed if one of the optional pre-switch effects accept
-    // once it gets called the first time, subsequent uses of this value should
-    //  be ignored since we'd now be committing to this pathway
+    // Accept cb gets consumed if one of the optional pre-switch effects accept.
+    // Once it gets called the first time, subsequent uses of this value should
+    // be ignored since we'd now be committing to this pathway.
     const a = accept;
     accept &&= function switchActionAccept()
     {
@@ -123,12 +133,12 @@ async function switchActionImpl(ctx: BattleParserContext<"gen4">, side: SideID,
     const interceptRes = await preSwitch(ctx, side, accept);
     if (interceptRes) Object.assign(res.actioned ??= {}, interceptRes.actioned);
 
-    // expect the actual switch-in
+    // Expect the actual switch-in.
     const switchRes = await
         (accept ? switchIn(ctx, side, accept) : switchIn(ctx, side));
     if (switchRes)
     {
-        res.mon = switchRes[1];
+        [/*side*/, res.mon] = switchRes;
         (res.actioned ??= {})[side] = true;
     }
     return res;
@@ -136,6 +146,7 @@ async function switchActionImpl(ctx: BattleParserContext<"gen4">, side: SideID,
 
 /**
  * Parses any pre-switch effects.
+ *
  * @param side Pokemon reference who is switching out.
  * @param accept Callback to accept this pathway.
  * @returns The result of a switch-interception move action, if found.
@@ -150,18 +161,18 @@ async function preSwitch(ctx: BattleParserContext<"gen4">, side: SideID,
         a!();
     };
 
-    // check for a possible switch-intercepting move, e.g. pursuit
+    // Check for a possible switch-intercepting move, e.g. pursuit.
     const intercepting: SideID | undefined = side === "p1" ? "p2" : "p1";
     const committed = !accept;
     const moveRes = await actionMove.interceptSwitch(ctx, intercepting, side,
-        // passed accept param should always be truthy to indicate that this
-        //  entire effect is always optional
+        // Passed accept param should always be truthy to indicate that this
+        // entire effect is always optional.
         () => { accept?.(); });
-    // opponent used up their action interrupting our switch
+    // Opponent used up their action interrupting our switch.
     if (!committed && !accept)
     {
-        // NOTE: switch continues even if target faints
-        // TODO: what if user faints, or more pre-switch effects are pending?
+        // Note: Switch continues even if target faints.
+        // TODO: What if user faints, or more pre-switch effects are pending?
     }
 
     await unordered.parse(ctx, effectAbility.onSwitchOut(ctx, side), accept);
@@ -171,6 +182,7 @@ async function preSwitch(ctx: BattleParserContext<"gen4">, side: SideID,
 
 /**
  * Parses a single `|switch|`/`|drag|` event and its implications.
+ *
  * @param side Player that should be making the switch action.
  * @param accept Callback to accept this pathway.
  * @returns The Pokemon that was switched in, or null if not accepted.
@@ -180,6 +192,7 @@ export async function switchIn(ctx: BattleParserContext<"gen4">,
     Promise<[side: SideID, mon: Pokemon] | null>;
 /**
  * Parses a single `|switch|`/`|drag|` event and its implications.
+ *
  * @param side Player that should be making the switch action. Omit to skip this
  * verification step.
  * @returns The Pokemon that was switched in.
@@ -198,6 +211,7 @@ export async function switchIn(ctx: BattleParserContext<"gen4">,
 /**
  * Parses initial `|switch|`/`|drag|` event and returns the switched-in Pokemon
  * obj.
+ *
  * @param sideId Player that should be making the switch action.
  * @param accept Optional accept cb. If not provided, this function will throw
  * on an invalid initial switch event.
@@ -254,22 +268,17 @@ async function switchEvent(ctx: BattleParserContext<"gen4">, side?: SideID,
     return [side, mon];
 }
 
-//#region switch effects
+//#region Switch effects.
 
 /**
  * Parses any effects that should happen after a switch-in.
+ *
  * @param side Pokemon reference that was switched in.
  * @param accept Optional accept cb.
  */
 async function switchEffects(ctx: BattleParserContext<"gen4">,
     side: SideID, accept?: unordered.AcceptCallback): Promise<void>
 {
-    // TODO: on-switch abilities, e.g. trace/intimidate
-
-    // order: hazards (any order), healingwish/lunardance,
-    //  ability on-start
-        // note: item on-update on each hazard
-
     const a = accept;
     accept &&= function switchEffectsAccept()
     {
@@ -280,12 +289,12 @@ async function switchEffects(ctx: BattleParserContext<"gen4">,
     const team = ctx.state.getTeam(side);
 
     const entryEffects: unordered.UnorderedDeadline<"gen4">[] = []
-    // entry hazards
+    // Entry hazards.
     if (team.status.spikes > 0) entryEffects.push(spikes(team.side));
     if (team.status.stealthrock > 0) entryEffects.push(stealthrock(team.side));
     if (team.status.toxicspikes > 0) entryEffects.push(toxicspikes(team.side));
-    // healingwish effects
-    // note: wish is on-residual, healingwish/lunardance are on-switch
+    // Healingwish effects.
+    // Note: Wish is on-residual, healingwish/lunardance are on-switch.
     if (team.status.healingwish)
     {
         entryEffects.push(healingwish(team.side, "healingwish"));
@@ -294,9 +303,9 @@ async function switchEffects(ctx: BattleParserContext<"gen4">,
     {
         entryEffects.push(healingwish(team.side, "lunardance"));
     }
-    await unordered.all(ctx, entryEffects, /*filter*/ undefined, accept);
+    await unordered.all(ctx, entryEffects, undefined /*filter*/, accept);
 
-    // afterwards check for an on-start ability
+    // Afterwards check for an on-start ability.
     if (!team.active.fainted)
     {
         await unordered.parse(ctx, effectAbility.onStart(ctx, team.side),
@@ -306,19 +315,19 @@ async function switchEffects(ctx: BattleParserContext<"gen4">,
     accept?.();
 }
 
-//#region entry hazards
+//#region Entry hazards.
 
 const spikes = (side: SideID) =>
     unordered.UnorderedDeadline.create(`${side} spikes`,
-        spikesImpl, /*reject*/ undefined, side);
+        spikesImpl, undefined /*reject*/, side);
 
 async function spikesImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID): Promise<void>
 {
-    // TODO: grounded/magicguard assertions
+    // TODO: Grounded/magicguard assertions.
     const team = ctx.state.getTeam(side);
     if (team.status.spikes <= 0) return;
-    // can't heal if already fainted
+    // Can't heal if already fainted.
     const mon = team.active;
     if (mon.fainted)
     {
@@ -327,7 +336,7 @@ async function spikesImpl(ctx: BattleParserContext<"gen4">,
     }
 
     const layers = team.status.spikes;
-    const denominator = [8, 6, 4]; // 1/8, 1/6, 1/4
+    const denominator = [8, 6, 4]; // 1/8, 1/6, 1/4.
     const percentage = layers <= 0 ? 0 : 100 / denominator[layers - 1];
     const damageRes = await effectDamage.percentDamage(ctx, side, -percentage,
         event =>
@@ -339,24 +348,24 @@ async function spikesImpl(ctx: BattleParserContext<"gen4">,
         });
     if (damageRes === true)
     {
-        // update items/faint since a damaging effect happened
+        // Update items/faint since a damaging effect happened.
         await unordered.all(ctx, [effectItem.onUpdate(ctx, side)]);
-        // check for faint
+        // Check for faint.
         await faint.event(ctx, side);
     }
 }
 
 const stealthrock = (side: SideID) =>
     unordered.UnorderedDeadline.create(`${side} stealthrock`,
-        stealthrockImpl, /*reject*/ undefined, side);
+        stealthrockImpl, undefined /*reject*/, side);
 
 async function stealthrockImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID): Promise<void>
 {
-    // TODO: magicguard assertions
+    // TODO: Magicguard assertions.
     const team = ctx.state.getTeam(side);
     if (team.status.stealthrock <= 0) return;
-    // can't heal if already fainted
+    // Can't heal if already fainted.
     const mon = team.active;
     if (mon.fainted)
     {
@@ -375,26 +384,26 @@ async function stealthrockImpl(ctx: BattleParserContext<"gen4">,
         });
     if (damageRes === true)
     {
-        // update items/faint since a damaging effect happened
+        // Update items/faint since a damaging effect happened.
         await unordered.parse(ctx, effectItem.onUpdate(ctx, side));
-        // check for faint
+        // Check for faint.
         await faint.event(ctx, side);
     }
 }
 
 const toxicspikes = (side: SideID) =>
     unordered.UnorderedDeadline.create(`${side} toxicspikes`,
-        toxicspikesImpl, /*reject*/ undefined, side);
+        toxicspikesImpl, undefined /*reject*/, side);
 
 async function toxicspikesImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID): Promise<void>
 {
-    // TODO: grounded/magicguard/ability immunity assertions
+    // TODO: Grounded/magicguard/ability immunity assertions.
     const team = ctx.state.getTeam(side);
     if (team.status.toxicspikes <= 0) return;
 
     const mon = team.active;
-    // can't heal if already fainted
+    // Can't heal if already fainted.
     if (mon.fainted)
     {
         accept();
@@ -402,7 +411,7 @@ async function toxicspikesImpl(ctx: BattleParserContext<"gen4">,
     }
     if (!mon.types.includes("poison"))
     {
-        // always blocked by substitute/steel type
+        // Always blocked by substitute/steel type.
         if (mon.volatile.substitute || mon.types.includes("steel"))
         {
             accept();
@@ -413,24 +422,24 @@ async function toxicspikesImpl(ctx: BattleParserContext<"gen4">,
         const statusRes = await effectStatus.status(ctx, side, [status],
             event =>
             {
-                if ((event.kwArgs as any).from) return false;
+                if ((event.kwArgs as {from?: string}).from) return false;
                 accept();
                 return true;
             });
         if (statusRes === status)
         {
-            // update items since a status effect happened
+            // Update items since a status effect happened.
             await unordered.parse(ctx, effectItem.onUpdate(ctx, side));
         }
     }
     else
     {
-        // grounded poison types automatically remove toxicspikes
+        // Grounded poison types automatically remove toxicspikes.
         const event = await tryVerify(ctx, "|-sideend|");
         if (!event) return;
         const [, sideStr, effectStr] = event.args;
         const ident = Protocol.parsePokemonIdent(
-            sideStr as any as Protocol.PokemonIdent);
+            sideStr as unknown as Protocol.PokemonIdent);
         if (ident.player !== side) return;
         const effect = Protocol.parseEffect(effectStr, toIdName);
         if (effect.name !== "toxicspikes") return;
@@ -441,7 +450,7 @@ async function toxicspikesImpl(ctx: BattleParserContext<"gen4">,
 
 //#endregion
 
-//#region healingwish effects
+//#region Healingwish effects.
 
 const healingwish = (side: SideID, type: "healingwish" | "lunardance") =>
     unordered.UnorderedDeadline.create(`${side} ${type}`,
@@ -451,7 +460,7 @@ async function healingwishImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID,
     type: "healingwish" | "lunardance"): Promise<void>
 {
-    // can't heal if already fainted
+    // Can't heal if already fainted.
     const mon = ctx.state.getTeam(side).active;
     if (mon.fainted)
     {
@@ -467,13 +476,13 @@ async function healingwishImpl(ctx: BattleParserContext<"gen4">,
             accept();
             return true;
         },
-        // gen4: event is emitted even if recipient has full hp
-        /*noSilent*/ true);
+        // Gen4: event is emitted even if recipient has full hp.
+        true /*noSilent*/);
 }
 
 //#endregion
 
-//#region other helpers
+//#region Other helpers.
 
 function effectDidntHappen(name: string): never
 {

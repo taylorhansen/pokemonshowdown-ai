@@ -1,8 +1,8 @@
-import * as tf from "@tensorflow/tfjs";
 import { EventEmitter } from "stream";
-import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 import { serialize } from "v8";
 import { MessageChannel, MessagePort, workerData } from "worker_threads";
+import * as tf from "@tensorflow/tfjs";
+import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 import { formats } from "../../../psbot/handlers/battle";
 import { intToChoice } from "../../../psbot/handlers/battle/agent";
 import { verifyModel } from "../../../psbot/handlers/battle/ai/networkAgent";
@@ -12,21 +12,21 @@ import { learn, LearnConfig } from "../../learn";
 import { RawPortResultError } from "../../port/PortProtocol";
 import { PredictMessage, PredictResult, PredictWorkerResult } from
     "./ModelPortProtocol";
-import { BatchPredictOptions, ModelLearnData } from "./ModelProtocol";
+import { ModelWorkerData, BatchPredictOptions, ModelLearnData } from
+    "./ModelProtocol";
 import { setTimeoutNs } from "./nanosecond";
 
-// select native backend, defaulting to cpu if not told to use gpu
-const tfn = importTfn(!!workerData.gpu);
-
-const format: formats.FormatType = workerData.format;
+// Select native backend, defaulting to cpu if not told to use gpu.
+const {gpu} = workerData as ModelWorkerData;
+const tfn = importTfn(gpu);
 
 /** State+callback entry for a NetworkRegistry's batch queue. */
 interface BatchEntry
 {
     /** Encoded battle state. */
-    state: Float32Array;
+    readonly state: Float32Array;
     /** Callback after getting the prediction for the given state. */
-    res(result: PredictResult): void;
+    readonly res: (result: PredictResult) => void;
 }
 
 /** Event for when the current batch should be executed. */
@@ -35,7 +35,7 @@ const batchExecute = Symbol("batchExecute");
 /** Describes the events emitted by {@link ModelRegistry.batchEvents}. */
 interface BatchEvents extends ListenerSignature<{[batchExecute]: true}>
 {
-    [batchExecute](): void;
+    readonly [batchExecute]: () => void;
 }
 
 /** Manages a neural network registry. */
@@ -50,7 +50,7 @@ export class ModelRegistry
     private readonly nextBatch: BatchEntry[] = [];
     /** Event listener for batch entries. */
     private readonly batchEvents =
-        // note: TypedEmitter doesn't contain option typings
+        // Note: TypedEmitter doesn't contain option typings.
         new EventEmitter({captureRejections: true}) as
             TypedEmitter<BatchEvents>;
     /** Resolves once the current batch timer expires. */
@@ -58,20 +58,22 @@ export class ModelRegistry
     /** Function to cancel the current timer. */
     private cancelTimer: (() => void) | null = null;
     /** Lock promise for managing the neural network resource. */
-    private inUse: Promise<any>;
+    private inUse: Promise<unknown>;
 
     /**
      * Creates a NetworkRegistry.
+     *
      * @param model Neural network object.
+     * @param format Game format for model verification.
      * @param batchOptions Options for batching predict requests.
      */
-    constructor(model: tf.LayersModel,
+    public constructor(model: tf.LayersModel, format: formats.FormatType,
         private readonly batchOptions: BatchPredictOptions)
     {
         try { verifyModel(model, formats.encoder[format].size); }
         catch (e)
         {
-            // cleanup model so it doesn't cause a memory leak
+            // Cleanup model so it doesn't cause a memory leak.
             model.dispose();
             throw e;
         }
@@ -80,21 +82,22 @@ export class ModelRegistry
         this.batchOptions =
         {
             ...batchOptions,
-            // min 1ns, max 1s
-            timeoutNs: Math.max(1, Math.min(batchOptions.timeoutNs, 999999999))
+            // Min 1ns, max 1s.
+            timeoutNs: batchOptions.timeoutNs
         };
 
-        // setup batch event listener
-        this.batchEvents.on(batchExecute, () => this.executeBatch());
+        // Setup batch event listener.
+        this.batchEvents.on(batchExecute, () => void this.executeBatch());
 
-        // warmup the model using fake data
-        // only useful with gpu backend
-        if (workerData.gpu)
+        // Warmup the model using fake data.
+        // Only useful with gpu backend.
+        if (gpu)
         {
             const fakeInput = tf.zeros([1, formats.encoder[format].size]);
             const fakeResult = model.predict(fakeInput) as tf.Tensor[];
             this.inUse = Promise.all(
-                    fakeResult.map(r => r.data().finally(() => r.dispose())))
+                    fakeResult.map(
+                        async r => await r.data().finally(() => r.dispose())))
                 .finally(() => fakeInput.dispose());
         }
         else this.inUse = Promise.resolve();
@@ -117,6 +120,7 @@ export class ModelRegistry
 
     /**
      * Indicates that a game worker is subscribing to a model.
+     *
      * @param uid ID of the model.
      * @returns A port for queueing predictions that the game worker will use.
      */
@@ -125,7 +129,7 @@ export class ModelRegistry
         const {port1, port2} = new MessageChannel();
         this.ports.add(port1);
         port1.on("message", (msg: PredictMessage) =>
-            this.predict(msg)
+            void this.predict(msg)
             .then(prediction =>
             {
                 const result: PredictWorkerResult =
@@ -140,20 +144,22 @@ export class ModelRegistry
                 };
                 port1.postMessage(result, [result.err.buffer]);
             }));
-        // remove this port from the recorded references after close
+        // Remove this port from the recorded references after close.
         port1.on("close", () => this.ports.delete(port1));
         return port2;
     }
 
     /**
      * Queues a learning episode.
+     *
      * @param config Learning config.
      * @param callback Callback for tracking the training process.
      * @param logPath Path to the folder to store TensorBoard logs in. Omit to
      * not store logs.
      */
-    public learn(config: LearnConfig, callback?: (data: ModelLearnData) => void,
-        logPath?: string): Promise<void>
+    public async learn(config: LearnConfig,
+        callback?: (data: ModelLearnData) => void, logPath?: string):
+        Promise<void>
     {
         let trainCallback: tf.CustomCallback | undefined;
         this.inUse = Promise.allSettled(
@@ -161,27 +167,28 @@ export class ModelRegistry
             this.inUse,
             ...(logPath ?
                 [ensureDir(logPath).then(
-                    // can change updateFreq to batch to track epoch progress,
-                    //  but will make the learning algorithm slower
+                    // Can change updateFreq to batch to track epoch progress,
+                    // but will make the learning algorithm slower.
                     () => tfn.node.tensorBoard(logPath, {updateFreq: "epoch"}))]
                 : [])
         ])
-            .then(([_, p]) =>
+            .then(([, p]) =>
                 p.status === "fulfilled" ? trainCallback = p.value
                     : Promise.reject(p.reason));
 
-        return this.inUse = this.inUse.then(() =>learn(
+        this.inUse = this.inUse.then(async () => await learn(
         {
             model: this.model, ...config,
             ...(callback && {callback}),
             ...(trainCallback && {trainCallback})
         }));
+        await this.inUse;
     }
 
     /** Queues a prediction for the neural network. */
     private async predict(msg: PredictMessage): Promise<PredictResult>
     {
-        return new Promise(res =>
+        return await new Promise(res =>
         {
             this.nextBatch.push({state: msg.state, res});
             this.checkPredictBatch();
@@ -196,15 +203,15 @@ export class ModelRegistry
     {
         if (this.nextBatch.length >= this.batchOptions.maxSize)
         {
-            // full batch
+            // Full batch.
             this.batchEvents.emit(batchExecute);
             return;
         }
 
-        // batch timer is already setup
+        // Batch timer is already setup.
         if (this.timeoutPromise) return;
 
-        // setup batch timer
+        // Setup batch timer.
         this.timeoutPromise =
             new Promise<void>(res =>
                 this.cancelTimer =
@@ -215,8 +222,8 @@ export class ModelRegistry
                 this.cancelTimer = null;
             });
 
-        // if the timer expires before the batch filled up, execute the batch as
-        //  it is
+        // If the timer expires before the batch filled up, execute the batch as
+        // it is.
         let didTimeout = false;
         Promise.race(
         [
@@ -233,11 +240,11 @@ export class ModelRegistry
     {
         if (this.nextBatch.length <= 0) return;
 
-        // allow for the next batch to start filling up
+        // Allow for the next batch to start filling up.
         const batch = [...this.nextBatch];
         this.nextBatch.length = 0;
 
-        // batch and execute model
+        // Batch and execute model.
 
         const [batchedProbs, batchedValues] = tf.tidy(() =>
         {
@@ -251,12 +258,12 @@ export class ModelRegistry
             ];
         });
 
-        // unpack and distribute batch entries
+        // Unpack and distribute batch entries.
 
         const [probsData, valueData] = await Promise.all(
         [
-            Promise.all(batchedProbs.map(
-                t => t.data() as Promise<Float32Array>)),
+            Promise.all(
+                batchedProbs.map(async t => await t.data() as Float32Array)),
             batchedValues.data() as Promise<Float32Array>
         ]);
         batchedProbs.forEach(t => t.dispose())

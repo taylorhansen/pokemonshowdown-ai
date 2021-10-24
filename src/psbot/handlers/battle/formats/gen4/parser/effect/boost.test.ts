@@ -1,10 +1,9 @@
-import { BoostID } from "@pkmn/types";
 import { expect } from "chai";
 import "mocha";
 import * as dex from "../../dex";
-import { ParserContext } from "../Context.test";
 import { createInitialContext } from "../Context.test";
-import { ParserHelpers, setupBattleParser, toIdent, toNum } from
+import { ParserHelpers } from "../ParserHelpers.test";
+import { setupBattleParser, toEffectName, toIdent, toNum } from
     "../helpers.test";
 import * as effectBoost from "./boost";
 
@@ -19,12 +18,12 @@ export const test = () => describe("boost", function()
     describe("boost()", function()
     {
         const init = setupBattleParser(ictx.startArgs, effectBoost.boost);
-        let pctx: ParserContext<Partial<dex.BoostTable<number>>> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
@@ -33,11 +32,13 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "atk", toNum(1)], kwArgs: {}});
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, atk: 1});
         });
 
@@ -46,12 +47,14 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.reject(
             {
                 args: ["-unboost", toIdent("p1"), "atk", toNum(1)], kwArgs: {}
             });
-            await ph.return({atk: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["atk", 1]]);
             expect(mon.volatile.boosts).to.deep.equal(boost0);
         });
 
@@ -60,10 +63,12 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.reject(
                 {args: ["-boost", toIdent("p2"), "atk", toNum(1)], kwArgs: {}});
-            await ph.return({atk: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["atk", 1]]);
             expect(mon.volatile.boosts).to.deep.equal(boost0);
         });
 
@@ -72,12 +77,14 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.reject(
             {
                 args: ["-unboost", toIdent("p1"), "spe", toNum(1)], kwArgs: {}
             });
-            await ph.return({atk: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["atk", 1]]);
             expect(mon.volatile.boosts).to.deep.equal(boost0);
         });
 
@@ -86,12 +93,14 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.reject(
             {
                 args: ["-unboost", toIdent("p1"), "atk", toNum(2)], kwArgs: {}
             });
-            await ph.return({atk: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["atk", 1]]);
             expect(mon.volatile.boosts).to.deep.equal(boost0);
         });
 
@@ -101,12 +110,14 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.spa = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
 
-            pctx = init({side: "p1", table: {spa: 1}});
-            // boost limit is 6, indicate that it can't go over
+            const table = new Map([["spa", 1]] as const);
+            pctx = init({side: "p1", table});
+            // Boost limit is 6, indicate that it can't go over.
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "spa", toNum(0)], kwArgs: {}});
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
         });
 
@@ -116,12 +127,14 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.spa = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
 
-            pctx = init({side: "p1", table: {spa: 1}});
-            // boost limit is 6, indicate that it can't go over
+            const table = new Map([["spa", 1]] as const);
+            pctx = init({side: "p1", table});
+            // Boost limit is 6, indicate that it can't go over.
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "spa", toNum(1)], kwArgs: {}});
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
         });
 
@@ -131,10 +144,12 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.spa = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
 
-            pctx = init({side: "p1", table: {def: 2, spa: 1, spd: -1}});
+            const table = new Map([["def", 2], ["spa", 1], ["spd", -1]] as
+                    const);
+            pctx = init({side: "p1", table});
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "def", toNum(2)], kwArgs: {}});
-            // boost limit is 6, indicate that it can't go over
+            // Boost limit is 6, indicate that it can't go over.
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "spa", toNum(0)], kwArgs: {}});
             await ph.handle(
@@ -142,7 +157,8 @@ export const test = () => describe("boost", function()
                 args: ["-unboost", toIdent("p1"), "spd", toNum(1)], kwArgs: {}
             });
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts)
                 .to.deep.equal({...boost0, def: 2, spa: 6, spd: -1});
         });
@@ -153,14 +169,17 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.spa = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
 
-            pctx = init({side: "p1", table: {def: 2, spa: 1, spd: -1}});
+            const table = new Map([["def", 2], ["spa", 1], ["spd", -1]] as
+                    const);
+            pctx = init({side: "p1", table});
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "def", toNum(2)], kwArgs: {}});
             await ph.reject(
             {
                 args: ["-unboost", toIdent("p1"), "spa", toNum(1)], kwArgs: {}
             });
-            await ph.return({spa: 1, spd: -1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["spa", 1], ["spd", -1]]);
             expect(mon.volatile.boosts)
                 .to.deep.equal({...boost0, def: 2, spa: 6});
         });
@@ -171,14 +190,15 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.accuracy = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, accuracy: 6});
 
-            pctx = init(
-                {side: "p1", table: {accuracy: 1, evasion: 1}, silent: true});
+            const table = new Map([["accuracy", 1], ["evasion", 1]] as const);
+            pctx = init({side: "p1", table, silent: true});
             await ph.handle(
             {
                 args: ["-boost", toIdent("p1"), "evasion", toNum(1)], kwArgs: {}
             });
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts)
                 .to.deep.equal({...boost0, accuracy: 6, evasion: 1});
         });
@@ -189,10 +209,11 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.accuracy = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, accuracy: 6});
 
-            pctx = init(
-                {side: "p1", table: {accuracy: 1, evasion: 1}, silent: true});
+            const table = new Map([["accuracy", 1], ["evasion", 1]] as const);
+            pctx = init({side: "p1", table, silent: true});
             await ph.halt();
-            await ph.return({evasion: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["evasion", 1]]);
             expect(mon.volatile.boosts).to.deep.equal({...boost0, accuracy: 6});
         });
 
@@ -202,23 +223,21 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.spa = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
 
-            pctx = init(
-            {
-                side: "p1", table: {spa: 1, spe: 1},
-                pred: e => e.kwArgs.from === "x"
-            });
+            const table = new Map([["spa", 1], ["spe", 1]] as const);
+            pctx = init({side: "p1", table, pred: e => e.kwArgs.from === "x"});
             await ph.handle(
             {
                 args: ["-boost", toIdent("p1"), "spa", toNum(0)],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.handle(
             {
                 args: ["-boost", toIdent("p1"), "spe", toNum(1)],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts)
                 .to.deep.equal({...boost0, spa: 6, spe: 1});
         });
@@ -228,19 +247,17 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init(
-            {
-                side: "p1", table: {accuracy: 1, spe: 1},
-                pred: e => e.kwArgs.from === "x"
-            });
+            const table = new Map([["accuracy", 1], ["spe", 1]] as const);
+            pctx = init({side: "p1", table, pred: e => e.kwArgs.from === "x"});
             await ph.handle(
             {
                 args: ["-boost", toIdent("p1"), "accuracy", toNum(1)],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.reject(
                 {args: ["-boost", toIdent("p1"), "spe", toNum(1)], kwArgs: {}});
-            await ph.return({spe: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["spe", 1]]);
             expect(mon.volatile.boosts).to.deep.equal({...boost0, accuracy: 1});
         });
     });
@@ -248,12 +265,12 @@ export const test = () => describe("boost", function()
     describe("setBoost()", function()
     {
         const init = setupBattleParser(ictx.startArgs, effectBoost.setBoost);
-        let pctx: ParserContext<Partial<dex.BoostTable<number>>> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
@@ -263,13 +280,15 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.atk = -5;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, atk: -5});
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.handle(
             {
                 args: ["-setboost", toIdent("p1"), "atk", toNum(1)], kwArgs: {}
             });
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, atk: 1});
         });
 
@@ -278,26 +297,30 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.reject(
             {
                 args: ["-unboost", toIdent("p1"), "atk", toNum(1)], kwArgs: {}
             });
-            await ph.return({atk: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["atk", 1]]);
             expect(mon.volatile.boosts).to.deep.equal(boost0);
         });
 
-        it("Should reject if invalid event", async function()
+        it("Should reject if invalid side", async function()
         {
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.reject(
             {
                 args: ["-setboost", toIdent("p2"), "atk", toNum(1)], kwArgs: {}
             });
-            await ph.return({atk: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["atk", 1]]);
             expect(mon.volatile.boosts).to.deep.equal(boost0);
         });
 
@@ -306,12 +329,14 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: -1}});
+            const table = new Map([["atk", -1]] as const);
+            pctx = init({side: "p1", table});
             await ph.reject(
             {
                 args: ["-setboost", toIdent("p1"), "spe", toNum(-1)], kwArgs: {}
             });
-            await ph.return({atk: -1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["atk", -1]]);
             expect(mon.volatile.boosts).to.deep.equal(boost0);
         });
 
@@ -320,12 +345,14 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1}});
+            const table = new Map([["atk", 1]] as const);
+            pctx = init({side: "p1", table});
             await ph.reject(
             {
                 args: ["-setboost", toIdent("p1"), "atk", toNum(2)], kwArgs: {}
             });
-            await ph.return({atk: 1});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["atk", 1]]);
             expect(mon.volatile.boosts).to.deep.equal(boost0);
         });
 
@@ -335,7 +362,9 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.spa = 2;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 2});
 
-            pctx = init({side: "p1", table: {def: 2, spa: 2, spd: -1}});
+            const table = new Map([["def", 2], ["spa", 2], ["spd", -1]] as
+                    const);
+            pctx = init({side: "p1", table});
             await ph.handle(
             {
                 args: ["-setboost", toIdent("p1"), "def", toNum(2)], kwArgs: {}
@@ -349,7 +378,8 @@ export const test = () => describe("boost", function()
                 args: ["-setboost", toIdent("p1"), "spd", toNum(-1)], kwArgs: {}
             });
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts)
                 .to.deep.equal({...boost0, def: 2, spa: 2, spd: -1});
         });
@@ -360,7 +390,8 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.evasion = 3;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, evasion: 3});
 
-            pctx = init({side: "p1", table: {accuracy: 2, evasion: 4}});
+            const table = new Map([["accuracy", 2], ["evasion", 4]] as const);
+            pctx = init({side: "p1", table});
             await ph.handle(
             {
                 args: ["-setboost", toIdent("p1"), "accuracy", toNum(2)],
@@ -371,7 +402,8 @@ export const test = () => describe("boost", function()
                 args: ["-setboost", toIdent("p1"), "evasion", toNum(2)],
                 kwArgs: {}
             });
-            await ph.return({evasion: 4});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["evasion", 4]]);
             expect(mon.volatile.boosts)
                 .to.deep.equal({...boost0, accuracy: 2, evasion: 3});
         });
@@ -382,13 +414,15 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.atk = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, atk: 6});
 
-            pctx = init({side: "p1", table: {atk: 6, def: 2}, silent: true});
+            const table = new Map([["atk", 6], ["def", 2]] as const);
+            pctx = init({side: "p1", table, silent: true});
             await ph.handle(
             {
                 args: ["-setboost", toIdent("p1"), "def", toNum(2)], kwArgs: {}
             });
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts)
                 .to.deep.equal({...boost0, atk: 6, def: 2});
         });
@@ -398,23 +432,21 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init(
-            {
-                side: "p1", table: {spa: 1, spe: 1},
-                pred: e => e.kwArgs.from === "x"
-            });
+            const table = new Map([["spa", 1], ["spe", 1]] as const);
+            pctx = init({side: "p1", table, pred: e => e.kwArgs.from === "x"});
             await ph.handle(
             {
                 args: ["-setboost", toIdent("p1"), "spa", toNum(1)],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.handle(
             {
                 args: ["-setboost", toIdent("p1"), "spe", toNum(1)],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.halt();
-            await ph.return({});
+            await ph.return(table);
+            expect([...table]).to.be.empty;
             expect(mon.volatile.boosts)
                 .to.deep.equal({...boost0, spa: 1, spe: 1});
         });
@@ -424,21 +456,19 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init(
-            {
-                side: "p1", table: {def: 2, spd: 3},
-                pred: e => e.kwArgs.from === "x"
-            });
+            const table = new Map([["def", 2], ["spd", 3]] as const);
+            pctx = init({side: "p1", table, pred: e => e.kwArgs.from === "x"});
             await ph.handle(
             {
                 args: ["-setboost", toIdent("p1"), "def", toNum(2)],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.reject(
             {
                 args: ["-setboost", toIdent("p1"), "spd", toNum(3)], kwArgs: {}
             });
-            await ph.return({spd: 3});
+            await ph.return(table);
+            expect([...table]).to.have.deep.members([["spd", 3]]);
             expect(mon.volatile.boosts).to.deep.equal({...boost0, def: 2});
         });
     });
@@ -446,12 +476,12 @@ export const test = () => describe("boost", function()
     describe("boostOne()", function()
     {
         const init = setupBattleParser(ictx.startArgs, effectBoost.boostOne);
-        let pctx: ParserContext<"silent" | BoostID | undefined> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
@@ -460,7 +490,10 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {atk: 1, spe: 1}});
+            pctx = init(
+            {
+                side: "p1", table: new Map([["atk", 1], ["spe", 1]] as const)
+            });
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "atk", toNum(1)], kwArgs: {}});
             await ph.return("atk");
@@ -472,7 +505,10 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {def: 1, spd: -1}});
+            pctx = init(
+            {
+                side: "p1", table: new Map([["def", 1], ["spd", -1]] as const)
+            });
             await ph.reject(
             {
                 args: ["-setboost", toIdent("p1"), "def", toNum(1)], kwArgs: {}
@@ -486,7 +522,11 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {spa: -1, evasion: 2}});
+            pctx = init(
+            {
+                side: "p1",
+                table: new Map([["spa", -1], ["evasion", 2]] as const)
+            });
             await ph.reject(
             {
                 args: ["-unboost", toIdent("p2"), "spa", toNum(1)], kwArgs: {}
@@ -500,7 +540,11 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {spa: -1, evasion: 2}});
+            pctx = init(
+            {
+                side: "p1",
+                table: new Map([["spa", -1], ["evasion", 2]] as const)
+            });
             await ph.reject(
             {
                 args: ["-unboost", toIdent("p1"), "spe", toNum(1)], kwArgs: {}
@@ -514,7 +558,10 @@ export const test = () => describe("boost", function()
             const mon = sh.initActive("p1");
             expect(mon.volatile.boosts).to.deep.equal(boost0);
 
-            pctx = init({side: "p1", table: {spd: -2, spe: 1}});
+            pctx = init(
+            {
+                side: "p1", table: new Map([["spd", -2], ["spe", 1]] as const)
+            });
             await ph.reject(
             {
                 args: ["-unboost", toIdent("p1"), "spd", toNum(1)], kwArgs: {}
@@ -529,8 +576,11 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.spa = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
 
-            pctx = init({side: "p1", table: {spa: 1, spd: 1}});
-            // boost limit is 6, indicate that it can't go over
+            pctx = init(
+            {
+                side: "p1", table: new Map([["spa", 1], ["spd", 1]] as const)
+            });
+            // Boost limit is 6, indicate that it can't go over.
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "spa", toNum(0)], kwArgs: {}});
             await ph.return("spa");
@@ -543,7 +593,7 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.spa = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
 
-            pctx = init({side: "p1", table: {spa: 1}});
+            pctx = init({side: "p1", table: new Map([["spa", 1]] as const)});
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "spa", toNum(1)], kwArgs: {}});
             await ph.return("spa");
@@ -556,7 +606,11 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.accuracy = 6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, accuracy: 6});
 
-            pctx = init({side: "p1", table: {accuracy: 1}, silent: true});
+            pctx = init(
+            {
+                side: "p1", table: new Map([["accuracy", 1]] as const),
+                silent: true
+            });
             await ph.return("silent");
             expect(mon.volatile.boosts).to.deep.equal({...boost0, accuracy: 6});
         });
@@ -567,7 +621,11 @@ export const test = () => describe("boost", function()
             mon.volatile.boosts.def = -6;
             expect(mon.volatile.boosts).to.deep.equal({...boost0, def: -6});
 
-            pctx = init({side: "p1", table: {def: -2, spa: 2}, silent: true});
+            pctx = init(
+            {
+                side: "p1", table: new Map([["def", -2], ["spa", 2]] as const),
+                silent: true
+            });
             await ph.handle(
                 {args: ["-boost", toIdent("p1"), "spa", toNum(2)], kwArgs: {}});
             await ph.return("spa");
@@ -582,7 +640,11 @@ export const test = () => describe("boost", function()
             expect(mon.volatile.boosts).to.deep.equal({...boost0, accuracy: 6});
 
             pctx = init(
-                {side: "p1", table: {accuracy: 1, evasion: 2}, silent: true});
+            {
+                side: "p1",
+                table: new Map([["accuracy", 1], ["evasion", 2]] as const),
+                silent: true
+            });
             await ph.handle(
             {
                 args: ["-boost", toIdent("p1"), "accuracy", toNum(0)],
@@ -600,13 +662,13 @@ export const test = () => describe("boost", function()
 
             pctx = init(
             {
-                side: "p1", table: {spa: 1, spe: 1},
+                side: "p1", table: new Map([["spa", 1], ["spe", 1]] as const),
                 pred: e => e.kwArgs.from === "x"
             });
             await ph.handle(
             {
                 args: ["-boost", toIdent("p1"), "spa", toNum(0)],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.return("spa");
             expect(mon.volatile.boosts).to.deep.equal({...boost0, spa: 6});
@@ -619,7 +681,8 @@ export const test = () => describe("boost", function()
 
             pctx = init(
             {
-                side: "p1", table: {accuracy: 1, spe: 1},
+                side: "p1",
+                table: new Map([["accuracy", 1], ["spe", 1]] as const),
                 pred: e => e.kwArgs.from === "x"
             });
             await ph.reject(

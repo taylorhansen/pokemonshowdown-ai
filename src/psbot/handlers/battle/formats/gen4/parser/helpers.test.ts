@@ -2,222 +2,20 @@
 import { Protocol } from "@pkmn/protocol";
 import { FieldCondition, ID, SideCondition, SideID, TypeName, Weather } from
     "@pkmn/types";
-import { expect } from "chai";
 import { toIdName } from "../../../../../helpers";
-import { Event } from "../../../../../parser";
 import { BattleAgent } from "../../../agent";
-import { BattleIterator, BattleParser, BattleParserContext } from
-    "../../../parser";
+import { BattleParser, BattleParserContext } from "../../../parser";
 import { startBattleParser, StartBattleParserArgs } from
     "../../../parser/helpers";
 import * as unordered from "../../../parser/unordered";
 import { FormatType } from "../../formats";
 import * as dex from "../dex";
-import { BattleState } from "../state/BattleState";
-import { Pokemon } from "../state/Pokemon";
 import { smeargle } from "../state/switchOptions.test";
-import { SwitchOptions } from "../state/Team";
 import { ParserContext } from "./Context.test";
-
-// TODO: should this be merged with ParserContext?
-/**
- * Helper class for manipulating the ParserContext.
- * @template TResult Return type of the BattleParser/SubParser.
- */
-export class ParserHelpers<TResult = unknown>
-{
-    /**
-     * Whether the BattleParser threw an exception and it has already been
-     * handled or tested. This is so that {@link ParserHelpers.close} doesn't
-     * rethrow the error while awaiting the {@link ParserContext.finish}
-     * Promise.
-     */
-    private handledError = false;
-
-    /**
-     * Constructs parser helper functions.
-     * @param pctx Function that gets the {@link ParserContext}. This is called
-     * each time a method wants to access the ParserContext in order to provide
-     * a level of indirection in case it gets reassigned later.
-     */
-    constructor(private readonly pctx: () => ParserContext<TResult> | undefined)
-    {}
-
-    /**
-     * Fully closes the current BattleParser and resets the state for the next
-     * test. Should be invoked at the end of a test or in an {@link afterEach}
-     * block.
-     */
-    public async close(): Promise<void>
-    {
-        try
-        {
-            // use ?. in case pctx wasn't initialized yet
-            await this.pctx()?.battleIt.return();
-            // the only way for the finish Promise to reject would be if the
-            //  underlying BattleIterators also threw, and so they should've
-            //  been handled via expect() by the time we get to this point
-            if (!this.handledError) await this.pctx()?.finish;
-            else
-            {
-                await expect(this.guaranteePctx().finish)
-                    .to.eventually.be.rejected;
-            }
-        }
-        catch (e) { throw e; }
-        // reset error state for the next test
-        finally { this.handledError = false; }
-    }
-
-    /**
-     * Handles an event normally.
-     * @param event Event to handle.
-     */
-    public async handle(event: Event): Promise<void>
-    {
-        const result = await this.next(event);
-        expect(result).to.not.have.property("done", true);
-        expect(result).to.have.property("value", undefined);
-    }
-
-    /**
-     * Handles an event that should reject and cause the BattleParser to return
-     * without handling it.
-     * @param event Event to handle.
-     */
-    public async reject(event: Event): Promise<void>
-    {
-        const result = await this.next(event);
-        expect(result).to.have.property("done", true);
-        expect(result).to.have.property("value", undefined);
-    }
-
-    /**
-     * Handles an event that should throw.
-     * @param event Event to handle.
-     * @param errorCtor Error type.
-     * @param message Optional error message.
-     */
-    public async rejectError(event: Event, errorCtor: ErrorConstructor,
-        message?: string): Promise<void>
-    {
-        await expect(this.next(event))
-            .to.eventually.be.rejectedWith(errorCtor, message);
-        // exception should propagate to the finish promise as well
-        await expect(this.guaranteePctx().finish)
-            .to.eventually.be.rejectedWith(errorCtor, message);
-    }
-
-    /**
-     * Passes a halt event and expects the BattleParser to reject it.
-     * @param event Event to handle.
-     */
-    public async halt(): Promise<void>
-    {
-        await this.reject(
-            {args: ["request", "{}" as Protocol.RequestJSON], kwArgs: {}});
-    }
-
-    /**
-     * Passes a halt event and expects the BattleParser to throw.
-     * @param errorCtor Error type.
-     * @param message Optional error message.
-     */
-    public async haltError(errorCtor: ErrorConstructor, message?: string):
-        Promise<void>
-    {
-        await this.rejectError(
-            {args: ["request", "{}" as Protocol.RequestJSON], kwArgs: {}},
-            errorCtor, message);
-    }
-
-    /**
-     * Expects the BattleParser to return after handling all the events or after
-     * rejecting one.
-     * @param ret Return value to compare, or a callback to verify it.
-     */
-    public async return(
-        ret: TResult | ((ret: Promise<TResult>) => PromiseLike<unknown>)):
-        Promise<void>
-    {
-        if (typeof ret === "function")
-        {
-            const f = ret as (ret: Promise<TResult>) => PromiseLike<unknown>;
-            await f(this.guaranteePctx().finish);
-        }
-        else
-        {
-            await expect(this.guaranteePctx().finish).to.eventually.become(ret);
-        }
-    }
-
-    /**
-     * Calls the ParserContext's `BattleIterator#next()` while checking for
-     * errors.
-     */
-    private async next(event: Event): ReturnType<BattleIterator["next"]>
-    {
-        try { return await this.guaranteePctx().battleIt.next(event); }
-        // rethrow while setting error state
-        // if the caller expected this and handled it, we'll be able to continue
-        //  as normal with #close() expecting the same error
-        catch (e) { this.handledError = true; throw e; }
-    }
-
-    private guaranteePctx(): ParserContext<TResult>
-    {
-        const pctx = this.pctx();
-        if (!pctx) throw new Error("ParserContext not initialized");
-        return pctx;
-    }
-}
-
-/** Helper class for manipulating the BattleState. */
-// tslint:disable-next-line: max-classes-per-file
-export class StateHelpers
-{
-    /**
-     * Constructs state helper functions.
-     * @param state Function that gets the ParserContext. This is called each
-     * time a method wants to access the BattleState in order to provide a level
-     * of indirection in case it gets reassigned later.
-     */
-    constructor(private readonly state: () => BattleState) {}
-
-    /**
-     * Initializes a team of pokemon, some of which may be unknown. The last
-     * defined one in the array will be switched in if any.
-     */
-    public initTeam(teamRef: SideID,
-        options: readonly (SwitchOptions | undefined)[]): Pokemon[]
-    {
-        const team = this.state().getTeam(teamRef);
-        team.size = options.length;
-        const result: Pokemon[] = [];
-        let i = 0;
-        for (const op of options)
-        {
-            if (!op) continue;
-            const mon = team.switchIn(op);
-            expect(mon, `Switch-in slot ${i} couldn't be filled`)
-                .to.not.be.null;
-            result.push(mon!);
-            ++i;
-        }
-        return result;
-    }
-
-    /** Initializes a team of one pokemon. */
-    public initActive(monRef: SideID, options = smeargle, size = 1): Pokemon
-    {
-        const opt = new Array<SwitchOptions | undefined>(size);
-        opt[0] = options;
-        return this.initTeam(monRef, opt)[0];
-    }
-}
 
 /**
  * Starts a {@link BattleParser}.
+ *
  * @param startArgs Arguments for starting the BattleParser.
  * @param parser Parser to call immediately, just after constructing the
  * BattleState and BattleIterators.
@@ -246,6 +44,7 @@ export function initParser
  * start a new ParserContext. This function is a curried version of
  * {@link initParser} with deferred arguments and {@link BattleState}
  * construction.
+ *
  * @param startArgs Initial arguments for starting the BattleParser.
  * @param stateCtor Function to get the initial battle state that the parser
  * will use when the returned function is called.
@@ -262,12 +61,14 @@ export function setupBattleParser
     parser: BattleParser<T, BattleAgent<T>, TArgs, TResult>):
     (...args: TArgs) => ParserContext<TResult>
 {
-    return (...args: TArgs) => initParser(startArgs, parser, ...args)
+    return (...args: TArgs): ParserContext<TResult> =>
+        initParser(startArgs, parser, ...args);
 }
 
 /**
  * Creates a {@link ParserContext} initialization function for an
  * {@link UnorderedDeadline}.
+ *
  * @template T Format type.
  * @template TArgs Parser ctor args, minus the {@link BattleParserContext} which
  * is filled in for the first parameter.
@@ -291,12 +92,15 @@ export function setupUnorderedDeadline
     (...args: TArgs) => ParserContext<[] | [TResult]>
 {
     return setupBattleParser(startArgs,
-        // create a BattleParser that evaluates the UnorderedDeadline
+        // Create a BattleParser that evaluates the UnorderedDeadline.a
         async (ctx, ...args) =>
             await unordered.parse(ctx, parserCtor(ctx, ...args)));
 }
 
-//#region protocol helpers
+//#region Protocol helpers.
+
+// Match with protocol type names.
+/* eslint-disable @typescript-eslint/naming-convention */
 
 export function toIdent(side: SideID, opt = smeargle,
     pos: Protocol.PositionLetter = "a"): Protocol.PokemonIdent
@@ -327,7 +131,6 @@ export function toHPStatus(hp: number | "faint", maxhp = 100,
 }
 
 export function toEffectName(name: string): Protocol.EffectName;
-// tslint:disable-next-line: unified-signatures
 export function toEffectName(id: string, type: "ability" | "item" | "move"):
     Protocol.EffectName;
 export function toEffectName(id: string, type?: "ability" | "item" | "move"):
@@ -392,13 +195,13 @@ export function toWeather(weather: dex.WeatherType): Weather
 export function toFieldCondition(
     effect: Exclude<dex.FieldEffectType, dex.WeatherType>): FieldCondition
 {
-    return toMoveName(effect) as any as FieldCondition;
+    return toMoveName(effect) as unknown as FieldCondition;
 }
 
 export function toSideCondition(
     effect: dex.TeamEffectType | dex.ImplicitTeamEffectType): SideCondition
 {
-    return toMoveName(effect) as any as SideCondition;
+    return toMoveName(effect) as unknown as SideCondition;
 }
 
 export function toBoostIDs(...boosts: dex.BoostName[]): Protocol.BoostIDs
@@ -442,5 +245,12 @@ export function toRule(name: string): Protocol.Rule
 {
     return name as Protocol.Rule;
 }
+
+export function toNickname(name: string): Protocol.Nickname
+{
+    return name as Protocol.Nickname;
+}
+
+/* eslint-enable @typescript-eslint/naming-convention */
 
 //#endregion

@@ -3,13 +3,13 @@ import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { ReadonlyPossibilityClass } from "../../state/PossibilityClass";
 import * as dexutil from "../dex-util";
 
-/** Limited form of the `ReadonlyPokemon` interface. */
+/** Limited form of the {@link ReadonlyPokemon} interface. */
 export type ReadonlyMoveUserSnapshot = Pick<ReadonlyPokemon, "hpType" | "item">;
 
-/** Limited form of the `Pokemon` interface. */
+/** Limited form of the {@link Pokemon} interface. */
 export type MoveUserSnapshot = Readonly<Pick<Pokemon, "hpType" | "item">>;
 
-/** Pairs a Move with its user-ref. */
+/** Pairs a {@link Move} with its {@link SideID user-ref}. */
 export interface MoveAndUserRef
 {
     /** Move object. */
@@ -18,7 +18,7 @@ export interface MoveAndUserRef
     readonly userRef: SideID;
 }
 
-/** Readonly form of `MoveAndUser`. */
+/** Readonly form of {@link MoveAndUser}. */
 export interface ReadonlyMoveAndUser
 {
     /** Move object. */
@@ -27,7 +27,7 @@ export interface ReadonlyMoveAndUser
     readonly user: ReadonlyPokemon;
 }
 
-/** Pairs a Move with its user. */
+/** Pairs a {@link Move} with its {@link Pokemon user}. */
 export interface MoveAndUser extends ReadonlyMoveAndUser
 {
     /** @override */
@@ -37,7 +37,7 @@ export interface MoveAndUser extends ReadonlyMoveAndUser
 /** Encapsulates move properties. */
 export class Move
 {
-    //#region properties interpreted from MoveData
+    //#region Properties interpreted from MoveData.
 
     /** Whether this move is affected by type effectiveness multipliers. */
     public get canBeEffective(): boolean
@@ -46,44 +46,46 @@ export class Move
     }
 
     /** Whether this move deals damage based on base power. */
-    public get dealsBPDamage(): boolean
+    public get dealsBpDamage(): boolean
     {
         return this.data.category !== "status" && !this.data.damage;
     }
 
     //#endregion
 
-    // TODO: eventually make #data inaccessible apart from internal dex
+    // TODO: Eventually make #data inaccessible apart from internal dex.
     /**
      * Creates a Move data wrapper.
+     *
      * @param data Move data from dex.
      */
-    constructor(public readonly data: dexutil.MoveData) {}
+    public constructor(public readonly data: dexutil.MoveData) {}
 
-    //#region interpreted properties that need extra info
+    //#region Interpreted properties that need extra info.
 
     /**
      * Gets the effective target of the move.
+     *
      * @param user User of the move (To handle ghost-type Curse).
      */
     public getTarget(user: ReadonlyPokemon): dexutil.MoveTarget
     {
-        // TODO(gen6): nonGhostTarget interactions with protean
+        // TODO(gen6): nonGhostTarget interactions with protean ability.
         return this.data.nonGhostTarget && !user.types.includes("ghost") ?
             this.data.nonGhostTarget : this.data.target;
     }
 
-    // TODO: encapsulate type-related methods into a PossibilityClass-like api
+    // TODO: Encapsulate type-related methods into a PossibilityClass-like api.
     /** Gets all the possible effective types of a move based on its user. */
     public getPossibleTypes(user: ReadonlyMoveUserSnapshot): Set<dexutil.Type>
     {
-        // TODO: also include naturalgift and others
+        // TODO: Also include naturalgift and others.
         switch (this.data.modifyType)
         {
             case "hpType": return new Set(user.hpType.possibleValues);
             case "plateType":
             {
-                // TODO: embargo negates plate
+                // TODO: Embargo negates plate.
                 const result = new Set<dexutil.Type>();
                 for (const n of user.item.possibleValues)
                 {
@@ -98,39 +100,40 @@ export class Move
 
     /**
      * Gets the move's effective type based on its user if the user's currently
-     * revealed traits guarantee it, or null if not enough information has been
-     * revealed.
+     * revealed traits guarantee it, or `null` if not enough information has
+     * been revealed.
      */
     public getDefiniteType(user: ReadonlyMoveUserSnapshot): dexutil.Type | null;
     /**
      * Gets the move's effective type based on its user if the user's currently
-     * revealed traits guarantee it, or null if not enough information has been
-     * revealed.
-     * @param hpType HPType of the user.
+     * revealed traits guarantee it, or `null` if not enough information has
+     * been revealed.
+     *
+     * @param hpType HpType of the user.
      * @param item User's item.
      */
-    public getDefiniteType(hpType: ReadonlyPossibilityClass<dexutil.HPType>,
+    public getDefiniteType(hpType: ReadonlyPossibilityClass<dexutil.HpType>,
         item: ReadonlyPossibilityClass<string, dexutil.ItemData>):
         dexutil.Type | null;
     public getDefiniteType(
-        userOrHPType:
-            ReadonlyMoveUserSnapshot | ReadonlyPossibilityClass<dexutil.HPType>,
+        userOrHpType:
+            ReadonlyMoveUserSnapshot | ReadonlyPossibilityClass<dexutil.HpType>,
         item?: ReadonlyPossibilityClass<string, dexutil.ItemData>):
         dexutil.Type | null
     {
-        let hpType: ReadonlyPossibilityClass<dexutil.HPType>;
+        let hpType: ReadonlyPossibilityClass<dexutil.HpType>;
         if (item)
         {
-            hpType = userOrHPType as ReadonlyPossibilityClass<dexutil.HPType>;
+            hpType = userOrHpType as ReadonlyPossibilityClass<dexutil.HpType>;
         }
-        else ({hpType, item} = userOrHPType as ReadonlyPokemon);
+        else ({hpType, item} = userOrHpType as ReadonlyPokemon);
 
         switch (this.data.modifyType)
         {
-            // TODO: also include naturalgift and others
+            // TODO: Also include naturalgift and others.
             case "hpType": return hpType.definiteValue;
             case "plateType":
-                // TODO: include item-blocking effects
+                // TODO: Include item-blocking effects.
                 if (!item.definiteValue) return null;
                 return item.map[item.definiteValue].plateType ?? this.data.type;
             case "???": return "???";
@@ -140,6 +143,7 @@ export class Move
 
     /**
      * Gets the main (guaranteed) boost effects of this move.
+     *
      * @param tgt Target of the boost effect.
      * @param userTypes User's types, in order to handle Curse effect.
      * @returns A table of boost values which are guaranteed to apply to the
@@ -163,6 +167,7 @@ export class Move
 
     /**
      * Gets the main guaranteed status effects of this move.
+     *
      * @param tgt Target of the status effect
      * @param userTypes User's types, in order to handle Curse effect.
      * @returns An array of statuses, one of which will afflict the `tgt` when
@@ -183,6 +188,7 @@ export class Move
 
     /**
      * Gets all guaranteed status effects of this move.
+     *
      * @param tgt Target of the status effect
      * @param userTypes User's types, in order to handle Curse effect.
      * @returns An array of statuses, one of which will afflict the `tgt` when
@@ -202,17 +208,18 @@ export class Move
 
     //#endregion
 
-    //#region inference helper methods
+    //#region Inference helper methods.
 
     /**
      * Makes inferences to support the assertion that, if this Move was used by
      * the given Pokemon, the Move would be of the given type.
+     *
      * @param type Expected move type
      * @param user User of the move.
      */
     public assertType(type: dexutil.Type, user: MoveUserSnapshot): void
     {
-        // assert move type if known
+        // Assert move type if known.
         const moveType = this.getDefiniteType(user);
         if (moveType)
         {
@@ -224,27 +231,29 @@ export class Move
             return;
         }
 
-        // if move type is unknown, reverse the assertion into an inference
+        // If move type is unknown, reverse the assertion into an inference.
         switch (this.data.modifyType)
         {
-            // asserted type is the user's hiddenpower type
+            // Asserted type is the user's hiddenpower type.
             case "hpType":
                 user.hpType.narrow(type);
                 break;
-            // asserted type is the type of plate the user is holding
+            // Asserted type is the type of plate the user is holding.
             case "plateType":
-                // TODO: embargo negates plate
+                // TODO: Embargo negates plate.
                 user.item.narrow((_, i) =>
                         type === (i.plateType ?? this.data.type));
                 break;
+            default:
         }
     }
 
-    // TODO: separate method to replace negative param?
+    // TODO: Separate method to replace negative param?
     /**
      * Makes inferences to support the assertion that, if this Move was used by
      * the given Pokemon, the Move would be of one of the given types, or the
      * opposite if `negative` is true.
+     *
      * @param types Expected possible move types.
      * @param user Move user.
      * @param negative Whether to flip the assertion.
@@ -265,7 +274,7 @@ export class Move
                 break;
             case "???":
                 defaultType = "???";
-                // fallthrough
+                // Fallthrough.
             default:
                 if (!!negative === types.has(defaultType))
                 {
@@ -280,6 +289,7 @@ export class Move
      * Adds a callback to wait until it can be confirmed whether, if this Move
      * was used by the given Pokemon, that it would be of one of the given
      * types.
+     *
      * @param types Expected possible move types.
      * @param user Move user.
      * @param cb Callback to wait. Called with `held=true` if the assertion
@@ -289,42 +299,42 @@ export class Move
     public onUpdateTypes(types: Set<dexutil.Type>, user: MoveUserSnapshot,
         cb: (held: boolean) => void): () => void
     {
-        // early return: move type already known
+        // Move type already known.
         const moveType = this.getDefiniteType(user);
         if (moveType)
         {
-            cb(/*held*/ types.has(moveType));
+            cb(types.has(moveType) /*held*/);
             return () => {};
         }
 
         switch (this.data.modifyType)
         {
             case "hpType":
-                // types must be shared by hpType
+                // Types must be shared by hpType.
                 return user.hpType.onUpdate(types, cb);
             case "plateType":
-                // item must cause the move to become one of the types
-                // optimization: keep subsets small since only a couple items
-                //  have a plateType
+                // Item must cause the move to become one of the types.
+                // Optimization: Keep subsets small since only a couple items
+                // have a plateType.
                 if (types.has(this.data.type))
                 {
-                    // kept=false iff the user has a plate item that isn't of
-                    //  the possible types
-                    // TODO: replace predicate with set of plate items
+                    // Kept=false iff the user has a plate item that isn't of
+                    // the possible types.
+                    // TODO: Replace predicate with set of plate items.
                     return user.item.onUpdate(
                         (_, i) => !!i.plateType && !types.has(i.plateType),
                         kept => cb(!kept));
                 }
-                // kept=true iff the user has a plate item that is of the
-                //  possible types (equivalent to above case)
+                // Kept=true iff the user has a plate item that is of the
+                // possible types (equivalent to above case).
                 return user.item.onUpdate(
                     (_, i) => !!i.plateType && types.has(i.plateType),
                     cb);
             case "???":
-                // should've been handled by `#getDefiniteType()`
-                // fallthrough
+                // Should've been handled by `#getDefiniteType()`.
+                // Fallthrough.
             default:
-                // istanbul ignore next: should never happen
+                // istanbul ignore next: Should never happen.
                 throw new Error(`Unsupported modifyType string ` +
                     `'${this.data.modifyType}'`);
         }

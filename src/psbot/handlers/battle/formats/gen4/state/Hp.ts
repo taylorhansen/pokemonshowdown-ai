@@ -1,5 +1,5 @@
-/** Readonly HP representation. */
-export interface ReadonlyHP
+/** Readonly {@link Hp} representation. */
+export interface ReadonlyHp
 {
     /** Current HP. May be a percentage. */
     readonly current: number;
@@ -8,7 +8,7 @@ export interface ReadonlyHP
 }
 
 /** Hit points info. */
-export class HP implements ReadonlyHP
+export class Hp implements ReadonlyHp
 {
     /** @override */
     public get current(): number { return this._current; }
@@ -20,6 +20,7 @@ export class HP implements ReadonlyHP
 
     /**
      * Sets the HP.
+     *
      * @param current Current HP.
      * @param max Optional max HP.
      */
@@ -29,8 +30,10 @@ export class HP implements ReadonlyHP
         this._current = Math.min(Math.max(0, current), this._max);
     }
 
+    // istanbul ignore next: Only used for logging.
     /**
-     * Encodes all hp data into a string.
+     * Encodes all HP data into a string.
+     *
      * @param isPercent Whether to report HP as a percentage.
      * @returns The HP in string form.
      */

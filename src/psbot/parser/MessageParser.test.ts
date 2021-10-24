@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { RoomEvent } from "./Event";
+import { HaltEvent, RoomEvent } from "./Event";
 import { MessageParser } from "./MessageParser";
 
 export const test = () => describe("MessageParser", function()
@@ -14,7 +14,7 @@ export const test = () => describe("MessageParser", function()
         parser = new MessageParser();
     });
 
-    afterEach("Destroy MessageParser", async function()
+    afterEach("Destroy MessageParser", function()
     {
         parser.destroy();
     });
@@ -23,13 +23,16 @@ export const test = () => describe("MessageParser", function()
     {
         parser.write(`>${roomid}\n|init|battle\n|start\n`);
         parser.end();
-        const events: RoomEvent[] = [];
-        for await (const event of parser) events.push(event);
+        const events: (RoomEvent | HaltEvent)[] = [];
+        for await (const event of parser)
+        {
+            events.push(event as RoomEvent | HaltEvent);
+        }
         expect(events).to.have.deep.members(
         [
             {roomid, args: ["init", "battle"], kwArgs: {}},
             {roomid, args: ["start"], kwArgs: {}},
-            // halt event after every chunk
+            // Halt event after every chunk.
             {roomid, args: ["halt"], kwArgs: {}}
         ]);
     });
@@ -38,8 +41,11 @@ export const test = () => describe("MessageParser", function()
     {
         parser.write("|init|battle\n|start\n");
         parser.end();
-        const events: RoomEvent[] = [];
-        for await (const event of parser) events.push(event);
+        const events: (RoomEvent | HaltEvent)[] = [];
+        for await (const event of parser)
+        {
+            events.push(event as RoomEvent | HaltEvent);
+        }
         expect(events).to.have.deep.members(
         [
             {roomid: "", args: ["init", "battle"], kwArgs: {}},
@@ -54,8 +60,11 @@ export const test = () => describe("MessageParser", function()
         parser.write(`>${roomid}\n|init|battle\n|start\n`);
         parser.write(`>${roomid2}\n|upkeep\n|-weather|SunnyDay|[upkeep]\n`);
         parser.end();
-        const events: RoomEvent[] = [];
-        for await (const event of parser) events.push(event);
+        const events: (RoomEvent | HaltEvent)[] = [];
+        for await (const event of parser)
+        {
+            events.push(event as RoomEvent | HaltEvent);
+        }
         expect(events).to.have.deep.members(
         [
             {roomid, args: ["init", "battle"], kwArgs: {}},

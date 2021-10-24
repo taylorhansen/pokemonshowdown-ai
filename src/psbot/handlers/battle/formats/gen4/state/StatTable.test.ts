@@ -10,11 +10,11 @@ export const test = () => describe("StatTable", function()
     {
         it("Should initialize StatRanges", function()
         {
-            // all base 100 stats
+            // All base 100 stats.
             const stats = StatTable.base(dex.pokemon["mew"], 100);
             for (const stat in dex.statNames)
             {
-                if (!dex.statNames.hasOwnProperty(stat)) continue;
+                if (!Object.hasOwnProperty.call(dex.statNames, stat)) continue;
 
                 if (stat === "hp")
                 {
@@ -23,8 +23,8 @@ export const test = () => describe("StatTable", function()
                 }
                 else
                 {
-                    expect(stats[stat as dex.StatExceptHP].min).to.equal(184);
-                    expect(stats[stat as dex.StatExceptHP].max).to.equal(328);
+                    expect(stats[stat as dex.StatExceptHp].min).to.equal(184);
+                    expect(stats[stat as dex.StatExceptHp].max).to.equal(328);
                 }
             }
         });
@@ -57,17 +57,17 @@ export const test = () => describe("StatTable", function()
         });
     });
 
-    describe("#divergeHP()", function()
+    describe("#divergeHp()", function()
     {
         it("Should create partial shallow copy", function()
         {
             const stats = StatTable.base(dex.pokemon["mew"], 100);
-            const overrideHP = new StatRange(50, 100, /*hp*/ true);
-            const dstats = stats.transform(overrideHP);
+            const overrideHp = new StatRange(50, 100, true /*hp*/);
+            const dstats = stats.transform(overrideHp);
 
             expect(stats.level).to.equal(dstats.level);
             expect(stats.hp).to.not.equal(dstats.hp);
-            expect(dstats.hp).to.equal(overrideHP);
+            expect(dstats.hp).to.equal(overrideHp);
             expect(stats.atk).to.equal(dstats.atk);
             expect(stats.def).to.equal(dstats.def);
             expect(stats.spa).to.equal(dstats.spa);

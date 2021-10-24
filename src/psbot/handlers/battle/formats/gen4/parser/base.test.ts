@@ -4,14 +4,18 @@ import "mocha";
 import { Event } from "../../../../../parser";
 import * as dex from "../dex";
 import { BattleState } from "../state/BattleState";
-import { ditto, smeargle } from "../state/switchOptions.test";
 import { ReadonlyVolatileStatus } from "../state/VolatileStatus";
-import { dispatch, ignoredEvents } from "./base";
+import { ditto, smeargle } from "../state/switchOptions.test";
 import { createInitialContext, ParserContext } from "./Context.test";
-import { initParser, ParserHelpers, toAbilityName, toBoostIDs, toDetails,
-    toEffectName, toFieldCondition, toHPStatus, toIdent, toItemName, toMoveName,
+import { ParserHelpers } from "./ParserHelpers.test";
+import { dispatch, ignoredEvents } from "./base";
+import { initParser, toAbilityName, toBoostIDs, toDetails, toEffectName,
+    toFieldCondition, toHPStatus, toIdent, toItemName, toMoveName, toNickname,
     toNum, toSide, toSideCondition, toSpeciesName, toTypes, toUsername,
     toWeather } from "./helpers.test";
+
+/** Unwraps a Promise. */
+type Awaited<T> = T extends Promise<infer U> ? U : T;
 
 export const test = () => describe("base", function()
 {
@@ -25,10 +29,10 @@ export const test = () => describe("base", function()
         state = ictx.getState();
     });
 
-    let pctx: ParserContext<void | null> | undefined;
+    let pctx: ParserContext<Awaited<ReturnType<typeof dispatch>>> | undefined;
     const ph = new ParserHelpers(() => pctx);
 
-    beforeEach("Initialize base BattleParser", async function()
+    beforeEach("Initialize base BattleParser", function()
     {
         pctx = initParser(ictx.startArgs, dispatch);
     });
@@ -42,12 +46,13 @@ export const test = () => describe("base", function()
     {
         it("Should reject and return null", async function()
         {
-            await ph.reject({args: ["invalid" as any], kwArgs: {}});
+            await ph.reject(
+                {args: ["invalid"], kwArgs: {}} as unknown as Event);
             await ph.return(null);
         });
     });
 
-    // note: for |request|, refer to request.test.ts
+    // Note: For |request|, refer to request.test.ts.
 
     describe("|turn|", function()
     {
@@ -101,7 +106,7 @@ export const test = () => describe("base", function()
         it("Should handle switch-in", async function()
         {
             sh.initActive("p1");
-            sh.initActive("p2", smeargle, /*size*/ 2);
+            sh.initActive("p2", smeargle, 2 /*size*/);
 
             await ph.handle(
             {
@@ -122,7 +127,7 @@ export const test = () => describe("base", function()
         it("Should handle forced switch-in", async function()
         {
             sh.initActive("p1");
-            sh.initActive("p2", smeargle, /*size*/ 2);
+            sh.initActive("p2", smeargle, 2 /*size*/);
 
             await ph.handle(
             {
@@ -266,12 +271,12 @@ export const test = () => describe("base", function()
         {
             it("Should flip Truant state", async function()
             {
-                // first make sure the pokemon has truant
+                // First make sure the pokemon has truant.
                 const mon = sh.initActive("p1");
                 mon.setAbility("truant");
                 expect(mon.volatile.willTruant).to.be.false;
 
-                // also flipped back on postTurn to sync with this event
+                // Also flipped back on postTurn to sync with this event.
                 await ph.handle(
                 {
                     args:
@@ -286,7 +291,7 @@ export const test = () => describe("base", function()
 
             it("Should overlap Truant turn with recharge turn", async function()
             {
-                // first make sure the pokemon has truant
+                // First make sure the pokemon has truant.
                 const mon = sh.initActive("p1");
                 mon.setAbility("truant");
                 expect(mon.volatile.willTruant).to.be.false;
@@ -420,7 +425,11 @@ export const test = () => describe("base", function()
             await ph.handle(
             {
                 args: ["-heal", toIdent("p2"), toHPStatus(100)],
-                kwArgs: {from: toEffectName("wish", "move"), wisher: "Ditto"}
+                kwArgs:
+                {
+                    from: toEffectName("wish", "move"),
+                    wisher: toNickname("Ditto")
+                }
             });
             await ph.return();
             expect(mon.hp.current).to.equal(100);
@@ -787,7 +796,7 @@ export const test = () => describe("base", function()
                 args:
                 [
                     "-clearpositiveboost", toIdent("p1"),
-                    // source pokemon/effect (note: unsupported move)
+                    // Source pokemon/effect (note: unsupported move).
                     toIdent("p2"), toEffectName("move: Spectral Thief")
                 ],
                 kwArgs: {}
@@ -828,7 +837,7 @@ export const test = () => describe("base", function()
             {
                 args:
                 [
-                    // order of idents is [source, target]
+                    // Order of idents is [source, target].
                     "-copyboost", toIdent("p1"), toIdent("p2"),
                     toBoostIDs("def")
                 ],
@@ -859,14 +868,11 @@ export const test = () => describe("base", function()
 
     describe("|-weather|", function()
     {
-        function weatherEvent(type: dex.WeatherType | "none",
-            kwArgs: Event<"|-weather|">["kwArgs"] = {}): Event<"|-weather|">
-        {
-            return {
-                args: ["-weather", type === "none" ? type : toWeather(type)],
-                kwArgs
-            };
-        }
+        const weatherEvent = (type: dex.WeatherType | "none",
+            kwArgs: Event<"|-weather|">["kwArgs"] = {}): Event<"|-weather|"> =>
+        ({
+            args: ["-weather", type === "none" ? type : toWeather(type)], kwArgs
+        });
 
         beforeEach("Assert weather is none initially", function()
         {
@@ -882,10 +888,11 @@ export const test = () => describe("base", function()
             expect(state.status.weather.source).to.be.null;
         });
 
-        // note: move effect test for item inference is handled in
-        //  action/move.test.ts
+        // Note: Move effect test for item inference is handled in
+        // action/move.test.ts.
 
-        // TODO: support in dex data then move test to effect/ability.test.ts
+        // TODO: Support in dex data then move this test to
+        // effect/ability.test.ts.
         describe("ability effect", function()
         {
             it("Should infer infinite duration if ability matches weather",
@@ -957,7 +964,7 @@ export const test = () => describe("base", function()
         });
     });
 
-    // fieldstart/fieldend
+    // Tests for fieldstart/fieldend.
     for (const start of [true, false])
     {
         const verb = start ? "start" : "end";
@@ -965,7 +972,7 @@ export const test = () => describe("base", function()
         const name = `|${eventName}|`;
         describe(name, function()
         {
-            // pseudo-weathers
+            // Pseudo-weathers
             for (const effect of ["gravity", "trickroom"] as const)
             {
                 it(`Should ${verb} ${effect}`, async function()
@@ -986,7 +993,7 @@ export const test = () => describe("base", function()
         });
     }
 
-    // sidestart/sideend
+    // Tests for sidestart/sideend.
     for (const start of [true, false])
     {
         const verb = start ? "start" : "end";
@@ -1065,7 +1072,7 @@ export const test = () => describe("base", function()
         });
     });
 
-    // start/end
+    // Tests for start/end.
     for (const start of [true, false])
     {
         const verb = start ? "start" : "end";
@@ -1327,12 +1334,12 @@ export const test = () => describe("base", function()
                         const v = sh.initActive("p1").volatile;
                         expect(v[effect].isActive).to.be.false;
 
-                        // first start the effect
+                        // First start the effect.
                         v[effect].start();
                         expect(v[effect].isActive).to.be.true;
                         expect(v[effect].turns).to.equal(0);
 
-                        // then update it
+                        // Then update it.
                         await ph.handle(
                         {
                             args: ["-start", toIdent("p1"), effectStr],
@@ -1345,7 +1352,7 @@ export const test = () => describe("base", function()
                 }
             }
 
-            // disable
+            // Disable.
             if (start)
             {
                 it("Should disable move", async function()
@@ -1423,7 +1430,7 @@ export const test = () => describe("base", function()
                 {
                     args:
                     [
-                        // note: start mentions user, end mentions target
+                        // Note: Start mentions user, end mentions target.
                         eventName, toIdent(start ? "p1" : "p2"),
                         toMoveName("doomdesire")
                     ],
@@ -1554,7 +1561,7 @@ export const test = () => describe("base", function()
             expect(mon.item.possibleValues).to.have.keys("mail");
         });
 
-        // TODO: move to move effect tests
+        // TODO: Move this test to move effect tests.
         it("Should handle recycle effect", async function()
         {
             const mon = sh.initActive("p1");
@@ -1606,7 +1613,7 @@ export const test = () => describe("base", function()
             await ph.handle(
             {
                 args: ["-enditem", toIdent("p1"), toItemName("oranberry")],
-                kwArgs: {from: "stealeat", of: toIdent("p2")}
+                kwArgs: {from: toEffectName("stealeat"), of: toIdent("p2")}
             });
             await ph.return();
             expect(item.possibleValues).to.have.keys("oranberry");
@@ -1615,7 +1622,7 @@ export const test = () => describe("base", function()
             expect(mon.lastItem).to.not.equal(item,
                 "item was transfered to lastItem");
             expect(mon.lastItem).to.equal(lastItem, "lastItem was reassigned");
-            // TODO: item on-eat effects?
+            // TODO: Item on-eat effects?
         });
 
         it("Should destroy item if from item-removal move", async function()
@@ -1803,8 +1810,8 @@ export const test = () => describe("base", function()
     {
         it("Should handle forewarn", async function()
         {
-            // note that usually this happens inside an Ability activation
-            //  context since more information is available
+            // Note: Usually this is supposed to happen inside an Ability
+            // activation context since more information is available.
             sh.initActive("p1");
             const mon = sh.initActive("p2");
             expect(mon.moveset.get("takedown")).to.be.null;
@@ -1831,12 +1838,12 @@ export const test = () => describe("base", function()
                 const v = sh.initActive("p1").volatile;
                 expect(v[effect].isActive).to.be.false;
 
-                // first start the effect
+                // First start the effect.
                 v[effect].start();
                 expect(v[effect].isActive).to.be.true;
                 expect(v[effect].turns).to.equal(0);
 
-                // then update it
+                // Then update it.
                 await ph.handle(
                 {
                     args: ["-activate", toIdent("p1"), effectStr], kwArgs: {}
@@ -1922,7 +1929,7 @@ export const test = () => describe("base", function()
             expect(v.stalling).to.be.true;
             expect(v.stallTurns).to.equal(1);
 
-            // assume "us" uses Feint move
+            // Assume "us" uses Feint move.
             await ph.handle(
             {
                 args:
@@ -1933,7 +1940,7 @@ export const test = () => describe("base", function()
             });
             await ph.return();
             expect(v.stalling).to.be.false;
-            // should not reset stall turns
+            // Should not reset stall turns.
             expect(v.stallTurns).to.equal(1);
         });
 
@@ -1991,7 +1998,7 @@ export const test = () => describe("base", function()
                 expect(them.lockOnTarget).to.be.null;
                 expect(them.lockOnTurns.isActive).to.be.false;
 
-                // p1 locks onto p2
+                // P1 locks onto p2.
                 await ph.handle(
                 {
                     args:
@@ -2026,8 +2033,8 @@ export const test = () => describe("base", function()
                 kwArgs: {}
             });
             await ph.return();
-            // replaces override moveset but not base, so switching will still
-            //  restore the original mimic move
+            // Replaces override moveset but not base, so switching will still
+            // restore the original mimic move.
             expect(mon.moveset.get("splash")).to.not.be.null;
             expect(mon.moveset.get("mimic")).to.be.null;
             expect(mon.baseMoveset.get("splash")).to.be.null;
@@ -2050,7 +2057,7 @@ export const test = () => describe("base", function()
                 kwArgs: {}
             });
             await ph.return();
-            // works like mimic but also changes base moveset
+            // Works like mimic but also changes base moveset.
             expect(mon.moveset.get("tackle")).to.not.be.null;
             expect(mon.moveset.get("sketch")).to.be.null;
             expect(mon.baseMoveset.get("tackle")).to.not.be.null;
@@ -2102,9 +2109,9 @@ export const test = () => describe("base", function()
                 [
                     "-activate", toIdent("p2"), toEffectName("spite", "move"),
                     toMoveName("splash"), toNum(4)
-                ] as any, // TODO: fix protocol typings
+                ],
                 kwArgs: {}
-            });
+            } as Event); // TODO: Fix/update protocol typings?
             await ph.return();
             const move = moveset.get("splash");
             expect(move).to.not.be.null;
@@ -2117,7 +2124,7 @@ export const test = () => describe("base", function()
             const us = sh.initActive("p1").volatile;
             const them = sh.initActive("p2").volatile;
 
-            // p1 being trapped by p2
+            // P1 being trapped by p2.
             await ph.handle(
             {
                 args: ["-activate", toIdent("p1"), toEffectName("trapped")],

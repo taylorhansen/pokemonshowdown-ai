@@ -16,13 +16,13 @@ export class ChanceReason extends inference.SubReason
     public override assert(): void
     {
         this.held = true;
-        this.delayCb?.(/*held*/ true);
+        this.delayCb?.(true /*held*/);
     }
 
     public override reject(): void
     {
         this.held = false;
-        this.delayCb?.(/*held*/ false);
+        this.delayCb?.(false /*held*/);
     }
 
     protected override delayImpl(cb: inference.DelayCallback):
@@ -34,6 +34,7 @@ export class ChanceReason extends inference.SubReason
 
     public override toString(indentInner = 4, indentOuter = 0): string
     {
+        void indentInner;
         const s = " ".repeat(indentOuter);
         return `${s}ChanceReason()`;
     }

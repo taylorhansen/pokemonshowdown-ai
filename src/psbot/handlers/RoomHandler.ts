@@ -4,7 +4,7 @@ import { Event } from "../parser";
 export interface RoomHandler
 {
     /** Handles an Event. */
-    handle(event: Event): void | Promise<void>;
+    readonly handle: (event: Event) => void | Promise<void>;
     /** Handles a halt signal after parsing a block of events. */
-    halt(): void | Promise<void>;
+    readonly halt: () => void | Promise<void>;
 }

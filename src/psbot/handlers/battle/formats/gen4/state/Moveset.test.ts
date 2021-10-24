@@ -100,7 +100,7 @@ export const test = () => describe("Moveset", function()
             expect(moveset.moves).to.be.empty;
             expect(moveset.constraint).to.have.all.keys(twoMoves);
 
-            // expand moveset enough to fit the movepool
+            // Expand moveset enough to fit the movepool.
             moveset.size = 2;
             expect(moveset.moves).to.have.all.keys(twoMoves);
             expect(moveset.constraint).to.be.empty;
@@ -115,7 +115,7 @@ export const test = () => describe("Moveset", function()
             const transform = new Moveset();
             transform.link(moveset, "transform");
 
-            // expand moveset enough to fit the movepool
+            // Expand moveset enough to fit the movepool.
             transform.size = 2;
             expect(moveset.moves).to.have.all.keys(twoMoves);
             expect(moveset.constraint).to.be.empty;
@@ -138,7 +138,7 @@ export const test = () => describe("Moveset", function()
                 moveset.link(base, "base");
                 expect(moveset.get("splash")).to.equal(base.get("splash"))
                     .and.to.not.be.null;
-                // not by-ref array copy
+                // Not by-ref array copy.
                 expect(moveset.moves).to.not.equal(base.moves);
             });
 
@@ -151,7 +151,7 @@ export const test = () => describe("Moveset", function()
                 moveset.reveal("splash");
                 expect(moveset.get("splash")).to.equal(base.get("splash"))
                     .and.to.not.be.null;
-                // not by-ref array copy
+                // Not by-ref array copy.
                 expect(moveset.moves).to.not.equal(base.moves);
             });
 
@@ -174,12 +174,12 @@ export const test = () => describe("Moveset", function()
 
                 moveset.isolate();
                 moveset.link(base, "base");
-                // to test this, see if changing the base moveset causes a
-                //  change in the transform user
-                // if the moveset didn't reclaim its link, the move would be
-                //  propagated normally
-                // technically modifying the base moveset is an error, but for
-                //  now it isn't being caught
+                // To test this, see if changing the base moveset causes a
+                // change in the transform user.
+                // If the moveset didn't reclaim its link, the move would be
+                // propagated normally.
+                // Technically modifying the base moveset is an error, but for
+                // now it isn't being caught.
                 base.reveal("tackle");
                 expect(moveset.get("tackle")).to.be.null;
                 expect(transform.get("tackle")).to.be.null;
@@ -227,7 +227,7 @@ export const test = () => describe("Moveset", function()
                 transform.reveal("splash");
                 moveset.link(transform, "transform");
 
-                // target moveset should have full pp
+                // Target moveset should have full pp.
                 expect(moveset.get("splash")).to.have.property("pp", 5);
                 expect(transform.get("splash")).to.have.property("pp", 64);
             });
@@ -239,7 +239,7 @@ export const test = () => describe("Moveset", function()
                 moveset.link(transform, "transform");
                 transform.reveal("splash");
 
-                // target moveset should have full pp
+                // Target moveset should have full pp.
                 expect(moveset.get("splash")).to.have.property("pp", 5);
                 expect(transform.get("splash")).to.have.property("pp", 64);
             });
@@ -251,7 +251,7 @@ export const test = () => describe("Moveset", function()
                 moveset.link(transform, "transform");
                 moveset.reveal("splash");
 
-                // target moveset should have full pp
+                // Target moveset should have full pp.
                 expect(moveset.get("splash")).to.have.property("pp", 5);
                 expect(transform.get("splash")).to.have.property("pp", 64);
             });
@@ -266,7 +266,7 @@ export const test = () => describe("Moveset", function()
                 transform2.link(moveset, "transform");
                 transform2.reveal("splash");
 
-                // target moveset should have full pp
+                // Target moveset should have full pp.
                 expect(moveset.get("splash")).to.have.property("pp", 64);
                 expect(transform1.get("splash")).to.have.property("pp", 5);
                 expect(transform2.get("splash")).to.have.property("pp", 5);
@@ -444,8 +444,8 @@ export const test = () => describe("Moveset", function()
             moveset.link(base, "base");
 
             moveset.reveal("tackle");
-            moveset.replace("tackle", new Move("splash"), /*base*/true);
-            // copied by-ref
+            moveset.replace("tackle", new Move("splash"), /*Base*/true);
+            // Copied by-ref.
             expect(moveset.get("splash")).to.equal(base.get("splash"))
                 .and.to.not.be.null;
         });
@@ -457,12 +457,12 @@ export const test = () => describe("Moveset", function()
         {
             const moveset = new Moveset(fiveMoves);
 
-            // two moves being removed from 5-move movepool
+            // Two moves being removed from 5-move movepool.
             moveset.inferDoesntHave(twoMoves);
             expect(moveset.size).to.equal(3);
 
             const remaining = fiveMoves.filter(
-                n => !twoMoves.includes(n as any));
+                n => !twoMoves.includes(n as typeof twoMoves[number]));
             expect(moveset.moves).to.have.all.keys(remaining);
         });
 

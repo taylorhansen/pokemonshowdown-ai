@@ -1,5 +1,5 @@
-import Long from "long";
 import { Transform, TransformCallback } from "stream";
+import { isLong } from "long";
 import * as tfrecord from "tfrecord";
 import { maskedCrc32c } from "tfrecord/lib/crc32c";
 import { AugmentedExperience } from "../../play/experience";
@@ -14,31 +14,34 @@ export class AExpDecoder extends Transform
 {
     /**
      * Event for when a chunk has been read from input and stored in
-     * `#nextChunk`. If `#nextChunk` is still null after this event is emitted,
-     * then there is no more data to read.
+     * {@link nextChunk}. If {@link nextChunk} is still null after this event is
+     * emitted, then there is no more data to read.
      */
     private static readonly chunkRead = Symbol("chunkRead");
-    /** Event for when the `#nextChunk` has been consumed and set to null. */
+    /**
+     * Event for when the {@link nextChunk} has been consumed and set to null.
+     */
     private static readonly chunkConsumed = Symbol("chunkConsumed");
 
     /** Internal buffer for reading data. */
     private dataBuffer: Buffer | null = null;
     /**
      * The next chunk to be read. When set or reset, the respective events
-     * `.chunkReadEvent` and `chunkConsumedEvent` should be emitted.
+     * {@link chunkRead} and {@link chunkConsumed} should be emitted.
      */
     private nextChunk: Buffer | null = null;
     /** Manages the async record reader loop. */
     private recordLoopPromise: Promise<void>;
-    /** Promise that resolves once `#_flush()` has been called. */
-    private flushPromise = new Promise<void>(res => this.flushResolve = res);
+    /** Promise that resolves once {@link _flush} has been called. */
+    private readonly flushPromise =
+        new Promise<void>(res => this.flushResolve = res);
     /** Callback for resolving the flush promise. */
     private flushResolve!: () => void;
 
-    // adapted from tfrecord/src/record_reader.ts and reader.ts
+    // Adapted from tfrecord/src/record_reader.ts and reader.ts.
     /**
      * Main metadata buffer that wraps serialized TFRecord Examples. Reused for
-     * each `#readRecord()` call to save on allocations.
+     * each {@link readRecord} call to save on allocations.
      */
     private readonly metadata = new ArrayBuffer(headerBytes);
     /** Buffer for reading 8byte length and 4byte crc32c header. */
@@ -60,7 +63,8 @@ export class AExpDecoder extends Transform
      * @param writableHighWaterMark High water mark on the write side.
      * @param readableHighWaterMark High water mark on the read side.
      */
-    constructor(writableHighWaterMark?: number, readableHighWaterMark?: number)
+    public constructor(writableHighWaterMark?: number,
+        readableHighWaterMark?: number)
     {
         super(
         {
@@ -76,14 +80,14 @@ export class AExpDecoder extends Transform
     {
         if (!this.nextChunk)
         {
-            // register chunk
+            // Register chunk.
             this.nextChunk = chunk;
             this.emit(AExpDecoder.chunkRead);
             callback();
         }
         else
         {
-            // wait for the next chunk to be consumed
+            // Wait for the next chunk to be consumed.
             this.once(AExpDecoder.chunkConsumed,
                 () => this._transform(chunk, encoding, callback));
         }
@@ -93,15 +97,15 @@ export class AExpDecoder extends Transform
     {
         if (this.listenerCount(AExpDecoder.chunkConsumed) > 0)
         {
-            // wait for the remaining chunks to be consumed
+            // Wait for the remaining chunks to be consumed.
             this.once(AExpDecoder.chunkConsumed, () => this._flush(callback));
             return;
         }
 
-        // signal no more data
+        // Signal no more data.
         this.flushResolve();
 
-        // wait for the record reader loop to finish
+        // Wait for the record reader loop to finish.
         this.recordLoopPromise =
             this.recordLoopPromise.then(() => callback()).catch(callback);
     }
@@ -109,17 +113,13 @@ export class AExpDecoder extends Transform
     /** Executes the record reader loop. */
     private async recordLoop(): Promise<void>
     {
-        while (true)
+        let recordData: Buffer | null;
+        while (recordData = await this.readRecord())
         {
-            const recordData = await this.readRecord();
-            if (!recordData)
-            {
-                this.push(null);
-                return;
-            }
             const example = tfrecord.Example.decode(recordData);
             this.push(AExpDecoder.exampleToAExp(example));
         }
+        this.push(null);
     }
 
     /**
@@ -131,10 +131,10 @@ export class AExpDecoder extends Transform
      */
     private async readRecord(): Promise<Buffer | null>
     {
-        // read header
+        // Read header.
         let bytesRead = await this.consume(this.lengthAndCrcBuffer,
             headerBytes);
-        if (bytesRead === 0) return null; // eof
+        if (bytesRead === 0) return null; // Eof
         if (bytesRead !== this.lengthAndCrcBuffer.length)
         {
             throw new Error("Incomplete read. Expected a " +
@@ -142,12 +142,12 @@ export class AExpDecoder extends Transform
                 `${bytesRead} bytes`);
         }
 
-        // parse header
-        const length = this.lengthAndCrc.getUint32(0, /*littleEndian*/ true);
+        // Parse header.
+        const length = this.lengthAndCrc.getUint32(0, /*LittleEndian*/ true);
         const lengthHigh = this.lengthAndCrc.getUint32(4,
-            /*littleEndian*/ true);
+                true /*littleEndian*/);
         const lengthCrc = this.lengthAndCrc.getUint32(lengthBytes,
-            /*littleEndian*/ true);
+                true /*littleEndian*/);
 
         // TODO: support 64bit length via Long
         if (lengthHigh) throw new Error("4gb+ tfrecords not supported");
@@ -160,21 +160,21 @@ export class AExpDecoder extends Transform
                 lengthCrc.toString(16));
         }
 
-        // get a buffer for record + crc32c footer
+        // Get a buffer for record + crc32c footer.
         const readLength = length + footerBytes;
         if (this.recordAndCrcBuffer.length < readLength)
         {
-            // grow record+crc buffer
+            // Grow record+crc buffer.
             let newLength = this.recordAndCrcBuffer.length;
             while (newLength < readLength) newLength *= 2;
 
-            // alloc new record+crc buffer
+            // Alloc new record+crc buffer.
             this.recordAndCrcBuffer = new Uint8Array(newLength);
             this.recordAndCrcView = new DataView(this.recordAndCrcBuffer.buffer,
                 0, newLength);
         }
 
-        // read record + footer
+        // Read record + footer.
         bytesRead = await this.consume(this.recordAndCrcBuffer, readLength);
         if (bytesRead !== readLength)
         {
@@ -182,13 +182,13 @@ export class AExpDecoder extends Transform
                 `after header but got ${bytesRead} bytes`);
         }
 
-        // extract view of record data
+        // Extract view of record data.
         const recordData = Buffer.from(this.recordAndCrcBuffer.buffer, 0,
             length);
 
-        // parse crc
+        // Parse crc.
         const recordCrc = this.recordAndCrcView.getUint32(length,
-            /*littleEndian*/ true);
+                true /*littleEndian*/);
         expectedCrc = maskedCrc32c(recordData);
         if (recordCrc !== maskedCrc32c(recordData))
         {
@@ -211,24 +211,24 @@ export class AExpDecoder extends Transform
      */
     private async consume(buffer: Uint8Array, length: number): Promise<number>
     {
-        // read enough data
+        // Read enough data.
         const prevLength = this.dataBuffer?.length ?? 0;
         const bytesRead = await this.bufferChunks(length);
         const totalBuffer = prevLength + bytesRead;
 
         if (!this.dataBuffer) return 0;
 
-        // consume data and write to argument buffer
+        // Consume data and write to argument buffer.
         const bytesConsumed = Math.min(totalBuffer, length);
         this.dataBuffer.copy(buffer, 0, 0, bytesConsumed);
 
-        // remove the consumed bytes out of the data buffer
+        // Remove the consumed bytes out of the data buffer.
         if (totalBuffer - length === 0) this.dataBuffer = null;
         else
         {
-            // splice buffer
+            // Splice out the requested length.
             const newBuf = Buffer.allocUnsafe(totalBuffer - length)
-            this.dataBuffer.copy(newBuf, 0, length); // everything after length
+            this.dataBuffer.copy(newBuf, 0, length);
             this.dataBuffer = newBuf;
         }
 
@@ -236,8 +236,8 @@ export class AExpDecoder extends Transform
     }
 
     /**
-     * Reads data from input and adds them to `#dataBuffer` until its length
-     * exceeds the given length.
+     * Reads data from input and adds them to {@link dataBuffer} until its
+     * length exceeds the given length.
      *
      * @param length Minimum amount of bytes to consume.
      * @returns The total number of bytes read. If this is less than the given
@@ -250,14 +250,14 @@ export class AExpDecoder extends Transform
 
         while ((this.dataBuffer?.length ?? 0) + bytesRead < length)
         {
-            // add the next chunk to the data buffer
+            // Add the next chunk to the data buffer.
             const chunk = await this.readChunk();
-            if (!chunk) break; // no more data
+            if (!chunk) break; // No more data.
             chunks.push(chunk);
             bytesRead += chunk.length;
         }
 
-        // add the chunks to the data buffer
+        // Add the chunks to the data buffer.
         if (chunks.length > 0)
         {
             if (!this.dataBuffer)
@@ -281,7 +281,7 @@ export class AExpDecoder extends Transform
      */
     private async readChunk(): Promise<Buffer | null>
     {
-        // wait for the next chunk to be read from input
+        // Wait for the next chunk to be read from input.
         if (!this.nextChunk)
         {
             await Promise.race(
@@ -291,7 +291,7 @@ export class AExpDecoder extends Transform
             ]);
         }
 
-        // consume chunk
+        // Consume chunk.
         const chunk = this.nextChunk;
         this.nextChunk = null;
         this.emit(AExpDecoder.chunkConsumed);
@@ -299,7 +299,7 @@ export class AExpDecoder extends Transform
     }
 
     /**
-     * Converts a tfrecord Example into an AugmentedExperience.
+     * Converts a tfrecord Example into an {@link AugmentedExperience}.
      *
      * @param example Example to decode.
      * @returns An AugmentedExperience.
@@ -333,9 +333,9 @@ export class AExpDecoder extends Transform
             throw new Error(`int64List '${key}' must have one value`);
         }
 
-        const v = value[0];
-        if (Long.isLong(v)) return v.getLowBitsUnsigned();
-        else return v;
+        const [v] = value;
+        if (isLong(v)) return v.getLowBitsUnsigned();
+        return v;
     }
 
     private static getFloat(featureMap: {[k: string]: tfrecord.protos.IFeature},

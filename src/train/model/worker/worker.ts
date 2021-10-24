@@ -1,8 +1,8 @@
 /** @file Dedicated worker for TensorFlow model operations. */
-import * as tf from "@tensorflow/tfjs";
 import { serialize } from "v8";
-import { parentPort, workerData } from "worker_threads";
-import { formats } from "../../../psbot/handlers/battle";
+import { parentPort } from "worker_threads";
+import * as tf from "@tensorflow/tfjs";
+import { FormatType } from "../../../psbot/handlers/battle/formats";
 import { RawPortResultError } from "../../port/PortProtocol";
 import { WorkerClosed } from "../../port/WorkerProtocol";
 import { createModel } from "../model";
@@ -12,8 +12,6 @@ import { BatchPredictOptions, ModelLearnResult, ModelLoadResult, ModelMessage,
 import { ModelRegistry } from "./ModelRegistry";
 
 if (!parentPort) throw new Error("No parent port!");
-
-const format: formats.FormatType = workerData.format;
 
 /** Maps model uid to their registry objects. */
 const models = new Map<number, ModelRegistry>();
@@ -34,10 +32,10 @@ function getRegistry(uid: number): ModelRegistry
 }
 
 /** Registers a recently loaded model. */
-function load(model: tf.LayersModel, rid: number,
+function load(rid: number, model: tf.LayersModel, format: FormatType,
     batchOptions: BatchPredictOptions)
 {
-    models.set(uidCounter, new ModelRegistry(model, batchOptions));
+    models.set(uidCounter, new ModelRegistry(model, format, batchOptions));
     const result: ModelLoadResult =
         {type: "load", rid, done: true, uid: uidCounter++};
     parentPort!.postMessage(result);
@@ -45,17 +43,17 @@ function load(model: tf.LayersModel, rid: number,
 
 parentPort.on("message", function handle(msg: ModelMessage)
 {
-    const rid = msg.rid;
-    let promise: Promise<any> | undefined;
+    const {rid} = msg;
+    let promise: Promise<unknown> | undefined;
     switch (msg.type)
     {
         case "load":
-            // downcast msg to BatchOptions
-            if (!msg.url) load(createModel(format), rid, msg);
+            // Note: Downcasting msg to BatchPredictOptions.
+            if (!msg.url) load(rid, createModel(msg.format), msg.format, msg);
             else
             {
                 promise = tf.loadLayersModel(msg.url)
-                    .then(m => load(m, rid, msg));
+                    .then(m => load(rid, m, msg.format, msg));
             }
             break;
         case "save":
@@ -95,7 +93,7 @@ parentPort.on("message", function handle(msg: ModelMessage)
                 msg.logPath)
             .then(function()
             {
-                // send a final message to end the stream of updates
+                // Send a final message to end the stream of updates.
                 const result: ModelLearnResult =
                     {type: "learn", rid, done: true};
                 parentPort!.postMessage(result);
@@ -104,9 +102,8 @@ parentPort.on("message", function handle(msg: ModelMessage)
         case "close":
         {
             promise = Promise.all(
-                    Array.from(models,
-                        ([uid, registry]) =>
-                            registry.unload().then(() => models.delete(uid))))
+                    Array.from(models, async ([uid, registry]) =>
+                        await registry.unload().then(() => models.delete(uid))))
                 .then(() =>
                 {
                     const result: WorkerClosed =
@@ -123,4 +120,6 @@ parentPort.on("message", function handle(msg: ModelMessage)
             {type: "error", rid, done: true, err: errBuf};
         parentPort!.postMessage(result, [errBuf.buffer]);
     });
+    // Promise should resolve on its own.
+    void promise;
 });

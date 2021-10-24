@@ -11,7 +11,7 @@ import * as turnLoop from "./turnLoop.test";
 
 export const test = () => describe("parser", function()
 {
-    // directory structure order
+    // Directory structure order.
     action.test();
     effect.test();
     reason.test();

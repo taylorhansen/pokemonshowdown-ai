@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import "mocha";
-import { ParserContext } from "../Context.test";
 import { createInitialContext } from "../Context.test";
-import { ParserHelpers, setupBattleParser, toHPStatus, toIdent } from
+import { ParserHelpers } from "../ParserHelpers.test";
+import { setupBattleParser, toEffectName, toHPStatus, toIdent } from
     "../helpers.test";
 import * as effectDamage from "./damage";
 
@@ -15,12 +15,12 @@ export const test = () => describe("damage", function()
     {
         const init = setupBattleParser(ictx.startArgs,
             effectDamage.percentDamage);
-        let pctx: ParserContext<true | "silent" | undefined> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
@@ -92,7 +92,7 @@ export const test = () => describe("damage", function()
             pctx = init("p1", -1);
             await ph.reject(
             {
-                // invalid format: should have finite hp number
+                // Invalid format: Should have finite hp number.
                 args: ["-damage", toIdent("p1"), toHPStatus(NaN, Infinity)],
                 kwArgs: {}
             });
@@ -117,7 +117,7 @@ export const test = () => describe("damage", function()
             const mon = sh.initActive("p1");
             expect(mon.hp.current).to.equal(100);
 
-            pctx = init("p1", 1, /*pred*/ undefined, /*noSilent*/ true);
+            pctx = init("p1", 1, undefined /*pred*/, true /*noSilent*/);
             await ph.handle(
             {
                 args: ["-damage", toIdent("p1"), toHPStatus(100)], kwArgs: {}
@@ -145,7 +145,7 @@ export const test = () => describe("damage", function()
             await ph.handle(
             {
                 args: ["-damage", toIdent("p1"), toHPStatus(90, 100)],
-                kwArgs: {from: "x"}
+                kwArgs: {from: toEffectName("x")}
             });
             await ph.return(true);
             expect(mon.hp.current).to.equal(90);

@@ -15,8 +15,9 @@ export interface ProtocolPort
     TProtocol extends PortProtocol<TTypes>, TTypes extends string
 >
 {
-    postMessage(msg: TMessage<TProtocol, TTypes>,
-        transferList?: readonly TransferListItem[]): void;
+    readonly postMessage:
+        (msg: ProtocolMessage<TProtocol, TTypes>,
+            transferList?: readonly TransferListItem[]) => void;
 }
 
 /** Function type for {@link AsyncPort.postMessage} callbacks. */
@@ -25,12 +26,12 @@ export type AsyncPortCallback
     TProtocol extends PortProtocol<TTypes>,
     TTypes extends string
 > =
-    (result: TResult<TProtocol, TTypes>) => void;
+    (result: ProtocolResult<TProtocol, TTypes>) => void;
 
 /**
  * Helper type for extracting the message type from a {@link PortProtocol} type.
  */
-export type TMessage
+export type ProtocolMessage
 <
     TProtocol extends PortProtocol<TTypes>,
     TTypes extends string,
@@ -42,7 +43,7 @@ export type TMessage
  * Helper for extracting the result type from a {@link PortProtocol} type. Also
  * includes an error type.
  */
-export type TResult
+export type ProtocolResult
 <
     TProtocol extends PortProtocol<TTypes>,
     TTypes extends string,
@@ -54,7 +55,7 @@ export type TResult
  * Helper for extracting the result type from a {@link PortProtocol} type. Also
  * includes a serialized error result type.
  */
-type TRawResult
+export type ProtocolResultRaw
 <
     TProtocol extends PortProtocol<TTypes>,
     TTypes extends string,
@@ -82,14 +83,15 @@ export class AsyncPort
     private ridCounter = 0;
     /** Tracks current outgoing requests to the port. */
     private readonly requests:
-        Map<number, (result: TResult<TProtocol, TTypes>) => void> = new Map();
+        Map<number, (result: ProtocolResult<TProtocol, TTypes>) => void> =
+            new Map();
 
     /**
      * Creates an AsyncPort.
      *
      * @param port Port to interface with.
      */
-    constructor(public readonly port: TPort) {}
+    public constructor(public readonly port: TPort) {}
 
     /**
      * Method that will be used to handle messages from the port.
@@ -98,22 +100,22 @@ export class AsyncPort
      *
      * @param result Result object from the port defined by the protocol.
      */
-    public receiveMessage(result: TRawResult<TProtocol, TTypes>): void
+    public receiveMessage(result: ProtocolResultRaw<TProtocol, TTypes>): void
     {
-        // find a registered callback
+        // Find a registered callback.
         const callback = this.requests.get(result.rid);
         if (!callback) throw new Error(`Invalid rid ${result.rid}`);
 
-        // de-register
+        // De-register.
         if (result.done) this.requests.delete(result.rid);
 
-        // process raw port result
+        // Process raw port result.
         if (result.type === "error")
         {
             const rawResult = result as RawPortResultError;
-            // deserialize raw Error obj buffer
+            // Deserialize raw Error obj buffer.
             const errorResult: PortResultError =
-                {...rawResult, err: deserialize(rawResult.err)};
+                {...rawResult, err: deserialize(rawResult.err) as Error};
             callback(errorResult);
         }
         else callback(result);
@@ -131,8 +133,8 @@ export class AsyncPort
      */
     public receiveError(err: Error): void
     {
-        // make sure that all currently pending callbacks get resolved in
-        //  the case of a worker error
+        // Make sure that all currently pending callbacks get resolved in the
+        // case of a worker error.
         const requests = [...this.requests];
         this.requests.clear();
         for (const [rid, callback] of requests)
@@ -156,33 +158,34 @@ export class AsyncPort
      * true.
      */
     public postMessage<T extends TTypes>(
-        msg: TMessage<TProtocol, TTypes, T>,
+        msg: ProtocolMessage<TProtocol, TTypes, T>,
         transferList: readonly TransferListItem[],
-        callback: (result: TResult<TProtocol, TTypes, T>) => void): void
+        callback: (result: ProtocolResult<TProtocol, TTypes, T>) => void): void
     {
-        // should never happen
+        // Should never happen.
         if (this.requests.has(msg.rid))
         {
             throw new Error(`Duplicate rid ${msg.rid}`);
         }
 
-        this.requests.set(msg.rid, (result: TResult<TProtocol, TTypes>) =>
+        this.requests.set(msg.rid,
+            (result: ProtocolResult<TProtocol, TTypes>) =>
         {
-            // should never happen
+            // Should never happen.
             if (msg.rid !== result.rid)
             {
-                throw new Error(`Dispatched rid ${msg.rid} but got back rid ` +
-                    result.rid);
+                throw new Error(
+                    `Dispatched rid ${msg.rid} but got back rid ${result.rid}`);
             }
 
-            // should never happen
+            // Should never happen.
             if (msg.type !== result.type && result.type !== "error")
             {
-                throw new Error(`Message '${msg.type}' sent but got back ` +
-                    `'${result.type}'`);
+                throw new Error(
+                    `Message '${msg.type}' sent but got back '${result.type}'`);
             }
 
-            callback(result as TResult<TProtocol, TTypes, T>);
+            callback(result as ProtocolResult<TProtocol, TTypes, T>);
         });
         this.port.postMessage(msg, transferList);
     }
@@ -194,7 +197,7 @@ export class AsyncPort
      */
     public nextRid(): number
     {
-        // TODO: guard against overflow and possible duplicate rids?
+        // TODO: Guard against overflow and possible duplicate rids?
         return this.ridCounter++;
     }
 }

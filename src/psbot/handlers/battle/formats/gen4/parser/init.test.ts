@@ -3,9 +3,10 @@ import "mocha";
 import { BattleState } from "../state";
 import { smeargle } from "../state/switchOptions.test";
 import { createInitialContext, ParserContext } from "./Context.test";
-import { initParser, ParserHelpers, toDetails, toFormatName, toHPStatus, toID,
-    toIdent, toMoveName, toNum, toRequestJSON, toRule, toSearchID,
-    toSpeciesName, toUsername } from "./helpers.test";
+import { ParserHelpers } from "./ParserHelpers.test";
+import { initParser, toDetails, toFormatName, toHPStatus, toID, toIdent,
+    toMoveName, toNum, toRequestJSON, toRule, toSearchID, toSpeciesName,
+    toUsername } from "./helpers.test";
 import { init } from "./init";
 
 export const test = () => describe("init", function()
@@ -22,7 +23,7 @@ export const test = () => describe("init", function()
     let pctx: ParserContext<void> | undefined;
     const ph = new ParserHelpers(() => pctx);
 
-    beforeEach("Initialize init BattleParser", async function()
+    beforeEach("Initialize init BattleParser", function()
     {
         pctx = initParser(ictx.startArgs, init);
     });
@@ -39,7 +40,7 @@ export const test = () => describe("init", function()
         const team2 = state.getTeam("p2");
         expect(team2.size).to.equal(0);
 
-        ictx.sender = async () => {};
+        ictx.sender = async () => await Promise.resolve(false);
 
         pctx = initParser(ictx.startArgs, init);
         await ph.handle({args: ["init", "battle"], kwArgs: {}});
@@ -96,7 +97,7 @@ export const test = () => describe("init", function()
         await ph.handle({args: ["teamsize", "p1", toNum(1)], kwArgs: {}});
         await ph.handle({args: ["teamsize", "p2", toNum(1)], kwArgs: {}});
         await ph.handle({args: ["gen", 4], kwArgs: {}});
-        await ph.handle({args: ["rated"], kwArgs: {}}); // ignored
+        await ph.handle({args: ["rated"], kwArgs: {}}); // Ignored.
         await ph.handle(
         {
             args: ["tier", toFormatName("[Gen 4] Random Battle")], kwArgs: {}

@@ -6,7 +6,8 @@ import { UnorderedDeadline } from "./UnorderedDeadline";
 import { AcceptCallback, UnorderedParser } from "./UnorderedParser";
 
 /**
- * Evaluates a group of UnorderedDeadline parsers in any order.
+ * Invokes a group of {@link UnorderedDeadline} parsers in any order.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TResult BattleParser's result type.
@@ -35,16 +36,16 @@ export async function all
     const results: TResult[] = [];
     if (parsers.length <= 0) return results;
 
-    // keep looping as long as parsers are accepting and we still have events to
-    //  parse
+    // Keep looping as long as parsers are accepting and we still have events to
+    // parse.
     let done = false;
     let consumed = true;
-    // note: even if done=true (i.e. no parsers accepted), we should still
-    //  continue if one of the parsers (excluding the filter) consumed an event,
-    //  since that could unblock them
+    // Note: Even if done=true (i.e., no parsers accepted), we should still
+    // continue if one of the parsers (excluding the filter) consumed an event
+    // in the last iteration, since that could've unblocked them.
     while (parsers.length > 0 && (!done || consumed))
     {
-        // make sure we still have events to parse
+        // Make sure we still have events to parse.
         if (!await tryPeek(ctx)) break;
 
         done = true;
@@ -52,14 +53,14 @@ export async function all
         let filterDone = false;
         for (let i = 0; i < parsers.length; ++i)
         {
-            // we call the filter before testing each parser since the parser
-            //  could still consume events but not accept, leaving events that
-            //  might need to be filtered again before testing the next parser
+            // We call the filter before testing each parser since the parser
+            // could still consume events but not accept, leaving events that
+            // might need to be filtered again before testing the next parser.
             if (filter)
             {
                 await filter(ctx, () => filterDone = true);
-                // if the filter called its accept cb, break out of the loop and
-                //  immediately reject pending parsers
+                // If the filter called its accept cb, break out of the loop and
+                // immediately reject pending parsers.
                 if (filterDone) break;
             }
 
@@ -80,18 +81,18 @@ export async function all
                     }
                 });
 
-            // consume parser that accepted
+            // Consume parser that accepted.
             if (accepted)
             {
-                // reset done so that we can test the next pending parser
+                // Reset done so that we can test the next pending parser.
                 done = false;
                 parsers.splice(i--, 1);
                 results.push(result);
                 break;
             }
-            // at the end, make sure we actually parsed any events
-            // we only really need to check this if done=true since that would
-            //  cancel the outer while loop
+            // At the end, make sure we actually parsed any events.
+            // We only really need to check this if done=true since that would
+            // cancel the outer while loop.
             if (done)
             {
                 const postParse = await tryPeek(ctx);
@@ -102,7 +103,7 @@ export async function all
         if (filterDone) break;
     }
 
-    // reject parsers that never got to accept an event
+    // Reject parsers that never got to accept an event.
     for (let i = 0; i < parsers.length; ++i)
     {
         parsers[i].reject();
@@ -113,8 +114,9 @@ export async function all
 }
 
 /**
- * Expects one of the UnorderedDeadline parsers to parse, rejecting all the
- * others that didn't parse.
+ * Expects one of the {@link UnorderedDeadline} parsers to parse, rejecting all
+ * the others that didn't parse.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TResult BattleParser's result type.
@@ -138,7 +140,7 @@ export async function oneOf
     let done: UnorderedDeadline<T, TAgent, TResult> | undefined;
     while (!done)
     {
-        // no events to parse
+        // No events to parse.
         const preParse = await tryPeek(ctx);
         if (!preParse) break;
 
@@ -155,7 +157,7 @@ export async function oneOf
         }
         if (done) break;
 
-        // no events were parsed, guard against infinite loop
+        // No events were parsed, guard against infinite loop.
         const postParse = await tryPeek(ctx);
         if (!postParse || preParse === postParse) break;
     }
@@ -164,7 +166,9 @@ export async function oneOf
 }
 
 /**
- * Expects an UnorderedDeadline parser to parse, or rejects it if it couldn't.
+ * Expects an {@link UnorderedDeadline} parser to parse, or rejects it if it
+ * couldn't.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TResult BattleParser's result type.

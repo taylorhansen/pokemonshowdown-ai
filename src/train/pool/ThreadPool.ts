@@ -1,5 +1,5 @@
-import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 import { Worker } from "worker_threads";
+import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 import { WorkerPort } from "../port/WorkerPort";
 import { WorkerProtocol } from "../port/WorkerProtocol";
 
@@ -29,9 +29,9 @@ interface WorkerEvents extends
     ListenerSignature<{[workerFree]: true, [workerError]: true}>
 {
     /** When a worker is free. */
-    [workerFree](): void;
+    readonly [workerFree]: () => void;
     /** When a worker encounters an uncaught exception. */
-    [workerError](err: Error): void;
+    readonly [workerError]: (err: Error) => void;
 }
 
 /**
@@ -43,12 +43,14 @@ interface WorkerEvents extends
  * @template TWorker Worker wrapper type.
  * @template TProtocol Protocol that the wrapped Worker implements.
  * @template TTypes Protocol event types.
+ * @template TWorkerData Data to pass to the worker as it gets created.
  */
 export class ThreadPool
 <
     TWorker extends WorkerPortLike<TProtocol, TTypes>,
     TProtocol extends WorkerProtocol<TTypes>,
-    TTypes extends string
+    TTypes extends string,
+    TWorkerData = unknown
 >
 {
     /** Used for managing worker events. */
@@ -72,31 +74,33 @@ export class ThreadPool
      * created. If a worker has to be restarted, the same instance of the
      * generated worker data will be passed back to it.
      */
-    constructor(public readonly numThreads: number,
+    public constructor(public readonly numThreads: number,
         private readonly scriptPath: string,
         private readonly workerPortCtor: new(worker: Worker) => TWorker,
-        workerData?: () => PromiseLike<any> | any)
+        workerData: () => PromiseLike<TWorkerData> | TWorkerData)
     {
         if (numThreads <= 0)
         {
-            throw new Error("Expected positive numThreads but got " +
-                numThreads);
+            throw new Error(
+                `Expected positive numThreads but got ${numThreads}`);
         }
 
         for (let i = 0; i < this.numThreads; ++i)
         {
-            (async () => await workerData?.())()
+            void (async () => await workerData?.())()
                 .then(data => this.addWorker(data));
         }
     }
 
     /**
-     * Takes a worker port from the pool. After the port is no longer needed,
-     * {@link givePort} must be called with the same port.
+     * Takes a worker port from the pool.
+     *
+     * After the port is no longer needed, {@link givePort} must be called with
+     * the same port.
      */
     public async takePort(): Promise<TWorker>
     {
-        // wait until a port is open
+        // Wait until a port is open.
         while (this.freePorts.length <= 0)
         {
             await new Promise<void>(res =>
@@ -114,7 +118,7 @@ export class ThreadPool
     {
         if (!this.ports.has(port))
         {
-            // errored port has been returned
+            // Errored port has been returned.
             if (this.erroredPorts.has(port))
             {
                 this.erroredPorts.delete(port);
@@ -154,20 +158,21 @@ export class ThreadPool
      *
      * @param workerData Optional data to pass to the worker.
      */
-    private addWorker(workerData?: any): void
+    private addWorker(workerData: TWorkerData): void
     {
         const worker = new Worker(this.scriptPath, {workerData});
         const port = new this.workerPortCtor(worker);
         worker.on("error", err =>
         {
-            // broadcast error for logging if possible
+            // Broadcast error for logging if possible.
             this.workerEvents.emit(workerError, err);
 
-            // remove this worker and create a new one to replace it
+            // Remove the errored worker and create a new one to replace it.
             if (!this.freePorts.includes(port))
             {
-                // port hasn't been returned yet, cache it in a special place so
-                //  that #givePort() doesn't throw once it does get returned
+                // Port hasn't been returned yet.
+                // Cache it in a special place so that #givePort() doesn't throw
+                // later.
                 this.ports.delete(port);
                 this.erroredPorts.add(port);
             }

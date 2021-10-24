@@ -9,17 +9,18 @@ import * as reason from "../reason";
 /** Checks if items should activate. */
 export async function updateItems(ctx: BattleParserContext<"gen4">)
 {
-    // TODO: also check abilities? in what order?
+    // TODO: Also check abilities? In what order?
     return await unordered.all(ctx,
         (Object.keys(ctx.state.teams) as SideID[])
             .map(side => onUpdate(ctx, side)));
 }
 
-//#region on-x EventInference functions
+//#region on-x EventInference functions.
 
 /**
  * Creates an EventInference parser that expects an on-`preMove` item to
  * activate if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @returns An EventInference that returns `"moveFirst"` if the holder is moving
  * first in its priority bracket due to the item, or otherwise `undefined`.
@@ -38,6 +39,7 @@ export const onPreMove = onX("onPreMove",
 /**
  * Creates an EventInference parser that expects an on-`moveCharge` item to
  * activate if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @returns An EventInference that returns `"shorten"` if the holder's two-turn
  * move is being shortend to one due to the item, or otherwise `undefined`.
@@ -56,6 +58,7 @@ export const onMoveCharge = onX("onMoveCharge",
 /**
  * Creates an EventInference parser that expects an on-`preHit` item to activate
  * if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @param hitBy Move+user the holder is being hit by.
  * @returns An EventInference that returns info about the item that activated,
@@ -73,25 +76,27 @@ export const onPreHit = onX("onPreHit",
                 await item.onPreHit(ctx, accept, side, hitBy))));
 
 /**
- * Creates an EventInference parser that expects an on-`tryOHKO` item to
+ * Creates an EventInference parser that expects an on-`tryOhko` item to
  * activate if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @returns An EventInference for handling item possibilities.
  */
-export const onTryOHKO = onX("onTryOHKO",
+export const onTryOhko = onX("onTryOhko",
     (ctx, side) =>
     {
         const mon = ctx.state.getTeam(side).active;
-        return getItems(mon, item => item.canTryOHKO(mon));
+        return getItems(mon, item => item.canTryOhko(mon));
     },
-    onXInferenceParser("onTryOHKOInference",
-        onXUnorderedParser("onTryOHKOUnordered",
+    onXInferenceParser("onTryOhkoInference",
+        onXUnorderedParser("onTryOhkoUnordered",
             async (ctx, accept, item, side) =>
-                await item.onTryOHKO(ctx, accept, side))));
+                await item.onTryOhko(ctx, accept, side))));
 
 /**
  * Creates an EventInference parser that expects an on-`super` item to activate
  * if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @param hitBy Move+user the holder was hit by.
  * @returns An EventInference for handling item possibilities.
@@ -110,6 +115,7 @@ export const onSuper = onX("onSuper",
 /**
  * Creates an EventInference parser that expects an on-`postHit` item to
  * activate if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @param hitBy Move+user ref the holder was hit by.
  * @returns An EventInference for handling item possibilities.
@@ -130,6 +136,7 @@ export const onPostHit = onX("onPostHit",
 /**
  * Creates an EventInference parser that expects an on-`movePostDamage` item to
  * activate if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @returns An EventInference for handling item possibilities.
  */
@@ -147,6 +154,7 @@ export const onMovePostDamage = onX("onMovePostDamage",
 /**
  * Creates an EventInference parser that expects an on-`update` item to activate
  * if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @returns An EventInference for handling item possibilities.
  */
@@ -164,6 +172,7 @@ export const onUpdate = onX("onUpdate",
 /**
  * Creates an EventInference parser that expects an on-`residual` item to
  * activate if possible.
+ *
  * @param side Pokemon reference who could have such an item.
  * @returns An EventInference for handling item possibilities.
  */
@@ -178,7 +187,9 @@ export const onResidual = onX("onResidual",
             async (ctx, accept, item, side) =>
                 await item.onResidual(ctx, accept, side))));
 
-//#region on-x EventInference helpers
+//#endregion
+
+//#region on-x EventInference function helpers.
 
 function onX<TArgs extends unknown[] = [], TResult = unknown>(name: string,
     f: (ctx: BattleParserContext<"gen4">, side: SideID, ...args: TArgs) =>
@@ -193,7 +204,7 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(name: string,
 {
     const onString = name.substr(2, 1).toLowerCase() + name.substr(3);
 
-    // force named function so that stack traces make sense
+    // Use computed property to force function name in stack trace.
     return {[name](ctx: BattleParserContext<"gen4">, side: SideID,
         ...args: TArgs)
     {
@@ -203,6 +214,7 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(name: string,
     }}[name];
 }
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
     name: string,
     unorderedParser:
@@ -214,10 +226,11 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
     if (i <= 3) throw new Error(`Invalid inference parser name '${name}'`);
     const onString = name.substr(2, 1).toLowerCase() + name.substr(3, i - 3);
 
-    // force named function so that stack traces make sense
+    // Force named function so that stack traces make sense.
     return {async [name](ctx: BattleParserContext<"gen4">,
         accept: inference.AcceptCallback, side: SideID,
-        items: Map<dex.Item, inference.SubInference>, ...args: TArgs)
+        items: Map<dex.Item, inference.SubInference>, ...args: TArgs):
+        Promise<TResult | undefined>
     {
         const parsers:
             unordered.UnorderedDeadline<"gen4", BattleAgent<"gen4">,
@@ -226,7 +239,7 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
         {
             parsers.push(unordered.UnorderedDeadline.create(
                 `item on-${onString} inference`,
-                unorderedParser, /*reject*/ undefined, item, side, ...args));
+                unorderedParser, undefined /*reject*/, item, side, ...args));
         }
 
         const [oneOfRes] = await unordered.oneOf(ctx, parsers);
@@ -237,6 +250,7 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
     }}[name];
 }
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
     name: string,
     parser: unordered.UnorderedParser<"gen4", BattleAgent<"gen4">,
@@ -245,6 +259,8 @@ function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
         [item: dex.Item, side: SideID, ...args: TArgs],
         [item: dex.Item, res: TResult]>
 {
+    // Use computed property to force function name in stack trace.
+    // eslint-disable-next-line prefer-arrow/prefer-arrow-functions
     return {async [name](ctx: BattleParserContext<"gen4">,
         accept: unordered.AcceptCallback, item: dex.Item, side: SideID,
         ...args: TArgs):
@@ -256,6 +272,7 @@ function onXUnorderedParser<TArgs extends unknown[] = [], TResult = unknown>(
 
 /**
  * Searches for possible item pathways based on the given predicate.
+ *
  * @param mon Pokemon to search.
  * @param prove Callback for filtering eligible items. Should return a set of
  * {@link inference.SubReason reasons} that would prove that the item could
@@ -279,7 +296,5 @@ function getItems(mon: Pokemon,
     }
     return res;
 }
-
-//#endregion
 
 //#endregion

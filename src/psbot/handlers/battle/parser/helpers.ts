@@ -7,7 +7,8 @@ import { BattleParser, BattleParserContext } from "./BattleParser";
 import { BattleIterator, IteratorPair } from "./iterators";
 
 /**
- * Config for `startBattleParser()`.
+ * Config for {@link startBattleParser}.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  */
@@ -22,11 +23,12 @@ export interface StartBattleParserArgs
      * Gets or constructs the battle state tracker object that will be used by
      * the BattleParser. Only called once.
      */
-    getState(): State<T>;
+    readonly getState: () => State<T>;
 }
 
 /**
  * Initializes a BattleParser.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
@@ -62,21 +64,21 @@ export function startBattleParser
         try
         {
             const result = await parser(ctx, ...args);
-            await eventIt.return();
-            await battleIt.return();
+            await eventIt.return?.();
+            await battleIt.return?.();
             return result;
         }
         catch (e)
         {
-            // if the BattleParser threw an exception, make sure both iterators
-            //  also get the error to settle any pending next() calls
-            // TODO: wrap errors to preserve current stack and make it clear in
-            //  the logs that the next() errors came from these rethrows here
-            // TODO: also include startBattleParser() parent's stack?
-            await eventIt.throw(e);
-            await battleIt.throw(e);
-            // rethrow the error here so that the final Promise as well as the
-            //  last iterator.next() Promises contain the error
+            // If the BattleParser threw an exception, make sure both iterators
+            // also get the error to settle any pending next() calls.
+            // TODO: Wrap errors to preserve current stack and make it clear in
+            // the logs that the next() errors came from these rethrows here.
+            // TODO: Also include startBattleParser() parent's stack?
+            await eventIt.throw?.(e);
+            await battleIt.throw?.(e);
+            // Rethrow the error here so that the final Promise as well as the
+            // last iterator.next() Promises contain the error.
             throw e;
         }
     })();
@@ -85,6 +87,7 @@ export function startBattleParser
 
 /**
  * Maps an event type to a BattleParser handler.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
@@ -105,6 +108,7 @@ export type EventHandlerMap
  * Creates a BattleParser that dispatches to an appropriate event handler using
  * the given map, or can return null if no events left or no handler is defined
  * for it.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
@@ -137,6 +141,7 @@ export function dispatcher
 /**
  * Creates a BattleParser that continuously calls the given BattleParser until
  * it stops consuming events or until the end of the event stream.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
@@ -161,6 +166,7 @@ export function baseEventLoop
 /**
  * Keeps calling a BattleParser with the given args until it doesn't consume an
  * event or until the end of the event stream.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
@@ -182,15 +188,16 @@ export async function eventLoop
     Promise<TResult[]>
 {
     const results: TResult[] = [];
+
     while (true)
     {
-        // no more events to parse
+        // No more events to parse
         const preEvent = await tryPeek(ctx);
         if (!preEvent) break;
 
         results.push(await parser(ctx, ...args));
 
-        // can't parse any more events
+        // Can't parse any more events
         const postEvent = await tryPeek(ctx);
         if (preEvent === postEvent) break;
     }
@@ -198,10 +205,12 @@ export async function eventLoop
 }
 
 /**
- * Peeks at the next event. Throws if there are none left.
+ * Peeks at the next event.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @param ctx Parser context.
+ * @throws Error if there are no events left.
  */
 export async function peek
 <
@@ -216,10 +225,12 @@ export async function peek
 }
 
 /**
- * Peeks at the next event. Returns `undefined` if there are none left.
+ * Peeks at the next event.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @param ctx Parser context.
+ * @returns The next event, or `undefined` if there are no events left.
  */
 export async function tryPeek
 <
@@ -233,13 +244,14 @@ export async function tryPeek
 }
 
 /**
- * Peeks and verifies the next event according to the given event type. Returns
- * `undefined` if there are no events left or `null` if the event type doesn't
- * match.
+ * Peeks and verifies the next event according to the given event type.
+ *
  * @template TName Event type identifier.
  * @template T Format type.
  * @param ctx Parser context.
  * @param expectedKey Expected event type.
+ * @returns The next event if it matches, "null` if it doesn't match, or
+ * `undefined" if there are no events left.
  */
 export async function tryVerify
 <
@@ -258,12 +270,13 @@ export async function tryVerify
 }
 
 /**
- * Peeks and verifies the next event according to the given event type. Throws
- * if there are no events left or if the event type doesn't match.
+ * Peeks and verifies the next event according to the given event type.
+ *
  * @template TName Event type identifier.
  * @template T Format type.
  * @param ctx Parser context.
  * @param expectedKey Expected event type.
+ * @throws Error if the event type doesn't match or if there are no events left.
  */
 export async function verify
 <
@@ -285,10 +298,12 @@ export async function verify
 }
 
 /**
- * Consumes an event. Throws if there are no events left.
+ * Consumes an event.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @param ctx Parser context.
+ * @throws Error if there are no events left.
  */
 export async function consume
 <

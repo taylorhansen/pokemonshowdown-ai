@@ -8,15 +8,9 @@ import * as dex from "../../dex";
 import { ReadonlyPokemon } from "../../state/Pokemon";
 import { dispatch } from "../base";
 
-/** Result from `status()`. */
-export interface StatusResult
-{
-    /** Status type that was consumed, or `true` if silently consumed. */
-    success?: true | dex.StatusType;
-}
-
 /**
  * Event types that could contain information about statuses.
+ *
  * @see {@link status}
  */
 export type StatusEventType = "|-start|" | "|-status|" | "|-singlemove|" |
@@ -24,6 +18,7 @@ export type StatusEventType = "|-start|" | "|-status|" | "|-singlemove|" |
 
 /**
  * Expects a status effect.
+ *
  * @param side Target pokemon reference.
  * @param statusTypes Possible statuses to afflict.
  * @param pred Optional additional custom check on the event before it can be
@@ -37,7 +32,7 @@ export async function status(ctx: BattleParserContext<"gen4">, side: SideID,
     Promise<true | dex.StatusType | undefined>
 {
     const mon = ctx.state.getTeam(side).active;
-    // effect would do nothing
+    // Effect would do nothing.
     if (isStatusSilent(mon, statusTypes)) return true;
 
     const event = await tryVerify(ctx, "|-start|", "|-status|", "|-singlemove|",
@@ -45,7 +40,7 @@ export async function status(ctx: BattleParserContext<"gen4">, side: SideID,
     if (!event) return;
     const res = verifyStatus(event, side, statusTypes);
     if (!res) return;
-    // TODO: also pass info that was parsed from the event?
+    // TODO: Also pass info that was parsed from the event?
     if (pred && !pred(event)) return;
     await dispatch(ctx);
     return res;
@@ -53,6 +48,7 @@ export async function status(ctx: BattleParserContext<"gen4">, side: SideID,
 
 /**
  * Checks whether a status effect would be silent.
+ *
  * @param mon Target pokemon.
  * @param statusTypes Possible statuses to afflict.
  */
@@ -64,6 +60,7 @@ function isStatusSilent(mon: ReadonlyPokemon,
 
 /**
  * Verifies a status event.
+ *
  * @param event Event to verify.
  * @param side Pokemon reference that should receive the status.
  * @param statusTypes Possible statuses to afflict.
@@ -84,20 +81,20 @@ function verifyStatus(event: Event<StatusEventType>, side: SideID,
     const [t, identStr, effectStr] = event.args;
     const effect = Protocol.parseEffect(effectStr, toIdName);
     if (!statusTypes.includes(effect.name as dex.StatusType)) return;
-    // only splash effect allows for |-activate| with no ident
+    // Only splash effect allows for |-activate| with no ident.
     if (t === "-activate")
     {
         if (effect.name !== "splash") return;
         return "splash";
     }
-    else if (effect.name === "splash") return;
+    if (effect.name === "splash") return;
     if (!identStr) return;
     const ident = Protocol.parsePokemonIdent(identStr);
     if (ident.player !== side) return;
     return effect.name as dex.StatusType;
 }
 
-// TODO: factor out status handlers for each status type?
+// TODO: Factor out status handlers for each status type?
 /** Checks whether the pokemon can't be afflicted by the given status. */
 export function cantStatus(mon: ReadonlyPokemon, statusType: dex.StatusType):
     boolean
@@ -109,8 +106,8 @@ export function cantStatus(mon: ReadonlyPokemon, statusType: dex.StatusType):
         case "leechseed": case "mudsport": case "nightmare": case "powertrick":
         case "substitute": case "suppressAbility": case "torment":
         case "watersport":
-        case "destinybond": case "grudge": case "rage": // singlemove
-        case "magiccoat": case "roost": case "snatch": // singleturn
+        case "destinybond": case "grudge": case "rage": // Single-move.
+        case "magiccoat": case "roost": case "snatch": // Single-turn.
             return mon.volatile[statusType];
         case "bide": case "confusion": case "charge": case "magnetrise":
         case "embargo": case "healblock": case "slowstart": case "taunt":
@@ -118,28 +115,30 @@ export function cantStatus(mon: ReadonlyPokemon, statusType: dex.StatusType):
             return mon.volatile[statusType].isActive;
         case "encore":
             return mon.volatile[statusType].ts.isActive;
-        case "endure": case "protect": // stall
+        case "endure": case "protect": // Stall.
             return mon.volatile.stalling;
         case "foresight": case "miracleeye":
             return mon.volatile.identified === statusType;
         case "splash":
             return false;
         default:
-            // istanbul ignore else: should never happen
+            // istanbul ignore else: Should never happen.
             if (dex.isMajorStatus(statusType)) return !!mon.majorStatus.current;
-            // istanbul ignore next: should never happen
+            // istanbul ignore next: Should never happen.
             throw new Error(`Invalid status effect '${statusType}'`);
     }
 }
 
 /**
  * Event types that could contain information about ending/curing statuses.
+ *
  * @see {@link cure}
  */
 export type CureEventType = "|-end|" | "|-curestatus|";
 
 /**
  * Expects a status cure effect.
+ *
  * @param side Target pokemon reference.
  * @param statusTypes Statuses to cure.
  * @param pred Optional additional custom check on the event before it can be
@@ -159,7 +158,7 @@ export async function cure(ctx: BattleParserContext<"gen4">, side: SideID,
     {
         if (!hasStatus(mon, statusType)) continue;
         res.add(statusType);
-        // curing slp also cures nightmare if applicable
+        // Curing slp also cures nightmare if applicable.
         if (statusType === "slp" && hasStatus(mon, "nightmare"))
         {
             res.add("nightmare");
@@ -176,7 +175,7 @@ export async function cure(ctx: BattleParserContext<"gen4">, side: SideID,
         if (ident.player !== side) break;
         const effect = Protocol.parseEffect(effectStr, toIdName);
         if (!res.has(effect.name as dex.StatusType)) break;
-        // TODO: also pass info that was parsed from the event?
+        // TODO: Also pass info that was parsed from the event?
         if (pred && !pred(event)) break;
         res.delete(effect.name as dex.StatusType);
         await dispatch(ctx);
@@ -195,8 +194,8 @@ export function hasStatus(mon: ReadonlyPokemon, statusType: dex.StatusType):
         case "leechseed": case "mudsport": case "nightmare":
         case "powertrick": case "substitute": case "suppressAbility":
         case "torment": case "watersport":
-        case "destinybond": case "grudge": case "rage": // singlemove
-        case "magiccoat": case "roost": case "snatch": // singleturn
+        case "destinybond": case "grudge": case "rage": // Single-move.
+        case "magiccoat": case "roost": case "snatch": // Single-turn.
             return mon.volatile[statusType];
         case "bide": case "confusion": case "charge": case "magnetrise":
         case "embargo": case "healblock": case "slowstart": case "taunt":
@@ -204,17 +203,17 @@ export function hasStatus(mon: ReadonlyPokemon, statusType: dex.StatusType):
             return mon.volatile[statusType].isActive;
         case "encore":
             return mon.volatile[statusType].ts.isActive;
-        case "endure": case "protect": // stall
+        case "endure": case "protect": // Stall.
             return mon.volatile.stalling;
         case "foresight": case "miracleeye":
             return mon.volatile.identified === statusType;
         default:
-            // istanbul ignore else: should never happen
+            // istanbul ignore else: Should never happen.
             if (dex.isMajorStatus(statusType))
             {
                 return mon.majorStatus.current === statusType;
             }
-            // istanbul ignore next: should never happen
+            // istanbul ignore next: Should never happen.
             throw new Error(`Invalid status effect '${statusType}'`);
     }
 }

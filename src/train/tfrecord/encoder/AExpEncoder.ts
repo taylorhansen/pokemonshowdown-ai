@@ -15,7 +15,7 @@ export class AExpEncoder extends Transform
     /** TFRecord Example builder. */
     private readonly builder = tfrecord.createBuilder();
 
-    // adapted from tfrecord/src/record_writer.ts and writer.ts
+    // Adapted from tfrecord/src/record_writer.ts and writer.ts.
     /**
      * Main metadata buffer that wraps serialized TFRecord Examples. Reused for
      * each `_transform` call to save on allocations.
@@ -35,7 +35,7 @@ export class AExpEncoder extends Transform
      * @param maxExp High water mark for the AugmentedExperience buffer. If the
      * buffer fills up past this point, the stream will apply backpressure.
      */
-    constructor(maxExp = 16)
+    public constructor(maxExp = 16)
     {
         super(
         {
@@ -43,36 +43,36 @@ export class AExpEncoder extends Transform
             writableHighWaterMark: maxExp
         });
 
-        // high order bits of length segment should stay unset
-        this.lengthAndCrc.setUint32(4, 0, /*littleEndian*/ true);
+        // High order bits of length segment should stay unset.
+        this.lengthAndCrc.setUint32(4, 0, true /*littleEndian*/);
     }
 
     public override _transform(aexp: AugmentedExperience,
         encoding: BufferEncoding, callback: TransformCallback): void
     {
-        // serialize Example
+        // Serialize Example.
         const example = this.aexpToExample(aexp);
-        // when supported, the encoder should be using buffers automatically
+        // When supported, the encoder should be using buffers automatically.
         const record = tfrecord.Example.encode(example).finish();
         if (!Buffer.isBuffer(record))
         {
             throw new Error("Example encoder didn't use Buffers");
         }
 
-        // encode length in metadata
-        this.lengthAndCrc.setUint32(0, record.length, /*littleEndian*/ true);
+        // Encode length in metadata.
+        this.lengthAndCrc.setUint32(0, record.length, true /*littleEndian*/);
 
-        // compute header
+        // Compute header.
         this.lengthAndCrc.setUint32(lengthBytes,
-            maskedCrc32c(this.lengthBuffer), /*littleEndian*/ true);
+            maskedCrc32c(this.lengthBuffer), true /*littleEndian*/);
         this.push(this.lengthAndCrcBuffer, "binary");
 
-        // insert serialized Example
+        // Insert serialized Example.
         this.push(record, "binary");
 
-        // compute footer
+        // Compute footer.
         this.lengthAndCrc.setUint32(0, maskedCrc32c(record),
-            /*littleEndian*/ true);
+                true /*littleEndian*/);
         this.push(this.lengthAndCrcBuffer.slice(0, footerBytes), "binary");
 
         callback();

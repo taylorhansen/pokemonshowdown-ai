@@ -1,6 +1,6 @@
 import { join } from "path";
-import ProgressBar from "progress";
 import * as stream from "stream";
+import ProgressBar from "progress";
 import { LogFunc, Logger } from "../../Logger";
 import { formats } from "../../psbot/handlers/battle";
 import { AdvantageConfig } from "../learn";
@@ -48,11 +48,12 @@ export interface PlayGamesArgs
      * AugmentedExperiences as TFRecords (i.e., if any agent configs contain
      * `exp=true`). If not specified, any experiences will be discarded.
      */
-    getExpPath?(): Promise<string>;
+    readonly getExpPath?: () => Promise<string>;
 }
 
 /**
  * Manages the playing of multiple games in parallel.
+ *
  * @returns The number of AugmentedExperiences generated, if any.
  */
 export async function playGames(
@@ -74,7 +75,7 @@ export async function playGames(
     const progressLog = new Logger(progressLogFunc, progressLogFunc,
         logger.prefix, logger.postfix);
 
-    // iterator-like stream for piping GamePoolArgs to the GamePool stream
+    // Iterator-like stream for piping GamePoolArgs to the GamePool stream.
     const poolArgs = stream.Readable.from(function* generateArgs()
     {
         for (const opponent of opponents)
@@ -93,7 +94,7 @@ export async function playGames(
         }
     }(), {objectMode: true});
 
-    // stream for summarizing the game results
+    // Stream for summarizing the game results.
     let numAExps = 0;
     let wins = 0;
     let losses = 0;
@@ -108,8 +109,9 @@ export async function playGames(
 
             if (result.err)
             {
-                progressLog.error(`Game ${result.id} threw an error: ` +
-                    (result.err.stack ?? result.err));
+                progressLog.error(
+                    `Game ${result.id} threw an error: ` +
+                        `${(result.err.stack ?? result.err.toString())}`);
             }
 
             if (result.winner === 0) ++wins;
@@ -122,7 +124,7 @@ export async function playGames(
         }
     });
 
-    // TODO: move pool outside for reuse?
+    // TODO: Move pool outside for reuse?
     const pool = new GamePool(numThreads, getExpPath);
     await stream.promises.pipeline(
         poolArgs,
@@ -131,7 +133,7 @@ export async function playGames(
     await pool.close();
 
     progress.terminate();
-    // TODO: also display separate records for each opponent
+    // TODO: Also display separate records for each opponent.
     logger.debug(`Record: ${wins}-${losses}-${ties}`);
 
     return numAExps;

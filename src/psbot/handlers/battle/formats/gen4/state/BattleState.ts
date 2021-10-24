@@ -2,7 +2,7 @@ import { SideID } from "@pkmn/sim";
 import { ReadonlyRoomStatus, RoomStatus } from "./RoomStatus";
 import { ReadonlyTeam, Team } from "./Team";
 
-/** Readonly BattleState representation. */
+/** Readonly {@link BattleState} representation. */
 export interface ReadonlyBattleState
 {
     /** Team data. */
@@ -15,9 +15,18 @@ export interface ReadonlyBattleState
     readonly ourSide?: SideID;
 
     /** Gets a team. Throws if invalid. */
-    getTeam(side: SideID): Team;
+    readonly getTeam: (side: SideID) => Team;
     /** Gets a team. Returns `undefined` if invalid. */
-    tryGetTeam(side: SideID): Team | undefined;
+    readonly tryGetTeam: (side: SideID) => Team | undefined;
+
+    /**
+     * Encodes all state data into a string.
+     *
+     * @param indent Indentation level to use.
+     * @returns The BattleState in string form.
+     * @override
+     */
+    readonly toString: (indent?: number) => string;
 }
 
 /** Holds all the data about a particular battle. */
@@ -35,10 +44,12 @@ export class BattleState implements ReadonlyBattleState
 
     /**
      * Creates a BattleState.
+     *
      * @param username The player's username.
      * @param numTeams Number of teams to initialize. Default 2.
      */
-    constructor(username: string, public readonly numTeams: 2 | 3 | 4 = 2)
+    public constructor(username: string,
+        public readonly numTeams: 2 | 3 | 4 = 2)
     {
         this.username = username;
         for (let i = 1; i <= numTeams; ++i)
@@ -67,7 +78,7 @@ export class BattleState implements ReadonlyBattleState
     {
         for (const sideId in this._teams)
         {
-            if (!this._teams.hasOwnProperty(sideId)) continue;
+            if (!Object.hasOwnProperty.call(this._teams, sideId)) continue;
             this._teams[sideId as SideID]?.preTurn();
         }
     }
@@ -78,24 +89,20 @@ export class BattleState implements ReadonlyBattleState
         this.status.postTurn();
         for (const sideId in this._teams)
         {
-            if (!this._teams.hasOwnProperty(sideId)) continue;
+            if (!Object.hasOwnProperty.call(this._teams, sideId)) continue;
             this._teams[sideId as SideID]?.postTurn();
         }
     }
 
-    // istanbul ignore next: only used for logging
-    /**
-     * Encodes all state data into a string.
-     * @param indent Indentation level to use.
-     * @returns The BattleState in string form.
-     */
+    // istanbul ignore next: Only used for logging.
+    /** @override */
     public toString(indent = 0): string
     {
         const s = " ".repeat(indent);
         let res = `${s}status: ${this.status.toString()}`;
         for (const sideId in this._teams)
         {
-            if (!this._teams.hasOwnProperty(sideId)) continue;
+            if (!Object.hasOwnProperty.call(this._teams, sideId)) continue;
             const team = this._teams[sideId as SideID];
             res += `\n${s}${sideId}`;
             if (sideId === this.ourSide) res += "(us)";

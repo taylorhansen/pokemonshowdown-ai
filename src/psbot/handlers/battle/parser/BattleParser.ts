@@ -7,6 +7,7 @@ import { EventIterator } from "./iterators";
 
 /**
  * Function type for parsing battle events.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs Additional parameter types.
@@ -26,6 +27,7 @@ export type BattleParser
 
 /**
  * Context container needed to call a BattleParser.
+ *
  * @template TEvent Game event type.
  * @template TState Battle state type.
  * @template TRState Readonly battle state type.
@@ -48,22 +50,21 @@ export interface BattleParserContext
     /** Battle state tracker. */
     readonly state: State<T>;
     /** Optional filter over events. */
-    filter?(event: Event): boolean;
+    readonly filter?: (event: Event) => boolean;
 }
 
 /** Function type for sending a Choice to the game. */
 export type ChoiceSender = (choice: Choice) => Promise<SenderResult>;
 
-// tslint:disable: no-trailing-whitespace (force newline in doc)
+// TODO: make this into a proper enum
 /**
- * Result after sending a Choice to the game.  
- * `<falsy>` - Choice was accepted.  
- * `true` - Choice was rejected for an unknown reason.  
- * `"disabled"` - Choice was rejected because the chosen move is disabled by
- * some effect.  
- * `"trapped"` - Choice was rejected because the client's pokemon is trapped by
- * some effect.
+ * Result after sending a Choice to the game.
+ *
+ * * `<falsy>` - Choice was accepted.
+ * * `true` - Choice was rejected for an unknown reason.
+ * * `"disabled"` - Choice was rejected because the chosen move is disabled by
+ *   some effect.
+ * * `"trapped"` - Choice was rejected because the client's pokemon is trapped
+ *   by some effect.
  */
-// tslint:enable: no-trailing-whitespace
-export type SenderResult = void | undefined | null | boolean | "disabled" |
-    "trapped";
+export type SenderResult = undefined | null | boolean | "disabled" | "trapped";

@@ -5,7 +5,8 @@ import * as unordered from "../unordered";
 import { SubInference } from "./SubInference";
 
 /**
- * BattleParser type that EventInferences can wrap.
+ * {@link BattleParser} type that {@link EventInference}s can wrap.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs BattleParser's additional parameter types.
@@ -25,7 +26,9 @@ export type InferenceParser
         TResult>;
 
 /**
- * Callback type for BattleParsers provided to the EventInference constructor.
+ * Callback type for {@link BattleParser}s provided to the
+ * {@link EventInference} constructor.
+ *
  * @param inf The SubInference that ended up being chosen out of the ones given
  * when the EventInference was initially constructed.
  */
@@ -37,6 +40,7 @@ export type AcceptCallback = (inf: SubInference) => void;
  *
  * This is an extended version of UnorderedDeadline in order to handle cases
  * where an event can cause one of several different but related inferences.
+ *
  * @template T Format type.
  * @template TAgent Battle agent type.
  * @template TArgs BattleParser's additional parameter types.
@@ -56,6 +60,7 @@ export class EventInference
 
     /**
      * Creates an EventInference.
+     *
      * @param name Name for logging/debugging.
      * @param cases All the possible cases in which this inference could accept
      * an event.
@@ -64,15 +69,14 @@ export class EventInference
      * callback before parsing to indicate which SubInference was chosen.
      * @param innerParserArgs Additional parser arguments.
      */
-    constructor(
-        name: string,
+    public constructor(name: string,
         private readonly cases: ReadonlySet<SubInference>,
         private readonly innerParser:
             InferenceParser<T, TAgent, TArgs, TResult>,
         ...innerParserArgs: TArgs)
     {
         super(name,
-            (ctx, accept) => this.parseImpl(ctx, accept),
+            async (ctx, accept) => await this.parseImpl(ctx, accept),
             () => this.rejectImpl());
 
         this.innerParserArgs = innerParserArgs;
@@ -95,7 +99,7 @@ export class EventInference
     /** Reject implementation. */
     private rejectImpl(): void
     {
-        for (const subInf of this.cases) subInf.resolve(/*held*/ false);
+        for (const subInf of this.cases) subInf.resolve(false /*held*/);
     }
 
     /**
@@ -109,11 +113,19 @@ export class EventInference
             throw new Error("BattleParser didn't provide accept callback " +
                 "with a valid SubInference");
         }
-        // assert the case that was accepted, and reject all the other
-        //  cases that weren't
-        for (const c of this.cases) c.resolve(/*held*/ c === inf);
+        // Assert the case that was accepted, and reject all the other
+        // cases that weren't.
+        for (const c of this.cases) c.resolve(/*Held*/ c === inf);
     }
 
+    /**
+     * Stringifier with indent options.
+     *
+     * @param indentInner Number of spaces for additional indents beyond the
+     * current line.
+     * @param indentOuter Number of spaces for the indent of the current line.
+     * @override
+     */
     public override toString(indentInner = 4, indentOuter = 0): string
     {
         const inner = " ".repeat(indentInner);
@@ -122,8 +134,8 @@ export class EventInference
 ${outer}EventInference(
 ${outer}${inner}${this.name},
 ${outer}${inner}cases = [${
-    [...this.cases].map(inf =>
-        "\n" + inf.toString(indentInner, indentOuter + 2 * indentInner)) +
+    [...this.cases].map(inf => "\n" +
+        inf.toString(indentInner, indentOuter + (2 * indentInner))).join(",") +
     (this.cases.size > 0 ? "\n" + outer + inner : "")}]
 ${outer})`;
     }

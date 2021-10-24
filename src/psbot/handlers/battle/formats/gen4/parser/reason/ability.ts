@@ -14,7 +14,7 @@ export interface PokemonAbilitySnapshot extends Pick<Pokemon, "traits">
 export function has(mon: PokemonAbilitySnapshot, abilities: Set<string>):
     inference.SubReason
 {
-    return new HasAbility(mon, abilities, /*negative*/ false);
+    return new HasAbility(mon, abilities, false /*negative*/);
 }
 
 /**
@@ -24,7 +24,7 @@ export function has(mon: PokemonAbilitySnapshot, abilities: Set<string>):
 export function doesntHave(mon: PokemonAbilitySnapshot, abilities: Set<string>):
     inference.SubReason
 {
-    return new HasAbility(mon, abilities, /*negative*/ true);
+    return new HasAbility(mon, abilities, true /*negative*/);
 }
 
 /**
@@ -96,12 +96,12 @@ class HasAbility extends inference.SubReason
     /** Ability snapshot for making inferences in retrospect. */
     private readonly ability: PossibilityClass<string>;
 
-    constructor(mon: PokemonAbilitySnapshot,
+    public constructor(mon: PokemonAbilitySnapshot,
         private readonly abilities: Set<string>,
         private readonly negative: boolean)
     {
         super();
-        this.ability = mon.traits.ability;
+        this.ability = mon.traits.ability as PossibilityClass<string>;
     }
 
     public override canHold(): boolean | null
@@ -124,8 +124,8 @@ class HasAbility extends inference.SubReason
 
     private acceptImpl(): void
     {
-        // TODO: guard against overnarrowing?
-        // may need a better framework for error handling/logging
+        // TODO: Guard against overnarrowing?
+        // May need a better framework for error handling/logging.
         this.ability.narrow(this.abilities);
     }
 

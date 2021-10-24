@@ -6,7 +6,7 @@ import { limitedStatusTurns, oneHotEncoder, OneHotEncoderArgs } from
     "../../../ai/encoder/helpers";
 import * as dex from "../dex";
 import { BattleState } from "../state/BattleState";
-import { HP } from "../state/HP";
+import { Hp } from "../state/Hp";
 import { ItemTempStatus } from "../state/ItemTempStatus";
 import { MajorStatusCounter } from
     "../state/MajorStatusCounter";
@@ -104,12 +104,12 @@ export const test = () => describe("encoders", function()
         /** Encoder to use. */
         readonly encoder: Encoder<TState>;
         /** State initializer. */
-        init(): TState;
+        readonly init: () => TState;
         /** Values to compare to the encoded values. */
         values?: Float32Array;
     }
 
-    function testEncoder<TStates extends any[]>(name: string,
+    function testEncoder<TStates extends unknown[]>(name: string,
         ...cases: {[T in keyof TStates]: CaseArgs<TStates[T]>}): void
     {
         describe(name, function()
@@ -120,7 +120,7 @@ export const test = () => describe("encoders", function()
                 describe(`Case ${i + 1}${c.name ? ` (${c.name})` : ""}`,
                 function()
                 {
-                    let state: any;
+                    let state: unknown;
 
                     beforeEach(`Initialize ${name}`, function()
                     {
@@ -135,7 +135,7 @@ export const test = () => describe("encoders", function()
                             expect(encoder.size).to.equal(values.length,
                                 `Encoder of size ${encoder.size} does not ` +
                                 "match the expected values of size " +
-                                values.length);
+                                `${values.length}`);
 
                             const arr = allocNaN(encoder.size);
                             encoder.encode(arr, state);
@@ -223,7 +223,7 @@ export const test = () => describe("encoders", function()
         {
             const its = new ItemTempStatus([5, 8], {reflect: "lightclay"});
             const mon = new Pokemon("magikarp");
-            its.start(mon, "reflect", /*infinite*/true);
+            its.start(mon, "reflect", true /*infinite*/);
             return its;
         }
     },
@@ -245,12 +245,12 @@ export const test = () => describe("encoders", function()
     {
         name: "Fully Initialized",
         encoder: encoders.statRangeEncoder,
-        init: () => new StatRange(100, 100, /*hp*/false)
+        init: () => new StatRange(100, 100, false /*hp*/)
     },
     {
         name: "Fully Initialized + HP",
         encoder: encoders.statRangeEncoder,
-        init: () => new StatRange(100, 100, /*hp*/true)
+        init: () => new StatRange(100, 100, true /*hp*/)
     },
     {
         name: "Unrevealed",
@@ -406,33 +406,33 @@ export const test = () => describe("encoders", function()
         init: () => undefined
     });
 
-    testEncoder("HP",
+    testEncoder("Hp",
     {
         name: "Fully Initialized",
         encoder: encoders.hpEncoder,
         init()
         {
-            const hp = new HP();
+            const hp = new Hp();
             hp.set(50, 100);
             return {hp, ours: true};
         },
-        values: new Float32Array([0.5, 100 / encoders.maxStatHP])
+        values: new Float32Array([0.5, 100 / encoders.maxStatHp])
     },
     {
         name: "Uninitialized",
         encoder: encoders.hpEncoder,
-        init: () => ({hp: new HP(), ours: true}),
+        init: () => ({hp: new Hp(), ours: true}),
         values: new Float32Array([0, 0])
     },
     {
         name: "Unrevealed",
-        encoder: encoders.unknownHPEncoder,
+        encoder: encoders.unknownHpEncoder,
         init: () => null,
         values: new Float32Array([1, 0.5])
     },
     {
         name: "Nonexistent",
-        encoder: encoders.emptyHPEncoder,
+        encoder: encoders.emptyHpEncoder,
         init: () => undefined,
         values: new Float32Array([-1, -1])
     });

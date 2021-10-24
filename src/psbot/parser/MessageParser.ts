@@ -1,15 +1,20 @@
-import { Protocol } from "@pkmn/protocol";
 import { Transform, TransformCallback } from "stream";
+import { Protocol } from "@pkmn/protocol";
 import { Logger } from "../../Logger";
 import { HaltEvent, RoomEvent } from "./Event";
 
 /**
  * Transform stream that parses PS protocol messages in chunks. Takes in
- * `string`s (in object mode), outputs {@link RoomEvent RoomEvents}.
+ * `string`s (in object mode), outputs {@link RoomEvent}s.
  */
 export class MessageParser extends Transform
 {
-    constructor(private readonly logger?: Logger)
+    /**
+     * Creates a MessageParser.
+     *
+     * @param logger Optional logger object.
+     */
+    public constructor(private readonly logger?: Logger)
     {
         super({objectMode: true});
     }
@@ -26,17 +31,17 @@ export class MessageParser extends Transform
                 this.push(msg);
                 rooms.add(msg.roomid)
             }
-            // also send a "halt" signal after parsing a block
+            // Also send a "halt" signal after parsing a block.
             for (const roomid of rooms)
             {
                 const msg: HaltEvent = {roomid, args: ["halt"], kwArgs: {}};
                 this.push(msg)
             }
         }
-        catch (e: any)
+        catch (e)
         {
             // istanbul ignore next: should never happen
-            return callback(e);
+            return callback(e as Error);
         }
         callback();
     }

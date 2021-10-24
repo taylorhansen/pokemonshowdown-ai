@@ -19,18 +19,18 @@ type PlayerActionsState = {[S in SideID]?: true};
 /** Parses each player's main actions for this turn. */
 export async function playerActions(ctx: BattleParserContext<"gen4">)
 {
-    // shared state used to track whether each pokemon has spent their action
-    //  for this turn
+    // Shared state used to track whether each pokemon has spent their action
+    // for this turn.
     const actioned: PlayerActionsState = {};
 
     const switchResults = await unordered.all(ctx,
-        (Object.entries(ctx.state.teams) as [SideID, any][])
+        (Object.entries(ctx.state.teams) as [SideID, unknown][])
             .map(([side]) => playerSwitchAction(side, actioned)),
         filter);
     Object.assign(actioned, ...switchResults.map(res => res.actioned));
 
     const moveResults = await unordered.all(ctx,
-        (Object.entries(ctx.state.teams) as [SideID, any][])
+        (Object.entries(ctx.state.teams) as [SideID, unknown][])
             .filter(([side]) => !actioned[side])
             .map(([side]) => playerMoveAction(side, actioned)),
         filter);
@@ -38,9 +38,9 @@ export async function playerActions(ctx: BattleParserContext<"gen4">)
 
     for (const side in actioned)
     {
-        if (!actioned.hasOwnProperty(side)) continue;
-        // TODO: throw/aggregate multiple errors?
-        // TODO: don't throw if game-over
+        if (!Object.hasOwnProperty.call(actioned, side)) continue;
+        // TODO: Throw/aggregate multiple errors?
+        // TODO: Don't throw if game-over.
         if (!actioned[side as SideID])
         {
             throw new Error(`Expected ${side} player action`);
@@ -50,7 +50,7 @@ export async function playerActions(ctx: BattleParserContext<"gen4">)
 
 const playerSwitchAction = (side: SideID, actioned: PlayerActionsState) =>
     unordered.UnorderedDeadline.create(`${side} action switch`,
-        playerSwitchActionImpl, /*reject*/ undefined, side, actioned);
+        playerSwitchActionImpl, undefined /*reject*/, side, actioned);
 
 async function playerSwitchActionImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID,
@@ -66,7 +66,7 @@ async function playerSwitchActionImpl(ctx: BattleParserContext<"gen4">,
 
 const playerMoveAction = (side: SideID, actioned: PlayerActionsState) =>
     unordered.UnorderedDeadline.create(`${side} action move`,
-        playerMoveActionImpl, /*reject*/ undefined, side, actioned);
+        playerMoveActionImpl, undefined /*reject*/, side, actioned);
 
 async function playerMoveActionImpl(ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback, side: SideID,
@@ -87,16 +87,16 @@ async function filter(ctx: BattleParserContext<"gen4">,
     await eventLoop(ctx,
         async function filterLoop(_ctx)
         {
-            const event = await peek(ctx);
+            const event = await peek(_ctx);
             switch (event.args[0])
             {
-                // terminating events
-                // TODO: is this necessary?
+                // Terminating events.
+                // TODO: Is this necessary?
                 case "win": case "tie":
                     accept();
                     break;
                 default:
-                    await ignoredEvents(ctx);
+                    await ignoredEvents(_ctx);
             }
         });
 }

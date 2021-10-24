@@ -12,33 +12,33 @@ import { Experience } from "./Experience";
 export function augmentExperiences(game: readonly Experience[],
     advantage: AdvantageConfig): AugmentedExperience[]
 {
-    // compute returns/advantages for each exp then add them to exp tuples
+    // Compute returns/advantages for each exp then add them to exp tuples.
     const samples: AugmentedExperience[] = [];
     let lastRet = 0;
     let lastAdv = 0;
-    // iterate backwards so we know the sum of the future rewards down to the
-    //  current experience
+    // Iterate backwards so we know the sum of the future rewards down to the
+    // current experience.
     for (let i = game.length - 1; i >= 0; --i)
     {
         const exp = game[i];
 
-        // calculate discounted summed rewards
-        lastRet = exp.reward + advantage.gamma * lastRet;
+        // Calculate discounted summed rewards
+        lastRet = exp.reward + (advantage.gamma * lastRet);
 
-        // estimate advantage
+        // Estimate advantage.
         switch (advantage.type)
         {
             case "a2c": lastAdv = lastRet - exp.value; break;
             case "generalized":
             {
-                // temporal difference residual
+                // Temporal difference residual.
                 const nextValue = game[i + 1]?.value ?? 0;
                 const delta = exp.reward - exp.value +
-                    advantage.gamma * nextValue;
+                    (advantage.gamma * nextValue);
 
-                // exponentially-decayed sum of residual terms
+                // Exponentially-decayed sum of residual terms.
                 lastAdv = delta +
-                    advantage.gamma * advantage.lambda * lastAdv;
+                    (advantage.gamma * advantage.lambda * lastAdv);
                 break;
             }
             case "reinforce": lastAdv = lastRet; break;
@@ -51,9 +51,9 @@ export function augmentExperiences(game: readonly Experience[],
         });
     }
 
-    // optionally standardize the set of advantage values for this game
-    // TODO: apply this to the entire batch of rollout games instead of just
-    //  individually, probably by moving this step to the learning phase
+    // Optionally standardize the set of advantage values for this game.
+    // TODO: Apply this to the entire batch of rollout games instead of just
+    // individually, probably by moving this step to the learning phase.
     if (advantage.standardize)
     {
         let sum = 0;
@@ -64,7 +64,7 @@ export function augmentExperiences(game: readonly Experience[],
             squaredSum += sample.advantage * sample.advantage;
         }
         const mean = sum / samples.length;
-        const stdev = Math.sqrt(squaredSum / samples.length - (mean * mean));
+        const stdev = Math.sqrt((squaredSum / samples.length) - (mean * mean));
 
         for (const sample of samples)
         {

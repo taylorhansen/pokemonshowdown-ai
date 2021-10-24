@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 import { BattleState } from "../../state";
-import { StateHelpers } from "../helpers.test";
+import { StateHelpers } from "../StateHelpers.test";
 import * as reasonAbility from "./ability";
 
 export const test = () => describe("ability", function()
@@ -80,7 +80,7 @@ export const test = () => describe("ability", function()
                     const reason = reasonAbility[name](mon,
                         new Set([has ? "illuminate" : "owntempo"]));
                     expect(() => reason.assert()).to.throw(Error,
-                        // TODO: more descriptive error message?
+                        // TODO: More descriptive error message?
                         "All possibilities have been ruled out " +
                             "(should never happen)");
                 });
@@ -112,7 +112,7 @@ export const test = () => describe("ability", function()
                     const reason = reasonAbility[name](mon,
                         new Set([has ? "illuminate" : "owntempo"]));
                     expect(() => reason.reject()).to.throw(Error,
-                        // TODO: more descriptive error message?
+                        // TODO: More descriptive error message?
                         "All possibilities have been ruled out " +
                             "(should never happen)");
                 });
@@ -253,7 +253,7 @@ export const test = () => describe("ability", function()
 
                     const reason = reasonAbility[name](mon);
                     expect(() => reason.assert()).to.throw(Error,
-                        // TODO: more descriptive error message?
+                        // TODO: More descriptive error message?
                         "All possibilities have been ruled out " +
                             "(should never happen)");
                 });
@@ -283,7 +283,7 @@ export const test = () => describe("ability", function()
 
                     const reason = reasonAbility[name](mon);
                     expect(() => reason.reject()).to.throw(Error,
-                        // TODO: more descriptive error message?
+                        // TODO: More descriptive error message?
                         "All possibilities have been ruled out " +
                             "(should never happen)");
                 });
@@ -385,7 +385,7 @@ export const test = () => describe("ability", function()
         });
     });
 
-    // TODO: entry for ["canIgnoreTargetAbility", true]
+    // TODO: Entry for ["canIgnoreTargetAbility", true]?
     for (const [name, can] of [["cantIgnoreTargetAbility", false]] as const)
     {
         describe(`${name}()`, function()
@@ -446,7 +446,7 @@ export const test = () => describe("ability", function()
 
                     const reason = reasonAbility[name](mon);
                     expect(() => reason.assert()).to.throw(Error,
-                        // TODO: more descriptive error message?
+                        // TODO: More descriptive error message?
                         "All possibilities have been ruled out " +
                             "(should never happen)");
                 });
@@ -476,7 +476,7 @@ export const test = () => describe("ability", function()
 
                     const reason = reasonAbility[name](mon);
                     expect(() => reason.reject()).to.throw(Error,
-                        // TODO: more descriptive error message?
+                        // TODO: More descriptive error message?
                         "All possibilities have been ruled out " +
                             "(should never happen)");
                 });

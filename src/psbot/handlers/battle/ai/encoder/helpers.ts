@@ -1,11 +1,9 @@
-/**
- * @file Helper functions and Encoders for the main BattleState encoders in
- * `encoders.ts`.
- */
+/** @file Helper functions and Encoders. */
 import { Encoder } from "./Encoder";
 
 /** Makes sure that an array is of a certain length. */
-export function checkLength(arr: Readonly<ArrayLike<any>>, length: number): void
+export function checkLength(arr: Readonly<ArrayLike<unknown>>, length: number):
+    void
 {
     if (arr.length < length)
     {
@@ -16,6 +14,7 @@ export function checkLength(arr: Readonly<ArrayLike<any>>, length: number): void
 /**
  * Interpolates max status duration and current number of turns. Use this when
  * the duration (or max possible duration) of a status is known.
+ *
  * @param turns Number of turns the status has been active (including current
  * turn), i.e., if the status started during this turn and the end of the
  * current turn hasn't been reached yet, `turns` should be 1, and should be
@@ -28,7 +27,7 @@ export function checkLength(arr: Readonly<ArrayLike<any>>, length: number): void
  */
 export function limitedStatusTurns(turns: number, duration: number): number
 {
-    // turns left excluding current turn / total expected duration
+    // Turns left excluding current turn / total expected duration.
     if (turns <= 0) return 0;
     return Math.max(0, (duration - turns + 1) / duration);
 }
@@ -55,40 +54,48 @@ export const booleanEncoder: Encoder<boolean> =
     size: 1
 };
 
-/** Memoized results of `fillEncoder()`. */
-const memoizedFillEncoders: {[value: number]: {[size: number]: Encoder<any>}} =
-    {};
+/** Memoized results of {@link fillEncoder}. */
+const memoizedFillEncoders = new Map<number, Map<number, Encoder<unknown>>>();
 
 /**
  * Encoder that fills an array with some value.
+ *
  * @param value Value to fill.
  * @param size Amount of numbers to fill with the given value.
  */
-export function fillEncoder(value: number, size: number): Encoder<any>
+export function fillEncoder(value: number, size: number): Encoder<unknown>
 {
-    if (memoizedFillEncoders.hasOwnProperty(value))
+    let memoValue = memoizedFillEncoders.get(value);
+    if (memoValue)
     {
-        const memoSize = memoizedFillEncoders[value];
-        if (memoSize.hasOwnProperty(size)) return memoSize[size];
+        const memoValueSize = memoValue.get(size);
+        if (memoValueSize) return memoValueSize;
     }
-    else memoizedFillEncoders[value] = {};
+    else
+    {
+        memoValue = new Map();
+        memoizedFillEncoders.set(value, memoValue);
+    }
 
-    return memoizedFillEncoders[value][size] =
+    const encoder: Encoder<unknown> =
     {
         encode(arr)
         {
-            checkLength(arr, size);
+            checkLength(arr, this.size);
             arr.fill(value);
         },
         size
-    }
+    };
+    memoValue.set(size, encoder);
+    return encoder;
 }
 
 /**
  * Encoder that fills an array with zeros.
+ *
  * @param size Amount of zeros to fill.
  */
-export function zeroEncoder(size: number): Encoder<any>
+export function zeroEncoder(size: number): Encoder<unknown>
 {
     return fillEncoder(0, size);
 }
@@ -106,28 +113,32 @@ export interface OneHotEncoderArgs
     readonly zero?: number;
 }
 
-/** Memoized results of `oneHotEncoder()`. */
-const memoizedOneHotEncoders: {[size: number]: Encoder<OneHotEncoderArgs>} = {};
+/** Memoized results of {@link oneHotEncoder}. */
+const memoizedOneHotEncoders = new Map<number, Encoder<OneHotEncoderArgs>>();
 
 /**
  * Creates a one-hot encoder.
+ *
  * @param size Number of discrete categories to encode.
  */
 export function oneHotEncoder(size: number): Encoder<OneHotEncoderArgs>
 {
-    if (memoizedOneHotEncoders.hasOwnProperty(size))
-    {
-        return memoizedOneHotEncoders[size];
-    }
+    const memo = memoizedOneHotEncoders.get(size);
+    if (memo) return memo;
 
-    return memoizedOneHotEncoders[size] =
+    const encoder: Encoder<OneHotEncoderArgs> =
     {
         encode(arr, {id, one = 1, zero = 0})
         {
-            checkLength(arr, size);
-            if (id === null || id < 0 || id >= size) arr.fill(zero);
-            else for (let i = 0; i < size; ++i) arr[i] = i === id ? one : zero;
+            checkLength(arr, this.size);
+            if (id === null || id < 0 || id >= this.size) arr.fill(zero);
+            else for (let i = 0; i < this.size; ++i)
+            {
+                arr[i] = i === id ? one : zero;
+            }
         },
         size
     };
+    memoizedOneHotEncoders.set(size, encoder);
+    return encoder;
 }

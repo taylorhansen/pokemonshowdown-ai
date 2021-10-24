@@ -1,6 +1,7 @@
 import { TransferListItem, Worker } from "worker_threads";
 import { WrappedError } from "../helpers/WrappedError";
-import { AsyncPort, TMessage, TResult } from "./AsyncPort";
+import { AsyncPort, ProtocolMessage, ProtocolResultRaw, ProtocolResult } from
+    "./AsyncPort";
 import { PortResultError } from "./PortProtocol";
 import { WorkerProtocol } from "./WorkerProtocol";
 
@@ -18,7 +19,7 @@ export class WorkerPort
 >
 {
     /** The underlying worker attached to this object. */
-    public get worker(): Worker { return this.asyncPort.port; };
+    public get worker(): Worker { return this.asyncPort.port; }
 
     /** Port wrapper. */
     private readonly asyncPort: AsyncPort<Worker, TProtocol, TTypes>;
@@ -28,10 +29,12 @@ export class WorkerPort
      *
      * @param worker `worker_threads` Worker object.
      */
-    constructor(worker: Worker)
+    public constructor(worker: Worker)
     {
         this.asyncPort = new AsyncPort(worker);
-        worker.on("message", res => this.asyncPort.receiveMessage(res));
+        worker.on("message",
+            (res: ProtocolResultRaw<TProtocol, TTypes>) =>
+                this.asyncPort.receiveMessage(res));
         worker.on("error",
             err => this.asyncPort.receiveError(
                 new WrappedError(err,
@@ -40,10 +43,10 @@ export class WorkerPort
     }
 
     /** Safely closes the worker. */
-    public close(): Promise<void>
+    public async close(): Promise<void>
     {
-        // send the close message and await a response
-        return new Promise((res, rej) =>
+        // Send the close message and await a response.
+        return await new Promise((res, rej) =>
             this.asyncPort.postMessage(
                 {type: "close", rid: this.asyncPort.nextRid()}, [],
                 result => result.type === "error" ?
@@ -63,9 +66,9 @@ export class WorkerPort
      * true.
      */
     public postMessage<T extends TTypes>(
-        msg: TMessage<TProtocol, TTypes, T>,
+        msg: ProtocolMessage<TProtocol, TTypes, T>,
         transferList: readonly TransferListItem[],
-        callback: (result: TResult<TProtocol, TTypes, T>) => void): void
+        callback: (result: ProtocolResult<TProtocol, TTypes, T>) => void): void
     {
         this.asyncPort.postMessage(msg, transferList, callback)
     }

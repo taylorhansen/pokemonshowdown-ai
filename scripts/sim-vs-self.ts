@@ -6,12 +6,16 @@ Teams.setGeneratorFactory(TeamGenerators);
 
 const stream = new BattleStreams.BattleTextStream({debug: true});
 
-Streams.stdin().pipeTo(stream);
-stream.pipeTo(Streams.stdout());
+void (async function()
+{
+    await Streams.stdin().pipeTo(stream);
+    await stream.pipeTo(Streams.stdout());
 
-stream.start();
+    await stream.start();
 
-stream.write(`>start {"formatid":"gen4randombattle"}
+    await stream.write(`\
+>start {"formatid":"gen4randombattle"}
 >player p1 {"name":"player1"}
 >player p2 {"name":"player2"}
 `);
+});

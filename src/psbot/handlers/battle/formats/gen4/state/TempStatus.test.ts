@@ -4,7 +4,7 @@ import { TempStatus } from "./TempStatus";
 
 export const test = () => describe("TempStatus", function()
 {
-    /** Checks the `#isActive` and `#turns` properties of a TempStatus. */
+    /** Checks {@link TempStatus.isActive} and {@link TempStatus.turns}. */
     function check(ts: TempStatus, isActive: boolean, turns: number): void
     {
         expect(ts).to.have.property("isActive", isActive);
@@ -45,14 +45,14 @@ export const test = () => describe("TempStatus", function()
                 const ts = new TempStatus("", 2);
                 ts.start();
                 ts.tick();
-                ts.start(/*restart*/false);
+                ts.start(false /*restart*/);
                 check(ts, true, 1);
             });
 
             it("Should start status if not already started", function()
             {
                 const ts = new TempStatus("", 2);
-                ts.start(/*restart*/false);
+                ts.start(false /*restart*/);
                 check(ts, true, 0);
             });
         });
@@ -92,7 +92,7 @@ export const test = () => describe("TempStatus", function()
         {
             it("Should end status on last tick", function()
             {
-                const ts = new TempStatus("", 3, /*silent*/true);
+                const ts = new TempStatus("", 3, true /*silent*/);
                 ts.start();
                 for (let i = 0; i < 2; ++i)
                 {

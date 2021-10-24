@@ -7,7 +7,7 @@ import { GenerationNum, StatID } from "@pkmn/types";
 import { toIdName } from "../../../../../helpers";
 import { BattleParserContext, consume, peek, tryVerify, unordered, verify } from
     "../../../parser";
-import { HPType } from "../dex";
+import { HpType } from "../dex";
 import { BattleState } from "../state";
 import { TeamRevealOptions } from "../state/Team";
 import { handlers as base } from "./base";
@@ -18,7 +18,7 @@ import { handlers as base } from "./base";
  */
 export async function init(ctx: BattleParserContext<"gen4">): Promise<void>
 {
-    // initialization events
+    // Initialization events.
     await unordered.all(ctx,
     [
         initBattle(), gameType(), player(1), request(), player(2),
@@ -78,7 +78,7 @@ const player = (num: 1 | 2) =>
 
             if (ctx.state.username === event.args[2])
             {
-                ctx.state.ourSide = event.args[1];
+                [, ctx.state.ourSide] = event.args;
             }
             await base["|player|"](ctx);
         },
@@ -92,8 +92,8 @@ const request = () =>
             if (!event) return;
             accept();
 
-            // only the first |request| msg can be used to initialize the
-            //  client's team
+            // Only the first |request| msg can be used to initialize the
+            // client's team.
             initRequest(ctx.state, Protocol.parseRequest(event.args[1]))
             await consume(ctx);
         },
@@ -107,7 +107,7 @@ const teamSize = (num: 1 | 2) =>
             if (!event || event.args[1] !== `p${num}` as const) return;
             accept();
 
-            // client's side should be initialized by the first |request| msg
+            // Client's side should be initialized by the first |request| msg.
             const [, sideId, sizeStr] = event.args;
             if (ctx.state.ourSide !== sideId)
             {
@@ -132,7 +132,7 @@ const gen = (num: GenerationNum) =>
                 throw new Error(`Expected |gen|${num} event but got ` +
                     `|gen|${genNum}`);
             }
-            // TODO: record gen?
+            // TODO: Record gen?
             await base["|gen|"](ctx);
         });
 
@@ -144,7 +144,7 @@ const tier = () =>
             if (!event) return;
             accept();
 
-            // TODO: record tier?
+            // TODO: Record tier?
             await base["|tier|"](ctx);
         });
 
@@ -157,7 +157,7 @@ const rules = () =>
             accept();
             do
             {
-                // TODO: record rules/mods?
+                // TODO: Record rules/mods?
                 await base["|rule|"](ctx);
                 event = await tryVerify(ctx, "|rule|");
             }
@@ -194,10 +194,10 @@ function initRequest(state: BattleState, req: Protocol.Request)
     team.size = req.side.pokemon.length;
     for (const reqMon of req.side.pokemon)
     {
-        // preprocess moves to possibly extract hiddenpower type and happiness
+        // Preprocess moves to possibly extract hiddenpower type and happiness.
         const moves: string[] = [];
         let happiness: number | undefined;
-        let hpType: HPType | undefined;
+        let hpType: HpType | undefined;
         for (const moveId of reqMon.moves)
         {
             let id: string = moveId;
@@ -220,7 +220,7 @@ function initRequest(state: BattleState, req: Protocol.Request)
         for (const stat in reqMon.stats)
         {
             // istanbul ignore if
-            if (!reqMon.stats.hasOwnProperty(stat)) continue;
+            if (!Object.hasOwnProperty.call(reqMon.stats, stat)) continue;
             const id = stat as Exclude<StatID, "hp">;
             mon.baseTraits.stats[id].set(reqMon.stats[id]);
         }
@@ -235,17 +235,16 @@ function initRequest(state: BattleState, req: Protocol.Request)
  * additional features.
  */
 export function sanitizeMoveId(id: string):
-    {id: string, happiness?: number, hpType?: HPType, hpPower?: number}
+    {id: string, happiness?: number, hpType?: HpType, hpPower?: number}
 {
     id = toIdName(id);
     let happiness: number | undefined;
-    let hpType: HPType | undefined;
+    let hpType: HpType | undefined;
     let hpPower: number | undefined;
     if (id.startsWith("hiddenpower") && id.length > "hiddenpower".length)
     {
-        // format: hiddenpower<type><base power if gen2-5>
-        hpType = id.substr("hiddenpower".length)
-                .replace(/\d+/, "") as HPType;
+        // Format: hiddenpower<type><base power if gen2-5>
+        hpType = id.substr("hiddenpower".length).replace(/\d+/, "") as HpType;
         const hpPowerStr = id.match(/\d+/)?.[0];
         if (hpPowerStr) hpPower = Number(hpPowerStr);
         id = "hiddenpower";
@@ -253,19 +252,17 @@ export function sanitizeMoveId(id: string):
     else if (id.startsWith("return") &&
         id.length > "return".length)
     {
-        // format: return<base power>
-        // equation: base power = happiness / 2.5
-        happiness = 2.5 *
-            parseInt(id.substr("return".length), 10);
+        // Format: return<base power>
+        // Equation: base power = happiness / 2.5
+        happiness = 2.5 * parseInt(id.substr("return".length), 10);
         id = "return";
     }
     else if (id.startsWith("frustration") &&
         id.length > "frustration".length)
     {
-        // format: frustration<base power>
-        // equation: base power = (255-happiness) / 2.5
-        happiness = 255 - 2.5 *
-                parseInt(id.substr("frustration".length), 10);
+        // Format: frustration<base power>
+        // Equation: base power = (255-happiness) / 2.5
+        happiness = 255 - (2.5 * parseInt(id.substr("frustration".length), 10));
         id = "frustration";
     }
     return {id, happiness, hpType, hpPower};
@@ -281,10 +278,10 @@ async function ignoredUpToStart(ctx: BattleParserContext<"gen4">,
     switch (event.args[0])
     {
         case "start":
-            // initialization phase ends on the |start event
-            // TODO: what about team preview?
+            // Initialization phase ends on the |start event.
+            // TODO: What about team preview?
             accept();
-            // fallthrough
+            // Fallthrough.
         case "init": case "gametype": case "player": case "request":
         case "teamsize": case "gen": case "tier": case "rule":
             break;
@@ -292,10 +289,13 @@ async function ignoredUpToStart(ctx: BattleParserContext<"gen4">,
         case "clearpoke": case "poke":
         default:
         {
-            // handle.consume event but don't accept it so the parser can be
-            //  called again later to consume another irrelevant event
+            // Handle.consume event but don't accept it so the parser can be
+            // called again later to consume another irrelevant event.
             const key = Protocol.key(event.args);
-            if (key && base.hasOwnProperty(key)) await base[key](ctx);
+            if (key && Object.hasOwnProperty.call(base, key))
+            {
+                await base[key](ctx);
+            }
             else await consume(ctx);
         }
     }

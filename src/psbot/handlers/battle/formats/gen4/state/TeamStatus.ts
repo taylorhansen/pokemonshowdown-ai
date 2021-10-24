@@ -2,7 +2,7 @@ import { FutureMove, futureMoveKeys, SelfSwitchType } from "../dex";
 import { ItemTempStatus, ReadonlyItemTempStatus } from "./ItemTempStatus";
 import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
 
-/** Readonly TeamStatus representation. */
+/** Readonly {@link TeamStatus} representation. */
 export interface ReadonlyTeamStatus
 {
     /** Turn counters for each type of future move. */
@@ -49,7 +49,7 @@ export class TeamStatus implements ReadonlyTeamStatus
             for (const id of futureMoveKeys)
             {
                 // 3 turns, end on last (can be silent)
-                future[id] = new TempStatus(id, 3, /*silent*/true);
+                future[id] = new TempStatus(id, 3, true /*silent*/);
             }
             return future;
         })();
@@ -82,9 +82,9 @@ export class TeamStatus implements ReadonlyTeamStatus
     public readonly tailwind = new TempStatus("tailwind", 3);
     /** @override */
     public toxicspikes = 0;
-    // ends next turn (can be silent)
+    // Ends next turn (can be silent).
     /** @override */
-    public readonly wish = new TempStatus("wishing", 2, /*silent*/true);
+    public readonly wish = new TempStatus("wishing", 2, true /*silent*/);
 
     /**
      * Called at the end of the turn, before a Choice has been sent to the
@@ -102,17 +102,18 @@ export class TeamStatus implements ReadonlyTeamStatus
         this.wish.tick();
     }
 
-    // istanbul ignore next: only used for logging
+    // istanbul ignore next: Only used for logging.
     /**
      * Encodes all team status data into a string
+     *
      * @returns The TeamStatus in string form.
      */
     public toString(): string
     {
         return `[${([] as string[]).concat(
                 Object.entries(this.futureMoves)
-                    .filter(([id, counter]) => counter.isActive)
-                    .map(([id, counter]) => counter.toString()),
+                    .filter(([, counter]) => counter.isActive)
+                    .map(([, counter]) => counter.toString()),
                 this.healingwish ? ["healing wish"] : [],
                 this.lightscreen.isActive ? [this.lightscreen.toString()] : [],
                 this.luckychant.isActive ? [this.luckychant.toString()] : [],

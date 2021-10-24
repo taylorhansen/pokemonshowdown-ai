@@ -7,7 +7,7 @@ import { AlgorithmArgs } from "./learn";
 import { ModelWorker } from "./model/worker";
 import { Opponent, playGames } from "./play";
 
-/** Args for `episode()`. */
+/** Args for {@link episode}. */
 export interface EpisodeArgs
 {
     /** Used to request model ports for the game workers. */
@@ -48,8 +48,8 @@ export async function episode(
         shufflePrefetch, logger, logPath
     }: EpisodeArgs): Promise<void>
 {
-    // play some games semi-randomly, building batches of Experience for each
-    //  game
+    // Play some games semi-randomly, building batches of Experience for each
+    // game.
     logger.debug("Collecting training data via policy rollout");
 
     const expFiles: tmp.FileResult[] = [];
@@ -68,7 +68,7 @@ export async function episode(
         rollout: algorithm.advantage, getExpPath
     });
 
-    // summary statement after rollout games
+    // Summary statement after rollout games.
     const numGames = trainOpponents.reduce((n, opp) => n + opp.numGames, 0);
     logger.debug(`Played ${numGames} games total, yielding ${numAExps} ` +
         `experiences (avg ${(numAExps / numGames).toFixed(2)} per game)`);
@@ -79,7 +79,7 @@ export async function episode(
         return;
     }
 
-    // train over the experience gained from each game
+    // Train over the experience gained from each game.
     logger.debug("Training over experience");
     let progress: ProgressBar | undefined;
     let numBatches: number | undefined;
@@ -105,17 +105,17 @@ export async function episode(
             switch (data.type)
             {
                 case "start":
-                    numBatches = data.numBatches;
+                    ({numBatches} = data);
                     startProgress();
                     break;
 
                 case "epoch":
-                    // ending summary statement for the current epoch
+                    // Ending summary statement for the current epoch.
                     progress?.terminate();
                     logger.debug(`Epoch ${data.epoch}/${epochs}: Avg loss = ` +
-                        data.loss);
+                        `${data.loss}`);
 
-                    // restart progress bar for the next epoch
+                    // Restart progress bar for the next epoch.
                     if (data.epoch < epochs) startProgress();
                     break;
                 case "batch":
@@ -124,9 +124,9 @@ export async function episode(
             }
         });
     progress?.terminate();
-    const cleanupPromise = expFiles.map(f => f.cleanup());
+    const cleanupPromise = expFiles.map(async f => await f.cleanup());
 
-    // evaluation games
+    // Evaluation games.
     logger.debug("Evaluating new network against benchmarks");
     const evalPromise = playGames(
     {

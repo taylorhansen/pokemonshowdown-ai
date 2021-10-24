@@ -1,20 +1,27 @@
 /** @file Defines the protocol typings for ModelWorkers. */
 import { MessagePort } from "worker_threads";
+import { FormatType } from "../../../psbot/handlers/battle/formats";
 import { LearnConfig } from "../../learn";
 import { PortMessageBase, PortResultBase } from
     "../../port/PortProtocol";
 import { WorkerProtocol } from "../../port/WorkerProtocol";
 
+/** Typings for the `workerData` object given to the ModelWorker. */
+export interface ModelWorkerData
+{
+    /** Whether to enable GPU support. */
+    gpu?: boolean;
+}
+
 /** ModelWorker request protocol typings. */
 export interface ModelProtocol extends
     WorkerProtocol<"load" | "save" | "unload" | "subscribe" | "learn">
 {
-    load: { message: ModelLoadMessage; result: ModelLoadResult; };
-    save: { message: ModelSaveMessage; result: ModelSaveResult; };
-    unload: { message: ModelUnloadMessage; result: ModelUnloadResult; };
-    subscribe:
-        { message: ModelSubscribeMessage; result: ModelSubscribeResult; };
-    learn: { message: ModelLearnMessage; result: ModelLearnResult; };
+    load: {message: ModelLoadMessage, result: ModelLoadResult};
+    save: {message: ModelSaveMessage, result: ModelSaveResult};
+    unload: {message: ModelUnloadMessage, result: ModelUnloadResult};
+    subscribe: {message: ModelSubscribeMessage, result: ModelSubscribeResult};
+    learn: {message: ModelLearnMessage, result: ModelLearnResult};
 }
 
 /** The types of requests that can be made to the network processor. */
@@ -27,6 +34,8 @@ type ModelMessageBase<T extends ModelRequestType> = PortMessageBase<T>;
 export interface ModelLoadMessage extends
     ModelMessageBase<"load">, BatchPredictOptions
 {
+    /** Game format for model verification. */
+    format: FormatType;
     /** URL to the `model.json` to load. If omitted, create a default model. */
     readonly url?: string;
 }
@@ -38,9 +47,9 @@ export interface BatchPredictOptions
     readonly maxSize: number;
     /**
      * Max amount of time to wait until the next batch should be processed, in
-     * nanoseconds. Max 1 second.
+     * nanoseconds.
      */
-    readonly timeoutNs: number;
+    readonly timeoutNs: bigint;
 }
 
 /** Saves a neural network to a given URL. */

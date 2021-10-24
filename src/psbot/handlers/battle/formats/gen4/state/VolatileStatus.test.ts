@@ -66,7 +66,7 @@ export const test = () => describe("VolatileStatus", function()
             expect(volatile.mirrormove).to.be.null;
             expect(volatile.mudsport).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
-            // TODO: test private moveset link
+            // TODO: Test private moveset link.
             expect(volatile.overrideTraits).to.be.null;
             expect(volatile.addedType).to.equal("???");
             expect(volatile.rage).to.be.false;
@@ -95,7 +95,7 @@ export const test = () => describe("VolatileStatus", function()
             setAllVolatiles(volatile);
             volatile.clearUnpassable();
 
-            // passed
+            // Passed.
             expect(volatile.aquaring).to.be.true;
             expect(volatile.boosts.atk).to.equal(1);
             expect(volatile.confusion.isActive).to.be.true;
@@ -119,7 +119,7 @@ export const test = () => describe("VolatileStatus", function()
             expect(volatile.trapped).to.not.be.null;
             expect(volatile.trapping).to.not.be.null;
 
-            // not passed
+            // Not passed.
             expect(volatile.attract).to.be.false;
             expect(volatile.bide.isActive).to.be.false;
             expect(volatile.charge.isActive).to.be.false;
@@ -144,7 +144,7 @@ export const test = () => describe("VolatileStatus", function()
             expect(volatile.mirrormove).to.be.null;
             expect(volatile.mudsport).to.be.false;
             expect(volatile.mustRecharge).to.be.false;
-            // TODO: test private moveset link
+            // TODO: Test private moveset link.
             expect(volatile.overrideTraits).to.be.null;
             expect(volatile.addedType).to.equal("???");
             expect(volatile.rage).to.be.false;
@@ -598,8 +598,8 @@ export function setAllVolatiles(volatile: VolatileStatus): void
     volatile.mirrormove = "watergun";
     volatile.mudsport = true;
     volatile.mustRecharge = true;
-    // TODO: test private moveset link
-    // has truant ability
+    // TODO: Test private moveset link.
+    // Has truant ability.
     volatile.overrideTraits = PokemonTraits.base(dex.pokemon["slaking"], 100);
     volatile.addedType = "ice";
     volatile.rage = true;

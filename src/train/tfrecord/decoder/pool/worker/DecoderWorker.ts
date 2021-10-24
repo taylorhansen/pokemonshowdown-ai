@@ -15,7 +15,7 @@ export class DecoderWorker
      *
      * @param worker `worker_threads` Worker object.
      */
-    constructor(worker: Worker)
+    public constructor(worker: Worker)
     {
         this.workerPort = new WorkerPort(worker);
     }
@@ -30,11 +30,11 @@ export class DecoderWorker
      * function returns `null`, in which case the worker has reached the end of
      * the file and the next call would restart from the beginning.
      */
-    public decode(path: string): Promise<AugmentedExperience | null>
+    public async decode(path: string): Promise<AugmentedExperience | null>
     {
         const msg: DecodeMessage =
             {type: "decode", rid: this.workerPort.nextRid(), path};
-        return new Promise((res, rej) =>
+        return await new Promise((res, rej) =>
             this.workerPort.postMessage<"decode">(msg, [],
                 result => result.type === "error" ?
                     rej(result.err) : res(result.aexp)));

@@ -5,29 +5,34 @@ import { WorkerProtocol } from "../../../port/WorkerProtocol";
 import { SimResult } from "../../sim/playGame";
 import { GameConfig } from "../GamePool";
 
+/** Typings for the `workerData` object given to the GameWorker. */
+export interface GameWorkerData
+{
+    /** Path to store experience files as tfrecords. */
+    expPath?: string;
+}
+
 /** GameWorker request protocol typings. */
 export interface GameProtocol extends WorkerProtocol<"play">
 {
-    play: {message: GameWorkerPlay, result: GameWorkerPlayResult}
+    play: {message: GamePlay, result: GamePlayResult};
 }
 
 /** The types of requests that can be made to the game worker. */
-export type GameWorkerRequestType = keyof GameProtocol;
+export type GameRequestType = keyof GameProtocol;
 
 /** Types of messages that the GamePool can send. */
-export type GameWorkerMessage =
-    GameProtocol[GameWorkerRequestType]["message"];
+export type GameMessage = GameProtocol[GameRequestType]["message"];
 
 /** Base interface for game worker messages. */
-type GameWorkerMessageBase<T extends GameWorkerRequestType> =
-    PortMessageBase<T>;
+type GameMessageBase<T extends GameRequestType> = PortMessageBase<T>;
 
 /** Game request message format. */
-export interface GameWorkerPlay extends GameWorkerMessageBase<"play">,
+export interface GamePlay extends GameMessageBase<"play">,
     GameConfig
 {
     /** Model ports that will play against each other. */
-    readonly agents: [GameWorkerAgentConfig, GameWorkerAgentConfig];
+    readonly agents: [GameAgentConfig, GameAgentConfig];
     /**
      * Path to store experience objects, if any are configured to be emitted in
      * the agent config. If unspecified, experience objects will be discarded.
@@ -36,7 +41,7 @@ export interface GameWorkerPlay extends GameWorkerMessageBase<"play">,
 }
 
 /** Config for game worker agents. */
-export interface GameWorkerAgentConfig
+export interface GameAgentConfig
 {
     /**
      * Port that uses the `model/ModelPort` protocol for interfacing with a
@@ -48,14 +53,13 @@ export interface GameWorkerAgentConfig
 }
 
 /** Types of messages that the GamePool can receive. */
-export type GameWorkerResult =
-    GameProtocol[GameWorkerRequestType]["result"];
+export type GameResult = GameProtocol[GameRequestType]["result"];
 
 /** Base interface for game worker message results. */
-type GameWorkerResultBase<T extends GameWorkerRequestType> = PortResultBase<T>;
+type GameResultBase<T extends GameRequestType> = PortResultBase<T>;
 
 /** Result of a game after it has been completed and processed by the worker. */
-export interface GameWorkerPlayResult extends GameWorkerResultBase<"play">,
+export interface GamePlayResult extends GameResultBase<"play">,
     Omit<SimResult, "err">
 {
     /** Number of AugmentedExperience objects saved, if enabled. Otherwise 0. */

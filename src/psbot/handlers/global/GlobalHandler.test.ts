@@ -51,7 +51,15 @@ export const test = () => describe("GlobalHandler", function()
         it("Should respond to challenge", function(done)
         {
             gh.updateUser = () => {};
-            gh.handle({args: ["updateuser", user1] as any, kwArgs: {}});
+            gh.handle(
+            {
+                args:
+                [
+                    "updateuser", user1, "0", "" as Protocol.AvatarIdent,
+                    "{}" as Protocol.JSON
+                ],
+                kwArgs: {}
+            });
 
             gh.respondToChallenge = function(user, format)
             {
@@ -86,7 +94,15 @@ export const test = () => describe("GlobalHandler", function()
         it("Should not respond to challenge if invalid username", function()
         {
             gh.updateUser = () => {};
-            gh.handle({args: ["updateuser", user1] as any, kwArgs: {}});
+            gh.handle(
+            {
+                args:
+                [
+                    "updateuser", user1, "0", "" as Protocol.AvatarIdent,
+                    "{}" as Protocol.JSON
+                ],
+                kwArgs: {}
+            });
 
             gh.handle(
             {
@@ -102,7 +118,15 @@ export const test = () => describe("GlobalHandler", function()
         it("Should not respond to challenge if invalid format", function()
         {
             gh.updateUser = () => {};
-            gh.handle({args: ["updateuser", user1] as any, kwArgs: {}});
+            gh.handle(
+            {
+                args:
+                [
+                    "updateuser", user1, "0", "" as Protocol.AvatarIdent,
+                    "{}" as Protocol.JSON
+                ],
+                kwArgs: {}
+            });
 
             gh.handle(
             {
@@ -156,14 +180,22 @@ export const test = () => describe("GlobalHandler", function()
 
     describe("|updateuser|", function()
     {
-        it("Should update username", async function(done)
+        it("Should update username", function(done)
         {
             gh.updateUser = function(user)
             {
                 expect(user).to.equal(user1);
                 done();
             };
-            gh.handle({args: ["updateuser", user1] as any, kwArgs: {}});
+            gh.handle(
+            {
+                args:
+                [
+                    "updateuser", user1, "0", "" as Protocol.AvatarIdent,
+                    "{}" as Protocol.JSON
+                ],
+                kwArgs: {}
+            });
         });
     });
 

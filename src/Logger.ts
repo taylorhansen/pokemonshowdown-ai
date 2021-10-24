@@ -17,17 +17,17 @@ export class Logger
 
     /**
      * Creates a Logger object.
+     *
      * @param debugStream Function for printing debug messages.
      * @param errorStream Function for printing error messages.
      * @param prefix Prefix added to each string.
      * @param postfix Postfix added to each string.
      */
-    constructor(
+    public constructor(
         public readonly debugLog: LogFunc = msg => process.stdout.write(msg),
         public readonly errorLog: LogFunc = msg => process.stderr.write(msg),
         public readonly prefix = "", public readonly postfix = "\n")
-    {
-    }
+    {}
 
     /** Creates a new Logger with a prefix appended to the current one. */
     public addPrefix(prefix: string): Logger

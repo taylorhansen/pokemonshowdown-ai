@@ -21,6 +21,7 @@ export async function event(ctx: BattleParserContext<"gen4">,
 
 /**
  * Checks for fainted pokemon that need to be replaced.
+ *
  * @param sides Sides to check. Default p1 and p2.
  */
 export async function replacements(ctx: BattleParserContext<"gen4">,
@@ -29,21 +30,21 @@ export async function replacements(ctx: BattleParserContext<"gen4">,
     sides = sides.filter(side => ctx.state.getTeam(side).active.fainted);
     if (sides.length <= 0) return;
 
-    // detect game-over state
+    // Detect game-over state.
     const losingSides = sides.filter(
         side => !ctx.state.getTeam(side).pokemon.some(
-            // still unrevealed/un-fainted pokemon left
+            // Still unrevealed/un-fainted pokemon left.
             mon => mon === null || (mon && !mon.fainted)))
     if (losingSides.length > 0)
     {
-        // only the top-level parser is allowed to consume the ending event
+        // Only the top-level parser is allowed to consume the ending event.
         await verify(ctx, "|win|");
         return;
     }
 
-    // wait for opponents to choose switch-ins
+    // Wait for opponents to choose switch-ins.
     if (!sides.includes(ctx.state.ourSide!)) await request(ctx, "wait");
-    // client also has to choose a switch-in
+    // Client also has to choose a switch-in.
     else await request(ctx, "switch");
 
     await actionSwitch.multipleSwitchIns(ctx, sides);

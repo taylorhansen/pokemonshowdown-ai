@@ -5,12 +5,12 @@ import * as dex from "../../dex";
 import { BattleState } from "../../state/BattleState";
 import { Pokemon } from "../../state/Pokemon";
 import { StatRange } from "../../state/StatRange";
-import { smeargle } from "../../state/switchOptions.test";
 import { SwitchOptions } from "../../state/Team";
-import { createInitialContext, ParserContext } from "../Context.test";
-import { ParserHelpers, setupBattleParser, setupUnorderedDeadline, toEffectName,
-    toHPStatus, toIdent, toItemName, toMessage, toMoveName, toNum } from
-    "../helpers.test";
+import { smeargle } from "../../state/switchOptions.test";
+import { createInitialContext } from "../Context.test";
+import { ParserHelpers } from "../ParserHelpers.test";
+import { setupBattleParser, setupUnorderedDeadline, toEffectName, toHPStatus,
+    toIdent, toItemName, toMessage, toMoveName, toNum } from "../helpers.test";
 import * as effectItem from "./item";
 
 export const test = () => describe("item", function()
@@ -25,7 +25,7 @@ export const test = () => describe("item", function()
         state = ictx.getState();
     });
 
-    // can have cutecharm or magicguard
+    // Can have cutecharm or magicguard.
     const clefable: SwitchOptions =
         {species: "clefable", level: 50, gender: "F", hp: 100, hpMax: 100};
 
@@ -49,31 +49,31 @@ export const test = () => describe("item", function()
         });
     }
 
-    function testHPThreshold(itemId: string, setup: () => Pokemon,
+    function testHpThreshold(itemId: string, setup: () => Pokemon,
         absent: () => Promise<void>): void
     {
-        it("Shouldn't infer no item if above HP threshold and didn't activate",
+        it("Shouldn't infer no item if above Hp threshold and didn't activate",
         async function()
         {
             const mon = setup();
             expect(mon.item.possibleValues).to.include.keys(itemId);
-            mon.hp.set(mon.hp.max); // should be outside hp threshold
+            mon.hp.set(mon.hp.max); // Should be outside hp threshold.
             await absent();
             expect(mon.item.possibleValues).to.include.keys(itemId);
         });
 
-        it("Should infer no item if below HP threshold and didn't activate",
+        it("Should infer no item if below Hp threshold and didn't activate",
         async function()
         {
             const mon = setup();
             expect(mon.item.possibleValues).to.include.keys(itemId);
-            mon.hp.set(1); // should be below hp threshold
+            mon.hp.set(1); // Should be below hp threshold.
             await absent();
             expect(mon.item.possibleValues).to.not.include.keys(itemId);
         });
     }
 
-    // note: only works for threshold=25
+    // Note: Only works for threshold=25.
     function testEarlyBerryAbilities(itemId: string, abilities: string[],
         setup: () => Pokemon, taken: () => Promise<void>,
         absent: () => Promise<void>): void
@@ -83,7 +83,7 @@ export const test = () => describe("item", function()
         {
             const mon = setup();
             mon.setAbility(...abilities, "illuminate");
-            // should be above 25% but at/below 50%
+            // Should be above 25% but at/below 50%.
             mon.hp.set(Math.floor(mon.hp.max / 2));
             await taken();
             expect(mon.traits.ability.possibleValues)
@@ -96,7 +96,7 @@ export const test = () => describe("item", function()
             const mon = setup();
             mon.setItem(itemId);
             mon.setAbility(...abilities, "illuminate");
-            // should be above 25% but at/below 50%
+            // Should be above 25% but at/below 50%.
             mon.hp.set(Math.floor(mon.hp.max / 2));
             await absent();
             expect(mon.traits.ability.possibleValues)
@@ -107,7 +107,7 @@ export const test = () => describe("item", function()
             "and ability suppressed", async function()
         {
             const mon = setup();
-            // should be above 25% but at/below 50%
+            // Should be above 25% but at/below 50%.
             mon.hp.set(Math.floor(mon.hp.max / 2));
             mon.setAbility(...abilities);
             mon.volatile.suppressAbility = true;
@@ -121,7 +121,7 @@ export const test = () => describe("item", function()
         {
             const mon = setup();
             mon.setAbility(...abilities, "illuminate");
-            // should be below original 25% threshold
+            // Should be below original 25% threshold.
             mon.hp.set(Math.floor(mon.hp.max / 4));
             await taken();
             expect(mon.traits.ability.possibleValues)
@@ -133,7 +133,7 @@ export const test = () => describe("item", function()
         {
             const mon = setup();
             mon.setAbility(...abilities, "illuminate");
-            // should be below original 25% threshold
+            // Should be below original 25% threshold.
             mon.hp.set(Math.floor(mon.hp.max / 4));
             await absent();
             expect(mon.item.possibleValues).to.not.have.keys(itemId);
@@ -192,12 +192,12 @@ export const test = () => describe("item", function()
     describe("updateItems()", function()
     {
         const init = setupBattleParser(ictx.startArgs, effectItem.updateItems);
-        let pctx: ParserContext<void[]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
@@ -211,7 +211,7 @@ export const test = () => describe("item", function()
             them.hp.set(1);
 
             pctx = init();
-            // p2's salacberry
+            // P2's salacberry.
             await ph.handle(
             {
                 args: ["-enditem", toIdent("p2"), toItemName("salacberry")],
@@ -222,7 +222,7 @@ export const test = () => describe("item", function()
                 args: ["-boost", toIdent("p2"), "spe", toNum(1)],
                 kwArgs: {from: toEffectName("salacberry", "item")}
             });
-            // p1's sitrusberry
+            // P1's sitrusberry.
             await ph.handle(
             {
                 args: ["-enditem", toIdent("p1"), toItemName("sitrusberry")],
@@ -242,7 +242,7 @@ export const test = () => describe("item", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
             effectItem.onPreMove);
-        let pctx: ParserContext<[] | ["moveFirst" | void]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -250,17 +250,17 @@ export const test = () => describe("item", function()
             await ph.close().finally(() => pctx = undefined);
         });
 
-        function preMoveSetup(lowHP?: boolean)
+        function preMoveSetup(lowHp?: boolean)
         {
             sh.initActive("p1");
             const mon = sh.initActive("p2");
-            if (lowHP) mon.hp.set(1);
+            if (lowHp) mon.hp.set(1);
             return mon;
         }
 
         async function preMoveTaken()
         {
-            // custapberry requires pre-turn snapshot
+            // Custapberry requires pre-turn snapshot.
             state.preTurn();
 
             pctx = init("p2");
@@ -280,7 +280,7 @@ export const test = () => describe("item", function()
 
         async function preMoveAbsent()
         {
-            // custapberry requires pre-turn snapshot
+            // Custapberry requires pre-turn snapshot.
             state.preTurn();
 
             pctx = init("p2");
@@ -288,29 +288,35 @@ export const test = () => describe("item", function()
             await ph.return([]);
         }
 
-        testHasItem("custapberry", () => preMoveSetup(/*lowHP*/ true),
+        testHasItem("custapberry", () => preMoveSetup(/*LowHp*/ true),
             "indicate increased move priority", preMoveTaken,
             "on-preMove", preMoveAbsent);
-        // TODO: additional tests for lowHP=false?
+        // TODO: Additional tests for lowHp=false?
 
-        describe("HP threshold", () =>
-            testHPThreshold("custapberry", preMoveSetup, preMoveAbsent));
+        describe("Hp threshold", function()
+        {
+            testHpThreshold("custapberry", preMoveSetup, preMoveAbsent);
+        });
 
-        describe("Early-berry ability (gluttony)", () =>
-            testEarlyBerryAbilities("custapberry", ["gluttony"],
-                preMoveSetup, preMoveTaken, preMoveAbsent));
+        describe("Early-berry ability (gluttony)", function()
+        {
+            testEarlyBerryAbilities("custapberry", ["gluttony"], preMoveSetup,
+                preMoveTaken, preMoveAbsent);
+        });
 
-        describe("Item-ignoring ability (klutz)", () =>
+        describe("Item-ignoring ability (klutz)", function()
+        {
             testBlockingAbilities("custapberry", ["klutz"],
-                () => preMoveSetup(/*lowHP*/ true),
-                preMoveTaken, preMoveAbsent));
+                () => preMoveSetup(true /*lowHp*/), preMoveTaken,
+                preMoveAbsent);
+        });
     });
 
     describe("onMoveCharge()", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
             effectItem.onMoveCharge);
-        let pctx: ParserContext<[] | ["shorten" | void]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -318,7 +324,7 @@ export const test = () => describe("item", function()
             await ph.close().finally(() => pctx = undefined);
         });
 
-        // TODO: add tests/options for other kinds of charging moves
+        // TODO: Add tests/options for other kinds of charging moves.
         function moveChargeSetup(charge?: boolean)
         {
             sh.initActive("p1");
@@ -346,10 +352,10 @@ export const test = () => describe("item", function()
             await ph.return([]);
         }
 
-        testHasItem("powerherb", () => moveChargeSetup(/*charge*/ true),
+        testHasItem("powerherb", () => moveChargeSetup(/*Charge*/ true),
             "indicate shortened  two-turn move", moveChargeTaken,
             "on-moveCharge", moveChargeAbsent);
-        // TODO: additional tests for charge=false
+        // TODO: Additional tests for charge=false.
 
         it("Shouldn't infer no consumeOn-moveCharge item if it did not " +
             "activate and the effect should've been silent",
@@ -364,17 +370,19 @@ export const test = () => describe("item", function()
             expect(mon.item.definiteValue).to.be.null;
         });
 
-        describe("Item-ignoring ability (klutz)", () =>
+        describe("Item-ignoring ability (klutz)", function()
+        {
             testBlockingAbilities("powerherb", ["klutz"],
-                () => moveChargeSetup(/*charge*/ true),
-                moveChargeTaken, moveChargeAbsent));
+                () => moveChargeSetup(true /*charge*/), moveChargeTaken,
+                moveChargeAbsent);
+        });
     });
 
     describe("onPreHit()", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
             effectItem.onPreHit);
-        let pctx: ParserContext<[] | [dex.ItemPreHitResult | void]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -422,7 +430,7 @@ export const test = () => describe("item", function()
             await ph.return([]);
         }
 
-        testHasItem("wacanberry", () => preHitSetup(/*weak*/ true),
+        testHasItem("wacanberry", () => preHitSetup(true/*weak*/),
             "indicate resist berry effect", preHitTaken,
             "on-preHit", preHitAbsent);
         // TODO: additional tests for weak=false
@@ -446,17 +454,18 @@ export const test = () => describe("item", function()
             await ph.return([]);
         });
 
-        describe("Item-ignoring ability (klutz)", () =>
+        describe("Item-ignoring ability (klutz)", function()
+        {
             testBlockingAbilities("wacanberry", ["klutz"],
-                () => preHitSetup(/*weak*/ true),
-                preHitTaken, preHitAbsent));
+                () => preHitSetup(true /*weak*/), preHitTaken, preHitAbsent);
+        });
     });
 
-    describe("onTryOHKO()", function()
+    describe("onTryOhko()", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
-            effectItem.onTryOHKO);
-        let pctx: ParserContext<[] | [void]> | undefined;
+            effectItem.onTryOhko);
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -464,7 +473,7 @@ export const test = () => describe("item", function()
             await ph.close().finally(() => pctx = undefined);
         });
 
-        function tryOHKOSetup(hp = 1, maxhp = 100, percent?: boolean)
+        function tryOhkoSetup(hp = 1, maxhp = 100, percent?: boolean)
         {
             const monRef = percent ? "p2" : "p1";
             const mon = sh.initActive(monRef);
@@ -472,7 +481,7 @@ export const test = () => describe("item", function()
             return mon;
         }
 
-        async function tryOHKOTaken(percent?: boolean)
+        async function tryOhkoTaken(percent?: boolean)
         {
             const monRef = percent ? "p2" : "p1";
             pctx = init(monRef);
@@ -482,10 +491,10 @@ export const test = () => describe("item", function()
                 kwArgs: {}
             });
             await ph.halt();
-            await ph.return([undefined]);
+            await ph.return([true]);
         }
 
-        async function tryOHKOAbsent(percent?: boolean)
+        async function tryOhkoAbsent(percent?: boolean)
         {
             const monRef = percent ? "p2" : "p1";
             pctx = init(monRef);
@@ -493,12 +502,14 @@ export const test = () => describe("item", function()
             await ph.return([]);
         }
 
-        testHasItem("focussash", tryOHKOSetup, "activate item", tryOHKOTaken,
-            "on-tryOHKO", tryOHKOAbsent);
+        testHasItem("focussash", tryOhkoSetup, "activate item", tryOhkoTaken,
+            "on-tryOhko", tryOhkoAbsent);
 
-        describe("Item-ignoring ability (klutz)", () =>
-            testBlockingAbilities("focussash", ["klutz"],
-                () => tryOHKOSetup(), tryOHKOTaken, tryOHKOAbsent));
+        describe("Item-ignoring ability (klutz)", function()
+        {
+            testBlockingAbilities("focussash", ["klutz"], () => tryOhkoSetup(),
+                tryOhkoTaken, tryOhkoAbsent);
+        });
 
         describe("HP % rounding", function()
         {
@@ -506,7 +517,7 @@ export const test = () => describe("item", function()
             {
                 const item = mon.item.possibleValues;
                 expect(item).to.include.keys("focussash");
-                await tryOHKOTaken(mon.team!.side !== state.ourSide);
+                await tryOhkoTaken(mon.team!.side !== state.ourSide);
                 expect(item).to.equal(mon.lastItem.possibleValues)
                     .and.to.have.keys("focussash");
             }
@@ -515,30 +526,30 @@ export const test = () => describe("item", function()
             {
                 const item = mon.item.possibleValues;
                 expect(item).to.include.keys("focussash");
-                await tryOHKOAbsent(mon.team!.side !== state.ourSide);
+                await tryOhkoAbsent(mon.team!.side !== state.ourSide);
                 expect(item).to.equal(mon.item.possibleValues)
                     .and.to.not.have.keys("focussash");
             }
 
             it("Should reject if hp = 0", async function()
             {
-                tryOHKOSetup(0);
-                await tryOHKOAbsent();
+                tryOhkoSetup(0);
+                await tryOhkoAbsent();
             });
 
             it("Should reject if hp values known and hp > 1",
             async function()
             {
-                tryOHKOSetup(2);
-                await tryOHKOAbsent();
+                tryOhkoSetup(2);
+                await tryOhkoAbsent();
             });
 
             it("Should accept if hp known and hp = 1", async function()
             {
-                // taken case
-                await shouldAcceptTaken(tryOHKOSetup(1));
-                // absent case
-                await shouldAcceptAbsent(tryOHKOSetup(1));
+                // Taken case.
+                await shouldAcceptTaken(tryOhkoSetup(1));
+                // Absent case.
+                await shouldAcceptAbsent(tryOhkoSetup(1));
             });
 
             describe("Unknown hp", function()
@@ -550,23 +561,23 @@ export const test = () => describe("item", function()
                     return mon;
                 }
 
-                function testUnknownHP(opts: SwitchOptions, actualMaxHP: number)
+                function testUnknownHp(opts: SwitchOptions, actualMaxHp: number)
                 {
-                    // max hp under 100 but can be over 100:
-                    const actualPercent = Math.ceil(100 / actualMaxHP);
+                    // Max hp under 100 but can be over 100.
+                    const actualPercent = Math.ceil(100 / actualMaxHp);
 
-                    const {min: minPossibleHP} =
+                    const {min: minPossibleHp} =
                         new StatRange(
                             dex.pokemon[opts.species].baseStats.hp,
-                            opts.level, /*hp*/ true);
-                    // 1hp percentage with min possible hp stat
-                    // this is the highest possible hp display value at 1hp
-                    const minPercent = Math.ceil(100 / minPossibleHP);
+                            opts.level, /*Hp*/ true);
+                    // 1hp percentage with min possible hp stat.
+                    // This is the highest possible hp display value at 1hp.
+                    const minPercent = Math.ceil(100 / minPossibleHp);
 
                     it("Should handle item", async function()
                     {
                         setup(opts, actualPercent);
-                        await tryOHKOTaken(true);
+                        await tryOhkoTaken(true);
                     });
 
                     if (minPercent <= 50)
@@ -575,7 +586,7 @@ export const test = () => describe("item", function()
                             `${minPercent + 1}%)`, async function()
                         {
                             setup(opts, minPercent + 1);
-                            await tryOHKOAbsent(/*percent*/ true);
+                            await tryOhkoAbsent(true /*percent*/);
                         });
                     }
                 }
@@ -589,7 +600,7 @@ export const test = () => describe("item", function()
                         const mon = setup(opts, hpDisplay);
                         expect(mon.item.possibleValues)
                             .to.include.keys("focussash");
-                        await tryOHKOAbsent(true);
+                        await tryOhkoAbsent(true);
                         expect(mon.item.possibleValues)
                             .to.not.include.keys("focussash");
                     });
@@ -604,75 +615,70 @@ export const test = () => describe("item", function()
                         const mon = setup(opts, hpDisplay);
                         expect(mon.item.possibleValues)
                             .to.include.keys("focussash");
-                        await tryOHKOAbsent(true);
+                        await tryOhkoAbsent(true);
                         expect(mon.item.possibleValues)
                             .to.include.keys("focussash");
                     });
                 }
 
-                describe("Max hp = 1", async function()
+                describe("Max hp = 1", function()
                 {
                     const shedinja: SwitchOptions =
                     {
                         species: "shedinja", gender: "N", level: 50, hp: 100,
                         hpMax: 100
                     };
-                    testUnknownHP(shedinja, 1);
+                    testUnknownHp(shedinja, 1);
                     shouldRuleOut(shedinja, 100);
                 });
 
-                describe("Max hp under 100", async function()
+                describe("Max hp under 100", function()
                 {
-                    const opts = {...smeargle, level: 10}; // 31-40
-                    testUnknownHP(opts, 35);
+                    const opts = {...smeargle, level: 10}; // 31-40.
+                    testUnknownHp(opts, 35);
                     shouldRuleOut(opts, 3, " (1hp)");
                 });
 
-                describe("Max hp under 100 but can be over 100",
-                async function()
+                describe("Max hp under 100 but can be over 100", function()
                 {
-                    const opts = {...smeargle, level: 40}; // 94-131
-                    testUnknownHP(opts, 95);
+                    const opts = {...smeargle, level: 40}; // 94-131.
+                    testUnknownHp(opts, 95);
                     shouldNotRuleOut(opts, 2, " (can be 1hp)");
                 });
 
-                describe("Max hp over 100 but can be under 100",
-                async function()
+                describe("Max hp over 100 but can be under 100", function()
                 {
-                    const opts = {...smeargle, level: 40}; // 94-131
-                    testUnknownHP(opts, 105);
+                    const opts = {...smeargle, level: 40}; // 94-131.
+                    testUnknownHp(opts, 105);
                     shouldRuleOut(opts, 1);
                     shouldNotRuleOut(opts, 2, " (can be 1hp)");
                 });
 
-                describe("Max hp between 100 and 200 exclusive",
-                async function()
+                describe("Max hp between 100 and 200 exclusive", function()
                 {
-                    const opts = {...smeargle, level: 50}; // 115-162
-                    testUnknownHP(opts, 120);
+                    const opts = {...smeargle, level: 50}; // 115-162.
+                    testUnknownHp(opts, 120);
                     shouldRuleOut(opts, 1);
                 });
 
-                describe("Max hp under 200 but can be over 200",
-                async function()
+                describe("Max hp under 200 but can be over 200", function()
                 {
-                    const opts = {...smeargle, level: 75}; // 167-238
-                    testUnknownHP(opts, 195);
+                    const opts = {...smeargle, level: 75}; // 167-238.
+                    testUnknownHp(opts, 195);
                     shouldNotRuleOut(opts, 1, " (can be 1hp)");
                 });
 
-                describe("Max hp over 200 but can be under 200",
-                async function()
+                describe("Max hp over 200 but can be under 200", function()
                 {
-                    const opts = {...smeargle, level: 75}; // 167-238
-                    testUnknownHP(opts, 205);
+                    const opts = {...smeargle, level: 75}; // 167-238.
+                    testUnknownHp(opts, 205);
                     shouldNotRuleOut(opts, 1, " (can be 1hp)");
                 });
 
-                describe("Max hp over 200", async function()
+                describe("Max hp over 200", function()
                 {
-                    const opts = {...smeargle, level: 100}; // 220-314
-                    testUnknownHP(opts, 250);
+                    const opts = {...smeargle, level: 100}; // 220-314.
+                    testUnknownHp(opts, 250);
                     shouldNotRuleOut(opts, 1, " (can be 1hp)");
                 });
             });
@@ -683,7 +689,7 @@ export const test = () => describe("item", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
             effectItem.onSuper);
-        let pctx: ParserContext<[] | [void]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -703,7 +709,7 @@ export const test = () => describe("item", function()
             return mon;
         }
 
-        // TODO: options for silent, heal holder
+        // TODO: Options for silent, heal holder.
         async function superTaken()
         {
             pctx = init("p2",
@@ -736,14 +742,14 @@ export const test = () => describe("item", function()
             await ph.return([]);
         }
 
-        testHasItem("enigmaberry", () => superSetup(/*weak*/ true),
+        testHasItem("enigmaberry", () => superSetup(true /*weak*/),
             "handle heal effect", superTaken, "on-super", superAbsent);
-        // TODO: additional tests for weak=false
+        // TODO: Additional tests for weak=false.
 
         it("Should handle silent heal effect", async function()
         {
-            // full hp
-            superSetup(/*weak*/ true).hp.set(100, 100);
+            // Full hp.
+            superSetup(true /*weak*/).hp.set(100, 100);
 
             pctx = init("p2",
             {
@@ -754,18 +760,20 @@ export const test = () => describe("item", function()
             await ph.return([]);
         });
 
-        describe("Item-ignoring ability (klutz)", () =>
+        describe("Item-ignoring ability (klutz)", function()
+        {
             testBlockingAbilities("enigmaberry", ["klutz"],
-                () => superSetup(/*weak*/ true), superTaken, superAbsent));
+                () => superSetup(true /*weak*/), superTaken, superAbsent);
+        });
 
-        // TODO: test moveIsType
+        // TODO: Test moveIsType.
     });
 
     describe("onPostHit()", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
             effectItem.onPostHit);
-        let pctx: ParserContext<[] | [void]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -779,7 +787,7 @@ export const test = () => describe("item", function()
             return sh.initActive("p2");
         }
 
-        // TODO: options for silent, damage user, heal holder
+        // TODO: Options for silent, damage user, heal holder.
         async function postHitTaken(move: dex.MoveData, itemId: string)
         {
             pctx = init("p2", {move: dex.getMove(move), userRef: "p1"});
@@ -793,9 +801,9 @@ export const test = () => describe("item", function()
                 args: ["-damage", toIdent("p1"), toHPStatus(88, 100)],
                 kwArgs: {from: toEffectName(itemId, "item"), of: toIdent("p2")}
             });
-            // since damage effect checks for any pending on-damage effects, it
-            //  needs to explicitly fail for the consumeOn-postHit parser to
-            //  return
+            // Since damage effect checks for any pending on-damage effects, it
+            // needs to explicitly fail for the consumeOn-postHit parser to
+            // return.
             await ph.halt();
             await ph.return([undefined]);
         }
@@ -817,8 +825,9 @@ export const test = () => describe("item", function()
 
                 const postHitCategorySetup = postHitSetup;
                 const postHitCategoryTaken =
-                    () => postHitTaken(move, item);
-                const postHitCategoryAbsent = () => postHitAbsent(move);
+                    async () => await postHitTaken(move, item);
+                const postHitCategoryAbsent =
+                    async () => await postHitAbsent(move);
 
                 testHasItem(item, postHitCategorySetup,
                     `handle ${category} damage effect`, postHitCategoryTaken,
@@ -839,10 +848,11 @@ export const test = () => describe("item", function()
                     await ph.return([undefined]);
                 });
 
-                describe("Item-ignoring ability (klutz)", () =>
-                    testBlockingAbilities(item, ["klutz"],
-                        postHitCategorySetup, postHitCategoryTaken,
-                        postHitCategoryAbsent));
+                describe("Item-ignoring ability (klutz)", function()
+                {
+                    testBlockingAbilities(item, ["klutz"], postHitCategorySetup,
+                        postHitCategoryTaken, postHitCategoryAbsent);
+                });
             });
         }
     });
@@ -851,7 +861,7 @@ export const test = () => describe("item", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
             effectItem.onMovePostDamage);
-        let pctx: ParserContext<[] | [void]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -865,7 +875,7 @@ export const test = () => describe("item", function()
             return sh.initActive("p2");
         }
 
-        // TODO: options for silent, damage user, heal holder
+        // TODO: Options for silent, damage user, heal holder.
         async function movePostDamageTaken(itemId: string)
         {
             pctx = init("p2");
@@ -886,7 +896,8 @@ export const test = () => describe("item", function()
         }
 
         testHasItem("lifeorb", movePostDamageSetup,
-            "handle percentDamage effect", () => movePostDamageTaken("lifeorb"),
+            "handle percentDamage effect",
+            async () => await movePostDamageTaken("lifeorb"),
             "on-movePostDamage", movePostDamageAbsent);
 
         it("Should handle silent percentDamage effect", async function()
@@ -1017,7 +1028,7 @@ export const test = () => describe("item", function()
             });
         }
 
-        // can have cutecharm or klutz
+        // Can have cutecharm or klutz.
         const lopunny: SwitchOptions =
         {
             species: "lopunny", level: 50, gender: "F", hp: 100, hpMax: 100
@@ -1039,7 +1050,7 @@ export const test = () => describe("item", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
             effectItem.onUpdate);
-        let pctx: ParserContext<[] | [void]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
@@ -1047,10 +1058,7 @@ export const test = () => describe("item", function()
             await ph.close().finally(() => pctx = undefined);
         });
 
-        function updateSetup()
-        {
-            return sh.initActive("p2");
-        }
+        const updateSetup = () => sh.initActive("p2");
 
         async function updateTaken(itemId: string, ...events: Event[])
         {
@@ -1074,30 +1082,31 @@ export const test = () => describe("item", function()
 
         describe("condition = hp", function()
         {
-            function updateHPSetup(lowHP?: boolean)
+            function updateHpSetup(lowHp?: boolean)
             {
                 const mon = updateSetup();
-                if (lowHP) mon.hp.set(1); // within hp threshold
+                if (lowHp) mon.hp.set(1); // Within hp threshold.
                 return mon;
             }
 
-            const updateHPTaken = updateTaken;
+            const updateHpTaken = updateTaken;
 
-            const updateHPAbsent = updateAbsent;
-            // TODO: additional tests for lowHP=false
+            const updateHpAbsent = updateAbsent;
+            // TODO: Additional tests for lowHp=false.
 
-            testHPThreshold("sitrusberry",
-                () => updateHPSetup(/*lowHP*/ true), updateHPAbsent);
+            testHpThreshold("sitrusberry",
+                () => updateHpSetup(true /*lowHp*/), updateHpAbsent);
 
-            const updateHPHealSetup = updateHPSetup;
-            const updateHPHealTaken = (itemId: string, ...events: Event[]) =>
-                updateTaken(itemId,
-                {
-                    args: ["-heal", toIdent("p2"), toHPStatus(26, 100)],
-                    kwArgs: {from: toEffectName(itemId, "item")}
-                },
-                ...events);
-            const updateHPHealAbsent = updateHPAbsent;
+            const updateHpHealSetup = updateHpSetup;
+            const updateHpHealTaken =
+                async (itemId: string, ...events: Event[]) =>
+                    await updateTaken(itemId,
+                    {
+                        args: ["-heal", toIdent("p2"), toHPStatus(26, 100)],
+                        kwArgs: {from: toEffectName(itemId, "item")}
+                    },
+                    ...events);
+            const updateHpHealAbsent = updateHpAbsent;
 
             for (const [name, itemId, dislike] of
             [
@@ -1108,17 +1117,18 @@ export const test = () => describe("item", function()
                 describe(name, function()
                 {
                     testHasItem("sitrusberry",
-                        () => updateHPHealSetup(/*lowHP*/ true),
-                        "handle heal effect", () => updateHPHealTaken(itemId),
-                        `on-update ${name}`, updateHPHealAbsent);
+                        () => updateHpHealSetup(true /*lowHp*/),
+                        "handle heal effect",
+                        async () => await updateHpHealTaken(itemId),
+                        `on-update ${name}`, updateHpHealAbsent);
 
                     if (!dislike) return;
 
                     it("Should handle dislike berry", async function()
                     {
-                        updateHPHealSetup(/*lowHP*/ true);
+                        updateHpHealSetup(true /*lowHp*/);
 
-                        await updateHPHealTaken(dislike,
+                        await updateHpHealTaken(dislike,
                         {
                             args:
                             [
@@ -1131,26 +1141,27 @@ export const test = () => describe("item", function()
                 });
             }
 
-            const updateHPBoostSetup = updateHPSetup;
+            const updateHpBoostSetup = updateHpSetup;
 
-            const updateHPBoostTaken = () => updateHPTaken("starfberry",
-            {
-                args: ["-boost", toIdent("p2"), "atk", toNum(2)],
-                kwArgs: {from: toEffectName("starfberry", "item")}
-            });
+            const updateHpBoostTaken =
+                async () => await updateHpTaken("starfberry",
+                {
+                    args: ["-boost", toIdent("p2"), "atk", toNum(2)],
+                    kwArgs: {from: toEffectName("starfberry", "item")}
+                });
 
-            const updateHPBoostAbsent = updateHPAbsent;
+            const updateHpBoostAbsent = updateHpAbsent;
 
             describe("boost", function()
             {
                 testHasItem("starfberry",
-                    () => updateHPBoostSetup(/*lowHP*/ true),
-                    "handle boost effect", updateHPBoostTaken,
-                    "on-update boost", updateHPBoostAbsent)
+                    () => updateHpBoostSetup(true /*lowHp*/),
+                    "handle boost effect", updateHpBoostTaken,
+                    "on-update boost", updateHpBoostAbsent)
 
                 it("Should throw if invalid boost", async function()
                 {
-                    updateHPBoostSetup(/*lowHP*/ true);
+                    updateHpBoostSetup(true /*lowHp*/);
 
                     pctx = init("p2");
                     await ph.handle(
@@ -1171,7 +1182,7 @@ export const test = () => describe("item", function()
 
                 it("Should throw if no boost effect", async function()
                 {
-                    updateHPSetup(/*lowHP*/ true);
+                    updateHpSetup(true /*lowHp*/);
 
                     pctx = init("p2");
                     await ph.handle(
@@ -1182,8 +1193,7 @@ export const test = () => describe("item", function()
                         ],
                         kwArgs: {eat: true}
                     });
-                    await ph.haltError(Error,
-                        "On-eat boost effect failed");
+                    await ph.haltError(Error, "On-eat boost effect failed");
                 });
             });
 
@@ -1191,7 +1201,7 @@ export const test = () => describe("item", function()
             {
                 it("Should handle focusenergy effect", async function()
                 {
-                    updateHPSetup(/*lowHP*/ true);
+                    updateHpSetup(true /*lowHp*/);
 
                     pctx = init("p2");
                     await ph.handle(
@@ -1217,7 +1227,7 @@ export const test = () => describe("item", function()
 
                 it("Should throw if no focusenergy effect", async function()
                 {
-                    updateHPSetup(/*lowHP*/ true);
+                    updateHpSetup(true /*lowHp*/);
 
                     pctx = init("p2");
                     await ph.handle(
@@ -1233,21 +1243,25 @@ export const test = () => describe("item", function()
                 });
             });
 
-            describe("Early-berry ability (gluttony)", () =>
+            describe("Early-berry ability (gluttony)", function()
+            {
                 testEarlyBerryAbilities("starfberry", ["gluttony"],
-                    updateHPBoostSetup, updateHPBoostTaken,
-                    updateHPBoostAbsent));
+                    updateHpBoostSetup, updateHpBoostTaken,
+                    updateHpBoostAbsent);
+            });
 
-            describe("Item-ignoring ability (klutz)", () =>
+            describe("Item-ignoring ability (klutz)", function()
+            {
                 testBlockingAbilities("sitrusberry", ["klutz"],
-                    () => updateHPHealSetup(/*lowHP*/ true),
-                    () => updateHPHealTaken("sitrusberry"),
-                    updateHPHealAbsent));
+                    () => updateHpHealSetup(true /*lowHp*/),
+                    async () => await updateHpHealTaken("sitrusberry"),
+                    updateHpHealAbsent);
+            });
         });
 
         describe("condition = status", function()
         {
-            // TODO: test each kind of consumeOn-status item
+            // TODO: Test each kind of consumeOn-status item.
             function updateStatusSetup(statused?: boolean)
             {
                 const mon = updateSetup();
@@ -1259,8 +1273,8 @@ export const test = () => describe("item", function()
                 return mon;
             }
 
-            // TODO: test each kind of consumeOn-update hp effect/item
-            const updateStatusTaken = () => updateTaken("lumberry",
+            // TODO: Test each kind of consumeOn-update hp effect/item.
+            const updateStatusTaken = async () => await updateTaken("lumberry",
                 {args: ["-curestatus", toIdent("p2"), "slp"], kwArgs: {}},
                 {
                     args: ["-end", toIdent("p2"), toEffectName("confusion")],
@@ -1269,19 +1283,21 @@ export const test = () => describe("item", function()
             const updateStatusAbsent = updateAbsent;
 
             testHasItem("cheriberry",
-                () => updateStatusSetup(/*statused*/ true),
+                () => updateStatusSetup(true /*statused*/),
                 "handle cure effect", updateStatusTaken, "on-update cure",
                 updateStatusAbsent);
-            // TODO: additional tests for updateStatused=false
+            // TODO: Additional tests for statused=false.
 
-            describe("Item-ignoring ability (klutz)", () =>
+            describe("Item-ignoring ability (klutz)", function()
+            {
                 testBlockingAbilities("lumberry", ["klutz"],
-                    () => updateStatusSetup(/*statused*/ true),
-                    updateStatusTaken, updateStatusAbsent));
+                    () => updateStatusSetup(true /*statused*/),
+                    updateStatusTaken, updateStatusAbsent);
+            });
 
             it("Should throw if no cure effect", async function()
             {
-                updateStatusSetup(/*statused*/ true).setItem("lumberry");
+                updateStatusSetup(true /*statused*/).setItem("lumberry");
 
                 pctx = init("p2");
                 await ph.handle(
@@ -1296,7 +1312,7 @@ export const test = () => describe("item", function()
 
             it("Should throw if partial cure effect", async function()
             {
-                updateStatusSetup(/*statused*/ true);
+                updateStatusSetup(true /*statused*/);
 
                 pctx = init("p2");
                 await ph.handle(
@@ -1322,7 +1338,7 @@ export const test = () => describe("item", function()
                 return mon;
             }
 
-            // TODO: add item effect events as parameter
+            // TODO: Add item effect events as parameter.
             async function updateDepletedTaken(): Promise<void>
             {
                 await updateTaken("leppaberry",
@@ -1340,16 +1356,16 @@ export const test = () => describe("item", function()
             const updateDepletedAbsent = updateAbsent;
 
             testHasItem("leppaberry",
-                () => updateDepletedSetup(/*depleted*/ true),
+                () => updateDepletedSetup(true /*depleted*/),
                 "handle restore effect", updateDepletedTaken,
                 "on-update restore", updateDepletedAbsent);
-            // TODO: additional tests for depleted=false
+            // TODO: Additional tests for depleted=false.
 
-            // TODO(later): handle move pp ambiguity corner cases
+            // TODO(later): Handle move pp ambiguity corner cases.
 
             it("Should throw if no restore effect", async function()
             {
-                updateDepletedSetup(/*depleted*/ true)
+                updateDepletedSetup(true /*depleted*/)
 
                 pctx = init("p2");
                 await ph.handle(
@@ -1361,10 +1377,12 @@ export const test = () => describe("item", function()
                     "On-eat restore effect failed: Missing |-activate| event");
             });
 
-            describe("Item-ignoring ability (klutz)", () =>
+            describe("Item-ignoring ability (klutz)", function()
+            {
                 testBlockingAbilities("leppaberry", ["klutz"],
-                    () => updateDepletedSetup(/*depleted*/ true),
-                    updateDepletedTaken, updateDepletedAbsent));
+                    () => updateDepletedSetup(true /*depleted*/),
+                    updateDepletedTaken, updateDepletedAbsent);
+            });
         });
     });
 
@@ -1372,19 +1390,19 @@ export const test = () => describe("item", function()
     {
         const init = setupUnorderedDeadline(ictx.startArgs,
             effectItem.onResidual);
-        let pctx: ParserContext<void[]> | undefined;
+        let pctx: ReturnType<typeof init> | undefined;
         const ph = new ParserHelpers(() => pctx);
 
         afterEach("Close ParserContext", async function()
         {
-            // reset variable so it doesn't leak into other tests
+            // Reset variable so it doesn't leak into other tests.
             await ph.close().finally(() => pctx = undefined);
         });
 
-        function residualSetup(lowHP?: boolean)
+        function residualSetup(lowHp?: boolean)
         {
             const mon = sh.initActive("p2");
-            if (lowHP) mon.hp.set(1);
+            if (lowHp) mon.hp.set(1);
             return mon;
         }
 
@@ -1409,19 +1427,21 @@ export const test = () => describe("item", function()
             kwArgs: {eat: true}
         };
 
-        testHasItem("micleberry", () => residualSetup(/*lowHP*/ true),
-            "handle item", () => residualTaken(micleEvent), "on-residual",
-            residualAbsent);
-        // TODO: additional tests for noStatus=false
+        testHasItem("micleberry", () => residualSetup(true /*lowHp*/),
+            "handle item", async () => await residualTaken(micleEvent),
+            "on-residual", residualAbsent);
+        // TODO: Additional tests for noStatus=false.
 
-        describe("Item-ignoring ability (klutz)", () =>
+        describe("Item-ignoring ability (klutz)", function()
+        {
             testBlockingAbilities("micleberry", ["klutz"],
-                () => residualSetup(/*lowHP*/ true),
-                () => residualTaken(micleEvent), residualAbsent));
+                () => residualSetup(true /*lowHp*/),
+                async () => await residualTaken(micleEvent), residualAbsent);
+        });
 
         describe("poison/noPoison", function()
         {
-            // poison type
+            // Poison type.
             const nidoqueen: SwitchOptions =
             {
                 species: "nidoqueen", level: 83, gender: "F", hp: 100,

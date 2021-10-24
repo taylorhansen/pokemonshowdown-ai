@@ -1,10 +1,10 @@
 import { MajorStatus } from "../dex";
 import { pluralTurns } from "./utility";
 
-/** Readonly MajorStatusCounter representation. */
+/** Readonly {@link MajorStatusCounter} representation. */
 export interface ReadonlyMajorStatusCounter
 {
-    /** Current MajorStatus, or null if none. */
+    /** Current status, or null if none. */
     readonly current: MajorStatus | null;
     /** Amount of turns this status has been active (if applicable). */
     readonly turns: number;
@@ -21,7 +21,7 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
 
     /** @override */
     public get turns(): number { return this._turns; }
-    private _turns: number = 0;
+    private _turns = 0;
 
     /** @override */
     public get duration(): number | null { return this._duration; }
@@ -32,6 +32,7 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
 
     /**
      * Afflicts a new major status.
+     *
      * @param status Status to afflict.
      */
     public afflict(status: MajorStatus): void
@@ -43,6 +44,7 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
 
     /**
      * Increments the turn counter if active.
+     *
      * @param ability Ability of the statused pokemon that might affect the
      * status duration. Optional.
      */
@@ -57,7 +59,7 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
                 `${pluralTurns(this._turns - 1, this._duration)})`);
         }
 
-        // TODO: implement in AbilityData/Ability wrapper
+        // TODO: Implement in AbilityData/Ability wrapper.
         if (ability === "earlybird" && this._current === "slp")
         {
             this._turns += 2;
@@ -79,6 +81,7 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
 
     /**
      * Asserts that the current status is the given argument.
+     *
      * @param status Status that should be currently set.
      * @returns `this` to allow chaining, typically with `#tick()`.
      */
@@ -102,8 +105,8 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
     }
 
     /**
-     * Registers the callback for when `#cure()` is called. The function will be
-     * called right before the method executes.
+     * Registers the callback for when {@link cure} is called. The function will
+     * be called right before the method executes.
      */
     public onCure(cb: () => void): this
     {
@@ -111,16 +114,16 @@ export class MajorStatusCounter implements ReadonlyMajorStatusCounter
         return this;
     }
 
-    /** Stringifies this MajorStatus, with turn info if applicable. */
+    // istanbul ignore next: Only used for logging.
+    /** Stringifies the status, with turn info if applicable. */
     public toString(): string
     {
         const s = this._current;
         if (s === "slp" || s === "tox")
         {
-            return `${s} (${pluralTurns(this._turns - 1,
-                    this._duration || undefined)})`;
+            return `${s} (${pluralTurns(this._turns - 1, this._duration)})`;
         }
-        // other statuses don't care about the turn counter
-        return s || "none";
+        // Other statuses don't care about the turn counter
+        return s ?? "none";
     }
 }

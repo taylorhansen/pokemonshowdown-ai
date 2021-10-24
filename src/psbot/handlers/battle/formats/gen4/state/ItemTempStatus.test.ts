@@ -74,9 +74,9 @@ export const test = () => describe("ItemTempStatus", function()
 
         it("Should set duration to null if infinite", function()
         {
-            its.start(source, "a", /*infinite*/true);
+            its.start(source, "a", true /*infinite*/);
             expect(its.type).to.equal("a");
-            // don't track item since infinite duration overrides it
+            // Don't track item since infinite duration overrides it.
             expect(its.source).to.be.null;
             expect(its.duration).to.be.null;
             expect(its.turns).to.equal(0);
@@ -168,8 +168,8 @@ export const test = () => describe("ItemTempStatus", function()
 
         it("Should still increment turns if infinite", function()
         {
-            its.start(source, "b", /*infinite*/ true);
-            // can count tick()s forever
+            its.start(source, "b", true /*infinite*/);
+            // Can count tick()s forever.
             for (let i = 1; i < 100; ++i)
             {
                 its.tick();
@@ -194,7 +194,7 @@ export const test = () => describe("ItemTempStatus", function()
             }
             while (++i < its.durations[0]);
 
-            // at this point, the status has been kept past its normal duration
+            // At this point, the status has been kept past its normal duration.
             expect(source.item.definiteValue).to.equal(its.items.b);
             expect(its.type).to.equal("b");
             expect(its.source).to.equal(source.item);

@@ -5,7 +5,7 @@ import { PortProtocol, PortRequestBase, PortResultBase } from
 /** ModelPort request protocol typings. */
 export interface ModelPortProtocol extends PortProtocol<"predict">
 {
-    predict: {message: PredictMessage, result: PredictWorkerResult}
+    predict: {message: PredictMessage, result: PredictWorkerResult};
 };
 
 /** Base interface for the predict request protocol. */

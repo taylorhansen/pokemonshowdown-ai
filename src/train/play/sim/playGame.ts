@@ -4,7 +4,7 @@ import { BattleParser } from "../../../psbot/handlers/battle/parser";
 import { AdvantageConfig } from "../../learn";
 import { AugmentedExperience, augmentExperiences, Experience, ExperienceAgent }
     from "../experience";
-import { experienceBattleParser, PlayerOptions, startPSBattle } from "./ps";
+import { experienceBattleParser, PlayerOptions, startPsBattle } from "./ps";
 
 /** Base interface for SimArgsAgent. */
 interface SimArgsAgentBase<TAgent extends BattleAgent, TExp extends boolean>
@@ -64,6 +64,7 @@ export interface PlayGameResult extends SimResult
 
 /**
  * Plays a single game and processes the results.
+ *
  * @param simName Name of the simulator to use.
  * @param args Arguments for the simulator.
  * @param rollout Config for processing Experiences if any BattleAgents are
@@ -72,11 +73,14 @@ export interface PlayGameResult extends SimResult
 export async function playGame(format: formats.FormatType, args: SimArgs,
     rollout?: AdvantageConfig): Promise<PlayGameResult>
 {
-    // detect battle agents that want to generate Experience objects
+    // Detect battle agents that want to generate Experience objects.
     const experiences: Experience[][] = [];
     const [p1, p2] = args.agents.map<PlayerOptions>(function(agentArgs, i)
     {
         if (!agentArgs.exp) return {agent: agentArgs.agent};
+
+        // Agent is configured to emit partial Experience data, so override the
+        // BattleParser to process them into full Experience objects.
         const exps: Experience[] = [];
         experiences[i] = exps;
         const parser = formats.parser[format] as
@@ -85,14 +89,14 @@ export async function playGame(format: formats.FormatType, args: SimArgs,
             agent: agentArgs.agent,
             parser: rollout ?
                 experienceBattleParser(parser, exp => exps.push(exp),
-                    // note: startPSBattle uses raw SideID as username
-                    `p${i + 1}`)
+                    // Note: startPSBattle uses raw SideID as username.
+                    `p${i + 1}`) as BattleParser<formats.FormatType>
                 : parser
         };
     });
 
-    // play the game
-    const {winner, err} = await startPSBattle(
+    // Play the game.
+    const {winner, err} = await startPsBattle(
     {
         format, players: {p1, p2}, maxTurns: args.maxTurns,
         logPath: args.logPath
@@ -101,7 +105,7 @@ export async function playGame(format: formats.FormatType, args: SimArgs,
     const aexps: AugmentedExperience[] = [];
     if (rollout && !err)
     {
-        // process experiences as long as the game wasn't errored
+        // Process experiences as long as the game wasn't errored.
         for (const batch of experiences)
         {
             aexps.push(...augmentExperiences(batch, rollout));
@@ -110,7 +114,7 @@ export async function playGame(format: formats.FormatType, args: SimArgs,
 
     return {
         experiences: aexps,
-        // pass winner id as an index corresponding to agents/experiences
+        // Pass winner id as an index corresponding to agents/experiences.
         ...winner && {winner: winner === "p1" ? 0 : 1},
         ...err && {err}
     };

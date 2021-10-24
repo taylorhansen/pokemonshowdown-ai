@@ -4,12 +4,13 @@ import * as dex from "../../dex";
 import { Pokemon, ReadonlyPokemon } from "../../state/Pokemon";
 import { subsetOrIndependent } from "./helpers";
 
-// TODO: account for other move-type-changing effects, e.g. normalize ability
-// TODO(gen6): also account for typechart-modifying moves, e.g. freezedry
+// TODO: Account for other move-type-changing effects, e.g. normalize ability.
+// TODO(gen6): Also account for typechart-modifying moves, e.g. freezedry.
 
 /**
  * Creates a SubReason that asserts that the pokemon isn't the same type as the
  * move being used against it. Inference applies to the move/user.
+ *
  * @param mon Pokemon to track.
  * @param hitBy Move+user that the pokemon is being hit by.
  */
@@ -21,6 +22,7 @@ export function diffType(mon: ReadonlyPokemon, hitBy: dex.MoveAndUser):
 
 /**
  * Creates a SubReason that asserts that the move has a certain effectiveness.
+ *
  * @param move Move to track.
  * @param user Move user to track.
  * @param target Target pokemon.
@@ -37,6 +39,7 @@ export function isEffective(move: dex.Move, user: Pokemon,
 /**
  * Creates a SubReason that asserts that the move being used by the given
  * pokemon is of one of the specified type(s).
+ *
  * @param move Move to track.
  * @param user Move user to track.
  * @param types Set of possible move types. Will be owned by the returned
@@ -45,12 +48,13 @@ export function isEffective(move: dex.Move, user: Pokemon,
 export function isType(move: dex.Move, user: Pokemon, types: Set<dex.Type>):
     inference.SubReason
 {
-    return new MoveIsType(move, user, types, /*negative*/ false);
+    return new MoveIsType(move, user, types, false /*negative*/);
 }
 
 /**
  * Creates a SubReason that asserts that the move being used by the given
  * pokemon is not of one of the specified type(s).
+ *
  * @param move Move to track.
  * @param user Move user to track.
  * @param types Set of possible move types. Will be owned by the returned
@@ -59,7 +63,7 @@ export function isType(move: dex.Move, user: Pokemon, types: Set<dex.Type>):
 export function isntType(move: dex.Move, user: Pokemon, types: Set<dex.Type>):
     inference.SubReason
 {
-    return new MoveIsType(move, user, types, /*negative*/ true);
+    return new MoveIsType(move, user, types, true /*negative*/);
 }
 
 class MoveIsType extends inference.SubReason
@@ -69,7 +73,7 @@ class MoveIsType extends inference.SubReason
      */
     private readonly partialUser: dex.MoveUserSnapshot;
 
-    constructor(private readonly move: dex.Move, user: Pokemon,
+    public constructor(private readonly move: dex.Move, user: Pokemon,
         private readonly types: Set<dex.Type>,
         private readonly negative: boolean)
     {
@@ -79,8 +83,8 @@ class MoveIsType extends inference.SubReason
 
     public override canHold(): boolean | null
     {
-        // if all of the move's possible types are contained by our given types,
-        //  then the assertion holds
+        // If all of the move's possible types are contained by our given types,
+        // then the assertion holds.
         return subsetOrIndependent(this.types,
             this.move.getPossibleTypes(this.partialUser), this.negative);
     }

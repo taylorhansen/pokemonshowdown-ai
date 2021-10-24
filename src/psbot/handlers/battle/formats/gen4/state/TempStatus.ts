@@ -1,6 +1,6 @@
 import { pluralTurns } from "./utility";
 
-/** Readonly TempStatus representation. */
+/** Readonly {@link TempStatus} representation. */
 export interface ReadonlyTempStatus
 {
     /** Name of the status. */
@@ -10,8 +10,9 @@ export interface ReadonlyTempStatus
     /** Current number of `#tick()`s. */
     readonly turns: number;
     /**
-     * Max amount of `#tick()`s the status will last. `#end()` should be called
-     * in place of the last `#tick()`.
+     * Max amount of {@link TempStatus.tick tick} calls the status will last.
+     * {@link TempStatus.end end} should be called in place of the last
+     * {@link TempStatus.tick tick} call.
      */
     readonly duration: number;
 }
@@ -29,22 +30,23 @@ export class TempStatus implements ReadonlyTempStatus
 
     /**
      * Creates a TempStatus.
+     *
      * @param name Name of the status.
-     * @param duration Max amount of `#tick()`s the status will last. `#end()`
-     * should be called in place of the last `#tick()`.
-     * @param silent Whether `#tick()` will act as `#end()` if it hits the
+     * @param duration Max amount of {@link tick} calls the status will last.
+     * {@link end} should be called in place of the last {@link tick} call.
+     * @param silent Whether {@link tick} will call {@link end} if it hits the
      * duration limit.
      */
-    constructor(public readonly name: string, public readonly duration: number,
-        public readonly silent = false)
-    {
-    }
+    public constructor(public readonly name: string,
+        public readonly duration: number, public readonly silent = false)
+    {}
 
     /**
      * Starts the status' turn counter, restarting by default if not already
      * active.
+     *
      * @param restart Whether the status should be restarted if called while
-     * still active. Default true.
+     * still active. Default `true`.
      */
     public start(restart = true): void
     {
@@ -54,17 +56,20 @@ export class TempStatus implements ReadonlyTempStatus
     }
 
     /**
-     * Increments turn counter if active. If the `silent` field is true, this
-     * will automatically call `#end()` if the duration was reached, rather
-     * than throwing an error on the next call.
+     * Increments turn counter if active.
+     *
+     * If {@link silent} is "true", this will call {@link end} if the duration
+     * was reached, rather than throwing an error on the next call.
+     * @throws Error if {@link silent} is false and the duration was reached
+     * without instead calling {@link end}.
      */
     public tick(): void
     {
-        // inapplicable
+        // Inapplicable.
         if (!this._isActive) return;
-        // went over duration
+        // Went over duration.
         if (++this._turns < this.duration) return;
-        // should've called end() on last tick() unless silent
+        // Should've called end() on last tick() unless silent.
         if (this.silent) return this.end();
         throw new Error(
             `TempStatus '${this.name}' lasted longer than expected ` +
@@ -95,7 +100,7 @@ export class TempStatus implements ReadonlyTempStatus
         ts._turns = this._turns;
     }
 
-    // istanbul ignore next: only used in logging
+    // istanbul ignore next: Only used in logging.
     /** Stringifies this TempStatus. */
     public toString(): string
     {

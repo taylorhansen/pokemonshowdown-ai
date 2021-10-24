@@ -2,14 +2,14 @@ import * as dex from "../dex";
 import { Moveset, ReadonlyMoveset } from "./Moveset";
 import { PokemonTraits, ReadonlyPokemonTraits } from "./PokemonTraits";
 import { ReadonlyTempStatus, TempStatus } from "./TempStatus";
-import { pluralTurns, plus } from "./utility";
 import { ReadonlyVariableTempStatus, VariableTempStatus  } from
     "./VariableTempStatus";
+import { pluralTurns, plus } from "./utility";
 
 /** Writable helper type. */
 type Writable<T> = T extends object ? {-readonly [U in keyof T]: T[U]} : never;
 
-// TODO: factor into a separate class?
+// TODO: Factor into a separate class?
 /** Tracks a move status turn counter. */
 export interface ReadonlyMoveStatus
 {
@@ -28,15 +28,15 @@ export interface MoveStatus extends ReadonlyMoveStatus
     readonly ts: TempStatus;
 }
 
-/** Readonly VolatileStatus representation. */
+/** Readonly {@link VolatileStatus} representation. */
 export interface ReadonlyVolatileStatus
 {
-    // passed when copying
+    //#region Passed when copying.
 
     /* Aqua Ring move status. */
     readonly aquaring: boolean;
     /** Stat boost stages. */
-    readonly boosts: dex.BoostTable<number>;
+    readonly boosts: dex.BoostTable;
     /** Confusion status. */
     readonly confusion: ReadonlyTempStatus;
     /** Curse status. */
@@ -75,14 +75,19 @@ export interface ReadonlyVolatileStatus
     /** Who we're trapping. */
     readonly trapping: ReadonlyVolatileStatus | null;
 
-    // passed by self-switch moves
+    //#endregion
+
+    //#region Passed by self-switch moves.
+
     /**
      * Last used move. Includes move selections and Struggle, but not called
      * moves.
      */
     readonly lastMove: string | null;
 
-    // not passed when copying
+    //#endregion
+
+    //#region Not passed when copying.
 
     /** Attract move status. */
     readonly attract: boolean;
@@ -133,7 +138,7 @@ export interface ReadonlyVolatileStatus
     readonly micleberry: boolean;
     /** Whether the pokemon has used Minimize while out. */
     readonly minimize: boolean;
-    // TODO(non-single battles): use a list of [move, user] tuples
+    // TODO(non-single battles): Use a list of [move, user] tuples.
     /** Last move that targeted this slot for mirrormove purposes. */
     readonly mirrormove: string | null;
     /** Mud Sport move status. */
@@ -183,6 +188,8 @@ export interface ReadonlyVolatileStatus
     readonly willTruant: boolean;
     /** Yawn move status. */
     readonly yawn: ReadonlyTempStatus;
+
+    //#endregion
 }
 
 /**
@@ -191,19 +198,19 @@ export interface ReadonlyVolatileStatus
  */
 export class VolatileStatus implements ReadonlyVolatileStatus
 {
-    // all fields are initialized on #clear() which is called in the constructor
+    // All fields are initialized on #clear() which is called in the
+    // constructor.
 
-    // passed when copying
+    //#region Passed when copying.
 
     /** @override */
     public aquaring!: boolean;
 
     /** @override */
-    public get boosts(): Writable<dex.BoostTable<number>>
-    { return this._boosts; }
-    private _boosts!: Writable<dex.BoostTable<number>>;
+    public get boosts(): Writable<dex.BoostTable> { return this._boosts; }
+    private _boosts!: Writable<dex.BoostTable>;
 
-    // 2-5 move attempts, cure on last
+    // 2-5 move attempts, cure on last.
     /** @override */
     public readonly confusion = new TempStatus("confused", 5);
 
@@ -233,11 +240,12 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     private _lockOnTarget!: VolatileStatus | null;
     /** @override */
     public get lockOnTurns(): ReadonlyTempStatus { return this._lockOnTurns; }
-    // ends next turn
+    // Ends next turn.
     private readonly _lockOnTurns =
-        new TempStatus("lock on", 2, /*silent*/true);
+        new TempStatus("lock on", 2, /*Silent*/true);
     /**
      * Starts the Lock-On status.
+     *
      * @param target Target of Lock-On.
      */
     public lockOn(target: VolatileStatus): void
@@ -285,18 +293,21 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         target._trapped = this;
     }
 
-    // passed by self-switch moves
+    //#endregion
+
+    //#region Passed by self-switch moves.
 
     /** @override */
     public lastMove!: string | null;
 
-    // not passed when copying
+    //#endregion
+
+    //#region Not passed when copying
 
     /** @override */
     public attract!: boolean;
 
-    // 2 bide updates, end on last or if inactive
-    // TODO: this status isn't handled anywhere
+    // 2 bide updates, end on last or if inactive.
     /** @override */
     public readonly bide = new TempStatus("bide", 2);
 
@@ -306,9 +317,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public damaged!: boolean;
 
-    // ends next turn
+    // Ends next turn.
     /** @override */
-    public readonly charge = new TempStatus("charging", 2, /*silent*/true);
+    public readonly charge = new TempStatus("charging", 2, /*Silent*/true);
 
     /** @override */
     public defensecurl!: boolean;
@@ -330,7 +341,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this._disabled.move = null;
         this._disabled.ts.end();
     }
-    // 4-7 turns, cure on last
+    // 4-7 turns, cure on last.
     private readonly _disabled: MoveStatus =
         {move: null, ts: new TempStatus("disabled", 7)};
 
@@ -339,20 +350,20 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** Starts the Encore status for the given move. */
     public encoreMove(move: string): void
     {
-        // can't encore unless the pokemon has the affected move
+        // Can't encore unless the pokemon has the affected move.
         this.overrideMoveset.reveal(move);
 
         this._encore.move = move;
         this._encore.ts.start();
     }
-    // TODO: also do this when the move runs out of pp
+    // TODO: Also do this when the move runs out of pp.
     /** Removes encore status. */
     public removeEncore(): void
     {
         this._encore.move = null;
         this._encore.ts.end();
     }
-    // 4-8 turns, cure on last
+    // 4-8 turns, cure on last.
     private readonly _encore: MoveStatus =
         {move: null, ts: new TempStatus("encored", 8)};
 
@@ -375,11 +386,11 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     public imprison!: boolean;
 
     // 2-3 move attempts (including first), end on last (can be silent) or if
-    //  inactive
-    // FIXME: ambiguity if there's no fatigue message to mark the end
+    // inactive.
+    // FIXME: Ambiguity if there's no fatigue message to mark the end.
     /** @override */
     public readonly lockedMove = new VariableTempStatus(dex.lockedMoves, 2,
-        /*silent*/true);
+            true /*silent*/);
 
     /** @override */
     public magiccoat!: boolean;
@@ -408,7 +419,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public addedType!: dex.Type;
 
-    /** Changes current type while active. Also resets `#addedType`. */
+    /** Changes current type while active. Also resets {@link addedType}. */
     public changeTypes(types: readonly [dex.Type, dex.Type]): void
     {
         // istanbul ignore next: should never happen
@@ -423,10 +434,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public rage!: boolean;
 
-    // 5 move attempts (including start), end on last or if inactive
+    // 5 move attempts (including start), end on last or if inactive.
     /** @override */
     public readonly rollout = new VariableTempStatus(dex.rolloutMoves, 4,
-        /*silent*/true);
+            true /*silent*/);
 
     /** @override */
     public roost!: boolean;
@@ -471,15 +482,15 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** @override */
     public transformed!: boolean;
 
-    // ends next turn
+    // Ends next turn.
     /** @override */
     public readonly twoTurn = new VariableTempStatus(dex.twoTurnMoves, 2,
-            /*silent*/true);
+            true /*silent*/);
 
     /** @override */
     public unburden!: boolean;
 
-    // 2-5 turns, end on last
+    // 2-5 turns, end on last.
     /** @override */
     public readonly uproar = new TempStatus("uproar", 5);
 
@@ -498,17 +509,17 @@ export class VolatileStatus implements ReadonlyVolatileStatus
                     "unknown ability"));
         }
 
-        // will invert to false on postTurn() so it's properly synced
+        // Will invert to false on postTurn() so it's properly synced.
         this._willTruant = true;
     }
     private _willTruant!: boolean;
 
-    // ends next turn
+    // Ends next turn.
     /** @override */
-    public readonly yawn = new TempStatus("yawn", 2, /*silent*/true);
+    public readonly yawn = new TempStatus("yawn", 2, /*Silent*/true);
 
     /** Creates a VolatileStatus object. */
-    constructor() { this.clear(); }
+    public constructor() { this.clear(); }
 
     /**
      * Clears all volatile status conditions. This does not affect shallow
@@ -538,14 +549,14 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.focusenergy = false;
         this.ingrain = false;
         this.leechseed = false;
-        // clear opponent's lockon status
+        // Clear opponent's lockon status.
         if (this._lockedOnBy)
         {
             this._lockedOnBy._lockOnTarget = null;
             this._lockedOnBy._lockOnTurns.end();
         }
         this._lockedOnBy = null;
-        // clear our lockon status
+        // Clear our lockon status.
         if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
         this._lockOnTarget = null;
         this._lockOnTurns.end();
@@ -555,10 +566,10 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.powertrick = false;
         this.substitute = false;
         this.suppressAbility = false;
-        // clear opponent's trapping status
+        // Clear opponent's trapping status.
         if (this._trapped) this._trapped._trapping = null;
         this._trapped = null;
-        // clear our trapping status
+        // Clear our trapping status.
         if (this._trapping) this._trapping._trapped = null;
         this._trapping = null;
     }
@@ -618,27 +629,28 @@ export class VolatileStatus implements ReadonlyVolatileStatus
 
     /**
      * Applies some special effects that only happen when Baton Passing.
+     *
      * @param majorStatus Major status of the recipient.
      */
     public batonPass(majorStatus?: dex.MajorStatus): void
     {
-        // restart lockon so the recipient can use it
+        // Restart lockon so the recipient can use it.
         if (this._lockOnTurns.isActive) this._lockOnTurns.start();
-        // nightmare status shouldn't persist if the recipient isn't asleep
+        // Nightmare status shouldn't persist if the recipient isn't asleep.
         if (majorStatus !== "slp") this.nightmare = false;
     }
 
     /** Updates some statuses after handling a self-switch. */
     public selfSwitch()
     {
-        // make sure lastMove is still valid
+        // Make sure lastMove is still valid.
         if (this.lastMove)
         {
             if (!this.overrideMoveset.constraint.has(this.lastMove))
             {
                 this.lastMove = null;
             }
-            // TODO: callback for when moveset updates constraint
+            // TODO: Callback for when moveset updates constraint.
         }
     }
 
@@ -647,13 +659,13 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     {
         this.resetSingleMove();
 
-        // move-locking statuses cancel when the intended move was prevented
-        //  from being attempted
+        // Move-locking statuses cancel when the intended move was prevented
+        // from being attempted.
         this.bide.end();
         this.lockedMove.reset();
         this.rollout.reset();
         this.twoTurn.reset();
-        // uproar doesn't end if prevented from using subsequent moves
+        // Uproar doesn't end if prevented from using subsequent moves.
 
         this._stalling = false;
         this._stallTurns = 0;
@@ -679,14 +691,14 @@ export class VolatileStatus implements ReadonlyVolatileStatus
     /** Called at the beginning of every turn to update temp statuses. */
     public preTurn(): void
     {
-        // TODO: what to do?
+        // TODO
     }
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void
     {
-        // implicitly update turn-based temp statuses
-        // this excludes statuses that are explicitly mentioned when updated
+        // Implicitly update turn-based temp statuses
+        // This excludes statuses that are explicitly mentioned when updated
         this.embargo.tick();
         this._lockOnTurns.tick();
         this.magnetrise.tick();
@@ -699,14 +711,14 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.twoTurn.tick();
         this.yawn.tick();
 
-        // handle lockon ending
+        // Handle lockon ending.
         if (!this._lockOnTurns.isActive)
         {
             if (this._lockOnTarget) this._lockOnTarget._lockedOnBy = null;
             this._lockOnTarget = null;
         }
 
-        // reset single-turn statuses
+        // Reset single-turn statuses.
         this.damaged = false;
         this.focus = false;
         this.magiccoat = false;
@@ -714,7 +726,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         this.snatch = false;
         this._stalling = false;
 
-        // toggle truant activation
+        // Toggle truant activation.
         if (this.overrideTraits?.ability.definiteValue === "truant")
         {
             this._willTruant = !this._willTruant;
@@ -722,7 +734,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
         else this._willTruant = false;
     }
 
-    // istanbul ignore next: only used in logging
+    // istanbul ignore next: Only used in logging.
     /**
      * Encodes all volatile status data into a string.
      * @returns The VolatileStatus in string form.
@@ -748,7 +760,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.powertrick ? ["power trick"] : [],
             this.substitute ? ["has substitute"] : [],
             this.suppressAbility ? ["suppressed ability"] : [],
-            // TODO: be more specific with trapping info
+            // TODO: Be more specific with trapping info.
             this._trapped ? ["trapped"] : [],
             this._trapping ? ["trapping"] : [],
             this.lastMove ? [`last used ${this.lastMove}`] : [],
@@ -776,7 +788,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus
             this.mirrormove ? ["last targeted by " + this.mirrormove] : [],
             this.mudsport ? ["mud sport"] : [],
             this.mustRecharge ? ["must recharge"] : [],
-            // override traits are handled by Pokemon#toString()
+            // Note: Override traits are handled by Pokemon#toString().
             this.rage ? ["rage"] : [],
             this.rollout.isActive ? [this.rollout.toString()] : [],
             this.roost ? ["roosting"] : [],
