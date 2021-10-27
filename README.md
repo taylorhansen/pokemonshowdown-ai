@@ -1,5 +1,6 @@
 # Pokemon Showdown AI
 
+[![CI](https://github.com/taylorhansen/pokemonshowdown-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/taylorhansen/pokemonshowdown-ai/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai/branch/main/graph/badge.svg?token=qRdGD5oRzd)](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai)
 
 For this project I plan on making and training a neural network to play in a
