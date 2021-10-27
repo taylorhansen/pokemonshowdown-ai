@@ -1,6 +1,5 @@
 # Pokemon Showdown AI
 
-[![Build Status](https://app.travis-ci.com/taylorhansen/pokemonshowdown-ai.svg?branch=main)](https://app.travis-ci.com/taylorhansen/pokemonshowdown-ai)
 [![codecov](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai/branch/main/graph/badge.svg?token=qRdGD5oRzd)](https://codecov.io/gh/taylorhansen/pokemonshowdown-ai)
 
 For this project I plan on making and training a neural network to play in a
