@@ -27,6 +27,7 @@ import {
     toUsername,
 } from "../helpers.test";
 import * as actionMove from "./move";
+import {Protocol} from "@pkmn/protocol";
 
 // TODO: Decrease the amount of required indentation so this isn't as cumbersome
 // to read.
@@ -3784,6 +3785,88 @@ export const test = (): void =>
                             }),
                         );
                     }
+
+                    describe("cure", function () {
+                        for (const move of ["healbell", "aromatherapy"]) {
+                            it(`Should pass if using ${move}`, async function () {
+                                sh.initActive("p1");
+                                const [mon1, mon2] = sh.initTeam("p2", [
+                                    ditto,
+                                    smeargle,
+                                ]);
+                                mon1.majorStatus.afflict("slp");
+                                mon2.majorStatus.afflict("brn");
+
+                                pctx = init("p2");
+                                await moveEvent("p2", move);
+                                // Cure-team indicator event.
+                                await ph.handle({
+                                    args: [
+                                        "-activate",
+                                        // TODO: Incomplete protocol typings.
+                                        toSide(
+                                            "p2",
+                                            "player1",
+                                        ) as unknown as Protocol.PokemonIdent,
+                                        toEffectName(move, "move"),
+                                    ],
+                                    kwArgs: {},
+                                });
+                                await ph.handle({
+                                    args: [
+                                        "-curestatus",
+                                        toIdent("p2", ditto, null),
+                                        "slp",
+                                    ],
+                                    kwArgs: {silent: true},
+                                });
+                                await ph.handle({
+                                    args: [
+                                        "-curestatus",
+                                        toIdent("p2", smeargle),
+                                        "brn",
+                                    ],
+                                    kwArgs: {silent: true},
+                                });
+                                await ph.halt();
+                                await ph.return({});
+                            });
+                        }
+
+                        it("Should reject if invalid effect", async function () {
+                            sh.initActive("p1");
+                            sh.initActive("p2").majorStatus.afflict("frz");
+
+                            pctx = init("p2");
+                            await moveEvent("p2", "healbell");
+                            await ph.rejectError(
+                                {
+                                    args: [
+                                        "-activate",
+                                        toSide(
+                                            "p2",
+                                            "player1",
+                                        ) as unknown as Protocol.PokemonIdent,
+                                        toEffectName("tackle", "move"),
+                                    ],
+                                    kwArgs: {},
+                                },
+                                Error,
+                                "Expected effect that didn't happen: " +
+                                    "p2 move team p2 cure",
+                            );
+                        });
+
+                        it("Should not handle if no statuses to cure", async function () {
+                            sh.initActive("p1");
+                            sh.initActive("p2");
+
+                            pctx = init("p2");
+                            await moveEvent("p2", "healbell");
+                            await ph.halt();
+                            await ph.return({});
+                        });
+                    });
                 });
 
                 describe("field", function () {

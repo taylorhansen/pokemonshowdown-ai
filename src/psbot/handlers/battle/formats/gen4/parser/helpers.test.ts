@@ -111,10 +111,10 @@ export function setupUnorderedDeadline<
 export function toIdent(
     side: SideID,
     opt = smeargle,
-    pos: Protocol.PositionLetter = "a",
+    pos: Protocol.PositionLetter | null = "a",
 ): Protocol.PokemonIdent {
     const species = dex.pokemon[opt.species];
-    return `${side}${pos}: ${
+    return `${side}${pos !== null ? pos : ""}: ${
         species?.display ?? opt.species
     }` as Protocol.PokemonIdent;
 }

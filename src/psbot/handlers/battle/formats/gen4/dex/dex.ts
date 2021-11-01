@@ -44509,6 +44509,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         target: "allyTeam",
         pp: [5, 8],
         flags: {noMirror: true},
+        effects: {team: {self: "cure"}},
     },
     assist: {
         uid: 16,
@@ -46334,6 +46335,7 @@ export const moves: {readonly [name: string]: dex.MoveData} = {
         target: "allyTeam",
         pp: [5, 8],
         flags: {noMirror: true},
+        effects: {team: {self: "cure"}},
     },
     healblock: {
         uid: 176,

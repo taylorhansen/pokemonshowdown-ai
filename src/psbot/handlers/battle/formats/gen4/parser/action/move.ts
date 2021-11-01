@@ -2009,7 +2009,7 @@ function teamEffect(
     const result: unordered.UnorderedDeadline<"gen4">[] = [];
     const effects = args.move.data.effects?.team;
     if (!effects) return result;
-    for (const tgt of ["self", "hit"] as dex.MoveEffectTarget[]) {
+    for (const tgt of Object.keys(effects) as dex.MoveEffectTarget[]) {
         const effect = effects[tgt];
         if (!effect) continue;
         const side = tgt === "self" ? args.side : otherSide;
@@ -2030,11 +2030,12 @@ async function teamEffectImpl(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
     side: SideID,
-    effect: dex.TeamEffectType,
+    effect: dex.TeamEffectType | "cure",
 ): Promise<void> {
     // Silently consume effect if already present.
     // Usually the move should fail, but some gen8 moves require this behavior.
-    const ts = ctx.state.getTeam(side).status;
+    const team = ctx.state.getTeam(side);
+    const ts = team.status;
     switch (effect) {
         // TODO: Lightscreen/reflect should set source pokemon.
         case "lightscreen":
@@ -2058,9 +2059,17 @@ async function teamEffectImpl(
             if (ts[effect] < 2) break;
             accept();
             return;
+        case "cure":
+            if (team.pokemon.some(p => p?.majorStatus.current)) break;
+            accept();
+            return;
     }
 
-    const event = await tryVerify(ctx, "|-sidestart|");
+    const event = await tryVerify(
+        ctx,
+        // Cure-team effect uses |-activate| event.
+        effect !== "cure" ? "|-sidestart|" : "|-activate|",
+    );
     if (!event) return;
     const [, sideStr, effectStr] = event.args;
     // Note: Protocol.Side is in a similar format to Protocol.PokemonIdent, just
@@ -2070,10 +2079,37 @@ async function teamEffectImpl(
     );
     if (sideObj.player !== side) return;
     const effectObj = Protocol.parseEffect(effectStr, toIdName);
-    if (effectObj.name !== effect) return;
+    if (effect === "cure") {
+        const move = dex.getMove(effectObj.name);
+        if (move?.data.effects?.team?.self !== "cure") return;
+    } else if (effectObj.name !== effect) return;
 
     accept();
-    await base["|-sidestart|"](ctx);
+    await dispatch(ctx);
+
+    // Cure-team effect includes optional cure-status events.
+    if (effect === "cure") {
+        const toCure = new Map(
+            (team.pokemon.filter(p => p?.majorStatus.current) as Pokemon[]).map(
+                p => [p.species, p],
+            ),
+        );
+        await eventLoop(ctx, async function cureStatusFilter(_ctx) {
+            const ev = await tryVerify(_ctx, "|-curestatus|");
+            if (!ev) return;
+            const [, _sideStr] = ev.args;
+            const _sideObj = Protocol.parsePokemonIdent(
+                _sideStr as unknown as Protocol.PokemonIdent,
+            );
+            if (_sideObj.player !== side) return;
+            const species = toIdName(_sideObj.name);
+            const mon = toCure.get(species);
+            if (!mon) return;
+            toCure.delete(species);
+            mon.majorStatus.cure();
+            await consume(_ctx);
+        });
+    }
 }
 
 //#endregion

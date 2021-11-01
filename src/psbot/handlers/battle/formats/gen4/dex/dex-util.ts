@@ -523,8 +523,10 @@ export interface MoveData extends DexData {
             readonly ghost?: true;
         } & {readonly [T in MoveEffectTarget]?: readonly StatusType[]};
 
-        /** Team effect to start. */
-        readonly team?: {readonly [T in MoveEffectTarget]?: TeamEffectType};
+        /** Team effect to start. If `"cure"`, cures all team major statuses. */
+        readonly team?: {
+            readonly [T in MoveEffectTarget]?: TeamEffectType | "cure";
+        };
 
         /** Field effect to start. */
         readonly field?: {

@@ -294,7 +294,9 @@ void (async function buildDex(): Promise<void> {
     };
 
     /** Maps some move names to TeamEffectTypes. */
-    const teamStatusTypeMap: {readonly [move: string]: dex.TeamEffectType} = {
+    const teamStatusTypeMap: {
+        readonly [move: string]: dex.TeamEffectType | "cure";
+    } = {
         lightscreen: "lightscreen",
         luckychant: "luckychant",
         mist: "mist",
@@ -304,6 +306,8 @@ void (async function buildDex(): Promise<void> {
         stealthrock: "stealthrock",
         tailwind: "tailwind",
         toxicspikes: "toxicspikes",
+        aromatherapy: "cure",
+        healbell: "cure",
         // TODO(gen6): auroraveil, stickyweb
     };
 
@@ -454,9 +458,12 @@ void (async function buildDex(): Promise<void> {
         // Setup move effects.
 
         const self: dex.MoveEffectTarget = "self";
-        const hit: dex.MoveEffectTarget = ["all", "allySide", "self"].includes(
-            target,
-        )
+        const hit: dex.MoveEffectTarget = [
+            "all",
+            "allySide",
+            "allyTeam",
+            "self",
+        ].includes(target)
             ? self
             : "hit";
 
