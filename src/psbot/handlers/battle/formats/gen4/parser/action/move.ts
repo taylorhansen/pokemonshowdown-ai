@@ -2037,7 +2037,6 @@ async function teamEffectImpl(
     const team = ctx.state.getTeam(side);
     const ts = team.status;
     switch (effect) {
-        // TODO: Lightscreen/reflect should set source pokemon.
         case "lightscreen":
         case "luckychant":
         case "mist":
@@ -2085,7 +2084,11 @@ async function teamEffectImpl(
     } else if (effectObj.name !== effect) return;
 
     accept();
-    await dispatch(ctx);
+    if (effect === "lightscreen" || effect === "reflect") {
+        // Override default behavior to record source pokemon.
+        ts[effect].start(team.active);
+        await consume(ctx);
+    } else await dispatch(ctx);
 
     // Cure-team effect includes optional cure-status events.
     if (effect === "cure") {

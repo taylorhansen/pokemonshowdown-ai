@@ -7,18 +7,18 @@ import {pluralTurns} from "./utility";
 export interface ReadonlyItemTempStatus<TStatusType extends string> {
     /** Whether a status is active. */
     readonly isActive: boolean;
-    /** Current weather type. */
+    /** Current status type. */
     readonly type: TStatusType | "none";
-    /** The weather-causer's item if there is one. */
+    /** The item of the pokemon that caused the status if there is one. */
     readonly source: ReadonlyPossibilityClass<string, ItemData> | null;
     /** Current number of {@link ItemTempStatus.tick tick} calls. */
     readonly turns: number;
     /**
      * The amount of {@link ItemTempStatus.tick tick} calls this status will
-     * last, or null if unlimited.
+     * last, or `null` if unlimited.
      */
     readonly duration: number | null;
-    /** Normal (index 0) and extended (index 1) turn durations. */
+    /** Normal (index `0`) and extended (index `1`) turn durations. */
     readonly durations: readonly [number, number];
     /** Dictionary from which to lookup the extension item for each status. */
     readonly items: {readonly [T in TStatusType]: string};
@@ -44,7 +44,7 @@ export class ItemTempStatus<TStatusType extends string>
         return this._type;
     }
     private _type!: TStatusType | "none";
-    // TODO: Should the getter make this readonly?
+    // TODO: Should the getter make this a readonly structure?
     /** @override */
     public get source(): PossibilityClass<string, ItemData> | null {
         return this._source;
