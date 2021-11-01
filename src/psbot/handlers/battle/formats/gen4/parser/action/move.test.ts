@@ -1,3 +1,4 @@
+import {Protocol} from "@pkmn/protocol";
 import {FieldCondition, SideCondition, SideID, Weather} from "@pkmn/types";
 import {expect} from "chai";
 import "mocha";
@@ -27,7 +28,6 @@ import {
     toUsername,
 } from "../helpers.test";
 import * as actionMove from "./move";
-import {Protocol} from "@pkmn/protocol";
 
 // TODO: Decrease the amount of required indentation so this isn't as cumbersome
 // to read.

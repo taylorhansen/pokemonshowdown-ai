@@ -1,5 +1,5 @@
 import {Transform, TransformCallback} from "stream";
-import {isLong} from "long";
+import Long from "long";
 import * as tfrecord from "tfrecord";
 import {maskedCrc32c} from "tfrecord/lib/crc32c";
 import {AugmentedExperience} from "../../play/experience";
@@ -345,8 +345,8 @@ export class AExpDecoder extends Transform {
         }
 
         const [v] = value;
-        if (isLong(v)) return v.getLowBitsUnsigned();
-        return v;
+        if (Long.isLong(v)) return v.getLowBitsUnsigned();
+        return v as number;
     }
 
     private static getFloat(
