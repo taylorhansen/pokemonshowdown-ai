@@ -43,10 +43,8 @@
     },
     "node": {
       "allowModules": [
-        // Type-only package.
-        "@pkmn/types",
-        // For some reason the node plugin can't find this pkg.
-        "websocket"
+        "@pkmn/types", // Type-only package.
+        "websocket" // For some reason the node plugin can't find this pkg.
       ],
       "tryExtensions": [".ts", ".d.ts"]
     }
@@ -108,8 +106,7 @@
     ],
     "@typescript-eslint/no-unnecessary-qualifier": "warn",
     "@typescript-eslint/no-unnecessary-type-arguments": "warn",
-    // Already covered by @typescript-eslint/no-require-imports (recommended).
-    "@typescript-eslint/no-var-requires": "off",
+    "@typescript-eslint/no-var-requires": "off", // Already covered by @typescript-eslint/no-require-imports (recommended).
     "@typescript-eslint/restrict-plus-operands": [
       "error",
       {
@@ -159,8 +156,7 @@
     "grouped-accessor-pairs": ["warn", "getBeforeSet"],
     "guard-for-in": "error",
     "import/first": "error",
-    // Already checked by typescript.
-    "import/namespace": "off",
+    "import/namespace": "off", // Already checked by typescript.
     "import/order": ["warn", {"alphabetize": {"order": "asc"}}],
     "max-classes-per-file": "error",
     "mocha/no-exports": "off",
@@ -174,9 +170,7 @@
     "no-caller": "error",
     "no-cond-assign": "off",
     "no-console": ["error", {"allow": ["error", "log"]}],
-    // Already covered by
-    // @typescript-eslint/no-unnecessary-condition (recommended).
-    "no-constant-condition": "off",
+    "no-constant-condition": "off", // Already covered by @typescript-eslint/no-unnecessary-condition (recommended).
     "no-constructor-return": "error",
     "no-duplicate-imports": ["warn", {"includeExports": true}],
     "no-else-return": ["warn", {"allowElseIf": false}],
@@ -221,14 +215,6 @@
       }
     ],
     "no-var": "error",
-    "max-len": [
-      "warn",
-      {
-        "code": 80,
-        // Allow eslint comments, mocha blocks, and long import paths.
-        "ignorePattern": "(^ *((// eslint-(disable|enable)-)|((describe|it|((before|after)(Each)?))\\()))|(from \"[^\"\\n]*\";$)"
-      }
-    ],
     "object-shorthand": ["error", "always"],
     "one-var": ["error", "never"],
     "operator-assignment": "warn",
