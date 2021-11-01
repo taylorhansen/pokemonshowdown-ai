@@ -99,6 +99,39 @@ export const test = (): void =>
                 await ph.return({actioned: {p2: true}});
             });
 
+            it("Should handle self-faint before switch", async function () {
+                sh.initTeam("p1", [ditto, smeargle]);
+                sh.initActive("p2");
+
+                pctx = init("p2", "p1");
+                await ph.handle({
+                    args: [
+                        "-activate",
+                        toIdent("p1"),
+                        toEffectName("pursuit", "move"),
+                    ],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["move", toIdent("p2"), toMoveName("pursuit")],
+                    kwArgs: {from: toMoveName("pursuit")},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p1"), toHPStatus(90, 100)],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["-damage", toIdent("p2"), toHPStatus("faint")],
+                    kwArgs: {from: toEffectName("lifeorb", "item")},
+                });
+                await ph.handle({
+                    args: ["faint", toIdent("p2")],
+                    kwArgs: {},
+                });
+                await ph.halt();
+                await ph.return({actioned: {p2: true}});
+            });
+
             it("TODO");
             // Pre-move effects, verify that move is handled normally, etc.
         });

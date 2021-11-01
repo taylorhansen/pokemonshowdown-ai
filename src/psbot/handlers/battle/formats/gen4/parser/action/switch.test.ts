@@ -64,8 +64,7 @@ export const test = () =>
             });
 
             it("Should handle switch-in", async function () {
-                state.getTeam("p1").size = 2;
-                state.getTeam("p1").switchIn(ditto);
+                sh.initTeam("p1", [undefined, ditto]);
                 sh.initActive("p2");
 
                 pctx = init("p1");
@@ -78,8 +77,7 @@ export const test = () =>
             });
 
             it("Should throw if invalid ident", async function () {
-                state.getTeam("p1").size = 2;
-                state.getTeam("p1").switchIn(ditto);
+                sh.initTeam("p1", [undefined, ditto]);
                 sh.initActive("p2");
 
                 pctx = init("p1");
@@ -92,8 +90,7 @@ export const test = () =>
 
             describe("interceptSwitch moves (pursuit)", function () {
                 it("Should handle Pursuit", async function () {
-                    state.getTeam("p1").size = 2;
-                    state.getTeam("p1").switchIn(smeargle);
+                    sh.initTeam("p1", [undefined, smeargle]);
                     sh.initActive("p2");
 
                     pctx = init("p1");
@@ -125,9 +122,9 @@ export const test = () =>
                 });
 
                 it("Should throw if move doesn't have interceptSwitch flag", async function () {
-                    state.getTeam("p1").size = 2;
-                    state.getTeam("p1").switchIn(smeargle);
+                    sh.initTeam("p1", [undefined, smeargle]);
                     sh.initActive("p2");
+
                     pctx = init("p1");
                     await ph.rejectError(
                         {
@@ -145,8 +142,8 @@ export const test = () =>
                 });
 
                 it("Should throw if mismatched monRef", async function () {
-                    state.getTeam("p1").size = 2;
-                    state.getTeam("p1").switchIn(smeargle);
+                    sh.initTeam("p1", [undefined, smeargle]);
+
                     pctx = init("p1");
                     await ph.rejectError(
                         {
@@ -161,6 +158,41 @@ export const test = () =>
                         "Invalid event: Expected type ['|switch|', '|drag|'] " +
                             "but got '|-activate|'",
                     );
+                });
+
+                // Gen2-4.
+                it("Should continue previous switch choice even if target faints", async function () {
+                    sh.initTeam("p1", [undefined, smeargle]);
+                    sh.initActive("p2");
+
+                    pctx = init("p1");
+                    await ph.handle({
+                        args: [
+                            "-activate",
+                            toIdent("p1"),
+                            toEffectName("pursuit", "move"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.handle({
+                        args: ["move", toIdent("p2"), toMoveName("pursuit")],
+                        kwArgs: {},
+                    });
+                    await ph.handle({
+                        args: ["-damage", toIdent("p1"), toHPStatus("faint")],
+                        kwArgs: {},
+                    });
+                    await ph.handle({
+                        args: ["faint", toIdent("p1")],
+                        kwArgs: {},
+                    });
+                    // Actual switch event.
+                    await ph.handle(switchEvent("p1", ditto));
+                    await ph.halt();
+                    await ph.return({
+                        mon: state.getTeam("p1").active,
+                        actioned: {p1: true, p2: true},
+                    });
                 });
             });
 
