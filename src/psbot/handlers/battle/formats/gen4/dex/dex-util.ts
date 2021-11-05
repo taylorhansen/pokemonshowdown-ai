@@ -247,7 +247,7 @@ export interface AbilityData extends DexData {
             // TODO: Weather abilities.
             /**
              * Whether this ability cures statuses specified by
-             * `#statusImmunity`.
+             * {@link AbilityData.statusImmunity}.
              */
             readonly cure?: true;
             /** Whether this ability copies the foe's ability. */
@@ -270,8 +270,9 @@ export interface AbilityData extends DexData {
          */
         readonly block?: {
             /**
-             * Block certain statuses specified by `#statusImmunity`, either
-             * unconditionally or if a certain weather is active.
+             * Block certain statuses specified by
+             * {@link AbilityData.statusImmunity}, either unconditionally or if
+             * a certain weather is active.
              */
             readonly status?: true | WeatherType;
             /** Block certain moves. */
@@ -306,7 +307,7 @@ export interface AbilityData extends DexData {
         readonly status?: {
             /**
              * Whether this ability cures statuses specified by
-             * `#statusImmunity`.
+             * {@link AbilityData.statusImmunity}.
              */
             readonly cure?: true;
         };
@@ -360,8 +361,8 @@ export interface AbilityData extends DexData {
     // TODO: Rename to passive?
     /** Additional ability flags. */
     readonly flags?: {
-        // TODO: pressure, normalize.
-        /** Eat 25% Hp berries early at 50%. */
+        // TODO: Normalize ability.
+        /** Eat 25% HP berries early at 50%. */
         readonly earlyBerry?: true;
         /** Whether this ability suppresses all weather effects. */
         readonly suppressWeather?: true;
@@ -411,7 +412,7 @@ export interface MoveData extends DexData {
     readonly target: MoveTarget;
     /**
      * Target of the move if the user is not ghost-type. Defaults to whatever
-     * `#target` is.
+     * {@link target} is.
      */
     readonly nonGhostTarget?: MoveTarget;
     /** Base power point range. */
