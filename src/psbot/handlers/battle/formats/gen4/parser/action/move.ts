@@ -1421,7 +1421,18 @@ async function postHit(
                 }),
             );
         }
+    }
 
+    if (parsers.length > 0) await unordered.all(ctx, parsers, postHitFilter);
+    // Parse untracked effects even if move has no tracked effects.
+    else await eventLoop(ctx, postHitFilter);
+
+    // Parse item effects after move effects so that the parser's state can be
+    // initialized with up-to-date info.
+
+    parsers.length = 0;
+
+    if (args.move.data.category !== "status") {
         // Item on-postHit (e.g. jabocaberry).
         parsers.push(
             effectItem.onPostHit(ctx, otherSide, {
@@ -1430,15 +1441,14 @@ async function postHit(
             }),
         );
     }
+
     // Item on-update (e.g. sitrusberry).
     parsers.push(
         effectItem.onUpdate(ctx, args.side),
         effectItem.onUpdate(ctx, otherSide),
     );
 
-    // Parse untracked effects even if move has no tracked effects.
-    if (parsers.length <= 0) await eventLoop(ctx, postHitFilter);
-    else await unordered.all(ctx, parsers, postHitFilter);
+    await unordered.all(ctx, parsers);
 }
 
 //#region Count-status effect.
@@ -1651,6 +1661,7 @@ function boost(
                         return;
                     }
 
+                    let accepted = false;
                     const boostArgs: effectBoost.BoostArgs = {
                         side: targetSide,
                         table,
@@ -1658,13 +1669,19 @@ function boost(
                         pred: event => {
                             if (event.kwArgs.from) return false;
                             accept();
+                            accepted = true;
                             return true;
                         },
                     };
                     if (effect.set) await effectBoost.setBoost(_ctx, boostArgs);
                     else await effectBoost.boost(_ctx, boostArgs);
+
+                    // Call accept() anyway since the effect was silent.
+                    if (!accepted && table.size <= 0) accept();
                 },
-                effect.chance ? undefined : effectDidntHappen,
+                effect.chance && effect.chance !== 100
+                    ? undefined
+                    : effectDidntHappen,
             ),
         );
     }
@@ -2454,8 +2471,8 @@ async function recoil(
         inferRecoil(args, !!damageResult /*consumed*/);
     }
     if (damageResult === true) {
-        // Berries can activate directly after receiving recoil damage, and/or
-        // just faint instead.
+        // Berries can activate directly after receiving recoil damage, or just
+        // faint instead.
         if (args.user.fainted) await expectFaints(ctx, new Set([args.side]));
         else await unordered.parse(ctx, effectItem.onUpdate(ctx, args.side));
     }

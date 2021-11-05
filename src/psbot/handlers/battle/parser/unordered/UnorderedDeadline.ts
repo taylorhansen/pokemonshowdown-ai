@@ -89,11 +89,9 @@ export class UnorderedDeadline<
         f: (result: TResult) => TResult2,
     ): UnorderedDeadline<T, TAgent, TResult2> {
         return new UnorderedDeadline(
-            typeof this._name === "string"
-                ? `transform ${this._name}`
-                : () => `transform ${(this._name as () => string)()}`,
+            () => `transform ${this.toString(4, 4)}`,
             async (ctx, accept) => f(await this.parse(ctx, accept)),
-            this._reject,
+            () => this.reject(),
         );
     }
 
@@ -110,7 +108,7 @@ export class UnorderedDeadline<
         const outer = " ".repeat(indentOuter);
         return `\
 ${outer}UnorderedDeadline(
-${outer}${inner}${this.name}
+${outer}${inner}${this.name.split("\n").join(`\n${outer}${inner}`)}
 ${outer})`;
     }
 }

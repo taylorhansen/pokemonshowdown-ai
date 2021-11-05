@@ -1386,11 +1386,6 @@ export const test = (): void =>
                     const boostTests: {
                         [T in dex.MoveEffectTarget]: (() => void)[];
                     } = {self: [], hit: []};
-                    for (const name of ["self", "hit"] as const) {
-                        describe(name, function () {
-                            for (const f of boostTests[name]) f();
-                        });
-                    }
 
                     function shouldHandleBoost(
                         ctg: "self" | "hit",
@@ -1401,8 +1396,13 @@ export const test = (): void =>
                         abilityImmunity?: string,
                         immunityHolder?: SwitchOptions,
                     ): void {
-                        const target = ctg === "self" ? "p1" : "p2";
                         boostTests[ctg].push(function () {
+                            const target = ctg === "self" ? "p1" : "p2";
+
+                            const remainingJson: {
+                                [T in dex.BoostName]?: number;
+                            } = {[stat]: (posBoost ? 1 : -1) * amount};
+
                             it("Should handle boost", async function () {
                                 sh.initActive("p1");
                                 sh.initActive("p2");
@@ -1426,7 +1426,9 @@ export const test = (): void =>
                                     Error,
                                     "Expected effect that didn't happen: " +
                                         `p1 move boost ${target} add ` +
-                                        `{"${stat}":${amount}}`,
+                                        `${JSON.stringify(remainingJson)} ` +
+                                        "(remaining: " +
+                                        `${JSON.stringify(remainingJson)})`,
                                 );
                             });
 
@@ -1435,7 +1437,7 @@ export const test = (): void =>
                                 sh.initActive("p2");
                                 state.getTeam(target).active.volatile.boosts[
                                     stat
-                                ] = 6 * Math.sign(amount);
+                                ] = 6 * (posBoost ? 1 : -1);
 
                                 pctx = init("p1");
                                 await moveEvent("p1", move);
@@ -1448,7 +1450,7 @@ export const test = (): void =>
                                 sh.initActive("p2");
                                 state.getTeam(target).active.volatile.boosts[
                                     stat
-                                ] = 6 * Math.sign(amount);
+                                ] = 6 * (posBoost ? 1 : -1);
 
                                 pctx = init("p1");
                                 await moveEvent("p1", move);
@@ -1499,37 +1501,6 @@ export const test = (): void =>
                                 await ph.return({});
                             });
 
-                            it(`Should throw if moldbreaker should've broken through ${abilityImmunity}`, async function () {
-                                sh.initActive("p1").setAbility("moldbreaker");
-                                sh.initActive("p2");
-
-                                pctx = init("p1");
-                                await moveEvent("p1", move);
-                                // Move parser context should reject this event
-                                // and attempt to exit.
-                                await ph.rejectError(
-                                    {
-                                        args: [
-                                            "-fail",
-                                            toIdent(target),
-                                            "unboost",
-                                            stat,
-                                        ],
-                                        kwArgs: {
-                                            from: toEffectName(
-                                                abilityImmunity,
-                                                "ability",
-                                            ),
-                                            of: toIdent(target),
-                                        },
-                                    },
-                                    Error,
-                                    "Expected effect that didn't happen: " +
-                                        `p1 move boost ${target} add ` +
-                                        `{"${stat}":${amount}}`,
-                                );
-                            });
-
                             it(`Should rule out ${abilityImmunity} if it didn't activate`, async function () {
                                 sh.initActive("p1");
                                 // Blocking ability or useless ability
@@ -1558,11 +1529,15 @@ export const test = (): void =>
 
                                 pctx = init("p1");
                                 await moveEvent("p1", move);
-                                await ph.rejectError(
+                                // Due to the way on-tryUnboost is handled,
+                                // it'll parse the effect immediately and then
+                                // reject the abilityImmunity, causing an error.
+                                await ph.handle(
                                     boostEvent(posBoost, target, stat, amount),
+                                );
+                                await ph.haltError(
                                     Error,
-                                    "All possibilities have been ruled out " +
-                                        "(should never happen)",
+                                    /^Supposed to reject one SubReason but all of them held\./,
                                 );
                             });
                         });
@@ -1680,7 +1655,7 @@ export const test = (): void =>
                                         amount > 0 /*pos*/,
                                         target,
                                         stat,
-                                        amount,
+                                        1,
                                     ),
                                 );
                                 await ph.halt();
@@ -1754,8 +1729,8 @@ export const test = (): void =>
                         "hit",
                         "psychic",
                         "spd",
-                        false /*PosBoost*/,
-                        -1,
+                        false /*posBoost*/,
+                        1,
                     );
 
                     function shouldHandle100SecondaryBoost(
@@ -1766,6 +1741,11 @@ export const test = (): void =>
                     ): void {
                         const sign = Math.sign(amount);
                         const target = ctg === "self" ? "p1" : "p2";
+
+                        const remainingJson: {
+                            [T in dex.BoostName]?: number;
+                        } = {[stat]: amount};
+
                         boostTests[ctg].push(function () {
                             it("Should throw if reject before 100% secondary effect", async function () {
                                 sh.initActive("p1");
@@ -1777,7 +1757,9 @@ export const test = (): void =>
                                     Error,
                                     "Expected effect that didn't happen: " +
                                         `p1 move boost ${target} add ` +
-                                        `{"${stat}":${amount}}`,
+                                        `${JSON.stringify(remainingJson)} ` +
+                                        "(remaining: " +
+                                        `${JSON.stringify(remainingJson)})`,
                                 );
                             });
 
@@ -1817,17 +1799,18 @@ export const test = (): void =>
                             });
                         }),
                     );
+
+                    for (const name of ["self", "hit"] as const) {
+                        describe(name, function () {
+                            for (const f of boostTests[name]) f();
+                        });
+                    }
                 });
 
                 describe("status", function () {
                     const statusTests: {
                         [T in dex.MoveEffectTarget]: (() => void)[];
                     } = {self: [], hit: []};
-                    for (const name of ["self", "hit"] as const) {
-                        describe(name, function () {
-                            for (const f of statusTests[name]) f();
-                        });
-                    }
 
                     interface TestNonRemovableArgs {
                         readonly ctg: dex.MoveEffectTarget;
@@ -2470,18 +2453,17 @@ export const test = (): void =>
 
                                     pctx = init("p1");
                                     await moveEvent("p1", "imprison");
-                                    await ph.rejectError(
-                                        {
-                                            args: [
-                                                "-start",
-                                                toIdent("p1", usVulpix),
-                                                toEffectName(
-                                                    "imprison",
-                                                    "move",
-                                                ),
-                                            ],
-                                            kwArgs: {},
-                                        },
+                                    await ph.handle({
+                                        args: [
+                                            "-start",
+                                            toIdent("p1", usVulpix),
+                                            toEffectName("imprison", "move"),
+                                        ],
+                                        kwArgs: {},
+                                    });
+                                    // Assertion kicks in after handling the
+                                    // event.
+                                    await ph.haltError(
                                         Error,
                                         "Imprison succeeded but both Pokemon " +
                                             "cannot share any moves",
@@ -3117,6 +3099,12 @@ export const test = (): void =>
                             });
                         }),
                     );
+
+                    for (const name of ["self", "hit"] as const) {
+                        describe(name, function () {
+                            for (const f of statusTests[name]) f();
+                        });
+                    }
                 });
 
                 describe("drain", function () {
@@ -3608,11 +3596,6 @@ export const test = (): void =>
                     const teamTests: {
                         [T in dex.MoveEffectTarget]: (() => void)[];
                     } = {self: [], hit: []};
-                    for (const name of ["self", "hit"] as const) {
-                        describe(name, function () {
-                            for (const f of teamTests[name]) f();
-                        });
-                    }
 
                     it("Should still allow unsupported |-sideend|", async function () {
                         const team = state.getTeam("p2");
@@ -3786,87 +3769,96 @@ export const test = (): void =>
                         );
                     }
 
-                    describe("cure", function () {
-                        for (const move of ["healbell", "aromatherapy"]) {
-                            it(`Should pass if using ${move}`, async function () {
+                    teamTests.self.push(() =>
+                        describe("cure", function () {
+                            for (const move of ["healbell", "aromatherapy"]) {
+                                it(`Should pass if using ${move}`, async function () {
+                                    sh.initActive("p1");
+                                    const [mon1, mon2] = sh.initTeam("p2", [
+                                        ditto,
+                                        smeargle,
+                                    ]);
+                                    mon1.majorStatus.afflict("slp");
+                                    mon2.majorStatus.afflict("brn");
+
+                                    pctx = init("p2");
+                                    await moveEvent("p2", move);
+                                    // Cure-team indicator event.
+                                    await ph.handle({
+                                        args: [
+                                            "-activate",
+                                            // TODO: Incomplete protocol
+                                            // typings.
+                                            toSide(
+                                                "p2",
+                                                "player1",
+                                            ) as unknown as Protocol.PokemonIdent,
+                                            toEffectName(move, "move"),
+                                        ],
+                                        kwArgs: {},
+                                    });
+                                    await ph.handle({
+                                        args: [
+                                            "-curestatus",
+                                            toIdent("p2", ditto, null),
+                                            "slp",
+                                        ],
+                                        kwArgs: {silent: true},
+                                    });
+                                    await ph.handle({
+                                        args: [
+                                            "-curestatus",
+                                            toIdent("p2", smeargle),
+                                            "brn",
+                                        ],
+                                        kwArgs: {silent: true},
+                                    });
+                                    await ph.halt();
+                                    await ph.return({});
+                                });
+                            }
+
+                            it("Should reject if invalid effect", async function () {
                                 sh.initActive("p1");
-                                const [mon1, mon2] = sh.initTeam("p2", [
-                                    ditto,
-                                    smeargle,
-                                ]);
-                                mon1.majorStatus.afflict("slp");
-                                mon2.majorStatus.afflict("brn");
+                                sh.initActive("p2").majorStatus.afflict("frz");
 
                                 pctx = init("p2");
-                                await moveEvent("p2", move);
-                                // Cure-team indicator event.
-                                await ph.handle({
-                                    args: [
-                                        "-activate",
-                                        // TODO: Incomplete protocol typings.
-                                        toSide(
-                                            "p2",
-                                            "player1",
-                                        ) as unknown as Protocol.PokemonIdent,
-                                        toEffectName(move, "move"),
-                                    ],
-                                    kwArgs: {},
-                                });
-                                await ph.handle({
-                                    args: [
-                                        "-curestatus",
-                                        toIdent("p2", ditto, null),
-                                        "slp",
-                                    ],
-                                    kwArgs: {silent: true},
-                                });
-                                await ph.handle({
-                                    args: [
-                                        "-curestatus",
-                                        toIdent("p2", smeargle),
-                                        "brn",
-                                    ],
-                                    kwArgs: {silent: true},
-                                });
+                                await moveEvent("p2", "healbell");
+                                await ph.rejectError(
+                                    {
+                                        args: [
+                                            "-activate",
+                                            toSide(
+                                                "p2",
+                                                "player1",
+                                            ) as unknown as Protocol.PokemonIdent,
+                                            toEffectName("tackle", "move"),
+                                        ],
+                                        kwArgs: {},
+                                    },
+                                    Error,
+                                    "Expected effect that didn't happen: " +
+                                        "p2 move team p2 cure",
+                                );
+                            });
+
+                            it("Should not handle if no statuses to cure", async function () {
+                                sh.initActive("p1");
+                                sh.initActive("p2");
+
+                                pctx = init("p2");
+                                await moveEvent("p2", "healbell");
                                 await ph.halt();
                                 await ph.return({});
                             });
-                        }
+                        }),
+                    );
 
-                        it("Should reject if invalid effect", async function () {
-                            sh.initActive("p1");
-                            sh.initActive("p2").majorStatus.afflict("frz");
-
-                            pctx = init("p2");
-                            await moveEvent("p2", "healbell");
-                            await ph.rejectError(
-                                {
-                                    args: [
-                                        "-activate",
-                                        toSide(
-                                            "p2",
-                                            "player1",
-                                        ) as unknown as Protocol.PokemonIdent,
-                                        toEffectName("tackle", "move"),
-                                    ],
-                                    kwArgs: {},
-                                },
-                                Error,
-                                "Expected effect that didn't happen: " +
-                                    "p2 move team p2 cure",
-                            );
+                    for (const name of ["self", "hit"] as const) {
+                        describe(name, function () {
+                            for (const f of teamTests[name]) f();
                         });
-
-                        it("Should not handle if no statuses to cure", async function () {
-                            sh.initActive("p1");
-                            sh.initActive("p2");
-
-                            pctx = init("p2");
-                            await moveEvent("p2", "healbell");
-                            await ph.halt();
-                            await ph.return({});
-                        });
-                    });
+                    }
                 });
 
                 describe("field", function () {

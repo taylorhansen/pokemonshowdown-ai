@@ -87,7 +87,7 @@ export class ParserHelpers<TResult = unknown> {
     public async rejectError(
         event: Event,
         errorCtor: ErrorConstructor,
-        message?: string,
+        message?: string | RegExp,
     ): Promise<void> {
         await expect(this.next(event)).to.eventually.be.rejectedWith(
             errorCtor,
@@ -120,7 +120,7 @@ export class ParserHelpers<TResult = unknown> {
      */
     public async haltError(
         errorCtor: ErrorConstructor,
-        message?: string,
+        message?: string | RegExp,
     ): Promise<void> {
         await this.rejectError(
             {args: ["request", "{}" as Protocol.RequestJSON], kwArgs: {}},
