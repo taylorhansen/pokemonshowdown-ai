@@ -31,9 +31,9 @@ export class ChanceReason extends inference.SubReason {
         return () => (this.delayCb = null);
     }
 
-    public override toString(indentInner = 4, indentOuter = 0): string {
+    public override toString(indentInner = 1, indentOuter = 0): string {
         void indentInner;
-        const s = " ".repeat(indentOuter);
+        const s = " ".repeat(indentOuter * 4);
         return `${s}ChanceReason()`;
     }
 }

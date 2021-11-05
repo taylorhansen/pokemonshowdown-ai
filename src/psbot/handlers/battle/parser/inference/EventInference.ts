@@ -120,17 +120,9 @@ export class EventInference<
         for (const c of this.cases) c.resolve(c === inf /*held*/);
     }
 
-    /**
-     * Stringifier with indent options.
-     *
-     * @param indentInner Number of spaces for additional indents beyond the
-     * current line.
-     * @param indentOuter Number of spaces for the indent of the current line.
-     * @override
-     */
-    public override toString(indentInner = 4, indentOuter = 0): string {
-        const inner = " ".repeat(indentInner);
-        const outer = " ".repeat(indentOuter);
+    public override toString(indentInner = 1, indentOuter = 0): string {
+        const inner = " ".repeat(indentInner * 4);
+        const outer = " ".repeat(indentOuter * 4);
         const indentInferenceOuter = indentOuter + 2 * indentInner;
         return `\
 ${outer}EventInference(

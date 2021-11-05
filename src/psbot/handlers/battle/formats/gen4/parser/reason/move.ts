@@ -120,9 +120,9 @@ class MoveIsType extends inference.SubReason {
         );
     }
 
-    public override toString(indentInner = 4, indentOuter = 0): string {
-        const inner = " ".repeat(indentInner);
-        const outer = " ".repeat(indentOuter);
+    public override toString(indentInner = 1, indentOuter = 0): string {
+        const inner = " ".repeat(indentInner * 4);
+        const outer = " ".repeat(indentOuter * 4);
         return `\
 ${outer}MoveIsType(
 ${outer}${inner}Move(${this.move.data.name}),

@@ -75,9 +75,9 @@ class HasItem extends inference.SubReason {
         );
     }
 
-    public override toString(indentInner = 4, indentOuter = 0): string {
-        const inner = " ".repeat(indentInner);
-        const outer = " ".repeat(indentOuter);
+    public override toString(indentInner = 1, indentOuter = 0): string {
+        const inner = " ".repeat(indentInner * 4);
+        const outer = " ".repeat(indentOuter * 4);
         return `\
 ${outer}HasItem(
 ${outer}${inner}mon = (

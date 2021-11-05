@@ -89,7 +89,7 @@ export class UnorderedDeadline<
         f: (result: TResult) => TResult2,
     ): UnorderedDeadline<T, TAgent, TResult2> {
         return new UnorderedDeadline(
-            () => `transform ${this.toString(4, 4)}`,
+            () => `transform,\n${this.toString(1, 0)}`,
             async (ctx, accept) => f(await this.parse(ctx, accept)),
             () => this.reject(),
         );
@@ -98,14 +98,13 @@ export class UnorderedDeadline<
     /**
      * Stringifier with indent options.
      *
-     * @param indentInner Number of spaces for additional indents beyond the
-     * current line.
-     * @param indentOuter Number of spaces for the indent of the current line.
+     * @param indentInner Number of additional indents beyond the current line.
+     * @param indentOuter Number of indents for the current line.
      * @override
      */
-    public toString(indentInner = 4, indentOuter = 0): string {
-        const inner = " ".repeat(indentInner);
-        const outer = " ".repeat(indentOuter);
+    public toString(indentInner = 1, indentOuter = 0): string {
+        const inner = " ".repeat(indentInner * 4);
+        const outer = " ".repeat(indentOuter * 4);
         return `\
 ${outer}UnorderedDeadline(
 ${outer}${inner}${this.name.split("\n").join(`\n${outer}${inner}`)}

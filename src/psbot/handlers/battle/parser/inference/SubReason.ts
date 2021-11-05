@@ -55,14 +55,13 @@ export abstract class SubReason {
     /**
      * Stringifier with indent options.
      *
-     * @param indentInner Number of spaces for additional indents beyond the
-     * current line.
-     * @param indentOuter Number of spaces for the indent of the current line.
+     * @param indentInner Number of additional indents beyond the current line.
+     * @param indentOuter Number of indents for the current line.
      * @override
      */
-    public toString(indentInner = 4, indentOuter = 0): string {
+    public toString(indentInner = 1, indentOuter = 0): string {
         void indentInner;
-        const s = " ".repeat(indentOuter);
+        const s = " ".repeat(indentOuter * 4);
         return `${s}SubReason()`;
     }
 }

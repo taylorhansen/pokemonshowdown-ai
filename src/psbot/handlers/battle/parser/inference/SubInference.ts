@@ -146,14 +146,13 @@ export class SubInference {
     /**
      * Stringifier with indent options.
      *
-     * @param indentInner Number of spaces for additional indents beyond the
-     * current line.
-     * @param indentOuter Number of spaces for the indent of the current line.
+     * @param indentInner Number of additional indents beyond the current line.
+     * @param indentOuter Number of indents for the current line.
      * @override
      */
-    public toString(indentInner = 4, indentOuter = 0): string {
-        const inner = " ".repeat(indentInner);
-        const outer = " ".repeat(indentOuter);
+    public toString(indentInner = 1, indentOuter = 0): string {
+        const inner = " ".repeat(indentInner * 4);
+        const outer = " ".repeat(indentOuter * 4);
         const indentReasonOuter = indentOuter + 2 * indentInner;
         return `\
 ${outer}SubInference(
