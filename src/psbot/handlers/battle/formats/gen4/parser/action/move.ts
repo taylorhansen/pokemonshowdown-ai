@@ -1734,7 +1734,7 @@ function status(
                 `${args.side} move status ${targetSide} ` +
                     `[${statusTypes.join(", ")}]`,
                 statusImpl,
-                effect.chance
+                effect.chance && effect.chance !== 100
                     ? undefined
                     : () => statusReject(ctx, args, tgt, statusTypes),
                 targetSide,
@@ -1894,7 +1894,7 @@ function drain(
 async function postHitFilter(ctx: BattleParserContext<"gen4">): Promise<void> {
     // Untracked status effects.
     // TODO: Support curing/rapidspin effects in status() or separate section?
-    const event = await tryVerify(ctx, "|-end|");
+    const event = await tryVerify(ctx, "|-end|", "|-curestatus|");
     if (!event) return;
     // Distinguish from ability/item effects.
     const from = Protocol.parseEffect(event.kwArgs.from, toIdName);
@@ -1909,7 +1909,7 @@ async function postHitFilter(ctx: BattleParserContext<"gen4">): Promise<void> {
     ) {
         return;
     }
-    await base["|-end|"](ctx);
+    await dispatch(ctx);
 }
 
 //#endregion

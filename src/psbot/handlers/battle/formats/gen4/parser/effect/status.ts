@@ -19,7 +19,8 @@ export type StatusEventType =
     | "|-singlemove|"
     | "|-singleturn|"
     | "|-message|"
-    | "|-activate|";
+    | "|-activate|"
+    | "|-endability|";
 
 /**
  * Expects a status effect.
@@ -49,6 +50,7 @@ export async function status(
         "|-singleturn|",
         "|-message|",
         "|-activate|",
+        "|-endability|",
     );
     if (!event) return;
     const res = verifyStatus(event, side, statusTypes);
@@ -93,7 +95,9 @@ function verifyStatus(
     }
 
     const [t, identStr, effectStr] = event.args;
-    const effect = Protocol.parseEffect(effectStr, toIdName);
+    let effect: ReturnType<typeof Protocol.parseEffect>;
+    if (t === "-endability") effect = {name: "suppressAbility"};
+    else effect = Protocol.parseEffect(effectStr, toIdName);
     if (!statusTypes.includes(effect.name as dex.StatusType)) return;
     // Only splash effect allows for |-activate| with no ident.
     if (t === "-activate") {

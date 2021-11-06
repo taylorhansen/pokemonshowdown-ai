@@ -2076,7 +2076,7 @@ export const test = (): void =>
                                 }
 
                                 if (secondaryMove100 && abilityImmunity) {
-                                    it("Should narrow ability if no status event due to silent ability immunity", async function () {
+                                    it("Should narrow ability if no status event due to silent ability immunity vs 100% secondary effect", async function () {
                                         const mon = state.getTeam("p1").active;
                                         mon.setAbility(
                                             abilityImmunity,
@@ -2126,7 +2126,7 @@ export const test = (): void =>
                         startEvent: {
                             args: [
                                 "-start",
-                                toIdent("p2"),
+                                toIdent("p1"),
                                 toEffectName("attract", "move"),
                             ],
                             kwArgs: {},
@@ -2186,6 +2186,8 @@ export const test = (): void =>
                             it("Should reject if mismatched flags", async function () {
                                 sh.initActive("p1");
                                 sh.initActive("p2");
+
+                                pctx = init("p2");
                                 await moveEvent("p2", "tackle");
                                 await ph.reject(curseEvent);
                                 await ph.return({});
@@ -2616,7 +2618,7 @@ export const test = (): void =>
                                 args: [
                                     "-damage",
                                     toIdent("p2"),
-                                    toHPStatus(75),
+                                    toHPStatus(25),
                                 ],
                                 kwArgs: {},
                             },
@@ -2899,7 +2901,7 @@ export const test = (): void =>
                                 expect(v.stallTurns).to.equal(0);
                             });
 
-                            it("Should reset stall count if using another move", async function () {
+                            it("Should reset stall counter if using another move", async function () {
                                 sh.initActive("p1");
                                 const mon = sh.initActive("p2");
 
@@ -2914,7 +2916,7 @@ export const test = (): void =>
                                 state.preTurn();
 
                                 pctx = init("p2");
-                                await moveEvent("p2", "splash");
+                                await moveSplash("p2");
                                 await ph.halt();
                                 await ph.return({});
                                 expect(mon.volatile.stalling).to.be.false;
@@ -2938,9 +2940,13 @@ export const test = (): void =>
                                 });
                                 await ph.halt();
                                 await ph.return({});
+                                expect(mon.volatile.stalling).to.be.true;
+                                expect(mon.volatile.stallTurns).to.equal(1);
+                                await ph.close();
 
                                 // Somehow the pokemon moves again in the same
                                 // turn via call effect.
+                                pctx = init("p2");
                                 await moveEvent("p2", "metronome");
                                 await moveEvent("p2", "endure", {
                                     from: toMoveName("metronome"),
@@ -3040,7 +3046,7 @@ export const test = (): void =>
                         clauseEvent: {
                             args: [
                                 "-message",
-                                toMessage("Sleep Clause activated."),
+                                toMessage("Sleep Clause Mod activated."),
                             ],
                             kwArgs: {},
                         },
@@ -3065,7 +3071,9 @@ export const test = (): void =>
                     // TODO: Move to target category.
                     statusTests.hit.push(() =>
                         describe("ability on-blockStatus", function () {
-                            it("Should handle ability status immunity while leaving other move effects intact", async function () {
+                            // TODO
+                            // eslint-disable-next-line mocha/no-skipped-tests
+                            it.skip("Should handle ability status immunity while leaving other move effects intact", async function () {
                                 sh.initActive("p1");
                                 sh.initActive("p2").setAbility("owntempo");
 
