@@ -9,7 +9,7 @@ recommend trying to use it out of the box.
 
 This project has three parts:
 
--   [PSBot](/src/psbot) framework for creating a general Pokemon Showdown bot
+-   [PsBot](/src/psbot) framework for creating a general Pokemon Showdown bot
     and setting up the battle interface.
 -   [Battle](/src/psbot/handlers/battle) state tracker, able to make logical
     deductions about the opponent's team by observing the events that happen in
