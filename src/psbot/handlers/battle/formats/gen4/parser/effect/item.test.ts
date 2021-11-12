@@ -628,7 +628,7 @@ export const test = () =>
                     function shouldRuleOut(
                         opts: SwitchOptions,
                         hpDisplay: number,
-                        comment?: string,
+                        comment = "",
                     ) {
                         it(`Should rule out item if it did not activate at ${hpDisplay}%${comment}`, async function () {
                             const mon = setup(opts, hpDisplay);
@@ -668,7 +668,7 @@ export const test = () =>
                             hpMax: 100,
                         };
                         testUnknownHp(shedinja, 1);
-                        shouldRuleOut(shedinja, 100);
+                        shouldRuleOut(shedinja, 100, " (1hp)");
                     });
 
                     describe("Max hp under 100", function () {

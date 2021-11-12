@@ -3071,7 +3071,7 @@ export const test = (): void =>
                     // TODO: Move to target category.
                     statusTests.hit.push(() =>
                         describe("ability on-blockStatus", function () {
-                            // TODO
+                            // TODO: Currently unsupported.
                             // eslint-disable-next-line mocha/no-skipped-tests
                             it.skip("Should handle ability status immunity while leaving other move effects intact", async function () {
                                 sh.initActive("p1");
