@@ -1445,6 +1445,20 @@ export const test = () =>
                     expect(them.ability).to.equal("illuminate");
                 });
 
+                it("Should handle no activation", async function () {
+                    const us = sh.initActive("p1");
+                    us.setAbility("trace", "illuminate");
+                    us.majorStatus.afflict("slp");
+                    const them = sh.initActive("p2");
+                    them.setAbility("insomnia", "pressure");
+
+                    pctx = init("p1");
+                    await ph.halt();
+                    await ph.return([]);
+                    expect(us.ability).to.equal("illuminate");
+                    expect(them.ability).to.be.empty;
+                });
+
                 it("Should not copy un-copyable ability", async function () {
                     const us = sh.initActive("p1");
                     us.setAbility("trace");
@@ -1456,6 +1470,25 @@ export const test = () =>
                     await ph.return([]);
                     expect(us.ability).to.equal("trace");
                     expect(them.ability).to.equal("multitype");
+                });
+
+                it("Should throw if ability does not activate after copy", async function () {
+                    const us = sh.initActive("p1");
+                    us.setAbility("vitalspirit", "insomnia");
+                    const them = sh.initActive("p2");
+                    them.setAbility("trace");
+                    them.majorStatus.afflict("slp");
+
+                    pctx = init("p2");
+                    await ph.handle(traceEvent("p2", "insomnia", "p1"));
+                    await ph.haltError(
+                        Error,
+                        "CopyFoeAbility ability 'trace' copied 'insomnia' but copied ability did not activate",
+                    );
+                    // Inference didn't finish so opponent is inferred but not
+                    // the holder.
+                    expect(us.ability).to.equal("insomnia");
+                    expect(them.ability).to.equal("trace");
                 });
 
                 it("Should activate copied on-update ability afterwards", async function () {

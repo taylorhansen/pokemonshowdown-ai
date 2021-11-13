@@ -491,6 +491,7 @@ async function onStartOrUpdateInference(
 
     for (const ability of startAbilities.keys()) {
         // Copier abilities are handled specially.
+        // istanbul ignore if: Probably would never happen but just in case.
         if (copiers.has(ability)) continue;
 
         if (!copyableStart.has(ability)) {
@@ -710,6 +711,7 @@ function onX<TArgs extends unknown[] = [], TResult = unknown>(
     ...args: TArgs
 ) => unordered.UnorderedDeadline<"gen4", BattleAgent<"gen4">, TResult> {
     const onString = name.match(/^on(?<str>.+)$/)?.groups?.["str"];
+    // istanbul ignore if: Should never happen.
     if (!onString) throw new Error(`Invalid parser name '${name}'`);
 
     // Note: Use computed property to force function name in stack trace.
@@ -753,6 +755,7 @@ function onXInferenceParser<TArgs extends unknown[] = [], TResult = unknown>(
     const onString = name
         .match(/^on(?<str>[a-zA-Z]+)Inference/)
         ?.groups?.["str"].replace(/^[A-Z]/, s => s.toLowerCase());
+    // istanbul ignore if: Should never happen.
     if (!onString) throw new Error(`Invalid inference parser name '${name}'`);
 
     // Note: Use computed property to force function name in stack trace.
