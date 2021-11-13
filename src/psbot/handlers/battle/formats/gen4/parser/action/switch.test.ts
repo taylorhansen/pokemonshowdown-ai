@@ -761,7 +761,10 @@ export const test = () =>
 
                     it("Should handle trace", async function () {
                         const [mon] = sh.initTeam("p1", [ralts, ditto]);
-                        expect(mon.traits.ability.possibleValues).to.have.keys("trace", "synchronize");
+                        expect(mon.traits.ability.possibleValues).to.have.keys(
+                            "trace",
+                            "synchronize",
+                        );
                         sh.initActive("p2").setAbility("pressure");
 
                         pctx = init("p1");

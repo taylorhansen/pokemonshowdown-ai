@@ -1483,7 +1483,8 @@ export const test = () =>
                     await ph.handle(traceEvent("p2", "insomnia", "p1"));
                     await ph.haltError(
                         Error,
-                        "CopyFoeAbility ability 'trace' copied 'insomnia' but copied ability did not activate",
+                        "CopyFoeAbility ability 'trace' copied 'insomnia' " +
+                            "but copied ability did not activate",
                     );
                     // Inference didn't finish so opponent is inferred but not
                     // the holder.
