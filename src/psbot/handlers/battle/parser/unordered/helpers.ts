@@ -113,7 +113,6 @@ export async function all<
  * @param ctx Parser context.
  * @param parsers BattleParsers to consider, wrapped to include a deadline
  * callback, in order of descending priority.
- * @param args Additional args to supply to each parser.
  * @returns The result of the parser that accepted an event, if any.
  */
 export async function oneOf<
@@ -172,13 +171,11 @@ export async function parse<
     parser: UnorderedDeadline<T, TAgent, TResult>,
     accept?: AcceptCallback,
 ): Promise<[] | [TResult]> {
-    const a = accept;
     let accepted = false;
-    accept = function parseAccept() {
-        a?.();
+    const res = await parser.parse(ctx, () => {
         accepted = true;
-    };
-    const res = await parser.parse(ctx, accept);
+        accept?.();
+    });
     if (accepted) return [res];
     parser.reject();
     return [];

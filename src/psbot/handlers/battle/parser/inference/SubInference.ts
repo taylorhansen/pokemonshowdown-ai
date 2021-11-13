@@ -27,7 +27,8 @@ export class SubInference {
      * proven, the entire SubInference is proven. Otherwise if one of them is
      * disproven the entire SubInference is disproven. This Set will eventually
      * be emptied as SubReasons get resolved in the future, and so shouldn't be
-     * modified outside this class.
+     * modified outside this class. If this Set is already empty, then the
+     * SubInference is already proven.
      */
     public constructor(private readonly reasons: Set<SubReason>) {
         this.queueAll();
@@ -54,8 +55,8 @@ export class SubInference {
             // any), and we just asserted them here.
             if (!this.allHeld) {
                 throw new Error(
-                    "Supposed to assert all SubReasons but some " +
-                        `rejected; info = ${this.toString()}`,
+                    "Supposed to assert all SubReasons but some rejected." +
+                        `\nthis = ${this.toString()}`,
                 );
             }
             return;
@@ -68,6 +69,11 @@ export class SubInference {
 
     /** Queues all the SubReasons to track accepts/rejects. */
     private queueAll(): void {
+        if (this.reasons.size <= 0) {
+            this.allHeld = true;
+            return;
+        }
+
         // Queue up unresolved SubReasons.
         for (const reason of this.reasons) {
             let called = false;

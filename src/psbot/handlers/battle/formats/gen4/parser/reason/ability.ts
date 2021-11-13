@@ -82,10 +82,31 @@ export function cantIgnoreTargetAbility(
 export function targetIgnoring(mon: PokemonAbilitySnapshot): Set<string> {
     if (mon.volatile.suppressAbility) return new Set();
 
-    const {ability} = mon.traits;
     const abilities = new Set<string>();
+    const {ability} = mon.traits;
     for (const name of ability.possibleValues) {
         if (ability.map[name].flags?.ignoreTargetAbility) abilities.add(name);
+    }
+    return abilities;
+}
+
+/**
+ * Creates a SubReason that asserts that the pokemon's ability can be copied by
+ * Trace.
+ */
+export function isCopyable(mon: PokemonAbilitySnapshot): inference.SubReason {
+    const abilities = uncopyable(mon);
+    return doesntHave(mon, abilities);
+}
+
+/**
+ * Gets the possible abilities from the pokemon that can't be copied by Trace.
+ */
+export function uncopyable(mon: PokemonAbilitySnapshot): Set<string> {
+    const abilities = new Set<string>();
+    const {ability} = mon.traits;
+    for (const name of ability.possibleValues) {
+        if (ability.map[name].flags?.noCopy) abilities.add(name);
     }
     return abilities;
 }

@@ -123,10 +123,6 @@ export class Ability {
      */
     public canStart(mon: Pokemon): Set<inference.SubReason> | null {
         if (!this.data.on?.start) return null;
-        // Activate on a certain status immunity to cure it.
-        const canCure = this.canCureImmunity("start", mon);
-        if (canCure) return new Set();
-        if (canCure === false) return null;
         // Frisk: Reveal opponent's item.
         if (this.data.on.start.revealItem) {
             // TODO(doubles): Track actual opponents.
@@ -140,7 +136,7 @@ export class Ability {
             // TODO: Other restrictions?
             return new Set([reason.item.hasUnknown(opp)]);
         }
-        // TODO: Add trace/intimidate restrictions.
+        // TODO: Add intimidate/other restrictions.
         return new Set();
     }
 
@@ -156,14 +152,6 @@ export class Ability {
         side: SideID,
     ): Promise<void> {
         if (!this.data.on?.start) return;
-        // Cure status immunity.
-        if (this.data.on.start.cure) {
-            return await this.cureImmunity(ctx, accept, side);
-        }
-        // Note(gen4): Trace is handled using other special logic found in
-        // #copyFoeAbility() and gen4/parser/ability.ts' onStart() function
-        // where this is called.
-        if (this.data.on.start?.copyFoeAbility) return;
         // Frisk.
         if (this.data.on.start.revealItem) {
             return await this.revealItem(ctx, accept, side);
@@ -174,33 +162,6 @@ export class Ability {
         }
         // If nothing is set, then the ability just reveals itself.
         return await this.revealAbility(ctx, accept, side);
-    }
-
-    /**
-     * Parses indicator event due to a copeFoeAbility ability (e.g. Trace).
-     *
-     * @param side Ability holder reference.
-     * @returns The name of the traced ability and the trace target, or
-     * undefined if not found.
-     */
-    public async copyFoeAbility(
-        ctx: BattleParserContext<"gen4">,
-        side: SideID,
-    ): Promise<{ability: string; side: SideID} | undefined> {
-        // Note(gen4): Traced ability activates before trace is acknowledged.
-        // To handle possible ambiguity, we have some special logic in
-        // gen4/parser/ability.ts#onStart() where this is called.
-        const event = await tryVerify(ctx, "|-ability|");
-        if (!event) return;
-        const [, identStr, abilityName] = event.args;
-        const ident = Protocol.parsePokemonIdent(identStr);
-        if (ident.player !== side) return;
-        if (!this.isEventFromAbility(event)) return;
-        if (!event.kwArgs.of) return;
-        const identOf = Protocol.parsePokemonIdent(event.kwArgs.of);
-        const abilityId = toIdName(abilityName);
-        await consume(ctx);
-        return {ability: abilityId, side: identOf.player};
     }
 
     /**
@@ -797,46 +758,6 @@ export class Ability {
 
     //#endregion
 
-    //#region On-status.
-
-    /**
-     * Checks whether the ability can activate on-`status` to cure it.
-     *
-     * @param mon Potential ability holder.
-     * @param statusType Afflicted status.
-     * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
-     * activate.
-     */
-    public canStatus(
-        mon: ReadonlyPokemon,
-        statusType: StatusType,
-    ): Set<inference.SubReason> | null {
-        return this.canCureImmunity("status", mon, [statusType])
-            ? new Set()
-            : null;
-    }
-
-    /**
-     * Activates an ability on-`status`.
-     *
-     * @param accept Callback to accept this pathway.
-     * @param side Ability holder reference.
-     */
-    public async onStatus(
-        ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback,
-        side: SideID,
-    ): Promise<void> {
-        if (!this.data.on?.status) return;
-        // Cure status immunity.
-        if (this.data.on.status.cure) {
-            return await this.cureImmunity(ctx, accept, side);
-        }
-    }
-
-    //#endregion
-
     //#region On-moveContactKo/moveContact/moveDamage.
 
     /**
@@ -1118,6 +1039,154 @@ export class Ability {
 
     //#endregion
 
+    //#region On-update.
+
+    /**
+     * Checks whether the ability can activate on-`update`.
+     *
+     * @param mon Potential ability holder.
+     * @param opp Opponent.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or `null` if it cannot
+     * activate.
+     */
+    public canUpdate(
+        mon: Pokemon,
+        opp: Pokemon,
+    ): Set<inference.SubReason> | null {
+        if (!this.data.on?.update) return null;
+        // Trace.
+        if (this.data.on.update.copyFoeAbility) {
+            if (opp.fainted) return null;
+            return new Set([reason.ability.isCopyable(opp)]);
+        }
+        // Cure immunities.
+        if (this.data.on.update.cure && this.data.statusImmunity) {
+            const statusTypes = Object.keys(
+                this.data.statusImmunity,
+            ) as StatusType[];
+            return statusTypes.some(
+                s => this.data.statusImmunity![s] && hasStatus(mon, s),
+            )
+                ? new Set()
+                : null;
+        }
+        return null;
+    }
+
+    /**
+     * Activates an ability on-`update`.
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     * @returns `"invert"` if the drain effect was overridden to deduct HP
+     * instead of heal, otherwise `undefined`.
+     */
+    public async onUpdate(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
+        void ctx, accept, side;
+
+        if (!this.data.on?.update) return;
+        // Note(gen4): Trace is handled using other special logic found in
+        // #copyFoeAbility() and gen4/parser/ability.ts' onStart() function
+        // where this is called.
+        if (this.data.on.update.copyFoeAbility) {
+            return;
+        }
+        // Cure status immunity.
+        if (this.data.on.update.cure) {
+            return await this.cureImmunity(ctx, accept, side);
+        }
+    }
+
+    /**
+     * Parses indicator event due to a copeFoeAbility ability (e.g. Trace).
+     *
+     * @param side Ability holder reference.
+     * @param accept Optional callback to accept this pathway.
+     * @param copied Expected copied ability.
+     * @param copiedTarget Expected copy target.
+     * @returns The name of the traced ability and the trace target, or
+     * `undefined` if not found.
+     */
+    public async copyFoeAbility(
+        ctx: BattleParserContext<"gen4">,
+        side: SideID,
+        accept?: unordered.AcceptCallback,
+        copied?: Ability,
+        copiedTarget?: SideID,
+    ): Promise<{ability: string; side: SideID} | undefined> {
+        // Note(gen4): Traced ability activates before trace is acknowledged.
+        // To handle possible ambiguity, we have some special logic in
+        // gen4/parser/ability.ts#onUpdate() where this method is called.
+        const event = await tryVerify(ctx, "|-ability|");
+        if (!event) return;
+        const [, identStr, abilityName] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        const abilityId = toIdName(abilityName);
+        if (copied && copied.data.name !== abilityId) return;
+        if (ident.player !== side) return;
+        if (!this.isEventFromAbility(event)) return;
+        if (!event.kwArgs.of) return;
+        const identOf = Protocol.parsePokemonIdent(event.kwArgs.of);
+        if (copiedTarget && identOf.player !== copiedTarget) return;
+        accept?.();
+        await consume(ctx);
+        return {ability: abilityId, side: identOf.player};
+    }
+
+    /**
+     * Handles events due to a statusImmunity ability curing a status (e.g.
+     * Insomnia).
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     */
+    private async cureImmunity(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
+        const immunities = this.data.statusImmunity;
+        if (!immunities) return;
+
+        // Verify initial event.
+        const initial = await tryVerify(ctx, "|-activate|");
+        if (!initial) return;
+        const [, initialIdentStr, initialEffectStr] = initial.args;
+        if (!initialIdentStr) return;
+        const initialIdent = Protocol.parsePokemonIdent(initialIdentStr);
+        if (initialIdent.player !== side) return;
+        const initialEffect = Protocol.parseEffect(initialEffectStr, toIdName);
+        if (initialEffect.type !== "ability") return;
+        if (initialEffect.name !== this.data.name) return;
+        accept();
+        await consume(ctx);
+
+        // Parse cure events.
+        const cureResult = await cure(
+            ctx,
+            side,
+            Object.keys(immunities) as StatusType[],
+        );
+        if (cureResult === "silent") {
+            throw new Error(
+                "On-status cure effect failed: Cure effect was a no-op",
+            );
+        }
+        if (cureResult.size > 0) {
+            throw new Error(
+                "On-status cure effect failed: " +
+                    `Missing cure events: [${[...cureResult].join(", ")}]`,
+            );
+        }
+    }
+
+    //#endregion
+
     //#region On-x helpers.
 
     /**
@@ -1217,87 +1286,6 @@ export class Ability {
             (!effect.type || effect.type === "ability") &&
             effect.name === this.data.name
         );
-    }
-
-    /**
-     * Checks if the ability can cure a status based on immunity.
-     *
-     * @param on Circumstance in which the ability would activate.
-     * @param mon Potential ability holder.
-     * @param statusTypes Statuses to consider. Omit to assume all relevant
-     * status immunities.
-     * @returns True if the ability can activate under the given circumstances,
-     * false if no immunities are violated, or null if the ability doesn't
-     * apply here (i.e., it's not immune to any status under the given
-     * circumstances).
-     */
-    private canCureImmunity(
-        on: AbilityOn,
-        mon: ReadonlyPokemon,
-        statusTypes?: readonly StatusType[],
-    ): boolean | null {
-        if (!this.data.statusImmunity) return null;
-        switch (on) {
-            case "start":
-            case "status":
-                if (!this.data.on?.[on]?.cure) return null;
-                break;
-            default:
-                return null;
-        }
-        if (!statusTypes) {
-            statusTypes = Object.keys(this.data.statusImmunity) as StatusType[];
-        }
-        return statusTypes.some(
-            s => this.data.statusImmunity![s] && hasStatus(mon, s),
-        );
-    }
-
-    /**
-     * Handles events due to a statusImmunity ability curing a status (e.g.
-     * Insomnia).
-     *
-     * @param accept Callback to accept this pathway.
-     * @param side Ability holder reference.
-     */
-    private async cureImmunity(
-        ctx: BattleParserContext<"gen4">,
-        accept: unordered.AcceptCallback,
-        side: SideID,
-    ): Promise<void> {
-        const immunities = this.data.statusImmunity;
-        if (!immunities) return;
-
-        // Verify initial event.
-        const initial = await tryVerify(ctx, "|-activate|");
-        if (!initial) return;
-        const [, initialIdentStr, initialEffectStr] = initial.args;
-        if (!initialIdentStr) return;
-        const initialIdent = Protocol.parsePokemonIdent(initialIdentStr);
-        if (initialIdent.player !== side) return;
-        const initialEffect = Protocol.parseEffect(initialEffectStr, toIdName);
-        if (initialEffect.type !== "ability") return;
-        if (initialEffect.name !== this.data.name) return;
-        accept();
-        await consume(ctx);
-
-        // Parse cure events.
-        const cureResult = await cure(
-            ctx,
-            side,
-            Object.keys(immunities) as StatusType[],
-        );
-        if (cureResult === "silent") {
-            throw new Error(
-                "On-status cure effect failed: " + "Cure effect was a no-op",
-            );
-        }
-        if (cureResult.size > 0) {
-            throw new Error(
-                "On-status cure effect failed: " +
-                    `Missing cure events: [${[...cureResult].join(", ")}]`,
-            );
-        }
     }
 
     /** Gets the ability's move type immunity, or null if none found. */

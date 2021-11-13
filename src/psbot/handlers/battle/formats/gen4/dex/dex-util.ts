@@ -246,13 +246,6 @@ export interface AbilityData extends DexData {
             // TODO: Document/handle conditions to not activate.
             // TODO: Weather abilities.
             /**
-             * Whether this ability cures statuses specified by
-             * {@link AbilityData.statusImmunity}.
-             */
-            readonly cure?: true;
-            /** Whether this ability copies the foe's ability. */
-            readonly copyFoeAbility?: true;
-            /**
              * Reveal a random opponent's held item, or don't activate if the
              * opponents don't have items.
              */
@@ -303,14 +296,6 @@ export interface AbilityData extends DexData {
             /** Block certain unboost effects from the opponent. */
             readonly block?: Partial<BoostTable<true>>;
         };
-        /** Whenever the ability holder gets statused. */
-        readonly status?: {
-            /**
-             * Whether this ability cures statuses specified by
-             * {@link AbilityData.statusImmunity}.
-             */
-            readonly cure?: true;
-        };
         /**
          * Whenever a damaging move makes contact and KOs the ability holder.
          */
@@ -350,6 +335,23 @@ export interface AbilityData extends DexData {
             /** Invert the drain healing effect. */
             readonly invert?: true;
         };
+        /** Whenever the game decides to check activation conditions. */
+        readonly update?: {
+            /**
+             * Whether this ability copies the foe's ability. Always checked
+             * after on-`start` and whenever the opponent either switches or
+             * changes its ability.
+             */
+            readonly copyFoeAbility?: true;
+            /**
+             * Whether this ability cures statuses specified by
+             * {@link AbilityData.statusImmunity}. Always checked after
+             * on-`start` and whenever the holder gets statused.
+             */
+            readonly cure?: true;
+            // TODO: Forecast.
+            // TODO(gen>=5): Flowergift.
+        };
     };
 
     /**
@@ -378,6 +380,8 @@ export interface AbilityData extends DexData {
          * amount of times.
          */
         readonly maxMultihit?: true;
+        /** Whether the ability can't be copied by Trace. */
+        readonly noCopy?: true;
         /**
          * Whether this ability silently blocks all indirect damage or just
          * recoil.

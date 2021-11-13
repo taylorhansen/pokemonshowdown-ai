@@ -92,10 +92,7 @@ export class Pokemon implements ReadonlyPokemon {
 
     /** @override */
     public get ability(): string {
-        if (!this.traits.ability.definiteValue) return "";
-
-        const {ability} = this.traits;
-        return ability.definiteValue ?? "";
+        return this.traits.ability.definiteValue ?? "";
     }
     /** Checks whether the Pokemon can currently have the given ability. */
     public canHaveAbility(ability: string): boolean {

@@ -143,6 +143,7 @@ export const test = () =>
 
                 it("Should throw if mismatched monRef", async function () {
                     sh.initTeam("p1", [undefined, smeargle]);
+                    sh.initActive("p2");
 
                     pctx = init("p1");
                     await ph.rejectError(
@@ -262,6 +263,7 @@ export const test = () =>
                         ],
                         kwArgs: {},
                     });
+                    // TODO: What about on-update item?
                     await ph.halt();
                     await ph.return({mon, actioned: {p1: true}});
                 });
@@ -746,6 +748,50 @@ export const test = () =>
                         await ph.halt();
                         await ph.return({mon, actioned: {p1: true}});
                     });
+                });
+
+                describe("on-update abilities", function () {
+                    const ralts: SwitchOptions = {
+                        species: "ralts",
+                        level: 40,
+                        gender: "M",
+                        hp: 100,
+                        hpMax: 100,
+                    };
+
+                    it("Should handle trace", async function () {
+                        const [mon] = sh.initTeam("p1", [ralts, ditto]);
+                        expect(mon.traits.ability.possibleValues).to.have.keys("trace", "synchronize");
+                        sh.initActive("p2").setAbility("pressure");
+
+                        pctx = init("p1");
+                        await ph.handle(switchEvent("p1", ralts));
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p1", ralts),
+                                toAbilityName("pressure"),
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p1", ralts),
+                                toAbilityName("pressure"),
+                            ],
+                            kwArgs: {
+                                from: toEffectName("trace", "ability"),
+                                of: toIdent("p2"),
+                            },
+                        });
+                        await ph.halt();
+                        await ph.return({mon, actioned: {p1: true}});
+                    });
+                });
+
+                describe("on-update items", function () {
+                    it("TODO");
                 });
             });
         });

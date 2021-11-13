@@ -889,9 +889,8 @@ void (async function buildDex(): Promise<void> {
     //#region Ability data.
 
     const statusImmunityOn: dex.AbilityData["on"] = {
-        start: {cure: true},
         block: {status: true},
-        status: {cure: true},
+        update: {cure: true},
     };
 
     /** Maps ability name to data. */
@@ -934,7 +933,6 @@ void (async function buildDex(): Promise<void> {
             },
         },
 
-        trace: {on: {start: {copyFoeAbility: true}}},
         frisk: {on: {start: {revealItem: true}}},
         forewarn: {on: {start: {warnStrongestMove: true}}},
         moldbreaker: {on: {start: {}}, flags: {ignoreTargetAbility: true}},
@@ -975,6 +973,8 @@ void (async function buildDex(): Promise<void> {
 
         liquidooze: {on: {moveDrain: {invert: true}}},
 
+        trace: {on: {update: {copyFoeAbility: true}}, flags: {noCopy: true}},
+
         gluttony: {flags: {earlyBerry: true}},
 
         // Note(gen3-4): No on-switchIn msg.
@@ -984,6 +984,9 @@ void (async function buildDex(): Promise<void> {
         klutz: {flags: {ignoreItem: true}},
 
         skilllink: {flags: {maxMultihit: true}},
+
+        forecast: {flags: {noCopy: true}},
+        multitype: {flags: {noCopy: true}},
 
         magicguard: {flags: {noIndirectDamage: true}},
         rockhead: {flags: {noIndirectDamage: "recoil"}},

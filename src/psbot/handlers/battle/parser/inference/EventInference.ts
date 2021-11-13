@@ -31,6 +31,7 @@ export type InferenceParser<
  */
 export type AcceptCallback = (inf: SubInference) => void;
 
+// TODO: Factor out TArgs param into a separate static create() function.
 /**
  * Describes the different but related cases in which a single group of events
  * can be parsed.
@@ -64,7 +65,7 @@ export class EventInference<
      * @param innerParserArgs Additional parser arguments.
      */
     public constructor(
-        name: string,
+        name: string | (() => string),
         private readonly cases: ReadonlySet<SubInference>,
         private readonly innerParser: InferenceParser<
             T,

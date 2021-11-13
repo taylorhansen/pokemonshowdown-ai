@@ -339,11 +339,11 @@ async function switchEffects(
     }
     await unordered.all(ctx, entryEffects, undefined /*filter*/, accept);
 
-    // Afterwards check for an on-start ability.
+    // Afterwards check for an on-start/update ability (e.g. trace or pressure).
     if (!team.active.fainted) {
         await unordered.parse(
             ctx,
-            effectAbility.onStart(ctx, team.side),
+            effectAbility.onStartOrUpdate(ctx, team.side),
             accept,
         );
     }
@@ -391,6 +391,7 @@ async function spikesImpl(
         },
     );
     if (damageRes === true) {
+        // TODO: Should faint happen first?
         // Update items/faint since a damaging effect happened.
         await unordered.all(ctx, [effectItem.onUpdate(ctx, side)]);
         // Check for faint.

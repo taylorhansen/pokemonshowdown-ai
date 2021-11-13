@@ -1442,10 +1442,22 @@ async function postHit(
         );
     }
 
+    // FIXME: The EventInferences used in these functions lock in their
+    // activation conditions at the time of the onUpdate() call, but they aren't
+    // updated if a move effect changes those conditions (e.g. via a status
+    // move).
+    // Add some tests for this, will need to research effect order more.
+
     // Item on-update (e.g. sitrusberry).
     parsers.push(
         effectItem.onUpdate(ctx, args.side),
         effectItem.onUpdate(ctx, otherSide),
+    );
+
+    // Ability on-update (e.g. immunity).
+    parsers.push(
+        effectAbility.onUpdate(ctx, args.side),
+        effectAbility.onUpdate(ctx, otherSide),
     );
 
     await unordered.all(ctx, parsers);
