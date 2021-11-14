@@ -175,6 +175,19 @@ export const test = () =>
                 },
                 values: new Float32Array([0, 1, 0]),
             },
+            {
+                name: "Overnarrowed",
+                encoder: pcEncoder,
+                init() {
+                    const pc = new PossibilityClass(map);
+                    expect(() => pc.narrow()).to.throw(
+                        "All possibilities have been ruled out (should never happen)",
+                    );
+                    expect(pc.size).to.equal(0);
+                    return pc;
+                },
+                values: new Float32Array([0, 0, 0]),
+            },
         );
 
         testEncoder("TempStatus", {

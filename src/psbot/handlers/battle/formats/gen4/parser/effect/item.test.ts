@@ -299,13 +299,58 @@ export const test = () =>
 
             testHasItem(
                 "custapberry",
-                () => preMoveSetup(/*LowHp*/ true),
+                () => preMoveSetup(true /*lowHp*/),
                 "indicate increased move priority",
                 preMoveTaken,
                 "on-preMove",
                 preMoveAbsent,
             );
             // TODO: Additional tests for lowHp=false?
+
+            it("Should throw if no custapberry message", async function () {
+                preMoveSetup(true /*lowHp*/);
+                state.preTurn();
+
+                pctx = init("p2");
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p2"),
+                        toItemName("custapberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.haltError(
+                    Error,
+                    "On-preMove moveFirst effect failed: " +
+                        "Missing custapberry message",
+                );
+            });
+
+            it("Should throw if invalid custapberry message", async function () {
+                preMoveSetup(true /*lowHp*/);
+                state.preTurn();
+
+                pctx = init("p2");
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p2"),
+                        toItemName("custapberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.rejectError(
+                    {
+                        args: ["-message", toMessage("invalid message")],
+                        kwArgs: {},
+                    },
+                    Error,
+                    "On-preMove moveFirst effect failed: " +
+                        "Expected custapberry message " +
+                        "'Custap Berry activated.' but got 'invalid message'",
+                );
+            });
 
             describe("Hp threshold", function () {
                 testHpThreshold("custapberry", preMoveSetup, preMoveAbsent);
@@ -790,6 +835,24 @@ export const test = () =>
                 });
                 await ph.halt();
                 await ph.return([]);
+            });
+
+            it("Should throw if no heal effect", async function () {
+                superSetup(true /*weak*/);
+
+                pctx = init("p2", {
+                    move: dex.getMove(dex.moves["lowkick"]),
+                    user: state.getTeam("p1").active,
+                });
+                await ph.handle({
+                    args: [
+                        "-enditem",
+                        toIdent("p2"),
+                        toItemName("enigmaberry"),
+                    ],
+                    kwArgs: {eat: true},
+                });
+                await ph.haltError(Error, "On-super heal effect failed");
             });
 
             describe("Item-ignoring ability (klutz)", function () {
@@ -1390,6 +1453,45 @@ export const test = () =>
                 );
                 // TODO: Additional tests for statused=false.
 
+                it("Should handle mentalherb non-berry item", async function () {
+                    updateStatusSetup().volatile.attract = true;
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: [
+                            "-enditem",
+                            toIdent("p2"),
+                            toItemName("mentalherb"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.handle({
+                        args: [
+                            "-end",
+                            toIdent("p2"),
+                            toEffectName("attract", "move"),
+                        ],
+                        kwArgs: {from: toEffectName("mentalherb", "item")},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+
+                it("Should throw if no mentalherb cure event", async function () {
+                    updateStatusSetup().volatile.attract = true;
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: [
+                            "-enditem",
+                            toIdent("p2"),
+                            toItemName("mentalherb"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.haltError(Error, "Missing cure events: [attract]");
+                });
+
                 describe("Item-ignoring ability (klutz)", function () {
                     testBlockingAbilities(
                         "lumberry",
@@ -1481,6 +1583,33 @@ export const test = () =>
                 // TODO: Additional tests for depleted=false.
 
                 // TODO(later): Handle move pp ambiguity corner cases.
+
+                it("Should throw if invalid restore event", async function () {
+                    updateDepletedSetup(true /*depleted*/);
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: [
+                            "-enditem",
+                            toIdent("p2"),
+                            toItemName("leppaberry"),
+                        ],
+                        kwArgs: {eat: true},
+                    });
+                    await ph.rejectError(
+                        {
+                            args: [
+                                "-activate",
+                                toIdent("p2"),
+                                toEffectName("leppaberry", "item"),
+                                toMoveName("tackle"),
+                            ],
+                            kwArgs: {},
+                        },
+                        Error,
+                        "Missing [consumed] suffix",
+                    );
+                });
 
                 it("Should throw if no restore effect", async function () {
                     updateDepletedSetup(true /*depleted*/);
@@ -1676,6 +1805,29 @@ export const test = () =>
                     await ph.return([undefined]);
                     expect(mon.volatile.micleberry).to.be.true;
                 });
+
+                it("Should not handle status effect if immunity", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setAbility("immunity");
+                    mon.setItem("toxicorb");
+
+                    pctx = init("p1");
+                    await ph.halt();
+                    await ph.return([]);
+                });
+
+                it("Should not handle status effect if weather-based immunity", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setAbility("leafguard");
+                    mon.setItem("toxicorb");
+                    state.status.weather.start(null /*source*/, "SunnyDay");
+
+                    pctx = init("p1");
+                    await ph.halt();
+                    await ph.return([]);
+                });
             });
         });
+
+        // TODO: stealeat tests.
     });

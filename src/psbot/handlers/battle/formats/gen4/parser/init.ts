@@ -155,9 +155,7 @@ const gen = (num: GenerationNum) =>
 
             const [, genNum] = event.args;
             if (num !== genNum) {
-                throw new Error(
-                    `Expected |gen|${num} event but got ` + `|gen|${genNum}`,
-                );
+                throw new Error(`Expected gen ${num} but got ${genNum}`);
             }
             // TODO: Record gen?
             await base["|gen|"](ctx);

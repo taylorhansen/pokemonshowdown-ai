@@ -404,6 +404,7 @@ export class Ability {
             if (!hitBy) return {};
             return await this.blockEffect(ctx, accept, side, hitBy);
         }
+        // istanbul ignore next: Can't reproduce.
         return {};
     }
 
@@ -479,6 +480,8 @@ export class Ability {
 
         // If no effects are being applied by the ability, just an |-immune|
         // event will be shown.
+        // TODO: Reasons/assertions for immune event rather than actual block
+        // effect?
         const event = await tryVerify(ctx, "|-immune|");
         if (event) {
             const [, identStr] = event.args;
@@ -518,6 +521,7 @@ export class Ability {
                 blockData.status,
             );
         }
+        // istanbul ignore next: Can't reproduce.
         return {};
     }
 
@@ -537,20 +541,8 @@ export class Ability {
         boosts: Partial<BoostTable>,
     ): Promise<AbilityBlockResult> {
         // Parse initial event indicating boost effect.
-        const event = await tryVerify(ctx, "|-ability|", "|-immune|");
+        const event = await tryVerify(ctx, "|-ability|");
         if (!event) return {};
-
-        // If no boosts are being applied, just an |-immune| event will be
-        // shown.
-        if (event.args[0] === "-immune") {
-            const [, ident2Str] = event.args;
-            const ident2 = Protocol.parsePokemonIdent(ident2Str);
-            if (ident2.player !== side) return {};
-            if (!this.isEventFromAbility(event)) return {};
-            accept();
-            await base["|-immune|"](ctx);
-            return {immune: true};
-        }
 
         // Otherwise, parse this initial event and then the boost events.
         const [, identStr, abilityName, s] = event.args;
@@ -568,11 +560,13 @@ export class Ability {
             table: new Map(Object.entries(boosts) as [BoostName, number][]),
             silent: true,
         });
-        if (Object.keys(remaining).length > 0) {
+        if (remaining.size > 0) {
             throw new Error(
                 "On-block move boost effect failed: " +
                     "Failed to parse boosts " +
-                    `[${Object.keys(remaining).join(", ")}]`,
+                    `[${[...remaining]
+                        .map(([b, a]) => `${b}: ${a}`)
+                        .join(", ")}]`,
             );
         }
         return {immune: true};
@@ -718,6 +712,7 @@ export class Ability {
         if (this.data.on.tryUnboost.block) {
             return await this.blockUnboost(ctx, accept, side);
         }
+        // istanbul ignore next: Can't reproduce.
         return {};
     }
 
@@ -1071,6 +1066,7 @@ export class Ability {
                 ? new Set()
                 : null;
         }
+        // istanbul ignore next: Can't reproduce.
         return null;
     }
 

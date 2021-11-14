@@ -496,15 +496,16 @@ export const test = () =>
                     await ph.return([{immune: true}]);
                 });
 
+                // Can have motordrive.
+                const electivire: SwitchOptions = {
+                    species: "electivire",
+                    level: 100,
+                    gender: "M",
+                    hp: 100,
+                    hpMax: 100,
+                };
+
                 it("Should handle boost effect", async function () {
-                    // Can have motordrive.
-                    const electivire: SwitchOptions = {
-                        species: "electivire",
-                        level: 100,
-                        gender: "M",
-                        hp: 100,
-                        hpMax: 100,
-                    };
                     sh.initActive("p1");
                     sh.initActive("p2", electivire);
 
@@ -532,6 +533,46 @@ export const test = () =>
                     });
                     await ph.halt();
                     await ph.return([{immune: true}]);
+                });
+
+                it("Should handle silent boost effect", async function () {
+                    sh.initActive("p1");
+                    sh.initActive("p2", electivire).volatile.boosts.spe = 6;
+
+                    pctx = init("p2", {
+                        move: dex.getMove(dex.moves["thunder"]),
+                        userRef: "p1",
+                    });
+                    await ph.handle({
+                        args: ["-immune", toIdent("p2", electivire)],
+                        kwArgs: {from: toEffectName("motordrive", "ability")},
+                    });
+                    await ph.halt();
+                    await ph.return([{immune: true}]);
+                });
+
+                it("Should throw if missing boosts", async function () {
+                    sh.initActive("p1");
+                    sh.initActive("p2", electivire);
+
+                    pctx = init("p2", {
+                        move: dex.getMove(dex.moves["thunder"]),
+                        userRef: "p1",
+                    });
+                    await ph.handle({
+                        args: [
+                            "-ability",
+                            toIdent("p2", electivire),
+                            toAbilityName("motordrive"),
+                            "boost",
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.haltError(
+                        Error,
+                        "On-block move boost effect failed: " +
+                            "Failed to parse boosts [spe: 1]",
+                    );
                 });
 
                 // Can have waterabsorb.
@@ -1656,6 +1697,54 @@ export const test = () =>
                     });
                     await ph.halt();
                     await ph.return([undefined]);
+                });
+
+                it("Should throw if missing cure event", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.majorStatus.afflict("slp");
+                    mon.setAbility("insomnia");
+                    sh.initActive("p2");
+
+                    pctx = init("p1");
+                    await ph.handle({
+                        args: [
+                            "-activate",
+                            toIdent("p1"),
+                            toEffectName("insomnia", "ability"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.haltError(
+                        Error,
+                        "On-status cure effect failed: " +
+                            "Missing cure events: [slp]",
+                    );
+                });
+
+                it("Should throw if cure event is not the same as the status", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.majorStatus.afflict("slp");
+                    mon.setAbility("insomnia");
+                    sh.initActive("p2");
+
+                    pctx = init("p1");
+                    await ph.handle({
+                        args: [
+                            "-activate",
+                            toIdent("p1"),
+                            toEffectName("insomnia", "ability"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.rejectError(
+                        {
+                            args: ["-curestatus", toIdent("p1"), "par"],
+                            kwArgs: {},
+                        },
+                        Error,
+                        "On-status cure effect failed: " +
+                            "Missing cure events: [slp]",
+                    );
                 });
             });
         });

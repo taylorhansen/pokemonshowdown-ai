@@ -120,6 +120,7 @@ export class Item {
         if (this.data.on.moveCharge.shorten) {
             return new Set([reason.ability.cantIgnoreItem(mon)]);
         }
+        // istanbul ignore next: Can't reproduce.
         return null;
     }
 
@@ -216,6 +217,7 @@ export class Item {
                 data.resistSuper,
             );
         }
+        // istanbul ignore next: Can't reproduce.
         return {};
     }
 
@@ -261,8 +263,8 @@ export class Item {
         if (eff !== "super") {
             // TODO: Log error instead of throw?
             throw new Error(
-                "Expected type effectiveness to be 'super' but " +
-                    `got '${eff}' for '${moveType}' vs [${types.join(", ")}]`,
+                `Expected type effectiveness to be 'super' but got '${eff}' ` +
+                    `for '${moveType}' vs [${types.join(", ")}]`,
             );
         }
 
@@ -295,6 +297,7 @@ export class Item {
 
             return result;
         }
+        // istanbul ignore next: Can't reproduce.
         return null;
     }
 
@@ -350,6 +353,7 @@ export class Item {
                 reason.move.isEffective(hitBy.move, hitBy.user, mon, "super"),
             ]);
         }
+        // istanbul ignore next: Can't reproduce.
         return null;
     }
 
@@ -376,7 +380,7 @@ export class Item {
                 data.heal,
             );
             if (damageResult !== true || !accepted) {
-                throw new Error("ConsumeOn-super heal effect failed");
+                throw new Error("On-super heal effect failed");
             }
         }
     }
@@ -408,6 +412,7 @@ export class Item {
             // Note: Even if effect is a no-op, this item still activates.
             return new Set([reason.ability.cantIgnoreItem(mon)]);
         }
+        // istanbul ignore next: Can't reproduce.
         return null;
     }
 
@@ -539,6 +544,7 @@ export class Item {
             case "status": {
                 let activate = false;
                 for (const statusType in data.status) {
+                    // istanbul ignore if: Can't reproduce.
                     if (!Object.hasOwnProperty.call(data.status, statusType)) {
                         continue;
                     }
@@ -711,7 +717,7 @@ export class Item {
             }
             // If there's a status immunity (even a silent one), then the item
             // can't activate.
-            if (data.status && !ability.statusImmunity?.[data.status]) {
+            if (data.status && ability.statusImmunity?.[data.status]) {
                 const blockCondition = ability.on?.block?.status;
                 if (blockCondition === true) continue;
                 if (
@@ -890,8 +896,7 @@ export class Item {
                 }
                 if (cureResult.size > 0) {
                     return fail(
-                        "Missing cure events: " +
-                            `[${[...cureResult].join(", ")}]`,
+                        `Missing cure events: [${[...cureResult].join(", ")}]`,
                     );
                 }
                 break;
@@ -909,7 +914,7 @@ export class Item {
                 Item.requireString(moveName, "move", fail);
                 const moveId = toIdName(moveName);
                 if (!event.kwArgs.consumed) {
-                    return fail("Missing [consume] suffix");
+                    return fail("Missing [consumed] suffix");
                 }
 
                 const holder = ctx.state.getTeam(side).active;
@@ -920,8 +925,11 @@ export class Item {
             // istanbul ignore next: Should never happen.
             default: {
                 const unhandled: never = data;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-                return fail(`Unknown effect type '${(unhandled as any).type}'`);
+                return fail(
+                    `Unknown effect type '${
+                        (unhandled as unknown as {type: string}).type
+                    }'`,
+                );
             }
         }
     }
@@ -950,10 +958,8 @@ export class Item {
             throw new Error(
                 `Pokemon '${side}' received indirect damage ` +
                     `from item '${this.data.name}' even though its ability ` +
-                    `[${[...ability.possibleValues].join(
-                        ", ",
-                    )}] suppresses that ` +
-                    "damage",
+                    `[${[...ability.possibleValues].join(", ")}] suppresses ` +
+                    "that damage",
             );
         }
         ability.remove(filteredAbilities);

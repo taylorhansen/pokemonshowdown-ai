@@ -42,6 +42,28 @@ export const test = () =>
         const agent = setupOverrideAgent(ictx);
         const sender = setupOverrideSender(ictx);
 
+        it("Should throw if mismatched type", async function () {
+            pctx = initParser(
+                ictx.startArgs,
+                async ctx => await request(ctx, "move"),
+            );
+            await ph.rejectError(
+                {
+                    args: [
+                        "request",
+                        toRequestJSON({
+                            requestType: "wait",
+                            side: undefined,
+                            rqid: 2,
+                        }),
+                    ],
+                    kwArgs: {},
+                },
+                Error,
+                "Expected |request| type 'move' but got 'wait'",
+            );
+        });
+
         describe("requestType = team", function () {
             it("Should throw", async function () {
                 await ph.rejectError(
@@ -182,6 +204,151 @@ export const test = () =>
                 expect(mon.traits.ability.possibleValues).to.have.keys(
                     "shadowtag",
                 );
+            });
+
+            it("Should send last choice if all choices were rejected", async function () {
+                const [, , mon] = sh.initTeam("p1", [eevee, ditto, smeargle]);
+                expect(mon.moveset.reveal("ember").pp).to.equal(40);
+                expect(mon.moveset.get("tackle")).to.be.null;
+
+                const p = ph.handle(
+                    requestEvent(
+                        "move",
+                        [
+                            {
+                                ...benchInfo[0],
+                                moves: [toID("tackle"), toID("ember")],
+                            },
+                            ...benchInfo.slice(1),
+                        ],
+                        {
+                            moves: [
+                                {
+                                    id: toID("tackle"),
+                                    name: toMoveName("tackle"),
+                                    pp: 32,
+                                    maxpp: 32,
+                                    target: "normal",
+                                },
+                                {
+                                    id: toID("ember"),
+                                    name: toMoveName("ember"),
+                                    pp: 10,
+                                    maxpp: 40,
+                                    target: "normal",
+                                },
+                            ],
+                        },
+                    ),
+                );
+
+                const choices = await agent.choices();
+                expect(choices).to.have.members([
+                    "move 1",
+                    "move 2",
+                    "switch 2",
+                    "switch 3",
+                ]);
+                [choices[1], choices[3]] = [choices[3], choices[1]];
+                expect(choices).to.have.members([
+                    "move 1",
+                    "switch 3",
+                    "switch 2",
+                    "move 2",
+                ]);
+                agent.resolve();
+                await expect(sender.sent()).to.eventually.equal("move 1");
+                sender.resolve(true /*i.e., reject the choice*/);
+                await expect(sender.sent()).to.eventually.equal("switch 3");
+                expect(choices).to.have.members([
+                    "switch 3",
+                    "switch 2",
+                    "move 2",
+                ]);
+                sender.resolve(true);
+                await expect(sender.sent()).to.eventually.equal("switch 2");
+                expect(choices).to.have.members(["switch 2", "move 2"]);
+                sender.resolve(true);
+                // Send last remaining choice.
+                await expect(sender.sent()).to.eventually.equal("move 2");
+                expect(choices).to.have.members(["move 2"]);
+                sender.resolve(false /*i.e., accept the choice*/);
+
+                await p;
+                await ph.return();
+            });
+
+            it("Should throw if all choices are rejected", async function () {
+                const [, , mon] = sh.initTeam("p1", [eevee, ditto, smeargle]);
+                expect(mon.moveset.reveal("ember").pp).to.equal(40);
+                expect(mon.moveset.get("tackle")).to.be.null;
+
+                const p = ph.rejectError(
+                    requestEvent(
+                        "move",
+                        [
+                            {
+                                ...benchInfo[0],
+                                moves: [toID("tackle"), toID("ember")],
+                            },
+                            ...benchInfo.slice(1),
+                        ],
+                        {
+                            moves: [
+                                {
+                                    id: toID("tackle"),
+                                    name: toMoveName("tackle"),
+                                    pp: 32,
+                                    maxpp: 32,
+                                    target: "normal",
+                                },
+                                {
+                                    id: toID("ember"),
+                                    name: toMoveName("ember"),
+                                    pp: 10,
+                                    maxpp: 40,
+                                    target: "normal",
+                                },
+                            ],
+                        },
+                    ),
+                    Error,
+                    "Last choice 'move 2' was rejected as 'true'",
+                );
+
+                const choices = await agent.choices();
+                expect(choices).to.have.members([
+                    "move 1",
+                    "move 2",
+                    "switch 2",
+                    "switch 3",
+                ]);
+                [choices[1], choices[3]] = [choices[3], choices[1]];
+                expect(choices).to.have.members([
+                    "move 1",
+                    "switch 3",
+                    "switch 2",
+                    "move 2",
+                ]);
+                agent.resolve();
+                await expect(sender.sent()).to.eventually.equal("move 1");
+                sender.resolve(true /*i.e., reject the choice*/);
+                await expect(sender.sent()).to.eventually.equal("switch 3");
+                expect(choices).to.have.members([
+                    "switch 3",
+                    "switch 2",
+                    "move 2",
+                ]);
+                sender.resolve(true);
+                await expect(sender.sent()).to.eventually.equal("switch 2");
+                expect(choices).to.have.members(["switch 2", "move 2"]);
+                sender.resolve(true);
+                // Send last remaining choice.
+                await expect(sender.sent()).to.eventually.equal("move 2");
+                expect(choices).to.have.members(["move 2"]);
+                sender.resolve(true);
+
+                await p;
             });
         });
 

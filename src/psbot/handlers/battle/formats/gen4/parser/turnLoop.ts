@@ -83,9 +83,7 @@ async function postTurn(
         return false;
     }
     if (Number(event.args[1]) !== num) {
-        throw new Error(
-            `Expected |turn|${num} event but got ` + `'${event.args[1]}'`,
-        );
+        throw new Error(`Expected turn ${num} but got ${event.args[1]}`);
     }
     await consume(ctx);
 

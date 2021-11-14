@@ -329,4 +329,37 @@ export const test = () =>
 
             await ph.return();
         });
+
+        it("Should throw if invalid turn number", async function () {
+            // Init phase.
+            state.getTeam("p1").size = 2;
+            state.getTeam("p2").size = 2;
+
+            // Turn 1: Switch in smeargle on both sides.
+            // Note: This is after the initial |start event parsed by init.ts.
+
+            await ph.handle({
+                args: [
+                    "switch",
+                    toIdent("p1", smeargle),
+                    toDetails(smeargle),
+                    toHPStatus(100, 100),
+                ],
+                kwArgs: {},
+            });
+            await ph.handle({
+                args: [
+                    "switch",
+                    toIdent("p2", smeargle),
+                    toDetails(smeargle),
+                    toHPStatus(100, 100),
+                ],
+                kwArgs: {},
+            });
+            await ph.rejectError(
+                {args: ["turn", toNum(2)], kwArgs: {}},
+                Error,
+                "Expected turn 1 but got 2",
+            );
+        });
     });

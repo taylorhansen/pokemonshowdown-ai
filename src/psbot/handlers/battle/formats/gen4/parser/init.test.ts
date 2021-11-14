@@ -50,7 +50,6 @@ export const test = () =>
 
             ictx.sender = async () => await Promise.resolve(false);
 
-            pctx = initParser(ictx.startArgs, init);
             await ph.handle({args: ["init", "battle"], kwArgs: {}});
             await ph.handle({args: ["gametype", "singles"], kwArgs: {}});
             await ph.handle({
@@ -140,5 +139,82 @@ export const test = () =>
             expect(team1.active).to.not.be.null;
             expect(team2.size).to.equal(1);
             expect(team2.active).to.be.null;
+        });
+
+        it("Should throw if invalid |init| event", async function () {
+            await ph.rejectError(
+                {
+                    args: ["init", "chat"],
+                    kwArgs: {},
+                },
+                Error,
+                "Expected room type 'battle' but got 'chat'",
+            );
+        });
+
+        it("Should throw if invalid |gametype| event", async function () {
+            await ph.rejectError(
+                {args: ["gametype", "doubles"], kwArgs: {}},
+                Error,
+                "Expected game type 'singles' but got 'doubles'",
+            );
+        });
+
+        it("Should throw if invalid |gen| event", async function () {
+            await ph.rejectError(
+                {args: ["gen", 3], kwArgs: {}},
+                Error,
+                "Expected gen 4 but got 3",
+            );
+        });
+
+        it("Should throw if invalid |request| side id", async function () {
+            state.ourSide = "p1";
+
+            await ph.rejectError(
+                {
+                    args: [
+                        "request",
+                        toRequestJSON({
+                            requestType: "move",
+                            active: [],
+                            side: {
+                                id: "p2",
+                                name: toUsername("player2"),
+                                pokemon: [],
+                            },
+                            rqid: 2,
+                        }),
+                    ],
+                    kwArgs: {},
+                },
+                Error,
+                "Expected |request| with side.id = 'p1' but got 'p2'",
+            );
+        });
+
+        it("Should throw if invalid |request| username", async function () {
+            state.ourSide = "p1";
+
+            await ph.rejectError(
+                {
+                    args: [
+                        "request",
+                        toRequestJSON({
+                            requestType: "move",
+                            active: [],
+                            side: {
+                                id: "p1",
+                                name: toUsername("player2"),
+                                pokemon: [],
+                            },
+                            rqid: 2,
+                        }),
+                    ],
+                    kwArgs: {},
+                },
+                Error,
+                "Expected |request| with side.name = 'username' but got 'player2'",
+            );
         });
     });

@@ -62,6 +62,7 @@ export function possibilityClassEncoder<T extends string>(
     return {
         encode(arr, pc) {
             checkLength(arr, keys.length);
+            // istanbul ignore next: Should never happen but ok if it does.
             if (pc.size < 0) {
                 arr.fill(0);
                 return;
@@ -699,19 +700,20 @@ interface TeamEncoderArgs {
 /** Encoder for a {@link Team}. */
 export const teamEncoder: Encoder<TeamEncoderArgs> = concat(
     assertEncoder(({team: t}) => {
+        // istanbul ignore if: Should never happen.
         if (!t.active) {
             throw new Error("Team does not have an active Pokemon");
         }
-        // istanbul ignore next: Should never happen.
+        // istanbul ignore if: Should never happen.
         if (t.active !== t.pokemon[0]) {
             throw new Error("Active Pokemon is not in the right Team slot");
         }
-        // istanbul ignore next: Should never happen.
+        // istanbul ignore if: Should never happen.
         if (!t.active.active) {
             throw new Error("Active Pokemon is not active");
         }
         for (let i = 1; i < t.pokemon.length; ++i) {
-            // istanbul ignore next: Should never happen.
+            // istanbul ignore if: Should never happen.
             if (t.pokemon[i]?.active) {
                 throw new Error(`Pokemon in Team slot ${i} is active`);
             }

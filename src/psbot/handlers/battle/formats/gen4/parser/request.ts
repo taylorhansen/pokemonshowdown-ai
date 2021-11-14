@@ -32,8 +32,7 @@ export async function request(
 
     if (type && req.requestType !== type) {
         throw new Error(
-            `Expected |request| type '${type}' but got ` +
-                `'${req.requestType}'`,
+            `Expected |request| type '${type}' but got '${req.requestType}'`,
         );
     }
 
@@ -93,6 +92,7 @@ async function decide(
     const choices = getChoices(req);
     ctx.logger.debug(`Choices: [${choices.join(", ")}]`);
 
+    // istanbul ignore if: Should never happen.
     if (choices.length <= 0) throw new Error("No choices to send");
     // Note: if we only have one choice then the BattleAgent will have basically
     // experienced a "time skip" between turns since its choices wouldn't have
@@ -103,7 +103,7 @@ async function decide(
     if (choices.length === 1) await sendLastchoice(ctx, choices[0]);
     else await evaluateChoices(ctx, req.side.id, choices);
 
-    ctx.logger.debug(`Choice ${choices[0]} was accepted`);
+    ctx.logger.debug(`Choice '${choices[0]}' was accepted`);
 }
 
 /**
@@ -138,7 +138,7 @@ async function evaluateChoices(
 
         // Remove invalid choice.
         const lastChoice = choices.shift()!;
-        ctx.logger.debug(`Choice ${lastChoice} was rejected as '${result}'`);
+        ctx.logger.debug(`Choice '${lastChoice}' was rejected as '${result}'`);
 
         // Interpret the rejection reason to possibly update the battle state.
         /**
@@ -148,21 +148,9 @@ async function evaluateChoices(
         let newInfo = false;
         if (result === "disabled") {
             // Move is disabled by a previously-unknown effect.
-            if (!lastChoice.startsWith("move")) {
-                throw new Error(
-                    `Non-move Choice '${lastChoice}' rejected ` +
-                        `as '${result}'`,
-                );
-            }
             // TODO: Imprison check.
         } else if (result === "trapped") {
             // Pokemon is trapped by a previously-unknown effect.
-            if (!lastChoice.startsWith("switch")) {
-                throw new Error(
-                    `Non-switch Choice ${lastChoice} ` +
-                        "rejected as 'trapped'",
-                );
-            }
             // Now known to be trapped by the opponent, all other switch choices
             // are therefore invalid.
             for (let i = 0; i < choices.length; ++i) {
@@ -177,13 +165,14 @@ async function evaluateChoices(
 
         // Before possibly querying the BattleAgent/loop again, make sure we
         // haven't fallen back to the base case in decide().
+        // istanbul ignore if: Should never happen.
         if (choices.length <= 0) {
             throw new Error(
-                `Last choice '${lastChoice}' rejected as ` + `'${result}'`,
+                `Last choice '${lastChoice}' rejected as '${result}'`,
             );
         }
         if (choices.length === 1) {
-            await sendLastchoice(ctx, lastChoice);
+            await sendLastchoice(ctx, choices[0]);
             break;
         }
 
@@ -202,8 +191,8 @@ async function sendLastchoice(
 ): Promise<void> {
     const res = await ctx.sender(choice);
     if (!res) return;
-    ctx.logger.debug(`Choice ${choice} was rejected as '${res}'`);
-    throw new Error(`Last choice '${choice}' rejected as '${res}'`);
+    ctx.logger.error(`Choice '${choice}' was rejected as '${res}'`);
+    throw new Error(`Last choice '${choice}' was rejected as '${res}'`);
 }
 
 /** Gets the available choices for this decision request. */
