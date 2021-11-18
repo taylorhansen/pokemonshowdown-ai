@@ -22,11 +22,10 @@ import {
 } from "./ModelProtocol";
 import {setTimeoutNs} from "./nanosecond";
 
-// Select native backend, defaulting to cpu if not told to use gpu.
 const {gpu} = workerData as ModelWorkerData;
 const tfn = importTfn(gpu);
 
-/** State+callback entry for a NetworkRegistry's batch queue. */
+/** State+callback entry for a {@link ModelRegistry}'s batch queue. */
 interface BatchEntry {
     /** Encoded battle state. */
     readonly state: Float32Array;
@@ -87,7 +86,6 @@ export class ModelRegistry {
 
         this.batchOptions = {
             ...batchOptions,
-            // Min 1ns, max 1s.
             timeoutNs: batchOptions.timeoutNs,
         };
 
@@ -176,7 +174,7 @@ export class ModelRegistry {
             ...(logPath
                 ? [
                       ensureDir(logPath).then(
-                          // Can change updateFreq to batch to track epoch
+                          // Note: Can change updateFreq to batch to track epoch
                           // progress, but will make the learning algorithm
                           // slower.
                           () =>

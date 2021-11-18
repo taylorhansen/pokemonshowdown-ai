@@ -74,7 +74,7 @@ export class WorkerPort<
      * @param transferList Port/buffer transfer list to avoid copying.
      * @param callback Function to call when a reply is sent by the port. This
      * may be called multiple times until the `done` property of the argument is
-     * true.
+     * `true`.
      */
     public postMessage<T extends TTypes>(
         msg: ProtocolMessage<TProtocol, TTypes, T>,

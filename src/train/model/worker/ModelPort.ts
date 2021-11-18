@@ -20,11 +20,11 @@ import {
 } from "./ModelPortProtocol";
 
 /**
- * Abstracts the interface between a game worker and the main NetworkProcessor
- * worker.
+ * Abstracts the interface between a game worker and a model owned by the main
+ * ModelWorker.
  *
  * Intended to be used by only one BattleAgent within a game worker that
- * received a port to connect to a neural network.
+ * received a port to connect to a model.
  *
  * @template TFormatType Game format type.
  */
@@ -89,9 +89,8 @@ export class ModelPort<
             let i = ModelPort.verifyInput(arr);
             if (i >= 0) {
                 throw new Error(
-                    "Neural network input contains an " +
-                        `invalid value (${arr[i]}) at index ${i}\n` +
-                        `State:\n${state.toString()}`,
+                    `Model input contains an invalid value '${arr[i]}' at ` +
+                        `index ${i}\nState:\n${state.toString()}`,
                 );
             }
 
@@ -99,8 +98,8 @@ export class ModelPort<
             i = ModelPort.verifyOutput(result.probs);
             if (i >= 0) {
                 throw new Error(
-                    "Neural network output contains an " +
-                        `invalid value at index ${i} (${intToChoice[i]})`,
+                    "Model output contains an invalid value " +
+                        `'${intToChoice[i]}' at index ${i}`,
                 );
             }
 
@@ -112,7 +111,7 @@ export class ModelPort<
             await innerAgent(state, choices, logger);
             if (!data) {
                 throw new Error(
-                    "ModelPort agent didn't collect experience " + "data",
+                    "ModelPort agent didn't collect experience data",
                 );
             }
             const result = data;
@@ -122,11 +121,11 @@ export class ModelPort<
     }
 
     /**
-     * Makes sure that the input doesn't contain invalid values, i.e. NaNs or
+     * Makes sure that the input doesn't contain invalid values, i.e. `NaN`s or
      * values outside the range `[-1, 1]`.
      *
      * @param arr Array input.
-     * @returns The index of an invalid value, or -1 if none found.
+     * @returns The index of an invalid value, or `-1` if none found.
      */
     private static verifyInput(arr: Float32Array): number {
         for (let i = 0; i < arr.length; ++i) {
@@ -137,12 +136,12 @@ export class ModelPort<
     }
 
     /**
-     * Makes sure that the output doesn't contain invalid values, i.e. NaNs or
-     * very small softmax outputs which tend to mess with `policyAgent`'s
-     * weighted shuffle algorithm.
+     * Makes sure that the output doesn't contain invalid values, i.e. `NaN`s or
+     * highly concentrated softmax outputs which tend to mess with
+     * `policyAgent`'s weighted shuffle algorithm.
      *
      * @param arr Array input.
-     * @returns The index of an invalid value, or -1 if none found.
+     * @returns The index of an invalid value, or `-1` if none found.
      */
     private static verifyOutput(arr: Float32Array): number {
         for (let i = 0; i < arr.length; ++i) {
