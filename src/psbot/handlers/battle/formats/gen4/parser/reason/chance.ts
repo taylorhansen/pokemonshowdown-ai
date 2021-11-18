@@ -1,13 +1,20 @@
 import {inference} from "../../../../parser";
 
 /**
- * SubReason that communicates that the parent effect is dependent on random
- * factors outside what can be predicted or deduced.
+ * Creates a SubReason that makes no assertions other than that the parent
+ * effect is dependent on random factors outside what can be predicted or
+ * deduced.
  */
-export class ChanceReason extends inference.SubReason {
-    /** Value of {@link ChanceReason.canHold}. */
+export const create = (): inference.SubReason => new ChanceReason();
+
+class ChanceReason extends inference.SubReason {
+    /**
+     * Return value of {@link ChanceReason.canHold canHold} before or after
+     * calling
+     * {@link ChanceReason.assert assert}/{@link ChanceReason.reject reject}.
+     */
     private held: boolean | null = null;
-    /** Callback from {@link ChanceReason.delayImpl}. */
+    /** Callback from {@link ChanceReason.delayImpl delayImpl}. */
     private delayCb: inference.DelayCallback | null = null;
 
     public override canHold(): boolean | null {
@@ -37,6 +44,3 @@ export class ChanceReason extends inference.SubReason {
         return `${s}ChanceReason()`;
     }
 }
-
-/** Function to create a {@link ChanceReason}. */
-export const create = () => new ChanceReason();
