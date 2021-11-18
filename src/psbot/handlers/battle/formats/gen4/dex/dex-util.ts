@@ -237,24 +237,47 @@ export interface AbilityData extends DexData {
              */
             readonly cure?: true;
         };
-        /**
-         * Whenever the holder switches in or gains the ability. Leaving this
-         * field defined but empty means it will reveal itself with no
-         * additional effects (e.g. moldbreaker, pressure, etc).
-         */
+        /** Whenever the holder switches in or gains the ability. */
         readonly start?: {
-            // TODO: Document/handle conditions to not activate.
-            // TODO: Weather abilities.
             /**
-             * Reveal a random opponent's held item, or don't activate if the
+             * Activates if any opponent has a strong move against the holder.
+             */
+            readonly anticipate?: true;
+            /** Boosts to apply immediately. */
+            readonly boost?: {
+                /**
+                 * Boost self. If `"download"`, depends on opponent's defensive
+                 * stats.
+                 */
+                readonly self?: Partial<BoostTable> | "download";
+                /** Boost opponents. Fails on Substitute. */
+                readonly foes?: Partial<BoostTable>;
+            };
+            /**
+             * Whether this ability causes opponents who target the holder with
+             * a move to use up 1 extra PP.
+             */
+            readonly extraPpUsage?: true;
+            /**
+             * Whether this ability ignores the target's ability when using a
+             * move.
+             */
+            readonly ignoreTargetAbility?: true;
+            /**
+             * Reveals a random opponent's held item, or don't activate if the
              * opponents don't have items.
              */
             readonly revealItem?: true;
-            /**
-             * Reveal the opponent's strongest move by base-power according to
-             * Forewarn rules.
-             */
+            /** Statuses, one of which to apply immediately. */
+            readonly status?: {
+                // TODO(slowstart): Also support on-end event.
+                /** Status self. */
+                readonly self: readonly StatusType[];
+            };
+            /** Reveals the opponent's strongest move. */
             readonly warnStrongestMove?: true;
+            /** Weather to start immediately. */
+            readonly weather?: WeatherType;
         };
         /**
          * Whenever a move or effect is about to hit the ability holder and the
@@ -370,10 +393,6 @@ export interface AbilityData extends DexData {
         readonly suppressWeather?: true;
         /** Whether this ability ignores held item. */
         readonly ignoreItem?: true;
-        /**
-         * Whether this ability ignores the target's ability when using a move.
-         */
-        readonly ignoreTargetAbility?: true;
         // TODO: Support inferences for this.
         /**
          * Whether to make multi-hit moves used by the holder hit for the max

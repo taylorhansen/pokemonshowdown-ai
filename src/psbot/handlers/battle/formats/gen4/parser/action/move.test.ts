@@ -1081,9 +1081,11 @@ export const test = (): void =>
                 });
 
                 describe("Substitute", function () {
+                    let them: Pokemon;
+
                     beforeEach("Initialize active and substitute", function () {
                         sh.initActive("p1").volatile.substitute = true;
-                        sh.initActive("p2").volatile.substitute = true;
+                        (them = sh.initActive("p2")).volatile.substitute = true;
                     });
 
                     const subBlockedEvent = (
@@ -1156,6 +1158,8 @@ export const test = (): void =>
                     });
 
                     it("Should handle substitute broken", async function () {
+                        expect(them.volatile.substituteBroken).to.be.null;
+
                         pctx = init("p1");
                         await moveEvent("p1", "leafstorm");
                         await ph.handle(subBrokenEvent("p2"));
@@ -1165,6 +1169,9 @@ export const test = (): void =>
                         });
                         await ph.halt();
                         await ph.return({});
+                        expect(them.volatile.substituteBroken).to.equal(
+                            "leafstorm",
+                        );
                     });
 
                     it("Should throw if sub-ignoring move doesn't ignore sub", async function () {

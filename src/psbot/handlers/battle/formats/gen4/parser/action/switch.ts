@@ -124,7 +124,7 @@ async function unorderedSwitchEffectsImpl(
     ctx: BattleParserContext<"gen4">,
     accept: unordered.AcceptCallback,
     side: SideID,
-) {
+): Promise<void> {
     // Note: Faint/win happens independently for each call.
     return await switchEffects(ctx, side, accept);
 }

@@ -74,6 +74,7 @@ export const test = () =>
                 expect(volatile.stalling).to.be.false;
                 expect(volatile.stallTurns).to.equal(0);
                 expect(volatile.stockpile).to.equal(0);
+                expect(volatile.substituteBroken).to.be.null;
                 expect(volatile.taunt.isActive).to.be.false;
                 expect(volatile.torment).to.be.false;
                 expect(volatile.twoTurn.isActive).to.be.false;
@@ -150,6 +151,7 @@ export const test = () =>
                 expect(volatile.stalling).to.be.false;
                 expect(volatile.stallTurns).to.equal(0);
                 expect(volatile.stockpile).to.equal(0);
+                expect(volatile.substituteBroken).to.be.null;
                 expect(volatile.taunt.isActive).to.be.false;
                 expect(volatile.torment).to.be.false;
                 expect(volatile.twoTurn.isActive).to.be.false;
@@ -562,6 +564,7 @@ export function setAllVolatiles(volatile: VolatileStatus): void {
     volatile.snatch = true;
     volatile.stall(true);
     volatile.stockpile = 2;
+    volatile.substituteBroken = "tackle";
     volatile.taunt.start();
     volatile.torment = true;
     volatile.twoTurn.start("solarbeam");

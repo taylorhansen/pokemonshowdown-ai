@@ -59,7 +59,10 @@ export const onStart = onX(
     "onStart",
     (ctx, side) => {
         const mon = ctx.state.getTeam(side).active;
-        return getAbilities(mon, ability => ability.canStart(mon));
+        // TODO(doubles): Track actual opponents.
+        const otherSide = side === "p1" ? "p2" : "p1";
+        const opp = ctx.state.getTeam(otherSide).active;
+        return getAbilities(mon, ability => ability.canStart(mon, opp));
     },
     onXInferenceParser("onStartInference", onStartUnordered),
 );
@@ -406,7 +409,9 @@ export function onStartOrUpdate(
     const mon = ctx.state.getTeam(side).active;
     // TODO(doubles): Track actual copy targets.
     const opp = ctx.state.getTeam(side === "p1" ? "p2" : "p1").active;
-    const startAbilities = getAbilities(mon, ability => ability.canStart(mon));
+    const startAbilities = getAbilities(mon, ability =>
+        ability.canStart(mon, opp),
+    );
     const updateAbilities = getAbilities(mon, ability =>
         ability.canUpdate(mon, opp),
     );
@@ -957,7 +962,7 @@ function collectCopierInferences(
 
         // Apply activation conditions for copied on-start/update abilities onto
         // the copier ability holder.
-        const startReasons = ability.canStart(mon);
+        const startReasons = ability.canStart(mon, opp);
         if (startReasons) {
             // Note: Also include the copier/copied abilities in the inference.
             startReasons.add(

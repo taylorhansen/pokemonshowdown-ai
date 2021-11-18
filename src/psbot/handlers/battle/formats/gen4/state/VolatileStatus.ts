@@ -169,6 +169,8 @@ export interface ReadonlyVolatileStatus {
     readonly stallTurns: number;
     /** Number of Stockpile uses. */
     readonly stockpile: number;
+    /** Name of the move that just broke the Substitute during this turn. */
+    readonly substituteBroken: string | null;
     /** Taunt move status. */
     readonly taunt: ReadonlyTempStatus;
     /** Torment move status. */
@@ -490,6 +492,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
     }
     private _stockpile!: number;
 
+    /** @override */
+    public substituteBroken: string | null = null;
+
     // 3-5 turns, cure on last.
     /** @override */
     public readonly taunt = new TempStatus("taunt", 5);
@@ -641,6 +646,7 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this._stalling = false;
         this._stallTurns = 0;
         this._stockpile = 0;
+        this.substituteBroken = null;
         this.taunt.end();
         this.torment = false;
         this.transformed = false;
@@ -713,8 +719,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
 
     /** Called at the end of every turn to update temp statuses. */
     public postTurn(): void {
-        // Implicitly update turn-based temp statuses
-        // This excludes statuses that are explicitly mentioned when updated
+        // Implicitly update turn-based temp statuses.
+        // This excludes statuses that are explicitly mentioned when updated.
         this.embargo.tick();
         this._lockOnTurns.tick();
         this.magnetrise.tick();
@@ -726,6 +732,8 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
         this.taunt.tick();
         this.twoTurn.tick();
         this.yawn.tick();
+
+        this.substituteBroken = null;
 
         // Handle lockon ending.
         if (!this._lockOnTurns.isActive) {
@@ -814,6 +822,9 @@ export class VolatileStatus implements ReadonlyVolatileStatus {
                     ? [pluralTurns("stalled", this._stallTurns - 1)]
                     : [],
                 this._stockpile > 0 ? [`stockpile ${this._stockpile}`] : [],
+                this.substituteBroken
+                    ? [`substitute broken by ${this.substituteBroken}`]
+                    : [],
                 this.taunt.isActive ? [this.taunt.toString()] : [],
                 this.torment ? ["torment"] : [],
                 this.transformed ? ["transformed"] : [],

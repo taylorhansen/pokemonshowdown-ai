@@ -1267,9 +1267,15 @@ async function hit(
                     // should just fail outright.
                     // TODO: For now custom dex mods in order to test this?
                     throw new Error(
-                        "Substitute-ignoring move shouldn't have " +
-                            "been blocked by Substitute",
+                        "Substitute-ignoring move shouldn't have been " +
+                            "blocked by Substitute",
                     );
+                }
+                // Broke target's substitute using this move.
+                if (event.args[0] === "-end") {
+                    ctx.state.getTeam(
+                        ident.player,
+                    ).active.volatile.substituteBroken = args.move.data.name;
                 }
                 return await dispatch(_ctx);
             }
@@ -1802,7 +1808,7 @@ function statusReject(
     if (
         !user.volatile.suppressAbility &&
         [...userAbility.possibleValues].every(
-            n => userAbility.map[n].flags?.ignoreTargetAbility,
+            n => userAbility.map[n].on?.start?.ignoreTargetAbility,
         )
     ) {
         throw new Error(
@@ -2955,7 +2961,7 @@ function addTarget(
             target.ability === "pressure" &&
             // Keep 1 pp deduction if the user's ability ignores pressure.
             [...user.traits.ability.possibleValues].some(
-                a => !dex.abilities[a].flags?.ignoreTargetAbility,
+                a => !dex.abilities[a].on?.start?.ignoreTargetAbility,
             )
         ) {
             moveSlot.pp -= 1;

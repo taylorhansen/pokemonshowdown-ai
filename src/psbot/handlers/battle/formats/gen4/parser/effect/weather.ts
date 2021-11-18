@@ -23,7 +23,7 @@ export async function weather(
 ): Promise<true | "silent" | undefined> {
     const rs = ctx.state.status;
     // Effect would do nothing.
-    if (rs.weather.isActive === (type !== "none")) return "silent";
+    if (rs.weather.type === type) return "silent";
 
     // Parse event.
     const event = await tryVerify(ctx, "|-weather|");

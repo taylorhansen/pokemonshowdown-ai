@@ -902,8 +902,23 @@ void (async function buildDex(): Promise<void> {
     } = {
         naturalcure: {on: {switchOut: {cure: true}}},
 
-        // TODO(insomnia/vitalspirit): when using rest, ability causes it to
-        // fail if hp not full (`|-fail|mon|heal`).
+        anticipation: {on: {start: {anticipate: true}}},
+        download: {on: {start: {boost: {self: "download"}}}},
+        forewarn: {on: {start: {warnStrongestMove: true}}},
+        frisk: {on: {start: {revealItem: true}}},
+        intimidate: {on: {start: {boost: {foes: {atk: -1}}}}},
+        moldbreaker: {on: {start: {ignoreTargetAbility: true}}},
+        pressure: {on: {start: {extraPpUsage: true}}},
+        slowstart: {on: {start: {status: {self: ["slowstart"]}}}},
+
+        // Weather abilities.
+        drizzle: {on: {start: {weather: "RainDance"}}},
+        drought: {on: {start: {weather: "SunnyDay"}}},
+        sandstream: {on: {start: {weather: "Sandstorm"}}},
+        snowwarning: {on: {start: {weather: "Hail"}}},
+
+        // TODO(insomnia/vitalspirit): When using rest, ability causes it to
+        // fail if hp not full (`|-fail|<ident>|heal`).
         immunity: {
             on: statusImmunityOn,
             statusImmunity: {psn: true, tox: true},
@@ -911,7 +926,7 @@ void (async function buildDex(): Promise<void> {
         insomnia: {on: statusImmunityOn, statusImmunity: {slp: true}},
         limber: {on: statusImmunityOn, statusImmunity: {par: true}},
         magmaarmor: {on: statusImmunityOn, statusImmunity: {frz: true}},
-        // TODO: Oblivious should also be immune to captivate.
+        // TODO: Oblivious should also be immune to captivate move.
         oblivious: {on: statusImmunityOn, statusImmunity: {attract: true}},
         owntempo: {on: statusImmunityOn, statusImmunity: {confusion: true}},
         vitalspirit: {on: statusImmunityOn, statusImmunity: {slp: true}},
@@ -932,11 +947,6 @@ void (async function buildDex(): Promise<void> {
                 yawn: true,
             },
         },
-
-        frisk: {on: {start: {revealItem: true}}},
-        forewarn: {on: {start: {warnStrongestMove: true}}},
-        moldbreaker: {on: {start: {}}, flags: {ignoreTargetAbility: true}},
-        pressure: {on: {start: {}}},
 
         // TODO(dryskin): Sun/fire weakness.
         dryskin: {on: {block: {move: {type: "water", percentDamage: 25}}}},

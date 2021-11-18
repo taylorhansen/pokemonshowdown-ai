@@ -11,7 +11,7 @@ export interface BoostArgs {
     readonly side: SideID;
     /** Boosts to apply. This is the same object that gets returned. */
     readonly table: Map<BoostID, number>;
-    /** Whether to ignore boosts that can't be applied. Default false.  */
+    /** Whether to ignore boosts that can't be applied. Default `false`.  */
     readonly silent?: boolean;
     /**
      * Optional additional custom check on the event before it can be parsed.
@@ -143,7 +143,7 @@ function consumeBoosts(
  * Parses a boost/unboost effect for one stat.
  *
  * @param args Information about the boosts to apply.
- * @returns The boost that was parsed, or "silent" if no boosts could be
+ * @returns The boost that was parsed, or `"silent"` if no boosts could be
  * applied and `args.silent=true`. Otherwise `undefined` if the next event is
  * invalid.
  */
@@ -168,7 +168,7 @@ export async function boostOne(
             }
         }
         if (allMaxed) return "silent";
-        // Try to match one of the remaining boosts.
+        // Otherwise, try to match one of the remaining boosts below.
     }
 
     const event = await tryVerify(ctx, "|-boost|", "|-unboost|");

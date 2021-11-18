@@ -20,6 +20,7 @@ import {
     toMoveName,
     toNum,
     toTypes,
+    toWeather,
 } from "../helpers.test";
 import * as effectAbility from "./ability";
 
@@ -185,6 +186,271 @@ export const test = () =>
                 );
             });
 
+            describe("Anticipate (Anticipation)", function () {
+                it("Should handle", async function () {
+                    sh.initActive("p1").moveset.reveal("icebeam");
+                    const mon = sh.initActive("p2");
+                    mon.setAbility("anticipation");
+                    mon.volatile.changeTypes(["grass", "???"]);
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: [
+                            "-ability",
+                            toIdent("p2"),
+                            toAbilityName("anticipation"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+
+                // TODO: Implement all activation conditions before supporting
+                // any assertions for this ability.
+                it("Should allow no activation", async function () {
+                    sh.initActive("p1").moveset.reveal("icebeam");
+                    const mon = sh.initActive("p2");
+                    mon.setAbility("anticipation");
+                    mon.volatile.changeTypes(["grass", "???"]);
+
+                    pctx = init("p2");
+                    await ph.halt();
+                    await ph.return([]);
+                });
+            });
+
+            describe("Boost", function () {
+                describe("Self (Download)", function () {
+                    it("Should handle", async function () {
+                        const mon = sh.initActive("p1");
+                        mon.traits.stats.def.set(mon.traits.stats.def.min);
+                        mon.traits.stats.spd.set(mon.traits.stats.spd.max);
+                        expect(mon.traits.stats.def.max).to.be.lessThan(
+                            mon.traits.stats.spd.max,
+                        );
+                        sh.initActive("p2").setAbility("download");
+
+                        pctx = init("p2");
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p2"),
+                                toAbilityName("download"),
+                                "boost",
+                            ],
+                            kwArgs: {},
+                        });
+                        // Def is lower.
+                        await ph.handle({
+                            args: ["-boost", toIdent("p2"), "atk", toNum(1)],
+                            kwArgs: {},
+                        });
+                        await ph.halt();
+                        await ph.return([undefined]);
+                    });
+
+                    it("Should throw if invalid boost", async function () {
+                        sh.initActive("p1");
+                        sh.initActive("p2").setAbility("download");
+
+                        pctx = init("p2");
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p2"),
+                                toAbilityName("download"),
+                                "boost",
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.rejectError(
+                            {
+                                args: [
+                                    "-boost",
+                                    toIdent("p2"),
+                                    "spe",
+                                    toNum(1),
+                                ],
+                                kwArgs: {},
+                            },
+                            Error,
+                            "On-start boost self download effect failed: " +
+                                "Missing boost: [{atk: 1}, {spa: 1}]",
+                        );
+                    });
+
+                    it("Should consider stat boosts", async function () {
+                        const mon = sh.initActive("p1");
+                        mon.traits.stats.def.set(mon.traits.stats.def.min);
+                        mon.traits.stats.spd.set(mon.traits.stats.spd.max);
+                        expect(mon.traits.stats.def.max).to.be.lessThan(
+                            mon.traits.stats.spd.max,
+                        );
+                        mon.volatile.boosts.def = 1;
+                        sh.initActive("p2").setAbility("download");
+
+                        pctx = init("p2");
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p2"),
+                                toAbilityName("download"),
+                                "boost",
+                            ],
+                            kwArgs: {},
+                        });
+                        // Considers stat boost, so spd is lower.
+                        await ph.handle({
+                            args: ["-boost", toIdent("p2"), "spa", toNum(1)],
+                            kwArgs: {},
+                        });
+                        await ph.halt();
+                        await ph.return([undefined]);
+                    });
+
+                    it("Should not consider ability-boosted stats", async function () {
+                        const mon = sh.initActive("p1");
+                        // TODO: Implement ability-boosted stats.
+                        mon.setAbility("marvelscale");
+                        mon.majorStatus.afflict("par");
+                        mon.traits.stats.def.set(mon.traits.stats.def.min);
+                        mon.traits.stats.spd.set(mon.traits.stats.spd.max);
+                        expect(mon.traits.stats.def.max).to.be.lessThan(
+                            mon.traits.stats.spd.max,
+                        );
+                        sh.initActive("p2").setAbility("download");
+
+                        pctx = init("p2");
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p2"),
+                                toAbilityName("download"),
+                                "boost",
+                            ],
+                            kwArgs: {},
+                        });
+                        // Ignores marvelscale boost, so def is lower.
+                        await ph.handle({
+                            args: ["-boost", toIdent("p2"), "atk", toNum(1)],
+                            kwArgs: {},
+                        });
+                        await ph.halt();
+                        await ph.return([undefined]);
+                    });
+
+                    // TODO(#311): Implement stat inferences.
+                    it("Should infer stat range");
+                });
+
+                describe("Foes (Intimidate)", function () {
+                    it("Should handle", async function () {
+                        sh.initActive("p1");
+                        sh.initActive("p2").setAbility("intimidate");
+
+                        pctx = init("p2");
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p2"),
+                                toAbilityName("intimidate"),
+                                "boost",
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.handle({
+                            args: ["-unboost", toIdent("p1"), "atk", toNum(1)],
+                            kwArgs: {},
+                        });
+                        await ph.halt();
+                        await ph.return([undefined]);
+                    });
+
+                    it("Should not activate if substitute", async function () {
+                        sh.initActive("p1").volatile.substitute = true;
+                        sh.initActive("p2").setAbility("intimidate");
+
+                        pctx = init("p2");
+                        await ph.halt();
+                        await ph.return([]);
+                    });
+
+                    it("Should still activate if substitute just broken", async function () {
+                        sh.initActive("p1").volatile.substituteBroken =
+                            "tackle";
+                        sh.initActive("p2").setAbility("intimidate");
+
+                        pctx = init("p2");
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p2"),
+                                toAbilityName("intimidate"),
+                                "boost",
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.handle({
+                            args: ["-unboost", toIdent("p1"), "atk", toNum(1)],
+                            kwArgs: {},
+                        });
+                        await ph.halt();
+                        await ph.return([undefined]);
+                    });
+
+                    it("Should not activate if substitute just broken by uturn", async function () {
+                        sh.initActive("p1").volatile.substituteBroken = "uturn";
+                        sh.initActive("p2").setAbility("intimidate");
+
+                        pctx = init("p2");
+                        await ph.halt();
+                        await ph.return([]);
+                    });
+
+                    // TODO(doubles): Test |-immune| event for when only one
+                    // opponent has a substitute.
+                });
+            });
+
+            describe("ExtraPpUsage (Pressure)", function () {
+                it("Should handle", async function () {
+                    sh.initActive("p1");
+                    sh.initActive("p2").setAbility("pressure");
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: [
+                            "-ability",
+                            toIdent("p2"),
+                            toAbilityName("pressure"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+            });
+
+            describe("IgnoreTargetAbility (Mold Breaker)", function () {
+                it("Should handle", async function () {
+                    sh.initActive("p1");
+                    sh.initActive("p2").setAbility("moldbreaker");
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: [
+                            "-ability",
+                            toIdent("p2"),
+                            toAbilityName("moldbreaker"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+            });
+
             describe("RevealItem (Frisk)", function () {
                 // Can have frisk.
                 const banette: SwitchOptions = {
@@ -266,6 +532,26 @@ export const test = () =>
                 });
             });
 
+            describe("Status", function () {
+                describe("Self (Slow Start)", function () {
+                    it("Should handle", async function () {
+                        sh.initActive("p1").setAbility("slowstart");
+
+                        pctx = init("p1");
+                        await ph.handle({
+                            args: [
+                                "-start",
+                                toIdent("p1"),
+                                toEffectName("slowstart", "ability"),
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.halt();
+                        await ph.return([undefined]);
+                    });
+                });
+            });
+
             describe("WarnStrongestMove (Forewarn)", function () {
                 // Limited movepool for easier testing.
                 const wobbuffet: SwitchOptions = {
@@ -305,6 +591,53 @@ export const test = () =>
                         "counter",
                         "mirrorcoat",
                     );
+                });
+            });
+
+            describe("Weather (Drizzle/Drought/Sand Stream/Snow Warning)", function () {
+                it("Should handle", async function () {
+                    sh.initActive("p2").setAbility("drizzle");
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: ["-weather", toWeather("RainDance")],
+                        kwArgs: {
+                            from: toEffectName("drizzle", "ability"),
+                            of: toIdent("p2"),
+                        },
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                    expect(state.status.weather.type).to.equal("RainDance");
+                    // Note(gen4): Weather abilities have infinite duration.
+                    expect(state.status.weather.duration).to.be.null;
+                });
+
+                it("Should still handle if weather is already set but different from the desired one", async function () {
+                    sh.initActive("p2").setAbility("drought");
+                    state.status.weather.start(null /*source*/, "Hail");
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: ["-weather", toWeather("SunnyDay")],
+                        kwArgs: {
+                            from: toEffectName("drought", "ability"),
+                            of: toIdent("p2"),
+                        },
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                    expect(state.status.weather.type).to.equal("SunnyDay");
+                    expect(state.status.weather.duration).to.be.null;
+                });
+
+                it("Should not handle if weather already set to the desired one", async function () {
+                    sh.initActive("p2").setAbility("sandstream");
+                    state.status.weather.start(null /*source*/, "Sandstorm");
+
+                    pctx = init("p2");
+                    await ph.halt();
+                    await ph.return([]);
                 });
             });
         });

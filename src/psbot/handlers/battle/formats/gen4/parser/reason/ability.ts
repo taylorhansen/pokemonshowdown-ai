@@ -85,7 +85,9 @@ export function targetIgnoring(mon: PokemonAbilitySnapshot): Set<string> {
     const abilities = new Set<string>();
     const {ability} = mon.traits;
     for (const name of ability.possibleValues) {
-        if (ability.map[name].flags?.ignoreTargetAbility) abilities.add(name);
+        if (ability.map[name].on?.start?.ignoreTargetAbility) {
+            abilities.add(name);
+        }
     }
     return abilities;
 }

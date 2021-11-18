@@ -11,14 +11,16 @@ import {
     unordered,
 } from "../../../../parser";
 import {dispatch, handlers as base} from "../../parser/base";
-import {boost} from "../../parser/effect/boost";
+import {boost, boostOne} from "../../parser/effect/boost";
 import {percentDamage} from "../../parser/effect/damage";
 import {
+    cantStatus,
     cure,
     hasStatus,
     status,
     StatusEventType,
 } from "../../parser/effect/status";
+import {weather} from "../../parser/effect/weather";
 import * as reason from "../../parser/reason";
 import {Pokemon, ReadonlyPokemon} from "../../state/Pokemon";
 import {getMove} from "../dex";
@@ -63,7 +65,7 @@ export class Ability {
      *
      * @param mon Potential ability holder.
      * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
+     * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
     public canSwitchOut(mon: ReadonlyPokemon): Set<inference.SubReason> | null {
@@ -117,27 +119,82 @@ export class Ability {
      * Checks whether the ability can activate on-`start`.
      *
      * @param mon Potential ability holder.
+     * @param opp Opponent.
      * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
+     * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
-    public canStart(mon: Pokemon): Set<inference.SubReason> | null {
+    public canStart(
+        mon: Pokemon,
+        opp: Pokemon,
+    ): Set<inference.SubReason> | null {
         if (!this.data.on?.start) return null;
-        // Frisk: Reveal opponent's item.
+        // Anticipation.
+        if (this.data.on.start.anticipate) {
+            if (opp.fainted) return null;
+            // TODO: Support move-type-changing abilities in order to be able to
+            // make assertions about move types (e.g. normalize).
+            return new Set([reason.chance.create()]);
+        }
+        if (this.data.on.start.boost) {
+            // Download.
+            if (this.data.on.start.boost.self) {
+                if (this.data.on.start.boost.self === "download") {
+                    // Requires an opponent to make the stat inferences.
+                    if (opp.fainted) return null;
+                }
+                return new Set();
+            }
+            // Intimidate.
+            if (this.data.on.start.boost.foes) {
+                if (opp.fainted) return null;
+                if (opp.volatile.substitute) return null;
+                // Note(gen4): Doesn't activate if substitute was broken by
+                // uturn this turn and the holder is just now being switched in.
+                if (opp.volatile.substituteBroken) {
+                    const move = getMove(opp.volatile.substituteBroken);
+                    if (move?.data.effects?.selfSwitch) return null;
+                }
+                return new Set();
+            }
+        }
+        // Frisk.
         if (this.data.on.start.revealItem) {
-            // TODO(doubles): Track actual opponents.
-            const {team} = mon;
-            if (!team) return null;
-            const {state} = team;
-            if (!state) return null;
-            const {side} = team;
-            const oppSide = side === "p1" ? "p2" : "p1";
-            const opp = state.getTeam(oppSide).active;
-            // TODO: Other restrictions?
+            if (opp.fainted) return null;
             return new Set([reason.item.hasUnknown(opp)]);
         }
-        // TODO: Add intimidate/other restrictions.
-        return new Set();
+        // Slow Start.
+        if (this.data.on.start.status?.self) {
+            if (this.data.on.start.status.self.every(s => cantStatus(mon, s))) {
+                return null;
+            }
+            return new Set();
+        }
+        // Pressure/Mold Breaker.
+        if (
+            this.data.on.start.extraPpUsage ||
+            this.data.on.start.ignoreTargetAbility
+        ) {
+            return new Set();
+        }
+        // Forewarn.
+        if (this.data.on.start.warnStrongestMove) {
+            if (opp.fainted) return null;
+            // TODO: Other restrictions?
+            return new Set();
+        }
+        // Drizzle/Drought/Sand Stream/Snow Warning.
+        if (this.data.on.start.weather) {
+            if (
+                mon.team?.state &&
+                mon.team.state.status.weather.type ===
+                    this.data.on.start.weather
+            ) {
+                return null;
+            }
+            return new Set();
+        }
+        return null;
     }
 
     /**
@@ -152,16 +209,187 @@ export class Ability {
         side: SideID,
     ): Promise<void> {
         if (!this.data.on?.start) return;
+        // Anticipation.
+        if (this.data.on.start.anticipate) {
+            return await this.anticipate(ctx, accept, side);
+        }
+        if (this.data.on.start.boost) {
+            // Download.
+            if (this.data.on.start.boost.self) {
+                if (this.data.on.start.boost.self === "download") {
+                    // TODO(doubles): Track actual opponents.
+                    const otherSide = side === "p1" ? "p2" : "p1";
+                    return await this.download(ctx, accept, side, otherSide);
+                }
+                // TODO(gen>4): Other self-boosting abilties.
+                return;
+            }
+            // Intimidate.
+            if (this.data.on.start.boost.foes) {
+                const otherSide = side === "p1" ? "p2" : "p1";
+                return await this.boostFoe(
+                    ctx,
+                    accept,
+                    side,
+                    otherSide,
+                    this.data.on.start.boost.foes,
+                );
+            }
+        }
         // Frisk.
         if (this.data.on.start.revealItem) {
             return await this.revealItem(ctx, accept, side);
+        }
+        // Slow Start.
+        if (this.data.on.start.status?.self) {
+            await status(ctx, side, this.data.on.start.status.self, event => {
+                if (event.args[0] !== "-message") {
+                    const e = event as Event<
+                        Exclude<StatusEventType, "|-message|">
+                    >;
+                    if (e.kwArgs.from || e.kwArgs.of) return false;
+                }
+                accept();
+                return true;
+            });
+            return;
+        }
+        // Pressure/Mold Breaker.
+        if (
+            this.data.on.start.extraPpUsage ||
+            this.data.on.start.ignoreTargetAbility
+        ) {
+            return await this.revealAbility(ctx, accept, side);
         }
         // Forewarn.
         if (this.data.on.start.warnStrongestMove) {
             return await this.warnStrongestMove(ctx, accept, side);
         }
-        // If nothing is set, then the ability just reveals itself.
-        return await this.revealAbility(ctx, accept, side);
+        // Drizzle/Drought/Sand Stream/Snow Warning.
+        if (this.data.on.start.weather) {
+            await this.weather(ctx, accept, side, this.data.on.start.weather);
+        }
+    }
+
+    /**
+     * Handles events due to an anticipate ability (e.g. Anticipation).
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     */
+    private async anticipate(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
+        const event = await tryVerify(ctx, "|-ability|");
+        if (!event) return;
+        const [, identStr, abilityName] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        if (ident.player !== side) return;
+        const ability = Protocol.parseEffect(abilityName, toIdName);
+        if (ability.name !== this.data.name) return;
+        accept();
+        await consume(ctx);
+    }
+
+    /**
+     * Handles events due to a boosting ability dependent on the opponent's
+     * defensive stats (e.g. Download).
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     * @param target Target pokemon reference.
+     */
+    private async download(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        target: SideID,
+    ): Promise<void> {
+        // Parse initial indicator event.
+        if (!(await this.abilityBoost(ctx, accept, side))) return;
+
+        // TODO(#311): Setup stat-based inferences.
+        void target;
+
+        // Parse boosts for self.
+        if (
+            !(await boostOne(ctx, {
+                side,
+                table: new Map<BoostID, number>([
+                    ["atk", 1],
+                    ["spa", 1],
+                ]),
+                pred: e => !e.kwArgs.from && !e.kwArgs.of,
+            }))
+        ) {
+            throw new Error(
+                "On-start boost self download effect failed: Missing boost: " +
+                    "[{atk: 1}, {spa: 1}]",
+            );
+        }
+    }
+
+    /**
+     * Handles events due to a boosting ability (e.g. Intimidate).
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     * @param target Target pokemon reference.
+     * @param boosts Boosts to apply.
+     */
+    private async boostFoe(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        target: SideID,
+        boosts: Partial<BoostTable>,
+    ): Promise<void> {
+        // Parse initial indicator event.
+        if (!(await this.abilityBoost(ctx, accept, side))) return;
+
+        // Parse boosts for target.
+        // TODO(doubles): Multiple targets and Substitute immunity.
+        const table = await boost(ctx, {
+            side: target,
+            table: new Map<BoostID, number>(
+                Object.entries(boosts) as [BoostID, number][],
+            ),
+            pred: e => !e.kwArgs.from && !e.kwArgs.of,
+        });
+        if (table.size > 0) {
+            throw new Error(
+                "On-start boost foes effect failed: Missing boosts: " +
+                    `{${[...table].map(([b, v]) => `${b}: ${v}`).join(", ")}}`,
+            );
+        }
+    }
+
+    /**
+     * Parses `|-ability|<ident>|<ability>|boost` event.
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     * @returns Whether the event was successfully parsed.
+     */
+    private async abilityBoost(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<boolean> {
+        const event = await tryVerify(ctx, "|-ability|");
+        if (!event) return false;
+        const [, identStr, abilityName, effectStr] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        if (ident.player !== side) return false;
+        const abilityId = toIdName(abilityName);
+        if (abilityId !== this.data.name) return false;
+        const effect = Protocol.parseEffect(effectStr, toIdName);
+        if (effect.name !== "boost") return false;
+        accept();
+        await consume(ctx);
+        return true;
     }
 
     /**
@@ -189,6 +417,30 @@ export class Ability {
 
         accept();
         ctx.state.getTeam(targetIdent.player).active.setItem(itemId);
+        await consume(ctx);
+    }
+
+    /**
+     * Handles events due to an ability that just announces itself (e.g.
+     * Pressure).
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     */
+    private async revealAbility(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
+        // TODO(doubles): Same event format for each opponent.
+        const event = await tryVerify(ctx, "|-ability|");
+        if (!event) return;
+        const [, identStr, abilityName] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        if (ident.player !== side) return;
+        const abilityId = toIdName(abilityName);
+        if (abilityId !== this.data.name) return;
+        accept();
         await consume(ctx);
     }
 
@@ -255,27 +507,29 @@ export class Ability {
     }
 
     /**
-     * Handles events due to an ability that just announces itself (e.g.
-     * Pressure).
+     * Handles events due to a weather ability (e.g. Drought).
      *
      * @param accept Callback to accept this pathway.
      * @param side Ability holder reference.
+     * @returns The result from calling the base {@link weather} parser.
      */
-    private async revealAbility(
+    private async weather(
         ctx: BattleParserContext<"gen4">,
         accept: unordered.AcceptCallback,
         side: SideID,
-    ): Promise<void> {
-        // TODO(doubles): Same event format for each opponent.
-        const event = await tryVerify(ctx, "|-ability|");
-        if (!event) return;
-        const [, identStr, abilityName] = event.args;
-        const ident = Protocol.parsePokemonIdent(identStr);
-        if (ident.player !== side) return;
-        const abilityId = toIdName(abilityName);
-        if (abilityId !== this.data.name) return;
-        accept();
-        await consume(ctx);
+        weatherType: WeatherType,
+    ): Promise<true | "silent" | undefined> {
+        const mon = ctx.state.getTeam(side).active;
+        return await weather(ctx, mon, weatherType, event => {
+            if (!this.isEventFromAbility(event)) return false;
+            if (event.kwArgs.of) {
+                const holderIdent = Protocol.parsePokemonIdent(event.kwArgs.of);
+                if (holderIdent.player !== side) return false;
+            }
+            accept();
+            // Note(gen4): Weathers caused by abilities have infinite duration.
+            return "infinite";
+        });
     }
 
     //#endregion
@@ -286,14 +540,14 @@ export class Ability {
      * Checks whether the ability can activate on-`block` to block some of a
      * move's effects
      *
-     * @param weather Current weather.
+     * @param weatherType Current weather.
      * @param hitBy Move+user that the holder is being hit by.
      * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
+     * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
     public canBlock(
-        weather: WeatherType | "none",
+        weatherType: WeatherType | "none",
         hitBy: MoveAndUser,
     ): Set<inference.SubReason> | null {
         let res: Set<inference.SubReason> | null = null;
@@ -306,7 +560,7 @@ export class Ability {
         );
         if (
             statuses.some(s =>
-                this.canBlockStatus(s, weather, /*AllowSilent*/ false),
+                this.canBlockStatus(s, weatherType, /*AllowSilent*/ false),
             )
         ) {
             res ??= new Set();
@@ -357,16 +611,16 @@ export class Ability {
      *
      * @param statusType Status to check.
      * @param weather Current weather.
-     * @param allowSilent Whether to allow silent activation. Default true.
+     * @param allowSilent Whether to allow silent activation. Default `true`.
      */
     public canBlockStatus(
         statusType: StatusType,
-        weather: WeatherType | "none",
+        weatherType: WeatherType | "none",
         allowSilent = true,
     ): boolean {
         const condition = this.data.on?.block?.status;
         return (
-            (condition === true || condition === weather) &&
+            (condition === true || condition === weatherType) &&
             !!this.data.statusImmunity &&
             (allowSilent
                 ? !!this.data.statusImmunity[statusType]
@@ -669,7 +923,7 @@ export class Ability {
      *
      * @param hitBy Move+user that the holder is being hit by.
      * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
+     * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
     public canBlockUnboost(
@@ -763,7 +1017,7 @@ export class Ability {
      * @param on Specific on-`X` condition.
      * @param hitBy Move+user that the holder was hit by.
      * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
+     * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
     public canMoveDamage(
@@ -973,7 +1227,7 @@ export class Ability {
      * Checks whether the ability can activate on-`moveDrain`.
      *
      * @returns A Set of SubReasons describing additional conditions of
-     * activation, or the empty set if there are none, or null if it cannot
+     * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
     public canMoveDrain(): Set<inference.SubReason> | null {
