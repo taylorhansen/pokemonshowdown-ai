@@ -7,7 +7,10 @@
  * @returns A function that will cancel the timer and immediately call the
  * callback.
  */
-export function setTimeoutNs(callback: () => void, ns: bigint): () => void {
+export function setTimeoutNs(
+    callback: (canceled: boolean) => void,
+    ns: bigint,
+): () => void {
     const timerState: TimerState = {
         callback,
         ns,
@@ -18,19 +21,22 @@ export function setTimeoutNs(callback: () => void, ns: bigint): () => void {
     dispatchTimer(timerState);
     return () => {
         timerState.canceled = true;
-        callback();
+        callback(true /*canceled*/);
     };
 }
 
 /** 1ms in ns. */
 const oneMs = 1000000n;
-/** 10ms in ns. */
-const tenMs = 10000000n;
+/**
+ * Threshold for time left until we start using `setImmediate` instead of
+ * `setTimeout`.
+ */
+const timeoutThreshold = 10000000n; /*10ms*/
 
 /** Timer state. */
 interface TimerState {
     /** Function to call when expired. */
-    readonly callback: () => void;
+    readonly callback: (canceled: boolean) => void;
     /** Requested timer duration in ns. */
     readonly ns: bigint;
     /** Initial `process.hrtime.bigint()` call. */
@@ -43,7 +49,7 @@ interface TimerState {
 
 /** Dispatches a timer to check the time after it's done. */
 function dispatchTimer(timerState: TimerState) {
-    if (timerState.timeLeft > tenMs) {
+    if (timerState.timeLeft > timeoutThreshold) {
         // Use regular ms timeout until we need more precision.
         // Take 5ms off to avoid overshooting it.
         setTimeout(
@@ -61,9 +67,11 @@ function checkTimer(timerState: TimerState) {
     if (timerState.canceled) return;
 
     // See if we crossed the threshold.
-    timerState.timeLeft = process.hrtime.bigint() - timerState.start;
+    const timestamp = process.hrtime.bigint();
+    const elapsed = timestamp - timerState.start;
+    timerState.timeLeft = timerState.ns - elapsed;
     if (timerState.timeLeft <= 0n) {
-        timerState.callback();
+        timerState.callback(false /*canceled*/);
         return;
     }
 

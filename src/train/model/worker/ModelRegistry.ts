@@ -225,26 +225,32 @@ export class ModelRegistry {
         if (this.timeoutPromise) return;
 
         // Setup batch timer.
-        this.timeoutPromise = new Promise<void>(
+        let didTimeout = false;
+        this.timeoutPromise = new Promise<boolean>(
             res =>
                 (this.cancelTimer = setTimeoutNs(
                     res,
                     this.batchOptions.timeoutNs,
                 )),
-        ).finally(() => {
-            this.timeoutPromise = null;
-            this.cancelTimer = null;
-        });
+        )
+            .then(canceled => void (didTimeout = !canceled))
+            .finally(() => {
+                this.timeoutPromise = null;
+                this.cancelTimer = null;
+            });
 
         // If the timer expires before the batch filled up, execute the batch as
         // it is.
-        let didTimeout = false;
         Promise.race([
             this.timeoutPromise.then(() => (didTimeout = true)),
             new Promise<void>(res =>
                 this.batchEvents.prependOnceListener(batchExecute, res),
             ).finally(this.cancelTimer),
-        ]).finally(() => didTimeout && this.batchEvents.emit(batchExecute));
+        ]).finally(() => {
+            if (didTimeout) {
+                this.batchEvents.emit(batchExecute);
+            }
+        });
     }
 
     /** Flushes the predict buffer and executes the batch. */
