@@ -23,24 +23,30 @@ export interface ReadonlyStatTable extends ReadonlyStatRanges {
 export class StatTable implements ReadonlyStatTable, StatRanges {
     /** @override */
     public readonly level: number;
+    /** Hit points. */
     public readonly hp: StatRange;
+    /** Attack. */
     public readonly atk: StatRange;
+    /** Defense. */
     public readonly def: StatRange;
+    /** Special Attack. */
     public readonly spa: StatRange;
+    /** Special Defense. */
     public readonly spd: StatRange;
+    /** Speed. */
     public readonly spe: StatRange;
 
     /**
      * Creates a StatTable and calculates all the stats.
      *
      * @param species Reference to the species data for looking up base stats.
-     * @param level Pokemon's level from 1 to 100 used for stat calcs.
+     * @param level Pokemon's level from `1` to `100`, used to calculate stats.
      */
     public static base(species: PokemonData, level: number): StatTable {
         return new StatTable(level, species.baseStats);
     }
 
-    // TODO: Make hpType a separate obj backed by ivs implementing this
+    // TODO(#311): Make hpType a separate obj backed by ivs implementing this
     // interface.
     private constructor(
         level: number,

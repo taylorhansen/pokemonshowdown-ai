@@ -1,4 +1,4 @@
-/** Readonly StatRange representation. */
+/** Readonly {@link StatRange} representation. */
 export interface ReadonlyStatRange {
     /** Base stat value used to calculate {@link min} and {@link max}. */
     readonly base: number;
@@ -26,7 +26,7 @@ export class StatRange implements ReadonlyStatRange {
     }
     private _max: number;
 
-    // TODO: Nature, ev, and iv possibilities.
+    // TODO(#311): Track underlying nature, EV, and IV possibilities.
 
     /**
      * Creates a StatRange.
