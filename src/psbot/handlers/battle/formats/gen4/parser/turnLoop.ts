@@ -76,8 +76,8 @@ async function postTurn(
     ctx: BattleParserContext<"gen4">,
     num: number,
 ): Promise<boolean> {
-    const event = await verify(ctx, "|turn|", "|win|");
-    if (event.args[0] === "win") {
+    const event = await verify(ctx, "|turn|", "|win|", "|tie|");
+    if (event.args[0] === "win" || event.args[0] === "tie") {
         // Game over.
         await consume(ctx);
         return false;
