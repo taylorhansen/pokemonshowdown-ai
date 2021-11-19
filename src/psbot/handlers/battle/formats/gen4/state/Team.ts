@@ -29,9 +29,9 @@ export interface ReadonlyTeam {
 export interface SwitchOptions {
     /** Species id name. */
     readonly species: string;
-    /** Level between 1 and 100. */
+    /** Level between `1` and `100`. */
     readonly level: number;
-    /** Pokemon's gender. Can be M, F, or N. */
+    /** Pokemon's gender. Can be `"M"`, `"F"`, or `"N"`. */
     readonly gender: GenderName;
     /** Pokemon's current HP. */
     readonly hp: number;
@@ -199,7 +199,7 @@ export class Team implements ReadonlyTeam {
      * Indicates that a new pokemon has been revealed.
      *
      * @returns The new pokemon, or `null` if the operation would overflow the
-     * current team size.
+     * current team {@link size}.
      */
     public reveal(options: TeamRevealOptions): Pokemon | null {
         const index = this.revealIndex(options);
@@ -211,7 +211,7 @@ export class Team implements ReadonlyTeam {
      * Indicates that a new pokemon has been revealed.
      *
      * @returns The index of the new pokemon, or `-1` if the operation would
-     * overflow the current team size.
+     * overflow the current team {@link size}.
      */
     private revealIndex({
         species,

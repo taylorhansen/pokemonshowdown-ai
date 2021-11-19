@@ -269,7 +269,7 @@ async function switchEvent(
     if (side && ident.player !== side) {
         if (accept) return null;
         throw new Error(
-            `Expected switch-in for '${side}' but got ` + `'${ident.player}'`,
+            `Expected switch-in for '${side}' but got '${ident.player}'`,
         );
     }
     side = ident.player;
@@ -279,7 +279,7 @@ async function switchEvent(
     ctx = {
         ...ctx,
         logger: ctx.logger.addPrefix(
-            "Switch(" + `${ident.player}${ident.position}): `,
+            `Switch(${ident.player}${ident.position}): `,
         ),
     };
 

@@ -56,7 +56,7 @@ async function preTurn(ctx: BattleParserContext<"gen4">): Promise<void> {
 // TODO: Move to separate file?
 /** Handles residual effects at the end of the turn. */
 async function residual(ctx: BattleParserContext<"gen4">): Promise<void> {
-    // TODO: wish.
+    // TODO(#312): Other residual effects: statuses, weathers, wish, etc.
     await unordered.all(
         ctx,
         (["p1", "p2"] as SideID[])

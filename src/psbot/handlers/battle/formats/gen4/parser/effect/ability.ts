@@ -98,7 +98,7 @@ export const onBlock = onX(
     ),
 );
 
-// TODO: Refactor hitBy to include other unboost effect sources, e.g.
+// TODO(#313): Refactor hitBy to include other unboost effect sources, e.g.
 // intimidate.
 /**
  * Creates an EventInference parser that expects an on-`tryUnboost` ability to
