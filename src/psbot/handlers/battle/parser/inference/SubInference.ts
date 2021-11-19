@@ -164,21 +164,19 @@ export class SubInference {
 ${outer}SubInference(
 ${outer}${inner}pending = [${
             [...this.reasons]
-                .map(r => "\n" + r.toString(indentInner, indentReasonOuter))
-                .join(",") + (this.reasons.size > 0 ? "\n" + outer + inner : "")
+                .map(r => `\n${r.toString(indentInner, indentReasonOuter)},`)
+                .join("") + (this.reasons.size > 0 ? "\n" + outer + inner : "")
         }],
 ${outer}${inner}accepted = [${
             [...this.accepted]
-                .map(r => "\n" + r.toString(indentInner, indentReasonOuter))
-                .join(",") +
-            (this.accepted.size > 0 ? "\n" + outer + inner : "")
+                .map(r => `\n${r.toString(indentInner, indentReasonOuter)},`)
+                .join("") + (this.accepted.size > 0 ? "\n" + outer + inner : "")
         }],
 ${outer}${inner}rejected = [${
             [...this.rejected]
-                .map(r => "\n" + r.toString(indentInner, indentReasonOuter))
-                .join(",") +
-            (this.rejected.size > 0 ? "\n" + outer + inner : "")
-        }]
+                .map(r => `\n${r.toString(indentInner, indentReasonOuter)},`)
+                .join("") + (this.rejected.size > 0 ? "\n" + outer + inner : "")
+        }],
 ${outer})`;
     }
 }

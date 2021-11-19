@@ -127,15 +127,15 @@ export class EventInference<
         const indentInferenceOuter = indentOuter + 2 * indentInner;
         return `\
 ${outer}EventInference(
-${outer}${inner}${this.name},
+${outer}${inner}${this.name.replace("\n", `\n${outer}${inner}`)},
 ${outer}${inner}cases = [${
             [...this.cases]
                 .map(
                     inf =>
-                        "\n" + inf.toString(indentInner, indentInferenceOuter),
+                        `\n${inf.toString(indentInner, indentInferenceOuter)},`,
                 )
-                .join(",") + (this.cases.size > 0 ? "\n" + outer + inner : "")
-        }]
+                .join("") + (this.cases.size > 0 ? "\n" + outer + inner : "")
+        }],
 ${outer})`;
     }
 }

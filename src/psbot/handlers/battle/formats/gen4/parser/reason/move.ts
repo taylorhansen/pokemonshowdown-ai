@@ -128,10 +128,10 @@ ${outer}MoveIsType(
 ${outer}${inner}Move(${this.move.data.name}),
 ${outer}${inner}user = (
 ${outer}${inner}${inner}hpType = [${this.partialUser.hpType.toString()}],
-${outer}${inner}${inner}item = [${this.partialUser.item.toString()}]
+${outer}${inner}${inner}item = [${this.partialUser.item.toString()}],
 ${outer}${inner}),
 ${outer}${inner}types = [${[...this.types].join(", ")}],
-${outer}${inner}negative = ${this.negative}
+${outer}${inner}negative = ${this.negative},
 ${outer})`;
     }
 }

@@ -170,11 +170,11 @@ class HasAbility extends inference.SubReason {
 ${outer}HasAbility(
 ${outer}${inner}mon = (
 ${outer}${inner}${inner}traits = (
-${outer}${inner}${inner}${inner}ability = [${this.ability.toString()}]
-${outer}${inner}${inner})
+${outer}${inner}${inner}${inner}ability = [${this.ability.toString()}],
+${outer}${inner}${inner}),
 ${outer}${inner}),
 ${outer}${inner}abilities = [${[...this.abilities].join(", ")}],
-${outer}${inner}negative = ${this.negative}
+${outer}${inner}negative = ${this.negative},
 ${outer})`;
     }
 }

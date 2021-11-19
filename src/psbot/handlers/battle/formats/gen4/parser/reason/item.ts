@@ -81,10 +81,10 @@ class HasItem extends inference.SubReason {
         return `\
 ${outer}HasItem(
 ${outer}${inner}mon = (
-${outer}${inner}${inner}item = [${this.item.toString()}]
+${outer}${inner}${inner}item = [${this.item.toString()}],
 ${outer}${inner}),
 ${outer}${inner}items = [${[...this.items].join(", ")}],
-${outer}${inner}negative = ${this.negative}
+${outer}${inner}negative = ${this.negative},
 ${outer})`;
     }
 }

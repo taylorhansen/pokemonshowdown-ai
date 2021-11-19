@@ -135,7 +135,7 @@ export class UnorderedDeadline<
         const outer = " ".repeat(indentOuter * 4);
         return `\
 ${outer}UnorderedDeadline(
-${outer}${inner}${this.name.split("\n").join(`\n${outer}${inner}`)}
+${outer}${inner}${this.name.replace("\n", `\n${outer}${inner}`)},
 ${outer})`;
     }
 }
