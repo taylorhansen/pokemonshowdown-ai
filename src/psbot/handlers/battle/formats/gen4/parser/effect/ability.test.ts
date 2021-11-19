@@ -408,6 +408,37 @@ export const test = () =>
                         await ph.return([]);
                     });
 
+                    it("Should be blocked by on-tryUnboost ability", async function () {
+                        const mon = sh.initActive("p1");
+                        mon.setAbility("hypercutter");
+                        const source = sh.initActive("p2");
+                        source.setAbility("intimidate");
+
+                        pctx = init("p2");
+                        await ph.handle({
+                            args: [
+                                "-ability",
+                                toIdent("p2"),
+                                toAbilityName("intimidate"),
+                                "boost",
+                            ],
+                            kwArgs: {},
+                        });
+                        await ph.handle({
+                            args: [
+                                "-fail",
+                                toIdent("p1"),
+                                toEffectName("unboost"),
+                            ],
+                            kwArgs: {
+                                from: toEffectName("hypercutter", "ability"),
+                                of: toIdent("p1"),
+                            },
+                        });
+                        await ph.halt();
+                        await ph.return([undefined]);
+                    });
+
                     // TODO(doubles): Test |-immune| event for when only one
                     // opponent has a substitute.
                 });
@@ -1135,13 +1166,10 @@ export const test = () =>
                     hp: 100,
                     hpMax: 100,
                 };
-                sh.initActive("p1");
+                const source = sh.initActive("p1");
                 sh.initActive("p2", metagross);
 
-                pctx = init("p2", {
-                    move: dex.getMove(dex.moves["charm"]),
-                    userRef: "p1",
-                });
+                pctx = init("p2", source, {atk: -1});
                 await ph.handle({
                     args: [
                         "-fail",
@@ -1164,11 +1192,9 @@ export const test = () =>
                     "liquidooze",
                 );
 
-                sh.initActive("p1").setAbility("moldbreaker");
-                pctx = init("p2", {
-                    move: dex.getMove(dex.moves["charm"]),
-                    userRef: "p1",
-                });
+                const source = sh.initActive("p1");
+                source.setAbility("moldbreaker");
+                pctx = init("p2", source, {atk: -1});
                 await ph.halt();
                 await ph.return([]);
                 expect(mon.traits.ability.possibleValues).to.have.keys(
@@ -1178,17 +1204,14 @@ export const test = () =>
             });
 
             it("Should infer no on-tryUnboost ability if it did not activate", async function () {
-                sh.initActive("p1");
+                const source = sh.initActive("p1");
                 const mon = sh.initActive("p2", tentacruel);
                 expect(mon.traits.ability.possibleValues).to.have.keys(
                     "clearbody",
                     "liquidooze",
                 );
 
-                pctx = init("p2", {
-                    move: dex.getMove(dex.moves["charm"]),
-                    userRef: "p1",
-                });
+                pctx = init("p2", source, {atk: -1});
                 await ph.halt();
                 await ph.return([]);
                 expect(mon.traits.ability.possibleValues).to.have.keys(
@@ -1197,7 +1220,7 @@ export const test = () =>
             });
 
             it("Shouldn't infer no on-tryUnboost ability if it did not activate and ability is suppressed", async function () {
-                sh.initActive("p1");
+                const source = sh.initActive("p1");
                 const mon = sh.initActive("p2", tentacruel);
                 mon.volatile.suppressAbility = true;
                 expect(mon.traits.ability.possibleValues).to.have.keys(
@@ -1205,10 +1228,7 @@ export const test = () =>
                     "liquidooze",
                 );
 
-                pctx = init("p2", {
-                    move: dex.getMove(dex.moves["charm"]),
-                    userRef: "p1",
-                });
+                pctx = init("p2", source, {atk: -1});
                 await ph.halt();
                 await ph.return([]);
                 expect(mon.traits.ability.possibleValues).to.have.keys(

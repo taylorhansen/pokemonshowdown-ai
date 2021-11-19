@@ -11,7 +11,7 @@ import {
     unordered,
 } from "../../../../parser";
 import {dispatch, handlers as base} from "../../parser/base";
-import {boost, boostOne} from "../../parser/effect/boost";
+import {boost, boostBlockable, boostOne} from "../../parser/effect/boost";
 import {percentDamage} from "../../parser/effect/damage";
 import {
     cantStatus,
@@ -351,8 +351,9 @@ export class Ability {
 
         // Parse boosts for target.
         // TODO(doubles): Multiple targets and Substitute immunity.
-        const table = await boost(ctx, {
+        const table = await boostBlockable(ctx, {
             side: target,
+            source: side,
             table: new Map<BoostID, number>(
                 Object.entries(boosts) as [BoostID, number][],
             ),
@@ -921,20 +922,18 @@ export class Ability {
      * Checks whether the ability can activate on-`tryUnboost` to block an
      * unboost effect.
      *
-     * @param hitBy Move+user that the holder is being hit by.
+     * @param source Pokemon that is the source of the unboost.
+     * @param boosts Boosts that will be applied.
      * @returns A Set of SubReasons describing additional conditions of
      * activation, or the empty set if there are none, or `null` if it cannot
      * activate.
      */
     public canBlockUnboost(
-        hitBy: MoveAndUser,
+        source: Pokemon,
+        boosts: Partial<BoostTable>,
     ): Set<inference.SubReason> | null {
         if (!this.data.on?.tryUnboost?.block) return null;
         const blockUnboost = this.data.on.tryUnboost.block;
-
-        const boostEffect = hitBy.move.getBoostEffects("hit", hitBy.user.types);
-        let {boosts} = boostEffect;
-        if (boostEffect.set) boosts = {};
 
         const res = (Object.keys(boosts) as BoostID[]).some(
             b => boosts[b]! < 0 && blockUnboost[b],
@@ -943,8 +942,7 @@ export class Ability {
             : null;
 
         // Moldbreaker check.
-        // TODO: Is this interfering with assertions?
-        res?.add(reason.ability.cantIgnoreTargetAbility(hitBy.user));
+        res?.add(reason.ability.cantIgnoreTargetAbility(source));
         return res;
     }
 

@@ -815,4 +815,138 @@ export const test = () =>
                 expect(mon.volatile.boosts).to.deep.equal(boost0);
             });
         });
+
+        describe("boostBlockable()", function () {
+            const init = setupBattleParser(
+                ictx.startArgs,
+                effectBoost.boostBlockable,
+            );
+            let pctx: ReturnType<typeof init> | undefined;
+            const ph = new ParserHelpers(() => pctx);
+
+            afterEach("Close ParserContext", async function () {
+                // Reset variable so it doesn't leak into other tests.
+                await ph.close().finally(() => (pctx = undefined));
+            });
+
+            it("Should handle boosts normally", async function () {
+                const mon = sh.initActive("p1");
+                expect(mon.volatile.boosts).to.deep.equal(boost0);
+                sh.initActive("p2");
+
+                const table = new Map([
+                    ["atk", -1],
+                    ["spe", -1],
+                ] as const);
+                pctx = init({side: "p1", source: "p2", table});
+                await ph.handle({
+                    args: ["-unboost", toIdent("p1"), "atk", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["-unboost", toIdent("p1"), "spe", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.halt();
+                await ph.return(table);
+                expect([...table]).to.be.empty;
+                expect(mon.volatile.boosts).to.deep.equal({
+                    ...boost0,
+                    atk: -1,
+                    spe: -1,
+                });
+            });
+
+            it("Should handle blocked boost", async function () {
+                const mon = sh.initActive("p1");
+                mon.setAbility("keeneye");
+                expect(mon.volatile.boosts).to.deep.equal(boost0);
+                sh.initActive("p2");
+
+                const table = new Map([
+                    ["atk", -1],
+                    ["accuracy", -1],
+                ] as const);
+                pctx = init({side: "p1", source: "p2", table});
+                await ph.handle({
+                    args: ["-unboost", toIdent("p1"), "atk", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["-fail", toIdent("p1"), "unboost", "accuracy"],
+                    kwArgs: {
+                        from: toEffectName("keeneye", "ability"),
+                        of: toIdent("p1"),
+                    },
+                });
+                await ph.halt();
+                await ph.return(table);
+                expect([...table]).to.be.empty;
+                expect(mon.volatile.boosts).to.deep.equal({
+                    ...boost0,
+                    atk: -1,
+                });
+            });
+
+            it("Should handle blocked boost in any order", async function () {
+                const mon = sh.initActive("p1");
+                mon.setAbility("keeneye");
+                expect(mon.volatile.boosts).to.deep.equal(boost0);
+                sh.initActive("p2");
+
+                const table = new Map([
+                    ["atk", -1],
+                    ["accuracy", -1],
+                ] as const);
+                pctx = init({side: "p1", source: "p2", table});
+                await ph.handle({
+                    args: ["-fail", toIdent("p1"), "unboost", "accuracy"],
+                    kwArgs: {
+                        from: toEffectName("keeneye", "ability"),
+                        of: toIdent("p1"),
+                    },
+                });
+                await ph.handle({
+                    args: ["-unboost", toIdent("p1"), "atk", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.halt();
+                await ph.return(table);
+                expect([...table]).to.be.empty;
+                expect(mon.volatile.boosts).to.deep.equal({
+                    ...boost0,
+                    atk: -1,
+                });
+            });
+
+            it("Should infer no blocking ability if it did not activate", async function () {
+                const mon = sh.initActive("p1");
+                mon.setAbility("keeneye", "illuminate");
+                expect(mon.volatile.boosts).to.deep.equal(boost0);
+                sh.initActive("p2");
+
+                const table = new Map([
+                    ["atk", -1],
+                    ["accuracy", -1],
+                ] as const);
+                pctx = init({side: "p1", source: "p2", table});
+                await ph.handle({
+                    args: ["-unboost", toIdent("p1"), "atk", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.handle({
+                    args: ["-unboost", toIdent("p1"), "accuracy", toNum(1)],
+                    kwArgs: {},
+                });
+                await ph.halt();
+                await ph.return(table);
+                expect([...table]).to.be.empty;
+                expect(mon.volatile.boosts).to.deep.equal({
+                    ...boost0,
+                    atk: -1,
+                    accuracy: -1,
+                });
+                expect(mon.ability).to.equal("illuminate");
+            });
+        });
     });

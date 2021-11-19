@@ -3,7 +3,10 @@ import {Protocol} from "@pkmn/protocol";
 import {BoostID, SideID} from "@pkmn/types";
 import {Event} from "../../../../../../parser";
 import {BattleParserContext, eventLoop, tryVerify} from "../../../../parser";
+import * as unordered from "../../../../parser/unordered";
+import * as dex from "../../dex";
 import {dispatch, handlers as base} from "../base";
+import * as effectAbility from "./ability";
 
 /** Args for {@link boost}. */
 export interface BoostArgs {
@@ -191,4 +194,88 @@ export async function boostOne(
     if (args.pred && !args.pred(event)) return;
     await dispatch(ctx);
     return boostId;
+}
+
+export interface BoostBlockableArgs extends BoostArgs {
+    /** Pokemon reference that is the source of the boost effect. */
+    readonly source: SideID;
+}
+
+/**
+ * Parses a boost/unboost effect that can be blocked by an on-`tryUnboost`
+ * ability (e.g. Clear Body).
+ *
+ * Should only be called with different {@link BoostArgs.side `args.side`} amd
+ * {@link BoostBlockableArgs.source `args.source`} values.
+ *
+ * @param args Information about the boosts to apply.
+ * @returns The boosts that weren't parsed.
+ */
+export async function boostBlockable(
+    ctx: BattleParserContext<"gen4">,
+    args: BoostBlockableArgs,
+): Promise<Map<BoostID, number>> {
+    const mon = ctx.state.getTeam(args.side).active;
+    const source = ctx.state.getTeam(args.source).active;
+
+    let blocked = false;
+    await eventLoop(ctx, async function boostBlockableLoop(_ctx) {
+        const event = await tryVerify(_ctx, "|-boost|", "|-unboost|");
+        if (!event) {
+            if (blocked) return;
+            // If no boost event, maybe it was blocked.
+            const blockRes = await unordered.parse(
+                ctx,
+                effectAbility.onTryUnboost(
+                    ctx,
+                    args.side,
+                    source,
+                    Object.fromEntries(args.table),
+                ),
+                () => (blocked = true),
+            );
+            if (blocked && blockRes[0]) {
+                for (const b in blockRes[0]) {
+                    if (!Object.hasOwnProperty.call(blockRes[0], b)) {
+                        continue;
+                    }
+                    if (!args.table.has(b as dex.BoostName)) continue;
+                    args.table.delete(b as dex.BoostName);
+                }
+            }
+            return;
+        }
+        // Otherwise parse the boost events normally.
+        const [, identStr, boostId, boostAmountStr] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        if (ident.player !== args.side) return;
+        if (!args.table.has(boostId)) return;
+        let boostAmount = Number(boostAmountStr);
+        if (event.args[0] === "-unboost") boostAmount = -boostAmount;
+        if (
+            !matchBoost(
+                args.table.get(boostId)!,
+                boostAmount,
+                mon.volatile.boosts[boostId],
+            )
+        ) {
+            return;
+        }
+        if (args.pred && !args.pred(event)) return;
+        args.table.delete(boostId);
+        await dispatch(ctx);
+    });
+
+    if (args.silent) {
+        // Remove boosts that were already at their limit.
+        consumeBoosts(args.table, boostId =>
+            matchBoost(
+                args.table.get(boostId)!,
+                0,
+                mon.volatile.boosts[boostId],
+            ),
+        );
+    }
+
+    return args.table;
 }

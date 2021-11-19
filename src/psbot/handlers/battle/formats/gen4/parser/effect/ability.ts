@@ -106,18 +106,17 @@ export const onBlock = onX(
  *
  * @param ctx Context in order to figure out which abilities to watch.
  * @param side Pokemon reference who could have such an ability.
- * @param hitBy Move+user ref that the holder is being hit by.
+ * @param source Pokemon that is the source of the boost effect.
+ * @param boosts Boosts that will be applied.
  * @returns An EventInference that returns the boosts that were blocked.
  */
 export const onTryUnboost = onX(
     "onTryUnboost",
-    (ctx, side, hitBy: dex.MoveAndUserRef) => {
+    (ctx, side, source: Pokemon, boosts: Partial<dex.BoostTable>) => {
         const mon = ctx.state.getTeam(side).active;
-        const hitBy2: dex.MoveAndUser = {
-            move: hitBy.move,
-            user: ctx.state.getTeam(hitBy.userRef).active,
-        };
-        return getAbilities(mon, ability => ability.canBlockUnboost(hitBy2));
+        return getAbilities(mon, ability =>
+            ability.canBlockUnboost(source, boosts),
+        );
     },
     onXInferenceParser(
         "onTryUnboostInference",

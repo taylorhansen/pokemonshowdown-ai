@@ -1641,28 +1641,6 @@ function boost(
             continue;
         }
 
-        // Check for ability on-tryUnboost effect first.
-        if (!effect.set && tgt === "hit") {
-            result.push(
-                effectAbility
-                    .onTryUnboost(ctx, targetSide, {
-                        userRef: args.side,
-                        move: args.move,
-                    })
-                    // Modify in-progress boost table when this effect gets
-                    // parsed.
-                    .transform(blockUnboost => {
-                        if (!blockUnboost) return;
-                        for (const b in blockUnboost) {
-                            if (!Object.hasOwnProperty.call(blockUnboost, b)) {
-                                continue;
-                            }
-                            if (!table.has(b as dex.BoostName)) continue;
-                            table.delete(b as dex.BoostName);
-                        }
-                    }),
-            );
-        }
         const tableSnapshot = new Map(table);
         result.push(
             unordered.UnorderedDeadline.create<"gen4">(
@@ -1680,8 +1658,9 @@ function boost(
                     }
 
                     let accepted = false;
-                    const boostArgs: effectBoost.BoostArgs = {
+                    const boostArgs: effectBoost.BoostBlockableArgs = {
                         side: targetSide,
+                        source: args.side,
                         table,
                         silent: true,
                         pred: event => {
@@ -1692,7 +1671,10 @@ function boost(
                         },
                     };
                     if (effect.set) await effectBoost.setBoost(_ctx, boostArgs);
-                    else await effectBoost.boost(_ctx, boostArgs);
+                    else if (tgt === "hit") {
+                        // Check for ability on-tryUnboost effect while parsing.
+                        await effectBoost.boostBlockable(_ctx, boostArgs);
+                    } else await effectBoost.boost(_ctx, boostArgs);
 
                     // Call accept() anyway since the effect was silent.
                     if (!accepted && table.size <= 0) accept();
