@@ -205,7 +205,7 @@ export interface BoostBlockableArgs extends BoostArgs {
  * Parses a boost/unboost effect that can be blocked by an on-`tryUnboost`
  * ability (e.g. Clear Body).
  *
- * Should only be called with different {@link BoostArgs.side `args.side`} amd
+ * Should only be called with different {@link BoostArgs.side `args.side`} and
  * {@link BoostBlockableArgs.source `args.source`} values.
  *
  * @param args Information about the boosts to apply.
@@ -218,6 +218,7 @@ export async function boostBlockable(
     const mon = ctx.state.getTeam(args.side).active;
     const source = ctx.state.getTeam(args.source).active;
 
+    const initialTable = Object.fromEntries(args.table);
     let blocked = false;
     await eventLoop(ctx, async function boostBlockableLoop(_ctx) {
         const event = await tryVerify(_ctx, "|-boost|", "|-unboost|");
@@ -230,7 +231,7 @@ export async function boostBlockable(
                     ctx,
                     args.side,
                     source,
-                    Object.fromEntries(args.table),
+                    initialTable,
                 ),
                 () => (blocked = true),
             );
@@ -239,7 +240,6 @@ export async function boostBlockable(
                     if (!Object.hasOwnProperty.call(blockRes[0], b)) {
                         continue;
                     }
-                    if (!args.table.has(b as dex.BoostName)) continue;
                     args.table.delete(b as dex.BoostName);
                 }
             }
