@@ -1,3 +1,4 @@
+import {Protocol} from "@pkmn/protocol";
 import {expect} from "chai";
 import "mocha";
 import {
@@ -139,6 +140,44 @@ export const test = () =>
                 await ph.return();
                 expect(mon.moveset.get("ember")!.pp).to.equal(10);
                 expect(mon.moveset.get("tackle")).to.not.be.null;
+            });
+
+            it("Should handle lockedmove pp", async function () {
+                const [, , mon] = sh.initTeam("p1", [eevee, ditto, smeargle]);
+                expect(mon.moveset.reveal("outrage").pp).to.equal(24);
+                expect(mon.moveset.reveal("ember").pp).to.equal(40);
+
+                const p = ph.handle(
+                    requestEvent(
+                        "move",
+                        [
+                            {
+                                ...benchInfo[0],
+                                moves: [toID("outrage"), toID("ember")],
+                            },
+                            ...benchInfo.slice(1),
+                        ],
+                        {
+                            moves: [
+                                {
+                                    id: toID("outrage"),
+                                    name: toMoveName("outrage"),
+                                    // TODO: Fix protocol typings.
+                                } as Protocol.Request.ActivePokemon["moves"][0],
+                            ],
+                            trapped: true,
+                        },
+                    ),
+                );
+
+                // Note: Only 1 choice so no agent call is expected.
+                await expect(sender.sent()).to.eventually.equal("move 1");
+                sender.resolve(false /*i.e., accept the choice*/);
+
+                await p;
+                await ph.return();
+                expect(mon.moveset.get("outrage")!.pp).to.equal(24);
+                expect(mon.moveset.get("ember")!.pp).to.equal(40);
             });
 
             it("Should handle switch rejection via trapping ability", async function () {

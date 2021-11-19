@@ -8,6 +8,7 @@ import {
     SenderResult,
     verify,
 } from "../../../parser";
+import {Move} from "../state/Move";
 import {sanitizeMoveId} from "./init";
 
 // Note: usually the |request| event is displayed before the game events that
@@ -48,7 +49,15 @@ export async function request(
                 // Sanitize variable-type moves.
                 let {id}: {id: string} = moveData;
                 ({id} = sanitizeMoveId(id));
-                mon.moveset.reveal(id, moveData.maxpp).pp = moveData.pp;
+                // Note: Can have missing pp/maxpp values, e.g. due to a locked
+                // move.
+                let move: Move;
+                if (!Object.hasOwnProperty.call(moveData, "maxpp")) {
+                    move = mon.moveset.reveal(id);
+                } else move = mon.moveset.reveal(id, moveData.maxpp);
+                if (Object.hasOwnProperty.call(moveData, "pp")) {
+                    move.pp = moveData.pp;
+                }
             }
             // Fallthrough.
         }
