@@ -208,6 +208,7 @@
     "@typescript-eslint/no-useless-constructor": "error",
     "no-useless-rename": "warn",
     "no-useless-return": "warn",
+    "node/no-missing-import": "off", // Already covered by import/no-unresolved (recommended).
     "node/no-unsupported-features/es-syntax": [
       "error",
       {
@@ -242,16 +243,15 @@
   },
   "overrides": [
     {
+      // Allow dev dependencies in helper scripts/test files that don't go into
+      // production.
       "files": ["scripts/**/*", "src/**/*.test.ts", "test/**/*"],
+      "settings": {
+        "node": {
+          "allowModules": ["@pkmn/types", "chai", "mocha", "websocket"]
+        }
+      },
       "rules": {
-        // Allow dev dependencies in helper scripts/test files that don't go
-        // into production.
-        "node/no-missing-import": [
-          "error",
-          {
-            "allowModules": ["chai", "mocha", "websocket"]
-          }
-        ],
         "node/no-unpublished-import": "off"
       }
     }
