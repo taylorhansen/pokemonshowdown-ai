@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import "mocha";
 import {BattleState} from "../state";
+import {SwitchOptions} from "../state/Team";
 import {smeargle} from "../state/switchOptions.test";
 import {createInitialContext, ParserContext} from "./Context.test";
 import {ParserHelpers} from "./ParserHelpers.test";
@@ -216,5 +217,71 @@ export const test = () =>
                 Error,
                 "Expected |request| with side.name = 'username' but got 'player2'",
             );
+        });
+
+        it("Should handle |request| with alt form", async function () {
+            const deoxysdefense: SwitchOptions = {
+                species: "deoxysdefense",
+                level: 20,
+                gender: "N",
+                hp: 55,
+                hpMax: 55,
+            };
+            state.ourSide = "p1";
+
+            await ph.handle({
+                args: [
+                    "request",
+                    toRequestJSON({
+                        requestType: "move",
+                        active: [],
+                        side: {
+                            id: "p1",
+                            name: toUsername("username"),
+                            pokemon: [
+                                {
+                                    active: true,
+                                    details: toDetails(deoxysdefense),
+                                    // Note: PS can sometimes omit the forme
+                                    // name in the ident.
+                                    ident: toIdent("p1", {
+                                        ...deoxysdefense,
+                                        species: "deoxys",
+                                    }),
+                                    pokeball: toID("pokeball"),
+                                    ability: toID("pressure"),
+                                    baseAbility: toID("pressure"),
+                                    condition: toHPStatus(
+                                        deoxysdefense.hp,
+                                        deoxysdefense.hpMax,
+                                    ),
+                                    item: toID("mail"),
+                                    moves: [toID("tackle")],
+                                    stats: {
+                                        atk: 30,
+                                        def: 75,
+                                        spa: 30,
+                                        spd: 75,
+                                        spe: 58,
+                                    },
+                                    hp: deoxysdefense.hp,
+                                    maxhp: deoxysdefense.hpMax,
+                                    hpcolor: "g",
+                                    name: toSpeciesName("deoxys"),
+                                    speciesForme:
+                                        toSpeciesName("deoxysdefense"),
+                                    level: deoxysdefense.level,
+                                    shiny: false,
+                                    gender: deoxysdefense.gender,
+                                    searchid: toSearchID("p1", deoxysdefense),
+                                },
+                            ],
+                        },
+                        rqid: 2,
+                    }),
+                ],
+                kwArgs: {},
+            });
+            await ph.haltError(Error);
         });
     });

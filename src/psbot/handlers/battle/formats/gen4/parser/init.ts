@@ -227,7 +227,7 @@ function initRequest(state: BattleState, req: Protocol.Request) {
         }
 
         const revealOpts: TeamRevealOptions = {
-            species: toIdName(reqMon.name),
+            species: toIdName(reqMon.speciesForme),
             level: reqMon.level,
             gender: reqMon.gender ?? "N",
             hp: reqMon.hp,

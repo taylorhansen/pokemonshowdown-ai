@@ -284,7 +284,7 @@ async function switchEvent(
     };
 
     const options: SwitchOptions = {
-        species: toIdName(data.name),
+        species: toIdName(data.speciesForme),
         level: data.level,
         gender: data.gender ?? "N",
         hp: health?.hp ?? 0,
