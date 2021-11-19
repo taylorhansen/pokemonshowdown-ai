@@ -23,8 +23,12 @@ const logger = Logger.stderr.addPrefix("Train: ");
 
 const format = "gen4";
 
+/** Flag for debugging. */
+const singleThreaded = false;
+const numThreads = singleThreaded ? 1 : os.cpus().length;
+
 /** Manages the worker thread for Tensorflow ops. */
-const models = new ModelWorker(/*Gpu*/ process.argv[2] === "--gpu");
+const models = new ModelWorker(process.argv[2] === "--gpu" /*gpu*/);
 /** Options for predict batching. */
 const batchOptions: BatchPredictOptions = {
     // When running games on multiple threads, the GamePool workers can tend to
@@ -35,7 +39,7 @@ const batchOptions: BatchPredictOptions = {
     // most likely), so it's best to cut it off nearly as soon as the timer
     // updates.
     // TODO: Tuning.
-    maxSize: os.cpus().length * 2,
+    maxSize: numThreads * 2,
     timeoutNs: /*50us*/ 50000n,
 };
 
@@ -90,7 +94,7 @@ const batchOptions: BatchPredictOptions = {
             ],
             evalOpponents,
             format,
-            numThreads: os.cpus().length,
+            numThreads,
             maxTurns: 128,
             algorithm: {
                 type: "ppo",
@@ -106,7 +110,7 @@ const batchOptions: BatchPredictOptions = {
                 entropyCoeff: 0.1,
             },
             epochs: 8,
-            numDecoderThreads: Math.ceil(os.cpus().length / 2),
+            numDecoderThreads: Math.ceil(numThreads / 2),
             batchSize: 16,
             shufflePrefetch: 16 * 128,
             logger: episodeLog,
