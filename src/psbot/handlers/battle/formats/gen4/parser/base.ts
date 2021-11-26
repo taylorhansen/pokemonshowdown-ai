@@ -962,7 +962,7 @@ handlersImpl["|updatepoke|"] = "unsupported";
 /**
  * Parser that consumes an ignored event so it doesn't mess with other parsers.
  */
-async function ignoredEvent(ctx: BattleParserContext<"gen4">) {
+export async function ignoredEvent(ctx: BattleParserContext<"gen4">) {
     const event = await tryPeek(ctx);
     if (!event) return;
     const key = Protocol.key(event.args);

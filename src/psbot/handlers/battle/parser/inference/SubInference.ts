@@ -1,5 +1,7 @@
 import {CancelCallback, SubReason} from "./SubReason";
 
+// TODO: Should SubInference extend SubReason in order to handle nested
+// conditions?
 /** A possible candidate for a parent EventInference. */
 export class SubInference {
     /**

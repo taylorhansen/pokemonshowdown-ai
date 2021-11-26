@@ -6,6 +6,7 @@ import {Event} from "../../../../../../parser";
 import {
     BattleParserContext,
     consume,
+    eventLoop,
     inference,
     tryVerify,
     unordered,
@@ -561,7 +562,8 @@ export class Ability {
         );
         if (
             statuses.some(s =>
-                this.canBlockStatus(s, weatherType, /*AllowSilent*/ false),
+                // TODO: Guard against cloudnine.
+                this.canBlockStatus(s, weatherType, false /*allowSilent*/),
             )
         ) {
             res ??= new Set();
@@ -619,6 +621,7 @@ export class Ability {
         weatherType: WeatherType | "none",
         allowSilent = true,
     ): boolean {
+        // TODO: For weather condition, include cloudnine guard.
         const condition = this.data.on?.block?.status;
         return (
             (condition === true || condition === weatherType) &&
@@ -1286,6 +1289,74 @@ export class Ability {
 
     //#endregion
 
+    //#region On-weather.
+
+    /**
+     * Checks whether the ability can activate on-`weather`.
+     *
+     * @param mon Potential ability holder.
+     * @param weatherType Current weather. If none, then this method cannot be
+     * called and the ability cannot activate.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or `null` if it cannot
+     * activate.
+     */
+    public canWeather(
+        mon: Pokemon,
+        weatherType: WeatherType,
+    ): Set<inference.SubReason> | null {
+        const data = this.data.on?.weather?.[weatherType];
+        if (!data) return null;
+        // Damage or heal holder.
+        if (data.percentDamage) {
+            // Damaging or healing with zero hp means no activation.
+            if (mon.fainted) return null;
+            // Healing with full hp means no activation.
+            if (data.percentDamage > 0 && mon.hp.current >= mon.hp.max) {
+                return null;
+            }
+            return new Set();
+        }
+        // Cure holder.
+        if (data.cure && this.data.statusImmunity) {
+            const statusTypes = Object.keys(
+                this.data.statusImmunity,
+            ) as StatusType[];
+            return statusTypes.some(
+                s => this.data.statusImmunity![s] && hasStatus(mon, s),
+            )
+                ? new Set()
+                : null;
+        }
+        return null;
+    }
+
+    /**
+     * Activates an ability on-`weather`.
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     * @param weatherType Current weather. If none, then this method cannot be
+     * called and the ability cannot activate.
+     */
+    public async onWeather(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        weatherType: WeatherType,
+    ): Promise<void> {
+        const data = this.data.on?.weather?.[weatherType];
+        if (!data) return;
+        if (data.percentDamage) {
+            await this.percentDamage(ctx, accept, side, data.percentDamage);
+        }
+        if (data.cure) {
+            await this.cureImmunity(ctx, accept, side);
+        }
+    }
+
+    //#endregion
+
     //#region On-update.
 
     /**
@@ -1318,6 +1389,27 @@ export class Ability {
                 ? new Set()
                 : null;
         }
+        if (this.data.on.update.forecast) {
+            // Only works on castform.
+            if (
+                mon.traits.species.name !== "castform" &&
+                mon.traits.species.baseSpecies !== "castform"
+            ) {
+                return null;
+            }
+            const weatherType = mon.team?.state?.status.weather.type;
+            const desiredForm =
+                weatherType && Ability.getForecastForm(weatherType);
+            if (
+                // Already in base form with inapplicable weather
+                (!mon.traits.species.form && !desiredForm) ||
+                // Already in desired form.
+                mon.traits.species.form === desiredForm
+            ) {
+                return null;
+            }
+            return new Set();
+        }
         // istanbul ignore next: Can't reproduce.
         return null;
     }
@@ -1327,16 +1419,12 @@ export class Ability {
      *
      * @param accept Callback to accept this pathway.
      * @param side Ability holder reference.
-     * @returns `"invert"` if the drain effect was overridden to deduct HP
-     * instead of heal, otherwise `undefined`.
      */
     public async onUpdate(
         ctx: BattleParserContext<"gen4">,
         accept: unordered.AcceptCallback,
         side: SideID,
     ): Promise<void> {
-        void ctx, accept, side;
-
         if (!this.data.on?.update) return;
         // Note(gen4): Trace is handled using other special logic found in
         // #copyFoeAbility() and gen4/parser/ability.ts' onStart() function
@@ -1347,6 +1435,10 @@ export class Ability {
         // Cure status immunity.
         if (this.data.on.update.cure) {
             return await this.cureImmunity(ctx, accept, side);
+        }
+        // Castform (forecast ability).
+        if (this.data.on.update.forecast) {
+            return await this.forecast(ctx, accept, side);
         }
     }
 
@@ -1431,6 +1523,210 @@ export class Ability {
                     `Missing cure events: [${[...cureResult].join(", ")}]`,
             );
         }
+    }
+
+    /**
+     * Handles events due to forecast ability.
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     */
+    private async forecast(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
+        const desiredForm = Ability.getForecastForm(
+            ctx.state.status.weather.type,
+        );
+        const desiredSpeciesForme = `castform${desiredForm ?? ""}`;
+
+        const event = await tryVerify(ctx, "|-formechange|");
+        if (!event) return;
+        const [, identStr, speciesForme] = event.args;
+        const ident = Protocol.parsePokemonIdent(identStr);
+        if (ident.player !== side) return;
+        if (toIdName(speciesForme) !== desiredSpeciesForme) return;
+        if (!this.isEventFromAbility(event)) return;
+        accept();
+        await base["|-formechange|"](ctx);
+    }
+
+    /**
+     * Gets the desired form for Castform based on the weather.
+     *
+     * @param weatherType Current weather or `"none"`.
+     * @returns One of the forms, or `undefined` if the base form is desired.
+     */
+    private static getForecastForm(
+        weatherType: WeatherType | "none",
+    ): string | undefined {
+        switch (weatherType) {
+            case "RainDance":
+                return "rainy";
+            case "Hail":
+                return "snowy";
+            case "SunnyDay":
+                return "sunny";
+            default:
+        }
+    }
+
+    //#endregion
+
+    //#region On-residual.
+
+    /**
+     * Checks whether the ability can activate on-`residual`.
+     *
+     * @param mon Potential ability holder.
+     * @param foes Opponents.
+     * @returns A Set of SubReasons describing additional conditions of
+     * activation, or the empty set if there are none, or `null` if it cannot
+     * activate.
+     */
+    public canResidual(
+        mon: ReadonlyPokemon,
+        foes: readonly ReadonlyPokemon[],
+    ): Set<inference.SubReason> | null {
+        if (!this.data.on?.residual) return null;
+        let res: Set<inference.SubReason> | null = null;
+        // Baddreams.
+        if (this.data.on.residual.damageFoes) {
+            const {statusTypes, percentDamage: p} =
+                this.data.on.residual.damageFoes;
+            if (
+                foes.some(
+                    foe =>
+                        statusTypes.some(statusType =>
+                            hasStatus(foe, statusType),
+                        ) &&
+                        ((p < 0 && foe.hp.current > 0) ||
+                            (p > 0 && foe.hp.current < foe.hp.max)),
+                )
+            ) {
+                res ??= new Set();
+            }
+        }
+        // Shedskin.
+        if (this.data.on.residual.cure && this.data.statusImmunity) {
+            const statusTypes = Object.keys(
+                this.data.statusImmunity,
+            ) as StatusType[];
+            if (
+                statusTypes.some(
+                    s => this.data.statusImmunity![s] && hasStatus(mon, s),
+                )
+            ) {
+                res ??= new Set();
+            }
+        }
+        // Speedboost.
+        if (this.data.on.residual.boost) {
+            const table = this.data.on.residual.boost;
+            const keys = Object.keys(table) as BoostName[];
+            if (
+                keys.some(
+                    key =>
+                        (table[key]! > 0 && mon.volatile.boosts[key] < 6) ||
+                        (table[key]! < 0 && mon.volatile.boosts[key] > -6),
+                )
+            ) {
+                res ??= new Set();
+            }
+        }
+        if (this.data.on.residual.chance) res?.add(reason.chance.create());
+        return res;
+    }
+
+    /**
+     * Activates an ability on-`residual`.
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     */
+    public async onResidual(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+    ): Promise<void> {
+        if (!this.data.on?.residual) return;
+        // Baddreams.
+        if (this.data.on.residual.damageFoes) {
+            return await this.damageFoes(
+                ctx,
+                accept,
+                side,
+                this.data.on.residual.damageFoes.statusTypes,
+                this.data.on.residual.damageFoes.percentDamage,
+            );
+        }
+        // Shedskin.
+        if (this.data.on.residual.cure) {
+            return await this.cureImmunity(ctx, accept, side);
+        }
+        // Speedboost.
+        if (this.data.on.residual.boost) {
+            await this.abilityBoost(ctx, accept, side);
+            await boost(ctx, {
+                side,
+                table: new Map(
+                    Object.entries(this.data.on.residual.boost) as [
+                        BoostName,
+                        number,
+                    ][],
+                ),
+                pred: event => !event.kwArgs.from,
+                silent: true,
+            });
+        }
+    }
+
+    /**
+     * Handles events due to a damageFoes ability (e.g. Bad Dreams).
+     *
+     * @param accept Callback to accept this pathway.
+     * @param side Ability holder reference.
+     */
+    private async damageFoes(
+        ctx: BattleParserContext<"gen4">,
+        accept: unordered.AcceptCallback,
+        side: SideID,
+        statusTypes: readonly StatusType[],
+        percent: number,
+    ): Promise<void> {
+        const a = accept;
+        let accepted = false;
+        accept = function damageFoesAccept() {
+            if (accepted) return;
+            accepted = true;
+            a();
+        };
+
+        const foeSides = new Set(
+            (Object.keys(ctx.state.teams) as SideID[]).filter(s => {
+                if (s === side) return false;
+                const m = ctx.state.getTeam(s).active;
+                return statusTypes.some(statusType => hasStatus(m, statusType));
+            }),
+        );
+        await eventLoop(ctx, async _ctx => {
+            const parsed: SideID[] = [];
+            for (const foeSide of foeSides) {
+                if (
+                    await this.percentDamage(
+                        _ctx,
+                        accept,
+                        foeSide,
+                        percent,
+                        side,
+                    )
+                ) {
+                    parsed.push(foeSide);
+                }
+            }
+            for (const foeSide of parsed) foeSides.delete(foeSide);
+        });
     }
 
     //#endregion

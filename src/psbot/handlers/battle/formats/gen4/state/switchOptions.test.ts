@@ -46,6 +46,26 @@ export const eevee: SwitchOptions = {
     hpMax: 115,
 };
 
+export const castform: SwitchOptions = {
+    species: "castform",
+    level: 35,
+    gender: "N",
+    hp: 100,
+    hpMax: 100,
+};
+export const castformrainy: SwitchOptions = {
+    ...castform,
+    species: "castformrainy",
+};
+export const castformsnowy: SwitchOptions = {
+    ...castform,
+    species: "castformsnowy",
+};
+export const castformsunny: SwitchOptions = {
+    ...castform,
+    species: "castformsunny",
+};
+
 export function requestEvent(
     type: "move",
     sidePokemon: Protocol.Request.Pokemon[],

@@ -84,10 +84,36 @@ export function canBlockStatus(
     return defender.some(t => typechart[t][status]);
 }
 
+/**
+ * Returns whether the defender is immune to damage inflicted by the given
+ * weather, or `null` if the weather is not applicable.
+ */
+export function canBlockWeather(
+    defender: readonly dexutil.Type[],
+    weatherType: dexutil.WeatherType,
+): boolean | null {
+    if (!["Sandstorm", "Hail"].includes(weatherType)) return null;
+    return defender.some(
+        t =>
+            typechart[t][
+                weatherType as Extract<
+                    dexutil.WeatherType,
+                    "Sandstorm" | "Hail"
+                >
+            ],
+    );
+}
+
 type AttackerMap = {readonly [TAttacker in dexutil.Type]: number};
 type StatusMap = {readonly [TStatus in dexutil.StatusType]?: boolean};
+type WeatherMap = {
+    readonly [TStatus in Extract<
+        dexutil.WeatherType,
+        "Sandstorm" | "Hail"
+    >]?: boolean;
+};
 
-// TODO: Include TDefender's weather immunity, groundedness, etc.
+// TODO: Include TDefender's groundedness, etc?
 /**
  * Type effectiveness chart for gen4.
  *
@@ -96,9 +122,11 @@ type StatusMap = {readonly [TStatus in dexutil.StatusType]?: boolean};
  *   appropriate damage multiplier.
  * - `typechart[defender][status]` - Maps to whether the defender is immune to
  *   the given status.
+ * - `typechart[defender][weather]` - Maps to whether the defender is immune to
+ *   the given weather.
  */
 export const typechart: {
-    readonly [TDefender in dexutil.Type]: AttackerMap & StatusMap;
+    readonly [TDefender in dexutil.Type]: AttackerMap & StatusMap & WeatherMap;
 } = {
     "???": {
         "???": 1,
@@ -321,6 +349,7 @@ export const typechart: {
         rock: 0.5,
         steel: 1,
         water: 2,
+        Sandstorm: true,
     },
     ice: {
         "???": 1,
@@ -342,6 +371,7 @@ export const typechart: {
         steel: 2,
         water: 1,
         frz: true,
+        Hail: true,
     },
     normal: {
         "???": 1,
@@ -424,6 +454,7 @@ export const typechart: {
         rock: 1,
         steel: 2,
         water: 2,
+        Sandstorm: true,
     },
     steel: {
         "???": 1,
@@ -446,6 +477,7 @@ export const typechart: {
         water: 1,
         psn: true,
         tox: true,
+        Sandstorm: true,
     },
     water: {
         "???": 1,

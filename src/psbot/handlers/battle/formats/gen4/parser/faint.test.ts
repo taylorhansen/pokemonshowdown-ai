@@ -61,14 +61,6 @@ export const test = () =>
                 pctx = init("p2");
                 await ph.reject({args: ["faint", toIdent("p1")], kwArgs: {}});
             });
-
-            it("Should return if pokemon isn't fainted", async function () {
-                sh.initActive("p1").faint();
-                sh.initActive("p2");
-
-                pctx = init("p2");
-                await ph.return();
-            });
         });
 
         describe("replacements()", function () {

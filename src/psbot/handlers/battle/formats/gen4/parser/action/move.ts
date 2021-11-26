@@ -22,6 +22,7 @@ import * as effectDamage from "../effect/damage";
 import * as effectItem from "../effect/item";
 import * as effectStatus from "../effect/status";
 import * as effectWeather from "../effect/weather";
+import * as faint from "../faint";
 import {ActionResult} from "./action";
 import * as actionSwitch from "./switch";
 
@@ -1730,6 +1731,7 @@ function status(
         }
 
         result.push(
+            // TODO: Rework to use EventInference interface.
             unordered.UnorderedDeadline.create(
                 `${args.side} move status ${targetSide} ` +
                     `[${statusTypes.join(", ")}]`,
@@ -1821,6 +1823,7 @@ function statusReject(
     const filteredAbilities = [...targetAbility.possibleValues].filter(n =>
         statusTypes.some(s =>
             // TODO: Some abilities distinguish between self/hit statuses.
+            // TODO: Guard against cloudnine.
             dex
                 .getAbility(targetAbility.map[n])
                 .canBlockStatus(s, ctx.state.status.weather.type),
@@ -1853,7 +1856,7 @@ function drain(
     return [
         effectAbility
             .onMoveDrain(ctx, targetRef, args.side)
-            .transform(function transformMoveDrain(drainRes) {
+            .transform("cancelable", function transformMoveDrain(drainRes) {
                 if (drainRes !== "invert") return;
                 if (handled) {
                     throw new Error(
@@ -1955,6 +1958,14 @@ async function otherEffects(
     // other-effects.
     if (parsers.length <= 0) await eventLoop(ctx, otherEffectsFilter);
     else await unordered.all(ctx, parsers, otherEffectsFilter);
+
+    // Ability on-update (e.g. forecast).
+    // TODO: Verify order.
+    await unordered.all(ctx, [
+        ...(Object.keys(ctx.state.teams) as SideID[]).map(side =>
+            effectAbility.onUpdate(ctx, side),
+        ),
+    ]);
 }
 
 //#region Swap-boost effect.
@@ -2430,7 +2441,7 @@ async function faints(
     ) {
         candidates.add(args.side);
     }
-    await expectFaints(ctx, candidates);
+    await faint.events(ctx, candidates);
 }
 
 //#endregion
@@ -2473,7 +2484,7 @@ async function recoil(
     if (damageResult === true) {
         // Berries can activate directly after receiving recoil damage, or just
         // faint instead.
-        if (args.user.fainted) await expectFaints(ctx, new Set([args.side]));
+        if (args.user.fainted) await faint.events(ctx, new Set([args.side]));
         else await unordered.parse(ctx, effectItem.onUpdate(ctx, args.side));
     }
 }
@@ -2535,7 +2546,7 @@ async function postDamage(
     if (args.user.fainted) return;
 
     await unordered.parse(ctx, effectItem.onMovePostDamage(ctx, args.side));
-    if (args.user.fainted) await expectFaints(ctx, new Set([args.side]));
+    if (args.user.fainted) await faint.events(ctx, new Set([args.side]));
 }
 
 //#endregion
@@ -2717,37 +2728,6 @@ async function moveCall(
 //#endregion
 
 //#endregion
-
-//#endregion
-
-//#region Event parsing helpers.
-
-/**
- * Expects a set of faint messages.
- *
- * @param candidates Pokemon references that should faint. These are removed
- * from the Set whenever this function handles a `|faint|` event.
- */
-async function expectFaints(
-    ctx: BattleParserContext<"gen4">,
-    candidates: Set<SideID>,
-): Promise<void> {
-    if (candidates.size <= 0) return;
-    await eventLoop(ctx, async function faintLoop(_ctx) {
-        const event = await tryVerify(_ctx, "|faint|");
-        if (!event) return;
-        const [, identStr] = event.args;
-        const ident = Protocol.parsePokemonIdent(identStr);
-        if (!candidates.delete(ident.player)) return;
-        await base["|faint|"](_ctx);
-        return {};
-    });
-    if (candidates.size > 0) {
-        throw new Error(
-            `Pokemon [${[...candidates].join(", ")}] haven't fainted yet`,
-        );
-    }
-}
 
 //#endregion
 

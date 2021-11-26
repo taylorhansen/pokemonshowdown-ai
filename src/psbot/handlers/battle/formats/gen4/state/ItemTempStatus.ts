@@ -103,6 +103,7 @@ export class ItemTempStatus<TStatusType extends string>
         infinite = false,
     ): void {
         if (type === "none") {
+            // TODO: Use short duration to infer item.
             this.reset();
             return;
         }
@@ -123,6 +124,8 @@ export class ItemTempStatus<TStatusType extends string>
 
         // Duration is certain once the item is known.
         this._source = source.item;
+        // TODO: Use SubReason interface instead to guard for item-ignoring
+        // effects.
         this._source.onNarrow(key => {
             // Start was called again with a different source before this
             // callback fired, so the old source item is no longer relevant.

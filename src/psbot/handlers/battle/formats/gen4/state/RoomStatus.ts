@@ -21,7 +21,7 @@ export class RoomStatus implements ReadonlyRoomStatus {
     /** @override */
     public lastMove?: string;
     /** @override */
-    public readonly trickroom = new TempStatus("trick room", 5);
+    public readonly trickroom = new TempStatus("trickroom", 5);
     /** @override */
     public readonly weather = new ItemTempStatus([5, 8], weatherItems);
 

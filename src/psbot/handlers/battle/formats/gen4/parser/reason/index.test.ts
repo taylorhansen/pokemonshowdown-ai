@@ -3,6 +3,7 @@ import * as chance from "./chance.test";
 import * as hp from "./hp.test";
 import * as item from "./item.test";
 import * as move from "./move.test";
+import * as weather from "./weather.test";
 
 export const test = () =>
     describe("reason", function () {
@@ -11,4 +12,5 @@ export const test = () =>
         hp.test();
         item.test();
         move.test();
+        weather.test();
     });

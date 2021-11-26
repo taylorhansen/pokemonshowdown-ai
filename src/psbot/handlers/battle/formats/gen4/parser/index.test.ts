@@ -7,6 +7,7 @@ import * as init from "./init.test";
 import * as main from "./main.test";
 import * as reason from "./reason/index.test";
 import * as request from "./request.test";
+import * as residual from "./residual.test";
 import * as turnLoop from "./turnLoop.test";
 
 export const test = () =>
@@ -20,5 +21,6 @@ export const test = () =>
         init.test();
         main.test();
         request.test();
+        residual.test();
         turnLoop.test();
     });

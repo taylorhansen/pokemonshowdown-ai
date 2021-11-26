@@ -8,7 +8,14 @@ import {BattleState} from "../../state";
 import {Pokemon, ReadonlyPokemon} from "../../state/Pokemon";
 import {ReadonlyTeam, SwitchOptions} from "../../state/Team";
 import {ReadonlyVariableTempStatus} from "../../state/VariableTempStatus";
-import {ditto, smeargle} from "../../state/switchOptions.test";
+import {
+    castform,
+    castformrainy,
+    castformsnowy,
+    castformsunny,
+    ditto,
+    smeargle,
+} from "../../state/switchOptions.test";
 import {createInitialContext} from "../Context.test";
 import {ParserHelpers} from "../ParserHelpers.test";
 import {
@@ -24,6 +31,7 @@ import {
     toNum,
     toRequestJSON,
     toSide,
+    toSpeciesName,
     toTypes,
     toUsername,
 } from "../helpers.test";
@@ -3944,6 +3952,8 @@ export const test = (): void =>
                                 args: ["-weather", "RainDance" as Weather],
                                 kwArgs: {},
                             });
+                            await ph.halt();
+                            await ph.return({});
 
                             const {weather} = state.status;
                             expect(weather.type).to.equal("RainDance");
@@ -3973,6 +3983,65 @@ export const test = (): void =>
                                 "Expected effect that didn't happen: " +
                                     "p2 move field RainDance",
                             );
+                        });
+
+                        it("Should change Castform's forme", async function () {
+                            sh.initActive("p1", castform);
+                            sh.initActive("p2");
+
+                            pctx = init("p2");
+                            await moveEvent("p2", "hail");
+                            await ph.handle({
+                                args: ["-weather", "Hail" as Weather],
+                                kwArgs: {},
+                            });
+                            await ph.handle({
+                                args: [
+                                    "-formechange",
+                                    toIdent("p1", castform),
+                                    toSpeciesName(castformsnowy.species),
+                                ],
+                                kwArgs: {
+                                    msg: true,
+                                    from: toEffectName("forecast", "ability"),
+                                },
+                            });
+                            await ph.halt();
+                            await ph.return({});
+                        });
+
+                        it("Should change Castform's forme again", async function () {
+                            state.status.weather.start(
+                                null /*source*/,
+                                "RainDance",
+                            );
+                            sh.initActive("p1", castform).formChange(
+                                castformrainy.species,
+                                castformrainy.level,
+                            );
+                            sh.initActive("p2");
+
+                            pctx = init("p2");
+                            await moveEvent("p2", "sunnyday");
+                            await ph.handle({
+                                args: ["-weather", "SunnyDay" as Weather],
+                                kwArgs: {},
+                            });
+                            await ph.handle({
+                                args: [
+                                    "-formechange",
+                                    // Note: Base forme is always used for the
+                                    // ident since it's the nickname.
+                                    toIdent("p1", castform),
+                                    toSpeciesName(castformsunny.species),
+                                ],
+                                kwArgs: {
+                                    msg: true,
+                                    from: toEffectName("forecast", "ability"),
+                                },
+                            });
+                            await ph.halt();
+                            await ph.return({});
                         });
                     });
                 });

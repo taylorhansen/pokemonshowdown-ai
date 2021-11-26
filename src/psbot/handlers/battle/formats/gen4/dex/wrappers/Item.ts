@@ -15,6 +15,7 @@ import {boostOne} from "../../parser/effect/boost";
 import {isPercentDamageSilent, percentDamage} from "../../parser/effect/damage";
 import {updateItems} from "../../parser/effect/item";
 import {
+    cantStatus,
     cure,
     hasStatus,
     status,
@@ -680,10 +681,6 @@ export class Item {
         // Micleberry.
         if (data.threshold) return this.checkHpThreshold(mon, data.threshold);
 
-        // Check for abilities that would block the item.
-        // Can't be blocked if ability is suppressed.
-        if (mon.volatile.suppressAbility) return new Set();
-
         // Check for percent-damage effect.
         const isPoison = mon.types.includes("poison");
         let percent = data[isPoison ? "poisonDamage" : "noPoisonDamage"];
@@ -697,6 +694,12 @@ export class Item {
 
         // No item effects to activate.
         if (!percent && !data.status) return null;
+
+        if (data.status && cantStatus(mon, data.status)) return null;
+
+        // Check for abilities that would block the item.
+        // Can't be blocked if ability is suppressed.
+        if (mon.volatile.suppressAbility) return new Set();
 
         // Get a list of all the possible abilities that could block the item
         // effects.

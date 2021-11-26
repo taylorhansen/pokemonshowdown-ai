@@ -82,44 +82,22 @@ export class UnorderedDeadline<
      * Wraps this UnorderedDeadline to transform its parser result.
      *
      * @template TResult2 Transformed result type.
-     * @param f Result transform function.
-     * @returns An UnorderedDeadline that applies `f` to `this` parser's result.
-     */
-    public transform<TResult2 = unknown>(
-        f: (result: TResult) => TResult2,
-    ): UnorderedDeadline<T, TAgent, TResult2>;
-    /**
-     * Wraps this UnorderedDeadline to transform its parser result.
-     *
-     * @template TResult2 Transformed result type.
      * @param name Name of the transform operation for logging/debugging.
      * @param f Result transform function.
+     * @param reject Callback if the parser never accepts an event.
      * @returns An UnorderedDeadline that applies `f` to `this` parser's result.
      */
     public transform<TResult2 = unknown>(
         name: string | (() => string),
         f: (result: TResult) => TResult2,
-    ): UnorderedDeadline<T, TAgent, TResult2>;
-    public transform<TResult2 = unknown>(
-        fnOrName: string | (() => string) | ((result: TResult) => TResult2),
-        f2?: (result: TResult) => TResult2,
+        reject?: RejectCallback,
     ): UnorderedDeadline<T, TAgent, TResult2> {
-        let f: (result: TResult) => TResult2;
-        if (f2) f = f2;
-        else f = fnOrName as (result: TResult) => TResult2;
-
-        let name: () => string;
-        if (f2) {
-            name =
-                typeof fnOrName === "string"
-                    ? () => fnOrName
-                    : (fnOrName as () => string);
-        } else name = () => "";
-
         return new UnorderedDeadline(
-            () => `transform(${name()}),\n${this.toString(1, 0)}`,
+            () =>
+                `transform(${typeof name === "string" ? name : name()}),\n` +
+                this.toString(1, 0),
             async (ctx, accept) => f(await this.parse(ctx, accept)),
-            () => this.reject(),
+            reject ?? (() => this.reject()),
         );
     }
 

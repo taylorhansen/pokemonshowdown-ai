@@ -897,7 +897,7 @@ void (async function buildDex(): Promise<void> {
     const abilityData: {
         readonly [ability: string]: Pick<
             dex.AbilityData,
-            "on" | "statusImmunity" | "flags"
+            "on" | "statusImmunity" | "weatherImmunity" | "flags"
         >;
     } = {
         naturalcure: {on: {switchOut: {cure: true}}},
@@ -948,8 +948,16 @@ void (async function buildDex(): Promise<void> {
             },
         },
 
-        // TODO(dryskin): Sun/fire weakness.
-        dryskin: {on: {block: {move: {type: "water", percentDamage: 25}}}},
+        dryskin: {
+            // TODO: Fire weakness.
+            on: {
+                block: {move: {type: "water", percentDamage: 25}},
+                weather: {
+                    SunnyDay: {percentDamage: -12.5},
+                    RainDance: {percentDamage: 12.5},
+                },
+            },
+        },
         // TODO(gen3-4): Doesn't work while frozen.
         flashfire: {on: {block: {move: {type: "fire", status: "flashfire"}}}},
         levitate: {on: {block: {move: {type: "ground"}}}},
@@ -983,7 +991,49 @@ void (async function buildDex(): Promise<void> {
 
         liquidooze: {on: {moveDrain: {invert: true}}},
 
+        hydration: {
+            on: {weather: {RainDance: {cure: true}}},
+            statusImmunity: {
+                brn: true,
+                par: true,
+                psn: true,
+                tox: true,
+                slp: true,
+                frz: true,
+            },
+        },
+        icebody: {
+            on: {weather: {Hail: {percentDamage: 6.25}}},
+            weatherImmunity: "Hail",
+        },
+        raindish: {on: {weather: {RainDance: {percentDamage: 6.25}}}},
+        solarpower: {on: {weather: {SunnyDay: {percentDamage: -12.5}}}},
+
+        forecast: {on: {update: {forecast: true}}, flags: {noCopy: true}},
         trace: {on: {update: {copyFoeAbility: true}}, flags: {noCopy: true}},
+
+        baddreams: {
+            on: {
+                residual: {
+                    damageFoes: {statusTypes: ["slp"], percentDamage: -12.5},
+                },
+            },
+        },
+        shedskin: {
+            on: {residual: {chance: 33, cure: true}},
+            statusImmunity: {
+                brn: true,
+                par: true,
+                psn: true,
+                tox: true,
+                slp: true,
+                frz: true,
+            },
+        },
+        speedboost: {on: {residual: {boost: {spe: 1}}}},
+
+        sandveil: {weatherImmunity: "Sandstorm"},
+        snowcloak: {weatherImmunity: "Hail"},
 
         gluttony: {flags: {earlyBerry: true}},
 
@@ -995,7 +1045,6 @@ void (async function buildDex(): Promise<void> {
 
         skilllink: {flags: {maxMultihit: true}},
 
-        forecast: {flags: {noCopy: true}},
         multitype: {flags: {noCopy: true}},
 
         magicguard: {flags: {noIndirectDamage: true}},

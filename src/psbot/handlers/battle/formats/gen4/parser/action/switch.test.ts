@@ -6,7 +6,13 @@ import {Event} from "../../../../../../parser";
 import {BattleState} from "../../state";
 import {Pokemon} from "../../state/Pokemon";
 import {SwitchOptions} from "../../state/Team";
-import {ditto, smeargle} from "../../state/switchOptions.test";
+import {
+    castform,
+    castformrainy,
+    castformsunny,
+    ditto,
+    smeargle,
+} from "../../state/switchOptions.test";
 import {ParserContext, createInitialContext} from "../Context.test";
 import {ParserHelpers} from "../ParserHelpers.test";
 import {
@@ -20,6 +26,8 @@ import {
     toMoveName,
     toSide,
     toSideCondition,
+    toSpeciesName,
+    toWeather,
 } from "../helpers.test";
 import * as actionSwitch from "./switch";
 
@@ -786,6 +794,68 @@ export const test = () =>
                             kwArgs: {
                                 from: toEffectName("trace", "ability"),
                                 of: toIdent("p2"),
+                            },
+                        });
+                        await ph.halt();
+                        await ph.return({mon, actioned: {p1: true}});
+                    });
+
+                    it("Should handle forecast", async function () {
+                        state.status.weather.start(
+                            null /*source*/,
+                            "RainDance",
+                        );
+                        const [mon] = sh.initTeam("p1", [castform, ditto]);
+                        sh.initActive("p2");
+
+                        pctx = init("p1");
+                        await ph.handle(switchEvent("p1", castform));
+                        await ph.handle({
+                            args: [
+                                "-formechange",
+                                toIdent("p1", castform),
+                                toSpeciesName(castformrainy.species),
+                            ],
+                            kwArgs: {
+                                msg: true,
+                                from: toEffectName("forecast", "ability"),
+                            },
+                        });
+                        await ph.halt();
+                        await ph.return({mon, actioned: {p1: true}});
+                    });
+
+                    const groudon: SwitchOptions = {
+                        species: "groudon",
+                        level: 30,
+                        gender: "N",
+                        hp: 100,
+                        hpMax: 100,
+                    };
+
+                    it("Should handle forecast after weather ability", async function () {
+                        state.status.weather.start(null /*source*/, "Hail");
+                        const [mon] = sh.initTeam("p1", [groudon, ditto]);
+                        sh.initActive("p2", castform);
+
+                        pctx = init("p1");
+                        await ph.handle(switchEvent("p1", groudon));
+                        await ph.handle({
+                            args: ["-weather", toWeather("SunnyDay")],
+                            kwArgs: {
+                                from: toEffectName("drought", "ability"),
+                                of: toIdent("p1", groudon),
+                            },
+                        });
+                        await ph.handle({
+                            args: [
+                                "-formechange",
+                                toIdent("p2", castform),
+                                toSpeciesName(castformsunny.species),
+                            ],
+                            kwArgs: {
+                                msg: true,
+                                from: toEffectName("forecast", "ability"),
                             },
                         });
                         await ph.halt();

@@ -7,7 +7,11 @@ import * as dex from "../../dex";
 import {BattleState} from "../../state/BattleState";
 import {Pokemon} from "../../state/Pokemon";
 import {SwitchOptions} from "../../state/Team";
-import {smeargle} from "../../state/switchOptions.test";
+import {
+    castform,
+    castformrainy,
+    smeargle,
+} from "../../state/switchOptions.test";
 import {createInitialContext} from "../Context.test";
 import {ParserHelpers} from "../ParserHelpers.test";
 import {
@@ -19,9 +23,11 @@ import {
     toItemName,
     toMoveName,
     toNum,
+    toSpeciesName,
     toTypes,
     toWeather,
 } from "../helpers.test";
+import * as reason from "../reason";
 import * as effectAbility from "./ability";
 
 export const test = () =>
@@ -1721,6 +1727,180 @@ export const test = () =>
             });
         });
 
+        describe("onWeather()", function () {
+            const init = setupUnorderedDeadline(
+                ictx.startArgs,
+                effectAbility.onWeather,
+            );
+            let pctx: ReturnType<typeof init> | undefined;
+            const ph = new ParserHelpers(() => pctx);
+
+            afterEach("Close ParserContext", async function () {
+                await ph.close().finally(() => (pctx = undefined));
+            });
+
+            it("Should infer no on-weather ability if it did not activate", async function () {
+                sh.initActive("p1");
+                const mon = sh.initActive("p2");
+                mon.setAbility("dryskin", "illuminate");
+
+                // Note: The active weather is provided as an argument here, so
+                // we technically don't need to actually set the weather in the
+                // battle state.
+                pctx = init("p2", "SunnyDay", new Set());
+                await ph.halt();
+                await ph.return([]);
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "illuminate",
+                );
+            });
+
+            it("Shouldn't infer no on-weather ability if it did not activate and and ability is suppressed", async function () {
+                state.status.weather.start(null /*source*/, "SunnyDay");
+                sh.initActive("p1");
+                const mon = sh.initActive("p2", tentacruel);
+                mon.setAbility("dryskin", "illuminate");
+                mon.volatile.suppressAbility = true;
+
+                pctx = init("p2", "SunnyDay", new Set());
+                await ph.halt();
+                await ph.return([]);
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "dryskin",
+                    "illuminate",
+                );
+            });
+
+            it("Should also make use of the given SubReasons", async function () {
+                const us = sh.initActive("p1");
+                us.setAbility("illuminate", "chlorophyll");
+                const mon = sh.initActive("p2", tentacruel);
+                mon.setAbility("dryskin", "illuminate");
+
+                pctx = init(
+                    "p2",
+                    "SunnyDay",
+                    // This SubReason must hold in order for on-weather
+                    // abilities to activate at all.
+                    new Set([reason.ability.has(us, new Set(["illuminate"]))]),
+                );
+                await ph.halt();
+                await ph.return([]);
+                // Either mon doesn't have dryskin (no on-weather activation),
+                // or us doesn't have illuminate (preventing on-weather
+                // activation at all).
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "dryskin",
+                    "illuminate",
+                );
+                expect(us.traits.ability.possibleValues).to.have.keys(
+                    "chlorophyll",
+                    "illuminate",
+                );
+                // Trigger the assertion by narrowing one of them.
+                mon.traits.ability.narrow("dryskin");
+                expect(us.traits.ability.possibleValues).to.have.keys(
+                    "chlorophyll",
+                );
+            });
+
+            describe("PercentDamage", function () {
+                it("Should handle", async function () {
+                    sh.initActive("p1");
+                    const mon = sh.initActive("p2");
+                    mon.setAbility("icebody");
+                    mon.hp.set(94);
+
+                    pctx = init("p2", "Hail", new Set());
+                    await ph.handle({
+                        args: ["-heal", toIdent("p2"), toHPStatus(100, 100)],
+                        kwArgs: {from: toEffectName("icebody", "ability")},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+
+                it("Should also make use of the given SubReasons", async function () {
+                    sh.initActive("p1");
+                    const mon = sh.initActive("p2");
+                    mon.setAbility("icebody");
+                    mon.hp.set(94);
+                    expect(mon.item.possibleValues).to.include.keys("pokeball");
+                    expect(mon.item.definiteValue).to.be.null;
+
+                    pctx = init(
+                        "p2",
+                        "Hail",
+                        new Set([reason.item.has(mon, new Set(["pokeball"]))]),
+                    );
+                    await ph.handle({
+                        args: ["-heal", toIdent("p2"), toHPStatus(100, 100)],
+                        kwArgs: {from: toEffectName("icebody", "ability")},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                    expect(mon.item.possibleValues).to.have.keys("pokeball");
+                    expect(mon.item.definiteValue).to.not.be.null;
+                });
+            });
+
+            describe("Cure", function () {
+                it("Should handle", async function () {
+                    sh.initActive("p1");
+                    const mon = sh.initActive("p2");
+                    mon.setAbility("hydration");
+                    mon.majorStatus.afflict("brn");
+
+                    pctx = init("p2", "RainDance", new Set());
+                    await ph.handle({
+                        args: [
+                            "-activate",
+                            toIdent("p2"),
+                            toEffectName("hydration", "ability"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.handle({
+                        args: ["-curestatus", toIdent("p2"), "brn"],
+                        kwArgs: {},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+
+                it("Should also make use of the given SubReasons", async function () {
+                    sh.initActive("p1");
+                    const mon = sh.initActive("p2");
+                    mon.setAbility("hydration");
+                    mon.majorStatus.afflict("brn");
+                    expect(mon.item.possibleValues).to.include.keys("pokeball");
+                    expect(mon.item.definiteValue).to.be.null;
+
+                    pctx = init(
+                        "p2",
+                        "RainDance",
+                        new Set([reason.item.has(mon, new Set(["pokeball"]))]),
+                    );
+                    await ph.handle({
+                        args: [
+                            "-activate",
+                            toIdent("p2"),
+                            toEffectName("hydration", "ability"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.handle({
+                        args: ["-curestatus", toIdent("p2"), "brn"],
+                        kwArgs: {},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                    expect(mon.item.possibleValues).to.have.keys("pokeball");
+                    expect(mon.item.definiteValue).to.not.be.null;
+                });
+            });
+        });
+
         const traceEvent = (
             side1: SideID,
             traced: string,
@@ -2100,6 +2280,30 @@ export const test = () =>
                     );
                 });
             });
+
+            describe("Forecast", function () {
+                it("Should handle", async function () {
+                    state.status.weather.start(null /*source*/, "RainDance");
+                    sh.initActive("p1");
+                    const mon = sh.initActive("p2", castform);
+                    expect(mon.ability).to.equal("forecast");
+
+                    pctx = init("p2");
+                    await ph.handle({
+                        args: [
+                            "-formechange",
+                            toIdent("p2", castform),
+                            toSpeciesName(castformrainy.species),
+                        ],
+                        kwArgs: {
+                            msg: true,
+                            from: toEffectName("forecast", "ability"),
+                        },
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+            });
         });
 
         describe("onStartOrUpdate()", function () {
@@ -2390,6 +2594,148 @@ export const test = () =>
                         "CopyFoeAbility ability [trace] activated for " +
                             "'moldbreaker' but no copy indicator event found",
                     );
+                });
+            });
+        });
+
+        describe("onResidual()", function () {
+            const init = setupUnorderedDeadline(
+                ictx.startArgs,
+                effectAbility.onResidual,
+            );
+            let pctx: ReturnType<typeof init> | undefined;
+            const ph = new ParserHelpers(() => pctx);
+
+            afterEach("Close ParserContext", async function () {
+                await ph.close().finally(() => (pctx = undefined));
+            });
+
+            it("Should infer no on-residual ability if it did not activate", async function () {
+                sh.initActive("p1");
+                const mon = sh.initActive("p2");
+                mon.setAbility("speedboost", "illuminate");
+
+                pctx = init("p2");
+                await ph.halt();
+                await ph.return([]);
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "illuminate",
+                );
+            });
+
+            it("Shouldn't infer no on-residual ability if it did not activate and ability is suppressed", async function () {
+                sh.initActive("p1");
+                const mon = sh.initActive("p2");
+                mon.setAbility("speedboost", "illuminate");
+                mon.volatile.suppressAbility = true;
+
+                pctx = init("p2");
+                await ph.halt();
+                await ph.return([]);
+                expect(mon.traits.ability.possibleValues).to.have.keys(
+                    "speedboost",
+                    "illuminate",
+                );
+            });
+
+            describe("DamageIfStatus (Bad Dreams)", function () {
+                it("Should handle", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setAbility("baddreams");
+                    sh.initActive("p2").majorStatus.afflict("slp");
+
+                    pctx = init("p1");
+                    await ph.handle({
+                        args: ["-damage", toIdent("p2"), toHPStatus(88)],
+                        kwArgs: {
+                            from: toEffectName("baddreams", "ability"),
+                            of: toIdent("p1"),
+                        },
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+
+                it("Should not handle if no status", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setAbility("baddreams");
+                    sh.initActive("p2");
+
+                    pctx = init("p1");
+                    await ph.halt();
+                    await ph.return([]);
+                });
+            });
+
+            describe("Cure (Shed Skin)", function () {
+                it("Should handle", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setAbility("shedskin");
+                    mon.majorStatus.afflict("par");
+                    sh.initActive("p2");
+
+                    pctx = init("p1");
+                    await ph.handle({
+                        args: [
+                            "-activate",
+                            toIdent("p1"),
+                            toEffectName("shedskin", "ability"),
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.handle({
+                        args: ["-curestatus", toIdent("p1"), "par"],
+                        kwArgs: {msg: true},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+
+                it("Should allow no activation due to chance", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setAbility("shedskin");
+                    mon.majorStatus.afflict("par");
+                    sh.initActive("p2");
+
+                    pctx = init("p1");
+                    await ph.halt();
+                    await ph.return([]);
+                });
+            });
+
+            describe("Boost (Speed Boost)", function () {
+                it("Should handle", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setAbility("speedboost");
+                    sh.initActive("p2");
+
+                    pctx = init("p1");
+                    await ph.handle({
+                        args: [
+                            "-ability",
+                            toIdent("p1"),
+                            toAbilityName("speedboost"),
+                            "boost",
+                        ],
+                        kwArgs: {},
+                    });
+                    await ph.handle({
+                        args: ["-boost", toIdent("p1"), "spe", toNum(1)],
+                        kwArgs: {},
+                    });
+                    await ph.halt();
+                    await ph.return([undefined]);
+                });
+
+                it("Should not handle if boost already maxed out", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setAbility("speedboost");
+                    mon.volatile.boosts.spe = 6;
+                    sh.initActive("p2");
+
+                    pctx = init("p1");
+                    await ph.halt();
+                    await ph.return([]);
                 });
             });
         });

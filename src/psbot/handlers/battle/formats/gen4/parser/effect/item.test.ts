@@ -1816,6 +1816,16 @@ export const test = () =>
                     await ph.return([]);
                 });
 
+                it("Should not handle status effect if already statused", async function () {
+                    const mon = sh.initActive("p1");
+                    mon.setItem("toxicorb");
+                    mon.majorStatus.afflict("brn");
+
+                    pctx = init("p1");
+                    await ph.halt();
+                    await ph.return([]);
+                });
+
                 it("Should not handle status effect if weather-based immunity", async function () {
                     const mon = sh.initActive("p1");
                     mon.setAbility("leafguard");

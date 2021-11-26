@@ -330,7 +330,8 @@ async function switchEffects(
     if (team.status.stealthrock > 0) entryEffects.push(stealthrock(team.side));
     if (team.status.toxicspikes > 0) entryEffects.push(toxicspikes(team.side));
     // Healingwish effects.
-    // Note: Wish is on-residual, healingwish/lunardance are on-switch.
+    // Note: Wish is on-residual (handled elsewhere), healingwish/lunardance are
+    // on-switch here.
     if (team.status.healingwish) {
         entryEffects.push(healingwish(team.side, "healingwish"));
     }
@@ -347,6 +348,16 @@ async function switchEffects(
             accept,
         );
     }
+
+    // Ability on-update (e.g. forecast).
+    // Note: We need to check again outside of onStartOrUpdate for all active
+    // pokemon in case an on-start ability triggered an activation condition,
+    // e.g. a weather ability causing forecast to activate and change forme.
+    await unordered.all(ctx, [
+        ...(Object.keys(ctx.state.teams) as SideID[]).map(s =>
+            effectAbility.onUpdate(ctx, s),
+        ),
+    ]);
 
     accept?.();
 }
@@ -395,7 +406,7 @@ async function spikesImpl(
         // Update items/faint since a damaging effect happened.
         await unordered.all(ctx, [effectItem.onUpdate(ctx, side)]);
         // Check for faint.
-        await faint.event(ctx, side);
+        if (mon.fainted) await faint.event(ctx, side);
     }
 }
 
@@ -438,7 +449,7 @@ async function stealthrockImpl(
         // Update items/faint since a damaging effect happened.
         await unordered.parse(ctx, effectItem.onUpdate(ctx, side));
         // Check for faint.
-        await faint.event(ctx, side);
+        if (mon.fainted) await faint.event(ctx, side);
     }
 }
 

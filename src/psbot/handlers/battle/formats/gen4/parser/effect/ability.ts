@@ -196,11 +196,48 @@ export const onMoveDrain = onX(
         return getAbilities(mon, ability => ability.canMoveDrain());
     },
     onXInferenceParser(
-        "onStatusInference",
+        "onMoveDrainInference",
         onXUnorderedParser(
-            "onStatusUnordered",
+            "onMoveDrainUnordered",
             async (ctx, accept, ability, side, hitByUserRef) =>
                 await ability.onMoveDrain(ctx, accept, side, hitByUserRef),
+        ),
+    ),
+);
+
+/**
+ * Creates an EventInference parser that expects an on-`weather` ability to
+ * activate if possible (e.g. Ice Body).
+ *
+ * @param ctx Context in order to figure out which abilities to watch.
+ * @param side Pokemon reference who could have such an ability.
+ * @param weatherType Current weather. Required to be active in order to be able
+ * to call this function.
+ * @param weatherReasons Reasons for weather effects to happen at all.
+ * @returns An EventInference for handling ability possibilities.
+ */
+export const onWeather = onX(
+    "onWeather",
+    (
+        ctx,
+        side,
+        weatherType: dex.WeatherType,
+        weatherReasons: ReadonlySet<inference.SubReason>,
+    ) => {
+        const mon = ctx.state.getTeam(side).active;
+        return getAbilities(mon, ability => {
+            const abilityReasons = ability.canWeather(mon, weatherType);
+            if (!abilityReasons) return abilityReasons;
+            weatherReasons.forEach(r => abilityReasons.add(r));
+            return abilityReasons;
+        });
+    },
+    onXInferenceParser(
+        "onWeatherInference",
+        onXUnorderedParser(
+            "onWeatherUnordered",
+            async (ctx, accept, ability, side, weatherType) =>
+                await ability.onWeather(ctx, accept, side, weatherType),
         ),
     ),
 );
@@ -687,6 +724,33 @@ async function onStartOrUpdateInferenceNoCopy(
     accept(ability);
     return res[0]![1];
 }
+
+/**
+ * Creates an EventInference parser that expects an on-`residual` ability to
+ * activate if possible (e.g. Speed Boost).
+ *
+ * @param ctx Context in order to figure out which abilities to watch.
+ * @param side Pokemon reference who could have such an ability.
+ * @returns An EventInference for handling ability possibilities.
+ */
+export const onResidual = onX(
+    "onResidual",
+    (ctx, side) => {
+        const mon = ctx.state.getTeam(side).active;
+        const foes = (Object.keys(ctx.state.teams) as SideID[])
+            .filter(s => s !== side)
+            .map(s => ctx.state.getTeam(s).active);
+        return getAbilities(mon, ability => ability.canResidual(mon, foes));
+    },
+    onXInferenceParser(
+        "onResidualInference",
+        onXUnorderedParser(
+            "onResidualUnordered",
+            async (ctx, accept, ability, side) =>
+                await ability.onResidual(ctx, accept, side),
+        ),
+    ),
+);
 
 //#endregion
 

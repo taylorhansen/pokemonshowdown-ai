@@ -287,8 +287,8 @@ export interface AbilityData extends DexData {
         readonly block?: {
             /**
              * Block certain statuses specified by
-             * {@link AbilityData.statusImmunity}, either unconditionally or if
-             * a certain weather is active.
+             * {@link AbilityData.statusImmunity statusImmunity}, either
+             * unconditionally or if a certain weather is active.
              */
             readonly status?: true | WeatherType;
             /** Block certain moves. */
@@ -333,10 +333,7 @@ export interface AbilityData extends DexData {
          * applies to `#on.moveContactKo`.
          */
         readonly moveContact?: {
-            /**
-             * Percent chance of this ability activating. Omit to assume that it
-             * always activates.
-             */
+            /** Percent chance of the effect happening. */
             readonly chance?: number;
             /** Percent damage dealt to move user. */
             readonly percentDamage?: number;
@@ -358,6 +355,25 @@ export interface AbilityData extends DexData {
             /** Invert the drain healing effect. */
             readonly invert?: true;
         };
+        /**
+         * Whenever the weather gets updated, before most on-`residual` effects.
+         */
+        readonly weather?: Partial<
+            Readonly<
+                Record<
+                    WeatherType,
+                    {
+                        /** Percent damage dealt to holder. */
+                        readonly percentDamage?: number;
+                        /**
+                         * Cure statuses specified by
+                         * {@link AbilityData.statusImmunity statusImmunity}.
+                         */
+                        readonly cure?: true;
+                    }
+                >
+            >
+        >;
         /** Whenever the game decides to check activation conditions. */
         readonly update?: {
             /**
@@ -368,12 +384,32 @@ export interface AbilityData extends DexData {
             readonly copyFoeAbility?: true;
             /**
              * Whether this ability cures statuses specified by
-             * {@link AbilityData.statusImmunity}. Always checked after
-             * on-`start` and whenever the holder gets statused.
+             * {@link AbilityData.statusImmunity statusImmunity}. Always checked
+             * after on-`start` and whenever the holder gets statused.
              */
             readonly cure?: true;
-            // TODO: Forecast.
+            /** Changes Castform's forme based on the weather. */
+            readonly forecast?: true;
             // TODO(gen>=5): Flowergift.
+        };
+        /** End of turn, after main moves/switches. */
+        readonly residual?: {
+            /** Damage foes if they have a given status. */
+            readonly damageFoes?: {
+                /** Status to check for. */
+                readonly statusTypes: readonly StatusType[];
+                /** Percent damage dealt. */
+                readonly percentDamage: number;
+            };
+            /** Percent chance of the effect happening. */
+            readonly chance?: number;
+            /**
+             * Cure statuses specified in
+             * {@link AbilityData.statusImmunity statusImmunity}.
+             */
+            readonly cure?: true;
+            /** Boost self. */
+            readonly boost?: Partial<BoostTable>;
         };
     };
 
@@ -382,6 +418,9 @@ export interface AbilityData extends DexData {
      * events are emitted for these immunities.
      */
     readonly statusImmunity?: {readonly [T in StatusType]?: true | "silent"};
+
+    /** Immunity to weather damage. Only applies to sandstorm/hail. */
+    readonly weatherImmunity?: Extract<WeatherType, "Sandstorm" | "Hail">;
 
     // TODO: Rename to passive?
     /** Additional ability flags. */

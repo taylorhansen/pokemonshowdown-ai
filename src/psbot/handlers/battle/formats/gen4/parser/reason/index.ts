@@ -3,3 +3,4 @@ export * as chance from "./chance";
 export * as hp from "./hp";
 export * as item from "./item";
 export * as move from "./move";
+export * as weather from "./weather";
