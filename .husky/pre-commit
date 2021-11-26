@@ -1,5 +1,8 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
+echo "Formatting..."
 npx git-format-staged -f 'prettier --ignore-unknown --stdin-filepath "{}"' "*"
+echo "Linting..."
 npx git-format-staged --no-write -f 'eslint --stdin --stdin-filename "{}" >&2' "*.js" "*.ts"
+echo "Done verifying"
