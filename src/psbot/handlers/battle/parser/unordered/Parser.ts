@@ -77,8 +77,8 @@ export class Parser<
     /**
      * Creates an unordered Parser.
      *
-     * @param name Name for logging/debugging.
-     * @param parser Parser function to wrap.
+     * @param _name Name for logging/debugging.
+     * @param parse Parser function to wrap.
      * @param _reject Callback if the parser never accepts an event.
      */
     public constructor(

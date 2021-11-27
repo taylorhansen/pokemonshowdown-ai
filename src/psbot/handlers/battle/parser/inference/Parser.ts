@@ -11,8 +11,8 @@ import {Reason} from "./Reason";
  * @template TAgent Battle agent type.
  * @template TResult Parser's result type.
  * @param name Name for logging/debugging.
- * @param cases All the possible cases in which this inference could accept
- * an event.
+ * @param cases All the possible cases in which this inference could accept an
+ * event.
  * @param innerParser Parser function that selects from the given cases. If it
  * accepts the current event, it should call the provided `accept` callback
  * before parsing to indicate which SubInference was chosen.
