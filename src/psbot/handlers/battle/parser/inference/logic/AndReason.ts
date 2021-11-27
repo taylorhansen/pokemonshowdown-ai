@@ -17,7 +17,7 @@ export function and(reasons: Set<Reason>): Reason {
  * Reason that requires all of its sub-Reasons to hold. Essentially a logical
  * `and` operation or `Array.every()`.
  */
-export class AndReason extends Reason {
+class AndReason extends Reason {
     /**
      * Whether all of the {@link Reason}s held, or `null` if currently unknown.
      */
