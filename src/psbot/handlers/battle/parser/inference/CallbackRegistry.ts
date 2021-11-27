@@ -17,7 +17,7 @@ export class CallbackRegistry<T = unknown> {
     }
 
     /**
-     * Registers a callback to wait for more information. Evaluatede in FIFO
+     * Registers a callback to wait for more information. Evaluated in FIFO
      * order.
      *
      * @param cb Callback to call once {@link resolve} is called. This method
