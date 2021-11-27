@@ -1,4 +1,3 @@
-/* eslint-disable max-classes-per-file */
 /** Readonly {@link PossibilityClass} representation. */
 export interface ReadonlyPossibilityClass<
     TKey extends string,
@@ -22,7 +21,7 @@ export interface ReadonlyPossibilityClass<
      *
      * @returns `this` for chaining.
      */
-    onNarrow: (cb: (key: TKey, data: TData) => void) => this;
+    readonly onNarrow: (cb: (key: TKey, data: TData) => void) => this;
 
     /**
      * Adds a listener for when either this object narrows down to a subset of
@@ -51,7 +50,7 @@ export interface ReadonlyPossibilityClass<
     ): () => void;
 
     /** Checks if a value is in the data possibility. */
-    isSet: (name: TKey) => boolean;
+    readonly isSet: (name: TKey) => boolean;
 }
 
 /** Represents a subset callback. */
@@ -62,89 +61,9 @@ interface Subset<TKey extends string> {
      * Callback for when the subset is empty (kept=`false`) or is equal to the
      * main possible values set (kept=`true`).
      */
-    update: (kept: boolean) => void;
+    readonly update: (kept: boolean) => void;
     /** Whether to cancel the update callback. */
     cancel?: boolean;
-}
-
-// TODO: Remove.
-/** Doubly linked list helper type for constant-time insertion/deletion. */
-class LinkedList<T = unknown> {
-    /** Beginning of the list. */
-    public head: LinkedListNode<T> | null = null;
-    /** End of the list. */
-    public tail: LinkedListNode<T> | null = null;
-
-    public *[Symbol.iterator](): IterableIterator<T> {
-        for (const node of this.nodes()) yield node.value;
-    }
-
-    /**
-     * Node iterator allowing only for the removal of the current node or
-     * anything before/after it (but never both).
-     */
-    public *nodes(): IterableIterator<LinkedListNode<T>> {
-        let node = this.head;
-        while (node) {
-            const {next} = node;
-            yield node;
-
-            if (!node.next) {
-                // Next node was removed.
-                if (node === this.tail) break;
-                // Current node was removed, restore previous node.next.
-                // Note: Undefined behavior if both of the above cases are true.
-                node = next;
-            } else node = node.next;
-        }
-    }
-
-    /** Adds a value to the end of the list. */
-    public push(value: T): void {
-        const newNode: LinkedListNode<T> = {value, prev: this.tail, next: null};
-        if (!this.tail) this.tail = newNode;
-        else this.tail = this.tail.next = newNode;
-
-        if (!this.head) this.head = this.tail;
-    }
-
-    /** Removes the node from the list and returns its value. */
-    public remove(node: LinkedListNode<T>): T {
-        if (!node.prev) {
-            // Update head ptr
-            if (this.head === node) this.head = node.next;
-        } else node.prev.next = node.next;
-
-        if (!node.next) {
-            // Update tail ptr.
-            if (this.tail === node) this.tail = node.prev;
-        } else node.next.prev = node.prev;
-
-        // Delete node.
-        node.prev = null;
-        node.next = null;
-        return node.value;
-    }
-
-    /** Clears all the nodes from the list. */
-    public clear(): void {
-        for (const node of this.nodes()) {
-            node.prev = null;
-            node.next = null;
-        }
-        this.head = null;
-        this.tail = null;
-    }
-}
-
-/** Linked list node. */
-interface LinkedListNode<T = unknown> {
-    /** Contained value. */
-    value: T;
-    /** Previous node. */
-    prev: LinkedListNode<T> | null;
-    /** Next node. */
-    next: LinkedListNode<T> | null;
 }
 
 // TODO: Rename to Uncertain? Better name?
@@ -185,8 +104,10 @@ export class PossibilityClass<TKey extends string, TData = unknown>
     /** {@link onNarrow} listeners. */
     private readonly listeners: ((key: TKey, data: TData) => void)[] = [];
 
+    /** Subset entry uid counter. */
+    private uid = 0;
     /** Keeps track of subset callbacks. */
-    private readonly subsets = new LinkedList<Subset<TKey>>();
+    private readonly subsets = new Map<symbol, Subset<TKey>>();
 
     /**
      * Creates a PossibilityClass.
@@ -273,11 +194,16 @@ export class PossibilityClass<TKey extends string, TData = unknown>
         else if (keys.size >= this._possibleValues.size) cb(true /*kept*/);
         // Unknown, register subset callback.
         else {
-            const subset: Subset<TKey> =
-                // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-                {set: keys, update: kept => subset.cancel || cb(kept)};
-            this.subsets.push(subset);
-            return () => (subset.cancel = true);
+            const subset: Subset<TKey> = {
+                set: keys,
+                update: kept => !subset.cancel && cb(kept),
+            };
+            const sym = Symbol(`PossibilityClass.subsets[${this.uid++}]`);
+            this.subsets.set(sym, subset);
+            return () => {
+                subset.cancel = true;
+                this.subsets.delete(sym);
+            };
         }
         return () => {};
     }
@@ -304,11 +230,11 @@ export class PossibilityClass<TKey extends string, TData = unknown>
         if (typeof arg0 === "undefined") {
             // Over-narrow to 0 keys.
             this._possibleValues.clear();
-            for (const subset of this.subsets) {
+            for (const [sym, subset] of [...this.subsets]) {
                 subset.set.clear();
                 subset.update(false /*kept*/);
+                this.subsets.delete(sym);
             }
-            this.subsets.clear();
             return this.checkNarrowed();
         }
         if (typeof arg0 === "string") {
@@ -360,19 +286,18 @@ export class PossibilityClass<TKey extends string, TData = unknown>
         if (!this._possibleValues.delete(key)) return;
 
         // Update subset listeners.
-        for (const node of this.subsets.nodes()) {
-            const subset = node.value;
+        for (const [sym, subset] of [...this.subsets]) {
             if (subset.cancel) {
-                this.subsets.remove(node);
+                this.subsets.delete(sym);
                 continue;
             }
             // See if subset conditions are now satisfied after deleting.
             if (subset.set.delete(key) && subset.set.size <= 0) {
                 subset.update(false /*kept*/);
-                this.subsets.remove(node);
+                this.subsets.delete(sym);
             } else if (subset.set.size >= this._possibleValues.size) {
                 subset.update(true /*kept*/);
-                this.subsets.remove(node);
+                this.subsets.delete(sym);
             }
         }
     }
@@ -414,5 +339,3 @@ export class PossibilityClass<TKey extends string, TData = unknown>
         return [...this._possibleValues].join(", ");
     }
 }
-
-/* eslint-enable max-classes-per-file */
