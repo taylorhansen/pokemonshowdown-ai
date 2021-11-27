@@ -2,7 +2,7 @@ import {expect} from "chai";
 import "mocha";
 import {IUtf8Message} from "websocket";
 import {PsBot} from "../../src/psbot/PsBot";
-import {Logger} from "../Logger";
+import {Logger} from "../logging/Logger";
 import {FakeRoomHandler} from "./FakeRoomHandler.test";
 import {MockPsServer} from "./MockPsServer.test";
 

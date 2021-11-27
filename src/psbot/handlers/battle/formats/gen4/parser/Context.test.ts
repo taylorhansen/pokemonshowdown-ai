@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Logger} from "../../../../../../Logger";
+import {Logger} from "../../../../../../logging/Logger";
 import {BattleAgent, Choice} from "../../../agent";
 import {
     BattleIterator,

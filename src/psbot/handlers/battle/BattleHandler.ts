@@ -1,5 +1,5 @@
 import {Protocol} from "@pkmn/protocol";
-import {Logger} from "../../../Logger";
+import {Logger} from "../../../logging/Logger";
 import {Sender} from "../../PsBot";
 import {Event} from "../../parser";
 import {RoomHandler} from "../RoomHandler";

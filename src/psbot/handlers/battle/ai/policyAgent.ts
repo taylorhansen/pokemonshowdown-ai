@@ -1,4 +1,4 @@
-import {Logger} from "../../../../Logger";
+import {Logger} from "../../../../logging/Logger";
 import {BattleAgent} from "../agent/BattleAgent";
 import {Choice, choiceIds, intToChoice} from "../agent/Choice";
 import {FormatType, ReadonlyState} from "../formats/formats";

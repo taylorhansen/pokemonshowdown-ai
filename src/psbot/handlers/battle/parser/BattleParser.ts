@@ -1,5 +1,5 @@
 /** @file Defines the core BattleParser function type. */
-import {Logger} from "../../../../Logger";
+import {Logger} from "../../../../logging/Logger";
 import {Event} from "../../../parser";
 import {BattleAgent, Choice} from "../agent";
 import {FormatType, State} from "../formats";

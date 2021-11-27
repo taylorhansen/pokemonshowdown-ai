@@ -1,7 +1,7 @@
 import {Protocol} from "@pkmn/protocol";
 import fetch, {RequestInit} from "node-fetch";
 import {client as WSClient} from "websocket";
-import {Logger} from "../Logger";
+import {Logger} from "../logging/Logger";
 import * as handlers from "./handlers";
 import {HaltEvent, MessageParser, RoomEvent} from "./parser";
 

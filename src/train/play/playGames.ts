@@ -1,7 +1,7 @@
 import {join} from "path";
 import * as stream from "stream";
 import ProgressBar from "progress";
-import {LogFunc, Logger} from "../../Logger";
+import {LogFunc, Logger} from "../../logging/Logger";
 import {formats} from "../../psbot/handlers/battle";
 import {AdvantageConfig} from "../learn";
 import {ModelWorker} from "../model/worker";

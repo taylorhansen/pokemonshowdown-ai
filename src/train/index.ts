@@ -2,12 +2,12 @@
 import * as os from "os";
 import {join} from "path";
 import {setGracefulCleanup} from "tmp-promise";
-import {Logger} from "../Logger";
 // For some reason eslint doesn't like gitignored source files.
 // eslint-disable-next-line node/no-unpublished-import
 import {latestModelFolder, logPath, modelsFolder} from "../config";
+import {Logger} from "../logging/Logger";
+import {ensureDir} from "../paths/ensureDir";
 import {episode} from "./episode";
-import {ensureDir} from "./helpers/ensureDir";
 import {BatchPredictOptions, ModelWorker} from "./model/worker";
 import {Opponent} from "./play";
 

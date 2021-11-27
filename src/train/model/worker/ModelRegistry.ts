@@ -3,11 +3,11 @@ import {serialize} from "v8";
 import {MessageChannel, MessagePort, workerData} from "worker_threads";
 import * as tf from "@tensorflow/tfjs";
 import {ListenerSignature, TypedEmitter} from "tiny-typed-emitter";
+import {ensureDir} from "../../../paths/ensureDir";
 import {formats} from "../../../psbot/handlers/battle";
 import {intToChoice} from "../../../psbot/handlers/battle/agent";
 import {verifyModel} from "../../../psbot/handlers/battle/ai/networkAgent";
 import {importTfn} from "../../../tfn";
-import {ensureDir} from "../../helpers/ensureDir";
 import {learn, LearnConfig} from "../../learn";
 import {RawPortResultError} from "../../port/PortProtocol";
 import {

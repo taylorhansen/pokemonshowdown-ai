@@ -1,7 +1,6 @@
 // istanbul ignore file: demo
 import {join} from "path";
 import * as tf from "@tensorflow/tfjs";
-import {Logger} from "../Logger";
 import {
     avatar,
     latestModelFolder,
@@ -12,6 +11,7 @@ import {
     // For some reason the linter doesn't like gitignored source files.
     // eslint-disable-next-line node/no-unpublished-import
 } from "../config";
+import {Logger} from "../logging/Logger";
 import {importTfn} from "../tfn";
 import {PsBot} from "./PsBot";
 import * as handlers from "./handlers";

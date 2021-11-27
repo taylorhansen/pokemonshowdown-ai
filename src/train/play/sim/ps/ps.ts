@@ -5,7 +5,8 @@ import {TeamGenerators} from "@pkmn/randoms";
 import {BattleStreams, Teams} from "@pkmn/sim";
 import {SideID} from "@pkmn/types";
 import * as tmp from "tmp-promise";
-import {LogFunc, Logger} from "../../../../Logger";
+import {LogFunc, Logger} from "../../../../logging/Logger";
+import {ensureDir} from "../../../../paths/ensureDir";
 import {Sender} from "../../../../psbot/PsBot";
 import {BattleHandler} from "../../../../psbot/handlers/battle";
 import {BattleAgent} from "../../../../psbot/handlers/battle/agent";
@@ -17,7 +18,6 @@ import {
     MessageParser,
     RoomEvent,
 } from "../../../../psbot/parser";
-import {ensureDir} from "../../../helpers/ensureDir";
 import {SimResult} from "../playGame";
 
 Teams.setGeneratorFactory(TeamGenerators);
